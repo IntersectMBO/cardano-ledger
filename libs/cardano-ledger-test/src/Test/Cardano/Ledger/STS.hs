@@ -132,8 +132,8 @@ prop_UTXOS =
     (\_env _st -> TrueSpec)
     $ \_env _st _sig _st' -> True
 
---prop_LEDGER :: Property
---prop_LEDGER = property $ do
+-- prop_LEDGER :: Property
+-- prop_LEDGER = property $ do
 --  pure $ stsPropertyV2 @"LEDGER" @ConwayFn
 --    TrueSpec
 --    (\_env -> TrueSpec)
@@ -209,8 +209,8 @@ prop_UTXOW =
     (\_env _st -> TrueSpec)
     $ \_env _st _sig _st' -> True
 
---prop_UTXO :: Property
---prop_UTXO = property $ do
+-- prop_UTXO :: Property
+-- prop_UTXO = property $ do
 --  ctx <- arbitrary
 --  pure $ stsPropertyV2 @"UTXO" @ConwayFn
 --    utxoEnvSpec
@@ -293,7 +293,7 @@ utxoTests =
   testGroup
     "UTXO* rules"
     [ {-testProperty "prop_UTXO" prop_UTXO
-    ,-} testProperty "prop_UTXOW" prop_UTXOW
+      ,-} testProperty "prop_UTXOW" prop_UTXOW
     , testProperty "prop_UTXOS" prop_UTXOS
     ]
 

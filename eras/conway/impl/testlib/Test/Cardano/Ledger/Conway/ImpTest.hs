@@ -143,10 +143,13 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.CertState (
+  CertState,
   CommitteeAuthorization (..),
+  certPStateL,
   csCommitteeCredsL,
+  psStakePoolParamsL,
   vsActualDRepExpiry,
-  vsNumDormantEpochsL, CertState, certPStateL, psStakePoolParamsL,
+  vsNumDormantEpochsL,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
@@ -167,6 +170,7 @@ import Cardano.Ledger.Conway.Rules (
   validCommitteeTerm,
   withdrawalCanWithdraw,
  )
+import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
@@ -178,6 +182,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
   asTreasuryL,
   certVStateL,
+  consumed,
   curPParamsEpochStateL,
   epochStateGovStateL,
   epochStatePoolParamsL,
@@ -190,15 +195,18 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   nesPdL,
   newEpochStateGovStateL,
+  produced,
   unifiedL,
   utxosGovStateL,
   utxosStakeDistrL,
+  utxosUtxoL,
   vsCommitteeStateL,
-  vsDRepsL, consumed, produced, utxosUtxoL,
+  vsDRepsL,
  )
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.UMap (dRepMap)
-import Cardano.Ledger.Val ((<->), Val (..))
+import Cardano.Ledger.UTxO (EraUTxO, UTxO, balance, sumAllValue, txInsFilter)
+import Cardano.Ledger.Val (Val (..), (<->))
 import Control.Monad (forM)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Control.State.Transition.Extended (STS (..))
@@ -225,8 +233,6 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCred)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModel)
-import Cardano.Ledger.UTxO (EraUTxO, UTxO, sumAllValue, balance, txInsFilter)
-import Cardano.Ledger.Conway.Tx (AlonzoTx)
 
 -- | Modify the PParams in the current state with the given function
 conwayModifyPParams ::
@@ -1716,26 +1722,27 @@ showConwayTxBalance ::
   UTxO era ->
   AlonzoTx era ->
   String
-showConwayTxBalance pp certState utxo tx = unlines
-  [ "Consumed:   \t"
-  , "\tInputs:     \t" <> show (coin inputs)
-  --, "Refunds:    \t" <> show refunds
-  , "\tWithdrawals \t" <> show withdrawals
-  , "\tTotal:      \t" <> (show . coin $ consumed pp certState utxo txBody)
-  , ""
-  , "Produced:  \t"
-  , "\tOutputs:   \t" <> show (coin $ sumAllValue (txBody ^. outputsTxBodyL))
-  , "\tDonations: \t" <> show (txBody ^. treasuryDonationTxBodyL)
-  , "\tDeposits:  \t" <> show (getTotalDepositsTxBody pp isRegPoolId txBody)
-  , "\tFees:      \t" <> show (txBody ^. feeTxBodyL)
-  , "\tTotal:     \t" <> (show . coin $ produced pp certState txBody)
-  ]
+showConwayTxBalance pp certState utxo tx =
+  unlines
+    [ "Consumed:   \t"
+    , "\tInputs:     \t" <> show (coin inputs)
+    , -- , "Refunds:    \t" <> show refunds
+      "\tWithdrawals \t" <> show withdrawals
+    , "\tTotal:      \t" <> (show . coin $ consumed pp certState utxo txBody)
+    , ""
+    , "Produced:  \t"
+    , "\tOutputs:   \t" <> show (coin $ sumAllValue (txBody ^. outputsTxBodyL))
+    , "\tDonations: \t" <> show (txBody ^. treasuryDonationTxBodyL)
+    , "\tDeposits:  \t" <> show (getTotalDepositsTxBody pp isRegPoolId txBody)
+    , "\tFees:      \t" <> show (txBody ^. feeTxBodyL)
+    , "\tTotal:     \t" <> (show . coin $ produced pp certState txBody)
+    ]
   where
-    --lookupStakingDeposit c = certState ^. certPStateL . psStakePoolParamsL
-    --lookupDRepDeposit c = undefined
+    -- lookupStakingDeposit c = certState ^. certPStateL . psStakePoolParamsL
+    -- lookupDRepDeposit c = undefined
     txBody = tx ^. bodyTxL
     inputs = balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
-    --refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
+    -- refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
     isRegPoolId = (`Map.member` (certState ^. certPStateL . psStakePoolParamsL))
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
