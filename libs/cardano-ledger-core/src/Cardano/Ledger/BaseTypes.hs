@@ -54,6 +54,7 @@ module Cardano.Ledger.BaseTypes (
   module Data.Maybe.Strict,
   BlocksMade (..),
   kindObject,
+  mkProxy,
 
   -- * Indices
   TxIx (..),
@@ -79,6 +80,7 @@ module Cardano.Ledger.BaseTypes (
 
   -- * Injection
   Inject (..),
+  swapMismatch,
 )
 where
 
@@ -737,6 +739,14 @@ data Mismatch (r :: Relation) a = Mismatch
   }
   deriving (Eq, Ord, Show, Generic, NFData, ToJSON, FromJSON, NoThunks)
 
+swapMismatch :: Mismatch r a -> Mismatch r a
+swapMismatch m@(Mismatch _ _) =
+  let Mismatch {..} = m
+   in Mismatch
+        { mismatchSupplied = mismatchExpected
+        , mismatchExpected = mismatchSupplied
+        }
+
 instance (EncCBOR a, Typeable r) => EncCBOR (Mismatch r a) where
   encCBOR (Mismatch supplied expected) =
     encode $
@@ -750,6 +760,22 @@ instance (DecCBOR a, Typeable r) => DecCBOR (Mismatch r a) where
       RecD Mismatch
         <! From
         <! From
+
+instance (Typeable r, EncCBOR a) => EncCBORGroup (Mismatch r a) where
+  encCBORGroup mm@(Mismatch _ _) =
+    let Mismatch {..} = mm
+     in encCBOR mismatchSupplied <> encCBOR mismatchExpected
+  encodedGroupSizeExpr size_ proxy =
+    encodedSizeExpr size_ (mismatchSupplied <$> proxy)
+      + encodedSizeExpr size_ (mismatchExpected <$> proxy)
+  listLen _ = 2
+  listLenBound _ = 2
+
+instance (Typeable r, DecCBOR a) => DecCBORGroup (Mismatch r a) where
+  decCBORGroup = do
+    mismatchSupplied <- decCBOR
+    mismatchExpected <- decCBOR
+    pure Mismatch {..}
 
 data Network
   = Testnet
@@ -921,3 +947,7 @@ instance Inject a a where
 -- | Helper function for a common pattern of creating objects
 kindObject :: Text -> [Pair] -> Value
 kindObject name obj = object $ ("kind" .= name) : obj
+
+-- | Helper function to create a 'Proxy' from a value
+mkProxy :: t -> Proxy t
+mkProxy _ = Proxy
