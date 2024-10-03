@@ -58,13 +58,7 @@ newtype ConwayMempoolEvent era = ConwayMempoolEvent Text
 type instance EraRuleEvent "MEMPOOL" (ConwayEra c) = ConwayMempoolEvent (ConwayEra c)
 
 instance
-  ( EraTx era
-  , EraGov era
-  , State (EraRule "MEMPOOL" era) ~ LedgerState era
-  , Signal (EraRule "MEMPOOL" era) ~ Tx era
-  , Environment (EraRule "MEMPOOL" era) ~ LedgerEnv era
-  , EraRule "MEMPOOL" era ~ ConwayMEMPOOL era
-  ) =>
+  (EraTx era, EraGov era) =>
   STS (ConwayMEMPOOL era)
   where
   type State (ConwayMEMPOOL era) = LedgerState era

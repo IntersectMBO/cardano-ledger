@@ -191,12 +191,15 @@ instance
   ) =>
   ToExpr (ConwayNewEpochEvent era)
 
+instance ToExpr (ConwayHardForkEvent era)
+
 instance
   ( EraPParams era
   , ToExpr (PParams era)
   , ToExpr (PParamsHKD StrictMaybe era)
   , ToExpr (Event (EraRule "POOLREAP" era))
   , ToExpr (Event (EraRule "SNAP" era))
+  , ToExpr (Event (EraRule "HARDFORK" era))
   ) =>
   ToExpr (ConwayEpochEvent era)
 
