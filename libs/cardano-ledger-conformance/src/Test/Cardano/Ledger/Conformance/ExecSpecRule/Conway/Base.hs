@@ -56,8 +56,11 @@ import Cardano.Ledger.Conway.Governance (
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
+  Vote (Abstain),
   VotingProcedures,
+  ensProtVerL,
   gasAction,
+  rsEnactStateL,
   showGovActionType,
  )
 import Cardano.Ledger.Conway.Rules (
@@ -85,7 +88,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (&), (.~))
+import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import qualified Lib as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Binary.TreeDiff (tableDoc)
@@ -315,7 +318,7 @@ ratifyEnvSpec ::
   ConwayRatifyExecContext Conway ->
   Specification fn (RatifyEnv Conway)
 ratifyEnvSpec ConwayRatifyExecContext {crecGovActionMap} =
-  constrained' $ \_ poolDistr drepDistr drepState _ committeeState ->
+  constrained' $ \_ poolDistr drepDistr drepState _ committeeState _ _ ->
     [ -- Bias the generator towards generating DReps that have stake and are registered
       exists
         ( \eval ->
@@ -376,7 +379,9 @@ ratifyEnvSpec ConwayRatifyExecContext {crecGovActionMap} =
     spoVotes =
       foldr'
         ( \GovActionState {gasStakePoolVotes} s ->
-            Map.keysSet gasStakePoolVotes <> s
+            -- TODO: Remove the filter when
+            -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/578 is resolved
+            Map.keysSet (Map.filter (== Abstain) gasStakePoolVotes) <> s
         )
         mempty
         crecGovActionMap
@@ -485,6 +490,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
                 <*> toSpecRep st
                 <*> toSpecRep sig
           ]
+      pv = st ^. rsEnactStateL . ensProtVerL
       actionAcceptedRatio gas@GovActionState {..} =
         tableDoc
           (Just "GovActionState")
@@ -495,7 +501,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
           ,
             ( "SPO:"
             , showAccepted (spoAccepted env st gas)
-                PP.<+> showRatio (spoAcceptedRatio env gas)
+                PP.<+> showRatio (spoAcceptedRatio env gas pv)
             )
           ,
             ( "DRep:"
@@ -524,6 +530,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
         | otherwise = error "ratio is not in the unit interval"
       committee = ensCommittee rsEnactState
       members = foldMap' (committeeMembers @Conway) committee
+      pv = st ^. rsEnactStateL . ensProtVerL
       ccBucket a =
         "CC yes votes ratio  \t"
           <> bucket
@@ -540,7 +547,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
       spoBucket a =
         "SPO yes votes ratio \t"
           <> bucket
-            (spoAcceptedRatio env a)
+            (spoAcceptedRatio env a pv)
       acceptedActions = fmap gasAction . filter (acceptedByEveryone env st) $ toList actions
       acceptedActionTypes = Set.fromList $ showGovActionType <$> acceptedActions
       labelRatios

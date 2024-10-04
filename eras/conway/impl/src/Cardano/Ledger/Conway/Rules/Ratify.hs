@@ -27,8 +27,10 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   withdrawalCanWithdraw,
 ) where
 
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
+  ProtVer,
   ShelleyBase,
   StrictMaybe (..),
   addEpochInterval,
@@ -53,6 +55,7 @@ import Cardano.Ledger.Conway.Governance (
   RatifyState (..),
   Vote (..),
   ensCommitteeL,
+  ensProtVerL,
   ensTreasuryL,
   gasAction,
   rsDelayedL,
@@ -73,6 +76,8 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualTotalPoolStake)
+import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.Val (Val (..), (<+>))
 import Control.State.Transition.Extended (
@@ -173,10 +178,12 @@ spoAccepted ::
 spoAccepted re rs gas =
   case votingStakePoolThreshold rs (gasAction gas) of
     -- Short circuit on zero threshold in order to avoid redundant computation.
-    SJust r -> r == minBound || spoAcceptedRatio re gas >= unboundRational r
+    SJust r ->
+      r == minBound || spoAcceptedRatio re gas (rs ^. rsEnactStateL . ensProtVerL) >= unboundRational r
     SNothing -> False
 
--- | Final ratio for `totalAcceptedStakePoolsRatio` we want is: t = y \/ (s - a)
+-- | Final ratio for `totalAcceptedStakePoolsRatio` we want during the bootstrap period is:
+-- t = y \/ (s - a)
 -- Where:
 --  * `y` - total delegated stake that voted Yes
 --  * `a` - total delegated stake that voted Abstain
@@ -187,13 +194,23 @@ spoAccepted re rs gas =
 -- vote are considered as `Abstain` votes.
 --
 -- `No` votes are not counted.
-spoAcceptedRatio :: forall era. RatifyEnv era -> GovActionState era -> Rational
+-- After the bootstrap period if an SPO didn't vote, it will be considered as a `No` vote by default.
+-- The only exceptions are when a pool delegated to an `AlwaysNoConfidence` or an `AlwaysAbstain` DRep.
+-- In those cases, behaviour is as expected: vote `Yes` on `NoConfidence` proposals in case of the former and
+-- and vote `Abstain` by default in case of the latter. For `HardForkInitiation`, behaviour is the same as
+-- during the bootstrap period: if an SPO didn't vote, their vote will always count as `No`.
+spoAcceptedRatio :: forall era. RatifyEnv era -> GovActionState era -> ProtVer -> Rational
 spoAcceptedRatio
-  RatifyEnv {reStakePoolDistr = PoolDistr individualPoolStake (CompactCoin totalActiveStake)}
+  RatifyEnv
+    { reStakePoolDistr = PoolDistr individualPoolStake (CompactCoin totalActiveStake)
+    , reDelegatees
+    , rePoolParams
+    }
   GovActionState
     { gasStakePoolVotes
     , gasProposalProcedure = ProposalProcedure {pProcGovAction}
     }
+  pv
     | totalActiveStake == 0 = 0 -- guard against the degenerate case when active stake is zero.
     | totalActiveStake == abstainStake = 0 -- guard against the degenerate case when all abstain.
     | otherwise = toInteger yesStake % toInteger (totalActiveStake - abstainStake)
@@ -201,10 +218,18 @@ spoAcceptedRatio
       accumStake (!yes, !abstain) poolId distr =
         let CompactCoin stake = individualTotalPoolStake distr
             vote = Map.lookup poolId gasStakePoolVotes
+            drep =
+              Map.lookup poolId rePoolParams >>= \d ->
+                Map.lookup (raCredential $ ppRewardAccount d) reDelegatees
          in case vote of
               Nothing
                 | HardForkInitiation {} <- pProcGovAction -> (yes, abstain)
-                | otherwise -> (yes, abstain + stake)
+                | bootstrapPhase pv -> (yes, abstain + stake)
+                | otherwise -> case drep of
+                    Just DRepAlwaysNoConfidence
+                      | NoConfidence {} <- pProcGovAction -> (yes + stake, abstain)
+                    Just DRepAlwaysAbstain -> (yes, abstain + stake)
+                    _ -> (yes, abstain)
               Just Abstain -> (yes, abstain + stake)
               Just VoteNo -> (yes, abstain)
               Just VoteYes -> (yes + stake, abstain)

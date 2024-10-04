@@ -63,6 +63,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr
+import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)
@@ -278,6 +279,9 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpProposalDeposits :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
     -- ^ Snapshot of the proposal-deposits per reward-account-staking-credential
     , dpGlobals :: !Globals
+    , dpPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+    -- ^ Snapshot of the parameters of stake pools -
+    --   this is needed to get the reward account for SPO vote calculation
     } ->
     DRepPulser era m ans
 
@@ -308,7 +312,7 @@ deriving instance (EraPParams era, Show ans) => Show (DRepPulser era m ans)
 
 instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) where
   showTypeOf _ = "DRepPulser"
-  wNoThunks ctxt drp@(DRepPulser _ _ _ _ _ _ _ _ _ _ _ _ _) =
+  wNoThunks ctxt drp@(DRepPulser _ _ _ _ _ _ _ _ _ _ _ _ _ _) =
     allNoThunks
       [ noThunks ctxt (dpPulseSize drp)
       , noThunks ctxt (dpUMap drp)
@@ -323,10 +327,11 @@ instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) 
       , noThunks ctxt (dpProposals drp)
       , noThunks ctxt (dpProposalDeposits drp)
       , noThunks ctxt (dpGlobals drp)
+      , noThunks ctxt (dpPoolParams drp)
       ]
 
 instance EraPParams era => NFData (DRepPulser era Identity (RatifyState era)) where
-  rnf (DRepPulser n um bal stake pool drep dstate ep cs es as pds gs) =
+  rnf (DRepPulser n um bal stake pool drep dstate ep cs es as pds gs poolps) =
     n `deepseq`
       um `deepseq`
         bal `deepseq`
@@ -339,7 +344,8 @@ instance EraPParams era => NFData (DRepPulser era Identity (RatifyState era)) wh
                       es `deepseq`
                         as `deepseq`
                           pds `deepseq`
-                            rnf gs
+                            gs `deepseq`
+                              rnf poolps
 
 class
   ( STS (ConwayRATIFY era)
@@ -386,6 +392,8 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
         , reDRepState = dpDRepState
         , reCurrentEpoch = dpCurrentEpoch
         , reCommitteeState = dpCommitteeState
+        , reDelegatees = dRepMap dpUMap
+        , rePoolParams = dpPoolParams
         }
     !ratifySig = RatifySignal dpProposals
     !ratifyState =

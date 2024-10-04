@@ -967,6 +967,7 @@ genSizedRep _ DRepPulserR = do
     <*> pure props
     <*> pure (proposalsDeposits $ def & pPropsL .~ OMap.fromFoldable props)
     <*> pure testGlobals
+    <*> arbitrary -- poolparams
 genSizedRep n DelegateeR =
   oneof
     [ DelegStake <$> genSizedRep n (PoolHashR @era)

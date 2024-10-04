@@ -198,6 +198,8 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
   shrink = genericShrink
 

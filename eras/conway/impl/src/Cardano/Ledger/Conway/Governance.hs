@@ -211,6 +211,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   credMap,
   dsUnified,
   epochStateGovStateL,
+  epochStatePoolParamsL,
   epochStateTreasuryL,
   esLStateL,
   lsCertState,
@@ -492,6 +493,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
                     , dpProposals = proposalsActions props
                     , dpProposalDeposits = proposalsDeposits props
                     , dpGlobals = globals
+                    , dpPoolParams = epochState ^. epochStatePoolParamsL
                     }
                 )
   pure $ epochState & epochStateGovStateL .~ govState'
