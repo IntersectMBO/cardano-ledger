@@ -269,3 +269,5 @@ instance ToExpr (ShelleyMirEvent era)
 instance ToExpr (RupdEvent era)
 
 instance ToExpr (PParamsHKD Identity era) => ToExpr (UtxoEnv era)
+
+instance ToExpr (PParamsHKD Identity era) => ToExpr (LedgerEnv era)

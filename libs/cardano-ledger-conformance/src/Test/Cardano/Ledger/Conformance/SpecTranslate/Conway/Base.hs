@@ -7,7 +7,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -26,6 +25,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   SpecTranslationError,
   ConwayExecEnactEnv (..),
   DepositPurpose (..),
+  ConwayTxBodyTransContext (..),
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
@@ -55,7 +55,6 @@ import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure,
   ConwayGovPredFailure,
-  ConwayUtxoPredFailure,
   EnactSignal (..),
   maxRefScriptSizePerBlock,
   maxRefScriptSizePerTx,
@@ -75,8 +74,7 @@ import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (Identity, UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules (Identity)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireAnyOf,
@@ -297,26 +295,6 @@ instance
   type SpecRep (UTxO era) = SpecRep (Map (TxIn (EraCrypto era)) (TxOut era))
   toSpecRep (UTxO m) = toSpecRep m
 
-instance
-  ( SpecTranslate ctx (TxOut era)
-  , SpecRep (TxOut era) ~ Agda.TxOut
-  , GovState era ~ ConwayGovState era
-  ) =>
-  SpecTranslate ctx (UTxOState era)
-  where
-  type SpecRep (UTxOState era) = Agda.UTxOState
-
-  toSpecRep UTxOState {..} = do
-    let
-      gasDeposits =
-        Map.fromList . fmap (bimap GovActionDeposit gasDeposit) $
-          OMap.assocList (utxosGovState ^. cgsProposalsL . pPropsL)
-    Agda.MkUTxOState
-      <$> toSpecRep utxosUtxo
-      <*> toSpecRep utxosFees
-      <*> toSpecRep gasDeposits
-      <*> toSpecRep utxosDonation
-
 deriving instance SpecTranslate ctx SlotNo
 
 deriving instance SpecTranslate ctx EpochNo
@@ -437,20 +415,6 @@ instance
   type SpecRep (PParams era) = SpecRep (PParamsHKD Identity era)
 
   toSpecRep (PParams x) = toSpecRep x
-
-instance
-  ( SpecRep (PParams era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD Identity era)
-  ) =>
-  SpecTranslate ctx (UtxoEnv era)
-  where
-  type SpecRep (UtxoEnv era) = Agda.UTxOEnv
-
-  toSpecRep x =
-    Agda.MkUTxOEnv
-      <$> toSpecRep (ueSlot x)
-      <*> toSpecRep (uePParams x)
-      <*> toSpecRep (Coin 10_000_000) -- TODO: Fix generating types
 
 instance SpecTranslate ctx a => SpecTranslate ctx (Set a) where
   type SpecRep (Set a) = Agda.HSSet (SpecRep a)
@@ -743,17 +707,6 @@ instance
       <*> toSpecRep (wits tx)
       <*> toSpecRep (isValid tx)
       <*> toSpecRep (auxiliaryData tx)
-
-instance
-  ( ToExpr (Value era)
-  , ToExpr (TxOut era)
-  , ToExpr (PredicateFailure (EraRule "UTXOS" era))
-  ) =>
-  SpecTranslate ctx (ConwayUtxoPredFailure era)
-  where
-  type SpecRep (ConwayUtxoPredFailure era) = OpaqueErrorString
-
-  toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
 
 instance
   ( EraPParams era

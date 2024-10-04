@@ -211,6 +211,8 @@ data GenSize = GenSize
   , oldUtxoPercent :: !Int -- between 0-100, 10 means pick an old UTxO 10% of the time
   , maxStablePools :: !Int
   , invalidScriptFreq :: !Int -- percentage
+  , regCertFreq :: !Int
+  , delegCertFreq :: !Int
   }
   deriving (Show)
 
@@ -285,6 +287,8 @@ instance Default GenSize where
       , withdrawalMax = 10
       , maxStablePools = 5
       , invalidScriptFreq = 5
+      , regCertFreq = 75
+      , delegCertFreq = 50
       }
 
 small :: GenSize
@@ -304,6 +308,8 @@ small =
     , withdrawalMax = 2
     , maxStablePools = 4
     , invalidScriptFreq = 5
+    , regCertFreq = 75
+    , delegCertFreq = 50
     }
 
 data PlutusPurposeTag
