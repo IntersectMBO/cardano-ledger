@@ -4,10 +4,6 @@ contact_links:
     url: https://github.com/cardano-ledger/blob/master/CONTRIBUTING.md
     about: Some rules & processes we honor.
 
-  - name: Feature ideas
-    url: https://github.com/cardano-ledger/discussions/categories/ideas
-    about: Maybe someone else had the same or a similar idea already?
-
   - name: All issues
     url: https://github.com/cardano-ledger/issues
     about: Check whether your issue is not already covered here.
