@@ -33,5 +33,7 @@ spec = do
       prop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
       prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
       prop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
+      xprop "UTXOW" $ conformsToImpl @"UTXOW" @ConwayFn @Conway
+      xprop "LEDGER" $ conformsToImpl @"LEDGER" @ConwayFn @Conway
     describe "ImpTests" $ do
       RatifyImp.spec

@@ -45,6 +45,7 @@ import Cardano.Ledger.UMap (sumRewardsUView)
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txInsFilter, txouts)
 import Control.DeepSeq (NFData)
 import Data.Foldable (fold)
+import Debug.Trace (traceShow)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
@@ -153,7 +154,9 @@ consumedTxBody ::
   Consumed
 consumedTxBody txBody pp dpstate utxo =
   Consumed
-    { conInputs = coinBalance (txInsFilter utxo (txBody ^. inputsTxBodyL))
+    { conInputs =
+        traceShow ("utxo: " <> show utxo <> "\n\ninputs: " <> show (txBody ^. inputsTxBodyL)) $
+          coinBalance (txInsFilter utxo (txBody ^. inputsTxBodyL))
     , conRefunds = certsTotalRefundsTxBody pp dpstate txBody
     , conWithdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
     }
