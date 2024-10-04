@@ -5,5 +5,5 @@ contact_links:
     about: Some rules & processes we honor.
 
   - name: All issues
-    url: https://github.com/cardano-ledger/issues
+    url: https://github.com/IntersectMBO/cardano-ledger/issues
     about: Check whether your issue is not already covered here.
