@@ -61,7 +61,10 @@ dsX = do
   pools <-
     genFromSpec @ConwayFn @(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
       (hasSize (rangeSize 8 8))
-  genFromSpec @ConwayFn @(DState era) (dstateSpec (lit acct) (lit pools))
+  dreps <-
+    genFromSpec @ConwayFn @(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+      (hasSize (rangeSize 8 8))
+  genFromSpec @ConwayFn @(DState era) (dstateSpec (lit acct) (lit pools) (lit dreps))
 
 vsX :: forall era. EraPP era => Gen (VState era)
 vsX = do

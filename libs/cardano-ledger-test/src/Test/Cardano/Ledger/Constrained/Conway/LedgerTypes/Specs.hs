@@ -356,7 +356,6 @@ drepStateSpec epoch = constrained $ \ [var|drepstate|] ->
   match drepstate $ \ [var|expiry|] _anchor [var|drepDdeposit|] _delegs ->
     [ assertExplain (pure "epoch of expiration must follow the current epoch") $ epoch <=. expiry
     , assertExplain (pure "no deposit is 0") $ lit (Coin 0) <=. drepDdeposit
-    -- TODO: add constraint that `delegs` must be present in the UMap
     ]
 
 vstateSpec :: (IsConwayUniv fn, Era era) => Term fn EpochNo -> Specification fn (VState era)
@@ -375,14 +374,21 @@ dstateSpec ::
   LedgerEra era fn =>
   Term fn AccountState ->
   Term fn (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))) ->
+  Term fn (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era))) ->
   Specification fn (DState era)
-dstateSpec acct poolreg = constrained $ \ [var| ds |] ->
+dstateSpec acct poolreg dreps = constrained $ \ [var| ds |] ->
   match ds $ \ [var|umap|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
-    match umap $ \ [var|rdMap|] [var|ptrmap|] [var|sPoolMap|] _dRepMap ->
+    match umap $ \ [var|rdMap|] [var|ptrmap|] [var|sPoolMap|] [var|dRepMap|] ->
       [ genHint 5 sPoolMap
       , assertExplain (pure "The delegations delegate to actual pools") $
           forAll (rng_ sPoolMap) (\ [var|keyhash|] -> member_ keyhash (dom_ poolreg))
       , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
+      , forAll' dreps $
+          \_ dRepState -> match dRepState $ \_ _ _ delegs ->
+            assertExplain
+              (pure "Delegs are present in the UMap")
+              (forAll delegs (\ [var|drep|] -> drep `member_` dom_ dRepMap))
+      , dreps `dependsOn` dRepMap
       , -- reify here, forces us to solve for ptrap, before sovling for rdMap
         whenTrue (hasPtrs (Proxy @era)) (reify ptrmap id (\ [var|pm|] -> domEqualRng pm rdMap))
       , whenTrue (not_ (hasPtrs (Proxy @era))) (assert $ ptrmap ==. lit Map.empty)
@@ -435,7 +441,17 @@ certStateSpec acct epoch = constrained $ \ [var|certState|] ->
   match certState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies vState (vstateSpec epoch)
     , satisfies pState (pstateSpec epoch)
-    , reify pState psStakePoolParams (\ [var|poolreg|] -> satisfies dState (dstateSpec acct poolreg))
+    , reify
+        pState
+        psStakePoolParams
+        ( \ [var|poolreg|] ->
+            reify
+              vState
+              vsDReps
+              ( \ [var|dreps|] ->
+                  satisfies dState (dstateSpec acct poolreg dreps)
+              )
+        )
     ]
 
 -- ==============================================================
