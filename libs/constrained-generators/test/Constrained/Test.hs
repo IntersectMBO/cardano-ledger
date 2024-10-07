@@ -123,6 +123,9 @@ tests nightly =
     -- TODO: turn this on when we bump quickcheck version
     -- testSpec "listSumShort" listSumShort
     testSpec "existsUnfree" existsUnfree
+    testSpec "appendSize" appendSize
+    testSpecNoShrink "appendSingleton" appendSingleton
+    testSpec "singletonSubset" singletonSubset
     -- TODO: double shrinking
     testSpecNoShrink "reifyYucky" reifyYucky
     testSpec "fixedRange" fixedRange
@@ -200,6 +203,15 @@ negativeTests =
               (pure "You can't constrain the variable introduced by reify as its already decided")
               $ reify x id
               $ \y -> y ==. 10
+    prop "singletonErrorTooMany" $
+      expectFailure $
+        prop_complete singletonErrorTooMany
+    prop "singletonErrorTooLong" $
+      expectFailure $
+        prop_complete singletonErrorTooLong
+    prop "appendTooLong" $
+      expectFailure $
+        prop_complete appendTooLong
 
 numberyTests :: Spec
 numberyTests =

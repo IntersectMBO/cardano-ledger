@@ -114,3 +114,31 @@ listSumShort = constrained $ \ [var| xs |] ->
           whenTrue b $ x <=. 10000000
       ]
   ]
+
+appendSize :: Specification BaseFn ([Int], [Int])
+appendSize = constrained' $ \ [var| xs |] [var| ys |] ->
+  [ assert $ sizeOf_ xs <=. 10
+  , assert $ sizeOf_ (ys ++. xs) <=. 15
+  ]
+
+appendSingleton :: Specification BaseFn Int
+appendSingleton = constrained $ \ [var| x |] ->
+  10 `elem_` singletonList_ x ++. lit [1, 2, 3]
+
+singletonSubset :: Specification BaseFn Int
+singletonSubset = constrained $ \ [var| x |] ->
+  fromList_ (singletonList_ x) `subset_` fromList_ (lit [1, 2, 3])
+
+-- Some notable error cases that shouldn't succeed
+
+singletonErrorTooMany :: Specification BaseFn Int
+singletonErrorTooMany = constrained $ \ [var| x |] ->
+  fromList_ (lit [1, 2, 3]) `subset_` fromList_ (singletonList_ x)
+
+singletonErrorTooLong :: Specification BaseFn Int
+singletonErrorTooLong = constrained $ \ [var| x |] ->
+  2 <=. length_ (singletonList_ x)
+
+appendTooLong :: Specification BaseFn [Int]
+appendTooLong = constrained $ \ [var| xs |] ->
+  sizeOf_ (lit [1, 2, 3, 4] ++. xs) <=. 3

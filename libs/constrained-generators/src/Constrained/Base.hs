@@ -55,7 +55,7 @@ import Control.Monad.Identity
 import Control.Monad.Writer (Writer, runWriter, tell)
 import Data.Foldable
 import Data.Kind
-import Data.List (intersect, nub, partition, (\\))
+import Data.List (intersect, isPrefixOf, isSuffixOf, nub, partition, (\\))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe
@@ -4458,20 +4458,23 @@ data ListFn fn args res where
     ) =>
     fn '[a] b ->
     ListFn fn '[[a]] b
-
-{- TODO add these?
-  AppendFn :: ListFn fn '[[a],[a]] [a]
-  ConsFn :: ListFn fn '[a.[a]] [a]
--}
+  SingletonList :: ListFn fn '[a] [a]
+  AppendFn :: ListFn fn '[[a], [a]] [a]
 
 deriving instance Show (ListFn fn args res)
 
 instance Typeable fn => Eq (ListFn fn args res) where
   FoldMap f == FoldMap g = cast f == Just g
+  SingletonList == SingletonList = True
+  SingletonList == _ = False
+  _ == SingletonList = False
+  AppendFn == AppendFn = True
 
 instance FunctionLike fn => FunctionLike (ListFn fn) where
   sem = \case
     FoldMap f -> adds @fn . map (sem f)
+    SingletonList -> (: [])
+    AppendFn -> (++)
 
 instance BaseUniverse fn => Functions (ListFn fn) fn where
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
@@ -4483,6 +4486,76 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
             let args = appendList (mapList (\(Value a) -> Lit a) pre) (v' :> mapList (\(Value a) -> Lit a) suf)
              in Let (App (injectFn fn) args) (x :-> p)
     FoldMap f | NilCtx HOLE <- ctx -> typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f spec)
+    SingletonList | NilCtx HOLE <- ctx -> case spec of
+      TrueSpec -> TrueSpec
+      MemberSpec xss -> MemberSpec [a | [a] <- xss]
+      TypeSpec (ListSpec _ m sz e f) cant
+        | length m > 1 ->
+            ErrorSpec $
+              NE.fromList
+                [ "Too many required elements for SingletonList: "
+                , "  " ++ show m
+                ]
+        | not $ 1 `conformsToSpec` sz ->
+            ErrorSpec $ pure $ "Size spec requires too many elements for SingletonList: " ++ show sz
+        | bad@(_ : _) <- filter (not . (`conformsToSpec` e)) m ->
+            ErrorSpec $
+              NE.fromList
+                [ "The following elements of the must spec do not conforms to the elem spec:"
+                , show bad
+                ]
+        -- There is precisely one required element in the final list, so the argumen to singletonList_ has to
+        -- be that element and we have to respect the cant and fold specs
+        | [a] <- m -> MemberSpec [a] <> notMemberSpec [a | [a] <- cant] <> reverseFoldSpec f
+        -- We have to respect the elem-spec, the can't spec, and the fold spec.
+        | otherwise -> e <> notMemberSpec [a | [a] <- cant] <> reverseFoldSpec f
+        where
+          reverseFoldSpec NoFold = TrueSpec
+          -- The single element list has to sum to something that obeys spec, i.e. `conformsToSpec (f a) spec`
+          reverseFoldSpec (FoldSpec fn spec) = propagateSpecFun fn (NilCtx HOLE) spec
+    AppendFn -> case spec of
+      TrueSpec -> TrueSpec
+      MemberSpec xss
+        | HOLE :? Value (ys :: [a]) :> Nil <- ctx
+        , Evidence <- prerequisites @fn @[a] ->
+            -- Only keep the prefixes of the elements of xss that can
+            -- give you the correct resulting list
+            MemberSpec (suffixedBy ys xss)
+        | Value (ys :: [a]) :! NilCtx HOLE <- ctx
+        , Evidence <- prerequisites @fn @[a] ->
+            -- Only keep the suffixes of the elements of xss that can
+            -- give you the correct resulting list
+            MemberSpec (prefixedBy ys xss)
+      TypeSpec ts@ListSpec {listSpecElem = e} cant
+        | HOLE :? Value (ys :: [a]) :> Nil <- ctx
+        , Evidence <- prerequisites @fn @[a]
+        , all (`conformsToSpec` e) ys ->
+            TypeSpec (alreadyHave ys ts) (suffixedBy ys cant)
+        | Value (ys :: [a]) :! NilCtx HOLE <- ctx
+        , Evidence <- prerequisites @fn @[a]
+        , all (`conformsToSpec` e) ys ->
+            TypeSpec (alreadyHave ys ts) (prefixedBy ys cant)
+      _ -> ErrorSpec $ pure "The spec given to propagateSpecFun AppendSpec is inconsistent!"
+      where
+        prefixedBy ys xss = [drop (length ys) xs | xs <- xss, ys `isPrefixOf` xs]
+        suffixedBy ys xss = [take (length xs - length ys) xs | xs <- xss, ys `isSuffixOf` xs]
+
+        alreadyHave ys (ListSpec h m sz e f) =
+          ListSpec
+            -- Reduce the hint
+            (fmap (subtract (sizeOf ys)) h)
+            -- The things in `ys` have already been added to the list, no need to
+            -- require them too
+            (m \\ ys)
+            -- Reduce the required size
+            (constrained $ \x -> (x + lit (sizeOf ys)) `satisfies` sz)
+            -- Nothing changes about what's a correct element
+            e
+            -- we have fewer things to sum now
+            (alreadyHaveFold ys f)
+
+        alreadyHaveFold _ NoFold = NoFold
+        alreadyHaveFold ys (FoldSpec fn spec) = FoldSpec fn (constrained $ \s -> app theAddFn s (foldMap_ (app fn) (lit ys)) `satisfies` spec)
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
@@ -4490,6 +4563,7 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
       constrained $ \x ->
         unsafeExists $ \x' ->
           assert (x ==. app (foldMapFn g) x') <> toPreds x' ts
+    SingletonList -> typeSpec (ListSpec Nothing [] (equalSpec 1) (typeSpec ts) NoFold)
 
 foldMapFn ::
   forall fn a b.
@@ -4501,6 +4575,12 @@ foldMapFn ::
   fn '[a] b ->
   fn '[[a]] b
 foldMapFn f = injectFn $ FoldMap @fn f
+
+singletonListFn :: forall fn a. HasSpec fn a => fn '[a] [a]
+singletonListFn = injectFn $ SingletonList @fn
+
+appendFn :: forall fn a. HasSpec fn a => fn '[[a], [a]] [a]
+appendFn = injectFn $ AppendFn @fn
 
 -- Number functions -------------------------------------------------------
 
@@ -4663,6 +4743,7 @@ infixr 2 ||.
   Term fn Bool
 (||.) = app orFn
 
+infix 4 `elem_`
 elem_ ::
   forall a fn.
   HasSpec fn a =>
@@ -4833,6 +4914,13 @@ foldMap_ f = app $ foldMapFn $ toFn $ f (V v)
     toFn (App fn (t :> Nil)) = injectFn $ Compose fn (toFn t)
     toFn (V v') | Just Refl <- eqVar v v' = idFn
     toFn _ = error "foldMap_ has not been given a function of the form \\ x -> f (g ... (h x))"
+
+infixr 5 ++.
+(++.) :: HasSpec fn a => Term fn [a] -> Term fn [a] -> Term fn [a]
+(++.) = app appendFn
+
+singletonList_ :: HasSpec fn a => Term fn a -> Term fn [a]
+singletonList_ = app singletonListFn
 
 -- Language constructs ----------------------------------------------------
 

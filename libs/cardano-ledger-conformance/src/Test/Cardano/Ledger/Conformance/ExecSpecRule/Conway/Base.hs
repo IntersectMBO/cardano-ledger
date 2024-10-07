@@ -76,7 +76,6 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Constrained hiding (inject)
-import Constrained.Base (fromList_)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
