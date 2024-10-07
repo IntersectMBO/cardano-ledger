@@ -62,6 +62,8 @@ library
         Test.Cardano.Ledger.Constrained.Conway.GovCert
         Test.Cardano.Ledger.Constrained.Conway.InstancesBasic
         Test.Cardano.Ledger.Constrained.Conway.Instances
+        Test.Cardano.Ledger.Constrained.Conway.InstancesTxBody
+        Test.Cardano.Ledger.Constrained.Conway.TxBodySpec
         Test.Cardano.Ledger.Constrained.Conway.Ledger
         Test.Cardano.Ledger.Constrained.Conway.NewEpoch
         Test.Cardano.Ledger.Constrained.Conway.PParams

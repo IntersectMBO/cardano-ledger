@@ -250,7 +250,11 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxBodyRaw (..))
-import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxCert (
+  GenesisDelegCert (..),
+  ShelleyDelegCert (..),
+  ShelleyTxCert (..),
+ )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
@@ -2695,10 +2699,22 @@ pcPoolCert (RetirePool keyhash epoch) = ppSexp "RetirePool" [pcKeyHash keyhash, 
 instance PrettyA (PoolCert c) where
   prettyA = pcPoolCert
 
+pcGenesisDelegCert :: GenesisDelegCert c -> PDoc
+pcGenesisDelegCert (GenesisDelegCert a b c) =
+  ppRecord
+    "GenesisDelegCert"
+    [ ("Genesis", pcKeyHash a)
+    , ("GenesisDelegate", pcKeyHash b)
+    , ("VerKeyVRF", trim (ppHash c))
+    ]
+
+instance PrettyA (GenesisDelegCert c) where
+  prettyA = pcGenesisDelegCert
+
 pcShelleyTxCert :: ShelleyTxCert c -> PDoc
 pcShelleyTxCert (ShelleyTxCertDelegCert x) = pcDelegCert x
 pcShelleyTxCert (ShelleyTxCertPool x) = pcPoolCert x
-pcShelleyTxCert (ShelleyTxCertGenesisDeleg _) = ppString "GenesisCert"
+pcShelleyTxCert (ShelleyTxCertGenesisDeleg x) = pcGenesisDelegCert x
 pcShelleyTxCert (ShelleyTxCertMir (MIRCert x (StakeAddressesMIR m))) =
   ppRecord
     "MIRStakeAdresses"

@@ -62,7 +62,8 @@ import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import System.IO.Unsafe (unsafePerformIO)
-import Test.Cardano.Ledger.Constrained.Conway ()
+
+-- import Test.Cardano.Ledger.Constrained.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway.Gov (govProposalsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.QuickCheck (generate)
@@ -79,7 +80,8 @@ import Test.QuickCheck (generate)
 --   supports specifications over the Era parametric (PParams era) in every era.
 --   The method 'correctTxOut' supports specifcations over type Family TxOut in every era.
 --   The method  'govStateSpec' supports specifcations over type Family GovState in every era.
---   And additional ones for phased out Type Families like InstantaneousRewards, StashedAVVMAddresses, and Ptrs
+--   And additional ones for phased out Type Families like InstantaneousRewards,
+--   GenDelegs, FutureGenDelegs, StashedAVVMAddresses, and Ptrs
 --   Instances for every Era are supplied.
 class
   ( HasSpec fn (TxOut era)
@@ -94,6 +96,7 @@ class
   where
   irewardSpec :: Term fn AccountState -> Specification fn (InstantaneousRewards (EraCrypto era))
   hasPtrs :: proxy era -> Term fn Bool
+  hasGenDelegs :: proxy era -> Bool
   correctTxOut ::
     Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
     Term fn (TxOut era) ->
@@ -104,6 +107,7 @@ class
 instance IsConwayUniv fn => LedgerEra Shelley fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
+  hasGenDelegs _proxy = True
   correctTxOut = betterTxOutShelley
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUTxO
@@ -111,6 +115,7 @@ instance IsConwayUniv fn => LedgerEra Shelley fn where
 instance IsConwayUniv fn => LedgerEra Allegra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
+  hasGenDelegs _proxy = True
   correctTxOut = betterTxOutShelley
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
@@ -118,6 +123,7 @@ instance IsConwayUniv fn => LedgerEra Allegra fn where
 instance IsConwayUniv fn => LedgerEra Mary fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
+  hasGenDelegs _proxy = True
   correctTxOut = betterTxOutMary
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
@@ -125,6 +131,7 @@ instance IsConwayUniv fn => LedgerEra Mary fn where
 instance IsConwayUniv fn => LedgerEra Alonzo fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
+  hasGenDelegs _proxy = True
   correctTxOut = betterTxOutAlonzo
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
@@ -132,6 +139,7 @@ instance IsConwayUniv fn => LedgerEra Alonzo fn where
 instance IsConwayUniv fn => LedgerEra Babbage fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
+  hasGenDelegs _proxy = True
   correctTxOut = betterTxOutBabbage
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
@@ -145,6 +153,7 @@ instance IsConwayUniv fn => LedgerEra Conway fn where
       , deltaTreas ==. lit (DeltaCoin 0)
       ]
   hasPtrs _proxy = lit False
+  hasGenDelegs _proxy = False
   correctTxOut = betterTxOutBabbage
   govStateSpec pp = conwayGovStateSpec pp (testGovEnv pp)
   newEpochStateSpec = newEpochStateSpecUnit
@@ -349,8 +358,6 @@ instantaneousRewardsSpec acct = constrained $ \ [var| irewards |] ->
 -- The CertState specs
 -- ========================================================================
 
-instance IsConwayUniv fn => NumLike fn EpochNo
-
 drepStateSpec :: (IsConwayUniv fn, Crypto c) => Term fn EpochNo -> Specification fn (DRepState c)
 drepStateSpec epoch = constrained $ \ [var|drepstate|] ->
   match drepstate $ \ [var|expiry|] _anchor [var|drepDdeposit|] _delegs ->
@@ -397,8 +404,10 @@ dstateSpec acct poolreg dreps = constrained $ \ [var| ds |] ->
         whenTrue (hasPtrs (Proxy @era)) (reify ptrmap id (\ [var|pm|] -> domEqualRng pm rdMap))
       , whenTrue (not_ (hasPtrs (Proxy @era))) (assert $ ptrmap ==. lit Map.empty)
       , satisfies irewards (irewardSpec @era acct)
-      , satisfies futureGenDelegs (hasSize (rangeSize 0 3))
-      , match genDelegs $ \ [var|gd|] -> satisfies gd (hasSize (rangeSize 1 4)) -- Strip off the newtype constructor
+      , satisfies
+          futureGenDelegs
+          (hasSize (if hasGenDelegs @era @fn [] then (rangeSize 0 3) else (rangeSize 0 0)))
+      , match genDelegs $ \ [var|gd|] -> satisfies gd (hasSize (if hasGenDelegs @era @fn [] then (rangeSize 1 4) else (rangeSize 0 0)))
       ]
 
 epochNoSpec :: IsConwayUniv fn => Specification fn EpochNo
