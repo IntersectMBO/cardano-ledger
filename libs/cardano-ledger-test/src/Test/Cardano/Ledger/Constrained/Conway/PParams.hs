@@ -10,7 +10,11 @@ module Test.Cardano.Ledger.Constrained.Conway.PParams where
 
 import Cardano.Ledger.Core (PParams (..))
 import Constrained
-import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (EraPP (..), simplePParamsSpec)
+import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
+  EraSpecPParams (..),
+  simplePParamsSpec,
+ )
 
-pparamsSpec :: forall fn era. (EraPP era, BaseUniverse fn) => Specification fn (PParams era)
+pparamsSpec ::
+  forall fn era. (EraSpecPParams era, BaseUniverse fn) => Specification fn (PParams era)
 pparamsSpec = constrained' $ \simplepp -> satisfies simplepp (simplePParamsSpec @fn @era)

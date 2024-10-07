@@ -24,18 +24,14 @@
 --   idea of whats well formed.
 module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs where
 
-import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))
 import Cardano.Ledger.Api
-import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.CertState
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules
-import Cardano.Ledger.Core (Value)
-import Cardano.Ledger.Credential (Credential, StakeReference (..))
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..), calculatePoolDistr)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash ()
@@ -49,7 +45,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   updateStakeDistribution,
  )
-import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.UMap (CompactForm (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -60,92 +55,50 @@ import qualified Data.Map as Map
 import Data.Typeable
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
-import Data.Word (Word64)
 import System.IO.Unsafe (unsafePerformIO)
-import Test.Cardano.Ledger.Constrained.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway.Gov (govProposalsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (EraSpecDeleg (..), EraSpecTxOut (..))
 import Test.QuickCheck (generate)
 
 -- ===========================================================
 
--- | The class (LedgerEra era) supports Era parametric Specs.
---   It contains methods that navigate the differences in types parameterized
---   by 'era' that are embeded as type Families in types that appear in the
---   Cardano Ledger Types. It is these components that change from one Era to another.
---   and the LedgerEra class has methods that asbtract over those changes.
---
---   The class (EraPP era) (Defined in ‘Test.Cardano.Ledger.Constrained.Conway.SimplePParams’)
---   supports specifications over the Era parametric (PParams era) in every era.
---   The method 'correctTxOut' supports specifcations over type Family TxOut in every era.
---   The method  'govStateSpec' supports specifcations over type Family GovState in every era.
---   And additional ones for phased out Type Families like InstantaneousRewards, StashedAVVMAddresses, and Ptrs
---   Instances for every Era are supplied.
+-- | The class (EraSpecLedger era) supports Era parametric Specs over types that appear in the Cardano Ledger.223
+--   It uses methods (see Test.Cardano.Ledger.Constrained.Conway.ParametricSpec)
+--   that navigate the differences in types parameterized by 'era' that are
+--   embeded as type Families in types that appear in the Cardano Ledger Types.
+--   It is these components that change from one Era to another.
+--   and the EraSpecLedger class has methods that asbtract over those changes.
 class
-  ( HasSpec fn (TxOut era)
-  , IsNormalType (TxOut era)
+  ( EraSpecTxOut era fn
   , HasSpec fn (GovState era)
-  , HasSpec fn (StashedAVVMAddresses era)
-  , EraTxOut era
-  , IsConwayUniv fn
-  , EraPP era
   ) =>
-  LedgerEra era fn
+  EraSpecLedger era fn
   where
-  irewardSpec :: Term fn AccountState -> Specification fn (InstantaneousRewards (EraCrypto era))
-  hasPtrs :: proxy era -> Term fn Bool
-  correctTxOut ::
-    Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
-    Term fn (TxOut era) ->
-    Pred fn
   govStateSpec :: PParams era -> Specification fn (GovState era)
   newEpochStateSpec :: PParams era -> Specification fn (NewEpochState era)
 
-instance IsConwayUniv fn => LedgerEra Shelley fn where
-  irewardSpec = instantaneousRewardsSpec
-  hasPtrs _proxy = lit True
-  correctTxOut = betterTxOutShelley
+instance IsConwayUniv fn => EraSpecLedger Shelley fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUTxO
 
-instance IsConwayUniv fn => LedgerEra Allegra fn where
-  irewardSpec = instantaneousRewardsSpec
-  hasPtrs _proxy = lit True
-  correctTxOut = betterTxOutShelley
+instance IsConwayUniv fn => EraSpecLedger Allegra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => LedgerEra Mary fn where
-  irewardSpec = instantaneousRewardsSpec
-  hasPtrs _proxy = lit True
-  correctTxOut = betterTxOutMary
+instance IsConwayUniv fn => EraSpecLedger Mary fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => LedgerEra Alonzo fn where
-  irewardSpec = instantaneousRewardsSpec
-  hasPtrs _proxy = lit True
-  correctTxOut = betterTxOutAlonzo
+instance IsConwayUniv fn => EraSpecLedger Alonzo fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => LedgerEra Babbage fn where
-  irewardSpec = instantaneousRewardsSpec
-  hasPtrs _proxy = lit True
-  correctTxOut = betterTxOutBabbage
+instance IsConwayUniv fn => EraSpecLedger Babbage fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => LedgerEra Conway fn where
-  irewardSpec _ = constrained $ \ [var|irewards|] ->
-    match irewards $ \ [var|reserves|] [var|treasury|] [var|deltaRes|] [var|deltaTreas|] ->
-      [ reserves ==. lit Map.empty
-      , treasury ==. lit Map.empty
-      , deltaRes ==. lit (DeltaCoin 0)
-      , deltaTreas ==. lit (DeltaCoin 0)
-      ]
-  hasPtrs _proxy = lit False
-  correctTxOut = betterTxOutBabbage
+instance IsConwayUniv fn => EraSpecLedger Conway fn where
   govStateSpec pp = conwayGovStateSpec pp (testGovEnv pp)
   newEpochStateSpec = newEpochStateSpecUnit
 
@@ -159,125 +112,8 @@ testGovEnv pp = unsafePerformIO $ generate $ do
   env <- genFromSpec @ConwayFn @(GovEnv Conway) (govEnvSpec @ConwayFn pp)
   pure env
 
--- ======================================================================================
--- TxOut and Value are two of the type families, whose instance changes from Era to Era.
--- We need SimpleRep for each possible TxOut (Shelley,Mary,Alonzo,Babbage)
--- We also need to define the method 'correctTxOut' for every 'LedgerEra' instance
--- These instances are tricky, since there is a unique combination of Value and TxOut in
--- each one. Observe the type equalites (like (Value era ~ Coin)), and the inputs
--- (like ShelleyTxOut, AlonzoTxOut, BabbageTxOut), that make each function applicable
--- to only specific eras.
--- ======================================================================================
-
-betterTxOutShelley ::
-  (EraTxOut era, Value era ~ Coin, IsConwayUniv fn) =>
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
-  Term fn (ShelleyTxOut era) ->
-  Pred fn
-betterTxOutShelley delegs txOut =
-  match txOut $ \ [var|addr|] [var|val|] ->
-    [ match val $ \ [var|c|] -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
-    , (caseOn addr)
-        ( branch $ \ [var|network|] _ [var|stakeref|] ->
-            [ assert $ network ==. lit Testnet
-            , satisfies stakeref (delegatedStakeReference delegs)
-            ]
-        )
-        ( branch $ \bootstrapAddr ->
-            match bootstrapAddr $ \_ [var|nm|] _ ->
-              (caseOn nm)
-                (branch $ \_ -> False)
-                (branch $ \_ -> True)
-        )
-    ]
-
-betterTxOutMary ::
-  (EraTxOut era, Value era ~ MaryValue (EraCrypto era), IsConwayUniv fn) =>
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
-  Term fn (ShelleyTxOut era) ->
-  Pred fn
-betterTxOutMary delegs txOut =
-  match txOut $ \ [var|addr|] [var|val|] ->
-    [ match val $ \ [var|c|] -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
-    , (caseOn addr)
-        ( branch $ \ [var|network|] _ [var|stakeref|] ->
-            [ assert $ network ==. lit Testnet
-            , satisfies stakeref (delegatedStakeReference delegs)
-            ]
-        )
-        ( branch $ \bootstrapAddr ->
-            match bootstrapAddr $ \_ [var|nm|] _ ->
-              (caseOn nm)
-                (branch $ \_ -> False)
-                (branch $ \_ -> True)
-        )
-    ]
-
-betterTxOutAlonzo ::
-  (AlonzoEraTxOut era, Value era ~ MaryValue (EraCrypto era), IsConwayUniv fn) =>
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
-  Term fn (AlonzoTxOut era) ->
-  Pred fn
-betterTxOutAlonzo delegs txOut =
-  match txOut $ \ [var|addr|] [var|val|] _ ->
-    [ match val $ \ [var|c|] -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
-    , (caseOn addr)
-        ( branch $ \ [var|network|] _ [var|stakeref|] ->
-            [ assert $ network ==. lit Testnet
-            , satisfies stakeref (delegatedStakeReference delegs)
-            ]
-        )
-        ( branch $ \bootstrapAddr ->
-            match bootstrapAddr $ \_ _nm _ -> False
-            {-
-            (caseOn nm)
-              (branch $ \_ -> False)
-              (branch $ \_ -> True) -}
-        )
-    ]
-
-betterTxOutBabbage ::
-  ( EraTxOut era
-  , Value era ~ MaryValue (EraCrypto era)
-  , IsNormalType (Script era)
-  , HasSpec fn (Script era)
-  , IsConwayUniv fn
-  ) =>
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
-  Term fn (BabbageTxOut era) ->
-  Pred fn
-betterTxOutBabbage delegs txOut =
-  match txOut $ \ [var|addr|] [var|val|] _ _ ->
-    [ match val $ \c -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
-    , (caseOn addr)
-        ( branch $ \ [var|network|] _ [var|stakeref|] ->
-            [ assert $ network ==. lit Testnet
-            , satisfies stakeref (delegatedStakeReference delegs)
-            ]
-        )
-        ( branch $ \bootstrapAddr ->
-            match bootstrapAddr $ \_ [var|nm|] _ ->
-              (caseOn nm)
-                (branch $ \_ -> False)
-                (branch $ \_ -> True)
-        )
-    ]
-
--- | Generate random Stake references that have a high probability of being delegated.
-delegatedStakeReference ::
-  (IsConwayUniv fn, Crypto c) =>
-  Term fn (Map (Credential 'Staking c) (KeyHash 'StakePool c)) ->
-  Specification fn (StakeReference c)
-delegatedStakeReference delegs =
-  constrained $ \ [var|ref|] ->
-    caseOn
-      ref
-      (branchW 9 $ \ [var|base|] -> member_ base (dom_ delegs))
-      (branchW 0 $ \_ptr -> False)
-      (branchW 1 $ \_null -> True) -- just an occaisional NullRef
-
 -- ================================================================================
--- Specifications for types that appear in the LedgerEra Ledger
+-- Specifications for types that appear in the EraSpecLedger Ledger
 -- the functions  exampleXX :: IO () (or IO Bool) visualize a test run. They are crcuial
 -- to eyeballing that the spes are working as expected. These are a tool that we expect
 -- users writing their own specs can emulate.
@@ -326,30 +162,9 @@ protVersCanfollow =
   constrained $ \ [var|pair|] ->
     match pair $ \ [var|protver1|] [var|protver2|] -> canFollow protver1 protver2
 
-instantaneousRewardsSpec ::
-  forall c fn.
-  (IsConwayUniv fn, Crypto c) =>
-  Term fn AccountState ->
-  Specification fn (InstantaneousRewards c)
-instantaneousRewardsSpec acct = constrained $ \ [var| irewards |] ->
-  match acct $ \ [var| acctRes |] [var| acctTreas |] ->
-    match irewards $ \ [var| reserves |] [var| treasury |] [var| deltaRes |] [var| deltaTreas |] ->
-      [ dependsOn acctRes reserves
-      , dependsOn acctRes deltaRes
-      , dependsOn acctTreas treasury
-      , dependsOn acctTreas deltaTreas
-      , assertExplain (pure "deltaTreausry and deltaReserves sum to 0") $ negate deltaRes ==. deltaTreas
-      , forAll (rng_ reserves) (\ [var| x |] -> x >=. (lit (Coin 0)))
-      , forAll (rng_ treasury) (\ [var| y |] -> y >=. (lit (Coin 0)))
-      , assert $ (toDelta_ (foldMap_ id (rng_ reserves))) - deltaRes <=. toDelta_ acctRes
-      , assert $ (toDelta_ (foldMap_ id (rng_ treasury))) - deltaTreas <=. toDelta_ acctTreas
-      ]
-
 -- ========================================================================
 -- The CertState specs
 -- ========================================================================
-
-instance IsConwayUniv fn => NumLike fn EpochNo
 
 drepStateSpec :: (IsConwayUniv fn, Crypto c) => Term fn EpochNo -> Specification fn (DRepState c)
 drepStateSpec epoch = constrained $ \ [var|drepstate|] ->
@@ -371,7 +186,7 @@ vstateSpec epoch = constrained $ \ [var|vstate|] ->
 
 dstateSpec ::
   forall era fn.
-  LedgerEra era fn =>
+  EraSpecLedger era fn =>
   Term fn AccountState ->
   Term fn (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))) ->
   Term fn (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era))) ->
@@ -397,8 +212,10 @@ dstateSpec acct poolreg dreps = constrained $ \ [var| ds |] ->
         whenTrue (hasPtrs (Proxy @era)) (reify ptrmap id (\ [var|pm|] -> domEqualRng pm rdMap))
       , whenTrue (not_ (hasPtrs (Proxy @era))) (assert $ ptrmap ==. lit Map.empty)
       , satisfies irewards (irewardSpec @era acct)
-      , satisfies futureGenDelegs (hasSize (rangeSize 0 3))
-      , match genDelegs $ \ [var|gd|] -> satisfies gd (hasSize (rangeSize 1 4)) -- Strip off the newtype constructor
+      , satisfies
+          futureGenDelegs
+          (hasSize (if hasGenDelegs @era [] then (rangeSize 0 3) else (rangeSize 0 0)))
+      , match genDelegs $ \ [var|gd|] -> satisfies gd (hasSize (if hasGenDelegs @era [] then (rangeSize 1 4) else (rangeSize 0 0)))
       ]
 
 epochNoSpec :: IsConwayUniv fn => Specification fn EpochNo
@@ -437,7 +254,7 @@ accountStateSpec =
 
 certStateSpec ::
   forall era fn.
-  LedgerEra era fn =>
+  EraSpecLedger era fn =>
   Term fn AccountState ->
   Term fn EpochNo ->
   Specification fn (CertState era)
@@ -464,7 +281,7 @@ certStateSpec acct epoch = constrained $ \ [var|certState|] ->
 
 utxoSpec ::
   forall era fn.
-  LedgerEra era fn =>
+  EraSpecLedger era fn =>
   Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
   Specification fn (UTxO era)
 utxoSpec delegs = constrained $ \ [var|utxo|] ->
@@ -474,7 +291,7 @@ utxoSpec delegs = constrained $ \ [var|utxo|] ->
 
 utxoStateSpec ::
   forall era fn.
-  LedgerEra era fn =>
+  EraSpecLedger era fn =>
   PParams era ->
   Term fn (CertState era) ->
   Specification fn (UTxOState era)
@@ -503,7 +320,7 @@ getDelegs cs = UMap.sPoolMap (dsUnified (certDState cs))
 -- ====================================================================
 
 shelleyGovStateSpec ::
-  forall era fn. LedgerEra era fn => PParams era -> Specification fn (ShelleyGovState era)
+  forall era fn. EraSpecLedger era fn => PParams era -> Specification fn (ShelleyGovState era)
 shelleyGovStateSpec pp =
   constrained $ \ [var|shellGovState|] ->
     match shellGovState $ \ [var|curpro|] [var|futpro|] [var|curpp|] _prevpp _futpp ->
@@ -523,7 +340,7 @@ govEnvSpec pp = constrained $ \ [var|govEnv|] ->
 
 conwayGovStateSpec ::
   forall fn.
-  LedgerEra Conway fn =>
+  EraSpecLedger Conway fn =>
   PParams Conway ->
   GovEnv Conway ->
   Specification fn (ConwayGovState Conway)
@@ -540,7 +357,7 @@ conwayGovStateSpec pp govenv =
 
 ledgerStateSpec ::
   forall era fn.
-  LedgerEra era fn =>
+  EraSpecLedger era fn =>
   PParams era ->
   Term fn AccountState ->
   Term fn EpochNo ->
@@ -595,7 +412,7 @@ getMarkSnapShot ls = SnapShot @(EraCrypto era) (Stake markStake) markDelegations
 
 epochStateSpec ::
   forall era fn.
-  LedgerEra era fn =>
+  EraSpecLedger era fn =>
   PParams era ->
   Term fn EpochNo ->
   Specification fn (EpochState era)
@@ -613,10 +430,10 @@ getPoolDistr :: forall era. EpochState era -> PoolDistr (EraCrypto era)
 getPoolDistr es = ssStakeMarkPoolDistr (esSnapshots es)
 
 -- | Used for Eras where StashedAVVMAddresses era ~ UTxO era (Shelley)
--- The 'newEpochStateSpec' method (of (LedgerEra era fn) class) in the Shelley instance
+-- The 'newEpochStateSpec' method (of (EraSpecLedger era fn) class) in the Shelley instance
 newEpochStateSpecUTxO ::
   forall era fn.
-  (LedgerEra era fn, StashedAVVMAddresses era ~ UTxO era) =>
+  (EraSpecLedger era fn, StashedAVVMAddresses era ~ UTxO era) =>
   PParams era ->
   Specification fn (NewEpochState era)
 newEpochStateSpecUTxO pp =
@@ -638,10 +455,10 @@ newEpochStateSpecUTxO pp =
     )
 
 -- | Used for Eras where StashedAVVMAddresses era ~ () (Allegra,Mary,Alonzo,Babbage,Conway)
--- The 'newEpochStateSpec' method (of (LedgerEra era fn) class) in the instances for (Allegra,Mary,Alonzo,Babbage,Conway)
+-- The 'newEpochStateSpec' method (of (EraSpecLedger era fn) class) in the instances for (Allegra,Mary,Alonzo,Babbage,Conway)
 newEpochStateSpecUnit ::
   forall era fn.
-  (LedgerEra era fn, StashedAVVMAddresses era ~ ()) =>
+  (EraSpecLedger era fn, StashedAVVMAddresses era ~ ()) =>
   PParams era ->
   Specification fn (NewEpochState era)
 newEpochStateSpecUnit pp =

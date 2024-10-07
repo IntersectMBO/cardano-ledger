@@ -179,7 +179,7 @@ proposalsSpec geEpoch gePPolicy geCertState =
 allGASInTree ::
   (IsConwayUniv fn, IsPred p fn) =>
   (Term fn (GovActionState (ConwayEra StandardCrypto)) -> p) ->
-  Specification fn (ProposalTree)
+  Specification fn (ProposalTree (ConwayEra StandardCrypto))
 allGASInTree k = constrained $ \ [var|proposalTree|] ->
   forAll (snd_ proposalTree) $ \ [var|subtree|] ->
     forAll' subtree $ \ [var|gas|] _ ->
@@ -187,7 +187,7 @@ allGASInTree k = constrained $ \ [var|proposalTree|] ->
 
 allGASAndChildInTree ::
   (IsConwayUniv fn, IsPred p fn) =>
-  Term fn ProposalTree ->
+  Term fn (ProposalTree (ConwayEra StandardCrypto)) ->
   ( Term fn (GovActionState (ConwayEra StandardCrypto)) ->
     Term fn (GovActionState (ConwayEra StandardCrypto)) ->
     p
@@ -201,7 +201,7 @@ allGASAndChildInTree t k =
 
 wellFormedChildren ::
   IsConwayUniv fn =>
-  Term fn ProposalTree ->
+  Term fn (ProposalTree (ConwayEra StandardCrypto)) ->
   Pred fn
 wellFormedChildren rootAndTrees =
   match rootAndTrees $ \root trees ->
