@@ -383,7 +383,11 @@ dstateSpec acct poolreg dreps = constrained $ \ [var| ds |] ->
       , assertExplain (pure "The delegations delegate to actual pools") $
           forAll (rng_ sPoolMap) (\ [var|keyhash|] -> member_ keyhash (dom_ poolreg))
       , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
-      , forAll' dreps $
+      , -- NOTE: Consider if this assertion (and the `dependsOn` check below it) can be removed.
+        -- Commit `21215b03a - Add delegations field to the DRep state` added a TODO
+        -- to add a constraint that delegs are in the UMap. The below does that but it wasn't
+        -- the cause for the conformance test failures.
+        forAll' dreps $
           \_ dRepState -> match dRepState $ \_ _ _ delegs ->
             assertExplain
               (pure "Delegs are present in the UMap")
