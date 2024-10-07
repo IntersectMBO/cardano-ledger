@@ -219,6 +219,8 @@ instance fn ~ BaseFn => QC.Arbitrary (TestableFn fn) where
       , TestableFn $ domFn @fn @Int @Int
       , TestableFn $ fromListFn @fn @Int
       , TestableFn $ lookupFn @fn @Int @Int
+      , TestableFn $ singletonListFn @fn @Int
+      , TestableFn $ appendFn @fn @Int
       ]
 
 prop_mapSpec ::
