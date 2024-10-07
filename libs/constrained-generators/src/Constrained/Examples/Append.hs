@@ -26,10 +26,10 @@ even :: Specification BaseFn Int
 even = MemberSpec [0, 2, 4, 6, 8, 10]
 
 endsWith :: [Int] -> Specification BaseFn [Int]
-endsWith suffix = TypeSpec (ListSpec Nothing [] TrueSpec TrueSpec NoFold (Split Nothing (Just suffix))) []
+endsWith suffix = TypeSpec (ListSpec Nothing [] TrueSpec TrueSpec NoFold (Split [] suffix)) []
 
 beginsWith :: [Int] -> Specification BaseFn [Int]
-beginsWith prefix = TypeSpec (ListSpec Nothing [] TrueSpec TrueSpec NoFold (Split (Just prefix) Nothing)) []
+beginsWith prefix = TypeSpec (ListSpec Nothing [] TrueSpec TrueSpec NoFold (Split prefix [])) []
 
 -- | Run an example
 go :: forall a. HasSpec BaseFn a => Specification BaseFn a -> IO a
@@ -171,7 +171,7 @@ appPrefix10 = constrained $
   \ [var|y|] ->
     [ satisfies
         y
-        (TypeSpec (ListSpec Nothing [] (MemberSpec [5]) TrueSpec NoFold (Split Nothing (Just [1, 2]))) [])
+        (TypeSpec (ListSpec Nothing [] (MemberSpec [5]) TrueSpec NoFold (Split [] [1, 2])) [])
     ]
 
 -- | test that prefix and size interact to constrain the size of the suffix in the HOLE.
@@ -180,5 +180,5 @@ appSuffix11 = constrained $
   \ [var|y|] ->
     [ satisfies
         y
-        (TypeSpec (ListSpec Nothing [] (MemberSpec [5]) TrueSpec NoFold (Split (Just [1, 2]) Nothing)) [])
+        (TypeSpec (ListSpec Nothing [] (MemberSpec [5]) TrueSpec NoFold (Split [1, 2] [])) [])
     ]

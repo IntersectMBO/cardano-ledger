@@ -317,7 +317,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           | NilCtx HOLE <- ctx
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
-                TypeSpec (ListSpec listHint must size elemspec foldspec (Split Nothing Nothing)) [] ->
+                TypeSpec (ListSpec listHint must size elemspec foldspec (Split [] [])) [] ->
                   typeSpec $
                     MapSpec
                       listHint

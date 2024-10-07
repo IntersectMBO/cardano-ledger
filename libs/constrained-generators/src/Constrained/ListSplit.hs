@@ -27,36 +27,32 @@ module Constrained.ListSplit where
 
 import Data.List (elemIndices, isPrefixOf, isSuffixOf)
 import Data.List.NonEmpty qualified as NE
-import Data.Maybe (mapMaybe, fromMaybe)
+import Data.Maybe (mapMaybe)
 import Prettyprinter
 import Test.QuickCheck
 
-data ListSplit a = Split (Maybe [a]) (Maybe [a]) deriving (Eq, Show)
+data ListSplit a = Split [a] [a] deriving (Eq, Show)
 
 instance Show a => Pretty (ListSplit a) where
-  pretty (Split Nothing Nothing) = "noSplit"
-  pretty (Split Nothing (Just xs)) = parens $ sep ["Split", "...", "++", viaShow xs]
-  pretty (Split (Just ys) (Just xs)) = parens $ sep ["Split", viaShow ys, "++", viaShow xs]
-  pretty (Split (Just ys) Nothing) = parens $ sep ["Split", viaShow ys, "++", "..."]
+  pretty (Split [] []) = "noSplit"
+  pretty (Split xs ys) = parens $ sep ["Split", viaShow xs, viaShow ys]
 
 noSplit :: ListSplit a
-noSplit = Split Nothing Nothing
+noSplit = Split [] []
 
 splitContents :: ListSplit a -> [a]
-splitContents (Split Nothing Nothing) = []
-splitContents (Split (Just xs) (Just ys)) = xs ++ ys
-splitContents (Split Nothing (Just ys)) = ys
-splitContents (Split (Just xs) Nothing) = xs
+splitContents (Split xs ys) = xs ++ ys
 
-genFromListSplit :: Arbitrary a => ListSplit a -> Gen [a]
-genFromListSplit (Split Nothing Nothing) = vectorOf 4 arbitrary
-genFromListSplit (Split (Just xs) (Just ys)) = pure (xs ++ ys)
-genFromListSplit (Split Nothing (Just ys)) = (++ ys) <$> arbitrary
-genFromListSplit (Split (Just ys) Nothing) = (ys ++) <$> arbitrary
+genFromListSplit :: (Arbitrary a, Eq a) => ListSplit a -> Gen [a]
+genFromListSplit (Split xs ys) =
+  -- TODO: this misses things like [1,2,3,3] [3,3,1] -> [1,2,3,3,3,1]?
+  frequency [ (4, (xs ++) . (++ ys) <$> arbitrary)
+            , (1, let (pre, join, post) = overlap xs ys in pure (pre ++ join ++ post))
+            ]
 
 conformSplit :: Eq a => [a] -> ListSplit a -> Bool
-conformSplit xs (Split mp ms) =
-  maybe True (`isPrefixOf` xs) mp && maybe True (`isSuffixOf` xs) ms
+conformSplit xs (Split p s) =
+  p `isPrefixOf` xs && s `isSuffixOf` xs
 
 prop_genFromListSplit_sound :: Property
 prop_genFromListSplit_sound =
@@ -67,65 +63,45 @@ prop_genFromListSplit_sound =
 prop_merge_sound :: Property
 prop_merge_sound =
   withMaxSuccess 10000 $
-  forAll arbitrary $ \ (pf1 :: ListSplit Int) ->
-  forAll arbitrary $ \ pf2 ->
+  forAllShrink arbitrary shrink $ \ (pf1 :: ListSplit Int) ->
+  forAllShrink arbitrary shrink $ \ pf2 ->
   case merge pf1 pf2 of
     Left _ -> discard
-    Right pf3 -> forAll (genFromListSplit pf3) $ \ x ->
-        counterexample (unlines [show pf1, show pf2, show pf3, show x]) $
+    Right pf3 -> counterexample (show pf3) $
+        forAll (genFromListSplit pf3) $ \ x ->
           classify (nullListSplit pf1) "null pf1" $
           classify (nullListSplit pf2) "null pf2" $
           classify (nullListSplit pf3) "null pf3" $
           conformSplit x pf1 && conformSplit x pf2 && conformSplit x pf3
 
 nullListSplit :: ListSplit a -> Bool
-nullListSplit (Split p s) = null $ fromMaybe [] p ++ fromMaybe [] s
+nullListSplit (Split p s) = null p && null s
 
-genSmall :: Arbitrary a => Gen (Maybe [a])
-genSmall =
-  frequency
-    [
-      ( 3
-      , Just <$> do
-          n <- choose (1, 5)
-          vectorOf n (resize 5 arbitrary)
-      )
-    , (1, pure Nothing)
-    ]
+genSmall :: Arbitrary a => Gen [a]
+genSmall = do
+  n <- choose (0, 5)
+  vectorOf n (resize 5 arbitrary)
 
 instance Arbitrary a => Arbitrary (ListSplit a) where
   arbitrary = Split <$> genSmall <*> genSmall
 
+  shrink (Split xs ys) = map (uncurry Split) (shrink (xs, ys))
+
 -- | if (merge x y) == Right z, then anything that conforms to z, should also conform to both x and y
 merge :: (Eq a, Show a) => ListSplit a -> ListSplit a -> Either (NE.NonEmpty String) (ListSplit a)
-merge (Split Nothing Nothing) x = Right x
-merge x (Split Nothing Nothing) = Right x
-merge (Split (Just ps) Nothing) (Split (Just xs) Nothing)
-  | isPrefixOf ps xs = Right (Split (Just xs) Nothing)
-  | isPrefixOf xs ps = Right (Split (Just ps) Nothing)
-  | True = Left $ NE.fromList ["Non matching prefixes in merge" ++ show ps ++ " " ++ show xs]
-merge (Split (Just ps) Nothing) (Split Nothing (Just ys)) = Right (mergeOverlap ps ys)
-merge p@(Split (Just ps) Nothing) q@(Split (Just xs) (Just ys))
-  | isPrefixOf ps (xs ++ ys) = Right q
-  | True = Left $ NE.fromList ["Non matching ListSplit in merge", "  " ++ show p, " " ++ show q]
-merge (Split Nothing (Just ss)) (Split (Just xs) Nothing) = Right (mergeOverlap xs ss)
-merge (Split Nothing (Just ss)) (Split Nothing (Just ys))
-  | isSuffixOf ss ys = Right (Split Nothing (Just ys))
-  | isSuffixOf ys ss = Right (Split Nothing (Just ss))
-  | True = Left $ NE.fromList ["Non matching suffixes in merge" ++ show ss ++ " " ++ show ys]
-merge p@(Split Nothing (Just ss)) q@(Split (Just xs) (Just ys))
-  | isSuffixOf ss (xs ++ ys) = Right q
-  | True = Left $ NE.fromList ["Non matching ListSplit in merge", "  " ++ show p, " " ++ show q]
-merge p@(Split (Just ps) (Just ss)) (Split q@(Just xs) Nothing)
-  | isPrefixOf xs (ps ++ ss) = Right p
-  | True = Left $ NE.fromList ["Non ListSplit in merge", "  " ++ show p, " " ++ show q]
-merge p@(Split (Just ps) (Just ss)) q@(Split Nothing (Just ys))
-  | isSuffixOf ys (ps ++ ss) = Right p
-  | True = Left $ NE.fromList ["Non ListSplit in merge", "  " ++ show p, " " ++ show q]
-merge p@(Split (Just ps) (Just ss)) q@(Split (Just xs) (Just ys)) =
-  if (ps ++ ss) == (xs ++ ys)
-    then Right p
-    else Left $ NE.fromList ["Two rigid ListSplits are inconsistent.", "  " ++ show p, "  " ++ show q]
+merge (Split p s) (Split p' s') = do
+  p'' <- prefix
+  s'' <- suffix
+  return $ Split p'' s''
+  where
+    prefix
+      | p `isPrefixOf` p' = return p'
+      | p' `isPrefixOf` p = return p
+      | otherwise         = Left $ pure $ "Incompatible prefixes: " ++ show p ++ " " ++ show p'
+    suffix
+      | s `isSuffixOf` s' = return s'
+      | s' `isSuffixOf` s = return s
+      | otherwise         = Left $ pure $ "Incompatible suffixes: " ++ show s ++ " " ++ show s'
 
 -- | "abcde" "defghi" have an over lap of "de", so return ("abc","de","fgi")
 --   "abc" "xyz" do Not have an overlap so return ("abc","","xyz")
@@ -139,11 +115,6 @@ overlap xs (y : ys) = first (reverse (elemIndices y xs)) xs (y : ys)
        in if isPrefixOf after suffix
             then (before, after, drop (length after) suffix)
             else first ns prefix suffix
-
-mergeOverlap :: Eq a => [a] -> [a] -> ListSplit a
-mergeOverlap xs ys = Split (Just (before ++ lap)) (Just after)
-  where
-    (before, lap, after) = overlap xs ys
 
 stripPrefix :: Eq a => [a] -> [a] -> Maybe [a]
 stripPrefix [] ys = Just ys

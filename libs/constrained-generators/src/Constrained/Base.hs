@@ -3884,12 +3884,7 @@ instance HasSpec fn a => HasSpec fn [a] where
   genFromTypeSpec (ListSpec _ must _ elemS _ split)
     | any (not . (`conformsToSpec` elemS)) (must ++ splitContents split) =
         genError1 "genTypeSpecSpec @ListSpec: (must set) or (split contents) do not conform to elemS"
-  genFromTypeSpec (ListSpec _ must size _ NoFold (Split (Just xs) (Just ys)))
-    | not (conformsToSpec (sizeOf (xs ++ ys)) size) = genError1 "Size and split don't agree"
-    | not (all (`elem` (xs ++ ys)) must) =
-        genError1 "Some elements in the must set are not in the split"
-    | True = pure (xs ++ ys) -- TODO: this is not right - it's too constrained!
-  genFromTypeSpec (ListSpec hint must size elemS NoFold (Split (Just xs) Nothing)) = do
+  genFromTypeSpec (ListSpec hint must size elemS NoFold (Split xs@(_:_) [])) = do
     let residual =
           ListSpec
             ((+ negate n) <$> hint)
@@ -3904,7 +3899,7 @@ instance HasSpec fn a => HasSpec fn [a] where
           )
     where
       n = sizeOf xs
-  genFromTypeSpec (ListSpec hint must size elemS NoFold (Split Nothing (Just xs))) = do
+  genFromTypeSpec (ListSpec hint must size elemS NoFold (Split [] xs@(_:_))) = do
     let residual =
           ListSpec
             ((+ negate n) <$> hint)
@@ -3919,14 +3914,14 @@ instance HasSpec fn a => HasSpec fn [a] where
           )
     where
       n = sizeOf xs
-  genFromTypeSpec (ListSpec msz must TrueSpec elemS NoFold (Split Nothing Nothing)) = do
+  genFromTypeSpec (ListSpec msz must TrueSpec elemS NoFold (Split [] [])) = do
     lst <- case msz of
       Nothing -> listOfT $ genFromSpecT elemS
       Just szHint -> do
         sz <- genFromSizeSpec (leqSpec @fn szHint)
         listOfUntilLenT (genFromSpecT elemS) (fromIntegral sz) (const True)
     pureGen $ shuffle (must ++ lst)
-  genFromTypeSpec (ListSpec msz must szSpec elemS NoFold (Split Nothing Nothing)) = do
+  genFromTypeSpec (ListSpec msz must szSpec elemS NoFold (Split [] [])) = do
     let hintsize = maybe TrueSpec (leqSpec . max 0) msz
     let mustsize = geqSpec @fn (sizeOf must)
     sz0 <-
@@ -3946,10 +3941,12 @@ instance HasSpec fn a => HasSpec fn [a] where
         sz
         ((`conformsToSpec` szSpec) . (+ sizeOf must) . fromIntegral)
     pureGen $ shuffle (must ++ lst)
-  genFromTypeSpec (ListSpec msz must size elemS (FoldSpec f foldS) (Split Nothing Nothing)) = do
+  genFromTypeSpec (ListSpec msz must size elemS (FoldSpec f foldS) (Split [] [])) = do
     genFromFold must (size <> maybe TrueSpec leqSpec msz) elemS f foldS
   genFromTypeSpec (ListSpec _ _ _ _ f@(FoldSpec _ _) split) =
     genError $ NE.fromList ["Can't mix FoldSpec and ListSplit in one ListSpec", show f, show split]
+  genFromTypeSpec (ListSpec _ _ _ _ _ split) =
+    genError $ NE.fromList ["Bad split spec: ", show split]
 
   shrinkWithTypeSpec (ListSpec _ _ _ es _ _) as =
     shrinkList (shrinkWithSpec es) as
@@ -3984,7 +3981,7 @@ instance HasSpec fn a => HasSpec fn [a] where
                     $ \prefix ->
                       [ assert $ x ==. append_ prefix (lit suffix)
                       , satisfies (sizeOf_ prefix) (subSpecInt size (equalSpec (sizeOf suffix)))
-                      ]) msuf <>
+                      ]) (if null msuf then Nothing else Just msuf) <>
                 maybe TruePred
                   (\ prefix ->
                     exists
@@ -4000,7 +3997,7 @@ instance HasSpec fn a => HasSpec fn [a] where
                         [ assert $ x ==. append_ (lit prefix) suffix
                         , satisfies (sizeOf_ suffix) (subSpecInt size (equalSpec (sizeOf prefix)))
                         ]
-                  ) mpre
+                  ) (if null mpre then Nothing else Just mpre)
          )
 
 instance HasSpec fn a => HasGenHint fn [a] where
@@ -4600,34 +4597,34 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
   propagateSpecFun SingleFn (NilCtx HOLE) spec =
     let singletons = filter ((1 ==) . length)
      in case spec of
-          TypeSpec (ListSpec _ [a] size es NoFold (Split Nothing Nothing)) cant
+          TypeSpec (ListSpec _ [a] size es NoFold (Split [] [])) cant
             | (1 `conformsToSpec` size)
                 && (a `conformsToSpec` es)
                 && ([a] `notElem` cant) ->
                 equalSpec a
-          TypeSpec (ListSpec _ [] size es NoFold (Split (Just [a]) Nothing)) cant
+          TypeSpec (ListSpec _ [] size es NoFold (Split [a] [])) cant
             | (1 `conformsToSpec` size)
                 && (a `conformsToSpec` es)
                 && ([a] `notElem` cant) ->
                 equalSpec a
-          TypeSpec (ListSpec _ [] size es NoFold (Split Nothing (Just [a]))) cant
+          TypeSpec (ListSpec _ [] size es NoFold (Split [] [a])) cant
             | (1 `conformsToSpec` size)
                 && (a `conformsToSpec` es)
                 && ([a] `notElem` cant) ->
                 equalSpec a
-          TypeSpec (ListSpec _ [] _ es NoFold (Split Nothing Nothing)) cant ->
+          TypeSpec (ListSpec _ [] _ es NoFold (Split [] [])) cant ->
             es <> notMemberSpec (fold $ singletons cant)
           MemberSpec es -> MemberSpec (fold $ singletons es)
           _ -> ErrorSpec (pure "propagateSpecFun Singleton where spec must have more than 1 element")
-  propagateSpecFun AppendFn (HOLE :? (Value ss) :> Nil) spec | null ss = spec
+  propagateSpecFun AppendFn (HOLE :? (Value []) :> Nil) spec = spec
   propagateSpecFun AppendFn (HOLE :? (Value (ss :: [a])) :> Nil) spec =
     explainSpec (NE.fromList ["Solving for (append_ hole suffix)", show spec]) $
       case spec of
-        TrueSpec -> TypeSpec (ListSpec Nothing [] TrueSpec TrueSpec NoFold noSplit) []
+        TrueSpec -> TrueSpec
         TypeSpec (ListSpec hint must size es NoFold split) cant
           | not (all (`conformsToSpec` es) ss) ->
               ErrorSpec (NE.fromList ["Not all elements in suffix conform to", show es])
-          | True ->
+          | otherwise ->
               let n = sizeOf ss
                   size' = size <> geqSpec n
                   hint' = ((+ (negate n)) <$> hint)
@@ -4636,9 +4633,9 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
                in ( case (size', split) of
                       (ErrorSpec _, _) ->
                         ErrorSpec (pure ("length of suffix " ++ show ss ++ ", is incompatible with (" ++ show size ++ ")"))
-                      (_, Split Nothing Nothing) ->
+                      (_, Split [] []) ->
                         TypeSpec (ListSpec hint' must' (adjust size' ss) es NoFold noSplit) (dropSuffix ss cant)
-                      (_, Split Nothing (Just suffix)) ->
+                      (_, Split [] suffix) ->
                         if ss == suffix
                           then TypeSpec (ListSpec hint' must' (adjust size' suffix) es NoFold noSplit) (dropSuffix ss cant)
                           else
@@ -4648,7 +4645,7 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
                                   , "is inconsistent with the Split suffix " ++ show suffix
                                   ]
                               )
-                      (_, Split (Just prefix) (Just suffix)) ->
+                      (_, Split prefix suffix) ->
                         if ss == suffix
                           then
                             if elem (prefix ++ suffix) cant
@@ -4661,8 +4658,6 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
                                   , "is inconsistent with the Split suffix " ++ show suffix
                                   ]
                               )
-                      (_, Split (Just prefix) Nothing) ->
-                        TypeSpec (ListSpec hint' must' (adjust size' prefix) es NoFold noSplit) (dropPrefix prefix cant)
                   )
         MemberSpec xs -> explainSpec (pure (show spec)) $
           case dropSuffix ss xs of
@@ -4686,9 +4681,9 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
                in case (size', split) of
                     (ErrorSpec _, _) ->
                       ErrorSpec (pure ("length of prefix " ++ show ss ++ ", is incompatible with (" ++ show size' ++ ")"))
-                    (_, Split Nothing Nothing) ->
+                    (_, Split [] []) ->
                       TypeSpec (ListSpec hint' must' (adjust size' ss) es NoFold noSplit) (dropPrefix ss cant)
-                    (_, Split (Just prefix) Nothing) ->
+                    (_, Split prefix []) ->
                       if ss == prefix
                         then
                           TypeSpec
@@ -4701,7 +4696,7 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
                                 , "is inconsistent with the Split prefix " ++ show prefix
                                 ]
                             )
-                    (_, Split (Just prefix) (Just suffix)) ->
+                    (_, Split prefix suffix) ->
                       if ss == prefix
                         then
                           if elem (prefix ++ suffix) cant
@@ -4714,10 +4709,6 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
                                 , "is inconsistent with the Split prefix " ++ show prefix
                                 ]
                             )
-                    (_, Split Nothing (Just suffix)) ->
-                      TypeSpec
-                        (ListSpec hint' must' (adjust size' suffix) es NoFold noSplit)
-                        (dropSuffix suffix cant)
         MemberSpec xs -> explainSpec (pure (show spec)) $
           case dropPrefix ss xs of
             [] -> ErrorSpec (pure ("All Member Specs ruled out by prefix: " ++ show ss))
@@ -5513,10 +5504,10 @@ instance Sized [a] where
     sizespec
       <> geqSpec (sizeOf must)
       <> ( case split of
-            Split Nothing Nothing -> TrueSpec
-            Split Nothing (Just suffix) -> geqSpec (sizeOf suffix)
-            Split (Just prefix) Nothing -> geqSpec (sizeOf prefix)
-            Split (Just prefix) (Just suffix) -> geqSpec (sizeOf prefix + sizeOf suffix)
+            Split [] [] -> TrueSpec
+            Split [] suffix -> geqSpec (sizeOf suffix)
+            Split prefix [] -> geqSpec (sizeOf prefix)
+            Split prefix suffix -> geqSpec (sizeOf prefix + sizeOf suffix)
          )
 
 -- How to constrain the size of any type, with a Sized instance
