@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | Specs necessary to generate, environment, state, and signal
@@ -9,7 +11,6 @@ module Test.Cardano.Ledger.Constrained.Conway.Pool where
 import Cardano.Crypto.Hash.Class qualified as Hash
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
-import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import Cardano.Ledger.Shelley.API.Types
@@ -27,16 +28,18 @@ currentEpoch :: SlotNo -> EpochNo
 currentEpoch = runIdentity . EI.epochInfoEpoch (epochInfoPure testGlobals)
 
 poolEnvSpec ::
-  IsConwayUniv fn =>
-  Specification fn (PoolEnv (ConwayEra StandardCrypto))
+  forall fn era.
+  (EraSpecPParams era, IsConwayUniv fn) =>
+  Specification fn (PoolEnv era)
 poolEnvSpec =
   constrained $ \pe ->
     match pe $ \_ pp ->
-      satisfies pp pparamsSpec
+      satisfies pp (pparamsSpec @fn @era)
 
 pStateSpec ::
-  IsConwayUniv fn =>
-  Specification fn (PState (ConwayEra StandardCrypto))
+  forall fn era.
+  (Era era, IsConwayUniv fn) =>
+  Specification fn (PState era)
 pStateSpec = constrained $ \ps ->
   match ps $ \stakePoolParams futureStakePoolParams retiring deposits ->
     [ assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
@@ -51,10 +54,11 @@ pStateSpec = constrained $ \ps ->
     ]
 
 poolCertSpec ::
-  IsConwayUniv fn =>
-  PoolEnv (ConwayEra StandardCrypto) ->
-  PState (ConwayEra StandardCrypto) ->
-  Specification fn (PoolCert StandardCrypto)
+  forall fn era.
+  (EraSpecPParams era, IsConwayUniv fn) =>
+  PoolEnv era ->
+  PState era ->
+  Specification fn (PoolCert (EraCrypto era))
 poolCertSpec (PoolEnv s pp) ps =
   constrained $ \pc ->
     (caseOn pc)

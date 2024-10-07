@@ -43,7 +43,7 @@ module Test.Cardano.Ledger.Constrained.Conway.InstancesBasic (
   makeNonNegativeInterval,
   SimplePParams (..),
   SimplePPUpdate (..),
-  EraPP (..),
+  EraSpecPParams (..),
 ) where
 
 import Cardano.Ledger.Alonzo.PParams
@@ -271,13 +271,13 @@ data SimplePParams era = SimplePParams
   }
   deriving (Eq, Generic)
 
-instance (EraPP era, Reflect era) => Show (SimplePParams era) where
+instance (EraSpecPParams era, Reflect era) => Show (SimplePParams era) where
   show x = show (prettyA (subsetToPP @era x))
 
 -- | Use then generic HasSimpleRep and HasSpec instances for SimplePParams
 instance HasSimpleRep (SimplePParams era)
 
-instance (EraPP era, Reflect era, BaseUniverse fn) => HasSpec fn (SimplePParams era)
+instance (EraSpecPParams era, Reflect era, BaseUniverse fn) => HasSpec fn (SimplePParams era)
 
 -- | Use this as the SimpleRep of (PParamsUpdate era)
 data SimplePPUpdate = SimplePPUpdate
@@ -329,38 +329,38 @@ instance HasSimpleRep SimplePPUpdate
 instance BaseUniverse fn => HasSpec fn SimplePPUpdate
 
 -- | SimpleRep instance for PParamsUpdate
-instance EraPP era => HasSimpleRep (PParamsUpdate era) where
+instance EraSpecPParams era => HasSimpleRep (PParamsUpdate era) where
   type SimpleRep (PParamsUpdate era) = SimplePPUpdate
   toSimpleRep = ppuToUpdate
   fromSimpleRep = updateToPPU
 
 -- | HasSpec instance for PParams
-instance (BaseUniverse fn, EraPP era) => HasSpec fn (PParamsUpdate era) where
+instance (BaseUniverse fn, EraSpecPParams era) => HasSpec fn (PParamsUpdate era) where
   genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
 
 -- ===============================================================
 
 -- | SimpleRep instance for PParams
-instance EraPP era => HasSimpleRep (PParams era) where
+instance EraSpecPParams era => HasSimpleRep (PParams era) where
   type SimpleRep (PParams era) = SimplePParams era
   toSimpleRep = ppToSubset
   fromSimpleRep = subsetToPP
 
 -- | HasSpec instance for PParams
-instance (BaseUniverse fn, EraPP era, HasSpec fn Coin) => HasSpec fn (PParams era) where
+instance (BaseUniverse fn, EraSpecPParams era, HasSpec fn Coin) => HasSpec fn (PParams era) where
   genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
 
 -- =======================================
 
-instance EraPP era => HasSimpleRep (ProposedPPUpdates era)
-instance (EraPP era, BaseUniverse fn) => HasSpec fn (ProposedPPUpdates era)
+instance EraSpecPParams era => HasSimpleRep (ProposedPPUpdates era)
+instance (EraSpecPParams era, BaseUniverse fn) => HasSpec fn (ProposedPPUpdates era)
 
-instance EraPP era => HasSimpleRep (FuturePParams era)
-instance (EraPP era, BaseUniverse fn) => HasSpec fn (FuturePParams era)
+instance EraSpecPParams era => HasSimpleRep (FuturePParams era)
+instance (EraSpecPParams era, BaseUniverse fn) => HasSpec fn (FuturePParams era)
 
 -- =============================================================
 
--- \| EraPP era means we can go back and forth between (SimplePParams era) and (PParams era)
+-- \| EraSpecPParams era means we can go back and forth between (SimplePParams era) and (PParams era)
 --   This allow us to use (SimplePParams era) as the (SimpleRep (PParams era))
 --   Much easier to constrain (SimplePParams era) than (PParams era) with all the THKD stuff.
 class
@@ -371,7 +371,7 @@ class
   , Show (PParamsHKD StrictMaybe era)
   , EraPParams era
   ) =>
-  EraPP era
+  EraSpecPParams era
   where
   subsetToPP :: SimplePParams era -> PParams era
   ppToSubset :: PParams era -> SimplePParams era

@@ -1,31 +1,37 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the DELEG rule
 module Test.Cardano.Ledger.Constrained.Conway.Deleg where
 
+import Cardano.Ledger.Allegra (Allegra)
+import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Core (Era (..), EraPParams (..), ppKeyDepositL)
 import Cardano.Ledger.Credential (credKeyHash, credScriptHash)
+import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
-import qualified Data.Map.Strict as Map
+import Constrained
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Lens.Micro
-
-import Constrained
-
-import Cardano.Ledger.Conway (Conway, ConwayEra)
-import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
-import Cardano.Ledger.Core (ppKeyDepositL)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 
@@ -38,14 +44,12 @@ someZeros = constrained $ \ [var| someRdpair |] ->
     satisfies reward (chooseSpec (1, constrained $ \ [var| x |] -> assert $ x ==. lit 0) (3, TrueSpec))
 
 dStateSpec ::
-  forall fn.
-  IsConwayUniv fn =>
-  Specification fn (DState (ConwayEra StandardCrypto))
+  forall fn era. (IsConwayUniv fn, EraSpecDeleg era) => Specification fn (DState era)
 dStateSpec = constrained $ \ [var| dstate |] ->
-  match dstate $ \ [var| rewardMap |] _futureGenDelegs _genDelegs _rewards ->
+  match dstate $ \ [var| rewardMap |] [var|futureGenDelegs|] [var|genDelegs|] _rewards ->
     match rewardMap $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] _dRepMap ->
-      [ assert $ sizeOf_ _futureGenDelegs ==. 0
-      , match _genDelegs $ \gd -> assert $ sizeOf_ gd ==. 0
+      [ assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
+      , match genDelegs $ \gd -> assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
       , match _rewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
       , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
       , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
@@ -54,24 +58,23 @@ dStateSpec = constrained $ \ [var| dstate |] ->
             \p -> match p $ \_cred rdpair -> satisfies rdpair someZeros
       ]
 
-delegCertSpec ::
-  forall fn.
-  IsConwayUniv fn =>
-  ConwayDelegEnv (ConwayEra StandardCrypto) ->
-  CertState (ConwayEra StandardCrypto) ->
-  Specification fn (ConwayDelegCert StandardCrypto)
-delegCertSpec (ConwayDelegEnv pp pools) certState =
-  let ds = certDState certState
-      dReps = vsDReps (certVState certState)
-      rewardMap = unUnify $ rewards ds
+conwayDelegCertSpec ::
+  forall fn era.
+  (EraPParams era, IsConwayUniv fn) =>
+  ConwayDelegEnv era ->
+  CertState era ->
+  Specification fn (ConwayDelegCert (EraCrypto era))
+conwayDelegCertSpec (ConwayDelegEnv pp pools) (CertState vs _ps ds) =
+  let rewardMap = unUnify $ rewards ds
+      dReps = vsDReps vs
       delegMap = unUnify $ delegations ds
       zeroReward = (== 0) . fromCompact . rdReward
       depositOf k =
         case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
           Just d | d > 0 -> SJust d
           _ -> SNothing
-      delegateeIsRegistered :: Term fn (Delegatee StandardCrypto) -> Pred fn
-      delegateeIsRegistered delegatee =
+      delegateeInPools :: Term fn (Delegatee (EraCrypto era)) -> Pred fn
+      delegateeInPools delegatee =
         (caseOn delegatee)
           (branch $ \kh -> isInPools kh)
           (branch $ \drep -> isInDReps drep)
@@ -79,7 +82,7 @@ delegCertSpec (ConwayDelegEnv pp pools) certState =
         where
           isInPools = (`member_` lit (Map.keysSet pools))
           drepsSet f drepsMap = Set.fromList [k' | k <- Map.keys drepsMap, Just k' <- [f k]]
-          isInDReps :: Term fn (DRep StandardCrypto) -> Pred fn
+          isInDReps :: Term fn (DRep (EraCrypto era)) -> Pred fn
           isInDReps drep =
             (caseOn drep)
               ( branch $ \drepKeyHash ->
@@ -113,20 +116,82 @@ delegCertSpec (ConwayDelegEnv pp pools) certState =
           -- ConwayDelegCert !(StakeCredential c) !(Delegatee c)
           ( branchW 1 $ \sc delegatee ->
               [ assert . member_ sc $ lit (Map.keysSet delegMap)
-              , delegateeIsRegistered delegatee
+              , delegateeInPools delegatee
               ]
           )
           -- ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
           ( branchW 1 $ \sc delegatee c ->
               [ assert $ c ==. lit (pp ^. ppKeyDepositL)
               , assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))
-              , delegateeIsRegistered delegatee
+              , delegateeInPools delegatee
               ]
           )
 
 delegEnvSpec ::
-  IsConwayUniv fn =>
-  Specification fn (ConwayDelegEnv Conway)
+  (EraSpecPParams era, IsConwayUniv fn) =>
+  Specification fn (ConwayDelegEnv era)
 delegEnvSpec = constrained $ \env ->
   match env $ \pp _ ->
     pp `satisfies` pparamsSpec
+
+-- ====================================
+-- Pre-Conway Deleg Certs
+
+shelleyDelegCertSpec ::
+  forall fn era.
+  (EraPParams era, IsConwayUniv fn) =>
+  ConwayDelegEnv era ->
+  DState era ->
+  Specification fn (ShelleyDelegCert (EraCrypto era))
+shelleyDelegCertSpec (ConwayDelegEnv _pp pools) ds =
+  let rewardMap = unUnify $ rewards ds
+      delegMap = unUnify $ delegations ds
+      zeroReward = (== 0) . fromCompact . rdReward
+   in constrained $ \dc ->
+        (caseOn dc)
+          -- The weights on each 'branchW' case try to make it likely
+          -- that each branch is choosen with similar frequency
+
+          -- ShelleyRegCert !(StakeCredential c)
+          ( branchW 2 $ \sc ->
+              [ assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))
+              ]
+          )
+          -- ShelleyUnRegCert !(StakeCredential c)
+          ( branchW 3 $ \sc ->
+              [ -- You can only unregister things with 0 reward
+                assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
+              , assert $ elem_ sc $ lit (Map.keys delegMap)
+              ]
+          )
+          -- ShelleyDelegCert !(StakeCredential c) (KeyHash StakePool c)
+          ( branchW 2 $ \sc kh ->
+              [ dependsOn sc dc
+              , dependsOn kh dc
+              , assert . elem_ sc $ lit (Map.keys delegMap)
+              , assert $ elem_ kh (lit (Map.keys pools))
+              ]
+          )
+
+-- =============================================
+
+class (Era era, EraPParams era) => EraSpecDeleg era where
+  hasGenDelegs :: proxy era -> Bool
+
+instance EraSpecDeleg Shelley where
+  hasGenDelegs _proxy = True
+
+instance EraSpecDeleg Allegra where
+  hasGenDelegs _proxy = True
+
+instance EraSpecDeleg Mary where
+  hasGenDelegs _proxy = True
+
+instance EraSpecDeleg Alonzo where
+  hasGenDelegs _proxy = True
+
+instance EraSpecDeleg Babbage where
+  hasGenDelegs _proxy = True
+
+instance EraSpecDeleg Conway where
+  hasGenDelegs _proxy = False

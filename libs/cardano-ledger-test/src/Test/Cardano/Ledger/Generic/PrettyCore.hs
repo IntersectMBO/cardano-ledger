@@ -250,7 +250,11 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxBodyRaw (..))
-import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
+import Cardano.Ledger.Shelley.TxCert (
+  GenesisDelegCert (..),
+  ShelleyDelegCert (..),
+  ShelleyTxCert (..),
+ )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
@@ -330,15 +334,9 @@ import Test.Cardano.Ledger.Generic.Fields (
  )
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
 import Test.Cardano.Ledger.Generic.Proof (
-  AllegraEra,
-  AlonzoEra,
-  BabbageEra,
-  ConwayEra,
   GovStateWit (..),
-  MaryEra,
   Proof (..),
   Reflect (..),
-  ShelleyEra,
   unReflect,
   whichGovState,
  )
@@ -762,52 +760,14 @@ ppWitnessSetHKD (ShelleyTxWits addr scr boot) =
 instance Reflect era => PrettyA (ShelleyTxWits era) where
   prettyA = ppWitnessSetHKD
 
--- TODO Redo this with Fields?
-ppPParamsUpdate ::
-  (ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, EraPParams era) =>
-  PParamsUpdate era ->
-  PDoc
-ppPParamsUpdate pp =
-  ppRecord
-    "PParamsUdate"
-    [ ("minfeeA", ppStrictMaybe pcCoin $ pp ^. ppuMinFeeAL)
-    , ("minfeeB", ppStrictMaybe pcCoin $ pp ^. ppuMinFeeBL)
-    , ("maxBBSize", ppStrictMaybe ppWord32 $ pp ^. ppuMaxBBSizeL)
-    , ("maxTxSize", ppStrictMaybe ppWord32 $ pp ^. ppuMaxTxSizeL)
-    , ("maxBHSize", ppStrictMaybe ppWord16 $ pp ^. ppuMaxBHSizeL)
-    , ("keyDeposit", ppStrictMaybe pcCoin $ pp ^. ppuKeyDepositL)
-    , ("poolDeposit", ppStrictMaybe pcCoin $ pp ^. ppuPoolDepositL)
-    , ("eMax", ppStrictMaybe ppEpochInterval $ pp ^. ppuEMaxL)
-    , ("nOpt", ppStrictMaybe ppNatural $ pp ^. ppuNOptL)
-    , ("a0", ppStrictMaybe (ppRational . unboundRational) $ pp ^. ppuA0L)
-    , ("rho", ppStrictMaybe ppUnitInterval $ pp ^. ppuRhoL)
-    , ("tau", ppStrictMaybe ppUnitInterval $ pp ^. ppuTauL)
-    , ("d", ppStrictMaybe ppUnitInterval $ pp ^. ppuDL)
-    , ("extraEntropy", ppStrictMaybe ppNonce $ pp ^. ppuExtraEntropyL)
-    , ("protocolVersion", ppStrictMaybe ppProtVer $ pp ^. ppuProtocolVersionL)
-    , ("minUTxOValue", ppStrictMaybe pcCoin $ pp ^. ppuMinUTxOValueL)
-    , ("minPoolCost", ppStrictMaybe pcCoin $ pp ^. ppuMinPoolCostL)
-    ]
+ppPParamsUpdate :: Proof era -> PParamsUpdate era -> PDoc
+ppPParamsUpdate proof pp = ppRecord ("PParamsUpdate " <> pack (show proof)) pairs
+  where
+    fields = Fields.abstractPPUpdate proof pp
+    pairs = concatMap pcPParamsField fields
 
--- TODO Do we need all these instances?
--- Does this resolve the constraints  (ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8)
-instance Crypto c => PrettyA (PParamsUpdate (ShelleyEra c)) where
-  prettyA = ppPParamsUpdate
-
-instance Crypto c => PrettyA (PParamsUpdate (AllegraEra c)) where
-  prettyA = ppPParamsUpdate
-
-instance Crypto c => PrettyA (PParamsUpdate (MaryEra c)) where
-  prettyA = ppPParamsUpdate
-
-instance Crypto c => PrettyA (PParamsUpdate (AlonzoEra c)) where
-  prettyA _ = ppString ("PParamsUpdate (AlonzoEra c)")
-
-instance Crypto c => PrettyA (PParamsUpdate (BabbageEra c)) where
-  prettyA _ = ppString ("PParamsUpdate (BabbageEra c)")
-
-instance Crypto c => PrettyA (PParamsUpdate (ConwayEra c)) where
-  prettyA _ = ppString ("PParamsUpdate (ConwayEra c)")
+instance Reflect era => PrettyA (PParamsUpdate era) where
+  prettyA x = ppPParamsUpdate reify x
 
 ppUpdate :: PrettyA (PParamsUpdate era) => PParams.Update era -> PDoc
 ppUpdate (PParams.Update prop epn) = ppSexp "Update" [ppProposedPPUpdates prop, ppEpochNo epn]
@@ -2695,10 +2655,22 @@ pcPoolCert (RetirePool keyhash epoch) = ppSexp "RetirePool" [pcKeyHash keyhash, 
 instance PrettyA (PoolCert c) where
   prettyA = pcPoolCert
 
+pcGenesisDelegCert :: GenesisDelegCert c -> PDoc
+pcGenesisDelegCert (GenesisDelegCert a b c) =
+  ppRecord
+    "GenesisDelegCert"
+    [ ("Genesis", pcKeyHash a)
+    , ("GenesisDelegate", pcKeyHash b)
+    , ("VerKeyVRF", trim (ppHash c))
+    ]
+
+instance PrettyA (GenesisDelegCert c) where
+  prettyA = pcGenesisDelegCert
+
 pcShelleyTxCert :: ShelleyTxCert c -> PDoc
 pcShelleyTxCert (ShelleyTxCertDelegCert x) = pcDelegCert x
 pcShelleyTxCert (ShelleyTxCertPool x) = pcPoolCert x
-pcShelleyTxCert (ShelleyTxCertGenesisDeleg _) = ppString "GenesisCert"
+pcShelleyTxCert (ShelleyTxCertGenesisDeleg x) = pcGenesisDelegCert x
 pcShelleyTxCert (ShelleyTxCertMir (MIRCert x (StakeAddressesMIR m))) =
   ppRecord
     "MIRStakeAdresses"

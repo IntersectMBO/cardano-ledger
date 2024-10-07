@@ -1,28 +1,54 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the CERT rule
 module Test.Cardano.Ledger.Constrained.Conway.Cert where
 
+import Cardano.Ledger.Allegra (Allegra)
+import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Shelley.API.Types
-
-import Constrained
-
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley.API.Types
+import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
+import Constrained
+import qualified Data.Map as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 import Test.Cardano.Ledger.Constrained.Conway.Pool
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
+import Test.QuickCheck hiding (forAll)
 
 certEnvSpec ::
-  IsConwayUniv fn =>
-  Specification fn (CertEnv (ConwayEra StandardCrypto))
+  forall fn era.
+  (EraSpecPParams era, IsConwayUniv fn) =>
+  Specification fn (CertEnv era)
 certEnvSpec =
   constrained $ \ce ->
     match ce $ \_slot pp _currEpoch _currCommittee _proposals ->
@@ -30,8 +56,8 @@ certEnvSpec =
       ]
 
 certStateSpec ::
-  IsConwayUniv fn =>
-  Specification fn (CertState (ConwayEra StandardCrypto))
+  (IsConwayUniv fn, EraSpecPParams era, EraSpecDeleg era) =>
+  Specification fn (CertState era)
 certStateSpec =
   constrained $ \cs ->
     match cs $ \vState pState dState ->
@@ -40,21 +66,200 @@ certStateSpec =
       , satisfies dState dStateSpec
       ]
 
-txCertSpec ::
+conwayTxCertSpec ::
   IsConwayUniv fn =>
   CertEnv (ConwayEra StandardCrypto) ->
   CertState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayTxCert (ConwayEra StandardCrypto))
-txCertSpec (CertEnv slot pp ce cc cp) certState@CertState {..} =
+conwayTxCertSpec (CertEnv slot pp ce cc cp) certState@CertState {..} =
   constrained $ \txCert ->
     caseOn
       txCert
       -- These weights try to make it equally likely that each of the many certs
       -- across the 3 categories are chosen at similar frequencies.
-      (branchW 3 $ \delegCert -> satisfies delegCert $ delegCertSpec delegEnv certState)
+      (branchW 3 $ \delegCert -> satisfies delegCert $ conwayDelegCertSpec delegEnv certState)
       (branchW 1 $ \poolCert -> satisfies poolCert $ poolCertSpec poolEnv certPState)
-      (branchW 3 $ \govCert -> satisfies govCert $ govCertSpec govCertEnv certState)
+      (branchW 2 $ \govCert -> satisfies govCert $ govCertSpec govCertEnv certState)
   where
     delegEnv = ConwayDelegEnv pp (psStakePoolParams certPState)
     poolEnv = PoolEnv slot pp
     govCertEnv = ConwayGovCertEnv pp ce cc cp
+
+-- ==============================================================
+-- Shelley Certs
+
+genesisDelegCertSpec ::
+  forall fn era.
+  (IsConwayUniv fn, Era era) => DState era -> Specification fn (GenesisDelegCert (EraCrypto era))
+genesisDelegCertSpec ds =
+  let (vrfKeyHashes, coldKeyHashes) = computeSets ds
+      GenDelegs genDelegs = dsGenDelegs ds
+   in constrained $ \ [var|gdc|] ->
+        match gdc $ \ [var|gkh|] [var|vkh|] [var|hashVrf|] ->
+          [ dependsOn gdc gkh
+          , dependsOn gdc vkh
+          , dependsOn gdc hashVrf
+          , assert $ member_ gkh (dom_ (lit genDelegs))
+          , reify gkh coldKeyHashes (\ [var|coldkeys|] -> member_ vkh coldkeys)
+          , reify gkh vrfKeyHashes (\ [var|vrfkeys|] -> member_ hashVrf vrfkeys)
+          ]
+
+-- | Compute 2 functions from the DState. Each function, given a KeyHash,
+--   returns a Set of 'Hashes', we expect certain things to be in those sets.
+--   This mimics what happens in the Cardano.Ledger.Shelley.Rules.Deleg module
+computeSets ::
+  DState era ->
+  ( KeyHash 'Genesis (EraCrypto era) -> Set (Hash (EraCrypto era) (VerKeyVRF (EraCrypto era)))
+  , KeyHash 'Genesis (EraCrypto era) -> Set (KeyHash 'GenesisDelegate (EraCrypto era))
+  )
+computeSets ds =
+  let genDelegs = unGenDelegs (dsGenDelegs ds)
+      futureGenDelegs = dsFutureGenDelegs ds
+      cod gkh = Set.fromList $ Map.elems $ Map.delete gkh genDelegs
+      fod gkh =
+        Set.fromList $ Map.elems $ Map.filterWithKey (\(FutureGenDeleg _ g) _ -> g /= gkh) futureGenDelegs
+      currentColdKeyHashes gkh = Set.map genDelegKeyHash (cod gkh)
+      currentVrfKeyHashes gkh = Set.map genDelegVrfHash (cod gkh)
+      futureColdKeyHashes gkh = Set.map genDelegKeyHash (fod gkh)
+      futureVrfKeyHashes gkh = Set.map genDelegVrfHash (fod gkh)
+      coldKeyHashes gkh = currentColdKeyHashes gkh <> futureColdKeyHashes gkh
+      vrfKeyHashes gkh = currentVrfKeyHashes gkh <> futureVrfKeyHashes gkh
+   in (vrfKeyHashes, coldKeyHashes)
+
+test3 :: forall era. (EraSpecDeleg era, EraSpecPParams era) => IO ()
+test3 = do
+  dstate <- generate $ genFromSpec @ConwayFn @(DState era) dStateSpec
+  let spec = genesisDelegCertSpec @ConwayFn dstate
+  ans <- generate $ genFromSpec @ConwayFn spec
+  putStrLn (show (prettyA dstate))
+  putStrLn (show (prettyA (ShelleyTxCertGenesisDeleg @era ans)))
+
+-- =======================================
+
+shelleyTxCertSpec ::
+  forall fn era.
+  (EraSpecPParams era, IsConwayUniv fn) =>
+  CertEnv era ->
+  CertState era ->
+  Specification fn (ShelleyTxCert era)
+shelleyTxCertSpec (CertEnv slot pp _ _ _) (CertState _vstate pstate dstate) =
+  constrained $ \ [var|shelleyTxCert|] ->
+    -- These weights try to make it equally likely that each of the many certs
+    -- across the 3 categories are chosen at similar frequencies.
+    (caseOn shelleyTxCert)
+      ( branchW 5 $ \ [var|deleg|] ->
+          satisfies
+            deleg
+            ( shelleyDelegCertSpec @fn @era
+                (ConwayDelegEnv pp (psStakePoolParams pstate))
+                dstate
+            )
+      )
+      (branchW 3 $ \ [var|poolCert|] -> satisfies poolCert $ poolCertSpec (PoolEnv slot pp) pstate)
+      (branchW 1 $ \ [var|genesis|] -> satisfies genesis (genesisDelegCertSpec @fn @era dstate))
+      (branchW 1 $ \ [var|_mir|] -> False) -- By design, we never generate a MIR cert
+
+test4 :: Gen Property
+test4 = do
+  env <- genFromSpec @ConwayFn @(CertEnv Conway) certEnvSpec
+  dstate <- genFromSpec @ConwayFn @(CertState Conway) certStateSpec
+  let spec = conwayTxCertSpec env dstate
+  ans <- genFromSpec @ConwayFn spec
+  let tag = case ans of
+        (ConwayTxCertDeleg (ConwayRegCert _ _)) -> "Register"
+        (ConwayTxCertDeleg (ConwayUnRegCert _ _)) -> "UnRegister"
+        (ConwayTxCertDeleg (ConwayDelegCert _ _)) -> "Delegate"
+        (ConwayTxCertDeleg (ConwayRegDelegCert _ _ _)) -> "Register&Delegate"
+        (ConwayTxCertPool (RegPool _)) -> "RegPool"
+        (ConwayTxCertPool (RetirePool _ _)) -> "RetirePool"
+        (ConwayTxCertGov (ConwayRegDRep _ _ _)) -> "RegDRep"
+        (ConwayTxCertGov (ConwayUnRegDRep _ _)) -> "UnRegDRep"
+        (ConwayTxCertGov (ConwayUpdateDRep _ _)) -> "UpdateDRep"
+        (ConwayTxCertGov (ConwayAuthCommitteeHotKey _ _)) -> "AuthCommittee"
+        (ConwayTxCertGov (ConwayResignCommitteeColdKey _ _)) -> "ResignCommittee"
+  pure (classify True tag (property (conformsToSpec ans spec)))
+
+test5 :: forall era. (EraSpecPParams era, EraSpecDeleg era) => Gen Property
+test5 = do
+  env <- genFromSpec @ConwayFn @(CertEnv era) certEnvSpec
+  dstate <- genFromSpec @ConwayFn @(CertState era) certStateSpec
+  let spec = shelleyTxCertSpec env dstate
+  ans <- genFromSpec @ConwayFn spec
+  let tag = case ans of
+        ShelleyTxCertDelegCert x -> case x of
+          ShelleyRegCert {} -> "Register"
+          ShelleyUnRegCert {} -> "UnRegister"
+          ShelleyDelegCert {} -> "Delegate"
+        ShelleyTxCertPool x -> case x of
+          RegPool {} -> "RegPool"
+          RetirePool {} -> "RetirePool"
+        ShelleyTxCertGenesisDeleg _ -> "Genesis"
+        ShelleyTxCertMir _ -> "Mir"
+  pure (classify True tag (property (conformsToSpec ans spec)))
+
+-- =========================================================================
+-- Making Cert Era parametric with the EraSpecCert class
+
+class
+  ( Era era
+  , IsConwayUniv fn
+  , HasSpec fn (TxCert era)
+  ) =>
+  EraSpecCert era fn
+  where
+  txCertSpec :: CertEnv era -> CertState era -> Specification fn (TxCert era)
+  txCertKey :: TxCert era -> CertKey (EraCrypto era)
+
+instance IsConwayUniv fn => EraSpecCert Shelley fn where
+  txCertSpec = shelleyTxCertSpec
+  txCertKey = shelleyTxCertKey
+instance IsConwayUniv fn => EraSpecCert Allegra fn where
+  txCertSpec = shelleyTxCertSpec
+  txCertKey = shelleyTxCertKey
+instance IsConwayUniv fn => EraSpecCert Mary fn where
+  txCertSpec = shelleyTxCertSpec
+  txCertKey = shelleyTxCertKey
+instance IsConwayUniv fn => EraSpecCert Alonzo fn where
+  txCertSpec = shelleyTxCertSpec
+  txCertKey = shelleyTxCertKey
+instance IsConwayUniv fn => EraSpecCert Babbage fn where
+  txCertSpec = shelleyTxCertSpec
+  txCertKey = shelleyTxCertKey
+instance IsConwayUniv fn => EraSpecCert Conway fn where
+  txCertSpec = conwayTxCertSpec
+  txCertKey = conwayTxCertKey
+
+-- | Used to aggregate the key used in registering a Certificate. Different
+--   certificates use different kinds of Keys, that allows us to use one
+--   type to represent all kinds of keys (Similar to DepositPurpose)
+data CertKey c
+  = StakeKey !(Credential 'Staking c)
+  | PoolKey !(KeyHash 'StakePool c)
+  | DRepKey !(Credential 'DRepRole c)
+  | ColdKey !(Credential 'ColdCommitteeRole c)
+  | GenesisKey !(KeyHash 'Genesis c)
+  | MirKey !MIRPot
+  deriving (Eq, Show, Ord)
+
+-- | Compute the aggregate key type of a Certificater
+conwayTxCertKey :: ConwayTxCert era -> CertKey (EraCrypto era)
+conwayTxCertKey (ConwayTxCertDeleg (ConwayRegCert x _)) = StakeKey x
+conwayTxCertKey (ConwayTxCertDeleg (ConwayUnRegCert x _)) = StakeKey x
+conwayTxCertKey (ConwayTxCertDeleg (ConwayDelegCert x _)) = StakeKey x
+conwayTxCertKey (ConwayTxCertDeleg (ConwayRegDelegCert x _ _)) = StakeKey x
+conwayTxCertKey (ConwayTxCertPool (RegPool x)) = PoolKey (ppId x)
+conwayTxCertKey (ConwayTxCertPool (RetirePool x _)) = PoolKey x
+conwayTxCertKey (ConwayTxCertGov (ConwayRegDRep x _ _)) = DRepKey x
+conwayTxCertKey (ConwayTxCertGov (ConwayUnRegDRep x _)) = DRepKey x
+conwayTxCertKey (ConwayTxCertGov (ConwayUpdateDRep x _)) = DRepKey x
+conwayTxCertKey (ConwayTxCertGov (ConwayAuthCommitteeHotKey x _)) = ColdKey x
+conwayTxCertKey (ConwayTxCertGov (ConwayResignCommitteeColdKey x _)) = ColdKey x
+
+shelleyTxCertKey :: ShelleyTxCert era -> CertKey (EraCrypto era)
+shelleyTxCertKey (ShelleyTxCertDelegCert (ShelleyRegCert x)) = StakeKey x
+shelleyTxCertKey (ShelleyTxCertDelegCert (ShelleyUnRegCert x)) = StakeKey x
+shelleyTxCertKey (ShelleyTxCertDelegCert (ShelleyDelegCert x _)) = StakeKey x
+shelleyTxCertKey (ShelleyTxCertPool (RegPool x)) = PoolKey (ppId x)
+shelleyTxCertKey (ShelleyTxCertPool (RetirePool x _)) = PoolKey x
+shelleyTxCertKey (ShelleyTxCertGenesisDeleg (GenesisDelegCert a _ _)) = GenesisKey a
+shelleyTxCertKey (ShelleyTxCertMir (MIRCert p _)) = MirKey p
