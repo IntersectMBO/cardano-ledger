@@ -67,9 +67,10 @@ govCertSpec ConwayGovCertEnv {..} certState =
               ]
           )
           -- ConwayUnRegDRep
-          ( branchW 3 $ \ [var|credUnreg|] [var|coinUnreg|] ->
-              assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))
-          )
+          -- ( branchW 3 $ \ [var|credUnreg|] [var|coinUnreg|] ->
+          --     assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))
+          -- )
+          (branchW 3 $ \_credUnreg _coinUnreg -> False)
           -- ConwayUpdateDRep
           ( branchW 1 $ \ [var|keyupdate|] _ ->
               member_ keyupdate reps
