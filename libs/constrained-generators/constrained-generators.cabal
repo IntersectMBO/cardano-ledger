@@ -41,8 +41,10 @@ library
         Constrained.Examples.Tree
         Constrained.Examples.Either
         Constrained.Examples.CheatSheet
+        Constrained.Examples.Append
         Constrained.Properties
         Constrained.Syntax
+        Constrained.ListSplit
 
     hs-source-dirs:   src
     default-language: Haskell2010

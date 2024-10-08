@@ -1,5 +1,6 @@
 module Constrained.Examples (module X) where
 
+import Constrained.Examples.Append as X
 import Constrained.Examples.Basic as X
 import Constrained.Examples.Either as X
 import Constrained.Examples.List as X

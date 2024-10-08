@@ -215,6 +215,8 @@ instance fn ~ BaseFn => QC.Arbitrary (TestableFn fn) where
       , TestableFn $ singletonFn @fn @Int
       , TestableFn $ unionFn @fn @Int
       , TestableFn $ foldMapFn @fn @Int idFn
+      , TestableFn $ singleFn @fn @Int
+      , TestableFn $ appendFn @fn @Int
       , TestableFn $ rngFn @fn @Int @Int
       , TestableFn $ domFn @fn @Int @Int
       , TestableFn $ fromListFn @fn @Int
