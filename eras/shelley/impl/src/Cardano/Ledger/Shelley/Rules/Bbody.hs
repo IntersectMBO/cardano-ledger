@@ -24,7 +24,13 @@ module Cardano.Ledger.Shelley.Rules.Bbody (
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, epochInfoPure)
+import Cardano.Ledger.BaseTypes (
+  BlocksMade,
+  Mismatch (..),
+  Relation (..),
+  ShelleyBase,
+  epochInfoPure,
+ )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
@@ -71,12 +77,8 @@ data BbodyEnv era = BbodyEnv
   }
 
 data ShelleyBbodyPredFailure era
-  = WrongBlockBodySizeBBODY
-      !Int -- Actual Body Size
-      !Int -- Claimed Body Size in Header
-  | InvalidBodyHashBBODY
-      !(Hash (EraCrypto era) EraIndependentBlockBody) -- Actual Hash
-      !(Hash (EraCrypto era) EraIndependentBlockBody) -- Claimed Hash
+  = WrongBlockBodySizeBBODY (Mismatch 'RelEQ Int)
+  | InvalidBodyHashBBODY (Mismatch 'RelEQ (Hash (EraCrypto era) EraIndependentBlockBody))
   | LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -183,11 +185,21 @@ bbodyTransition =
 
         actualBodySize
           == fromIntegral (bhviewBSize bhview)
-            ?! WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bhview)
+            ?! WrongBlockBodySizeBBODY
+              ( Mismatch
+                  { mismatchSupplied = actualBodySize
+                  , mismatchExpected = fromIntegral $ bhviewBSize bhview
+                  }
+              )
 
         actualBodyHash
           == bhviewBHash bhview
-            ?! InvalidBodyHashBBODY actualBodyHash (bhviewBHash bhview)
+            ?! InvalidBodyHashBBODY
+              ( Mismatch
+                  { mismatchSupplied = actualBodyHash
+                  , mismatchExpected = bhviewBHash bhview
+                  }
+              )
 
         ls' <-
           trans @(EraRule "LEDGERS" era) $

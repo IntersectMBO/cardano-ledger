@@ -56,6 +56,7 @@ import Cardano.Ledger.BaseTypes (
   CertIx (..),
   DnsName,
   EpochInterval (..),
+  Mismatch (..),
   Network (..),
   NonNegativeInterval,
   Nonce (..),
@@ -807,10 +808,10 @@ instance Era era => Arbitrary (PState era) where
   arbitrary = PState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (Anchor c) where
-  arbitrary =
-    Anchor
-      <$> arbitrary
-      <*> arbitrary
+  arbitrary = Anchor <$> arbitrary <*> arbitrary
+
+instance Arbitrary a => Arbitrary (Mismatch r a) where
+  arbitrary = Mismatch <$> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (CommitteeAuthorization c) where
   arbitrary =

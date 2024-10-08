@@ -44,7 +44,7 @@ import Cardano.Ledger.Babbage.Rules (
   babbageUtxowTransition,
  )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (Mismatch (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -357,6 +357,7 @@ shelleyToConwayUtxowPredFailure = \case
     error "Impossible: MIR has been removed in Conway"
   Shelley.MissingTxBodyMetadataHash x -> MissingTxBodyMetadataHash x
   Shelley.MissingTxMetadata x -> MissingTxMetadata x
-  Shelley.ConflictingMetadataHash a b -> ConflictingMetadataHash a b
+  Shelley.ConflictingMetadataHash (Mismatch supplied expected) ->
+    ConflictingMetadataHash supplied expected
   Shelley.InvalidMetadata -> InvalidMetadata
   Shelley.ExtraneousScriptWitnessesUTXOW xs -> ExtraneousScriptWitnessesUTXOW xs

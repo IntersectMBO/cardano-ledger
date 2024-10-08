@@ -2,6 +2,17 @@
 
 ## 1.14.0.0
 
+* Remove `ShelleyNewppPredFailure`. #4649
+* Change predicate-failures and their serialization to use the `Mismatch` type to report supplied and expected values. #4649
+  * `MaxTxSizeUTxO`
+  * `FeeTooSmallUTxO`
+  * `WrongBlockBodySizeBBODY`
+  * `InvalidBodyHashBBODY`
+  * `ConflictingMetadataHash`
+  * `StakePoolRetirementWrongEpochPOOL`
+  * `StakePoolCostTooLowPOOL`
+  * `WrongNetworkPOOL`
+  * `NonGenesisUpdatePPUP`
 * Deprecated `applyTxs` and `applyTxsTransition` in `Mempool`
 * Replaced `applyTx` in `ApplyTx` class with `applyTxOpts`
 * Added and exposed `applyTx` in `Mempool`

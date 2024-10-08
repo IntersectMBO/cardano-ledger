@@ -29,6 +29,7 @@ import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraUTXO)
 import Cardano.Ledger.Allegra.Rules.Ppup ()
 import Cardano.Ledger.Allegra.Scripts (inInterval)
 import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
   Network,
   ProtVer (pvMajor),
   ShelleyBase,
@@ -471,9 +472,9 @@ shelleyToAllegraUtxoPredFailure = \case
   Shelley.BadInputsUTxO ins -> BadInputsUTxO ins
   Shelley.ExpiredUTxO ttl current ->
     OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
-  Shelley.MaxTxSizeUTxO a m -> MaxTxSizeUTxO a m
+  Shelley.MaxTxSizeUTxO (Mismatch a m) -> MaxTxSizeUTxO a m
   Shelley.InputSetEmptyUTxO -> InputSetEmptyUTxO
-  Shelley.FeeTooSmallUTxO mf af -> FeeTooSmallUTxO mf af
+  Shelley.FeeTooSmallUTxO (Mismatch sf ef) -> FeeTooSmallUTxO ef sf
   Shelley.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
   Shelley.WrongNetwork n as -> WrongNetwork n as
   Shelley.WrongNetworkWithdrawal n as -> WrongNetworkWithdrawal n as

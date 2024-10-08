@@ -476,7 +476,7 @@ testEmptyInputSet =
 testFeeTooSmall :: Assertion
 testFeeTooSmall =
   testInvalidTx
-    [UtxowFailure (UtxoFailure (FeeTooSmallUTxO (Coin 205) (Coin 1)))]
+    [UtxowFailure (UtxoFailure (FeeTooSmallUTxO $ Mismatch (Coin 1) (Coin 205)))]
     $ aliceGivesBobLovelace
       AliceToBob
         { input = TxIn genesisId minBound
@@ -637,7 +637,8 @@ testPoolCostTooSmall =
     [ DelegsFailure $
         DelplFailure $
           PoolFailure $
-            StakePoolCostTooLowPOOL (ppCost alicePoolParamsSmallCost) (pp @C ^. ppMinPoolCostL)
+            StakePoolCostTooLowPOOL $
+              Mismatch (ppCost alicePoolParamsSmallCost) (pp @C ^. ppMinPoolCostL)
     ]
     $ aliceGivesBobLovelace
     $ AliceToBob
