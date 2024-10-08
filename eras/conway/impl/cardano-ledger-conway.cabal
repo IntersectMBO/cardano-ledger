@@ -240,7 +240,7 @@ test-suite tests
         cardano-ledger-conway,
         cardano-ledger-core,
         cardano-ledger-binary:testlib,
-        cardano-ledger-shelley >=1.14,
+        cardano-ledger-shelley,
         cardano-slotting:testlib,
         cardano-strict-containers,
         containers,

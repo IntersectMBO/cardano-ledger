@@ -174,8 +174,10 @@ import Cardano.Ledger.Shelley.AdaPots (sumAdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesis (..),
+  describeValidationErr,
   fromNominalDiffTimeMicro,
   mkShelleyGlobals,
+  validateGenesis,
  )
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
@@ -477,7 +479,7 @@ class
   ShelleyEraImp era
   where
   initGenesis ::
-    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m) =>
+    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m, MonadFail m) =>
     m (Genesis era)
   default initGenesis ::
     (Monad m, Genesis era ~ NoGenesis era) =>
@@ -485,12 +487,13 @@ class
   initGenesis = pure NoGenesis
 
   initNewEpochState ::
-    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m) =>
+    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m, MonadFail m) =>
     m (NewEpochState era)
   default initNewEpochState ::
     ( HasKeyPairs s (EraCrypto era)
     , MonadState s m
     , HasStatefulGen (StateGenM s) m
+    , MonadFail m
     , ShelleyEraImp (PreviousEra era)
     , TranslateEra era NewEpochState
     , TranslationError era NewEpochState ~ Void
@@ -506,6 +509,7 @@ class
     , HasSubState s
     , SubState s ~ StateGen QCGen
     , HasStatefulGen (StateGenM s) m
+    , MonadFail m
     ) =>
     m (ImpTestState era)
   initImpTestState = initNewEpochState >>= defaultInitImpTestState
@@ -533,6 +537,7 @@ defaultInitNewEpochState ::
   ( MonadState s m
   , HasKeyPairs s (EraCrypto era)
   , HasStatefulGen (StateGenM s) m
+  , MonadFail m
   , ShelleyEraImp era
   , ShelleyEraImp (PreviousEra era)
   , TranslateEra era NewEpochState
@@ -574,6 +579,7 @@ defaultInitImpTestState ::
   , HasKeyPairs s (EraCrypto era)
   , MonadState s m
   , HasStatefulGen (StateGenM s) m
+  , MonadFail m
   , HasSubState s
   , SubState s ~ StateGen QCGen
   ) =>
@@ -655,42 +661,46 @@ instance
   ) =>
   ShelleyEraImp (ShelleyEra c)
   where
-  initGenesis =
-    pure
-      ShelleyGenesis
-        { sgSystemStart = errorFail $ iso8601ParseM "2017-09-23T21:44:51Z"
-        , sgNetworkMagic = 123456 -- Mainnet value: 764824073
-        , sgNetworkId = Testnet
-        , sgActiveSlotsCoeff = 5 %! 100
-        , sgSecurityParam = 2160
-        , sgEpochLength = 4320 -- Mainnet value: 432000
-        , sgSlotsPerKESPeriod = 129600
-        , sgMaxKESEvolutions = 62
-        , sgSlotLength = 1
-        , sgUpdateQuorum = 5
-        , sgMaxLovelaceSupply = 45_000_000_000_000_000
-        , sgProtocolParams =
-            emptyPParams
-              & ppMinFeeAL .~ Coin 44
-              & ppMinFeeBL .~ Coin 155_381
-              & ppMaxBBSizeL .~ 65536
-              & ppMaxTxSizeL .~ 16384
-              & ppKeyDepositL .~ Coin 2_000_000
-              & ppKeyDepositL .~ Coin 500_000_000
-              & ppEMaxL .~ EpochInterval 18
-              & ppNOptL .~ 150
-              & ppA0L .~ (3 %! 10)
-              & ppRhoL .~ (3 %! 1000)
-              & ppTauL .~ (2 %! 10)
-              & ppDL .~ (1 %! 1)
-              & ppExtraEntropyL .~ NeutralNonce
-              & ppMinUTxOValueL .~ Coin 2_000_000
-              & ppMinPoolCostL .~ Coin 340_000_000
-        , -- TODO: Add a top level definition and add private keys to ImpState:
-          sgGenDelegs = mempty
-        , sgInitialFunds = mempty
-        , sgStaking = mempty
-        }
+  initGenesis = do
+    let
+      gen =
+        ShelleyGenesis
+          { sgSystemStart = errorFail $ iso8601ParseM "2017-09-23T21:44:51Z"
+          , sgNetworkMagic = 123456 -- Mainnet value: 764824073
+          , sgNetworkId = Testnet
+          , sgActiveSlotsCoeff = 20 %! 100 -- Mainnet value: 5 %! 100
+          , sgSecurityParam = 108 -- Mainnet value: 2160
+          , sgEpochLength = 4320 -- Mainnet value: 432000
+          , sgSlotsPerKESPeriod = 129600
+          , sgMaxKESEvolutions = 62
+          , sgSlotLength = 1
+          , sgUpdateQuorum = 5
+          , sgMaxLovelaceSupply = 45_000_000_000_000_000
+          , sgProtocolParams =
+              emptyPParams
+                & ppMinFeeAL .~ Coin 44
+                & ppMinFeeBL .~ Coin 155_381
+                & ppMaxBBSizeL .~ 65536
+                & ppMaxTxSizeL .~ 16384
+                & ppKeyDepositL .~ Coin 2_000_000
+                & ppKeyDepositL .~ Coin 500_000_000
+                & ppEMaxL .~ EpochInterval 18
+                & ppNOptL .~ 150
+                & ppA0L .~ (3 %! 10)
+                & ppRhoL .~ (3 %! 1000)
+                & ppTauL .~ (2 %! 10)
+                & ppDL .~ (1 %! 1)
+                & ppExtraEntropyL .~ NeutralNonce
+                & ppMinUTxOValueL .~ Coin 2_000_000
+                & ppMinPoolCostL .~ Coin 340_000_000
+          , -- TODO: Add a top level definition and add private keys to ImpState:
+            sgGenDelegs = mempty
+          , sgInitialFunds = mempty
+          , sgStaking = mempty
+          }
+    case validateGenesis gen of
+      Right () -> pure gen
+      Left errs -> fail . T.unpack . T.unlines $ map describeValidationErr errs
 
   initNewEpochState = do
     shelleyGenesis <- initGenesis @(ShelleyEra c)

@@ -69,7 +69,7 @@ library
         cardano-crypto-class,
         cardano-ledger-binary >=1.4,
         cardano-ledger-core ^>=1.15,
-        cardano-ledger-shelley >=1.13 && <1.15,
+        cardano-ledger-shelley ^>=1.15,
         cardano-strict-containers,
         cardano-slotting,
         cborg,

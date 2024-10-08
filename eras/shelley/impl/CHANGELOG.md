@@ -1,11 +1,17 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.14.2.0
+## 1.15.0.0
 
 * Added `EncCBOR` instance for `LedgerEnv`
 
 ### `testlib`
 
+* Added a `MonadFail` constraint to two methods of `ShelleyEraImp`:
+  - `initGenesis`
+  - `initNewEpochState`
+* Added a `MonadFail` constraint to:
+  - `defaultInitNewEpochState`
+  - `defaultInitImpTestState`
 * Added `logText`
 * Added `ToExpr` instance for `LedgerEnv`
 * Added `tryRunImpRuleNoAssertions` to `ImpTest`
