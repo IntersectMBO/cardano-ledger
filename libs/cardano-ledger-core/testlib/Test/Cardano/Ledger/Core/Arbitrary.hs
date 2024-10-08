@@ -525,7 +525,7 @@ instance Crypto c => Arbitrary (IndividualPoolStake c) where
 ------------------------------------------------------------------------------------------
 
 instance Crypto c => Arbitrary (DRepState c) where
-  arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.UTxO -------------------------------------------------------------------

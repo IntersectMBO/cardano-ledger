@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -12,9 +13,11 @@ module Test.Cardano.Ledger.Constrained.Conway.Deleg where
 
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Credential (credKeyHash, credScriptHash)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Lens.Micro
 
 import Constrained
@@ -55,24 +58,38 @@ delegCertSpec ::
   forall fn.
   IsConwayUniv fn =>
   ConwayDelegEnv (ConwayEra StandardCrypto) ->
-  DState (ConwayEra StandardCrypto) ->
+  CertState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayDelegCert StandardCrypto)
-delegCertSpec (ConwayDelegEnv pp pools) ds =
-  let rewardMap = unUnify $ rewards ds
+delegCertSpec (ConwayDelegEnv pp pools) certState =
+  let ds = certDState certState
+      dReps = vsDReps (certVState certState)
+      rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds
       zeroReward = (== 0) . fromCompact . rdReward
       depositOf k =
         case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
           Just d | d > 0 -> SJust d
           _ -> SNothing
-      delegateeInPools :: Term fn (Delegatee StandardCrypto) -> Pred fn
-      delegateeInPools delegatee =
+      delegateeIsRegistered :: Term fn (Delegatee StandardCrypto) -> Pred fn
+      delegateeIsRegistered delegatee =
         (caseOn delegatee)
           (branch $ \kh -> isInPools kh)
-          (branch $ \_ -> True)
-          (branch $ \kh _ -> isInPools kh)
+          (branch $ \drep -> isInDReps drep)
+          (branch $ \kh drep -> [assert $ isInPools kh, assert $ isInDReps drep])
         where
           isInPools = (`member_` lit (Map.keysSet pools))
+          drepsSet f drepsMap = Set.fromList [k' | k <- Map.keys drepsMap, Just k' <- [f k]]
+          isInDReps :: Term fn (DRep StandardCrypto) -> Pred fn
+          isInDReps drep =
+            (caseOn drep)
+              ( branch $ \drepKeyHash ->
+                  drepKeyHash `member_` lit (drepsSet credKeyHash dReps)
+              )
+              ( branch $ \drepScriptHash ->
+                  drepScriptHash `member_` lit (drepsSet credScriptHash dReps)
+              )
+              (branch $ const True)
+              (branch $ const True)
    in constrained $ \dc ->
         (caseOn dc)
           -- The weights on each 'branchW' case try to make it likely
@@ -96,14 +113,14 @@ delegCertSpec (ConwayDelegEnv pp pools) ds =
           -- ConwayDelegCert !(StakeCredential c) !(Delegatee c)
           ( branchW 1 $ \sc delegatee ->
               [ assert . member_ sc $ lit (Map.keysSet delegMap)
-              , delegateeInPools delegatee
+              , delegateeIsRegistered delegatee
               ]
           )
           -- ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
           ( branchW 1 $ \sc delegatee c ->
               [ assert $ c ==. lit (pp ^. ppKeyDepositL)
               , assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))
-              , delegateeInPools delegatee
+              , delegateeIsRegistered delegatee
               ]
           )
 

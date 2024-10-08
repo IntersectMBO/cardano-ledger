@@ -352,7 +352,7 @@ putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
 {-# INLINE putCredential #-}
 
--- | The size of the extra attributes in a bootstrp (ie Byron) address. Used
+-- | The size of the extra attributes in a bootstrap (ie Byron) address. Used
 -- to help enforce that people do not post huge ones on the chain.
 bootstrapAddressAttrsSize :: BootstrapAddress c -> Int
 bootstrapAddressAttrsSize (BootstrapAddress addr) =

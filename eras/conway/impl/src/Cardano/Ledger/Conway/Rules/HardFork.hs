@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,12 +14,15 @@
 module Cardano.Ledger.Conway.Rules.HardFork (
   ConwayHARDFORK,
   ConwayHardForkEvent (..),
-) where
+)
+where
 
-import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase)
+import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, StrictMaybe (..), natVersion)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayHARDFORK)
+import Cardano.Ledger.DRep
 import Cardano.Ledger.Shelley.LedgerState
+import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
   BaseM,
@@ -36,8 +38,11 @@ import Control.State.Transition (
   tellEvent,
   transitionRules,
  )
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Void (Void)
 import GHC.Generics (Generic)
+import Lens.Micro
 
 newtype ConwayHardForkEvent era = ConwayHardForkEvent ProtVer
   deriving (Generic, Eq)
@@ -60,8 +65,30 @@ instance
 
 hardforkTransition :: TransitionRule (ConwayHARDFORK era)
 hardforkTransition = do
-  TRC (_, st, pv) <-
+  TRC (_, epochState, newPv) <-
     judgmentContext
-  -- Add operations that modify the state meaningfully during intra-era hardforks.
-  tellEvent $ ConwayHardForkEvent pv
-  pure st
+  tellEvent $ ConwayHardForkEvent newPv
+  if pvMajor newPv == natVersion @10
+    then
+      pure $
+        epochState
+          & esLStateL . lsCertStateL %~ \certState ->
+            let umap = certState ^. certDStateL . dsUnifiedL
+                dReps = certState ^. certVStateL . vsDRepsL
+                (dRepsWithDelegations, elemsWithoutUnknownDRepDelegations) =
+                  Map.mapAccumWithKey adjustDelegations dReps (UM.umElems umap)
+                adjustDelegations ds stakeCred umElem@(UM.UMElem rd ptr stakePool mDrep) =
+                  case mDrep of
+                    SJust (DRepCredential dRep) ->
+                      let addDelegation _ dRepState =
+                            Just $ dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
+                       in case Map.updateLookupWithKey addDelegation dRep ds of
+                            (Nothing, _) -> (ds, UM.UMElem rd ptr stakePool SNothing)
+                            (Just _, ds') -> (ds', umElem)
+                    _ -> (ds, umElem)
+             in certState
+                  -- Remove dangling delegations to non-existent DReps:
+                  & (certDStateL . dsUnifiedL .~ umap {UM.umElems = elemsWithoutUnknownDRepDelegations})
+                  -- Populate DRep delegations with delegatees
+                  & (certVStateL . vsDRepsL .~ dRepsWithDelegations)
+    else pure epochState

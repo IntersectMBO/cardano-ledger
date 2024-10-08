@@ -45,15 +45,15 @@ txCertSpec ::
   CertEnv (ConwayEra StandardCrypto) ->
   CertState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayTxCert (ConwayEra StandardCrypto))
-txCertSpec (CertEnv slot pp ce cc cp) CertState {..} =
+txCertSpec (CertEnv slot pp ce cc cp) certState@CertState {..} =
   constrained $ \txCert ->
     caseOn
       txCert
       -- These weights try to make it equally likely that each of the many certs
       -- across the 3 categories are chosen at similar frequencies.
-      (branchW 3 $ \delegCert -> satisfies delegCert $ delegCertSpec delegEnv certDState)
+      (branchW 3 $ \delegCert -> satisfies delegCert $ delegCertSpec delegEnv certState)
       (branchW 1 $ \poolCert -> satisfies poolCert $ poolCertSpec poolEnv certPState)
-      (branchW 3 $ \govCert -> satisfies govCert $ govCertSpec govCertEnv certVState)
+      (branchW 3 $ \govCert -> satisfies govCert $ govCertSpec govCertEnv certState)
   where
     delegEnv = ConwayDelegEnv pp (psStakePoolParams certPState)
     poolEnv = PoolEnv slot pp

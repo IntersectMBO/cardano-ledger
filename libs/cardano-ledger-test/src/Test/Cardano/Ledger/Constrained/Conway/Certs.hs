@@ -147,20 +147,33 @@ data CertKey c
   | ColdKey !(Credential 'ColdCommitteeRole c)
   deriving (Eq, Show, Ord)
 
--- | Compute the aggregate key type of a Certificater
-txCertKey :: ConwayTxCert era -> CertKey (EraCrypto era)
-txCertKey (ConwayTxCertDeleg (ConwayRegCert x _)) = StakeKey x
-txCertKey (ConwayTxCertDeleg (ConwayUnRegCert x _)) = StakeKey x
-txCertKey (ConwayTxCertDeleg (ConwayDelegCert x _)) = StakeKey x
-txCertKey (ConwayTxCertDeleg (ConwayRegDelegCert x _ _)) = StakeKey x
-txCertKey (ConwayTxCertPool (RegPool x)) = PoolKey (ppId x)
-txCertKey (ConwayTxCertPool (RetirePool x _)) = PoolKey x
-txCertKey (ConwayTxCertGov (ConwayRegDRep x _ _)) = DRepKey x
-txCertKey (ConwayTxCertGov (ConwayUnRegDRep x _)) = DRepKey x
-txCertKey (ConwayTxCertGov (ConwayUpdateDRep x _)) = DRepKey x
-txCertKey (ConwayTxCertGov (ConwayAuthCommitteeHotKey x _)) = ColdKey x
-txCertKey (ConwayTxCertGov (ConwayResignCommitteeColdKey x _)) = ColdKey x
-
 noSameKeys :: [ConwayTxCert era] -> [ConwayTxCert era]
 noSameKeys [] = []
-noSameKeys (x : xs) = x : noSameKeys (filter (\y -> txCertKey x /= txCertKey y) xs)
+noSameKeys (cert : certs) = cert : noSameKeys (filter (check cert) certs)
+  where
+    check :: ConwayTxCert era -> ConwayTxCert era -> Bool
+    check x y@(ConwayTxCertDeleg (ConwayDelegCert a b)) =
+      txCertKey x /= txCertKey y && txCertKey x /= txCertDelegateeKey a b
+    check x y@(ConwayTxCertDeleg (ConwayRegDelegCert a b _)) =
+      txCertKey x /= txCertKey y && txCertKey x /= txCertDelegateeKey a b
+    check x y = txCertKey x /= txCertKey y
+
+    -- \| Compute the aggregate key type of a Certificater
+    txCertKey :: ConwayTxCert era -> CertKey (EraCrypto era)
+    txCertKey (ConwayTxCertDeleg (ConwayRegCert x _)) = StakeKey x
+    txCertKey (ConwayTxCertDeleg (ConwayUnRegCert x _)) = StakeKey x
+    txCertKey (ConwayTxCertDeleg (ConwayDelegCert x _)) = StakeKey x
+    txCertKey (ConwayTxCertDeleg (ConwayRegDelegCert x _ _)) = StakeKey x
+    txCertKey (ConwayTxCertPool (RegPool x)) = PoolKey (ppId x)
+    txCertKey (ConwayTxCertPool (RetirePool x _)) = PoolKey x
+    txCertKey (ConwayTxCertGov (ConwayRegDRep x _ _)) = DRepKey x
+    txCertKey (ConwayTxCertGov (ConwayUnRegDRep x _)) = DRepKey x
+    txCertKey (ConwayTxCertGov (ConwayUpdateDRep x _)) = DRepKey x
+    txCertKey (ConwayTxCertGov (ConwayAuthCommitteeHotKey x _)) = ColdKey x
+    txCertKey (ConwayTxCertGov (ConwayResignCommitteeColdKey x _)) = ColdKey x
+
+    txCertDelegateeKey :: Credential 'Staking c -> Delegatee c -> CertKey c
+    txCertDelegateeKey _ (DelegStakeVote _ (DRepCredential y)) = DRepKey y
+    txCertDelegateeKey _ (DelegVote (DRepCredential y)) = DRepKey y
+    txCertDelegateeKey _ (DelegStake y) = PoolKey y
+    txCertDelegateeKey x _ = StakeKey x

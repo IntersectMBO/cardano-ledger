@@ -8,7 +8,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.DRep (
-  DRep (DRepCredential, DRepAlwaysAbstain, DRepAlwaysNoConfidence),
+  DRep (DRepCredential, DRepKeyHash, DRepScriptHash, DRepAlwaysAbstain, DRepAlwaysNoConfidence),
   DRepState (..),
   drepExpiryL,
   drepAnchorL,
@@ -40,6 +40,7 @@ import Data.Aeson (
   (.:?),
  )
 import Data.Aeson.Types (toJSONKeyText)
+import Data.Set (Set)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -125,6 +126,7 @@ data DRepState c = DRepState
   { drepExpiry :: !EpochNo
   , drepAnchor :: !(StrictMaybe (Anchor c))
   , drepDeposit :: !Coin
+  , drepDelegs :: !(Set (Credential 'Staking c))
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -133,9 +135,10 @@ instance NoThunks (DRepState era)
 instance Crypto c => NFData (DRepState c)
 
 instance Crypto c => DecCBOR (DRepState c) where
-  decCBOR =
+  decCBOR = do
     decode $
       RecD DRepState
+        <! From
         <! From
         <! From
         <! From
@@ -147,14 +150,16 @@ instance Crypto c => EncCBOR (DRepState c) where
         !> To drepExpiry
         !> To drepAnchor
         !> To drepDeposit
+        !> To drepDelegs
 
 instance Crypto c => ToJSON (DRepState c) where
-  toJSON x@(DRepState _ _ _) =
+  toJSON x@(DRepState _ _ _ _) =
     let DRepState {..} = x
      in toJSON $
           object $
             [ "expiry" .= toJSON drepExpiry
             , "deposit" .= toJSON drepDeposit
+            , "delegators" .= toJSON drepDelegs
             ]
               ++ ["anchor" .= toJSON anchor | SJust anchor <- [drepAnchor]]
 
@@ -164,6 +169,9 @@ instance Crypto c => FromJSON (DRepState c) where
       <$> o .: "expiry"
       <*> o .:? "anchor" .!= SNothing
       <*> o .: "deposit"
+      -- Construction of DRep state with deleagations is intentionally prohibited, since
+      -- there is a requirement to retain the invariant of delegations in the UMap
+      <*> pure mempty
 
 drepExpiryL :: Lens' (DRepState c) EpochNo
 drepExpiryL = lens drepExpiry (\x y -> x {drepExpiry = y})

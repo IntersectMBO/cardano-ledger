@@ -39,16 +39,18 @@ instance
 
   environmentSpec _ctx = govCertEnvSpec
 
-  stateSpec _ctx _env = vStateSpec
+  stateSpec _ctx _env = certStateSpec
 
-  signalSpec _ctx env st = govCertSpec env st
+  signalSpec _ctx = govCertSpec
 
   classOf = Just . nameGovCert
 
-  runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
+  runAgdaRule env (Agda.MkCertState dState pState vState) sig =
+    bimap
+      (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
+      (Agda.MkCertState dState pState)
       . computationResultToEither
-      $ Agda.govCertStep env st sig
+      $ Agda.govCertStep env vState sig
 
 nameGovCert :: ConwayGovCert c -> String
 nameGovCert (ConwayRegDRep {}) = "ConwayRegDRep"

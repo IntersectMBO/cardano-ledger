@@ -86,7 +86,7 @@ ledgerExamplesConway =
         ApplyTxError $
           pure $
             wrapFailed @(ConwayDELEG Conway) @(ConwayLEDGER Conway) $
-              DelegateeNotRegisteredDELEG @Conway (SLE.mkKeyHash 1)
+              DelegateeStakePoolNotRegisteredDELEG @Conway (SLE.mkKeyHash 1)
     , SLE.sleRewardsCredentials =
         Set.fromList
           [ Left (Coin 100)

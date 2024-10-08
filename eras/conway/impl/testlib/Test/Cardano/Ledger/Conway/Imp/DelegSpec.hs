@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
   spec,
 ) where
 
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
@@ -256,7 +257,7 @@ spec = do
             & bodyTxL . certsTxBodyL
               .~ [DelegTxCert cred (DelegStake poolKh)]
         )
-        [injectFailure $ DelegateeNotRegisteredDELEG poolKh]
+        [injectFailure $ DelegateeStakePoolNotRegisteredDELEG poolKh]
 
       expectNotDelegatedToPool cred
 
@@ -337,25 +338,24 @@ spec = do
       expectNotDelegatedToPool cred
 
     it "Delegate vote of registered stake credentials to unregistered drep" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-
-      cred <- KeyHashObj <$> freshKeyHash
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [RegDepositTxCert cred expectedDeposit]
-
+      RewardAccount _ cred <- registerRewardAccount
       drepCred <- KeyHashObj <$> freshKeyHash
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+      let tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ [DelegTxCert cred (DelegVote (DRepCredential drepCred))]
+          inBootstrap = do
+            submitTx_ tx
+            expectDelegatedVote cred (DRepCredential drepCred)
 
-      expectDelegatedVote cred (DRepCredential drepCred)
+          outOfBootstrap = do
+            submitFailingTx tx [injectFailure $ DelegateeDRepNotRegisteredDELEG drepCred]
+            expectNotDelegatedVote cred
+      ifBootstrap inBootstrap outOfBootstrap
 
     it "Delegate vote of unregistered stake credentials" $ do
       cred <- KeyHashObj <$> freshKeyHash
-      drepCred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
       submitFailingTx
         ( mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
@@ -369,7 +369,7 @@ spec = do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
       cred <- KeyHashObj <$> freshKeyHash
-      drepCred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
 
       submitTx_ $
         mkBasicTx mkBasicTxBody
@@ -377,7 +377,7 @@ spec = do
             .~ [RegDepositDelegTxCert cred (DelegVote (DRepCredential drepCred)) expectedDeposit]
       expectDelegatedVote cred (DRepCredential drepCred)
 
-      drepCred2 <- KeyHashObj <$> freshKeyHash
+      drepCred2 <- KeyHashObj <$> registerDRep
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
@@ -388,7 +388,7 @@ spec = do
     it "Delegate vote and unregister stake credentials" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       cred <- KeyHashObj <$> freshKeyHash
-      drepCred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
@@ -407,7 +407,7 @@ spec = do
       cred <- KeyHashObj <$> freshKeyHash
       poolKh <- freshKeyHash
       registerPool poolKh
-      drepCred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
 
       submitTx_ $
         mkBasicTx mkBasicTxBody
@@ -434,7 +434,7 @@ spec = do
       poolKh <- freshKeyHash
       rewardAccount <- registerRewardAccount
       registerPool poolKh
-      drepCred <- KeyHashObj <$> freshKeyHash
+      drepCred <- KeyHashObj <$> registerDRep
 
       submitTx_ $
         mkBasicTx mkBasicTxBody

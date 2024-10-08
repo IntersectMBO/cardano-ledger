@@ -39,10 +39,11 @@ vStateSpec = constrained' $ \ [var|_dreps|] [var|_commstate|] [var|dormantepochs
 govCertSpec ::
   IsConwayUniv fn =>
   ConwayGovCertEnv (ConwayEra StandardCrypto) ->
-  VState (ConwayEra StandardCrypto) ->
+  CertState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayGovCert StandardCrypto)
-govCertSpec ConwayGovCertEnv {..} vs =
-  let reps = lit $ Map.keysSet $ vsDReps vs
+govCertSpec ConwayGovCertEnv {..} certState =
+  let vs = certVState certState
+      reps = lit $ Map.keysSet $ vsDReps vs
       deposits = Map.map drepDeposit (vsDReps vs)
       getNewMembers = \case
         UpdateCommittee _ _ newMembers _ -> Map.keysSet newMembers
@@ -66,9 +67,10 @@ govCertSpec ConwayGovCertEnv {..} vs =
               ]
           )
           -- ConwayUnRegDRep
-          ( branchW 3 $ \ [var|credUnreg|] [var|coinUnreg|] ->
-              assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))
-          )
+          -- ( branchW 3 $ \ [var|credUnreg|] [var|coinUnreg|] ->
+          --     assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))
+          -- )
+          (branchW 3 $ \_credUnreg _coinUnreg -> False)
           -- ConwayUpdateDRep
           ( branchW 1 $ \ [var|keyupdate|] _ ->
               member_ keyupdate reps

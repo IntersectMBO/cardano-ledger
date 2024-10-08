@@ -1981,7 +1981,8 @@ ppConwayDelegPredFailure x = case x of
     ppSexp "StakeKeyNotRegisteredDELEG" [pcCredential cred]
   StakeKeyHasNonZeroRewardAccountBalanceDELEG c ->
     ppSexp "StakeKeyHasNonZeroRewardAccountBalanceDELEG" [pcCoin c]
-  ConwayRules.DelegateeNotRegisteredDELEG kh -> ppSexp "DelegateeNotRegisteredDELEG" [pcKeyHash kh]
+  ConwayRules.DelegateeDRepNotRegisteredDELEG cred -> ppSexp "DelegateeDRepNotRegisteredDELEG" [pcCredential cred]
+  ConwayRules.DelegateeStakePoolNotRegisteredDELEG kh -> ppSexp "DelegateeStakePoolNotRegisteredDELEG" [pcKeyHash kh]
 
 instance PrettyA (ConwayDelegPredFailure era) where
   prettyA = ppConwayDelegPredFailure
@@ -3213,12 +3214,13 @@ instance PrettyA (Anchor c) where
   prettyA = pcAnchor
 
 pcDRepState :: DRepState c -> PDoc
-pcDRepState (DRepState expire anchor deposit) =
+pcDRepState (DRepState expire anchor deposit delegs) =
   ppRecord
     "DRepState"
     [ ("expire", ppEpochNo expire)
     , ("anchor", ppStrictMaybe pcAnchor anchor)
     , ("deposit", pcCoin deposit)
+    , ("delegations", ppSet pcCredential delegs)
     ]
 
 instance PrettyA (DRepState c) where

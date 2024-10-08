@@ -112,6 +112,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getsPParams,
   currentProposalsShouldContain,
   withImpStateWithProtVer,
+  ifBootstrap,
   whenPostBootstrap,
   submitYesVoteCCs_,
   donateToTreasury,
@@ -1648,6 +1649,11 @@ whenPostBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
 whenPostBootstrap a = do
   pv <- getProtVer
   unless (HardForks.bootstrapPhase pv) a
+
+ifBootstrap :: EraGov era => ImpTestM era a -> ImpTestM era a -> ImpTestM era a
+ifBootstrap inBootstrap outOfBootstrap = do
+  pv <- getProtVer
+  if HardForks.bootstrapPhase pv then inBootstrap else outOfBootstrap
 
 submitYesVoteCCs_ ::
   forall era f.

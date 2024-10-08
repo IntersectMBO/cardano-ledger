@@ -69,6 +69,7 @@ expectedConwayGenesis =
                 { drepExpiry = EpochNo 1000
                 , drepAnchor = SNothing
                 , drepDeposit = Coin 5000
+                , drepDelegs = mempty
                 }
             )
           ,
@@ -83,6 +84,7 @@ expectedConwayGenesis =
                         , anchorDataHash = def
                         }
                 , drepDeposit = Coin 6000
+                , drepDelegs = mempty
                 }
             )
           ]

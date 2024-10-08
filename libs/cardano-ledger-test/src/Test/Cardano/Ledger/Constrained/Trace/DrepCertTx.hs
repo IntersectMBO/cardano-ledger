@@ -124,7 +124,7 @@ drepCert proof = case whichTxCert proof of
     deposit@(Coin m) <- getTerm (drepDeposit proof)
     case mdrepstate of
       Nothing -> pure (Coin (-m), [Certs' [ConwayTxCertGov $ ConwayRegDRep cred deposit SNothing]])
-      Just (DRepState _expiry _manchor _dep) ->
+      Just (DRepState _expiry _manchor _dep _delegs) ->
         liftGen $
           oneof
             [ pure (deposit, [Certs' [ConwayTxCertGov $ ConwayUnRegDRep cred deposit]])

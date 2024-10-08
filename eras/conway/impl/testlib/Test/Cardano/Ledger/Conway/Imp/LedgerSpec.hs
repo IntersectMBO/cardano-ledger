@@ -109,13 +109,14 @@ spec = do
 
     unRegisterDRep drep
     expectDRepNotRegistered drep
-
-    submitTx_ $
-      mkBasicTx $
-        mkBasicTxBody
-          & withdrawalsTxBodyL
-            .~ Withdrawals
-              [(ra, reward)]
+    let tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL
+                .~ Withdrawals
+                  [(ra, reward)]
+    ifBootstrap (submitTx_ tx >> (lookupReward cred `shouldReturn` mempty)) $ do
+      submitFailingTx tx [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
 
   it "Withdraw from a key delegated to an expired DRep" $ do
     modifyPParams $ \pp ->
@@ -159,7 +160,7 @@ spec = do
 
     _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
 
-    -- expire the drep after  delegation
+    -- expire the drep after delegation
     void $ submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
     passNEpochs 4
     isDRepExpired drep `shouldReturn` True

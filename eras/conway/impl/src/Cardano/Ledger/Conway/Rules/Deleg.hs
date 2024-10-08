@@ -31,6 +31,15 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.CertState (
+  CertState (..),
+  DState (..),
+  certDStateL,
+  certVStateL,
+  dsUnifiedL,
+  vsDReps,
+  vsDRepsL,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra)
@@ -39,12 +48,13 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (DelegStake, DelegStakeVote, DelegVote),
  )
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Shelley.LedgerState (DState (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HF
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
-import Control.Monad (forM_, guard)
+import Control.Monad (forM_, guard, unless)
 import Control.State.Transition (
   BaseM,
   Environment,
@@ -63,18 +73,15 @@ import Control.State.Transition (
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
+import Data.Set as Set
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import NoThunks.Class (NoThunks)
 
 data ConwayDelegEnv era = ConwayDelegEnv
   { cdePParams :: PParams era
-  , cdePools ::
-      !( Map
-          (KeyHash 'StakePool (EraCrypto era))
-          (PoolParams (EraCrypto era))
-       )
+  , cdePools :: Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
   }
   deriving (Generic)
 
@@ -86,18 +93,19 @@ instance EraPParams era => EncCBOR (ConwayDelegEnv era) where
             !> To cdePParams
             !> To cdePools
 
-instance NFData (PParams era) => NFData (ConwayDelegEnv era)
+instance (Era era, NFData (PParams era)) => NFData (ConwayDelegEnv era)
 
 deriving instance Eq (PParams era) => Eq (ConwayDelegEnv era)
 
 deriving instance Show (PParams era) => Show (ConwayDelegEnv era)
 
 data ConwayDelegPredFailure era
-  = IncorrectDepositDELEG !Coin
-  | StakeKeyRegisteredDELEG !(Credential 'Staking (EraCrypto era))
-  | StakeKeyNotRegisteredDELEG !(Credential 'Staking (EraCrypto era))
-  | StakeKeyHasNonZeroRewardAccountBalanceDELEG !Coin
-  | DelegateeNotRegisteredDELEG !(KeyHash 'StakePool (EraCrypto era))
+  = IncorrectDepositDELEG Coin
+  | StakeKeyRegisteredDELEG (Credential 'Staking (EraCrypto era))
+  | StakeKeyNotRegisteredDELEG (Credential 'Staking (EraCrypto era))
+  | StakeKeyHasNonZeroRewardAccountBalanceDELEG Coin
+  | DelegateeDRepNotRegisteredDELEG (Credential 'DRepRole (EraCrypto era))
+  | DelegateeStakePoolNotRegisteredDELEG (KeyHash 'StakePool (EraCrypto era))
   deriving (Show, Eq, Generic)
 
 type instance EraRuleFailure "DELEG" (ConwayEra c) = ConwayDelegPredFailure (ConwayEra c)
@@ -121,8 +129,10 @@ instance Era era => EncCBOR (ConwayDelegPredFailure era) where
         Sum (StakeKeyNotRegisteredDELEG @era) 3 !> To stakeCred
       StakeKeyHasNonZeroRewardAccountBalanceDELEG mCoin ->
         Sum (StakeKeyHasNonZeroRewardAccountBalanceDELEG @era) 4 !> To mCoin
-      DelegateeNotRegisteredDELEG delegatee ->
-        Sum (DelegateeNotRegisteredDELEG @era) 6 !> To delegatee
+      DelegateeDRepNotRegisteredDELEG delegatee ->
+        Sum (DelegateeDRepNotRegisteredDELEG @era) 5 !> To delegatee
+      DelegateeStakePoolNotRegisteredDELEG delegatee ->
+        Sum (DelegateeStakePoolNotRegisteredDELEG @era) 6 !> To delegatee
 
 instance Era era => DecCBOR (ConwayDelegPredFailure era) where
   decCBOR = decode $ Summands "ConwayDelegPredFailure" $ \case
@@ -130,19 +140,20 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
     2 -> SumD StakeKeyRegisteredDELEG <! From
     3 -> SumD StakeKeyNotRegisteredDELEG <! From
     4 -> SumD StakeKeyHasNonZeroRewardAccountBalanceDELEG <! From
-    6 -> SumD DelegateeNotRegisteredDELEG <! From
+    5 -> SumD DelegateeDRepNotRegisteredDELEG <! From
+    6 -> SumD DelegateeStakePoolNotRegisteredDELEG <! From
     n -> Invalid n
 
 instance
   ( EraPParams era
-  , State (EraRule "DELEG" era) ~ DState era
+  , State (EraRule "DELEG" era) ~ CertState era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , EraRule "DELEG" era ~ ConwayDELEG era
   ) =>
   STS (ConwayDELEG era)
   where
-  type State (ConwayDELEG era) = DState era
+  type State (ConwayDELEG era) = CertState era
   type Signal (ConwayDELEG era) = ConwayDelegCert (EraCrypto era)
   type Environment (ConwayDELEG era) = ConwayDelegEnv era
   type BaseM (ConwayDELEG era) = ShelleyBase
@@ -155,7 +166,7 @@ conwayDelegTransition :: forall era. EraPParams era => TransitionRule (ConwayDEL
 conwayDelegTransition = do
   TRC
     ( ConwayDelegEnv pp pools
-      , dState@DState {dsUnified}
+      , certState@CertState {certDState = DState {dsUnified}}
       , cert
       ) <-
     judgmentContext
@@ -166,33 +177,74 @@ conwayDelegTransition = do
     registerStakeCredential stakeCred =
       let rdPair = UM.RDPair (UM.CompactCoin 0) (UM.compactCoinOrError ppKeyDeposit)
        in UM.insert stakeCred rdPair $ UM.RewDepUView dsUnified
-    delegStake stakeCred sPool umap =
-      UM.SPoolUView umap UM.⨃ Map.singleton stakeCred sPool
-    delegVote stakeCred dRep umap =
-      UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
+    delegStake stakeCred sPool cState =
+      cState
+        & certDStateL . dsUnifiedL %~ \umap ->
+          UM.SPoolUView umap UM.⨃ Map.singleton stakeCred sPool
+    delegVote stakeCred dRep cState =
+      let cState' =
+            cState
+              & certDStateL . dsUnifiedL %~ \umap ->
+                UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
+          dReps = vsDReps (certVState cState)
+       in case dRep of
+            DRepCredential targetDRep
+              | Just dRepState <- Map.lookup targetDRep dReps ->
+                  let dRepState' = dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
+                   in cState' & certVStateL . vsDRepsL .~ Map.insert targetDRep dRepState' dReps
+            _ -> cState'
+    unDelegVote stakeCred vState = \case
+      DRepCredential dRepCred ->
+        let removeDelegation dRepState =
+              dRepState {drepDelegs = Set.delete stakeCred (drepDelegs dRepState)}
+         in vState & vsDRepsL %~ Map.adjust removeDelegation dRepCred
+      _ -> vState
     processDelegation stakeCred delegatee =
       case delegatee of
         DelegStake sPool -> delegStake stakeCred sPool
         DelegVote dRep -> delegVote stakeCred dRep
         DelegStakeVote sPool dRep -> delegVote stakeCred dRep . delegStake stakeCred sPool
+    processUnDelegation _ Nothing cState = cState
+    processUnDelegation stakeCred (Just delegatee) cState@(CertState {certVState}) =
+      case delegatee of
+        DelegStake _ -> cState
+        DelegVote dRep -> cState {certVState = unDelegVote stakeCred certVState dRep}
+        DelegStakeVote _sPool dRep -> cState {certVState = unDelegVote stakeCred certVState dRep}
     checkStakeKeyNotRegistered stakeCred =
       UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
-    checkStakeKeyIsRegistered stakeCred =
-      UM.member stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyNotRegisteredDELEG stakeCred
+    checkStakeKeyIsRegistered stakeCred = do
+      let mUMElem = Map.lookup stakeCred (UM.umElems dsUnified)
+      isJust mUMElem ?! StakeKeyNotRegisteredDELEG stakeCred
+      pure $ mUMElem >>= umElemToDelegatee
     checkStakeDelegateeRegistered =
       let checkPoolRegistered targetPool =
-            targetPool `Map.member` pools ?! DelegateeNotRegisteredDELEG targetPool
+            targetPool `Map.member` pools ?! DelegateeStakePoolNotRegisteredDELEG targetPool
+          checkDRepRegistered = \case
+            DRepAlwaysAbstain -> pure ()
+            DRepAlwaysNoConfidence -> pure ()
+            DRepCredential targetDRep -> do
+              let dReps = vsDReps (certVState certState)
+              unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $
+                targetDRep `Map.member` dReps ?! DelegateeDRepNotRegisteredDELEG targetDRep
        in \case
             DelegStake targetPool -> checkPoolRegistered targetPool
-            DelegStakeVote targetPool _ -> checkPoolRegistered targetPool
-            DelegVote _ -> pure ()
+            DelegStakeVote targetPool targetDRep ->
+              checkPoolRegistered targetPool >> checkDRepRegistered targetDRep
+            DelegVote targetDRep -> checkDRepRegistered targetDRep
+    umElemToDelegatee (UM.UMElem _ _ mPool mDRep) =
+      case (mPool, mDRep) of
+        (SNothing, SNothing) -> Nothing
+        (SJust pool, SNothing) -> Just $ DelegStake pool
+        (SNothing, SJust dRep) -> Just $ DelegVote dRep
+        (SJust pool, SJust dRep) -> Just $ DelegStakeVote pool dRep
   case cert of
     ConwayRegCert stakeCred sMayDeposit -> do
       forM_ sMayDeposit checkDepositAgainstPParams
       checkStakeKeyNotRegistered stakeCred
-      pure $ dState {dsUnified = registerStakeCredential stakeCred}
+      pure $ certState & certDStateL . dsUnifiedL .~ registerStakeCredential stakeCred
     ConwayUnRegCert stakeCred sMayRefund -> do
       let (mUMElem, umap) = UM.extractStakingCredential stakeCred dsUnified
+          mCurDelegatee = mUMElem >>= umElemToDelegatee
           checkInvalidRefund = do
             SJust suppliedRefund <- Just sMayRefund
             -- we don't want to report invalid refund when stake credential is not registered:
@@ -207,16 +259,15 @@ conwayDelegTransition = do
       failOnJust checkInvalidRefund IncorrectDepositDELEG
       isJust mUMElem ?! StakeKeyNotRegisteredDELEG stakeCred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
-      pure $ dState {dsUnified = umap}
+      pure $ processUnDelegation stakeCred mCurDelegatee $ certState & certDStateL . dsUnifiedL .~ umap
     ConwayDelegCert stakeCred delegatee -> do
-      checkStakeKeyIsRegistered stakeCred
+      mCurDelegatee <- checkStakeKeyIsRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
-      pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified}
+      pure $ processDelegation stakeCred delegatee $ processUnDelegation stakeCred mCurDelegatee certState
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       checkDepositAgainstPParams deposit
       checkStakeKeyNotRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
       pure $
-        dState
-          { dsUnified = processDelegation stakeCred delegatee $ registerStakeCredential stakeCred
-          }
+        processDelegation stakeCred delegatee $
+          certState & certDStateL . dsUnifiedL .~ registerStakeCredential stakeCred
