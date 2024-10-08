@@ -188,7 +188,7 @@ io = id
 assertFailure :: (HasCallStack, MonadIO m) => String -> m a
 assertFailure = liftIO . H.assertFailure
 
-assertColorFailure :: HasCallStack => String -> IO a
+assertColorFailure :: (HasCallStack, MonadIO m) => String -> m a
 assertColorFailure = liftIO . H.assertColorFailure
 
 -- | Just like `expectationBool`, but does not force the return type to unit. Lifted
