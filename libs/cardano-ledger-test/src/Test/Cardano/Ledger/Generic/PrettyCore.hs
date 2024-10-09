@@ -1520,7 +1520,7 @@ ppConwayGovPredFailure x = case x of
     ppSexp "ProposalProcedureNetworkIdMismatch" [pcRewardAccount racnt, pcNetwork nw]
   TreasuryWithdrawalsNetworkIdMismatch sr nw ->
     ppSexp "TreasuryWithdrawalsNetworkIdMismatch" [ppSet pcRewardAccount sr, pcNetwork nw]
-  ProposalDepositIncorrect c1 c2 -> ppSexp "ProposalDepositIncorrect" [pcCoin c1, pcCoin c2]
+  ProposalDepositIncorrect (Mismatch supplied expected) -> ppSexp "ProposalDepositIncorrect" [pcCoin supplied, pcCoin expected]
   DisallowedVoters m -> ppSexp "DisallowedVoters" [prettyA m]
   ConflictingCommitteeUpdate s ->
     ppSexp "ConflictingCommitteeUpdate" [ppSet pcCredential s]
@@ -1528,7 +1528,7 @@ ppConwayGovPredFailure x = case x of
   InvalidPrevGovActionId p -> ppSexp "InvalidPrevGovActionId" [pcProposalProcedure p]
   VotingOnExpiredGovAction m ->
     ppSexp "VotingOnExpiredGovAction" [prettyA m]
-  ProposalCantFollow s1 p1 p2 ->
+  ProposalCantFollow s1 Mismatch {mismatchSupplied = p1, mismatchExpected = p2} ->
     ppSexp "ProposalCantFollow" [ppStrictMaybe pcGovPurposeId s1, ppProtVer p1, ppProtVer p2]
   InvalidPolicyHash a b ->
     ppSexp "InvalidPolicyHash" [ppStrictMaybe prettyA a, ppStrictMaybe prettyA b]
