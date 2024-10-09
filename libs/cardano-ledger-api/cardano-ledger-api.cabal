@@ -56,7 +56,7 @@ library
         bytestring,
         cardano-ledger-allegra ^>=1.6,
         cardano-ledger-alonzo >=1.9 && <1.12,
-        cardano-ledger-babbage >=1.9 && <=1.11,
+        cardano-ledger-babbage >=1.10 && <=1.11,
         cardano-ledger-binary >=1.4,
         cardano-ledger-conway >=1.13 && <1.19,
         cardano-ledger-core ^>=1.15,
