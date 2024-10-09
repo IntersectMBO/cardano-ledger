@@ -227,6 +227,11 @@ library
         -Wno-missing-safe-haskell-mode -Wno-prepositive-qualified-module
         -Wno-safe -Wno-unsafe -Wunused-packages
 
+    if impl(ghc == 8.10.7) && os(darwin) && arch(aarch64)
+      build-depends: text >= 1.2.5.0
+    else
+      build-depends: text >= 2.0
+
     build-depends:
         base >=4.14 && <5,
         aeson,
@@ -255,7 +260,6 @@ library
         streaming,
         streaming-binary >=0.2 && <0.4,
         streaming-bytestring,
-        text,
         time,
         vector
 
