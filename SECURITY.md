@@ -8,7 +8,7 @@ as possible.
 
 Please provide a clear and concise description of the vulnerability, including:
 
-* the affected version(s) of OSC-documentation,
+* the affected version(s) of cardano-ledger,
 * steps that can be followed to exercise the vulnerability,
 * any workarounds or mitigations
 
