@@ -1338,19 +1338,28 @@ ppConwayUtxoPredFailure = \case
       [ ("provided interval", ppValidityInterval vi)
       , ("current slot", pcSlotNo slot)
       ]
-  ConwayRules.MaxTxSizeUTxO actual maxs ->
-    ppRecord "MaxTxSizeUTxO" [("Actual", ppInteger actual), ("max transaction size", ppInteger maxs)]
+  ConwayRules.MaxTxSizeUTxO mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "MaxTxSizeUTxO"
+          [ ("Actual", ppInteger mismatchSupplied)
+          , ("max transaction size", ppInteger mismatchExpected)
+          ]
   ConwayRules.InputSetEmptyUTxO -> ppString "InputSetEmptyUTxO"
-  ConwayRules.FeeTooSmallUTxO computed supplied ->
-    ppRecord
-      "FeeTooSmallUTxO"
-      [ ("min fee for this transaction", pcCoin computed)
-      , ("fee supplied by this transaction", pcCoin supplied)
-      ]
-  ConwayRules.ValueNotConservedUTxO consumed produced ->
-    ppRecord
-      "ValueNotConservedUTxO"
-      [("coin consumed", pcVal @era reify consumed), ("coin produced", pcVal @era reify produced)]
+  ConwayRules.FeeTooSmallUTxO mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "FeeTooSmallUTxO"
+          [ ("fee supplied by this transaction", pcCoin mismatchSupplied)
+          , ("min fee for this transaction", pcCoin mismatchExpected)
+          ]
+  ConwayRules.ValueNotConservedUTxO mm@(Mismatch _ _) ->
+    let Mismatch {mismatchSupplied = consumed, mismatchExpected = produced} = mm
+     in ppRecord
+          "ValueNotConservedUTxO"
+          [ ("coin consumed", pcVal @era reify consumed)
+          , ("coin produced", pcVal @era reify produced)
+          ]
   ConwayRules.WrongNetwork n add ->
     ppRecord
       "WrongNetwork"
@@ -1389,26 +1398,29 @@ ppConwayUtxoPredFailure = \case
       , ("the required collateral for the given fee", pcCoin c2)
       ]
   ConwayRules.ScriptsNotPaidUTxO u -> ppSexp "ScriptsNotPaidUTxO" [pcUTxO reify u]
-  ConwayRules.ExUnitsTooBigUTxO e1 e2 ->
-    ppRecord
-      "ExUnitsTooBigUTxO"
-      [ ("Max EXUnits from the protocol parameters", pcExUnits e1)
-      , ("EXUnits supplied", pcExUnits e2)
-      ]
+  ConwayRules.ExUnitsTooBigUTxO mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "ExUnitsTooBigUTxO"
+          [ ("EXUnits supplied", pcExUnits mismatchSupplied)
+          , ("Max EXUnits from the protocol parameters", pcExUnits mismatchExpected)
+          ]
   ConwayRules.CollateralContainsNonADA v -> ppSexp "CollateralContainsNonADA" [pcVal (reify @era) v]
-  ConwayRules.WrongNetworkInTxBody n1 n2 ->
-    ppRecord
-      "WrongNetworkInTxBody"
-      [ ("Actual Network ID", ppNetwork n1)
-      , ("Network ID in transaction body", ppNetwork n2)
-      ]
+  ConwayRules.WrongNetworkInTxBody mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "WrongNetworkInTxBody"
+          [ ("Network ID in transaction body", ppNetwork mismatchSupplied)
+          , ("Actual Network ID", ppNetwork mismatchExpected)
+          ]
   ConwayRules.OutsideForecast slot -> ppRecord "OutsideForecast" [("slot number outside consensus forecast range", pcSlotNo slot)]
-  ConwayRules.TooManyCollateralInputs n1 n2 ->
-    ppRecord
-      "TooManyCollateralInputs"
-      [ ("Max allowed collateral inputs", ppNatural n1)
-      , ("Number of collateral inputs", ppNatural n2)
-      ]
+  ConwayRules.TooManyCollateralInputs mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "TooManyCollateralInputs"
+          [ ("Number of collateral inputs", ppNatural mismatchSupplied)
+          , ("Max allowed collateral inputs", ppNatural mismatchExpected)
+          ]
   ConwayRules.NoCollateralInputs -> ppSexp " NoCollateralInputs" []
   ConwayRules.IncorrectTotalCollateralField c1 c2 ->
     ppRecord

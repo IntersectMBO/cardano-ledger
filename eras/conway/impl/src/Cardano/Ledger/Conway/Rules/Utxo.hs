@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -39,8 +40,14 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   BabbageUtxoPredFailure (..),
   utxoTransition,
  )
-import Cardano.Ledger.BaseTypes (Network, ShelleyBase, SlotNo)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.BaseTypes (Mismatch (..), Network, Relation (..), ShelleyBase, SlotNo)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  ifDecoderVersionAtLeast,
+  ifEncodingVersionAtLeast,
+  natVersion,
+ )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -87,21 +94,12 @@ data ConwayUtxoPredFailure era
       -- | current slot
       !SlotNo
   | MaxTxSizeUTxO
-      -- | the actual transaction size
-      !Integer
-      -- | the max transaction size
-      !Integer
+      !(Mismatch 'RelLTEQ Integer)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
-      -- | the minimum fee for this transaction
-      !Coin
-      -- | the fee supplied in this transaction
-      !Coin
+      !(Mismatch 'RelGTEQ Coin) -- The values are serialised in reverse order
   | ValueNotConservedUTxO
-      -- | the Coin consumed by this transaction
-      !(Value era)
-      -- | the Coin produced by this transaction
-      !(Value era)
+      !(Mismatch 'RelEQ (Value era)) -- Serialise consumed first, then produced
   | -- | the set of addresses with incorrect network IDs
     WrongNetwork
       -- | the expected network id
@@ -131,27 +129,18 @@ data ConwayUtxoPredFailure era
     ScriptsNotPaidUTxO
       !(UTxO era)
   | ExUnitsTooBigUTxO
-      -- | Max EXUnits from the protocol parameters
-      !ExUnits
-      -- | EXUnits supplied
-      !ExUnits
+      !(Mismatch 'RelLTEQ ExUnits) -- The values are serialised in reverse order
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA !(Value era)
   | -- | Wrong Network ID in body
     WrongNetworkInTxBody
-      -- | Actual Network ID
-      !Network
-      -- | Network ID in transaction body
-      !Network
+      !(Mismatch 'RelEQ Network) -- The values are serialised in reverse order
   | -- | slot number outside consensus forecast range
     OutsideForecast
       !SlotNo
   | -- | There are too many collateral inputs
     TooManyCollateralInputs
-      -- | Max allowed collateral inputs
-      !Natural
-      -- | Number of collateral inputs
-      !Natural
+      !(Mismatch 'RelLTEQ Natural) -- The values are serialised in reverse order
   | NoCollateralInputs
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField
@@ -289,31 +278,75 @@ instance
   ) =>
   EncCBOR (ConwayUtxoPredFailure era)
   where
-  encCBOR =
-    encode . \case
-      UtxosFailure a -> Sum (UtxosFailure @era) 0 !> To a
-      BadInputsUTxO ins -> Sum (BadInputsUTxO @era) 1 !> To ins
-      OutsideValidityIntervalUTxO a b -> Sum OutsideValidityIntervalUTxO 2 !> To a !> To b
-      MaxTxSizeUTxO a b -> Sum MaxTxSizeUTxO 3 !> To a !> To b
-      InputSetEmptyUTxO -> Sum InputSetEmptyUTxO 4
-      FeeTooSmallUTxO a b -> Sum FeeTooSmallUTxO 5 !> To a !> To b
-      ValueNotConservedUTxO a b -> Sum (ValueNotConservedUTxO @era) 6 !> To a !> To b
-      WrongNetwork right wrongs -> Sum (WrongNetwork @era) 7 !> To right !> To wrongs
-      WrongNetworkWithdrawal right wrongs -> Sum (WrongNetworkWithdrawal @era) 8 !> To right !> To wrongs
-      OutputTooSmallUTxO outs -> Sum (OutputTooSmallUTxO @era) 9 !> To outs
-      OutputBootAddrAttrsTooBig outs -> Sum (OutputBootAddrAttrsTooBig @era) 10 !> To outs
-      OutputTooBigUTxO outs -> Sum (OutputTooBigUTxO @era) 11 !> To outs
-      InsufficientCollateral a b -> Sum InsufficientCollateral 12 !> To a !> To b
-      ScriptsNotPaidUTxO a -> Sum ScriptsNotPaidUTxO 13 !> To a
-      ExUnitsTooBigUTxO a b -> Sum ExUnitsTooBigUTxO 14 !> To a !> To b
-      CollateralContainsNonADA a -> Sum CollateralContainsNonADA 15 !> To a
-      WrongNetworkInTxBody a b -> Sum WrongNetworkInTxBody 16 !> To a !> To b
-      OutsideForecast a -> Sum OutsideForecast 17 !> To a
-      TooManyCollateralInputs a b -> Sum TooManyCollateralInputs 18 !> To a !> To b
-      NoCollateralInputs -> Sum NoCollateralInputs 19
-      IncorrectTotalCollateralField c1 c2 -> Sum IncorrectTotalCollateralField 20 !> To c1 !> To c2
-      BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 21 !> To x
-      BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 22 !> To x
+  encCBOR pf = ifEncodingVersionAtLeast (natVersion @10) (tenOnwards pf) (beforeTen pf)
+    where
+      tenOnwards =
+        encode . \case
+          UtxosFailure a -> Sum (UtxosFailure @era) 0 !> To a
+          BadInputsUTxO ins -> Sum (BadInputsUTxO @era) 1 !> To ins
+          OutsideValidityIntervalUTxO a b -> Sum OutsideValidityIntervalUTxO 2 !> To a !> To b
+          MaxTxSizeUTxO mm -> Sum MaxTxSizeUTxO 3 !> To mm
+          InputSetEmptyUTxO -> Sum InputSetEmptyUTxO 4
+          FeeTooSmallUTxO mm -> Sum FeeTooSmallUTxO 5 !> To mm
+          ValueNotConservedUTxO mm -> Sum (ValueNotConservedUTxO @era) 6 !> To mm
+          WrongNetwork right wrongs -> Sum (WrongNetwork @era) 7 !> To right !> To wrongs
+          WrongNetworkWithdrawal right wrongs -> Sum (WrongNetworkWithdrawal @era) 8 !> To right !> To wrongs
+          OutputTooSmallUTxO outs -> Sum (OutputTooSmallUTxO @era) 9 !> To outs
+          OutputBootAddrAttrsTooBig outs -> Sum (OutputBootAddrAttrsTooBig @era) 10 !> To outs
+          OutputTooBigUTxO outs -> Sum (OutputTooBigUTxO @era) 11 !> To outs
+          InsufficientCollateral a b -> Sum InsufficientCollateral 12 !> To a !> To b
+          ScriptsNotPaidUTxO a -> Sum ScriptsNotPaidUTxO 13 !> To a
+          ExUnitsTooBigUTxO mm -> Sum ExUnitsTooBigUTxO 14 !> To mm
+          CollateralContainsNonADA a -> Sum CollateralContainsNonADA 15 !> To a
+          WrongNetworkInTxBody mm -> Sum WrongNetworkInTxBody 16 !> To mm
+          OutsideForecast a -> Sum OutsideForecast 17 !> To a
+          TooManyCollateralInputs mm -> Sum TooManyCollateralInputs 18 !> To mm
+          NoCollateralInputs -> Sum NoCollateralInputs 19
+          IncorrectTotalCollateralField c1 c2 -> Sum IncorrectTotalCollateralField 20 !> To c1 !> To c2
+          BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 21 !> To x
+          BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 22 !> To x
+      beforeTen =
+        encode . \case
+          UtxosFailure a -> Sum (UtxosFailure @era) 0 !> To a
+          BadInputsUTxO ins -> Sum (BadInputsUTxO @era) 1 !> To ins
+          OutsideValidityIntervalUTxO a b -> Sum OutsideValidityIntervalUTxO 2 !> To a !> To b
+          MaxTxSizeUTxO mm@(Mismatch _ _) ->
+            Sum MaxTxSizeUTxO 3
+              !> E (\(Mismatch {..}) -> encCBOR mismatchSupplied <> encCBOR mismatchExpected) mm
+          InputSetEmptyUTxO -> Sum InputSetEmptyUTxO 4
+          FeeTooSmallUTxO mm@(Mismatch _ _) ->
+            -- The values are serialised in reverse order
+            Sum FeeTooSmallUTxO 5
+              !> E (\(Mismatch {..}) -> encCBOR mismatchExpected <> encCBOR mismatchSupplied) mm
+          ValueNotConservedUTxO mm@(Mismatch consumed produced) ->
+            -- Consumed, then produced
+            Sum (ValueNotConservedUTxO @era) 6
+              !> E (const $ encCBOR consumed <> encCBOR produced) mm
+          WrongNetwork right wrongs -> Sum (WrongNetwork @era) 7 !> To right !> To wrongs
+          WrongNetworkWithdrawal right wrongs -> Sum (WrongNetworkWithdrawal @era) 8 !> To right !> To wrongs
+          OutputTooSmallUTxO outs -> Sum (OutputTooSmallUTxO @era) 9 !> To outs
+          OutputBootAddrAttrsTooBig outs -> Sum (OutputBootAddrAttrsTooBig @era) 10 !> To outs
+          OutputTooBigUTxO outs -> Sum (OutputTooBigUTxO @era) 11 !> To outs
+          InsufficientCollateral a b -> Sum InsufficientCollateral 12 !> To a !> To b
+          ScriptsNotPaidUTxO a -> Sum ScriptsNotPaidUTxO 13 !> To a
+          ExUnitsTooBigUTxO mm@(Mismatch _ _) ->
+            -- The values are serialised in reverse order
+            Sum ExUnitsTooBigUTxO 14
+              !> E (\(Mismatch {..}) -> encCBOR mismatchExpected <> encCBOR mismatchSupplied) mm
+          CollateralContainsNonADA a -> Sum CollateralContainsNonADA 15 !> To a
+          WrongNetworkInTxBody mm@(Mismatch _ _) ->
+            -- The values are serialised in reverse order
+            Sum WrongNetworkInTxBody 16
+              !> E (\(Mismatch {..}) -> encCBOR mismatchExpected <> encCBOR mismatchSupplied) mm
+          OutsideForecast a -> Sum OutsideForecast 17 !> To a
+          TooManyCollateralInputs mm@(Mismatch _ _) ->
+            -- The values are serialised in reverse order
+            Sum TooManyCollateralInputs 18
+              !> E (\(Mismatch {..}) -> encCBOR mismatchExpected <> encCBOR mismatchSupplied) mm
+          NoCollateralInputs -> Sum NoCollateralInputs 19
+          IncorrectTotalCollateralField c1 c2 -> Sum IncorrectTotalCollateralField 20 !> To c1 !> To c2
+          BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 21 !> To x
+          BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 22 !> To x
 
 instance
   ( Era era
@@ -323,31 +356,100 @@ instance
   ) =>
   DecCBOR (ConwayUtxoPredFailure era)
   where
-  decCBOR = decode . Summands "ConwayUtxoPred" $ \case
-    0 -> SumD UtxosFailure <! From
-    1 -> SumD BadInputsUTxO <! From
-    2 -> SumD OutsideValidityIntervalUTxO <! From <! From
-    3 -> SumD MaxTxSizeUTxO <! From <! From
-    4 -> SumD InputSetEmptyUTxO
-    5 -> SumD FeeTooSmallUTxO <! From <! From
-    6 -> SumD ValueNotConservedUTxO <! From <! From
-    7 -> SumD WrongNetwork <! From <! From
-    8 -> SumD WrongNetworkWithdrawal <! From <! From
-    9 -> SumD OutputTooSmallUTxO <! From
-    10 -> SumD OutputBootAddrAttrsTooBig <! From
-    11 -> SumD OutputTooBigUTxO <! From
-    12 -> SumD InsufficientCollateral <! From <! From
-    13 -> SumD ScriptsNotPaidUTxO <! D (UTxO <$> decCBOR)
-    14 -> SumD ExUnitsTooBigUTxO <! From <! From
-    15 -> SumD CollateralContainsNonADA <! From
-    16 -> SumD WrongNetworkInTxBody <! From <! From
-    17 -> SumD OutsideForecast <! From
-    18 -> SumD TooManyCollateralInputs <! From <! From
-    19 -> SumD NoCollateralInputs
-    20 -> SumD IncorrectTotalCollateralField <! From <! From
-    21 -> SumD BabbageOutputTooSmallUTxO <! From
-    22 -> SumD BabbageNonDisjointRefInputs <! From
-    n -> Invalid n
+  decCBOR = ifDecoderVersionAtLeast (natVersion @10) tenOnwards beforeTen
+    where
+      tenOnwards = decode . Summands "ConwayUtxoPredFailure" $ \case
+        0 -> SumD UtxosFailure <! From
+        1 -> SumD BadInputsUTxO <! From
+        2 -> SumD OutsideValidityIntervalUTxO <! From <! From
+        3 -> SumD MaxTxSizeUTxO <! From
+        4 -> SumD InputSetEmptyUTxO
+        5 -> SumD FeeTooSmallUTxO <! From
+        6 -> SumD ValueNotConservedUTxO <! From
+        7 -> SumD WrongNetwork <! From <! From
+        8 -> SumD WrongNetworkWithdrawal <! From <! From
+        9 -> SumD OutputTooSmallUTxO <! From
+        10 -> SumD OutputBootAddrAttrsTooBig <! From
+        11 -> SumD OutputTooBigUTxO <! From
+        12 -> SumD InsufficientCollateral <! From <! From
+        13 -> SumD ScriptsNotPaidUTxO <! D (UTxO <$> decCBOR)
+        14 -> SumD ExUnitsTooBigUTxO <! From
+        15 -> SumD CollateralContainsNonADA <! From
+        16 -> SumD WrongNetworkInTxBody <! From
+        17 -> SumD OutsideForecast <! From
+        18 -> SumD TooManyCollateralInputs <! From
+        19 -> SumD NoCollateralInputs
+        20 -> SumD IncorrectTotalCollateralField <! From <! From
+        21 -> SumD BabbageOutputTooSmallUTxO <! From
+        22 -> SumD BabbageNonDisjointRefInputs <! From
+        n -> Invalid n
+      beforeTen = decode . Summands "ConwayUtxoPredFailure" $ \case
+        0 -> SumD UtxosFailure <! From
+        1 -> SumD BadInputsUTxO <! From
+        2 -> SumD OutsideValidityIntervalUTxO <! From <! From
+        3 ->
+          SumD MaxTxSizeUTxO
+            <! D
+              ( do
+                  mismatchSupplied <- decCBOR
+                  mismatchExpected <- decCBOR
+                  pure Mismatch {..}
+              )
+        4 -> SumD InputSetEmptyUTxO
+        5 ->
+          SumD FeeTooSmallUTxO
+            <! D
+              ( do
+                  mismatchExpected <- decCBOR -- The values are serialised in reverse order
+                  mismatchSupplied <- decCBOR
+                  pure Mismatch {..}
+              )
+        6 ->
+          SumD ValueNotConservedUTxO
+            <! D
+              ( do
+                  consumed <- decCBOR
+                  produced <- decCBOR
+                  pure Mismatch {mismatchSupplied = consumed, mismatchExpected = produced}
+              )
+        7 -> SumD WrongNetwork <! From <! From
+        8 -> SumD WrongNetworkWithdrawal <! From <! From
+        9 -> SumD OutputTooSmallUTxO <! From
+        10 -> SumD OutputBootAddrAttrsTooBig <! From
+        11 -> SumD OutputTooBigUTxO <! From
+        12 -> SumD InsufficientCollateral <! From <! From
+        13 -> SumD ScriptsNotPaidUTxO <! D (UTxO <$> decCBOR)
+        14 ->
+          SumD ExUnitsTooBigUTxO
+            <! D
+              ( do
+                  mismatchExpected <- decCBOR -- The values are serialised in reverse order
+                  mismatchSupplied <- decCBOR
+                  pure Mismatch {..}
+              )
+        15 -> SumD CollateralContainsNonADA <! From
+        16 ->
+          SumD WrongNetworkInTxBody
+            <! D
+              ( do
+                  mismatchExpected <- decCBOR -- The values are serialised in reverse order
+                  mismatchSupplied <- decCBOR
+                  pure Mismatch {..}
+              )
+        17 -> SumD OutsideForecast <! From
+        18 ->
+          SumD TooManyCollateralInputs
+            <! D
+              ( do
+                  mismatchExpected <- decCBOR -- The values are serialised in reverse order
+                  mismatchSupplied <- decCBOR
+                  pure Mismatch {..}
+              )
+        19 -> SumD NoCollateralInputs
+        20 -> SumD IncorrectTotalCollateralField <! From <! From
+        21 -> SumD BabbageOutputTooSmallUTxO <! From
+        22 -> SumD BabbageNonDisjointRefInputs <! From
+        n -> Invalid n
 
 -- =====================================================
 -- Injecting from one PredicateFailure to another
@@ -369,10 +471,20 @@ alonzoToConwayUtxoPredFailure ::
 alonzoToConwayUtxoPredFailure = \case
   Alonzo.BadInputsUTxO x -> BadInputsUTxO x
   Alonzo.OutsideValidityIntervalUTxO vi slotNo -> OutsideValidityIntervalUTxO vi slotNo
-  Alonzo.MaxTxSizeUTxO x y -> MaxTxSizeUTxO x y
+  Alonzo.MaxTxSizeUTxO x y -> MaxTxSizeUTxO Mismatch {mismatchSupplied = x, mismatchExpected = y}
   Alonzo.InputSetEmptyUTxO -> InputSetEmptyUTxO
-  Alonzo.FeeTooSmallUTxO c1 c2 -> FeeTooSmallUTxO c1 c2
-  Alonzo.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
+  Alonzo.FeeTooSmallUTxO ppMinFee supplied ->
+    FeeTooSmallUTxO
+      Mismatch
+        { mismatchSupplied = supplied
+        , mismatchExpected = ppMinFee
+        }
+  Alonzo.ValueNotConservedUTxO consumed produced ->
+    ValueNotConservedUTxO
+      Mismatch
+        { mismatchSupplied = consumed
+        , mismatchExpected = produced
+        }
   Alonzo.WrongNetwork x y -> WrongNetwork x y
   Alonzo.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
   Alonzo.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
@@ -392,11 +504,26 @@ alonzoToConwayUtxoPredFailure = \case
       OutputTooBigUTxO $ map toRestricted xs
   Alonzo.InsufficientCollateral c1 c2 -> InsufficientCollateral c1 c2
   Alonzo.ScriptsNotPaidUTxO u -> ScriptsNotPaidUTxO u
-  Alonzo.ExUnitsTooBigUTxO e1 e2 -> ExUnitsTooBigUTxO e1 e2
+  Alonzo.ExUnitsTooBigUTxO e1 e2 ->
+    ExUnitsTooBigUTxO
+      Mismatch
+        { mismatchSupplied = e2
+        , mismatchExpected = e1
+        }
   Alonzo.CollateralContainsNonADA v -> CollateralContainsNonADA v
-  Alonzo.WrongNetworkInTxBody nid nidb -> WrongNetworkInTxBody nid nidb
+  Alonzo.WrongNetworkInTxBody nid nidInTx ->
+    WrongNetworkInTxBody
+      Mismatch
+        { mismatchSupplied = nidInTx
+        , mismatchExpected = nid
+        }
   Alonzo.OutsideForecast sno -> OutsideForecast sno
-  Alonzo.TooManyCollateralInputs n1 n2 -> TooManyCollateralInputs n1 n2
+  Alonzo.TooManyCollateralInputs maxI suppliedI ->
+    TooManyCollateralInputs
+      Mismatch
+        { mismatchSupplied = suppliedI
+        , mismatchExpected = maxI
+        }
   Alonzo.NoCollateralInputs -> NoCollateralInputs
 
 allegraToConwayUtxoPredFailure ::
@@ -407,10 +534,25 @@ allegraToConwayUtxoPredFailure ::
 allegraToConwayUtxoPredFailure = \case
   Allegra.BadInputsUTxO x -> BadInputsUTxO x
   Allegra.OutsideValidityIntervalUTxO vi slotNo -> OutsideValidityIntervalUTxO vi slotNo
-  Allegra.MaxTxSizeUTxO x y -> MaxTxSizeUTxO x y
+  Allegra.MaxTxSizeUTxO supplied expected ->
+    MaxTxSizeUTxO
+      Mismatch
+        { mismatchSupplied = supplied
+        , mismatchExpected = expected
+        }
   Allegra.InputSetEmptyUTxO -> InputSetEmptyUTxO
-  Allegra.FeeTooSmallUTxO c1 c2 -> FeeTooSmallUTxO c1 c2
-  Allegra.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
+  Allegra.FeeTooSmallUTxO minFee suppliedFee ->
+    FeeTooSmallUTxO
+      Mismatch
+        { mismatchSupplied = suppliedFee
+        , mismatchExpected = minFee
+        }
+  Allegra.ValueNotConservedUTxO consumed produced ->
+    ValueNotConservedUTxO
+      Mismatch
+        { mismatchSupplied = consumed
+        , mismatchExpected = produced
+        }
   Allegra.WrongNetwork x y -> WrongNetwork x y
   Allegra.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
