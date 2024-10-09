@@ -129,6 +129,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import Data.Pulse (foldlM')
 import qualified Data.Sequence.Strict as SSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -290,6 +291,12 @@ instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
 
 data ConwayGovEvent era
   = GovNewProposals !(TxId (EraCrypto era)) !(Proposals era)
+  | GovRemovedVotes
+      !(TxId (EraCrypto era))
+      -- | Votes that were replaced in this tx.
+      !(Set (Voter (EraCrypto era), GovActionId (EraCrypto era)))
+      -- | Any votes from these DReps in this or in previous txs are removed
+      !(Set (Credential 'DRepRole (EraCrypto era)))
   deriving (Generic, Eq)
 
 instance EraPParams era => NFData (ConwayGovEvent era)
@@ -535,15 +542,24 @@ govTransition = do
 
   -- Inversion of the keys in VotingProcedures, where we can find the voters for every
   -- govActionId
-  let (unknownGovActionIds, knownVotes) =
+  let (unknownGovActionIds, knownVotes, replacedVotes) =
         foldrVotingProcedures
-          -- strictness is not needed for `unknown`
-          ( \voter gaId _ (unknown, !known) ->
+          -- strictness is not needed for `unknown` or `replaced`
+          ( \voter gaId _ (unknown, !known, replaced) ->
               case Map.lookup gaId curGovActionIds of
-                Just gas -> (unknown, (voter, gas) : known)
-                Nothing -> (gaId : unknown, known)
+                Just gas ->
+                  let isVoteReplaced =
+                        case voter of
+                          CommitteeVoter hotCred -> hotCred `Map.member` gasCommitteeVotes gas
+                          DRepVoter cred -> cred `Map.member` gasDRepVotes gas
+                          StakePoolVoter poolId -> poolId `Map.member` gasStakePoolVotes gas
+                      replaced'
+                        | isVoteReplaced = Set.insert (voter, gaId) replaced
+                        | otherwise = replaced
+                   in (unknown, (voter, gas) : known, replaced')
+                Nothing -> (gaId : unknown, known, replaced)
           )
-          ([], [])
+          ([], [], Set.empty)
           gsVotingProcedures
       curGovActionIds = proposalsActionsMap proposals
       isVoterKnown = \case
@@ -578,6 +594,7 @@ govTransition = do
 
   -- Report the event
   tellEvent $ GovNewProposals txid updatedProposalStates
+  tellEvent $ GovRemovedVotes txid replacedVotes unregisteredDReps
 
   pure updatedProposalStates
 
