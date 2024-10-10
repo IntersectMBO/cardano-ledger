@@ -67,7 +67,7 @@ govCertSpec ConwayGovCertEnv {..} certState =
               ]
           )
           -- ConwayUnRegDRep -- Commented out on purpose, to make conformance tests pass.
-          -- Shpould be uncommented when they are fixed to handle un registration
+          -- Should be uncommented when they are fixed to handle un registration
           -- ( branchW 3 $ \ [var|credUnreg|] [var|coinUnreg|] ->
           --     assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))
           -- )

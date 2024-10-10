@@ -39,7 +39,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Cert (EraCert (..))
 import Test.Cardano.Ledger.Constrained.Conway.Certs (certsEnvSpec, projectEnv)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.InstancesTxBody ()
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (LedgerEra (..), certStateSpec)
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraLedger (..), certStateSpec)
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 
 -- import qualified Test.Cardano.Ledger.Generic.Proof as Proof
@@ -127,10 +127,10 @@ foo = generate $ genFromSpec $ subMap @Int @Int @ConwayFn
 
 bodyspec ::
   forall era.
-  ( LedgerEra era ConwayFn
+  ( EraLedger era ConwayFn
   , TxOutValue era
-  , --  , HasSpec ConwayFn (TxCert era)
-    EraCert era
+  , HasSpec ConwayFn (TxCert era)
+  , EraCert era
   ) =>
   UTxO era ->
   CertsEnv era ->

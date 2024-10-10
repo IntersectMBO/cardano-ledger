@@ -26,9 +26,9 @@ import Data.Sequence (Seq, fromList)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Constrained.Conway.Cert
-import Test.Cardano.Ledger.Constrained.Conway.Deleg (someZeros)
+import Test.Cardano.Ledger.Constrained.Conway.Deleg (EraDeleg (..), someZeros)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (LedgerEra (..))
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraLedger (..))
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 
 -- =======================================================
@@ -44,7 +44,7 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 -- Note that only the keyhash credentials need be delegated to a DRep.
 bootstrapDStateSpec ::
   forall fn era.
-  LedgerEra era fn =>
+  EraLedger era fn =>
   CertsContext era ->
   Specification fn (DState era)
 bootstrapDStateSpec withdrawals =
@@ -54,8 +54,8 @@ bootstrapDStateSpec withdrawals =
       withdrawalKeys = Map.keysSet (Map.mapKeys raCredential withdrawals)
    in constrained $ \ [var| dstate |] ->
         match dstate $ \ [var| rewardMap |] futureGenDelegs genDelegs _rewards ->
-          [ assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era @fn [] then 3 else 0)
-          , match genDelegs $ \gd -> assert $ sizeOf_ gd ==. (if hasGenDelegs @era @fn [] then 3 else 0)
+          [ assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
+          , match genDelegs $ \gd -> assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
           , match _rewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
           , match [var| rewardMap |] $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] dRepDelegs ->
               [ assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
@@ -111,10 +111,10 @@ projectEnv x =
     }
 
 txCertsSpec ::
-  EraCert era =>
+  (IsConwayUniv fn, HasSpec fn (TxCert era), EraCert era) =>
   CertsEnv era ->
   CertState era ->
-  Specification ConwayFn (Seq (TxCert era))
+  Specification fn (Seq (TxCert era))
 txCertsSpec env state =
   constrained $ \seqs ->
     exists

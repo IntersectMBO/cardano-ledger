@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -17,29 +18,26 @@
 -- for the CERT rule
 module Test.Cardano.Ledger.Constrained.Conway.Cert where
 
-import Cardano.Ledger.CertState
-import Cardano.Ledger.Conway.Rules
-import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Shelley.API.Types
-
-import Constrained
-
 import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
+import Constrained
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Instances
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (LedgerEra (..))
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 import Test.Cardano.Ledger.Constrained.Conway.Pool
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
@@ -56,7 +54,7 @@ certEnvSpec =
       ]
 
 certStateSpec ::
-  LedgerEra era fn =>
+  (IsConwayUniv fn, EraDeleg era) =>
   Specification fn (CertState era)
 certStateSpec =
   constrained $ \cs ->
@@ -126,7 +124,7 @@ computeSets ds =
       vrfKeyHashes gkh = currentVrfKeyHashes gkh <> futureVrfKeyHashes gkh
    in (vrfKeyHashes, coldKeyHashes)
 
-test3 :: forall era. LedgerEra era ConwayFn => IO ()
+test3 :: forall era. EraDeleg era => IO ()
 test3 = do
   dstate <- generate $ genFromSpec @ConwayFn @(DState era) dStateSpec
   let spec = genesisDelegCertSpec @ConwayFn dstate
@@ -179,7 +177,7 @@ test4 = do
         (ConwayTxCertGov (ConwayResignCommitteeColdKey _ _)) -> "ResignCommittee"
   pure (classify True tag (property (conformsToSpec ans spec)))
 
-test5 :: forall era. LedgerEra era ConwayFn => Gen Property
+test5 :: forall era. (EraDeleg era, EraPP era) => Gen Property
 test5 = do
   env <- genFromSpec @ConwayFn @(CertEnv era) certEnvSpec
   dstate <- genFromSpec @ConwayFn @(CertState era) certStateSpec
@@ -200,8 +198,10 @@ test5 = do
 -- =========================================================================
 -- Making Cert Era parametric with the EraCert class
 
-class (Era era, HasSpec ConwayFn (TxCert era)) => EraCert era where
-  txCertSpec :: IsConwayUniv fn => CertEnv era -> CertState era -> Specification fn (TxCert era)
+class Era era => EraCert era where
+  txCertSpec ::
+    (IsConwayUniv fn, HasSpec fn (TxCert era)) =>
+    CertEnv era -> CertState era -> Specification fn (TxCert era)
   txCertKey :: TxCert era -> CertKey (EraCrypto era)
 
 instance EraCert Shelley where txCertSpec = shelleyTxCertSpec; txCertKey = shelleyTxCertKey

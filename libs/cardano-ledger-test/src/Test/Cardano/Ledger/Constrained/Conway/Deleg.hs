@@ -1,22 +1,31 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the DELEG rule
 module Test.Cardano.Ledger.Constrained.Conway.Deleg where
 
+import Cardano.Ledger.Allegra (Allegra)
+import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core (Era (..), EraPParams (..), ppKeyDepositL)
 import Cardano.Ledger.Credential (credKeyHash, credScriptHash)
+import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
 import Constrained
@@ -24,7 +33,6 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (LedgerEra (..))
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 
 -- | Specify that some of the rewards in the RDPair's are zero.
@@ -36,14 +44,12 @@ someZeros = constrained $ \ [var| someRdpair |] ->
     satisfies reward (chooseSpec (1, constrained $ \ [var| x |] -> assert $ x ==. lit 0) (3, TrueSpec))
 
 dStateSpec ::
-  forall fn era.
-  LedgerEra era fn =>
-  Specification fn (DState era)
+  forall fn era. (IsConwayUniv fn, EraDeleg era) => Specification fn (DState era)
 dStateSpec = constrained $ \ [var| dstate |] ->
   match dstate $ \ [var| rewardMap |] [var|futureGenDelegs|] [var|genDelegs|] _rewards ->
     match rewardMap $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] _dRepMap ->
-      [ assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era @fn [] then 3 else 0)
-      , match genDelegs $ \gd -> assert $ sizeOf_ gd ==. (if hasGenDelegs @era @fn [] then 3 else 0)
+      [ assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
+      , match genDelegs $ \gd -> assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
       , match _rewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
       , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
       , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
@@ -166,3 +172,26 @@ shelleyDelegCertSpec (ConwayDelegEnv _pp pools) ds =
               , assert $ elem_ kh (lit (Map.keys pools))
               ]
           )
+
+-- =============================================
+
+class (Era era, EraPParams era) => EraDeleg era where
+  hasGenDelegs :: proxy era -> Bool
+
+instance EraDeleg Shelley where
+  hasGenDelegs _proxy = True
+
+instance EraDeleg Allegra where
+  hasGenDelegs _proxy = True
+
+instance EraDeleg Mary where
+  hasGenDelegs _proxy = True
+
+instance EraDeleg Alonzo where
+  hasGenDelegs _proxy = True
+
+instance EraDeleg Babbage where
+  hasGenDelegs _proxy = True
+
+instance EraDeleg Conway where
+  hasGenDelegs _proxy = False

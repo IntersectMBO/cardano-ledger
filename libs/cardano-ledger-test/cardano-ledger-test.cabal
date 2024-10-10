@@ -70,6 +70,7 @@ library
         Test.Cardano.Ledger.Constrained.Conway.Pool
         Test.Cardano.Ledger.Constrained.Conway.Utxo
         Test.Cardano.Ledger.Constrained.Conway.SimplePParams
+        Test.Cardano.Ledger.Constrained.Conway.ParametricSpec
         Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
         Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
         Test.Cardano.Ledger.Examples.BabbageFeatures
