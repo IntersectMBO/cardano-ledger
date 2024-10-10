@@ -152,6 +152,8 @@ tests nightly =
     testSpec "mapRestrictedValuesBool" mapRestrictedValuesBool
     testSpec "mapSetSmall" mapSetSmall
     testSpecNoShrink "powersetPickOne" powersetPickOne
+    testSpecNoShrink "appendSuffix" appendSuffix
+    testSpecNoShrink "appendForAll" appendForAll
     numberyTests
     sizeTests
     numNumSpecTree
@@ -203,15 +205,20 @@ negativeTests =
               (pure "You can't constrain the variable introduced by reify as its already decided")
               $ reify x id
               $ \y -> y ==. 10
-    prop "singletonErrorTooMany" $
-      expectFailure $
-        prop_complete singletonErrorTooMany
-    prop "singletonErrorTooLong" $
-      expectFailure $
-        prop_complete singletonErrorTooLong
-    prop "appendTooLong" $
-      expectFailure $
-        prop_complete appendTooLong
+    testSpecFail "singletonErrorTooMany" singletonErrorTooMany
+    testSpecFail "singletonErrorTooLong" singletonErrorTooLong
+    testSpecFail "appendTooLong" appendTooLong
+    testSpecFail "overconstrainedAppend" overconstrainedAppend
+    testSpecFail "overconstrainedPrefixes" overconstrainedPrefixes
+    testSpecFail "overconstrainedSuffixes" overconstrainedSuffixes
+    testSpecFail "appendForAllBad" appendForAllBad
+
+testSpecFail :: HasSpec fn a => String -> Specification fn a -> Spec
+testSpecFail s spec =
+  prop (s ++ " fails") $
+    expectFailure $
+      withMaxSuccess 1 $
+        prop_complete spec
 
 numberyTests :: Spec
 numberyTests =
