@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.14.0.1
+
+*
+
 ## 1.14.0.0
 
 * Remove `ShelleyNewppPredFailure`. #4649

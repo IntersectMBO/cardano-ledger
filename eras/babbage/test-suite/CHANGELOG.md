@@ -1,5 +1,13 @@
 # Version history for `cardano-ledger-babbage-test`
 
+## 1.3.0.1
+
+*
+
+## 1.3.0.0
+
+* Move `TranslatableGen` and `GenerateGoldenFileMain` to babbage testlib
+
 ## 1.2.0.5
 
 *
