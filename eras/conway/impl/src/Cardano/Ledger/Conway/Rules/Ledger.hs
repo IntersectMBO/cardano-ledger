@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -39,8 +40,14 @@ import Cardano.Ledger.Babbage.Rules (
  )
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
+  Relation (..),
+  ShelleyBase,
+  StrictMaybe (..),
+  epochInfoPure,
+ )
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen, encodeWord8)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core hiding (proposals)
@@ -140,16 +147,8 @@ data ConwayLedgerPredFailure era
   | ConwayCertsFailure (PredicateFailure (EraRule "CERTS" era))
   | ConwayGovFailure (PredicateFailure (EraRule "GOV" era))
   | ConwayWdrlNotDelegatedToDRep (NonEmpty (KeyHash 'Staking (EraCrypto era)))
-  | ConwayTreasuryValueMismatch
-      -- | Actual
-      Coin
-      -- | Submitted in transaction
-      Coin
-  | ConwayTxRefScriptsSizeTooBig
-      -- | Computed sum of reference script size
-      Int
-      -- | Maximum allowed total reference script size
-      Int
+  | ConwayTreasuryValueMismatch !(Mismatch 'RelEQ Coin) -- The serialisation order is in reverse
+  | ConwayTxRefScriptsSizeTooBig !(Mismatch 'RelLTEQ Int)
   | ConwayMempoolFailure Text
   deriving (Generic)
 
@@ -259,17 +258,21 @@ instance
   ) =>
   EncCBOR (ConwayLedgerPredFailure era)
   where
-  encCBOR =
-    encode . \case
-      ConwayUtxowFailure x -> Sum (ConwayUtxowFailure @era) 1 !> To x
-      ConwayCertsFailure x -> Sum (ConwayCertsFailure @era) 2 !> To x
-      ConwayGovFailure x -> Sum (ConwayGovFailure @era) 3 !> To x
-      ConwayWdrlNotDelegatedToDRep x ->
-        Sum (ConwayWdrlNotDelegatedToDRep @era) 4 !> To x
-      ConwayTreasuryValueMismatch actual submitted ->
-        Sum (ConwayTreasuryValueMismatch @era) 5 !> To actual !> To submitted
-      ConwayTxRefScriptsSizeTooBig x y -> Sum ConwayTxRefScriptsSizeTooBig 6 !> To x !> To y
-      ConwayMempoolFailure t -> Sum ConwayMempoolFailure 7 !> To t
+  encCBOR = \case
+    ConwayUtxowFailure x ->
+      encodeListLen 2 <> encodeWord8 1 <> encCBOR x
+    ConwayCertsFailure x ->
+      encodeListLen 2 <> encodeWord8 2 <> encCBOR x
+    ConwayGovFailure x ->
+      encodeListLen 2 <> encodeWord8 3 <> encCBOR x
+    ConwayWdrlNotDelegatedToDRep x ->
+      encodeListLen 2 <> encodeWord8 4 <> encCBOR x
+    ConwayTreasuryValueMismatch (Mismatch {mismatchSupplied = submitted, mismatchExpected = actual}) ->
+      encodeListLen 3 <> encodeWord8 5 <> encCBOR actual <> encCBOR submitted
+    ConwayTxRefScriptsSizeTooBig (Mismatch {mismatchSupplied = x, mismatchExpected = y}) ->
+      encodeListLen 3 <> encodeWord8 6 <> encCBOR x <> encCBOR y
+    ConwayMempoolFailure t ->
+      encodeListLen 2 <> encodeWord8 7 <> encCBOR t
 
 instance
   ( Era era
@@ -279,16 +282,32 @@ instance
   ) =>
   DecCBOR (ConwayLedgerPredFailure era)
   where
-  decCBOR =
-    decode $ Summands "ConwayLedgerPredFailure" $ \case
-      1 -> SumD ConwayUtxowFailure <! From
-      2 -> SumD ConwayCertsFailure <! From
-      3 -> SumD ConwayGovFailure <! From
-      4 -> SumD ConwayWdrlNotDelegatedToDRep <! From
-      5 -> SumD ConwayTreasuryValueMismatch <! From <! From
-      6 -> SumD ConwayTxRefScriptsSizeTooBig <! From <! From
-      7 -> SumD ConwayMempoolFailure <! From
-      n -> Invalid n
+  decCBOR = decodeRecordSum "ConwayLedgerPredFailure" $ \case
+    1 -> do
+      x <- decCBOR
+      pure (2, ConwayUtxowFailure x)
+    2 -> do
+      x <- decCBOR
+      pure (2, ConwayCertsFailure x)
+    3 -> do
+      x <- decCBOR
+      pure (2, ConwayGovFailure x)
+    4 -> do
+      x <- decCBOR
+      pure (2, ConwayWdrlNotDelegatedToDRep x)
+    5 -> do
+      -- The serialisation order is in reverse
+      mismatchExpected <- decCBOR
+      mismatchSupplied <- decCBOR
+      pure (3, ConwayTreasuryValueMismatch $ Mismatch {..})
+    6 -> do
+      mismatchSupplied <- decCBOR
+      mismatchExpected <- decCBOR
+      pure (3, ConwayTxRefScriptsSizeTooBig $ Mismatch {..})
+    7 -> do
+      x <- decCBOR
+      pure (2, ConwayMempoolFailure x)
+    n -> invalidKey n
 
 data ConwayLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))
@@ -406,12 +425,22 @@ ledgerTransition = do
           SJust submittedTreasuryValue ->
             submittedTreasuryValue
               == actualTreasuryValue
-                ?! ConwayTreasuryValueMismatch actualTreasuryValue submittedTreasuryValue
+                ?! ConwayTreasuryValueMismatch
+                  ( Mismatch
+                      { mismatchSupplied = submittedTreasuryValue
+                      , mismatchExpected = actualTreasuryValue
+                      }
+                  )
 
         let totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxosUtxoL) tx
         totalRefScriptSize
           <= maxRefScriptSizePerTx
-            ?! ConwayTxRefScriptsSizeTooBig totalRefScriptSize maxRefScriptSizePerTx
+            ?! ConwayTxRefScriptsSizeTooBig
+              ( Mismatch
+                  { mismatchSupplied = totalRefScriptSize
+                  , mismatchExpected = maxRefScriptSizePerTx
+                  }
+              )
 
         let govState = utxoState ^. utxosGovStateL
             committee = govState ^. committeeGovStateL

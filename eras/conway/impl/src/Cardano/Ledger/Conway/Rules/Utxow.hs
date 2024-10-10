@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -44,8 +45,8 @@ import Cardano.Ledger.Babbage.Rules (
   babbageUtxowTransition,
  )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
-import Cardano.Ledger.BaseTypes (Mismatch (..), ShelleyBase)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), ifEncodingVersionAtLeast, natVersion)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -112,10 +113,7 @@ data ConwayUtxowPredFailure era
     MissingTxMetadata
       !(AuxiliaryDataHash (EraCrypto era))
   | ConflictingMetadataHash
-      -- | hash of the metadata included in the transaction body
-      !(AuxiliaryDataHash (EraCrypto era))
-      -- | expected hash of the full metadata
-      !(AuxiliaryDataHash (EraCrypto era))
+      !(Mismatch 'RelEQ (AuxiliaryDataHash (EraCrypto era)))
   | -- | Contains out of range values (string`s too long)
     InvalidMetadata
   | -- | extraneous scripts
@@ -124,20 +122,11 @@ data ConwayUtxowPredFailure era
   | MissingRedeemers
       ![(PlutusPurpose AsItem era, ScriptHash (EraCrypto era))]
   | MissingRequiredDatums
-      -- | Set of missing data hashes
-      !(Set (DataHash (EraCrypto era)))
-      -- | Set of received data hashes
-      !(Set (DataHash (EraCrypto era)))
+      !(Mismatch 'RelEQ (Set (DataHash (EraCrypto era)))) -- These values are serialised in reverse order
   | NotAllowedSupplementalDatums
-      -- | Set of unallowed data hashes
-      !(Set (DataHash (EraCrypto era)))
-      -- | Set of acceptable supplemental data hashes
-      !(Set (DataHash (EraCrypto era)))
+      !(Mismatch 'RelEQ (Set (DataHash (EraCrypto era))))
   | PPViewHashesDontMatch
-      -- | The PPHash in the TxBody
-      !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
-      -- | Computed from the current Protocol Parameters
-      !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+      !(Mismatch 'RelEQ (StrictMaybe (ScriptIntegrityHash (EraCrypto era))))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
       (Set (TxIn (EraCrypto era)))
@@ -270,26 +259,57 @@ instance
   ) =>
   EncCBOR (ConwayUtxowPredFailure era)
   where
-  encCBOR =
-    encode . \case
-      UtxoFailure x -> Sum UtxoFailure 0 !> To x
-      InvalidWitnessesUTXOW xs -> Sum InvalidWitnessesUTXOW 1 !> To xs
-      MissingVKeyWitnessesUTXOW xs -> Sum MissingVKeyWitnessesUTXOW 2 !> To xs
-      MissingScriptWitnessesUTXOW xs -> Sum MissingScriptWitnessesUTXOW 3 !> To xs
-      ScriptWitnessNotValidatingUTXOW xs -> Sum ScriptWitnessNotValidatingUTXOW 4 !> To xs
-      MissingTxBodyMetadataHash xs -> Sum MissingTxBodyMetadataHash 5 !> To xs
-      MissingTxMetadata xs -> Sum MissingTxMetadata 6 !> To xs
-      ConflictingMetadataHash a b -> Sum ConflictingMetadataHash 7 !> To a !> To b
-      InvalidMetadata -> Sum InvalidMetadata 8
-      ExtraneousScriptWitnessesUTXOW xs -> Sum ExtraneousScriptWitnessesUTXOW 9 !> To xs
-      MissingRedeemers x -> Sum MissingRedeemers 10 !> To x
-      MissingRequiredDatums x y -> Sum MissingRequiredDatums 11 !> To x !> To y
-      NotAllowedSupplementalDatums x y -> Sum NotAllowedSupplementalDatums 12 !> To x !> To y
-      PPViewHashesDontMatch x y -> Sum PPViewHashesDontMatch 13 !> To x !> To y
-      UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 14 !> To x
-      ExtraRedeemers x -> Sum ExtraRedeemers 15 !> To x
-      MalformedScriptWitnesses x -> Sum MalformedScriptWitnesses 16 !> To x
-      MalformedReferenceScripts x -> Sum MalformedReferenceScripts 17 !> To x
+  encCBOR pf = ifEncodingVersionAtLeast (natVersion @10) (tenOnwards pf) (beforeTen pf)
+    where
+      tenOnwards =
+        encode . \case
+          UtxoFailure x -> Sum UtxoFailure 0 !> To x
+          InvalidWitnessesUTXOW xs -> Sum InvalidWitnessesUTXOW 1 !> To xs
+          MissingVKeyWitnessesUTXOW xs -> Sum MissingVKeyWitnessesUTXOW 2 !> To xs
+          MissingScriptWitnessesUTXOW xs -> Sum MissingScriptWitnessesUTXOW 3 !> To xs
+          ScriptWitnessNotValidatingUTXOW xs -> Sum ScriptWitnessNotValidatingUTXOW 4 !> To xs
+          MissingTxBodyMetadataHash xs -> Sum MissingTxBodyMetadataHash 5 !> To xs
+          MissingTxMetadata xs -> Sum MissingTxMetadata 6 !> To xs
+          ConflictingMetadataHash mm -> Sum ConflictingMetadataHash 7 !> To mm
+          InvalidMetadata -> Sum InvalidMetadata 8
+          ExtraneousScriptWitnessesUTXOW xs -> Sum ExtraneousScriptWitnessesUTXOW 9 !> To xs
+          MissingRedeemers x -> Sum MissingRedeemers 10 !> To x
+          MissingRequiredDatums mm -> Sum MissingRequiredDatums 11 !> To mm
+          NotAllowedSupplementalDatums mm -> Sum NotAllowedSupplementalDatums 12 !> To mm
+          PPViewHashesDontMatch mm -> Sum PPViewHashesDontMatch 13 !> To mm
+          UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 14 !> To x
+          ExtraRedeemers x -> Sum ExtraRedeemers 15 !> To x
+          MalformedScriptWitnesses x -> Sum MalformedScriptWitnesses 16 !> To x
+          MalformedReferenceScripts x -> Sum MalformedReferenceScripts 17 !> To x
+      beforeTen =
+        encode . \case
+          UtxoFailure x -> Sum UtxoFailure 0 !> To x
+          InvalidWitnessesUTXOW xs -> Sum InvalidWitnessesUTXOW 1 !> To xs
+          MissingVKeyWitnessesUTXOW xs -> Sum MissingVKeyWitnessesUTXOW 2 !> To xs
+          MissingScriptWitnessesUTXOW xs -> Sum MissingScriptWitnessesUTXOW 3 !> To xs
+          ScriptWitnessNotValidatingUTXOW xs -> Sum ScriptWitnessNotValidatingUTXOW 4 !> To xs
+          MissingTxBodyMetadataHash xs -> Sum MissingTxBodyMetadataHash 5 !> To xs
+          MissingTxMetadata xs -> Sum MissingTxMetadata 6 !> To xs
+          ConflictingMetadataHash mm@(Mismatch _ _) ->
+            Sum ConflictingMetadataHash 7
+              !> E (\(Mismatch {..}) -> encCBOR mismatchSupplied <> encCBOR mismatchExpected) mm
+          InvalidMetadata -> Sum InvalidMetadata 8
+          ExtraneousScriptWitnessesUTXOW xs -> Sum ExtraneousScriptWitnessesUTXOW 9 !> To xs
+          MissingRedeemers x -> Sum MissingRedeemers 10 !> To x
+          MissingRequiredDatums mm@(Mismatch _ _) ->
+            -- These values are serialised in reverse order
+            Sum MissingRequiredDatums 11
+              !> E (\(Mismatch {..}) -> encCBOR mismatchExpected <> encCBOR mismatchSupplied) mm
+          NotAllowedSupplementalDatums mm@(Mismatch _ _) ->
+            Sum NotAllowedSupplementalDatums 12
+              !> E (\(Mismatch {..}) -> encCBOR mismatchSupplied <> encCBOR mismatchExpected) mm
+          PPViewHashesDontMatch mm@(Mismatch _ _) ->
+            Sum PPViewHashesDontMatch 13
+              !> E (\(Mismatch {..}) -> encCBOR mismatchSupplied <> encCBOR mismatchExpected) mm
+          UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 14 !> To x
+          ExtraRedeemers x -> Sum ExtraRedeemers 15 !> To x
+          MalformedScriptWitnesses x -> Sum MalformedScriptWitnesses 16 !> To x
+          MalformedReferenceScripts x -> Sum MalformedReferenceScripts 17 !> To x
 
 instance
   ( ConwayEraScript era
@@ -305,13 +325,41 @@ instance
     4 -> SumD ScriptWitnessNotValidatingUTXOW <! From
     5 -> SumD MissingTxBodyMetadataHash <! From
     6 -> SumD MissingTxMetadata <! From
-    7 -> SumD ConflictingMetadataHash <! From <! From
+    7 ->
+      SumD ConflictingMetadataHash
+        <! D
+          ( do
+              mismatchSupplied <- decCBOR
+              mismatchExpected <- decCBOR
+              pure Mismatch {..}
+          )
     8 -> SumD InvalidMetadata
     9 -> SumD ExtraneousScriptWitnessesUTXOW <! From
     10 -> SumD MissingRedeemers <! From
-    11 -> SumD MissingRequiredDatums <! From <! From
-    12 -> SumD NotAllowedSupplementalDatums <! From <! From
-    13 -> SumD PPViewHashesDontMatch <! From <! From
+    11 ->
+      SumD MissingRequiredDatums
+        <! D
+          ( do
+              mismatchExpected <- decCBOR
+              mismatchSupplied <- decCBOR
+              pure Mismatch {..}
+          )
+    12 ->
+      SumD NotAllowedSupplementalDatums
+        <! D
+          ( do
+              mismatchSupplied <- decCBOR
+              mismatchExpected <- decCBOR
+              pure Mismatch {..}
+          )
+    13 ->
+      SumD PPViewHashesDontMatch
+        <! D
+          ( do
+              mismatchSupplied <- decCBOR
+              mismatchExpected <- decCBOR
+              pure Mismatch {..}
+          )
     14 -> SumD UnspendableUTxONoDatumHash <! From
     15 -> SumD ExtraRedeemers <! From
     16 -> SumD MalformedScriptWitnesses <! From
@@ -338,9 +386,24 @@ alonzoToConwayUtxowPredFailure ::
 alonzoToConwayUtxowPredFailure = \case
   Alonzo.ShelleyInAlonzoUtxowPredFailure f -> shelleyToConwayUtxowPredFailure f
   Alonzo.MissingRedeemers rs -> MissingRedeemers rs
-  Alonzo.MissingRequiredDatums mds rds -> MissingRequiredDatums mds rds
-  Alonzo.NotAllowedSupplementalDatums uds ads -> NotAllowedSupplementalDatums uds ads
-  Alonzo.PPViewHashesDontMatch a b -> PPViewHashesDontMatch a b
+  Alonzo.MissingRequiredDatums mds rds ->
+    MissingRequiredDatums
+      Mismatch
+        { mismatchSupplied = rds
+        , mismatchExpected = mds
+        }
+  Alonzo.NotAllowedSupplementalDatums uds ads ->
+    NotAllowedSupplementalDatums
+      Mismatch
+        { mismatchSupplied = uds
+        , mismatchExpected = ads
+        }
+  Alonzo.PPViewHashesDontMatch a b ->
+    PPViewHashesDontMatch
+      Mismatch
+        { mismatchSupplied = a
+        , mismatchExpected = b
+        }
   Alonzo.MissingRequiredSigners _xs ->
     error "Impossible case. It will be removed once we are in Conway. See #3972"
   Alonzo.UnspendableUTxONoDatumHash ins -> UnspendableUTxONoDatumHash ins
@@ -357,7 +420,6 @@ shelleyToConwayUtxowPredFailure = \case
     error "Impossible: MIR has been removed in Conway"
   Shelley.MissingTxBodyMetadataHash x -> MissingTxBodyMetadataHash x
   Shelley.MissingTxMetadata x -> MissingTxMetadata x
-  Shelley.ConflictingMetadataHash (Mismatch supplied expected) ->
-    ConflictingMetadataHash supplied expected
+  Shelley.ConflictingMetadataHash Mismatch {..} -> ConflictingMetadataHash Mismatch {..}
   Shelley.InvalidMetadata -> InvalidMetadata
   Shelley.ExtraneousScriptWitnessesUTXOW xs -> ExtraneousScriptWitnessesUTXOW xs

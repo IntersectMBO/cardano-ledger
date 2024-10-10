@@ -32,8 +32,10 @@ import Cardano.Ledger.Address (RewardAccount, raCredential, raNetwork)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
+  Mismatch (..),
   Network,
   ProtVer,
+  Relation (..),
   ShelleyBase,
   StrictMaybe (SJust),
   addEpochInterval,
@@ -165,11 +167,7 @@ data ConwayGovPredFailure era
   | MalformedProposal (GovAction era)
   | ProposalProcedureNetworkIdMismatch (RewardAccount (EraCrypto era)) Network
   | TreasuryWithdrawalsNetworkIdMismatch (Set.Set (RewardAccount (EraCrypto era))) Network
-  | ProposalDepositIncorrect
-      -- | Submitted deposit
-      Coin
-      -- | Expected deposit taken from `PParams`
-      Coin
+  | ProposalDepositIncorrect !(Mismatch 'RelEQ Coin)
   | -- | Some governance actions are not allowed to be voted on by certain types of
     -- Voters. This failure lists all governance action ids with their respective voters
     -- that are not allowed to vote on those governance actions.
@@ -185,10 +183,8 @@ data ConwayGovPredFailure era
   | ProposalCantFollow
       -- | The PrevGovActionId of the HardForkInitiation that fails
       (StrictMaybe (GovPurposeId 'HardForkPurpose era))
-      -- | Its protocol version
-      ProtVer
-      -- | The ProtVer of the Previous GovAction pointed to by the one proposed
-      ProtVer
+      -- | Its protocol version and the protocal version of the previous gov-action pointed to by the proposal
+      !(Mismatch 'RelGT ProtVer)
   | InvalidPolicyHash
       -- | The policy script hash in the proposal
       (StrictMaybe (ScriptHash (EraCrypto era)))
@@ -223,13 +219,28 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     1 -> SumD MalformedProposal <! From
     2 -> SumD ProposalProcedureNetworkIdMismatch <! From <! From
     3 -> SumD TreasuryWithdrawalsNetworkIdMismatch <! From <! From
-    4 -> SumD ProposalDepositIncorrect <! From <! From
+    4 ->
+      SumD ProposalDepositIncorrect
+        <! D
+          ( do
+              mismatchSupplied <- decCBOR
+              mismatchExpected <- decCBOR
+              pure Mismatch {..}
+          )
     5 -> SumD DisallowedVoters <! From
     6 -> SumD ConflictingCommitteeUpdate <! From
     7 -> SumD ExpirationEpochTooSmall <! From
     8 -> SumD InvalidPrevGovActionId <! From
     9 -> SumD VotingOnExpiredGovAction <! From
-    10 -> SumD ProposalCantFollow <! From <! From <! From
+    10 ->
+      SumD ProposalCantFollow
+        <! From
+        <! D
+          ( do
+              mismatchSupplied <- decCBOR
+              mismatchExpected <- decCBOR
+              pure Mismatch {..}
+          )
     11 -> SumD InvalidPolicyHash <! From <! From
     12 -> SumD DisallowedProposalDuringBootstrap <! From
     13 -> SumD DisallowedVotesDuringBootstrap <! From
@@ -248,8 +259,11 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum ProposalProcedureNetworkIdMismatch 2 !> To acnt !> To nid
       TreasuryWithdrawalsNetworkIdMismatch acnts nid ->
         Sum TreasuryWithdrawalsNetworkIdMismatch 3 !> To acnts !> To nid
-      ProposalDepositIncorrect submitted expected ->
-        Sum ProposalDepositIncorrect 4 !> To submitted !> To expected
+      ProposalDepositIncorrect mm@(Mismatch _ _) ->
+        Sum ProposalDepositIncorrect 4
+          !> E
+            (\(Mismatch {..}) -> encCBOR mismatchSupplied <> encCBOR mismatchExpected)
+            mm
       DisallowedVoters votes ->
         Sum DisallowedVoters 5 !> To votes
       ConflictingCommitteeUpdate members ->
@@ -260,11 +274,15 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum InvalidPrevGovActionId 8 !> To proposal
       VotingOnExpiredGovAction ga ->
         Sum VotingOnExpiredGovAction 9 !> To ga
-      ProposalCantFollow prevgaid pv1 pv2 ->
+      ProposalCantFollow prevgaid mm ->
         Sum ProposalCantFollow 10
           !> To prevgaid
-          !> To pv1
-          !> To pv2
+          !> E
+            ( \m@(Mismatch _ _) ->
+                let Mismatch {..} = m
+                 in encCBOR mismatchSupplied <> encCBOR mismatchExpected
+            )
+            mm
       InvalidPolicyHash got expected ->
         Sum InvalidPolicyHash 11
           !> To got
@@ -455,7 +473,13 @@ govTransition = do
                 preceedingHardFork @era pProcGovAction pp prevGovActionIds st
               if pvCanFollow prevProtVer newProtVer
                 then Nothing
-                else Just $ ProposalCantFollow @era prevGaid newProtVer prevProtVer
+                else
+                  Just $
+                    ProposalCantFollow @era prevGaid $
+                      Mismatch
+                        { mismatchSupplied = newProtVer
+                        , mismatchExpected = prevProtVer
+                        }
         failOnJust badHardFork id
 
         -- PParamsUpdate well-formedness check
@@ -478,7 +502,11 @@ govTransition = do
         let expectedDep = pp ^. ppGovActionDepositL
          in pProcDeposit
               == expectedDep
-                ?! ProposalDepositIncorrect pProcDeposit expectedDep
+                ?! ProposalDepositIncorrect
+                  Mismatch
+                    { mismatchSupplied = pProcDeposit
+                    , mismatchExpected = expectedDep
+                    }
 
         -- Return address network id check
         raNetwork pProcReturnAddr
