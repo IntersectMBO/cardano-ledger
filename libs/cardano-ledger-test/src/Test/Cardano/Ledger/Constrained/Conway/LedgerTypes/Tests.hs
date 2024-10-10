@@ -141,7 +141,7 @@ soundSpecWith ::
   Int -> Gen (Specification ConwayFn t) -> SpecWith (Arg Property)
 soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ property $ (soundSpec @t specx)
 
-utxoStateGen :: forall era. LedgerEra era ConwayFn => Gen (Specification ConwayFn (UTxOState era))
+utxoStateGen :: forall era. EraLedger era ConwayFn => Gen (Specification ConwayFn (UTxOState era))
 utxoStateGen =
   utxoStateSpec @era
     <$> genConwayFn @(PParams era) pparamsSpec
@@ -153,7 +153,7 @@ specSuite ::
   forall (era :: Type).
   ( EraTxOut era
   , EraCrypto era ~ StandardCrypto
-  , LedgerEra era ConwayFn
+  , EraLedger era ConwayFn
   , IsNormalType (TxOut era)
   , PrettyA (GovState era)
   ) =>

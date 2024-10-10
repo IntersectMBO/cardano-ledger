@@ -38,6 +38,7 @@ import Test.Cardano.Ledger.Constrained.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
+import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (EraOut (irewardSpec))
 import Test.QuickCheck (Gen)
 
 -- ==============================================================
@@ -55,7 +56,7 @@ psX = do
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
   genFromSpec @ConwayFn @(PState era) (pstateSpec (lit epoch))
 
-dsX :: forall era. LedgerEra era ConwayFn => Gen (DState era)
+dsX :: forall era. EraLedger era ConwayFn => Gen (DState era)
 dsX = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   pools <-
@@ -71,13 +72,13 @@ vsX = do
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
   genFromSpec @ConwayFn @(VState era) (vstateSpec (lit epoch))
 
-csX :: forall era. LedgerEra era ConwayFn => Gen (CertState era)
+csX :: forall era. EraLedger era ConwayFn => Gen (CertState era)
 csX = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
   genFromSpec @ConwayFn @(CertState era) (certStateSpec (lit acct) (lit epoch))
 
-utxoX :: forall era. LedgerEra era ConwayFn => Gen (UTxO era)
+utxoX :: forall era. EraLedger era ConwayFn => Gen (UTxO era)
 utxoX = do
   cs <-
     genFromSpec
@@ -86,7 +87,7 @@ utxoX = do
       (hasSize (rangeSize 30 30))
   genFromSpec @ConwayFn @(UTxO era) (utxoSpec @era (lit cs))
 
-utxostateX :: forall era. LedgerEra era ConwayFn => PParams era -> Gen (UTxOState era)
+utxostateX :: forall era. EraLedger era ConwayFn => PParams era -> Gen (UTxOState era)
 utxostateX pp = do
   certstate <- csX @era
   genFromSpec @ConwayFn @(UTxOState era) (utxoStateSpec pp (lit certstate))
@@ -99,34 +100,35 @@ conwaygovX pp = do
   env <- genFromSpec @ConwayFn @(GovEnv Conway) (govEnvSpec pp)
   genFromSpec @ConwayFn @(ConwayGovState Conway) (conwayGovStateSpec pp env)
 
-lsX :: forall era. LedgerEra era ConwayFn => PParams era -> Gen (LedgerState era)
+lsX :: forall era. EraLedger era ConwayFn => PParams era -> Gen (LedgerState era)
 lsX pp = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
   genFromSpec @ConwayFn @(LedgerState era) (ledgerStateSpec pp (lit acct) (lit epoch))
 
-esX :: forall era. LedgerEra era ConwayFn => PParams era -> Gen (EpochState era)
+esX :: forall era. EraLedger era ConwayFn => PParams era -> Gen (EpochState era)
 esX pp = do
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
   genFromSpec @ConwayFn @(EpochState era) (epochStateSpec pp (lit epoch))
 
-nesX :: forall era. LedgerEra era ConwayFn => PParams era -> Gen (NewEpochState era)
+nesX :: forall era. EraLedger era ConwayFn => PParams era -> Gen (NewEpochState era)
 nesX pp = genFromSpec @ConwayFn @(NewEpochState era) (newEpochStateSpec pp)
 
 snapX :: forall era. Era era => Gen (SnapShot (EraCrypto era))
 snapX = genFromSpec @ConwayFn @(SnapShot (EraCrypto era)) snapShotSpec
 
-snapsX :: forall era. LedgerEra era ConwayFn => PParams era -> Gen (SnapShots (EraCrypto era))
+snapsX :: forall era. EraLedger era ConwayFn => PParams era -> Gen (SnapShots (EraCrypto era))
 snapsX pp = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
   ls <- genFromSpec @ConwayFn @(LedgerState era) (ledgerStateSpec pp (lit acct) (lit epoch))
   genFromSpec @ConwayFn @(SnapShots (EraCrypto era)) (snapShotsSpec (lit (getMarkSnapShot ls)))
 
-instanRewX :: forall era. Era era => Gen (InstantaneousRewards (EraCrypto era))
+instanRewX :: forall era. EraOut era ConwayFn => Gen (InstantaneousRewards (EraCrypto era))
 instanRewX = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
-  genFromSpec @ConwayFn @(InstantaneousRewards (EraCrypto era)) (instantaneousRewardsSpec (lit acct))
+  genFromSpec @ConwayFn @(InstantaneousRewards (EraCrypto era))
+    (irewardSpec @era @ConwayFn (lit acct))
 
 drepStateX :: forall era. Era era => Gen (DRepState (EraCrypto era))
 drepStateX = do
@@ -164,7 +166,7 @@ instance EraPP era => WellFormed (PState era) era where
   wff = psX
   wffWithPP _ = psX
 
-instance (EraPP era, LedgerEra era ConwayFn) => WellFormed (DState era) era where
+instance (EraPP era, EraLedger era ConwayFn) => WellFormed (DState era) era where
   wff = dsX
   wffWithPP _ = dsX
 
@@ -172,13 +174,13 @@ instance EraPP era => WellFormed (VState era) era where
   wff = vsX
   wffWithPP _ = vsX
 
-instance (EraPP era, LedgerEra era ConwayFn) => WellFormed (CertState era) era where
+instance (EraPP era, EraLedger era ConwayFn) => WellFormed (CertState era) era where
   wff = csX
 
-instance (EraPP era, LedgerEra era ConwayFn) => WellFormed (UTxO era) era where
+instance (EraPP era, EraLedger era ConwayFn) => WellFormed (UTxO era) era where
   wff = utxoX
 
-instance (EraPP era, LedgerEra era ConwayFn) => WellFormed (UTxOState era) era where
+instance (EraPP era, EraLedger era ConwayFn) => WellFormed (UTxOState era) era where
   wffWithPP = utxostateX
 
 instance WellFormed (GovEnv Conway) Conway where
@@ -187,25 +189,25 @@ instance WellFormed (GovEnv Conway) Conway where
 instance WellFormed (ConwayGovState Conway) Conway where
   wffWithPP pp = conwaygovX pp
 
-instance (EraPP era, LedgerEra era ConwayFn) => WellFormed (ShelleyGovState era) era where
+instance (EraPP era, EraLedger era ConwayFn) => WellFormed (ShelleyGovState era) era where
   wffWithPP pp = genFromSpec @ConwayFn @(ShelleyGovState era) (shelleyGovStateSpec pp)
 
-instance (EraPP era, LedgerEra era ConwayFn) => WellFormed (LedgerState era) era where
+instance (EraPP era, EraLedger era ConwayFn) => WellFormed (LedgerState era) era where
   wffWithPP = lsX
 
-instance (EraPP era, LedgerEra era ConwayFn) => WellFormed (EpochState era) era where
+instance (EraPP era, EraLedger era ConwayFn) => WellFormed (EpochState era) era where
   wffWithPP = esX
 
-instance (EraPP era, LedgerEra era ConwayFn) => WellFormed (NewEpochState era) era where
+instance (EraPP era, EraLedger era ConwayFn) => WellFormed (NewEpochState era) era where
   wffWithPP = nesX
 
 instance (EraPP era, c ~ EraCrypto era) => WellFormed (SnapShot c) era where
   wff = snapX @era
 
-instance (EraPP era, LedgerEra era ConwayFn, c ~ EraCrypto era) => WellFormed (SnapShots c) era where
+instance (EraPP era, EraLedger era ConwayFn, c ~ EraCrypto era) => WellFormed (SnapShots c) era where
   wffWithPP = snapsX @era
 
-instance (EraPP era, c ~ EraCrypto era) => WellFormed (InstantaneousRewards c) era where
+instance (EraPP era, c ~ EraCrypto era, EraOut era ConwayFn) => WellFormed (InstantaneousRewards c) era where
   wff = instanRewX @era
 
 instance (EraPP era, c ~ EraCrypto era) => WellFormed (DRepState c) era where

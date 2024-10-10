@@ -25,7 +25,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "DELEG" Conway where
 
   stateSpec _ _ = certStateSpec
 
-  signalSpec _ = delegCertSpec
+  signalSpec _ = conwayDelegCertSpec
 
   runAgdaRule env (Agda.MkCertState dState pState vState) sig =
     bimap
