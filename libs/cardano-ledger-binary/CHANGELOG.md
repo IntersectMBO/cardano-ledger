@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.4.0.1
+
+*
+
 ## 1.4.0.0
 
 ### `testlib`

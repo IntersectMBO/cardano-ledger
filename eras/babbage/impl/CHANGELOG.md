@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.10.0.1
+
+*
+
 ## 1.10.0.0
 
 * Add `ProtVer` argument to `TxInfo` functions:

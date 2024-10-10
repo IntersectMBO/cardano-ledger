@@ -1,5 +1,9 @@
 # Revision history for `cardano-ledger-byron`
 
+## 1.0.2.1
+
+*
+
 ## 1.0.2.0
 
 * Move `mainnet-genesis.json` to the test package to make `ts_prop_elaboratedCertsValid` pass when run with `cabal`. #4586

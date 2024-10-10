@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.9.4.1
+
+*
+
 ## 1.9.4.0
 
 * Add new module `Test.Cardano.Ledger.Api.DebugTools` with `readCBOR`, `writeCBOR`, `readEraCBOR` and `writeEraCBOR`

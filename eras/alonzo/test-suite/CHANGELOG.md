@@ -1,5 +1,13 @@
 # Version history for `cardano-ledger-alonzo-test`
 
+## 1.3.0.1
+
+*
+
+## 1.3.0.0
+
+* Move `TranslationInstance`, `TranslatableGen`, `Golden`, `GenerateGoldenFileMain` to alonzo testlib
+
 ## 1.2.1.4
 
 *
