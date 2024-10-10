@@ -129,6 +129,16 @@ singletonSubset :: Specification BaseFn Int
 singletonSubset = constrained $ \ [var| x |] ->
   fromList_ (singletonList_ x) `subset_` fromList_ (lit [1, 2, 3])
 
+appendSuffix :: Specification BaseFn ([Int], [Int])
+appendSuffix = constrained' $
+  \ [var|x|] [var|y|] -> assert $ x ==. y ++. lit [4, 5, 6]
+
+appendForAll :: Specification BaseFn ([Int], [Int])
+appendForAll = constrained' $ \ [var| xs |] [var| ys |] ->
+  [ forAll xs $ \ x -> x `elem_` lit [2,4..10]
+  , assert $ xs ==. ys ++. lit [2,4,6]
+  ]
+
 -- Some notable error cases that shouldn't succeed
 
 singletonErrorTooMany :: Specification BaseFn Int
@@ -142,3 +152,94 @@ singletonErrorTooLong = constrained $ \ [var| x |] ->
 appendTooLong :: Specification BaseFn [Int]
 appendTooLong = constrained $ \ [var| xs |] ->
   sizeOf_ (lit [1, 2, 3, 4] ++. xs) <=. 3
+
+-- | Fails because the cant set is over constrained
+overconstrainedAppend :: Specification BaseFn ([Int], [Int])
+overconstrainedAppend = constrained' $
+  \ [var|x|] [var|y|] ->
+    [ dependsOn y x
+    , assert $ x ==. lit [1, 2, 3] ++. y
+    , assert $ y ==. lit [4, 5, 6]
+    , assert $ x /=. lit [1, 2, 3, 4, 5, 6]
+    ]
+
+{- TODO get most of these working:
+-- =============================================
+-- The examples
+
+-- | Completely constrained by Split
+app1 :: Specification BaseFn [Int]
+app1 = constrained $
+  \x -> assert $ x ==. append_ (lit [1, 2, 3]) (lit [4, 5, 6])
+
+-- | test that the Split fails because suffix has element not even
+appSuffix4 :: Specification BaseFn ([Int], [Int])
+appSuffix4 = constrained' $
+  \ [var|x|] [var|y|] ->
+    [ forAll x $ \i -> satisfies i even
+    , assert $ x ==. append_ y (lit [4, 5, 6]) -- 5 fails even
+    ]
+
+-- | test that the suffix makes the length too long for the size constraint
+appSuffix5 :: Specification BaseFn ([Int], [Int])
+appSuffix5 = constrained' $
+  \ [var|x|] [var|y|] ->
+    [ assert $ sizeOf_ x <=. 4
+    , assert $ x ==. append_ y (lit [1, 2, 3, 4, 5])
+    ]
+
+-- | test that 'x' is overconstrained in the suffix.
+appSuffix6 :: Specification BaseFn ([Int])
+appSuffix6 = constrained $
+  \ [var|x|] -> [satisfies x (endsWith [1, 2]), satisfies x (endsWith [3, 4])]
+
+-- | test that 'x' has conflicting suffix requirements
+appSuffix7 :: Specification BaseFn ([Int], [Int])
+appSuffix7 = constrained' $
+  \ [var|x|] [var|y|] -> [assert $ x ==. append_ (lit [1, 2, 3]) (lit [4, 5, 6]), assert $ x ==. append_ y (lit [1, 2])]
+
+-- | another test that 'x' has conflicting suffix requirements
+appSuffix8 :: Specification BaseFn ([Int], [Int])
+appSuffix8 = constrained' $
+  \ [var|x|] [var|y|] -> [satisfies x (endsWith [3, 4]), assert $ x ==. append_ y (lit [1, 2])]
+
+-- | x and y only constrained by prefix
+appPrefix2 :: Specification BaseFn ([Int], [Int])
+appPrefix2 = constrained' $
+  \ [var|x|] [var|y|] -> assert $ x ==. append_ (lit [4, 5, 6]) y
+
+-- | test that the Split is constrained by even
+appPrefix3 :: Specification BaseFn ([Int], [Int])
+appPrefix3 = constrained' $
+  \ [var|x|] [var|y|] ->
+    [ forAll x $ \i -> satisfies i even
+    , assert $ x ==. append_ (lit [4, 6]) y
+    ]
+
+-- | test that the Split fails because prefix has element not even
+appPrefix4 :: Specification BaseFn ([Int], [Int])
+appPrefix4 = constrained' $
+  \ [var|x|] [var|y|] ->
+    [ forAll x $ \i -> satisfies i even
+    , assert $ x ==. append_ (lit [4, 5, 6]) y -- 5 fails even
+    ]
+
+-- | test that the prefix makes the length too long for the size constraint
+appPrefix5 :: Specification BaseFn ([Int], [Int])
+appPrefix5 = constrained' $
+  \ [var|x|] [var|y|] ->
+    [ assert $ sizeOf_ x <=. 4
+    , assert $ x ==. append_ (lit [1, 2, 3, 4, 5]) y
+    ]
+
+-- | test that 'x' is overconstrained in the prefix.
+appPrefix6 :: Specification BaseFn ([Int])
+appPrefix6 = constrained $
+  \ [var|x|] -> [satisfies x (beginsWith [1, 2]), satisfies x (beginsWith [3, 4])]
+
+-- | test that 'y' fills out what is missing from 'x'
+appPrefix7 :: Specification BaseFn ([Int], [Int])
+appPrefix7 = constrained' $
+  \ [var|x|] [var|y|] -> [assert $ x ==. append_ (lit [1, 2, 3]) (lit [4, 5, 6]), assert $ x ==. append_ (lit [1, 2]) y]
+
+-}
