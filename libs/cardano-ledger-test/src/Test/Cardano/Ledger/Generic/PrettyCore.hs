@@ -1582,34 +1582,40 @@ ppConwayUtxowPredFailure proof = \case
     ppSexp " MissingTxMetadata" [ppAuxiliaryDataHash m]
   ConwayRules.MissingTxMetadata m ->
     ppSexp " MissingTxMetadata" [ppAuxiliaryDataHash m]
-  ConwayRules.ConflictingMetadataHash h1 h2 ->
-    ppRecord
-      "ConflictingMetadataHash"
-      [("Hash in the body", ppAuxiliaryDataHash h1), ("Hash of full metadata", ppAuxiliaryDataHash h2)]
+  ConwayRules.ConflictingMetadataHash mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "ConflictingMetadataHash"
+          [ ("Hash in the body", ppAuxiliaryDataHash mismatchSupplied)
+          , ("Hash of full metadata", ppAuxiliaryDataHash mismatchExpected)
+          ]
   ConwayRules.InvalidMetadata ->
     ppSexp "InvalidMetadata" []
   ConwayRules.ExtraneousScriptWitnessesUTXOW m ->
     ppSexp "ExtraneousScriptWitnessesUTXOW" [ppSet pcScriptHash m]
   ConwayRules.MissingRedeemers xs ->
     ppSexp "MissingRedeemers" [ppList (ppPair ppPlutusPurposeAsItem prettyA) xs]
-  ConwayRules.MissingRequiredDatums s1 s2 ->
-    ppRecord
-      "MissingRequiredDatums"
-      [ ("missing data hashes", ppSet ppSafeHash s1)
-      , ("received data hashes", ppSet ppSafeHash s2)
-      ]
-  ConwayRules.NotAllowedSupplementalDatums s1 s2 ->
-    ppRecord
-      "NotAllowedSupplementalDatums"
-      [ ("unallowed data hashes", ppSet ppSafeHash s1)
-      , ("acceptable data hashes", ppSet ppSafeHash s2)
-      ]
-  ConwayRules.PPViewHashesDontMatch h1 h2 ->
-    ppRecord
-      "PPViewHashesDontMatch"
-      [ ("PPHash in the TxBody", ppStrictMaybe ppSafeHash h1)
-      , ("PPHash Computed from the current Protocol Parameters", ppStrictMaybe ppSafeHash h2)
-      ]
+  ConwayRules.MissingRequiredDatums mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "MissingRequiredDatums"
+          [ ("received data hashes", ppSet ppSafeHash mismatchSupplied)
+          , ("missing data hashes", ppSet ppSafeHash mismatchExpected)
+          ]
+  ConwayRules.NotAllowedSupplementalDatums mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "NotAllowedSupplementalDatums"
+          [ ("unallowed data hashes", ppSet ppSafeHash mismatchSupplied)
+          , ("acceptable data hashes", ppSet ppSafeHash mismatchExpected)
+          ]
+  ConwayRules.PPViewHashesDontMatch mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "PPViewHashesDontMatch"
+          [ ("PPHash in the TxBody", ppStrictMaybe ppSafeHash mismatchSupplied)
+          , ("PPHash Computed from the current Protocol Parameters", ppStrictMaybe ppSafeHash mismatchExpected)
+          ]
   ConwayRules.UnspendableUTxONoDatumHash x ->
     ppSexp "UnspendableUTxONoDatumHash" [ppSet pcTxIn x]
   ConwayRules.ExtraRedeemers x ->
