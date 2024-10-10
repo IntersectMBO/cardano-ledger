@@ -129,6 +129,16 @@ singletonSubset :: Specification BaseFn Int
 singletonSubset = constrained $ \ [var| x |] ->
   fromList_ (singletonList_ x) `subset_` fromList_ (lit [1, 2, 3])
 
+appendSuffix :: Specification BaseFn ([Int], [Int])
+appendSuffix = constrained' $
+  \ [var|x|] [var|y|] -> assert $ x ==. y ++. lit [4, 5, 6]
+
+appendForAll :: Specification BaseFn ([Int], [Int])
+appendForAll = constrained' $ \ [var| xs |] [var| ys |] ->
+  [ forAll xs $ \x -> x `elem_` lit [2, 4 .. 10]
+  , assert $ xs ==. ys ++. lit [2, 4, 6]
+  ]
+
 -- Some notable error cases that shouldn't succeed
 
 singletonErrorTooMany :: Specification BaseFn Int
@@ -142,3 +152,31 @@ singletonErrorTooLong = constrained $ \ [var| x |] ->
 appendTooLong :: Specification BaseFn [Int]
 appendTooLong = constrained $ \ [var| xs |] ->
   sizeOf_ (lit [1, 2, 3, 4] ++. xs) <=. 3
+
+-- | Fails because the cant set is over constrained
+overconstrainedAppend :: Specification BaseFn ([Int], [Int])
+overconstrainedAppend = constrained' $
+  \ [var|x|] [var|y|] ->
+    [ dependsOn y x
+    , assert $ x ==. lit [1, 2, 3] ++. y
+    , assert $ y ==. lit [4, 5, 6]
+    , assert $ x /=. lit [1, 2, 3, 4, 5, 6]
+    ]
+
+overconstrainedPrefixes :: Specification BaseFn ([Int], [Int], [Int])
+overconstrainedPrefixes = constrained' $ \ [var| xs |] [var| ys |] [var| zs |] ->
+  [ xs ==. lit [1, 2, 3] ++. ys
+  , xs ==. lit [3, 4, 5] ++. zs
+  ]
+
+overconstrainedSuffixes :: Specification BaseFn ([Int], [Int], [Int])
+overconstrainedSuffixes = constrained' $ \ [var| xs |] [var| ys |] [var| zs |] ->
+  [ xs ==. ys ++. lit [1, 2, 3]
+  , xs ==. zs ++. lit [3, 4, 5]
+  ]
+
+appendForAllBad :: Specification BaseFn ([Int], [Int])
+appendForAllBad = constrained' $ \ [var| xs |] [var| ys |] ->
+  [ forAll xs $ \x -> x `elem_` lit [1 .. 10]
+  , assert $ xs ==. ys ++. lit [2, 4, 11]
+  ]
