@@ -113,6 +113,7 @@ import Test.Cardano.Ledger.Generic.Functions
 import Test.Cardano.Ledger.Generic.GenState (
   GenEnv (..),
   GenRS,
+  GenSize (..),
   GenState (..),
   PlutusPurposeTag (..),
   elementsT,
@@ -579,11 +580,13 @@ chooseGood bad n xs = do
 -- Generating Certificates, May add to the Model
 
 genShelleyDelegCert :: forall era. Reflect era => GenRS era (TxCert era)
-genShelleyDelegCert =
+genShelleyDelegCert = do
+  regCertFreq <- asks $ regCertFreq . geSize
+  delegCertFreq <- asks $ delegCertFreq . geSize
   frequencyT
-    [ (75, genShelleyRegCert)
+    [ (regCertFreq, genShelleyRegCert)
     , (25, genShelleyUnRegCert)
-    , (50, genDelegation)
+    , (delegCertFreq, genDelegation)
     ]
   where
     genShelleyRegCert = RegTxCert <$> genFreshRegCred @era Certifying

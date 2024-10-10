@@ -140,6 +140,8 @@ instance NFData HsRewardUpdate
 
 instance NFData NewEpochState
 
+instance NFData LEnv
+
 instance ToExpr a => ToExpr (HSSet a)
 
 instance ToExpr Credential where
@@ -237,6 +239,8 @@ instance ToExpr Acnt
 instance ToExpr HsRewardUpdate
 
 instance ToExpr NewEpochState
+
+instance ToExpr LEnv
 
 instance Default (HSMap k v)
 

@@ -332,7 +332,7 @@ mkProposals pgais omap = do
 --
 -- WARNING: Should only be used for testing!
 unsafeMkProposals ::
-  HasCallStack =>
+  (HasCallStack, EraPParams era) =>
   GovRelation StrictMaybe era ->
   OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era) ->
   Proposals era
@@ -342,7 +342,15 @@ unsafeMkProposals pgais omap = F.foldl' unsafeProposalsAddAction initialProposal
     unsafeProposalsAddAction ps gas =
       case runProposalsAddAction gas ps of
         Just p -> p
-        Nothing -> error $ "unsafeMkProposals: runProposalsAddAction failed for " ++ show (gas ^. gasIdL)
+        Nothing ->
+          error $
+            unlines
+              [ "unsafeMkProposals: runProposalsAddAction failed for " ++ show (gas ^. gasIdL)
+              , "Proposals:"
+              , show ps
+              , "GovActionState:"
+              , show gas
+              ]
 
 instance EraPParams era => EncCBOR (Proposals era) where
   encCBOR ps =

@@ -171,6 +171,9 @@ instance
             !> To uecUTxO
             !> To uecUtxoEnv
 
+instance Inject (UtxoExecContext era) (CertState era) where
+  inject = ueCertState . uecUtxoEnv
+
 utxoTxSpec ::
   ( IsConwayUniv fn
   , HasSpec fn (AlonzoTx era)
