@@ -1,0 +1,109 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Chain.Genesis.CBOR</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-4"></span><span>  </span><span class="annot"><a href="Test.Cardano.Chain.Genesis.CBOR.html#tests"><span class="hs-identifier">tests</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Chain.Genesis.Gen.html"><span class="hs-identifier">Test.Cardano.Chain.Genesis.Gen</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-test-1.5.0.2/doc/html/cardano-crypto-test/src"><span class="hs-identifier">Test.Cardano.Crypto.Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-test-1.5.0.2/doc/html/cardano-crypto-test/src"><span class="hs-identifier">genProtocolMagicId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/l/testlib/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/l/testlib/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">roundTripsCBORBuildable</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/l/testlib/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">roundTripsCBORShow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-test-0.1.0.3-f0feb61605817ae2c1b2e3b4bfbd8e89aef4c72586363cd87aaeb31ae908dd6f/share/doc/html/src"><span class="hs-identifier">Test.Cardano.Prelude</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-test-0.1.0.3-f0feb61605817ae2c1b2e3b4bfbd8e89aef4c72586363cd87aaeb31ae908dd6f/share/doc/html/src"><span class="hs-identifier">discoverRoundTripArg</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Options.html"><span class="hs-identifier">Test.Options</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Options.html#TSGroup"><span class="hs-identifier">TSGroup</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier">TSProperty</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#concatTSGroups"><span class="hs-identifier">concatTSGroups</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Options.html#eachOfTS"><span class="hs-identifier">eachOfTS</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- GenesisKeyHash</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Test.Cardano.Chain.Genesis.CBOR.html#ts_roundTripGenesisKeyHashesCBOR"><span class="hs-identifier hs-type">ts_roundTripGenesisKeyHashesCBOR</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-22"></span><span id="ts_roundTripGenesisKeyHashesCBOR"><span class="annot"><span class="annottext">ts_roundTripGenesisKeyHashesCBOR :: TSProperty
+</span><a href="Test.Cardano.Chain.Genesis.CBOR.html#ts_roundTripGenesisKeyHashesCBOR"><span class="hs-identifier hs-var hs-var">ts_roundTripGenesisKeyHashesCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><span class="annottext">forall a.
+(Show a, HasCallStack) =&gt;
+TestLimit -&gt; Gen a -&gt; (a -&gt; PropertyT IO ()) -&gt; TSProperty
+</span><a href="Test.Options.html#eachOfTS"><span class="hs-identifier hs-var">eachOfTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">1000</span></span><span> </span><span class="annot"><span class="annottext">Gen GenesisKeyHashes
+</span><a href="Test.Cardano.Chain.Genesis.Gen.html#genGenesisKeyHashes"><span class="hs-identifier hs-var">genGenesisKeyHashes</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(DecCBOR a, EncCBOR a, Eq a, MonadTest m, Buildable a,
+ HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/l/testlib/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">roundTripsCBORBuildable</span></a></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Test.Cardano.Chain.Genesis.CBOR.html#tests"><span class="hs-identifier hs-type">tests</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSGroup"><span class="hs-identifier hs-type">TSGroup</span></a></span><span>
+</span><span id="line-26"></span><span id="tests"><span class="annot"><span class="annottext">tests :: TSGroup
+</span><a href="Test.Cardano.Chain.Genesis.CBOR.html#tests"><span class="hs-identifier hs-var hs-var">tests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="annottext">[TSGroup] -&gt; TSGroup
+</span><a href="Test.Options.html#concatTSGroups"><span class="hs-identifier hs-var">concatTSGroups</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">$$</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-test-0.1.0.3-f0feb61605817ae2c1b2e3b4bfbd8e89aef4c72586363cd87aaeb31ae908dd6f/share/doc/html/src"><span class="hs-identifier hs-type">discoverRoundTripArg</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- GenesisAvvmBalances</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Test.Cardano.Chain.Genesis.CBOR.html#ts_roundTripGenesisAvvmBalances"><span class="hs-identifier hs-type">ts_roundTripGenesisAvvmBalances</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-34"></span><span id="ts_roundTripGenesisAvvmBalances"><span class="annot"><span class="annottext">ts_roundTripGenesisAvvmBalances :: TSProperty
+</span><a href="Test.Cardano.Chain.Genesis.CBOR.html#ts_roundTripGenesisAvvmBalances"><span class="hs-identifier hs-var hs-var">ts_roundTripGenesisAvvmBalances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">forall a.
+(Show a, HasCallStack) =&gt;
+TestLimit -&gt; Gen a -&gt; (a -&gt; PropertyT IO ()) -&gt; TSProperty
+</span><a href="Test.Options.html#eachOfTS"><span class="hs-identifier hs-var">eachOfTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">1000</span></span><span> </span><span class="annot"><span class="annottext">Gen GenesisAvvmBalances
+</span><a href="Test.Cardano.Chain.Genesis.Gen.html#genGenesisAvvmBalances"><span class="hs-identifier hs-var">genGenesisAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(DecCBOR a, EncCBOR a, Eq a, MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/l/testlib/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">roundTripsCBORShow</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- GenesisNonAvvmBalances</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Test.Cardano.Chain.Genesis.CBOR.html#ts_roundTripGenesisNonAvvmBalances"><span class="hs-identifier hs-type">ts_roundTripGenesisNonAvvmBalances</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-41"></span><span id="ts_roundTripGenesisNonAvvmBalances"><span class="annot"><span class="annottext">ts_roundTripGenesisNonAvvmBalances :: TSProperty
+</span><a href="Test.Cardano.Chain.Genesis.CBOR.html#ts_roundTripGenesisNonAvvmBalances"><span class="hs-identifier hs-var hs-var">ts_roundTripGenesisNonAvvmBalances</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">forall a.
+(Show a, HasCallStack) =&gt;
+TestLimit -&gt; Gen a -&gt; (a -&gt; PropertyT IO ()) -&gt; TSProperty
+</span><a href="Test.Options.html#eachOfTS"><span class="hs-identifier hs-var">eachOfTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">1000</span></span><span> </span><span class="annot"><span class="annottext">Gen GenesisNonAvvmBalances
+</span><a href="Test.Cardano.Chain.Genesis.Gen.html#genGenesisNonAvvmBalances"><span class="hs-identifier hs-var">genGenesisNonAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(DecCBOR a, EncCBOR a, Eq a, MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/l/testlib/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">roundTripsCBORShow</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- GenesisDelegation</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Test.Cardano.Chain.Genesis.CBOR.html#ts_roundTripGenesisDelegation"><span class="hs-identifier hs-type">ts_roundTripGenesisDelegation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-48"></span><span id="ts_roundTripGenesisDelegation"><span class="annot"><span class="annottext">ts_roundTripGenesisDelegation :: TSProperty
+</span><a href="Test.Cardano.Chain.Genesis.CBOR.html#ts_roundTripGenesisDelegation"><span class="hs-identifier hs-var hs-var">ts_roundTripGenesisDelegation</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><span class="annottext">forall a.
+(Show a, HasCallStack) =&gt;
+TestLimit -&gt; Gen a -&gt; (a -&gt; PropertyT IO ()) -&gt; TSProperty
+</span><a href="Test.Options.html#eachOfTS"><span class="hs-identifier hs-var">eachOfTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">1000</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; GenT Identity GenesisDelegation
+</span><a href="Test.Cardano.Chain.Genesis.Gen.html#genGenesisDelegation"><span class="hs-identifier hs-var">genGenesisDelegation</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Gen ProtocolMagicId
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-test-1.5.0.2/doc/html/cardano-crypto-test/src"><span class="hs-identifier hs-var">genProtocolMagicId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(DecCBOR a, EncCBOR a, Eq a, MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/l/testlib/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">roundTripsCBORShow</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- GenesisData</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Test.Cardano.Chain.Genesis.CBOR.html#ts_roundTripGenesisData"><span class="hs-identifier hs-type">ts_roundTripGenesisData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Options.html#TSProperty"><span class="hs-identifier hs-type">TSProperty</span></a></span><span>
+</span><span id="line-55"></span><span id="ts_roundTripGenesisData"><span class="annot"><span class="annottext">ts_roundTripGenesisData :: TSProperty
+</span><a href="Test.Cardano.Chain.Genesis.CBOR.html#ts_roundTripGenesisData"><span class="hs-identifier hs-var hs-var">ts_roundTripGenesisData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="annottext">forall a.
+(Show a, HasCallStack) =&gt;
+TestLimit -&gt; Gen a -&gt; (a -&gt; PropertyT IO ()) -&gt; TSProperty
+</span><a href="Test.Options.html#eachOfTS"><span class="hs-identifier hs-var">eachOfTS</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">1000</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; GenT Identity Config
+</span><a href="Test.Cardano.Chain.Genesis.Gen.html#genConfig"><span class="hs-identifier hs-var">genConfig</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Gen ProtocolMagicId
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-test-1.5.0.2/doc/html/cardano-crypto-test/src"><span class="hs-identifier hs-var">genProtocolMagicId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(DecCBOR a, EncCBOR a, Eq a, MonadTest m, Show a, HasCallStack) =&gt;
+a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/l/testlib/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">roundTripsCBORShow</span></a></span><span>
+</span><span id="line-57"></span></pre></body></html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Babbage.Transition</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.14.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier">TransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-alonzo-1.11.0.0/doc/html/cardano-ledger-alonzo/src"><span class="hs-identifier">Cardano.Ledger.Alonzo</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-alonzo-1.11.0.0/doc/html/cardano-ledger-alonzo/src"><span class="hs-identifier">Cardano.Ledger.Alonzo.Transition</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.Era.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Era</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Babbage.Translation.html"><span class="hs-identifier">Cardano.Ledger.Babbage.Translation</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.15.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Cardano.Ledger.Crypto</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.15.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Cardano.Ledger.Genesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.15.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">NoGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.14.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier">Cardano.Ledger.Shelley.Transition</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-8b2bea885eb8212a3ebcb31d917de3abc20fe0aa9e677bbb15eac33f7b96228a/share/doc/html/src"><span class="hs-identifier">Lens.Micro</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679572255"><span id="local-6989586621679572257"><span id="local-6989586621679572343"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.15.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679572343"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.14.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-type">EraTransition</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Babbage.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679572343"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-keyword">newtype</span><span> </span><span id="TransitionConfig"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.14.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">TransitionConfig</span></a></span></span><span> </span><span id="local-6989586621679572343"><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Babbage.Era.html#BabbageEra"><span class="hs-identifier hs-type">BabbageEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679572343"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="BabbageTransitionConfig"><span class="annot"><a href="Cardano.Ledger.Babbage.Transition.html#BabbageTransitionConfig"><span class="hs-identifier hs-var">BabbageTransitionConfig</span></a></span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">{</span><span> </span><span id="btcAlonzoTransitionConfig"><span class="annot"><span class="annottext">forall c.
+TransitionConfig (BabbageEra c) -&gt; TransitionConfig (AlonzoEra c)
+</span><a href="Cardano.Ledger.Babbage.Transition.html#btcAlonzoTransitionConfig"><span class="hs-identifier hs-var hs-var">btcAlonzoTransitionConfig</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.14.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-type">TransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-alonzo-1.11.0.0/doc/html/cardano-ledger-alonzo/src"><span class="hs-identifier hs-type">AlonzoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679572343"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679572241"><span id="local-6989586621679572243"><span id="local-6989586621679572249"><span class="annot"><span class="annottext">Int -&gt; TransitionConfig (BabbageEra c) -&gt; ShowS
+forall c.
+Crypto c =&gt;
+Int -&gt; TransitionConfig (BabbageEra c) -&gt; ShowS
+forall c. Crypto c =&gt; [TransitionConfig (BabbageEra c)] -&gt; ShowS
+forall c. Crypto c =&gt; TransitionConfig (BabbageEra c) -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [TransitionConfig (BabbageEra c)] -&gt; ShowS
+$cshowList :: forall c. Crypto c =&gt; [TransitionConfig (BabbageEra c)] -&gt; ShowS
+show :: TransitionConfig (BabbageEra c) -&gt; String
+$cshow :: forall c. Crypto c =&gt; TransitionConfig (BabbageEra c) -&gt; String
+showsPrec :: Int -&gt; TransitionConfig (BabbageEra c) -&gt; ShowS
+$cshowsPrec :: forall c.
+Crypto c =&gt;
+Int -&gt; TransitionConfig (BabbageEra c) -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679572232"><span id="local-6989586621679572237"><span class="annot"><span class="annottext">TransitionConfig (BabbageEra c)
+-&gt; TransitionConfig (BabbageEra c) -&gt; Bool
+forall c.
+Crypto c =&gt;
+TransitionConfig (BabbageEra c)
+-&gt; TransitionConfig (BabbageEra c) -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: TransitionConfig (BabbageEra c)
+-&gt; TransitionConfig (BabbageEra c) -&gt; Bool
+$c/= :: forall c.
+Crypto c =&gt;
+TransitionConfig (BabbageEra c)
+-&gt; TransitionConfig (BabbageEra c) -&gt; Bool
+== :: TransitionConfig (BabbageEra c)
+-&gt; TransitionConfig (BabbageEra c) -&gt; Bool
+$c== :: forall c.
+Crypto c =&gt;
+TransitionConfig (BabbageEra c)
+-&gt; TransitionConfig (BabbageEra c) -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679572216"><span id="local-6989586621679572220"><span id="local-6989586621679572225"><span class="annot"><span class="annottext">Context -&gt; TransitionConfig (BabbageEra c) -&gt; IO (Maybe ThunkInfo)
+Proxy (TransitionConfig (BabbageEra c)) -&gt; String
+forall c.
+Crypto c =&gt;
+Context -&gt; TransitionConfig (BabbageEra c) -&gt; IO (Maybe ThunkInfo)
+forall c.
+Crypto c =&gt;
+Proxy (TransitionConfig (BabbageEra c)) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy (TransitionConfig (BabbageEra c)) -&gt; String
+$cshowTypeOf :: forall c.
+Crypto c =&gt;
+Proxy (TransitionConfig (BabbageEra c)) -&gt; String
+wNoThunks :: Context -&gt; TransitionConfig (BabbageEra c) -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall c.
+Crypto c =&gt;
+Context -&gt; TransitionConfig (BabbageEra c) -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; TransitionConfig (BabbageEra c) -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: forall c.
+Crypto c =&gt;
+Context -&gt; TransitionConfig (BabbageEra c) -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679572192"><span id="local-6989586621679572196"><span id="local-6989586621679572200"><span id="local-6989586621679572204"><span id="local-6989586621679572209"><span class="annot"><span class="annottext">[TransitionConfig (BabbageEra c)] -&gt; Encoding
+[TransitionConfig (BabbageEra c)] -&gt; Value
+TransitionConfig (BabbageEra c) -&gt; Bool
+TransitionConfig (BabbageEra c) -&gt; Encoding
+TransitionConfig (BabbageEra c) -&gt; Value
+forall c. Crypto c =&gt; [TransitionConfig (BabbageEra c)] -&gt; Encoding
+forall c. Crypto c =&gt; [TransitionConfig (BabbageEra c)] -&gt; Value
+forall c. Crypto c =&gt; TransitionConfig (BabbageEra c) -&gt; Bool
+forall c. Crypto c =&gt; TransitionConfig (BabbageEra c) -&gt; Encoding
+forall c. Crypto c =&gt; TransitionConfig (BabbageEra c) -&gt; Value
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+omitField :: TransitionConfig (BabbageEra c) -&gt; Bool
+$comitField :: forall c. Crypto c =&gt; TransitionConfig (BabbageEra c) -&gt; Bool
+toEncodingList :: [TransitionConfig (BabbageEra c)] -&gt; Encoding
+$ctoEncodingList :: forall c. Crypto c =&gt; [TransitionConfig (BabbageEra c)] -&gt; Encoding
+toJSONList :: [TransitionConfig (BabbageEra c)] -&gt; Value
+$ctoJSONList :: forall c. Crypto c =&gt; [TransitionConfig (BabbageEra c)] -&gt; Value
+toEncoding :: TransitionConfig (BabbageEra c) -&gt; Encoding
+$ctoEncoding :: forall c. Crypto c =&gt; TransitionConfig (BabbageEra c) -&gt; Encoding
+toJSON :: TransitionConfig (BabbageEra c) -&gt; Value
+$ctoJSON :: forall c. Crypto c =&gt; TransitionConfig (BabbageEra c) -&gt; Value
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679572177"><span id="local-6989586621679572181"><span id="local-6989586621679572186"><span class="annot"><span class="annottext">Maybe (TransitionConfig (BabbageEra c))
+Value -&gt; Parser [TransitionConfig (BabbageEra c)]
+Value -&gt; Parser (TransitionConfig (BabbageEra c))
+forall c. Crypto c =&gt; Maybe (TransitionConfig (BabbageEra c))
+forall c.
+Crypto c =&gt;
+Value -&gt; Parser [TransitionConfig (BabbageEra c)]
+forall c.
+Crypto c =&gt;
+Value -&gt; Parser (TransitionConfig (BabbageEra c))
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+omittedField :: Maybe (TransitionConfig (BabbageEra c))
+$comittedField :: forall c. Crypto c =&gt; Maybe (TransitionConfig (BabbageEra c))
+parseJSONList :: Value -&gt; Parser [TransitionConfig (BabbageEra c)]
+$cparseJSONList :: forall c.
+Crypto c =&gt;
+Value -&gt; Parser [TransitionConfig (BabbageEra c)]
+parseJSON :: Value -&gt; Parser (TransitionConfig (BabbageEra c))
+$cparseJSON :: forall c.
+Crypto c =&gt;
+Value -&gt; Parser (TransitionConfig (BabbageEra c))
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>  </span><span id="local-6989586621679572173"><span class="annot"><span class="annottext">mkTransitionConfig :: TranslationContext (BabbageEra c)
+-&gt; TransitionConfig (PreviousEra (BabbageEra c))
+-&gt; TransitionConfig (BabbageEra c)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.14.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">mkTransitionConfig</span></a></span></span><span> </span><span class="annot"><span class="annottext">TranslationContext (BabbageEra c)
+NoGenesis (BabbageEra c)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.15.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall c.
+TransitionConfig (AlonzoEra c) -&gt; TransitionConfig (BabbageEra c)
+</span><a href="Cardano.Ledger.Babbage.Transition.html#BabbageTransitionConfig"><span class="hs-identifier hs-var">BabbageTransitionConfig</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679572169"><span class="annot"><span class="annottext">injectIntoTestState :: TransitionConfig (BabbageEra c)
+-&gt; NewEpochState (BabbageEra c) -&gt; NewEpochState (BabbageEra c)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.14.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">injectIntoTestState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era.
+EraTransition era =&gt;
+TransitionConfig era -&gt; NewEpochState era -&gt; NewEpochState era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.14.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">registerInitialFundsThenStaking</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>  </span><span id="local-6989586621679572163"><span class="annot"><span class="annottext">tcPreviousEraConfigL :: EraTransition (PreviousEra (BabbageEra c)) =&gt;
+Lens'
+  (TransitionConfig (BabbageEra c))
+  (TransitionConfig (PreviousEra (BabbageEra c)))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.14.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcPreviousEraConfigL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-8b2bea885eb8212a3ebcb31d917de3abc20fe0aa9e677bbb15eac33f7b96228a/share/doc/html/src"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="annot"><span class="annottext">forall c.
+TransitionConfig (BabbageEra c) -&gt; TransitionConfig (AlonzoEra c)
+</span><a href="Cardano.Ledger.Babbage.Transition.html#btcAlonzoTransitionConfig"><span class="hs-identifier hs-var">btcAlonzoTransitionConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679572160"><span class="annot"><span class="annottext">TransitionConfig (BabbageEra c)
+</span><a href="#local-6989586621679572160"><span class="hs-identifier hs-var">btc</span></a></span></span><span> </span><span id="local-6989586621679572159"><span class="annot"><span class="annottext">TransitionConfig (AlonzoEra c)
+</span><a href="#local-6989586621679572159"><span class="hs-identifier hs-var">pc</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TransitionConfig (BabbageEra c)
+</span><a href="#local-6989586621679572160"><span class="hs-identifier hs-var">btc</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">btcAlonzoTransitionConfig :: TransitionConfig (AlonzoEra c)
+</span><a href="Cardano.Ledger.Babbage.Transition.html#btcAlonzoTransitionConfig"><span class="hs-identifier hs-var">btcAlonzoTransitionConfig</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TransitionConfig (AlonzoEra c)
+</span><a href="#local-6989586621679572159"><span class="hs-identifier hs-var">pc</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679572156"><span class="annot"><span class="annottext">tcTranslationContextL :: Lens'
+  (TransitionConfig (BabbageEra c))
+  (TranslationContext (BabbageEra c))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.14.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">tcTranslationContextL</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-8b2bea885eb8212a3ebcb31d917de3abc20fe0aa9e677bbb15eac33f7b96228a/share/doc/html/src"><span class="hs-identifier hs-var">lens</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. a -&gt; b -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. NoGenesis era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.15.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">NoGenesis</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. a -&gt; b -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">id</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span></pre></body></html>

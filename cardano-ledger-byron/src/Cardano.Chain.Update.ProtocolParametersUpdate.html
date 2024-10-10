@@ -1,0 +1,927 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Update.ProtocolParametersUpdate</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier">ProtocolParametersUpdate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#isEmpty"><span class="hs-identifier">isEmpty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#apply"><span class="hs-identifier">apply</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.LovelacePortion.html#LovelacePortion"><span class="hs-identifier">LovelacePortion</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.TxFeePolicy.html#TxFeePolicy"><span class="hs-identifier">TxFeePolicy</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.html"><span class="hs-identifier">Cardano.Chain.Slotting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier">EpochNumber</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier">SlotNumber</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html"><span class="hs-identifier">Cardano.Chain.Update.ProtocolParameters</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier">ProtocolParameters</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.SoftforkRule.html"><span class="hs-identifier">Cardano.Chain.Update.SoftforkRule</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Update.SoftforkRule.html#SoftforkRule"><span class="hs-identifier">SoftforkRule</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">enforceSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier">Builder</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Format</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">bprint</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">build</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">bytes</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">later</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">shortest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Data which represents modifications of block (aka protocol) version</span><span>
+</span><span id="line-36"></span><span id="local-6989586621679581329"><span id="local-6989586621679581330"></span></span><span class="hs-keyword">data</span><span> </span><span id="ProtocolParametersUpdate"><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-var">ProtocolParametersUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ProtocolParametersUpdate"><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-var">ProtocolParametersUpdate</span></a></span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ppuScriptVersion"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Word16
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuScriptVersion"><span class="hs-identifier hs-var hs-var">ppuScriptVersion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word16</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuSlotDuration"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuSlotDuration"><span class="hs-identifier hs-var hs-var">ppuSlotDuration</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Natural</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuMaxBlockSize"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxBlockSize"><span class="hs-identifier hs-var hs-var">ppuMaxBlockSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Natural</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuMaxHeaderSize"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxHeaderSize"><span class="hs-identifier hs-var hs-var">ppuMaxHeaderSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Natural</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuMaxTxSize"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxTxSize"><span class="hs-identifier hs-var hs-var">ppuMaxTxSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Natural</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuMaxProposalSize"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxProposalSize"><span class="hs-identifier hs-var hs-var">ppuMaxProposalSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Natural</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuMpcThd"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMpcThd"><span class="hs-identifier hs-var hs-var">ppuMpcThd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.LovelacePortion.html#LovelacePortion"><span class="hs-identifier hs-type">LovelacePortion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuHeavyDelThd"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuHeavyDelThd"><span class="hs-identifier hs-var hs-var">ppuHeavyDelThd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.LovelacePortion.html#LovelacePortion"><span class="hs-identifier hs-type">LovelacePortion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuUpdateVoteThd"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateVoteThd"><span class="hs-identifier hs-var hs-var">ppuUpdateVoteThd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.LovelacePortion.html#LovelacePortion"><span class="hs-identifier hs-type">LovelacePortion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuUpdateProposalThd"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateProposalThd"><span class="hs-identifier hs-var hs-var">ppuUpdateProposalThd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.LovelacePortion.html#LovelacePortion"><span class="hs-identifier hs-type">LovelacePortion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuUpdateProposalTTL"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe SlotNumber
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateProposalTTL"><span class="hs-identifier hs-var hs-var">ppuUpdateProposalTTL</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-type">SlotNumber</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuSoftforkRule"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe SoftforkRule
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuSoftforkRule"><span class="hs-identifier hs-var hs-var">ppuSoftforkRule</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.SoftforkRule.html#SoftforkRule"><span class="hs-identifier hs-type">SoftforkRule</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuTxFeePolicy"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe TxFeePolicy
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuTxFeePolicy"><span class="hs-identifier hs-var hs-var">ppuTxFeePolicy</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.TxFeePolicy.html#TxFeePolicy"><span class="hs-identifier hs-type">TxFeePolicy</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ppuUnlockStakeEpoch"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe EpochNumber
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUnlockStakeEpoch"><span class="hs-identifier hs-var hs-var">ppuUnlockStakeEpoch</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679581284"><span id="local-6989586621679581286"><span id="local-6989586621679581312"><span class="annot"><span class="annottext">Int -&gt; ProtocolParametersUpdate -&gt; ShowS
+[ProtocolParametersUpdate] -&gt; ShowS
+ProtocolParametersUpdate -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ProtocolParametersUpdate] -&gt; ShowS
+$cshowList :: [ProtocolParametersUpdate] -&gt; ShowS
+show :: ProtocolParametersUpdate -&gt; String
+$cshow :: ProtocolParametersUpdate -&gt; String
+showsPrec :: Int -&gt; ProtocolParametersUpdate -&gt; ShowS
+$cshowsPrec :: Int -&gt; ProtocolParametersUpdate -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679581250"><span id="local-6989586621679581274"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+$c/= :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+== :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+$c== :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679581180"><span id="local-6989586621679581182"><span id="local-6989586621679581185"><span id="local-6989586621679581188"><span id="local-6989586621679581191"><span id="local-6989586621679581214"><span id="local-6989586621679581238"><span class="annot"><span class="annottext">Eq ProtocolParametersUpdate
+ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Ordering
+ProtocolParametersUpdate
+-&gt; ProtocolParametersUpdate -&gt; ProtocolParametersUpdate
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: ProtocolParametersUpdate
+-&gt; ProtocolParametersUpdate -&gt; ProtocolParametersUpdate
+$cmin :: ProtocolParametersUpdate
+-&gt; ProtocolParametersUpdate -&gt; ProtocolParametersUpdate
+max :: ProtocolParametersUpdate
+-&gt; ProtocolParametersUpdate -&gt; ProtocolParametersUpdate
+$cmax :: ProtocolParametersUpdate
+-&gt; ProtocolParametersUpdate -&gt; ProtocolParametersUpdate
+&gt;= :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+$c&gt;= :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+&gt; :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+$c&gt; :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+&lt;= :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+$c&lt;= :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+&lt; :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+$c&lt; :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Bool
+compare :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Ordering
+$ccompare :: ProtocolParametersUpdate -&gt; ProtocolParametersUpdate -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x.
+Rep ProtocolParametersUpdate x -&gt; ProtocolParametersUpdate
+forall x.
+ProtocolParametersUpdate -&gt; Rep ProtocolParametersUpdate x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x.
+Rep ProtocolParametersUpdate x -&gt; ProtocolParametersUpdate
+$cfrom :: forall x.
+ProtocolParametersUpdate -&gt; Rep ProtocolParametersUpdate x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679581167"><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: ProtocolParametersUpdate -&gt; ()
+$crnf :: ProtocolParametersUpdate -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-type">B.Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679581087"><span class="annot"><span class="annottext">build :: ProtocolParametersUpdate -&gt; Builder
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span id="local-6989586621679581085"><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>    </span><span class="annot"><span class="annottext">forall a. Format Builder a -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">bprint</span></a></span><span>
+</span><span id="line-58"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe Word16
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe Word16
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;{ script version: &quot;</span></span><span>
+</span><span id="line-59"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">build</span></a></span><span>
+</span><span id="line-60"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;, slot duration: &quot;</span></span><span>
+</span><span id="line-61"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall r. Format r (Natural -&gt; r)
+</span><a href="#local-6989586621679581082"><span class="hs-identifier hs-var">bytes'</span></a></span><span>
+</span><span id="line-62"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;, block size limit: &quot;</span></span><span>
+</span><span id="line-63"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall r. Format r (Natural -&gt; r)
+</span><a href="#local-6989586621679581082"><span class="hs-identifier hs-var">bytes'</span></a></span><span>
+</span><span id="line-64"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;, header size limit: &quot;</span></span><span>
+</span><span id="line-65"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall r. Format r (Natural -&gt; r)
+</span><a href="#local-6989586621679581082"><span class="hs-identifier hs-var">bytes'</span></a></span><span>
+</span><span id="line-66"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe Natural
+   -&gt; Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;, tx size limit: &quot;</span></span><span>
+</span><span id="line-67"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall r. Format r (Natural -&gt; r)
+</span><a href="#local-6989586621679581082"><span class="hs-identifier hs-var">bytes'</span></a></span><span>
+</span><span id="line-68"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe Natural
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;, proposal size limit: &quot;</span></span><span>
+</span><span id="line-69"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall r. Format r (Natural -&gt; r)
+</span><a href="#local-6989586621679581082"><span class="hs-identifier hs-var">bytes'</span></a></span><span>
+</span><span id="line-70"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;, mpc threshold: &quot;</span></span><span>
+</span><span id="line-71"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">build</span></a></span><span>
+</span><span id="line-72"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;, heavyweight delegation threshold: &quot;</span></span><span>
+</span><span id="line-73"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">build</span></a></span><span>
+</span><span id="line-74"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe LovelacePortion
+   -&gt; Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;, update vote threshold: &quot;</span></span><span>
+</span><span id="line-75"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">build</span></a></span><span>
+</span><span id="line-76"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe LovelacePortion
+   -&gt; Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;, update proposal threshold: &quot;</span></span><span>
+</span><span id="line-77"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">build</span></a></span><span>
+</span><span id="line-78"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+  (Maybe SlotNumber
+   -&gt; Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy
+   -&gt; Maybe EpochNumber
+   -&gt; Builder)
+</span><span class="hs-string">&quot;, update implicit period (slots): &quot;</span></span><span>
+</span><span id="line-79"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">build</span></a></span><span>
+</span><span id="line-80"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy -&gt; Maybe EpochNumber -&gt; Builder)
+  (Maybe SoftforkRule
+   -&gt; Maybe TxFeePolicy -&gt; Maybe EpochNumber -&gt; Builder)
+</span><span class="hs-string">&quot;, softfork rule: &quot;</span></span><span>
+</span><span id="line-81"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">build</span></a></span><span>
+</span><span id="line-82"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe TxFeePolicy -&gt; Maybe EpochNumber -&gt; Builder)
+  (Maybe TxFeePolicy -&gt; Maybe EpochNumber -&gt; Builder)
+</span><span class="hs-string">&quot;, tx fee policy: &quot;</span></span><span>
+</span><span id="line-83"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">build</span></a></span><span>
+</span><span id="line-84"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format
+  (Maybe EpochNumber -&gt; Builder) (Maybe EpochNumber -&gt; Builder)
+</span><span class="hs-string">&quot;, unlock stake epoch: &quot;</span></span><span>
+</span><span id="line-85"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var">bmodifier</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Buildable a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">build</span></a></span><span>
+</span><span id="line-86"></span><span>          </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format Builder Builder
+</span><span class="hs-string">&quot; }&quot;</span></span><span>
+</span><span id="line-87"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Word16
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuScriptVersion"><span class="hs-identifier hs-var">ppuScriptVersion</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuSlotDuration"><span class="hs-identifier hs-var">ppuSlotDuration</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-90"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxBlockSize"><span class="hs-identifier hs-var">ppuMaxBlockSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxHeaderSize"><span class="hs-identifier hs-var">ppuMaxHeaderSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxTxSize"><span class="hs-identifier hs-var">ppuMaxTxSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxProposalSize"><span class="hs-identifier hs-var">ppuMaxProposalSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMpcThd"><span class="hs-identifier hs-var">ppuMpcThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuHeavyDelThd"><span class="hs-identifier hs-var">ppuHeavyDelThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateVoteThd"><span class="hs-identifier hs-var">ppuUpdateVoteThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateProposalThd"><span class="hs-identifier hs-var">ppuUpdateProposalThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe SlotNumber
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateProposalTTL"><span class="hs-identifier hs-var">ppuUpdateProposalTTL</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe SoftforkRule
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuSoftforkRule"><span class="hs-identifier hs-var">ppuSoftforkRule</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe TxFeePolicy
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuTxFeePolicy"><span class="hs-identifier hs-var">ppuTxFeePolicy</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe EpochNumber
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUnlockStakeEpoch"><span class="hs-identifier hs-var">ppuUnlockStakeEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679581085"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-103"></span><span>      </span><span id="local-6989586621679581789"><span id="local-6989586621679581790"><span class="annot"><a href="#local-6989586621679581083"><span class="hs-identifier hs-type">bmodifier</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-type">Format</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">Builder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679581790"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">Builder</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-type">Format</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679581789"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679581790"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679581789"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-104"></span><span>      </span><span id="local-6989586621679581083"><span class="annot"><span class="annottext">bmodifier :: forall a r.
+Format Builder (a -&gt; Builder) -&gt; Format r (Maybe a -&gt; r)
+</span><a href="#local-6989586621679581083"><span class="hs-identifier hs-var hs-var">bmodifier</span></a></span></span><span> </span><span id="local-6989586621679581079"><span class="annot"><span class="annottext">Format Builder (a -&gt; Builder)
+</span><a href="#local-6989586621679581079"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a r. (a -&gt; Builder) -&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">later</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;no change&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Format Builder a -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">bprint</span></a></span><span> </span><span class="annot"><span class="annottext">Format Builder (a -&gt; Builder)
+</span><a href="#local-6989586621679581079"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span>      </span><span id="local-6989586621679581786"><span class="annot"><a href="#local-6989586621679581082"><span class="hs-identifier hs-type">bytes'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-type">Format</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679581786"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Natural</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679581786"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-107"></span><span>      </span><span id="local-6989586621679581082"><span class="annot"><span class="annottext">bytes' :: forall r. Format r (Natural -&gt; r)
+</span><a href="#local-6989586621679581082"><span class="hs-identifier hs-var hs-var">bytes'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall f a r.
+(Ord f, Integral a, Fractional f) =&gt;
+Format Builder (f -&gt; Builder) -&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">bytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a r. Real a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">shortest</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- Used for debugging purposes only</span><span>
+</span><span id="line-110"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679581060"><span id="local-6989586621679581062"><span id="local-6989586621679581064"><span id="local-6989586621679581066"><span id="local-6989586621679581068"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span></span></span></span></span></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679581052"><span id="local-6989586621679581054"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621679581049"><span class="annot"><span class="annottext">toCBOR :: ProtocolParametersUpdate -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679581043"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-116"></span><span>  </span><span id="local-6989586621679581040"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s ProtocolParametersUpdate
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679581032"><span id="local-6989586621679581034"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-119"></span><span>  </span><span id="local-6989586621679580986"><span class="annot"><span class="annottext">encCBOR :: ProtocolParametersUpdate -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span id="local-6989586621679580984"><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-120"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">14</span></span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Word16
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuScriptVersion"><span class="hs-identifier hs-var">ppuScriptVersion</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuSlotDuration"><span class="hs-identifier hs-var">ppuSlotDuration</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxBlockSize"><span class="hs-identifier hs-var">ppuMaxBlockSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxHeaderSize"><span class="hs-identifier hs-var">ppuMaxHeaderSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxTxSize"><span class="hs-identifier hs-var">ppuMaxTxSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxProposalSize"><span class="hs-identifier hs-var">ppuMaxProposalSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMpcThd"><span class="hs-identifier hs-var">ppuMpcThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-128"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuHeavyDelThd"><span class="hs-identifier hs-var">ppuHeavyDelThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateVoteThd"><span class="hs-identifier hs-var">ppuUpdateVoteThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateProposalThd"><span class="hs-identifier hs-var">ppuUpdateProposalThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe SlotNumber
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateProposalTTL"><span class="hs-identifier hs-var">ppuUpdateProposalTTL</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe SoftforkRule
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuSoftforkRule"><span class="hs-identifier hs-var">ppuSoftforkRule</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe TxFeePolicy
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuTxFeePolicy"><span class="hs-identifier hs-var">ppuTxFeePolicy</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe EpochNumber
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUnlockStakeEpoch"><span class="hs-identifier hs-var">ppuUnlockStakeEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580984"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679580977"><span id="local-6989586621679580979"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-137"></span><span>  </span><span id="local-6989586621679580926"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s ProtocolParametersUpdate
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ProtocolParametersUpdate&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">14</span></span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">Maybe Word16
+-&gt; Maybe Natural
+-&gt; Maybe Natural
+-&gt; Maybe Natural
+-&gt; Maybe Natural
+-&gt; Maybe Natural
+-&gt; Maybe LovelacePortion
+-&gt; Maybe LovelacePortion
+-&gt; Maybe LovelacePortion
+-&gt; Maybe LovelacePortion
+-&gt; Maybe SlotNumber
+-&gt; Maybe SoftforkRule
+-&gt; Maybe TxFeePolicy
+-&gt; Maybe EpochNumber
+-&gt; ProtocolParametersUpdate
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-var">ProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-142"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-143"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-145"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-147"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-149"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-150"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-151"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-152"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-153"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#empty"><span class="hs-identifier hs-type">empty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-156"></span><span id="empty"><span class="annot"><span class="annottext">empty :: ProtocolParametersUpdate
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#empty"><span class="hs-identifier hs-var hs-var">empty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-157"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ppuScriptVersion :: Maybe Word16
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuScriptVersion"><span class="hs-identifier hs-var">ppuScriptVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuSlotDuration :: Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuSlotDuration"><span class="hs-identifier hs-var">ppuSlotDuration</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuMaxBlockSize :: Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxBlockSize"><span class="hs-identifier hs-var">ppuMaxBlockSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuMaxHeaderSize :: Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxHeaderSize"><span class="hs-identifier hs-var">ppuMaxHeaderSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-162"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuMaxTxSize :: Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxTxSize"><span class="hs-identifier hs-var">ppuMaxTxSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuMaxProposalSize :: Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxProposalSize"><span class="hs-identifier hs-var">ppuMaxProposalSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuMpcThd :: Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMpcThd"><span class="hs-identifier hs-var">ppuMpcThd</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuHeavyDelThd :: Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuHeavyDelThd"><span class="hs-identifier hs-var">ppuHeavyDelThd</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuUpdateVoteThd :: Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateVoteThd"><span class="hs-identifier hs-var">ppuUpdateVoteThd</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-167"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuUpdateProposalThd :: Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateProposalThd"><span class="hs-identifier hs-var">ppuUpdateProposalThd</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuUpdateProposalTTL :: Maybe SlotNumber
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateProposalTTL"><span class="hs-identifier hs-var">ppuUpdateProposalTTL</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuSoftforkRule :: Maybe SoftforkRule
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuSoftforkRule"><span class="hs-identifier hs-var">ppuSoftforkRule</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuTxFeePolicy :: Maybe TxFeePolicy
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuTxFeePolicy"><span class="hs-identifier hs-var">ppuTxFeePolicy</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppuUnlockStakeEpoch :: Maybe EpochNumber
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUnlockStakeEpoch"><span class="hs-identifier hs-var">ppuUnlockStakeEpoch</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-173"></span><span>
+</span><span id="line-174"></span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#isEmpty"><span class="hs-identifier hs-type">isEmpty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-175"></span><span id="isEmpty"><span class="annot"><span class="annottext">isEmpty :: ProtocolParametersUpdate -&gt; Bool
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#isEmpty"><span class="hs-identifier hs-var hs-var">isEmpty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="hs-comment">-- | Apply 'ProtocolParametersUpdate' to 'ProtocolParameters'</span><span>
+</span><span id="line-178"></span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#apply"><span class="hs-identifier hs-type">apply</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ProtocolParametersUpdate"><span class="hs-identifier hs-type">ProtocolParametersUpdate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier hs-type">ProtocolParameters</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier hs-type">ProtocolParameters</span></a></span><span>
+</span><span id="line-179"></span><span id="apply"><span class="annot"><span class="annottext">apply :: ProtocolParametersUpdate
+-&gt; ProtocolParameters -&gt; ProtocolParameters
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#apply"><span class="hs-identifier hs-var hs-var">apply</span></a></span></span><span> </span><span id="local-6989586621679580922"><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span></span><span> </span><span id="local-6989586621679580921"><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-180"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier hs-type">ProtocolParameters</span></a></span><span>
+</span><span id="line-181"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">ppScriptVersion :: Word16
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppScriptVersion"><span class="hs-identifier hs-var">ppScriptVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; Word16
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppScriptVersion"><span class="hs-identifier hs-var">ppScriptVersion</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Word16
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuScriptVersion"><span class="hs-identifier hs-var">ppuScriptVersion</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppSlotDuration :: Natural
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppSlotDuration"><span class="hs-identifier hs-var">ppSlotDuration</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; Natural
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppSlotDuration"><span class="hs-identifier hs-var">ppSlotDuration</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuSlotDuration"><span class="hs-identifier hs-var">ppuSlotDuration</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppMaxBlockSize :: Natural
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppMaxBlockSize"><span class="hs-identifier hs-var">ppMaxBlockSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; Natural
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppMaxBlockSize"><span class="hs-identifier hs-var">ppMaxBlockSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxBlockSize"><span class="hs-identifier hs-var">ppuMaxBlockSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-184"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppMaxHeaderSize :: Natural
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppMaxHeaderSize"><span class="hs-identifier hs-var">ppMaxHeaderSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; Natural
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppMaxHeaderSize"><span class="hs-identifier hs-var">ppMaxHeaderSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxHeaderSize"><span class="hs-identifier hs-var">ppuMaxHeaderSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppMaxTxSize :: Natural
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppMaxTxSize"><span class="hs-identifier hs-var">ppMaxTxSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; Natural
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppMaxTxSize"><span class="hs-identifier hs-var">ppMaxTxSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxTxSize"><span class="hs-identifier hs-var">ppuMaxTxSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppMaxProposalSize :: Natural
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppMaxProposalSize"><span class="hs-identifier hs-var">ppMaxProposalSize</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-187"></span><span>        </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span>
+</span><span id="line-188"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; Natural
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppMaxProposalSize"><span class="hs-identifier hs-var">ppMaxProposalSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-189"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe Natural
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMaxProposalSize"><span class="hs-identifier hs-var">ppuMaxProposalSize</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppMpcThd :: LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppMpcThd"><span class="hs-identifier hs-var">ppMpcThd</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppMpcThd"><span class="hs-identifier hs-var">ppMpcThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuMpcThd"><span class="hs-identifier hs-var">ppuMpcThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppHeavyDelThd :: LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppHeavyDelThd"><span class="hs-identifier hs-var">ppHeavyDelThd</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppHeavyDelThd"><span class="hs-identifier hs-var">ppHeavyDelThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuHeavyDelThd"><span class="hs-identifier hs-var">ppuHeavyDelThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppUpdateVoteThd :: LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppUpdateVoteThd"><span class="hs-identifier hs-var">ppUpdateVoteThd</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppUpdateVoteThd"><span class="hs-identifier hs-var">ppUpdateVoteThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateVoteThd"><span class="hs-identifier hs-var">ppuUpdateVoteThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppUpdateProposalThd :: LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppUpdateProposalThd"><span class="hs-identifier hs-var">ppUpdateProposalThd</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-194"></span><span>        </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span>
+</span><span id="line-195"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppUpdateProposalThd"><span class="hs-identifier hs-var">ppUpdateProposalThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe LovelacePortion
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateProposalThd"><span class="hs-identifier hs-var">ppuUpdateProposalThd</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppUpdateProposalTTL :: SlotNumber
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppUpdateProposalTTL"><span class="hs-identifier hs-var">ppUpdateProposalTTL</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; SlotNumber
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppUpdateProposalTTL"><span class="hs-identifier hs-var">ppUpdateProposalTTL</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe SlotNumber
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUpdateProposalTTL"><span class="hs-identifier hs-var">ppuUpdateProposalTTL</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-198"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppSoftforkRule :: SoftforkRule
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppSoftforkRule"><span class="hs-identifier hs-var">ppSoftforkRule</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; SoftforkRule
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppSoftforkRule"><span class="hs-identifier hs-var">ppSoftforkRule</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe SoftforkRule
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuSoftforkRule"><span class="hs-identifier hs-var">ppuSoftforkRule</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-199"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppTxFeePolicy :: TxFeePolicy
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppTxFeePolicy"><span class="hs-identifier hs-var">ppTxFeePolicy</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; TxFeePolicy
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppTxFeePolicy"><span class="hs-identifier hs-var">ppTxFeePolicy</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe TxFeePolicy
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuTxFeePolicy"><span class="hs-identifier hs-var">ppuTxFeePolicy</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ppUnlockStakeEpoch :: EpochNumber
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppUnlockStakeEpoch"><span class="hs-identifier hs-var">ppUnlockStakeEpoch</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-201"></span><span>        </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span>
+</span><span id="line-202"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParameters -&gt; EpochNumber
+</span><a href="Cardano.Chain.Update.ProtocolParameters.html#ppUnlockStakeEpoch"><span class="hs-identifier hs-var">ppUnlockStakeEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679580921"><span class="hs-identifier hs-var">pp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-203"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolParametersUpdate -&gt; Maybe EpochNumber
+</span><a href="Cardano.Chain.Update.ProtocolParametersUpdate.html#ppuUnlockStakeEpoch"><span class="hs-identifier hs-var">ppuUnlockStakeEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParametersUpdate
+</span><a href="#local-6989586621679580922"><span class="hs-identifier hs-var">ppu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-204"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-205"></span></pre></body></html>

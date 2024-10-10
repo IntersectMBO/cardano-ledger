@@ -1,0 +1,473 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679567168"><span id="local-6989586621679567169"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Slotting.EpochNumber</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier">EpochNumber</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#isBootstrapEra"><span class="hs-identifier">isBootstrapEra</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Ix</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Ix</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">bprint</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/canonical-json-0.6.0.1-ba67b9734eba891fcd39ebc5c019e7d83b2d5b5d2da7232cdac369ced6b01b0f/share/doc/html/src"><span class="hs-identifier">Text.JSON.Canonical</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/canonical-json-0.6.0.1-ba67b9734eba891fcd39ebc5c019e7d83b2d5b5d2da7232cdac369ced6b01b0f/share/doc/html/src"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/canonical-json-0.6.0.1-ba67b9734eba891fcd39ebc5c019e7d83b2d5b5d2da7232cdac369ced6b01b0f/share/doc/html/src"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- | Index of epoch.</span><span>
+</span><span id="line-34"></span><span id="local-6989586621679567159"><span id="local-6989586621679567160"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="EpochNumber"><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-var">EpochNumber</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="EpochNumber"><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-var">EpochNumber</span></a></span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="getEpochNumber"><span class="annot"><span class="annottext">EpochNumber -&gt; Word64
+</span><a href="Cardano.Chain.Slotting.EpochNumber.html#getEpochNumber"><span class="hs-identifier hs-var hs-var">getEpochNumber</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679567147"><span id="local-6989586621679567149"><span id="local-6989586621679567155"><span class="annot"><span class="annottext">Int -&gt; EpochNumber -&gt; ShowS
+[EpochNumber] -&gt; ShowS
+EpochNumber -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [EpochNumber] -&gt; ShowS
+$cshowList :: [EpochNumber] -&gt; ShowS
+show :: EpochNumber -&gt; String
+$cshow :: EpochNumber -&gt; String
+showsPrec :: Int -&gt; EpochNumber -&gt; ShowS
+$cshowsPrec :: Int -&gt; EpochNumber -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567113"><span id="local-6989586621679567115"><span id="local-6989586621679567117"><span id="local-6989586621679567119"><span id="local-6989586621679567121"><span id="local-6989586621679567123"><span id="local-6989586621679567125"><span id="local-6989586621679567127"><span id="local-6989586621679567129"><span id="local-6989586621679567131"><span id="local-6989586621679567133"><span id="local-6989586621679567135"><span id="local-6989586621679567138"><span id="local-6989586621679567142"><span class="annot"><span class="annottext">Typeable EpochNumber
+EpochNumber -&gt; DataType
+EpochNumber -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b) -&gt; EpochNumber -&gt; EpochNumber
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; EpochNumber -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; EpochNumber -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochNumber -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochNumber -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochNumber -&gt; m EpochNumber
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochNumber -&gt; m EpochNumber
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c EpochNumber
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; EpochNumber -&gt; c EpochNumber
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c EpochNumber)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c EpochNumber)
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochNumber -&gt; m EpochNumber
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochNumber -&gt; m EpochNumber
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochNumber -&gt; m EpochNumber
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochNumber -&gt; m EpochNumber
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochNumber -&gt; m EpochNumber
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochNumber -&gt; m EpochNumber
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; EpochNumber -&gt; u
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; EpochNumber -&gt; u
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; EpochNumber -&gt; [u]
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; EpochNumber -&gt; [u]
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochNumber -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochNumber -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochNumber -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochNumber -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; EpochNumber -&gt; EpochNumber
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; EpochNumber -&gt; EpochNumber
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c EpochNumber)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c EpochNumber)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c EpochNumber)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c EpochNumber)
+dataTypeOf :: EpochNumber -&gt; DataType
+$cdataTypeOf :: EpochNumber -&gt; DataType
+toConstr :: EpochNumber -&gt; Constr
+$ctoConstr :: EpochNumber -&gt; Constr
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c EpochNumber
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c EpochNumber
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; EpochNumber -&gt; c EpochNumber
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; EpochNumber -&gt; c EpochNumber
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567105"><span id="local-6989586621679567110"><span class="annot"><span class="annottext">EpochNumber -&gt; EpochNumber -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: EpochNumber -&gt; EpochNumber -&gt; Bool
+$c/= :: EpochNumber -&gt; EpochNumber -&gt; Bool
+== :: EpochNumber -&gt; EpochNumber -&gt; Bool
+$c== :: EpochNumber -&gt; EpochNumber -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567072"><span id="local-6989586621679567076"><span id="local-6989586621679567080"><span id="local-6989586621679567084"><span id="local-6989586621679567088"><span id="local-6989586621679567092"><span id="local-6989586621679567097"><span class="annot"><span class="annottext">Eq EpochNumber
+EpochNumber -&gt; EpochNumber -&gt; Bool
+EpochNumber -&gt; EpochNumber -&gt; Ordering
+EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+$cmin :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+max :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+$cmax :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+&gt;= :: EpochNumber -&gt; EpochNumber -&gt; Bool
+$c&gt;= :: EpochNumber -&gt; EpochNumber -&gt; Bool
+&gt; :: EpochNumber -&gt; EpochNumber -&gt; Bool
+$c&gt; :: EpochNumber -&gt; EpochNumber -&gt; Bool
+&lt;= :: EpochNumber -&gt; EpochNumber -&gt; Bool
+$c&lt;= :: EpochNumber -&gt; EpochNumber -&gt; Bool
+&lt; :: EpochNumber -&gt; EpochNumber -&gt; Bool
+$c&lt; :: EpochNumber -&gt; EpochNumber -&gt; Bool
+compare :: EpochNumber -&gt; EpochNumber -&gt; Ordering
+$ccompare :: EpochNumber -&gt; EpochNumber -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567042"><span id="local-6989586621679567046"><span id="local-6989586621679567050"><span id="local-6989586621679567054"><span id="local-6989586621679567058"><span id="local-6989586621679567062"><span id="local-6989586621679567067"><span class="annot"><span class="annottext">Integer -&gt; EpochNumber
+EpochNumber -&gt; EpochNumber
+EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+forall a.
+(a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Integer -&gt; a)
+-&gt; Num a
+fromInteger :: Integer -&gt; EpochNumber
+$cfromInteger :: Integer -&gt; EpochNumber
+signum :: EpochNumber -&gt; EpochNumber
+$csignum :: EpochNumber -&gt; EpochNumber
+abs :: EpochNumber -&gt; EpochNumber
+$cabs :: EpochNumber -&gt; EpochNumber
+negate :: EpochNumber -&gt; EpochNumber
+$cnegate :: EpochNumber -&gt; EpochNumber
+* :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+$c* :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+- :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+$c- :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
++ :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+$c+ :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Num</span></a></span></span></span></span></span></span></span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567007"><span id="local-6989586621679567011"><span id="local-6989586621679567015"><span id="local-6989586621679567019"><span id="local-6989586621679567023"><span id="local-6989586621679567027"><span id="local-6989586621679567031"><span id="local-6989586621679567036"><span class="annot"><span class="annottext">Int -&gt; EpochNumber
+EpochNumber -&gt; Int
+EpochNumber -&gt; [EpochNumber]
+EpochNumber -&gt; EpochNumber
+EpochNumber -&gt; EpochNumber -&gt; [EpochNumber]
+EpochNumber -&gt; EpochNumber -&gt; EpochNumber -&gt; [EpochNumber]
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+enumFromThenTo :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber -&gt; [EpochNumber]
+$cenumFromThenTo :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber -&gt; [EpochNumber]
+enumFromTo :: EpochNumber -&gt; EpochNumber -&gt; [EpochNumber]
+$cenumFromTo :: EpochNumber -&gt; EpochNumber -&gt; [EpochNumber]
+enumFromThen :: EpochNumber -&gt; EpochNumber -&gt; [EpochNumber]
+$cenumFromThen :: EpochNumber -&gt; EpochNumber -&gt; [EpochNumber]
+enumFrom :: EpochNumber -&gt; [EpochNumber]
+$cenumFrom :: EpochNumber -&gt; [EpochNumber]
+fromEnum :: EpochNumber -&gt; Int
+$cfromEnum :: EpochNumber -&gt; Int
+toEnum :: Int -&gt; EpochNumber
+$ctoEnum :: Int -&gt; EpochNumber
+pred :: EpochNumber -&gt; EpochNumber
+$cpred :: EpochNumber -&gt; EpochNumber
+succ :: EpochNumber -&gt; EpochNumber
+$csucc :: EpochNumber -&gt; EpochNumber
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566978"><span id="local-6989586621679566982"><span id="local-6989586621679566986"><span id="local-6989586621679566990"><span id="local-6989586621679566994"><span id="local-6989586621679566999"><span class="annot"><span class="annottext">Ord EpochNumber
+(EpochNumber, EpochNumber) -&gt; Int
+(EpochNumber, EpochNumber) -&gt; [EpochNumber]
+(EpochNumber, EpochNumber) -&gt; EpochNumber -&gt; Bool
+(EpochNumber, EpochNumber) -&gt; EpochNumber -&gt; Int
+forall a.
+Ord a
+-&gt; ((a, a) -&gt; [a])
+-&gt; ((a, a) -&gt; a -&gt; Int)
+-&gt; ((a, a) -&gt; a -&gt; Int)
+-&gt; ((a, a) -&gt; a -&gt; Bool)
+-&gt; ((a, a) -&gt; Int)
+-&gt; ((a, a) -&gt; Int)
+-&gt; Ix a
+unsafeRangeSize :: (EpochNumber, EpochNumber) -&gt; Int
+$cunsafeRangeSize :: (EpochNumber, EpochNumber) -&gt; Int
+rangeSize :: (EpochNumber, EpochNumber) -&gt; Int
+$crangeSize :: (EpochNumber, EpochNumber) -&gt; Int
+inRange :: (EpochNumber, EpochNumber) -&gt; EpochNumber -&gt; Bool
+$cinRange :: (EpochNumber, EpochNumber) -&gt; EpochNumber -&gt; Bool
+unsafeIndex :: (EpochNumber, EpochNumber) -&gt; EpochNumber -&gt; Int
+$cunsafeIndex :: (EpochNumber, EpochNumber) -&gt; EpochNumber -&gt; Int
+index :: (EpochNumber, EpochNumber) -&gt; EpochNumber -&gt; Int
+$cindex :: (EpochNumber, EpochNumber) -&gt; EpochNumber -&gt; Int
+range :: (EpochNumber, EpochNumber) -&gt; [EpochNumber]
+$crange :: (EpochNumber, EpochNumber) -&gt; [EpochNumber]
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ix</span></a></span></span></span></span></span></span></span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566942"><span id="local-6989586621679566946"><span id="local-6989586621679566950"><span id="local-6989586621679566954"><span id="local-6989586621679566958"><span id="local-6989586621679566962"><span id="local-6989586621679566967"><span class="annot"><span class="annottext">Enum EpochNumber
+Real EpochNumber
+EpochNumber -&gt; Integer
+EpochNumber -&gt; EpochNumber -&gt; (EpochNumber, EpochNumber)
+EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+forall a.
+Real a
+-&gt; Enum a
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; a -&gt; (a, a))
+-&gt; (a -&gt; Integer)
+-&gt; Integral a
+toInteger :: EpochNumber -&gt; Integer
+$ctoInteger :: EpochNumber -&gt; Integer
+divMod :: EpochNumber -&gt; EpochNumber -&gt; (EpochNumber, EpochNumber)
+$cdivMod :: EpochNumber -&gt; EpochNumber -&gt; (EpochNumber, EpochNumber)
+quotRem :: EpochNumber -&gt; EpochNumber -&gt; (EpochNumber, EpochNumber)
+$cquotRem :: EpochNumber -&gt; EpochNumber -&gt; (EpochNumber, EpochNumber)
+mod :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+$cmod :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+div :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+$cdiv :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+rem :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+$crem :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+quot :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+$cquot :: EpochNumber -&gt; EpochNumber -&gt; EpochNumber
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Integral</span></a></span></span></span></span></span></span></span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566932"><span class="annot"><span class="annottext">Num EpochNumber
+Ord EpochNumber
+EpochNumber -&gt; Rational
+forall a. Num a -&gt; Ord a -&gt; (a -&gt; Rational) -&gt; Real a
+toRational :: EpochNumber -&gt; Rational
+$ctoRational :: EpochNumber -&gt; Rational
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Real</span></a></span></span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep EpochNumber x -&gt; EpochNumber
+forall x. EpochNumber -&gt; Rep EpochNumber x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep EpochNumber x -&gt; EpochNumber
+$cfrom :: forall x. EpochNumber -&gt; Rep EpochNumber x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566918"><span id="local-6989586621679566923"><span class="annot"><span class="annottext">EpochNumber
+forall a. a -&gt; a -&gt; Bounded a
+maxBound :: EpochNumber
+$cmaxBound :: EpochNumber
+minBound :: EpochNumber
+$cminBound :: EpochNumber
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566912"><span class="annot"><span class="annottext">EpochNumber -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: EpochNumber -&gt; ()
+$crnf :: EpochNumber -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679566896"><span id="local-6989586621679566900"><span id="local-6989586621679566905"><span class="annot"><span class="annottext">Context -&gt; EpochNumber -&gt; IO (Maybe ThunkInfo)
+Proxy EpochNumber -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy EpochNumber -&gt; String
+$cshowTypeOf :: Proxy EpochNumber -&gt; String
+wNoThunks :: Context -&gt; EpochNumber -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; EpochNumber -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; EpochNumber -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; EpochNumber -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-type">Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679566882"><span class="annot"><span class="annottext">build :: EpochNumber -&gt; Builder
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Format Builder a -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">bprint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (EpochNumber -&gt; Builder) (EpochNumber -&gt; Builder)
+</span><span class="hs-string">&quot;#&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Integral a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- Used for debugging purposes only</span><span>
+</span><span id="line-57"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566870"><span id="local-6989586621679566872"><span id="local-6989586621679566874"><span id="local-6989586621679566876"><span id="local-6989586621679566878"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier hs-type">Aeson.ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span></span></span></span></span></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566862"><span id="local-6989586621679566864"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679566859"><span class="annot"><span class="annottext">toCBOR :: EpochNumber -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566853"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679566850"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s EpochNumber
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566843"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>  </span><span id="local-6989586621679566839"><span class="annot"><span class="annottext">encCBOR :: EpochNumber -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span><span> </span><span id="local-6989586621679566837"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679566837"><span class="hs-identifier hs-var">epoch</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679566837"><span class="hs-identifier hs-var">epoch</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679566831"><span class="annot"><span class="annottext">encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy EpochNumber -&gt; Size
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedSizeExpr</span></a></span></span><span> </span><span id="local-6989586621679566829"><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679566829"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a.
+EncCBOR a =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodedSizeExpr</span></a></span><span> </span><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><a href="#local-6989586621679566829"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNumber -&gt; Word64
+</span><a href="Cardano.Chain.Slotting.EpochNumber.html#getEpochNumber"><span class="hs-identifier hs-var">getEpochNumber</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679566820"><span id="local-6989586621679566822"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679566814"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s EpochNumber
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; EpochNumber
+</span><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-var">EpochNumber</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- Note that it will be encoded as string, because 'EpochNumber' doesn't</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- necessary fit into JS number.</span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679567328"><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Monad</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679567328"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/canonical-json-0.6.0.1-ba67b9734eba891fcd39ebc5c019e7d83b2d5b5d2da7232cdac369ced6b01b0f/share/doc/html/src"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679567328"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>  </span><span id="local-6989586621679566804"><span class="annot"><span class="annottext">toJSON :: EpochNumber -&gt; m JSValue
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/canonical-json-0.6.0.1-ba67b9734eba891fcd39ebc5c019e7d83b2d5b5d2da7232cdac369ced6b01b0f/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a. ToJSON m a =&gt; a -&gt; m JSValue
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/canonical-json-0.6.0.1-ba67b9734eba891fcd39ebc5c019e7d83b2d5b5d2da7232cdac369ced6b01b0f/share/doc/html/src"><span class="hs-identifier hs-var">toJSON</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNumber -&gt; Word64
+</span><a href="Cardano.Chain.Slotting.EpochNumber.html#getEpochNumber"><span class="hs-identifier hs-var">getEpochNumber</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679567320"><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/mtl-2.2.2/src"><span class="hs-identifier hs-type">MonadError</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-type">SchemaError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679567320"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/canonical-json-0.6.0.1-ba67b9734eba891fcd39ebc5c019e7d83b2d5b5d2da7232cdac369ced6b01b0f/share/doc/html/src"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679567320"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>  </span><span id="local-6989586621679566786"><span class="annot"><span class="annottext">fromJSON :: JSValue -&gt; m EpochNumber
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/canonical-json-0.6.0.1-ba67b9734eba891fcd39ebc5c019e7d83b2d5b5d2da7232cdac369ced6b01b0f/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; EpochNumber
+</span><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-var">EpochNumber</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a. FromJSON m a =&gt; JSValue -&gt; m a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/canonical-json-0.6.0.1-ba67b9734eba891fcd39ebc5c019e7d83b2d5b5d2da7232cdac369ced6b01b0f/share/doc/html/src"><span class="hs-identifier hs-var">fromJSON</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- | Bootstrap era is ongoing until stakes are unlocked. The reward era starts</span><span>
+</span><span id="line-81"></span><span class="hs-comment">--   from the epoch specified as the epoch that unlocks stakes:</span><span>
+</span><span id="line-82"></span><span class="hs-comment">--</span><span>
+</span><span id="line-83"></span><span class="hs-comment">--   @</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--                       [unlock stake epoch]</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--                               /</span><span>
+</span><span id="line-86"></span><span class="hs-comment">--   Epoch: ...  E-3  E-2  E-1   E+0  E+1  E+2  E+3  ...</span><span>
+</span><span id="line-87"></span><span class="hs-comment">--          ------------------ | -----------------------</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--               Bootstrap era   Reward era</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--   @</span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#isBootstrapEra"><span class="hs-identifier hs-type">isBootstrapEra</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-comment">-- | Unlock stake epoch</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-comment">-- | Epoch in question (for which we determine whether it belongs to the</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-comment">--   bootstrap era)</span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-97"></span><span id="isBootstrapEra"><span class="annot"><span class="annottext">isBootstrapEra :: EpochNumber -&gt; EpochNumber -&gt; Bool
+</span><a href="Cardano.Chain.Slotting.EpochNumber.html#isBootstrapEra"><span class="hs-identifier hs-var hs-var">isBootstrapEra</span></a></span></span><span> </span><span id="local-6989586621679566784"><span class="annot"><span class="annottext">EpochNumber
+</span><a href="#local-6989586621679566784"><span class="hs-identifier hs-var">unlockStakeEpoch</span></a></span></span><span> </span><span id="local-6989586621679566783"><span class="annot"><span class="annottext">EpochNumber
+</span><a href="#local-6989586621679566783"><span class="hs-identifier hs-var">epoch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EpochNumber
+</span><a href="#local-6989586621679566783"><span class="hs-identifier hs-var">epoch</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNumber
+</span><a href="#local-6989586621679566784"><span class="hs-identifier hs-var">unlockStakeEpoch</span></a></span><span>
+</span><span id="line-98"></span></pre></body></html>

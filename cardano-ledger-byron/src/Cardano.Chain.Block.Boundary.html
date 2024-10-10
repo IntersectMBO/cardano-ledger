@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Boundary blocks have been deprecated, but we keep functions to decode them</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Block.Boundary</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Block.Boundary.html#decCBORBoundaryConsensusData"><span class="hs-identifier">decCBORBoundaryConsensusData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryExtraHeaderData"><span class="hs-identifier">dropBoundaryExtraHeaderData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryExtraHeaderDataRetainGenesisTag"><span class="hs-identifier">dropBoundaryExtraHeaderDataRetainGenesisTag</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryBody"><span class="hs-identifier">dropBoundaryBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryExtraBodyData"><span class="hs-identifier">dropBoundaryExtraBodyData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier">ChainDifficulty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#attrData"><span class="hs-identifier">attrData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#decCBORAttributes"><span class="hs-identifier">decCBORAttributes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#dropAttributes"><span class="hs-identifier">dropAttributes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Decoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Dropper</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeWord64</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">dropBytes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">dropList</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">enforceSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- BoundaryConsensusData</span><span>
+</span><span id="line-32"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span id="local-6989586621679564906"><span class="annot"><a href="Cardano.Chain.Block.Boundary.html#decCBORBoundaryConsensusData"><span class="hs-identifier hs-type">decCBORBoundaryConsensusData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679564906"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.ChainDifficulty.html#ChainDifficulty"><span class="hs-identifier hs-type">ChainDifficulty</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-35"></span><span id="decCBORBoundaryConsensusData"><span class="annot"><span class="annottext">decCBORBoundaryConsensusData :: forall s. Decoder s (Word64, ChainDifficulty)
+</span><a href="Cardano.Chain.Block.Boundary.html#decCBORBoundaryConsensusData"><span class="hs-identifier hs-var hs-var">decCBORBoundaryConsensusData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;BoundaryConsensusData&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679564841"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679564841"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall s. Decoder s Word64
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeWord64</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679564840"><span class="annot"><span class="annottext">ChainDifficulty
+</span><a href="#local-6989586621679564840"><span class="hs-identifier hs-var">cd</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679564841"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ChainDifficulty
+</span><a href="#local-6989586621679564840"><span class="hs-identifier hs-var">cd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- BoundaryExtraHeaderData</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span id="local-6989586621679564893"><span class="annot"><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryExtraHeaderData"><span class="hs-identifier hs-type">dropBoundaryExtraHeaderData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Dropper</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679564893"><span class="hs-identifier hs-type">s</span></a></span></span><span>
+</span><span id="line-46"></span><span id="dropBoundaryExtraHeaderData"><span class="annot"><span class="annottext">dropBoundaryExtraHeaderData :: forall s. Dropper s
+</span><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryExtraHeaderData"><span class="hs-identifier hs-var hs-var">dropBoundaryExtraHeaderData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;BoundaryExtraHeaderData&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">forall s. Dropper s
+</span><a href="Cardano.Chain.Common.Attributes.html#dropAttributes"><span class="hs-identifier hs-var">dropAttributes</span></a></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- | When starting a new chain in ourorobos-consensus, we often start from a</span><span>
+</span><span id="line-51"></span><span class="hs-comment">--   non-zero epoch. This is done in order to ensure synchronisation between</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--   nodes - we assume that the chain started at some fixed point in the past</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--   (e.g. midnight) which all nodes can agree on despite different node start</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--   times. However, the standard deserialisation assumes that the genesis EBB</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--   is precisely that in epoch zero.</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--   In order to successfully round-trip a genesis EBB in a non-zero epoch,</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--   then, we add a &quot;magic&quot; tag which indicates the presense of the genesis</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--   hash. The choice of 255 and the word &quot;Genesis&quot; is completely arbitrary, and</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--   only done to correspond with the matching encoder. This encoding will only</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--   ever be seen when processing blocks from a demo.</span><span>
+</span><span id="line-62"></span><span id="local-6989586621679564890"><span class="annot"><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryExtraHeaderDataRetainGenesisTag"><span class="hs-identifier hs-type">dropBoundaryExtraHeaderDataRetainGenesisTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679564890"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-63"></span><span id="dropBoundaryExtraHeaderDataRetainGenesisTag"><span class="annot"><span class="annottext">dropBoundaryExtraHeaderDataRetainGenesisTag :: forall s. Decoder s Bool
+</span><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryExtraHeaderDataRetainGenesisTag"><span class="hs-identifier hs-var hs-var">dropBoundaryExtraHeaderDataRetainGenesisTag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;BoundaryExtraHeaderData&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="annottext">forall h. Attributes h -&gt; h
+</span><a href="Cardano.Chain.Common.Attributes.html#attrData"><span class="hs-identifier hs-var">attrData</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall t s.
+t
+-&gt; (Word8 -&gt; ByteString -&gt; t -&gt; Decoder s (Maybe t))
+-&gt; Decoder s (Attributes t)
+</span><a href="Cardano.Chain.Common.Attributes.html#decCBORAttributes"><span class="hs-identifier hs-var">decCBORAttributes</span></a></span><span>
+</span><span id="line-67"></span><span>      </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-68"></span><span>      </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679564820"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679564820"><span class="hs-identifier hs-var">w8</span></a></span></span><span> </span><span id="local-6989586621679564819"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679564819"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span id="local-6989586621679564818"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679564818"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679564818"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">||</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679564820"><span class="hs-identifier hs-var">w8</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">255</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679564819"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;Genesis&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- BoundaryBody</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span id="local-6989586621679564814"><span class="annot"><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryBody"><span class="hs-identifier hs-type">dropBoundaryBody</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Dropper</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679564814"><span class="hs-identifier hs-type">s</span></a></span></span><span>
+</span><span id="line-75"></span><span id="dropBoundaryBody"><span class="annot"><span class="annottext">dropBoundaryBody :: forall s. Dropper s
+</span><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryBody"><span class="hs-identifier hs-var hs-var">dropBoundaryBody</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall s. Dropper s -&gt; Dropper s
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">dropList</span></a></span><span> </span><span class="annot"><span class="annottext">forall s. Dropper s
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">dropBytes</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- BoundaryExtraBodyData</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span id="local-6989586621679564813"><span class="annot"><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryExtraBodyData"><span class="hs-identifier hs-type">dropBoundaryExtraBodyData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Dropper</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679564813"><span class="hs-identifier hs-type">s</span></a></span></span><span>
+</span><span id="line-82"></span><span id="dropBoundaryExtraBodyData"><span class="annot"><span class="annottext">dropBoundaryExtraBodyData :: forall s. Dropper s
+</span><a href="Cardano.Chain.Block.Boundary.html#dropBoundaryExtraBodyData"><span class="hs-identifier hs-var hs-var">dropBoundaryExtraBodyData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;BoundaryExtraBodyData&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">forall s. Dropper s
+</span><a href="Cardano.Chain.Common.Attributes.html#dropAttributes"><span class="hs-identifier hs-var">dropAttributes</span></a></span><span>
+</span><span id="line-85"></span></pre></body></html>
