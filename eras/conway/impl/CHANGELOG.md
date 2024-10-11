@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.17.0.1
+## 1.18.0.0
 
-*
+* Add new event `GovRemovedVotes` for invalidated votes
 
 ## 1.17.0.0
 
