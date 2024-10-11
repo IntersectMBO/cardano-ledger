@@ -139,7 +139,7 @@
               packages.cardano-ledger-shelley-ma-test.configureFlags = ["--ghc-option=-Werror"];
               packages.small-steps.configureFlags = ["--ghc-option=-Werror"];
               packages.cardano-ledger-byron = {
-                configureFlags = ["--ghc-option=-Werror"];
+                configureFlags = ["--ghc-option=-Werror --ghc-option=-fno-warn-unused-packages"];
                 components = {
                   tests.cardano-ledger-byron-test = {
                     preCheck = ''

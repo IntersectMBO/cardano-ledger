@@ -110,6 +110,10 @@ package cardano-ledger-mary
 package cardano-ledger-conway
   flags: +asserts
 
+package cardano-ledger-byron
+  -- Temporary fix, in order to add `Cabal >= 3.12`, to avoid errors when releasing the package
+  ghc-options: -fno-warn-unused-packages
+
 -- Always write GHC env files, because they are needed for repl and by the doctests.
 write-ghc-environment-files: always
 
