@@ -653,12 +653,17 @@ instance HasSpec fn a => Semigroup (Specification fn a) where
       $ MemberSpec
       $ nub
       $ intersect as as'
-  MemberSpec as <> TypeSpec s cant =
-    MemberSpec $
-      nub $
-        filter
-          (flip (conformsTo @fn) s)
-          (filter (`notElem` cant) as)
+  ms@(MemberSpec as) <> ts@TypeSpec {} =
+    case nub $ filter (`conformsToSpec` ts) as of
+      [] ->
+        ErrorSpec
+          ( NE.fromList
+              [ "The two " ++ show (typeRep (Proxy @a)) ++ " Specifications are inconsistent."
+              , "  " ++ show ms
+              , "  " ++ show ts
+              ]
+          )
+      as' -> MemberSpec as'
   TypeSpec s cant <> MemberSpec as = MemberSpec as <> TypeSpec s cant
   SuspendedSpec v p <> SuspendedSpec v' p' = SuspendedSpec v (p <> rename v' v p')
   SuspendedSpec v ps <> s = SuspendedSpec v (ps <> satisfies (V v) s)
@@ -1094,8 +1099,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
     explain
       ( NE.fromList
           [ ""
-          , "genFromSpecT"
-          , "    " ++ show (typeRep cant)
+          , "genFromSpecT at type " ++ show (typeRep cant)
           , "    " ++ show spec
           , "  with mode " ++ show mode
           ]
@@ -1104,7 +1108,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
       -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
       -- starts giving us trouble.
       genFromTypeSpec @fn s `suchThatT` (`notElem` cant)
-  ErrorSpec e -> explain1 "genFromSpecT ErrorSpec{} with explanation:" $ genError e
+  ErrorSpec e -> genError e
 
 shrinkWithSpec :: forall fn a. HasSpec fn a => Specification fn a -> a -> [a]
 -- TODO: possibly allow for ignoring the `conformsToSpec` check in the `TypeSpec`
@@ -1297,11 +1301,9 @@ mergeSolverStage (SolverStage x ps spec) plan =
               ( NE.fromList
                   ( [ "Solving var " ++ show x ++ " fails."
                     , "Merging the Specs"
-                    , "   " ++ show spec
-                    , "   " ++ show spec'
-                    , "Predicates"
+                    , "   1. " ++ show spec
+                    , "   2. " ++ show spec'
                     ]
-                      ++ (map show (ps ++ ps'))
                   )
               )
               (spec <> spec')
