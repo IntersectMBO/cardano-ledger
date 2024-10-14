@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-shelley-test`
 
-## 1.5.0.1
+## 1.5.1.0
 
-*
+* Update `ShelleyPoolPredFailure` arbitrary instance
 
 ## 1.5.0.0
 

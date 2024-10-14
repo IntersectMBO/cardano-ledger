@@ -139,15 +139,20 @@ instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
   encCBOR = \case
     StakePoolNotRegisteredOnKeyPOOL kh ->
       encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR kh
-    StakePoolRetirementWrongEpochPOOL gtmm lteqmm ->
-      encodeListLen 3 <> encCBOR (1 :: Word8) <> encCBOR gtmm <> encCBOR lteqmm
-    StakePoolCostTooLowPOOL mm ->
-      encodeListLen 2 <> encCBOR (3 :: Word8) <> encCBOR mm
-    WrongNetworkPOOL mm c ->
-      encodeListLen 3 <> encCBOR (4 :: Word8) <> encCBOR mm <> encCBOR c
+    StakePoolRetirementWrongEpochPOOL (Mismatch _ gtExpected) (Mismatch ltSupplied ltExpected) ->
+      encodeListLen 4
+        <> encCBOR (1 :: Word8)
+        <> encCBOR gtExpected
+        <> encCBOR ltSupplied
+        <> encCBOR ltExpected
+    StakePoolCostTooLowPOOL (Mismatch supplied expected) ->
+      encodeListLen 3 <> encCBOR (3 :: Word8) <> encCBOR supplied <> encCBOR expected
+    WrongNetworkPOOL (Mismatch supplied expected) c ->
+      encodeListLen 4 <> encCBOR (4 :: Word8) <> encCBOR expected <> encCBOR supplied <> encCBOR c
     PoolMedataHashTooBig a b ->
       encodeListLen 3 <> encCBOR (5 :: Word8) <> encCBOR a <> encCBOR b
 
+-- `ShelleyPoolPredFailure` is used in Conway POOL rule, so we need to keep the serialization unchanged
 instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
   decCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
     \case
@@ -155,17 +160,25 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
         kh <- decCBOR
         pure (2, StakePoolNotRegisteredOnKeyPOOL kh)
       1 -> do
-        gtmm <- decCBOR
-        lteqmm <- decCBOR
-        pure (3, StakePoolRetirementWrongEpochPOOL gtmm lteqmm)
+        gtExpected <- decCBOR
+        ltSupplied <- decCBOR
+        ltExpected <- decCBOR
+        pure
+          ( 4
+          , StakePoolRetirementWrongEpochPOOL
+              (Mismatch ltSupplied gtExpected)
+              (Mismatch ltSupplied ltExpected)
+          )
       2 -> fail "WrongCertificateTypePOOL has been removed as impossible case"
       3 -> do
-        mm <- decCBOR
-        pure (2, StakePoolCostTooLowPOOL mm)
+        supplied <- decCBOR
+        expected <- decCBOR
+        pure (3, StakePoolCostTooLowPOOL (Mismatch supplied expected))
       4 -> do
-        mm <- decCBOR
-        poolID <- decCBOR
-        pure (3, WrongNetworkPOOL mm poolID)
+        expectedNetId <- decCBOR
+        suppliedNetId <- decCBOR
+        poolId <- decCBOR
+        pure (4, WrongNetworkPOOL (Mismatch suppliedNetId expectedNetId) poolId)
       5 -> do
         poolID <- decCBOR
         s <- decCBOR

@@ -61,7 +61,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyDelplPredFailure,
   ShelleyLedgerPredFailure,
   ShelleyLedgersPredFailure,
-  ShelleyPoolPredFailure,
+  ShelleyPoolPredFailure (..),
   ShelleyPpupPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
@@ -659,7 +659,17 @@ instance Era era => Arbitrary (ShelleyPpupPredFailure era) where
   shrink = genericShrink
 
 instance Era era => Arbitrary (ShelleyPoolPredFailure era) where
-  arbitrary = genericArbitraryU
+  arbitrary =
+    oneof
+      [ StakePoolNotRegisteredOnKeyPOOL <$> arbitrary
+      , do
+          a <- arbitrary
+          b <- arbitrary
+          StakePoolRetirementWrongEpochPOOL (Mismatch a b) . Mismatch a <$> arbitrary
+      , StakePoolCostTooLowPOOL <$> arbitrary
+      , WrongNetworkPOOL <$> arbitrary <*> arbitrary
+      , PoolMedataHashTooBig <$> arbitrary <*> arbitrary
+      ]
   shrink = genericShrink
 
 instance
