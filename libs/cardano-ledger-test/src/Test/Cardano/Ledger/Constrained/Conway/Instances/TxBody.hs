@@ -10,7 +10,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Constrained.Conway.InstancesTxBody where
+module Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody where
 
 import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))
@@ -35,7 +35,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Sequence.Strict as SS (fromList)
 import Data.Set (Set)
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 
 -- ==============================================================================
 

@@ -32,7 +32,7 @@ import Constrained
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 
 -- | Specify that some of the rewards in the RDPair's are zero.
@@ -46,11 +46,11 @@ someZeros = constrained $ \ [var| someRdpair |] ->
 dStateSpec ::
   forall fn era. (IsConwayUniv fn, EraSpecDeleg era) => Specification fn (DState era)
 dStateSpec = constrained $ \ [var| dstate |] ->
-  match dstate $ \ [var| rewardMap |] [var|futureGenDelegs|] [var|genDelegs|] _rewards ->
+  match dstate $ \ [var| rewardMap |] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     match rewardMap $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] _dRepMap ->
       [ assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
       , match genDelegs $ \gd -> assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
-      , match _rewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
+      , match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
       , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
       , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
       , assertExplain (pure "some rewards are zero") $

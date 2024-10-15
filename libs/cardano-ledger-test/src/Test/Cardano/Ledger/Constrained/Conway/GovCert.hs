@@ -19,7 +19,7 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Constrained
 import qualified Data.Map as Map
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 
 vStateSpec :: Specification fn (VState era)

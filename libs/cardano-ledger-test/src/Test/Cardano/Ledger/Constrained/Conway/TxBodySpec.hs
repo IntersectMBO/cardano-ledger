@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -29,21 +30,25 @@ import Cardano.Ledger.Val
 import Constrained hiding (Value)
 import Constrained.Base (Pred (..), hasSize, rangeSize)
 import Data.Foldable (toList)
-import qualified Data.Map as Map
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Set (Set)
+import Data.Word (Word64)
+
 import Data.Sequence.Internal (Seq)
+import Lens.Micro
 
 -- , certStateSpec)
 
 import Test.Cardano.Ledger.Constrained.Conway.Cert (EraSpecCert (..), certStateSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Certs (certsEnvSpec, projectEnv)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
-import Test.Cardano.Ledger.Constrained.Conway.InstancesTxBody ()
+import Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody (fromShelleyBody)
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraSpecLedger (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
+import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 import Test.QuickCheck hiding (forAll)
 import Prelude hiding (seq)
 
@@ -53,7 +58,25 @@ import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.LedgerState (CertState)
-import Test.Cardano.Ledger.Constrained.Conway.InstancesTxBody ()
+import Data.Text (pack)
+import Lens.Micro
+import Prettyprinter (sep, vsep)
+import Test.Cardano.Ledger.Generic.Fields (
+  TxBodyField (..),
+  abstractTxBody,
+ )
+import Test.Cardano.Ledger.Generic.PrettyCore (
+  PDoc,
+  PrettyA (..),
+  pcTxBodyField,
+  pcTxBodyWithUTxO,
+  pcTxIn,
+  pcTxOut,
+  ppList,
+  ppMap,
+  ppRecord,
+  ppString,
+ )
 
 -- =================================
 -- Move these to the MapSpec
@@ -214,3 +237,86 @@ go = do
 
 sumCoin_ :: forall fn era. EraSpecTxOut era fn => Term fn [TxOut era] -> Term fn Coin
 sumCoin_ x = foldMap_ (txOutCoin_ @era @fn) x
+
+-- ===============================================================
+
+bodyspec2 ::
+  forall era fn.
+  ( EraSpecTxOut era fn
+  , EraSpecCert era fn
+  ) =>
+  CertsEnv era ->
+  CertState era ->
+  Specification
+    fn
+    ( ShelleyTxBody era
+    , Map (TxIn (EraCrypto era)) (TxOut era)
+    , TxIn (EraCrypto era)
+    )
+bodyspec2 certsenv certstate =
+  constrained' $ \ [var|shelleyBody|] [var|utxo|] [var|feeInput|] ->
+    match shelleyBody $
+      \ [var|inputs|] [var|outputs|] [var|certs|] [var|rewAcct|] [var|fee|] _ [var|update|] _ ->
+        [ dependsOn shelleyBody fee
+        , dependsOn shelleyBody (inputs :: Term fn (Set (TxIn (EraCrypto era))))
+        , dependsOn shelleyBody outputs
+        , dependsOn shelleyBody certs
+        , dependsOn utxo inputs
+        , -- , exists (\eval -> undefined) $ \ [var|feeInput|] ->
+          exists (\eval -> pure (Map.restrictKeys (eval utxo) (eval inputs))) $ \ [var|utxosubset|] ->
+            exists (\_eval -> undefined) $ \ [var|tempUtxo|] ->
+              [ dependsOn inputs utxosubset
+              , dependsOn utxo utxosubset
+              , dependsOn feeInput inputs
+              , dependsOn fee utxosubset
+              , dependsOn fee feeInput
+              , dependsOn outputs utxosubset
+              , dependsOn outputs fee
+              , dependsOn utxo tempUtxo
+              , satisfies utxosubset (hasSize (rangeSize 3 4))
+              , assert $ member_ feeInput inputs
+              , assert $ inputs ==. dom_ utxosubset
+              , assert $ onJust (lookup_ feeInput utxosubset) (\ [var|txout|] -> fee ==. txOutCoin_ @era @fn txout)
+              , satisfies (dom_ tempUtxo) (hasSize (rangeSize 8 10))
+              , subMapSuperDependsOnSub utxosubset tempUtxo
+              , assert $ (sumCoin_ @fn @era outputs) ==. sumCoin_ @fn @era (rng_ utxosubset) - fee
+              , forAll outputs $ \x -> txOutCoin_ @era @fn x >=. lit (Coin 0)
+              , reify
+                  (pair_ tempUtxo feeInput)
+                  (\(m, i) -> Map.adjust baz i m)
+                  (\u -> utxo ==. u)
+              ]
+        , assert $ update ==. lit Nothing
+        , forAll certs $ \ [var|oneCert|] -> satisfies oneCert (txCertSpec (projectEnv certsenv) certstate)
+        , assert $ sizeOf_ certs <=. 4
+        , assert $ rewAcct ==. lit Map.empty
+        , assert $ sizeOf_ outputs ==. 4
+        ]
+
+baz :: EraTxOut era => TxOut era -> TxOut era
+baz x = x & coinTxOutL .~ ((x ^. coinTxOutL) <+> (Coin 100))
+
+go2 ::
+  forall era.
+  ( EraSpecTxOut era ConwayFn
+  , EraSpecCert era ConwayFn
+  , HasSpec ConwayFn (Tx era)
+  ) =>
+  IO ()
+go2 = do
+  certState <-
+    generate $
+      genFromSpec @ConwayFn @(CertState era)
+        (certStateSpec @ConwayFn @era) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
+        -- error "STOP"
+  certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv era) certsEnvSpec
+
+  (body, utxomap, feeinput) <-
+    generate $ genFromSpec (bodyspec2 @era @ConwayFn certsEnv certState)
+  let utxo = UTxO utxomap
+
+  putStrLn
+    ("Input UTxO, total " ++ show (coinBalance @era utxo) ++ ", size = " ++ show (Map.size utxomap))
+  putPretty "UTxO" utxo
+  putPretty "\nfeeInput" feeinput
+  putStrLn (show (pcTxBodyWithUTxO utxo (fromShelleyBody body)))

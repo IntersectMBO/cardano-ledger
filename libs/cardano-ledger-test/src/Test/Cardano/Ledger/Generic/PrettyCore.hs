@@ -537,6 +537,9 @@ puncLeft open (x : xs) coma close = align (sep ((open <+> x) : help xs))
 ppSet :: (x -> Doc ann) -> Set x -> Doc ann
 ppSet p xs = encloseSep lbrace rbrace comma (map p (toList xs))
 
+instance PrettyA a => PrettyA (Set a) where
+  prettyA x = ppSet prettyA x
+
 ppSeq :: (a -> Doc ann) -> Seq a -> Doc ann
 ppSeq p xs = ppList p (foldr (:) [] xs)
 
@@ -3651,3 +3654,34 @@ pcSnapShot x = ppRecord "SnapShot" (pcSnapShotL "" x)
 
 instance PrettyA (SnapShot c) where
   prettyA s = pcSnapShot s
+
+-- | pretty print a TxBody, summarizing the coin in the inputs and outputs.
+--   Useful when inspecting to see if the TxBody balances
+pcTxBodyWithUTxO :: forall era. Reflect era => UTxO era -> TxBody era -> PDoc
+pcTxBodyWithUTxO (UTxO utxo) txbody = ppRecord ("TxBody " <> pack (show proof)) pairs
+  where
+    proof = reify @era
+    fields = abstractTxBody proof txbody
+    pairs = concatMap f fields
+    f (Inputs s) =
+      [(pack "spend inputs", pcUtxoDoc subutxo <> summaryMap (Map.map (\x -> x ^. coinTxOutL) subutxo))]
+      where
+        subutxo = Map.restrictKeys utxo s
+    f (Collateral s) = [(pack "coll inputs", pcUtxoDoc subutxo)]
+      where
+        subutxo = Map.restrictKeys utxo s
+    f (RefInputs s) = [(pack "ref inputs", pcUtxoDoc subutxo)]
+      where
+        subutxo = Map.restrictKeys utxo s
+    f (Outputs x) =
+      [(pack "Outputs", sep (map (pcTxOut proof) outs) <> summaryList (map (\v -> v ^. coinTxOutL) outs))]
+      where
+        outs = toList x
+    f x = pcTxBodyField proof x
+    pcUtxoDoc m = ppMap pcTxIn (pcTxOut proof) m
+
+summaryMap :: Map a Coin -> PDoc
+summaryMap x = ppString (" Count " ++ show (Map.size x) ++ ", Total " ++ show (Map.foldl' (<>) mempty x))
+
+summaryList :: [Coin] -> PDoc
+summaryList x = ppString (" Count " ++ show (length x) ++ ", Total " ++ show (foldl (<>) mempty x))

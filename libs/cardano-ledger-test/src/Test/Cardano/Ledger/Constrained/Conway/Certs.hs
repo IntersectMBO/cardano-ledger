@@ -26,10 +26,9 @@ import Data.Sequence (Seq, fromList)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Constrained.Conway.Cert
-import Test.Cardano.Ledger.Constrained.Conway.Deleg (EraSpecDeleg (..), someZeros)
+import Test.Cardano.Ledger.Constrained.Conway.Deleg (someZeros)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
-import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (EraSpecTxOut (..))
 
 -- =======================================================
 
