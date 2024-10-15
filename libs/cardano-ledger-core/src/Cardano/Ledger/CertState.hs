@@ -352,7 +352,8 @@ deriving newtype instance Era era => ToJSON (CommitteeState era)
 instance Era era => ToCBOR (CommitteeState era) where
   toCBOR = toEraCBOR @era
 
--- | The state that tracks the voting entities (DReps and Constitutional Committee members)
+-- | The state that tracks the voting entities (DReps and Constitutional Committee
+-- members). In the formal ledger specification this type is called @GState@
 data VState era = VState
   { vsDReps ::
       !( Map
