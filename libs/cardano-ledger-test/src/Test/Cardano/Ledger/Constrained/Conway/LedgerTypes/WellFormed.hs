@@ -57,7 +57,6 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   vstateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
-import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (EraSpecTxOut (irewardSpec))
 import Test.QuickCheck (Gen)
 
 -- ==============================================================

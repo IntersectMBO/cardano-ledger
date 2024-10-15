@@ -39,7 +39,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 import Test.Cardano.Ledger.Constrained.Conway.Pool
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
@@ -56,7 +56,7 @@ certEnvSpec =
       ]
 
 certStateSpec ::
-  (IsConwayUniv fn, EraSpecPParams era, EraSpecDeleg era) =>
+  (IsConwayUniv fn, EraSpecDeleg era) =>
   Specification fn (CertState era)
 certStateSpec =
   constrained $ \cs ->

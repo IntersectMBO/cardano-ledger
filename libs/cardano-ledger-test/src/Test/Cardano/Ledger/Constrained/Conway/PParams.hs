@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Constrained.Conway.PParams where
 
 import Cardano.Ledger.Core (PParams (..))
 import Constrained
-import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
+import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   EraSpecPParams (..),
   simplePParamsSpec,
  )
