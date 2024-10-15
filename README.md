@@ -86,11 +86,9 @@ The directory structure of this repository is as follows:
 
 # Building
 
-It is recommended to use [`nix`](https://nixos.org/nix/download.html) for building everything in this repository.
-Haskell files can be built with [`cabal`](https://www.haskell.org/cabal/) inside of a nix shell, which can be
-entered by invoking the command `nix develop` from the root directory.
+It is recommended to use [`nix`](https://nixos.org/nix/download.html) for building everything in this repository. Make sure you have a recent version of `nix` by following this [guide](https://nixos.org/manual/nix/stable/installation/upgrading.html).
 
-Make sure you have a recent version of `nix` by following this [guide](https://nixos.org/manual/nix/stable/installation/upgrading.html)
+Haskell files can be built with [`cabal`](https://www.haskell.org/cabal/) inside of a nix shell, which can be entered by invoking `nix develop` from the root directory.
 
 ## Nix Cache
 
@@ -165,8 +163,7 @@ nix develop --command make watch
 
 # Testing
 
-From the root directory invoke `nix develop` to enter a nix shell, then run `cabal test all` 
-to run all tests or `cabal test <package>` to run the tests for a specific package.
+From the root directory invoke `nix develop` to enter a nix shell, then run `cabal test all` to run all tests or `cabal test <package>` to run the tests for a specific package.
 
 Note: The `CARDANO_MAINNET_MIRROR` environment variable can be overridden in `flake.nix` if one desires to run
 the Byron tests with a different version of the [mainnet epochs](https://github.com/input-output-hk/cardano-mainnet-mirror/tree/master/epochs).
