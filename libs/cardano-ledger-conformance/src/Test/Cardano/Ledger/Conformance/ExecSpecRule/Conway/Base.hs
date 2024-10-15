@@ -47,7 +47,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (Conway)
-import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParams, ppMaxTxSizeL)
+import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParams, ppMaxTxSizeL, sizeTxF)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
@@ -162,10 +162,11 @@ instance
       runGenRS proof genSize $
         genAlonzoTx proof ueSlot
     ueCertState <- arbitrary
+    let txSize = uecTx ^. sizeTxF
     let
       uePParams =
         gePParams (gsGenEnv gs)
-          & ppMaxTxSizeL .~ 3000
+          & ppMaxTxSizeL .~ fromIntegral txSize
           & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
       uecUtxoEnv = UtxoEnv {..}
     pure UtxoExecContext {..}
