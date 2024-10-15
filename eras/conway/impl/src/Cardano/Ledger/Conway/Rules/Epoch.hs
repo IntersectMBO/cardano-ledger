@@ -217,7 +217,7 @@ returnProposalDeposits removedProposals oldUMap =
               (RewDepUView um)
           , unclaimed
           )
-      | otherwise = (um, Map.insertWith (<>) (gasId gas) (gasDeposit gas) unclaimed)
+      | otherwise = (um, Map.insert (gasId gas) (gasDeposit gas) unclaimed)
     addReward c rd =
       -- Deposits have been validated at this point
       rd {rdReward = rdReward rd <> compactCoinOrError c}
