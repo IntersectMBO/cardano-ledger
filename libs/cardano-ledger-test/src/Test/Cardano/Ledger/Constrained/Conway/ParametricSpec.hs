@@ -57,9 +57,13 @@ import qualified Data.Map as Map
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Constrained.Conway.Cert (CertKey (..), EraSpecCert (..))
 import Test.Cardano.Ledger.Constrained.Conway.Deleg (EraSpecDeleg (..))
-import Test.Cardano.Ledger.Constrained.Conway.Instances (IsConwayUniv, maryValueCoin_, toDelta_)
-import Test.Cardano.Ledger.Constrained.Conway.SimplePParams
-import qualified Test.Cardano.Ledger.Constrained.Conway.SimplePParams as SimplePParams
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger (
+  IsConwayUniv,
+  maryValueCoin_,
+  toDelta_,
+ )
+import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams
+import qualified Test.Cardano.Ledger.Constrained.Conway.Instances.PParams as SimplePParams
 
 -- ===========================================================
 

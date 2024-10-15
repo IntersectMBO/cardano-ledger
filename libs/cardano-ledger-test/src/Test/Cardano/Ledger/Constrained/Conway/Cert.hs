@@ -15,6 +15,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the CERT rule
@@ -22,7 +23,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Cert where
 
 import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Babbage (Babbage, BabbageEra)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.Rules
@@ -39,10 +40,9 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 import Test.Cardano.Ledger.Constrained.Conway.Pool
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.QuickCheck hiding (forAll)
 
 certEnvSpec ::
@@ -56,7 +56,7 @@ certEnvSpec =
       ]
 
 certStateSpec ::
-  (IsConwayUniv fn, EraSpecPParams era, EraSpecDeleg era) =>
+  (IsConwayUniv fn, EraSpecDeleg era) =>
   Specification fn (CertState era)
 certStateSpec =
   constrained $ \cs ->
@@ -88,18 +88,17 @@ conwayTxCertSpec (CertEnv slot pp ce cc cp) certState@CertState {..} =
 -- ==============================================================
 -- Shelley Certs
 
+-- | Genesis delegations only work through the Babbage era. Hence the (AtMostEra BabbageEra era)
 genesisDelegCertSpec ::
   forall fn era.
-  (IsConwayUniv fn, Era era) => DState era -> Specification fn (GenesisDelegCert (EraCrypto era))
+  (AtMostEra BabbageEra era, IsConwayUniv fn, Era era) =>
+  DState era -> Specification fn (GenesisDelegCert (EraCrypto era))
 genesisDelegCertSpec ds =
   let (vrfKeyHashes, coldKeyHashes) = computeSets ds
       GenDelegs genDelegs = dsGenDelegs ds
    in constrained $ \ [var|gdc|] ->
         match gdc $ \ [var|gkh|] [var|vkh|] [var|hashVrf|] ->
-          [ dependsOn gdc gkh
-          , dependsOn gdc vkh
-          , dependsOn gdc hashVrf
-          , assert $ member_ gkh (dom_ (lit genDelegs))
+          [ assert $ member_ gkh (dom_ (lit genDelegs))
           , reify gkh coldKeyHashes (\ [var|coldkeys|] -> member_ vkh coldkeys)
           , reify gkh vrfKeyHashes (\ [var|vrfkeys|] -> member_ hashVrf vrfkeys)
           ]
@@ -126,19 +125,11 @@ computeSets ds =
       vrfKeyHashes gkh = currentVrfKeyHashes gkh <> futureVrfKeyHashes gkh
    in (vrfKeyHashes, coldKeyHashes)
 
-test3 :: forall era. (EraSpecDeleg era, EraSpecPParams era) => IO ()
-test3 = do
-  dstate <- generate $ genFromSpec @ConwayFn @(DState era) dStateSpec
-  let spec = genesisDelegCertSpec @ConwayFn dstate
-  ans <- generate $ genFromSpec @ConwayFn spec
-  putStrLn (show (prettyA dstate))
-  putStrLn (show (prettyA (ShelleyTxCertGenesisDeleg @era ans)))
-
 -- =======================================
 
 shelleyTxCertSpec ::
   forall fn era.
-  (EraSpecPParams era, IsConwayUniv fn) =>
+  (AtMostEra BabbageEra era, EraSpecPParams era, IsConwayUniv fn) =>
   CertEnv era ->
   CertState era ->
   Specification fn (ShelleyTxCert era)
@@ -158,44 +149,6 @@ shelleyTxCertSpec (CertEnv slot pp _ _ _) (CertState _vstate pstate dstate) =
       (branchW 3 $ \ [var|poolCert|] -> satisfies poolCert $ poolCertSpec (PoolEnv slot pp) pstate)
       (branchW 1 $ \ [var|genesis|] -> satisfies genesis (genesisDelegCertSpec @fn @era dstate))
       (branchW 1 $ \ [var|_mir|] -> False) -- By design, we never generate a MIR cert
-
-test4 :: Gen Property
-test4 = do
-  env <- genFromSpec @ConwayFn @(CertEnv Conway) certEnvSpec
-  dstate <- genFromSpec @ConwayFn @(CertState Conway) certStateSpec
-  let spec = conwayTxCertSpec env dstate
-  ans <- genFromSpec @ConwayFn spec
-  let tag = case ans of
-        (ConwayTxCertDeleg (ConwayRegCert _ _)) -> "Register"
-        (ConwayTxCertDeleg (ConwayUnRegCert _ _)) -> "UnRegister"
-        (ConwayTxCertDeleg (ConwayDelegCert _ _)) -> "Delegate"
-        (ConwayTxCertDeleg (ConwayRegDelegCert _ _ _)) -> "Register&Delegate"
-        (ConwayTxCertPool (RegPool _)) -> "RegPool"
-        (ConwayTxCertPool (RetirePool _ _)) -> "RetirePool"
-        (ConwayTxCertGov (ConwayRegDRep _ _ _)) -> "RegDRep"
-        (ConwayTxCertGov (ConwayUnRegDRep _ _)) -> "UnRegDRep"
-        (ConwayTxCertGov (ConwayUpdateDRep _ _)) -> "UpdateDRep"
-        (ConwayTxCertGov (ConwayAuthCommitteeHotKey _ _)) -> "AuthCommittee"
-        (ConwayTxCertGov (ConwayResignCommitteeColdKey _ _)) -> "ResignCommittee"
-  pure (classify True tag (property (conformsToSpec ans spec)))
-
-test5 :: forall era. (EraSpecPParams era, EraSpecDeleg era) => Gen Property
-test5 = do
-  env <- genFromSpec @ConwayFn @(CertEnv era) certEnvSpec
-  dstate <- genFromSpec @ConwayFn @(CertState era) certStateSpec
-  let spec = shelleyTxCertSpec env dstate
-  ans <- genFromSpec @ConwayFn spec
-  let tag = case ans of
-        ShelleyTxCertDelegCert x -> case x of
-          ShelleyRegCert {} -> "Register"
-          ShelleyUnRegCert {} -> "UnRegister"
-          ShelleyDelegCert {} -> "Delegate"
-        ShelleyTxCertPool x -> case x of
-          RegPool {} -> "RegPool"
-          RetirePool {} -> "RetirePool"
-        ShelleyTxCertGenesisDeleg _ -> "Genesis"
-        ShelleyTxCertMir _ -> "Mir"
-  pure (classify True tag (property (conformsToSpec ans spec)))
 
 -- =========================================================================
 -- Making Cert Era parametric with the EraSpecCert class
@@ -263,3 +216,52 @@ shelleyTxCertKey (ShelleyTxCertPool (RegPool x)) = PoolKey (ppId x)
 shelleyTxCertKey (ShelleyTxCertPool (RetirePool x _)) = PoolKey x
 shelleyTxCertKey (ShelleyTxCertGenesisDeleg (GenesisDelegCert a _ _)) = GenesisKey a
 shelleyTxCertKey (ShelleyTxCertMir (MIRCert p _)) = MirKey p
+
+-- =====================================================
+
+testGenesisCert ::
+  forall era. (AtMostEra BabbageEra era, EraSpecDeleg era, EraSpecPParams era) => Gen Property
+testGenesisCert = do
+  dstate <- genFromSpec @ConwayFn @(DState era) dStateSpec
+  let spec = genesisDelegCertSpec @ConwayFn dstate
+  ans <- genFromSpec @ConwayFn spec
+  pure $ property (conformsToSpec ans spec)
+
+testShelleyCert ::
+  forall era. (AtMostEra BabbageEra era, EraSpecPParams era, EraSpecDeleg era) => Gen Property
+testShelleyCert = do
+  env <- genFromSpec @ConwayFn @(CertEnv era) certEnvSpec
+  dstate <- genFromSpec @ConwayFn @(CertState era) certStateSpec
+  let spec = shelleyTxCertSpec env dstate
+  ans <- genFromSpec @ConwayFn spec
+  let tag = case ans of
+        ShelleyTxCertDelegCert x -> case x of
+          ShelleyRegCert {} -> "Register"
+          ShelleyUnRegCert {} -> "UnRegister"
+          ShelleyDelegCert {} -> "Delegate"
+        ShelleyTxCertPool x -> case x of
+          RegPool {} -> "RegPool"
+          RetirePool {} -> "RetirePool"
+        ShelleyTxCertGenesisDeleg _ -> "Genesis"
+        ShelleyTxCertMir _ -> "Mir"
+  pure (classify True tag (property (conformsToSpec ans spec)))
+
+testConwayCert :: Gen Property
+testConwayCert = do
+  env <- genFromSpec @ConwayFn @(CertEnv Conway) certEnvSpec
+  dstate <- genFromSpec @ConwayFn @(CertState Conway) certStateSpec
+  let spec = conwayTxCertSpec env dstate
+  ans <- genFromSpec @ConwayFn spec
+  let tag = case ans of
+        (ConwayTxCertDeleg (ConwayRegCert _ _)) -> "Register"
+        (ConwayTxCertDeleg (ConwayUnRegCert _ _)) -> "UnRegister"
+        (ConwayTxCertDeleg (ConwayDelegCert _ _)) -> "Delegate"
+        (ConwayTxCertDeleg (ConwayRegDelegCert _ _ _)) -> "Register&Delegate"
+        (ConwayTxCertPool (RegPool _)) -> "RegPool"
+        (ConwayTxCertPool (RetirePool _ _)) -> "RetirePool"
+        (ConwayTxCertGov (ConwayRegDRep _ _ _)) -> "RegDRep"
+        (ConwayTxCertGov (ConwayUnRegDRep _ _)) -> "UnRegDRep"
+        (ConwayTxCertGov (ConwayUpdateDRep _ _)) -> "UpdateDRep"
+        (ConwayTxCertGov (ConwayAuthCommitteeHotKey _ _)) -> "AuthCommittee"
+        (ConwayTxCertGov (ConwayResignCommitteeColdKey _ _)) -> "ResignCommittee"
+  pure (classify True tag (conformsToSpec ans spec))

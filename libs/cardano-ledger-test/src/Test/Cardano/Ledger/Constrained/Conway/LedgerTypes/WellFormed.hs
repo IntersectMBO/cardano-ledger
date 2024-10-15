@@ -39,9 +39,9 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   EraSpecLedger (..),
   accountStateSpec,
+  aggregateDRep,
   certStateSpec,
   conwayGovStateSpec,
-  drepStateSpec,
   dstateSpec,
   epochNoSpec,
   epochStateSpec,
@@ -57,7 +57,6 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   vstateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
-import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (EraSpecTxOut (irewardSpec))
 import Test.QuickCheck (Gen)
 
 -- ==============================================================
@@ -81,15 +80,17 @@ dsX = do
   pools <-
     genFromSpec @ConwayFn @(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
       (hasSize (rangeSize 8 8))
-  dreps <-
-    genFromSpec @ConwayFn @(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-      (hasSize (rangeSize 8 8))
-  genFromSpec @ConwayFn @(DState era) (dstateSpec (lit acct) (lit pools) (lit dreps))
+  genFromSpec @ConwayFn @(DState era) (dstateSpec (lit acct) (lit pools))
 
 vsX :: forall era. EraSpecPParams era => Gen (VState era)
 vsX = do
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
-  genFromSpec @ConwayFn @(VState era) (vstateSpec (lit epoch))
+  delegatees <-
+    aggregateDRep
+      <$> genFromSpec @ConwayFn -- ensures that each credential delegates to exactly one DRep
+        @(Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
+        TrueSpec
+  genFromSpec @ConwayFn @(VState era) (vstateSpec (lit epoch) (lit delegatees))
 
 csX :: forall era. EraSpecLedger era ConwayFn => Gen (CertState era)
 csX = do
@@ -148,11 +149,6 @@ instanRewX = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   genFromSpec @ConwayFn @(InstantaneousRewards (EraCrypto era))
     (irewardSpec @era @ConwayFn (lit acct))
-
-drepStateX :: forall era. Era era => Gen (DRepState (EraCrypto era))
-drepStateX = do
-  epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
-  genFromSpec @ConwayFn @(DRepState (EraCrypto era)) (drepStateSpec (lit epoch))
 
 -- ==============================================================
 -- The WellFormed class
@@ -231,6 +227,3 @@ instance
   WellFormed (InstantaneousRewards c) era
   where
   wff = instanRewX @era
-
-instance (EraSpecPParams era, c ~ EraCrypto era) => WellFormed (DRepState c) era where
-  wff = drepStateX @era

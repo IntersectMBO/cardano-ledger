@@ -32,9 +32,9 @@
 --   See Test.Cardano.Ledger.Constrained.Conway.SimplePParams
 --   We divide these `HasSpec` and `HasSimpleRep` instances into two files
 --   because SimplePParams, needs these instances but not the 100's of other
---   ones defined in Test.Cardano.Ledger.Constrained.Conway.Instances.
+--   ones defined in Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 --   And too many instances causes GHC 8.10.7 to blow up.
-module Test.Cardano.Ledger.Constrained.Conway.InstancesBasic (
+module Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (
   cSNothing_,
   cSJust_,
   succV_,

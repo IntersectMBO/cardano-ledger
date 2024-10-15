@@ -1102,6 +1102,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
           , "genFromSpecT at type " ++ show (typeRep cant)
           , "    " ++ show spec
           , "  with mode " ++ show mode
+          , "  cant set " ++ unlines (map show cant)
           ]
       )
       $
@@ -3309,26 +3310,41 @@ genFromFold ::
   fn '[a] b ->
   Specification fn b ->
   GenT m [a]
-genFromFold (nub -> must) (simplifySpec -> size) elemS fn foldS = do
-  let elemS' = mapSpec fn elemS
-      mustVal = adds @fn (map (sem fn) must)
-      foldS' = propagateSpecFun (theAddFn @fn) (HOLE :? Value mustVal :> Nil) foldS
-  m <- getMode
-  results0 <-
-    withMode Loose $
-      (withMode m $ genList (simplifySpec elemS') (simplifySpec foldS'))
-        `suchThatT` (\xs -> (sizeOf must + sizeOf xs) `conformsToSpec` size)
-  results <-
-    explain
-      ( NE.fromList
-          [ "genInverse"
-          , "  fn = " ++ show fn
-          , "  results0 = " ++ show results0
-          , show $ "  elemS =" <+> pretty elemS
-          ]
-      )
-      $ mapM (genInverse fn elemS) results0
-  pureGen $ shuffle $ must ++ results
+genFromFold (nub -> must) (simplifySpec -> size) elemS fn foldS =
+  explain
+    ( NE.fromList
+        [ "while calling genFromFold"
+        , "  must  = " ++ show must
+        , "  size  = " ++ show size
+        , "  elemS = " ++ show elemS
+        , "  fn    = " ++ show fn
+        , "  foldS = " ++ show foldS
+        ]
+    )
+    $ do
+      let elemS' = mapSpec fn elemS
+          mustVal = adds @fn (map (sem fn) must)
+          foldS' = propagateSpecFun (theAddFn @fn) (HOLE :? Value mustVal :> Nil) foldS
+      m <- getMode
+      results0 <-
+        withMode Loose $
+          ( withMode m $
+              suchThatWithTryT
+                1000
+                (genList (simplifySpec elemS') (simplifySpec foldS'))
+                (\xs -> (sizeOf must + sizeOf xs) `conformsToSpec` size)
+          )
+      results <-
+        explain
+          ( NE.fromList
+              [ "genInverse"
+              , "  fn = " ++ show fn
+              , "  results0 = " ++ show results0
+              , show $ "  elemS =" <+> pretty elemS
+              ]
+          )
+          $ mapM (genInverse fn elemS) results0
+      pureGen $ shuffle $ must ++ results
 
 ------------------------------------------------------------------------
 -- Instances of HasSpec
@@ -5249,7 +5265,11 @@ instance HasSpec fn a => Pretty (WithPrec (Specification fn a)) where
   pretty (WithPrec d s) = case s of
     ErrorSpec es -> "ErrorSpec" /> vsep' (map fromString (NE.toList es))
     TrueSpec -> fromString $ "TrueSpec @(" ++ show (typeRep (Proxy @a)) ++ ")"
-    MemberSpec xs -> parensIf (d > 10) $ "MemberSpec" <+> viaShow xs
+    MemberSpec xs ->
+      parensIf (d > 10) $
+        if length xs == 1
+          then "MemberSpec" <+> fromString (take 20 (show xs))
+          else "MemberSpec [" <+> viaShow (length xs) <+> "elements ...] @" <> viaShow (typeRep (Proxy @a))
     SuspendedSpec x p -> parensIf (d > 10) $ "constrained $ \\" <+> viaShow x <+> "->" /> pretty p
     -- TODO: require pretty for `TypeSpec` to make this much nicer
     TypeSpec ts cant ->

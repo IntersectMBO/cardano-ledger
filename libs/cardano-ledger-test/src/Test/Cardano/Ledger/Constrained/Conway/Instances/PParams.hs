@@ -32,7 +32,8 @@
 --   in each era, and provides (Term fn) selector functions
 --   (e.g. minFeeA_, minFeeB_, etc.) for every PParam field (in every era).
 --   The class EraSpecPParams provides this era parametric abstraction.
-module Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
+--   and instances of EraSpecPParams are defined here.
+module Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   EraSpecPParams (..),
   SimplePParams (..),
   SimplePPUpdate (..),
@@ -98,7 +99,7 @@ import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Constrained.Conway.InstancesBasic
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
 
 -- ============================================
 
