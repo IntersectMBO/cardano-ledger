@@ -361,7 +361,7 @@ data VState era = VState
           (DRepState (EraCrypto era))
        )
   , vsCommitteeState :: !(CommitteeState era)
-  , vsNumDormantEpochs :: EpochNo
+  , vsNumDormantEpochs :: !EpochNo
   -- ^ Number of contiguous epochs in which there are exactly zero
   -- active governance proposals to vote on. It is incremented in every
   -- EPOCH rule if the number of active governance proposals to vote on
