@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.14.1.1
+
+*
+
 ## 1.14.1.0
 
 * Revert changes to serialization of `ShelleyPoolPredFailure`
