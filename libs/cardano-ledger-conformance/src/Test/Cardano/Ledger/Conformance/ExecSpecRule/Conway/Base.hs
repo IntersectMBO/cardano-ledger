@@ -109,7 +109,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   epochStateSpec,
   newEpochStateSpec,
  )
-import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
+import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   committeeMaxTermLength_,
   committeeMinSize_,
   protocolVersion_,

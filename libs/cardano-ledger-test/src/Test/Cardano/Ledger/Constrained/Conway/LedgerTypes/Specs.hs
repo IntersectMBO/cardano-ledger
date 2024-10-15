@@ -58,7 +58,6 @@ import qualified Data.VMap as VMap
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Constrained.Conway.Gov (govProposalsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
-import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (EraSpecDeleg (..), EraSpecTxOut (..))
 import Test.QuickCheck (generate)
 
 -- ===========================================================

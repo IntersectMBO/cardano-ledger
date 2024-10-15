@@ -19,7 +19,7 @@ import Constrained
 import Control.Monad.Identity
 import Data.Map.Strict qualified as Map
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Slotting.Numeric ()
