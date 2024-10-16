@@ -84,7 +84,7 @@ library
         cardano-ledger-binary ^>=1.4,
         cardano-ledger-core ^>=1.15,
         cardano-ledger-mary ^>=1.7,
-        cardano-ledger-shelley >=1.14 && <1.15,
+        cardano-ledger-shelley ^>=1.15,
         cardano-slotting,
         cardano-strict-containers,
         containers,
