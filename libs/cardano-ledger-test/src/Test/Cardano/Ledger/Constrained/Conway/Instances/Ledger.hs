@@ -18,6 +18,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -53,6 +54,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger (
   gasCommitteeVotes_,
   gasDRepVotes_,
   gasProposalProcedure_,
+  psPParamUpdate_,
   ProposalsSplit (..),
   genProposalsSplit,
   proposalSplitSum,
@@ -132,7 +134,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
-import Constrained hiding (Value)
+import Constrained hiding (Sized, Value)
 import Constrained qualified as C
 import Constrained.Base (Binder (..), HasGenHint (..), Pred (..), Term (..))
 import Constrained.Spec.Map
@@ -168,6 +170,7 @@ import PlutusLedgerApi.V1 qualified as PV1
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
@@ -219,7 +222,7 @@ type ConwayTxBodyTypes =
 instance (EraSpecPParams ConwayEra, IsConwayUniv fn) => HasSpec fn (ConwayTxBody ConwayEra)
 
 instance HasSimpleRep (ConwayTxBody ConwayEra) where
-  type SimpleRep (ConwayTxBody ConwayEra) = SOP '["ConwayTxBody" ::: ConwayTxBodyTypes]
+  type TheSop (ConwayTxBody ConwayEra) = '["ConwayTxBody" ::: ConwayTxBodyTypes]
   toSimpleRep ConwayTxBody {..} =
     inject @"ConwayTxBody" @'["ConwayTxBody" ::: ConwayTxBodyTypes]
       ctbSpendInputs
@@ -294,12 +297,15 @@ instance HasSimpleRep (StrictSeq a) where
   toSimpleRep = toList
   fromSimpleRep = StrictSeq.fromList
 instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (StrictSeq a)
+instance Forallable (StrictSeq a) a
 
 instance HasSimpleRep (Seq a) where
   type SimpleRep (Seq a) = [a]
   toSimpleRep = toList
   fromSimpleRep = Seq.fromList
-instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Seq a)
+instance HasSpec fn a => HasSpec fn (Seq a)
+instance Forallable (Seq a) a
+instance HasSpec fn a => C.Sized fn (Seq a)
 
 instance HasSimpleRep (Sized a)
 instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Sized a)
@@ -321,7 +327,6 @@ type ShelleyTxOutTypes era =
    , Value era
    ]
 instance (Era era, Val (Value era)) => HasSimpleRep (ShelleyTxOut era) where
-  -- type SimpleRep (ShelleyTxOut era) = SOP '["ShelleyTxOut" ::: ShelleyTxOutTypes era]
   type TheSop (ShelleyTxOut era) = '["ShelleyTxOut" ::: ShelleyTxOutTypes era]
   toSimpleRep (ShelleyTxOut addr val) =
     inject @"ShelleyTxOut" @'["ShelleyTxOut" ::: ShelleyTxOutTypes era]
@@ -338,7 +343,6 @@ type AlonzoTxOutTypes era =
    , StrictMaybe DataHash
    ]
 instance (Era era, Val (Value era)) => HasSimpleRep (AlonzoTxOut era) where
-  -- type SimpleRep (AlonzoTxOut era) = SOP '["AlonzoTxOut" ::: AlonzoTxOutTypes era]
   type TheSop (AlonzoTxOut era) = '["AlonzoTxOut" ::: AlonzoTxOutTypes era]
   toSimpleRep (AlonzoTxOut addr val mdat) =
     inject @"AlonzoTxOut" @'["AlonzoTxOut" ::: AlonzoTxOutTypes era]
@@ -974,13 +978,13 @@ type UMapTypes =
    , Map (Credential 'Staking) DRep
    ]
 instance HasSimpleRep UMap where
-  type SimpleRep UMap = SOP '["UMap" ::: UMapTypes]
+  type TheSop UMap = '["UMap" ::: UMapTypes]
   toSimpleRep um = inject @"UMap" @'["UMap" ::: UMapTypes] (rdPairMap um) (ptrMap um) (sPoolMap um) (dRepMap um)
   fromSimpleRep rep = algebra @'["UMap" ::: UMapTypes] rep unify
 instance IsConwayUniv fn => HasSpec fn UMap
 
 instance HasSimpleRep RDPair where
-  type SimpleRep RDPair = SOP '["RDPair" ::: '[SimpleRep Coin, SimpleRep Coin]]
+  type TheSop RDPair = '["RDPair" ::: '[SimpleRep Coin, SimpleRep Coin]]
   toSimpleRep (RDPair rew dep) =
     inject
       @"RDPair"
@@ -1072,7 +1076,7 @@ type ProposalsType era =
    -- this right now.
    ]
 instance EraPParams era => HasSimpleRep (Proposals era) where
-  type SimpleRep (Proposals era) = SOP '["Proposals" ::: ProposalsType era]
+  type TheSop (Proposals era) = '["Proposals" ::: ProposalsType era]
   toSimpleRep props =
     inject @"Proposals" @'["Proposals" ::: ProposalsType era]
       (buildProposalTree $ coerce grPParamUpdate)
@@ -1116,7 +1120,13 @@ instance EraPParams era => HasSimpleRep (Proposals era) where
     where
       mkOMap (Node a ts) = a OMap.<| foldMap mkOMap ts
 
-instance (EraSpecPParams era, IsConwayUniv fn) => HasSpec fn (Proposals era)
+instance (EraSpecPParams era, IsConwayUniv fn, Arbitrary (Proposals era)) => HasSpec fn (Proposals era) where
+  shrinkWithTypeSpec _ props = shrink props
+
+psPParamUpdate_ ::
+  (EraSpecPParams era, Arbitrary (Proposals era), IsConwayUniv fn) =>
+  Term fn (Proposals era) -> Term fn (ProposalTree era)
+psPParamUpdate_ = sel @0
 
 data ProposalsSplit = ProposalsSplit
   { psPPChange :: Integer
@@ -1343,8 +1353,8 @@ instance
     (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
   where
   type
-    SimpleRep (DRepPulser ConwayEra Identity (RatifyState ConwayEra)) =
-      SOP '["DRepPulser" ::: DRepPulserTypes]
+    TheSop (DRepPulser ConwayEra Identity (RatifyState ConwayEra)) =
+      '["DRepPulser" ::: DRepPulserTypes]
   toSimpleRep DRepPulser {..} =
     inject @"DRepPulser" @'["DRepPulser" ::: DRepPulserTypes]
       dpPulseSize
@@ -1408,7 +1418,7 @@ instance
   HasSpec fn (ShelleyTx era)
 
 instance EraSpecPParams era => HasSimpleRep (ShelleyTx era) where
-  type SimpleRep (ShelleyTx era) = SOP '["ShelleyTx" ::: ShelleyTxTypes era]
+  type TheSop (ShelleyTx era) = '["ShelleyTx" ::: ShelleyTxTypes era]
   toSimpleRep (ShelleyTx body wits auxdata) =
     inject @"ShelleyTx" @'["ShelleyTx" ::: ShelleyTxTypes era]
       body
@@ -1432,8 +1442,8 @@ type AlonzoTxAuxDataTypes era =
    ]
 instance AlonzoEraScript era => HasSimpleRep (AlonzoTxAuxData era) where
   type
-    SimpleRep (AlonzoTxAuxData era) =
-      SOP '["AlonzoTxOutData" ::: AlonzoTxAuxDataTypes era]
+    TheSop (AlonzoTxAuxData era) =
+      '["AlonzoTxOutData" ::: AlonzoTxAuxDataTypes era]
   toSimpleRep (AlonzoTxAuxData metaMap tsSeq _) =
     inject @"AlonzoTxAuxData" @'["AlonzoTxAuxData" ::: AlonzoTxAuxDataTypes era]
       metaMap
@@ -1456,8 +1466,8 @@ type AllegraTxAuxDataTypes era =
    ]
 instance Era era => HasSimpleRep (AllegraTxAuxData era) where
   type
-    SimpleRep (AllegraTxAuxData era) =
-      SOP '["AllegraTxOutData" ::: AllegraTxAuxDataTypes era]
+    TheSop (AllegraTxAuxData era) =
+      '["AllegraTxOutData" ::: AllegraTxAuxDataTypes era]
   toSimpleRep (AllegraTxAuxData metaMap tsSeq) =
     inject @"AllegraTxAuxData" @'["AllegraTxAuxData" ::: AllegraTxAuxDataTypes era]
       metaMap
@@ -1479,8 +1489,8 @@ type ShelleyTxAuxDataTypes era =
    ]
 instance Era era => HasSimpleRep (ShelleyTxAuxData era) where
   type
-    SimpleRep (ShelleyTxAuxData era) =
-      SOP '["ShelleyTxAuxData" ::: ShelleyTxAuxDataTypes era]
+    TheSop (ShelleyTxAuxData era) =
+      '["ShelleyTxAuxData" ::: ShelleyTxAuxDataTypes era]
   toSimpleRep (ShelleyTxAuxData metaMap) =
     inject @"ShelleyTxAuxData" @'["ShelleyTxAuxData" ::: ShelleyTxAuxDataTypes era]
       metaMap
@@ -1508,8 +1518,8 @@ type AlonzoTxWitsTypes =
    ]
 instance AlonzoEraScript era => HasSimpleRep (AlonzoTxWits era) where
   type
-    SimpleRep (AlonzoTxWits era) =
-      SOP '["AlonzoTxWits" ::: AlonzoTxWitsTypes]
+    TheSop (AlonzoTxWits era) =
+      '["AlonzoTxWits" ::: AlonzoTxWitsTypes]
   toSimpleRep (AlonzoTxWits vkeyWits bootstrapWits _ _ _) =
     inject @"AlonzoTxWits" @'["AlonzoTxWits" ::: AlonzoTxWitsTypes]
       vkeyWits
@@ -1525,8 +1535,8 @@ type ShelleyTxWitsTypes era =
    ]
 instance EraScript era => HasSimpleRep (ShelleyTxWits era) where
   type
-    SimpleRep (ShelleyTxWits era) =
-      SOP '["ShelleyTxWits" ::: ShelleyTxWitsTypes era]
+    TheSop (ShelleyTxWits era) =
+      '["ShelleyTxWits" ::: ShelleyTxWitsTypes era]
   toSimpleRep (ShelleyTxWits vkeyWits _ bootstrapWits) =
     inject @"ShelleyTxWits" @'["ShelleyTxWits" ::: ShelleyTxWitsTypes era]
       vkeyWits
@@ -1644,7 +1654,7 @@ type PulserTypes =
    , RewardAns
    ]
 instance HasSimpleRep Pulser where
-  type SimpleRep Pulser = SOP '["Pulser" ::: PulserTypes]
+  type TheSop Pulser = '["Pulser" ::: PulserTypes]
   toSimpleRep (RSLP n free bal ans) =
     inject @"Pulser" @'["Pulser" ::: PulserTypes]
       n
