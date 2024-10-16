@@ -51,6 +51,7 @@ module Constrained.Base where
 
 import Control.Applicative
 import Control.Arrow (first)
+import Control.Exception (SomeException, catch)
 import Control.Monad
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, runWriter, tell)
@@ -75,6 +76,7 @@ import GHC.Real
 import GHC.Stack
 import GHC.TypeLits
 import Prettyprinter
+import System.IO.Unsafe
 import System.Random
 import System.Random.Stateful
 import Test.QuickCheck hiding (Args, Fun, forAll)
@@ -1278,7 +1280,11 @@ envFromPred env p = case p of
 -- | A version of `genFromSpecT` that simply errors if the generator fails
 genFromSpec :: forall fn a. (HasCallStack, HasSpec fn a) => Specification fn a -> Gen a
 genFromSpec spec = do
-  res <- strictGen $ explain1 "Calling genFromSpec" $ genFromSpecT spec
+  res <- strictGen $ explain1 "Calling genFromSpec" $ do
+    r <- genFromSpecT spec
+    unsafePerformIO $
+      r `seq`
+        pure (pure r) `catch` \(e :: SomeException) -> pure (fatalError (pure $ show e))
   errorGE $ fmap pure res
 
 -- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
@@ -1375,7 +1381,7 @@ data SolverStage fn where
 
 instance Pretty (SolverStage fn) where
   pretty SolverStage {..} =
-    ("\nSolving for variable " <+> viaShow stageVar)
+    viaShow stageVar
       <+> "<-"
         /> vsep'
           ( [pretty stageSpec | not $ isTrueSpec stageSpec]
@@ -5197,7 +5203,7 @@ fromList_ = app fromListFn
 
 sizeOf_ ::
   forall a fn.
-  (HasSpec fn a, Sized a) =>
+  (HasSpec fn a, Sized fn a) =>
   Term fn a ->
   Term fn Integer
 sizeOf_ = app sizeOfFn
@@ -5218,7 +5224,7 @@ length_ ::
   Term fn Integer
 length_ = app sizeOfFn
 
-null_ :: (HasSpec fn a, Sized a) => Term fn a -> Term fn Bool
+null_ :: (HasSpec fn a, Sized fn a) => Term fn a -> Term fn Bool
 null_ xs = sizeOf_ xs ==. 0
 
 -- #####
@@ -5690,15 +5696,15 @@ genFromSizeSpec :: (BaseUniverse fn, MonadGenError m) => Specification fn Intege
 genFromSizeSpec integerSpec = genFromSpecT (integerSpec <> geqSpec 0)
 
 data SizeFn (fn :: [Type] -> Type -> Type) as b where
-  SizeOf :: forall fn a. (Sized a, HasSpec fn a) => SizeFn fn '[a] Integer
+  SizeOf :: forall fn a. (Sized fn a, HasSpec fn a) => SizeFn fn '[a] Integer
 
 deriving instance Eq (SizeFn fn as b)
 deriving instance Show (SizeFn fn as b)
 
 instance FunctionLike (SizeFn fn) where
-  sem SizeOf = sizeOf -- From the Sized class
+  sem SizeOf = sizeOf @fn -- From the Sized class
 
-sizeOfFn :: forall fn a. (HasSpec fn a, Member (SizeFn fn) fn, Sized a) => fn '[a] Integer
+sizeOfFn :: forall fn a. (HasSpec fn a, Member (SizeFn fn) fn, Sized fn a) => fn '[a] Integer
 sizeOfFn = injectFn $ SizeOf @fn @a
 
 -- Operations on Size (specified in SizeFn) by the Functions instance
@@ -5745,13 +5751,45 @@ maxSpec (TypeSpec (NumSpecInterval _ hi) bad) = TypeSpec (NumSpecInterval Nothin
 -- Sized
 -- ================
 
-class Sized t where
+class Sized fn t where
   sizeOf :: t -> Integer
-  liftSizeSpec :: HasSpec fn t => SizeSpec fn -> [Integer] -> Specification fn t
-  liftMemberSpec :: HasSpec fn t => OrdSet Integer -> Specification fn t
-  sizeOfTypeSpec :: HasSpec fn t => TypeSpec fn t -> Specification fn Integer
+  default sizeOf :: (HasSimpleRep t, Sized fn (SimpleRep t)) => t -> Integer
+  sizeOf = sizeOf @fn . toSimpleRep
 
-instance Ord a => Sized (Set.Set a) where
+  liftSizeSpec :: HasSpec fn t => SizeSpec fn -> [Integer] -> Specification fn t
+  default liftSizeSpec ::
+    ( HasSpec fn t
+    , HasSimpleRep t
+    , Sized fn (SimpleRep t)
+    , HasSpec fn (SimpleRep t)
+    , TypeSpec fn t ~ TypeSpec fn (SimpleRep t)
+    ) =>
+    SizeSpec fn -> [Integer] -> Specification fn t
+  liftSizeSpec sz cant = fromSimpleRepSpec $ liftSizeSpec sz cant
+
+  liftMemberSpec :: HasSpec fn t => OrdSet Integer -> Specification fn t
+  default liftMemberSpec ::
+    ( HasSpec fn t
+    , HasSpec fn (SimpleRep t)
+    , HasSimpleRep t
+    , Sized fn (SimpleRep t)
+    , TypeSpec fn t ~ TypeSpec fn (SimpleRep t)
+    ) =>
+    OrdSet Integer -> Specification fn t
+  liftMemberSpec = fromSimpleRepSpec . liftMemberSpec
+
+  sizeOfTypeSpec :: HasSpec fn t => TypeSpec fn t -> Specification fn Integer
+  default sizeOfTypeSpec ::
+    ( HasSpec fn t
+    , HasSpec fn (SimpleRep t)
+    , HasSimpleRep t
+    , Sized fn (SimpleRep t)
+    , TypeSpec fn t ~ TypeSpec fn (SimpleRep t)
+    ) =>
+    TypeSpec fn t -> Specification fn Integer
+  sizeOfTypeSpec = sizeOfTypeSpec @fn @(SimpleRep t)
+
+instance Ord a => Sized fn (Set.Set a) where
   sizeOf = toInteger . Set.size
   liftSizeSpec spec cant = typeSpec (SetSpec mempty TrueSpec (TypeSpec spec cant))
   liftMemberSpec xs = case NE.nonEmpty xs of
@@ -5759,7 +5797,7 @@ instance Ord a => Sized (Set.Set a) where
     Just zs -> typeSpec (SetSpec mempty TrueSpec (MemberSpec zs))
   sizeOfTypeSpec (SetSpec must _ sz) = sz <> geqSpec (sizeOf must)
 
-instance Sized [a] where
+instance Sized fn [a] where
   sizeOf = toInteger . length
   liftSizeSpec spec cant = typeSpec (ListSpec Nothing mempty (TypeSpec spec cant) TrueSpec NoFold)
   liftMemberSpec xs = case NE.nonEmpty xs of
@@ -5769,7 +5807,7 @@ instance Sized [a] where
   sizeOfTypeSpec (ListSpec _ must sizespec _ _) = sizespec <> geqSpec (sizeOf must)
 
 -- How to constrain the size of any type, with a Sized instance
-hasSize :: (HasSpec fn t, Sized t) => SizeSpec fn -> Specification fn t
+hasSize :: (HasSpec fn t, Sized fn t) => SizeSpec fn -> Specification fn t
 hasSize sz = liftSizeSpec sz []
 
 -- ==================================================================================
@@ -6034,17 +6072,17 @@ multT PosInf (Ok _) = PosInf
 --   Because many (TypeSpec fn t)'s contain (Specification fn s), for types 's' different from 't'
 sizeOfSpec ::
   forall fn t.
-  (BaseUniverse fn, Sized t, HasSpec fn t) => Specification fn t -> Specification fn Integer
+  (BaseUniverse fn, Sized fn t, HasSpec fn t) => Specification fn t -> Specification fn Integer
 sizeOfSpec (ExplainSpec _ s) = sizeOfSpec s
 sizeOfSpec TrueSpec = TrueSpec
-sizeOfSpec s@(MemberSpec xs) = nubOrdMemberSpec ("call to (sizeOfSpec " ++ show s ++ ")") (map sizeOf (NE.toList xs))
+sizeOfSpec s@(MemberSpec xs) = nubOrdMemberSpec ("call to (sizeOfSpec " ++ show s ++ ")") (map (sizeOf @fn) (NE.toList xs))
 sizeOfSpec (ErrorSpec xs) = ErrorSpec xs
 sizeOfSpec (SuspendedSpec x p) =
   constrained $ \len ->
     Exists
       (\_ -> fatalError1 "sizeOfSpec: Exists")
       (x :-> (Explain (pure "sizeOfSpec") $ Assert (len ==. sizeOf_ (V x)) <> p))
-sizeOfSpec (TypeSpec x _) = sizeOfTypeSpec @t @fn x
+sizeOfSpec (TypeSpec x _) = sizeOfTypeSpec @fn @t x
 
 -- | Turn a Size spec into an ErrorSpec if it has negative numbers.
 checkForNegativeSize :: Specification fn Integer -> Specification fn Integer
