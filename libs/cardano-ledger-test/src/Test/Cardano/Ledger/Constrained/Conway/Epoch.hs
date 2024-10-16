@@ -8,6 +8,7 @@
 -- for the EPOCH rule
 module Test.Cardano.Ledger.Constrained.Conway.Epoch where
 
+import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway (Conway, ConwayEra)
@@ -26,8 +27,13 @@ newtype EpochExecEnv era = EpochExecEnv
 epochEnvSpec :: Specification fn (EpochExecEnv Conway)
 epochEnvSpec = TrueSpec
 
-epochStateSpec :: Specification fn (EpochState (ConwayEra StandardCrypto))
-epochStateSpec = TrueSpec
+epochStateSpec :: Specification ConwayFn (EpochState (ConwayEra StandardCrypto))
+epochStateSpec = constrained $ \ es ->
+  let accountState = sel @0 es
+      ledgerSTate  = sel @1 es
+      snapShots    = sel @2 es
+      nonMyopic    = sel @3 es
+  in True
 
 epochSignalSpec :: Specification fn EpochNo
 epochSignalSpec = TrueSpec

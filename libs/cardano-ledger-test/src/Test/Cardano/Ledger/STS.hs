@@ -27,6 +27,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.Pool
+import Test.Cardano.Ledger.Constrained.Conway.Epoch
 
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Shelley.Utils
@@ -110,7 +111,7 @@ prop_EPOCH :: Property
 prop_EPOCH =
   stsPropertyV2 @"EPOCH" @ConwayFn
     TrueSpec
-    (\_env -> TrueSpec)
+    (\() -> epochStateSpec)
     (\_env _st -> TrueSpec)
     $ \_env _st _sig _st' -> True
 
