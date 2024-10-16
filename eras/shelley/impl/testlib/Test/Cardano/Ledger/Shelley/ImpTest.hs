@@ -93,6 +93,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   expectRegisteredRewardAddress,
   expectNotRegisteredRewardAddress,
   expectTreasury,
+  disableTreasuryExpansion,
   updateAddrTxWits,
   addNativeScriptTxWits,
   addRootTxIn,
@@ -1857,6 +1858,10 @@ expectTreasury c =
   impAnn "Checking treasury amount" $ do
     treasuryAmt <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
     c `shouldBe` treasuryAmt
+
+-- Ensure no fees reach the treasury since that complicates withdrawal checks
+disableTreasuryExpansion :: ShelleyEraImp era => ImpTestM era ()
+disableTreasuryExpansion = modifyPParams $ ppTauL .~ (0 %! 1)
 
 impGetNativeScript :: ScriptHash (EraCrypto era) -> ImpTestM era (Maybe (NativeScript era))
 impGetNativeScript sh = Map.lookup sh <$> gets impNativeScripts
