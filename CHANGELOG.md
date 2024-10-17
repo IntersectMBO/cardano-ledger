@@ -7,10 +7,20 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
-## 9.3
+## 10.0
 
+- Translation of `RegTxCert` and `UnRegTxCert` to `PlutusV3` scripts context will now be done correctly, which means deposit and refund respectively, will actually be translated: [#4627](https://github.com/IntersectMBO/cardano-ledger/pull/4627)
+- Treasury withdrawals that are empty or sum up to zero will no longer be allowed: [#4630](https://github.com/IntersectMBO/cardano-ledger/pull/4630)
+- Prevent non-registered return accounts for proposals' deposits and `TreasuryWithdrawals` [#4639](https://github.com/IntersectMBO/cardano-ledger/pull/4639)
+- Ensure `ppuCoinsPerUTxOBytes` cannot be zero: [#4650](https://github.com/IntersectMBO/cardano-ledger/pull/4650)
+- Ensure dreps exist prior to delegation: [#4652](https://github.com/IntersectMBO/cardano-ledger/pull/4652)
+- Change how SPO votes are counted: [#4659](https://github.com/IntersectMBO/cardano-ledger/pull/4659)
 - Disallow withdrawals to non-delegated keyhashes post-bootstrap [#4555](https://github.com/IntersectMBO/cardano-ledger/pull/4555)
 - Remove `maxMajorPV` from `Globals`, because it was unused: [#4218](https://github.com/IntersectMBO/cardano-ledger/pull/4218)
+
+## 9.2.1
+
+- Improve performance of certificate validation: [#4600](https://github.com/IntersectMBO/cardano-ledger/pull/4600) and [#4643](https://github.com/IntersectMBO/cardano-ledger/pull/4643)
 
 ## 9.2
 

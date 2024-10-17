@@ -191,8 +191,7 @@ assertFailure = liftIO . H.assertFailure
 assertColorFailure :: HasCallStack => String -> IO a
 assertColorFailure = liftIO . H.assertColorFailure
 
--- | Just like `expectationBool`, but does not force the return type to unit. Lifted
--- version of `H.assertBool`
+-- | Lifted version of `H.assertBool`
 assertBool :: (HasCallStack, MonadIO m) => String -> Bool -> m ()
 assertBool msg = liftIO . H.assertBool msg
 
