@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Slotting.SlotCount</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Slotting.SlotCount.html#SlotCount"><span class="hs-identifier">SlotCount</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">FromCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">ToCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Buildable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- | A number of slots</span><span>
+</span><span id="line-16"></span><span id="local-6989586621679567648"><span id="local-6989586621679567649"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="SlotCount"><span class="annot"><a href="Cardano.Chain.Slotting.SlotCount.html#SlotCount"><span class="hs-identifier hs-var">SlotCount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SlotCount"><span class="annot"><a href="Cardano.Chain.Slotting.SlotCount.html#SlotCount"><span class="hs-identifier hs-var">SlotCount</span></a></span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unSlotCount"><span class="annot"><span class="annottext">SlotCount -&gt; Word64
+</span><a href="Cardano.Chain.Slotting.SlotCount.html#unSlotCount"><span class="hs-identifier hs-var hs-var">unSlotCount</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679567629"><span id="local-6989586621679567639"><span id="local-6989586621679567642"><span id="local-6989586621679567644"><span class="annot"><span class="annottext">ReadPrec [SlotCount]
+ReadPrec SlotCount
+Int -&gt; ReadS SlotCount
+ReadS [SlotCount]
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+readListPrec :: ReadPrec [SlotCount]
+$creadListPrec :: ReadPrec [SlotCount]
+readPrec :: ReadPrec SlotCount
+$creadPrec :: ReadPrec SlotCount
+readList :: ReadS [SlotCount]
+$creadList :: ReadS [SlotCount]
+readsPrec :: Int -&gt; ReadS SlotCount
+$creadsPrec :: Int -&gt; ReadS SlotCount
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567617"><span id="local-6989586621679567619"><span id="local-6989586621679567625"><span class="annot"><span class="annottext">Int -&gt; SlotCount -&gt; ShowS
+[SlotCount] -&gt; ShowS
+SlotCount -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [SlotCount] -&gt; ShowS
+$cshowList :: [SlotCount] -&gt; ShowS
+show :: SlotCount -&gt; String
+$cshow :: SlotCount -&gt; String
+showsPrec :: Int -&gt; SlotCount -&gt; ShowS
+$cshowsPrec :: Int -&gt; SlotCount -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep SlotCount x -&gt; SlotCount
+forall x. SlotCount -&gt; Rep SlotCount x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep SlotCount x -&gt; SlotCount
+$cfrom :: forall x. SlotCount -&gt; Rep SlotCount x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679567606"><span id="local-6989586621679567611"><span class="annot"><span class="annottext">SlotCount -&gt; SlotCount -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: SlotCount -&gt; SlotCount -&gt; Bool
+$c/= :: SlotCount -&gt; SlotCount -&gt; Bool
+== :: SlotCount -&gt; SlotCount -&gt; Bool
+$c== :: SlotCount -&gt; SlotCount -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567573"><span id="local-6989586621679567577"><span id="local-6989586621679567581"><span id="local-6989586621679567585"><span id="local-6989586621679567589"><span id="local-6989586621679567593"><span id="local-6989586621679567598"><span class="annot"><span class="annottext">Eq SlotCount
+SlotCount -&gt; SlotCount -&gt; Bool
+SlotCount -&gt; SlotCount -&gt; Ordering
+SlotCount -&gt; SlotCount -&gt; SlotCount
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: SlotCount -&gt; SlotCount -&gt; SlotCount
+$cmin :: SlotCount -&gt; SlotCount -&gt; SlotCount
+max :: SlotCount -&gt; SlotCount -&gt; SlotCount
+$cmax :: SlotCount -&gt; SlotCount -&gt; SlotCount
+&gt;= :: SlotCount -&gt; SlotCount -&gt; Bool
+$c&gt;= :: SlotCount -&gt; SlotCount -&gt; Bool
+&gt; :: SlotCount -&gt; SlotCount -&gt; Bool
+$c&gt; :: SlotCount -&gt; SlotCount -&gt; Bool
+&lt;= :: SlotCount -&gt; SlotCount -&gt; Bool
+$c&lt;= :: SlotCount -&gt; SlotCount -&gt; Bool
+&lt; :: SlotCount -&gt; SlotCount -&gt; Bool
+$c&lt; :: SlotCount -&gt; SlotCount -&gt; Bool
+compare :: SlotCount -&gt; SlotCount -&gt; Ordering
+$ccompare :: SlotCount -&gt; SlotCount -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567567"><span class="annot"><span class="annottext">SlotCount -&gt; Builder
+forall p. (p -&gt; Builder) -&gt; Buildable p
+build :: SlotCount -&gt; Builder
+$cbuild :: SlotCount -&gt; Builder
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Buildable</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567545"><span id="local-6989586621679567551"><span id="local-6989586621679567558"><span class="annot"><span class="annottext">Typeable SlotCount
+SlotCount -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [SlotCount] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy SlotCount -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [SlotCount] -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [SlotCount] -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy SlotCount -&gt; Size
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy SlotCount -&gt; Size
+encCBOR :: SlotCount -&gt; Encoding
+$cencCBOR :: SlotCount -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567528"><span id="local-6989586621679567532"><span id="local-6989586621679567537"><span class="annot"><span class="annottext">Typeable SlotCount
+Proxy SlotCount -&gt; Text
+forall s. Decoder s SlotCount
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy SlotCount -&gt; Decoder s ()
+label :: Proxy SlotCount -&gt; Text
+$clabel :: Proxy SlotCount -&gt; Text
+dropCBOR :: forall s. Proxy SlotCount -&gt; Decoder s ()
+$cdropCBOR :: forall s. Proxy SlotCount -&gt; Decoder s ()
+decCBOR :: forall s. Decoder s SlotCount
+$cdecCBOR :: forall s. Decoder s SlotCount
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567507"><span id="local-6989586621679567513"><span id="local-6989586621679567520"><span class="annot"><span class="annottext">Typeable SlotCount
+SlotCount -&gt; Encoding
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [SlotCount] -&gt; Size
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy SlotCount -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; ToCBOR a
+encodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [SlotCount] -&gt; Size
+$cencodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [SlotCount] -&gt; Size
+encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy SlotCount -&gt; Size
+$cencodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy SlotCount -&gt; Size
+toCBOR :: SlotCount -&gt; Encoding
+$ctoCBOR :: SlotCount -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679567494"><span id="local-6989586621679567499"><span class="annot"><span class="annottext">Typeable SlotCount
+Proxy SlotCount -&gt; Text
+forall s. Decoder s SlotCount
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a) -&gt; (Proxy a -&gt; Text) -&gt; FromCBOR a
+label :: Proxy SlotCount -&gt; Text
+$clabel :: Proxy SlotCount -&gt; Text
+fromCBOR :: forall s. Decoder s SlotCount
+$cfromCBOR :: forall s. Decoder s SlotCount
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromCBOR</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679567488"><span class="annot"><span class="annottext">SlotCount -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: SlotCount -&gt; ()
+$crnf :: SlotCount -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span></pre></body></html>

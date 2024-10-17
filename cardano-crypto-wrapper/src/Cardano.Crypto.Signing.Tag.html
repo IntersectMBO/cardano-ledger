@@ -1,0 +1,201 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE StandaloneKindSignatures #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Crypto.Signing.Tag</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignTag"><span class="hs-identifier">SignTag</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#signTag"><span class="hs-identifier">signTag</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#signTagDecoded"><span class="hs-identifier">signTagDecoded</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Crypto.ProtocolMagic.html"><span class="hs-identifier">Cardano.Crypto.ProtocolMagic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Crypto.ProtocolMagic.html#ProtocolMagicId"><span class="hs-identifier">ProtocolMagicId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html"><span class="hs-identifier">Cardano.Crypto.Signing.VerificationKey</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier">VerificationKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-1.1.2-08cf0e9a68de1acfa5d70203d8ecaec92265ba8a42487cb729e1a1e4864c0508/share/doc/html/src"><span class="hs-identifier">Cardano.Crypto.Wallet</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CC</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Annotated</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">byronProtVer</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">serialize'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">bprint</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">shown</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- | To protect against replay attacks (i.e. when an attacker intercepts a</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--   signed piece of data and later sends it again), we add a tag to all data</span><span>
+</span><span id="line-23"></span><span class="hs-comment">--   that we sign. This ensures that even if some bytestring can be deserialized</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--   into two different types of messages (A and B), the attacker can't take</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--   message A and send it as message B.</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--   We also automatically add the network tag ('protocolMagic') whenever it</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--   makes sense, to ensure that things intended for testnet won't work for</span><span>
+</span><span id="line-29"></span><span class="hs-comment">--   mainnet.</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignTag"><span class="hs-identifier hs-type">SignTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Type</span></a></span><span>
+</span><span id="line-31"></span><span id="local-6989586621679278019"><span id="local-6989586621679278020"></span></span><span class="hs-keyword">data</span><span> </span><span id="SignTag"><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignTag"><span class="hs-identifier hs-var">SignTag</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | Anything (to be used for testing only)</span><span>
+</span><span id="line-33"></span><span>    </span><span id="SignForTestingOnly"><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignForTestingOnly"><span class="hs-identifier hs-var">SignForTestingOnly</span></a></span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Tx:               @TxSigData@</span><span>
+</span><span id="line-35"></span><span>    </span><span id="SignTx"><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignTx"><span class="hs-identifier hs-var">SignTx</span></a></span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Redeem tx:        @TxSigData@</span><span>
+</span><span id="line-37"></span><span>    </span><span id="SignRedeemTx"><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignRedeemTx"><span class="hs-identifier hs-var">SignRedeemTx</span></a></span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Vss certificate:  @(VssVerificationKey, EpochNumber)@</span><span>
+</span><span id="line-39"></span><span>    </span><span id="SignVssCert"><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignVssCert"><span class="hs-identifier hs-var">SignVssCert</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Update proposal:  @UpdateProposalToSign@</span><span>
+</span><span id="line-41"></span><span>    </span><span id="SignUSProposal"><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignUSProposal"><span class="hs-identifier hs-var">SignUSProposal</span></a></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Commitment:       @(EpochNumber, Commitment)@</span><span>
+</span><span id="line-43"></span><span>    </span><span id="SignCommitment"><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignCommitment"><span class="hs-identifier hs-var">SignCommitment</span></a></span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | US proposal vote: @(UpId, Bool)@</span><span>
+</span><span id="line-45"></span><span>    </span><span id="SignUSVote"><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignUSVote"><span class="hs-identifier hs-var">SignUSVote</span></a></span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Block header:     @ToSign@</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-comment">--   This constructor takes the 'VerificationKey' of the delegation</span><span>
+</span><span id="line-49"></span><span>    </span><span class="hs-comment">--   certificate issuer, which is prepended to the signature as part of the</span><span>
+</span><span id="line-50"></span><span>    </span><span class="hs-comment">--   sign tag</span><span>
+</span><span id="line-51"></span><span>    </span><span id="SignBlock"><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignBlock"><span class="hs-identifier hs-var">SignBlock</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Certificate:      @Certificate@</span><span>
+</span><span id="line-53"></span><span>    </span><span id="SignCertificate"><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignCertificate"><span class="hs-identifier hs-var">SignCertificate</span></a></span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679278004"><span id="local-6989586621679278008"><span class="annot"><span class="annottext">SignTag -&gt; SignTag -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: SignTag -&gt; SignTag -&gt; Bool
+$c/= :: SignTag -&gt; SignTag -&gt; Bool
+== :: SignTag -&gt; SignTag -&gt; Bool
+$c== :: SignTag -&gt; SignTag -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679277985"><span id="local-6989586621679277987"><span id="local-6989586621679277989"><span id="local-6989586621679277991"><span id="local-6989586621679277993"><span id="local-6989586621679277995"><span id="local-6989586621679277999"><span class="annot"><span class="annottext">Eq SignTag
+SignTag -&gt; SignTag -&gt; Bool
+SignTag -&gt; SignTag -&gt; Ordering
+SignTag -&gt; SignTag -&gt; SignTag
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: SignTag -&gt; SignTag -&gt; SignTag
+$cmin :: SignTag -&gt; SignTag -&gt; SignTag
+max :: SignTag -&gt; SignTag -&gt; SignTag
+$cmax :: SignTag -&gt; SignTag -&gt; SignTag
+&gt;= :: SignTag -&gt; SignTag -&gt; Bool
+$c&gt;= :: SignTag -&gt; SignTag -&gt; Bool
+&gt; :: SignTag -&gt; SignTag -&gt; Bool
+$c&gt; :: SignTag -&gt; SignTag -&gt; Bool
+&lt;= :: SignTag -&gt; SignTag -&gt; Bool
+$c&lt;= :: SignTag -&gt; SignTag -&gt; Bool
+&lt; :: SignTag -&gt; SignTag -&gt; Bool
+$c&lt; :: SignTag -&gt; SignTag -&gt; Bool
+compare :: SignTag -&gt; SignTag -&gt; Ordering
+$ccompare :: SignTag -&gt; SignTag -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679277974"><span id="local-6989586621679277976"><span id="local-6989586621679277982"><span class="annot"><span class="annottext">Int -&gt; SignTag -&gt; ShowS
+[SignTag] -&gt; ShowS
+SignTag -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [SignTag] -&gt; ShowS
+$cshowList :: [SignTag] -&gt; ShowS
+show :: SignTag -&gt; String
+$cshow :: SignTag -&gt; String
+showsPrec :: Int -&gt; SignTag -&gt; ShowS
+$cshowsPrec :: Int -&gt; SignTag -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep SignTag x -&gt; SignTag
+forall x. SignTag -&gt; Rep SignTag x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep SignTag x -&gt; SignTag
+$cfrom :: forall x. SignTag -&gt; Rep SignTag x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- TODO: it would be nice if we couldn't use 'SignTag' with wrong</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- types. Maybe something with GADTs and data families?</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-type">Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignTag"><span class="hs-identifier hs-type">SignTag</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679277964"><span class="annot"><span class="annottext">build :: SignTag -&gt; Builder
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Format Builder a -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">bprint</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Show a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">shown</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- | Get magic bytes corresponding to a 'SignTag', taking `ProtocolMagic` bytes</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--   from the annotation</span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#signTagDecoded"><span class="hs-identifier hs-type">signTagDecoded</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Annotated</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.ProtocolMagic.html#ProtocolMagicId"><span class="hs-identifier hs-type">ProtocolMagicId</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignTag"><span class="hs-identifier hs-type">SignTag</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-65"></span><span id="signTagDecoded"><span class="annot"><span class="annottext">signTagDecoded :: Annotated ProtocolMagicId ByteString -&gt; SignTag -&gt; ByteString
+</span><a href="Cardano.Crypto.Signing.Tag.html#signTagDecoded"><span class="hs-identifier hs-var hs-var">signTagDecoded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; SignTag -&gt; ByteString
+</span><a href="Cardano.Crypto.Signing.Tag.html#signTagRaw"><span class="hs-identifier hs-var">signTagRaw</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall b a. Annotated b a -&gt; a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">annotation</span></a></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- | Get magic bytes corresponding to a 'SignTag'. Guaranteed to be different</span><span>
+</span><span id="line-68"></span><span class="hs-comment">--   (and begin with a different byte) for different tags.</span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#signTag"><span class="hs-identifier hs-type">signTag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Crypto.ProtocolMagic.html#ProtocolMagicId"><span class="hs-identifier hs-type">ProtocolMagicId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignTag"><span class="hs-identifier hs-type">SignTag</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-70"></span><span id="signTag"><span class="annot"><span class="annottext">signTag :: ProtocolMagicId -&gt; SignTag -&gt; ByteString
+</span><a href="Cardano.Crypto.Signing.Tag.html#signTag"><span class="hs-identifier hs-var hs-var">signTag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; SignTag -&gt; ByteString
+</span><a href="Cardano.Crypto.Signing.Tag.html#signTagRaw"><span class="hs-identifier hs-var">signTagRaw</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; Version -&gt; a -&gt; ByteString
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">serialize'</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagicId -&gt; Word32
+</span><a href="Cardano.Crypto.ProtocolMagic.html#unProtocolMagicId"><span class="hs-identifier hs-var">unProtocolMagicId</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#signTagRaw"><span class="hs-identifier hs-type">signTagRaw</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignTag"><span class="hs-identifier hs-type">SignTag</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-73"></span><span id="signTagRaw"><span class="annot"><span class="annottext">signTagRaw :: ByteString -&gt; SignTag -&gt; ByteString
+</span><a href="Cardano.Crypto.Signing.Tag.html#signTagRaw"><span class="hs-identifier hs-var hs-var">signTagRaw</span></a></span></span><span> </span><span id="local-6989586621679277958"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679277958"><span class="hs-identifier hs-var">network</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><span class="annottext">SignTag
+</span><a href="Cardano.Crypto.Signing.Tag.html#SignForTestingOnly"><span class="hs-identifier hs-var">SignForTestingOnly</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\x00&quot;</span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><span class="annottext">SignTag
+</span><a href="Cardano.Crypto.Signing.Tag.html#SignTx"><span class="hs-identifier hs-var">SignTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\x01&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679277958"><span class="hs-identifier hs-var">network</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><span class="annottext">SignTag
+</span><a href="Cardano.Crypto.Signing.Tag.html#SignRedeemTx"><span class="hs-identifier hs-var">SignRedeemTx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\x02&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679277958"><span class="hs-identifier hs-var">network</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="annottext">SignTag
+</span><a href="Cardano.Crypto.Signing.Tag.html#SignVssCert"><span class="hs-identifier hs-var">SignVssCert</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\x03&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679277958"><span class="hs-identifier hs-var">network</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="annottext">SignTag
+</span><a href="Cardano.Crypto.Signing.Tag.html#SignUSProposal"><span class="hs-identifier hs-var">SignUSProposal</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\x04&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679277958"><span class="hs-identifier hs-var">network</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">SignTag
+</span><a href="Cardano.Crypto.Signing.Tag.html#SignCommitment"><span class="hs-identifier hs-var">SignCommitment</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\x05&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679277958"><span class="hs-identifier hs-var">network</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><span class="annottext">SignTag
+</span><a href="Cardano.Crypto.Signing.Tag.html#SignUSVote"><span class="hs-identifier hs-var">SignUSVote</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\x06&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679277958"><span class="hs-identifier hs-var">network</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-comment">-- &quot;\x07&quot; was used for SignMainBlock, but was never used in mainnet</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-comment">-- &quot;\x08&quot; was used for SignMainBlockLight, but was never used in mainnet</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-comment">-- This tag includes the prefix that was previously added in @proxySign@,</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-comment">-- allowing us to unify the two signing functions</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Signing.Tag.html#SignBlock"><span class="hs-identifier hs-type">SignBlock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Crypto.Signing.VerificationKey.html#VerificationKey"><span class="hs-identifier hs-type">VerificationKey</span></a></span><span> </span><span id="local-6989586621679277956"><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621679277956"><span class="hs-identifier hs-var">issuerVK</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;01&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">XPub -&gt; ByteString
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-1.1.2-08cf0e9a68de1acfa5d70203d8ecaec92265ba8a42487cb729e1a1e4864c0508/share/doc/html/src"><span class="hs-identifier hs-var">CC.unXPub</span></a></span><span> </span><span class="annot"><span class="annottext">XPub
+</span><a href="#local-6989586621679277956"><span class="hs-identifier hs-var">issuerVK</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\x09&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679277958"><span class="hs-identifier hs-var">network</span></a></span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><span class="annottext">SignTag
+</span><a href="Cardano.Crypto.Signing.Tag.html#SignCertificate"><span class="hs-identifier hs-var">SignCertificate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;\x0a&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679277958"><span class="hs-identifier hs-var">network</span></a></span><span>
+</span><span id="line-89"></span></pre></body></html>

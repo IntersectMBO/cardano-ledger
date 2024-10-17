@@ -1,0 +1,313 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679568442"><span id="local-6989586621679568443"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Slotting.EpochSlots</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier">EpochSlots</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#WithEpochSlots"><span class="hs-identifier">WithEpochSlots</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#epochFirstSlot"><span class="hs-identifier">epochFirstSlot</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html"><span class="hs-identifier">Cardano.Chain.Slotting.EpochNumber</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.SlotNumber.html"><span class="hs-identifier">Cardano.Chain.Slotting.SlotNumber</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Buildable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- | The number of slots per epoch.</span><span>
+</span><span id="line-28"></span><span id="local-6989586621679568435"><span id="local-6989586621679568436"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="EpochSlots"><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-var">EpochSlots</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="EpochSlots"><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-var">EpochSlots</span></a></span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unEpochSlots"><span class="annot"><span class="annottext">EpochSlots -&gt; Word64
+</span><a href="Cardano.Chain.Slotting.EpochSlots.html#unEpochSlots"><span class="hs-identifier hs-var hs-var">unEpochSlots</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679568400"><span id="local-6989586621679568402"><span id="local-6989586621679568404"><span id="local-6989586621679568406"><span id="local-6989586621679568408"><span id="local-6989586621679568410"><span id="local-6989586621679568412"><span id="local-6989586621679568414"><span id="local-6989586621679568416"><span id="local-6989586621679568418"><span id="local-6989586621679568420"><span id="local-6989586621679568422"><span id="local-6989586621679568425"><span id="local-6989586621679568429"><span class="annot"><span class="annottext">Typeable EpochSlots
+EpochSlots -&gt; DataType
+EpochSlots -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b) -&gt; EpochSlots -&gt; EpochSlots
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; EpochSlots -&gt; u
+forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; EpochSlots -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochSlots -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochSlots -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochSlots -&gt; m EpochSlots
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochSlots -&gt; m EpochSlots
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c EpochSlots
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; EpochSlots -&gt; c EpochSlots
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c EpochSlots)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c EpochSlots)
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochSlots -&gt; m EpochSlots
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochSlots -&gt; m EpochSlots
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochSlots -&gt; m EpochSlots
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochSlots -&gt; m EpochSlots
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochSlots -&gt; m EpochSlots
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d) -&gt; EpochSlots -&gt; m EpochSlots
+gmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; EpochSlots -&gt; u
+$cgmapQi :: forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; EpochSlots -&gt; u
+gmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; EpochSlots -&gt; [u]
+$cgmapQ :: forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; EpochSlots -&gt; [u]
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochSlots -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochSlots -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochSlots -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; EpochSlots -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; EpochSlots -&gt; EpochSlots
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b) -&gt; EpochSlots -&gt; EpochSlots
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c EpochSlots)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c EpochSlots)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c EpochSlots)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c EpochSlots)
+dataTypeOf :: EpochSlots -&gt; DataType
+$cdataTypeOf :: EpochSlots -&gt; DataType
+toConstr :: EpochSlots -&gt; Constr
+$ctoConstr :: EpochSlots -&gt; Constr
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c EpochSlots
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c EpochSlots
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; EpochSlots -&gt; c EpochSlots
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g) -&gt; EpochSlots -&gt; c EpochSlots
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679568392"><span id="local-6989586621679568397"><span class="annot"><span class="annottext">EpochSlots -&gt; EpochSlots -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: EpochSlots -&gt; EpochSlots -&gt; Bool
+$c/= :: EpochSlots -&gt; EpochSlots -&gt; Bool
+== :: EpochSlots -&gt; EpochSlots -&gt; Bool
+$c== :: EpochSlots -&gt; EpochSlots -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679568359"><span id="local-6989586621679568363"><span id="local-6989586621679568367"><span id="local-6989586621679568371"><span id="local-6989586621679568375"><span id="local-6989586621679568379"><span id="local-6989586621679568384"><span class="annot"><span class="annottext">Eq EpochSlots
+EpochSlots -&gt; EpochSlots -&gt; Bool
+EpochSlots -&gt; EpochSlots -&gt; Ordering
+EpochSlots -&gt; EpochSlots -&gt; EpochSlots
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: EpochSlots -&gt; EpochSlots -&gt; EpochSlots
+$cmin :: EpochSlots -&gt; EpochSlots -&gt; EpochSlots
+max :: EpochSlots -&gt; EpochSlots -&gt; EpochSlots
+$cmax :: EpochSlots -&gt; EpochSlots -&gt; EpochSlots
+&gt;= :: EpochSlots -&gt; EpochSlots -&gt; Bool
+$c&gt;= :: EpochSlots -&gt; EpochSlots -&gt; Bool
+&gt; :: EpochSlots -&gt; EpochSlots -&gt; Bool
+$c&gt; :: EpochSlots -&gt; EpochSlots -&gt; Bool
+&lt;= :: EpochSlots -&gt; EpochSlots -&gt; Bool
+$c&lt;= :: EpochSlots -&gt; EpochSlots -&gt; Bool
+&lt; :: EpochSlots -&gt; EpochSlots -&gt; Bool
+$c&lt; :: EpochSlots -&gt; EpochSlots -&gt; Bool
+compare :: EpochSlots -&gt; EpochSlots -&gt; Ordering
+$ccompare :: EpochSlots -&gt; EpochSlots -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679568338"><span id="local-6989586621679568348"><span id="local-6989586621679568351"><span id="local-6989586621679568353"><span class="annot"><span class="annottext">ReadPrec [EpochSlots]
+ReadPrec EpochSlots
+Int -&gt; ReadS EpochSlots
+ReadS [EpochSlots]
+forall a.
+(Int -&gt; ReadS a)
+-&gt; ReadS [a] -&gt; ReadPrec a -&gt; ReadPrec [a] -&gt; Read a
+readListPrec :: ReadPrec [EpochSlots]
+$creadListPrec :: ReadPrec [EpochSlots]
+readPrec :: ReadPrec EpochSlots
+$creadPrec :: ReadPrec EpochSlots
+readList :: ReadS [EpochSlots]
+$creadList :: ReadS [EpochSlots]
+readsPrec :: Int -&gt; ReadS EpochSlots
+$creadsPrec :: Int -&gt; ReadS EpochSlots
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Read</span></a></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679568326"><span id="local-6989586621679568328"><span id="local-6989586621679568334"><span class="annot"><span class="annottext">Int -&gt; EpochSlots -&gt; ShowS
+[EpochSlots] -&gt; ShowS
+EpochSlots -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [EpochSlots] -&gt; ShowS
+$cshowList :: [EpochSlots] -&gt; ShowS
+show :: EpochSlots -&gt; String
+$cshow :: EpochSlots -&gt; String
+showsPrec :: Int -&gt; EpochSlots -&gt; ShowS
+$cshowsPrec :: Int -&gt; EpochSlots -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679568323"><span class="annot"><span class="annottext">EpochSlots -&gt; Builder
+forall p. (p -&gt; Builder) -&gt; Buildable p
+build :: EpochSlots -&gt; Builder
+$cbuild :: EpochSlots -&gt; Builder
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Buildable</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep EpochSlots x -&gt; EpochSlots
+forall x. EpochSlots -&gt; Rep EpochSlots x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep EpochSlots x -&gt; EpochSlots
+$cfrom :: forall x. EpochSlots -&gt; Rep EpochSlots x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679568303"><span id="local-6989586621679568307"><span id="local-6989586621679568312"><span class="annot"><span class="annottext">Context -&gt; EpochSlots -&gt; IO (Maybe ThunkInfo)
+Proxy EpochSlots -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy EpochSlots -&gt; String
+$cshowTypeOf :: Proxy EpochSlots -&gt; String
+wNoThunks :: Context -&gt; EpochSlots -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; EpochSlots -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; EpochSlots -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; EpochSlots -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679568292"><span id="local-6989586621679568294"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679568289"><span class="annot"><span class="annottext">toCBOR :: EpochSlots -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679568283"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679568280"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s EpochSlots
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679568272"><span id="local-6989586621679568274"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679568266"><span class="annot"><span class="annottext">encCBOR :: EpochSlots -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">EpochSlots -&gt; Word64
+</span><a href="Cardano.Chain.Slotting.EpochSlots.html#unEpochSlots"><span class="hs-identifier hs-var">unEpochSlots</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679568257"><span id="local-6989586621679568259"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679568251"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s EpochSlots
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; EpochSlots
+</span><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-var">EpochSlots</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- | Data with an accompanying slots per epoch context.</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">data</span><span> </span><span id="WithEpochSlots"><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#WithEpochSlots"><span class="hs-identifier hs-var">WithEpochSlots</span></a></span></span><span> </span><span id="local-6989586621679568526"><span class="annot"><a href="#local-6989586621679568526"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="WithEpochSlots"><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#WithEpochSlots"><span class="hs-identifier hs-var">WithEpochSlots</span></a></span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="epochSlots"><span class="annot"><span class="annottext">forall a. WithEpochSlots a -&gt; EpochSlots
+</span><a href="Cardano.Chain.Slotting.EpochSlots.html#epochSlots"><span class="hs-identifier hs-var hs-var">epochSlots</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="unWithEpochSlots"><span class="annot"><span class="annottext">forall a. WithEpochSlots a -&gt; a
+</span><a href="Cardano.Chain.Slotting.EpochSlots.html#unWithEpochSlots"><span class="hs-identifier hs-var hs-var">unWithEpochSlots</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679568526"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679568237"><span id="local-6989586621679568239"><span id="local-6989586621679568244"><span class="annot"><span class="annottext">Int -&gt; WithEpochSlots a -&gt; ShowS
+forall a. Show a =&gt; Int -&gt; WithEpochSlots a -&gt; ShowS
+forall a. Show a =&gt; [WithEpochSlots a] -&gt; ShowS
+forall a. Show a =&gt; WithEpochSlots a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [WithEpochSlots a] -&gt; ShowS
+$cshowList :: forall a. Show a =&gt; [WithEpochSlots a] -&gt; ShowS
+show :: WithEpochSlots a -&gt; String
+$cshow :: forall a. Show a =&gt; WithEpochSlots a -&gt; String
+showsPrec :: Int -&gt; WithEpochSlots a -&gt; ShowS
+$cshowsPrec :: forall a. Show a =&gt; Int -&gt; WithEpochSlots a -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679568231"><span id="local-6989586621679568235"><span class="annot"><span class="annottext">WithEpochSlots a -&gt; WithEpochSlots a -&gt; Bool
+forall a. Eq a =&gt; WithEpochSlots a -&gt; WithEpochSlots a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: WithEpochSlots a -&gt; WithEpochSlots a -&gt; Bool
+$c/= :: forall a. Eq a =&gt; WithEpochSlots a -&gt; WithEpochSlots a -&gt; Bool
+== :: WithEpochSlots a -&gt; WithEpochSlots a -&gt; Bool
+$c== :: forall a. Eq a =&gt; WithEpochSlots a -&gt; WithEpochSlots a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- | Calculate the first slot in an epoch.</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- Note that this function will give an undetermined result if Byron is not the</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- first and only era - a more robust method should use 'EpochInfo' from</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- cardano-slotting.</span><span>
+</span><span id="line-57"></span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#epochFirstSlot"><span class="hs-identifier hs-type">epochFirstSlot</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-type">SlotNumber</span></a></span><span>
+</span><span id="line-58"></span><span id="epochFirstSlot"><span class="annot"><span class="annottext">epochFirstSlot :: EpochSlots -&gt; EpochNumber -&gt; SlotNumber
+</span><a href="Cardano.Chain.Slotting.EpochSlots.html#epochFirstSlot"><span class="hs-identifier hs-var hs-var">epochFirstSlot</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Slotting.EpochSlots.html#EpochSlots"><span class="hs-identifier hs-type">EpochSlots</span></a></span><span> </span><span id="local-6989586621679568230"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679568230"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Slotting.EpochNumber.html#EpochNumber"><span class="hs-identifier hs-type">EpochNumber</span></a></span><span> </span><span id="local-6989586621679568228"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679568228"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; SlotNumber
+</span><a href="Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-var">SlotNumber</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679568230"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679568228"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-59"></span></pre></body></html>

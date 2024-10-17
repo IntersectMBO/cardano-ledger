@@ -1,0 +1,652 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- | The UTxO is large and is kept in-memory. It is important to use as</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- small a representation as possible to keep overall memory use reasonable.</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- This module provides a special compact representation for data types</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- contained within the UTxO.</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- The idea here is that the compact representation is optimised only for</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- storage size and does not have to be the same as the representation used</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- when operating on the data. Conversion functions are to be used when</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- inserting and retrieving values from the UTxO.</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.UTxO.Compact</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxIn"><span class="hs-identifier">CompactTxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#toCompactTxIn"><span class="hs-identifier">toCompactTxIn</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#fromCompactTxIn"><span class="hs-identifier">fromCompactTxIn</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier">CompactTxId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#toCompactTxId"><span class="hs-identifier">toCompactTxId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#fromCompactTxId"><span class="hs-identifier">fromCompactTxId</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier">CompactTxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#toCompactTxOut"><span class="hs-identifier">toCompactTxOut</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#fromCompactTxOut"><span class="hs-identifier">fromCompactTxOut</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html"><span class="hs-identifier">Cardano.Chain.Common.Compact</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier">CompactAddress</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#fromCompactAddress"><span class="hs-identifier">fromCompactAddress</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#toCompactAddress"><span class="hs-identifier">toCompactAddress</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html"><span class="hs-identifier">Cardano.Chain.Common.Lovelace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier">Lovelace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html"><span class="hs-identifier">Cardano.Chain.UTxO.Tx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxId"><span class="hs-identifier">TxId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxIn"><span class="hs-identifier">TxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxOut"><span class="hs-identifier">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier">Cardano.Crypto.Hashing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier">hashToBytes</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier">unsafeHashFromBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier">Cardano.HeapWords</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier">HeapWords</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier">heapWordsUnpacked</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">enforceSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier">Data.Binary.Get</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier">Get</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier">getWord64le</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier">runGet</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier">Data.Binary.Put</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier">Put</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier">putWord64le</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier">runPut</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier">fromStrict</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier">toStrict</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- Compact TxIn</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- | A compact in-memory representation for a 'TxIn'.</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- Convert using 'toCompactTxIn' and 'fromCompactTxIn'.</span><span>
+</span><span id="line-61"></span><span id="local-6989586621679574171"><span id="local-6989586621679574172"></span></span><span class="hs-keyword">data</span><span> </span><span id="CompactTxIn"><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxIn"><span class="hs-identifier hs-var">CompactTxIn</span></a></span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="CompactTxInUtxo"><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxInUtxo"><span class="hs-identifier hs-var">CompactTxInUtxo</span></a></span></span><span>
+</span><span id="line-63"></span><span>      </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word16</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679574163"><span id="local-6989586621679574168"><span class="annot"><span class="annottext">CompactTxIn -&gt; CompactTxIn -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+$c/= :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+== :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+$c== :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679574138"><span id="local-6989586621679574140"><span id="local-6989586621679574143"><span id="local-6989586621679574146"><span id="local-6989586621679574149"><span id="local-6989586621679574153"><span id="local-6989586621679574158"><span class="annot"><span class="annottext">Eq CompactTxIn
+CompactTxIn -&gt; CompactTxIn -&gt; Bool
+CompactTxIn -&gt; CompactTxIn -&gt; Ordering
+CompactTxIn -&gt; CompactTxIn -&gt; CompactTxIn
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: CompactTxIn -&gt; CompactTxIn -&gt; CompactTxIn
+$cmin :: CompactTxIn -&gt; CompactTxIn -&gt; CompactTxIn
+max :: CompactTxIn -&gt; CompactTxIn -&gt; CompactTxIn
+$cmax :: CompactTxIn -&gt; CompactTxIn -&gt; CompactTxIn
+&gt;= :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+$c&gt;= :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+&gt; :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+$c&gt; :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+&lt;= :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+$c&lt;= :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+&lt; :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+$c&lt; :: CompactTxIn -&gt; CompactTxIn -&gt; Bool
+compare :: CompactTxIn -&gt; CompactTxIn -&gt; Ordering
+$ccompare :: CompactTxIn -&gt; CompactTxIn -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep CompactTxIn x -&gt; CompactTxIn
+forall x. CompactTxIn -&gt; Rep CompactTxIn x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep CompactTxIn x -&gt; CompactTxIn
+$cfrom :: forall x. CompactTxIn -&gt; Rep CompactTxIn x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679574123"><span id="local-6989586621679574125"><span id="local-6989586621679574132"><span class="annot"><span class="annottext">Int -&gt; CompactTxIn -&gt; ShowS
+[CompactTxIn] -&gt; ShowS
+CompactTxIn -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [CompactTxIn] -&gt; ShowS
+$cshowList :: [CompactTxIn] -&gt; ShowS
+show :: CompactTxIn -&gt; String
+$cshow :: CompactTxIn -&gt; String
+showsPrec :: Int -&gt; CompactTxIn -&gt; ShowS
+$cshowsPrec :: Int -&gt; CompactTxIn -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679574120"><span class="annot"><span class="annottext">CompactTxIn -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: CompactTxIn -&gt; ()
+$crnf :: CompactTxIn -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679574113"><span id="local-6989586621679574115"><span id="local-6989586621679574117"><span class="annot"><span class="annottext">Context -&gt; CompactTxIn -&gt; IO (Maybe ThunkInfo)
+Proxy CompactTxIn -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy CompactTxIn -&gt; String
+$cshowTypeOf :: Proxy CompactTxIn -&gt; String
+wNoThunks :: Context -&gt; CompactTxIn -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; CompactTxIn -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; CompactTxIn -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; CompactTxIn -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier hs-type">HeapWords</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxIn"><span class="hs-identifier hs-type">CompactTxIn</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679574108"><span class="annot"><span class="annottext">heapWords :: CompactTxIn -&gt; Int
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">heapWords</span></a></span></span><span> </span><span class="annot"><span class="annottext">CompactTxIn
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-comment">-- We have</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- &gt; data CompactTxIn = CompactTxInUtxo {-# UNPACK #-} !CompactTxId</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- &gt;                                    {-# UNPACK #-} !Word16</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">-- so 'CompactTxInUtxo' requires:</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- - 1 word for the 'CompactTxInUtxo' object header</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">-- - 4 words (on a 64-bit arch) for the unpacked 'CompactTxId'</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- - 1 word for the unpacked 'Word16'</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">-- +---------------------------------------------+</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">-- &#9474;CompactTxInUtxo&#9474;Word#|Word#&#9474;Word#&#9474;Word#&#9474;Word#&#9474;</span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">-- +---------------------------------------------+</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span>    </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679574100"><span id="local-6989586621679574102"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxIn"><span class="hs-identifier hs-type">CompactTxIn</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679574097"><span class="annot"><span class="annottext">toCBOR :: CompactTxIn -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679574091"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxIn"><span class="hs-identifier hs-type">CompactTxIn</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>  </span><span id="local-6989586621679574088"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s CompactTxIn
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679574080"><span id="local-6989586621679574082"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxIn"><span class="hs-identifier hs-type">CompactTxIn</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>  </span><span id="local-6989586621679574067"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s CompactTxIn
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;CompactTxIn&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><span class="annottext">CompactTxId -&gt; Word16 -&gt; CompactTxIn
+</span><a href="Cardano.Chain.UTxO.Compact.html#CompactTxInUtxo"><span class="hs-identifier hs-var">CompactTxInUtxo</span></a></span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679574058"><span id="local-6989586621679574060"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxIn"><span class="hs-identifier hs-type">CompactTxIn</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679574050"><span class="annot"><span class="annottext">encCBOR :: CompactTxIn -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxInUtxo"><span class="hs-identifier hs-type">CompactTxInUtxo</span></a></span><span> </span><span id="local-6989586621679574048"><span class="annot"><span class="annottext">CompactTxId
+</span><a href="#local-6989586621679574048"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span id="local-6989586621679574047"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679574047"><span class="hs-identifier hs-var">txIndex</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-103"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">CompactTxId
+</span><a href="#local-6989586621679574048"><span class="hs-identifier hs-var">txId</span></a></span><span>
+</span><span id="line-104"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679574047"><span class="hs-identifier hs-var">txIndex</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#toCompactTxIn"><span class="hs-identifier hs-type">toCompactTxIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxIn"><span class="hs-identifier hs-type">CompactTxIn</span></a></span><span>
+</span><span id="line-107"></span><span id="toCompactTxIn"><span class="annot"><span class="annottext">toCompactTxIn :: TxIn -&gt; CompactTxIn
+</span><a href="Cardano.Chain.UTxO.Compact.html#toCompactTxIn"><span class="hs-identifier hs-var hs-var">toCompactTxIn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxInUtxo"><span class="hs-identifier hs-type">TxInUtxo</span></a></span><span> </span><span id="local-6989586621679574045"><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679574045"><span class="hs-identifier hs-var">txId</span></a></span></span><span> </span><span id="local-6989586621679574044"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679574044"><span class="hs-identifier hs-var">txIndex</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><span class="annottext">CompactTxId -&gt; Word16 -&gt; CompactTxIn
+</span><a href="Cardano.Chain.UTxO.Compact.html#CompactTxInUtxo"><span class="hs-identifier hs-var">CompactTxInUtxo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TxId -&gt; CompactTxId
+</span><a href="Cardano.Chain.UTxO.Compact.html#toCompactTxId"><span class="hs-identifier hs-var">toCompactTxId</span></a></span><span> </span><span class="annot"><span class="annottext">TxId
+</span><a href="#local-6989586621679574045"><span class="hs-identifier hs-var">txId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679574044"><span class="hs-identifier hs-var">txIndex</span></a></span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#fromCompactTxIn"><span class="hs-identifier hs-type">fromCompactTxIn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxIn"><span class="hs-identifier hs-type">CompactTxIn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxIn"><span class="hs-identifier hs-type">TxIn</span></a></span><span>
+</span><span id="line-111"></span><span id="fromCompactTxIn"><span class="annot"><span class="annottext">fromCompactTxIn :: CompactTxIn -&gt; TxIn
+</span><a href="Cardano.Chain.UTxO.Compact.html#fromCompactTxIn"><span class="hs-identifier hs-var hs-var">fromCompactTxIn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxInUtxo"><span class="hs-identifier hs-type">CompactTxInUtxo</span></a></span><span> </span><span id="local-6989586621679574043"><span class="annot"><span class="annottext">CompactTxId
+</span><a href="#local-6989586621679574043"><span class="hs-identifier hs-var">compactTxId</span></a></span></span><span> </span><span id="local-6989586621679574042"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679574042"><span class="hs-identifier hs-var">txIndex</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><span class="annottext">TxId -&gt; Word16 -&gt; TxIn
+</span><a href="Cardano.Chain.UTxO.Tx.html#TxInUtxo"><span class="hs-identifier hs-var">TxInUtxo</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CompactTxId -&gt; TxId
+</span><a href="Cardano.Chain.UTxO.Compact.html#fromCompactTxId"><span class="hs-identifier hs-var">fromCompactTxId</span></a></span><span> </span><span class="annot"><span class="annottext">CompactTxId
+</span><a href="#local-6989586621679574043"><span class="hs-identifier hs-var">compactTxId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679574042"><span class="hs-identifier hs-var">txIndex</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- Compact TxId</span><span>
+</span><span id="line-116"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- | A compact in-memory representation for a 'TxId'.</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- Convert using 'toCompactTxId' and 'fromCompactTxId'.</span><span>
+</span><span id="line-121"></span><span class="hs-comment">--</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- Compared to a normal 'TxId', this takes 5 heap words rather than 12.</span><span>
+</span><span id="line-123"></span><span id="local-6989586621679574040"><span id="local-6989586621679574041"></span></span><span class="hs-keyword">data</span><span> </span><span id="CompactTxId"><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-var">CompactTxId</span></a></span></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="CompactTxId"><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-var">CompactTxId</span></a></span></span><span>
+</span><span id="line-125"></span><span>      </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-126"></span><span>      </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-127"></span><span>      </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-128"></span><span>      </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679574030"><span id="local-6989586621679574037"><span class="annot"><span class="annottext">CompactTxId -&gt; CompactTxId -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: CompactTxId -&gt; CompactTxId -&gt; Bool
+$c/= :: CompactTxId -&gt; CompactTxId -&gt; Bool
+== :: CompactTxId -&gt; CompactTxId -&gt; Bool
+$c== :: CompactTxId -&gt; CompactTxId -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep CompactTxId x -&gt; CompactTxId
+forall x. CompactTxId -&gt; Rep CompactTxId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep CompactTxId x -&gt; CompactTxId
+$cfrom :: forall x. CompactTxId -&gt; Rep CompactTxId x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679574000"><span id="local-6989586621679574002"><span id="local-6989586621679574005"><span id="local-6989586621679574008"><span id="local-6989586621679574011"><span id="local-6989586621679574017"><span id="local-6989586621679574024"><span class="annot"><span class="annottext">Eq CompactTxId
+CompactTxId -&gt; CompactTxId -&gt; Bool
+CompactTxId -&gt; CompactTxId -&gt; Ordering
+CompactTxId -&gt; CompactTxId -&gt; CompactTxId
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: CompactTxId -&gt; CompactTxId -&gt; CompactTxId
+$cmin :: CompactTxId -&gt; CompactTxId -&gt; CompactTxId
+max :: CompactTxId -&gt; CompactTxId -&gt; CompactTxId
+$cmax :: CompactTxId -&gt; CompactTxId -&gt; CompactTxId
+&gt;= :: CompactTxId -&gt; CompactTxId -&gt; Bool
+$c&gt;= :: CompactTxId -&gt; CompactTxId -&gt; Bool
+&gt; :: CompactTxId -&gt; CompactTxId -&gt; Bool
+$c&gt; :: CompactTxId -&gt; CompactTxId -&gt; Bool
+&lt;= :: CompactTxId -&gt; CompactTxId -&gt; Bool
+$c&lt;= :: CompactTxId -&gt; CompactTxId -&gt; Bool
+&lt; :: CompactTxId -&gt; CompactTxId -&gt; Bool
+$c&lt; :: CompactTxId -&gt; CompactTxId -&gt; Bool
+compare :: CompactTxId -&gt; CompactTxId -&gt; Ordering
+$ccompare :: CompactTxId -&gt; CompactTxId -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679573988"><span id="local-6989586621679573990"><span id="local-6989586621679573998"><span class="annot"><span class="annottext">Int -&gt; CompactTxId -&gt; ShowS
+[CompactTxId] -&gt; ShowS
+CompactTxId -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [CompactTxId] -&gt; ShowS
+$cshowList :: [CompactTxId] -&gt; ShowS
+show :: CompactTxId -&gt; String
+$cshow :: CompactTxId -&gt; String
+showsPrec :: Int -&gt; CompactTxId -&gt; ShowS
+$cshowsPrec :: Int -&gt; CompactTxId -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679573986"><span class="annot"><span class="annottext">CompactTxId -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: CompactTxId -&gt; ()
+$crnf :: CompactTxId -&gt; ()
+</span><a href="#local-6989586621679573986"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679573980"><span id="local-6989586621679573982"><span id="local-6989586621679573984"><span class="annot"><span class="annottext">Context -&gt; CompactTxId -&gt; IO (Maybe ThunkInfo)
+Proxy CompactTxId -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy CompactTxId -&gt; String
+$cshowTypeOf :: Proxy CompactTxId -&gt; String
+wNoThunks :: Context -&gt; CompactTxId -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; CompactTxId -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; CompactTxId -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; CompactTxId -&gt; IO (Maybe ThunkInfo)
+</span><a href="#local-6989586621679573980"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier hs-type">HeapWords</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621679573977"><span class="annot"><span class="annottext">heapWords :: CompactTxId -&gt; Int
+</span><a href="#local-6989586621679573977"><span class="hs-identifier hs-var hs-var hs-var hs-var">heapWords</span></a></span></span><span> </span><span class="annot"><span class="annottext">CompactTxId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-comment">-- We have</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-136"></span><span>    </span><span class="hs-comment">-- &gt; data CompactTxId = CompactTxId {-# UNPACK #-} !Word64</span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-comment">-- &gt;                                {-# UNPACK #-} !Word64</span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-comment">-- &gt;                                {-# UNPACK #-} !Word64</span><span>
+</span><span id="line-139"></span><span>    </span><span class="hs-comment">-- &gt;                                {-# UNPACK #-} !Word64</span><span>
+</span><span id="line-140"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-141"></span><span>    </span><span class="hs-comment">-- so 'CompactTxId' requires:</span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-comment">-- - 1 word for the 'CompactTxId' object header</span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-comment">-- - 1 word (on a 64-bit arch) for the unpacked 'Word64'</span><span>
+</span><span id="line-145"></span><span>    </span><span class="hs-comment">-- - 1 word (on a 64-bit arch) for the unpacked 'Word64'</span><span>
+</span><span id="line-146"></span><span>    </span><span class="hs-comment">-- - 1 word (on a 64-bit arch) for the unpacked 'Word64'</span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-comment">-- - 1 word (on a 64-bit arch) for the unpacked 'Word64'</span><span>
+</span><span id="line-148"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-comment">-- +-----------------------------------+</span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-comment">-- &#9474;CompactTxId&#9474;Word#&#9474;Word#&#9474;Word#&#9474;Word#&#9474;</span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-comment">-- +-----------------------------------+</span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-153"></span><span>    </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679573970"><span id="local-6989586621679573972"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-156"></span><span>  </span><span id="local-6989586621679573968"><span class="annot"><span class="annottext">toCBOR :: CompactTxId -&gt; Encoding
+</span><a href="#local-6989586621679573968"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679573963"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-159"></span><span>  </span><span id="local-6989586621679573961"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s CompactTxId
+</span><a href="#local-6989586621679573961"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679573954"><span id="local-6989586621679573956"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-162"></span><span>  </span><span id="local-6989586621679573942"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s CompactTxId
+</span><a href="#local-6989586621679573942"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-163"></span><span>    </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;CompactTxId&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-164"></span><span>    </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64 -&gt; Word64 -&gt; CompactTxId
+</span><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-var">CompactTxId</span></a></span><span>
+</span><span id="line-165"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-166"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-167"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-168"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679573935"><span id="local-6989586621679573937"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-171"></span><span>  </span><span id="local-6989586621679573925"><span class="annot"><span class="annottext">encCBOR :: CompactTxId -&gt; Encoding
+</span><a href="#local-6989586621679573925"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span><span> </span><span id="local-6989586621679573924"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573924"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679573923"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573923"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679573922"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573922"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679573921"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573921"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-173"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573924"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-174"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573923"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-175"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573922"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-176"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573921"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#getCompactTxId"><span class="hs-identifier hs-type">getCompactTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-type">Get</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span><span>
+</span><span id="line-179"></span><span id="getCompactTxId"><span class="annot"><span class="annottext">getCompactTxId :: Get CompactTxId
+</span><a href="Cardano.Chain.UTxO.Compact.html#getCompactTxId"><span class="hs-identifier hs-var hs-var">getCompactTxId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-180"></span><span>  </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64 -&gt; Word64 -&gt; CompactTxId
+</span><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-var">CompactTxId</span></a></span><span>
+</span><span id="line-181"></span><span>    </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Get Word64
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-var">getWord64le</span></a></span><span>
+</span><span id="line-182"></span><span>    </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Get Word64
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-var">getWord64le</span></a></span><span>
+</span><span id="line-183"></span><span>    </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Get Word64
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-var">getWord64le</span></a></span><span>
+</span><span id="line-184"></span><span>    </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Get Word64
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-var">getWord64le</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#putCompactTxId"><span class="hs-identifier hs-type">putCompactTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-type">Put</span></a></span><span>
+</span><span id="line-187"></span><span id="putCompactTxId"><span class="annot"><span class="annottext">putCompactTxId :: CompactTxId -&gt; Put
+</span><a href="Cardano.Chain.UTxO.Compact.html#putCompactTxId"><span class="hs-identifier hs-var hs-var">putCompactTxId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span><span> </span><span id="local-6989586621679573918"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573918"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679573917"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573917"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679573916"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573916"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679573915"><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573915"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-188"></span><span>  </span><span class="annot"><span class="annottext">Word64 -&gt; Put
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-var">putWord64le</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573918"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-189"></span><span>    </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Put
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-var">putWord64le</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573917"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Put
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-var">putWord64le</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573916"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Put
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-var">putWord64le</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679573915"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#toCompactTxId"><span class="hs-identifier hs-type">toCompactTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span><span>
+</span><span id="line-194"></span><span id="toCompactTxId"><span class="annot"><span class="annottext">toCompactTxId :: TxId -&gt; CompactTxId
+</span><a href="Cardano.Chain.UTxO.Compact.html#toCompactTxId"><span class="hs-identifier hs-var hs-var">toCompactTxId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><span class="annottext">forall a. Get a -&gt; ByteString -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-var">runGet</span></a></span><span> </span><span class="annot"><span class="annottext">Get CompactTxId
+</span><a href="Cardano.Chain.UTxO.Compact.html#getCompactTxId"><span class="hs-identifier hs-var">getCompactTxId</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-var">BSL.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall algo a. AbstractHash algo a -&gt; ByteString
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier hs-var">hashToBytes</span></a></span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#fromCompactTxId"><span class="hs-identifier hs-type">fromCompactTxId</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxId"><span class="hs-identifier hs-type">CompactTxId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxId"><span class="hs-identifier hs-type">TxId</span></a></span><span>
+</span><span id="line-198"></span><span id="fromCompactTxId"><span class="annot"><span class="annottext">fromCompactTxId :: CompactTxId -&gt; TxId
+</span><a href="Cardano.Chain.UTxO.Compact.html#fromCompactTxId"><span class="hs-identifier hs-var hs-var">fromCompactTxId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-199"></span><span>  </span><span class="annot"><span class="annottext">forall a. ByteString -&gt; Hash a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier hs-var">unsafeHashFromBytes</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-var">BSL.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Put -&gt; ByteString
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/binary-0.8.9.0/src"><span class="hs-identifier hs-var">runPut</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">CompactTxId -&gt; Put
+</span><a href="Cardano.Chain.UTxO.Compact.html#putCompactTxId"><span class="hs-identifier hs-var">putCompactTxId</span></a></span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-202"></span><span class="hs-comment">-- Compact TxOut</span><span>
+</span><span id="line-203"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-204"></span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- | A compact in-memory representation for a 'TxOut'.</span><span>
+</span><span id="line-206"></span><span class="hs-comment">--</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- Convert using 'toCompactTxOut' and 'fromCompactTxOut'.</span><span>
+</span><span id="line-208"></span><span id="local-6989586621679573912"><span id="local-6989586621679573913"></span></span><span class="hs-keyword">data</span><span> </span><span id="CompactTxOut"><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-var">CompactTxOut</span></a></span></span><span>
+</span><span id="line-209"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="CompactTxOut"><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-var">CompactTxOut</span></a></span></span><span>
+</span><span id="line-210"></span><span>      </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Common.Compact.html#CompactAddress"><span class="hs-identifier hs-type">CompactAddress</span></a></span><span>
+</span><span id="line-211"></span><span>      </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-212"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679573903"><span id="local-6989586621679573909"><span class="annot"><span class="annottext">CompactTxOut -&gt; CompactTxOut -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+$c/= :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+== :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+$c== :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679573878"><span id="local-6989586621679573880"><span id="local-6989586621679573883"><span id="local-6989586621679573886"><span id="local-6989586621679573889"><span id="local-6989586621679573893"><span id="local-6989586621679573899"><span class="annot"><span class="annottext">Eq CompactTxOut
+CompactTxOut -&gt; CompactTxOut -&gt; Bool
+CompactTxOut -&gt; CompactTxOut -&gt; Ordering
+CompactTxOut -&gt; CompactTxOut -&gt; CompactTxOut
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: CompactTxOut -&gt; CompactTxOut -&gt; CompactTxOut
+$cmin :: CompactTxOut -&gt; CompactTxOut -&gt; CompactTxOut
+max :: CompactTxOut -&gt; CompactTxOut -&gt; CompactTxOut
+$cmax :: CompactTxOut -&gt; CompactTxOut -&gt; CompactTxOut
+&gt;= :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+$c&gt;= :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+&gt; :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+$c&gt; :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+&lt;= :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+$c&lt;= :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+&lt; :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+$c&lt; :: CompactTxOut -&gt; CompactTxOut -&gt; Bool
+compare :: CompactTxOut -&gt; CompactTxOut -&gt; Ordering
+$ccompare :: CompactTxOut -&gt; CompactTxOut -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep CompactTxOut x -&gt; CompactTxOut
+forall x. CompactTxOut -&gt; Rep CompactTxOut x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep CompactTxOut x -&gt; CompactTxOut
+$cfrom :: forall x. CompactTxOut -&gt; Rep CompactTxOut x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679573865"><span id="local-6989586621679573867"><span id="local-6989586621679573874"><span class="annot"><span class="annottext">Int -&gt; CompactTxOut -&gt; ShowS
+[CompactTxOut] -&gt; ShowS
+CompactTxOut -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [CompactTxOut] -&gt; ShowS
+$cshowList :: [CompactTxOut] -&gt; ShowS
+show :: CompactTxOut -&gt; String
+$cshow :: CompactTxOut -&gt; String
+showsPrec :: Int -&gt; CompactTxOut -&gt; ShowS
+$cshowsPrec :: Int -&gt; CompactTxOut -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-213"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679573863"><span class="annot"><span class="annottext">CompactTxOut -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: CompactTxOut -&gt; ()
+$crnf :: CompactTxOut -&gt; ()
+</span><a href="#local-6989586621679573863"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679573857"><span id="local-6989586621679573859"><span id="local-6989586621679573861"><span class="annot"><span class="annottext">Context -&gt; CompactTxOut -&gt; IO (Maybe ThunkInfo)
+Proxy CompactTxOut -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy CompactTxOut -&gt; String
+$cshowTypeOf :: Proxy CompactTxOut -&gt; String
+wNoThunks :: Context -&gt; CompactTxOut -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; CompactTxOut -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; CompactTxOut -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; CompactTxOut -&gt; IO (Maybe ThunkInfo)
+</span><a href="#local-6989586621679573857"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier hs-type">HeapWords</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-type">CompactTxOut</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-216"></span><span>  </span><span id="local-6989586621679573849"><span class="annot"><span class="annottext">heapWords :: CompactTxOut -&gt; Int
+</span><a href="#local-6989586621679573849"><span class="hs-identifier hs-var hs-var hs-var hs-var">heapWords</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-type">CompactTxOut</span></a></span><span> </span><span id="local-6989586621679573848"><span class="annot"><span class="annottext">CompactAddress
+</span><a href="#local-6989586621679573848"><span class="hs-identifier hs-var">compactAddr</span></a></span></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-217"></span><span>    </span><span class="hs-comment">-- We have</span><span>
+</span><span id="line-218"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-219"></span><span>    </span><span class="hs-comment">-- &gt; data CompactTxOut = CompactTxOut {-# UNPACK #-} !CompactAddress</span><span>
+</span><span id="line-220"></span><span>    </span><span class="hs-comment">-- &gt;                                  {-# UNPACK #-} !Lovelace</span><span>
+</span><span id="line-221"></span><span>    </span><span class="hs-comment">-- &gt; newtype CompactAddress = CompactAddress ShortByteString</span><span>
+</span><span id="line-222"></span><span>    </span><span class="hs-comment">-- &gt; newtype Lovelace = Lovelace { getLovelace :: Word64 }</span><span>
+</span><span id="line-223"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-224"></span><span>    </span><span class="hs-comment">-- so @CompactTxOut {-# UNPACK #-} !CompactAddress {-# UNPACK #-} !Lovelace@</span><span>
+</span><span id="line-225"></span><span>    </span><span class="hs-comment">-- requires:</span><span>
+</span><span id="line-226"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-227"></span><span>    </span><span class="hs-comment">-- - 1 word for the 'CompactTxOut' object header</span><span>
+</span><span id="line-228"></span><span>    </span><span class="hs-comment">-- - 1 word for the pointer to the byte array object</span><span>
+</span><span id="line-229"></span><span>    </span><span class="hs-comment">-- - 1 word (on a 64-bit arch) for the unpacked 'Word64' ('Lovelace')</span><span>
+</span><span id="line-230"></span><span>    </span><span class="hs-comment">-- - the heap words required by the byte array object</span><span>
+</span><span id="line-231"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-232"></span><span>    </span><span class="hs-comment">-- Note that for the sake of uniformity, we use 'heapWordsUnpacked' to</span><span>
+</span><span id="line-233"></span><span>    </span><span class="hs-comment">-- account for the level of indirection removed by the @UNPACK@ pragma.</span><span>
+</span><span id="line-234"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-235"></span><span>    </span><span class="hs-comment">-- +----------------------+</span><span>
+</span><span id="line-236"></span><span>    </span><span class="hs-comment">-- &#9474;CompactTxOut&#9474; * &#9474;Word#&#9474;</span><span>
+</span><span id="line-237"></span><span>    </span><span class="hs-comment">-- +--------------+-------+</span><span>
+</span><span id="line-238"></span><span>    </span><span class="hs-comment">--                |</span><span>
+</span><span id="line-239"></span><span>    </span><span class="hs-comment">--                v</span><span>
+</span><span id="line-240"></span><span>    </span><span class="hs-comment">--                +--------------+</span><span>
+</span><span id="line-241"></span><span>    </span><span class="hs-comment">--                &#9474;BA#&#9474;sz&#9474;payload&#9474;</span><span>
+</span><span id="line-242"></span><span>    </span><span class="hs-comment">--                +--------------+</span><span>
+</span><span id="line-243"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-244"></span><span>    </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HeapWords a =&gt; a -&gt; Int
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier hs-var">heapWordsUnpacked</span></a></span><span> </span><span class="annot"><span class="annottext">CompactAddress
+</span><a href="#local-6989586621679573848"><span class="hs-identifier hs-var">compactAddr</span></a></span><span>
+</span><span id="line-245"></span><span>
+</span><span id="line-246"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679573840"><span id="local-6989586621679573842"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-type">CompactTxOut</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-247"></span><span>  </span><span id="local-6989586621679573838"><span class="annot"><span class="annottext">toCBOR :: CompactTxOut -&gt; Encoding
+</span><a href="#local-6989586621679573838"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-248"></span><span>
+</span><span id="line-249"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679573833"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-type">CompactTxOut</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-250"></span><span>  </span><span id="local-6989586621679573831"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s CompactTxOut
+</span><a href="#local-6989586621679573831"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-251"></span><span>
+</span><span id="line-252"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679573824"><span id="local-6989586621679573826"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-type">CompactTxOut</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-253"></span><span>  </span><span id="local-6989586621679573815"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s CompactTxOut
+</span><a href="#local-6989586621679573815"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-254"></span><span>    </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;CompactTxOut&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-255"></span><span>    </span><span class="annot"><span class="annottext">CompactAddress -&gt; Lovelace -&gt; CompactTxOut
+</span><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-var">CompactTxOut</span></a></span><span>
+</span><span id="line-256"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-257"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-258"></span><span>
+</span><span id="line-259"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679573808"><span id="local-6989586621679573810"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-type">CompactTxOut</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-260"></span><span>  </span><span id="local-6989586621679573801"><span class="annot"><span class="annottext">encCBOR :: CompactTxOut -&gt; Encoding
+</span><a href="#local-6989586621679573801"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-type">CompactTxOut</span></a></span><span> </span><span id="local-6989586621679573800"><span class="annot"><span class="annottext">CompactAddress
+</span><a href="#local-6989586621679573800"><span class="hs-identifier hs-var">compactAddr</span></a></span></span><span> </span><span id="local-6989586621679573799"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679573799"><span class="hs-identifier hs-var">lovelace</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-261"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-262"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">CompactAddress
+</span><a href="#local-6989586621679573800"><span class="hs-identifier hs-var">compactAddr</span></a></span><span>
+</span><span id="line-263"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679573799"><span class="hs-identifier hs-var">lovelace</span></a></span><span>
+</span><span id="line-264"></span><span>
+</span><span id="line-265"></span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#toCompactTxOut"><span class="hs-identifier hs-type">toCompactTxOut</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-type">CompactTxOut</span></a></span><span>
+</span><span id="line-266"></span><span id="toCompactTxOut"><span class="annot"><span class="annottext">toCompactTxOut :: TxOut -&gt; CompactTxOut
+</span><a href="Cardano.Chain.UTxO.Compact.html#toCompactTxOut"><span class="hs-identifier hs-var hs-var">toCompactTxOut</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span> </span><span id="local-6989586621679573797"><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621679573797"><span class="hs-identifier hs-var">addr</span></a></span></span><span> </span><span id="local-6989586621679573796"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679573796"><span class="hs-identifier hs-var">lovelace</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-267"></span><span>  </span><span class="annot"><span class="annottext">CompactAddress -&gt; Lovelace -&gt; CompactTxOut
+</span><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-var">CompactTxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Address -&gt; CompactAddress
+</span><a href="Cardano.Chain.Common.Compact.html#toCompactAddress"><span class="hs-identifier hs-var">toCompactAddress</span></a></span><span> </span><span class="annot"><span class="annottext">Address
+</span><a href="#local-6989586621679573797"><span class="hs-identifier hs-var">addr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679573796"><span class="hs-identifier hs-var">lovelace</span></a></span><span>
+</span><span id="line-268"></span><span>
+</span><span id="line-269"></span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#fromCompactTxOut"><span class="hs-identifier hs-type">fromCompactTxOut</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-type">CompactTxOut</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.UTxO.Tx.html#TxOut"><span class="hs-identifier hs-type">TxOut</span></a></span><span>
+</span><span id="line-270"></span><span id="fromCompactTxOut"><span class="annot"><span class="annottext">fromCompactTxOut :: CompactTxOut -&gt; TxOut
+</span><a href="Cardano.Chain.UTxO.Compact.html#fromCompactTxOut"><span class="hs-identifier hs-var hs-var">fromCompactTxOut</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.UTxO.Compact.html#CompactTxOut"><span class="hs-identifier hs-type">CompactTxOut</span></a></span><span> </span><span id="local-6989586621679573795"><span class="annot"><span class="annottext">CompactAddress
+</span><a href="#local-6989586621679573795"><span class="hs-identifier hs-var">compactAddr</span></a></span></span><span> </span><span id="local-6989586621679573794"><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679573794"><span class="hs-identifier hs-var">lovelace</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-271"></span><span>  </span><span class="annot"><span class="annottext">Address -&gt; Lovelace -&gt; TxOut
+</span><a href="Cardano.Chain.UTxO.Tx.html#TxOut"><span class="hs-identifier hs-var">TxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CompactAddress -&gt; Address
+</span><a href="Cardano.Chain.Common.Compact.html#fromCompactAddress"><span class="hs-identifier hs-var">fromCompactAddress</span></a></span><span> </span><span class="annot"><span class="annottext">CompactAddress
+</span><a href="#local-6989586621679573795"><span class="hs-identifier hs-var">compactAddr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Lovelace
+</span><a href="#local-6989586621679573794"><span class="hs-identifier hs-var">lovelace</span></a></span><span>
+</span><span id="line-272"></span></pre></body></html>

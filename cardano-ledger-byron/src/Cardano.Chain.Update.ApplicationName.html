@@ -1,0 +1,508 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679578241"><span id="local-6989586621679578242"><span id="local-6989586621679578243"></span></span></span><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Update.ApplicationName</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier">ApplicationName</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#applicationNameMaxLength"><span class="hs-identifier">applicationNameMaxLength</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameError"><span class="hs-identifier">ApplicationNameError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#checkApplicationName"><span class="hs-identifier">checkApplicationName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Case</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Decoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">DecoderError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">cborError</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeWord8</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">matchSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">szCases</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">cborError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">bprint</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">stext</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span id="local-6989586621679578225"><span id="local-6989586621679578226"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="ApplicationName"><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-var">ApplicationName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ApplicationName"><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-var">ApplicationName</span></a></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unApplicationName"><span class="annot"><span class="annottext">ApplicationName -&gt; Text
+</span><a href="Cardano.Chain.Update.ApplicationName.html#unApplicationName"><span class="hs-identifier hs-var hs-var">unApplicationName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679578216"><span id="local-6989586621679578221"><span class="annot"><span class="annottext">ApplicationName -&gt; ApplicationName -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ApplicationName -&gt; ApplicationName -&gt; Bool
+$c/= :: ApplicationName -&gt; ApplicationName -&gt; Bool
+== :: ApplicationName -&gt; ApplicationName -&gt; Bool
+$c== :: ApplicationName -&gt; ApplicationName -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679578183"><span id="local-6989586621679578187"><span id="local-6989586621679578191"><span id="local-6989586621679578195"><span id="local-6989586621679578199"><span id="local-6989586621679578203"><span id="local-6989586621679578208"><span class="annot"><span class="annottext">Eq ApplicationName
+ApplicationName -&gt; ApplicationName -&gt; Bool
+ApplicationName -&gt; ApplicationName -&gt; Ordering
+ApplicationName -&gt; ApplicationName -&gt; ApplicationName
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: ApplicationName -&gt; ApplicationName -&gt; ApplicationName
+$cmin :: ApplicationName -&gt; ApplicationName -&gt; ApplicationName
+max :: ApplicationName -&gt; ApplicationName -&gt; ApplicationName
+$cmax :: ApplicationName -&gt; ApplicationName -&gt; ApplicationName
+&gt;= :: ApplicationName -&gt; ApplicationName -&gt; Bool
+$c&gt;= :: ApplicationName -&gt; ApplicationName -&gt; Bool
+&gt; :: ApplicationName -&gt; ApplicationName -&gt; Bool
+$c&gt; :: ApplicationName -&gt; ApplicationName -&gt; Bool
+&lt;= :: ApplicationName -&gt; ApplicationName -&gt; Bool
+$c&lt;= :: ApplicationName -&gt; ApplicationName -&gt; Bool
+&lt; :: ApplicationName -&gt; ApplicationName -&gt; Bool
+$c&lt; :: ApplicationName -&gt; ApplicationName -&gt; Bool
+compare :: ApplicationName -&gt; ApplicationName -&gt; Ordering
+$ccompare :: ApplicationName -&gt; ApplicationName -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679578169"><span id="local-6989586621679578171"><span id="local-6989586621679578177"><span class="annot"><span class="annottext">Int -&gt; ApplicationName -&gt; ShowS
+[ApplicationName] -&gt; ShowS
+ApplicationName -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ApplicationName] -&gt; ShowS
+$cshowList :: [ApplicationName] -&gt; ShowS
+show :: ApplicationName -&gt; String
+$cshow :: ApplicationName -&gt; String
+showsPrec :: Int -&gt; ApplicationName -&gt; ShowS
+$cshowsPrec :: Int -&gt; ApplicationName -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep ApplicationName x -&gt; ApplicationName
+forall x. ApplicationName -&gt; Rep ApplicationName x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ApplicationName x -&gt; ApplicationName
+$cfrom :: forall x. ApplicationName -&gt; Rep ApplicationName x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679578163"><span class="annot"><span class="annottext">ApplicationName -&gt; Builder
+forall p. (p -&gt; Builder) -&gt; Buildable p
+build :: ApplicationName -&gt; Builder
+$cbuild :: ApplicationName -&gt; Builder
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">B.Buildable</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679578156"><span class="annot"><span class="annottext">ApplicationName -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: ApplicationName -&gt; ()
+$crnf :: ApplicationName -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679578140"><span id="local-6989586621679578144"><span id="local-6989586621679578149"><span class="annot"><span class="annottext">Context -&gt; ApplicationName -&gt; IO (Maybe ThunkInfo)
+Proxy ApplicationName -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy ApplicationName -&gt; String
+$cshowTypeOf :: Proxy ApplicationName -&gt; String
+wNoThunks :: Context -&gt; ApplicationName -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; ApplicationName -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; ApplicationName -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; ApplicationName -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679578129"><span id="local-6989586621679578131"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-type">ApplicationName</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679578126"><span class="annot"><span class="annottext">toCBOR :: ApplicationName -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679578120"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-type">ApplicationName</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679578117"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s ApplicationName
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679578110"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-type">ApplicationName</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679578106"><span class="annot"><span class="annottext">encCBOR :: ApplicationName -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span id="local-6989586621679578104"><span class="annot"><span class="annottext">ApplicationName
+</span><a href="#local-6989586621679578104"><span class="hs-identifier hs-var">appName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ApplicationName -&gt; Text
+</span><a href="Cardano.Chain.Update.ApplicationName.html#unApplicationName"><span class="hs-identifier hs-var">unApplicationName</span></a></span><span> </span><span class="annot"><span class="annottext">ApplicationName
+</span><a href="#local-6989586621679578104"><span class="hs-identifier hs-var">appName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679578093"><span class="annot"><span class="annottext">encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy ApplicationName -&gt; Size
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encodedSizeExpr</span></a></span></span><span> </span><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; Proxy t -&gt; Size
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Proxy ApplicationName
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">[Case Size] -&gt; Size
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">szCases</span></a></span><span>
+</span><span id="line-57"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall t. Text -&gt; t -&gt; Case t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">Case</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;minBound&quot;</span></span><span> </span><span class="annot"><span class="annottext">Size
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-58"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall t. Text -&gt; t -&gt; Case t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">Case</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;maxBound&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Num a =&gt; Integer -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromInteger</span></a></span><span> </span><span class="annot"><span class="annottext">forall i. Integral i =&gt; i
+</span><a href="Cardano.Chain.Update.ApplicationName.html#applicationNameMaxLength"><span class="hs-identifier hs-var">applicationNameMaxLength</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679578083"><span id="local-6989586621679578085"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-type">ApplicationName</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679578077"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s ApplicationName
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ApplicationName
+</span><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-var">ApplicationName</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-keyword">data</span><span> </span><span id="ApplicationNameError"><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameError"><span class="hs-identifier hs-var">ApplicationNameError</span></a></span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="ApplicationNameTooLong"><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameTooLong"><span class="hs-identifier hs-var">ApplicationNameTooLong</span></a></span></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ApplicationNameNotAscii"><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameNotAscii"><span class="hs-identifier hs-var">ApplicationNameNotAscii</span></a></span></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679578038"><span id="local-6989586621679578040"><span id="local-6989586621679578042"><span id="local-6989586621679578044"><span id="local-6989586621679578046"><span id="local-6989586621679578048"><span id="local-6989586621679578050"><span id="local-6989586621679578052"><span id="local-6989586621679578054"><span id="local-6989586621679578056"><span id="local-6989586621679578058"><span id="local-6989586621679578060"><span id="local-6989586621679578064"><span id="local-6989586621679578069"><span class="annot"><span class="annottext">Typeable ApplicationNameError
+ApplicationNameError -&gt; DataType
+ApplicationNameError -&gt; Constr
+(forall b. Data b =&gt; b -&gt; b)
+-&gt; ApplicationNameError -&gt; ApplicationNameError
+forall a.
+Typeable a
+-&gt; (forall (c :: * -&gt; *).
+    (forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+    -&gt; (forall g. g -&gt; c g) -&gt; a -&gt; c a)
+-&gt; (forall (c :: * -&gt; *).
+    (forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+    -&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c a)
+-&gt; (a -&gt; Constr)
+-&gt; (a -&gt; DataType)
+-&gt; (forall (t :: * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d. Data d =&gt; c (t d)) -&gt; Maybe (c a))
+-&gt; (forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+    Typeable t =&gt;
+    (forall d e. (Data d, Data e) =&gt; c (t d e)) -&gt; Maybe (c a))
+-&gt; ((forall b. Data b =&gt; b -&gt; b) -&gt; a -&gt; a)
+-&gt; (forall r r'.
+    (r -&gt; r' -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall r r'.
+    (r' -&gt; r -&gt; r) -&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; a -&gt; r)
+-&gt; (forall u. (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; [u])
+-&gt; (forall u. Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; a -&gt; u)
+-&gt; (forall (m :: * -&gt; *).
+    Monad m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; (forall (m :: * -&gt; *).
+    MonadPlus m =&gt;
+    (forall d. Data d =&gt; d -&gt; m d) -&gt; a -&gt; m a)
+-&gt; Data a
+forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ApplicationNameError -&gt; u
+forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; ApplicationNameError -&gt; [u]
+forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ApplicationNameError -&gt; r
+forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ApplicationNameError -&gt; r
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ApplicationNameError -&gt; m ApplicationNameError
+forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ApplicationNameError -&gt; m ApplicationNameError
+forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ApplicationNameError
+forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; ApplicationNameError
+-&gt; c ApplicationNameError
+forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ApplicationNameError)
+forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ApplicationNameError)
+gmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ApplicationNameError -&gt; m ApplicationNameError
+$cgmapMo :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ApplicationNameError -&gt; m ApplicationNameError
+gmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ApplicationNameError -&gt; m ApplicationNameError
+$cgmapMp :: forall (m :: * -&gt; *).
+MonadPlus m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ApplicationNameError -&gt; m ApplicationNameError
+gmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ApplicationNameError -&gt; m ApplicationNameError
+$cgmapM :: forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall d. Data d =&gt; d -&gt; m d)
+-&gt; ApplicationNameError -&gt; m ApplicationNameError
+gmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ApplicationNameError -&gt; u
+$cgmapQi :: forall u.
+Int -&gt; (forall d. Data d =&gt; d -&gt; u) -&gt; ApplicationNameError -&gt; u
+gmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; ApplicationNameError -&gt; [u]
+$cgmapQ :: forall u.
+(forall d. Data d =&gt; d -&gt; u) -&gt; ApplicationNameError -&gt; [u]
+gmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ApplicationNameError -&gt; r
+$cgmapQr :: forall r r'.
+(r' -&gt; r -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ApplicationNameError -&gt; r
+gmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ApplicationNameError -&gt; r
+$cgmapQl :: forall r r'.
+(r -&gt; r' -&gt; r)
+-&gt; r -&gt; (forall d. Data d =&gt; d -&gt; r') -&gt; ApplicationNameError -&gt; r
+gmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; ApplicationNameError -&gt; ApplicationNameError
+$cgmapT :: (forall b. Data b =&gt; b -&gt; b)
+-&gt; ApplicationNameError -&gt; ApplicationNameError
+dataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ApplicationNameError)
+$cdataCast2 :: forall (t :: * -&gt; * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d e. (Data d, Data e) =&gt; c (t d e))
+-&gt; Maybe (c ApplicationNameError)
+dataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ApplicationNameError)
+$cdataCast1 :: forall (t :: * -&gt; *) (c :: * -&gt; *).
+Typeable t =&gt;
+(forall d. Data d =&gt; c (t d)) -&gt; Maybe (c ApplicationNameError)
+dataTypeOf :: ApplicationNameError -&gt; DataType
+$cdataTypeOf :: ApplicationNameError -&gt; DataType
+toConstr :: ApplicationNameError -&gt; Constr
+$ctoConstr :: ApplicationNameError -&gt; Constr
+gunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ApplicationNameError
+$cgunfold :: forall (c :: * -&gt; *).
+(forall b r. Data b =&gt; c (b -&gt; r) -&gt; c r)
+-&gt; (forall r. r -&gt; c r) -&gt; Constr -&gt; c ApplicationNameError
+gfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; ApplicationNameError
+-&gt; c ApplicationNameError
+$cgfoldl :: forall (c :: * -&gt; *).
+(forall d b. Data d =&gt; c (d -&gt; b) -&gt; d -&gt; c b)
+-&gt; (forall g. g -&gt; c g)
+-&gt; ApplicationNameError
+-&gt; c ApplicationNameError
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Data</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679578031"><span id="local-6989586621679578035"><span class="annot"><span class="annottext">ApplicationNameError -&gt; ApplicationNameError -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ApplicationNameError -&gt; ApplicationNameError -&gt; Bool
+$c/= :: ApplicationNameError -&gt; ApplicationNameError -&gt; Bool
+== :: ApplicationNameError -&gt; ApplicationNameError -&gt; Bool
+$c== :: ApplicationNameError -&gt; ApplicationNameError -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679578021"><span id="local-6989586621679578023"><span id="local-6989586621679578029"><span class="annot"><span class="annottext">Int -&gt; ApplicationNameError -&gt; ShowS
+[ApplicationNameError] -&gt; ShowS
+ApplicationNameError -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ApplicationNameError] -&gt; ShowS
+$cshowList :: [ApplicationNameError] -&gt; ShowS
+show :: ApplicationNameError -&gt; String
+$cshow :: ApplicationNameError -&gt; String
+showsPrec :: Int -&gt; ApplicationNameError -&gt; ShowS
+$cshowsPrec :: Int -&gt; ApplicationNameError -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- Used for debugging purposes only</span><span>
+</span><span id="line-70"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679578011"><span id="local-6989586621679578013"><span id="local-6989586621679578015"><span id="local-6989586621679578017"><span id="local-6989586621679578019"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-type">ApplicationName</span></a></span></span></span></span></span></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679578003"><span id="local-6989586621679578005"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameError"><span class="hs-identifier hs-type">ApplicationNameError</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621679578001"><span class="annot"><span class="annottext">toCBOR :: ApplicationNameError -&gt; Encoding
+</span><a href="#local-6989586621679578001"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679577996"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameError"><span class="hs-identifier hs-type">ApplicationNameError</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679577994"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s ApplicationNameError
+</span><a href="#local-6989586621679577994"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679577987"><span id="local-6989586621679577989"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameError"><span class="hs-identifier hs-type">ApplicationNameError</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>  </span><span id="local-6989586621679577973"><span class="annot"><span class="annottext">encCBOR :: ApplicationNameError -&gt; Encoding
+</span><a href="#local-6989586621679577973"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span id="local-6989586621679577972"><span class="annot"><span class="annottext">ApplicationNameError
+</span><a href="#local-6989586621679577972"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ApplicationNameError
+</span><a href="#local-6989586621679577972"><span class="hs-identifier hs-var">err</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-80"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameTooLong"><span class="hs-identifier hs-type">ApplicationNameTooLong</span></a></span><span> </span><span id="local-6989586621679577971"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577971"><span class="hs-identifier hs-var">appName</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-81"></span><span>      </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-82"></span><span>        </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>        </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577971"><span class="hs-identifier hs-var">appName</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameNotAscii"><span class="hs-identifier hs-type">ApplicationNameNotAscii</span></a></span><span> </span><span id="local-6989586621679577970"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577970"><span class="hs-identifier hs-var">appName</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-85"></span><span>      </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-86"></span><span>        </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>        </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577970"><span class="hs-identifier hs-var">appName</span></a></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679577963"><span id="local-6989586621679577965"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameError"><span class="hs-identifier hs-type">ApplicationNameError</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679577943"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s ApplicationNameError
+</span><a href="#local-6989586621679577943"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-91"></span><span>    </span><span id="local-6989586621679577942"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679577942"><span class="hs-identifier hs-var">len</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall s. Decoder s Int
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeListLen</span></a></span><span>
+</span><span id="line-92"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679578446"><span class="annot"><a href="#local-6989586621679577941"><span class="hs-identifier hs-type">checkSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679578446"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-93"></span><span>        </span><span id="local-6989586621679577941"><span class="annot"><span class="annottext">checkSize :: forall s. Int -&gt; Decoder s ()
+</span><a href="#local-6989586621679577941"><span class="hs-identifier hs-var hs-var">checkSize</span></a></span></span><span> </span><span id="local-6989586621679577939"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679577939"><span class="hs-identifier hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">matchSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ApplicationNameError&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679577939"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679577942"><span class="hs-identifier hs-var">len</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span id="local-6989586621679577938"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679577938"><span class="hs-identifier hs-var">tag</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall s. Decoder s Word8
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeWord8</span></a></span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679577938"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-96"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall s. Int -&gt; Decoder s ()
+</span><a href="#local-6989586621679577941"><span class="hs-identifier hs-var">checkSize</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ApplicationNameError
+</span><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameTooLong"><span class="hs-identifier hs-var">ApplicationNameTooLong</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-97"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall s. Int -&gt; Decoder s ()
+</span><a href="#local-6989586621679577941"><span class="hs-identifier hs-var">checkSize</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ApplicationNameError
+</span><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameNotAscii"><span class="hs-identifier hs-var">ApplicationNameNotAscii</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) e a. (MonadFail m, Buildable e) =&gt; e -&gt; m a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var">cborError</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Word8 -&gt; DecoderError
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var">DecoderErrorUnknownTag</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;ApplicationNameError&quot;</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679577938"><span class="hs-identifier hs-var">tag</span></a></span><span>
+</span><span id="line-99"></span><span>
+</span><span id="line-100"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-type">B.Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameError"><span class="hs-identifier hs-type">ApplicationNameError</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679577916"><span class="annot"><span class="annottext">build :: ApplicationNameError -&gt; Builder
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-102"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameTooLong"><span class="hs-identifier hs-type">ApplicationNameTooLong</span></a></span><span> </span><span id="local-6989586621679577914"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577914"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-103"></span><span>      </span><span class="annot"><span class="annottext">forall a. Format Builder a -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">bprint</span></a></span><span>
+</span><span id="line-104"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Text -&gt; Int -&gt; Builder) (Text -&gt; Int -&gt; Builder)
+</span><span class="hs-string">&quot;ApplicationName, &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall r. Format r (Text -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">stext</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format (Int -&gt; Builder) (Int -&gt; Builder)
+</span><span class="hs-string">&quot;, exceeds limit of &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a r. Integral a =&gt; Format r (a -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577914"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-106"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall i. Integral i =&gt; i
+</span><a href="Cardano.Chain.Update.ApplicationName.html#applicationNameMaxLength"><span class="hs-identifier hs-var">applicationNameMaxLength</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameNotAscii"><span class="hs-identifier hs-type">ApplicationNameNotAscii</span></a></span><span> </span><span id="local-6989586621679577912"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577912"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><span class="annottext">forall a. Format Builder a -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">bprint</span></a></span><span>
+</span><span id="line-109"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Text -&gt; Builder) (Text -&gt; Builder)
+</span><span class="hs-string">&quot;ApplicationName, &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall r. Format r (Text -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">stext</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format Builder Builder
+</span><span class="hs-string">&quot;, contains non-ascii characters&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577912"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- | Smart constructor of 'ApplicationName'</span><span>
+</span><span id="line-113"></span><span id="local-6989586621679578421"><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#checkApplicationName"><span class="hs-identifier hs-type">checkApplicationName</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/mtl-2.2.2/src"><span class="hs-identifier hs-type">MonadError</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameError"><span class="hs-identifier hs-type">ApplicationNameError</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679578421"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-type">ApplicationName</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679578421"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-115"></span><span id="checkApplicationName"><span class="annot"><span class="annottext">checkApplicationName :: forall (m :: * -&gt; *).
+MonadError ApplicationNameError m =&gt;
+ApplicationName -&gt; m ()
+</span><a href="Cardano.Chain.Update.ApplicationName.html#checkApplicationName"><span class="hs-identifier hs-var hs-var">checkApplicationName</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationName"><span class="hs-identifier hs-type">ApplicationName</span></a></span><span> </span><span id="local-6989586621679577899"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577899"><span class="hs-identifier hs-var">appName</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-var">T.length</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577899"><span class="hs-identifier hs-var">appName</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall i. Integral i =&gt; i
+</span><a href="Cardano.Chain.Update.ApplicationName.html#applicationNameMaxLength"><span class="hs-identifier hs-var">applicationNameMaxLength</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-117"></span><span>      </span><span class="annot"><span class="annottext">forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/mtl-2.2.2/src"><span class="hs-identifier hs-var">throwError</span></a></span><span>
+</span><span id="line-118"></span><span>        </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ApplicationNameError
+</span><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameTooLong"><span class="hs-identifier hs-var">ApplicationNameTooLong</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577899"><span class="hs-identifier hs-var">appName</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-var">T.any</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">isAscii</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577899"><span class="hs-identifier hs-var">appName</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/mtl-2.2.2/src"><span class="hs-identifier hs-var">throwError</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ApplicationNameError
+</span><a href="Cardano.Chain.Update.ApplicationName.html#ApplicationNameNotAscii"><span class="hs-identifier hs-var">ApplicationNameNotAscii</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679577899"><span class="hs-identifier hs-var">appName</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span id="local-6989586621679578497"><span class="annot"><a href="Cardano.Chain.Update.ApplicationName.html#applicationNameMaxLength"><span class="hs-identifier hs-type">applicationNameMaxLength</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679578497"><span class="hs-identifier hs-type">i</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679578497"><span class="hs-identifier hs-type">i</span></a></span></span><span>
+</span><span id="line-123"></span><span id="applicationNameMaxLength"><span class="annot"><span class="annottext">applicationNameMaxLength :: forall i. Integral i =&gt; i
+</span><a href="Cardano.Chain.Update.ApplicationName.html#applicationNameMaxLength"><span class="hs-identifier hs-var hs-var">applicationNameMaxLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">i
+</span><span class="hs-number">12</span></span><span>
+</span><span id="line-124"></span></pre></body></html>
