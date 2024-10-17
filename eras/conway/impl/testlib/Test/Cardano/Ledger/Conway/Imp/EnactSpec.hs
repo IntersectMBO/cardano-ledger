@@ -129,6 +129,7 @@ treasuryWithdrawalsSpec =
       ensTreasury enactState'' `shouldBe` Coin 1
 
     it "Withdrawals exceeding treasury submitted in a single proposal" $ do
+      disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
       initialTreasury <- getTreasury
@@ -150,6 +151,7 @@ treasuryWithdrawalsSpec =
       sumRewardAccounts withdrawals `shouldReturn` sumRequested
 
     it "Withdrawals exceeding maxBound Word64 submitted in a single proposal" $ do
+      disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
       initialTreasury <- getTreasury
@@ -159,6 +161,7 @@ treasuryWithdrawalsSpec =
       checkNoWithdrawal initialTreasury withdrawals
 
     it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $ do
+      disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
       donateToTreasury $ Coin 5_000_000

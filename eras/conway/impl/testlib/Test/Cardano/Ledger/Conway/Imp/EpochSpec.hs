@@ -390,6 +390,7 @@ treasurySpec =
       treasuryWithdrawalExpectation []
 
     it "TreasuryWithdrawalExtra" $ do
+      disableTreasuryExpansion
       rewardAccount <- registerRewardAccount
       rewardAccountOther <- registerRewardAccount
       govPolicy <- getGovPolicy
@@ -408,6 +409,7 @@ treasuryWithdrawalExpectation ::
   [GovAction era] ->
   ImpTestM era ()
 treasuryWithdrawalExpectation extraWithdrawals = do
+  disableTreasuryExpansion
   withdrawalAmount <- uniformRM (Coin 1, Coin 1_000_000_000)
   -- Before making a withdrawal, we need to make sure there is enough money in the treasury:
   donateToTreasury withdrawalAmount
@@ -436,6 +438,7 @@ treasuryWithdrawalExpectation extraWithdrawals = do
 
 depositMovesToTreasuryWhenStakingAddressUnregisters :: ConwayEraImp era => ImpTestM era ()
 depositMovesToTreasuryWhenStakingAddressUnregisters = do
+  disableTreasuryExpansion
   initialTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   modifyPParams $ \pp ->
     pp

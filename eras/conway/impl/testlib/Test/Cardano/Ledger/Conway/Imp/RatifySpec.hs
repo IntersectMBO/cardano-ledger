@@ -462,6 +462,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
           rewardAccount <- registerRewardAccount
           submitTreasuryWithdrawals [(rewardAccount, amount)]
     it "TreasuryWithdrawal fails to ratify due to an increase in CommitteeMinSize" $ do
+      disableTreasuryExpansion
       amount <- uniformRM (Coin 1, Coin 100_000_000)
       -- Ensure sufficient amount in the treasury
       submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ amount)
@@ -488,6 +489,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       currentProposalsShouldContain gaiTW
       getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` treasury
     it "TreasuryWithdrawal ratifies due to a decrease in CommitteeMinSize" $ do
+      disableTreasuryExpansion
       (drepC, hotCommitteeC, _) <- electBasicCommittee
       (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
       amount <- uniformRM (Coin 1, Coin 100_000_000)
@@ -927,6 +929,7 @@ votingSpec =
         it "AlwaysAbstain" $ do
           let getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
 
+          disableTreasuryExpansion
           donateToTreasury $ Coin 5_000_000
 
           (drep1, comMember, _) <- electBasicCommittee

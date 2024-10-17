@@ -1,8 +1,13 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.11.0.1
+## 1.11.1.0
 
 *
+
+### `testlib`
+
+* Add `submitPhase2InvalidTx`
+* Add `expectTxSuccess`, `expectTxPhase2Failure`
 
 ## 1.11.0.0
 
