@@ -17,7 +17,7 @@ import Cardano.Ledger.Binary.FlatTerm (FlatTerm, toFlatTerm)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Text (Text, pack)
 import Data.Typeable
-import Test.Cardano.Ledger.Binary.RoundTrip (Trip (..), cborTrip, mkTrip, roundTripExpectation)
+import Test.Cardano.Ledger.Binary.RoundTrip (Trip, TripOf (..), cborTrip, mkTrip, roundTripExpectation)
 import Test.Hspec
 
 -- ==========================================================================

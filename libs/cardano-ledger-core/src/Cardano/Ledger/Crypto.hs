@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 -- | Package all the crypto constraints into one place.
 module Cardano.Ledger.Crypto where
@@ -17,7 +18,7 @@ class
   ( HashAlgorithm (HASH c)
   , HashAlgorithm (ADDRHASH c)
   , DSIGNAlgorithm (DSIGN c)
-  , KESAlgorithm (KES c)
+  , UnsoundPureKESAlgorithm (KES c)
   , VRFAlgorithm (VRF c)
   , ContextDSIGN (DSIGN c) ~ ()
   , ContextKES (KES c) ~ ()
@@ -43,3 +44,7 @@ instance Crypto StandardCrypto where
   type VRF StandardCrypto = PraosVRF
   type HASH StandardCrypto = Blake2b_256
   type ADDRHASH StandardCrypto = Blake2b_224
+
+-- | Crypto that allows KES keys to be generated in pure code for testing
+-- purposes.
+type PureGenCrypto crypto = (Crypto crypto, UnsoundPureKESAlgorithm (KES crypto))
