@@ -1,0 +1,27 @@
+name: Cardano Ledger Issue
+description: Issue, Feature Enhancement, or Fix for the cardano-ledger repository
+### Description
+A clear and concise description of the problem or feature request. Include relevant context and details.
+
+### Steps to Reproduce (for bugs)
+1. Step 1
+2. Step 2
+3. Step 3
+(Include screenshots if applicable)
+
+### Expected Behavior
+A clear description of what you expected to happen.
+
+### Actual Behavior
+What actually happens when following the steps. Include any error messages or logs.
+
+### Environment (if applicable)
+- Cardano Ledger Version:
+- Operating System:
+- Nix/Cabal Version:
+
+### Additional Context
+Add any other context about the problem or request here. Include possible solutions, discussions, or relevant documentation links.
+
+### Labels
+(For maintainers: add relevant labels such as `bug`, `enhancement`, `technical-debt`, etc.)
