@@ -19,10 +19,10 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Constrained
 import qualified Data.Map as Map
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 
-vStateSpec :: Specification fn (VState (ConwayEra StandardCrypto))
+vStateSpec :: Specification fn (VState era)
 vStateSpec = TrueSpec
 
 {- There are no hard constraints on VState, but sometimes when something fails we want to
@@ -66,7 +66,8 @@ govCertSpec ConwayGovCertEnv {..} certState =
               , assert $ coinreg ==. lit (cgcePParams ^. ppDRepDepositL)
               ]
           )
-          -- ConwayUnRegDRep
+          -- ConwayUnRegDRep -- Commented out on purpose, to make conformance tests pass.
+          -- Should be uncommented when they are fixed to handle un registration
           -- ( branchW 3 $ \ [var|credUnreg|] [var|coinUnreg|] ->
           --     assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))
           -- )

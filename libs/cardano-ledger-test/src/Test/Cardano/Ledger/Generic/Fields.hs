@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -37,6 +38,8 @@ module Test.Cardano.Ledger.Generic.Fields (
   abstractTxOut,
   abstractWitnesses,
   abstractPParams,
+  abstractPParamsUpdate,
+  abstractPPUpdate,
 )
 where
 
@@ -87,7 +90,7 @@ import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word16, Word32)
-import Lens.Micro ((^.))
+import Lens.Micro (Lens', (^.))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
@@ -756,3 +759,161 @@ pattern DHash' x <-
   (dhashview -> Just x)
   where
     DHash' x = DHash (toStrictMaybe x)
+
+-- =======================================================================
+
+push ::
+  (a -> PParamsField era) ->
+  (Lens' (PParamsUpdate era) (StrictMaybe a)) ->
+  PParamsUpdate era ->
+  Maybe (PParamsField era)
+push fieldConstr lens ppu = case ppu ^. lens of
+  SNothing -> Nothing
+  SJust x -> Just (fieldConstr x)
+
+abstractPParamsUpdate :: Proof era -> PParamsUpdate era -> [Maybe (PParamsField era)]
+abstractPParamsUpdate Shelley pp =
+  [ push MinfeeA ppuMinFeeAL pp
+  , push MinfeeB ppuMinFeeBL pp
+  , push MaxBBSize ppuMaxBBSizeL pp
+  , push MaxTxSize ppuMaxTxSizeL pp
+  , push MaxBHSize ppuMaxBHSizeL pp
+  , push KeyDeposit ppuKeyDepositL pp
+  , push PoolDeposit ppuPoolDepositL pp
+  , push EMax ppuEMaxL pp
+  , push NOpt ppuNOptL pp
+  , push A0 ppuA0L pp
+  , push Rho ppuRhoL pp
+  , push Tau ppuTauL pp
+  , push D ppuDL pp
+  , push ExtraEntropy ppuExtraEntropyL pp
+  , push ProtocolVersion ppuProtocolVersionL pp
+  , push MinUTxOValue ppuMinUTxOValueL pp
+  , push MinPoolCost ppuMinPoolCostL pp
+  ]
+abstractPParamsUpdate Allegra pp =
+  [ push MinfeeA ppuMinFeeAL pp
+  , push MinfeeB ppuMinFeeBL pp
+  , push MaxBBSize ppuMaxBBSizeL pp
+  , push MaxTxSize ppuMaxTxSizeL pp
+  , push MaxBHSize ppuMaxBHSizeL pp
+  , push KeyDeposit ppuKeyDepositL pp
+  , push PoolDeposit ppuPoolDepositL pp
+  , push EMax ppuEMaxL pp
+  , push NOpt ppuNOptL pp
+  , push A0 ppuA0L pp
+  , push Rho ppuRhoL pp
+  , push Tau ppuTauL pp
+  , push D ppuDL pp
+  , push ExtraEntropy ppuExtraEntropyL pp
+  , push ProtocolVersion ppuProtocolVersionL pp
+  , push MinUTxOValue ppuMinUTxOValueL pp
+  , push MinPoolCost ppuMinPoolCostL pp
+  ]
+abstractPParamsUpdate Mary pp =
+  [ push MinfeeA ppuMinFeeAL pp
+  , push MinfeeB ppuMinFeeBL pp
+  , push MaxBBSize ppuMaxBBSizeL pp
+  , push MaxTxSize ppuMaxTxSizeL pp
+  , push MaxBHSize ppuMaxBHSizeL pp
+  , push KeyDeposit ppuKeyDepositL pp
+  , push PoolDeposit ppuPoolDepositL pp
+  , push EMax ppuEMaxL pp
+  , push NOpt ppuNOptL pp
+  , push A0 ppuA0L pp
+  , push Rho ppuRhoL pp
+  , push Tau ppuTauL pp
+  , push D ppuDL pp
+  , push ExtraEntropy ppuExtraEntropyL pp
+  , push ProtocolVersion ppuProtocolVersionL pp
+  , push MinUTxOValue ppuMinUTxOValueL pp
+  , push MinPoolCost ppuMinPoolCostL pp
+  ]
+abstractPParamsUpdate Alonzo pp =
+  [ push MinfeeA ppuMinFeeAL pp
+  , push MinfeeB ppuMinFeeBL pp
+  , push MaxBBSize ppuMaxBBSizeL pp
+  , push MaxTxSize ppuMaxTxSizeL pp
+  , push MaxBHSize ppuMaxBHSizeL pp
+  , push KeyDeposit ppuKeyDepositL pp
+  , push PoolDeposit ppuPoolDepositL pp
+  , push EMax ppuEMaxL pp
+  , push NOpt ppuNOptL pp
+  , push A0 ppuA0L pp
+  , push Rho ppuRhoL pp
+  , push Tau ppuTauL pp
+  , push D ppuDL pp
+  , push ExtraEntropy ppuExtraEntropyL pp
+  , push ProtocolVersion ppuProtocolVersionL pp
+  , push MinPoolCost ppuMinPoolCostL pp
+  , push CoinPerUTxOWord ppuCoinsPerUTxOWordL pp
+  , push Costmdls ppuCostModelsL pp
+  , push Prices ppuPricesL pp
+  , push MaxTxExUnits ppuMaxTxExUnitsL pp
+  , push MaxBlockExUnits ppuMaxBlockExUnitsL pp
+  , push MaxValSize ppuMaxValSizeL pp
+  , push CollateralPercentage ppuCollateralPercentageL pp
+  , push MaxCollateralInputs ppuMaxCollateralInputsL pp
+  ]
+abstractPParamsUpdate Babbage pp =
+  [ push MinfeeA ppuMinFeeAL pp
+  , push MinfeeB ppuMinFeeBL pp
+  , push MaxBBSize ppuMaxBBSizeL pp
+  , push MaxTxSize ppuMaxTxSizeL pp
+  , push MaxBHSize ppuMaxBHSizeL pp
+  , push KeyDeposit ppuKeyDepositL pp
+  , push PoolDeposit ppuPoolDepositL pp
+  , push EMax ppuEMaxL pp
+  , push NOpt ppuNOptL pp
+  , push A0 ppuA0L pp
+  , push Rho ppuRhoL pp
+  , push Tau ppuTauL pp
+  , push ProtocolVersion ppuProtocolVersionL pp
+  , push MinPoolCost ppuMinPoolCostL pp
+  , push CoinPerUTxOByte ppuCoinsPerUTxOByteL pp
+  , push Costmdls ppuCostModelsL pp
+  , push Prices ppuPricesL pp
+  , push MaxTxExUnits ppuMaxTxExUnitsL pp
+  , push MaxBlockExUnits ppuMaxBlockExUnitsL pp
+  , push MaxValSize ppuMaxValSizeL pp
+  , push CollateralPercentage ppuCollateralPercentageL pp
+  , push MaxCollateralInputs ppuMaxCollateralInputsL pp
+  ]
+abstractPParamsUpdate Conway pp =
+  [ push MinfeeA ppuMinFeeAL pp
+  , push MinfeeB ppuMinFeeBL pp
+  , push MaxBBSize ppuMaxBBSizeL pp
+  , push MaxTxSize ppuMaxTxSizeL pp
+  , push MaxBHSize ppuMaxBHSizeL pp
+  , push KeyDeposit ppuKeyDepositL pp
+  , push PoolDeposit ppuPoolDepositL pp
+  , push EMax ppuEMaxL pp
+  , push NOpt ppuNOptL pp
+  , push A0 ppuA0L pp
+  , push Rho ppuRhoL pp
+  , push Tau ppuTauL pp
+  , -- , push ProtocolVersion ppuProtocolVersionL pp
+    push MinPoolCost ppuMinPoolCostL pp
+  , push CoinPerUTxOByte ppuCoinsPerUTxOByteL pp
+  , push Costmdls ppuCostModelsL pp
+  , push Prices ppuPricesL pp
+  , push MaxTxExUnits ppuMaxTxExUnitsL pp
+  , push MaxBlockExUnits ppuMaxBlockExUnitsL pp
+  , push MaxValSize ppuMaxValSizeL pp
+  , push CollateralPercentage ppuCollateralPercentageL pp
+  , push MaxCollateralInputs ppuMaxCollateralInputsL pp
+  , push PoolVotingThreshold ppuPoolVotingThresholdsL pp
+  , push DRepVotingThreshold ppuDRepVotingThresholdsL pp
+  , push MinCommitteeSize ppuCommitteeMinSizeL pp
+  , push CommitteeTermLimit ppuCommitteeMaxTermLengthL pp
+  , push GovActionExpiration ppuGovActionLifetimeL pp
+  , push GovActionDeposit ppuGovActionDepositL pp
+  , push DRepDeposit ppuDRepDepositL pp
+  , push DRepActivity ppuDRepActivityL pp
+  ]
+
+abstractPPUpdate :: Proof era -> PParamsUpdate era -> [PParamsField era]
+abstractPPUpdate proof ppu = foldr accum [] (abstractPParamsUpdate proof ppu)
+  where
+    accum (Just x) ans = x : ans
+    accum Nothing ans = ans
