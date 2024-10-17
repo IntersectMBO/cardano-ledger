@@ -261,12 +261,15 @@ validateTotalCollateral pp txBody utxoCollateral =
     bal = collAdaBalance txBody utxoCollateral
     fromAlonzoValidation = first (fmap injectFailure)
 
--- | This validation produces the same failure as in Alonzo, but is slightly
--- different then the corresponding one in Alonzo, since it is possible to add
--- non-ada collateral, but only if the same amount of the same multi-asset is
--- present in the collateral return output.
+-- | This validation produces the same failure as in Alonzo, but is slightly different
+-- then the corresponding one in Alonzo, due to addition of the collateral return output:
 --
--- > isAdaOnly balance
+-- 1. Collateral amount can be specified exactly, thus protecting user against unnecessary
+-- loss.
+--
+-- 2. Collateral inputs can contain multi-assets, as long all of them are returned to the
+-- `collateralReturnTxBodyL`. This design decision was also intentional, in order to
+-- simplify utxo selection for collateral.
 validateCollateralContainsNonADA ::
   forall era.
   BabbageEraTxBody era =>

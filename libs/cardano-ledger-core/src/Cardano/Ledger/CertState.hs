@@ -352,7 +352,8 @@ deriving newtype instance Era era => ToJSON (CommitteeState era)
 instance Era era => ToCBOR (CommitteeState era) where
   toCBOR = toEraCBOR @era
 
--- | The state that tracks the voting entities (DReps and Constitutional Committee members)
+-- | The state that tracks the voting entities (DReps and Constitutional Committee
+-- members). In the formal ledger specification this type is called @GState@
 data VState era = VState
   { vsDReps ::
       !( Map
@@ -360,7 +361,7 @@ data VState era = VState
           (DRepState (EraCrypto era))
        )
   , vsCommitteeState :: !(CommitteeState era)
-  , vsNumDormantEpochs :: EpochNo
+  , vsNumDormantEpochs :: !EpochNo
   -- ^ Number of contiguous epochs in which there are exactly zero
   -- active governance proposals to vote on. It is incremented in every
   -- EPOCH rule if the number of active governance proposals to vote on
