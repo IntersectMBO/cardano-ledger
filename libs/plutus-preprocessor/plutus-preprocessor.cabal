@@ -43,7 +43,7 @@ library
         plutus-ledger-api,
         template-haskell
 
-    if (impl(ghc <9.6) || impl(ghc >=9.7) || os(windows))
+    if ((impl(ghc <9.6) || impl(ghc >=9.7)) || os(windows))
         buildable: False
 
 executable plutus-preprocessor
@@ -60,5 +60,5 @@ executable plutus-preprocessor
         plutus-preprocessor,
         base >=4.14 && <5
 
-    if (impl(ghc <9.6) || impl(ghc >=9.7) || os(windows))
+    if ((impl(ghc <9.6) || impl(ghc >=9.7)) || os(windows))
         buildable: False
