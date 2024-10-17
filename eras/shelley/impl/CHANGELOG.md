@@ -1,8 +1,13 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.14.1.1
+## 1.14.2.0
 
-*
+* Added `EncCBOR` instance for `LedgerEnv`
+
+### `testlib`
+
+* Added `ToExpr` instance for `LedgerEnv`
+* Added `tryRunImpRuleNoAssertions` to `ImpTest`
 
 ## 1.14.1.0
 

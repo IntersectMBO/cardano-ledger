@@ -73,6 +73,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impLogToExpr,
   runImpRule,
   tryRunImpRule,
+  tryRunImpRuleNoAssertions,
   delegateStake,
   registerRewardAccount,
   registerStakeCredential,
@@ -1295,14 +1296,43 @@ tryRunImpRule ::
         (NonEmpty (PredicateFailure (EraRule rule era)))
         (State (EraRule rule era), [Event (EraRule rule era)])
     )
-tryRunImpRule stsEnv stsState stsSignal = do
+tryRunImpRule = tryRunImpRule' @rule AssertionsAll
+
+tryRunImpRuleNoAssertions ::
+  forall rule era.
+  (STS (EraRule rule era), BaseM (EraRule rule era) ~ ShelleyBase) =>
+  Environment (EraRule rule era) ->
+  State (EraRule rule era) ->
+  Signal (EraRule rule era) ->
+  ImpTestM
+    era
+    ( Either
+        (NonEmpty (PredicateFailure (EraRule rule era)))
+        (State (EraRule rule era), [Event (EraRule rule era)])
+    )
+tryRunImpRuleNoAssertions = tryRunImpRule' @rule AssertionsOff
+
+tryRunImpRule' ::
+  forall rule era.
+  (STS (EraRule rule era), BaseM (EraRule rule era) ~ ShelleyBase) =>
+  AssertionPolicy ->
+  Environment (EraRule rule era) ->
+  State (EraRule rule era) ->
+  Signal (EraRule rule era) ->
+  ImpTestM
+    era
+    ( Either
+        (NonEmpty (PredicateFailure (EraRule rule era)))
+        (State (EraRule rule era), [Event (EraRule rule era)])
+    )
+tryRunImpRule' assertionPolicy stsEnv stsState stsSignal = do
   let trc = TRC (stsEnv, stsState, stsSignal)
   let
     stsOpts =
       ApplySTSOpts
         { asoValidation = ValidateAll
         , asoEvents = EPReturn
-        , asoAssertions = AssertionsAll
+        , asoAssertions = assertionPolicy
         }
   runShelleyBase (applySTSOptsEither @(EraRule rule era) stsOpts trc)
 

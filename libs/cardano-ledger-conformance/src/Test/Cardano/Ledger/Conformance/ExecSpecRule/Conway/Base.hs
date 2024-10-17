@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -28,13 +27,13 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   nameGovAction,
   crecTreasuryL,
   crecGovActionMapL,
+  enactStateSpec,
 ) where
 
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
   Inject (..),
-  ProtVer (..),
   StrictMaybe (..),
   addEpochInterval,
   natVersion,
@@ -47,7 +46,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (Conway)
-import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParams, ppMaxTxSizeL, sizeTxF)
+import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParams)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
@@ -78,26 +77,21 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Constrained hiding (inject)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (Foldable (..))
-import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio (denominator, numerator, (%))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (&), (.~), (^.))
+import Lens.Micro (Lens', lens, (^.))
 import qualified Lib as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Binary.TreeDiff (tableDoc)
 import Test.Cardano.Ledger.Common (Arbitrary (..))
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
-  OpaqueErrorString (..),
   SpecTranslate (..),
-  checkConformance,
   computationResultToEither,
-  runConformance,
   runSpecTransM,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (defaultTestConformance)
@@ -107,18 +101,13 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   DepositPurpose,
  )
 import Test.Cardano.Ledger.Constrained.Conway (
-  ConwayFn,
   EpochExecEnv,
   IsConwayUniv,
-  UtxoExecContext (..),
   coerce_,
   epochEnvSpec,
   epochSignalSpec,
   epochStateSpec,
   newEpochStateSpec,
-  utxoEnvSpec,
-  utxoStateSpec,
-  utxoTxSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
   committeeMaxTermLength_,
@@ -127,92 +116,8 @@ import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
  )
 
 import Cardano.Ledger.Address (RewardAccount)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
-import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Conway.ImpTest (logDoc, showConwayTxBalance)
-import Test.Cardano.Ledger.Generic.GenState (
-  GenEnv (..),
-  GenState (..),
-  invalidScriptFreq,
-  runGenRS,
- )
-import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
-import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
-import qualified Test.Cardano.Ledger.Generic.Proof as Proof
-import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
-
-instance
-  forall fn.
-  IsConwayUniv fn =>
-  ExecSpecRule fn "UTXO" Conway
-  where
-  type ExecContext fn "UTXO" Conway = UtxoExecContext Conway
-
-  genExecContext = do
-    let proof = Proof.reify @Conway
-    ueSlot <- arbitrary
-    let
-      genSize =
-        GenSize.small
-          { invalidScriptFreq = 0 -- TODO make the test work with invalid scripts
-          }
-    ((uecUTxO, uecTx), gs) <-
-      runGenRS proof genSize $
-        genAlonzoTx proof ueSlot
-    ueCertState <- arbitrary
-    let txSize = uecTx ^. sizeTxF
-    let
-      uePParams =
-        gePParams (gsGenEnv gs)
-          & ppMaxTxSizeL .~ fromIntegral txSize
-          & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
-      uecUtxoEnv = UtxoEnv {..}
-    pure UtxoExecContext {..}
-
-  environmentSpec = utxoEnvSpec
-
-  stateSpec = utxoStateSpec
-
-  signalSpec ctx _ _ = utxoTxSpec ctx
-
-  runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.utxoStep env st sig
-
-  extraInfo ctx env@UtxoEnv {..} st@UTxOState {..} sig =
-    "Impl:\n"
-      <> PP.ppString (showConwayTxBalance uePParams ueCertState utxosUtxo sig)
-      <> "\n\nSpec:\n"
-      <> PP.ppString
-        ( either show T.unpack . runSpecTransM ctx $
-            Agda.utxoDebug
-              <$> toSpecRep env
-              <*> toSpecRep st
-              <*> toSpecRep sig
-        )
-
-  testConformance ctx env st sig = property $ do
-    (implResTest, agdaResTest) <- runConformance @"UTXO" @ConwayFn @Conway ctx env st sig
-    let extra = extraInfo @ConwayFn @"UTXO" @Conway ctx (inject env) (inject st) (inject sig)
-    logDoc extra
-    let
-      -- TODO make the deposit map updates match up exactly between the spec and
-      -- the implmentation
-      eraseDeposits Agda.MkUTxOState {..} =
-        Agda.MkUTxOState {deposits = Agda.MkHSMap mempty, ..}
-    checkConformance
-      @"UTXO"
-      @Conway
-      @ConwayFn
-      ctx
-      (inject env)
-      (inject st)
-      (inject sig)
-      (second eraseDeposits implResTest)
-      (second eraseDeposits agdaResTest)
 
 data ConwayCertExecContext era = ConwayCertExecContext
   { ccecWithdrawals :: !(Map (RewardAccount (EraCrypto era)) Coin)
@@ -663,10 +568,7 @@ nameGovAction UpdateCommittee {} = "UpdateCommittee"
 nameGovAction NewConstitution {} = "NewConstitution"
 nameGovAction InfoAction {} = "InfoAction"
 
-instance
-  IsConwayUniv fn =>
-  ExecSpecRule fn "EPOCH" Conway
-  where
+instance IsConwayUniv fn => ExecSpecRule fn "EPOCH" Conway where
   type ExecContext fn "EPOCH" Conway = [GovActionState Conway]
   type ExecEnvironment fn "EPOCH" Conway = EpochExecEnv Conway
 
@@ -686,10 +588,7 @@ instance
 nameEpoch :: EpochNo -> String
 nameEpoch x = show x
 
-instance
-  IsConwayUniv fn =>
-  ExecSpecRule fn "NEWEPOCH" Conway
-  where
+instance IsConwayUniv fn => ExecSpecRule fn "NEWEPOCH" Conway where
   type ExecContext fn "NEWEPOCH" Conway = [GovActionState Conway]
   type ExecEnvironment fn "NEWEPOCH" Conway = EpochExecEnv Conway
 

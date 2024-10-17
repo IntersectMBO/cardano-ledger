@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -35,6 +36,7 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
@@ -97,6 +99,17 @@ deriving instance Eq (PParams era) => Eq (LedgerEnv era)
 
 instance NFData (PParams era) => NFData (LedgerEnv era) where
   rnf (LedgerEnv _slotNo _ix pp _account _mempool) = rnf pp
+
+instance EraPParams era => EncCBOR (LedgerEnv era) where
+  encCBOR env@(LedgerEnv _ _ _ _ _) =
+    let LedgerEnv {..} = env
+     in encode $
+          Rec LedgerEnv
+            !> To ledgerSlotNo
+            !> To ledgerIx
+            !> To ledgerPp
+            !> To ledgerAccount
+            !> To ledgerMempool
 
 data ShelleyLedgerPredFailure era
   = UtxowFailure (PredicateFailure (EraRule "UTXOW" era)) -- Subtransition Failures

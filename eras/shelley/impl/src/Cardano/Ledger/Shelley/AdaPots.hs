@@ -153,7 +153,8 @@ consumedTxBody ::
   Consumed
 consumedTxBody txBody pp dpstate utxo =
   Consumed
-    { conInputs = coinBalance (txInsFilter utxo (txBody ^. inputsTxBodyL))
+    { conInputs =
+        coinBalance (txInsFilter utxo (txBody ^. inputsTxBodyL))
     , conRefunds = certsTotalRefundsTxBody pp dpstate txBody
     , conWithdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
     }
