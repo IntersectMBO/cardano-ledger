@@ -166,6 +166,8 @@ import Test.Cardano.Ledger.Shelley.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.QuickCheck hiding (Args, Fun, forAll)
 
+import Test.Cardano.Ledger.Constrained.Conway.SimplePParams
+
 type ConwayUnivFns = CoinFn : CoerceFn : StringFn : MapFn : FunFn : TreeFn : BaseFns
 type ConwayFn = Fix (OneofL ConwayUnivFns)
 

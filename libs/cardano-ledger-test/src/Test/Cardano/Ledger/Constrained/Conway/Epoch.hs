@@ -29,11 +29,12 @@ epochEnvSpec = TrueSpec
 
 epochStateSpec :: Specification ConwayFn (EpochState (ConwayEra StandardCrypto))
 epochStateSpec = constrained $ \ es ->
-  let accountState = sel @0 es
-      ledgerSTate  = sel @1 es
-      snapShots    = sel @2 es
-      nonMyopic    = sel @3 es
-  in True
+  match es $ \ a l s m -> True
+  -- let accountState = sel @0 es
+  --     ledgerSTate  = sel @1 es
+  --     snapShots    = sel @2 es
+  --     nonMyopic    = sel @3 es
+  -- in True
 
 epochSignalSpec :: Specification fn EpochNo
 epochSignalSpec = TrueSpec
