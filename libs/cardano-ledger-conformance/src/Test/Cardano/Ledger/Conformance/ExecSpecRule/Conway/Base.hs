@@ -55,7 +55,6 @@ import Cardano.Ledger.Conway.Governance (
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
-  Vote (Abstain),
   VotingProcedures,
   ensProtVerL,
   gasAction,
@@ -300,9 +299,7 @@ ratifyEnvSpec ConwayRatifyExecContext {crecGovActionMap} =
     spoVotes =
       foldr'
         ( \GovActionState {gasStakePoolVotes} s ->
-            -- TODO: Remove the filter when
-            -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/578 is resolved
-            Map.keysSet (Map.filter (== Abstain) gasStakePoolVotes) <> s
+            Map.keysSet gasStakePoolVotes <> s
         )
         mempty
         crecGovActionMap
