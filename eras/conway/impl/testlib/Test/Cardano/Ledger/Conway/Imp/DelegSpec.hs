@@ -5,7 +5,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
@@ -13,9 +12,10 @@ module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
@@ -347,6 +347,16 @@ spec = do
           inBootstrap = do
             submitTx_ tx
             expectDelegatedVote cred (DRepCredential drepCred)
+            impAnn "Ensure delegation is cleaned up on the transition out of bootstrap" $ do
+              hotCreds <- registerInitialCommittee
+              (spo, _, _) <- setupPoolWithStake $ Coin 3_000_000_000
+              protVer <- getProtVer
+              gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+              submitYesVoteCCs_ hotCreds gai
+              submitYesVote_ (StakePoolVoter spo) gai
+              passNEpochs 2
+              getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
+              expectNotDelegatedVote cred
 
           outOfBootstrap = do
             submitFailingTx tx [injectFailure $ DelegateeDRepNotRegisteredDELEG drepCred]
