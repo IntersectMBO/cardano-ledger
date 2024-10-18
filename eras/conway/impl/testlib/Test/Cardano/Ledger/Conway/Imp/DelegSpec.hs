@@ -30,7 +30,7 @@ import Cardano.Ledger.Val (Val (..))
 import Data.Functor ((<&>))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((%~), (&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -337,6 +337,22 @@ spec = do
 
       expectDelegatedVote cred (DRepCredential drepCred)
       expectNotDelegatedToPool cred
+      whenBootstrap $ do
+        impAnn "Ensure DRep delegation is populated after bootstrap" $ do
+          -- Clear out delegation, in order to check its repopulation from UMap.
+          let deleteDelegation =
+                Map.adjust (drepDelegsL %~ Set.delete cred) drepCred
+          modifyNES $ \nes ->
+            nes & nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL %~ deleteDelegation
+          hotCreds <- registerInitialCommittee
+          (spo, _, _) <- setupPoolWithStake $ Coin 3_000_000_000
+          protVer <- getProtVer
+          gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+          submitYesVoteCCs_ hotCreds gai
+          submitYesVote_ (StakePoolVoter spo) gai
+          passNEpochs 2
+          getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
+          expectDelegatedVote cred (DRepCredential drepCred)
 
     it "Delegate vote of registered stake credentials to unregistered drep" $ do
       RewardAccount _ cred <- registerRewardAccount

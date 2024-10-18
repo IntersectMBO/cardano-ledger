@@ -113,6 +113,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   currentProposalsShouldContain,
   withImpStateWithProtVer,
   ifBootstrap,
+  whenBootstrap,
   whenPostBootstrap,
   submitYesVoteCCs_,
   donateToTreasury,
@@ -1644,6 +1645,11 @@ majorFollow pv@(ProtVer x _) = case succVersion x of
 -- | An illegal ProtVer that skips 3 minor versions
 cantFollow :: ProtVer -> ProtVer
 cantFollow (ProtVer x y) = ProtVer x (y + 3)
+
+whenBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
+whenBootstrap a = do
+  pv <- getProtVer
+  when (HardForks.bootstrapPhase pv) a
 
 whenPostBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
 whenPostBootstrap a = do
