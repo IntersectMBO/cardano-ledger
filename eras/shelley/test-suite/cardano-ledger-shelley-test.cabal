@@ -76,7 +76,7 @@ library
         cardano-crypto-class,
         cardano-crypto-wrapper,
         cardano-data >=1.2,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib} ^>=1.4,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib} ^>=1.5,
         cardano-ledger-byron,
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.15,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.14,

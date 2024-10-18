@@ -2,6 +2,8 @@
 
 ## 1.15.1.0
 
+* Add `{Enc|Dec}CBORGroup` instances for `Mismatch`. #4666
+  * Add `(un)swapMismatch` to swap `Mismatch` values to preserve serialisation when necessary.
 * Add `drepDelegsL`
 
 ### `testlib`

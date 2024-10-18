@@ -88,7 +88,7 @@ library
         data-default-class,
         cardano-crypto-class,
         cardano-data >=1.2.3,
-        cardano-ledger-binary ^>=1.4,
+        cardano-ledger-binary ^>=1.5,
         cardano-ledger-allegra ^>=1.6,
         cardano-ledger-alonzo ^>=1.12,
         cardano-ledger-babbage ^>=1.10,
@@ -187,7 +187,7 @@ executable huddle-cddl
     build-depends:
         base,
         testlib,
-        cardano-ledger-binary:testlib >=1.4
+        cardano-ledger-binary:testlib >=1.5
 
 executable gen-golden
     main-is:          GenerateGoldenFileMain.hs
