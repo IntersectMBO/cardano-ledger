@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.15.0.1
+## 1.15.1.0
 
-*
+* Add `drepDelegsL`
 
 ## 1.15.0.0
 
