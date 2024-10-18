@@ -139,7 +139,13 @@ predicateFailuresSpec =
             , pProcAnchor = anchor
             }
         )
-        [injectFailure $ ProposalDepositIncorrect (actionDeposit <-> Coin 1) actionDeposit]
+        [ injectFailure $
+            ProposalDepositIncorrect $
+              Mismatch
+                { mismatchSupplied = actionDeposit <-> Coin 1
+                , mismatchExpected = actionDeposit
+                }
+        ]
     it "ConflictingCommitteeUpdate" $ do
       committeeC <- KeyHashObj <$> freshKeyHash
       curEpochNo <- getsNES nesELL
@@ -1296,7 +1302,13 @@ firstHardForkCantFollow = do
         , pProcAnchor = def
         }
     )
-    [injectFailure $ ProposalCantFollow SNothing protver2 protver0]
+    [ injectFailure $
+        ProposalCantFollow SNothing $
+          Mismatch
+            { mismatchSupplied = protver2
+            , mismatchExpected = protver0
+            }
+    ]
 
 -- | Tests a second hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkFollows ::
@@ -1341,7 +1353,13 @@ secondHardForkCantFollow = do
         , pProcAnchor = def
         }
     )
-    [injectFailure $ ProposalCantFollow (SJust (GovPurposeId gaid1)) protver2 protver1]
+    [ injectFailure $
+        ProposalCantFollow (SJust (GovPurposeId gaid1)) $
+          Mismatch
+            { mismatchSupplied = protver2
+            , mismatchExpected = protver1
+            }
+    ]
 
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.

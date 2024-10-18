@@ -67,7 +67,12 @@ spec = do
         tx = mkBasicTx (mkBasicTxBody & referenceInputsTxBodyL .~ Set.fromList txIns)
     submitFailingTx
       tx
-      [ injectFailure $ ConwayTxRefScriptsSizeTooBig (size * n) maxRefScriptSizePerTx
+      [ injectFailure $
+          ConwayTxRefScriptsSizeTooBig $
+            Mismatch
+              { mismatchSupplied = size * n
+              , mismatchExpected = maxRefScriptSizePerTx
+              }
       ]
 
   it "Withdraw from delegated and non-delegated staking key" $ do

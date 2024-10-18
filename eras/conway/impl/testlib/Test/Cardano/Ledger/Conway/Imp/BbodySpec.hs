@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Conway.Imp.BbodySpec (
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.BaseTypes (BlocksMade (..), ProtVer (..))
+import Cardano.Ledger.BaseTypes (BlocksMade (..), Mismatch (..), ProtVer (..))
 import Cardano.Ledger.Block
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules (
@@ -97,9 +97,11 @@ spec = describe "BBODY" $ do
     predFailures
       `shouldBe` NE.fromList
         [ injectFailure
-            ( BodyRefScriptsSizeTooBig
-                expectedTotalRefScriptSize
-                maxRefScriptSizePerBlock
+            ( BodyRefScriptsSizeTooBig $
+                Mismatch
+                  { mismatchSupplied = expectedTotalRefScriptSize
+                  , mismatchExpected = maxRefScriptSizePerBlock
+                  }
             )
         ]
   where
