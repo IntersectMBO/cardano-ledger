@@ -39,16 +39,9 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import Cardano.Ledger.BaseTypes (Mismatch (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
- )
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Era (ConwayBBODY, ConwayEra)
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
@@ -100,28 +93,12 @@ maxRefScriptSizePerBlock :: Int
 maxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
 
 data ConwayBbodyPredFailure era
-  = WrongBlockBodySizeBBODY
-      -- | Actual Body Size
-      !Int
-      -- | Claimed Body Size in Header
-      !Int
-  | InvalidBodyHashBBODY
-      -- | Actual Hash
-      !(Hash (EraCrypto era) EraIndependentBlockBody)
-      -- | Claimed Hash
-      !(Hash (EraCrypto era) EraIndependentBlockBody)
+  = WrongBlockBodySizeBBODY !(Mismatch 'RelEQ Int)
+  | InvalidBodyHashBBODY !(Mismatch 'RelEQ (Hash (EraCrypto era) EraIndependentBlockBody))
   | -- | LEDGERS rule subtransition Failures
     LedgersFailure !(PredicateFailure (EraRule "LEDGERS" era))
-  | TooManyExUnits
-      -- | Computed Sum of ExUnits for all plutus scripts
-      !ExUnits
-      -- | Maximum allowed by protocal parameters
-      !ExUnits
-  | BodyRefScriptsSizeTooBig
-      -- | Computed sum of reference script size
-      Int
-      -- | Maximum allowed total reference script size
-      Int
+  | TooManyExUnits !(Mismatch 'RelLTEQ ExUnits)
+  | BodyRefScriptsSizeTooBig !(Mismatch 'RelLTEQ Int)
   deriving (Generic)
 
 deriving instance
@@ -144,11 +121,11 @@ instance
   where
   encCBOR =
     encode . \case
-      WrongBlockBodySizeBBODY x y -> Sum WrongBlockBodySizeBBODY 0 !> To x !> To y
-      InvalidBodyHashBBODY x y -> Sum (InvalidBodyHashBBODY @era) 1 !> To x !> To y
+      WrongBlockBodySizeBBODY mm -> Sum WrongBlockBodySizeBBODY 0 !> ToGroup mm
+      InvalidBodyHashBBODY mm -> Sum (InvalidBodyHashBBODY @era) 1 !> ToGroup mm
       LedgersFailure x -> Sum (LedgersFailure @era) 2 !> To x
-      TooManyExUnits x y -> Sum TooManyExUnits 3 !> To x !> To y
-      BodyRefScriptsSizeTooBig x y -> Sum BodyRefScriptsSizeTooBig 4 !> To x !> To y
+      TooManyExUnits mm -> Sum TooManyExUnits 3 !> ToGroup mm
+      BodyRefScriptsSizeTooBig mm -> Sum BodyRefScriptsSizeTooBig 4 !> ToGroup mm
 
 instance
   ( Era era
@@ -157,11 +134,11 @@ instance
   DecCBOR (ConwayBbodyPredFailure era)
   where
   decCBOR = decode . Summands "ConwayBbodyPred" $ \case
-    0 -> SumD WrongBlockBodySizeBBODY <! From <! From
-    1 -> SumD InvalidBodyHashBBODY <! From <! From
+    0 -> SumD WrongBlockBodySizeBBODY <! FromGroup
+    1 -> SumD InvalidBodyHashBBODY <! FromGroup
     2 -> SumD LedgersFailure <! From
-    3 -> SumD TooManyExUnits <! From <! From
-    4 -> SumD BodyRefScriptsSizeTooBig <! From <! From
+    3 -> SumD TooManyExUnits <! FromGroup
+    4 -> SumD BodyRefScriptsSizeTooBig <! FromGroup
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" (ConwayEra c) = ConwayBbodyPredFailure (ConwayEra c)
@@ -238,11 +215,11 @@ shelleyToConwayBbodyPredFailure ::
   ShelleyBbodyPredFailure era ->
   ConwayBbodyPredFailure era
 shelleyToConwayBbodyPredFailure
-  (Shelley.WrongBlockBodySizeBBODY (Mismatch supplied expected)) =
-    WrongBlockBodySizeBBODY supplied expected
+  (Shelley.WrongBlockBodySizeBBODY m) =
+    WrongBlockBodySizeBBODY m
 shelleyToConwayBbodyPredFailure
-  (Shelley.InvalidBodyHashBBODY (Mismatch supplied expected)) =
-    InvalidBodyHashBBODY supplied expected
+  (Shelley.InvalidBodyHashBBODY m) =
+    InvalidBodyHashBBODY m
 shelleyToConwayBbodyPredFailure (Shelley.LedgersFailure x) = LedgersFailure x
 
 alonzoToConwayBbodyPredFailure ::
@@ -250,7 +227,12 @@ alonzoToConwayBbodyPredFailure ::
   AlonzoBbodyPredFailure era ->
   ConwayBbodyPredFailure era
 alonzoToConwayBbodyPredFailure (ShelleyInAlonzoBbodyPredFailure x) = shelleyToConwayBbodyPredFailure x
-alonzoToConwayBbodyPredFailure (Alonzo.TooManyExUnits x y) = TooManyExUnits x y
+alonzoToConwayBbodyPredFailure (Alonzo.TooManyExUnits x y) =
+  TooManyExUnits $
+    Mismatch
+      { mismatchSupplied = x
+      , mismatchExpected = y
+      }
 
 instance
   ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
@@ -318,7 +300,12 @@ conwayBbodyTransition = do
         totalRefScriptSize
           <= maxRefScriptSizePerBlock
             ?! injectFailure
-              (BodyRefScriptsSizeTooBig totalRefScriptSize maxRefScriptSizePerBlock)
+              ( BodyRefScriptsSizeTooBig $
+                  Mismatch
+                    { mismatchSupplied = totalRefScriptSize
+                    , mismatchExpected = maxRefScriptSizePerBlock
+                    }
+              )
         pure state
 
 instance

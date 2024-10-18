@@ -44,16 +44,9 @@ import Cardano.Ledger.Babbage.Rules (
   babbageUtxowTransition,
  )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
-import Cardano.Ledger.BaseTypes (Mismatch (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (
-  Decode (..),
-  Encode (..),
-  decode,
-  encode,
-  (!>),
-  (<!),
- )
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXO, ConwayUTXOW)
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
@@ -112,10 +105,7 @@ data ConwayUtxowPredFailure era
     MissingTxMetadata
       !(AuxiliaryDataHash (EraCrypto era))
   | ConflictingMetadataHash
-      -- | hash of the metadata included in the transaction body
-      !(AuxiliaryDataHash (EraCrypto era))
-      -- | expected hash of the full metadata
-      !(AuxiliaryDataHash (EraCrypto era))
+      !(Mismatch 'RelEQ (AuxiliaryDataHash (EraCrypto era)))
   | -- | Contains out of range values (string`s too long)
     InvalidMetadata
   | -- | extraneous scripts
@@ -124,22 +114,24 @@ data ConwayUtxowPredFailure era
   | MissingRedeemers
       ![(PlutusPurpose AsItem era, ScriptHash (EraCrypto era))]
   | MissingRequiredDatums
+      -- TODO: Make this NonEmpty #4066
+
       -- | Set of missing data hashes
       !(Set (DataHash (EraCrypto era)))
       -- | Set of received data hashes
       !(Set (DataHash (EraCrypto era)))
   | NotAllowedSupplementalDatums
-      -- | Set of unallowed data hashes
+      -- TODO: Make this NonEmpty #4066
+
+      -- | Set of unallowed data hashes.
       !(Set (DataHash (EraCrypto era)))
       -- | Set of acceptable supplemental data hashes
       !(Set (DataHash (EraCrypto era)))
   | PPViewHashesDontMatch
-      -- | The PPHash in the TxBody
-      !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
-      -- | Computed from the current Protocol Parameters
-      !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+      !(Mismatch 'RelEQ (StrictMaybe (ScriptIntegrityHash (EraCrypto era))))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
+      -- TODO: Make this NonEmpty #4066
       (Set (TxIn (EraCrypto era)))
   | -- | List of redeemers not needed
     ExtraRedeemers ![PlutusPurpose AsIx era]
@@ -279,13 +271,13 @@ instance
       ScriptWitnessNotValidatingUTXOW xs -> Sum ScriptWitnessNotValidatingUTXOW 4 !> To xs
       MissingTxBodyMetadataHash xs -> Sum MissingTxBodyMetadataHash 5 !> To xs
       MissingTxMetadata xs -> Sum MissingTxMetadata 6 !> To xs
-      ConflictingMetadataHash a b -> Sum ConflictingMetadataHash 7 !> To a !> To b
+      ConflictingMetadataHash mm -> Sum ConflictingMetadataHash 7 !> ToGroup mm
       InvalidMetadata -> Sum InvalidMetadata 8
       ExtraneousScriptWitnessesUTXOW xs -> Sum ExtraneousScriptWitnessesUTXOW 9 !> To xs
       MissingRedeemers x -> Sum MissingRedeemers 10 !> To x
       MissingRequiredDatums x y -> Sum MissingRequiredDatums 11 !> To x !> To y
       NotAllowedSupplementalDatums x y -> Sum NotAllowedSupplementalDatums 12 !> To x !> To y
-      PPViewHashesDontMatch x y -> Sum PPViewHashesDontMatch 13 !> To x !> To y
+      PPViewHashesDontMatch mm -> Sum PPViewHashesDontMatch 13 !> ToGroup mm
       UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 14 !> To x
       ExtraRedeemers x -> Sum ExtraRedeemers 15 !> To x
       MalformedScriptWitnesses x -> Sum MalformedScriptWitnesses 16 !> To x
@@ -305,13 +297,13 @@ instance
     4 -> SumD ScriptWitnessNotValidatingUTXOW <! From
     5 -> SumD MissingTxBodyMetadataHash <! From
     6 -> SumD MissingTxMetadata <! From
-    7 -> SumD ConflictingMetadataHash <! From <! From
+    7 -> SumD ConflictingMetadataHash <! FromGroup
     8 -> SumD InvalidMetadata
     9 -> SumD ExtraneousScriptWitnessesUTXOW <! From
     10 -> SumD MissingRedeemers <! From
     11 -> SumD MissingRequiredDatums <! From <! From
     12 -> SumD NotAllowedSupplementalDatums <! From <! From
-    13 -> SumD PPViewHashesDontMatch <! From <! From
+    13 -> SumD PPViewHashesDontMatch <! FromGroup
     14 -> SumD UnspendableUTxONoDatumHash <! From
     15 -> SumD ExtraRedeemers <! From
     16 -> SumD MalformedScriptWitnesses <! From
@@ -340,7 +332,12 @@ alonzoToConwayUtxowPredFailure = \case
   Alonzo.MissingRedeemers rs -> MissingRedeemers rs
   Alonzo.MissingRequiredDatums mds rds -> MissingRequiredDatums mds rds
   Alonzo.NotAllowedSupplementalDatums uds ads -> NotAllowedSupplementalDatums uds ads
-  Alonzo.PPViewHashesDontMatch a b -> PPViewHashesDontMatch a b
+  Alonzo.PPViewHashesDontMatch a b ->
+    PPViewHashesDontMatch
+      Mismatch
+        { mismatchSupplied = a
+        , mismatchExpected = b
+        }
   Alonzo.MissingRequiredSigners _xs ->
     error "Impossible case. It will be removed once we are in Conway. See #3972"
   Alonzo.UnspendableUTxONoDatumHash ins -> UnspendableUTxONoDatumHash ins
@@ -357,7 +354,6 @@ shelleyToConwayUtxowPredFailure = \case
     error "Impossible: MIR has been removed in Conway"
   Shelley.MissingTxBodyMetadataHash x -> MissingTxBodyMetadataHash x
   Shelley.MissingTxMetadata x -> MissingTxMetadata x
-  Shelley.ConflictingMetadataHash (Mismatch supplied expected) ->
-    ConflictingMetadataHash supplied expected
+  Shelley.ConflictingMetadataHash mm -> ConflictingMetadataHash mm
   Shelley.InvalidMetadata -> InvalidMetadata
   Shelley.ExtraneousScriptWitnessesUTXOW xs -> ExtraneousScriptWitnessesUTXOW xs
