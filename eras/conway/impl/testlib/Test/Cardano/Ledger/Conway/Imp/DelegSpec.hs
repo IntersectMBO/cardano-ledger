@@ -342,8 +342,10 @@ spec = do
           -- Clear out delegation, in order to check its repopulation from UMap.
           let deleteDelegation =
                 Map.adjust (drepDelegsL %~ Set.delete cred) drepCred
-          modifyNES $ \nes ->
-            nes & nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL %~ deleteDelegation
+          --  Drep delegation for both version 9 and 10 are populating both umap and
+          --  `drepDelegs`, so manually modifying the umap in the state is the only way to
+          --  test the correct repopulation of `drepDelegs`
+          modifyNES $ nesEsL . epochStateRegDrepL %~ deleteDelegation
           hotCreds <- registerInitialCommittee
           (spo, _, _) <- setupPoolWithStake $ Coin 3_000_000_000
           protVer <- getProtVer
@@ -549,7 +551,7 @@ spec = do
 
     expectDelegatedVote cred drep = do
       umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
-      dreps <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+      dreps <- getsNES $ nesEsL . epochStateRegDrepL
       impAnn (show cred <> " expected to have their vote delegated to " <> show drep) $ do
         Map.lookup cred (dRepMap umap) `shouldBe` Just drep
         case drep of
@@ -559,7 +561,7 @@ spec = do
                 whenPostBootstrap $ assertFailure "Expected DRep to be registered"
               Just drepState ->
                 assertBool
-                  "Expected DRep delegations to contain the stake crednetial"
+                  "Expected DRep delegations to contain the stake credential"
                   (cred `Set.member` drepDelegs drepState)
           _ -> pure ()
 
