@@ -42,7 +42,8 @@ library
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -Wincomplete-uni-patterns -Wredundant-constraints
+    -- -Wunused-packages
 
     build-depends:
         base >=4.14 && <5,
@@ -61,6 +62,7 @@ library
         deepseq,
         FailT,
         formatting,
+        io-classes,
         iproute,
         microlens,
         mtl,
@@ -96,7 +98,8 @@ library testlib
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -Wincomplete-uni-patterns -Wredundant-constraints
+    -- -Wunused-packages
 
     build-depends:
         base,
@@ -119,6 +122,7 @@ library testlib
         hedgehog,
         hspec,
         hspec-core,
+        mtl,
         pretty-show,
         prettyprinter,
         prettyprinter-ansi-terminal,
@@ -152,7 +156,8 @@ test-suite tests
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -Wincomplete-uni-patterns -Wredundant-constraints
+    -- -Wunused-packages
         -threaded -rtsopts -with-rtsopts=-N
 
     build-depends:
@@ -186,7 +191,8 @@ benchmark bench
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -Wincomplete-uni-patterns -Wredundant-constraints
+    -- -Wunused-packages
         -threaded -rtsopts -O2
 
     build-depends:
