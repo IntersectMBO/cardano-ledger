@@ -28,7 +28,8 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (Val (..))
 import Data.Functor ((<&>))
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -532,8 +533,19 @@ spec = do
 
     expectDelegatedVote cred drep = do
       umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
-      impAnn (show cred <> " expected to have their vote delegated to " <> show drep) $
+      dreps <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+      impAnn (show cred <> " expected to have their vote delegated to " <> show drep) $ do
         Map.lookup cred (dRepMap umap) `shouldBe` Just drep
+        case drep of
+          DRepCredential drepCred ->
+            case Map.lookup drepCred dreps of
+              Nothing ->
+                whenPostBootstrap $ assertFailure "Expected DRep to be registered"
+              Just drepState ->
+                assertBool
+                  "Expected DRep delegations to contain the stake crednetial"
+                  (cred `Set.member` drepDelegs drepState)
+          _ -> pure ()
 
     expectNotDelegatedVote cred = do
       umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
