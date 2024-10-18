@@ -5,7 +5,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
@@ -13,9 +12,10 @@ module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
@@ -28,8 +28,9 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (Val (..))
 import Data.Functor ((<&>))
-import qualified Data.Map as Map
-import Lens.Micro ((&), (.~))
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import Lens.Micro ((%~), (&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -336,6 +337,24 @@ spec = do
 
       expectDelegatedVote cred (DRepCredential drepCred)
       expectNotDelegatedToPool cred
+      whenBootstrap $ do
+        impAnn "Ensure DRep delegation is populated after bootstrap" $ do
+          -- Clear out delegation, in order to check its repopulation from UMap.
+          let deleteDelegation =
+                Map.adjust (drepDelegsL %~ Set.delete cred) drepCred
+          --  Drep delegation for both version 9 and 10 are populating both umap and
+          --  `drepDelegs`, so manually modifying the umap in the state is the only way to
+          --  test the correct repopulation of `drepDelegs`
+          modifyNES $ nesEsL . epochStateRegDrepL %~ deleteDelegation
+          hotCreds <- registerInitialCommittee
+          (spo, _, _) <- setupPoolWithStake $ Coin 3_000_000_000
+          protVer <- getProtVer
+          gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+          submitYesVoteCCs_ hotCreds gai
+          submitYesVote_ (StakePoolVoter spo) gai
+          passNEpochs 2
+          getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
+          expectDelegatedVote cred (DRepCredential drepCred)
 
     it "Delegate vote of registered stake credentials to unregistered drep" $ do
       RewardAccount _ cred <- registerRewardAccount
@@ -347,6 +366,16 @@ spec = do
           inBootstrap = do
             submitTx_ tx
             expectDelegatedVote cred (DRepCredential drepCred)
+            impAnn "Ensure delegation is cleaned up on the transition out of bootstrap" $ do
+              hotCreds <- registerInitialCommittee
+              (spo, _, _) <- setupPoolWithStake $ Coin 3_000_000_000
+              protVer <- getProtVer
+              gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+              submitYesVoteCCs_ hotCreds gai
+              submitYesVote_ (StakePoolVoter spo) gai
+              passNEpochs 2
+              getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
+              expectNotDelegatedVote cred
 
           outOfBootstrap = do
             submitFailingTx tx [injectFailure $ DelegateeDRepNotRegisteredDELEG drepCred]
@@ -522,8 +551,19 @@ spec = do
 
     expectDelegatedVote cred drep = do
       umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
-      impAnn (show cred <> " expected to have their vote delegated to " <> show drep) $
+      dreps <- getsNES $ nesEsL . epochStateRegDrepL
+      impAnn (show cred <> " expected to have their vote delegated to " <> show drep) $ do
         Map.lookup cred (dRepMap umap) `shouldBe` Just drep
+        case drep of
+          DRepCredential drepCred ->
+            case Map.lookup drepCred dreps of
+              Nothing ->
+                whenPostBootstrap $ assertFailure "Expected DRep to be registered"
+              Just drepState ->
+                assertBool
+                  "Expected DRep delegations to contain the stake credential"
+                  (cred `Set.member` drepDelegs drepState)
+          _ -> pure ()
 
     expectNotDelegatedVote cred = do
       umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
