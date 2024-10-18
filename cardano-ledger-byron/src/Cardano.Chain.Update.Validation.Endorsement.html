@@ -1,0 +1,610 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Update.Validation.Endorsement</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Environment"><span class="hs-identifier">Environment</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#State"><span class="hs-identifier">State</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier">Endorsement</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier">CandidateProtocolUpdate</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#register"><span class="hs-identifier">register</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Error"><span class="hs-identifier">Error</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier">BlockCount</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.KeyHash.html#KeyHash"><span class="hs-identifier">KeyHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Chain.Delegation.html"><span class="hs-identifier">Cardano.Chain.Delegation</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Delegation</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.ProtocolConstants.html"><span class="hs-identifier">Cardano.Chain.ProtocolConstants</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.ProtocolConstants.html#kSlotSecurityParam"><span class="hs-identifier">kSlotSecurityParam</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.html"><span class="hs-identifier">Cardano.Chain.Slotting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier">SlotNumber</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.SlotNumber.html#addSlotCount"><span class="hs-identifier">addSlotCount</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Proposal.html"><span class="hs-identifier">Cardano.Chain.Update.Proposal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Update.Proposal.html#UpId"><span class="hs-identifier">UpId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html"><span class="hs-identifier">Cardano.Chain.Update.ProtocolParameters</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier">ProtocolParameters</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolVersion.html"><span class="hs-identifier">Cardano.Chain.Update.ProtocolVersion</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Update.ProtocolVersion.html#ProtocolVersion"><span class="hs-identifier">ProtocolVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Registration.html"><span class="hs-identifier">Cardano.Chain.Update.Validation.Registration</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Registration</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">DecoderError</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">cborError</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeWord8</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">enforceSize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/transformers-0.5.6.2/src"><span class="hs-identifier">State</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">cborError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">data</span><span> </span><span id="Environment"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Environment"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Environment"><span class="hs-identifier hs-var">Environment</span></a></span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="k"><span class="annot"><span class="annottext">Environment -&gt; BlockCount
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#k"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier hs-type">BlockCount</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-comment">-- ^ Chain stability parameter.</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="currentSlot"><span class="annot"><span class="annottext">Environment -&gt; SlotNumber
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#currentSlot"><span class="hs-identifier hs-var hs-var">currentSlot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-type">SlotNumber</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="adoptionThreshold"><span class="annot"><span class="annottext">Environment -&gt; Int
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#adoptionThreshold"><span class="hs-identifier hs-var hs-var">adoptionThreshold</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="delegationMap"><span class="annot"><span class="annottext">Environment -&gt; Map
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#delegationMap"><span class="hs-identifier hs-var hs-var">delegationMap</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Delegation.Map.html#Map"><span class="hs-identifier hs-type">Delegation.Map</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="confirmedProposals"><span class="annot"><span class="annottext">Environment -&gt; Map UpId SlotNumber
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#confirmedProposals"><span class="hs-identifier hs-var hs-var">confirmedProposals</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Proposal.html#UpId"><span class="hs-identifier hs-type">UpId</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-type">SlotNumber</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="registeredProtocolUpdateProposals"><span class="annot"><span class="annottext">Environment -&gt; ProtocolUpdateProposals
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#registeredProtocolUpdateProposals"><span class="hs-identifier hs-var hs-var">registeredProtocolUpdateProposals</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Update.Validation.Registration.html#ProtocolUpdateProposals"><span class="hs-identifier hs-type">Registration.ProtocolUpdateProposals</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">data</span><span> </span><span id="State"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="State"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#State"><span class="hs-identifier hs-var">State</span></a></span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="candidateProtocolVersions"><span class="annot"><span class="annottext">State -&gt; [CandidateProtocolUpdate]
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#candidateProtocolVersions"><span class="hs-identifier hs-var hs-var">candidateProtocolVersions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-type">CandidateProtocolUpdate</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="registeredEndorsements"><span class="annot"><span class="annottext">State -&gt; Set Endorsement
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#registeredEndorsements"><span class="hs-identifier hs-var hs-var">registeredEndorsements</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier hs-type">Endorsement</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span id="local-6989586621679587070"><span id="local-6989586621679587071"></span></span><span class="hs-keyword">data</span><span> </span><span id="CandidateProtocolUpdate"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-var">CandidateProtocolUpdate</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CandidateProtocolUpdate"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-var">CandidateProtocolUpdate</span></a></span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="cpuSlot"><span class="annot"><span class="annottext">CandidateProtocolUpdate -&gt; SlotNumber
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuSlot"><span class="hs-identifier hs-var hs-var">cpuSlot</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Slotting.SlotNumber.html#SlotNumber"><span class="hs-identifier hs-type">SlotNumber</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-comment">-- ^ Slot at which this protocol version and parameters gathered enough</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-comment">-- endorsements and became a candidate. This is used to check which</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-comment">-- versions became candidates 2k slots before the end of an epoch (and only</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-comment">-- those can be adopted at that epoch). Versions that became candidates</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-comment">-- later than 2k slots before the end of an epoch can be adopted in</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-comment">-- following epochs.</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cpuProtocolVersion"><span class="annot"><span class="annottext">CandidateProtocolUpdate -&gt; ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuProtocolVersion"><span class="hs-identifier hs-var hs-var">cpuProtocolVersion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Update.ProtocolVersion.html#ProtocolVersion"><span class="hs-identifier hs-type">ProtocolVersion</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cpuProtocolParameters"><span class="annot"><span class="annottext">CandidateProtocolUpdate -&gt; ProtocolParameters
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuProtocolParameters"><span class="hs-identifier hs-var hs-var">cpuProtocolParameters</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier hs-type">ProtocolParameters</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679587056"><span id="local-6989586621679587064"><span class="annot"><span class="annottext">CandidateProtocolUpdate -&gt; CandidateProtocolUpdate -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: CandidateProtocolUpdate -&gt; CandidateProtocolUpdate -&gt; Bool
+$c/= :: CandidateProtocolUpdate -&gt; CandidateProtocolUpdate -&gt; Bool
+== :: CandidateProtocolUpdate -&gt; CandidateProtocolUpdate -&gt; Bool
+$c== :: CandidateProtocolUpdate -&gt; CandidateProtocolUpdate -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679587041"><span id="local-6989586621679587043"><span id="local-6989586621679587053"><span class="annot"><span class="annottext">Int -&gt; CandidateProtocolUpdate -&gt; ShowS
+[CandidateProtocolUpdate] -&gt; ShowS
+CandidateProtocolUpdate -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [CandidateProtocolUpdate] -&gt; ShowS
+$cshowList :: [CandidateProtocolUpdate] -&gt; ShowS
+show :: CandidateProtocolUpdate -&gt; String
+$cshow :: CandidateProtocolUpdate -&gt; String
+showsPrec :: Int -&gt; CandidateProtocolUpdate -&gt; ShowS
+$cshowsPrec :: Int -&gt; CandidateProtocolUpdate -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep CandidateProtocolUpdate x -&gt; CandidateProtocolUpdate
+forall x. CandidateProtocolUpdate -&gt; Rep CandidateProtocolUpdate x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep CandidateProtocolUpdate x -&gt; CandidateProtocolUpdate
+$cfrom :: forall x. CandidateProtocolUpdate -&gt; Rep CandidateProtocolUpdate x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679587035"><span class="annot"><span class="annottext">CandidateProtocolUpdate -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: CandidateProtocolUpdate -&gt; ()
+$crnf :: CandidateProtocolUpdate -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679587028"><span id="local-6989586621679587030"><span id="local-6989586621679587032"><span class="annot"><span class="annottext">Context -&gt; CandidateProtocolUpdate -&gt; IO (Maybe ThunkInfo)
+Proxy CandidateProtocolUpdate -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy CandidateProtocolUpdate -&gt; String
+$cshowTypeOf :: Proxy CandidateProtocolUpdate -&gt; String
+wNoThunks :: Context -&gt; CandidateProtocolUpdate -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; CandidateProtocolUpdate -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; CandidateProtocolUpdate -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; CandidateProtocolUpdate -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679587020"><span id="local-6989586621679587022"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-type">CandidateProtocolUpdate</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679587017"><span class="annot"><span class="annottext">toCBOR :: CandidateProtocolUpdate -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679587011"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-type">CandidateProtocolUpdate</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679587008"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s CandidateProtocolUpdate
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679587000"><span id="local-6989586621679587002"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-type">CandidateProtocolUpdate</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679586983"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s CandidateProtocolUpdate
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;CandidateProtocolUpdate&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="annottext">SlotNumber
+-&gt; ProtocolVersion -&gt; ProtocolParameters -&gt; CandidateProtocolUpdate
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-var">CandidateProtocolUpdate</span></a></span><span>
+</span><span id="line-83"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-84"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-85"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679586974"><span id="local-6989586621679586976"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-type">CandidateProtocolUpdate</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679586962"><span class="annot"><span class="annottext">encCBOR :: CandidateProtocolUpdate -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span id="local-6989586621679586960"><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586960"><span class="hs-identifier hs-var">cpu</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-90"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CandidateProtocolUpdate -&gt; SlotNumber
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuSlot"><span class="hs-identifier hs-var">cpuSlot</span></a></span><span> </span><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586960"><span class="hs-identifier hs-var">cpu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-91"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CandidateProtocolUpdate -&gt; ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuProtocolVersion"><span class="hs-identifier hs-var">cpuProtocolVersion</span></a></span><span> </span><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586960"><span class="hs-identifier hs-var">cpu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CandidateProtocolUpdate -&gt; ProtocolParameters
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuProtocolParameters"><span class="hs-identifier hs-var">cpuProtocolParameters</span></a></span><span> </span><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586960"><span class="hs-identifier hs-var">cpu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span id="local-6989586621679586958"><span id="local-6989586621679586959"></span></span><span class="hs-keyword">data</span><span> </span><span id="Endorsement"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier hs-var">Endorsement</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Endorsement"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier hs-var">Endorsement</span></a></span></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="endorsementProtocolVersion"><span class="annot"><span class="annottext">Endorsement -&gt; ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#endorsementProtocolVersion"><span class="hs-identifier hs-var hs-var">endorsementProtocolVersion</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Update.ProtocolVersion.html#ProtocolVersion"><span class="hs-identifier hs-type">ProtocolVersion</span></a></span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="endorsementKeyHash"><span class="annot"><span class="annottext">Endorsement -&gt; KeyHash
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#endorsementKeyHash"><span class="hs-identifier hs-var hs-var">endorsementKeyHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Common.KeyHash.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679586948"><span id="local-6989586621679586953"><span class="annot"><span class="annottext">Endorsement -&gt; Endorsement -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Endorsement -&gt; Endorsement -&gt; Bool
+$c/= :: Endorsement -&gt; Endorsement -&gt; Bool
+== :: Endorsement -&gt; Endorsement -&gt; Bool
+$c== :: Endorsement -&gt; Endorsement -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679586938"><span id="local-6989586621679586940"><span id="local-6989586621679586946"><span class="annot"><span class="annottext">Int -&gt; Endorsement -&gt; ShowS
+[Endorsement] -&gt; ShowS
+Endorsement -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Endorsement] -&gt; ShowS
+$cshowList :: [Endorsement] -&gt; ShowS
+show :: Endorsement -&gt; String
+$cshow :: Endorsement -&gt; String
+showsPrec :: Int -&gt; Endorsement -&gt; ShowS
+$cshowsPrec :: Int -&gt; Endorsement -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679586914"><span id="local-6989586621679586916"><span id="local-6989586621679586919"><span id="local-6989586621679586922"><span id="local-6989586621679586925"><span id="local-6989586621679586929"><span id="local-6989586621679586934"><span class="annot"><span class="annottext">Eq Endorsement
+Endorsement -&gt; Endorsement -&gt; Bool
+Endorsement -&gt; Endorsement -&gt; Ordering
+Endorsement -&gt; Endorsement -&gt; Endorsement
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: Endorsement -&gt; Endorsement -&gt; Endorsement
+$cmin :: Endorsement -&gt; Endorsement -&gt; Endorsement
+max :: Endorsement -&gt; Endorsement -&gt; Endorsement
+$cmax :: Endorsement -&gt; Endorsement -&gt; Endorsement
+&gt;= :: Endorsement -&gt; Endorsement -&gt; Bool
+$c&gt;= :: Endorsement -&gt; Endorsement -&gt; Bool
+&gt; :: Endorsement -&gt; Endorsement -&gt; Bool
+$c&gt; :: Endorsement -&gt; Endorsement -&gt; Bool
+&lt;= :: Endorsement -&gt; Endorsement -&gt; Bool
+$c&lt;= :: Endorsement -&gt; Endorsement -&gt; Bool
+&lt; :: Endorsement -&gt; Endorsement -&gt; Bool
+$c&lt; :: Endorsement -&gt; Endorsement -&gt; Bool
+compare :: Endorsement -&gt; Endorsement -&gt; Ordering
+$ccompare :: Endorsement -&gt; Endorsement -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep Endorsement x -&gt; Endorsement
+forall x. Endorsement -&gt; Rep Endorsement x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Endorsement x -&gt; Endorsement
+$cfrom :: forall x. Endorsement -&gt; Rep Endorsement x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679586909"><span class="annot"><span class="annottext">Endorsement -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: Endorsement -&gt; ()
+$crnf :: Endorsement -&gt; ()
+</span><a href="#local-6989586621679586909"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679586903"><span id="local-6989586621679586905"><span id="local-6989586621679586907"><span class="annot"><span class="annottext">Context -&gt; Endorsement -&gt; IO (Maybe ThunkInfo)
+Proxy Endorsement -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy Endorsement -&gt; String
+$cshowTypeOf :: Proxy Endorsement -&gt; String
+wNoThunks :: Context -&gt; Endorsement -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; Endorsement -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; Endorsement -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; Endorsement -&gt; IO (Maybe ThunkInfo)
+</span><a href="#local-6989586621679586903"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679586896"><span id="local-6989586621679586898"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier hs-type">Endorsement</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-102"></span><span>  </span><span id="local-6989586621679586894"><span class="annot"><span class="annottext">toCBOR :: Endorsement -&gt; Encoding
+</span><a href="#local-6989586621679586894"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679586889"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier hs-type">Endorsement</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679586887"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s Endorsement
+</span><a href="#local-6989586621679586887"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679586880"><span id="local-6989586621679586882"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier hs-type">Endorsement</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-108"></span><span>  </span><span id="local-6989586621679586872"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s Endorsement
+</span><a href="#local-6989586621679586872"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Endorsement&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">ProtocolVersion -&gt; KeyHash -&gt; Endorsement
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier hs-var">Endorsement</span></a></span><span>
+</span><span id="line-111"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-112"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679586865"><span id="local-6989586621679586867"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier hs-type">Endorsement</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-115"></span><span>  </span><span id="local-6989586621679586859"><span class="annot"><span class="annottext">encCBOR :: Endorsement -&gt; Encoding
+</span><a href="#local-6989586621679586859"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span id="local-6989586621679586858"><span class="annot"><span class="annottext">Endorsement
+</span><a href="#local-6989586621679586858"><span class="hs-identifier hs-var">sh</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-117"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Endorsement -&gt; ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#endorsementProtocolVersion"><span class="hs-identifier hs-var">endorsementProtocolVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Endorsement
+</span><a href="#local-6989586621679586858"><span class="hs-identifier hs-var">sh</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Endorsement -&gt; KeyHash
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#endorsementKeyHash"><span class="hs-identifier hs-var">endorsementKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">Endorsement
+</span><a href="#local-6989586621679586858"><span class="hs-identifier hs-var">sh</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span><span class="hs-keyword">data</span><span> </span><span id="Error"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Error"><span class="hs-identifier hs-var">Error</span></a></span></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | Multiple proposals were found, which propose an update to the same</span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-comment">-- protocol version.</span><span>
+</span><span id="line-123"></span><span>    </span><span id="MultipleProposalsForProtocolVersion"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#MultipleProposalsForProtocolVersion"><span class="hs-identifier hs-var">MultipleProposalsForProtocolVersion</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolVersion.html#ProtocolVersion"><span class="hs-identifier hs-type">ProtocolVersion</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679586852"><span id="local-6989586621679586855"><span class="annot"><span class="annottext">Error -&gt; Error -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Error -&gt; Error -&gt; Bool
+$c/= :: Error -&gt; Error -&gt; Bool
+== :: Error -&gt; Error -&gt; Bool
+$c== :: Error -&gt; Error -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679586844"><span id="local-6989586621679586846"><span id="local-6989586621679586850"><span class="annot"><span class="annottext">Int -&gt; Error -&gt; ShowS
+[Error] -&gt; ShowS
+Error -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Error] -&gt; ShowS
+$cshowList :: [Error] -&gt; ShowS
+show :: Error -&gt; String
+$cshow :: Error -&gt; String
+showsPrec :: Int -&gt; Error -&gt; ShowS
+$cshowsPrec :: Int -&gt; Error -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679586837"><span id="local-6989586621679586839"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Error"><span class="hs-identifier hs-type">Error</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-127"></span><span>  </span><span id="local-6989586621679586835"><span class="annot"><span class="annottext">toCBOR :: Error -&gt; Encoding
+</span><a href="#local-6989586621679586835"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679586830"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Error"><span class="hs-identifier hs-type">Error</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-130"></span><span>  </span><span id="local-6989586621679586828"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s Error
+</span><a href="#local-6989586621679586828"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679586821"><span id="local-6989586621679586823"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Error"><span class="hs-identifier hs-type">Error</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-133"></span><span>  </span><span id="local-6989586621679586813"><span class="annot"><span class="annottext">encCBOR :: Error -&gt; Encoding
+</span><a href="#local-6989586621679586813"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#MultipleProposalsForProtocolVersion"><span class="hs-identifier hs-type">MultipleProposalsForProtocolVersion</span></a></span><span> </span><span id="local-6989586621679586812"><span class="annot"><span class="annottext">ProtocolVersion
+</span><a href="#local-6989586621679586812"><span class="hs-identifier hs-var">protocolVersion</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-135"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-136"></span><span>      </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolVersion
+</span><a href="#local-6989586621679586812"><span class="hs-identifier hs-var">protocolVersion</span></a></span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679586805"><span id="local-6989586621679586807"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Error"><span class="hs-identifier hs-type">Error</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-139"></span><span>  </span><span id="local-6989586621679586791"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s Error
+</span><a href="#local-6989586621679586791"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-140"></span><span>    </span><span class="annot"><span class="annottext">forall s. Text -&gt; Int -&gt; Decoder s ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">enforceSize</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Endorsement.Error&quot;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-141"></span><span>    </span><span id="local-6989586621679586790"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679586790"><span class="hs-identifier hs-var">tag</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall s. Decoder s Word8
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeWord8</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679586790"><span class="hs-identifier hs-var">tag</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-143"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ProtocolVersion -&gt; Error
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#MultipleProposalsForProtocolVersion"><span class="hs-identifier hs-var">MultipleProposalsForProtocolVersion</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) e a. (MonadFail m, Buildable e) =&gt; e -&gt; m a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var">cborError</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Word8 -&gt; DecoderError
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var">DecoderErrorUnknownTag</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Endorsement.Error&quot;</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679586790"><span class="hs-identifier hs-var">tag</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- | Register an endorsement.</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- This corresponds to the @UPEND@ rule.</span><span>
+</span><span id="line-149"></span><span id="local-6989586621679587318"><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#register"><span class="hs-identifier hs-type">register</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/mtl-2.2.2/src"><span class="hs-identifier hs-type">MonadError</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Error"><span class="hs-identifier hs-type">Error</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679587318"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier hs-type">Endorsement</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679587318"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#State"><span class="hs-identifier hs-type">State</span></a></span></span><span>
+</span><span id="line-151"></span><span id="register"><span class="annot"><span class="annottext">register :: forall (m :: * -&gt; *).
+MonadError Error m =&gt;
+Environment -&gt; State -&gt; Endorsement -&gt; m State
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#register"><span class="hs-identifier hs-var hs-var">register</span></a></span></span><span> </span><span id="local-6989586621679586768"><span class="annot"><span class="annottext">Environment
+</span><a href="#local-6989586621679586768"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679586767"><span class="annot"><span class="annottext">State
+</span><a href="#local-6989586621679586767"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span id="local-6989586621679586766"><span class="annot"><span class="annottext">Endorsement
+</span><a href="#local-6989586621679586766"><span class="hs-identifier hs-var">endorsement</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">forall k a. Map k a -&gt; [(k, a)]
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">M.toList</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">forall a k. (a -&gt; Bool) -&gt; Map k a -&gt; Map k a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">M.filter</span></a></span><span>
+</span><span id="line-154"></span><span>        </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolVersion
+</span><a href="#local-6989586621679586763"><span class="hs-identifier hs-var">pv</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolUpdateProposal -&gt; ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Registration.html#pupProtocolVersion"><span class="hs-identifier hs-var">Registration.pupProtocolVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>        </span><span class="annot"><span class="annottext">ProtocolUpdateProposals
+</span><a href="#local-6989586621679586760"><span class="hs-identifier hs-var">registeredProtocolUpdateProposals</span></a></span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-comment">-- We ignore endorsement of proposals that aren't registered</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">State
+</span><a href="#local-6989586621679586767"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-comment">-- Try to register the endorsement and check if we can adopt the proposal</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-special">[</span><span class="hs-special">(</span><span id="local-6989586621679586759"><span class="annot"><span class="annottext">UpId
+</span><a href="#local-6989586621679586759"><span class="hs-identifier hs-var">upId</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Registration.html#ProtocolUpdateProposal"><span class="hs-identifier hs-type">Registration.ProtocolUpdateProposal</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolVersion
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679586757"><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679586757"><span class="hs-identifier hs-var">pps'</span></a></span></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-161"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">UpId -&gt; Bool
+</span><a href="#local-6989586621679586756"><span class="hs-identifier hs-var">isConfirmedAndStable</span></a></span><span> </span><span class="annot"><span class="annottext">UpId
+</span><a href="#local-6989586621679586759"><span class="hs-identifier hs-var">upId</span></a></span><span>
+</span><span id="line-162"></span><span>        </span><span class="hs-keyword">then</span><span>
+</span><span id="line-163"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679586755"><span class="hs-identifier hs-var">numberOfEndorsements</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679586754"><span class="hs-identifier hs-var">adoptionThreshold</span></a></span><span>
+</span><span id="line-164"></span><span>            </span><span class="hs-keyword">then</span><span> </span><span class="hs-comment">-- Register the endorsement and adopt the proposal in the next epoch</span><span>
+</span><span id="line-165"></span><span>              </span><span class="hs-keyword">do</span><span>
+</span><span id="line-166"></span><span>                </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679586753"><span class="annot"><span class="annottext">cpu :: CandidateProtocolUpdate
+</span><a href="#local-6989586621679586753"><span class="hs-identifier hs-var hs-var">cpu</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-167"></span><span>                      </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-type">CandidateProtocolUpdate</span></a></span><span>
+</span><span id="line-168"></span><span>                        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cpuSlot :: SlotNumber
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuSlot"><span class="hs-identifier hs-var">cpuSlot</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SlotNumber
+</span><a href="#local-6989586621679586752"><span class="hs-identifier hs-var">currentSlot</span></a></span><span>
+</span><span id="line-169"></span><span>                        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cpuProtocolVersion :: ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuProtocolVersion"><span class="hs-identifier hs-var">cpuProtocolVersion</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolVersion
+</span><a href="#local-6989586621679586763"><span class="hs-identifier hs-var">pv</span></a></span><span>
+</span><span id="line-170"></span><span>                        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cpuProtocolParameters :: ProtocolParameters
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuProtocolParameters"><span class="hs-identifier hs-var">cpuProtocolParameters</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679586757"><span class="hs-identifier hs-var">pps'</span></a></span><span>
+</span><span id="line-171"></span><span>                        </span><span class="hs-special">}</span><span>
+</span><span id="line-172"></span><span>                    </span><span id="local-6989586621679586751"><span class="annot"><span class="annottext">cpus' :: [CandidateProtocolUpdate]
+</span><a href="#local-6989586621679586751"><span class="hs-identifier hs-var hs-var">cpus'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-173"></span><span>                      </span><span class="annot"><span class="annottext">[CandidateProtocolUpdate]
+-&gt; CandidateProtocolUpdate -&gt; [CandidateProtocolUpdate]
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#updateCandidateProtocolUpdates"><span class="hs-identifier hs-var">updateCandidateProtocolUpdates</span></a></span><span> </span><span class="annot"><span class="annottext">[CandidateProtocolUpdate]
+</span><a href="#local-6989586621679586749"><span class="hs-identifier hs-var">candidateProtocolVersions</span></a></span><span> </span><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586753"><span class="hs-identifier hs-var">cpu</span></a></span><span>
+</span><span id="line-174"></span><span>                </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span>
+</span><span id="line-175"></span><span>                  </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#State"><span class="hs-identifier hs-type">State</span></a></span><span>
+</span><span id="line-176"></span><span>                    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">candidateProtocolVersions :: [CandidateProtocolUpdate]
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#candidateProtocolVersions"><span class="hs-identifier hs-var">candidateProtocolVersions</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[CandidateProtocolUpdate]
+</span><a href="#local-6989586621679586751"><span class="hs-identifier hs-var">cpus'</span></a></span><span>
+</span><span id="line-177"></span><span>                    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">registeredEndorsements :: Set Endorsement
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#registeredEndorsements"><span class="hs-identifier hs-var">registeredEndorsements</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Endorsement
+</span><a href="#local-6989586621679586748"><span class="hs-identifier hs-var">registeredEndorsements'</span></a></span><span>
+</span><span id="line-178"></span><span>                    </span><span class="hs-special">}</span><span>
+</span><span id="line-179"></span><span>            </span><span class="hs-keyword">else</span><span> </span><span class="hs-comment">-- Just register the endorsement if we cannot adopt</span><span>
+</span><span id="line-180"></span><span>              </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">State
+</span><a href="#local-6989586621679586767"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">registeredEndorsements :: Set Endorsement
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#registeredEndorsements"><span class="hs-identifier hs-var">registeredEndorsements</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Set Endorsement
+</span><a href="#local-6989586621679586748"><span class="hs-identifier hs-var">registeredEndorsements'</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-181"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="hs-comment">-- Ignore the endorsement if the registration isn't stable</span><span>
+</span><span id="line-182"></span><span>          </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">State
+</span><a href="#local-6989586621679586767"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-183"></span><span>    </span><span class="hs-comment">-- Throw an error if there are multiple proposals for this protocol version</span><span>
+</span><span id="line-184"></span><span>    </span><span class="annot"><span class="annottext">[(UpId, ProtocolUpdateProposal)]
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall e (m :: * -&gt; *) a. MonadError e m =&gt; e -&gt; m a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/mtl-2.2.2/src"><span class="hs-identifier hs-var">throwError</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolVersion -&gt; Error
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#MultipleProposalsForProtocolVersion"><span class="hs-identifier hs-var">MultipleProposalsForProtocolVersion</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolVersion
+</span><a href="#local-6989586621679586763"><span class="hs-identifier hs-var">pv</span></a></span><span>
+</span><span id="line-185"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-186"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#Environment"><span class="hs-identifier hs-type">Environment</span></a></span><span>
+</span><span id="line-187"></span><span>      </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679586746"><span class="annot"><span class="annottext">BlockCount
+k :: BlockCount
+k :: Environment -&gt; BlockCount
+</span><a href="#local-6989586621679586746"><span class="hs-identifier hs-var hs-var">k</span></a></span></span><span>
+</span><span id="line-188"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679586752"><span class="annot"><span class="annottext">SlotNumber
+currentSlot :: SlotNumber
+currentSlot :: Environment -&gt; SlotNumber
+</span><a href="#local-6989586621679586752"><span class="hs-identifier hs-var hs-var">currentSlot</span></a></span></span><span>
+</span><span id="line-189"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679586754"><span class="annot"><span class="annottext">Int
+adoptionThreshold :: Int
+adoptionThreshold :: Environment -&gt; Int
+</span><a href="#local-6989586621679586754"><span class="hs-identifier hs-var hs-var">adoptionThreshold</span></a></span></span><span>
+</span><span id="line-190"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679586745"><span class="annot"><span class="annottext">Map
+delegationMap :: Map
+delegationMap :: Environment -&gt; Map
+</span><a href="#local-6989586621679586745"><span class="hs-identifier hs-var hs-var">delegationMap</span></a></span></span><span>
+</span><span id="line-191"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679586744"><span class="annot"><span class="annottext">Map UpId SlotNumber
+confirmedProposals :: Map UpId SlotNumber
+confirmedProposals :: Environment -&gt; Map UpId SlotNumber
+</span><a href="#local-6989586621679586744"><span class="hs-identifier hs-var hs-var">confirmedProposals</span></a></span></span><span>
+</span><span id="line-192"></span><span>      </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679586760"><span class="annot"><span class="annottext">ProtocolUpdateProposals
+registeredProtocolUpdateProposals :: ProtocolUpdateProposals
+registeredProtocolUpdateProposals :: Environment -&gt; ProtocolUpdateProposals
+</span><a href="#local-6989586621679586760"><span class="hs-identifier hs-var hs-var">registeredProtocolUpdateProposals</span></a></span></span><span>
+</span><span id="line-193"></span><span>      </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Environment
+</span><a href="#local-6989586621679586768"><span class="hs-identifier hs-var">env</span></a></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span>    </span><span id="local-6989586621679586756"><span class="annot"><span class="annottext">isConfirmedAndStable :: UpId -&gt; Bool
+</span><a href="#local-6989586621679586756"><span class="hs-identifier hs-var hs-var">isConfirmedAndStable</span></a></span></span><span> </span><span id="local-6989586621679586741"><span class="annot"><span class="annottext">UpId
+</span><a href="#local-6989586621679586741"><span class="hs-identifier hs-var">upId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UpId
+</span><a href="#local-6989586621679586741"><span class="hs-identifier hs-var">upId</span></a></span><span> </span><span class="annot"><span class="annottext">forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-operator hs-var">`M.member`</span></a></span><span> </span><span class="annot"><span class="annottext">Map UpId SlotNumber
+</span><a href="#local-6989586621679586739"><span class="hs-identifier hs-var">scps</span></a></span><span>
+</span><span id="line-196"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-197"></span><span>        </span><span class="hs-comment">-- Stable and confirmed proposals.</span><span>
+</span><span id="line-198"></span><span>        </span><span id="local-6989586621679586739"><span class="annot"><span class="annottext">scps :: Map UpId SlotNumber
+</span><a href="#local-6989586621679586739"><span class="hs-identifier hs-var hs-var">scps</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a k. (a -&gt; Bool) -&gt; Map k a -&gt; Map k a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">M.filter</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679586736"><span class="annot"><span class="annottext">SlotNumber
+</span><a href="#local-6989586621679586736"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">SlotCount -&gt; SlotNumber -&gt; SlotNumber
+</span><a href="Cardano.Chain.Slotting.SlotNumber.html#addSlotCount"><span class="hs-identifier hs-var">addSlotCount</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BlockCount -&gt; SlotCount
+</span><a href="Cardano.Chain.ProtocolConstants.html#kSlotSecurityParam"><span class="hs-identifier hs-var">kSlotSecurityParam</span></a></span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679586746"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SlotNumber
+</span><a href="#local-6989586621679586736"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNumber
+</span><a href="#local-6989586621679586752"><span class="hs-identifier hs-var">currentSlot</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map UpId SlotNumber
+</span><a href="#local-6989586621679586744"><span class="hs-identifier hs-var">confirmedProposals</span></a></span><span>
+</span><span id="line-199"></span><span>
+</span><span id="line-200"></span><span>    </span><span class="annot"><a href="#local-6989586621679586755"><span class="hs-identifier hs-type">numberOfEndorsements</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span id="local-6989586621679586755"><span class="annot"><span class="annottext">numberOfEndorsements :: Int
+</span><a href="#local-6989586621679586755"><span class="hs-identifier hs-var hs-var">numberOfEndorsements</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-202"></span><span>      </span><span class="annot"><span class="annottext">forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-var">length</span></a></span><span>
+</span><span id="line-203"></span><span>        </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. (a -&gt; Bool) -&gt; Set a -&gt; Set a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Set.filter</span></a></span><span>
+</span><span id="line-204"></span><span>          </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolVersion
+</span><a href="#local-6989586621679586763"><span class="hs-identifier hs-var">pv</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Endorsement -&gt; ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#endorsementProtocolVersion"><span class="hs-identifier hs-var">endorsementProtocolVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-205"></span><span>          </span><span class="annot"><span class="annottext">Set Endorsement
+</span><a href="#local-6989586621679586748"><span class="hs-identifier hs-var">registeredEndorsements'</span></a></span><span>
+</span><span id="line-206"></span><span>
+</span><span id="line-207"></span><span>    </span><span id="local-6989586621679586763"><span class="annot"><span class="annottext">pv :: ProtocolVersion
+</span><a href="#local-6989586621679586763"><span class="hs-identifier hs-var hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Endorsement -&gt; ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#endorsementProtocolVersion"><span class="hs-identifier hs-var">endorsementProtocolVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Endorsement
+</span><a href="#local-6989586621679586766"><span class="hs-identifier hs-var">endorsement</span></a></span><span>
+</span><span id="line-208"></span><span>
+</span><span id="line-209"></span><span>    </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#State"><span class="hs-identifier hs-type">State</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679586749"><span class="annot"><span class="annottext">[CandidateProtocolUpdate]
+candidateProtocolVersions :: [CandidateProtocolUpdate]
+candidateProtocolVersions :: State -&gt; [CandidateProtocolUpdate]
+</span><a href="#local-6989586621679586749"><span class="hs-identifier hs-var hs-var">candidateProtocolVersions</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679586732"><span class="annot"><span class="annottext">Set Endorsement
+registeredEndorsements :: Set Endorsement
+registeredEndorsements :: State -&gt; Set Endorsement
+</span><a href="#local-6989586621679586732"><span class="hs-identifier hs-var hs-var">registeredEndorsements</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">State
+</span><a href="#local-6989586621679586767"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-210"></span><span>
+</span><span id="line-211"></span><span>    </span><span id="local-6989586621679586748"><span class="annot"><span class="annottext">registeredEndorsements' :: Set Endorsement
+</span><a href="#local-6989586621679586748"><span class="hs-identifier hs-var hs-var">registeredEndorsements'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">KeyHash -&gt; Map -&gt; Maybe KeyHash
+</span><a href="Cardano.Chain.Delegation.Map.html#lookupR"><span class="hs-identifier hs-var">Delegation.lookupR</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash
+</span><a href="#local-6989586621679586729"><span class="hs-identifier hs-var">vk</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+</span><a href="#local-6989586621679586745"><span class="hs-identifier hs-var">delegationMap</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-212"></span><span>      </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679586728"><span class="annot"><span class="annottext">KeyHash
+</span><a href="#local-6989586621679586728"><span class="hs-identifier hs-var">vkS</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Set.insert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ProtocolVersion -&gt; KeyHash -&gt; Endorsement
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#Endorsement"><span class="hs-identifier hs-var">Endorsement</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolVersion
+</span><a href="#local-6989586621679586726"><span class="hs-identifier hs-var">epv</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash
+</span><a href="#local-6989586621679586728"><span class="hs-identifier hs-var">vkS</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Set Endorsement
+</span><a href="#local-6989586621679586732"><span class="hs-identifier hs-var">registeredEndorsements</span></a></span><span>
+</span><span id="line-213"></span><span>      </span><span class="annot"><span class="annottext">Maybe KeyHash
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Set Endorsement
+</span><a href="#local-6989586621679586732"><span class="hs-identifier hs-var">registeredEndorsements</span></a></span><span>
+</span><span id="line-214"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-215"></span><span>        </span><span class="hs-comment">-- Note that we do not throw an error if there is no corresponding</span><span>
+</span><span id="line-216"></span><span>        </span><span class="hs-comment">-- delegate for the given endorsement keyHash. This is consistent</span><span>
+</span><span id="line-217"></span><span>        </span><span class="hs-comment">-- with the @UPEND@ rules. The check that there is a delegator should be</span><span>
+</span><span id="line-218"></span><span>        </span><span class="hs-comment">-- done in the rule that checks that the block issuer is a delegate of a</span><span>
+</span><span id="line-219"></span><span>        </span><span class="hs-comment">-- genesis key.</span><span>
+</span><span id="line-220"></span><span>
+</span><span id="line-221"></span><span>        </span><span id="local-6989586621679586729"><span class="annot"><span class="annottext">vk :: KeyHash
+</span><a href="#local-6989586621679586729"><span class="hs-identifier hs-var hs-var">vk</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Endorsement -&gt; KeyHash
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#endorsementKeyHash"><span class="hs-identifier hs-var">endorsementKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">Endorsement
+</span><a href="#local-6989586621679586766"><span class="hs-identifier hs-var">endorsement</span></a></span><span>
+</span><span id="line-222"></span><span>        </span><span id="local-6989586621679586726"><span class="annot"><span class="annottext">epv :: ProtocolVersion
+</span><a href="#local-6989586621679586726"><span class="hs-identifier hs-var hs-var">epv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Endorsement -&gt; ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#endorsementProtocolVersion"><span class="hs-identifier hs-var">endorsementProtocolVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Endorsement
+</span><a href="#local-6989586621679586766"><span class="hs-identifier hs-var">endorsement</span></a></span><span>
+</span><span id="line-223"></span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- | Add a newly endorsed protocol version to the 'CandidateProtocolUpdate's</span><span>
+</span><span id="line-225"></span><span class="hs-comment">--</span><span>
+</span><span id="line-226"></span><span class="hs-comment">--   We only add it to the list if the 'ProtocolVersion' is strictly greater</span><span>
+</span><span id="line-227"></span><span class="hs-comment">--   than all other `CandidateProtocolUpdate`s</span><span>
+</span><span id="line-228"></span><span class="hs-comment">--</span><span>
+</span><span id="line-229"></span><span class="hs-comment">-- This corresponds to the @FADS@ rule.</span><span>
+</span><span id="line-230"></span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#updateCandidateProtocolUpdates"><span class="hs-identifier hs-type">updateCandidateProtocolUpdates</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-231"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-type">CandidateProtocolUpdate</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-232"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-type">CandidateProtocolUpdate</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-233"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#CandidateProtocolUpdate"><span class="hs-identifier hs-type">CandidateProtocolUpdate</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-234"></span><span id="updateCandidateProtocolUpdates"><span class="annot"><span class="annottext">updateCandidateProtocolUpdates :: [CandidateProtocolUpdate]
+-&gt; CandidateProtocolUpdate -&gt; [CandidateProtocolUpdate]
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#updateCandidateProtocolUpdates"><span class="hs-identifier hs-var hs-var">updateCandidateProtocolUpdates</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span id="local-6989586621679586725"><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586725"><span class="hs-identifier hs-var">cpu</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586725"><span class="hs-identifier hs-var">cpu</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-235"></span><span class="annot"><a href="Cardano.Chain.Update.Validation.Endorsement.html#updateCandidateProtocolUpdates"><span class="hs-identifier hs-var">updateCandidateProtocolUpdates</span></a></span><span> </span><span id="local-6989586621679586724"><span class="annot"><span class="annottext">cpus :: [CandidateProtocolUpdate]
+</span><a href="#local-6989586621679586724"><span class="hs-identifier hs-var">cpus</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span id="local-6989586621679586723"><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586723"><span class="hs-identifier hs-var">cpu</span></a></span></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-glyph hs-type">:</span></a></span><span> </span><span class="annot"><span class="annottext">[CandidateProtocolUpdate]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679586722"><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586722"><span class="hs-identifier hs-var">cpu'</span></a></span></span><span>
+</span><span id="line-236"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">CandidateProtocolUpdate -&gt; ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuProtocolVersion"><span class="hs-identifier hs-var">cpuProtocolVersion</span></a></span><span> </span><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586723"><span class="hs-identifier hs-var">cpu</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">CandidateProtocolUpdate -&gt; ProtocolVersion
+</span><a href="Cardano.Chain.Update.Validation.Endorsement.html#cpuProtocolVersion"><span class="hs-identifier hs-var">cpuProtocolVersion</span></a></span><span> </span><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586722"><span class="hs-identifier hs-var">cpu'</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CandidateProtocolUpdate
+</span><a href="#local-6989586621679586722"><span class="hs-identifier hs-var">cpu'</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; [a] -&gt; [a]
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[CandidateProtocolUpdate]
+</span><a href="#local-6989586621679586724"><span class="hs-identifier hs-var">cpus</span></a></span><span>
+</span><span id="line-237"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[CandidateProtocolUpdate]
+</span><a href="#local-6989586621679586724"><span class="hs-identifier hs-var">cpus</span></a></span><span>
+</span><span id="line-238"></span></pre></body></html>

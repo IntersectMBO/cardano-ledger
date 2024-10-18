@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Genesis.Initializer</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-5"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#GenesisInitializer"><span class="hs-identifier">GenesisInitializer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#TestnetBalanceOptions"><span class="hs-identifier">TestnetBalanceOptions</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#FakeAvvmOptions"><span class="hs-identifier">FakeAvvmOptions</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier">Lovelace</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- | Options determining generated genesis stakes, balances, and delegation</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">data</span><span> </span><span id="GenesisInitializer"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#GenesisInitializer"><span class="hs-identifier hs-var">GenesisInitializer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="GenesisInitializer"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#GenesisInitializer"><span class="hs-identifier hs-var">GenesisInitializer</span></a></span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="giTestBalance"><span class="annot"><span class="annottext">GenesisInitializer -&gt; TestnetBalanceOptions
+</span><a href="Cardano.Chain.Genesis.Initializer.html#giTestBalance"><span class="hs-identifier hs-var hs-var">giTestBalance</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#TestnetBalanceOptions"><span class="hs-identifier hs-type">TestnetBalanceOptions</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="giFakeAvvmBalance"><span class="annot"><span class="annottext">GenesisInitializer -&gt; FakeAvvmOptions
+</span><a href="Cardano.Chain.Genesis.Initializer.html#giFakeAvvmBalance"><span class="hs-identifier hs-var hs-var">giFakeAvvmBalance</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#FakeAvvmOptions"><span class="hs-identifier hs-type">FakeAvvmOptions</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="giAvvmBalanceFactor"><span class="annot"><span class="annottext">GenesisInitializer -&gt; Rational
+</span><a href="Cardano.Chain.Genesis.Initializer.html#giAvvmBalanceFactor"><span class="hs-identifier hs-var hs-var">giAvvmBalanceFactor</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Rational</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-comment">-- ^ Avvm balances will be multiplied by this factor</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="giUseHeavyDlg"><span class="annot"><span class="annottext">GenesisInitializer -&gt; Bool
+</span><a href="Cardano.Chain.Genesis.Initializer.html#giUseHeavyDlg"><span class="hs-identifier hs-var hs-var">giUseHeavyDlg</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-comment">-- ^ Whether to use heavyweight delegation for genesis keys</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679565903"><span id="local-6989586621679565912"><span class="annot"><span class="annottext">GenesisInitializer -&gt; GenesisInitializer -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: GenesisInitializer -&gt; GenesisInitializer -&gt; Bool
+$c/= :: GenesisInitializer -&gt; GenesisInitializer -&gt; Bool
+== :: GenesisInitializer -&gt; GenesisInitializer -&gt; Bool
+$c== :: GenesisInitializer -&gt; GenesisInitializer -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679565886"><span id="local-6989586621679565888"><span id="local-6989586621679565899"><span class="annot"><span class="annottext">Int -&gt; GenesisInitializer -&gt; ShowS
+[GenesisInitializer] -&gt; ShowS
+GenesisInitializer -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [GenesisInitializer] -&gt; ShowS
+$cshowList :: [GenesisInitializer] -&gt; ShowS
+show :: GenesisInitializer -&gt; String
+$cshow :: GenesisInitializer -&gt; String
+showsPrec :: Int -&gt; GenesisInitializer -&gt; ShowS
+$cshowsPrec :: Int -&gt; GenesisInitializer -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- | These options determine balances of nodes specific for testnet</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">data</span><span> </span><span id="TestnetBalanceOptions"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#TestnetBalanceOptions"><span class="hs-identifier hs-var">TestnetBalanceOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TestnetBalanceOptions"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#TestnetBalanceOptions"><span class="hs-identifier hs-var">TestnetBalanceOptions</span></a></span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="tboPoors"><span class="annot"><span class="annottext">TestnetBalanceOptions -&gt; Word
+</span><a href="Cardano.Chain.Genesis.Initializer.html#tboPoors"><span class="hs-identifier hs-var hs-var">tboPoors</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Word</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-comment">-- ^ Number of poor nodes (with small balance).</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tboRichmen"><span class="annot"><span class="annottext">TestnetBalanceOptions -&gt; Word
+</span><a href="Cardano.Chain.Genesis.Initializer.html#tboRichmen"><span class="hs-identifier hs-var hs-var">tboRichmen</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Word</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-comment">-- ^ Number of rich nodes (with huge balance).</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tboTotalBalance"><span class="annot"><span class="annottext">TestnetBalanceOptions -&gt; Lovelace
+</span><a href="Cardano.Chain.Genesis.Initializer.html#tboTotalBalance"><span class="hs-identifier hs-var hs-var">tboTotalBalance</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-comment">-- ^ Total balance owned by these nodes.</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="tboRichmenShare"><span class="annot"><span class="annottext">TestnetBalanceOptions -&gt; Rational
+</span><a href="Cardano.Chain.Genesis.Initializer.html#tboRichmenShare"><span class="hs-identifier hs-var hs-var">tboRichmenShare</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Rational</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-comment">-- ^ Portion of stake owned by all richmen together.</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679565868"><span id="local-6989586621679565877"><span class="annot"><span class="annottext">TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool
+$c/= :: TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool
+== :: TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool
+$c== :: TestnetBalanceOptions -&gt; TestnetBalanceOptions -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679565854"><span id="local-6989586621679565856"><span id="local-6989586621679565866"><span class="annot"><span class="annottext">Int -&gt; TestnetBalanceOptions -&gt; ShowS
+[TestnetBalanceOptions] -&gt; ShowS
+TestnetBalanceOptions -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [TestnetBalanceOptions] -&gt; ShowS
+$cshowList :: [TestnetBalanceOptions] -&gt; ShowS
+show :: TestnetBalanceOptions -&gt; String
+$cshow :: TestnetBalanceOptions -&gt; String
+showsPrec :: Int -&gt; TestnetBalanceOptions -&gt; ShowS
+$cshowsPrec :: Int -&gt; TestnetBalanceOptions -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | These options determines balances of fake AVVM nodes which didn't really go</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--   through vending, but pretend they did</span><span>
+</span><span id="line-40"></span><span id="local-6989586621679565852"><span id="local-6989586621679565853"></span></span><span class="hs-keyword">data</span><span> </span><span id="FakeAvvmOptions"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#FakeAvvmOptions"><span class="hs-identifier hs-var">FakeAvvmOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="FakeAvvmOptions"><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#FakeAvvmOptions"><span class="hs-identifier hs-var">FakeAvvmOptions</span></a></span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="faoCount"><span class="annot"><span class="annottext">FakeAvvmOptions -&gt; Word
+</span><a href="Cardano.Chain.Genesis.Initializer.html#faoCount"><span class="hs-identifier hs-var hs-var">faoCount</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Word</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="faoOneBalance"><span class="annot"><span class="annottext">FakeAvvmOptions -&gt; Lovelace
+</span><a href="Cardano.Chain.Genesis.Initializer.html#faoOneBalance"><span class="hs-identifier hs-var hs-var">faoOneBalance</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Common.Lovelace.html#Lovelace"><span class="hs-identifier hs-type">Lovelace</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679565843"><span id="local-6989586621679565847"><span class="annot"><span class="annottext">FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool
+$c/= :: FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool
+== :: FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool
+$c== :: FakeAvvmOptions -&gt; FakeAvvmOptions -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679565834"><span id="local-6989586621679565836"><span id="local-6989586621679565841"><span class="annot"><span class="annottext">Int -&gt; FakeAvvmOptions -&gt; ShowS
+[FakeAvvmOptions] -&gt; ShowS
+FakeAvvmOptions -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [FakeAvvmOptions] -&gt; ShowS
+$cshowList :: [FakeAvvmOptions] -&gt; ShowS
+show :: FakeAvvmOptions -&gt; String
+$cshow :: FakeAvvmOptions -&gt; String
+showsPrec :: Int -&gt; FakeAvvmOptions -&gt; ShowS
+$cshowsPrec :: Int -&gt; FakeAvvmOptions -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep FakeAvvmOptions x -&gt; FakeAvvmOptions
+forall x. FakeAvvmOptions -&gt; Rep FakeAvvmOptions x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep FakeAvvmOptions x -&gt; FakeAvvmOptions
+$cfrom :: forall x. FakeAvvmOptions -&gt; Rep FakeAvvmOptions x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span></pre></body></html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Byron.Spec.Ledger.Core.Generators.Properties</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Byron.Spec.Ledger.Core.Generators.Properties.html#relevantKValuesAreGenerated"><span class="hs-identifier">relevantKValuesAreGenerated</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/byron-spec-ledger-1.0.1.0/doc/html/byron-spec-ledger/src"><span class="hs-identifier">Byron.Spec.Ledger.Core.Generators</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CoreGen</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/byron-spec-ledger-1.0.1.0/doc/html/byron-spec-ledger/src"><span class="hs-identifier">Byron.Spec.Ledger.GlobalParams</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GP</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">when</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier">Property</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier">cover</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier">forAll</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier">property</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier">withTests</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- | Coverage test to check that we're generating relevant 'k' values.</span><span>
+</span><span id="line-12"></span><span class="annot"><a href="Test.Byron.Spec.Ledger.Core.Generators.Properties.html#relevantKValuesAreGenerated"><span class="hs-identifier hs-type">relevantKValuesAreGenerated</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier hs-type">Property</span></a></span><span>
+</span><span id="line-13"></span><span id="relevantKValuesAreGenerated"><span class="annot"><span class="annottext">relevantKValuesAreGenerated :: Property
+</span><a href="Test.Byron.Spec.Ledger.Core.Generators.Properties.html#relevantKValuesAreGenerated"><span class="hs-identifier hs-var hs-var">relevantKValuesAreGenerated</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TestLimit -&gt; Property -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier hs-var">withTests</span></a></span><span> </span><span class="annot"><span class="annottext">TestLimit
+</span><span class="hs-number">500</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><span class="annottext">HasCallStack =&gt; PropertyT IO () -&gt; Property
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier hs-var">property</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-15"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679207878"><span class="annot"><span class="annottext">chainLength :: Word64
+</span><a href="#local-6989586621679207878"><span class="hs-identifier hs-var hs-var">chainLength</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1000</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span>    </span><span id="local-6989586621679207877"><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679207877"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a.
+(Monad m, Show a, HasCallStack) =&gt;
+Gen a -&gt; PropertyT m a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Gen BlockCount
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/byron-spec-ledger-1.0.1.0/doc/html/byron-spec-ledger/src"><span class="hs-identifier hs-var">CoreGen.k</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207878"><span class="hs-identifier hs-var">chainLength</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207878"><span class="hs-identifier hs-var">chainLength</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">`div`</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679207874"><span class="hs-identifier hs-type">slotsPerEpoch</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-20"></span><span>        </span><span id="local-6989586621679207874"><span class="annot"><span class="annottext">slotsPerEpoch :: Word64
+</span><a href="#local-6989586621679207874"><span class="hs-identifier hs-var hs-var">slotsPerEpoch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall n. Integral n =&gt; BlockCount -&gt; n
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/byron-spec-ledger-1.0.1.0/doc/html/byron-spec-ledger/src"><span class="hs-identifier hs-var">GP.slotsPerEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679207877"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207874"><span class="hs-identifier hs-var">slotsPerEpoch</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-23"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679207871"><span class="hs-identifier hs-type">epochs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-24"></span><span>          </span><span id="local-6989586621679207871"><span class="annot"><span class="annottext">epochs :: Word64
+</span><a href="#local-6989586621679207871"><span class="hs-identifier hs-var hs-var">epochs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">round</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207878"><span class="hs-identifier hs-var">chainLength</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207874"><span class="hs-identifier hs-var">slotsPerEpoch</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span>      </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+(MonadTest m, HasCallStack) =&gt;
+CoverPercentage -&gt; LabelName -&gt; Bool -&gt; m ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier hs-var">cover</span></a></span><span>
+</span><span id="line-27"></span><span>        </span><span class="annot"><span class="annottext">CoverPercentage
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-28"></span><span>        </span><span class="annot"><span class="annottext">LabelName
+</span><span class="hs-string">&quot;1 epochs &quot;</span></span><span>
+</span><span id="line-29"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207871"><span class="hs-identifier hs-var">epochs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span>      </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+(MonadTest m, HasCallStack) =&gt;
+CoverPercentage -&gt; LabelName -&gt; Bool -&gt; m ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier hs-var">cover</span></a></span><span>
+</span><span id="line-32"></span><span>        </span><span class="annot"><span class="annottext">CoverPercentage
+</span><span class="hs-number">20</span></span><span>
+</span><span id="line-33"></span><span>        </span><span class="annot"><span class="annottext">LabelName
+</span><span class="hs-string">&quot;epochs in [2, 25)&quot;</span></span><span>
+</span><span id="line-34"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207871"><span class="hs-identifier hs-var">epochs</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207871"><span class="hs-identifier hs-var">epochs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">25</span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>      </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+(MonadTest m, HasCallStack) =&gt;
+CoverPercentage -&gt; LabelName -&gt; Bool -&gt; m ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier hs-var">cover</span></a></span><span>
+</span><span id="line-37"></span><span>        </span><span class="annot"><span class="annottext">CoverPercentage
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-38"></span><span>        </span><span class="annot"><span class="annottext">LabelName
+</span><span class="hs-string">&quot;epochs in [25, 50)&quot;</span></span><span>
+</span><span id="line-39"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">25</span></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207871"><span class="hs-identifier hs-var">epochs</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207871"><span class="hs-identifier hs-var">epochs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">50</span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+(MonadTest m, HasCallStack) =&gt;
+CoverPercentage -&gt; LabelName -&gt; Bool -&gt; m ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier hs-var">cover</span></a></span><span>
+</span><span id="line-42"></span><span>        </span><span class="annot"><span class="annottext">CoverPercentage
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><span class="annottext">LabelName
+</span><span class="hs-string">&quot;50 epochs &quot;</span></span><span>
+</span><span id="line-44"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207871"><span class="hs-identifier hs-var">epochs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">50</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span>      </span><span class="hs-comment">-- Note that we will not get any epochs between 50 and 100 since this will require the value of</span><span>
+</span><span id="line-47"></span><span>      </span><span class="hs-comment">-- @k@ to be a fraction. For instance, to get a @k@ value that will produce 70 epochs for a</span><span>
+</span><span id="line-48"></span><span>      </span><span class="hs-comment">-- chain of length 1000, we need (assuming @10k@ slots per-epoch):</span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-50"></span><span>      </span><span class="hs-comment">-- &gt; 1000 / (10 * 70) ~ 1.428</span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-comment">-- So if we round this value up, we get 50 epochs:</span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span>      </span><span class="hs-comment">-- &gt; 1000 / (10 * 2) == 50</span><span>
+</span><span id="line-55"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-comment">-- And if we round this value down we get 100 epochs.</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+(MonadTest m, HasCallStack) =&gt;
+CoverPercentage -&gt; LabelName -&gt; Bool -&gt; m ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hedgehog-1.4-cf25076c23f8111cd6afc444e0858eba4ce376f503d597d6b1f692a04269d59c/share/doc/html/src"><span class="hs-identifier hs-var">cover</span></a></span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><span class="annottext">CoverPercentage
+</span><span class="hs-number">6</span></span><span>
+</span><span id="line-60"></span><span>        </span><span class="annot"><span class="annottext">LabelName
+</span><span class="hs-string">&quot;100 epochs &quot;</span></span><span>
+</span><span id="line-61"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679207871"><span class="hs-identifier hs-var">epochs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">100</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span></pre></body></html>

@@ -1,0 +1,520 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Common.AddrAttributes</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier">AddrAttributes</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDAddressPayload"><span class="hs-identifier">HDAddressPayload</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html"><span class="hs-identifier">Cardano.Chain.Common.Attributes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#Attributes"><span class="hs-identifier">Attributes</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#decCBORAttributes"><span class="hs-identifier">decCBORAttributes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#encCBORAttributes"><span class="hs-identifier">encCBORAttributes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.NetworkMagic.html"><span class="hs-identifier">Cardano.Chain.Common.NetworkMagic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.NetworkMagic.html#NetworkMagic"><span class="hs-identifier">NetworkMagic</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier">Cardano.HeapWords</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier">HeapWords</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Decoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">byronProtVer</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeBytesCanonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeFull</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeFullDecoder</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeWord32Canonical</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">fromByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">serialize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">toByronCBOR</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier">toCborError</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">toCborError</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">object</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-operator">(.=)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Char8</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier">Data.Text.Lazy.Builder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier">Builder</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">bprint</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">builder</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier">Formatting.Buildable</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">B</span></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- | Additional information stored along with address. It's intended</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- to be put into 'Attributes' data type to make it extensible with</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- softfork.</span><span>
+</span><span id="line-48"></span><span id="local-6989586621679562075"><span id="local-6989586621679562076"></span></span><span class="hs-keyword">data</span><span> </span><span id="AddrAttributes"><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-var">AddrAttributes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AddrAttributes"><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-var">AddrAttributes</span></a></span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="aaVKDerivationPath"><span class="annot"><span class="annottext">AddrAttributes -&gt; Maybe HDAddressPayload
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#aaVKDerivationPath"><span class="hs-identifier hs-var hs-var">aaVKDerivationPath</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDAddressPayload"><span class="hs-identifier hs-type">HDAddressPayload</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="aaNetworkMagic"><span class="annot"><span class="annottext">AddrAttributes -&gt; NetworkMagic
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#aaNetworkMagic"><span class="hs-identifier hs-var hs-var">aaNetworkMagic</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Common.NetworkMagic.html#NetworkMagic"><span class="hs-identifier hs-type">NetworkMagic</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679562063"><span id="local-6989586621679562070"><span class="annot"><span class="annottext">AddrAttributes -&gt; AddrAttributes -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+$c/= :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+== :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+$c== :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679562034"><span id="local-6989586621679562036"><span id="local-6989586621679562039"><span id="local-6989586621679562042"><span id="local-6989586621679562045"><span id="local-6989586621679562050"><span id="local-6989586621679562057"><span class="annot"><span class="annottext">Eq AddrAttributes
+AddrAttributes -&gt; AddrAttributes -&gt; Bool
+AddrAttributes -&gt; AddrAttributes -&gt; Ordering
+AddrAttributes -&gt; AddrAttributes -&gt; AddrAttributes
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: AddrAttributes -&gt; AddrAttributes -&gt; AddrAttributes
+$cmin :: AddrAttributes -&gt; AddrAttributes -&gt; AddrAttributes
+max :: AddrAttributes -&gt; AddrAttributes -&gt; AddrAttributes
+$cmax :: AddrAttributes -&gt; AddrAttributes -&gt; AddrAttributes
+&gt;= :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+$c&gt;= :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+&gt; :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+$c&gt; :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+&lt;= :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+$c&lt;= :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+&lt; :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+$c&lt; :: AddrAttributes -&gt; AddrAttributes -&gt; Bool
+compare :: AddrAttributes -&gt; AddrAttributes -&gt; Ordering
+$ccompare :: AddrAttributes -&gt; AddrAttributes -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679562019"><span id="local-6989586621679562021"><span id="local-6989586621679562030"><span class="annot"><span class="annottext">Int -&gt; AddrAttributes -&gt; ShowS
+[AddrAttributes] -&gt; ShowS
+AddrAttributes -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [AddrAttributes] -&gt; ShowS
+$cshowList :: [AddrAttributes] -&gt; ShowS
+show :: AddrAttributes -&gt; String
+$cshow :: AddrAttributes -&gt; String
+showsPrec :: Int -&gt; AddrAttributes -&gt; ShowS
+$cshowsPrec :: Int -&gt; AddrAttributes -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep AddrAttributes x -&gt; AddrAttributes
+forall x. AddrAttributes -&gt; Rep AddrAttributes x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep AddrAttributes x -&gt; AddrAttributes
+$cfrom :: forall x. AddrAttributes -&gt; Rep AddrAttributes x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679562013"><span class="annot"><span class="annottext">AddrAttributes -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: AddrAttributes -&gt; ()
+$crnf :: AddrAttributes -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679562006"><span id="local-6989586621679562008"><span id="local-6989586621679562010"><span class="annot"><span class="annottext">Context -&gt; AddrAttributes -&gt; IO (Maybe ThunkInfo)
+Proxy AddrAttributes -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy AddrAttributes -&gt; String
+$cshowTypeOf :: Proxy AddrAttributes -&gt; String
+wNoThunks :: Context -&gt; AddrAttributes -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; AddrAttributes -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; AddrAttributes -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; AddrAttributes -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier hs-type">HeapWords</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>  </span><span id="local-6989586621679561991"><span class="annot"><span class="annottext">heapWords :: AddrAttributes -&gt; Int
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">heapWords</span></a></span></span><span> </span><span id="local-6989586621679561989"><span class="annot"><span class="annottext">AddrAttributes
+</span><a href="#local-6989586621679561989"><span class="hs-identifier hs-var">aa</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HeapWords a =&gt; a -&gt; Int
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier hs-var">heapWords</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddrAttributes -&gt; Maybe HDAddressPayload
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#aaVKDerivationPath"><span class="hs-identifier hs-var">aaVKDerivationPath</span></a></span><span> </span><span class="annot"><span class="annottext">AddrAttributes
+</span><a href="#local-6989586621679561989"><span class="hs-identifier hs-var">aa</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HeapWords a =&gt; a -&gt; Int
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/heapwords-0.1.0.2-32deea298916c936dcadf9a73cfc0939b8067776207f51515dab96b9d0252d2b/share/doc/html/src"><span class="hs-identifier hs-var">heapWords</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">AddrAttributes -&gt; NetworkMagic
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#aaNetworkMagic"><span class="hs-identifier hs-var">aaNetworkMagic</span></a></span><span> </span><span class="annot"><span class="annottext">AddrAttributes
+</span><a href="#local-6989586621679561989"><span class="hs-identifier hs-var">aa</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-type">B.Buildable</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-61"></span><span>  </span><span id="local-6989586621679561973"><span class="annot"><span class="annottext">build :: AddrAttributes -&gt; Builder
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">build</span></a></span></span><span> </span><span id="local-6989586621679561971"><span class="annot"><span class="annottext">AddrAttributes
+</span><a href="#local-6989586621679561971"><span class="hs-identifier hs-var">aa</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-62"></span><span>    </span><span class="annot"><span class="annottext">forall a. Format Builder a -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">bprint</span></a></span><span>
+</span><span id="line-63"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Format (Builder -&gt; Builder) (Builder -&gt; Builder)
+</span><span class="hs-string">&quot;AddrAttributes { derivation path: &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall r. Format r (Builder -&gt; r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/formatting-7.2.0-8fc435b10a0b35a28b37ed08cb464776eac3e0ddd238b62bd4b2d282266f29e7/share/doc/html/src"><span class="hs-identifier hs-var">builder</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Format Builder Builder
+</span><span class="hs-string">&quot; }&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>      </span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679561969"><span class="hs-identifier hs-var">derivationPathBuilder</span></a></span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>      </span><span class="annot"><a href="#local-6989586621679561969"><span class="hs-identifier hs-type">derivationPathBuilder</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">Builder</span></a></span><span>
+</span><span id="line-67"></span><span>      </span><span id="local-6989586621679561969"><span class="annot"><span class="annottext">derivationPathBuilder :: Builder
+</span><a href="#local-6989586621679561969"><span class="hs-identifier hs-var hs-var">derivationPathBuilder</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">AddrAttributes -&gt; Maybe HDAddressPayload
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#aaVKDerivationPath"><span class="hs-identifier hs-var">aaVKDerivationPath</span></a></span><span> </span><span class="annot"><span class="annottext">AddrAttributes
+</span><a href="#local-6989586621679561971"><span class="hs-identifier hs-var">aa</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-68"></span><span>        </span><span class="annot"><span class="annottext">Maybe HDAddressPayload
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;{}&quot;</span></span><span>
+</span><span id="line-69"></span><span>        </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">HDAddressPayload
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Builder
+</span><span class="hs-string">&quot;{path is encrypted}&quot;</span></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- Used for debugging purposes only</span><span>
+</span><span id="line-72"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679561959"><span id="local-6989586621679561961"><span id="local-6989586621679561963"><span id="local-6989586621679561965"><span id="local-6989586621679561967"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span></span></span></span></span></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">{- NOTE: Address attributes serialization
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'Attributes' are conceptually a map, where keys are numbers ('Word8').
+
+For address there are two attributes:
+  - 1 - derivation path, defaults to 'Nothing'.
+
+-}</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679561949"><span id="local-6989586621679561951"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-85"></span><span>  </span><span id="local-6989586621679561946"><span class="annot"><span class="annottext">toCBOR :: Attributes AddrAttributes -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679561938"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>  </span><span id="local-6989586621679561935"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (Attributes AddrAttributes)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679561925"><span id="local-6989586621679561927"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-comment">-- FIXME @avieth it was observed that for a 150kb block, this call to</span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-comment">-- encCBORAttributes allocated 3.685mb</span><span>
+</span><span id="line-93"></span><span>  </span><span class="hs-comment">-- Try using serialize rather than serialize', to avoid the</span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-comment">-- toStrict call.</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-comment">-- Also consider using a custom builder strategy; serialized attributes are</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-comment">-- probably small, right?</span><span>
+</span><span id="line-97"></span><span>  </span><span id="local-6989586621679561911"><span class="annot"><span class="annottext">encCBOR :: Attributes AddrAttributes -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span id="local-6989586621679561909"><span class="annot"><span class="annottext">attrs :: Attributes AddrAttributes
+</span><a href="#local-6989586621679561909"><span class="hs-identifier hs-var">attrs</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">attrData :: forall h. Attributes h -&gt; h
+</span><a href="Cardano.Chain.Common.Attributes.html#attrData"><span class="hs-identifier hs-var">attrData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span> </span><span id="local-6989586621679561906"><span class="annot"><span class="annottext">Maybe HDAddressPayload
+</span><a href="#local-6989586621679561906"><span class="hs-identifier hs-var">derivationPath</span></a></span></span><span> </span><span id="local-6989586621679561905"><span class="annot"><span class="annottext">NetworkMagic
+</span><a href="#local-6989586621679561905"><span class="hs-identifier hs-var">networkMagic</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>    </span><span class="annot"><span class="annottext">forall t. [(Word8, t -&gt; LByteString)] -&gt; Attributes t -&gt; Encoding
+</span><a href="Cardano.Chain.Common.Attributes.html#encCBORAttributes"><span class="hs-identifier hs-var">encCBORAttributes</span></a></span><span> </span><span class="annot"><span class="annottext">[(Word8, AddrAttributes -&gt; LByteString)]
+</span><a href="#local-6989586621679561904"><span class="hs-identifier hs-var">listWithIndices</span></a></span><span> </span><span class="annot"><span class="annottext">Attributes AddrAttributes
+</span><a href="#local-6989586621679561909"><span class="hs-identifier hs-var">attrs</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><a href="#local-6989586621679561904"><span class="hs-identifier hs-type">listWithIndices</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-type">LByteString</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-101"></span><span>      </span><span id="local-6989586621679561904"><span class="annot"><span class="annottext">listWithIndices :: [(Word8, AddrAttributes -&gt; LByteString)]
+</span><a href="#local-6989586621679561904"><span class="hs-identifier hs-var hs-var">listWithIndices</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">[(Word8, AddrAttributes -&gt; LByteString)]
+</span><a href="#local-6989586621679561903"><span class="hs-identifier hs-var">derivationPathListWithIndices</span></a></span><span>
+</span><span id="line-103"></span><span>          </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(Word8, AddrAttributes -&gt; LByteString)]
+</span><a href="#local-6989586621679561902"><span class="hs-identifier hs-var">networkMagicListWithIndices</span></a></span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>      </span><span class="annot"><a href="#local-6989586621679561903"><span class="hs-identifier hs-type">derivationPathListWithIndices</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-type">LByteString</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span>      </span><span id="local-6989586621679561903"><span class="annot"><span class="annottext">derivationPathListWithIndices :: [(Word8, AddrAttributes -&gt; LByteString)]
+</span><a href="#local-6989586621679561903"><span class="hs-identifier hs-var hs-var">derivationPathListWithIndices</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe HDAddressPayload
+</span><a href="#local-6989586621679561906"><span class="hs-identifier hs-var">derivationPath</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-107"></span><span>        </span><span class="annot"><span class="annottext">Maybe HDAddressPayload
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-108"></span><span>        </span><span class="hs-comment">-- 'unsafeFromJust' is safe, because 'case' ensures</span><span>
+</span><span id="line-109"></span><span>        </span><span class="hs-comment">-- that derivation path is 'Just'.</span><span>
+</span><span id="line-110"></span><span>        </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="annot"><span class="annottext">HDAddressPayload
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; Version -&gt; a -&gt; LByteString
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a -&gt; a
+</span><a href="#local-6989586621679561901"><span class="hs-identifier hs-var">unsafeFromJust</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">AddrAttributes -&gt; Maybe HDAddressPayload
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#aaVKDerivationPath"><span class="hs-identifier hs-var">aaVKDerivationPath</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-111"></span><span>      </span><span id="local-6989586621679562393"><span class="annot"><a href="#local-6989586621679561901"><span class="hs-identifier hs-type">unsafeFromJust</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679562393"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679562393"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-112"></span><span>      </span><span id="local-6989586621679561901"><span class="annot"><span class="annottext">unsafeFromJust :: forall a. Maybe a -&gt; a
+</span><a href="#local-6989586621679561901"><span class="hs-identifier hs-var hs-var">unsafeFromJust</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-113"></span><span>        </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; Text -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-var">panic</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Maybe was Nothing in EncCBOR (Attributes AddrAttributes)&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span>      </span><span class="annot"><a href="#local-6989586621679561902"><span class="hs-identifier hs-type">networkMagicListWithIndices</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word8</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-type">LByteString</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-116"></span><span>      </span><span id="local-6989586621679561902"><span class="annot"><span class="annottext">networkMagicListWithIndices :: [(Word8, AddrAttributes -&gt; LByteString)]
+</span><a href="#local-6989586621679561902"><span class="hs-identifier hs-var hs-var">networkMagicListWithIndices</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-117"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">NetworkMagic
+</span><a href="#local-6989586621679561905"><span class="hs-identifier hs-var">networkMagic</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-118"></span><span>          </span><span class="annot"><span class="annottext">NetworkMagic
+</span><a href="Cardano.Chain.Common.NetworkMagic.html#NetworkMainOrStage"><span class="hs-identifier hs-var">NetworkMainOrStage</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-119"></span><span>          </span><span class="annot"><a href="Cardano.Chain.Common.NetworkMagic.html#NetworkTestnet"><span class="hs-identifier hs-type">NetworkTestnet</span></a></span><span> </span><span id="local-6989586621679561892"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679561892"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-120"></span><span>            </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">2</span></span><span class="hs-special">,</span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">AddrAttributes
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; Version -&gt; a -&gt; LByteString
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">serialize</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679561892"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679561883"><span id="local-6989586621679561885"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.Attributes.html#Attributes"><span class="hs-identifier hs-type">Attributes</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>  </span><span id="local-6989586621679561881"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s (Attributes AddrAttributes)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall t s.
+t
+-&gt; (Word8 -&gt; LByteString -&gt; t -&gt; Decoder s (Maybe t))
+-&gt; Decoder s (Attributes t)
+</span><a href="Cardano.Chain.Common.Attributes.html#decCBORAttributes"><span class="hs-identifier hs-var">decCBORAttributes</span></a></span><span> </span><span class="annot"><span class="annottext">AddrAttributes
+</span><a href="#local-6989586621679561879"><span class="hs-identifier hs-var">initValue</span></a></span><span> </span><span class="annot"><span class="annottext">forall s.
+Word8
+-&gt; LByteString
+-&gt; AddrAttributes
+-&gt; Decoder s (Maybe AddrAttributes)
+</span><a href="#local-6989586621679561878"><span class="hs-identifier hs-var">go</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-125"></span><span>      </span><span id="local-6989586621679561879"><span class="annot"><span class="annottext">initValue :: AddrAttributes
+</span><a href="#local-6989586621679561879"><span class="hs-identifier hs-var hs-var">initValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-126"></span><span>        </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span>
+</span><span id="line-127"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">aaVKDerivationPath :: Maybe HDAddressPayload
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#aaVKDerivationPath"><span class="hs-identifier hs-var">aaVKDerivationPath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-128"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">aaNetworkMagic :: NetworkMagic
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#aaNetworkMagic"><span class="hs-identifier hs-var">aaNetworkMagic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NetworkMagic
+</span><a href="Cardano.Chain.Common.NetworkMagic.html#NetworkMainOrStage"><span class="hs-identifier hs-var">NetworkMainOrStage</span></a></span><span>
+</span><span id="line-129"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span>      </span><span id="local-6989586621679562383"><span class="annot"><a href="#local-6989586621679561878"><span class="hs-identifier hs-type">go</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-132"></span><span>        </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-133"></span><span>        </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-type">LByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-134"></span><span>        </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-135"></span><span>        </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Decoder</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679562383"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#AddrAttributes"><span class="hs-identifier hs-type">AddrAttributes</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-136"></span><span>      </span><span id="local-6989586621679561878"><span class="annot"><span class="annottext">go :: forall s.
+Word8
+-&gt; LByteString
+-&gt; AddrAttributes
+-&gt; Decoder s (Maybe AddrAttributes)
+</span><a href="#local-6989586621679561878"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679561859"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679561859"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679561858"><span class="annot"><span class="annottext">LByteString
+</span><a href="#local-6989586621679561858"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679561857"><span class="annot"><span class="annottext">AddrAttributes
+</span><a href="#local-6989586621679561857"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679561859"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-137"></span><span>        </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-138"></span><span>          </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679561856"><span class="annot"><span class="annottext">HDAddressPayload
+</span><a href="#local-6989586621679561856"><span class="hs-identifier hs-var">deriv</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AddrAttributes
+</span><a href="#local-6989586621679561857"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">aaVKDerivationPath :: Maybe HDAddressPayload
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#aaVKDerivationPath"><span class="hs-identifier hs-var">aaVKDerivationPath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">HDAddressPayload
+</span><a href="#local-6989586621679561856"><span class="hs-identifier hs-var">deriv</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>            </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) e a.
+(MonadFail m, Buildable e) =&gt;
+Either e a -&gt; m a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var">toCborError</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a.
+DecCBOR a =&gt;
+Version -&gt; LByteString -&gt; Either DecoderError a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeFull</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">LByteString
+</span><a href="#local-6989586621679561858"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-140"></span><span>        </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">2</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-141"></span><span>          </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679561854"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679561854"><span class="hs-identifier hs-var">deriv</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">AddrAttributes
+</span><a href="#local-6989586621679561857"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">aaNetworkMagic :: NetworkMagic
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#aaNetworkMagic"><span class="hs-identifier hs-var">aaNetworkMagic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; NetworkMagic
+</span><a href="Cardano.Chain.Common.NetworkMagic.html#NetworkTestnet"><span class="hs-identifier hs-var">NetworkTestnet</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679561854"><span class="hs-identifier hs-var">deriv</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-142"></span><span>            </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) e a.
+(MonadFail m, Buildable e) =&gt;
+Either e a -&gt; m a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-var">toCborError</span></a></span><span>
+</span><span id="line-143"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s a)
+-&gt; LByteString
+-&gt; Either DecoderError a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeFullDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">byronProtVer</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;NetworkMagic&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall s. Decoder s Word32
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeWord32Canonical</span></a></span><span> </span><span class="annot"><span class="annottext">LByteString
+</span><a href="#local-6989586621679561858"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>        </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- | Passphrase is a hash of root verification key.</span><span>
+</span><span id="line-147"></span><span class="hs-keyword">data</span><span> </span><span id="HDPassphrase"><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDPassphrase"><span class="hs-identifier hs-var">HDPassphrase</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="HDPassphrase"><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDPassphrase"><span class="hs-identifier hs-var">HDPassphrase</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679561847"><span id="local-6989586621679561851"><span class="annot"><span class="annottext">HDPassphrase -&gt; HDPassphrase -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: HDPassphrase -&gt; HDPassphrase -&gt; Bool
+$c/= :: HDPassphrase -&gt; HDPassphrase -&gt; Bool
+== :: HDPassphrase -&gt; HDPassphrase -&gt; Bool
+$c== :: HDPassphrase -&gt; HDPassphrase -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679561838"><span id="local-6989586621679561840"><span id="local-6989586621679561845"><span class="annot"><span class="annottext">Int -&gt; HDPassphrase -&gt; ShowS
+[HDPassphrase] -&gt; ShowS
+HDPassphrase -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [HDPassphrase] -&gt; ShowS
+$cshowList :: [HDPassphrase] -&gt; ShowS
+show :: HDPassphrase -&gt; String
+$cshow :: HDPassphrase -&gt; String
+showsPrec :: Int -&gt; HDPassphrase -&gt; ShowS
+$cshowsPrec :: Int -&gt; HDPassphrase -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- | HDAddressPayload is a specific address attribute that was used by the</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- Cardano wallet at mainnet launch, prior to moving to a BIP-44 style scheme.</span><span>
+</span><span id="line-152"></span><span class="hs-comment">--</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- It consisted of</span><span>
+</span><span id="line-154"></span><span class="hs-comment">--</span><span>
+</span><span id="line-155"></span><span class="hs-comment">--   * serialized and encrypted using HDPassphrase derivation path from the</span><span>
+</span><span id="line-156"></span><span class="hs-comment">--   root key to given descendant key (using ChaChaPoly1305 algorithm)</span><span>
+</span><span id="line-157"></span><span class="hs-comment">--</span><span>
+</span><span id="line-158"></span><span class="hs-comment">--   * cryptographic tag</span><span>
+</span><span id="line-159"></span><span class="hs-comment">--</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- It is still distinguished as an attribute, but not used by the ledger,</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- because the attributes size limits treat this attribute specially.</span><span>
+</span><span id="line-162"></span><span id="local-6989586621679561836"><span id="local-6989586621679561837"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="HDAddressPayload"><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDAddressPayload"><span class="hs-identifier hs-var">HDAddressPayload</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="HDAddressPayload"><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDAddressPayload"><span class="hs-identifier hs-var">HDAddressPayload</span></a></span></span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="getHDAddressPayload"><span class="annot"><span class="annottext">HDAddressPayload -&gt; ByteString
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#getHDAddressPayload"><span class="hs-identifier hs-var hs-var">getHDAddressPayload</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">ByteString</span></a></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679561828"><span id="local-6989586621679561832"><span class="annot"><span class="annottext">HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+$c/= :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+== :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+$c== :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679561797"><span id="local-6989586621679561801"><span id="local-6989586621679561805"><span id="local-6989586621679561809"><span id="local-6989586621679561813"><span id="local-6989586621679561817"><span id="local-6989586621679561822"><span class="annot"><span class="annottext">Eq HDAddressPayload
+HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+HDAddressPayload -&gt; HDAddressPayload -&gt; Ordering
+HDAddressPayload -&gt; HDAddressPayload -&gt; HDAddressPayload
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: HDAddressPayload -&gt; HDAddressPayload -&gt; HDAddressPayload
+$cmin :: HDAddressPayload -&gt; HDAddressPayload -&gt; HDAddressPayload
+max :: HDAddressPayload -&gt; HDAddressPayload -&gt; HDAddressPayload
+$cmax :: HDAddressPayload -&gt; HDAddressPayload -&gt; HDAddressPayload
+&gt;= :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+$c&gt;= :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+&gt; :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+$c&gt; :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+&lt;= :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+$c&lt;= :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+&lt; :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+$c&lt; :: HDAddressPayload -&gt; HDAddressPayload -&gt; Bool
+compare :: HDAddressPayload -&gt; HDAddressPayload -&gt; Ordering
+$ccompare :: HDAddressPayload -&gt; HDAddressPayload -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679561787"><span id="local-6989586621679561789"><span id="local-6989586621679561793"><span class="annot"><span class="annottext">Int -&gt; HDAddressPayload -&gt; ShowS
+[HDAddressPayload] -&gt; ShowS
+HDAddressPayload -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [HDAddressPayload] -&gt; ShowS
+$cshowList :: [HDAddressPayload] -&gt; ShowS
+show :: HDAddressPayload -&gt; String
+$cshow :: HDAddressPayload -&gt; String
+showsPrec :: Int -&gt; HDAddressPayload -&gt; ShowS
+$cshowsPrec :: Int -&gt; HDAddressPayload -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep HDAddressPayload x -&gt; HDAddressPayload
+forall x. HDAddressPayload -&gt; Rep HDAddressPayload x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep HDAddressPayload x -&gt; HDAddressPayload
+$cfrom :: forall x. HDAddressPayload -&gt; Rep HDAddressPayload x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679561768"><span id="local-6989586621679561774"><span id="local-6989586621679561781"><span class="annot"><span class="annottext">Typeable HDAddressPayload
+HDAddressPayload -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [HDAddressPayload] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy HDAddressPayload -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [HDAddressPayload] -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [HDAddressPayload] -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy HDAddressPayload -&gt; Size
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy HDAddressPayload -&gt; Size
+encCBOR :: HDAddressPayload -&gt; Encoding
+$cencCBOR :: HDAddressPayload -&gt; Encoding
+</span><a href="#local-6989586621679561768"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679561764"><span class="annot"><span class="annottext">HDAddressPayload -&gt; Int
+forall a. (a -&gt; Int) -&gt; HeapWords a
+heapWords :: HDAddressPayload -&gt; Int
+$cheapWords :: HDAddressPayload -&gt; Int
+</span><a href="#local-6989586621679561764"><span class="hs-identifier hs-var hs-var hs-var hs-var">HeapWords</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679561759"><span class="annot"><span class="annottext">HDAddressPayload -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: HDAddressPayload -&gt; ()
+$crnf :: HDAddressPayload -&gt; ()
+</span><a href="#local-6989586621679561759"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679561753"><span id="local-6989586621679561755"><span id="local-6989586621679561757"><span class="annot"><span class="annottext">Context -&gt; HDAddressPayload -&gt; IO (Maybe ThunkInfo)
+Proxy HDAddressPayload -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy HDAddressPayload -&gt; String
+$cshowTypeOf :: Proxy HDAddressPayload -&gt; String
+wNoThunks :: Context -&gt; HDAddressPayload -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; HDAddressPayload -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; HDAddressPayload -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; HDAddressPayload -&gt; IO (Maybe ThunkInfo)
+</span><a href="#local-6989586621679561753"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>
+</span><span id="line-169"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679561746"><span id="local-6989586621679561748"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDAddressPayload"><span class="hs-identifier hs-type">HDAddressPayload</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-170"></span><span>  </span><span id="local-6989586621679561744"><span class="annot"><span class="annottext">toCBOR :: HDAddressPayload -&gt; Encoding
+</span><a href="#local-6989586621679561744"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toByronCBOR</span></a></span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679561739"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-557ad90b95c57041fc27e317e08c1c821ab83f415fcdc6ccd4a1caf3af0d91ef/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDAddressPayload"><span class="hs-identifier hs-type">HDAddressPayload</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-173"></span><span>  </span><span id="local-6989586621679561737"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s HDAddressPayload
+</span><a href="#local-6989586621679561737"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">fromByronCBOR</span></a></span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- Used for debugging purposes only</span><span>
+</span><span id="line-176"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679561728"><span id="local-6989586621679561730"><span id="local-6989586621679561732"><span id="local-6989586621679561734"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDAddressPayload"><span class="hs-identifier hs-type">HDAddressPayload</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-177"></span><span>  </span><span id="local-6989586621679561717"><span class="annot"><span class="annottext">toJSON :: HDAddressPayload -&gt; Value
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDAddressPayload"><span class="hs-identifier hs-type">HDAddressPayload</span></a></span><span> </span><span id="local-6989586621679561715"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679561715"><span class="hs-identifier hs-var">bs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier hs-var">object</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;HDAddressPayload&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-var">Char8.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679561715"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679561707"><span id="local-6989586621679561709"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Common.AddrAttributes.html#HDAddressPayload"><span class="hs-identifier hs-type">HDAddressPayload</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-180"></span><span>  </span><span id="local-6989586621679561705"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s HDAddressPayload
+</span><a href="#local-6989586621679561705"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; HDAddressPayload
+</span><a href="Cardano.Chain.Common.AddrAttributes.html#HDAddressPayload"><span class="hs-identifier hs-var">HDAddressPayload</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall s. Decoder s ByteString
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeBytesCanonical</span></a></span><span>
+</span><span id="line-181"></span></pre></body></html>
