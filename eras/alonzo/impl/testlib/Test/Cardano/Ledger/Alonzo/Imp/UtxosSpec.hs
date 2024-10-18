@@ -74,7 +74,7 @@ spec = describe "UTXOS" $
 
         it "Invalid transaction marked as valid" $ do
           txIn <- produceScript . hashPlutusScript $ alwaysFailsWithDatum slang
-          expectPhase2Invalid $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
+          submitPhase2Invalid_ $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
         it "Invalid plutus script fails in phase 2" $ do
           txIn0 <- produceScript redeemerSameAsDatumHash

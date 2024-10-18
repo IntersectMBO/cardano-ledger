@@ -161,7 +161,7 @@ spec = describe "Invalid transactions" $ do
           -- PlutusV3 no longer requires a spending Datum, but it should still fail since the
           -- actual script expects it
           if lang >= PlutusV3
-            then expectPhase2Invalid tx
+            then submitPhase2Invalid_ tx
             else submitFailingTx tx [injectFailure $ UnspendableUTxONoDatumHash [txIn]]
 
         it "No ExtraRedeemers on same script certificates" $ do

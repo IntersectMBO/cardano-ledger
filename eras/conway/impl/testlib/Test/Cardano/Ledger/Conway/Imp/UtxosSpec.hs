@@ -570,7 +570,7 @@ govPolicySpec = do
                 , pProcAnchor = anchor
                 }
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
-        expectPhase2Invalid tx
+        submitPhase2Invalid_ tx
 
       impAnn "TreasuryWithdrawals" $ do
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
@@ -583,7 +583,7 @@ govPolicySpec = do
                 , pProcAnchor = anchor
                 }
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
-        expectPhase2Invalid tx
+        submitPhase2Invalid_ tx
 
 costModelsSpec ::
   forall era.
@@ -628,7 +628,7 @@ costModelsSpec =
                 , pProcAnchor = anchor
                 }
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
-        expectPhase2Invalid tx
+        submitPhase2Invalid_ tx
 
     it "Updating CostModels with alwaysSucceeds govPolicy but no PlutusV3 CostModels fails" $ do
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]

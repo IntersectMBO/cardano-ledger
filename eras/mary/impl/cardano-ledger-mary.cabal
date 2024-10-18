@@ -78,7 +78,7 @@ library
         cardano-ledger-allegra ^>=1.6,
         cardano-ledger-binary >=1.4,
         cardano-ledger-core ^>=1.15,
-        cardano-ledger-shelley >=1.13 && <1.15,
+        cardano-ledger-shelley ^>=1.15,
         containers,
         deepseq,
         groups,
