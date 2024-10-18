@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-core
-version:            1.15.0.0
+version:            1.15.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -95,7 +95,7 @@ library
         base-deriving-via,
         binary,
         bytestring,
-        cardano-ledger-binary ^>=1.4,
+        cardano-ledger-binary ^>=1.4.1,
         cardano-crypto,
         cardano-crypto-class,
         cardano-crypto-praos,
@@ -180,7 +180,7 @@ library testlib
         cardano-crypto-test,
         cardano-crypto-wrapper,
         cardano-ledger-core,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.4,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.4.1,
         cardano-ledger-byron,
         cardano-ledger-byron-test,
         containers,

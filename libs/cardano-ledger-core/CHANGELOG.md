@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-core`
 
-## 1.15.0.1
+## 1.15.1.0
 
-*
+* Add `{Enc|Dec}CBORGroup` instances for `Mismatch`. #4666
+  * Add `swapMismatch` to swap `Mismatch` values to preserve serialisation when necessary.
 
 ## 1.15.0.0
 

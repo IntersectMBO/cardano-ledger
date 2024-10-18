@@ -2,19 +2,16 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (
   spec,
   relevantDuringBootstrapSpec,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovPurposeId (..), Voter (..))
@@ -162,7 +159,11 @@ relevantDuringBootstrapSpec = do
                 (RegDRepTxCert (KeyHashObj khDRep) providedDRepDeposit SNothing)
         )
         ( pure . injectFailure $
-            ConwayDRepIncorrectDeposit providedDRepDeposit expectedDRepDeposit
+            ConwayDRepIncorrectDeposit $
+              Mismatch
+                { mismatchSupplied = providedDRepDeposit
+                , mismatchExpected = expectedDRepDeposit
+                }
         )
     it "invalid refund provided with DRep deregistration cert" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
@@ -181,7 +182,11 @@ relevantDuringBootstrapSpec = do
                 (UnRegDRepTxCert drepCred refund)
         )
         ( pure . injectFailure $
-            ConwayDRepIncorrectRefund refund drepDeposit
+            ConwayDRepIncorrectRefund $
+              Mismatch
+                { mismatchSupplied = refund
+                , mismatchExpected = drepDeposit
+                }
         )
     it "DRep already registered" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100

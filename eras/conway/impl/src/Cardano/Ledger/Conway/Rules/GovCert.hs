@@ -25,12 +25,17 @@ where
 
 import Cardano.Ledger.BaseTypes (
   EpochNo,
+  Mismatch (..),
+  Relation (..),
   ShelleyBase,
   StrictMaybe,
   addEpochInterval,
   strictMaybe,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (
   CertState (..),
@@ -80,7 +85,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import Data.Typeable (Typeable)
 import Data.Void (Void)
-import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
@@ -113,9 +117,9 @@ deriving instance EraPParams era => Eq (ConwayGovCertEnv era)
 data ConwayGovCertPredFailure era
   = ConwayDRepAlreadyRegistered !(Credential 'DRepRole (EraCrypto era))
   | ConwayDRepNotRegistered !(Credential 'DRepRole (EraCrypto era))
-  | ConwayDRepIncorrectDeposit !Coin !Coin -- The first is the given and the second is the expected deposit
+  | ConwayDRepIncorrectDeposit !(Mismatch 'RelEQ Coin)
   | ConwayCommitteeHasPreviouslyResigned !(Credential 'ColdCommitteeRole (EraCrypto era))
-  | ConwayDRepIncorrectRefund !Coin !Coin -- The first is the given and the second is the expected refund
+  | ConwayDRepIncorrectRefund !(Mismatch 'RelEQ Coin)
   | -- | Predicate failure whenever an update to an unknown committee member is
     -- attempted. Current Constitutional Committee and all available proposals will be
     -- searched before reporting this predicate failure.
@@ -133,64 +137,30 @@ instance NoThunks (ConwayGovCertPredFailure era)
 instance NFData (ConwayGovCertPredFailure era)
 
 instance
-  (Typeable era, Crypto (EraCrypto era)) =>
+  Era era =>
   EncCBOR (ConwayGovCertPredFailure era)
   where
-  encCBOR = \case
-    ConwayDRepAlreadyRegistered cred ->
-      encodeListLen 2
-        <> encCBOR (0 :: Word8)
-        <> encCBOR cred
-    ConwayDRepNotRegistered cred ->
-      encodeListLen 2
-        <> encCBOR (1 :: Word8)
-        <> encCBOR cred
-    ConwayDRepIncorrectDeposit deposit expectedDeposit ->
-      encodeListLen 3
-        <> encCBOR (2 :: Word8)
-        <> encCBOR deposit
-        <> encCBOR expectedDeposit
-    ConwayCommitteeHasPreviouslyResigned coldCred ->
-      encodeListLen 2
-        <> encCBOR (3 :: Word8)
-        <> encCBOR coldCred
-    ConwayDRepIncorrectRefund refund expectedRefund ->
-      encodeListLen 3
-        <> encCBOR (4 :: Word8)
-        <> encCBOR refund
-        <> encCBOR expectedRefund
-    ConwayCommitteeIsUnknown coldCred ->
-      encodeListLen 2
-        <> encCBOR (5 :: Word8)
-        <> encCBOR coldCred
+  encCBOR =
+    encode @_ @(ConwayGovCertPredFailure era) . \case
+      ConwayDRepAlreadyRegistered cred -> Sum ConwayDRepAlreadyRegistered 0 !> To cred
+      ConwayDRepNotRegistered cred -> Sum ConwayDRepNotRegistered 1 !> To cred
+      ConwayDRepIncorrectDeposit mm -> Sum ConwayDRepIncorrectDeposit 2 !> ToGroup mm
+      ConwayCommitteeHasPreviouslyResigned coldCred -> Sum ConwayCommitteeHasPreviouslyResigned 3 !> To coldCred
+      ConwayDRepIncorrectRefund mm -> Sum ConwayDRepIncorrectRefund 4 !> ToGroup mm
+      ConwayCommitteeIsUnknown coldCred -> Sum ConwayCommitteeIsUnknown 5 !> To coldCred
 
 instance
   (Typeable era, Crypto (EraCrypto era)) =>
   DecCBOR (ConwayGovCertPredFailure era)
   where
-  decCBOR = decodeRecordSum "ConwayGovCertPredFailure" $
-    \case
-      0 -> do
-        cred <- decCBOR
-        pure (2, ConwayDRepAlreadyRegistered cred)
-      1 -> do
-        cred <- decCBOR
-        pure (2, ConwayDRepNotRegistered cred)
-      2 -> do
-        deposit <- decCBOR
-        expectedDeposit <- decCBOR
-        pure (3, ConwayDRepIncorrectDeposit deposit expectedDeposit)
-      3 -> do
-        coldCred <- decCBOR
-        pure (2, ConwayCommitteeHasPreviouslyResigned coldCred)
-      4 -> do
-        refund <- decCBOR
-        expectedRefund <- decCBOR
-        pure (3, ConwayDRepIncorrectRefund refund expectedRefund)
-      5 -> do
-        coldCred <- decCBOR
-        pure (2, ConwayCommitteeIsUnknown coldCred)
-      k -> invalidKey k
+  decCBOR = decode . Summands "ConwayGovCertPredFailure" $ \case
+    0 -> SumD ConwayDRepAlreadyRegistered <! From
+    1 -> SumD ConwayDRepNotRegistered <! From
+    2 -> SumD ConwayDRepIncorrectDeposit <! FromGroup
+    3 -> SumD ConwayCommitteeHasPreviouslyResigned <! From
+    4 -> SumD ConwayDRepIncorrectRefund <! FromGroup
+    5 -> SumD ConwayCommitteeIsUnknown <! From
+    n -> Invalid n
 
 instance
   ( ConwayEraPParams era
@@ -252,7 +222,13 @@ conwayGovCertTransition = do
   case cert of
     ConwayRegDRep cred deposit mAnchor -> do
       Map.notMember cred vsDReps ?! ConwayDRepAlreadyRegistered cred
-      deposit == ppDRepDeposit ?! ConwayDRepIncorrectDeposit deposit ppDRepDeposit
+      deposit
+        == ppDRepDeposit
+          ?! ConwayDRepIncorrectDeposit
+            Mismatch
+              { mismatchSupplied = deposit
+              , mismatchExpected = ppDRepDeposit
+              }
       let drepState =
             DRepState
               { drepExpiry =
@@ -279,7 +255,7 @@ conwayGovCertTransition = do
             guard (refund /= paidDeposit)
             pure paidDeposit
       isJust mDRepState ?! ConwayDRepNotRegistered cred
-      failOnJust drepRefundMismatch $ ConwayDRepIncorrectRefund refund
+      failOnJust drepRefundMismatch $ ConwayDRepIncorrectRefund . Mismatch refund
       let
         certState' =
           certState {certVState = vState {vsDReps = Map.delete cred vsDReps}}
