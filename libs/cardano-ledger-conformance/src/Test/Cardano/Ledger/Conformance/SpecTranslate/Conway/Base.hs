@@ -1094,6 +1094,8 @@ instance
       <*> dreps
       <*> toSpecRep reCommitteeState
       <*> toSpecRep treasury
+      <*> toSpecRep rePoolParams
+      <*> toSpecRep reDelegatees
 
 instance SpecTranslate ctx Bool where
   type SpecRep Bool = Bool
