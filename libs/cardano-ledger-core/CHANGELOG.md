@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-core`
 
-## 1.15.0.1
+## 1.15.1.0
 
 *
+
+### `testlib`
+
+* Generalize the return type of `assertColorFailure` to `MonadIO`
 
 ## 1.15.0.0
 

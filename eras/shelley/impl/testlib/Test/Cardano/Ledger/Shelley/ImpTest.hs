@@ -90,9 +90,11 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   lookupImpRootTxOut,
   sendValueTo,
   sendCoinTo,
+  expectUTxOContent,
   expectRegisteredRewardAddress,
   expectNotRegisteredRewardAddress,
   expectTreasury,
+  disableTreasuryExpansion,
   updateAddrTxWits,
   addNativeScriptTxWits,
   addRootTxIn,
@@ -110,6 +112,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   Doc,
   AnsiStyle,
   logDoc,
+  logText,
   logString,
   logToExpr,
   logStakeDistr,
@@ -134,7 +137,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron (empty)
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
-import Cardano.Crypto.Hash (Hash, HashAlgorithm)
+import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (
@@ -155,6 +158,7 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
+  Hash,
   KeyHash,
   KeyRole (..),
   VerKeyVRF,
@@ -172,8 +176,10 @@ import Cardano.Ledger.Shelley.AdaPots (sumAdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesis (..),
+  describeValidationErr,
   fromNominalDiffTimeMicro,
   mkShelleyGlobals,
+  validateGenesis,
  )
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
@@ -242,7 +248,7 @@ import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default.Class (Default (..))
-import Data.Foldable (toList)
+import Data.Foldable (toList, traverse_)
 import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))
 import Data.IORef
@@ -253,6 +259,7 @@ import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.TreeDiff (ansiWlExpr)
@@ -468,13 +475,13 @@ class
   , VRF.VRFAlgorithm (VRF (EraCrypto era))
   , HashAlgorithm (HASH (EraCrypto era))
   , DSIGNAlgorithm (DSIGN (EraCrypto era))
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , Signable (DSIGN (EraCrypto era)) (Hash (EraCrypto era) EraIndependentTxBody)
   , ADDRHASH (EraCrypto era) ~ Blake2b_224
   ) =>
   ShelleyEraImp era
   where
   initGenesis ::
-    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m) =>
+    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m, MonadFail m) =>
     m (Genesis era)
   default initGenesis ::
     (Monad m, Genesis era ~ NoGenesis era) =>
@@ -482,12 +489,13 @@ class
   initGenesis = pure NoGenesis
 
   initNewEpochState ::
-    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m) =>
+    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m, MonadFail m) =>
     m (NewEpochState era)
   default initNewEpochState ::
     ( HasKeyPairs s (EraCrypto era)
     , MonadState s m
     , HasStatefulGen (StateGenM s) m
+    , MonadFail m
     , ShelleyEraImp (PreviousEra era)
     , TranslateEra era NewEpochState
     , TranslationError era NewEpochState ~ Void
@@ -503,6 +511,7 @@ class
     , HasSubState s
     , SubState s ~ StateGen QCGen
     , HasStatefulGen (StateGenM s) m
+    , MonadFail m
     ) =>
     m (ImpTestState era)
   initImpTestState = initNewEpochState >>= defaultInitImpTestState
@@ -530,6 +539,7 @@ defaultInitNewEpochState ::
   ( MonadState s m
   , HasKeyPairs s (EraCrypto era)
   , HasStatefulGen (StateGenM s) m
+  , MonadFail m
   , ShelleyEraImp era
   , ShelleyEraImp (PreviousEra era)
   , TranslateEra era NewEpochState
@@ -571,6 +581,7 @@ defaultInitImpTestState ::
   , HasKeyPairs s (EraCrypto era)
   , MonadState s m
   , HasStatefulGen (StateGenM s) m
+  , MonadFail m
   , HasSubState s
   , SubState s ~ StateGen QCGen
   ) =>
@@ -647,47 +658,51 @@ instance
   , NFData (VerKeyDSIGN (DSIGN c))
   , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
-  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
+  , Signable (DSIGN c) (Hash c EraIndependentTxBody)
   , ShelleyEraScript (ShelleyEra c)
   ) =>
   ShelleyEraImp (ShelleyEra c)
   where
-  initGenesis =
-    pure
-      ShelleyGenesis
-        { sgSystemStart = errorFail $ iso8601ParseM "2017-09-23T21:44:51Z"
-        , sgNetworkMagic = 123456 -- Mainnet value: 764824073
-        , sgNetworkId = Testnet
-        , sgActiveSlotsCoeff = 5 %! 100
-        , sgSecurityParam = 2160
-        , sgEpochLength = 4320 -- Mainnet value: 432000
-        , sgSlotsPerKESPeriod = 129600
-        , sgMaxKESEvolutions = 62
-        , sgSlotLength = 1
-        , sgUpdateQuorum = 5
-        , sgMaxLovelaceSupply = 45_000_000_000_000_000
-        , sgProtocolParams =
-            emptyPParams
-              & ppMinFeeAL .~ Coin 44
-              & ppMinFeeBL .~ Coin 155_381
-              & ppMaxBBSizeL .~ 65536
-              & ppMaxTxSizeL .~ 16384
-              & ppKeyDepositL .~ Coin 2_000_000
-              & ppKeyDepositL .~ Coin 500_000_000
-              & ppEMaxL .~ EpochInterval 18
-              & ppNOptL .~ 150
-              & ppA0L .~ (3 %! 10)
-              & ppRhoL .~ (3 %! 1000)
-              & ppTauL .~ (2 %! 10)
-              & ppDL .~ (1 %! 1)
-              & ppExtraEntropyL .~ NeutralNonce
-              & ppMinUTxOValueL .~ Coin 2_000_000
-              & ppMinPoolCostL .~ Coin 340_000_000
-        , -- TODO: Add a top level definition and add private keys to ImpState:
-          sgGenDelegs = mempty
-        , sgInitialFunds = mempty
-        , sgStaking = mempty
-        }
+  initGenesis = do
+    let
+      gen =
+        ShelleyGenesis
+          { sgSystemStart = errorFail $ iso8601ParseM "2017-09-23T21:44:51Z"
+          , sgNetworkMagic = 123456 -- Mainnet value: 764824073
+          , sgNetworkId = Testnet
+          , sgActiveSlotsCoeff = 20 %! 100 -- Mainnet value: 5 %! 100
+          , sgSecurityParam = 108 -- Mainnet value: 2160
+          , sgEpochLength = 4320 -- Mainnet value: 432000
+          , sgSlotsPerKESPeriod = 129600
+          , sgMaxKESEvolutions = 62
+          , sgSlotLength = 1
+          , sgUpdateQuorum = 5
+          , sgMaxLovelaceSupply = 45_000_000_000_000_000
+          , sgProtocolParams =
+              emptyPParams
+                & ppMinFeeAL .~ Coin 44
+                & ppMinFeeBL .~ Coin 155_381
+                & ppMaxBBSizeL .~ 65536
+                & ppMaxTxSizeL .~ 16384
+                & ppKeyDepositL .~ Coin 2_000_000
+                & ppKeyDepositL .~ Coin 500_000_000
+                & ppEMaxL .~ EpochInterval 18
+                & ppNOptL .~ 150
+                & ppA0L .~ (3 %! 10)
+                & ppRhoL .~ (3 %! 1000)
+                & ppTauL .~ (2 %! 10)
+                & ppDL .~ (1 %! 1)
+                & ppExtraEntropyL .~ NeutralNonce
+                & ppMinUTxOValueL .~ Coin 2_000_000
+                & ppMinPoolCostL .~ Coin 340_000_000
+          , -- TODO: Add a top level definition and add private keys to ImpState:
+            sgGenDelegs = mempty
+          , sgInitialFunds = mempty
+          , sgStaking = mempty
+          }
+    case validateGenesis gen of
+      Right () -> pure gen
+      Left errs -> fail . T.unpack . T.unlines $ map describeValidationErr errs
 
   initNewEpochState = do
     shelleyGenesis <- initGenesis @(ShelleyEra c)
@@ -991,9 +1006,9 @@ runShelleyBase act = do
   pure $ runIdentity $ runReaderT act globals
 
 getRewardAccountAmount :: RewardAccount (EraCrypto era) -> ImpTestM era Coin
-getRewardAccountAmount rewardAcount = do
+getRewardAccountAmount rewardAccount = do
   umap <- getsNES $ nesEsL . epochStateUMapL
-  let cred = raCredential rewardAcount
+  let cred = raCredential rewardAccount
   case UMap.lookup cred (RewDepUView umap) of
     Nothing -> assertFailure $ "Expected a reward account: " ++ show cred
     Just RDPair {rdReward} -> pure $ fromCompact rdReward
@@ -1103,7 +1118,7 @@ impNativeScriptKeyPairs tx = do
   keyPairs <- mapM (impSatisfyNativeScript curAddrWits) nativeScripts
   pure . mconcat $ catMaybes keyPairs
 
-fixupTxOuts :: ShelleyEraImp era => Tx era -> ImpTestM era (Tx era)
+fixupTxOuts :: (ShelleyEraImp era, HasCallStack) => Tx era -> ImpTestM era (Tx era)
 fixupTxOuts tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let
@@ -1487,11 +1502,17 @@ logWithCallStack callStack entry = impLogL %= (<> stack <> line <> indent 2 entr
             ]
         ]
     prefix n = if n <= 0 then "" else indent (n - 1) "└"
-    stack = vsep [prefix n <> prettySrcLoc' loc | (n, (_, loc)) <- zip [0, 2 ..] (getCallStack callStack)]
+    stack =
+      vsep
+        [prefix n <> prettySrcLoc' loc | (n, (_, loc)) <- zip [0, 2 ..] . reverse $ getCallStack callStack]
 
 -- | Adds a Doc to the log, which is only shown if the test fails
 logDoc :: HasCallStack => Doc AnsiStyle -> ImpTestM era ()
 logDoc = logWithCallStack ?callStack
+
+-- | Adds a Text to the log, which is only shown if the test fails
+logText :: HasCallStack => Text -> ImpTestM era ()
+logText = logWithCallStack ?callStack . pretty
 
 -- | Adds a String to the log, which is only shown if the test fails
 logString :: HasCallStack => String -> ImpTestM era ()
@@ -1529,7 +1550,7 @@ freshSafeHash = arbitrary
 
 freshKeyHashVRF ::
   Era era =>
-  ImpTestM era (Hash (HASH (EraCrypto era)) (VerKeyVRF (EraCrypto era)))
+  ImpTestM era (Hash (EraCrypto era) (VerKeyVRF (EraCrypto era)))
 freshKeyHashVRF = arbitrary
 
 -- | Adds a key pair to the keyhash lookup map
@@ -1823,6 +1844,15 @@ withPostFixup ::
   ImpTestM era a
 withPostFixup f = withCustomFixup (>=> f)
 
+expectUTxOContent ::
+  (HasCallStack, ToExpr (TxOut era)) =>
+  UTxO era -> [(TxIn (EraCrypto era), Maybe (TxOut era) -> Bool)] -> ImpTestM era ()
+expectUTxOContent utxo = traverse_ $ \(txIn, test) -> do
+  let result = txIn `Map.lookup` unUTxO utxo
+  unless (test result) $
+    expectationFailure $
+      "UTxO content failed predicate:\n" <> ansiExprString txIn <> " -> " <> ansiExprString result
+
 expectRegisteredRewardAddress :: RewardAccount (EraCrypto era) -> ImpTestM era ()
 expectRegisteredRewardAddress (RewardAccount _ cred) = do
   umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
@@ -1839,6 +1869,10 @@ expectTreasury c =
     treasuryAmt <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
     c `shouldBe` treasuryAmt
 
+-- Ensure no fees reach the treasury since that complicates withdrawal checks
+disableTreasuryExpansion :: ShelleyEraImp era => ImpTestM era ()
+disableTreasuryExpansion = modifyPParams $ ppTauL .~ (0 %! 1)
+
 impGetNativeScript :: ScriptHash (EraCrypto era) -> ImpTestM era (Maybe (NativeScript era))
 impGetNativeScript sh = Map.lookup sh <$> gets impNativeScripts
 
@@ -1850,7 +1884,7 @@ impLookupUTxO txIn = impAnn "Looking up TxOut" $ do
     Nothing -> error $ "Failed to get TxOut for " <> show txIn
 
 produceScript ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasCallStack) =>
   ScriptHash (EraCrypto era) ->
   ImpTestM era (TxIn (EraCrypto era))
 produceScript scriptHash = do
@@ -1858,6 +1892,7 @@ produceScript scriptHash = do
   let tx =
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr mempty)
+  logString $ "Produced script: " <> show scriptHash
   txInAt (0 :: Int) <$> submitTx tx
 
 advanceToPointOfNoReturn :: ImpTestM era ()
