@@ -37,6 +37,7 @@ spec = describe "Valid transactions" $ do
           alwaysSucceedsWithDatumHash = hashPlutusScript $ alwaysSucceedsWithDatum slang :: ScriptHash (EraCrypto era)
           alwaysSucceedsNoDatumHash = hashPlutusScript $ alwaysSucceedsNoDatum slang :: ScriptHash (EraCrypto era)
           alwaysFailsWithDatumHash = hashPlutusScript $ alwaysFailsWithDatum slang :: ScriptHash (EraCrypto era)
+          alwaysFailsNoDatumHash = hashPlutusScript $ alwaysFailsNoDatum slang :: ScriptHash (EraCrypto era)
 
         it "Validating SPEND script" $ do
           txIn <- produceScript alwaysSucceedsWithDatumHash
@@ -68,10 +69,18 @@ spec = describe "Valid transactions" $ do
                 & inputsTxBodyL .~ [txIn]
                 & certsTxBodyL .~ [txCert]
 
-  it "Validating WITHDRAWAL script" $ do
-    const $ pendingWith "not implemented yet"
-  it "Not validating WITHDRAWAL script" $ do
-    const $ pendingWith "not implemented yet"
+        it "Validating WITHDRAWAL script" $ do
+          account <- registerStakeCredential @era $ ScriptHashObj alwaysSucceedsNoDatumHash
+          expectTxSuccess <=< submitTx $
+            mkBasicTx $
+              mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
+
+        it "Not validating WITHDRAWAL script" $ do
+          account <- registerStakeCredential @era $ ScriptHashObj alwaysFailsNoDatumHash
+          expectTxSuccess <=< submitPhase2Invalid $
+            mkBasicTx $
+              mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
+
   it "Validating MINT script" $ do
     const $ pendingWith "not implemented yet"
   it "Not validating MINT script" $ do
