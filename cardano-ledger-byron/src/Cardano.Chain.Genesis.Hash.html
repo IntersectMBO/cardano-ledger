@@ -1,0 +1,95 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Genesis.Hash</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Hash.html#GenesisHash"><span class="hs-identifier">GenesisHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier">Cardano.Crypto.Hashing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier">Hash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier">Cardano.Crypto.Raw</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier">Raw</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span id="local-6989586621679565662"><span id="local-6989586621679565663"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="GenesisHash"><span class="annot"><a href="Cardano.Chain.Genesis.Hash.html#GenesisHash"><span class="hs-identifier hs-var">GenesisHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="GenesisHash"><span class="annot"><a href="Cardano.Chain.Genesis.Hash.html#GenesisHash"><span class="hs-identifier hs-var">GenesisHash</span></a></span></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unGenesisHash"><span class="annot"><span class="annottext">GenesisHash -&gt; Hash Raw
+</span><a href="Cardano.Chain.Genesis.Hash.html#unGenesisHash"><span class="hs-identifier hs-var hs-var">unGenesisHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier hs-type">Raw</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679565653"><span id="local-6989586621679565658"><span class="annot"><span class="annottext">GenesisHash -&gt; GenesisHash -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: GenesisHash -&gt; GenesisHash -&gt; Bool
+$c/= :: GenesisHash -&gt; GenesisHash -&gt; Bool
+== :: GenesisHash -&gt; GenesisHash -&gt; Bool
+$c== :: GenesisHash -&gt; GenesisHash -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep GenesisHash x -&gt; GenesisHash
+forall x. GenesisHash -&gt; Rep GenesisHash x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep GenesisHash x -&gt; GenesisHash
+$cfrom :: forall x. GenesisHash -&gt; Rep GenesisHash x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679565644"><span class="annot"><span class="annottext">GenesisHash -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: GenesisHash -&gt; ()
+$crnf :: GenesisHash -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679565620"><span id="local-6989586621679565627"><span id="local-6989586621679565635"><span class="annot"><span class="annottext">Typeable GenesisHash
+Proxy GenesisHash -&gt; Text
+forall s. Decoder s GenesisHash
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy GenesisHash -&gt; Decoder s ()
+label :: Proxy GenesisHash -&gt; Text
+$clabel :: Proxy GenesisHash -&gt; Text
+dropCBOR :: forall s. Proxy GenesisHash -&gt; Decoder s ()
+$cdropCBOR :: forall s. Proxy GenesisHash -&gt; Decoder s ()
+decCBOR :: forall s. Decoder s GenesisHash
+$cdecCBOR :: forall s. Decoder s GenesisHash
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679565589"><span id="local-6989586621679565598"><span id="local-6989586621679565608"><span class="annot"><span class="annottext">Typeable GenesisHash
+GenesisHash -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [GenesisHash] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy GenesisHash -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [GenesisHash] -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [GenesisHash] -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy GenesisHash -&gt; Size
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy GenesisHash -&gt; Size
+encCBOR :: GenesisHash -&gt; Encoding
+$cencCBOR :: GenesisHash -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679565571"><span id="local-6989586621679565575"><span id="local-6989586621679565580"><span class="annot"><span class="annottext">Context -&gt; GenesisHash -&gt; IO (Maybe ThunkInfo)
+Proxy GenesisHash -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy GenesisHash -&gt; String
+$cshowTypeOf :: Proxy GenesisHash -&gt; String
+wNoThunks :: Context -&gt; GenesisHash -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; GenesisHash -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; GenesisHash -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; GenesisHash -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-0463ac71474a2bad0a06b0f513fd49599fa3f3dd9bae265aaebf349d2fda51f3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span id="local-6989586621679565557"><span id="local-6989586621679565559"><span id="local-6989586621679565565"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.Hash.html#GenesisHash"><span class="hs-identifier hs-type">GenesisHash</span></a></span></span></span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- Used for debugging purposes only</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679565546"><span id="local-6989586621679565548"><span id="local-6989586621679565550"><span id="local-6989586621679565552"><span id="local-6989586621679565554"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-2004b0b948cb55e8ba23822910366edfd68fe1ba8cee7418966154fc8a04f5a5/share/doc/html/src"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.Hash.html#GenesisHash"><span class="hs-identifier hs-type">GenesisHash</span></a></span></span></span></span></span></span><span>
+</span><span id="line-27"></span></pre></body></html>

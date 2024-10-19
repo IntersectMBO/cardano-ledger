@@ -1,0 +1,861 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Binary.Cddl</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripCborSpec"><span class="hs-identifier">cddlRoundTripCborSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripExpectation"><span class="hs-identifier">cddlRoundTripExpectation</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripAnnCborSpec"><span class="hs-identifier">cddlRoundTripAnnCborSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripAnnExpectation"><span class="hs-identifier">cddlRoundTripAnnExpectation</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Helper functions and types</span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cddl"><span class="hs-identifier">Cddl</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cbor"><span class="hs-identifier">Cbor</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#DiagCbor"><span class="hs-identifier">DiagCbor</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlData"><span class="hs-identifier">CddlData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlVarFile"><span class="hs-identifier">CddlVarFile</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#beforeAllCddlFile"><span class="hs-identifier">beforeAllCddlFile</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#withCddlVarFile"><span class="hs-identifier">withCddlVarFile</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#genCddlDiagCbor"><span class="hs-identifier">genCddlDiagCbor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#diagCborToCbor"><span class="hs-identifier">diagCborToCbor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#validateCddlConformance"><span class="hs-identifier">validateCddlConformance</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#readProcessNoFailure"><span class="hs-identifier">readProcessNoFailure</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#usingTempFile"><span class="hs-identifier">usingTempFile</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">forM_</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier">Data.ByteString.Lazy.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BSL8</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier">Data.Text.Encoding</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Typeable</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">System.IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">hClose</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier">System.Process.Typed</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">ExitCode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier">ProcessConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier">byteStringInput</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier">proc</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier">readProcess</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier">setStdin</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.RoundTrip.html"><span class="hs-identifier">Test.Cardano.Ledger.Binary.RoundTrip</span></a></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-2.11.9-2a314d3e9a4fad8487773aa2031c27e6fa29d76ecb4daa34c3ebc86b9d60d38e/share/doc/html/src"><span class="hs-identifier">Test.Hspec</span></a></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/unliftio-0.2.25.0-805e450f51e3cb591de12153d6c9fbfc715f47e02e97b08aeb72529461d785a7/share/doc/html/src"><span class="hs-identifier">UnliftIO.Temporary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/unliftio-0.2.25.0-805e450f51e3cb591de12153d6c9fbfc715f47e02e97b08aeb72529461d785a7/share/doc/html/src"><span class="hs-identifier">withTempFile</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- | Contents of CDDL Spec</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">newtype</span><span> </span><span id="Cddl"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cddl"><span class="hs-identifier hs-var">Cddl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Cddl"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cddl"><span class="hs-identifier hs-var">Cddl</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unCddl"><span class="annot"><span class="annottext">Cddl -&gt; ByteString
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#unCddl"><span class="hs-identifier hs-var hs-var">unCddl</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | Binary form of CBOR data.</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">newtype</span><span> </span><span id="Cbor"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cbor"><span class="hs-identifier hs-var">Cbor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Cbor"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cbor"><span class="hs-identifier hs-var">Cbor</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unCbor"><span class="annot"><span class="annottext">Cbor -&gt; ByteString
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#unCbor"><span class="hs-identifier hs-var hs-var">unCbor</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- | Human readable CBOR, which was randomly generated.</span><span>
+</span><span id="line-58"></span><span class="hs-keyword">newtype</span><span> </span><span id="DiagCbor"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#DiagCbor"><span class="hs-identifier hs-var">DiagCbor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DiagCbor"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#DiagCbor"><span class="hs-identifier hs-var">DiagCbor</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unDiagCbor"><span class="annot"><span class="annottext">DiagCbor -&gt; ByteString
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#unDiagCbor"><span class="hs-identifier hs-var hs-var">unDiagCbor</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">data</span><span> </span><span id="CddlVarFile"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlVarFile"><span class="hs-identifier hs-var">CddlVarFile</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CddlVarFile"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlVarFile"><span class="hs-identifier hs-var">CddlVarFile</span></a></span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="cddlVarFilePath"><span class="annot"><span class="annottext">CddlVarFile -&gt; FilePath
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlVarFilePath"><span class="hs-identifier hs-var hs-var">cddlVarFilePath</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-comment">-- ^ File that contains the Cddl data included in this type</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cddlVarName"><span class="annot"><span class="annottext">CddlVarFile -&gt; Text
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlVarName"><span class="hs-identifier hs-var hs-var">cddlVarName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">T.Text</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-comment">-- ^ Name of the variable being tested</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cddlVarData"><span class="annot"><span class="annottext">CddlVarFile -&gt; Cddl
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlVarData"><span class="hs-identifier hs-var hs-var">cddlVarData</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cddl"><span class="hs-identifier hs-type">Cddl</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-comment">-- ^ Full CDDL spec with @output=`cddlVarName`@ prefix</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cddlVarDiagCbor"><span class="annot"><span class="annottext">CddlVarFile -&gt; [DiagCbor]
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlVarDiagCbor"><span class="hs-identifier hs-var hs-var">cddlVarDiagCbor</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#DiagCbor"><span class="hs-identifier hs-type">DiagCbor</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">-- ^ Generated CBOR data from the above CDDL spec</span><span>
+</span><span id="line-69"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-keyword">data</span><span> </span><span id="CddlData"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlData"><span class="hs-identifier hs-var">CddlData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CddlData"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlData"><span class="hs-identifier hs-var">CddlData</span></a></span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="cddlData"><span class="annot"><span class="annottext">CddlData -&gt; Cddl
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlData"><span class="hs-identifier hs-var hs-var">cddlData</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cddl"><span class="hs-identifier hs-type">Cddl</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cddlNumExamples"><span class="annot"><span class="annottext">CddlData -&gt; Int
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlNumExamples"><span class="hs-identifier hs-var hs-var">cddlNumExamples</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-comment">-- ^ Number of random cases to generate</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- | Given an action that produces CDDL content, we combine it all into `CddlData` and</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- make it available to every subsequent Spec. Important point about this is that the</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- supplied action will only be executed once.</span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#beforeAllCddlFile"><span class="hs-identifier hs-type">beforeAllCddlFile</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-comment">-- | Number of random cases to generate</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-comment">-- | Action that produces a list of valid CDDL specs</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.9-341f7cbdbfb79a82c773ee031a1c9fdbd4be25f8ad76a92abdfce28033f0549c/share/doc/html/src"><span class="hs-identifier hs-type">SpecWith</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlData"><span class="hs-identifier hs-type">CddlData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.9-341f7cbdbfb79a82c773ee031a1c9fdbd4be25f8ad76a92abdfce28033f0549c/share/doc/html/src"><span class="hs-identifier hs-type">Spec</span></a></span><span>
+</span><span id="line-88"></span><span id="beforeAllCddlFile"><span class="annot"><span class="annottext">beforeAllCddlFile :: HasCallStack =&gt; Int -&gt; IO [ByteString] -&gt; SpecWith CddlData -&gt; Spec
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#beforeAllCddlFile"><span class="hs-identifier hs-var hs-var">beforeAllCddlFile</span></a></span></span><span> </span><span id="local-6989586621679243119"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679243119"><span class="hs-identifier hs-var">numExamples</span></a></span></span><span> </span><span id="local-6989586621679243118"><span class="annot"><span class="annottext">IO [ByteString]
+</span><a href="#local-6989586621679243118"><span class="hs-identifier hs-var">getCddlFiles</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; IO a -&gt; SpecWith a -&gt; Spec
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.9-341f7cbdbfb79a82c773ee031a1c9fdbd4be25f8ad76a92abdfce28033f0549c/share/doc/html/src"><span class="hs-identifier hs-var">beforeAll</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-89"></span><span>  </span><span id="local-6989586621679243116"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679243116"><span class="hs-identifier hs-var">cddls</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO [ByteString]
+</span><a href="#local-6989586621679243118"><span class="hs-identifier hs-var">getCddlFiles</span></a></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-comment">-- combine all files into one large strict bytestring, while converting it back to the</span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-comment">-- lazy one for later usage. This is done to reduce overhead of a lazy bytestring</span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679243113"><span class="annot"><span class="annottext">cddl :: Cddl
+</span><a href="#local-6989586621679243113"><span class="hs-identifier hs-var hs-var">cddl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Cddl
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cddl"><span class="hs-identifier hs-var">Cddl</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-var">BSL.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-var">BSL.toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679243116"><span class="hs-identifier hs-var">cddls</span></a></span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlData"><span class="hs-identifier hs-type">CddlData</span></a></span><span>
+</span><span id="line-95"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cddlData :: Cddl
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlData"><span class="hs-identifier hs-var">cddlData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Cddl
+</span><a href="#local-6989586621679243113"><span class="hs-identifier hs-var">cddl</span></a></span><span>
+</span><span id="line-96"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cddlNumExamples :: Int
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlNumExamples"><span class="hs-identifier hs-var">cddlNumExamples</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679243119"><span class="hs-identifier hs-var">numExamples</span></a></span><span>
+</span><span id="line-97"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- | Given a `CddlData` and a CDDL variable name present in the supplied data, generate a</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- `CddlVarFile`, that contains random data for that variable.</span><span>
+</span><span id="line-101"></span><span id="local-6989586621679243256"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#withCddlVarFile"><span class="hs-identifier hs-type">withCddlVarFile</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-comment">-- | Name of the variable that will be tested</span><span>
+</span><span id="line-104"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-comment">-- | CddlData that will be used for random data generation</span><span>
+</span><span id="line-106"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlData"><span class="hs-identifier hs-type">CddlData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-comment">-- | Action that can use the random data for roundtrip and conformance testing</span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlVarFile"><span class="hs-identifier hs-type">CddlVarFile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243256"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243256"><span class="hs-identifier hs-type">b</span></a></span></span><span>
+</span><span id="line-110"></span><span id="withCddlVarFile"><span class="annot"><span class="annottext">withCddlVarFile :: forall b.
+HasCallStack =&gt;
+Text -&gt; CddlData -&gt; (CddlVarFile -&gt; IO b) -&gt; IO b
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#withCddlVarFile"><span class="hs-identifier hs-var hs-var">withCddlVarFile</span></a></span></span><span> </span><span id="local-6989586621679243106"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243106"><span class="hs-identifier hs-var">varName</span></a></span></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlData"><span class="hs-identifier hs-type">CddlData</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679243104"><span id="local-6989586621679243105"><span class="annot"><span class="annottext">Int
+Cddl
+cddlNumExamples :: Int
+cddlData :: Cddl
+cddlNumExamples :: CddlData -&gt; Int
+cddlData :: CddlData -&gt; Cddl
+</span><a href="#local-6989586621679243104"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679243103"><span class="annot"><span class="annottext">CddlVarFile -&gt; IO b
+</span><a href="#local-6989586621679243103"><span class="hs-identifier hs-var">roundTripTest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679243096"><span class="annot"><span class="annottext">suffix :: ByteString
+</span><a href="#local-6989586621679243096"><span class="hs-identifier hs-var hs-var">suffix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-var">T.encodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;output = &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243106"><span class="hs-identifier hs-var">varName</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;\n&quot;</span></span><span>
+</span><span id="line-112"></span><span>      </span><span id="local-6989586621679243092"><span class="annot"><span class="annottext">varData :: Cddl
+</span><a href="#local-6989586621679243092"><span class="hs-identifier hs-var hs-var">varData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Cddl
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cddl"><span class="hs-identifier hs-var">Cddl</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-var">BSL.fromStrict</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679243096"><span class="hs-identifier hs-var">suffix</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Cddl -&gt; ByteString
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#unCddl"><span class="hs-identifier hs-var">unCddl</span></a></span><span> </span><span class="annot"><span class="annottext">Cddl
+</span><a href="#local-6989586621679243105"><span class="hs-identifier hs-var">cddlData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621679243091"><span class="annot"><span class="annottext">[DiagCbor]
+</span><a href="#local-6989586621679243091"><span class="hs-identifier hs-var">diagCbor</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; Int -&gt; Cddl -&gt; IO [DiagCbor]
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#genCddlDiagCbor"><span class="hs-identifier hs-var">genCddlDiagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679243104"><span class="hs-identifier hs-var">cddlNumExamples</span></a></span><span> </span><span class="annot"><span class="annottext">Cddl
+</span><a href="#local-6989586621679243092"><span class="hs-identifier hs-var">varData</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><span class="annottext">forall a. ByteString -&gt; (FilePath -&gt; IO a) -&gt; IO a
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#usingTempFile"><span class="hs-identifier hs-var">usingTempFile</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Cddl -&gt; ByteString
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#unCddl"><span class="hs-identifier hs-var">unCddl</span></a></span><span> </span><span class="annot"><span class="annottext">Cddl
+</span><a href="#local-6989586621679243092"><span class="hs-identifier hs-var">varData</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679243090"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679243090"><span class="hs-identifier hs-var">filePath</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><span class="annottext">CddlVarFile -&gt; IO b
+</span><a href="#local-6989586621679243103"><span class="hs-identifier hs-var">roundTripTest</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-116"></span><span>      </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlVarFile"><span class="hs-identifier hs-type">CddlVarFile</span></a></span><span>
+</span><span id="line-117"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cddlVarFilePath :: FilePath
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlVarFilePath"><span class="hs-identifier hs-var">cddlVarFilePath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679243090"><span class="hs-identifier hs-var">filePath</span></a></span><span>
+</span><span id="line-118"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cddlVarName :: Text
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlVarName"><span class="hs-identifier hs-var">cddlVarName</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243106"><span class="hs-identifier hs-var">varName</span></a></span><span>
+</span><span id="line-119"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cddlVarData :: Cddl
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlVarData"><span class="hs-identifier hs-var">cddlVarData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Cddl
+</span><a href="#local-6989586621679243092"><span class="hs-identifier hs-var">varData</span></a></span><span>
+</span><span id="line-120"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cddlVarDiagCbor :: [DiagCbor]
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlVarDiagCbor"><span class="hs-identifier hs-var">cddlVarDiagCbor</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[DiagCbor]
+</span><a href="#local-6989586621679243091"><span class="hs-identifier hs-var">diagCbor</span></a></span><span>
+</span><span id="line-121"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- | Using the supplied `CddlData` inside the `SpecWith` generate random data and run the</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- `cddlRoundTripExpectation` for the supplied CDDL variable</span><span>
+</span><span id="line-125"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripCborSpec"><span class="hs-identifier hs-type">cddlRoundTripCborSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679243252"><span class="annot"><a href="#local-6989586621679243252"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243252"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243252"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243252"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243252"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-comment">-- | Serialization version</span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-comment">-- | Name of the CDDL variable to test</span><span>
+</span><span id="line-131"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.9-341f7cbdbfb79a82c773ee031a1c9fdbd4be25f8ad76a92abdfce28033f0549c/share/doc/html/src"><span class="hs-identifier hs-type">SpecWith</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlData"><span class="hs-identifier hs-type">CddlData</span></a></span><span>
+</span><span id="line-133"></span><span id="cddlRoundTripCborSpec"><span class="annot"><span class="annottext">cddlRoundTripCborSpec :: forall a.
+(HasCallStack, Eq a, Show a, EncCBOR a, DecCBOR a) =&gt;
+Version -&gt; Text -&gt; SpecWith CddlData
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripCborSpec"><span class="hs-identifier hs-var hs-var">cddlRoundTripCborSpec</span></a></span></span><span> </span><span id="local-6989586621679243069"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679243069"><span class="hs-identifier hs-var">version</span></a></span></span><span> </span><span id="local-6989586621679243068"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243068"><span class="hs-identifier hs-var">varName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679243066"><span class="annot"><span class="annottext">lbl :: Text
+</span><a href="#local-6989586621679243066"><span class="hs-identifier hs-var hs-var">lbl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. DecCBOR a =&gt; Proxy a -&gt; Text
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-keyword hs-var">label</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (t :: k). Proxy t
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679243252"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-135"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Example a) =&gt;
+FilePath -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.9-341f7cbdbfb79a82c773ee031a1c9fdbd4be25f8ad76a92abdfce28033f0549c/share/doc/html/src"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-var">T.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243068"><span class="hs-identifier hs-var">varName</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243066"><span class="hs-identifier hs-var">lbl</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679243061"><span class="annot"><span class="annottext">CddlData
+</span><a href="#local-6989586621679243061"><span class="hs-identifier hs-var">cddlData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-136"></span><span>        </span><span class="annot"><span class="annottext">forall b.
+HasCallStack =&gt;
+Text -&gt; CddlData -&gt; (CddlVarFile -&gt; IO b) -&gt; IO b
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#withCddlVarFile"><span class="hs-identifier hs-var">withCddlVarFile</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243068"><span class="hs-identifier hs-var">varName</span></a></span><span> </span><span class="annot"><span class="annottext">CddlData
+</span><a href="#local-6989586621679243061"><span class="hs-identifier hs-var">cddlData</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-137"></span><span>          </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Show a, Eq a) =&gt;
+Text -&gt; Version -&gt; Version -&gt; Trip a a -&gt; CddlVarFile -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripExpectation"><span class="hs-identifier hs-var">cddlRoundTripExpectation</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243066"><span class="hs-identifier hs-var">lbl</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679243069"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679243069"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (EncCBOR a, DecCBOR b) =&gt; Trip a b
+</span><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#cborTrip"><span class="hs-identifier hs-var">cborTrip</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679243252"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- | Verify that random data generated is:</span><span>
+</span><span id="line-140"></span><span class="hs-comment">--</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- * Decoded successfully into a Haskell type using the decoder in `Trip` and the version</span><span>
+</span><span id="line-142"></span><span class="hs-comment">--   supplied</span><span>
+</span><span id="line-143"></span><span class="hs-comment">--</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- * When reencoded conforms to the CDDL spec and produces valid `FlatTerm`</span><span>
+</span><span id="line-145"></span><span class="hs-comment">--</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- * When decoded again from the bytes produced by the encoder matches the type exactly</span><span>
+</span><span id="line-147"></span><span class="hs-comment">--   when it was decoded from random bytes</span><span>
+</span><span id="line-148"></span><span id="local-6989586621679243239"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripExpectation"><span class="hs-identifier hs-type">cddlRoundTripExpectation</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243239"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243239"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-comment">-- | Version to use for decoding</span><span>
+</span><span id="line-152"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-comment">-- | Version to use for encoding</span><span>
+</span><span id="line-154"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-comment">-- | Decode/encoder that needs tsting</span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#Trip"><span class="hs-identifier hs-type">Trip</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243239"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243239"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-comment">-- | Randomly generated data and the CDDL spec</span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlVarFile"><span class="hs-identifier hs-type">CddlVarFile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-159"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-expectations-0.8.4-58b371c4175faf313008a93c247d475c9c44c294781f44aba1f2a6928af1dbb7/share/doc/html/src"><span class="hs-identifier hs-type">Expectation</span></a></span></span><span>
+</span><span id="line-160"></span><span id="cddlRoundTripExpectation"><span class="annot"><span class="annottext">cddlRoundTripExpectation :: forall a.
+(HasCallStack, Show a, Eq a) =&gt;
+Text -&gt; Version -&gt; Version -&gt; Trip a a -&gt; CddlVarFile -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripExpectation"><span class="hs-identifier hs-var hs-var">cddlRoundTripExpectation</span></a></span></span><span> </span><span id="local-6989586621679243035"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243035"><span class="hs-identifier hs-var">lbl</span></a></span></span><span> </span><span id="local-6989586621679243034"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679243034"><span class="hs-identifier hs-var">encVersion</span></a></span></span><span> </span><span id="local-6989586621679243033"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679243033"><span class="hs-identifier hs-var">decVersion</span></a></span></span><span> </span><span id="local-6989586621679243032"><span class="annot"><span class="annottext">trip :: Trip a a
+</span><a href="#local-6989586621679243032"><span class="hs-identifier hs-var">trip</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#Trip"><span class="hs-identifier hs-type">Trip</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679243030"><span class="annot"><span class="annottext">forall s. Decoder s a
+tripDecoder :: forall a b. Trip a b -&gt; forall s. Decoder s b
+tripDecoder :: forall s. Decoder s a
+</span><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#tripDecoder"><span class="hs-identifier hs-var hs-var">tripDecoder</span></a></span></span><span class="hs-special">}</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlVarFile"><span class="hs-identifier hs-type">CddlVarFile</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679243025"><span id="local-6989586621679243026"><span id="local-6989586621679243027"><span id="local-6989586621679243028"><span class="annot"><span class="annottext">FilePath
+[DiagCbor]
+Text
+Cddl
+cddlVarDiagCbor :: [DiagCbor]
+cddlVarData :: Cddl
+cddlVarName :: Text
+cddlVarFilePath :: FilePath
+cddlVarDiagCbor :: CddlVarFile -&gt; [DiagCbor]
+cddlVarData :: CddlVarFile -&gt; Cddl
+cddlVarName :: CddlVarFile -&gt; Text
+cddlVarFilePath :: CddlVarFile -&gt; FilePath
+</span><a href="#local-6989586621679243025"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><span class="annottext">forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">forM_</span></a></span><span> </span><span class="annot"><span class="annottext">[DiagCbor]
+</span><a href="#local-6989586621679243025"><span class="hs-identifier hs-var">cddlVarDiagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679243024"><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679243024"><span class="hs-identifier hs-var">diagCbor</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-162"></span><span>    </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cbor"><span class="hs-identifier hs-type">Cbor</span></a></span><span> </span><span id="local-6989586621679243023"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679243023"><span class="hs-identifier hs-var">cbor</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; DiagCbor -&gt; IO Cbor
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#diagCborToCbor"><span class="hs-identifier hs-var">diagCborToCbor</span></a></span><span> </span><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679243024"><span class="hs-identifier hs-var">diagCbor</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679243022"><span class="annot"><span class="annottext">mkFailure :: Encoding
+-&gt; Maybe ByteString
+-&gt; Maybe FilePath
+-&gt; Maybe DecoderError
+-&gt; Maybe DecoderError
+-&gt; RoundTripFailure
+</span><a href="#local-6989586621679243022"><span class="hs-identifier hs-var hs-var">mkFailure</span></a></span></span><span> </span><span id="local-6989586621679243021"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621679243021"><span class="hs-identifier hs-var">encoding</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-164"></span><span>          </span><span class="annot"><span class="annottext">Version
+-&gt; Version
+-&gt; Encoding
+-&gt; ByteString
+-&gt; Maybe ByteString
+-&gt; Maybe FilePath
+-&gt; Maybe DecoderError
+-&gt; Maybe DecoderError
+-&gt; RoundTripFailure
+</span><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#RoundTripFailure"><span class="hs-identifier hs-var">RoundTripFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679243034"><span class="hs-identifier hs-var">encVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679243033"><span class="hs-identifier hs-var">decVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621679243021"><span class="hs-identifier hs-var">encoding</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679243023"><span class="hs-identifier hs-var">cbor</span></a></span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s a)
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeFullDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679243033"><span class="hs-identifier hs-var">decVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243035"><span class="hs-identifier hs-var">lbl</span></a></span><span> </span><span class="annot"><span class="annottext">forall s. Decoder s a
+</span><a href="#local-6989586621679243030"><span class="hs-identifier hs-var">tripDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679243023"><span class="hs-identifier hs-var">cbor</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-166"></span><span>      </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679243018"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679243018"><span class="hs-identifier hs-var">decErr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-167"></span><span>        </span><span class="annot"><span class="annottext">HasCallStack =&gt; DiagCbor -&gt; RoundTripFailure -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlFailure"><span class="hs-identifier hs-var">cddlFailure</span></a></span><span> </span><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679243024"><span class="hs-identifier hs-var">diagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+-&gt; Maybe ByteString
+-&gt; Maybe FilePath
+-&gt; Maybe DecoderError
+-&gt; Maybe DecoderError
+-&gt; RoundTripFailure
+</span><a href="#local-6989586621679243022"><span class="hs-identifier hs-var">mkFailure</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Monoid a =&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679243018"><span class="hs-identifier hs-var">decErr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>      </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679243016"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679243016"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-169"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">forall a b.
+Eq b =&gt;
+Text
+-&gt; Version
+-&gt; Version
+-&gt; Trip a b
+-&gt; a
+-&gt; Either RoundTripFailure (b, Encoding, ByteString)
+</span><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#embedTripLabelExtra"><span class="hs-identifier hs-var">embedTripLabelExtra</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679243035"><span class="hs-identifier hs-var">lbl</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679243034"><span class="hs-identifier hs-var">encVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679243033"><span class="hs-identifier hs-var">decVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Trip a a
+</span><a href="#local-6989586621679243032"><span class="hs-identifier hs-var">trip</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679243016"><span class="hs-identifier hs-var">val</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-170"></span><span>          </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679243014"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679243014"><span class="hs-identifier hs-var">val'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679243013"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621679243013"><span class="hs-identifier hs-var">encoding</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679243012"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679243012"><span class="hs-identifier hs-var">encodedBytes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-171"></span><span>            </span><span class="annot"><span class="annottext">FilePath -&gt; ByteString -&gt; IO (Either FilePath ByteString)
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#validateCddlConformance"><span class="hs-identifier hs-var">validateCddlConformance</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679243028"><span class="hs-identifier hs-var">cddlVarFilePath</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679243012"><span class="hs-identifier hs-var">encodedBytes</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-172"></span><span>              </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679243011"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679243011"><span class="hs-identifier hs-var">confErr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-173"></span><span>                </span><span class="annot"><span class="annottext">HasCallStack =&gt; DiagCbor -&gt; RoundTripFailure -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlFailure"><span class="hs-identifier hs-var">cddlFailure</span></a></span><span> </span><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679243024"><span class="hs-identifier hs-var">diagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-174"></span><span>                  </span><span class="annot"><span class="annottext">Encoding
+-&gt; Maybe ByteString
+-&gt; Maybe FilePath
+-&gt; Maybe DecoderError
+-&gt; Maybe DecoderError
+-&gt; RoundTripFailure
+</span><a href="#local-6989586621679243022"><span class="hs-identifier hs-var">mkFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621679243013"><span class="hs-identifier hs-var">encoding</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679243012"><span class="hs-identifier hs-var">encodedBytes</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679243011"><span class="hs-identifier hs-var">confErr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-175"></span><span>              </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679243010"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679243010"><span class="hs-identifier hs-var">_bsl</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679243014"><span class="hs-identifier hs-var">val'</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-expectations-0.8.4-58b371c4175faf313008a93c247d475c9c44c294781f44aba1f2a6928af1dbb7/share/doc/html/src"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679243016"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-176"></span><span>          </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679243008"><span class="annot"><span class="annottext">RoundTripFailure
+</span><a href="#local-6989586621679243008"><span class="hs-identifier hs-var">embedErr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; DiagCbor -&gt; RoundTripFailure -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlFailure"><span class="hs-identifier hs-var">cddlFailure</span></a></span><span> </span><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679243024"><span class="hs-identifier hs-var">diagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">RoundTripFailure
+</span><a href="#local-6989586621679243008"><span class="hs-identifier hs-var">embedErr</span></a></span><span>
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlFailure"><span class="hs-identifier hs-type">cddlFailure</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#DiagCbor"><span class="hs-identifier hs-type">DiagCbor</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#RoundTripFailure"><span class="hs-identifier hs-type">RoundTripFailure</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-expectations-0.8.4-58b371c4175faf313008a93c247d475c9c44c294781f44aba1f2a6928af1dbb7/share/doc/html/src"><span class="hs-identifier hs-type">Expectation</span></a></span><span>
+</span><span id="line-179"></span><span id="cddlFailure"><span class="annot"><span class="annottext">cddlFailure :: HasCallStack =&gt; DiagCbor -&gt; RoundTripFailure -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlFailure"><span class="hs-identifier hs-var hs-var">cddlFailure</span></a></span></span><span> </span><span id="local-6989586621679242997"><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679242997"><span class="hs-identifier hs-var">diagCbor</span></a></span></span><span> </span><span id="local-6989586621679242996"><span class="annot"><span class="annottext">RoundTripFailure
+</span><a href="#local-6989586621679242996"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-180"></span><span>  </span><span class="annot"><span class="annottext">HasCallStack =&gt; FilePath -&gt; IO ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-expectations-0.8.4-58b371c4175faf313008a93c247d475c9c44c294781f44aba1f2a6928af1dbb7/share/doc/html/src"><span class="hs-identifier hs-var">expectationFailure</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-181"></span><span>    </span><span class="annot"><span class="annottext">[FilePath] -&gt; FilePath
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">unlines</span></a></span><span>
+</span><span id="line-182"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Failed to Cddl RoundTrip verification:&quot;</span></span><span>
+</span><span id="line-183"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">RoundTripFailure
+</span><a href="#local-6989586621679242996"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-184"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Generated diag: &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; FilePath
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-var">BSL8.unpack</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiagCbor -&gt; ByteString
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#unDiagCbor"><span class="hs-identifier hs-var">unDiagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679242997"><span class="hs-identifier hs-var">diagCbor</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-186"></span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- | Similar to `cddlRoundTripCborSpec`, but for Annotator.</span><span>
+</span><span id="line-188"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripAnnCborSpec"><span class="hs-identifier hs-type">cddlRoundTripAnnCborSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-189"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679243211"><span class="annot"><a href="#local-6989586621679243211"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-190"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243211"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243211"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243211"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243211"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-191"></span><span>  </span><span class="hs-comment">-- | Serialization version</span><span>
+</span><span id="line-192"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-193"></span><span>  </span><span class="hs-comment">-- | Cddl variable name</span><span>
+</span><span id="line-194"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.9-341f7cbdbfb79a82c773ee031a1c9fdbd4be25f8ad76a92abdfce28033f0549c/share/doc/html/src"><span class="hs-identifier hs-type">SpecWith</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlData"><span class="hs-identifier hs-type">CddlData</span></a></span><span>
+</span><span id="line-196"></span><span id="cddlRoundTripAnnCborSpec"><span class="annot"><span class="annottext">cddlRoundTripAnnCborSpec :: forall a.
+(HasCallStack, Eq a, Show a, EncCBOR a, DecCBOR (Annotator a)) =&gt;
+Version -&gt; Text -&gt; SpecWith CddlData
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripAnnCborSpec"><span class="hs-identifier hs-var hs-var">cddlRoundTripAnnCborSpec</span></a></span></span><span> </span><span id="local-6989586621679242972"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242972"><span class="hs-identifier hs-var">version</span></a></span></span><span> </span><span id="local-6989586621679242971"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679242971"><span class="hs-identifier hs-var">varName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-197"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679242969"><span class="annot"><span class="annottext">lbl :: Text
+</span><a href="#local-6989586621679242969"><span class="hs-identifier hs-var hs-var">lbl</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. DecCBOR a =&gt; Proxy a -&gt; Text
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-keyword hs-var">label</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall {k} (t :: k). Proxy t
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Proxy</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243211"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-198"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Example a) =&gt;
+FilePath -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.9-341f7cbdbfb79a82c773ee031a1c9fdbd4be25f8ad76a92abdfce28033f0549c/share/doc/html/src"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-var">T.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679242971"><span class="hs-identifier hs-var">varName</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679242969"><span class="hs-identifier hs-var">lbl</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679242968"><span class="annot"><span class="annottext">CddlData
+</span><a href="#local-6989586621679242968"><span class="hs-identifier hs-var">cddlData</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-199"></span><span>        </span><span class="annot"><span class="annottext">forall b.
+HasCallStack =&gt;
+Text -&gt; CddlData -&gt; (CddlVarFile -&gt; IO b) -&gt; IO b
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#withCddlVarFile"><span class="hs-identifier hs-var">withCddlVarFile</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679242971"><span class="hs-identifier hs-var">varName</span></a></span><span> </span><span class="annot"><span class="annottext">CddlData
+</span><a href="#local-6989586621679242968"><span class="hs-identifier hs-var">cddlData</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-200"></span><span>          </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Show a, Eq a) =&gt;
+Text
+-&gt; Version
+-&gt; Version
+-&gt; Trip a (Annotator a)
+-&gt; CddlVarFile
+-&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripAnnExpectation"><span class="hs-identifier hs-var">cddlRoundTripAnnExpectation</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679242969"><span class="hs-identifier hs-var">lbl</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242972"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242972"><span class="hs-identifier hs-var">version</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (EncCBOR a, DecCBOR b) =&gt; Trip a b
+</span><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#cborTrip"><span class="hs-identifier hs-var">cborTrip</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679243211"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-201"></span><span>
+</span><span id="line-202"></span><span class="hs-comment">-- | Same as `cddlRoundTripExpectation`, but works for decoders that are wrapped into</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- `Annotator`</span><span>
+</span><span id="line-204"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripAnnExpectation"><span class="hs-identifier hs-type">cddlRoundTripAnnExpectation</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-205"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679243208"><span class="annot"><a href="#local-6989586621679243208"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-206"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243208"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243208"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-207"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">T.Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-208"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-209"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Version</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-210"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#Trip"><span class="hs-identifier hs-type">Trip</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243208"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">Annotator</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243208"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-211"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlVarFile"><span class="hs-identifier hs-type">CddlVarFile</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-212"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-expectations-0.8.4-58b371c4175faf313008a93c247d475c9c44c294781f44aba1f2a6928af1dbb7/share/doc/html/src"><span class="hs-identifier hs-type">Expectation</span></a></span><span>
+</span><span id="line-213"></span><span id="cddlRoundTripAnnExpectation"><span class="annot"><span class="annottext">cddlRoundTripAnnExpectation :: forall a.
+(HasCallStack, Show a, Eq a) =&gt;
+Text
+-&gt; Version
+-&gt; Version
+-&gt; Trip a (Annotator a)
+-&gt; CddlVarFile
+-&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlRoundTripAnnExpectation"><span class="hs-identifier hs-var hs-var">cddlRoundTripAnnExpectation</span></a></span></span><span> </span><span id="local-6989586621679242947"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679242947"><span class="hs-identifier hs-var">lbl</span></a></span></span><span> </span><span id="local-6989586621679242946"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242946"><span class="hs-identifier hs-var">encVersion</span></a></span></span><span> </span><span id="local-6989586621679242945"><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242945"><span class="hs-identifier hs-var">decVersion</span></a></span></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#Trip"><span class="hs-identifier hs-type">Trip</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679242942"><span id="local-6989586621679242943"><span id="local-6989586621679242944"><span class="annot"><span class="annottext">a -&gt; Encoding
+forall s. Decoder s ()
+forall s. Decoder s (Annotator a)
+tripDropper :: forall a b. Trip a b -&gt; forall s. Decoder s ()
+tripEncoder :: forall a b. Trip a b -&gt; a -&gt; Encoding
+tripDropper :: forall s. Decoder s ()
+tripDecoder :: forall s. Decoder s (Annotator a)
+tripEncoder :: a -&gt; Encoding
+tripDecoder :: forall a b. Trip a b -&gt; forall s. Decoder s b
+</span><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#tripDropper"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#CddlVarFile"><span class="hs-identifier hs-type">CddlVarFile</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679242936"><span id="local-6989586621679242937"><span id="local-6989586621679242938"><span id="local-6989586621679242939"><span class="annot"><span class="annottext">FilePath
+[DiagCbor]
+Text
+Cddl
+cddlVarDiagCbor :: [DiagCbor]
+cddlVarData :: Cddl
+cddlVarName :: Text
+cddlVarFilePath :: FilePath
+cddlVarDiagCbor :: CddlVarFile -&gt; [DiagCbor]
+cddlVarData :: CddlVarFile -&gt; Cddl
+cddlVarName :: CddlVarFile -&gt; Text
+cddlVarFilePath :: CddlVarFile -&gt; FilePath
+</span><a href="#local-6989586621679242936"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-214"></span><span>  </span><span class="annot"><span class="annottext">forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">forM_</span></a></span><span> </span><span class="annot"><span class="annottext">[DiagCbor]
+</span><a href="#local-6989586621679242936"><span class="hs-identifier hs-var">cddlVarDiagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679242935"><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679242935"><span class="hs-identifier hs-var">diagCbor</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-215"></span><span>    </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cbor"><span class="hs-identifier hs-type">Cbor</span></a></span><span> </span><span id="local-6989586621679242934"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242934"><span class="hs-identifier hs-var">cbor</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; DiagCbor -&gt; IO Cbor
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#diagCborToCbor"><span class="hs-identifier hs-var">diagCborToCbor</span></a></span><span> </span><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679242935"><span class="hs-identifier hs-var">diagCbor</span></a></span><span>
+</span><span id="line-216"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679242933"><span class="annot"><span class="annottext">mkFailure :: Encoding
+-&gt; Maybe ByteString
+-&gt; Maybe FilePath
+-&gt; Maybe DecoderError
+-&gt; Maybe DecoderError
+-&gt; RoundTripFailure
+</span><a href="#local-6989586621679242933"><span class="hs-identifier hs-var hs-var">mkFailure</span></a></span></span><span> </span><span id="local-6989586621679242932"><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621679242932"><span class="hs-identifier hs-var">encoding</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-217"></span><span>          </span><span class="annot"><span class="annottext">Version
+-&gt; Version
+-&gt; Encoding
+-&gt; ByteString
+-&gt; Maybe ByteString
+-&gt; Maybe FilePath
+-&gt; Maybe DecoderError
+-&gt; Maybe DecoderError
+-&gt; RoundTripFailure
+</span><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#RoundTripFailure"><span class="hs-identifier hs-var">RoundTripFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242946"><span class="hs-identifier hs-var">encVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242945"><span class="hs-identifier hs-var">decVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621679242932"><span class="hs-identifier hs-var">encoding</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242934"><span class="hs-identifier hs-var">cbor</span></a></span><span>
+</span><span id="line-218"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">forall a.
+Version
+-&gt; Text
+-&gt; (forall s. Decoder s (Annotator a))
+-&gt; ByteString
+-&gt; Either DecoderError a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeFullAnnotator</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242945"><span class="hs-identifier hs-var">decVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679242947"><span class="hs-identifier hs-var">lbl</span></a></span><span> </span><span class="annot"><span class="annottext">forall s. Decoder s (Annotator a)
+</span><a href="#local-6989586621679242943"><span class="hs-identifier hs-var">tripDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242934"><span class="hs-identifier hs-var">cbor</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-219"></span><span>      </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679242930"><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679242930"><span class="hs-identifier hs-var">decErr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-220"></span><span>        </span><span class="annot"><span class="annottext">HasCallStack =&gt; DiagCbor -&gt; RoundTripFailure -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlFailure"><span class="hs-identifier hs-var">cddlFailure</span></a></span><span> </span><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679242935"><span class="hs-identifier hs-var">diagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+-&gt; Maybe ByteString
+-&gt; Maybe FilePath
+-&gt; Maybe DecoderError
+-&gt; Maybe DecoderError
+-&gt; RoundTripFailure
+</span><a href="#local-6989586621679242933"><span class="hs-identifier hs-var">mkFailure</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Monoid a =&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">DecoderError
+</span><a href="#local-6989586621679242930"><span class="hs-identifier hs-var">decErr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-221"></span><span>      </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679242929"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679242929"><span class="hs-identifier hs-var">val</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-222"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679242928"><span class="annot"><span class="annottext">encoding :: Encoding
+</span><a href="#local-6989586621679242928"><span class="hs-identifier hs-var hs-var">encoding</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Version -&gt; Encoding -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.4.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">toPlainEncoding</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242946"><span class="hs-identifier hs-var">encVersion</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Encoding
+</span><a href="#local-6989586621679242944"><span class="hs-identifier hs-var">tripEncoder</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679242929"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-223"></span><span>         </span><span class="hs-keyword">in</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">forall t.
+Text
+-&gt; Version
+-&gt; Version
+-&gt; (forall s. Decoder s (Annotator t))
+-&gt; Encoding
+-&gt; Either RoundTripFailure (t, ByteString)
+</span><a href="Test.Cardano.Ledger.Binary.RoundTrip.html#decodeAnnExtra"><span class="hs-identifier hs-var">decodeAnnExtra</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679242947"><span class="hs-identifier hs-var">lbl</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242946"><span class="hs-identifier hs-var">encVersion</span></a></span><span> </span><span class="annot"><span class="annottext">Version
+</span><a href="#local-6989586621679242945"><span class="hs-identifier hs-var">decVersion</span></a></span><span> </span><span class="annot"><span class="annottext">forall s. Decoder s (Annotator a)
+</span><a href="#local-6989586621679242943"><span class="hs-identifier hs-var">tripDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621679242928"><span class="hs-identifier hs-var">encoding</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-224"></span><span>              </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679242925"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679242925"><span class="hs-identifier hs-var">val'</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679242924"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242924"><span class="hs-identifier hs-var">encodedBytes</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-225"></span><span>                </span><span class="annot"><span class="annottext">FilePath -&gt; ByteString -&gt; IO (Either FilePath ByteString)
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#validateCddlConformance"><span class="hs-identifier hs-var">validateCddlConformance</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679242939"><span class="hs-identifier hs-var">cddlVarFilePath</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242924"><span class="hs-identifier hs-var">encodedBytes</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-226"></span><span>                  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679242923"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679242923"><span class="hs-identifier hs-var">confErr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-227"></span><span>                    </span><span class="annot"><span class="annottext">HasCallStack =&gt; DiagCbor -&gt; RoundTripFailure -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlFailure"><span class="hs-identifier hs-var">cddlFailure</span></a></span><span> </span><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679242935"><span class="hs-identifier hs-var">diagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-228"></span><span>                      </span><span class="annot"><span class="annottext">Encoding
+-&gt; Maybe ByteString
+-&gt; Maybe FilePath
+-&gt; Maybe DecoderError
+-&gt; Maybe DecoderError
+-&gt; RoundTripFailure
+</span><a href="#local-6989586621679242933"><span class="hs-identifier hs-var">mkFailure</span></a></span><span> </span><span class="annot"><span class="annottext">Encoding
+</span><a href="#local-6989586621679242928"><span class="hs-identifier hs-var">encoding</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242924"><span class="hs-identifier hs-var">encodedBytes</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679242923"><span class="hs-identifier hs-var">confErr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-229"></span><span>                  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679242922"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242922"><span class="hs-identifier hs-var">_bsl</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679242925"><span class="hs-identifier hs-var">val'</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. (HasCallStack, Show a, Eq a) =&gt; a -&gt; a -&gt; IO ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-expectations-0.8.4-58b371c4175faf313008a93c247d475c9c44c294781f44aba1f2a6928af1dbb7/share/doc/html/src"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679242929"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-230"></span><span>              </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679242921"><span class="annot"><span class="annottext">RoundTripFailure
+</span><a href="#local-6989586621679242921"><span class="hs-identifier hs-var">embedErr</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; DiagCbor -&gt; RoundTripFailure -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#cddlFailure"><span class="hs-identifier hs-var">cddlFailure</span></a></span><span> </span><span class="annot"><span class="annottext">DiagCbor
+</span><a href="#local-6989586621679242935"><span class="hs-identifier hs-var">diagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">RoundTripFailure
+</span><a href="#local-6989586621679242921"><span class="hs-identifier hs-var">embedErr</span></a></span><span>
+</span><span id="line-231"></span><span>
+</span><span id="line-232"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#genCddlDiagCbor"><span class="hs-identifier hs-type">genCddlDiagCbor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cddl"><span class="hs-identifier hs-type">Cddl</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#DiagCbor"><span class="hs-identifier hs-type">DiagCbor</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-233"></span><span id="genCddlDiagCbor"><span class="annot"><span class="annottext">genCddlDiagCbor :: HasCallStack =&gt; Int -&gt; Cddl -&gt; IO [DiagCbor]
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#genCddlDiagCbor"><span class="hs-identifier hs-var hs-var">genCddlDiagCbor</span></a></span></span><span> </span><span id="local-6989586621679242913"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679242913"><span class="hs-identifier hs-var">numCases</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-234"></span><span>  </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; DiagCbor
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#DiagCbor"><span class="hs-identifier hs-var">DiagCbor</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString]
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-var">BSL8.lines</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-235"></span><span>    </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall stdin stdout stderr.
+FilePath
+-&gt; ProcessConfig stdin stdout stderr
+-&gt; ByteString
+-&gt; IO (Either FilePath ByteString)
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#readProcessNoFailure"><span class="hs-identifier hs-var">readProcessNoFailure</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;generating examples&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; [FilePath] -&gt; ProcessConfig () () ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier hs-var">proc</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;cddl&quot;</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;-&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;generate&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679242913"><span class="hs-identifier hs-var">numCases</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-236"></span><span>    </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Cddl -&gt; ByteString
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#unCddl"><span class="hs-identifier hs-var">unCddl</span></a></span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- | Convert randomly generated Cbor in special Diag (human readable) format to binary CBOR</span><span>
+</span><span id="line-239"></span><span class="hs-comment">-- format</span><span>
+</span><span id="line-240"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#diagCborToCbor"><span class="hs-identifier hs-type">diagCborToCbor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#DiagCbor"><span class="hs-identifier hs-type">DiagCbor</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cbor"><span class="hs-identifier hs-type">Cbor</span></a></span><span>
+</span><span id="line-241"></span><span id="diagCborToCbor"><span class="annot"><span class="annottext">diagCborToCbor :: HasCallStack =&gt; DiagCbor -&gt; IO Cbor
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#diagCborToCbor"><span class="hs-identifier hs-var hs-var">diagCborToCbor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-242"></span><span>  </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; FilePath -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Cbor
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#Cbor"><span class="hs-identifier hs-var">Cbor</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span>    </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall stdin stdout stderr.
+FilePath
+-&gt; ProcessConfig stdin stdout stderr
+-&gt; ByteString
+-&gt; IO (Either FilePath ByteString)
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#readProcessNoFailure"><span class="hs-identifier hs-var">readProcessNoFailure</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;converting cbor diagnostic notation to bytes&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; [FilePath] -&gt; ProcessConfig () () ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier hs-var">proc</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;diag2cbor.rb&quot;</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;-&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-244"></span><span>    </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">DiagCbor -&gt; ByteString
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#unDiagCbor"><span class="hs-identifier hs-var">unDiagCbor</span></a></span><span>
+</span><span id="line-245"></span><span>
+</span><span id="line-246"></span><span class="hs-comment">-- | Run a @cddl@ process and validate that encoded data is in confomrance with the</span><span>
+</span><span id="line-247"></span><span class="hs-comment">-- supplied CDDL spec</span><span>
+</span><span id="line-248"></span><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#validateCddlConformance"><span class="hs-identifier hs-type">validateCddlConformance</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-249"></span><span>  </span><span class="hs-comment">-- | File path to the file with CDDL spec</span><span>
+</span><span id="line-250"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-251"></span><span>  </span><span class="hs-comment">-- | CBOR encoded data that should conform with CDDL spec</span><span>
+</span><span id="line-252"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">BSL8.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-253"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-254"></span><span id="validateCddlConformance"><span class="annot"><span class="annottext">validateCddlConformance :: FilePath -&gt; ByteString -&gt; IO (Either FilePath ByteString)
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#validateCddlConformance"><span class="hs-identifier hs-var hs-var">validateCddlConformance</span></a></span></span><span> </span><span id="local-6989586621679242904"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679242904"><span class="hs-identifier hs-var">filePath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-255"></span><span>  </span><span class="annot"><span class="annottext">forall stdin stdout stderr.
+FilePath
+-&gt; ProcessConfig stdin stdout stderr
+-&gt; ByteString
+-&gt; IO (Either FilePath ByteString)
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#readProcessNoFailure"><span class="hs-identifier hs-var">readProcessNoFailure</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;validating cddl conformace&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">FilePath -&gt; [FilePath] -&gt; ProcessConfig () () ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier hs-var">proc</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;cddl&quot;</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679242904"><span class="hs-identifier hs-var">filePath</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;validate&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;-&quot;</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-256"></span><span>
+</span><span id="line-257"></span><span class="hs-comment">-- | Run a process with `readProcess` and return `Left` on failure, which will contain the</span><span>
+</span><span id="line-258"></span><span class="hs-comment">-- output produced on @stderr@. Accepts lazy bytestring as input for the spawned</span><span>
+</span><span id="line-259"></span><span class="hs-comment">-- process. In case when a process exits successfuly, the output is returned on the</span><span>
+</span><span id="line-260"></span><span class="hs-comment">-- `Right`. Upon a successful exit, @stderr@ output is ignored to avoid polluting test</span><span>
+</span><span id="line-261"></span><span class="hs-comment">-- suite output with copious amounts of warnings.</span><span>
+</span><span id="line-262"></span><span id="local-6989586621679243185"><span id="local-6989586621679243186"><span id="local-6989586621679243187"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#readProcessNoFailure"><span class="hs-identifier hs-type">readProcessNoFailure</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-263"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-264"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier hs-type">ProcessConfig</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243187"><span class="hs-identifier hs-type">stdin</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243186"><span class="hs-identifier hs-type">stdout</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243185"><span class="hs-identifier hs-type">stderr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-265"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-266"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-267"></span><span id="readProcessNoFailure"><span class="annot"><span class="annottext">readProcessNoFailure :: forall stdin stdout stderr.
+FilePath
+-&gt; ProcessConfig stdin stdout stderr
+-&gt; ByteString
+-&gt; IO (Either FilePath ByteString)
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#readProcessNoFailure"><span class="hs-identifier hs-var hs-var">readProcessNoFailure</span></a></span></span><span> </span><span id="local-6989586621679242885"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679242885"><span class="hs-identifier hs-var">procDescr</span></a></span></span><span> </span><span id="local-6989586621679242884"><span class="annot"><span class="annottext">ProcessConfig stdin stdout stderr
+</span><a href="#local-6989586621679242884"><span class="hs-identifier hs-var">procConfig</span></a></span></span><span> </span><span id="local-6989586621679242883"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242883"><span class="hs-identifier hs-var">input</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-268"></span><span>  </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) stdin stdoutIgnored stderrIgnored.
+MonadIO m =&gt;
+ProcessConfig stdin stdoutIgnored stderrIgnored
+-&gt; m (ExitCode, ByteString, ByteString)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier hs-var">readProcess</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall stdin stdin0 stdout stderr.
+StreamSpec 'STInput stdin
+-&gt; ProcessConfig stdin0 stdout stderr
+-&gt; ProcessConfig stdin stdout stderr
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier hs-var">setStdin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; StreamSpec 'STInput ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/typed-process-0.2.11.1-9e5a021910083b6c9df78ab81fb75896dfb3309e411af702a8d046050e4142ea/share/doc/html/src"><span class="hs-identifier hs-var">byteStringInput</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242883"><span class="hs-identifier hs-var">input</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ProcessConfig stdin stdout stderr
+</span><a href="#local-6989586621679242884"><span class="hs-identifier hs-var">procConfig</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-269"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ExitCode
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">ExitSuccess</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679242881"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242881"><span class="hs-identifier hs-var">stdOut</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. b -&gt; Either a b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242881"><span class="hs-identifier hs-var">stdOut</span></a></span><span>
+</span><span id="line-270"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ExitCode
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">ExitSuccess</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679242880"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242880"><span class="hs-identifier hs-var">stdOut</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679242879"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242879"><span class="hs-identifier hs-var">_stdErr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-271"></span><span>      </span><span class="hs-comment">-- Ideally we would only want to use relevant CDDL for particular test, which would</span><span>
+</span><span id="line-272"></span><span>      </span><span class="hs-comment">-- result in stdErr to be empty, but currently there are many warnings about unused</span><span>
+</span><span id="line-273"></span><span>      </span><span class="hs-comment">-- CDDL rules:</span><span>
+</span><span id="line-274"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-275"></span><span>      </span><span class="hs-comment">-- putStrLn $</span><span>
+</span><span id="line-276"></span><span>      </span><span class="hs-comment">--   unlines</span><span>
+</span><span id="line-277"></span><span>      </span><span class="hs-comment">--     [ &quot;Process for &quot; &lt;&gt; procDescr</span><span>
+</span><span id="line-278"></span><span>      </span><span class="hs-comment">--     , &quot;received some output on stderr&quot;</span><span>
+</span><span id="line-279"></span><span>      </span><span class="hs-comment">--     , show procConfig</span><span>
+</span><span id="line-280"></span><span>      </span><span class="hs-comment">--     , &quot;StdErr output:&quot;</span><span>
+</span><span id="line-281"></span><span>      </span><span class="hs-comment">--     , bslToString stdErr</span><span>
+</span><span id="line-282"></span><span>      </span><span class="hs-comment">--     ]</span><span>
+</span><span id="line-283"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. b -&gt; Either a b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242880"><span class="hs-identifier hs-var">stdOut</span></a></span><span>
+</span><span id="line-284"></span><span>    </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">ExitFailure</span></a></span><span> </span><span id="local-6989586621679242877"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679242877"><span class="hs-identifier hs-var">exitCode</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679242876"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242876"><span class="hs-identifier hs-var">stdErr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-285"></span><span>      </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-286"></span><span>        </span><span class="annot"><span class="annottext">forall a b. a -&gt; Either a b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-287"></span><span>          </span><span class="annot"><span class="annottext">[FilePath] -&gt; FilePath
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">unlines</span></a></span><span>
+</span><span id="line-288"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;Process for &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679242885"><span class="hs-identifier hs-var">procDescr</span></a></span><span>
+</span><span id="line-289"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ProcessConfig stdin stdout stderr
+</span><a href="#local-6989586621679242884"><span class="hs-identifier hs-var">procConfig</span></a></span><span>
+</span><span id="line-290"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;failed with an error code: &quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; FilePath
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679242877"><span class="hs-identifier hs-var">exitCode</span></a></span><span>
+</span><span id="line-291"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;StdErr output:&quot;</span></span><span>
+</span><span id="line-292"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; FilePath
+</span><a href="#local-6989586621679242875"><span class="hs-identifier hs-var">bslToString</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242876"><span class="hs-identifier hs-var">stdErr</span></a></span><span>
+</span><span id="line-293"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-294"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-295"></span><span>    </span><span id="local-6989586621679242875"><span class="annot"><span class="annottext">bslToString :: ByteString -&gt; FilePath
+</span><a href="#local-6989586621679242875"><span class="hs-identifier hs-var hs-var">bslToString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; FilePath
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-var">T.unpack</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Text
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-var">T.decodeUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-var">BSL.toStrict</span></a></span><span>
+</span><span id="line-296"></span><span>
+</span><span id="line-297"></span><span class="hs-comment">-- | Write binary data to a temporary file and apply an action to a temporary file name</span><span>
+</span><span id="line-298"></span><span class="hs-comment">-- path that contains that data. File is guaranteed to be alive only until the supplied</span><span>
+</span><span id="line-299"></span><span class="hs-comment">-- action is active, therefore make sure not to return the name for the temporary file</span><span>
+</span><span id="line-300"></span><span class="hs-comment">-- name.</span><span>
+</span><span id="line-301"></span><span id="local-6989586621679243253"><span class="annot"><a href="Test.Cardano.Ledger.Binary.Cddl.html#usingTempFile"><span class="hs-identifier hs-type">usingTempFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">BSL.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243253"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679243253"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-302"></span><span id="usingTempFile"><span class="annot"><span class="annottext">usingTempFile :: forall a. ByteString -&gt; (FilePath -&gt; IO a) -&gt; IO a
+</span><a href="Test.Cardano.Ledger.Binary.Cddl.html#usingTempFile"><span class="hs-identifier hs-var hs-var">usingTempFile</span></a></span></span><span> </span><span id="local-6989586621679242869"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242869"><span class="hs-identifier hs-var">bytes</span></a></span></span><span> </span><span id="local-6989586621679242868"><span class="annot"><span class="annottext">FilePath -&gt; IO a
+</span><a href="#local-6989586621679242868"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-303"></span><span>  </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a.
+MonadUnliftIO m =&gt;
+FilePath -&gt; FilePath -&gt; (FilePath -&gt; Handle -&gt; m a) -&gt; m a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/unliftio-0.2.25.0-805e450f51e3cb591de12153d6c9fbfc715f47e02e97b08aeb72529461d785a7/share/doc/html/src"><span class="hs-identifier hs-var">withTempFile</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;.&quot;</span></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><span class="hs-string">&quot;tmp&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679242867"><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679242867"><span class="hs-identifier hs-var">fileName</span></a></span></span><span> </span><span id="local-6989586621679242866"><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679242866"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-304"></span><span>    </span><span class="annot"><span class="annottext">Handle -&gt; ByteString -&gt; IO ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-var">BSL.hPut</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679242866"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679242869"><span class="hs-identifier hs-var">bytes</span></a></span><span>
+</span><span id="line-305"></span><span>    </span><span class="annot"><span class="annottext">Handle -&gt; IO ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">hClose</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679242866"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-306"></span><span>    </span><span class="annot"><span class="annottext">FilePath -&gt; IO a
+</span><a href="#local-6989586621679242868"><span class="hs-identifier hs-var">action</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679242867"><span class="hs-identifier hs-var">fileName</span></a></span><span>
+</span><span id="line-307"></span></pre></body></html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE StandaloneKindSignatures #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- | Secure generation of random numbers and 'ByteString's</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Crypto.Random</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Random.html#SecureRandom"><span class="hs-identifier">SecureRandom</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Random.html#deterministic"><span class="hs-identifier">deterministic</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Random.html#randomNumber"><span class="hs-identifier">randomNumber</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Crypto.Random.html#randomNumberInRange"><span class="hs-identifier">randomNumberInRange</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">Crypto.Number.Basic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">numBytes</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">Crypto.Number.Serialize</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">os2ip</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">Crypto.Random</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">ChaChaDRG</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">MonadPseudoRandom</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">MonadRandom</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">drgNewSeed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">getRandomBytes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">seedFromInteger</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">withDRG</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">Crypto.Random.Entropy</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier">getEntropy</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | You can use 'runSecureRandom' on any 'MonadRandom' computation to</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- use the operating  system entropy source to satisfy every request for</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- randomness. That is, this does not use a fixed entropy pool shared across</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- all requests; it gets entropy from the operating  system for every request.</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- This is suitable for key generation but is inappropriate for other uses</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- since it can quickly drain the operating system entropy.</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Cardano.Crypto.Random.html#SecureRandom"><span class="hs-identifier hs-type">SecureRandom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Type</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Type</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">newtype</span><span> </span><span id="SecureRandom"><span class="annot"><a href="Cardano.Crypto.Random.html#SecureRandom"><span class="hs-identifier hs-var">SecureRandom</span></a></span></span><span> </span><span id="local-6989586621679274919"><span class="annot"><a href="#local-6989586621679274919"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="SecureRandom"><span class="annot"><a href="Cardano.Crypto.Random.html#SecureRandom"><span class="hs-identifier hs-var">SecureRandom</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="runSecureRandom"><span class="annot"><span class="annottext">forall a. SecureRandom a -&gt; IO a
+</span><a href="Cardano.Crypto.Random.html#runSecureRandom"><span class="hs-identifier hs-var hs-var">runSecureRandom</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679274919"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679274814"><span id="local-6989586621679274819"><span class="annot"><span class="annottext">forall a b. a -&gt; SecureRandom b -&gt; SecureRandom a
+forall a b. (a -&gt; b) -&gt; SecureRandom a -&gt; SecureRandom b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+&lt;$ :: forall a b. a -&gt; SecureRandom b -&gt; SecureRandom a
+$c&lt;$ :: forall a b. a -&gt; SecureRandom b -&gt; SecureRandom a
+fmap :: forall a b. (a -&gt; b) -&gt; SecureRandom a -&gt; SecureRandom b
+$cfmap :: forall a b. (a -&gt; b) -&gt; SecureRandom a -&gt; SecureRandom b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679274789"><span id="local-6989586621679274793"><span id="local-6989586621679274797"><span id="local-6989586621679274801"><span id="local-6989586621679274806"><span class="annot"><span class="annottext">Functor SecureRandom
+forall a. a -&gt; SecureRandom a
+forall a b. SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom a
+forall a b. SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom b
+forall a b.
+SecureRandom (a -&gt; b) -&gt; SecureRandom a -&gt; SecureRandom b
+forall a b c.
+(a -&gt; b -&gt; c) -&gt; SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom c
+forall (f :: * -&gt; *).
+Functor f
+-&gt; (forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+&lt;* :: forall a b. SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom a
+$c&lt;* :: forall a b. SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom a
+*&gt; :: forall a b. SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom b
+$c*&gt; :: forall a b. SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom b
+liftA2 :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom c
+$cliftA2 :: forall a b c.
+(a -&gt; b -&gt; c) -&gt; SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom c
+&lt;*&gt; :: forall a b.
+SecureRandom (a -&gt; b) -&gt; SecureRandom a -&gt; SecureRandom b
+$c&lt;*&gt; :: forall a b.
+SecureRandom (a -&gt; b) -&gt; SecureRandom a -&gt; SecureRandom b
+pure :: forall a. a -&gt; SecureRandom a
+$cpure :: forall a. a -&gt; SecureRandom a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></a></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679274772"><span id="local-6989586621679274776"><span id="local-6989586621679274781"><span class="annot"><span class="annottext">Applicative SecureRandom
+forall a. a -&gt; SecureRandom a
+forall a b. SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom b
+forall a b.
+SecureRandom a -&gt; (a -&gt; SecureRandom b) -&gt; SecureRandom b
+forall (m :: * -&gt; *).
+Applicative m
+-&gt; (forall a b. m a -&gt; (a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. m a -&gt; m b -&gt; m b)
+-&gt; (forall a. a -&gt; m a)
+-&gt; Monad m
+return :: forall a. a -&gt; SecureRandom a
+$creturn :: forall a. a -&gt; SecureRandom a
+&gt;&gt; :: forall a b. SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom b
+$c&gt;&gt; :: forall a b. SecureRandom a -&gt; SecureRandom b -&gt; SecureRandom b
+&gt;&gt;= :: forall a b.
+SecureRandom a -&gt; (a -&gt; SecureRandom b) -&gt; SecureRandom b
+$c&gt;&gt;= :: forall a b.
+SecureRandom a -&gt; (a -&gt; SecureRandom b) -&gt; SecureRandom b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monad</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-type">MonadRandom</span></a></span><span> </span><span class="annot"><a href="Cardano.Crypto.Random.html#SecureRandom"><span class="hs-identifier hs-type">SecureRandom</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-44"></span><span>  </span><span id="local-6989586621679274760"><span class="annot"><span class="annottext">getRandomBytes :: forall byteArray.
+ByteArray byteArray =&gt;
+Int -&gt; SecureRandom byteArray
+</span><a href="#local-6989586621679274760"><span class="hs-identifier hs-var hs-var hs-var hs-var">getRandomBytes</span></a></span></span><span> </span><span id="local-6989586621679274759"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679274759"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. IO a -&gt; SecureRandom a
+</span><a href="Cardano.Crypto.Random.html#SecureRandom"><span class="hs-identifier hs-var">SecureRandom</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall byteArray. ByteArray byteArray =&gt; Int -&gt; IO byteArray
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-var">getEntropy</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679274759"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- | You can use 'deterministic' on any 'MonadRandom' computation to make it use</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--   a seed (hopefully produced by a Really Secure&#8482; randomness source). The seed</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--   has to have enough entropy to make this function secure.</span><span>
+</span><span id="line-49"></span><span id="local-6989586621679274867"><span class="annot"><a href="Cardano.Crypto.Random.html#deterministic"><span class="hs-identifier hs-type">deterministic</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-type">MonadPseudoRandom</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-type">ChaChaDRG</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679274867"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679274867"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-50"></span><span id="deterministic"><span class="annot"><span class="annottext">deterministic :: forall a. ByteString -&gt; MonadPseudoRandom ChaChaDRG a -&gt; a
+</span><a href="Cardano.Crypto.Random.html#deterministic"><span class="hs-identifier hs-var hs-var">deterministic</span></a></span></span><span> </span><span id="local-6989586621679274756"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679274756"><span class="hs-identifier hs-var">seed</span></a></span></span><span> </span><span id="local-6989586621679274755"><span class="annot"><span class="annottext">MonadPseudoRandom ChaChaDRG a
+</span><a href="#local-6989586621679274755"><span class="hs-identifier hs-var">gen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a b. (a, b) -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fst</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall gen a. DRG gen =&gt; gen -&gt; MonadPseudoRandom gen a -&gt; (a, gen)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-var">withDRG</span></a></span><span> </span><span class="annot"><span class="annottext">ChaChaDRG
+</span><a href="#local-6989586621679274754"><span class="hs-identifier hs-var">chachaSeed</span></a></span><span> </span><span class="annot"><span class="annottext">MonadPseudoRandom ChaChaDRG a
+</span><a href="#local-6989586621679274755"><span class="hs-identifier hs-var">gen</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-52"></span><span>    </span><span id="local-6989586621679274754"><span class="annot"><span class="annottext">chachaSeed :: ChaChaDRG
+</span><a href="#local-6989586621679274754"><span class="hs-identifier hs-var hs-var">chachaSeed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seed -&gt; ChaChaDRG
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-var">drgNewSeed</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Seed
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-var">seedFromInteger</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (cat :: k -&gt; k -&gt; *) (b :: k) (c :: k) (a :: k).
+Category cat =&gt;
+cat b c -&gt; cat a b -&gt; cat a c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall ba. ByteArrayAccess ba =&gt; ba -&gt; Integer
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-var">os2ip</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679274756"><span class="hs-identifier hs-var">seed</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- | Generate a random number in range [0, n)</span><span>
+</span><span id="line-55"></span><span class="hs-comment">--</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--   We want to avoid modulo bias, so we use the arc4random_uniform</span><span>
+</span><span id="line-57"></span><span class="hs-comment">--   implementation (http://stackoverflow.com/a/20051580/615030). Specifically,</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--   we repeatedly generate a random number in range [0, 2^x) until we hit on</span><span>
+</span><span id="line-59"></span><span class="hs-comment">--   something outside of [0, 2^x mod n), which means that it'll be in range</span><span>
+</span><span id="line-60"></span><span class="hs-comment">--   [2^x mod n, 2^x). The amount of numbers in this interval is guaranteed to</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--   be divisible by n, and thus applying 'mod' to it will be safe.</span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Cardano.Crypto.Random.html#randomNumber"><span class="hs-identifier hs-type">randomNumber</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679274847"><span class="annot"><a href="#local-6989586621679274847"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-type">MonadRandom</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679274847"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679274847"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-63"></span><span id="randomNumber"><span class="annot"><span class="annottext">randomNumber :: forall (m :: * -&gt; *). MonadRandom m =&gt; Integer -&gt; m Integer
+</span><a href="Cardano.Crypto.Random.html#randomNumber"><span class="hs-identifier hs-var hs-var">randomNumber</span></a></span></span><span> </span><span id="local-6989586621679274722"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274722"><span class="hs-identifier hs-var">n</span></a></span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274722"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; Text -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-var">panic</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;randomNumber: n &lt;= 0&quot;</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m Integer
+</span><a href="#local-6989586621679274719"><span class="hs-identifier hs-var">gen</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-67"></span><span>    </span><span id="local-6989586621679274714"><span class="annot"><span class="annottext">size :: Int
+</span><a href="#local-6989586621679274714"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">max</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">4</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Int
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-var">numBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274722"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- size of integers, in bytes</span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621679274705"><span class="annot"><span class="annottext">rangeMod :: Integer
+</span><a href="#local-6989586621679274705"><span class="hs-identifier hs-var hs-var">rangeMod</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (Num a, Integral b) =&gt; a -&gt; b -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">^</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679274714"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">`rem`</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274722"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="hs-comment">-- 2^x mod n</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><a href="#local-6989586621679274719"><span class="hs-identifier hs-type">gen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679274847"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Integer</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span id="local-6989586621679274719"><span class="annot"><span class="annottext">gen :: m Integer
+</span><a href="#local-6989586621679274719"><span class="hs-identifier hs-var hs-var">gen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-71"></span><span>      </span><span id="local-6989586621679274701"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274701"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall ba. ByteArrayAccess ba =&gt; ba -&gt; Integer
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-var">os2ip</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/bytestring-0.11.4.0/src"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) byteArray.
+(MonadRandom m, ByteArray byteArray) =&gt;
+Int -&gt; m byteArray
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-var">getRandomBytes</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679274714"><span class="hs-identifier hs-var">size</span></a></span><span>
+</span><span id="line-72"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274701"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274705"><span class="hs-identifier hs-var">rangeMod</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">m Integer
+</span><a href="#local-6989586621679274719"><span class="hs-identifier hs-var">gen</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274701"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">`rem`</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274722"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | Generate a random number in range [a, b]</span><span>
+</span><span id="line-75"></span><span id="local-6989586621679274834"><span class="annot"><a href="Cardano.Crypto.Random.html#randomNumberInRange"><span class="hs-identifier hs-type">randomNumberInRange</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cryptonite-0.30-d261577b794ca5b29c2c50332dec87d2e9cf6e400aad9ac82fa221d140516dd9/share/doc/html/src"><span class="hs-identifier hs-type">MonadRandom</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679274834"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Integer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679274834"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-bignum-1.2/src"><span class="hs-identifier hs-type">Integer</span></a></span></span><span>
+</span><span id="line-76"></span><span id="randomNumberInRange"><span class="annot"><span class="annottext">randomNumberInRange :: forall (m :: * -&gt; *).
+MonadRandom m =&gt;
+Integer -&gt; Integer -&gt; m Integer
+</span><a href="Cardano.Crypto.Random.html#randomNumberInRange"><span class="hs-identifier hs-var hs-var">randomNumberInRange</span></a></span></span><span> </span><span id="local-6989586621679274684"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274684"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679274683"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274683"><span class="hs-identifier hs-var">b</span></a></span></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274684"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274683"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; Text -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-var">panic</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;randomNumberInRange: a &gt; b&quot;</span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274684"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">+</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *). MonadRandom m =&gt; Integer -&gt; m Integer
+</span><a href="Cardano.Crypto.Random.html#randomNumber"><span class="hs-identifier hs-var">randomNumber</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274683"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679274684"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span></pre></body></html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.Genesis.Spec</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Spec.html#GenesisSpec"><span class="hs-identifier">GenesisSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Spec.html#mkGenesisSpec"><span class="hs-identifier">mkGenesisSpec</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Common.html"><span class="hs-identifier">Cardano.Chain.Common</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier">BlockCount</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html"><span class="hs-identifier">Cardano.Chain.Genesis.AvvmBalances</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier">GenesisAvvmBalances</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.Delegation.html"><span class="hs-identifier">Cardano.Chain.Genesis.Delegation</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Genesis.Delegation.html#GenesisDelegation"><span class="hs-identifier">GenesisDelegation</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html"><span class="hs-identifier">Cardano.Chain.Genesis.Initializer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#GenesisInitializer"><span class="hs-identifier">GenesisInitializer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html"><span class="hs-identifier">Cardano.Chain.Update.ProtocolParameters</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier">ProtocolParameters</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier">Cardano.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier">ProtocolMagic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">nub</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- | Specification how to generate full 'GenesisData'</span><span>
+</span><span id="line-22"></span><span id="local-6989586621679581926"><span id="local-6989586621679581927"></span></span><span class="hs-keyword">data</span><span> </span><span id="GenesisSpec"><span class="annot"><a href="Cardano.Chain.Genesis.Spec.html#GenesisSpec"><span class="hs-identifier hs-var">GenesisSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UnsafeGenesisSpec"><span class="annot"><a href="Cardano.Chain.Genesis.Spec.html#UnsafeGenesisSpec"><span class="hs-identifier hs-var">UnsafeGenesisSpec</span></a></span></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="gsAvvmDistr"><span class="annot"><span class="annottext">GenesisSpec -&gt; GenesisAvvmBalances
+</span><a href="Cardano.Chain.Genesis.Spec.html#gsAvvmDistr"><span class="hs-identifier hs-var hs-var">gsAvvmDistr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-type">GenesisAvvmBalances</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-comment">-- ^ Genesis data describes avvm utxo</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="gsHeavyDelegation"><span class="annot"><span class="annottext">GenesisSpec -&gt; GenesisDelegation
+</span><a href="Cardano.Chain.Genesis.Spec.html#gsHeavyDelegation"><span class="hs-identifier hs-var hs-var">gsHeavyDelegation</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Genesis.Delegation.html#GenesisDelegation"><span class="hs-identifier hs-type">GenesisDelegation</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-comment">-- ^ Genesis state of heavyweight delegation. Will be concatenated with</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-comment">--   delegation genesis keyHashes if 'tiUseHeavyDlg' is 'True'</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="gsProtocolParameters"><span class="annot"><span class="annottext">GenesisSpec -&gt; ProtocolParameters
+</span><a href="Cardano.Chain.Genesis.Spec.html#gsProtocolParameters"><span class="hs-identifier hs-var hs-var">gsProtocolParameters</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier hs-type">ProtocolParameters</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-comment">-- ^ Genesis 'ProtocolParameters'</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="gsK"><span class="annot"><span class="annottext">GenesisSpec -&gt; BlockCount
+</span><a href="Cardano.Chain.Genesis.Spec.html#gsK"><span class="hs-identifier hs-var hs-var">gsK</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier hs-type">BlockCount</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-comment">-- ^ The security parameter of the Ouroboros protocol</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="gsProtocolMagic"><span class="annot"><span class="annottext">GenesisSpec -&gt; ProtocolMagic
+</span><a href="Cardano.Chain.Genesis.Spec.html#gsProtocolMagic"><span class="hs-identifier hs-var hs-var">gsProtocolMagic</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier hs-type">ProtocolMagic</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-comment">-- ^ The magic number unique to any instance of Cardano</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="gsInitializer"><span class="annot"><span class="annottext">GenesisSpec -&gt; GenesisInitializer
+</span><a href="Cardano.Chain.Genesis.Spec.html#gsInitializer"><span class="hs-identifier hs-var hs-var">gsInitializer</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#GenesisInitializer"><span class="hs-identifier hs-type">GenesisInitializer</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-comment">-- ^ Other data which depend on genesis type</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679581902"><span id="local-6989586621679581917"><span class="annot"><span class="annottext">GenesisSpec -&gt; GenesisSpec -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: GenesisSpec -&gt; GenesisSpec -&gt; Bool
+$c/= :: GenesisSpec -&gt; GenesisSpec -&gt; Bool
+== :: GenesisSpec -&gt; GenesisSpec -&gt; Bool
+$c== :: GenesisSpec -&gt; GenesisSpec -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679581879"><span id="local-6989586621679581881"><span id="local-6989586621679581898"><span class="annot"><span class="annottext">Int -&gt; GenesisSpec -&gt; ShowS
+[GenesisSpec] -&gt; ShowS
+GenesisSpec -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [GenesisSpec] -&gt; ShowS
+$cshowList :: [GenesisSpec] -&gt; ShowS
+show :: GenesisSpec -&gt; String
+$cshow :: GenesisSpec -&gt; String
+showsPrec :: Int -&gt; GenesisSpec -&gt; ShowS
+$cshowsPrec :: Int -&gt; GenesisSpec -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep GenesisSpec x -&gt; GenesisSpec
+forall x. GenesisSpec -&gt; Rep GenesisSpec x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep GenesisSpec x -&gt; GenesisSpec
+$cfrom :: forall x. GenesisSpec -&gt; Rep GenesisSpec x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | Safe constructor for 'GenesisSpec'. Throws error if something</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- goes wrong.</span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Cardano.Chain.Genesis.Spec.html#mkGenesisSpec"><span class="hs-identifier hs-type">mkGenesisSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.AvvmBalances.html#GenesisAvvmBalances"><span class="hs-identifier hs-type">GenesisAvvmBalances</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Delegation.html#GenesisDelegation"><span class="hs-identifier hs-type">GenesisDelegation</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Update.ProtocolParameters.html#ProtocolParameters"><span class="hs-identifier hs-type">ProtocolParameters</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Common.BlockCount.html#BlockCount"><span class="hs-identifier hs-type">BlockCount</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-crypto-wrapper-1.5.1.3/doc/html/cardano-crypto-wrapper/src"><span class="hs-identifier hs-type">ProtocolMagic</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><a href="Cardano.Chain.Genesis.Initializer.html#GenesisInitializer"><span class="hs-identifier hs-type">GenesisInitializer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/text-1.2.5.0/src"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="Cardano.Chain.Genesis.Spec.html#GenesisSpec"><span class="hs-identifier hs-type">GenesisSpec</span></a></span><span>
+</span><span id="line-49"></span><span id="mkGenesisSpec"><span class="annot"><span class="annottext">mkGenesisSpec :: GenesisAvvmBalances
+-&gt; GenesisDelegation
+-&gt; ProtocolParameters
+-&gt; BlockCount
+-&gt; ProtocolMagic
+-&gt; GenesisInitializer
+-&gt; Either Text GenesisSpec
+</span><a href="Cardano.Chain.Genesis.Spec.html#mkGenesisSpec"><span class="hs-identifier hs-var hs-var">mkGenesisSpec</span></a></span></span><span> </span><span id="local-6989586621679581872"><span class="annot"><span class="annottext">GenesisAvvmBalances
+</span><a href="#local-6989586621679581872"><span class="hs-identifier hs-var">avvmDistr</span></a></span></span><span> </span><span id="local-6989586621679581871"><span class="annot"><span class="annottext">GenesisDelegation
+</span><a href="#local-6989586621679581871"><span class="hs-identifier hs-var">delega</span></a></span></span><span> </span><span id="local-6989586621679581870"><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679581870"><span class="hs-identifier hs-var">bvd</span></a></span></span><span> </span><span id="local-6989586621679581869"><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679581869"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679581868"><span class="annot"><span class="annottext">ProtocolMagic
+</span><a href="#local-6989586621679581868"><span class="hs-identifier hs-var">pm</span></a></span></span><span> </span><span id="local-6989586621679581867"><span class="annot"><span class="annottext">GenesisInitializer
+</span><a href="#local-6989586621679581867"><span class="hs-identifier hs-var">specType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679581866"><span class="annot"><span class="annottext">avvmKeys :: [CompactRedeemVerificationKey]
+</span><a href="#local-6989586621679581866"><span class="hs-identifier hs-var hs-var">avvmKeys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall k a. Map k a -&gt; [k]
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">M.keys</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisAvvmBalances -&gt; Map CompactRedeemVerificationKey Lovelace
+</span><a href="Cardano.Chain.Genesis.AvvmBalances.html#unGenesisAvvmBalances"><span class="hs-identifier hs-var">unGenesisAvvmBalances</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisAvvmBalances
+</span><a href="#local-6989586621679581872"><span class="hs-identifier hs-var">avvmDistr</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Eq a =&gt; [a] -&gt; [a]
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">nub</span></a></span><span> </span><span class="annot"><span class="annottext">[CompactRedeemVerificationKey]
+</span><a href="#local-6989586621679581866"><span class="hs-identifier hs-var">avvmKeys</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HasLength a =&gt; a -&gt; Int
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier hs-var">length</span></a></span><span> </span><span class="annot"><span class="annottext">[CompactRedeemVerificationKey]
+</span><a href="#local-6989586621679581866"><span class="hs-identifier hs-var">avvmKeys</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><span class="annottext">forall e (m :: * -&gt; *). MonadError e m =&gt; Bool -&gt; e -&gt; m ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-operator hs-var">`orThrowError`</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;mkGenesisSpec: there are duplicates in avvm balances&quot;</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-comment">-- All checks passed</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisAvvmBalances
+-&gt; GenesisDelegation
+-&gt; ProtocolParameters
+-&gt; BlockCount
+-&gt; ProtocolMagic
+-&gt; GenesisInitializer
+-&gt; GenesisSpec
+</span><a href="Cardano.Chain.Genesis.Spec.html#UnsafeGenesisSpec"><span class="hs-identifier hs-var">UnsafeGenesisSpec</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisAvvmBalances
+</span><a href="#local-6989586621679581872"><span class="hs-identifier hs-var">avvmDistr</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisDelegation
+</span><a href="#local-6989586621679581871"><span class="hs-identifier hs-var">delega</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolParameters
+</span><a href="#local-6989586621679581870"><span class="hs-identifier hs-var">bvd</span></a></span><span> </span><span class="annot"><span class="annottext">BlockCount
+</span><a href="#local-6989586621679581869"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolMagic
+</span><a href="#local-6989586621679581868"><span class="hs-identifier hs-var">pm</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisInitializer
+</span><a href="#local-6989586621679581867"><span class="hs-identifier hs-var">specType</span></a></span><span>
+</span><span id="line-55"></span></pre></body></html>

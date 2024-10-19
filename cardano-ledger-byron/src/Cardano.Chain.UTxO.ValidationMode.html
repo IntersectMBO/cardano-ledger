@@ -1,0 +1,42 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Chain.UTxO.ValidationMode</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>  </span><span class="annot"><a href="Cardano.Chain.UTxO.ValidationMode.html#TxValidationMode"><span class="hs-identifier">TxValidationMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- TxValidationMode</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- | Indicates what sort of transaction validation should be performed.</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">data</span><span> </span><span id="TxValidationMode"><span class="annot"><a href="Cardano.Chain.UTxO.ValidationMode.html#TxValidationMode"><span class="hs-identifier hs-var">TxValidationMode</span></a></span></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-comment">-- | Perform all transaction validations.</span><span>
+</span><span id="line-15"></span><span>    </span><span id="TxValidation"><span class="annot"><a href="Cardano.Chain.UTxO.ValidationMode.html#TxValidation"><span class="hs-identifier hs-var">TxValidation</span></a></span></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | Because we've already validated this transaction against some ledger</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-comment">-- state, we know that cryptographic validation has passed. However, we</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-comment">-- should still perform all of the other non-cryptographic checks since</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-comment">-- we're validating against a potentially dfferent ledger state.</span><span>
+</span><span id="line-20"></span><span>    </span><span id="TxValidationNoCrypto"><span class="annot"><a href="Cardano.Chain.UTxO.ValidationMode.html#TxValidationNoCrypto"><span class="hs-identifier hs-var">TxValidationNoCrypto</span></a></span></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="hs-comment">-- | No validations should be performed as we have already validated this</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-comment">-- transaction against this very same ledger state.</span><span>
+</span><span id="line-23"></span><span>    </span><span id="NoTxValidation"><span class="annot"><a href="Cardano.Chain.UTxO.ValidationMode.html#NoTxValidation"><span class="hs-identifier hs-var">NoTxValidation</span></a></span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679577844"><span id="local-6989586621679577846"><span class="annot"><span class="annottext">TxValidationMode -&gt; TxValidationMode -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: TxValidationMode -&gt; TxValidationMode -&gt; Bool
+$c/= :: TxValidationMode -&gt; TxValidationMode -&gt; Bool
+== :: TxValidationMode -&gt; TxValidationMode -&gt; Bool
+$c== :: TxValidationMode -&gt; TxValidationMode -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679577837"><span id="local-6989586621679577839"><span id="local-6989586621679577841"><span class="annot"><span class="annottext">Int -&gt; TxValidationMode -&gt; ShowS
+[TxValidationMode] -&gt; ShowS
+TxValidationMode -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [TxValidationMode] -&gt; ShowS
+$cshowList :: [TxValidationMode] -&gt; ShowS
+show :: TxValidationMode -&gt; String
+$cshow :: TxValidationMode -&gt; String
+showsPrec :: Int -&gt; TxValidationMode -&gt; ShowS
+$cshowsPrec :: Int -&gt; TxValidationMode -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span></pre></body></html>
