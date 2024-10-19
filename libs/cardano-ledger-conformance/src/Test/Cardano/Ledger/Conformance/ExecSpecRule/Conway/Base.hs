@@ -27,6 +27,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   nameGovAction,
   crecTreasuryL,
   crecGovActionMapL,
+  crecStakeDelegsL,
   enactStateSpec,
 ) where
 
@@ -71,7 +72,9 @@ import Cardano.Ledger.Conway.Rules (
   spoAccepted,
   spoAcceptedRatio,
  )
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Constrained hiding (inject)
 import Data.Bifunctor (Bifunctor (..))
@@ -171,6 +174,7 @@ instance Era era => NFData (ConwayCertExecContext era)
 data ConwayRatifyExecContext era = ConwayRatifyExecContext
   { crecTreasury :: Coin
   , crecGovActionMap :: [GovActionState era]
+  , crecStakeDelegs :: Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
   }
   deriving (Generic, Eq, Show)
 
@@ -180,18 +184,26 @@ crecTreasuryL = lens crecTreasury (\x y -> x {crecTreasury = y})
 crecGovActionMapL :: Lens' (ConwayRatifyExecContext era) [GovActionState era]
 crecGovActionMapL = lens crecGovActionMap (\x y -> x {crecGovActionMap = y})
 
+crecStakeDelegsL ::
+  Lens'
+    (ConwayRatifyExecContext era)
+    (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+crecStakeDelegsL = lens crecStakeDelegs (\x y -> x {crecStakeDelegs = y})
+
 instance EraPParams era => EncCBOR (ConwayRatifyExecContext era) where
-  encCBOR x@(ConwayRatifyExecContext _ _) =
+  encCBOR x@(ConwayRatifyExecContext _ _ _) =
     let ConwayRatifyExecContext {..} = x
      in encode $
           Rec ConwayRatifyExecContext
             !> To crecTreasury
             !> To crecGovActionMap
+            !> To crecStakeDelegs
 
 instance EraPParams era => DecCBOR (ConwayRatifyExecContext era) where
   decCBOR =
     decode $
       RecD ConwayRatifyExecContext
+        <! From
         <! From
         <! From
 
@@ -207,6 +219,7 @@ instance
     ConwayRatifyExecContext
       <$> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
   shrink = genericShrink
 
@@ -219,6 +232,14 @@ instance
     [GovActionState era]
   where
   inject = crecGovActionMap
+
+instance
+  c ~ EraCrypto era =>
+  Inject
+    (ConwayRatifyExecContext era)
+    (Map (Credential 'Staking c) (KeyHash 'StakePool c))
+  where
+  inject = crecStakeDelegs
 
 instance HasSimpleRep (ConwayRatifyExecContext era)
 instance

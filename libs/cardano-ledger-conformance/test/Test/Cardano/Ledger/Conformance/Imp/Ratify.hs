@@ -32,7 +32,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   esAccountStateL,
   nesELL,
   nesEsL,
+  unifiedL,
  )
+import Cardano.Ledger.UMap (sPoolMap)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as SSeq
@@ -63,11 +65,13 @@ spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $ do
     let ratSt = getRatifyState govSt
     noConfidenceGAS <- getGovActionState noConfidence
     treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+    umap <- getsNES unifiedL
     let
       execCtx =
         ConwayRatifyExecContext
           treasury
           [noConfidenceGAS]
+          (sPoolMap umap)
     passNEpochs 2
     getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId noConfidence)
     pure $
@@ -130,7 +134,8 @@ spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $ do
 
     logString "Testing conformance"
     treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
-    let execCtx = ConwayRatifyExecContext treasury [constitutionGAS]
+    umap <- getsNES unifiedL
+    let execCtx = ConwayRatifyExecContext treasury [constitutionGAS] (sPoolMap umap)
     ratEnv <- getRatifyEnv
     govSt <- getsNES $ nesEsL . epochStateGovStateL
     let
