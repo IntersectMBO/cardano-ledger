@@ -65,6 +65,7 @@ import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..), decodeAnnSet)
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Encoding.EncCBOR (EncCBOR (encCBOR))
+import Cardano.Ledger.Binary.Group (DecCBORGroup (..), EncCBORGroup (..))
 import Cardano.Ledger.Binary.Version (Version)
 #if ! MIN_VERSION_base(4,18,0)
 import Control.Applicative (liftA2)
@@ -75,7 +76,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set, insert, member)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import Data.Typeable (Typeable, typeOf)
+import Data.Typeable (Proxy (..), Typeable, typeOf)
 import Data.Void (Void)
 
 -- ====================================================================
@@ -358,6 +359,9 @@ data Decode (w :: Wrapped) t where
   -- | Label a (component, field, argument). It will be decoded using the existing
   -- DecCBOR instance at @t@
   From :: DecCBOR t => Decode w t
+  -- | Label components, fields, arguments. It will be decoded using the existing
+  -- DecCBORGroup instance at @t@
+  FromGroup :: (EncCBORGroup t, DecCBORGroup t) => Decode w t
   -- | Label a (component, field, argument). It will be decoded using the given decoder.
   D :: (forall s. Decoder s t) -> Decode ('Closed 'Dense) t
   -- | Apply a functional decoding (arising from 'RecD' or 'SumD') to get (type wise)
@@ -412,12 +416,13 @@ x <*! y = ApplyAnn x y
 f <? y = ApplyErr f y
 {-# INLINE (<?) #-}
 
-hsize :: Decode w t -> Int
+hsize :: forall w t. Decode w t -> Int
 hsize (Summands _ _) = 1
 hsize (SumD _) = 0
 hsize (RecD _) = 0
 hsize (KeyedD _) = 0
 hsize From = 1
+hsize FromGroup = fromIntegral $ listLenBound $ Proxy @t
 hsize (D _) = 1
 hsize (ApplyD f x) = hsize f + hsize x
 hsize (Invalid _) = 0
@@ -444,6 +449,7 @@ decodeCount (SumD cn) n = pure (n + 1, cn)
 decodeCount (KeyedD cn) n = pure (n + 1, cn)
 decodeCount (RecD cn) n = decodeRecordNamed "RecD" (const n) (pure (n, cn))
 decodeCount From n = (n,) <$> decCBOR
+decodeCount FromGroup n = (n,) <$> decCBORGroup
 decodeCount (D dec) n = (n,) <$> dec
 decodeCount (Invalid k) _ = invalidKey k
 decodeCount (Map f x) n = do (m, y) <- decodeCount x n; pure (m, f y)
@@ -477,6 +483,7 @@ decodeClosed (Summands nm f) = decodeRecordSum nm (decodE . f)
 decodeClosed (KeyedD cn) = pure cn
 decodeClosed (RecD cn) = pure cn
 decodeClosed From = decCBOR
+decodeClosed FromGroup = decCBORGroup
 decodeClosed (D dec) = dec
 decodeClosed (ApplyD cn g) = do
   f <- decodeClosed cn

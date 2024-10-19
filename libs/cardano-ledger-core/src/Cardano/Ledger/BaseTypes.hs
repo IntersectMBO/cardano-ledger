@@ -79,6 +79,7 @@ module Cardano.Ledger.BaseTypes (
 
   -- * Injection
   Inject (..),
+  swapMismatch,
 )
 where
 
@@ -737,6 +738,13 @@ data Mismatch (r :: Relation) a = Mismatch
   }
   deriving (Eq, Ord, Show, Generic, NFData, ToJSON, FromJSON, NoThunks)
 
+swapMismatch :: Mismatch r a -> Mismatch r a
+swapMismatch Mismatch {..} =
+  Mismatch
+    { mismatchSupplied = mismatchExpected
+    , mismatchExpected = mismatchSupplied
+    }
+
 instance (EncCBOR a, Typeable r) => EncCBOR (Mismatch r a) where
   encCBOR (Mismatch supplied expected) =
     encode $
@@ -750,6 +758,20 @@ instance (DecCBOR a, Typeable r) => DecCBOR (Mismatch r a) where
       RecD Mismatch
         <! From
         <! From
+
+instance (Typeable r, EncCBOR a) => EncCBORGroup (Mismatch r a) where
+  encCBORGroup Mismatch {..} = encCBOR mismatchSupplied <> encCBOR mismatchExpected
+  encodedGroupSizeExpr size_ proxy =
+    encodedSizeExpr size_ (mismatchSupplied <$> proxy)
+      + encodedSizeExpr size_ (mismatchExpected <$> proxy)
+  listLen _ = 2
+  listLenBound _ = 2
+
+instance (Typeable r, DecCBOR a) => DecCBORGroup (Mismatch r a) where
+  decCBORGroup = do
+    mismatchSupplied <- decCBOR
+    mismatchExpected <- decCBOR
+    pure Mismatch {..}
 
 data Network
   = Testnet
