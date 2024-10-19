@@ -80,6 +80,7 @@ library testlib
         cardano-crypto-class >=2.1.1,
         cardano-strict-containers,
         generic-random,
+        io-classes,
         nothunks
 
 test-suite tests

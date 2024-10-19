@@ -44,10 +44,13 @@ import Prettyprinter.Render.Text (hPutDoc)
 import System.IO (IOMode (..), hPutStrLn, withFile)
 import Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (RoundTripFailure),
-  Trip (..),
+  Trip,
+  TripOf (..),
   cborTrip,
   decodeAnnExtra,
   embedTripLabelExtra,
+  tripEncoder,
+  tripDecoder,
  )
 import Test.Hspec (
   Expectation,
