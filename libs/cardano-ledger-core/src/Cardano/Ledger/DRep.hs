@@ -13,6 +13,7 @@ module Cardano.Ledger.DRep (
   drepExpiryL,
   drepAnchorL,
   drepDepositL,
+  drepDelegsL,
 ) where
 
 import Cardano.Ledger.BaseTypes
@@ -181,3 +182,6 @@ drepAnchorL = lens drepAnchor (\x y -> x {drepAnchor = y})
 
 drepDepositL :: Lens' (DRepState c) Coin
 drepDepositL = lens drepDeposit (\x y -> x {drepDeposit = y})
+
+drepDelegsL :: Lens' (DRepState c) (Set (Credential 'Staking c))
+drepDelegsL = lens drepDelegs (\x y -> x {drepDelegs = y})

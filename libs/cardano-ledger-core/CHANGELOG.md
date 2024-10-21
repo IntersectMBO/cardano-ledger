@@ -2,7 +2,7 @@
 
 ## 1.15.1.0
 
-*
+* Add `drepDelegsL`
 
 ### `testlib`
 

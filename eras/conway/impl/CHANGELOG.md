@@ -4,6 +4,10 @@
 
 * Add new event `GovRemovedVotes` for invalidated votes
 
+### `testlib`
+
+* Add `whenBootstrap`
+
 ## 1.17.0.0
 
 * Added `reDelegatees` and `rePoolParams` to `RatifyEnv` for updated SPO vote calculation #4645

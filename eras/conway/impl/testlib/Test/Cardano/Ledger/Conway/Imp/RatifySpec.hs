@@ -93,7 +93,7 @@ initiateHardForkWithLessThanMinimalCommitteeSize =
     mHotCred <- resignCommitteeColdKey committeeMember anchor
     protVer <- getProtVer
     gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
-    submitYesVoteCCs_ (maybe NE.toList (\hotCred -> NE.filter (/= hotCred)) mHotCred $ hotCs) gai
+    submitYesVoteCCs_ (maybe NE.toList (\hotCred -> NE.filter (/= hotCred)) mHotCred hotCs) gai
     submitYesVote_ (StakePoolVoter spoK1) gai
     if bootstrapPhase protVer
       then do
