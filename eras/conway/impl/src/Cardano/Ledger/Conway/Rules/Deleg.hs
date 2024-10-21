@@ -178,39 +178,6 @@ conwayDelegTransition = do
     registerStakeCredential stakeCred =
       let rdPair = UM.RDPair (UM.CompactCoin 0) (UM.compactCoinOrError ppKeyDeposit)
        in UM.insert stakeCred rdPair $ UM.RewDepUView dsUnified
-    delegStake stakeCred sPool cState =
-      cState
-        & certDStateL . dsUnifiedL %~ \umap ->
-          UM.SPoolUView umap UM.⨃ Map.singleton stakeCred sPool
-    delegVote stakeCred dRep cState =
-      let cState' =
-            cState
-              & certDStateL . dsUnifiedL %~ \umap ->
-                UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
-          dReps = vsDReps (certVState cState)
-       in case dRep of
-            DRepCredential targetDRep
-              | Just dRepState <- Map.lookup targetDRep dReps ->
-                  let dRepState' = dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
-                   in cState' & certVStateL . vsDRepsL .~ Map.insert targetDRep dRepState' dReps
-            _ -> cState'
-    unDelegVote stakeCred vState = \case
-      DRepCredential dRepCred ->
-        let removeDelegation dRepState =
-              dRepState {drepDelegs = Set.delete stakeCred (drepDelegs dRepState)}
-         in vState & vsDRepsL %~ Map.adjust removeDelegation dRepCred
-      _ -> vState
-    processDelegation stakeCred delegatee =
-      case delegatee of
-        DelegStake sPool -> delegStake stakeCred sPool
-        DelegVote dRep -> delegVote stakeCred dRep
-        DelegStakeVote sPool dRep -> delegVote stakeCred dRep . delegStake stakeCred sPool
-    processDRepUnDelegation _ Nothing cState = cState
-    processDRepUnDelegation stakeCred (Just delegatee) cState@(CertState {certVState}) =
-      case delegatee of
-        DelegStake _ -> cState
-        DelegVote dRep -> cState {certVState = unDelegVote stakeCred certVState dRep}
-        DelegStakeVote _sPool dRep -> cState {certVState = unDelegVote stakeCred certVState dRep}
     checkStakeKeyNotRegistered stakeCred =
       UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
     checkStakeKeyIsRegistered stakeCred = do
@@ -279,3 +246,50 @@ conwayDelegTransition = do
       pure $
         processDelegation stakeCred delegatee $
           certState & certDStateL . dsUnifiedL .~ registerStakeCredential stakeCred
+
+processDelegation ::
+  Credential Staking (EraCrypto era) ->
+  Delegatee (EraCrypto era) ->
+  CertState era ->
+  CertState era
+processDelegation stakeCred delegatee =
+  case delegatee of
+    DelegStake sPool -> delegStake sPool
+    DelegVote dRep -> delegVote dRep
+    DelegStakeVote sPool dRep -> delegVote dRep . delegStake sPool
+  where
+    delegStake sPool cState =
+      cState
+        & certDStateL . dsUnifiedL %~ \umap ->
+          UM.SPoolUView umap UM.⨃ Map.singleton stakeCred sPool
+    delegVote dRep cState =
+      let cState' =
+            cState
+              & certDStateL . dsUnifiedL %~ \umap ->
+                UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
+          dReps = vsDReps (certVState cState)
+       in case dRep of
+            DRepCredential targetDRep
+              | Just dRepState <- Map.lookup targetDRep dReps ->
+                  let dRepState' = dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
+                   in cState' & certVStateL . vsDRepsL .~ Map.insert targetDRep dRepState' dReps
+            _ -> cState'
+
+processDRepUnDelegation ::
+  Credential Staking (EraCrypto era) ->
+  Maybe (Delegatee (EraCrypto era)) ->
+  CertState era ->
+  CertState era
+processDRepUnDelegation _ Nothing cState = cState
+processDRepUnDelegation stakeCred (Just delegatee) cState@(CertState {certVState}) =
+  case delegatee of
+    DelegStake _ -> cState
+    DelegVote dRep -> cState {certVState = unDelegVote certVState dRep}
+    DelegStakeVote _sPool dRep -> cState {certVState = unDelegVote certVState dRep}
+  where
+    unDelegVote vState = \case
+      DRepCredential dRepCred ->
+        let removeDelegation dRepState =
+              dRepState {drepDelegs = Set.delete stakeCred (drepDelegs dRepState)}
+         in vState & vsDRepsL %~ Map.adjust removeDelegation dRepCred
+      _ -> vState
