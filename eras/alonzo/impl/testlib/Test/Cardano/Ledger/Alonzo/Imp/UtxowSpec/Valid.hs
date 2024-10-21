@@ -19,6 +19,7 @@ import Cardano.Ledger.Plutus (
  )
 import Control.Monad ((<=<))
 import Lens.Micro ((&), (.~))
+import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
@@ -81,10 +82,12 @@ spec = describe "Valid transactions" $ do
             mkBasicTx $
               mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
 
-  it "Validating MINT script" $ do
-    const $ pendingWith "not implemented yet"
-  it "Not validating MINT script" $ do
-    const $ pendingWith "not implemented yet"
+        it "Validating MINT script" $ do
+          expectTxSuccess <=< submitTx <=< mkTokenMintingTx $ alwaysSucceedsNoDatumHash
+
+        it "Not validating MINT script" $ do
+          expectTxSuccess <=< submitPhase2Invalid <=< mkTokenMintingTx $ alwaysFailsNoDatumHash
+
   it "Validating scripts everywhere" $ do
     const $ pendingWith "not implemented yet"
   it "Acceptable supplimentary datum" $ do
