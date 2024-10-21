@@ -11,6 +11,8 @@ import Data.Default.Class (Default (def))
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
+import Test.Cardano.Ledger.Common (hspec)
+import qualified Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests as LedgerTypes
 import Test.Cardano.Ledger.Constrained.Examples (allExampleTests)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (predsTests)
 import Test.Cardano.Ledger.Constrained.Spec (allSpecTests)
@@ -32,9 +34,11 @@ main :: IO ()
 main = do
   hSetEncoding stdout utf8
   nightly <- lookupEnv "NIGHTLY"
-  defaultMain $ case nightly of
-    Nothing -> testGroup "cardano-core" defaultTests
-    Just _ -> testGroup "cardano-core - nightly" nightlyTests
+  case nightly of
+    Nothing -> defaultMain $ testGroup "cardano-core" defaultTests
+    Just _ -> do
+      hspec LedgerTypes.spec
+      defaultMain $ testGroup "cardano-core - nightly" nightlyTests
 
 defaultTests :: [TestTree]
 defaultTests =
