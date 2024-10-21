@@ -46,6 +46,7 @@ import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra)
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (ConwayDelegCert, ConwayRegCert, ConwayRegDelegCert, ConwayUnRegCert),
   Delegatee (DelegStake, DelegStakeVote, DelegVote),
+  getVoteDelegatee,
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -204,8 +205,8 @@ conwayDelegTransition = do
         DelegStake sPool -> delegStake stakeCred sPool
         DelegVote dRep -> delegVote stakeCred dRep
         DelegStakeVote sPool dRep -> delegVote stakeCred dRep . delegStake stakeCred sPool
-    processUnDelegation _ Nothing cState = cState
-    processUnDelegation stakeCred (Just delegatee) cState@(CertState {certVState}) =
+    processDRepUnDelegation _ Nothing cState = cState
+    processDRepUnDelegation stakeCred (Just delegatee) cState@(CertState {certVState}) =
       case delegatee of
         DelegStake _ -> cState
         DelegVote dRep -> cState {certVState = unDelegVote stakeCred certVState dRep}
@@ -259,11 +260,18 @@ conwayDelegTransition = do
       failOnJust checkInvalidRefund IncorrectDepositDELEG
       isJust mUMElem ?! StakeKeyNotRegisteredDELEG stakeCred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
-      pure $ processUnDelegation stakeCred mCurDelegatee $ certState & certDStateL . dsUnifiedL .~ umap
+      pure $
+        processDRepUnDelegation stakeCred mCurDelegatee $
+          certState & certDStateL . dsUnifiedL .~ umap
     ConwayDelegCert stakeCred delegatee -> do
       mCurDelegatee <- checkStakeKeyIsRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
-      pure $ processDelegation stakeCred delegatee $ processUnDelegation stakeCred mCurDelegatee certState
+      pure $
+        processDelegation stakeCred delegatee $
+          -- We should not be clearing out DRep delegation if we are not replacing it with a new one
+          if isJust (getVoteDelegatee delegatee)
+            then processDRepUnDelegation stakeCred mCurDelegatee certState
+            else certState
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       checkDepositAgainstPParams deposit
       checkStakeKeyNotRegistered stakeCred
