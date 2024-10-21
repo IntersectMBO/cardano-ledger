@@ -19,6 +19,7 @@ module Cardano.Ledger.Conway.Rules.Deleg (
   ConwayDELEG,
   ConwayDelegPredFailure (..),
   ConwayDelegEnv (..),
+  processDelegation,
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
@@ -46,7 +47,6 @@ import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra)
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (ConwayDelegCert, ConwayRegCert, ConwayRegDelegCert, ConwayUnRegCert),
   Delegatee (DelegStake, DelegStakeVote, DelegVote),
-  getVoteDelegatee,
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -233,27 +233,27 @@ conwayDelegTransition = do
     ConwayDelegCert stakeCred delegatee -> do
       mCurDelegatee <- checkStakeKeyIsRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
-      pure $
-        processDelegation stakeCred delegatee $
-          -- We should not be clearing out DRep delegation if we are not replacing it with a new one
-          if isJust (getVoteDelegatee delegatee)
-            then processDRepUnDelegation stakeCred mCurDelegatee certState
-            else certState
+      pure $ processDelegation stakeCred mCurDelegatee delegatee certState
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       checkDepositAgainstPParams deposit
       checkStakeKeyNotRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
       pure $
-        processDelegation stakeCred delegatee $
+        processDelegation stakeCred Nothing delegatee $
           certState & certDStateL . dsUnifiedL .~ registerStakeCredential stakeCred
 
+-- | Apply new delegation, while properly cleaning up older delegations.
 processDelegation ::
+  -- | Delegator
   Credential Staking (EraCrypto era) ->
+  -- | Current delegatee for the above stake credential that needs to be cleaned up.
+  Maybe (Delegatee (EraCrypto era)) ->
+  -- | New delegatee
   Delegatee (EraCrypto era) ->
   CertState era ->
   CertState era
-processDelegation stakeCred delegatee =
-  case delegatee of
+processDelegation stakeCred mCurDelegatee newDelegatee =
+  case newDelegatee of
     DelegStake sPool -> delegStake sPool
     DelegVote dRep -> delegVote dRep
     DelegStakeVote sPool dRep -> delegVote dRep . delegStake sPool
@@ -264,7 +264,7 @@ processDelegation stakeCred delegatee =
           UM.SPoolUView umap UM.⨃ Map.singleton stakeCred sPool
     delegVote dRep cState =
       let cState' =
-            cState
+            processDRepUnDelegation stakeCred mCurDelegatee cState
               & certDStateL . dsUnifiedL %~ \umap ->
                 UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
           dReps = vsDReps (certVState cState)
