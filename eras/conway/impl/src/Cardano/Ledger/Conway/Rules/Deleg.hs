@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -199,12 +200,6 @@ conwayDelegTransition = do
             DelegStakeVote targetPool targetDRep ->
               checkPoolRegistered targetPool >> checkDRepRegistered targetDRep
             DelegVote targetDRep -> checkDRepRegistered targetDRep
-    umElemToDelegatee (UM.UMElem _ _ mPool mDRep) =
-      case (mPool, mDRep) of
-        (SNothing, SNothing) -> Nothing
-        (SJust pool, SNothing) -> Just $ DelegStake pool
-        (SNothing, SJust dRep) -> Just $ DelegVote dRep
-        (SJust pool, SJust dRep) -> Just $ DelegStakeVote pool dRep
   case cert of
     ConwayRegCert stakeCred sMayDeposit -> do
       forM_ sMayDeposit checkDepositAgainstPParams
@@ -233,26 +228,42 @@ conwayDelegTransition = do
     ConwayDelegCert stakeCred delegatee -> do
       mCurDelegatee <- checkStakeKeyIsRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
-      pure $ processDelegation stakeCred mCurDelegatee delegatee certState
+      pure $ processDelegationInternal stakeCred mCurDelegatee delegatee certState
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       checkDepositAgainstPParams deposit
       checkStakeKeyNotRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
       pure $
-        processDelegation stakeCred Nothing delegatee $
+        processDelegationInternal stakeCred Nothing delegatee $
           certState & certDStateL . dsUnifiedL .~ registerStakeCredential stakeCred
 
--- | Apply new delegation, while properly cleaning up older delegations.
+-- | Apply new delegation, while properly cleaning up older delegations. This function
+-- does not enforce that delegatee is registered, that has to be handled by the caller.
 processDelegation ::
   -- | Delegator
-  Credential Staking (EraCrypto era) ->
+  Credential 'Staking (EraCrypto era) ->
+  -- | New delegatee
+  Delegatee (EraCrypto era) ->
+  CertState era ->
+  CertState era
+processDelegation stakeCred newDelegatee !certState = certState'
+  where
+    !certState' = processDelegationInternal stakeCred mCurDelegatee newDelegatee certState
+    mUMElem = Map.lookup stakeCred (UM.umElems (dsUnified (certDState certState)))
+    mCurDelegatee = mUMElem >>= umElemToDelegatee
+
+-- | Same as `processDelegation`, except it expects the current delegation supplied as an
+-- argument, because in ledger rules we already have it readily available.
+processDelegationInternal ::
+  -- | Delegator
+  Credential 'Staking (EraCrypto era) ->
   -- | Current delegatee for the above stake credential that needs to be cleaned up.
   Maybe (Delegatee (EraCrypto era)) ->
   -- | New delegatee
   Delegatee (EraCrypto era) ->
   CertState era ->
   CertState era
-processDelegation stakeCred mCurDelegatee newDelegatee =
+processDelegationInternal stakeCred mCurDelegatee newDelegatee =
   case newDelegatee of
     DelegStake sPool -> delegStake sPool
     DelegVote dRep -> delegVote dRep
@@ -275,8 +286,16 @@ processDelegation stakeCred mCurDelegatee newDelegatee =
                    in cState' & certVStateL . vsDRepsL .~ Map.insert targetDRep dRepState' dReps
             _ -> cState'
 
+umElemToDelegatee :: UM.UMElem c -> Maybe (Delegatee c)
+umElemToDelegatee (UM.UMElem _ _ mPool mDRep) =
+  case (mPool, mDRep) of
+    (SNothing, SNothing) -> Nothing
+    (SJust pool, SNothing) -> Just $ DelegStake pool
+    (SNothing, SJust dRep) -> Just $ DelegVote dRep
+    (SJust pool, SJust dRep) -> Just $ DelegStakeVote pool dRep
+
 processDRepUnDelegation ::
-  Credential Staking (EraCrypto era) ->
+  Credential 'Staking (EraCrypto era) ->
   Maybe (Delegatee (EraCrypto era)) ->
   CertState era ->
   CertState era
