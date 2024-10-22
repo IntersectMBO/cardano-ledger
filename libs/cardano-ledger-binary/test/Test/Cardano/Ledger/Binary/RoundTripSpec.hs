@@ -219,7 +219,6 @@ spec = do
         describe "CompactSingle" $ do
           roundTripSpecIO @(VerKeyKES (CompactSingleKES Ed25519DSIGN)) (cborTripIO mkVerKeyKES)
           roundTripSpecIO @(SigKES (CompactSingleKES Ed25519DSIGN)) (cborTripIO mkSigKES)
-          roundTripSpec @(UnsoundPureSignKeyKES (CompactSingleKES Ed25519DSIGN)) cborTrip
         describe "CompactSum" $ do
           roundTripSpecIO @(VerKeyKES (CompactSum0KES Ed25519DSIGN)) (cborTripIO mkVerKeyKES)
           roundTripSpecIO @(SigKES (CompactSum0KES Ed25519DSIGN)) (cborTripIO mkSigKES)

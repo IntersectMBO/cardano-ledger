@@ -29,7 +29,7 @@ import Cardano.Crypto.DSIGN.Class (
   VerKeyDSIGN,
  )
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm)
-import Cardano.Crypto.KES.Class (KESAlgorithm, UnsoundPureKESAlgorithm, SigKES, VerKeyKES, UnsoundPureSignKeyKES)
+import Cardano.Crypto.KES.Class (KESAlgorithm, SigKES, VerKeyKES)
 import Cardano.Crypto.VRF.Class (
   CertVRF,
   CertifiedVRF (..),
@@ -481,10 +481,6 @@ instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a)
 
 instance KESAlgorithm k => DecCBOR (VerKeyKES k) where
   decCBOR = decodeVerKeyKES
-  {-# INLINE decCBOR #-}
-
-instance UnsoundPureKESAlgorithm k => DecCBOR (UnsoundPureSignKeyKES k) where
-  decCBOR = decodeUnsoundPureSignKeyKES
   {-# INLINE decCBOR #-}
 
 instance KESAlgorithm k => DecCBOR (SigKES k)

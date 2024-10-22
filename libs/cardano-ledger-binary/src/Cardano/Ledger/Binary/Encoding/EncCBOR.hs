@@ -74,10 +74,8 @@ import Cardano.Crypto.Hash.Class (
  )
 import Cardano.Crypto.KES.Class (
   KESAlgorithm,
-  UnsoundPureKESAlgorithm,
   SigKES,
   SignKeyKES,
-  UnsoundPureSignKeyKES,
   VerKeyKES,
   sizeSigKES,
   sizeSignKeyKES,
@@ -938,12 +936,6 @@ encodedSigKESSizeExpr _proxy =
 instance KESAlgorithm k => EncCBOR (VerKeyKES k) where
   encCBOR = encodeVerKeyKES
   encodedSizeExpr _size = encodedVerKeyKESSizeExpr
-
-instance
-  UnsoundPureKESAlgorithm k => EncCBOR (UnsoundPureSignKeyKES k)
-  where
-  encCBOR = encodeUnsoundPureSignKeyKES
-  encodedSizeExpr _size _p = encodedSignKeyKESSizeExpr (Proxy :: Proxy (SignKeyKES k))
 
 instance KESAlgorithm k => EncCBOR (SigKES k)
   where

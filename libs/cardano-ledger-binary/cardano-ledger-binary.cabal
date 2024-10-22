@@ -61,8 +61,6 @@ library
         deepseq,
         FailT,
         formatting,
-        -- for now:
-        io-classes,
         iproute,
         microlens,
         mtl,
