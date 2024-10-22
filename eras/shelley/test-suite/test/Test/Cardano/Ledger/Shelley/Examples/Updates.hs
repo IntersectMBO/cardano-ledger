@@ -190,10 +190,10 @@ updates1 = CHAINExample initStUpdates blockEx1 (Right expectedStEx1)
 -- Block 2, Slot 20, Epoch 0
 --
 
-ppVotes2 :: (Era (ShelleyEra c)) => ProposedPPUpdates (ShelleyEra c)
+ppVotes2 :: Era (ShelleyEra c) => ProposedPPUpdates (ShelleyEra c)
 ppVotes2 = collectVotes ppVoteA [1, 5]
 
-updateEx3B :: (Era (ShelleyEra c)) => Update (ShelleyEra c)
+updateEx3B :: Era (ShelleyEra c) => Update (ShelleyEra c)
 updateEx3B = Update ppVotes2 (EpochNo 0)
 
 feeTx2 :: Coin
@@ -269,7 +269,7 @@ ppVoteB =
   emptyPParamsUpdate
     & ppuMinUTxOValueL .~ SJust (Coin 99)
 
-ppVotes3 :: (Era (ShelleyEra c)) => ProposedPPUpdates (ShelleyEra c)
+ppVotes3 :: Era (ShelleyEra c) => ProposedPPUpdates (ShelleyEra c)
 ppVotes3 = collectVotes ppVoteB [1]
 
 feeTx3 :: Coin

@@ -1,5 +1,6 @@
 module Main where
 
+import Cardano.Crypto.Libsodium.Init
 import System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Binary.Failure as Failure
 import qualified Test.Cardano.Ledger.Binary.PlainSpec as PlainSpec
@@ -12,7 +13,6 @@ import qualified Test.Cardano.Ledger.Binary.Vintage.RoundTrip as Vintage.RoundTr
 import qualified Test.Cardano.Ledger.Binary.Vintage.Serialization as Vintage.Serialization
 import qualified Test.Cardano.Ledger.Binary.Vintage.SizeBounds as Vintage.SizeBounds
 import Test.Hspec
-import Cardano.Crypto.Libsodium.Init
 
 spec :: Spec
 spec = do

@@ -485,7 +485,7 @@ mkBlockHeader ::
   BHeader c
 mkBlockHeader protVer prev pKeys slotNo blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
   let bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
-  in mkBHeader pKeys kesPeriod c0 bhBody
+   in mkBHeader pKeys kesPeriod c0 bhBody
 {-# DEPRECATED mkBlockHeader "In favor of `mkBHeader` and `mkBHBody`" #-}
 
 -- | Takes a sequence of KES hot keys and checks to see whether there is one whose

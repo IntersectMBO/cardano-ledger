@@ -55,8 +55,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
 -- corresponding keyspace.
 genEnv ::
   forall era.
-  ( EraGen era
-  ) =>
+  EraGen era =>
   Proxy era ->
   Constants ->
   GenEnv era
@@ -83,8 +82,7 @@ scriptSpace scripts3 scripts2 =
 -- | Example keyspace for use in generators
 keySpace ::
   forall era.
-  ( EraGen era
-  ) =>
+  EraGen era =>
   Constants ->
   KeySpace era
 keySpace c =
@@ -118,9 +116,9 @@ coreNodeKeys c@Constants {numCoreNodes} =
 genesisDelegates ::
   ( Crypto c
   , UnsoundPureKESAlgorithm (KES c)
-  )
-  => Constants
-  -> [AllIssuerKeys c 'GenesisDelegate]
+  ) =>
+  Constants ->
+  [AllIssuerKeys c 'GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
   | x <- [0 .. 50]
@@ -130,9 +128,9 @@ genesisDelegates c =
 stakePoolKeys ::
   ( Crypto c
   , UnsoundPureKESAlgorithm (KES c)
-  )
-  => Constants
-  -> [AllIssuerKeys c 'StakePool]
+  ) =>
+  Constants ->
+  [AllIssuerKeys c 'StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
   | x <- [0 .. 50]

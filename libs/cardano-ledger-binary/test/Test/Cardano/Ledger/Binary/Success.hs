@@ -8,7 +8,7 @@ import Cardano.Ledger.Binary
 import Control.Monad (forM_)
 import Data.Proxy (Proxy (Proxy))
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Binary.RoundTrip (pureTrip, embedTripExpectation)
+import Test.Cardano.Ledger.Binary.RoundTrip (embedTripExpectation, pureTrip)
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck

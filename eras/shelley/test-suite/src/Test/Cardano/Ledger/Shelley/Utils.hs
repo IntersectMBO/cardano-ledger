@@ -49,8 +49,8 @@ import Cardano.Crypto.Hash (
  )
 import Cardano.Crypto.KES (
   UnsoundPureKESAlgorithm (..),
-  unsoundPureGenKeyKES,
   unsoundPureDeriveVerKeyKES,
+  unsoundPureGenKeyKES,
  )
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF (
@@ -208,14 +208,14 @@ mkCertifiedVRF a sk =
   coerce $ evalCertified () a sk
 
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
-mkKESKeyPair :: (UnsoundPureKESAlgorithm (KES c))
-             => RawSeed
-             -> KESKeyPair c
+mkKESKeyPair ::
+  UnsoundPureKESAlgorithm (KES c) =>
+  RawSeed ->
+  KESKeyPair c
 mkKESKeyPair seed =
   let sk = unsoundPureGenKeyKES (mkSeedFromWords seed)
       vk = unsoundPureDeriveVerKeyKES sk
-  in
-     KESKeyPair
+   in KESKeyPair
         { kesSignKey = sk
         , kesVerKey = vk
         }

@@ -70,7 +70,6 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   embedTripLabel,
   embedTripLabelExtra,
   decodeAnnExtra,
-
 )
 where
 
@@ -116,7 +115,6 @@ roundTripSpecIO ::
   Spec
 roundTripSpecIO trip =
   prop (show (typeRep $ Proxy @t)) $ roundTripExpectationIO trip
-
 
 -- | Tests the roundtrip property using QuickCheck generators for all possible versions
 -- starting with `shelleyProtVer`.
@@ -266,7 +264,6 @@ roundTripRangeExpectation trip fromVersion toVersion t =
     case roundTrip version trip t of
       Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
       Right tDecoded -> tDecoded `shouldBe` t
-
 
 -- | Verify that round triping through the binary form holds for a range of versions.
 --

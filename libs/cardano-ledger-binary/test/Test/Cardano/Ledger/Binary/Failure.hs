@@ -8,7 +8,7 @@ import Cardano.Ledger.Binary
 import Data.Map (Map)
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
-import Test.Cardano.Ledger.Binary.RoundTrip (pureTrip, embedTripRangeFailureExpectation)
+import Test.Cardano.Ledger.Binary.RoundTrip (embedTripRangeFailureExpectation, pureTrip)
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck

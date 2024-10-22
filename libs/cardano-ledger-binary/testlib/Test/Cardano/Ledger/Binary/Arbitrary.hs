@@ -19,14 +19,14 @@ module Test.Cardano.Ledger.Binary.Arbitrary (
 where
 
 import Cardano.Crypto.DSIGN.Class hiding (Signable)
-import Cardano.Crypto.KES.Class
-          ( UnsoundPureKESAlgorithm
-          , UnsoundPureSignKeyKES
-          , VerKeyKES
-          , unsoundPureGenKeyKES
-          , unsoundPureDeriveVerKeyKES
-          , seedSizeKES
-          )
+import Cardano.Crypto.KES.Class (
+  UnsoundPureKESAlgorithm,
+  UnsoundPureSignKeyKES,
+  VerKeyKES,
+  seedSizeKES,
+  unsoundPureDeriveVerKeyKES,
+  unsoundPureGenKeyKES,
+ )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
@@ -205,7 +205,6 @@ instance UnsoundPureKESAlgorithm c => Arbitrary (UnsoundPureSignKeyKES c) where
 
 instance UnsoundPureKESAlgorithm c => Arbitrary (VerKeyKES c) where
   arbitrary = unsoundPureDeriveVerKeyKES <$> arbitrary
-
 
 instance
   (ContextVRF v ~ (), Signable v ~ SignableRepresentation, VRFAlgorithm v) =>

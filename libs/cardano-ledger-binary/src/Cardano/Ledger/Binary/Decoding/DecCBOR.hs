@@ -483,8 +483,7 @@ instance KESAlgorithm k => DecCBOR (VerKeyKES k) where
   decCBOR = decodeVerKeyKES
   {-# INLINE decCBOR #-}
 
-instance KESAlgorithm k => DecCBOR (SigKES k)
-  where
+instance KESAlgorithm k => DecCBOR (SigKES k) where
   decCBOR = decodeSigKES
   {-# INLINE decCBOR #-}
 

@@ -1,7 +1,7 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ConstraintKinds #-}
 
 -- | Package all the crypto constraints into one place.
 module Cardano.Ledger.Crypto where

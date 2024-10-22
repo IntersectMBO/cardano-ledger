@@ -20,18 +20,18 @@ import Cardano.Crypto.Hash.SHA256 (SHA256)
 import Cardano.Crypto.Hash.SHA3_256 (SHA3_256)
 import Cardano.Crypto.Hash.Short (ShortHash)
 import Cardano.Crypto.KES.Class (
-  KESAlgorithm,
   ContextKES,
-  SigKES,
-  VerKeyKES,
-  SignKeyKES,
-  UnsoundPureSignKeyKES,
+  KESAlgorithm,
   SeedSizeKES,
+  SigKES,
+  SignKeyKES,
   Signable,
-  genKeyKES,
+  UnsoundPureSignKeyKES,
+  VerKeyKES,
   deriveVerKeyKES,
-  signKES,
   forgetSignKeyKES,
+  genKeyKES,
+  signKES,
  )
 import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
 import Cardano.Crypto.KES.CompactSum (
@@ -56,21 +56,21 @@ import Cardano.Crypto.KES.Sum (
   Sum6KES,
   Sum7KES,
  )
+import Cardano.Crypto.Libsodium
+import Cardano.Crypto.Libsodium.MLockedSeed
+import Cardano.Crypto.PinnedSizedBytes (PinnedSizedBytes, psbToByteString)
 import Cardano.Crypto.VRF.Class (CertVRF, CertifiedVRF, OutputVRF, SignKeyVRF, VerKeyVRF)
 import Cardano.Crypto.VRF.Mock (MockVRF)
 import Cardano.Crypto.VRF.Praos (PraosVRF)
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
-import Cardano.Crypto.PinnedSizedBytes (PinnedSizedBytes, psbToByteString)
-import Cardano.Crypto.Libsodium
-import Cardano.Crypto.Libsodium.MLockedSeed
 import Cardano.Ledger.Binary
 import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (EpochNo, EpochSize, SlotNo, WithOrigin)
 import Cardano.Slotting.Time (SystemStart)
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
-import Control.Monad (when)
 import Control.Exception (bracket)
+import Control.Monad (when)
 import qualified Data.ByteString as BS
 import Data.Fixed (Nano, Pico)
 import Data.Foldable as F
@@ -97,8 +97,9 @@ import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Hspec
 
-withSK :: KESAlgorithm v
-       => PinnedSizedBytes (SeedSizeKES v) -> (SignKeyKES v -> IO b) -> IO b
+withSK ::
+  KESAlgorithm v =>
+  PinnedSizedBytes (SeedSizeKES v) -> (SignKeyKES v -> IO b) -> IO b
 withSK seedPSB action =
   bracket
     (fmap MLockedSeed . mlsbFromByteString . psbToByteString $ seedPSB)
@@ -109,15 +110,17 @@ withSK seedPSB action =
         forgetSignKeyKES
         action
 
-mkVerKeyKES :: KESAlgorithm v
-            => PinnedSizedBytes (SeedSizeKES v)
-            -> IO (VerKeyKES v)
+mkVerKeyKES ::
+  KESAlgorithm v =>
+  PinnedSizedBytes (SeedSizeKES v) ->
+  IO (VerKeyKES v)
 mkVerKeyKES seedPSB =
   withSK seedPSB deriveVerKeyKES
 
-mkSigKES :: (KESAlgorithm v, ContextKES v ~ (), Signable v BS.ByteString)
-         => (PinnedSizedBytes (SeedSizeKES v), [Word8])
-         -> IO (SigKES v)
+mkSigKES ::
+  (KESAlgorithm v, ContextKES v ~ (), Signable v BS.ByteString) =>
+  (PinnedSizedBytes (SeedSizeKES v), [Word8]) ->
+  IO (SigKES v)
 mkSigKES (seedPSB, msg) =
   withSK seedPSB $ \sk -> (signKES () 0 (BS.pack msg) sk)
 
@@ -263,41 +266,41 @@ spec = do
              , VerKeyKES (SimpleKES Ed25519DSIGN 5)
              , VerKeyKES (SimpleKES Ed25519DSIGN 6)
              , VerKeyKES (SimpleKES Ed25519DSIGN 7)
-             ) $
-            cborTripIO $
-               \(s1, s2, s3, s4, s5, s6, s7) ->
-                    (,,,,,,)
-                      <$> mkVerKeyKES s1
-                      <*> mkVerKeyKES s2
-                      <*> mkVerKeyKES s3
-                      <*> mkVerKeyKES s4
-                      <*> mkVerKeyKES s5
-                      <*> mkVerKeyKES s6
-                      <*> mkVerKeyKES s7
+             )
+            $ cborTripIO
+            $ \(s1, s2, s3, s4, s5, s6, s7) ->
+              (,,,,,,)
+                <$> mkVerKeyKES s1
+                <*> mkVerKeyKES s2
+                <*> mkVerKeyKES s3
+                <*> mkVerKeyKES s4
+                <*> mkVerKeyKES s5
+                <*> mkVerKeyKES s6
+                <*> mkVerKeyKES s7
           roundTripSpecIO
             @( SigKES (SimpleKES Ed25519DSIGN 1)
              , SigKES (SimpleKES Ed25519DSIGN 2)
              , SigKES (SimpleKES Ed25519DSIGN 3)
              , SigKES (SimpleKES Ed25519DSIGN 4)
-             ) $
-            cborTripIO $
-               \(s1, m1, s2, m2, s3, m3, s4, m4) ->
-                    (,,,)
-                      <$> mkSigKES (s1, m1)
-                      <*> mkSigKES (s2, m2)
-                      <*> mkSigKES (s3, m3)
-                      <*> mkSigKES (s4, m4)
+             )
+            $ cborTripIO
+            $ \(s1, m1, s2, m2, s3, m3, s4, m4) ->
+              (,,,)
+                <$> mkSigKES (s1, m1)
+                <*> mkSigKES (s2, m2)
+                <*> mkSigKES (s3, m3)
+                <*> mkSigKES (s4, m4)
           roundTripSpecIO
             @( SigKES (SimpleKES Ed25519DSIGN 5)
              , SigKES (SimpleKES Ed25519DSIGN 6)
              , SigKES (SimpleKES Ed25519DSIGN 7)
-             ) $
-            cborTripIO $
-              \(s1, m1, s2, m2, s3, m3) ->
-                (,,)
-                  <$> mkSigKES (s1, m1)
-                  <*> mkSigKES (s2, m2)
-                  <*> mkSigKES (s3, m3)
+             )
+            $ cborTripIO
+            $ \(s1, m1, s2, m2, s3, m3) ->
+              (,,)
+                <$> mkSigKES (s1, m1)
+                <*> mkSigKES (s2, m2)
+                <*> mkSigKES (s3, m3)
         describe "Mock" $ do
           roundTripSpecIO @(VerKeyKES (MockKES 7)) (cborTripIO mkVerKeyKES)
           roundTripSpecIO @(SigKES (MockKES 7)) (cborTripIO mkSigKES)

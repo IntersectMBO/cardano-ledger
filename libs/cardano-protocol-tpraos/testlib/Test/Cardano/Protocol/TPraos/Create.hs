@@ -24,11 +24,11 @@ module Test.Cardano.Protocol.TPraos.Create (
 ) where
 
 import Cardano.Crypto.DSIGN (Signable)
-import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.KES.Class (
-    UnsoundPureKESAlgorithm,
-    unsoundPureSignedKES,
-  )
+  UnsoundPureKESAlgorithm,
+  unsoundPureSignedKES,
+ )
+import qualified Cardano.Crypto.KES.Class as KES
 import qualified Cardano.Crypto.VRF.Class as VRF
 import Cardano.Ledger.BaseTypes (
   BlockNo,

@@ -49,8 +49,8 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   cborTrip,
   decodeAnnExtra,
   embedTripLabelExtra,
-  tripEncoder,
   tripDecoder,
+  tripEncoder,
  )
 import Test.Hspec (
   Expectation,

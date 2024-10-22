@@ -17,8 +17,6 @@ module Test.Cardano.Protocol.TPraos.Arbitrary (
   genCoherentBlock,
 ) where
 
-import Data.Proxy (Proxy (..))
-import qualified Data.ByteString as BS
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN (Signable)
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
@@ -38,6 +36,8 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..), OCertSi
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState)
+import qualified Data.ByteString as BS
+import Data.Proxy (Proxy (..))
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common

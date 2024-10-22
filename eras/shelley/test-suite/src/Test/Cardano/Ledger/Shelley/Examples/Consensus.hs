@@ -14,9 +14,9 @@ module Test.Cardano.Ledger.Shelley.Examples.Consensus where
 
 import Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash as Hash
+import Cardano.Crypto.KES as KES
 import Cardano.Crypto.Seed as Seed
 import Cardano.Crypto.VRF as VRF
-import Cardano.Crypto.KES as KES
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
@@ -222,7 +222,7 @@ mkScriptHash = ScriptHash . mkDummyHash @(ADDRHASH c)
 -- serialisation, not validation.
 exampleTx ::
   forall era.
-  (EraTx era) =>
+  EraTx era =>
   (TxBody era -> KeyPairWits era -> TxWits era) ->
   TxBody era ->
   TxAuxData era ->
@@ -474,10 +474,11 @@ exampleTxIns =
     [ TxIn (TxId (mkDummySafeHash Proxy 1)) minBound
     ]
 
-exampleCerts :: ( ShelleyEraTxCert era
-                , ProtVerAtMost era 8
-                ) =>
-              StrictSeq (TxCert era)
+exampleCerts ::
+  ( ShelleyEraTxCert era
+  , ProtVerAtMost era 8
+  ) =>
+  StrictSeq (TxCert era)
 exampleCerts =
   StrictSeq.fromList
     [ RegTxCert (keyToCredential exampleStakeKey)

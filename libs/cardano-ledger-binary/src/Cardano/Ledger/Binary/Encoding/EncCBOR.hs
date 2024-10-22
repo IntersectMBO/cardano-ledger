@@ -13,8 +13,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
 
@@ -937,8 +937,7 @@ instance KESAlgorithm k => EncCBOR (VerKeyKES k) where
   encCBOR = encodeVerKeyKES
   encodedSizeExpr _size = encodedVerKeyKESSizeExpr
 
-instance KESAlgorithm k => EncCBOR (SigKES k)
-  where
+instance KESAlgorithm k => EncCBOR (SigKES k) where
   encCBOR = encodeSigKES
   encodedSizeExpr _size = encodedSigKESSizeExpr
 
