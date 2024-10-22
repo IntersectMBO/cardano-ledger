@@ -2,7 +2,7 @@
 
 ## 1.18.0.0
 
-* Add new event `GovRemovedVotes` for invalidated votes
+* Add new event `GovRemovedVotes` for invalidated votes.
 
 ### `testlib`
 

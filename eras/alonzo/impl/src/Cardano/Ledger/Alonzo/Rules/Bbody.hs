@@ -33,7 +33,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.BaseTypes (Mismatch (..), ShelleyBase, epochInfoPure)
+import Cardano.Ledger.BaseTypes (Mismatch (..), Relation (..), ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..))
@@ -82,11 +82,7 @@ import NoThunks.Class (NoThunks (..))
 
 data AlonzoBbodyPredFailure era
   = ShelleyInAlonzoBbodyPredFailure (ShelleyBbodyPredFailure era)
-  | TooManyExUnits
-      -- | Computed Sum of ExUnits for all plutus scripts
-      !ExUnits
-      -- | Maximum allowed by protocal parameters
-      !ExUnits
+  | TooManyExUnits !(Mismatch 'RelLTEQ ExUnits)
   deriving (Generic)
 
 newtype AlonzoBbodyEvent era
@@ -157,7 +153,7 @@ instance
   EncCBOR (AlonzoBbodyPredFailure era)
   where
   encCBOR (ShelleyInAlonzoBbodyPredFailure x) = encode (Sum ShelleyInAlonzoBbodyPredFailure 0 !> To x)
-  encCBOR (TooManyExUnits x y) = encode (Sum TooManyExUnits 1 !> To x !> To y)
+  encCBOR (TooManyExUnits m) = encode (Sum TooManyExUnits 1 !> To m)
 
 instance
   ( Typeable era
@@ -168,7 +164,7 @@ instance
   decCBOR = decode (Summands "AlonzoBbodyPredFail" dec)
     where
       dec 0 = SumD ShelleyInAlonzoBbodyPredFailure <! From
-      dec 1 = SumD TooManyExUnits <! From <! From
+      dec 1 = SumD TooManyExUnits <! From
       dec n = Invalid n
 
 -- ========================================
@@ -253,7 +249,7 @@ alonzoBbodyTransition =
             txTotal = foldMap totExUnits txs
             ppMax = pp ^. ppMaxBlockExUnitsL
         pointWiseExUnits (<=) txTotal ppMax
-          ?! injectFailure (TooManyExUnits txTotal ppMax)
+          ?! injectFailure (TooManyExUnits Mismatch {mismatchSupplied = txTotal, mismatchExpected = ppMax})
 
         pure $
           BbodyState @era

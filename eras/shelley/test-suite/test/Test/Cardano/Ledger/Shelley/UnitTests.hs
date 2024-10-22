@@ -357,7 +357,7 @@ testInvalidTx errs tx =
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
-    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000)))
+    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO $ Mismatch (Coin 0) (Coin 10000)))
     , UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ mkGenesisTxIn 42))
     ]
     $ aliceGivesBobLovelace
@@ -491,7 +491,9 @@ testFeeTooSmall =
 
 testExpiredTx :: Assertion
 testExpiredTx =
-  let errs = [UtxowFailure (UtxoFailure (ExpiredUTxO (SlotNo {unSlotNo = 0}) (SlotNo {unSlotNo = 1})))]
+  let errs =
+        [ UtxowFailure (UtxoFailure (ExpiredUTxO $ Mismatch (SlotNo {unSlotNo = 0}) (SlotNo {unSlotNo = 1})))
+        ]
       tx =
         aliceGivesBobLovelace $
           AliceToBob

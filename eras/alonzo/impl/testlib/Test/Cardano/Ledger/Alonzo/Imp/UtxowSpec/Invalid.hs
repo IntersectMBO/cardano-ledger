@@ -5,7 +5,6 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec) where
@@ -21,7 +20,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unRedeemers)
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
+import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..), StrictMaybe (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
@@ -130,7 +129,9 @@ spec = describe "Invalid transactions" $ do
               withNoFixup $
                 submitFailingTx
                   badHashTx
-                  [injectFailure $ PPViewHashesDontMatch badHash goodHash]
+                  [ injectFailure $
+                      PPViewHashesDontMatch Mismatch {mismatchSupplied = badHash, mismatchExpected = goodHash}
+                  ]
 
           it "Mismatched" $
             testHashMismatch . SJust =<< arbitrary

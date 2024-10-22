@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.6.0.2
+## 1.6.1.0
 
-*
+* Use `Mismatch` to clarify predicate failures. #4711
 
 ## 1.6.0.1
 

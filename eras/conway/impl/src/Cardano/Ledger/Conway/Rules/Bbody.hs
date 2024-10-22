@@ -227,12 +227,7 @@ alonzoToConwayBbodyPredFailure ::
   AlonzoBbodyPredFailure era ->
   ConwayBbodyPredFailure era
 alonzoToConwayBbodyPredFailure (ShelleyInAlonzoBbodyPredFailure x) = shelleyToConwayBbodyPredFailure x
-alonzoToConwayBbodyPredFailure (Alonzo.TooManyExUnits x y) =
-  TooManyExUnits $
-    Mismatch
-      { mismatchSupplied = x
-      , mismatchExpected = y
-      }
+alonzoToConwayBbodyPredFailure (Alonzo.TooManyExUnits m) = TooManyExUnits m
 
 instance
   ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)

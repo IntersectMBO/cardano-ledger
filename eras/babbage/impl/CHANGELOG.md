@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.10.0.1
+## 1.10.1.0
 
-*
+* Use `Mismatch` to clarify predicate failures. #4711
 
 ## 1.10.0.0
 

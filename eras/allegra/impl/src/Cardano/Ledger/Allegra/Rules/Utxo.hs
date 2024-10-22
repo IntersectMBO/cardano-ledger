@@ -32,18 +32,13 @@ import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network,
   ProtVer (pvMajor),
+  Relation (..),
   ShelleyBase,
   StrictMaybe (..),
   networkId,
  )
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  decodeRecordSum,
-  encodeListLen,
-  invalidKey,
-  serialize,
- )
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize)
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto (Crypto)
@@ -58,11 +53,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (
-  EraUTxO (..),
-  UTxO (..),
-  txouts,
- )
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import Control.DeepSeq (NFData)
@@ -73,7 +64,6 @@ import Data.Foldable (toList)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -87,16 +77,10 @@ data AllegraUtxoPredFailure era
   | OutsideValidityIntervalUTxO
       !ValidityInterval -- transaction's validity interval
       !SlotNo -- current slot
-  | MaxTxSizeUTxO
-      !Integer -- the actual transaction size
-      !Integer -- the max transaction size
+  | MaxTxSizeUTxO !(Mismatch 'RelLTEQ Integer)
   | InputSetEmptyUTxO
-  | FeeTooSmallUTxO
-      !Coin -- the minimum fee for this transaction
-      !Coin -- the fee supplied in this transaction
-  | ValueNotConservedUTxO
-      !(Value era) -- the Coin consumed by this transaction
-      !(Value era) -- the Coin produced by this transaction
+  | FeeTooSmallUTxO !(Mismatch 'RelGTEQ Coin)
+  | ValueNotConservedUTxO !(Mismatch 'RelEQ (Value era)) -- Consumed, then produced
   | WrongNetwork
       !Network -- the expected network id
       !(Set (Addr (EraCrypto era))) -- the set of addresses with incorrect network IDs
@@ -160,7 +144,7 @@ data AllegraUtxoEvent era
     TxUTxODiff
       -- | UTxO consumed
       (UTxO era)
-      -- | UTxO created
+      -- | UTxO created (produced)
       (UTxO era)
   deriving (Generic)
 
@@ -363,57 +347,22 @@ instance
   ) =>
   EncCBOR (AllegraUtxoPredFailure era)
   where
-  encCBOR = \case
-    BadInputsUTxO ins ->
-      encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR ins
-    (OutsideValidityIntervalUTxO a b) ->
-      encodeListLen 3
-        <> encCBOR (1 :: Word8)
-        <> encCBOR a
-        <> encCBOR b
-    (MaxTxSizeUTxO a b) ->
-      encodeListLen 3
-        <> encCBOR (2 :: Word8)
-        <> encCBOR a
-        <> encCBOR b
-    InputSetEmptyUTxO -> encodeListLen 1 <> encCBOR (3 :: Word8)
-    (FeeTooSmallUTxO a b) ->
-      encodeListLen 3
-        <> encCBOR (4 :: Word8)
-        <> encCBOR a
-        <> encCBOR b
-    (ValueNotConservedUTxO a b) ->
-      encodeListLen 3
-        <> encCBOR (5 :: Word8)
-        <> encCBOR a
-        <> encCBOR b
-    OutputTooSmallUTxO outs ->
-      encodeListLen 2
-        <> encCBOR (6 :: Word8)
-        <> encCBOR outs
-    (UpdateFailure a) ->
-      encodeListLen 2
-        <> encCBOR (7 :: Word8)
-        <> encCBOR a
-    (WrongNetwork right wrongs) ->
-      encodeListLen 3
-        <> encCBOR (8 :: Word8)
-        <> encCBOR right
-        <> encCBOR wrongs
-    (WrongNetworkWithdrawal right wrongs) ->
-      encodeListLen 3
-        <> encCBOR (9 :: Word8)
-        <> encCBOR right
-        <> encCBOR wrongs
-    OutputBootAddrAttrsTooBig outs ->
-      encodeListLen 2
-        <> encCBOR (10 :: Word8)
-        <> encCBOR outs
-    TriesToForgeADA -> encodeListLen 1 <> encCBOR (11 :: Word8)
-    OutputTooBigUTxO outs ->
-      encodeListLen 2
-        <> encCBOR (12 :: Word8)
-        <> encCBOR outs
+  encCBOR =
+    encode . \case
+      BadInputsUTxO ins -> Sum BadInputsUTxO 0 !> To ins
+      OutsideValidityIntervalUTxO validityInterval slot ->
+        Sum OutsideValidityIntervalUTxO 1 !> To validityInterval !> To slot
+      MaxTxSizeUTxO m -> Sum MaxTxSizeUTxO 2 !> To m
+      InputSetEmptyUTxO -> Sum InputSetEmptyUTxO 3
+      FeeTooSmallUTxO m -> Sum FeeTooSmallUTxO 4 !> To m
+      ValueNotConservedUTxO m -> Sum ValueNotConservedUTxO 5 !> To m
+      OutputTooSmallUTxO outs -> Sum OutputTooSmallUTxO 6 !> To outs
+      UpdateFailure fails -> Sum UpdateFailure 7 !> To fails
+      WrongNetwork right wrongs -> Sum WrongNetwork 8 !> To right !> To wrongs
+      WrongNetworkWithdrawal right wrongs -> Sum WrongNetworkWithdrawal 9 !> To right !> To wrongs
+      OutputBootAddrAttrsTooBig outs -> Sum OutputBootAddrAttrsTooBig 10 !> To outs
+      TriesToForgeADA -> Sum TriesToForgeADA 11
+      OutputTooBigUTxO outs -> Sum OutputTooBigUTxO 12 !> To outs
 
 instance
   ( EraTxOut era
@@ -421,61 +370,31 @@ instance
   ) =>
   DecCBOR (AllegraUtxoPredFailure era)
   where
-  decCBOR =
-    decodeRecordSum "PredicateFailureUTXO" $
-      \case
-        0 -> do
-          ins <- decCBOR
-          pure (2, BadInputsUTxO ins) -- The (2,..) indicates the number of things decoded, INCLUDING the tags, which are decoded by decodeRecordSumNamed
-        1 -> do
-          a <- decCBOR
-          b <- decCBOR
-          pure (3, OutsideValidityIntervalUTxO a b)
-        2 -> do
-          a <- decCBOR
-          b <- decCBOR
-          pure (3, MaxTxSizeUTxO a b)
-        3 -> pure (1, InputSetEmptyUTxO)
-        4 -> do
-          a <- decCBOR
-          b <- decCBOR
-          pure (3, FeeTooSmallUTxO a b)
-        5 -> do
-          a <- decCBOR
-          b <- decCBOR
-          pure (3, ValueNotConservedUTxO a b)
-        6 -> do
-          outs <- decCBOR
-          pure (2, OutputTooSmallUTxO outs)
-        7 -> do
-          a <- decCBOR
-          pure (2, UpdateFailure a)
-        8 -> do
-          right <- decCBOR
-          wrongs <- decCBOR
-          pure (3, WrongNetwork right wrongs)
-        9 -> do
-          right <- decCBOR
-          wrongs <- decCBOR
-          pure (3, WrongNetworkWithdrawal right wrongs)
-        10 -> do
-          outs <- decCBOR
-          pure (2, OutputBootAddrAttrsTooBig outs)
-        11 -> pure (1, TriesToForgeADA)
-        12 -> do
-          outs <- decCBOR
-          pure (2, OutputTooBigUTxO outs)
-        k -> invalidKey k
+  decCBOR = decode . Summands "AllegraUtxoPredFailure" $ \case
+    0 -> SumD BadInputsUTxO <! From
+    1 -> SumD OutsideValidityIntervalUTxO <! From <! From
+    2 -> SumD MaxTxSizeUTxO <! From
+    3 -> SumD InputSetEmptyUTxO
+    4 -> SumD FeeTooSmallUTxO <! From
+    5 -> SumD ValueNotConservedUTxO <! From
+    6 -> SumD OutputTooSmallUTxO <! From
+    7 -> SumD UpdateFailure <! From
+    8 -> SumD WrongNetwork <! From <! From
+    9 -> SumD WrongNetworkWithdrawal <! From <! From
+    10 -> SumD OutputBootAddrAttrsTooBig <! From
+    11 -> SumD TriesToForgeADA
+    12 -> SumD OutputTooBigUTxO <! From
+    k -> Invalid k
 
 shelleyToAllegraUtxoPredFailure :: Shelley.ShelleyUtxoPredFailure era -> AllegraUtxoPredFailure era
 shelleyToAllegraUtxoPredFailure = \case
   Shelley.BadInputsUTxO ins -> BadInputsUTxO ins
-  Shelley.ExpiredUTxO ttl current ->
+  Shelley.ExpiredUTxO Mismatch {mismatchSupplied = ttl, mismatchExpected = current} ->
     OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
-  Shelley.MaxTxSizeUTxO (Mismatch a m) -> MaxTxSizeUTxO a m
+  Shelley.MaxTxSizeUTxO m -> MaxTxSizeUTxO m
   Shelley.InputSetEmptyUTxO -> InputSetEmptyUTxO
-  Shelley.FeeTooSmallUTxO (Mismatch sf ef) -> FeeTooSmallUTxO ef sf
-  Shelley.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
+  Shelley.FeeTooSmallUTxO m -> FeeTooSmallUTxO m
+  Shelley.ValueNotConservedUTxO m -> ValueNotConservedUTxO m
   Shelley.WrongNetwork n as -> WrongNetwork n as
   Shelley.WrongNetworkWithdrawal n as -> WrongNetworkWithdrawal n as
   Shelley.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
