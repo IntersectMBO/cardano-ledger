@@ -2,11 +2,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid (spec) where
 
+import Cardano.Ledger.Allegra.Scripts (
+  pattern RequireTimeExpire,
+ )
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
@@ -17,8 +21,15 @@ import Cardano.Ledger.Plutus (
   hashPlutusScript,
   withSLanguage,
  )
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireAllOf,
+  pattern RequireSignature,
+ )
 import Control.Monad ((<=<))
-import Lens.Micro ((&), (.~))
+import Data.Maybe.Strict (StrictMaybe (..))
+import GHC.Exts (fromList)
+import Lens.Micro ((&), (.~), (<&>))
+import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -88,8 +99,23 @@ spec = describe "Valid transactions" $ do
         it "Not validating MINT script" $ do
           expectTxSuccess <=< submitPhase2Invalid <=< mkTokenMintingTx $ alwaysFailsNoDatumHash
 
-  it "Validating scripts everywhere" $ do
-    const $ pendingWith "not implemented yet"
+        --  Process a transaction with a succeeding script in every place possible,
+        --  and also with succeeding timelock scripts.
+        it "Validating scripts everywhere" $ do
+          slotNo <- use impLastTickG
+          addrs <- replicateM 3 freshKeyHash
+          let witAlwaysScripts = replicate 2 $ RequireAllOf mempty
+              witTimelockScripts =
+                zip addrs [0 ..] <&> \(a, i) ->
+                  RequireAllOf [RequireSignature a, RequireTimeExpire (slotNo + 100 + i)]
+          txIns <- traverse (produceScript <=< impAddNativeScript) (witAlwaysScripts <> witTimelockScripts)
+          let tx =
+                mkBasicTx $
+                  mkBasicTxBody
+                    & inputsTxBodyL .~ fromList txIns
+                    & vldtTxBodyL .~ ValidityInterval SNothing (SJust $ slotNo + 1)
+          expectTxSuccess <=< submitTx $ tx
+
   it "Acceptable supplimentary datum" $ do
     const $ pendingWith "not implemented yet"
   it "Multiple identical certificates" $ do
