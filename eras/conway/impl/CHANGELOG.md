@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.17.1.0
+
+* Add `processDelegation`
+
 ## 1.17.0.0
 
 * Added `reDelegatees` and `rePoolParams` to `RatifyEnv` for updated SPO vote calculation #4645
