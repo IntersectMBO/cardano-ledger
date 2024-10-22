@@ -136,6 +136,7 @@ data PoolEvent era
 instance NFData (PoolEvent era)
 
 instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
+  -- We can't use the Coders library here because we omit one of the fields during serialisation
   encCBOR = \case
     StakePoolNotRegisteredOnKeyPOOL kh ->
       encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR kh
@@ -154,6 +155,7 @@ instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
 
 -- `ShelleyPoolPredFailure` is used in Conway POOL rule, so we need to keep the serialization unchanged
 instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
+  -- We can't use the Coders library here because we omit one of the fields during serialisation
   decCBOR = decodeRecordSum "PredicateFailure (POOL era)" $
     \case
       0 -> do

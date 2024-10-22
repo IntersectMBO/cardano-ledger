@@ -51,6 +51,8 @@ import Cardano.Ledger.Alonzo.UTxO (
   getInputDataHashesTxBody,
  )
 import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
+  Relation (..),
   ShelleyBase,
   StrictMaybe (..),
   quorum,
@@ -100,25 +102,27 @@ data AlonzoUtxowPredFailure era
     MissingRedeemers
       ![(PlutusPurpose AsItem era, ScriptHash (EraCrypto era))]
   | MissingRequiredDatums
+      -- TODO: Make this NonEmpty #4066
+
       -- | Set of missing data hashes
       !(Set (DataHash (EraCrypto era)))
       -- | Set of received data hashes
       !(Set (DataHash (EraCrypto era)))
   | NotAllowedSupplementalDatums
+      -- TODO: Make this NonEmpty #4066
+
       -- | Set of unallowed data hashes
       !(Set (DataHash (EraCrypto era)))
       -- | Set of acceptable supplemental data hashes
       !(Set (DataHash (EraCrypto era)))
   | PPViewHashesDontMatch
-      -- | The PPHash in the TxBody
-      !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
-      -- | Computed from the current Protocol Parameters
-      !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+      !(Mismatch 'RelEQ (StrictMaybe (ScriptIntegrityHash (EraCrypto era))))
   | -- | Set of witnesses which were needed and not supplied
     MissingRequiredSigners -- TODO: remove once in Conway. It is now redundant. See #3972
       (Set (KeyHash 'Witness (EraCrypto era)))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
+      -- TODO: Make this NonEmpty #4066
       (Set (TxIn (EraCrypto era)))
   | -- | List of redeemers not needed
     ExtraRedeemers
@@ -190,7 +194,7 @@ instance
       MissingRedeemers x -> Sum MissingRedeemers 1 !> To x
       MissingRequiredDatums x y -> Sum MissingRequiredDatums 2 !> To x !> To y
       NotAllowedSupplementalDatums x y -> Sum NotAllowedSupplementalDatums 3 !> To x !> To y
-      PPViewHashesDontMatch x y -> Sum PPViewHashesDontMatch 4 !> To x !> To y
+      PPViewHashesDontMatch m -> Sum PPViewHashesDontMatch 4 !> To m
       MissingRequiredSigners x -> Sum MissingRequiredSigners 5 !> To x
       UnspendableUTxONoDatumHash x -> Sum UnspendableUTxONoDatumHash 6 !> To x
       ExtraRedeemers x -> Sum ExtraRedeemers 7 !> To x
@@ -217,7 +221,7 @@ instance
       1 -> SumD MissingRedeemers <! From
       2 -> SumD MissingRequiredDatums <! From <! From
       3 -> SumD NotAllowedSupplementalDatums <! From <! From
-      4 -> SumD PPViewHashesDontMatch <! From <! From
+      4 -> SumD PPViewHashesDontMatch <! From
       5 -> SumD MissingRequiredSigners <! From
       6 -> SumD UnspendableUTxONoDatumHash <! From
       7 -> SumD ExtraRedeemers <! From
@@ -317,7 +321,7 @@ ppViewHashesMatch tx pp (ScriptsProvided scriptsProvided) scriptsNeeded = do
       bodyPPhash = tx ^. bodyTxL . scriptIntegrityHashTxBodyL
   failureUnless
     (bodyPPhash == computedPPhash)
-    (PPViewHashesDontMatch bodyPPhash computedPPhash)
+    (PPViewHashesDontMatch Mismatch {mismatchSupplied = bodyPPhash, mismatchExpected = computedPPhash})
 
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.

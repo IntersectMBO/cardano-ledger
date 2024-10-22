@@ -12,7 +12,7 @@ import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import qualified Cardano.Ledger.Metadata as M
 import Cardano.Ledger.Plutus (Data (..), ExUnits (..), hashPlutusScript, withSLanguage)
@@ -36,7 +36,9 @@ spec = describe "UTXO" $ do
   it "Wrong network ID" $ do
     submitFailingTx
       (mkBasicTx mkBasicTxBody & bodyTxL . networkIdTxBodyL .~ SJust Mainnet)
-      [injectFailure $ WrongNetworkInTxBody Testnet Mainnet]
+      [ injectFailure $
+          WrongNetworkInTxBody Mismatch {mismatchSupplied = Mainnet, mismatchExpected = Testnet}
+      ]
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
@@ -52,7 +54,11 @@ spec = describe "UTXO" $ do
               mkBasicTx mkBasicTxBody
                 & bodyTxL . inputsTxBodyL .~ [txIn]
                 & witsTxL . rdmrsTxWitsL <>~ Redeemers (Map.singleton prp (dat, txExUnits))
-          submitFailingTx tx [injectFailure $ ExUnitsTooBigUTxO maxExUnits txExUnits]
+          submitFailingTx
+            tx
+            [ injectFailure $
+                ExUnitsTooBigUTxO Mismatch {mismatchSupplied = txExUnits, mismatchExpected = maxExUnits}
+            ]
 
         it "Insufficient collateral" $ do
           scriptInput <- produceScript $ hashPlutusScript $ alwaysSucceedsWithDatum slang
