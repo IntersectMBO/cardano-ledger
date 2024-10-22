@@ -457,6 +457,34 @@ spec = do
       expectNotDelegatedVote cred
       expectNotDelegatedToPool cred
 
+    it "Delegate to DRep and SPO and change delegation to a different SPO" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      cred <- KeyHashObj <$> freshKeyHash
+      poolKh <- freshKeyHash
+      registerPool poolKh
+      drepCred <- KeyHashObj <$> registerDRep
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [ RegDepositDelegTxCert
+                  cred
+                  (DelegStakeVote poolKh (DRepCredential drepCred))
+                  expectedDeposit
+               ]
+      expectDelegatedToPool cred poolKh
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      poolKh' <- freshKeyHash
+      registerPool poolKh'
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [DelegTxCert cred (DelegStake poolKh')]
+      expectDelegatedToPool cred poolKh'
+      expectDelegatedVote cred (DRepCredential drepCred)
+
     it "Delegate, retire and re-register pool" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       cred <- KeyHashObj <$> freshKeyHash

@@ -20,25 +20,22 @@ import Cardano.Ledger.Babbage.Transition (TransitionConfig (BabbageTransitionCon
 import Cardano.Ledger.Conway.Core (Era (..))
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..), toConwayGenesisPairs)
+import Cardano.Ledger.Conway.Rules.Deleg (processDelegation)
 import Cardano.Ledger.Conway.Translation ()
-import Cardano.Ledger.Conway.TxCert (Delegatee, getStakePoolDelegatee, getVoteDelegatee)
+import Cardano.Ledger.Conway.TxCert (Delegatee)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
-  certDStateL,
   certVStateL,
-  dsUnifiedL,
   esLStateL,
   lsCertStateL,
   nesEsL,
   vsDRepsL,
  )
 import Cardano.Ledger.Shelley.Transition
-import Cardano.Ledger.UMap (UMElem (..), umElemsL)
-import Control.Applicative (Alternative (..))
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
@@ -51,8 +48,6 @@ import Data.Aeson (
  )
 import Data.ListMap (ListMap)
 import qualified Data.ListMap as ListMap
-import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe)
 import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -146,21 +141,5 @@ registerDelegs ::
   NewEpochState era ->
   NewEpochState era
 registerDelegs cfg =
-  nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . umElemsL
-    %~ \m -> ListMap.foldrWithKey (\(k, v) -> Map.insertWith joinUMElems k $ delegateeToUMElem v) m delegs
-  where
-    delegs = cfg ^. tcDelegsL
-    delegateeToUMElem d =
-      UMElem
-        SNothing
-        mempty
-        (maybeToStrictMaybe $ getStakePoolDelegatee d)
-        (maybeToStrictMaybe $ getVoteDelegatee d)
-    joinUMElems
-      (UMElem _ _ newStakePool newDRep)
-      (UMElem rdp ptrs oldStakePool oldDRrep) =
-        UMElem
-          rdp
-          ptrs
-          (oldStakePool <|> newStakePool)
-          (oldDRrep <|> newDRep)
+  nesEsL . esLStateL . lsCertStateL
+    %~ \certState -> ListMap.foldrWithKey (uncurry processDelegation) certState (cfg ^. tcDelegsL)
