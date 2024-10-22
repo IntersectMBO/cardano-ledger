@@ -330,9 +330,9 @@ proposalsWithVotingSpec =
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node SNothing (fmap SJust <$> a)
         passEpoch
-        p4 <- submitConstitutionGovAction SNothing
-        p31 <- submitConstitutionGovAction $ SJust p3
-        p211 <- submitConstitutionGovAction $ SJust p21
+        p4 <- submitConstitution SNothing
+        p31 <- submitConstitution $ SJust (GovPurposeId p3)
+        p211 <- submitConstitution $ SJust (GovPurposeId p21)
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node
             SNothing
@@ -362,8 +362,8 @@ proposalsWithVotingSpec =
             , Node () []
             , Node () []
             ]
-        p2131 <- submitConstitutionGovAction $ SJust p213
-        p2141 <- submitConstitutionGovAction $ SJust p214
+        p2131 <- submitConstitution $ SJust (GovPurposeId p213)
+        p2141 <- submitConstitution $ SJust (GovPurposeId p214)
         submitYesVote_ (DRepVoter drepC) p212
         submitYesVoteCCs_ committeeMembers' p212
         fmap (!! 3) getProposalsForest
@@ -518,7 +518,7 @@ proposalsWithVotingSpec =
       submitProposal_ prop3
       checkProps [prop0, prop1, prop2, prop3]
   where
-    submitConstitutionForest = submitGovActionForest submitConstitutionGovAction
+    submitConstitutionForest = submitGovActionForest $ submitConstitution . fmap GovPurposeId
 
 proposalsSpec ::
   forall era.
@@ -555,27 +555,18 @@ proposalsSpec = do
   describe "Proposals" $ do
     it "Predicate failure when proposal deposit has nonexistent return address" $ do
       protVer <- getProtVer
-      registeredRewardAccount <- registerRewardAccount
       unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
-      deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-      anchor <- arbitrary
-      let mkProposal rewardAccount =
-            ProposalProcedure
-              { pProcDeposit = deposit
-              , pProcReturnAddr = rewardAccount
-              , pProcGovAction = InfoAction
-              , pProcAnchor = anchor
-              }
       if HF.bootstrapPhase protVer
         then do
-          submitProposal_ $ mkProposal registeredRewardAccount
-          submitProposal_ $ mkProposal unregisteredRewardAccount
+          mkProposal InfoAction >>= submitProposal_
+          mkProposalWithRewardAccount InfoAction unregisteredRewardAccount >>= submitProposal_
         else do
-          submitProposal_ $ mkProposal registeredRewardAccount
-          submitFailingProposal
-            (mkProposal unregisteredRewardAccount)
-            [ injectFailure $ ProposalReturnAccountDoesNotExist unregisteredRewardAccount
-            ]
+          mkProposal InfoAction >>= submitProposal_
+          mkProposalWithRewardAccount InfoAction unregisteredRewardAccount >>= \pr ->
+            submitFailingProposal
+              pr
+              [ injectFailure $ ProposalReturnAccountDoesNotExist unregisteredRewardAccount
+              ]
     describe "Consistency" $ do
       it "Proposals submitted without proper parent fail" $ do
         let mkCorruptGovActionId :: GovActionId c -> GovActionId c
@@ -837,7 +828,7 @@ votingSpec =
         -- Voting after the 3rd epoch should fail
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
         (drep, _, _) <- setupSingleDRep 1_000_000
-        (govActionId, _) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         passNEpochs 3
         submitFailingVote
           (DRepVoter drep)
@@ -846,7 +837,7 @@ votingSpec =
           ]
       it "non-existent gov-actions" $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
-        (govActionId, _) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         let dummyGaid = govActionId {gaidGovActionIx = GovActionIx 99} -- non-existent `GovActionId`
         submitFailingVote
           (DRepVoter drep)
@@ -960,7 +951,7 @@ constitutionSpec =
       it "empty PrevGovId after the first constitution was enacted" $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
-        (govActionId, _constitution) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         submitYesVote_ (DRepVoter dRep) govActionId
         submitYesVoteCCs_ committeeMembers' govActionId
         passNEpochs 2
@@ -969,13 +960,13 @@ constitutionSpec =
               NewConstitution
                 SNothing
                 constitution
-        invalidNewConstitutionProposal <- proposalWithRewardAccount invalidNewConstitutionGovAction
+        invalidNewConstitutionProposal <- mkProposal invalidNewConstitutionGovAction
         submitFailingProposal
           invalidNewConstitutionProposal
           [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
           ]
       it "invalid index in GovPurposeId" $ do
-        (govActionId, _constitution) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         passNEpochs 2
         constitution <- arbitrary
         let invalidPrevGovActionId =
@@ -985,17 +976,17 @@ constitutionSpec =
               NewConstitution
                 (SJust invalidPrevGovActionId)
                 constitution
-        invalidNewConstitutionProposal <- proposalWithRewardAccount invalidNewConstitutionGovAction
+        invalidNewConstitutionProposal <- mkProposal invalidNewConstitutionGovAction
         submitFailingProposal
           invalidNewConstitutionProposal
           [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
           ]
       it "valid GovPurposeId but invalid purpose" $ do
-        (govActionId, _constitution) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         passNEpochs 2
         let invalidNoConfidenceAction =
               NoConfidence $ SJust $ GovPurposeId govActionId
-        invalidNoConfidenceProposal <- proposalWithRewardAccount invalidNoConfidenceAction
+        invalidNoConfidenceProposal <- mkProposal invalidNoConfidenceAction
 
         submitFailingProposal
           invalidNoConfidenceProposal
@@ -1203,7 +1194,7 @@ withdrawalsSpec =
       [ConwayGovPredFailure era] -> [ConwayGovPredFailure era] -> GovAction era -> ImpTestM era ()
     expectPredFailures predFailures bootstrapPredFailures wdrl = do
       curProtVer <- getProtVer
-      propP <- proposalWithRewardAccount wdrl
+      propP <- mkProposal wdrl
       submitFailingProposal
         propP
         ( injectFailure
@@ -1212,22 +1203,6 @@ withdrawalsSpec =
                     else NE.fromList predFailures
                 )
         )
-
-proposalWithRewardAccount ::
-  forall era.
-  ConwayEraImp era =>
-  GovAction era ->
-  ImpTestM era (ProposalProcedure era)
-proposalWithRewardAccount action = do
-  rewardAccount <- registerRewardAccount
-  govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-  pure
-    ProposalProcedure
-      { pProcDeposit = govActionDeposit
-      , pProcReturnAddr = rewardAccount
-      , pProcGovAction = action
-      , pProcAnchor = def
-      }
 
 -- =========================================================
 -- Proposing a HardFork should always use a new ProtVer that
@@ -1402,17 +1377,17 @@ bootstrapPhaseSpec =
               }
       checkProposalFailure proposal
     it "NoConfidence" $ do
-      proposal <- proposalWithRewardAccount $ NoConfidence SNothing
+      proposal <- mkProposal $ NoConfidence SNothing
       checkProposalFailure proposal
     it "UpdateCommittee" $ do
       cCred <- KeyHashObj <$> freshKeyHash
       curEpochNo <- getsNES nesELL
       let newMembers = [(cCred, addEpochInterval curEpochNo (EpochInterval 30))]
-      proposal <- proposalWithRewardAccount $ UpdateCommittee SNothing mempty newMembers (1 %! 1)
+      proposal <- mkProposal $ UpdateCommittee SNothing mempty newMembers (1 %! 1)
       checkProposalFailure proposal
     it "NewConstitution" $ do
       constitution <- arbitrary
-      proposal <- proposalWithRewardAccount $ NewConstitution SNothing constitution
+      proposal <- mkProposal $ NewConstitution SNothing constitution
       checkProposalFailure proposal
   where
     checkProposalFailure proposal = do

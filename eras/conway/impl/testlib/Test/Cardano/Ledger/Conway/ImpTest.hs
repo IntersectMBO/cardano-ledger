@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -32,6 +33,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   trySubmitGovActions,
   trySubmitProposal,
   trySubmitProposals,
+  mkConstitutionProposal,
+  mkProposal,
+  mkProposalWithRewardAccount,
   submitTreasuryWithdrawals,
   submitVote,
   submitVote_,
@@ -74,7 +78,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   proposalsShowDebug,
   getGovPolicy,
   submitFailingGovAction,
-  submitConstitutionGovAction,
   submitGovActionForest,
   submitGovActionTree,
   getProposalsForest,
@@ -796,18 +799,32 @@ trySubmitGovActions ::
   NE.NonEmpty (GovAction era) ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
 trySubmitGovActions gas = do
-  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-  rewardAccount <- registerRewardAccount
-  anchor <- arbitrary
-  proposals <- forM gas $ \ga -> do
-    pure
-      ProposalProcedure
-        { pProcDeposit = deposit
-        , pProcReturnAddr = rewardAccount
-        , pProcGovAction = ga
-        , pProcAnchor = anchor
-        }
+  proposals <- traverse mkProposal gas
   trySubmitProposals proposals
+
+mkProposalWithRewardAccount ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  GovAction era ->
+  RewardAccount (EraCrypto era) ->
+  ImpTestM era (ProposalProcedure era)
+mkProposalWithRewardAccount ga rewardAccount = do
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+  anchor <- arbitrary
+  pure
+    ProposalProcedure
+      { pProcDeposit = deposit
+      , pProcReturnAddr = rewardAccount
+      , pProcGovAction = ga
+      , pProcAnchor = anchor
+      }
+
+mkProposal ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  GovAction era ->
+  ImpTestM era (ProposalProcedure era)
+mkProposal ga = do
+  rewardAccount <- registerRewardAccount
+  mkProposalWithRewardAccount ga rewardAccount
 
 submitGovAction ::
   forall era.
@@ -1412,24 +1429,6 @@ proposalsShowDebug ps showRoots =
          )
       <> ["----- Proposals End -----"]
 
-submitConstitutionGovAction ::
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
-  StrictMaybe (GovActionId (EraCrypto era)) ->
-  ImpTestM era (GovActionId (EraCrypto era))
-submitConstitutionGovAction gid = do
-  constitutionHash <- freshSafeHash
-  let constitutionAction =
-        NewConstitution
-          (GovPurposeId <$> gid)
-          ( Constitution
-              ( Anchor
-                  (fromJust $ textToUrl 64 "constitution.dummy.0")
-                  constitutionHash
-              )
-              SNothing
-          )
-  submitGovAction constitutionAction
-
 getProposalsForest ::
   ConwayEraGov era =>
   ImpTestM era (Forest (StrictMaybe (GovActionId (EraCrypto era))))
@@ -1518,19 +1517,22 @@ expectNumDormantEpochs expected = do
       nesEsL . esLStateL . lsCertStateL . certVStateL . vsNumDormantEpochsL
   nd `shouldBeExpr` expected
 
+mkConstitutionProposal ::
+  ConwayEraImp era =>
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  ImpTestM era (ProposalProcedure era, Constitution era)
+mkConstitutionProposal prevGovId = do
+  constitution <- arbitrary
+  (,constitution) <$> mkProposal (NewConstitution prevGovId constitution)
+
 submitConstitution ::
   forall era.
   ConwayEraImp era =>
   StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
-  ImpTestM era (GovActionId (EraCrypto era), Constitution era)
+  ImpTestM era (GovActionId (EraCrypto era))
 submitConstitution prevGovId = do
-  constitution <- arbitrary
-  let constitutionAction =
-        NewConstitution
-          prevGovId
-          constitution
-  govActionId <- submitGovAction constitutionAction
-  pure (govActionId, constitution)
+  (proposal, _) <- mkConstitutionProposal prevGovId
+  submitProposal proposal
 
 expectDRepNotRegistered ::
   HasCallStack =>
