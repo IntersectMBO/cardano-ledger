@@ -6,6 +6,7 @@
 
 ### `testlib`
 
+* Add `mkProposal` and `mkProposalWithRewardAccount`
 * Add `whenBootstrap`
 
 ## 1.17.2.0

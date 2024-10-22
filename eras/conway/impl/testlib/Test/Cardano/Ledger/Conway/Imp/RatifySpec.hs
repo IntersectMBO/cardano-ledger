@@ -600,7 +600,6 @@ votingSpec =
       gaidThreshold <- impAnn "Update StakePool thresholds" $ do
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
         (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` (51 %! 100)
-        rew <- registerRewardAccount
         let ppUpdate =
               emptyPParamsUpdate
                 & ppuPoolVotingThresholdsL
@@ -613,14 +612,7 @@ votingSpec =
                       , pvtCommitteeNoConfidence = 1 %! 2
                       }
                 & ppuGovActionLifetimeL .~ SJust (EpochInterval 100)
-        gaidThreshold <-
-          submitProposal $
-            ProposalProcedure
-              { pProcReturnAddr = rew
-              , pProcGovAction = ParameterChange SNothing ppUpdate SNothing
-              , pProcDeposit = pp ^. ppGovActionDepositL
-              , pProcAnchor = def
-              }
+        gaidThreshold <- mkProposal (ParameterChange SNothing ppUpdate SNothing) >>= submitProposal
         submitYesVote_ (DRepVoter drep) gaidThreshold
         submitYesVoteCCs_ ccCreds gaidThreshold
         logAcceptedRatio gaidThreshold
@@ -633,21 +625,12 @@ votingSpec =
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
         impAnn "Security group threshold should be 1/2" $
           (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` (1 %! 2)
-        rew <- registerRewardAccount
-        gaidMinFee <-
-          submitProposal $
-            ProposalProcedure
-              { pProcReturnAddr = rew
-              , pProcGovAction =
-                  ParameterChange
-                    (SJust (GovPurposeId gaidThreshold))
-                    ( emptyPParamsUpdate
-                        & ppuMinFeeAL .~ SJust newMinFeeA
-                    )
-                    SNothing
-              , pProcDeposit = pp ^. ppGovActionDepositL
-              , pProcAnchor = def
-              }
+        let ga =
+              ParameterChange
+                (SJust (GovPurposeId gaidThreshold))
+                (emptyPParamsUpdate & ppuMinFeeAL .~ SJust newMinFeeA)
+                SNothing
+        gaidMinFee <- mkProposal ga >>= submitProposal
         submitYesVote_ (DRepVoter drep) gaidMinFee
         submitYesVoteCCs_ ccCreds gaidMinFee
         pure gaidMinFee
@@ -777,13 +760,10 @@ votingSpec =
             let
               newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
-              submitProposal $
-                ProposalProcedure
-                  { pProcDeposit = Coin 600_000
-                  , pProcReturnAddr = dRepRewardAccount
-                  , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100)
-                  , pProcAnchor = def
-                  }
+              mkProposalWithRewardAccount
+                (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
+                dRepRewardAccount
+                >>= submitProposal
             -- Submit the vote from DRep #1
             submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
             submitYesVote_ (StakePoolVoter spoC) addCCGaid
@@ -795,13 +775,10 @@ votingSpec =
             cc' <- KeyHashObj <$> freshKeyHash
             let
               newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
-            submitProposal_ $
-              ProposalProcedure
-                { pProcDeposit = Coin 600_000
-                , pProcReturnAddr = dRepRewardAccount
-                , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100)
-                , pProcAnchor = def
-                }
+            mkProposalWithRewardAccount
+              (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
+              dRepRewardAccount
+              >>= submitProposal_
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -825,26 +802,18 @@ votingSpec =
             curEpochNo <- getsNES nesELL
             let
               newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
-            anchor <- arbitrary
             addCCGaid <-
-              submitProposal $
-                ProposalProcedure
-                  { pProcDeposit = Coin 1_000_000
-                  , pProcReturnAddr = dRepRewardAccount1
-                  , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100)
-                  , pProcAnchor = anchor
-                  }
+              mkProposalWithRewardAccount
+                (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
+                dRepRewardAccount1
+                >>= submitProposal
             cc' <- KeyHashObj <$> freshKeyHash
             let
               newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
-            anchor' <- arbitrary
-            submitProposal_ $
-              ProposalProcedure
-                { pProcDeposit = Coin 1_000_000
-                , pProcReturnAddr = dRepRewardAccount3
-                , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100)
-                , pProcAnchor = anchor'
-                }
+            mkProposalWithRewardAccount
+              (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
+              dRepRewardAccount3
+              >>= submitProposal_
             -- Submit the vote from DRep #1
             submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
             submitYesVote_ (StakePoolVoter spoC) addCCGaid
@@ -1126,15 +1095,12 @@ votingSpec =
             curEpochNo <- getsNES nesELL
             let
               newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
-            anchor <- arbitrary
             addCCGaid <-
-              submitProposal $
-                ProposalProcedure
-                  { pProcDeposit = Coin 600_000
-                  , pProcReturnAddr = spoRewardAccount
-                  , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100)
-                  , pProcAnchor = anchor
-                  }
+              mkProposalWithRewardAccount
+                (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
+                spoRewardAccount
+                >>= submitProposal
+
             -- Submit a yes vote from SPO #1 and a no vote from SPO #2
             submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
             submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
@@ -1145,14 +1111,10 @@ votingSpec =
             cc' <- KeyHashObj <$> freshKeyHash
             let
               newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
-            anchor' <- arbitrary
-            submitProposal_ $
-              ProposalProcedure
-                { pProcDeposit = Coin 600_000
-                , pProcReturnAddr = spoRewardAccount
-                , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100)
-                , pProcAnchor = anchor'
-                }
+            mkProposalWithRewardAccount
+              (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
+              spoRewardAccount
+              >>= submitProposal_
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -1188,23 +1150,17 @@ votingSpec =
             let
               newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
-              submitProposal $
-                ProposalProcedure
-                  { pProcDeposit = Coin 1_000_000
-                  , pProcReturnAddr = spoRewardAccount1
-                  , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100)
-                  , pProcAnchor = def
-                  }
+              mkProposalWithRewardAccount
+                (UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100))
+                spoRewardAccount1
+                >>= submitProposal
             cc' <- KeyHashObj <$> freshKeyHash
             let
               newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
-            submitProposal_ $
-              ProposalProcedure
-                { pProcDeposit = Coin 1_000_000
-                , pProcReturnAddr = spoRewardAccount3
-                , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100)
-                , pProcAnchor = def
-                }
+            mkProposalWithRewardAccount
+              (UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100))
+              spoRewardAccount3
+              >>= submitProposal_
             -- Submit a yes vote from SPO #1 and a no vote from SPO #2
             submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
             submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid

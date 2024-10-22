@@ -476,18 +476,10 @@ govPolicySpec = do
       anchor <- arbitrary
       void $
         enactConstitution SNothing (Constitution anchor (SJust scriptHash)) dRep committeeMembers'
-      rewardAccount <- registerRewardAccount
-      pp <- getsNES $ nesEsL . curPParamsEpochStateL
       impAnn "ParameterChange" $ do
         let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
         let govAction = ParameterChange SNothing pparamsUpdate (SJust scriptHash)
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
+        proposal <- mkProposal govAction
         let tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
@@ -495,16 +487,10 @@ govPolicySpec = do
         submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
 
       impAnn "TreasuryWithdrawals" $ do
+        rewardAccount <- registerRewardAccount
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust scriptHash)
-
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
+        proposal <- mkProposal govAction
         let tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
@@ -516,7 +502,6 @@ govPolicySpec = do
       committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
-      pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $
         enactConstitution
           SNothing
@@ -528,60 +513,32 @@ govPolicySpec = do
       impAnn "ParameterChange" $ do
         let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
         let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
-        submitProposal_ proposal
+        mkProposal govAction >>= submitProposal_
       impAnn "TreasuryWithdrawals" $ do
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysSucceedsSh)
-
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
-        submitProposal_ proposal
+        mkProposal govAction >>= submitProposal_
 
     it "alwaysFails Plutus govPolicy does not validate" $ do
       let alwaysFailsSh = hashPlutusScript (alwaysFailsNoDatum SPlutusV3)
       committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
-      pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $
         enactConstitution SNothing (Constitution anchor (SJust alwaysFailsSh)) dRep committeeMembers'
 
-      rewardAccount <- registerRewardAccount
       impAnn "ParameterChange" $ do
         let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
         let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysFailsSh)
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
+        proposal <- mkProposal govAction
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         submitPhase2Invalid_ tx
 
       impAnn "TreasuryWithdrawals" $ do
+        rewardAccount <- registerRewardAccount
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysFailsSh)
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
+        proposal <- mkProposal govAction
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         submitPhase2Invalid_ tx
 
@@ -618,15 +575,7 @@ costModelsSpec =
       impAnn "Fail to update V3 Costmodels" $ do
         let pparamsUpdate = def & ppuCostModelsL .~ SJust (testingCostModels [PlutusV3])
         let govAction = ParameterChange (SJust govIdPPUpdate1) pparamsUpdate (SJust alwaysFailsSh)
-        rewardAccount <- registerRewardAccount
-        pp <- getsNES $ nesEsL . curPParamsEpochStateL
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
+        proposal <- mkProposal govAction
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         submitPhase2Invalid_ tx
 

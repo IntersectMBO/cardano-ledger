@@ -109,17 +109,10 @@ proposalsSpec =
         getsNES $
           nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionScriptL
       govActionId <-
-        submitProposal $
-          ProposalProcedure
-            { pProcDeposit = deposit
-            , pProcReturnAddr = rewardAccount
-            , pProcGovAction =
-                ParameterChange
-                  SNothing
-                  (def & ppuMinFeeAL .~ SJust (Coin 3000))
-                  policy
-            , pProcAnchor = def
-            }
+        mkProposalWithRewardAccount
+          (ParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 3000)) policy)
+          rewardAccount
+          >>= submitProposal
       expectPresentGovActionId govActionId
       passNEpochs 3
       expectMissingGovActionId govActionId
@@ -479,14 +472,10 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
   govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
   govPolicy <- getGovPolicy
   gaid <-
-    submitProposal
-      ProposalProcedure
-        { pProcReturnAddr = returnAddr
-        , pProcGovAction =
-            ParameterChange SNothing (emptyPParamsUpdate & ppuGovActionDepositL .~ SJust (Coin 10)) govPolicy
-        , pProcDeposit = govActionDeposit
-        , pProcAnchor = def
-        }
+    mkProposalWithRewardAccount
+      (ParameterChange SNothing (emptyPParamsUpdate & ppuGovActionDepositL .~ SJust (Coin 10)) govPolicy)
+      returnAddr
+      >>= submitProposal
   expectPresentGovActionId gaid
   replicateM_ 5 passEpoch
   expectTreasury initialTreasury
@@ -527,24 +516,17 @@ eventsSpec = describe "Events" $ do
           newVal <- arbitrary
           proposal <- submitParameterChange SNothing $ def & ppuCoinsPerUTxOByteL .~ SJust newVal
           pure
-            (proposal, (getsNES $ nesEsL . curPParamsEpochStateL . ppCoinsPerUTxOByteL) `shouldReturn` newVal)
+            (proposal, getsNES (nesEsL . curPParamsEpochStateL . ppCoinsPerUTxOByteL) `shouldReturn` newVal)
       (proposalA, checkProposedParameterA) <- proposeParameterChange
       (proposalB, _) <- proposeParameterChange
       rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccount
       passEpoch -- prevent proposalC expiry and force it's deletion due to conflit.
       proposalC <- impAnn "proposalC" $ do
         newVal <- arbitrary
-        submitProposal
-          ProposalProcedure
-            { pProcReturnAddr = rewardAccount
-            , pProcGovAction =
-                ParameterChange
-                  SNothing
-                  (def & ppuCoinsPerUTxOByteL .~ SJust newVal)
-                  SNothing
-            , pProcDeposit = propDeposit
-            , pProcAnchor = def
-            }
+        mkProposalWithRewardAccount
+          (ParameterChange SNothing (def & ppuCoinsPerUTxOByteL .~ SJust newVal) SNothing)
+          rewardAccount
+          >>= submitProposal
       let
         isGovInfoEvent (SomeSTSEvent ev)
           | Just (TickNewEpochEvent (EpochEvent (GovInfoEvent {})) :: ShelleyTickEvent era) <- cast ev = True

@@ -32,6 +32,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   trySubmitGovActions,
   trySubmitProposal,
   trySubmitProposals,
+  mkProposal,
+  mkProposalWithRewardAccount,
   submitTreasuryWithdrawals,
   submitVote,
   submitVote_,
@@ -796,18 +798,32 @@ trySubmitGovActions ::
   NE.NonEmpty (GovAction era) ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
 trySubmitGovActions gas = do
-  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-  rewardAccount <- registerRewardAccount
-  anchor <- arbitrary
-  proposals <- forM gas $ \ga -> do
-    pure
-      ProposalProcedure
-        { pProcDeposit = deposit
-        , pProcReturnAddr = rewardAccount
-        , pProcGovAction = ga
-        , pProcAnchor = anchor
-        }
+  proposals <- traverse mkProposal gas
   trySubmitProposals proposals
+
+mkProposalWithRewardAccount ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  GovAction era ->
+  RewardAccount (EraCrypto era) ->
+  ImpTestM era (ProposalProcedure era)
+mkProposalWithRewardAccount ga rewardAccount = do
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+  anchor <- arbitrary
+  pure
+    ProposalProcedure
+      { pProcDeposit = deposit
+      , pProcReturnAddr = rewardAccount
+      , pProcGovAction = ga
+      , pProcAnchor = anchor
+      }
+
+mkProposal ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  GovAction era ->
+  ImpTestM era (ProposalProcedure era)
+mkProposal ga = do
+  rewardAccount <- registerRewardAccount
+  mkProposalWithRewardAccount ga rewardAccount
 
 submitGovAction ::
   forall era.

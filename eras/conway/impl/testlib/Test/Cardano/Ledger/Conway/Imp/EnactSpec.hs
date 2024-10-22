@@ -354,16 +354,7 @@ noConfidenceSpec =
     impAnn "Committee should be elected" $ do
       committee <- getCommittee
       committee `shouldBe` SJust (Committee committeeMap $ 1 %! 2)
-    pp <- getsNES $ nesEsL . curPParamsEpochStateL
-    returnAddr <- registerRewardAccount
-    gaidNoConf <-
-      submitProposal $
-        ProposalProcedure
-          { pProcReturnAddr = returnAddr
-          , pProcGovAction = NoConfidence (SJust prevGaidCommittee)
-          , pProcDeposit = pp ^. ppGovActionDepositL
-          , pProcAnchor = def
-          }
+    gaidNoConf <- mkProposal (NoConfidence (SJust prevGaidCommittee)) >>= submitProposal
     submitYesVote_ (StakePoolVoter khSPO) gaidNoConf
     submitYesVote_ (DRepVoter drep) gaidNoConf
     replicateM_ 4 passEpoch
