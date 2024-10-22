@@ -512,6 +512,8 @@ class
   impSatisfyNativeScript ::
     -- | Set of Witnesses that have already been satisfied
     Set.Set (KeyHash 'Witness (EraCrypto era)) ->
+    -- | The transaction body that the script will be applied to
+    TxBody era ->
     NativeScript era ->
     ImpTestM era (Maybe (Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))))
 
@@ -714,7 +716,7 @@ instance
         startEpochNo = impEraStartEpochNo @(ShelleyEra c)
     pure $ translateToShelleyLedgerStateFromUtxo transContext startEpochNo Byron.empty
 
-  impSatisfyNativeScript providedVKeyHashes script = do
+  impSatisfyNativeScript providedVKeyHashes _txBody script = do
     keyPairs <- gets impKeyPairs
     let
       satisfyMOf m Empty
@@ -863,7 +865,8 @@ updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
       addrWitHashes = curAddrWitHashes <> Set.map witVKeyHash extraAddrVKeyWits
   -- Shelley Based Native Script Witnesses
   scriptsRequired <- impNativeScriptsRequired tx
-  nativeScriptsKeyPairs <- mapM (impSatisfyNativeScript addrWitHashes) (Map.elems scriptsRequired)
+  nativeScriptsKeyPairs <-
+    mapM (impSatisfyNativeScript addrWitHashes txBody) (Map.elems scriptsRequired)
   let extraNativeScriptVKeyWits =
         mkWitnessesVKey txBodyHash $ Map.elems (mconcat (catMaybes nativeScriptsKeyPairs))
   -- Byron Based Witessed
@@ -903,7 +906,7 @@ impNativeScriptKeyPairs tx = do
   scriptsRequired <- impNativeScriptsRequired tx
   let nativeScripts = Map.elems scriptsRequired
       curAddrWits = Set.map witVKeyHash $ tx ^. witsTxL . addrTxWitsL
-  keyPairs <- mapM (impSatisfyNativeScript curAddrWits) nativeScripts
+  keyPairs <- mapM (impSatisfyNativeScript curAddrWits $ tx ^. bodyTxL) nativeScripts
   pure . mconcat $ catMaybes keyPairs
 
 fixupTxOuts :: (ShelleyEraImp era, HasCallStack) => Tx era -> ImpTestM era (Tx era)
