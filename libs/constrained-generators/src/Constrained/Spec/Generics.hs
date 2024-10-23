@@ -60,6 +60,7 @@ import Constrained.Core
 import Constrained.List
 import Constrained.Spec.Pairs ()
 import Constrained.Univ
+import qualified Data.List.NonEmpty as NE
 
 ------------------------------------------------------------------------
 -- Generics
@@ -82,10 +83,10 @@ instance BaseUniverse fn => Functions (GenericsFn fn) fn where
              in Let (App (injectFn fn) args) (v :-> ps)
     ToGeneric | NilCtx HOLE <- ctx -> case spec of
       TypeSpec s cant -> TypeSpec s (fromSimpleRep <$> cant)
-      MemberSpec es -> MemberSpec (fromSimpleRep <$> es)
+      MemberSpec es -> MemberSpec (fmap fromSimpleRep es)
     FromGeneric | NilCtx HOLE <- ctx -> case spec of
       TypeSpec s cant -> TypeSpec s (toSimpleRep <$> cant)
-      MemberSpec es -> MemberSpec (toSimpleRep <$> es)
+      MemberSpec es -> MemberSpec (fmap toSimpleRep es)
 
   rewriteRules FromGeneric (App (extractFn @(GenericsFn fn) @fn -> Just ToGeneric) (x :> Nil) :> _) = cast x
   rewriteRules ToGeneric (App (extractFn @(GenericsFn fn) @fn -> Just FromGeneric) (x :> Nil) :> _) = Just x
@@ -178,10 +179,16 @@ instance BaseUniverse fn => Functions (SumFn fn) fn where
              in Let (App (injectFn fn) args) (v :-> ps)
     InjLeft | NilCtx HOLE <- ctx -> case spec of
       TypeSpec (SumSpec _ sl _) cant -> sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
-      MemberSpec es -> MemberSpec [a | SumLeft a <- es]
+      MemberSpec es ->
+        memberSpecList
+          [a | SumLeft a <- NE.toList es]
+          (pure "propagateSpecFun InjLeft on (MemberSpec es) with no SumLeft in es")
     InjRight | NilCtx HOLE <- ctx -> case spec of
       TypeSpec (SumSpec _ _ sr) cant -> sr <> foldMap notEqualSpec [a | SumRight a <- cant]
-      MemberSpec es -> MemberSpec [a | SumRight a <- es]
+      MemberSpec es ->
+        memberSpecList
+          [a | SumRight a <- NE.toList es]
+          (pure "propagateSpecFun InjRight on (MemberSpec es) with no SumRight in es")
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of

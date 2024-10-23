@@ -57,6 +57,7 @@ import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley.AdaPots (Consumed (..), Produced (..), consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (CertState)
 import Data.Text (pack)
 import Lens.Micro
@@ -272,6 +273,7 @@ bodyspec2 certsenv certstate =
               , dependsOn fee feeInput
               , dependsOn outputs utxosubset
               , dependsOn outputs fee
+              , dependsOn outputs certs
               , dependsOn utxo tempUtxo
               , satisfies utxosubset (hasSize (rangeSize 3 4))
               , assert $ member_ feeInput inputs
@@ -314,9 +316,12 @@ go2 = do
   (body, utxomap, feeinput) <-
     generate $ genFromSpec (bodyspec2 @era @ConwayFn certsEnv certState)
   let utxo = UTxO utxomap
+      txbody = fromShelleyBody body
 
   putStrLn
     ("Input UTxO, total " ++ show (coinBalance @era utxo) ++ ", size = " ++ show (Map.size utxomap))
   putPretty "UTxO" utxo
   putPretty "\nfeeInput" feeinput
-  putStrLn (show (pcTxBodyWithUTxO utxo (fromShelleyBody body)))
+  putStrLn (show (pcTxBodyWithUTxO utxo txbody))
+  print (consumedTxBody txbody (certsPParams certsEnv) certState utxo)
+  print (producedTxBody txbody (certsPParams certsEnv) certState)
