@@ -92,5 +92,5 @@ okOr constant need = case (constant, need) of
   (True, False) ->
     ErrorSpec
       (pure ("(" ++ show constant ++ "||. HOLE) must equal False. That cannot be the case."))
-  (False, False) -> MemberSpec [False]
-  (False, True) -> MemberSpec [True]
+  (False, False) -> MemberSpec (pure False)
+  (False, True) -> MemberSpec (pure True)
