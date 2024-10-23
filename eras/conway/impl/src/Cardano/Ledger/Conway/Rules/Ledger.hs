@@ -417,17 +417,15 @@ ledgerTransition = do
             committee = govState ^. committeeGovStateL
             proposals = govState ^. proposalsGovStateL
             committeeProposals = proposalsWithPurpose grCommitteeL proposals
-        certStateAfterCERTS <-
-          trans @(EraRule "CERTS" era) $
-            TRC
-              ( CertsEnv tx pp slot currentEpoch committee committeeProposals
-              , certState
-              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
-              )
 
-        -- Starting with version 10, we don't allow withdrawals into RewardAcounts that are KeyHashes and not delegated to Dreps
+        -- Starting with version 10, we don't allow withdrawals into RewardAcounts that are
+        -- KeyHashes and not delegated to Dreps.
+        --
+        -- We also need to make sure we are using the certState before certificates are applied,
+        -- because otherwise it would not be possible to unregister a reward account and withdraw
+        -- all funds from it in the same transaction.
         unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $ do
-          let dUnified = dsUnified $ certDState certStateAfterCERTS
+          let dUnified = dsUnified $ certDState certState
               wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
               delegatedAddrs = DRepUView dUnified
               wdrlsKeyHashes =
@@ -436,6 +434,14 @@ ledgerTransition = do
               nonExistentDelegations =
                 Set.filter (not . (`UMap.member` delegatedAddrs) . KeyHashObj) wdrlsKeyHashes
           failOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
+
+        certStateAfterCERTS <-
+          trans @(EraRule "CERTS" era) $
+            TRC
+              ( CertsEnv tx pp slot currentEpoch committee committeeProposals
+              , certState
+              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              )
 
         -- Votes and proposals from signal tx
         let govSignal =
