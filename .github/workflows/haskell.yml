@@ -277,6 +277,7 @@ jobs:
         gem install cbor-diag
 
     - name: Download Mainnet Mirror
+      if: matrix.package == 'cardano-ledger-byron'
       run: |
         REF=a31ac75
         {
