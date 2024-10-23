@@ -685,7 +685,7 @@ instance
                 & ppMaxBBSizeL .~ 65536
                 & ppMaxTxSizeL .~ 16384
                 & ppKeyDepositL .~ Coin 2_000_000
-                & ppKeyDepositL .~ Coin 500_000_000
+                & ppPoolDepositL .~ Coin 500_000_000
                 & ppEMaxL .~ EpochInterval 18
                 & ppNOptL .~ 150
                 & ppA0L .~ (3 %! 10)
