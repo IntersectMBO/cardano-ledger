@@ -53,7 +53,6 @@ import Cardano.Ledger.Keys as X (
   SignKeyVRF,
   SignedDSIGN,
   SignedKES,
-  UnsoundPureSignKeyKES,
   VKey (..),
   VerKeyKES,
   VerKeyVRF,

@@ -26,7 +26,6 @@ import Cardano.Crypto.KES.Class (
   SigKES,
   SignKeyKES,
   Signable,
-  UnsoundPureSignKeyKES,
   VerKeyKES,
   deriveVerKeyKES,
   forgetSignKeyKES,
