@@ -230,6 +230,8 @@ jobs:
 
       SECP_CACHE_VERSION: "2022-12-30"
 
+      packages-with-ruby-cddl-tests: '["cardano-protocol-tpraos", "cardano-ledger-shelley", "cardano-ledger-allegra", "cardano-ledger-mary", "cardano-ledger-alonzo", "cardano-ledger-babbage", "cardano-ledger-conway"]'
+
     defaults:
       run:
         shell: bash
@@ -267,11 +269,13 @@ jobs:
         cabal-version: 3.12.1.0
 
     - name: Set up Ruby 2.7
+      if: contains(fromJson(env.packages-with-ruby-cddl-tests), matrix.package)
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: 2.7
 
     - name: Install cbor-diag and cddl
+      if: contains(fromJson(env.packages-with-ruby-cddl-tests), matrix.package)
       run: |
         gem install cddl -v 0.10.3
         gem install cbor-diag
