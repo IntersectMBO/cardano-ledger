@@ -118,6 +118,31 @@ spec = do
     ifBootstrap (submitTx_ tx >> (lookupReward cred `shouldReturn` mempty)) $ do
       submitFailingTx tx [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
 
+  it "Withdraw and unregister staking credential in the same transaction" $ do
+    refund <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+    kh <- freshKeyHash
+    let cred = KeyHashObj kh
+    ra <- registerStakeCredential cred
+    Positive newDeposit <- arbitrary
+    modifyPParams $ \pp ->
+      pp
+        & ppGovActionLifetimeL .~ EpochInterval 2
+        & ppKeyDepositL .~ Coin newDeposit
+
+    submitAndExpireProposalToMakeReward cred
+    reward <- lookupReward cred
+
+    (drep, _, _) <- setupSingleDRep 1_000_000
+
+    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
+
+    let tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & certsTxBodyL .~ [UnRegDepositTxCert cred refund]
+              & (withdrawalsTxBodyL .~ Withdrawals [(ra, reward)])
+    submitTx_ tx
+
   it "Withdraw from a key delegated to an expired DRep" $ do
     modifyPParams $ \pp ->
       pp
