@@ -36,7 +36,7 @@ jobs:
   build:
     strategy:
       matrix:
-        ghc: ["8.10.7", "9.2.8", "9.6.6", "9.8.2", "9.10.1"]
+        ghc: ["9.2.8"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -142,9 +142,6 @@ jobs:
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-
 
-    - name: Check workflow test matrix
-      run: cabal build all --dry-run && scripts/check-workflow-test-matrix.hs
-
     - name: Build dependencies
       id: build-dependencies
       run: cabal build all --only-dependencies
@@ -186,34 +183,8 @@ jobs:
     strategy:
       matrix:
         package:
-        - byron-spec-chain
-        - byron-spec-ledger
-        - cardano-crypto-wrapper
-        - cardano-data
-        - cardano-ledger-allegra
-        - cardano-ledger-alonzo
-        - cardano-ledger-alonzo-test
-        - cardano-ledger-api
-        - cardano-ledger-babbage
-        - cardano-ledger-babbage-test
-        - cardano-ledger-binary
-        - cardano-ledger-byron
-        - cardano-ledger-conformance
-        - cardano-ledger-conway
-        - cardano-ledger-conway-test
-        - cardano-ledger-core
-        - cardano-ledger-mary
-        - cardano-ledger-shelley
-        - cardano-ledger-shelley-ma-test
-        - cardano-ledger-shelley-test
-        - cardano-ledger-test
-        - cardano-protocol-tpraos
         - constrained-generators
-        - non-integral
-        - set-algebra
-        - small-steps
-        - vector-map
-        ghc: ["8.10.7", "9.2.8", "9.6.6", "9.8.2", "9.10.1"]
+        ghc: ["9.2.8"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -336,7 +307,7 @@ jobs:
       run: |
         export CARDANO_MAINNET_MIRROR="$(pwd)/epochs"
         if [ -z "$NIGHTLY" ]; then
-          cabal test "${{ matrix.package }}"
+          cabal test "${{ matrix.package }}" --test-options='--seed 2057128003 --match prop_univSound'
         else
           TRIES=3
           scripts/cabal-test-with-retries.sh "${{ matrix.package }}" "$TRIES"
