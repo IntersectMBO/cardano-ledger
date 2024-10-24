@@ -54,7 +54,6 @@ spec ::
   SpecWith (ImpTestState era)
 spec = do
   relevantDuringBootstrapSpec
-  constitutionSpec
   proposalsWithVotingSpec
   votingSpec
   policySpec
@@ -68,6 +67,7 @@ relevantDuringBootstrapSpec ::
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
+  constitutionSpec
   withdrawalsSpec
   hardForkSpec
   pparamUpdateSpec
@@ -904,10 +904,10 @@ constitutionSpec =
       it "empty PrevGovId before the first constitution is enacted" $ do
         --  Initial proposal does not need a GovPurposeId but after it is enacted, the
         --  following ones are not
-        _ <- submitConstitution SNothing
+        _ <- submitConstitutionFailingBootstrap SNothing
         -- Until the first proposal is enacted all proposals with empty GovPurposeIds are valid
-        void $ submitConstitution SNothing
-      it "valid GovPurposeId" $ do
+        void $ submitConstitutionFailingBootstrap SNothing
+      it "valid GovPurposeId" $ whenPostBootstrap $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
         constitution <- arbitrary
@@ -924,47 +924,56 @@ constitutionSpec =
       it "empty PrevGovId after the first constitution was enacted" $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
-        govActionId <- submitConstitution SNothing
-        submitYesVote_ (DRepVoter dRep) govActionId
-        submitYesVoteCCs_ committeeMembers' govActionId
-        passNEpochs 2
-        constitution <- arbitrary
-        let invalidNewConstitutionGovAction =
-              NewConstitution
-                SNothing
-                constitution
-        invalidNewConstitutionProposal <- mkProposal invalidNewConstitutionGovAction
-        submitFailingProposal
-          invalidNewConstitutionProposal
-          [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
-          ]
+        mbGovActionId <- submitConstitutionFailingBootstrap SNothing
+        forM_ mbGovActionId $ \govActionId -> do
+          submitYesVote_ (DRepVoter dRep) govActionId
+          submitYesVoteCCs_ committeeMembers' govActionId
+          passNEpochs 2
+          constitution <- arbitrary
+          let invalidNewConstitutionGovAction =
+                NewConstitution
+                  SNothing
+                  constitution
+          invalidNewConstitutionProposal <- mkProposal invalidNewConstitutionGovAction
+          submitFailingProposal
+            invalidNewConstitutionProposal
+            [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
+            ]
       it "invalid index in GovPurposeId" $ do
-        govActionId <- submitConstitution SNothing
-        passNEpochs 2
-        constitution <- arbitrary
-        let invalidPrevGovActionId =
-              -- Expected Ix = 0
-              GovPurposeId (govActionId {gaidGovActionIx = GovActionIx 1})
-            invalidNewConstitutionGovAction =
-              NewConstitution
-                (SJust invalidPrevGovActionId)
-                constitution
-        invalidNewConstitutionProposal <- mkProposal invalidNewConstitutionGovAction
-        submitFailingProposal
-          invalidNewConstitutionProposal
-          [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
-          ]
+        mbGovActionId <- submitConstitutionFailingBootstrap SNothing
+        forM_ mbGovActionId $ \govActionId -> do
+          passNEpochs 2
+          constitution <- arbitrary
+          let invalidPrevGovActionId =
+                -- Expected Ix = 0
+                GovPurposeId (govActionId {gaidGovActionIx = GovActionIx 1})
+              invalidNewConstitutionGovAction =
+                NewConstitution
+                  (SJust invalidPrevGovActionId)
+                  constitution
+          invalidNewConstitutionProposal <- mkProposal invalidNewConstitutionGovAction
+          submitFailingProposal
+            invalidNewConstitutionProposal
+            [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
+            ]
       it "valid GovPurposeId but invalid purpose" $ do
-        govActionId <- submitConstitution SNothing
-        passNEpochs 2
-        let invalidNoConfidenceAction =
-              NoConfidence $ SJust $ GovPurposeId govActionId
-        invalidNoConfidenceProposal <- mkProposal invalidNoConfidenceAction
+        mbGovActionId <- submitConstitutionFailingBootstrap SNothing
+        forM_ mbGovActionId $ \govActionId -> do
+          passNEpochs 2
+          let invalidNoConfidenceAction =
+                NoConfidence $ SJust $ GovPurposeId govActionId
+          invalidNoConfidenceProposal <- mkProposal invalidNoConfidenceAction
 
-        submitFailingProposal
-          invalidNoConfidenceProposal
-          [ injectFailure $ InvalidPrevGovActionId invalidNoConfidenceProposal
-          ]
+          submitFailingProposal
+            invalidNoConfidenceProposal
+            [ injectFailure $ InvalidPrevGovActionId invalidNoConfidenceProposal
+            ]
+  where
+    submitConstitutionFailingBootstrap prevGovId = do
+      proposal <- fst <$> mkConstitutionProposal prevGovId
+      submitBootstrapAwareFailingProposal
+        proposal
+        (FailBootstrap [injectFailure (DisallowedProposalDuringBootstrap proposal)])
 
 policySpec ::
   forall era.
