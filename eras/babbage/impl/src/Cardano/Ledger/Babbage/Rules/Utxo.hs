@@ -53,6 +53,7 @@ import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXO)
 import Cardano.Ledger.Babbage.Rules.Ppup ()
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
   ProtVer (..),
   ShelleyBase,
   epochInfo,
@@ -212,7 +213,9 @@ feesOK pp tx u@(UTxO utxo) =
       minFee = getMinFeeTxUtxo pp tx u
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txBody
-          failureUnless (minFee <= theFee) (injectFailure $ FeeTooSmallUTxO minFee theFee)
+          failureUnless
+            (minFee <= theFee)
+            (injectFailure $ FeeTooSmallUTxO Mismatch {mismatchSupplied = theFee, mismatchExpected = minFee})
         , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
           unless (nullRedeemers $ tx ^. witsTxL . rdmrsTxWitsL) $
             validateTotalCollateral pp txBody utxoCollateral
@@ -508,6 +511,7 @@ instance
 instance
   ( Era era
   , DecCBOR (TxOut era)
+  , EncCBOR (Value era)
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))

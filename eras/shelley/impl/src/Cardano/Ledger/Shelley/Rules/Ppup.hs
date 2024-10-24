@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -31,15 +32,13 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
-  invalidKey,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
-  decodeRecordSum,
   decodeWord,
-  encodeListLen,
  )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPPUP)
@@ -90,8 +89,8 @@ instance DecCBOR VotingPeriod where
 
 data ShelleyPpupPredFailure era
   = -- | An update was proposed by a key hash that is not one of the genesis keys.
-    --  The first set contains the key hashes which were a part of the update.
-    --  The second set contains the key hashes of the genesis keys.
+    --  `mismatchSupplied` ~ key hashes which were a part of the update.
+    --  `mismatchExpected` ~ key hashes of the genesis keys.
     NonGenesisUpdatePPUP
       !(Mismatch 'RelSubset (Set (KeyHash 'Genesis (EraCrypto era))))
   | -- | An update was proposed for the wrong epoch.
@@ -138,30 +137,18 @@ instance (EraPParams era, ProtVerAtMost era 8) => STS (ShelleyPPUP era) where
   transitionRules = [ppupTransitionNonEmpty]
 
 instance Era era => EncCBOR (ShelleyPpupPredFailure era) where
-  encCBOR = \case
-    NonGenesisUpdatePPUP mm ->
-      encodeListLen 2
-        <> encCBOR (0 :: Word8)
-        <> encCBOR mm
-    PPUpdateWrongEpoch ce e vp ->
-      encodeListLen 4 <> encCBOR (1 :: Word8) <> encCBOR ce <> encCBOR e <> encCBOR vp
-    PVCannotFollowPPUP p -> encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR p
+  encCBOR =
+    encode @_ @(ShelleyPpupPredFailure era) . \case
+      NonGenesisUpdatePPUP mm -> Sum NonGenesisUpdatePPUP 0 !> To mm
+      PPUpdateWrongEpoch ce e vp -> Sum PPUpdateWrongEpoch 1 !> To ce !> To e !> To vp
+      PVCannotFollowPPUP p -> Sum PVCannotFollowPPUP 2 !> To p
 
 instance Era era => DecCBOR (ShelleyPpupPredFailure era) where
-  decCBOR = decodeRecordSum "ShelleyPpupPredFailure" $
-    \case
-      0 -> do
-        mm <- decCBOR
-        pure (2, NonGenesisUpdatePPUP mm)
-      1 -> do
-        a <- decCBOR
-        b <- decCBOR
-        c <- decCBOR
-        pure (4, PPUpdateWrongEpoch a b c)
-      2 -> do
-        p <- decCBOR
-        pure (2, PVCannotFollowPPUP p)
-      k -> invalidKey k
+  decCBOR = decode . Summands "ShelleyPpupPredFailure" $ \case
+    0 -> SumD NonGenesisUpdatePPUP <! From
+    1 -> SumD PPUpdateWrongEpoch <! From <! From <! From
+    2 -> SumD PVCannotFollowPPUP <! From
+    k -> Invalid k
 
 ppupTransitionNonEmpty :: (EraPParams era, ProtVerAtMost era 8) => TransitionRule (ShelleyPPUP era)
 ppupTransitionNonEmpty = do

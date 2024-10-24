@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -16,7 +15,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Mir (
 )
 where
 
-import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..), mkCertIxPartial)
+import Cardano.Ledger.BaseTypes (Mismatch (..), Nonce, StrictMaybe (..), mkCertIxPartial)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Credential (Ptr (..))
@@ -264,7 +263,8 @@ mirFailFunds pot treasury llNeeded llReceived =
         . pure
         . BbodyFailure
         . injectFailure
-        $ InsufficientForInstantaneousRewardsDELEG pot llNeeded llReceived
+        $ InsufficientForInstantaneousRewardsDELEG pot
+        $ Mismatch llNeeded llReceived
     )
 
 --

@@ -6,6 +6,7 @@
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxoSpec (spec) where
 
+import Cardano.Ledger.BaseTypes (Mismatch (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
@@ -45,7 +46,8 @@ spec = describe "UTXO" $ do
         submitFailingTx
           (mkBasicTx txBody)
           [ injectFailure $
-              ValueNotConservedUTxO
-                (rootTxOutValue <> inject txAmount)
-                (rootTxOutValue <> inject (txAmount <> extra))
+              ValueNotConservedUTxO $
+                Mismatch
+                  (rootTxOutValue <> inject txAmount)
+                  (rootTxOutValue <> inject (txAmount <> extra))
           ]

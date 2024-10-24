@@ -52,16 +52,10 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   StrictMaybe,
-  invalidKey,
   networkId,
  )
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
-  decodeRecordSum,
-  encodeListLen,
- )
-import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
+import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (
   certsTotalDepositsTxBody,
   certsTotalRefundsTxBody,
@@ -111,7 +105,6 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
@@ -172,16 +165,14 @@ data ShelleyUtxoPredFailure era
   = BadInputsUTxO
       !(Set (TxIn (EraCrypto era))) -- The bad transaction inputs
   | ExpiredUTxO
-      !SlotNo -- transaction's time to live
-      !SlotNo -- current slot
+      !(Mismatch 'RelLTEQ SlotNo)
   | MaxTxSizeUTxO
       !(Mismatch 'RelLTEQ Integer)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
       !(Mismatch 'RelGTEQ Coin)
   | ValueNotConservedUTxO
-      !(Value era) -- the Coin consumed by this transaction
-      !(Value era) -- the Coin produced by this transaction
+      !(Mismatch 'RelEQ (Value era))
   | WrongNetwork
       !Network -- the expected network id
       !(Set (Addr (EraCrypto era))) -- the set of addresses with incorrect network IDs
@@ -239,50 +230,19 @@ instance
   ) =>
   EncCBOR (ShelleyUtxoPredFailure era)
   where
-  encCBOR = \case
-    BadInputsUTxO ins ->
-      encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR ins
-    ExpiredUTxO a b ->
-      encodeListLen 3
-        <> encCBOR (1 :: Word8)
-        <> encCBOR a
-        <> encCBOR b
-    MaxTxSizeUTxO mm ->
-      encodeListLen 2
-        <> encCBOR (2 :: Word8)
-        <> encCBOR mm
-    InputSetEmptyUTxO -> encodeListLen 1 <> encCBOR (3 :: Word8)
-    FeeTooSmallUTxO mm ->
-      encodeListLen 2
-        <> encCBOR (4 :: Word8)
-        <> encCBOR mm
-    ValueNotConservedUTxO a b ->
-      encodeListLen 3
-        <> encCBOR (5 :: Word8)
-        <> encCBOR a
-        <> encCBOR b
-    OutputTooSmallUTxO outs ->
-      encodeListLen 2
-        <> encCBOR (6 :: Word8)
-        <> encCBOR outs
-    UpdateFailure a ->
-      encodeListLen 2
-        <> encCBOR (7 :: Word8)
-        <> encCBOR a
-    WrongNetwork right wrongs ->
-      encodeListLen 3
-        <> encCBOR (8 :: Word8)
-        <> encCBOR right
-        <> encCBOR wrongs
-    WrongNetworkWithdrawal right wrongs ->
-      encodeListLen 3
-        <> encCBOR (9 :: Word8)
-        <> encCBOR right
-        <> encCBOR wrongs
-    OutputBootAddrAttrsTooBig outs ->
-      encodeListLen 2
-        <> encCBOR (10 :: Word8)
-        <> encCBOR outs
+  encCBOR =
+    encode . \case
+      BadInputsUTxO ins -> Sum BadInputsUTxO 0 !> To ins
+      ExpiredUTxO m -> Sum ExpiredUTxO 1 !> To m
+      MaxTxSizeUTxO m -> Sum MaxTxSizeUTxO 2 !> To m
+      InputSetEmptyUTxO -> Sum InputSetEmptyUTxO 3
+      FeeTooSmallUTxO m -> Sum FeeTooSmallUTxO 4 !> To m
+      ValueNotConservedUTxO m -> Sum ValueNotConservedUTxO 5 !> To m
+      OutputTooSmallUTxO outs -> Sum OutputTooSmallUTxO 6 !> To outs
+      UpdateFailure a -> Sum UpdateFailure 7 !> To a
+      WrongNetwork right wrongs -> Sum WrongNetwork 8 !> To right !> To wrongs
+      WrongNetworkWithdrawal right wrongs -> Sum WrongNetworkWithdrawal 9 !> To right !> To wrongs
+      OutputBootAddrAttrsTooBig outs -> Sum OutputBootAddrAttrsTooBig 10 !> To outs
 
 instance
   ( EraTxOut era
@@ -290,45 +250,19 @@ instance
   ) =>
   DecCBOR (ShelleyUtxoPredFailure era)
   where
-  decCBOR =
-    decodeRecordSum "PredicateFailureUTXO" $
-      \case
-        0 -> do
-          ins <- decCBOR
-          pure (2, BadInputsUTxO ins)
-        1 -> do
-          a <- decCBOR
-          b <- decCBOR
-          pure (3, ExpiredUTxO a b)
-        2 -> do
-          mm <- decCBOR
-          pure (2, MaxTxSizeUTxO mm)
-        3 -> pure (1, InputSetEmptyUTxO)
-        4 -> do
-          mm <- decCBOR
-          pure (2, FeeTooSmallUTxO mm)
-        5 -> do
-          a <- decCBOR
-          b <- decCBOR
-          pure (3, ValueNotConservedUTxO a b)
-        6 -> do
-          outs <- decCBOR
-          pure (2, OutputTooSmallUTxO outs)
-        7 -> do
-          a <- decCBOR
-          pure (2, UpdateFailure a)
-        8 -> do
-          right <- decCBOR
-          wrongs <- decCBOR
-          pure (3, WrongNetwork right wrongs)
-        9 -> do
-          right <- decCBOR
-          wrongs <- decCBOR
-          pure (3, WrongNetworkWithdrawal right wrongs)
-        10 -> do
-          outs <- decCBOR
-          pure (2, OutputBootAddrAttrsTooBig outs)
-        k -> invalidKey k
+  decCBOR = decode . Summands "PredicateFailureUTXO" $ \case
+    0 -> SumD BadInputsUTxO <! From
+    1 -> SumD ExpiredUTxO <! From
+    2 -> SumD MaxTxSizeUTxO <! From
+    3 -> SumD InputSetEmptyUTxO
+    4 -> SumD FeeTooSmallUTxO <! From
+    5 -> SumD ValueNotConservedUTxO <! From
+    6 -> SumD OutputTooSmallUTxO <! From
+    7 -> SumD UpdateFailure <! From
+    8 -> SumD WrongNetwork <! From <! From
+    9 -> SumD WrongNetworkWithdrawal <! From <! From
+    10 -> SumD OutputBootAddrAttrsTooBig <! From
+    k -> Invalid k
 
 instance
   ( EraTx era
@@ -478,7 +412,9 @@ validateTimeToLive ::
   TxBody era ->
   SlotNo ->
   Test (ShelleyUtxoPredFailure era)
-validateTimeToLive txb slot = failureUnless (ttl >= slot) $ ExpiredUTxO ttl slot
+validateTimeToLive txb slot =
+  failureUnless (ttl >= slot) $
+    ExpiredUTxO Mismatch {mismatchSupplied = ttl, mismatchExpected = slot}
   where
     ttl = txb ^. ttlTxBodyL
 
@@ -572,7 +508,8 @@ validateValueNotConservedUTxO ::
   TxBody era ->
   Test (ShelleyUtxoPredFailure era)
 validateValueNotConservedUTxO pp utxo certState txBody =
-  failureUnless (consumedValue == producedValue) $ ValueNotConservedUTxO consumedValue producedValue
+  failureUnless (consumedValue == producedValue) $
+    ValueNotConservedUTxO Mismatch {mismatchSupplied = consumedValue, mismatchExpected = producedValue}
   where
     consumedValue = consumed pp certState utxo txBody
     producedValue = produced pp certState txBody
