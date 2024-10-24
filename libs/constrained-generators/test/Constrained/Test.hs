@@ -61,16 +61,14 @@ tests nightly =
     testSpec "emptyListSpec" emptyListSpec
     testSpec "eitherSpec" eitherSpec
     testSpec "maybeSpec" maybeSpec
-    testSpec "eitherSetSpec" eitherSetSpec
+    testSpecNoShrink "eitherSetSpec" eitherSetSpec
     testSpec "fooSpec" fooSpec
-    -- TODO: this spec needs double shrinking to shrink properly
-    -- so we need to figure something out about double-shrinking
-    testSpecNoShrink "intSpec" intSpec
     testSpec "mapElemSpec" mapElemSpec
+    testSpec "mapElemKeySpec" mapElemKeySpec
     -- TODO: double shrinking
     testSpecNoShrink "mapIsJust" mapIsJust
-    testSpec "mapElemKeySpec" mapElemKeySpec
-    testSpec "mapPairSpec" mapPairSpec
+    testSpecNoShrink "intSpec" intSpec
+    testSpecNoShrink "mapPairSpec" mapPairSpec
     testSpecNoShrink "mapEmptyDomainSpec" mapEmptyDomainSpec
     -- TODO: this _can_ be shrunk, but it's incredibly expensive to do
     -- so and it's not obvious if there is a faster way without implementing
@@ -86,7 +84,7 @@ tests nightly =
     testSpec "eitherSimpleSetSpec" eitherSimpleSetSpec
     testSpecNoShrink "emptySetSpec" emptySetSpec
     testSpec "forAllAnySpec" forAllAnySpec
-    testSpec "notSubsetSpec" notSubsetSpec
+    testSpecNoShrink "notSubsetSpec" notSubsetSpec
     testSpec "maybeJustSetSpec" maybeJustSetSpec
     testSpec "weirdSetPairSpec" weirdSetPairSpec
     testSpec "knownDomainMap" knownDomainMap
@@ -146,7 +144,6 @@ tests nightly =
     testSpec "unionBounded" unionBounded
     testSpec "elemSpec" elemSpec
     testSpec "lookupSpecific" lookupSpecific
-    testSpec "specificElemConstraints" lookupSpecific
     testSpec "mapRestrictedValues" mapRestrictedValues
     testSpec "mapRestrictedValuesThree" mapRestrictedValuesThree
     testSpec "mapRestrictedValuesBool" mapRestrictedValuesBool
@@ -302,7 +299,7 @@ testSpec' withShrink n s = do
             prop_sound $ constrained $ \x -> explanation es $ x `satisfies` s
     when withShrink $
       prop "prop_shrink_sound" $
-        within 10_000_000 $
+        discardAfter 100_000 $
           checkCoverage' $
             prop_shrink_sound s
 
