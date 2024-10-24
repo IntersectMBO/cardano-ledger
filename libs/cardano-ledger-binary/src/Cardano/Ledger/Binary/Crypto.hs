@@ -14,8 +14,6 @@ module Cardano.Ledger.Binary.Crypto (
   -- * KES
   encodeVerKeyKES,
   decodeVerKeyKES,
-  encodeSignKeyKES,
-  decodeSignKeyKES,
   encodeSigKES,
   decodeSigKES,
   encodeSignedKES,
@@ -84,14 +82,6 @@ encodeVerKeyKES = fromPlainEncoding . C.encodeVerKeyKES
 decodeVerKeyKES :: C.KESAlgorithm v => Decoder s (C.VerKeyKES v)
 decodeVerKeyKES = fromPlainDecoder C.decodeVerKeyKES
 {-# INLINE decodeVerKeyKES #-}
-
-encodeSignKeyKES :: C.KESAlgorithm v => C.SignKeyKES v -> Encoding
-encodeSignKeyKES = fromPlainEncoding . C.encodeSignKeyKES
-{-# INLINE encodeSignKeyKES #-}
-
-decodeSignKeyKES :: C.KESAlgorithm v => Decoder s (C.SignKeyKES v)
-decodeSignKeyKES = fromPlainDecoder C.decodeSignKeyKES
-{-# INLINE decodeSignKeyKES #-}
 
 encodeSigKES :: C.KESAlgorithm v => C.SigKES v -> Encoding
 encodeSigKES = fromPlainEncoding . C.encodeSigKES

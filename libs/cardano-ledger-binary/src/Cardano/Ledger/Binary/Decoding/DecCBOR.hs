@@ -23,20 +23,13 @@ where
 import qualified Cardano.Binary as Plain (Decoder, FromCBOR (..))
 import Cardano.Crypto.DSIGN.Class (
   DSIGNAlgorithm,
-  SeedSizeDSIGN,
   SigDSIGN,
   SignKeyDSIGN,
   SignedDSIGN,
   VerKeyDSIGN,
  )
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm)
-import Cardano.Crypto.KES.Class (KESAlgorithm, OptimizedKESAlgorithm, SigKES, SignKeyKES, VerKeyKES)
-import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
-import Cardano.Crypto.KES.CompactSum (CompactSumKES)
-import Cardano.Crypto.KES.Mock (MockKES)
-import Cardano.Crypto.KES.Simple (SimpleKES)
-import Cardano.Crypto.KES.Single (SingleKES)
-import Cardano.Crypto.KES.Sum (SumKES)
+import Cardano.Crypto.KES.Class (KESAlgorithm, SigKES, VerKeyKES)
 import Cardano.Crypto.VRF.Class (
   CertVRF,
   CertifiedVRF (..),
@@ -92,7 +85,6 @@ import qualified Data.Vector.Storable as VS
 import qualified Data.Vector.Unboxed as VU
 import Data.Void (Void)
 import Data.Word (Word16, Word32, Word64, Word8)
-import GHC.TypeNats (KnownNat, type (*))
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
@@ -487,93 +479,11 @@ instance (HashAlgorithm h, Typeable a) => DecCBOR (Hash h a)
 -- KES
 --------------------------------------------------------------------------------
 
-instance
-  (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
-  DecCBOR (VerKeyKES (SimpleKES d t))
-  where
+instance KESAlgorithm k => DecCBOR (VerKeyKES k) where
   decCBOR = decodeVerKeyKES
   {-# INLINE decCBOR #-}
 
-instance
-  (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
-  DecCBOR (SignKeyKES (SimpleKES d t))
-  where
-  decCBOR = decodeSignKeyKES
-  {-# INLINE decCBOR #-}
-
-instance
-  (DSIGNAlgorithm d, KnownNat t, KnownNat (SeedSizeDSIGN d * t)) =>
-  DecCBOR (SigKES (SimpleKES d t))
-  where
-  decCBOR = decodeSigKES
-  {-# INLINE decCBOR #-}
-
-instance (KESAlgorithm d, HashAlgorithm h) => DecCBOR (VerKeyKES (SumKES h d)) where
-  decCBOR = decodeVerKeyKES
-  {-# INLINE decCBOR #-}
-
-instance (KESAlgorithm d, HashAlgorithm h) => DecCBOR (SignKeyKES (SumKES h d)) where
-  decCBOR = decodeSignKeyKES
-  {-# INLINE decCBOR #-}
-
-instance (KESAlgorithm d, HashAlgorithm h) => DecCBOR (SigKES (SumKES h d)) where
-  decCBOR = decodeSigKES
-  {-# INLINE decCBOR #-}
-
-instance DSIGNAlgorithm d => DecCBOR (VerKeyKES (CompactSingleKES d)) where
-  decCBOR = decodeVerKeyKES
-  {-# INLINE decCBOR #-}
-
-instance DSIGNAlgorithm d => DecCBOR (SignKeyKES (CompactSingleKES d)) where
-  decCBOR = decodeSignKeyKES
-  {-# INLINE decCBOR #-}
-
-instance DSIGNAlgorithm d => DecCBOR (SigKES (CompactSingleKES d)) where
-  decCBOR = decodeSigKES
-  {-# INLINE decCBOR #-}
-
-instance
-  (OptimizedKESAlgorithm d, HashAlgorithm h) =>
-  DecCBOR (VerKeyKES (CompactSumKES h d))
-  where
-  decCBOR = decodeVerKeyKES
-  {-# INLINE decCBOR #-}
-
-instance
-  (OptimizedKESAlgorithm d, HashAlgorithm h) =>
-  DecCBOR (SignKeyKES (CompactSumKES h d))
-  where
-  decCBOR = decodeSignKeyKES
-  {-# INLINE decCBOR #-}
-
-instance
-  (OptimizedKESAlgorithm d, HashAlgorithm h) =>
-  DecCBOR (SigKES (CompactSumKES h d))
-  where
-  decCBOR = decodeSigKES
-  {-# INLINE decCBOR #-}
-
-instance DSIGNAlgorithm d => DecCBOR (VerKeyKES (SingleKES d)) where
-  decCBOR = decodeVerKeyKES
-  {-# INLINE decCBOR #-}
-
-instance DSIGNAlgorithm d => DecCBOR (SignKeyKES (SingleKES d)) where
-  decCBOR = decodeSignKeyKES
-  {-# INLINE decCBOR #-}
-
-instance DSIGNAlgorithm d => DecCBOR (SigKES (SingleKES d)) where
-  decCBOR = decodeSigKES
-  {-# INLINE decCBOR #-}
-
-instance KnownNat t => DecCBOR (VerKeyKES (MockKES t)) where
-  decCBOR = decodeVerKeyKES
-  {-# INLINE decCBOR #-}
-
-instance KnownNat t => DecCBOR (SignKeyKES (MockKES t)) where
-  decCBOR = decodeSignKeyKES
-  {-# INLINE decCBOR #-}
-
-instance KnownNat t => DecCBOR (SigKES (MockKES t)) where
+instance KESAlgorithm k => DecCBOR (SigKES k) where
   decCBOR = decodeSigKES
   {-# INLINE decCBOR #-}
 

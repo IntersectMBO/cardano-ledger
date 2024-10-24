@@ -119,6 +119,7 @@ library testlib
         hedgehog,
         hspec,
         hspec-core,
+        mtl,
         pretty-show,
         prettyprinter,
         prettyprinter-ansi-terminal,

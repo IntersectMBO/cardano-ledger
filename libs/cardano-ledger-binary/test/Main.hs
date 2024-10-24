@@ -1,5 +1,6 @@
 module Main where
 
+import Cardano.Crypto.Libsodium.Init
 import System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Binary.Failure as Failure
 import qualified Test.Cardano.Ledger.Binary.PlainSpec as PlainSpec
@@ -32,4 +33,5 @@ main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
   hSetEncoding stdout utf8
+  sodiumInit
   hspec spec

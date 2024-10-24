@@ -96,7 +96,7 @@ initUTxO =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStMIR :: forall c. Crypto c => Coin -> ChainState (ShelleyEra c)
+initStMIR :: forall c. PureGenCrypto c => Coin -> ChainState (ShelleyEra c)
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt @(ShelleyEra c) initUTxO
@@ -140,13 +140,13 @@ txbodyEx1 pot =
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     aliceCoinEx1 = aliceInitCoin <-> Val.inject (feeTx1 <+> Coin 7)
 
-mirWits :: Crypto c => [Int] -> [KeyPair 'Witness c]
+mirWits :: PureGenCrypto c => [Int] -> [KeyPair 'Witness c]
 mirWits = map (asWitness . aikCold . coreNodeIssuerKeys)
 
-sufficientMIRWits :: Crypto c => [KeyPair 'Witness c]
+sufficientMIRWits :: PureGenCrypto c => [KeyPair 'Witness c]
 sufficientMIRWits = mirWits [0 .. 4]
 
-insufficientMIRWits :: Crypto c => [KeyPair 'Witness c]
+insufficientMIRWits :: PureGenCrypto c => [KeyPair 'Witness c]
 insufficientMIRWits = mirWits [0 .. 3]
 
 txEx1 ::

@@ -81,7 +81,7 @@ aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 initUTxO :: Crypto c => UTxO (ShelleyEra c)
 initUTxO = genesisCoins genesisId [ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin)]
 
-initStPoolReReg :: Crypto c => ChainState (ShelleyEra c)
+initStPoolReReg :: PureGenCrypto c => ChainState (ShelleyEra c)
 initStPoolReReg = initSt initUTxO
 
 --
@@ -94,7 +94,7 @@ feeTx1 = Coin 3
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> Coin 250 <-> feeTx1
 
-txbodyEx1 :: Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx1 :: PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -167,10 +167,10 @@ feeTx2 = Coin 3
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-newPoolParams :: Crypto c => PoolParams c
+newPoolParams :: PureGenCrypto c => PoolParams c
 newPoolParams = Cast.alicePoolParams {ppCost = Coin 500}
 
-txbodyEx2 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx2 :: forall c. PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx2 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
@@ -286,7 +286,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: Crypto c => SnapShot c
+snapEx3 :: PureGenCrypto c => SnapShot c
 snapEx3 =
   emptySnapShot {ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]}
 

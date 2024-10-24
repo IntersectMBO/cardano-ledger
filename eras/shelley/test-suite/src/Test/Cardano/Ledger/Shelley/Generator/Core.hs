@@ -60,6 +60,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Core (
 where
 
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Crypto.KES (UnsoundPureKESAlgorithm)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
@@ -79,7 +80,7 @@ import Cardano.Ledger.Credential (
   pattern StakeRefBase,
   pattern StakeRefPtr,
  )
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (
   Hash,
   KeyHash,
@@ -457,7 +458,9 @@ unitIntervalToNatural ui =
   #-}
 
 mkBlockHeader ::
-  Mock c =>
+  ( UnsoundPureKESAlgorithm (KES c)
+  , Mock c
+  ) =>
   ProtVer ->
   -- | Hash of previous block
   HashHeader c ->

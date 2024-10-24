@@ -112,19 +112,19 @@ initStGenesisDeleg = initSt initUTxO
 --
 
 newGenDelegate ::
-  Crypto c =>
+  PureGenCrypto c =>
   KeyPair 'GenesisDelegate c
 newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (RawSeed 108 0 0 0 1)
 
-newGenesisVrfKH :: forall c. Crypto c => Hash c (VerKeyVRF c)
+newGenesisVrfKH :: forall c. PureGenCrypto c => Hash c (VerKeyVRF c)
 newGenesisVrfKH = hashVerKeyVRF (vrfVerKey (mkVRFKeyPair @c (RawSeed 9 8 7 6 5)))
 
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx1 :: forall c. PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -147,7 +147,7 @@ txbodyEx1 =
 
 txEx1 ::
   forall c.
-  ( Crypto c
+  ( PureGenCrypto c
   , Signable (DSIGN c) (Hash.Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyTx (ShelleyEra c)
@@ -188,7 +188,7 @@ blockEx1 =
 
 newGenDeleg ::
   forall c.
-  Crypto c =>
+  PureGenCrypto c =>
   (FutureGenDeleg c, GenDelegPair c)
 newGenDeleg =
   ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVK 0)
