@@ -123,6 +123,11 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   expectMembers,
   showConwayTxBalance,
   logConwayTxBalance,
+  submitBootstrapAware,
+  submitBootstrapAwareFailingVote,
+  submitBootstrapAwareFailingProposal,
+  SubmitFailureExpectation (..),
+  FailBoth (..),
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -1773,3 +1778,56 @@ logConwayTxBalance tx = do
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
   logString $ showConwayTxBalance pp certState utxo tx
+
+submitBootstrapAwareFailingVote ::
+  ConwayEraImp era =>
+  Vote ->
+  Voter (EraCrypto era) ->
+  GovActionId (EraCrypto era) ->
+  SubmitFailureExpectation era ->
+  ImpTestM era ()
+submitBootstrapAwareFailingVote vote voter gaId =
+  submitBootstrapAware
+    (submitVote_ vote voter gaId)
+    (submitFailingVote voter gaId)
+
+submitBootstrapAwareFailingProposal ::
+  ConwayEraImp era =>
+  ProposalProcedure era ->
+  SubmitFailureExpectation era ->
+  ImpTestM era (StrictMaybe (GovActionId (EraCrypto era)))
+submitBootstrapAwareFailingProposal proposal =
+  submitBootstrapAware
+    (SJust <$> submitProposal proposal)
+    (submitFailingProposal proposal >=> const (pure SNothing))
+
+data SubmitFailureExpectation era
+  = FailBootstrap (NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+  | FailPostBootstrap (NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+  | FailBootstrapAndPostBootstrap (FailBoth era)
+
+data FailBoth era = FailBoth
+  { bootstrapFailures :: NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era))
+  , postBootstrapFailures :: NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era))
+  }
+
+submitBootstrapAware ::
+  EraGov era =>
+  ImpTestM era a ->
+  (NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)) -> ImpTestM era a) ->
+  SubmitFailureExpectation era ->
+  ImpTestM era a
+submitBootstrapAware action failAction =
+  \case
+    FailBootstrap failures ->
+      ifBootstrap
+        (failAction failures)
+        action
+    FailPostBootstrap failures ->
+      ifBootstrap
+        action
+        (failAction failures)
+    FailBootstrapAndPostBootstrap (FailBoth bFailures pBFailures) ->
+      ifBootstrap
+        (failAction bFailures)
+        (failAction pBFailures)
