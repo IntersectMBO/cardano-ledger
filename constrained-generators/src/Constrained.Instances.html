@@ -1,0 +1,441 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE EmptyCase #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FunctionalDependencies #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ImportQualifiedPost #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-orphans #-}</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- | This module provides some necessary instances</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- of `Functions` that aren't needed in `Constrained.Base`</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- (which is already big enough) but which are necessary</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- to use the framework.</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Constrained.Instances</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Typeable</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Base.html"><span class="hs-identifier">Constrained.Base</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Core.html"><span class="hs-identifier">Constrained.Core</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.List.html"><span class="hs-identifier">Constrained.List</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Spec.Generics.html"><span class="hs-identifier">Constrained.Spec.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Univ.html"><span class="hs-identifier">Constrained.Univ</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679886818"><span class="hs-special">(</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886818"><span class="hs-identifier hs-type">fn</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Base.html#Functions"><span class="hs-identifier hs-type">Functions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679886818"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#Fix"><span class="hs-identifier hs-type">Fix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886818"><span class="hs-identifier hs-type">fn</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#Fix"><span class="hs-identifier hs-type">Fix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886818"><span class="hs-identifier hs-type">fn</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Functions"><span class="hs-identifier hs-type">Functions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#Fix"><span class="hs-identifier hs-type">Fix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886818"><span class="hs-identifier hs-type">fn</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#Fix"><span class="hs-identifier hs-type">Fix</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886818"><span class="hs-identifier hs-type">fn</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679886605"><span class="annot"><span class="annottext">propagateSpecFun :: forall (as :: [*]) a b.
+(TypeList as, Typeable as, HasSpec (Fix fn) a, HasSpec (Fix fn) b,
+ All (HasSpec (Fix fn)) as) =&gt;
+Fix fn as b
+-&gt; ListCtx Value as (HOLE a)
+-&gt; Specification (Fix fn) b
+-&gt; Specification (Fix fn) a
+</span><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var hs-var hs-var hs-var">propagateSpecFun</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#Fix"><span class="hs-identifier hs-type">Fix</span></a></span><span> </span><span id="local-6989586621679886602"><span class="annot"><span class="annottext">fn (Fix fn) as b
+</span><a href="#local-6989586621679886602"><span class="hs-identifier hs-var">fn</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679886601"><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><a href="#local-6989586621679886601"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span id="local-6989586621679886600"><span class="annot"><span class="annottext">Specification (Fix fn) b
+</span><a href="#local-6989586621679886600"><span class="hs-identifier hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: [*] -&gt; * -&gt; *) (fn :: [*] -&gt; * -&gt; *) (as :: [*]) a b.
+(Functions f fn, TypeList as, Typeable as, HasSpec fn a,
+ HasSpec fn b, All (HasSpec fn) as) =&gt;
+f as b
+-&gt; ListCtx Value as (HOLE a)
+-&gt; Specification fn b
+-&gt; Specification fn a
+</span><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span class="annot"><span class="annottext">fn (Fix fn) as b
+</span><a href="#local-6989586621679886602"><span class="hs-identifier hs-var">fn</span></a></span><span> </span><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><a href="#local-6989586621679886601"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">Specification (Fix fn) b
+</span><a href="#local-6989586621679886600"><span class="hs-identifier hs-var">spec</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679886590"><span class="annot"><span class="annottext">rewriteRules :: forall (as :: [*]) b.
+(TypeList as, Typeable as, HasSpec (Fix fn) b,
+ All (HasSpec (Fix fn)) as) =&gt;
+Fix fn as b -&gt; List (Term (Fix fn)) as -&gt; Maybe (Term (Fix fn) b)
+</span><a href="Constrained.Base.html#rewriteRules"><span class="hs-identifier hs-var hs-var hs-var hs-var">rewriteRules</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#Fix"><span class="hs-identifier hs-type">Fix</span></a></span><span> </span><span id="local-6989586621679886588"><span class="annot"><span class="annottext">fn (Fix fn) as b
+</span><a href="#local-6989586621679886588"><span class="hs-identifier hs-var">fn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: [*] -&gt; * -&gt; *) (fn :: [*] -&gt; * -&gt; *) (as :: [*]) b.
+(Functions f fn, TypeList as, Typeable as, HasSpec fn b,
+ All (HasSpec fn) as) =&gt;
+f as b -&gt; List (Term fn) as -&gt; Maybe (Term fn b)
+</span><a href="Constrained.Base.html#rewriteRules"><span class="hs-identifier hs-var">rewriteRules</span></a></span><span> </span><span class="annot"><span class="annottext">fn (Fix fn) as b
+</span><a href="#local-6989586621679886588"><span class="hs-identifier hs-var">fn</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679886582"><span class="annot"><span class="annottext">mapTypeSpec :: forall a b.
+(HasSpec (Fix fn) a, HasSpec (Fix fn) b) =&gt;
+Fix fn '[a] b -&gt; TypeSpec (Fix fn) a -&gt; Specification (Fix fn) b
+</span><a href="Constrained.Base.html#mapTypeSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapTypeSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#Fix"><span class="hs-identifier hs-type">Fix</span></a></span><span> </span><span id="local-6989586621679886580"><span class="annot"><span class="annottext">fn (Fix fn) '[a] b
+</span><a href="#local-6989586621679886580"><span class="hs-identifier hs-var">fn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: [*] -&gt; * -&gt; *) (fn :: [*] -&gt; * -&gt; *) a b.
+(Functions f fn, HasSpec fn a, HasSpec fn b) =&gt;
+f '[a] b -&gt; TypeSpec fn a -&gt; Specification fn b
+</span><a href="Constrained.Base.html#mapTypeSpec"><span class="hs-identifier hs-var">mapTypeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">fn (Fix fn) '[a] b
+</span><a href="#local-6989586621679886580"><span class="hs-identifier hs-var">fn</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679886801"><span id="local-6989586621679886802"><span id="local-6989586621679886803"><span class="hs-special">(</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886803"><span class="hs-identifier hs-type">fn</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886802"><span class="hs-identifier hs-type">fn'</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886801"><span class="hs-identifier hs-type">fnU</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Base.html#Functions"><span class="hs-identifier hs-type">Functions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679886803"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886801"><span class="hs-identifier hs-type">fnU</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679886801"><span class="hs-identifier hs-type">fnU</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Constrained.Base.html#Functions"><span class="hs-identifier hs-type">Functions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679886802"><span class="hs-identifier hs-type">fn'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886801"><span class="hs-identifier hs-type">fnU</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679886801"><span class="hs-identifier hs-type">fnU</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#Functions"><span class="hs-identifier hs-type">Functions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#Oneof"><span class="hs-identifier hs-type">Oneof</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886803"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886802"><span class="hs-identifier hs-type">fn'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886801"><span class="hs-identifier hs-type">fnU</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679886801"><span class="hs-identifier hs-type">fnU</span></a></span></span></span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679886530"><span class="annot"><span class="annottext">propagateSpecFun :: forall (as :: [*]) a b.
+(TypeList as, Typeable as, HasSpec fnU a, HasSpec fnU b,
+ All (HasSpec fnU) as) =&gt;
+Oneof fn fn' fnU as b
+-&gt; ListCtx Value as (HOLE a)
+-&gt; Specification fnU b
+-&gt; Specification fnU a
+</span><a href="#local-6989586621679886530"><span class="hs-identifier hs-var hs-var hs-var hs-var">propagateSpecFun</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#OneofLeft"><span class="hs-identifier hs-type">OneofLeft</span></a></span><span> </span><span id="local-6989586621679886528"><span class="annot"><span class="annottext">fn fnU as b
+</span><a href="#local-6989586621679886528"><span class="hs-identifier hs-var">fn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: [*] -&gt; * -&gt; *) (fn :: [*] -&gt; * -&gt; *) (as :: [*]) a b.
+(Functions f fn, TypeList as, Typeable as, HasSpec fn a,
+ HasSpec fn b, All (HasSpec fn) as) =&gt;
+f as b
+-&gt; ListCtx Value as (HOLE a)
+-&gt; Specification fn b
+-&gt; Specification fn a
+</span><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span class="annot"><span class="annottext">fn fnU as b
+</span><a href="#local-6989586621679886528"><span class="hs-identifier hs-var">fn</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#OneofRight"><span class="hs-identifier hs-type">OneofRight</span></a></span><span> </span><span id="local-6989586621679886526"><span class="annot"><span class="annottext">fn' fnU as b
+</span><a href="#local-6989586621679886526"><span class="hs-identifier hs-var">fn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: [*] -&gt; * -&gt; *) (fn :: [*] -&gt; * -&gt; *) (as :: [*]) a b.
+(Functions f fn, TypeList as, Typeable as, HasSpec fn a,
+ HasSpec fn b, All (HasSpec fn) as) =&gt;
+f as b
+-&gt; ListCtx Value as (HOLE a)
+-&gt; Specification fn b
+-&gt; Specification fn a
+</span><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span class="annot"><span class="annottext">fn' fnU as b
+</span><a href="#local-6989586621679886526"><span class="hs-identifier hs-var">fn</span></a></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span id="local-6989586621679886511"><span class="annot"><span class="annottext">rewriteRules :: forall (as :: [*]) b.
+(TypeList as, Typeable as, HasSpec fnU b, All (HasSpec fnU) as) =&gt;
+Oneof fn fn' fnU as b -&gt; List (Term fnU) as -&gt; Maybe (Term fnU b)
+</span><a href="#local-6989586621679886511"><span class="hs-identifier hs-var hs-var hs-var hs-var">rewriteRules</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#OneofLeft"><span class="hs-identifier hs-type">OneofLeft</span></a></span><span> </span><span id="local-6989586621679886510"><span class="annot"><span class="annottext">fn fnU as b
+</span><a href="#local-6989586621679886510"><span class="hs-identifier hs-var">fn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: [*] -&gt; * -&gt; *) (fn :: [*] -&gt; * -&gt; *) (as :: [*]) b.
+(Functions f fn, TypeList as, Typeable as, HasSpec fn b,
+ All (HasSpec fn) as) =&gt;
+f as b -&gt; List (Term fn) as -&gt; Maybe (Term fn b)
+</span><a href="Constrained.Base.html#rewriteRules"><span class="hs-identifier hs-var">rewriteRules</span></a></span><span> </span><span class="annot"><span class="annottext">fn fnU as b
+</span><a href="#local-6989586621679886510"><span class="hs-identifier hs-var">fn</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#rewriteRules"><span class="hs-identifier hs-var">rewriteRules</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#OneofRight"><span class="hs-identifier hs-type">OneofRight</span></a></span><span> </span><span id="local-6989586621679886509"><span class="annot"><span class="annottext">fn' fnU as b
+</span><a href="#local-6989586621679886509"><span class="hs-identifier hs-var">fn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: [*] -&gt; * -&gt; *) (fn :: [*] -&gt; * -&gt; *) (as :: [*]) b.
+(Functions f fn, TypeList as, Typeable as, HasSpec fn b,
+ All (HasSpec fn) as) =&gt;
+f as b -&gt; List (Term fn) as -&gt; Maybe (Term fn b)
+</span><a href="Constrained.Base.html#rewriteRules"><span class="hs-identifier hs-var">rewriteRules</span></a></span><span> </span><span class="annot"><span class="annottext">fn' fnU as b
+</span><a href="#local-6989586621679886509"><span class="hs-identifier hs-var">fn</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679886500"><span class="annot"><span class="annottext">mapTypeSpec :: forall a b.
+(HasSpec fnU a, HasSpec fnU b) =&gt;
+Oneof fn fn' fnU '[a] b -&gt; TypeSpec fnU a -&gt; Specification fnU b
+</span><a href="#local-6989586621679886500"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapTypeSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#OneofLeft"><span class="hs-identifier hs-type">OneofLeft</span></a></span><span> </span><span id="local-6989586621679886499"><span class="annot"><span class="annottext">fn fnU '[a] b
+</span><a href="#local-6989586621679886499"><span class="hs-identifier hs-var">fn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: [*] -&gt; * -&gt; *) (fn :: [*] -&gt; * -&gt; *) a b.
+(Functions f fn, HasSpec fn a, HasSpec fn b) =&gt;
+f '[a] b -&gt; TypeSpec fn a -&gt; Specification fn b
+</span><a href="Constrained.Base.html#mapTypeSpec"><span class="hs-identifier hs-var">mapTypeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">fn fnU '[a] b
+</span><a href="#local-6989586621679886499"><span class="hs-identifier hs-var">fn</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#mapTypeSpec"><span class="hs-identifier hs-var">mapTypeSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#OneofRight"><span class="hs-identifier hs-type">OneofRight</span></a></span><span> </span><span id="local-6989586621679886498"><span class="annot"><span class="annottext">fn' fnU '[a] b
+</span><a href="#local-6989586621679886498"><span class="hs-identifier hs-var">fn</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (f :: [*] -&gt; * -&gt; *) (fn :: [*] -&gt; * -&gt; *) a b.
+(Functions f fn, HasSpec fn a, HasSpec fn b) =&gt;
+f '[a] b -&gt; TypeSpec fn a -&gt; Specification fn b
+</span><a href="Constrained.Base.html#mapTypeSpec"><span class="hs-identifier hs-var">mapTypeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">fn' fnU '[a] b
+</span><a href="#local-6989586621679886498"><span class="hs-identifier hs-var">fn</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679886778"><span class="annot"><a href="Constrained.Base.html#BaseUniverse"><span class="hs-identifier hs-type">BaseUniverse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886778"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Functions"><span class="hs-identifier hs-type">Functions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#EqFn"><span class="hs-identifier hs-type">EqFn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886778"><span class="hs-identifier hs-type">fn</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679886778"><span class="hs-identifier hs-type">fn</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679886468"><span class="annot"><span class="annottext">propagateSpecFun :: forall (as :: [*]) a b.
+(TypeList as, Typeable as, HasSpec fn a, HasSpec fn b,
+ All (HasSpec fn) as) =&gt;
+EqFn fn as b
+-&gt; ListCtx Value as (HOLE a)
+-&gt; Specification fn b
+-&gt; Specification fn a
+</span><a href="#local-6989586621679886468"><span class="hs-identifier hs-var hs-var hs-var hs-var">propagateSpecFun</span></a></span></span><span> </span><span class="annot"><span class="annottext">EqFn fn as b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#ErrorSpec"><span class="hs-identifier hs-type">ErrorSpec</span></a></span><span> </span><span id="local-6989586621679886466"><span class="annot"><span class="annottext">NonEmpty String
+</span><a href="#local-6989586621679886466"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+NonEmpty String -&gt; Specification fn a
+</span><a href="Constrained.Base.html#ErrorSpec"><span class="hs-identifier hs-var">ErrorSpec</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty String
+</span><a href="#local-6989586621679886466"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span id="local-6989586621679886465"><span class="annot"><span class="annottext">EqFn fn as b
+</span><a href="#local-6989586621679886465"><span class="hs-identifier hs-var">fn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.List.html#ListCtx"><span class="hs-identifier hs-type">ListCtx</span></a></span><span> </span><span id="local-6989586621679886460"><span class="annot"><span class="annottext">List Value as
+</span><a href="#local-6989586621679886460"><span class="hs-identifier hs-var">pre</span></a></span></span><span> </span><span class="annot"><span class="annottext">HOLE a a
+</span><a href="Constrained.Base.html#HOLE"><span class="hs-identifier hs-var">HOLE</span></a></span><span> </span><span id="local-6989586621679886454"><span class="annot"><span class="annottext">List Value as'
+</span><a href="#local-6989586621679886454"><span class="hs-identifier hs-var">suf</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#SuspendedSpec"><span class="hs-identifier hs-type">SuspendedSpec</span></a></span><span> </span><span id="local-6989586621679886438"><span class="annot"><span class="annottext">Var b
+</span><a href="#local-6989586621679886438"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679886437"><span class="annot"><span class="annottext">Pred fn
+</span><a href="#local-6989586621679886437"><span class="hs-identifier hs-var">ps</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679886435"><span class="annot"><span class="annottext">Term fn a
+</span><a href="#local-6989586621679886435"><span class="hs-identifier hs-var">v'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-61"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679886434"><span class="annot"><span class="annottext">args :: List (Term fn) (Append as (a : as'))
+</span><a href="#local-6989586621679886434"><span class="hs-identifier hs-var hs-var">args</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall {a} (f :: a -&gt; *) (as :: [a]) (bs :: [a]).
+List f as -&gt; List f bs -&gt; List f (Append as bs)
+</span><a href="Constrained.List.html#appendList"><span class="hs-identifier hs-var">appendList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall {k} (f :: k -&gt; *) (g :: k -&gt; *) (as :: [k]).
+(forall (a :: k). f a -&gt; g a) -&gt; List f as -&gt; List g as
+</span><a href="Constrained.List.html#mapList"><span class="hs-identifier hs-var">mapList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span id="local-6989586621679886428"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886428"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). Show a =&gt; a -&gt; Term fn a
+</span><a href="Constrained.Base.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886428"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">List Value as
+</span><a href="#local-6989586621679886460"><span class="hs-identifier hs-var">pre</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term fn a
+</span><a href="#local-6989586621679886435"><span class="hs-identifier hs-var">v'</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (f :: k -&gt; *) (a :: k) (as1 :: [k]).
+f a -&gt; List f as1 -&gt; List f (a : as1)
+</span><a href="Constrained.List.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (f :: k -&gt; *) (g :: k -&gt; *) (as :: [k]).
+(forall (a :: k). f a -&gt; g a) -&gt; List f as -&gt; List g as
+</span><a href="Constrained.List.html#mapList"><span class="hs-identifier hs-var">mapList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span id="local-6989586621679886423"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886423"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). Show a =&gt; a -&gt; Term fn a
+</span><a href="Constrained.Base.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886423"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">List Value as'
+</span><a href="#local-6989586621679886454"><span class="hs-identifier hs-var">suf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a. Term fn a -&gt; Binder fn a -&gt; Pred fn
+</span><a href="Constrained.Base.html#Let"><span class="hs-identifier hs-var">Let</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (as :: [*]) (fn :: [*] -&gt; * -&gt; *) a.
+(Typeable as, TypeList as, All (HasSpec fn) as, HasSpec fn a,
+ BaseUniverse fn) =&gt;
+fn as a -&gt; List (Term fn) as -&gt; Term fn a
+</span><a href="Constrained.Base.html#App"><span class="hs-identifier hs-var">App</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) (fnU :: [*] -&gt; * -&gt; *) (as :: [*]) b.
+Member fn fnU =&gt;
+fn as b -&gt; fnU as b
+</span><a href="Constrained.Univ.html#injectFn"><span class="hs-identifier hs-var">injectFn</span></a></span><span> </span><span class="annot"><span class="annottext">EqFn fn as b
+</span><a href="#local-6989586621679886465"><span class="hs-identifier hs-var">fn</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">List (Term fn) (Append as (a : as'))
+</span><a href="#local-6989586621679886434"><span class="hs-identifier hs-var">args</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Var b
+</span><a href="#local-6989586621679886438"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Var a -&gt; Pred fn -&gt; Binder fn a
+</span><a href="Constrained.Base.html#%3A-%3E"><span class="hs-operator hs-var">:-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Pred fn
+</span><a href="#local-6989586621679886437"><span class="hs-identifier hs-var">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span class="annot"><span class="annottext">EqFn fn as b
+</span><a href="Constrained.Univ.html#Equal"><span class="hs-identifier hs-var">Equal</span></a></span><span> </span><span id="local-6989586621679886410"><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><a href="#local-6989586621679886410"><span class="hs-identifier hs-var">ctx</span></a></span></span><span> </span><span id="local-6989586621679886409"><span class="annot"><span class="annottext">Specification fn b
+</span><a href="#local-6989586621679886409"><span class="hs-identifier hs-var">spec</span></a></span></span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">HOLE a a
+</span><a href="Constrained.Base.html#HOLE"><span class="hs-identifier hs-var">HOLE</span></a></span><span> </span><span class="annot"><a href="Constrained.List.html#%3A%3F"><span class="hs-operator hs-type">:?</span></a></span><span> </span><span class="annot"><a href="Constrained.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span id="local-6989586621679886391"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886391"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="Constrained.List.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">List Value as1
+</span><a href="Constrained.List.html#Nil"><span class="hs-identifier hs-var">Nil</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><a href="#local-6989586621679886410"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-65"></span><span>        </span><span class="annot"><span class="annottext">forall (f :: [*] -&gt; * -&gt; *) (fn :: [*] -&gt; * -&gt; *) (as :: [*]) a b.
+(Functions f fn, TypeList as, Typeable as, HasSpec fn a,
+ HasSpec fn b, All (HasSpec fn) as) =&gt;
+f as b
+-&gt; ListCtx Value as (HOLE a)
+-&gt; Specification fn b
+-&gt; Specification fn a
+</span><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#EqFn"><span class="hs-identifier hs-type">EqFn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886778"><span class="hs-identifier hs-type">fn</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679886778"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). Eq a =&gt; EqFn fn '[a, a] Bool
+</span><a href="Constrained.Univ.html#Equal"><span class="hs-identifier hs-var">Equal</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; Value a
+</span><a href="Constrained.Core.html#Value"><span class="hs-identifier hs-var">Value</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886391"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a (as1 :: [*]) (c :: * -&gt; *).
+f a -&gt; ListCtx f as1 c -&gt; ListCtx f (a : as1) c
+</span><a href="Constrained.List.html#%3A%21"><span class="hs-operator hs-var">:!</span></a></span><span> </span><span class="annot"><span class="annottext">forall (c :: * -&gt; *) a (f :: * -&gt; *). c a -&gt; ListCtx f '[a] c
+</span><a href="Constrained.List.html#NilCtx"><span class="hs-identifier hs-var">NilCtx</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. HOLE a a
+</span><a href="Constrained.Base.html#HOLE"><span class="hs-identifier hs-var">HOLE</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Specification fn b
+</span><a href="#local-6989586621679886409"><span class="hs-identifier hs-var">spec</span></a></span><span>
+</span><span id="line-66"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Constrained.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span id="local-6989586621679886370"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886370"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="annot"><a href="Constrained.List.html#%3A%21"><span class="hs-operator hs-type">:!</span></a></span><span> </span><span class="annot"><a href="Constrained.List.html#NilCtx"><span class="hs-identifier hs-type">NilCtx</span></a></span><span> </span><span class="annot"><span class="annottext">HOLE a a
+</span><a href="Constrained.Base.html#HOLE"><span class="hs-identifier hs-var">HOLE</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><a href="#local-6989586621679886410"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Specification fn Bool
+-&gt; (Bool -&gt; Specification fn a) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#caseBoolSpec"><span class="hs-identifier hs-var">caseBoolSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification fn b
+</span><a href="#local-6989586621679886409"><span class="hs-identifier hs-var">spec</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-67"></span><span>        </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">True</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). a -&gt; Specification fn a
+</span><a href="Constrained.Base.html#equalSpec"><span class="hs-identifier hs-var">equalSpec</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886370"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-68"></span><span>        </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+a -&gt; Specification fn a
+</span><a href="Constrained.Base.html#notEqualSpec"><span class="hs-identifier hs-var">notEqualSpec</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886370"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679886358"><span class="annot"><span class="annottext">rewriteRules :: forall (as :: [*]) b.
+(TypeList as, Typeable as, HasSpec fn b, All (HasSpec fn) as) =&gt;
+EqFn fn as b -&gt; List (Term fn) as -&gt; Maybe (Term fn b)
+</span><a href="#local-6989586621679886358"><span class="hs-identifier hs-var hs-var hs-var hs-var">rewriteRules</span></a></span></span><span> </span><span class="annot"><span class="annottext">EqFn fn as b
+</span><a href="Constrained.Univ.html#Equal"><span class="hs-identifier hs-var">Equal</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679886341"><span class="annot"><span class="annottext">Term fn a
+</span><a href="#local-6989586621679886341"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="annot"><a href="Constrained.List.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span id="local-6989586621679886340"><span class="annot"><span class="annottext">Term fn a
+</span><a href="#local-6989586621679886340"><span class="hs-identifier hs-var">t'</span></a></span></span><span> </span><span class="annot"><a href="Constrained.List.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">List (Term fn) as1
+</span><a href="Constrained.List.html#Nil"><span class="hs-identifier hs-var">Nil</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Term fn a
+</span><a href="#local-6989586621679886341"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Term fn a
+</span><a href="#local-6989586621679886340"><span class="hs-identifier hs-var">t'</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). Show a =&gt; a -&gt; Term fn a
+</span><a href="Constrained.Base.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679886331"><span class="annot"><span class="annottext">mapTypeSpec :: forall a b.
+(HasSpec fn a, HasSpec fn b) =&gt;
+EqFn fn '[a] b -&gt; TypeSpec fn a -&gt; Specification fn b
+</span><a href="#local-6989586621679886331"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapTypeSpec</span></a></span></span><span> </span><span id="local-6989586621679886330"><span class="annot"><span class="annottext">EqFn fn '[a] b
+</span><a href="#local-6989586621679886330"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><span class="annottext">TypeSpec fn a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">EqFn fn '[a] b
+</span><a href="#local-6989586621679886330"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-keyword">of</span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679886317"><span id="local-6989586621679886691"><span class="annot"><a href="Constrained.Base.html#BaseUniverse"><span class="hs-identifier hs-type">BaseUniverse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886691"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Functions"><span class="hs-identifier hs-type">Functions</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Univ.html#BoolFn"><span class="hs-identifier hs-type">BoolFn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886691"><span class="hs-identifier hs-type">fn</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679886691"><span class="hs-identifier hs-type">fn</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679886310"><span class="annot"><span class="annottext">propagateSpecFun :: forall (as :: [*]) a b.
+(TypeList as, Typeable as, HasSpec fn a, HasSpec fn b,
+ All (HasSpec fn) as) =&gt;
+BoolFn fn as b
+-&gt; ListCtx Value as (HOLE a)
+-&gt; Specification fn b
+-&gt; Specification fn a
+</span><a href="#local-6989586621679886310"><span class="hs-identifier hs-var hs-var hs-var hs-var">propagateSpecFun</span></a></span></span><span> </span><span class="annot"><span class="annottext">BoolFn fn as b
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">ListCtx Value as (HOLE a)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#ErrorSpec"><span class="hs-identifier hs-type">ErrorSpec</span></a></span><span> </span><span id="local-6989586621679886309"><span class="annot"><span class="annottext">NonEmpty String
+</span><a href="#local-6989586621679886309"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+NonEmpty String -&gt; Specification fn a
+</span><a href="Constrained.Base.html#ErrorSpec"><span class="hs-identifier hs-var">ErrorSpec</span></a></span><span> </span><span class="annot"><span class="annottext">NonEmpty String
+</span><a href="#local-6989586621679886309"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span id="local-6989586621679886308"><span class="annot"><span class="annottext">BoolFn fn as b
+</span><a href="#local-6989586621679886308"><span class="hs-identifier hs-var">fn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.List.html#ListCtx"><span class="hs-identifier hs-type">ListCtx</span></a></span><span> </span><span id="local-6989586621679886304"><span class="annot"><span class="annottext">List Value as
+</span><a href="#local-6989586621679886304"><span class="hs-identifier hs-var">pre</span></a></span></span><span> </span><span class="annot"><span class="annottext">HOLE a a
+</span><a href="Constrained.Base.html#HOLE"><span class="hs-identifier hs-var">HOLE</span></a></span><span> </span><span id="local-6989586621679886299"><span class="annot"><span class="annottext">List Value as'
+</span><a href="#local-6989586621679886299"><span class="hs-identifier hs-var">suf</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#SuspendedSpec"><span class="hs-identifier hs-type">SuspendedSpec</span></a></span><span> </span><span id="local-6989586621679886285"><span class="annot"><span class="annottext">Var b
+</span><a href="#local-6989586621679886285"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679886284"><span class="annot"><span class="annottext">Pred fn
+</span><a href="#local-6989586621679886284"><span class="hs-identifier hs-var">ps</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679886283"><span class="annot"><span class="annottext">Term fn a
+</span><a href="#local-6989586621679886283"><span class="hs-identifier hs-var">v'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-80"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679886282"><span class="annot"><span class="annottext">args :: List (Term fn) (Append as (a : as'))
+</span><a href="#local-6989586621679886282"><span class="hs-identifier hs-var hs-var">args</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall {a} (f :: a -&gt; *) (as :: [a]) (bs :: [a]).
+List f as -&gt; List f bs -&gt; List f (Append as bs)
+</span><a href="Constrained.List.html#appendList"><span class="hs-identifier hs-var">appendList</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall {k} (f :: k -&gt; *) (g :: k -&gt; *) (as :: [k]).
+(forall (a :: k). f a -&gt; g a) -&gt; List f as -&gt; List g as
+</span><a href="Constrained.List.html#mapList"><span class="hs-identifier hs-var">mapList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span id="local-6989586621679886279"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886279"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). Show a =&gt; a -&gt; Term fn a
+</span><a href="Constrained.Base.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886279"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">List Value as
+</span><a href="#local-6989586621679886304"><span class="hs-identifier hs-var">pre</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term fn a
+</span><a href="#local-6989586621679886283"><span class="hs-identifier hs-var">v'</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (f :: k -&gt; *) (a :: k) (as1 :: [k]).
+f a -&gt; List f as1 -&gt; List f (a : as1)
+</span><a href="Constrained.List.html#%3A%3E"><span class="hs-operator hs-var">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall {k} (f :: k -&gt; *) (g :: k -&gt; *) (as :: [k]).
+(forall (a :: k). f a -&gt; g a) -&gt; List f as -&gt; List g as
+</span><a href="Constrained.List.html#mapList"><span class="hs-identifier hs-var">mapList</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span id="local-6989586621679886276"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886276"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). Show a =&gt; a -&gt; Term fn a
+</span><a href="Constrained.Base.html#Lit"><span class="hs-identifier hs-var">Lit</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679886276"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">List Value as'
+</span><a href="#local-6989586621679886299"><span class="hs-identifier hs-var">suf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>       </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a. Term fn a -&gt; Binder fn a -&gt; Pred fn
+</span><a href="Constrained.Base.html#Let"><span class="hs-identifier hs-var">Let</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (as :: [*]) (fn :: [*] -&gt; * -&gt; *) a.
+(Typeable as, TypeList as, All (HasSpec fn) as, HasSpec fn a,
+ BaseUniverse fn) =&gt;
+fn as a -&gt; List (Term fn) as -&gt; Term fn a
+</span><a href="Constrained.Base.html#App"><span class="hs-identifier hs-var">App</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) (fnU :: [*] -&gt; * -&gt; *) (as :: [*]) b.
+Member fn fnU =&gt;
+fn as b -&gt; fnU as b
+</span><a href="Constrained.Univ.html#injectFn"><span class="hs-identifier hs-var">injectFn</span></a></span><span> </span><span class="annot"><span class="annottext">BoolFn fn as b
+</span><a href="#local-6989586621679886308"><span class="hs-identifier hs-var">fn</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">List (Term fn) (Append as (a : as'))
+</span><a href="#local-6989586621679886282"><span class="hs-identifier hs-var">args</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Var b
+</span><a href="#local-6989586621679886285"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Var a -&gt; Pred fn -&gt; Binder fn a
+</span><a href="Constrained.Base.html#%3A-%3E"><span class="hs-operator hs-var">:-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Pred fn
+</span><a href="#local-6989586621679886284"><span class="hs-identifier hs-var">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span class="annot"><span class="annottext">BoolFn fn as b
+</span><a href="Constrained.Univ.html#Not"><span class="hs-identifier hs-var">Not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.List.html#NilCtx"><span class="hs-identifier hs-type">NilCtx</span></a></span><span> </span><span class="annot"><span class="annottext">HOLE a Bool
+</span><a href="Constrained.Base.html#HOLE"><span class="hs-identifier hs-var">HOLE</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679886268"><span class="annot"><span class="annottext">Specification fn b
+</span><a href="#local-6989586621679886268"><span class="hs-identifier hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Specification fn Bool
+-&gt; (Bool -&gt; Specification fn a) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#caseBoolSpec"><span class="hs-identifier hs-var">caseBoolSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification fn b
+</span><a href="#local-6989586621679886268"><span class="hs-identifier hs-var">spec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). a -&gt; Specification fn a
+</span><a href="Constrained.Base.html#equalSpec"><span class="hs-identifier hs-var">equalSpec</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">not</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span class="annot"><span class="annottext">BoolFn fn as b
+</span><a href="Constrained.Univ.html#Or"><span class="hs-identifier hs-var">Or</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">HOLE a a
+</span><a href="Constrained.Base.html#HOLE"><span class="hs-identifier hs-var">HOLE</span></a></span><span> </span><span class="annot"><a href="Constrained.List.html#%3A%3F"><span class="hs-operator hs-type">:?</span></a></span><span> </span><span class="annot"><a href="Constrained.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679886247"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679886247"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Constrained.List.html#%3A%3E"><span class="hs-operator hs-type">:&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">List Value as1
+</span><a href="Constrained.List.html#Nil"><span class="hs-identifier hs-var">Nil</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679886244"><span class="annot"><span class="annottext">Specification fn b
+</span><a href="#local-6989586621679886244"><span class="hs-identifier hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Specification fn Bool
+-&gt; (Bool -&gt; Specification fn a) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#caseBoolSpec"><span class="hs-identifier hs-var">caseBoolSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification fn b
+</span><a href="#local-6989586621679886244"><span class="hs-identifier hs-var">spec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *). Bool -&gt; Bool -&gt; Specification fn Bool
+</span><a href="Constrained.Instances.html#okOr"><span class="hs-identifier hs-var">okOr</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679886247"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><a href="Constrained.Base.html#propagateSpecFun"><span class="hs-identifier hs-var">propagateSpecFun</span></a></span><span> </span><span class="annot"><span class="annottext">BoolFn fn as b
+</span><a href="Constrained.Univ.html#Or"><span class="hs-identifier hs-var">Or</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Core.html#Value"><span class="hs-identifier hs-type">Value</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679886232"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679886232"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Constrained.List.html#%3A%21"><span class="hs-operator hs-type">:!</span></a></span><span> </span><span class="annot"><a href="Constrained.List.html#NilCtx"><span class="hs-identifier hs-type">NilCtx</span></a></span><span> </span><span class="annot"><span class="annottext">HOLE a Bool
+</span><a href="Constrained.Base.html#HOLE"><span class="hs-identifier hs-var">HOLE</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679886228"><span class="annot"><span class="annottext">Specification fn b
+</span><a href="#local-6989586621679886228"><span class="hs-identifier hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Specification fn Bool
+-&gt; (Bool -&gt; Specification fn a) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#caseBoolSpec"><span class="hs-identifier hs-var">caseBoolSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Specification fn b
+</span><a href="#local-6989586621679886228"><span class="hs-identifier hs-var">spec</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *). Bool -&gt; Bool -&gt; Specification fn Bool
+</span><a href="Constrained.Instances.html#okOr"><span class="hs-identifier hs-var">okOr</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679886232"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679886225"><span class="annot"><span class="annottext">mapTypeSpec :: forall a b.
+(HasSpec fn a, HasSpec fn b) =&gt;
+BoolFn fn '[a] b -&gt; TypeSpec fn a -&gt; Specification fn b
+</span><a href="#local-6989586621679886225"><span class="hs-identifier hs-var hs-var hs-var hs-var">mapTypeSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">BoolFn fn '[a] b
+</span><a href="Constrained.Univ.html#Not"><span class="hs-identifier hs-var">Not</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Constrained.Base.html#SumSpec"><span class="hs-identifier hs-type">SumSpec</span></a></span><span> </span><span id="local-6989586621679886218"><span class="annot"><span class="annottext">Maybe (Int, Int)
+</span><a href="#local-6989586621679886218"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679886217"><span class="annot"><span class="annottext">Specification fn ()
+</span><a href="#local-6989586621679886217"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679886216"><span class="annot"><span class="annottext">Specification fn ()
+</span><a href="#local-6989586621679886216"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+TypeSpec fn a -&gt; Specification fn a
+</span><a href="Constrained.Base.html#typeSpec"><span class="hs-identifier hs-var">typeSpec</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a b.
+Maybe (Int, Int)
+-&gt; Specification fn a -&gt; Specification fn b -&gt; SumSpec fn a b
+</span><a href="Constrained.Base.html#SumSpec"><span class="hs-identifier hs-var">SumSpec</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Int, Int)
+</span><a href="#local-6989586621679886218"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Specification fn ()
+</span><a href="#local-6989586621679886216"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Specification fn ()
+</span><a href="#local-6989586621679886217"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- | We have something like ('constant' ||. HOLE) must evaluate to 'need'. Return a (Specification fn Bool) for HOLE, that makes that True.</span><span>
+</span><span id="line-89"></span><span id="local-6989586621679886675"><span class="annot"><a href="Constrained.Instances.html#okOr"><span class="hs-identifier hs-type">okOr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679886675"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span></span><span>
+</span><span id="line-90"></span><span id="okOr"><span class="annot"><span class="annottext">okOr :: forall (fn :: [*] -&gt; * -&gt; *). Bool -&gt; Bool -&gt; Specification fn Bool
+</span><a href="Constrained.Instances.html#okOr"><span class="hs-identifier hs-var hs-var">okOr</span></a></span></span><span> </span><span id="local-6989586621679886206"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679886206"><span class="hs-identifier hs-var">constant</span></a></span></span><span> </span><span id="local-6989586621679886205"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679886205"><span class="hs-identifier hs-var">need</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679886206"><span class="hs-identifier hs-var">constant</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679886205"><span class="hs-identifier hs-var">need</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a. Specification fn a
+</span><a href="Constrained.Base.html#TrueSpec"><span class="hs-identifier hs-var">TrueSpec</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+NonEmpty String -&gt; Specification fn a
+</span><a href="Constrained.Base.html#ErrorSpec"><span class="hs-identifier hs-var">ErrorSpec</span></a></span><span>
+</span><span id="line-94"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;(&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679886206"><span class="hs-identifier hs-var">constant</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;||. HOLE) must equal False. That cannot be the case.&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). OrdSet a -&gt; Specification fn a
+</span><a href="Constrained.Base.html#MemberSpec"><span class="hs-identifier hs-var">MemberSpec</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). OrdSet a -&gt; Specification fn a
+</span><a href="Constrained.Base.html#MemberSpec"><span class="hs-identifier hs-var">MemberSpec</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-97"></span></pre></body></html>

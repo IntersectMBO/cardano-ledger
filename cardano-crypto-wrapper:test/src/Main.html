@@ -1,0 +1,41 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-0.2.0.0-f94057d25dcf2d4f164bab69c09958a9051fdb9e8065545817eeae7df075117b/share/doc/html/src"><span class="hs-identifier">Cardano.Prelude</span></a></span><span>
+</span><span id="line-2"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Crypto.CBOR.html"><span class="hs-identifier">Test.Cardano.Crypto.CBOR</span></a></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Crypto.Hashing.html"><span class="hs-identifier">Test.Cardano.Crypto.Hashing</span></a></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Crypto.Json.html"><span class="hs-identifier">Test.Cardano.Crypto.Json</span></a></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Crypto.Keys.html"><span class="hs-identifier">Test.Cardano.Crypto.Keys</span></a></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Crypto.Limits.html"><span class="hs-identifier">Test.Cardano.Crypto.Limits</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Crypto.Random.html"><span class="hs-identifier">Test.Cardano.Crypto.Random</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Crypto.Signing.Redeem.html"><span class="hs-identifier">Test.Cardano.Crypto.Signing.Redeem</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Crypto.Signing.Redeem.Compact.html"><span class="hs-identifier">Test.Cardano.Crypto.Signing.Redeem.Compact</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Crypto.Signing.Safe.html"><span class="hs-identifier">Test.Cardano.Crypto.Signing.Safe</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Cardano.Crypto.Signing.Signing.html"><span class="hs-identifier">Test.Cardano.Crypto.Signing.Signing</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-test-0.1.0.3-f0feb61605817ae2c1b2e3b4bfbd8e89aef4c72586363cd87aaeb31ae908dd6f/share/doc/html/src"><span class="hs-identifier">Test.Cardano.Prelude</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- | Main testing action</span><span>
+</span><span id="line-15"></span><span class="annot"><a href="Main.html#main"><span class="hs-identifier hs-type">main</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span id="main"><span class="annot"><span class="annottext">IO ()
+</span><a href="Main.html#main"><span class="hs-identifier hs-var hs-var hs-var">main</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><span class="annottext">[IO Bool] -&gt; IO ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-prelude-test-0.1.0.3-f0feb61605817ae2c1b2e3b4bfbd8e89aef4c72586363cd87aaeb31ae908dd6f/share/doc/html/src"><span class="hs-identifier hs-var">runTests</span></a></span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Crypto.CBOR.html#tests"><span class="hs-identifier hs-var">Test.Cardano.Crypto.CBOR.tests</span></a></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Crypto.Hashing.html#tests"><span class="hs-identifier hs-var">Test.Cardano.Crypto.Hashing.tests</span></a></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Crypto.Json.html#tests"><span class="hs-identifier hs-var">Test.Cardano.Crypto.Json.tests</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Crypto.Keys.html#tests"><span class="hs-identifier hs-var">Test.Cardano.Crypto.Keys.tests</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Crypto.Limits.html#tests"><span class="hs-identifier hs-var">Test.Cardano.Crypto.Limits.tests</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Crypto.Random.html#tests"><span class="hs-identifier hs-var">Test.Cardano.Crypto.Random.tests</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Crypto.Signing.Redeem.html#tests"><span class="hs-identifier hs-var">Test.Cardano.Crypto.Signing.Redeem.tests</span></a></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Crypto.Signing.Redeem.Compact.html#tests"><span class="hs-identifier hs-var">Test.Cardano.Crypto.Signing.Redeem.Compact.tests</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Crypto.Signing.Safe.html#tests"><span class="hs-identifier hs-var">Test.Cardano.Crypto.Signing.Safe.tests</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">IO Bool
+</span><a href="Test.Cardano.Crypto.Signing.Signing.html#tests"><span class="hs-identifier hs-var">Test.Cardano.Crypto.Signing.Signing.tests</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-29"></span></pre></body></html>
