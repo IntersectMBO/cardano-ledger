@@ -39,7 +39,15 @@ import Cardano.Ledger.Babbage.Rules (
  )
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
+import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
+  Relation (..),
+  ShelleyBase,
+  StrictMaybe (..),
+  epochInfoPure,
+  swapMismatch,
+  unswapMismatch,
+ )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
@@ -140,16 +148,8 @@ data ConwayLedgerPredFailure era
   | ConwayCertsFailure (PredicateFailure (EraRule "CERTS" era))
   | ConwayGovFailure (PredicateFailure (EraRule "GOV" era))
   | ConwayWdrlNotDelegatedToDRep (NonEmpty (KeyHash 'Staking (EraCrypto era)))
-  | ConwayTreasuryValueMismatch
-      -- | Actual
-      Coin
-      -- | Submitted in transaction
-      Coin
-  | ConwayTxRefScriptsSizeTooBig
-      -- | Computed sum of reference script size
-      Int
-      -- | Maximum allowed total reference script size
-      Int
+  | ConwayTreasuryValueMismatch !(Mismatch 'RelEQ Coin) -- The serialisation order is in reverse
+  | ConwayTxRefScriptsSizeTooBig !(Mismatch 'RelLTEQ Int)
   | ConwayMempoolFailure Text
   deriving (Generic)
 
@@ -264,11 +264,10 @@ instance
       ConwayUtxowFailure x -> Sum (ConwayUtxowFailure @era) 1 !> To x
       ConwayCertsFailure x -> Sum (ConwayCertsFailure @era) 2 !> To x
       ConwayGovFailure x -> Sum (ConwayGovFailure @era) 3 !> To x
-      ConwayWdrlNotDelegatedToDRep x ->
-        Sum (ConwayWdrlNotDelegatedToDRep @era) 4 !> To x
-      ConwayTreasuryValueMismatch actual submitted ->
-        Sum (ConwayTreasuryValueMismatch @era) 5 !> To actual !> To submitted
-      ConwayTxRefScriptsSizeTooBig x y -> Sum ConwayTxRefScriptsSizeTooBig 6 !> To x !> To y
+      ConwayWdrlNotDelegatedToDRep x -> Sum (ConwayWdrlNotDelegatedToDRep @era) 4 !> To x
+      ConwayTreasuryValueMismatch mm ->
+        Sum (ConwayTreasuryValueMismatch @era . unswapMismatch) 5 !> ToGroup (swapMismatch mm)
+      ConwayTxRefScriptsSizeTooBig mm -> Sum ConwayTxRefScriptsSizeTooBig 6 !> ToGroup mm
       ConwayMempoolFailure t -> Sum ConwayMempoolFailure 7 !> To t
 
 instance
@@ -279,16 +278,15 @@ instance
   ) =>
   DecCBOR (ConwayLedgerPredFailure era)
   where
-  decCBOR =
-    decode $ Summands "ConwayLedgerPredFailure" $ \case
-      1 -> SumD ConwayUtxowFailure <! From
-      2 -> SumD ConwayCertsFailure <! From
-      3 -> SumD ConwayGovFailure <! From
-      4 -> SumD ConwayWdrlNotDelegatedToDRep <! From
-      5 -> SumD ConwayTreasuryValueMismatch <! From <! From
-      6 -> SumD ConwayTxRefScriptsSizeTooBig <! From <! From
-      7 -> SumD ConwayMempoolFailure <! From
-      n -> Invalid n
+  decCBOR = decode . Summands "ConwayLedgerPredFailure" $ \case
+    1 -> SumD ConwayUtxowFailure <! From
+    2 -> SumD ConwayCertsFailure <! From
+    3 -> SumD ConwayGovFailure <! From
+    4 -> SumD ConwayWdrlNotDelegatedToDRep <! From
+    5 -> SumD ConwayTreasuryValueMismatch <! (unswapMismatch <$> FromGroup)
+    6 -> SumD ConwayTxRefScriptsSizeTooBig <! FromGroup
+    7 -> SumD ConwayMempoolFailure <! From
+    n -> Invalid n
 
 data ConwayLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))
@@ -406,12 +404,22 @@ ledgerTransition = do
           SJust submittedTreasuryValue ->
             submittedTreasuryValue
               == actualTreasuryValue
-                ?! ConwayTreasuryValueMismatch actualTreasuryValue submittedTreasuryValue
+                ?! ConwayTreasuryValueMismatch
+                  ( Mismatch
+                      { mismatchSupplied = submittedTreasuryValue
+                      , mismatchExpected = actualTreasuryValue
+                      }
+                  )
 
         let totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxosUtxoL) tx
         totalRefScriptSize
           <= maxRefScriptSizePerTx
-            ?! ConwayTxRefScriptsSizeTooBig totalRefScriptSize maxRefScriptSizePerTx
+            ?! ConwayTxRefScriptsSizeTooBig
+              ( Mismatch
+                  { mismatchSupplied = totalRefScriptSize
+                  , mismatchExpected = maxRefScriptSizePerTx
+                  }
+              )
 
         let govState = utxoState ^. utxosGovStateL
             committee = govState ^. committeeGovStateL

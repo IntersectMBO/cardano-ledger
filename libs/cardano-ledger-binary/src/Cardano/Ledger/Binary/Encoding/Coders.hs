@@ -68,6 +68,7 @@ import Cardano.Ledger.Binary.Encoding.Encoder (
   encodeTag,
   encodeWord,
  )
+import Cardano.Ledger.Binary.Group (EncCBORGroup (..))
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 
 -- ====================================================================
@@ -128,6 +129,8 @@ data Encode (w :: Wrapped) t where
   Keyed :: t -> Encode ('Closed 'Sparse) t
   -- | Label an (component, field, argument) to be encoded using an existing EncCBOR instance.
   To :: EncCBOR a => a -> Encode ('Closed 'Dense) a
+  -- | Label components, set of fields, or arguments to be encoded using an existing EncCBORGroup instance.
+  ToGroup :: EncCBORGroup t => t -> Encode ('Closed 'Dense) t
   -- | Label an (component, field, argument) to be encoded using an existing EncCBOR instance.
   E :: (t -> Encoding) -> t -> Encode ('Closed 'Dense) t
   -- | Lift one Encode to another with a different type. Used to make a Functor instance of (Encode w).
@@ -161,6 +164,7 @@ runE (Sum cn _) = cn
 runE (Rec cn) = cn
 runE (ApplyE f x) = runE f (runE x)
 runE (To x) = x
+runE (ToGroup x) = x
 runE (E _ x) = x
 runE (MapE f x) = f $ runE x
 runE (OmitC x) = x
@@ -173,6 +177,7 @@ gsize :: Encode w t -> Word
 gsize (Sum _ _) = 0
 gsize (Rec _) = 0
 gsize (To _) = 1
+gsize (ToGroup x) = listLen x
 gsize (E _ _) = 1
 gsize (MapE _ x) = gsize x
 gsize (ApplyE f x) = gsize f + gsize x
@@ -192,6 +197,7 @@ encode = encodeCountPrefix 0
     encodeCountPrefix n (Keyed _) = encodeMapLen n
     encodeCountPrefix n (Rec _) = encodeListLen n
     encodeCountPrefix _ (To x) = encCBOR x
+    encodeCountPrefix _ (ToGroup x) = encCBORGroup x
     encodeCountPrefix _ (E enc x) = enc x
     encodeCountPrefix n (MapE _ x) = encodeCountPrefix n x
     encodeCountPrefix _ (OmitC _) = mempty
@@ -204,6 +210,7 @@ encode = encodeCountPrefix 0
         encodeClosed :: Encode ('Closed d) t -> Encoding
         encodeClosed (Rec _) = mempty
         encodeClosed (To x) = encCBOR x
+        encodeClosed (ToGroup x) = encCBORGroup x
         encodeClosed (E enc x) = enc x
         encodeClosed (MapE _ x) = encodeClosed x
         encodeClosed (ApplyE f x) = encodeClosed f <> encodeClosed x

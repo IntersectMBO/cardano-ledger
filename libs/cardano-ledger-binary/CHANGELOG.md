@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.4.0.1
+## 1.5.0.0
 
-*
+* Extend `Coders` to accommodate `{Enc|Dec}CBORGroup`. #4666
+  * Add `ToGroup` to `Encode`
+  * Add `FromGroup` to `Decode`
+* Add `{Enc|Dec}CBORGroup` instance for `(a, a)`. #4666
 
 ## 1.4.0.0
 

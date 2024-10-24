@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
@@ -61,3 +62,18 @@ listLenInt x = fromIntegral (listLen x)
 
 class Typeable a => DecCBORGroup a where
   decCBORGroup :: Decoder s a
+
+instance EncCBOR a => EncCBORGroup (a, a) where
+  encCBORGroup (x, y) =
+    encCBOR x <> encCBOR y
+  encodedGroupSizeExpr size_ proxy =
+    encodedSizeExpr size_ (fst <$> proxy)
+      + encodedSizeExpr size_ (snd <$> proxy)
+  listLen _ = 2
+  listLenBound _ = 2
+
+instance DecCBOR a => DecCBORGroup (a, a) where
+  decCBORGroup = do
+    x <- decCBOR
+    y <- decCBOR
+    pure (x, y)

@@ -1301,19 +1301,28 @@ ppConwayUtxoPredFailure = \case
       [ ("provided interval", ppValidityInterval vi)
       , ("current slot", pcSlotNo slot)
       ]
-  ConwayRules.MaxTxSizeUTxO actual maxs ->
-    ppRecord "MaxTxSizeUTxO" [("Actual", ppInteger actual), ("max transaction size", ppInteger maxs)]
+  ConwayRules.MaxTxSizeUTxO mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "MaxTxSizeUTxO"
+          [ ("Actual", ppInteger mismatchSupplied)
+          , ("max transaction size", ppInteger mismatchExpected)
+          ]
   ConwayRules.InputSetEmptyUTxO -> ppString "InputSetEmptyUTxO"
-  ConwayRules.FeeTooSmallUTxO computed supplied ->
-    ppRecord
-      "FeeTooSmallUTxO"
-      [ ("min fee for this transaction", pcCoin computed)
-      , ("fee supplied by this transaction", pcCoin supplied)
-      ]
-  ConwayRules.ValueNotConservedUTxO consumed produced ->
-    ppRecord
-      "ValueNotConservedUTxO"
-      [("coin consumed", pcVal @era reify consumed), ("coin produced", pcVal @era reify produced)]
+  ConwayRules.FeeTooSmallUTxO mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "FeeTooSmallUTxO"
+          [ ("fee supplied by this transaction", pcCoin mismatchSupplied)
+          , ("min fee for this transaction", pcCoin mismatchExpected)
+          ]
+  ConwayRules.ValueNotConservedUTxO mm@(Mismatch _ _) ->
+    let Mismatch {mismatchSupplied = consumed, mismatchExpected = produced} = mm
+     in ppRecord
+          "ValueNotConservedUTxO"
+          [ ("coin consumed", pcVal @era reify consumed)
+          , ("coin produced", pcVal @era reify produced)
+          ]
   ConwayRules.WrongNetwork n add ->
     ppRecord
       "WrongNetwork"
@@ -1352,26 +1361,29 @@ ppConwayUtxoPredFailure = \case
       , ("the required collateral for the given fee", pcCoin c2)
       ]
   ConwayRules.ScriptsNotPaidUTxO u -> ppSexp "ScriptsNotPaidUTxO" [pcUTxO reify u]
-  ConwayRules.ExUnitsTooBigUTxO e1 e2 ->
-    ppRecord
-      "ExUnitsTooBigUTxO"
-      [ ("Max EXUnits from the protocol parameters", pcExUnits e1)
-      , ("EXUnits supplied", pcExUnits e2)
-      ]
+  ConwayRules.ExUnitsTooBigUTxO mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "ExUnitsTooBigUTxO"
+          [ ("EXUnits supplied", pcExUnits mismatchSupplied)
+          , ("Max EXUnits from the protocol parameters", pcExUnits mismatchExpected)
+          ]
   ConwayRules.CollateralContainsNonADA v -> ppSexp "CollateralContainsNonADA" [pcVal (reify @era) v]
-  ConwayRules.WrongNetworkInTxBody n1 n2 ->
-    ppRecord
-      "WrongNetworkInTxBody"
-      [ ("Actual Network ID", ppNetwork n1)
-      , ("Network ID in transaction body", ppNetwork n2)
-      ]
+  ConwayRules.WrongNetworkInTxBody mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "WrongNetworkInTxBody"
+          [ ("Network ID in transaction body", ppNetwork mismatchSupplied)
+          , ("Actual Network ID", ppNetwork mismatchExpected)
+          ]
   ConwayRules.OutsideForecast slot -> ppRecord "OutsideForecast" [("slot number outside consensus forecast range", pcSlotNo slot)]
-  ConwayRules.TooManyCollateralInputs n1 n2 ->
-    ppRecord
-      "TooManyCollateralInputs"
-      [ ("Max allowed collateral inputs", ppNatural n1)
-      , ("Number of collateral inputs", ppNatural n2)
-      ]
+  ConwayRules.TooManyCollateralInputs mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "TooManyCollateralInputs"
+          [ ("Number of collateral inputs", ppNatural mismatchSupplied)
+          , ("Max allowed collateral inputs", ppNatural mismatchExpected)
+          ]
   ConwayRules.NoCollateralInputs -> ppSexp " NoCollateralInputs" []
   ConwayRules.IncorrectTotalCollateralField c1 c2 ->
     ppRecord
@@ -1411,7 +1423,8 @@ instance Reflect era => PrettyA (ShelleyLedgersPredFailure era) where
 ppConwayLedgerPredFailure :: Reflect era => Proof era -> ConwayLedgerPredFailure era -> PDoc
 ppConwayLedgerPredFailure proof x = case x of
   ConwayWdrlNotDelegatedToDRep s -> ppSexp "ConwayWdrlNotDelegatedToDRep" [prettyA s]
-  ConwayTreasuryValueMismatch c1 c2 -> ppSexp "ConwayTreasuryValueMismatch" [pcCoin c1, pcCoin c2]
+  ConwayTreasuryValueMismatch (Mismatch {mismatchSupplied = c1, mismatchExpected = c2}) ->
+    ppSexp "ConwayTreasuryValueMismatch" [pcCoin c1, pcCoin c2]
   ConwayGovFailure y -> case proof of
     Conway -> ppSexp "ConwayGovFailure" [ppConwayGovPredFailure y]
     _ ->
@@ -1423,7 +1436,7 @@ ppConwayLedgerPredFailure proof x = case x of
     _ ->
       error
         ("Only the ConwayEra has a (PredicateFailure (EraRule \"CERTS\" era)). This Era is " ++ show proof)
-  ConwayTxRefScriptsSizeTooBig s1 s2 ->
+  ConwayTxRefScriptsSizeTooBig (Mismatch {mismatchSupplied = s1, mismatchExpected = s2}) ->
     ppRecord
       "ConwayTxRefScriptsSizeTooBig"
       [ ("Computed sum of reference script size", ppInt s1)
@@ -1452,9 +1465,11 @@ ppConwayGovCertPredFailure :: ConwayGovCertPredFailure era -> PDoc
 ppConwayGovCertPredFailure z = case z of
   ConwayDRepAlreadyRegistered x -> ppSexp "ConwayDRepAlreadyRegistered" [pcCredential x]
   ConwayDRepNotRegistered x -> ppSexp "ConwayDRepNotRegistered" [pcCredential x]
-  ConwayDRepIncorrectDeposit c1 c2 -> ppSexp "ConwayDRepIncorrectDeposit" [pcCoin c1, pcCoin c2]
+  ConwayDRepIncorrectDeposit (Mismatch {mismatchSupplied = c1, mismatchExpected = c2}) ->
+    ppSexp "ConwayDRepIncorrectDeposit" [pcCoin c1, pcCoin c2]
   ConwayCommitteeHasPreviouslyResigned x -> ppSexp "ConwayCommitteeHasPreviouslyResigned" [pcCredential x]
-  ConwayDRepIncorrectRefund c1 c2 -> ppSexp "ConwayDRepIncorrectRefund" [pcCoin c1, pcCoin c2]
+  ConwayDRepIncorrectRefund (Mismatch {mismatchSupplied = c1, mismatchExpected = c2}) ->
+    ppSexp "ConwayDRepIncorrectRefund" [pcCoin c1, pcCoin c2]
   ConwayCommitteeIsUnknown c -> ppSexp "ConwayCommitteeIsUnknown" [pcCredential c]
 
 instance PrettyA (ConwayGovCertPredFailure era) where
@@ -1480,7 +1495,7 @@ ppConwayGovPredFailure x = case x of
     ppSexp "ProposalProcedureNetworkIdMismatch" [pcRewardAccount racnt, pcNetwork nw]
   TreasuryWithdrawalsNetworkIdMismatch sr nw ->
     ppSexp "TreasuryWithdrawalsNetworkIdMismatch" [ppSet pcRewardAccount sr, pcNetwork nw]
-  ProposalDepositIncorrect c1 c2 -> ppSexp "ProposalDepositIncorrect" [pcCoin c1, pcCoin c2]
+  ProposalDepositIncorrect (Mismatch supplied expected) -> ppSexp "ProposalDepositIncorrect" [pcCoin supplied, pcCoin expected]
   DisallowedVoters m -> ppSexp "DisallowedVoters" [prettyA m]
   ConflictingCommitteeUpdate s ->
     ppSexp "ConflictingCommitteeUpdate" [ppSet pcCredential s]
@@ -1488,7 +1503,7 @@ ppConwayGovPredFailure x = case x of
   InvalidPrevGovActionId p -> ppSexp "InvalidPrevGovActionId" [pcProposalProcedure p]
   VotingOnExpiredGovAction m ->
     ppSexp "VotingOnExpiredGovAction" [prettyA m]
-  ProposalCantFollow s1 p1 p2 ->
+  ProposalCantFollow s1 Mismatch {mismatchSupplied = p1, mismatchExpected = p2} ->
     ppSexp "ProposalCantFollow" [ppStrictMaybe pcGovPurposeId s1, ppProtVer p1, ppProtVer p2]
   InvalidPolicyHash a b ->
     ppSexp "InvalidPolicyHash" [ppStrictMaybe prettyA a, ppStrictMaybe prettyA b]
@@ -1530,21 +1545,24 @@ ppConwayUtxowPredFailure proof = \case
     ppSexp " MissingTxMetadata" [ppAuxiliaryDataHash m]
   ConwayRules.MissingTxMetadata m ->
     ppSexp " MissingTxMetadata" [ppAuxiliaryDataHash m]
-  ConwayRules.ConflictingMetadataHash h1 h2 ->
-    ppRecord
-      "ConflictingMetadataHash"
-      [("Hash in the body", ppAuxiliaryDataHash h1), ("Hash of full metadata", ppAuxiliaryDataHash h2)]
+  ConwayRules.ConflictingMetadataHash mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "ConflictingMetadataHash"
+          [ ("Hash in the body", ppAuxiliaryDataHash mismatchSupplied)
+          , ("Hash of full metadata", ppAuxiliaryDataHash mismatchExpected)
+          ]
   ConwayRules.InvalidMetadata ->
     ppSexp "InvalidMetadata" []
   ConwayRules.ExtraneousScriptWitnessesUTXOW m ->
     ppSexp "ExtraneousScriptWitnessesUTXOW" [ppSet pcScriptHash m]
   ConwayRules.MissingRedeemers xs ->
     ppSexp "MissingRedeemers" [ppList (ppPair ppPlutusPurposeAsItem prettyA) xs]
-  ConwayRules.MissingRequiredDatums s1 s2 ->
+  ConwayRules.MissingRequiredDatums h1 h2 ->
     ppRecord
       "MissingRequiredDatums"
-      [ ("missing data hashes", ppSet ppSafeHash s1)
-      , ("received data hashes", ppSet ppSafeHash s2)
+      [ ("received data hashes", ppSet ppSafeHash h1)
+      , ("missing data hashes", ppSet ppSafeHash h2)
       ]
   ConwayRules.NotAllowedSupplementalDatums s1 s2 ->
     ppRecord
@@ -1552,12 +1570,13 @@ ppConwayUtxowPredFailure proof = \case
       [ ("unallowed data hashes", ppSet ppSafeHash s1)
       , ("acceptable data hashes", ppSet ppSafeHash s2)
       ]
-  ConwayRules.PPViewHashesDontMatch h1 h2 ->
-    ppRecord
-      "PPViewHashesDontMatch"
-      [ ("PPHash in the TxBody", ppStrictMaybe ppSafeHash h1)
-      , ("PPHash Computed from the current Protocol Parameters", ppStrictMaybe ppSafeHash h2)
-      ]
+  ConwayRules.PPViewHashesDontMatch mm@(Mismatch _ _) ->
+    let Mismatch {..} = mm
+     in ppRecord
+          "PPViewHashesDontMatch"
+          [ ("PPHash in the TxBody", ppStrictMaybe ppSafeHash mismatchSupplied)
+          , ("PPHash Computed from the current Protocol Parameters", ppStrictMaybe ppSafeHash mismatchExpected)
+          ]
   ConwayRules.UnspendableUTxONoDatumHash x ->
     ppSexp "UnspendableUTxONoDatumHash" [ppSet pcTxIn x]
   ConwayRules.ExtraRedeemers x ->
@@ -1609,32 +1628,35 @@ ppBbodyPredicateFailure (LedgersFailure x) =
 instance Reflect era => PrettyA (ShelleyBbodyPredFailure era) where
   prettyA = ppBbodyPredicateFailure
 
--- ================
 ppConwayBbodyPredFail :: forall era. Reflect era => ConwayBbodyPredFailure era -> PDoc
-ppConwayBbodyPredFail (ConwayRules.BodyRefScriptsSizeTooBig s1 s2) =
-  ppRecord
-    "BodyRefScriptsSizeTooBig"
-    [ ("Computed sum of reference script size", ppInt s1)
-    , ("Maximum allowed total reference script size", ppInt s2)
-    ]
-ppConwayBbodyPredFail (ConwayRules.TooManyExUnits e1 e2) =
-  ppRecord
-    "TooManyExUnits"
-    [ ("Computed Sum of ExUnits for all plutus scripts", pcExUnits e1)
-    , ("Maximum allowed by protocal parameters", pcExUnits e2)
-    ]
-ppConwayBbodyPredFail (ConwayRules.WrongBlockBodySizeBBODY x y) =
-  ppRecord
-    "WrongBlockBodySizeBBODY"
-    [ ("actual computed BBody size", ppInt x)
-    , ("claimed BBody Size in Header", ppInt y)
-    ]
-ppConwayBbodyPredFail (ConwayRules.InvalidBodyHashBBODY h1 h2) =
-  ppRecord
-    "(InvalidBodyHashBBODY"
-    [ ("actual hash", ppHash h1)
-    , ("claimed hash", ppHash h2)
-    ]
+ppConwayBbodyPredFail (ConwayRules.BodyRefScriptsSizeTooBig mm@(Mismatch _ _)) =
+  let Mismatch {..} = mm
+   in ppRecord
+        "BodyRefScriptsSizeTooBig"
+        [ ("Computed sum of reference script size", ppInt mismatchSupplied)
+        , ("Maximum allowed total reference script size", ppInt mismatchExpected)
+        ]
+ppConwayBbodyPredFail (ConwayRules.TooManyExUnits mm@(Mismatch _ _)) =
+  let Mismatch {..} = mm
+   in ppRecord
+        "TooManyExUnits"
+        [ ("Computed Sum of ExUnits for all plutus scripts", pcExUnits mismatchSupplied)
+        , ("Maximum allowed by protocal parameters", pcExUnits mismatchExpected)
+        ]
+ppConwayBbodyPredFail (ConwayRules.WrongBlockBodySizeBBODY mm@(Mismatch _ _)) =
+  let Mismatch {..} = mm
+   in ppRecord
+        "WrongBlockBodySizeBBODY"
+        [ ("actual computed BBody size", ppInt mismatchSupplied)
+        , ("claimed BBody Size in Header", ppInt mismatchExpected)
+        ]
+ppConwayBbodyPredFail (ConwayRules.InvalidBodyHashBBODY mm@(Mismatch _ _)) =
+  let Mismatch {..} = mm
+   in ppRecord
+        "(InvalidBodyHashBBODY"
+        [ ("actual hash", ppHash mismatchSupplied)
+        , ("claimed hash", ppHash mismatchExpected)
+        ]
 ppConwayBbodyPredFail (ConwayRules.LedgersFailure x) =
   ppSexp "LedgersFailure" [ppLEDGERS @era reify x]
 

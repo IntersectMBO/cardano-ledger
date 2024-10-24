@@ -8,6 +8,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -76,6 +77,8 @@ module Cardano.Ledger.BaseTypes (
   ShelleyBase,
   Relation (..),
   Mismatch (..),
+  swapMismatch,
+  unswapMismatch,
 
   -- * Injection
   Inject (..),
@@ -737,6 +740,14 @@ data Mismatch (r :: Relation) a = Mismatch
   }
   deriving (Eq, Ord, Show, Generic, NFData, ToJSON, FromJSON, NoThunks)
 
+-- | Convert a `Mismatch` to a tuple that has "supplied" and "expected" swapped places
+swapMismatch :: Mismatch r a -> (a, a)
+swapMismatch Mismatch {mismatchSupplied, mismatchExpected} = (mismatchExpected, mismatchSupplied)
+
+-- | Convert a tuple that has "supplied" and "expected" swapped places to a `Mismatch` type.
+unswapMismatch :: (a, a) -> Mismatch r a
+unswapMismatch (mismatchExpected, mismatchSupplied) = Mismatch {mismatchSupplied, mismatchExpected}
+
 instance (EncCBOR a, Typeable r) => EncCBOR (Mismatch r a) where
   encCBOR (Mismatch supplied expected) =
     encode $
@@ -750,6 +761,20 @@ instance (DecCBOR a, Typeable r) => DecCBOR (Mismatch r a) where
       RecD Mismatch
         <! From
         <! From
+
+instance (Typeable r, EncCBOR a) => EncCBORGroup (Mismatch r a) where
+  encCBORGroup Mismatch {..} = encCBOR mismatchSupplied <> encCBOR mismatchExpected
+  encodedGroupSizeExpr size_ proxy =
+    encodedSizeExpr size_ (mismatchSupplied <$> proxy)
+      + encodedSizeExpr size_ (mismatchExpected <$> proxy)
+  listLen _ = 2
+  listLenBound _ = 2
+
+instance (Typeable r, DecCBOR a) => DecCBORGroup (Mismatch r a) where
+  decCBORGroup = do
+    mismatchSupplied <- decCBOR
+    mismatchExpected <- decCBOR
+    pure Mismatch {..}
 
 data Network
   = Testnet
