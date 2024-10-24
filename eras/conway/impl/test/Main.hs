@@ -17,6 +17,7 @@ import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReo
 import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
+import qualified Test.Cardano.Ledger.Conway.SPORatifySpec as SPORatifySpec
 import qualified Test.Cardano.Ledger.Conway.Spec as Spec
 import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
@@ -32,6 +33,7 @@ main =
       Cddl.spec
       DRepRatify.spec
       CommitteeRatify.spec
+      SPORatifySpec.spec
       Genesis.spec
       GovActionReorder.spec
       roundTripJsonEraSpec @Conway
