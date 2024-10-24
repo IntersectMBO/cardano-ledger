@@ -127,7 +127,7 @@ proposalsSpec =
       initialPulser <- getsNES $ newEpochStateGovStateL . drepPulsingStateGovStateL
       initialEnactState <- getEnactState
 
-      (govActionId, _) <- submitConstitution SNothing
+      govActionId <- submitConstitution SNothing
       curConstitution' <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
       impAnn "Constitution has not been enacted yet" $
         curConstitution' `shouldBe` curConstitution

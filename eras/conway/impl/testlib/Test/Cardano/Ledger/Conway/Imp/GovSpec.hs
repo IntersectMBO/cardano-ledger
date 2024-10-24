@@ -313,9 +313,9 @@ proposalsWithVotingSpec =
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node SNothing (fmap SJust <$> a)
         passEpoch
-        p4 <- submitConstitutionGovAction SNothing
-        p31 <- submitConstitutionGovAction $ SJust p3
-        p211 <- submitConstitutionGovAction $ SJust p21
+        p4 <- submitConstitution SNothing
+        p31 <- submitConstitution $ SJust (GovPurposeId p3)
+        p211 <- submitConstitution $ SJust (GovPurposeId p21)
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node
             SNothing
@@ -345,8 +345,8 @@ proposalsWithVotingSpec =
             , Node () []
             , Node () []
             ]
-        p2131 <- submitConstitutionGovAction $ SJust p213
-        p2141 <- submitConstitutionGovAction $ SJust p214
+        p2131 <- submitConstitution $ SJust (GovPurposeId p213)
+        p2141 <- submitConstitution $ SJust (GovPurposeId p214)
         submitYesVote_ (DRepVoter drepC) p212
         submitYesVoteCCs_ committeeMembers' p212
         fmap (!! 3) getProposalsForest
@@ -498,7 +498,7 @@ proposalsWithVotingSpec =
       submitProposal_ prop3
       checkProps [prop0, prop1, prop2, prop3]
   where
-    submitConstitutionForest = submitGovActionForest submitConstitutionGovAction
+    submitConstitutionForest = submitGovActionForest $ submitConstitution . fmap GovPurposeId
 
 proposalsSpec ::
   forall era.
@@ -800,7 +800,7 @@ votingSpec =
         -- Voting after the 3rd epoch should fail
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
         (drep, _, _) <- setupSingleDRep 1_000_000
-        (govActionId, _) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         passNEpochs 3
         submitFailingVote
           (DRepVoter drep)
@@ -809,7 +809,7 @@ votingSpec =
           ]
       it "non-existent gov-actions" $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
-        (govActionId, _) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         let dummyGaid = govActionId {gaidGovActionIx = GovActionIx 99} -- non-existent `GovActionId`
         submitFailingVote
           (DRepVoter drep)
@@ -923,7 +923,7 @@ constitutionSpec =
       it "empty PrevGovId after the first constitution was enacted" $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
-        (govActionId, _constitution) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         submitYesVote_ (DRepVoter dRep) govActionId
         submitYesVoteCCs_ committeeMembers' govActionId
         passNEpochs 2
@@ -938,7 +938,7 @@ constitutionSpec =
           [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
           ]
       it "invalid index in GovPurposeId" $ do
-        (govActionId, _constitution) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         passNEpochs 2
         constitution <- arbitrary
         let invalidPrevGovActionId =
@@ -954,7 +954,7 @@ constitutionSpec =
           [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
           ]
       it "valid GovPurposeId but invalid purpose" $ do
-        (govActionId, _constitution) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         passNEpochs 2
         let invalidNoConfidenceAction =
               NoConfidence $ SJust $ GovPurposeId govActionId

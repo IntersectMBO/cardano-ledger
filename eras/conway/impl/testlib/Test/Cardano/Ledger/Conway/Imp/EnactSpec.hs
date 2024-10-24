@@ -365,7 +365,8 @@ constitutionSpec =
   it "Constitution" $ do
     (committeeMember1 :| [committeeMember2]) <- registerInitialCommittee
     (dRep, _, _) <- setupSingleDRep 1_000_000
-    (govActionId, constitution) <- submitConstitution SNothing
+    (proposal, constitution) <- mkConstitutionProposal SNothing
+    govActionId <- submitProposal proposal
     initialConstitution <- getConstitution
 
     proposalsBeforeVotes <- getsNES $ newEpochStateGovStateL . proposalsGovStateL

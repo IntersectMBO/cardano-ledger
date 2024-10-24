@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -32,6 +33,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   trySubmitGovActions,
   trySubmitProposal,
   trySubmitProposals,
+  mkConstitutionProposal,
   mkProposal,
   mkProposalWithRewardAccount,
   submitTreasuryWithdrawals,
@@ -76,7 +78,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   proposalsShowDebug,
   getGovPolicy,
   submitFailingGovAction,
-  submitConstitutionGovAction,
   submitGovActionForest,
   submitGovActionTree,
   getProposalsForest,
@@ -1428,24 +1429,6 @@ proposalsShowDebug ps showRoots =
          )
       <> ["----- Proposals End -----"]
 
-submitConstitutionGovAction ::
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
-  StrictMaybe (GovActionId (EraCrypto era)) ->
-  ImpTestM era (GovActionId (EraCrypto era))
-submitConstitutionGovAction gid = do
-  constitutionHash <- freshSafeHash
-  let constitutionAction =
-        NewConstitution
-          (GovPurposeId <$> gid)
-          ( Constitution
-              ( Anchor
-                  (fromJust $ textToUrl 64 "constitution.dummy.0")
-                  constitutionHash
-              )
-              SNothing
-          )
-  submitGovAction constitutionAction
-
 getProposalsForest ::
   ConwayEraGov era =>
   ImpTestM era (Forest (StrictMaybe (GovActionId (EraCrypto era))))
@@ -1534,19 +1517,22 @@ expectNumDormantEpochs expected = do
       nesEsL . esLStateL . lsCertStateL . certVStateL . vsNumDormantEpochsL
   nd `shouldBeExpr` expected
 
+mkConstitutionProposal ::
+  ConwayEraImp era =>
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  ImpTestM era (ProposalProcedure era, Constitution era)
+mkConstitutionProposal prevGovId = do
+  constitution <- arbitrary
+  (,constitution) <$> mkProposal (NewConstitution prevGovId constitution)
+
 submitConstitution ::
   forall era.
   ConwayEraImp era =>
   StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
-  ImpTestM era (GovActionId (EraCrypto era), Constitution era)
+  ImpTestM era (GovActionId (EraCrypto era))
 submitConstitution prevGovId = do
-  constitution <- arbitrary
-  let constitutionAction =
-        NewConstitution
-          prevGovId
-          constitution
-  govActionId <- submitGovAction constitutionAction
-  pure (govActionId, constitution)
+  (proposal, _) <- mkConstitutionProposal prevGovId
+  submitProposal proposal
 
 expectDRepNotRegistered ::
   HasCallStack =>

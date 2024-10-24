@@ -6,6 +6,8 @@
 
 ### `testlib`
 
+* Add `mkConstitutionProposal`
+* Remove `submitConstitutionGovAction` and change signature of `submitConstitution`
 * Add `mkProposal` and `mkProposalWithRewardAccount`
 * Add `whenBootstrap`
 

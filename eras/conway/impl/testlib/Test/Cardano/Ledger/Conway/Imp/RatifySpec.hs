@@ -237,7 +237,7 @@ committeeExpiryResignationDiscountSpec =
       committeeHotC1 <- registerCommitteeHotKey committeeColdC1
       _committeeHotC2 <- registerCommitteeHotKey committeeColdC2
       -- Submit a constitution with a CC vote
-      (gaiConstitution, _constitution) <- submitConstitution SNothing
+      gaiConstitution <- submitConstitution SNothing
       submitYesVote_ (CommitteeVoter committeeHotC1) gaiConstitution
       -- Check for CC acceptance
       ccShouldNotBeExpired committeeColdC2
@@ -269,7 +269,7 @@ committeeExpiryResignationDiscountSpec =
       committeeHotC1 <- registerCommitteeHotKey committeeColdC1
       _committeeHotC2 <- registerCommitteeHotKey committeeColdC2
       -- Submit a constitution with a CC vote
-      (gaiConstitution, _constitution) <- submitConstitution SNothing
+      gaiConstitution <- submitConstitution SNothing
       submitYesVote_ (CommitteeVoter committeeHotC1) gaiConstitution
       -- Check for CC acceptance
       ccShouldNotBeResigned committeeColdC2
@@ -1259,10 +1259,10 @@ delayingActionsSpec =
     it "A delaying action delays its child even when both ere proposed and ratified in the same epoch" $ do
       committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
-      gai0 <- submitConstitutionGovAction SNothing
-      gai1 <- submitConstitutionGovAction $ SJust gai0
-      gai2 <- submitConstitutionGovAction $ SJust gai1
-      gai3 <- submitConstitutionGovAction $ SJust gai2
+      gai0 <- submitConstitution SNothing
+      gai1 <- submitConstitution $ SJust (GovPurposeId gai0)
+      gai2 <- submitConstitution $ SJust (GovPurposeId gai1)
+      gai3 <- submitConstitution $ SJust (GovPurposeId gai2)
       submitYesVote_ (DRepVoter dRep) gai0
       submitYesVoteCCs_ committeeMembers' gai0
       submitYesVote_ (DRepVoter dRep) gai1
@@ -1297,8 +1297,8 @@ delayingActionsSpec =
           submitParameterChange
             (SJust pGai1)
             $ def & ppuDRepDepositL .~ SJust (Coin 1_000_002)
-        cGai0 <- submitConstitutionGovAction SNothing
-        cGai1 <- submitConstitutionGovAction $ SJust cGai0
+        cGai0 <- submitConstitution SNothing
+        cGai1 <- submitConstitution $ SJust (GovPurposeId cGai0)
         submitYesVote_ (DRepVoter dRep) cGai0
         submitYesVoteCCs_ committeeMembers' cGai0
         submitYesVote_ (DRepVoter dRep) cGai1
@@ -1329,10 +1329,10 @@ delayingActionsSpec =
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-        gai0 <- submitConstitutionGovAction SNothing
-        gai1 <- submitConstitutionGovAction $ SJust gai0
-        gai2 <- submitConstitutionGovAction $ SJust gai1
-        gai3 <- submitConstitutionGovAction $ SJust gai2
+        gai0 <- submitConstitution SNothing
+        gai1 <- submitConstitution $ SJust (GovPurposeId gai0)
+        gai2 <- submitConstitution $ SJust (GovPurposeId gai1)
+        gai3 <- submitConstitution $ SJust (GovPurposeId gai2)
         submitYesVote_ (DRepVoter dRep) gai0
         submitYesVoteCCs_ committeeMembers' gai0
         submitYesVote_ (DRepVoter dRep) gai1
@@ -1366,9 +1366,9 @@ delayingActionsSpec =
           submitParameterChange
             (SJust pGai1)
             $ def & ppuDRepDepositL .~ SJust (Coin 1_000_002)
-        cGai0 <- submitConstitutionGovAction SNothing
-        cGai1 <- submitConstitutionGovAction $ SJust cGai0
-        cGai2 <- submitConstitutionGovAction $ SJust cGai1
+        cGai0 <- submitConstitution SNothing
+        cGai1 <- submitConstitution $ SJust (GovPurposeId cGai0)
+        cGai2 <- submitConstitution $ SJust (GovPurposeId cGai1)
         submitYesVote_ (DRepVoter dRep) cGai0
         submitYesVoteCCs_ committeeMembers' cGai0
         submitYesVote_ (DRepVoter dRep) cGai1
@@ -1427,7 +1427,8 @@ delayingActionsSpec =
 
         -- other actions get ratified and enacted
         govIdConst1 <- impAnn "Other actions are ratified and enacted" $ do
-          (govIdConst1, constitution) <- submitConstitution SNothing
+          (proposal, constitution) <- mkConstitutionProposal SNothing
+          govIdConst1 <- submitProposal proposal
           submitYesVote_ (DRepVoter drep) govIdConst1
           submitYesVoteCCs_ hks govIdConst1
 
@@ -1450,7 +1451,8 @@ delayingActionsSpec =
           expectMembers $ initialMembers <> membersExceedingExpiry
 
         impAnn "New committee can vote" $ do
-          (govIdConst2, constitution) <- submitConstitution $ SJust (GovPurposeId govIdConst1)
+          (proposal, constitution) <- mkConstitutionProposal $ SJust (GovPurposeId govIdConst1)
+          govIdConst2 <- submitProposal proposal
           submitYesVote_ (DRepVoter drep) govIdConst2
           hks' <- traverse registerCommitteeHotKey (Set.toList membersExceedingExpiry)
           submitYesVoteCCs_ hks' govIdConst2
