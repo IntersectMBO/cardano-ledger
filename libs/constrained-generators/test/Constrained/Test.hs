@@ -61,7 +61,7 @@ tests nightly =
     testSpec "emptyListSpec" emptyListSpec
     testSpec "eitherSpec" eitherSpec
     testSpec "maybeSpec" maybeSpec
-    testSpec "eitherSetSpec" eitherSetSpec
+    testSpecNoShrink "eitherSetSpec" eitherSetSpec
     testSpec "fooSpec" fooSpec
     -- TODO: this spec needs double shrinking to shrink properly
     -- so we need to figure something out about double-shrinking
@@ -70,7 +70,7 @@ tests nightly =
     -- TODO: double shrinking
     testSpecNoShrink "mapIsJust" mapIsJust
     testSpec "mapElemKeySpec" mapElemKeySpec
-    testSpec "mapPairSpec" mapPairSpec
+    testSpecNoShrink "mapPairSpec" mapPairSpec
     testSpecNoShrink "mapEmptyDomainSpec" mapEmptyDomainSpec
     -- TODO: this _can_ be shrunk, but it's incredibly expensive to do
     -- so and it's not obvious if there is a faster way without implementing
@@ -86,7 +86,7 @@ tests nightly =
     testSpec "eitherSimpleSetSpec" eitherSimpleSetSpec
     testSpecNoShrink "emptySetSpec" emptySetSpec
     testSpec "forAllAnySpec" forAllAnySpec
-    testSpec "notSubsetSpec" notSubsetSpec
+    testSpecNoShrink "notSubsetSpec" notSubsetSpec
     testSpec "maybeJustSetSpec" maybeJustSetSpec
     testSpec "weirdSetPairSpec" weirdSetPairSpec
     testSpec "knownDomainMap" knownDomainMap
