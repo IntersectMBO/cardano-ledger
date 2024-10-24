@@ -1075,7 +1075,9 @@ instance SpecTranslate ctx (PoolDistr c) where
     pure . Agda.MkHSMap $ first (Agda.CredVoter Agda.SPO . Agda.KeyHashObj) <$> l
 
 instance
-  Inject ctx Coin =>
+  ( Inject ctx Coin
+  , Inject ctx (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+  ) =>
   SpecTranslate ctx (RatifyEnv era)
   where
   type SpecRep (RatifyEnv era) = Agda.RatifyEnv
@@ -1088,12 +1090,17 @@ instance
         pure . Agda.StakeDistrs $ Agda.MkHSMap (stakeDistrsMap <> drepDistrsMap)
       dreps = toSpecRep $ Map.map drepExpiry reDRepState
     treasury <- askCtx @Coin
+    stakeDelegs <-
+      askCtx @(Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
     Agda.MkRatifyEnv
       <$> stakeDistrs
       <*> toSpecRep reCurrentEpoch
       <*> dreps
       <*> toSpecRep reCommitteeState
       <*> toSpecRep treasury
+      <*> toSpecRep rePoolParams
+      <*> toSpecRep reDelegatees
+      <*> toSpecRep stakeDelegs
 
 instance SpecTranslate ctx Bool where
   type SpecRep Bool = Bool
