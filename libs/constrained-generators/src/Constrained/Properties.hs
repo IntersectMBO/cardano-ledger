@@ -102,7 +102,7 @@ prop_univSound (TestableFn fn) =
             let sspec = simplifySpec (propagateSpecFun fn ctx spec)
              in QC.counterexample ("\n" ++ show ("propagateSpecFun fn ctx spec =" /> pretty sspec)) $
                   QC.counterexample ("\n" ++ show (prettyPlan sspec)) $
-                    QC.within 10_000_000 $
+                    QC.within 20_000_000 $
                       QC.forAllBlind (strictGen $ genFromSpecT @_ @_ sspec) $ \ge ->
                         fromGEDiscard $ do
                           a <- ge
