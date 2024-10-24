@@ -1142,18 +1142,114 @@ genFromSpecT (simplifySpec -> spec) = case spec of
 
 shrinkWithSpec :: forall fn a. HasSpec fn a => Specification fn a -> a -> [a]
 -- TODO: possibly allow for ignoring the `conformsToSpec` check in the `TypeSpec`
--- case when you know what you're doing
+-- case when you know what you're doing (remember to filter on cant)
 shrinkWithSpec (simplifySpec -> spec) a = filter (`conformsToSpec` spec) $ case spec of
-  -- TODO: filter on can't if we have a known to be sound shrinker
   TypeSpec s _ -> shrinkWithTypeSpec @fn s a
-  -- TODO: The better way of doing this is to compute the dependency graph,
-  -- shrink one variable at a time, and fixup the rest of the variables
-  SuspendedSpec {} -> shr a
+  SuspendedSpec x p -> shr a ++ shrinkFromPreds p x a
+  -- TODO: with a defined shrink order we would be able to do something like:
+  -- `MemberSpec as -> filter (\a' -> shrinkOrder a' a == LT) $ sortBy shrinkOrder as`
+  -- But because we don't we have to be more careful here, otherwise we risk either
+  -- creating shrink loops or if you have `shrinkWithSpec (MemberSpec [3,2,1,0]) 1` you
+  -- would risk shrinking to `[3,2]` instead of `[0]`.
   MemberSpec {} -> shr a
   TrueSpec -> shr a
   ErrorSpec {} -> []
   where
     shr = shrinkWithTypeSpec @fn (emptySpec @fn @a)
+
+shrinkFromPreds :: HasSpec fn a => Pred fn -> Var a -> a -> [a]
+shrinkFromPreds p
+  | Result _ plan <- prepareLinearization p = \x a -> listFromGE $ do
+      -- NOTE: we do this to e.g. guard against bad construction functions in Exists
+      xaGood <- checkPred (singletonEnv x a) p
+      unless xaGood $
+        fatalError1 "Trying to shrink a bad value, don't do that!"
+      -- Get an `env` for the original value
+      initialEnv <- envFromPred (singletonEnv x a) p
+      return
+        [ a'
+        | -- Shrink the initialEnv
+        env' <- shrinkEnvFromPlan initialEnv plan
+        , -- Get the value of the constrained variable `x` in the shrunk env
+        Just a' <- [lookupEnv env' x]
+        , -- NOTE: this is necessary because it's possible that changing
+        -- a particular value in the env during shrinking might not result
+        -- in the value of `x` changing and there is no better way to know than
+        -- to do this.
+        a' /= a
+        ]
+  | otherwise = error "Bad pred"
+
+-- Start with a valid Env for the plan and try to shrink it
+shrinkEnvFromPlan :: Env -> SolverPlan fn -> [Env]
+shrinkEnvFromPlan initialEnv SolverPlan {..} = go mempty solverPlan
+  where
+    go _ [] = [] -- In this case we decided to keep every variable the same so nothing to return
+    go env ((substStage env -> SolverStage {..}) : plan) = do
+      Just a <- [lookupEnv initialEnv stageVar]
+      -- Two cases:
+      --  - either we shrink this value and try to fixup every value later on in the plan or
+      [ env' <> fixedEnv
+        | a' <- shrinkWithSpec stageSpec a
+        , let env' = extendEnv stageVar a' env
+        , Just fixedEnv <- [fixupPlan env' plan]
+        ]
+        --  - we keep this value the way it is and try to shrink some later value
+        ++ go (extendEnv stageVar a env) plan
+
+    -- Fix the rest of the plan given an environment `env` for the plan so far
+    fixupPlan env [] = pure env
+    fixupPlan env ((substStage env -> SolverStage {..}) : plan) =
+      case lookupEnv initialEnv stageVar >>= fixupWithSpec stageSpec of
+        Nothing -> Nothing
+        Just a -> fixupPlan (extendEnv stageVar a env) plan
+
+-- Try to fix a value w.r.t a specification
+fixupWithSpec :: forall fn a. HasSpec fn a => Specification fn a -> a -> Maybe a
+fixupWithSpec spec a
+  | a `conformsToSpec` spec = Just a
+  | otherwise = case spec of
+      MemberSpec (a :| _) -> Just a
+      _ -> listToMaybe $ filter (`conformsToSpec` spec) (shrinkWithSpec @fn TrueSpec a)
+
+-- Construct an environment for all variables that show up on the top level
+-- (i.e. ones bound in `let` and `exists`) from an environment for all the free
+-- variables in the pred. The environment you get out of this function is
+-- _bigger_ than the environment you put in. From
+-- ```
+-- let y = x + 1 in let z = y + 1 in foo x y z
+-- ```
+-- and an environment with `{x -> 1}` you would get `{x -> 1, y -> 2, z -> 3}`
+-- out.
+envFromPred :: Env -> Pred fn -> GE Env
+envFromPred env p = case p of
+  -- NOTE: these don't bind anything
+  Assert {} -> pure env
+  DependsOn {} -> pure env
+  Monitor {} -> pure env
+  TruePred {} -> pure env
+  FalsePred {} -> pure env
+  GenHint {} -> pure env
+  -- NOTE: this is ok because the variables either come from an `Exists`, a `Let`, or from
+  -- the top level
+  Reifies {} -> pure env
+  -- NOTE: variables in here shouldn't escape to the top level
+  ForAll {} -> pure env
+  Case {} -> pure env
+  -- These can introduce binders that show up in the plan
+  When _ p -> envFromPred env p
+  Subst x a p -> envFromPred env (substitutePred x a p)
+  Let t (x :-> p) -> do
+    v <- runTerm env t
+    envFromPred (extendEnv x v env) p
+  Explain _ p -> envFromPred env p
+  Exists c (x :-> p) -> do
+    v <- c (errorGE . explain1 "envFromPred: Exists" . runTerm env)
+    envFromPred (extendEnv x v env) p
+  Block [] -> pure env
+  Block (p : ps) -> do
+    env' <- envFromPred env p
+    envFromPred env' (Block ps)
 
 -- | A version of `genFromSpecT` that simply errors if the generator fails
 genFromSpec :: forall fn a. (HasCallStack, HasSpec fn a) => Specification fn a -> Gen a

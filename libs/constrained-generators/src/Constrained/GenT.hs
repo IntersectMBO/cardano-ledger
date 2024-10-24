@@ -137,6 +137,10 @@ headGE t
   | x : _ <- toList t = pure x
   | otherwise = fatalError (pure "head of empty structure")
 
+-- | Turn a `GE [a]` to `[a]`, `genError` goes to `[]` and `fatalError` to `error`.
+listFromGE :: GE [a] -> [a]
+listFromGE = fromGE (const []) . explain1 "listFromGE"
+
 ------------------------------------------------------------------------
 -- GenT
 ------------------------------------------------------------------------
