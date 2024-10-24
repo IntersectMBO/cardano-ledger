@@ -19,7 +19,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..), PredicateFailure)
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Plutus.CostModels (updateCostModels)
 import qualified Cardano.Ledger.Shelley.HardForks as HF
@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Val (zero, (<->))
 import Data.Default.Class (Default (..))
+import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -54,8 +55,6 @@ spec ::
   SpecWith (ImpTestState era)
 spec = do
   relevantDuringBootstrapSpec
-  constitutionSpec
-  proposalsWithVotingSpec
   votingSpec
   policySpec
   predicateFailuresSpec
@@ -68,6 +67,7 @@ relevantDuringBootstrapSpec ::
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
+  constitutionSpec
   withdrawalsSpec
   hardForkSpec
   pparamUpdateSpec
@@ -249,277 +249,6 @@ pparamUpdateSpec =
           )
           [injectFailure $ MalformedProposal ga]
 
-proposalsWithVotingSpec ::
-  forall era.
-  ConwayEraImp era =>
-  SpecWith (ImpTestState era)
-proposalsWithVotingSpec =
-  describe "Proposals" $ do
-    describe "Consistency" $ do
-      it "Subtrees are pruned when competing proposals are enacted" $ do
-        (dRep, committeeMember, GovPurposeId committeeGovActionId) <- electBasicCommittee
-        a@[ _
-            , b@(Node p2 _)
-            ] <-
-          submitConstitutionForest
-            SNothing
-            [ Node
-                ()
-                [ Node
-                    ()
-                    [ Node () []
-                    , Node () []
-                    ]
-                ]
-            , Node
-                ()
-                [ Node () []
-                ]
-            ]
-
-        getProposalsForest
-          `shouldReturn` [ Node SNothing []
-                         , Node SNothing []
-                         , Node (SJust committeeGovActionId) []
-                         , Node SNothing (fmap SJust <$> a)
-                         ]
-        passEpoch
-        submitYesVote_ (DRepVoter dRep) p2
-        submitYesVote_ (CommitteeVoter committeeMember) p2
-        passNEpochs 2
-        getProposalsForest
-          `shouldReturn` [ Node SNothing []
-                         , Node SNothing []
-                         , Node (SJust committeeGovActionId) []
-                         , SJust <$> b
-                         ]
-      it "Subtrees are pruned when competing proposals are enacted over multiple rounds" $ do
-        committeeMembers' <- registerInitialCommittee
-        (drepC, _, _) <- setupSingleDRep 1_000_000
-        a@[ c
-            , Node
-                p2
-                [ Node p21 []
-                  , Node p22 []
-                  ]
-            , Node p3 []
-            ] <-
-          submitConstitutionForest
-            SNothing
-            [ Node
-                ()
-                [ Node
-                    ()
-                    [ Node () []
-                    , Node () []
-                    ]
-                ]
-            , Node
-                ()
-                [ Node () []
-                , Node () []
-                ]
-            , Node () []
-            ]
-        submitYesVote_ (DRepVoter drepC) p2
-        submitYesVoteCCs_ committeeMembers' p2
-        submitYesVote_ (DRepVoter drepC) p21
-        submitYesVoteCCs_ committeeMembers' p21
-        submitYesVote_ (DRepVoter drepC) p3
-        submitYesVoteCCs_ committeeMembers' p3 -- Two competing proposals break the tie based on proposal order
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node SNothing (fmap SJust <$> a)
-        passEpoch
-        p4 <- submitConstitutionGovAction SNothing
-        p31 <- submitConstitutionGovAction $ SJust p3
-        p211 <- submitConstitutionGovAction $ SJust p21
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node
-            SNothing
-            [ SJust <$> c
-            , Node
-                (SJust p2)
-                [ Node (SJust p21) [Node (SJust p211) []]
-                , Node (SJust p22) []
-                ]
-            , Node (SJust p3) [Node (SJust p31) []]
-            , Node (SJust p4) []
-            ]
-        passEpoch
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node
-            (SJust p2)
-            [ Node (SJust p21) [Node (SJust p211) []]
-            , Node (SJust p22) []
-            ]
-        [ Node p212 []
-          , Node p213 []
-          , Node p214 []
-          ] <-
-          submitConstitutionForest
-            (SJust p21)
-            [ Node () []
-            , Node () []
-            , Node () []
-            ]
-        p2131 <- submitConstitutionGovAction $ SJust p213
-        p2141 <- submitConstitutionGovAction $ SJust p214
-        submitYesVote_ (DRepVoter drepC) p212
-        submitYesVoteCCs_ committeeMembers' p212
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node
-            (SJust p2)
-            [ Node
-                (SJust p21)
-                [ Node (SJust p211) []
-                , Node (SJust p212) []
-                , Node (SJust p213) [Node (SJust p2131) []]
-                , Node (SJust p214) [Node (SJust p2141) []]
-                ]
-            , Node (SJust p22) []
-            ]
-        passNEpochs 2
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node (SJust p212) []
-        props <- getProposals
-        proposalsSize props `shouldBe` 0
-      it "Votes from subsequent epochs are considered for ratification" $ do
-        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
-        committeeMembers' <- registerInitialCommittee
-        (dRep, _, _) <- setupSingleDRep 1_000_000
-        [Node p1 []] <-
-          submitConstitutionForest
-            SNothing
-            [Node () []]
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node SNothing [Node (SJust p1) []]
-        passNEpochs 2
-        submitYesVote_ (DRepVoter dRep) p1
-        submitYesVoteCCs_ committeeMembers' p1
-        passNEpochs 2
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node (SJust p1) []
-      it "Subtrees are pruned for both enactment and expiry over multiple rounds" $ do
-        committeeMembers' <- registerInitialCommittee
-        (dRep, _, _) <- setupSingleDRep 1_000_000
-        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
-        [ a@( Node
-                p1
-                [ b@( Node
-                        p11
-                        [ Node _p111 []
-                          , Node _p112 []
-                          ]
-                      )
-                  ]
-              )
-          , Node
-              _p2
-              [ Node _p21 []
-                , Node _p22 []
-                ]
-          , Node p3 []
-          ] <-
-          submitConstitutionForest
-            SNothing
-            [ Node
-                ()
-                [ Node
-                    ()
-                    [ Node () []
-                    , Node () []
-                    ]
-                ]
-            , Node
-                ()
-                [ Node () []
-                , Node () []
-                ]
-            , Node () []
-            ]
-        passNEpochs 2
-        submitYesVote_ (DRepVoter dRep) p1
-        submitYesVoteCCs_ committeeMembers' p1
-        submitYesVote_ (DRepVoter dRep) p11
-        submitYesVoteCCs_ committeeMembers' p11
-        submitYesVote_ (DRepVoter dRep) p3
-        submitYesVoteCCs_ committeeMembers' p3 -- Two competing proposals break the tie based on proposal order
-        passNEpochs 2
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` SJust
-          <$> a
-        passEpoch -- ConstitutionPurpose is a delayed action
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` SJust
-          <$> b
-        passNEpochs 2
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node (SJust p11) []
-        c@[ Node _p113 []
-            , Node _p114 []
-            ] <-
-          submitConstitutionForest
-            (SJust p11)
-            [ Node () []
-            , Node () []
-            ]
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node (SJust p11) (fmap SJust <$> c)
-        passNEpochs 4
-        d@[ Node _p115 []
-            , Node p116 []
-            ] <-
-          submitConstitutionForest
-            (SJust p11)
-            [ Node () []
-            , Node () []
-            ]
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node (SJust p11) (fmap SJust <$> (c <> d))
-        passNEpochs 2
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node (SJust p11) (fmap SJust <$> d)
-        submitYesVote_ (DRepVoter dRep) p116
-        submitYesVoteCCs_ committeeMembers' p116
-        passNEpochs 3
-        fmap (!! 3) getProposalsForest
-          `shouldReturn` Node (SJust p116) []
-    it "Proposals are stored in the expected order" $ do
-      modifyPParams $ ppMaxValSizeL .~ 1_000_000_000
-      deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-      ens <- getEnactState
-      returnAddr <- registerRewardAccount
-      withdrawal <-
-        Map.singleton returnAddr . Coin . getPositive
-          <$> (arbitrary :: ImpTestM era (Positive Integer))
-      let
-        mkProp name action = do
-          ProposalProcedure
-            { pProcReturnAddr = returnAddr
-            , pProcGovAction = action
-            , pProcDeposit = deposit
-            , pProcAnchor = Anchor (fromJust $ textToUrl 16 name) def
-            }
-        prop0 = mkProp "prop0" InfoAction
-        prop1 = mkProp "prop1" $ NoConfidence (ens ^. ensPrevCommitteeL)
-        prop2 = mkProp "prop2" InfoAction
-        prop3 = mkProp "prop3" $ TreasuryWithdrawals withdrawal SNothing
-      submitProposal_ prop0
-      submitProposal_ prop1
-      let
-        checkProps l = do
-          props <-
-            getsNES $
-              nesEsL . epochStateGovStateL @era . cgsProposalsL . pPropsL
-          fmap (pProcAnchor . gasProposalProcedure . snd) (OMap.assocList props)
-            `shouldBe` fmap pProcAnchor l
-      checkProps [prop0, prop1]
-      submitProposal_ prop2
-      submitProposal_ prop3
-      checkProps [prop0, prop1, prop2, prop3]
-  where
-    submitConstitutionForest = submitGovActionForest submitConstitutionGovAction
-
 proposalsSpec ::
   forall era.
   ( ConwayEraImp era
@@ -555,27 +284,18 @@ proposalsSpec = do
   describe "Proposals" $ do
     it "Predicate failure when proposal deposit has nonexistent return address" $ do
       protVer <- getProtVer
-      registeredRewardAccount <- registerRewardAccount
       unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
-      deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-      anchor <- arbitrary
-      let mkProposal rewardAccount =
-            ProposalProcedure
-              { pProcDeposit = deposit
-              , pProcReturnAddr = rewardAccount
-              , pProcGovAction = InfoAction
-              , pProcAnchor = anchor
-              }
       if HF.bootstrapPhase protVer
         then do
-          submitProposal_ $ mkProposal registeredRewardAccount
-          submitProposal_ $ mkProposal unregisteredRewardAccount
+          mkProposal InfoAction >>= submitProposal_
+          mkProposalWithRewardAccount InfoAction unregisteredRewardAccount >>= submitProposal_
         else do
-          submitProposal_ $ mkProposal registeredRewardAccount
-          submitFailingProposal
-            (mkProposal unregisteredRewardAccount)
-            [ injectFailure $ ProposalReturnAccountDoesNotExist unregisteredRewardAccount
-            ]
+          mkProposal InfoAction >>= submitProposal_
+          mkProposalWithRewardAccount InfoAction unregisteredRewardAccount >>= \pr ->
+            submitFailingProposal
+              pr
+              [ injectFailure $ ProposalReturnAccountDoesNotExist unregisteredRewardAccount
+              ]
     describe "Consistency" $ do
       it "Proposals submitted without proper parent fail" $ do
         let mkCorruptGovActionId :: GovActionId c -> GovActionId c
@@ -818,9 +538,272 @@ proposalsSpec = do
                          , Node SNothing []
                          , Node SNothing []
                          ]
+      it "Subtrees are pruned when competing proposals are enacted" $ whenPostBootstrap $ do
+        (dRep, committeeMember, GovPurposeId committeeGovActionId) <- electBasicCommittee
+        a@[ _
+            , b@(Node p2 _)
+            ] <-
+          submitConstitutionForest
+            SNothing
+            [ Node
+                ()
+                [ Node
+                    ()
+                    [ Node () []
+                    , Node () []
+                    ]
+                ]
+            , Node
+                ()
+                [ Node () []
+                ]
+            ]
+
+        getProposalsForest
+          `shouldReturn` [ Node SNothing []
+                         , Node SNothing []
+                         , Node (SJust committeeGovActionId) []
+                         , Node SNothing (fmap SJust <$> a)
+                         ]
+        passEpoch
+        submitYesVote_ (DRepVoter dRep) p2
+        submitYesVote_ (CommitteeVoter committeeMember) p2
+        passNEpochs 2
+        getProposalsForest
+          `shouldReturn` [ Node SNothing []
+                         , Node SNothing []
+                         , Node (SJust committeeGovActionId) []
+                         , SJust <$> b
+                         ]
+      it "Subtrees are pruned when competing proposals are enacted over multiple rounds" $ whenPostBootstrap $ do
+        committeeMembers' <- registerInitialCommittee
+        (drepC, _, _) <- setupSingleDRep 1_000_000
+        a@[ c
+            , Node
+                p2
+                [ Node p21 []
+                  , Node p22 []
+                  ]
+            , Node p3 []
+            ] <-
+          submitConstitutionForest
+            SNothing
+            [ Node
+                ()
+                [ Node
+                    ()
+                    [ Node () []
+                    , Node () []
+                    ]
+                ]
+            , Node
+                ()
+                [ Node () []
+                , Node () []
+                ]
+            , Node () []
+            ]
+        submitYesVote_ (DRepVoter drepC) p2
+        submitYesVoteCCs_ committeeMembers' p2
+        submitYesVote_ (DRepVoter drepC) p21
+        submitYesVoteCCs_ committeeMembers' p21
+        submitYesVote_ (DRepVoter drepC) p3
+        submitYesVoteCCs_ committeeMembers' p3 -- Two competing proposals break the tie based on proposal order
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node SNothing (fmap SJust <$> a)
+        passEpoch
+        p4 <- submitConstitution SNothing
+        p31 <- submitConstitution $ SJust (GovPurposeId p3)
+        p211 <- submitConstitution $ SJust (GovPurposeId p21)
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node
+            SNothing
+            [ SJust <$> c
+            , Node
+                (SJust p2)
+                [ Node (SJust p21) [Node (SJust p211) []]
+                , Node (SJust p22) []
+                ]
+            , Node (SJust p3) [Node (SJust p31) []]
+            , Node (SJust p4) []
+            ]
+        passEpoch
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node
+            (SJust p2)
+            [ Node (SJust p21) [Node (SJust p211) []]
+            , Node (SJust p22) []
+            ]
+        [ Node p212 []
+          , Node p213 []
+          , Node p214 []
+          ] <-
+          submitConstitutionForest
+            (SJust p21)
+            [ Node () []
+            , Node () []
+            , Node () []
+            ]
+        p2131 <- submitConstitution $ SJust (GovPurposeId p213)
+        p2141 <- submitConstitution $ SJust (GovPurposeId p214)
+        submitYesVote_ (DRepVoter drepC) p212
+        submitYesVoteCCs_ committeeMembers' p212
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node
+            (SJust p2)
+            [ Node
+                (SJust p21)
+                [ Node (SJust p211) []
+                , Node (SJust p212) []
+                , Node (SJust p213) [Node (SJust p2131) []]
+                , Node (SJust p214) [Node (SJust p2141) []]
+                ]
+            , Node (SJust p22) []
+            ]
+        passNEpochs 2
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node (SJust p212) []
+        props <- getProposals
+        proposalsSize props `shouldBe` 0
+      it "Subtrees are pruned for both enactment and expiry over multiple rounds" $ whenPostBootstrap $ do
+        committeeMembers' <- registerInitialCommittee
+        (dRep, _, _) <- setupSingleDRep 1_000_000
+        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
+        [ a@( Node
+                p1
+                [ b@( Node
+                        p11
+                        [ Node _p111 []
+                          , Node _p112 []
+                          ]
+                      )
+                  ]
+              )
+          , Node
+              _p2
+              [ Node _p21 []
+                , Node _p22 []
+                ]
+          , Node p3 []
+          ] <-
+          submitConstitutionForest
+            SNothing
+            [ Node
+                ()
+                [ Node
+                    ()
+                    [ Node () []
+                    , Node () []
+                    ]
+                ]
+            , Node
+                ()
+                [ Node () []
+                , Node () []
+                ]
+            , Node () []
+            ]
+        passNEpochs 2
+        submitYesVote_ (DRepVoter dRep) p1
+        submitYesVoteCCs_ committeeMembers' p1
+        submitYesVote_ (DRepVoter dRep) p11
+        submitYesVoteCCs_ committeeMembers' p11
+        submitYesVote_ (DRepVoter dRep) p3
+        submitYesVoteCCs_ committeeMembers' p3 -- Two competing proposals break the tie based on proposal order
+        passNEpochs 2
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` SJust
+          <$> a
+        passEpoch -- ConstitutionPurpose is a delayed action
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` SJust
+          <$> b
+        passNEpochs 2
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node (SJust p11) []
+        c@[ Node _p113 []
+            , Node _p114 []
+            ] <-
+          submitConstitutionForest
+            (SJust p11)
+            [ Node () []
+            , Node () []
+            ]
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node (SJust p11) (fmap SJust <$> c)
+        passNEpochs 4
+        d@[ Node _p115 []
+            , Node p116 []
+            ] <-
+          submitConstitutionForest
+            (SJust p11)
+            [ Node () []
+            , Node () []
+            ]
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node (SJust p11) (fmap SJust <$> (c <> d))
+        passNEpochs 2
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node (SJust p11) (fmap SJust <$> d)
+        submitYesVote_ (DRepVoter dRep) p116
+        submitYesVoteCCs_ committeeMembers' p116
+        passNEpochs 3
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node (SJust p116) []
+      it "Votes from subsequent epochs are considered for ratification" $ whenPostBootstrap $ do
+        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
+
+        committeeMembers' <- registerInitialCommittee
+        (dRep, _, _) <- setupSingleDRep 1_000_000
+        [Node p1 []] <-
+          submitConstitutionForest
+            SNothing
+            [Node () []]
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node SNothing [Node (SJust p1) []]
+        passNEpochs 2
+        submitYesVote_ (DRepVoter dRep) p1
+        submitYesVoteCCs_ committeeMembers' p1
+        passNEpochs 2
+        fmap (!! 3) getProposalsForest
+          `shouldReturn` Node (SJust p1) []
+      it "Proposals are stored in the expected order" $ whenPostBootstrap $ do
+        modifyPParams $ ppMaxValSizeL .~ 1_000_000_000
+        deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+        ens <- getEnactState
+        returnAddr <- registerRewardAccount
+        withdrawal <-
+          Map.singleton returnAddr . Coin . getPositive
+            <$> (arbitrary :: ImpTestM era (Positive Integer))
+        let
+          mkProp name action = do
+            ProposalProcedure
+              { pProcReturnAddr = returnAddr
+              , pProcGovAction = action
+              , pProcDeposit = deposit
+              , pProcAnchor = Anchor (fromJust $ textToUrl 16 name) def
+              }
+          prop0 = mkProp "prop0" InfoAction
+          prop1 = mkProp "prop1" $ NoConfidence (ens ^. ensPrevCommitteeL)
+          prop2 = mkProp "prop2" InfoAction
+          prop3 = mkProp "prop3" $ TreasuryWithdrawals withdrawal SNothing
+        submitProposal_ prop0
+        submitProposal_ prop1
+        let
+          checkProps l = do
+            props <-
+              getsNES $
+                nesEsL . epochStateGovStateL @era . cgsProposalsL . pPropsL
+            fmap (pProcAnchor . gasProposalProcedure . snd) (OMap.assocList props)
+              `shouldBe` fmap pProcAnchor l
+        checkProps [prop0, prop1]
+        submitProposal_ prop2
+        submitProposal_ prop3
+        checkProps [prop0, prop1, prop2, prop3]
   where
     submitParameterChangeForest = submitGovActionForest $ submitGovAction . paramAction
     submitParameterChangeTree = submitGovActionTree $ submitGovAction . paramAction
+    submitConstitutionForest = submitGovActionForest $ submitConstitution . fmap GovPurposeId
     paramAction p =
       ParameterChange (GovPurposeId <$> p) (def & ppuMinFeeAL .~ SJust (Coin 10)) SNothing
 
@@ -837,7 +820,7 @@ votingSpec =
         -- Voting after the 3rd epoch should fail
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
         (drep, _, _) <- setupSingleDRep 1_000_000
-        (govActionId, _) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         passNEpochs 3
         submitFailingVote
           (DRepVoter drep)
@@ -846,7 +829,7 @@ votingSpec =
           ]
       it "non-existent gov-actions" $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
-        (govActionId, _) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         let dummyGaid = govActionId {gaidGovActionIx = GovActionIx 99} -- non-existent `GovActionId`
         submitFailingVote
           (DRepVoter drep)
@@ -928,6 +911,46 @@ votingSpec =
         expectNoCurrentProposals
         conAnchor `shouldNotBe` anchor
 
+type ExtraBootstrapPredicateFailures era = [PredicateFailure (EraRule "LEDGER" era)]
+type PostBootstrapPredicateFailures era = NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era))
+data SubmitFailureExpectation era
+  = FailBootstrap (ExtraBootstrapPredicateFailures era)
+  | FailPostBootstrap (PostBootstrapPredicateFailures era)
+  | FailBoth (ExtraBootstrapPredicateFailures era) (PostBootstrapPredicateFailures era)
+
+submitBootstrapAwareFailingProposal ::
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  ) =>
+  SubmitFailureExpectation era ->
+  ProposalProcedure era ->
+  ImpTestM era (StrictMaybe (GovActionId (EraCrypto era)))
+submitBootstrapAwareFailingProposal expectation proposal = case expectation of
+  FailBootstrap extraBootstrapFailures -> do
+    let bootstrapFailures =
+          injectFailure (DisallowedProposalDuringBootstrap proposal) : extraBootstrapFailures
+    ifBootstrap
+      ( submitFailingProposal
+          proposal
+          (NE.fromList bootstrapFailures)
+          $> SNothing
+      )
+      (SJust <$> submitProposal proposal)
+  FailPostBootstrap failures ->
+    ifBootstrap
+      (SJust <$> submitProposal proposal)
+      (submitFailingProposal proposal failures $> SNothing)
+  FailBoth extraBootstrapFailures failures -> do
+    let bootstrapFailures =
+          injectFailure (DisallowedProposalDuringBootstrap proposal) : extraBootstrapFailures
+    ifBootstrap
+      ( submitFailingProposal
+          proposal
+          (NE.fromList bootstrapFailures)
+          $> SNothing
+      )
+      (submitFailingProposal proposal failures $> SNothing)
+
 constitutionSpec ::
   forall era.
   ( ConwayEraImp era
@@ -940,10 +963,10 @@ constitutionSpec =
       it "empty PrevGovId before the first constitution is enacted" $ do
         --  Initial proposal does not need a GovPurposeId but after it is enacted, the
         --  following ones are not
-        _ <- submitConstitution SNothing
+        _ <- submitConstitutionFailingBootstrap SNothing
         -- Until the first proposal is enacted all proposals with empty GovPurposeIds are valid
-        void $ submitConstitution SNothing
-      it "valid GovPurposeId" $ do
+        void $ submitConstitutionFailingBootstrap SNothing
+      it "valid GovPurposeId" $ whenPostBootstrap $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
         constitution <- arbitrary
@@ -957,10 +980,10 @@ constitutionSpec =
             committeeMembers'
 
     describe "rejected for" $ do
-      it "empty PrevGovId after the first constitution was enacted" $ do
+      it "empty PrevGovId after the first constitution was enacted" $ whenPostBootstrap $ do
         committeeMembers' <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
-        (govActionId, _constitution) <- submitConstitution SNothing
+        govActionId <- submitConstitution SNothing
         submitYesVote_ (DRepVoter dRep) govActionId
         submitYesVoteCCs_ committeeMembers' govActionId
         passNEpochs 2
@@ -969,69 +992,44 @@ constitutionSpec =
               NewConstitution
                 SNothing
                 constitution
-        invalidNewConstitutionProposal <- proposalWithRewardAccount invalidNewConstitutionGovAction
+        invalidNewConstitutionProposal <- mkProposal invalidNewConstitutionGovAction
         submitFailingProposal
           invalidNewConstitutionProposal
           [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
           ]
       it "invalid index in GovPurposeId" $ do
-        (govActionId, _constitution) <- submitConstitution SNothing
-        passNEpochs 2
-        constitution <- arbitrary
-        let invalidPrevGovActionId =
-              -- Expected Ix = 0
-              GovPurposeId (govActionId {gaidGovActionIx = GovActionIx 1})
-            invalidNewConstitutionGovAction =
-              NewConstitution
-                (SJust invalidPrevGovActionId)
-                constitution
-        invalidNewConstitutionProposal <- proposalWithRewardAccount invalidNewConstitutionGovAction
-        submitFailingProposal
-          invalidNewConstitutionProposal
-          [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
-          ]
+        mbGovActionId <- submitConstitutionFailingBootstrap SNothing
+        forM_ mbGovActionId $ \govActionId -> do
+          passNEpochs 2
+          constitution <- arbitrary
+          let invalidPrevGovActionId =
+                -- Expected Ix = 0
+                GovPurposeId (govActionId {gaidGovActionIx = GovActionIx 1})
+              invalidNewConstitutionGovAction =
+                NewConstitution
+                  (SJust invalidPrevGovActionId)
+                  constitution
+          invalidNewConstitutionProposal <- mkProposal invalidNewConstitutionGovAction
+          submitFailingProposal
+            invalidNewConstitutionProposal
+            [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
+            ]
       it "valid GovPurposeId but invalid purpose" $ do
-        (govActionId, _constitution) <- submitConstitution SNothing
-        passNEpochs 2
-        let invalidNoConfidenceAction =
-              NoConfidence $ SJust $ GovPurposeId govActionId
-        invalidNoConfidenceProposal <- proposalWithRewardAccount invalidNoConfidenceAction
+        mbGovActionId <- submitConstitutionFailingBootstrap SNothing
+        forM_ mbGovActionId $ \govActionId -> do
+          passNEpochs 2
+          let invalidNoConfidenceAction =
+                NoConfidence $ SJust $ GovPurposeId govActionId
+          invalidNoConfidenceProposal <- mkProposal invalidNoConfidenceAction
 
-        submitFailingProposal
-          invalidNoConfidenceProposal
-          [ injectFailure $ InvalidPrevGovActionId invalidNoConfidenceProposal
-          ]
-    it "submitted successfully with valid GovPurposeId" $ do
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 1
-
-      curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-      initialPulser <- getsNES $ newEpochStateGovStateL . drepPulsingStateGovStateL
-      initialEnactState <- getEnactState
-
-      (govActionId, _) <- submitConstitution SNothing
-      curConstitution' <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-      impAnn "Constitution has not been enacted yet" $
-        curConstitution' `shouldBe` curConstitution
-
-      govState <- getsNES newEpochStateGovStateL
-      let expectedProposals = govState ^. cgsProposalsL
-          expectedPulser = govState ^. cgsDRepPulsingStateL
-      expectedEnactState <- getEnactState
-
-      impAnn "EnactState reflects the submitted governance action" $ do
-        expectedEnactState `shouldBe` initialEnactState
-
-      impAnn "Proposals contain the submitted proposal" $
-        expectedProposals `shouldSatisfy` \props -> govActionId `elem` proposalsIds props
-
-      impAnn "Pulser has not changed" $
-        expectedPulser `shouldBe` initialPulser
-
-      passNEpochs 2
-      impAnn "Proposal gets removed after expiry" $ do
-        govStateFinal <- getsNES newEpochStateGovStateL
-        let ratifyState = extractDRepPulsingState (govStateFinal ^. cgsDRepPulsingStateL)
-        rsExpired ratifyState `shouldBe` Set.singleton govActionId
+          submitFailingProposal
+            invalidNoConfidenceProposal
+            [ injectFailure $ InvalidPrevGovActionId invalidNoConfidenceProposal
+            ]
+  where
+    submitConstitutionFailingBootstrap prevGovId =
+      mkConstitutionProposal prevGovId >>=
+        submitBootstrapAwareFailingProposal (FailBootstrap []) . fst
 
 policySpec ::
   forall era.
@@ -1234,7 +1232,7 @@ withdrawalsSpec =
       [ConwayGovPredFailure era] -> [ConwayGovPredFailure era] -> GovAction era -> ImpTestM era ()
     expectPredFailures predFailures bootstrapPredFailures wdrl = do
       curProtVer <- getProtVer
-      propP <- proposalWithRewardAccount wdrl
+      propP <- mkProposal wdrl
       submitFailingProposal
         propP
         ( injectFailure
@@ -1243,22 +1241,6 @@ withdrawalsSpec =
                     else NE.fromList predFailures
                 )
         )
-
-proposalWithRewardAccount ::
-  forall era.
-  ConwayEraImp era =>
-  GovAction era ->
-  ImpTestM era (ProposalProcedure era)
-proposalWithRewardAccount action = do
-  rewardAccount <- registerRewardAccount
-  govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-  pure
-    ProposalProcedure
-      { pProcDeposit = govActionDeposit
-      , pProcReturnAddr = rewardAccount
-      , pProcGovAction = action
-      , pProcAnchor = def
-      }
 
 -- =========================================================
 -- Proposing a HardFork should always use a new ProtVer that
@@ -1433,17 +1415,17 @@ bootstrapPhaseSpec =
               }
       checkProposalFailure proposal
     it "NoConfidence" $ do
-      proposal <- proposalWithRewardAccount $ NoConfidence SNothing
+      proposal <- mkProposal $ NoConfidence SNothing
       checkProposalFailure proposal
     it "UpdateCommittee" $ do
       cCred <- KeyHashObj <$> freshKeyHash
       curEpochNo <- getsNES nesELL
       let newMembers = [(cCred, addEpochInterval curEpochNo (EpochInterval 30))]
-      proposal <- proposalWithRewardAccount $ UpdateCommittee SNothing mempty newMembers (1 %! 1)
+      proposal <- mkProposal $ UpdateCommittee SNothing mempty newMembers (1 %! 1)
       checkProposalFailure proposal
     it "NewConstitution" $ do
       constitution <- arbitrary
-      proposal <- proposalWithRewardAccount $ NewConstitution SNothing constitution
+      proposal <- mkProposal $ NewConstitution SNothing constitution
       checkProposalFailure proposal
   where
     checkProposalFailure proposal = do
