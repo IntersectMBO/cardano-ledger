@@ -121,13 +121,43 @@ proposalsSpec =
             , pProcAnchor = def
             }
       expectPresentGovActionId govActionId
-      passEpoch
-      passEpoch
-      passEpoch
+      passNEpochs 3
       expectMissingGovActionId govActionId
 
       getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL) `shouldReturn` initialValue
       getRewardAccountAmount rewardAccount `shouldReturn` deposit
+
+    it "Proposals are expired and removed as expected" $ whenPostBootstrap $ do
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 1
+
+      curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+      initialPulser <- getsNES $ newEpochStateGovStateL . drepPulsingStateGovStateL
+      initialEnactState <- getEnactState
+
+      (govActionId, _) <- submitConstitution SNothing
+      curConstitution' <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+      impAnn "Constitution has not been enacted yet" $
+        curConstitution' `shouldBe` curConstitution
+
+      govState <- getsNES newEpochStateGovStateL
+      let expectedProposals = govState ^. cgsProposalsL
+          expectedPulser = govState ^. cgsDRepPulsingStateL
+      expectedEnactState <- getEnactState
+
+      impAnn "EnactState reflects the submitted governance action" $ do
+        expectedEnactState `shouldBe` initialEnactState
+
+      impAnn "Proposals contain the submitted proposal" $
+        expectedProposals `shouldSatisfy` \props -> govActionId `elem` proposalsIds props
+
+      impAnn "Pulser has not changed" $
+        expectedPulser `shouldBe` initialPulser
+
+      passNEpochs 2
+      impAnn "Proposal gets removed after expiry" $ do
+        govStateFinal <- getsNES newEpochStateGovStateL
+        let ratifyState = extractDRepPulsingState (govStateFinal ^. cgsDRepPulsingStateL)
+        rsExpired ratifyState `shouldBe` Set.singleton govActionId
   where
     submitParameterChangeTree = submitGovActionTree $ submitGovAction . paramAction
     paramAction p =
