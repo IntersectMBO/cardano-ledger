@@ -225,6 +225,7 @@ test-suite tests
         Test.Cardano.Ledger.Conway.GenesisSpec
         Test.Cardano.Ledger.Conway.GovActionReorderSpec
         Test.Cardano.Ledger.Conway.Plutus.PlutusSpec
+        Test.Cardano.Ledger.Conway.SPORatifySpec
         Test.Cardano.Ledger.Conway.TxInfoSpec
         Test.Cardano.Ledger.Conway.GoldenTranslation
         Paths_cardano_ledger_conway
