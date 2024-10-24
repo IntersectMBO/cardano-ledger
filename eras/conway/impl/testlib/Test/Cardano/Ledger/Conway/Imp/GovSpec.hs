@@ -19,7 +19,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..), PredicateFailure)
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Plutus.CostModels (updateCostModels)
 import qualified Cardano.Ledger.Shelley.HardForks as HF
@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Val (zero, (<->))
 import Data.Default.Class (Default (..))
+import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -918,6 +919,46 @@ votingSpec =
               . constitutionAnchorL
         expectNoCurrentProposals
         conAnchor `shouldNotBe` anchor
+
+type ExtraBootstrapPredicateFailures era = [PredicateFailure (EraRule "LEDGER" era)]
+type PostBootstrapPredicateFailures era = NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era))
+data SubmitFailureExpectation era
+  = FailBootstrap (ExtraBootstrapPredicateFailures era)
+  | FailPostBootstrap (PostBootstrapPredicateFailures era)
+  | FailBoth (ExtraBootstrapPredicateFailures era) (PostBootstrapPredicateFailures era)
+
+submitBootstrapAwareFailingProposal ::
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  ) =>
+  SubmitFailureExpectation era ->
+  ProposalProcedure era ->
+  ImpTestM era (StrictMaybe (GovActionId (EraCrypto era)))
+submitBootstrapAwareFailingProposal expectation proposal = case expectation of
+  FailBootstrap extraBootstrapFailures -> do
+    let bootstrapFailures =
+          injectFailure (DisallowedProposalDuringBootstrap proposal) : extraBootstrapFailures
+    ifBootstrap
+      ( submitFailingProposal
+          proposal
+          (NE.fromList bootstrapFailures)
+          $> SNothing
+      )
+      (SJust <$> submitProposal proposal)
+  FailPostBootstrap failures ->
+    ifBootstrap
+      (SJust <$> submitProposal proposal)
+      (submitFailingProposal proposal failures $> SNothing)
+  FailBoth extraBootstrapFailures failures -> do
+    let bootstrapFailures =
+          injectFailure (DisallowedProposalDuringBootstrap proposal) : extraBootstrapFailures
+    ifBootstrap
+      ( submitFailingProposal
+          proposal
+          (NE.fromList bootstrapFailures)
+          $> SNothing
+      )
+      (submitFailingProposal proposal failures $> SNothing)
 
 constitutionSpec ::
   forall era.
