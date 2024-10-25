@@ -56,8 +56,10 @@ import Cardano.Ledger.Alonzo.TxBody (
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), nullRedeemers)
 import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
   Network,
   ProtVer (..),
+  Relation (..),
   ShelleyBase,
   StrictMaybe (..),
   epochInfo,
@@ -122,22 +124,10 @@ data AlonzoUtxoPredFailure era
       !ValidityInterval
       -- | current slot
       !SlotNo
-  | MaxTxSizeUTxO
-      -- | the actual transaction size
-      !Integer
-      -- | the max transaction size
-      !Integer
+  | MaxTxSizeUTxO !(Mismatch 'RelLTEQ Integer)
   | InputSetEmptyUTxO
-  | FeeTooSmallUTxO
-      -- | the minimum fee for this transaction
-      !Coin
-      -- | the fee supplied in this transaction
-      !Coin
-  | ValueNotConservedUTxO
-      -- | the Coin consumed by this transaction
-      !(Value era)
-      -- | the Coin produced by this transaction
-      !(Value era)
+  | FeeTooSmallUTxO !(Mismatch 'RelGTEQ Coin)
+  | ValueNotConservedUTxO !(Mismatch 'RelEQ (Value era))
   | -- | the set of addresses with incorrect network IDs
     WrongNetwork
       -- | the expected network id
@@ -170,28 +160,16 @@ data AlonzoUtxoPredFailure era
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
       !(UTxO era)
-  | ExUnitsTooBigUTxO
-      -- | Max `ExUnits` from the protocol parameters
-      !ExUnits
-      -- | `ExUnits` supplied
-      !ExUnits
+  | ExUnitsTooBigUTxO !(Mismatch 'RelLTEQ ExUnits)
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA !(Value era)
   | -- | Wrong Network ID in body
-    WrongNetworkInTxBody
-      -- | Actual Network ID
-      !Network
-      -- | Network ID in transaction body
-      !Network
+    WrongNetworkInTxBody !(Mismatch 'RelEQ Network)
   | -- | slot number outside consensus forecast range
     OutsideForecast
       !SlotNo
   | -- | There are too many collateral inputs
-    TooManyCollateralInputs
-      -- | Max allowed collateral inputs
-      !Natural
-      -- | Number of collateral inputs
-      !Natural
+    TooManyCollateralInputs !(Mismatch 'RelLTEQ Natural)
   | NoCollateralInputs
   deriving (Generic)
 
@@ -299,7 +277,9 @@ feesOK pp tx u@(UTxO utxo) =
       minFee = getMinFeeTxUtxo pp tx u
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txb
-          failureUnless (minFee <= theFee) (FeeTooSmallUTxO minFee theFee)
+          failureUnless
+            (minFee <= theFee)
+            (FeeTooSmallUTxO Mismatch {mismatchSupplied = theFee, mismatchExpected = minFee})
         , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
           unless (nullRedeemers (tx ^. witsTxL . rdmrsTxWitsL)) $
             validateCollateral pp txBody utxoCollateral
@@ -446,7 +426,9 @@ validateWrongNetworkInTxBody ::
 validateWrongNetworkInTxBody netId txBody =
   case txBody ^. networkIdTxBodyL of
     SNothing -> pure ()
-    SJust bid -> failureUnless (netId == bid) $ WrongNetworkInTxBody netId bid
+    SJust bid ->
+      failureUnless (netId == bid) $
+        WrongNetworkInTxBody Mismatch {mismatchSupplied = bid, mismatchExpected = netId}
 
 -- | Ensure that execution units to not exceed the maximum allowed @maxTxExUnits@ parameter.
 --
@@ -461,7 +443,7 @@ validateExUnitsTooBigUTxO ::
   Test (AlonzoUtxoPredFailure era)
 validateExUnitsTooBigUTxO pp tx =
   failureUnless (pointWiseExUnits (<=) totalExUnits maxTxExUnits) $
-    ExUnitsTooBigUTxO maxTxExUnits totalExUnits
+    ExUnitsTooBigUTxO Mismatch {mismatchSupplied = totalExUnits, mismatchExpected = maxTxExUnits}
   where
     maxTxExUnits = pp ^. ppMaxTxExUnitsL
     -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction:
@@ -476,7 +458,8 @@ validateTooManyCollateralInputs ::
   TxBody era ->
   Test (AlonzoUtxoPredFailure era)
 validateTooManyCollateralInputs pp txBody =
-  failureUnless (numColl <= maxColl) $ TooManyCollateralInputs maxColl numColl
+  failureUnless (numColl <= maxColl) $
+    TooManyCollateralInputs Mismatch {mismatchSupplied = numColl, mismatchExpected = maxColl}
   where
     maxColl, numColl :: Natural
     maxColl = pp ^. ppMaxCollateralInputsL
@@ -636,14 +619,14 @@ encFail (BadInputsUTxO ins) =
   Sum (BadInputsUTxO @era) 0 !> To ins
 encFail (OutsideValidityIntervalUTxO a b) =
   Sum OutsideValidityIntervalUTxO 1 !> To a !> To b
-encFail (MaxTxSizeUTxO a b) =
-  Sum MaxTxSizeUTxO 2 !> To a !> To b
+encFail (MaxTxSizeUTxO m) =
+  Sum MaxTxSizeUTxO 2 !> To m
 encFail InputSetEmptyUTxO =
   Sum InputSetEmptyUTxO 3
-encFail (FeeTooSmallUTxO a b) =
-  Sum FeeTooSmallUTxO 4 !> To a !> To b
-encFail (ValueNotConservedUTxO a b) =
-  Sum (ValueNotConservedUTxO @era) 5 !> To a !> To b
+encFail (FeeTooSmallUTxO m) =
+  Sum FeeTooSmallUTxO 4 !> To m
+encFail (ValueNotConservedUTxO m) =
+  Sum (ValueNotConservedUTxO @era) 5 !> To m
 encFail (OutputTooSmallUTxO outs) =
   Sum (OutputTooSmallUTxO @era) 6 !> To outs
 encFail (UtxosFailure a) =
@@ -662,16 +645,16 @@ encFail (InsufficientCollateral a b) =
   Sum InsufficientCollateral 13 !> To a !> To b
 encFail (ScriptsNotPaidUTxO a) =
   Sum ScriptsNotPaidUTxO 14 !> To a
-encFail (ExUnitsTooBigUTxO a b) =
-  Sum ExUnitsTooBigUTxO 15 !> To a !> To b
+encFail (ExUnitsTooBigUTxO m) =
+  Sum ExUnitsTooBigUTxO 15 !> To m
 encFail (CollateralContainsNonADA a) =
   Sum CollateralContainsNonADA 16 !> To a
-encFail (WrongNetworkInTxBody a b) =
-  Sum WrongNetworkInTxBody 17 !> To a !> To b
+encFail (WrongNetworkInTxBody m) =
+  Sum WrongNetworkInTxBody 17 !> To m
 encFail (OutsideForecast a) =
   Sum OutsideForecast 18 !> To a
-encFail (TooManyCollateralInputs a b) =
-  Sum TooManyCollateralInputs 19 !> To a !> To b
+encFail (TooManyCollateralInputs m) =
+  Sum TooManyCollateralInputs 19 !> To m
 encFail NoCollateralInputs =
   Sum NoCollateralInputs 20
 
@@ -685,10 +668,10 @@ decFail ::
   Decode 'Open (AlonzoUtxoPredFailure era)
 decFail 0 = SumD BadInputsUTxO <! From
 decFail 1 = SumD OutsideValidityIntervalUTxO <! From <! From
-decFail 2 = SumD MaxTxSizeUTxO <! From <! From
+decFail 2 = SumD MaxTxSizeUTxO <! From
 decFail 3 = SumD InputSetEmptyUTxO
-decFail 4 = SumD FeeTooSmallUTxO <! From <! From
-decFail 5 = SumD ValueNotConservedUTxO <! From <! From
+decFail 4 = SumD FeeTooSmallUTxO <! From
+decFail 5 = SumD ValueNotConservedUTxO <! From
 decFail 6 = SumD OutputTooSmallUTxO <! From
 decFail 7 = SumD UtxosFailure <! From
 decFail 8 = SumD WrongNetwork <! From <! From
@@ -700,14 +683,12 @@ decFail 12 =
       fromRestricted (sz, mv, txOut) = (toInteger sz, toInteger mv, txOut)
    in SumD OutputTooBigUTxO <! D (map fromRestricted <$> decCBOR)
 decFail 13 = SumD InsufficientCollateral <! From <! From
-decFail 14 =
-  SumD ScriptsNotPaidUTxO
-    <! D (UTxO <$> decCBOR)
-decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From
+decFail 14 = SumD ScriptsNotPaidUTxO <! D (UTxO <$> decCBOR)
+decFail 15 = SumD ExUnitsTooBigUTxO <! From
 decFail 16 = SumD CollateralContainsNonADA <! From
-decFail 17 = SumD WrongNetworkInTxBody <! From <! From
+decFail 17 = SumD WrongNetworkInTxBody <! From
 decFail 18 = SumD OutsideForecast <! From
-decFail 19 = SumD TooManyCollateralInputs <! From <! From
+decFail 19 = SumD TooManyCollateralInputs <! From
 decFail 20 = SumD NoCollateralInputs
 decFail n = Invalid n
 
@@ -715,6 +696,7 @@ instance
   ( Era era
   , DecCBOR (TxOut era)
   , DecCBOR (Value era)
+  , EncCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   DecCBOR (AlonzoUtxoPredFailure era)
@@ -734,10 +716,10 @@ allegraToAlonzoUtxoPredFailure ::
 allegraToAlonzoUtxoPredFailure = \case
   Allegra.BadInputsUTxO x -> BadInputsUTxO x
   Allegra.OutsideValidityIntervalUTxO vi slotNo -> OutsideValidityIntervalUTxO vi slotNo
-  Allegra.MaxTxSizeUTxO x y -> MaxTxSizeUTxO x y
+  Allegra.MaxTxSizeUTxO m -> MaxTxSizeUTxO m
   Allegra.InputSetEmptyUTxO -> InputSetEmptyUTxO
-  Allegra.FeeTooSmallUTxO c1 c2 -> FeeTooSmallUTxO c1 c2
-  Allegra.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
+  Allegra.FeeTooSmallUTxO m -> FeeTooSmallUTxO m
+  Allegra.ValueNotConservedUTxO m -> ValueNotConservedUTxO m
   Allegra.WrongNetwork x y -> WrongNetwork x y
   Allegra.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x

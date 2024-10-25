@@ -377,7 +377,7 @@ instance
       , -- MissingRedeemers <$> arbitrary -- see #4110
         MissingRequiredDatums <$> arbitrary <*> arbitrary
       , NotAllowedSupplementalDatums <$> arbitrary <*> arbitrary
-      , PPViewHashesDontMatch <$> arbitrary <*> arbitrary
+      , PPViewHashesDontMatch <$> arbitrary
       , MissingRequiredSigners <$> arbitrary
       , UnspendableUTxONoDatumHash <$> arbitrary
       -- , ExtraRedeemers <$> arbitrary -- see #4110

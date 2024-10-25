@@ -3,6 +3,13 @@
 ## 1.15.0.0
 
 * Added `EncCBOR` instance for `LedgerEnv`
+* Use `Mismatch` to clarify _some more_ predicate failures. #4711
+  * `Shelley/InsufficientForInstantaneousRewardsDELEG`
+  * `Shelley/MIRCertificateTooLateinEpochDELEG`
+  * `Shelley/InsufficientForTransferDELEG`
+  * `Shelley/ExpiredUTxO`
+  * `Shelley/ValueNotConservedUTxO`
+  
 
 ### `testlib`
 

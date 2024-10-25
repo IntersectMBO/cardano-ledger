@@ -21,6 +21,8 @@ where
 
 import Cardano.Ledger.BaseTypes (
   Globals (..),
+  Mismatch (..),
+  Relation (..),
   ShelleyBase,
   StrictMaybe (..),
   epochInfoPure,
@@ -119,19 +121,16 @@ data ShelleyDelegPredFailure era
       !(KeyHash 'GenesisDelegate (EraCrypto era)) -- Keyhash which is already delegated to
   | InsufficientForInstantaneousRewardsDELEG
       !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
-      !Coin -- amount of rewards to be given out
-      !Coin -- size of the pot from which the lovelace is drawn
+      !(Mismatch 'RelLTEQ Coin)
   | MIRCertificateTooLateinEpochDELEG
-      !SlotNo -- current slot
-      !SlotNo -- EraRule "MIR" must be submitted before this slot
+      !(Mismatch 'RelLT SlotNo)
   | DuplicateGenesisVRFDELEG
       !(Hash (EraCrypto era) (VerKeyVRF (EraCrypto era))) -- VRF KeyHash which is already delegated to
   | MIRTransferNotCurrentlyAllowed
   | MIRNegativesNotCurrentlyAllowed
   | InsufficientForTransferDELEG
       !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
-      !Coin -- amount attempted to transfer
-      !Coin -- amount available
+      !(Mismatch 'RelLTEQ Coin)
   | MIRProducesNegativeUpdate
   | MIRNegativeTransfer
       !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
@@ -180,14 +179,13 @@ instance
       encodeListLen 2 <> encCBOR (5 :: Word8) <> encCBOR gkh
     DuplicateGenesisDelegateDELEG kh ->
       encodeListLen 2 <> encCBOR (6 :: Word8) <> encCBOR kh
-    InsufficientForInstantaneousRewardsDELEG pot needed potAmount ->
-      encodeListLen 4
+    InsufficientForInstantaneousRewardsDELEG pot m ->
+      encodeListLen 3
         <> encCBOR (7 :: Word8)
         <> encCBOR pot
-        <> encCBOR needed
-        <> encCBOR potAmount
-    MIRCertificateTooLateinEpochDELEG sNow sTooLate ->
-      encodeListLen 3 <> encCBOR (8 :: Word8) <> encCBOR sNow <> encCBOR sTooLate
+        <> encCBOR m
+    MIRCertificateTooLateinEpochDELEG m ->
+      encodeListLen 2 <> encCBOR (8 :: Word8) <> encCBOR m
     DuplicateGenesisVRFDELEG vrf ->
       encodeListLen 2 <> encCBOR (9 :: Word8) <> encCBOR vrf
     StakeKeyInRewardsDELEG cred ->
@@ -196,12 +194,11 @@ instance
       encodeListLen 1 <> encCBOR (11 :: Word8)
     MIRNegativesNotCurrentlyAllowed ->
       encodeListLen 1 <> encCBOR (12 :: Word8)
-    InsufficientForTransferDELEG pot needed available ->
-      encodeListLen 4
+    InsufficientForTransferDELEG pot m ->
+      encodeListLen 3
         <> encCBOR (13 :: Word8)
         <> encCBOR pot
-        <> encCBOR needed
-        <> encCBOR available
+        <> encCBOR m
     MIRProducesNegativeUpdate ->
       encodeListLen 1 <> encCBOR (14 :: Word8)
     MIRNegativeTransfer pot amt ->
@@ -238,13 +235,11 @@ instance
         pure (2, DuplicateGenesisDelegateDELEG kh)
       7 -> do
         pot <- decCBOR
-        needed <- decCBOR
-        potAmount <- decCBOR
-        pure (4, InsufficientForInstantaneousRewardsDELEG pot needed potAmount)
+        m <- decCBOR
+        pure (3, InsufficientForInstantaneousRewardsDELEG pot m)
       8 -> do
-        sNow <- decCBOR
-        sTooLate <- decCBOR
-        pure (3, MIRCertificateTooLateinEpochDELEG sNow sTooLate)
+        m <- decCBOR
+        pure (2, MIRCertificateTooLateinEpochDELEG m)
       9 -> do
         vrf <- decCBOR
         pure (2, DuplicateGenesisVRFDELEG vrf)
@@ -257,9 +252,8 @@ instance
         pure (1, MIRNegativesNotCurrentlyAllowed)
       13 -> do
         pot <- decCBOR
-        needed <- decCBOR
-        available <- decCBOR
-        pure (4, InsufficientForTransferDELEG pot needed available)
+        m <- decCBOR
+        pure (3, InsufficientForTransferDELEG pot m)
       14 -> do
         pure (1, MIRProducesNegativeUpdate)
       15 -> do
@@ -356,7 +350,7 @@ delegationTransition = do
             then do
               let available = availableAfterMIR targetPot acnt (dsIRewards ds)
               coin >= mempty ?! MIRNegativeTransfer targetPot coin
-              coin <= available ?! InsufficientForTransferDELEG targetPot coin available
+              coin <= available ?! InsufficientForTransferDELEG targetPot (Mismatch coin available)
 
               let ir = dsIRewards ds
                   dr = deltaReserves ir
@@ -400,7 +394,7 @@ checkSlotNotTooLate slot = do
   tellEvent (DelegNewEpoch newEpoch)
   firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
   let tooLate = firstSlot *- Duration sp
-  slot < tooLate ?! MIRCertificateTooLateinEpochDELEG slot tooLate
+  slot < tooLate ?! MIRCertificateTooLateinEpochDELEG (Mismatch slot tooLate)
 
 updateReservesAndTreasury ::
   MIRPot ->
@@ -412,7 +406,12 @@ updateReservesAndTreasury targetPot combinedMap available ds = do
   let requiredForRewards = fold combinedMap
   requiredForRewards
     <= available
-      ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
+      ?! InsufficientForInstantaneousRewardsDELEG
+        targetPot
+        Mismatch
+          { mismatchSupplied = requiredForRewards
+          , mismatchExpected = available
+          }
   pure $
     case targetPot of
       ReservesMIR -> ds {dsIRewards = (dsIRewards ds) {iRReserves = combinedMap}}

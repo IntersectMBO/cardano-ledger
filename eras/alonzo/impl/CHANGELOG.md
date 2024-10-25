@@ -2,7 +2,7 @@
 
 ## 1.12.0.0
 
-*
+* Use `Mismatch` to clarify predicate failures. #4711
 
 ### `testlib`
 

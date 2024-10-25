@@ -1666,11 +1666,11 @@ instance Reflect era => PrettyA (ConwayBbodyPredFailure era) where
 ppAlonzoBbodyPredFail :: Reflect era => AlonzoBbodyPredFailure era -> PDoc
 ppAlonzoBbodyPredFail (ShelleyInAlonzoBbodyPredFailure x) =
   ppSexp "ShelleyInAlonzoPredFail" [ppBbodyPredicateFailure x]
-ppAlonzoBbodyPredFail (TooManyExUnits e1 e2) =
+ppAlonzoBbodyPredFail (TooManyExUnits Mismatch {..}) =
   ppRecord
     "TooManyExUnits"
-    [ ("Computed Sum of ExUnits for all plutus scripts", pcExUnits e1)
-    , ("Maximum allowed by protocal parameters", pcExUnits e2)
+    [ ("Computed Sum of ExUnits for all plutus scripts", pcExUnits mismatchSupplied)
+    , ("Maximum allowed by protocal parameters", pcExUnits mismatchExpected)
     ]
 
 instance Reflect era => PrettyA (AlonzoBbodyPredFailure era) where
@@ -1750,11 +1750,11 @@ ppAlonzoUtxowPredFailure (NotAllowedSupplementalDatums s1 s2) =
     [ ("unallowed data hashes", ppSet ppSafeHash s1)
     , ("acceptable data hashes", ppSet ppSafeHash s2)
     ]
-ppAlonzoUtxowPredFailure (PPViewHashesDontMatch h1 h2) =
+ppAlonzoUtxowPredFailure (PPViewHashesDontMatch Mismatch {..}) =
   ppRecord
     "PPViewHashesDontMatch"
-    [ ("PPHash in the TxBody", ppStrictMaybe ppSafeHash h1)
-    , ("PPHash Computed from the current Protocol Parameters", ppStrictMaybe ppSafeHash h2)
+    [ ("PPHash in the TxBody", ppStrictMaybe ppSafeHash mismatchSupplied)
+    , ("PPHash Computed from the current Protocol Parameters", ppStrictMaybe ppSafeHash mismatchExpected)
     ]
 ppAlonzoUtxowPredFailure (MissingRequiredSigners x) =
   ppSexp "MissingRequiredSigners" [ppSet pcKeyHash x]
@@ -1814,19 +1814,23 @@ ppAlonzoUtxoPredFailure x = case x of
       [ ("provided interval", ppValidityInterval vi)
       , ("current slot", pcSlotNo slot)
       ]
-  Alonzo.MaxTxSizeUTxO actual maxs ->
-    ppRecord "MaxTxSizeUTxO" [("Actual", ppInteger actual), ("max transaction size", ppInteger maxs)]
+  Alonzo.MaxTxSizeUTxO Mismatch {..} ->
+    ppRecord
+      "MaxTxSizeUTxO"
+      [("Actual", ppInteger mismatchSupplied), ("max transaction size", ppInteger mismatchExpected)]
   Alonzo.InputSetEmptyUTxO -> ppString "InputSetEmptyUTxO"
-  Alonzo.FeeTooSmallUTxO computed supplied ->
+  Alonzo.FeeTooSmallUTxO Mismatch {..} ->
     ppRecord
       "FeeTooSmallUTxO"
-      [ ("min fee for this transaction", pcCoin computed)
-      , ("fee supplied by this transaction", pcCoin supplied)
+      [ ("min fee for this transaction", pcCoin mismatchExpected)
+      , ("fee supplied by this transaction", pcCoin mismatchSupplied)
       ]
-  Alonzo.ValueNotConservedUTxO consumed produced ->
+  Alonzo.ValueNotConservedUTxO Mismatch {..} ->
     ppRecord
       "ValueNotConservedUTxO"
-      [("coin consumed", pcVal @era reify consumed), ("coin produced", pcVal @era reify produced)]
+      [ ("coin consumed", pcVal @era reify mismatchSupplied)
+      , ("coin produced", pcVal @era reify mismatchExpected)
+      ]
   Alonzo.WrongNetwork n add ->
     ppRecord
       "WrongNetwork"
@@ -1867,25 +1871,25 @@ ppAlonzoUtxoPredFailure x = case x of
       , ("the required collateral for the given fee", pcCoin c2)
       ]
   ScriptsNotPaidUTxO u -> ppSexp "ScriptsNotPaidUTxO" [pcUTxO reify u]
-  ExUnitsTooBigUTxO e1 e2 ->
+  ExUnitsTooBigUTxO Mismatch {..} ->
     ppRecord
       "ExUnitsTooBigUTxO"
-      [ ("Max EXUnits from the protocol parameters", pcExUnits e1)
-      , ("EXUnits supplied", pcExUnits e2)
+      [ ("Max EXUnits from the protocol parameters", pcExUnits mismatchExpected)
+      , ("EXUnits supplied", pcExUnits mismatchSupplied)
       ]
   CollateralContainsNonADA v -> ppSexp "CollateralContainsNonADA" [pcVal (reify @era) v]
-  WrongNetworkInTxBody n1 n2 ->
+  WrongNetworkInTxBody Mismatch {..} ->
     ppRecord
       "WrongNetworkInTxBody"
-      [ ("Actual Network ID", ppNetwork n1)
-      , ("Network ID in transaction body", ppNetwork n2)
+      [ ("Actual Network ID", ppNetwork mismatchExpected)
+      , ("Network ID in transaction body", ppNetwork mismatchSupplied)
       ]
   OutsideForecast slot -> ppRecord "OutsideForecast" [("slot number outside consensus forecast range", pcSlotNo slot)]
-  TooManyCollateralInputs n1 n2 ->
+  TooManyCollateralInputs Mismatch {..} ->
     ppRecord
       "TooManyCollateralInputs"
-      [ ("Max allowed collateral inputs", ppNatural n1)
-      , ("Number of collateral inputs", ppNatural n2)
+      [ ("Max allowed collateral inputs", ppNatural mismatchExpected)
+      , ("Number of collateral inputs", ppNatural mismatchSupplied)
       ]
   NoCollateralInputs -> ppSexp " NoCollateralInputs" []
 
@@ -1904,17 +1908,19 @@ ppShelleyDelegPredFailure x = case x of
   WrongCertificateTypeDELEG -> ppSexp "WrongCertificateTypeDELEG" []
   GenesisKeyNotInMappingDELEG kh -> ppSexp "GenesisKeyNotInMappingDELEG" [pcKeyHash kh]
   DuplicateGenesisDelegateDELEG kh -> ppSexp "DuplicateGenesisDelegateDELEG" [pcKeyHash kh]
-  InsufficientForInstantaneousRewardsDELEG pot c1 c2 ->
+  InsufficientForInstantaneousRewardsDELEG pot Mismatch {..} ->
     ppSexp
       "InsufficientForInstantaneousRewardsDELEG"
-      [ppString (show pot), pcCoin c1, pcCoin c2]
-  MIRCertificateTooLateinEpochDELEG s1 s2 ->
-    ppSexp "MIRCertificateTooLateinEpochDELEG" [pcSlotNo s1, pcSlotNo s2]
+      [ppString (show pot), pcCoin mismatchSupplied, pcCoin mismatchExpected]
+  MIRCertificateTooLateinEpochDELEG Mismatch {..} ->
+    ppSexp "MIRCertificateTooLateinEpochDELEG" [pcSlotNo mismatchSupplied, pcSlotNo mismatchExpected]
   DuplicateGenesisVRFDELEG hash -> ppSexp "DuplicateGenesisVRFDELEG" [ppHash hash]
   MIRTransferNotCurrentlyAllowed -> ppString "MIRTransferNotCurrentlyAllowed"
   MIRNegativesNotCurrentlyAllowed -> ppString " MIRNegativesNotCurrentlyAllowed"
-  InsufficientForTransferDELEG pot c1 c2 ->
-    ppSexp "InsufficientForTransferDELEG" [ppString (show pot), pcCoin c1, pcCoin c2]
+  InsufficientForTransferDELEG pot Mismatch {..} ->
+    ppSexp
+      "InsufficientForTransferDELEG"
+      [ppString (show pot), pcCoin mismatchSupplied, pcCoin mismatchExpected]
   MIRProducesNegativeUpdate -> ppString "MIRProducesNegativeUpdate"
   MIRNegativeTransfer pot c1 -> ppSexp " MIRNegativeTransfer" [ppString (show pot), pcCoin c1]
 
@@ -2103,8 +2109,12 @@ instance PrettyA FailureDescription where
 ppShelleyUtxoPredFailure :: forall era. Reflect era => ShelleyUtxoPredFailure era -> PDoc
 ppShelleyUtxoPredFailure (Shelley.BadInputsUTxO x) =
   ppSexp "BadInputsUTxO" [ppSet pcTxIn x]
-ppShelleyUtxoPredFailure (Shelley.ExpiredUTxO ttl slot) =
-  ppRecord "ExpiredUTxO" [("transaction time to live", pcSlotNo ttl), ("current slot", pcSlotNo slot)]
+ppShelleyUtxoPredFailure (Shelley.ExpiredUTxO Mismatch {..}) =
+  ppRecord
+    "ExpiredUTxO"
+    [ ("transaction time to live", pcSlotNo mismatchSupplied)
+    , ("current slot", pcSlotNo mismatchExpected)
+    ]
 ppShelleyUtxoPredFailure (Shelley.MaxTxSizeUTxO (Mismatch {mismatchSupplied = actual, mismatchExpected = maxs})) =
   ppRecord
     "MaxTxSizeUTxO"
@@ -2119,7 +2129,7 @@ ppShelleyUtxoPredFailure (Shelley.FeeTooSmallUTxO (Mismatch {mismatchSupplied = 
     [ ("min fee for this transaction", pcCoin computed)
     , ("fee supplied by this transaction", pcCoin supplied)
     ]
-ppShelleyUtxoPredFailure (Shelley.ValueNotConservedUTxO consumed produced) =
+ppShelleyUtxoPredFailure (Shelley.ValueNotConservedUTxO Mismatch {mismatchSupplied = consumed, mismatchExpected = produced}) =
   ppRecord
     "ValueNotConservedUTxO"
     [ ("coin consumed", pcVal @era reify consumed)
@@ -2193,24 +2203,24 @@ ppAllegraUtxoPredFailure (Allegra.OutsideValidityIntervalUTxO vi slot) =
     [ ("provided interval", ppValidityInterval vi)
     , ("current slot", pcSlotNo slot)
     ]
-ppAllegraUtxoPredFailure (Allegra.MaxTxSizeUTxO actual maxs) =
+ppAllegraUtxoPredFailure (Allegra.MaxTxSizeUTxO Mismatch {..}) =
   ppRecord
     "MaxTxSizeUTxO"
-    [ ("Actual", ppInteger actual)
-    , ("max transaction size", ppInteger maxs)
+    [ ("Actual", ppInteger mismatchSupplied)
+    , ("max transaction size", ppInteger mismatchExpected)
     ]
 ppAllegraUtxoPredFailure (Allegra.InputSetEmptyUTxO) = ppSexp "InputSetEmptyUTxO" []
-ppAllegraUtxoPredFailure (Allegra.FeeTooSmallUTxO computed supplied) =
+ppAllegraUtxoPredFailure (Allegra.FeeTooSmallUTxO Mismatch {..}) =
   ppRecord
     "FeeTooSmallUTxO"
-    [ ("min fee for this transaction", pcCoin computed)
-    , ("fee supplied by this transaction", pcCoin supplied)
+    [ ("min fee for this transaction", pcCoin mismatchExpected)
+    , ("fee supplied by this transaction", pcCoin mismatchSupplied)
     ]
-ppAllegraUtxoPredFailure (Allegra.ValueNotConservedUTxO consumed produced) =
+ppAllegraUtxoPredFailure (Allegra.ValueNotConservedUTxO Mismatch {..}) =
   ppRecord
     "ValueNotConservedUTxO"
-    [ ("coin consumed", pcVal @era reify consumed)
-    , ("coin produced", pcVal @era reify produced)
+    [ ("coin consumed", pcVal @era reify mismatchSupplied)
+    , ("coin produced", pcVal @era reify mismatchExpected)
     ]
 ppAllegraUtxoPredFailure (Allegra.WrongNetwork n add) =
   ppRecord

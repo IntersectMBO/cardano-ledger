@@ -77,8 +77,12 @@ data BbodyEnv era = BbodyEnv
   }
 
 data ShelleyBbodyPredFailure era
-  = WrongBlockBodySizeBBODY (Mismatch 'RelEQ Int)
-  | InvalidBodyHashBBODY (Mismatch 'RelEQ (Hash (EraCrypto era) EraIndependentBlockBody))
+  = -- | `mismatchSupplied` ~ Actual body size.
+    --   `mismatchExpected` ~ Claimed body size in the header.
+    WrongBlockBodySizeBBODY (Mismatch 'RelEQ Int)
+  | -- | `mismatchSupplied` ~ Actual hash.
+    --   `mismatchExpected` ~ Claimed hash in the header.
+    InvalidBodyHashBBODY (Mismatch 'RelEQ (Hash (EraCrypto era) EraIndependentBlockBody))
   | LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 

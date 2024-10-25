@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -10,6 +9,7 @@
 module Test.Cardano.Ledger.Mary.Imp.UtxoSpec (spec) where
 
 import Cardano.Ledger.Allegra.Scripts
+import Cardano.Ledger.BaseTypes (Mismatch (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
@@ -70,7 +70,8 @@ spec = describe "UTXO" $ do
       submitFailingTx
         (mkBasicTx txBody)
         [ injectFailure $
-            ValueNotConservedUTxO
-              (rootTxOutValue <> MaryValue c (MultiAsset mintedMultiAsset))
-              (rootTxOutValue <> MaryValue c burnTooMuchProducedMultiAsset)
+            ValueNotConservedUTxO $
+              Mismatch
+                (rootTxOutValue <> MaryValue c (MultiAsset mintedMultiAsset))
+                (rootTxOutValue <> MaryValue c burnTooMuchProducedMultiAsset)
         ]

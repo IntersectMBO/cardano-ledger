@@ -357,20 +357,10 @@ alonzoToConwayUtxoPredFailure ::
 alonzoToConwayUtxoPredFailure = \case
   Alonzo.BadInputsUTxO x -> BadInputsUTxO x
   Alonzo.OutsideValidityIntervalUTxO vi slotNo -> OutsideValidityIntervalUTxO vi slotNo
-  Alonzo.MaxTxSizeUTxO x y -> MaxTxSizeUTxO Mismatch {mismatchSupplied = x, mismatchExpected = y}
+  Alonzo.MaxTxSizeUTxO m -> MaxTxSizeUTxO m
   Alonzo.InputSetEmptyUTxO -> InputSetEmptyUTxO
-  Alonzo.FeeTooSmallUTxO ppMinFee supplied ->
-    FeeTooSmallUTxO
-      Mismatch
-        { mismatchSupplied = supplied
-        , mismatchExpected = ppMinFee
-        }
-  Alonzo.ValueNotConservedUTxO consumed produced ->
-    ValueNotConservedUTxO
-      Mismatch
-        { mismatchSupplied = consumed
-        , mismatchExpected = produced
-        }
+  Alonzo.FeeTooSmallUTxO m -> FeeTooSmallUTxO m
+  Alonzo.ValueNotConservedUTxO m -> ValueNotConservedUTxO m
   Alonzo.WrongNetwork x y -> WrongNetwork x y
   Alonzo.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
   Alonzo.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
@@ -390,26 +380,11 @@ alonzoToConwayUtxoPredFailure = \case
       OutputTooBigUTxO $ map toRestricted xs
   Alonzo.InsufficientCollateral c1 c2 -> InsufficientCollateral c1 c2
   Alonzo.ScriptsNotPaidUTxO u -> ScriptsNotPaidUTxO u
-  Alonzo.ExUnitsTooBigUTxO e1 e2 ->
-    ExUnitsTooBigUTxO
-      Mismatch
-        { mismatchSupplied = e2
-        , mismatchExpected = e1
-        }
+  Alonzo.ExUnitsTooBigUTxO m -> ExUnitsTooBigUTxO m
   Alonzo.CollateralContainsNonADA v -> CollateralContainsNonADA v
-  Alonzo.WrongNetworkInTxBody nid nidInTx ->
-    WrongNetworkInTxBody
-      Mismatch
-        { mismatchSupplied = nidInTx
-        , mismatchExpected = nid
-        }
+  Alonzo.WrongNetworkInTxBody m -> WrongNetworkInTxBody m
   Alonzo.OutsideForecast sno -> OutsideForecast sno
-  Alonzo.TooManyCollateralInputs maxI suppliedI ->
-    TooManyCollateralInputs
-      Mismatch
-        { mismatchSupplied = suppliedI
-        , mismatchExpected = maxI
-        }
+  Alonzo.TooManyCollateralInputs m -> TooManyCollateralInputs m
   Alonzo.NoCollateralInputs -> NoCollateralInputs
 
 allegraToConwayUtxoPredFailure ::
@@ -420,25 +395,10 @@ allegraToConwayUtxoPredFailure ::
 allegraToConwayUtxoPredFailure = \case
   Allegra.BadInputsUTxO x -> BadInputsUTxO x
   Allegra.OutsideValidityIntervalUTxO vi slotNo -> OutsideValidityIntervalUTxO vi slotNo
-  Allegra.MaxTxSizeUTxO supplied expected ->
-    MaxTxSizeUTxO
-      Mismatch
-        { mismatchSupplied = supplied
-        , mismatchExpected = expected
-        }
+  Allegra.MaxTxSizeUTxO m -> MaxTxSizeUTxO m
   Allegra.InputSetEmptyUTxO -> InputSetEmptyUTxO
-  Allegra.FeeTooSmallUTxO minFee suppliedFee ->
-    FeeTooSmallUTxO
-      Mismatch
-        { mismatchSupplied = suppliedFee
-        , mismatchExpected = minFee
-        }
-  Allegra.ValueNotConservedUTxO consumed produced ->
-    ValueNotConservedUTxO
-      Mismatch
-        { mismatchSupplied = consumed
-        , mismatchExpected = produced
-        }
+  Allegra.FeeTooSmallUTxO m -> FeeTooSmallUTxO m
+  Allegra.ValueNotConservedUTxO m -> ValueNotConservedUTxO m
   Allegra.WrongNetwork x y -> WrongNetwork x y
   Allegra.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
