@@ -10,10 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Conway.Imp.GovSpec (
-  spec,
-  relevantDuringBootstrapSpec,
-) where
+module Test.Cardano.Ledger.Conway.Imp.GovSpec (spec) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes
@@ -51,20 +48,12 @@ spec ::
   ) =>
   SpecWith (ImpTestState era)
 spec = do
-  relevantDuringBootstrapSpec
-
-relevantDuringBootstrapSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
-  SpecWith (ImpTestState era)
-relevantDuringBootstrapSpec = do
-  predicateFailuresSpec
-  policySpec
-  votingSpec
-  unknownCostModelsSpec
   constitutionSpec
+  proposalsSpec
+  votingSpec
+  policySpec
+  predicateFailuresSpec
+  unknownCostModelsSpec
   withdrawalsSpec
   hardForkSpec
   pparamUpdateSpec
