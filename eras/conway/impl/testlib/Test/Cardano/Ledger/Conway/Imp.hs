@@ -114,7 +114,7 @@ spec = do
       describe "BBODY" $ Bbody.spec @era
       describe "CERTS" $ Certs.spec @era
       describe "DELEG" $ Deleg.spec @era
-      describe "ENACT" $ Enact.relevantDuringBootstrapSpec @era
+      describe "ENACT" $ Enact.spec @era
       describe "EPOCH" $ Epoch.relevantDuringBootstrapSpec @era
       describe "GOV" $ Gov.spec @era
       describe "GOVCERT" $ GovCert.spec @era
