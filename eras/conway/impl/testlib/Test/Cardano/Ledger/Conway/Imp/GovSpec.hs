@@ -57,8 +57,6 @@ spec = do
   votingSpec
   policySpec
   predicateFailuresSpec
-  unknownCostModelsSpec
-
 relevantDuringBootstrapSpec ::
   forall era.
   ( ConwayEraImp era
@@ -66,6 +64,7 @@ relevantDuringBootstrapSpec ::
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
+  unknownCostModelsSpec
   constitutionSpec
   withdrawalsSpec
   hardForkSpec
@@ -84,12 +83,11 @@ unknownCostModelsSpec =
       costModels <- getsPParams ppCostModelsL
       newCostModels <- arbitrary
       hotCommitteeCs <- registerInitialCommittee
-      (drepC, _, _) <- setupSingleDRep 1_000_000
+      whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPTechnicalGroupL .~ def)
       gai <-
         submitParameterChange SNothing $
           emptyPParamsUpdate
             & ppuCostModelsL .~ SJust newCostModels
-      submitYesVote_ (DRepVoter drepC) gai
       submitYesVoteCCs_ hotCommitteeCs gai
       passNEpochs 2
       getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gai)
