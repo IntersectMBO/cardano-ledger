@@ -8,10 +8,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Conway.Imp.EnactSpec (
-  spec,
-  relevantDuringBootstrapSpec,
-) where
+module Test.Cardano.Ledger.Conway.Imp.EnactSpec (spec) where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
@@ -54,27 +51,15 @@ spec ::
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 spec = do
-  relevantDuringBootstrapSpec
   committeeSpec
   treasuryWithdrawalsSpec
   noConfidenceSpec
-  constitutionSpec
-  actionPriorityCommitteePurposeSpec
   hardForkInitiationSpec
-
-relevantDuringBootstrapSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
-  ) =>
-  SpecWith (ImpTestState era)
-relevantDuringBootstrapSpec = do
+  constitutionSpec
   actionPrioritySpec
   hardForkInitiationNoDRepsSpec
   pparamPredictionSpec
@@ -90,7 +75,8 @@ treasuryWithdrawalsSpec ::
   SpecWith (ImpTestState era)
 treasuryWithdrawalsSpec =
   describe "Treasury withdrawals" $ do
-    it "Modify EnactState as expected" $ do
+    -- Treasury withdrawals are disallowed in bootstrap, so we're running these tests only post-bootstrap
+    it "Modify EnactState as expected" $ whenPostBootstrap $ do
       rewardAcount1 <- registerRewardAccount
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
       gas <- getGovActionState govActionId
@@ -130,7 +116,7 @@ treasuryWithdrawalsSpec =
                    ]
       ensTreasury enactState'' `shouldBe` Coin 1
 
-    it "Withdrawals exceeding treasury submitted in a single proposal" $ do
+    it "Withdrawals exceeding treasury submitted in a single proposal" $ whenPostBootstrap $ do
       disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
@@ -152,7 +138,7 @@ treasuryWithdrawalsSpec =
       getTreasury `shouldReturn` zero
       sumRewardAccounts withdrawals `shouldReturn` sumRequested
 
-    it "Withdrawals exceeding maxBound Word64 submitted in a single proposal" $ do
+    it "Withdrawals exceeding maxBound Word64 submitted in a single proposal" $ whenPostBootstrap $ do
       disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
@@ -162,38 +148,39 @@ treasuryWithdrawalsSpec =
       void $ enactTreasuryWithdrawals withdrawals drepC committeeCs
       checkNoWithdrawal initialTreasury withdrawals
 
-    it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $ do
-      disableTreasuryExpansion
-      committeeCs <- registerInitialCommittee
-      (drepC, _, _) <- setupSingleDRep 1_000_000
-      donateToTreasury $ Coin 5_000_000
-      initialTreasury <- getTreasury
-      numWithdrawals <- choose (1, 10)
-      withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
+    it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $
+      whenPostBootstrap $ do
+        disableTreasuryExpansion
+        committeeCs <- registerInitialCommittee
+        (drepC, _, _) <- setupSingleDRep 1_000_000
+        donateToTreasury $ Coin 5_000_000
+        initialTreasury <- getTreasury
+        numWithdrawals <- choose (1, 10)
+        withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
 
-      impAnn "submit in individual proposals in the same epoch" $ do
-        traverse_
-          ( \w -> do
-              gaId <- submitTreasuryWithdrawals @era [w]
-              submitYesVote_ (DRepVoter drepC) gaId
-              submitYesVoteCCs_ committeeCs gaId
-          )
-          withdrawals
-        passNEpochs 2
+        impAnn "submit in individual proposals in the same epoch" $ do
+          traverse_
+            ( \w -> do
+                gaId <- submitTreasuryWithdrawals @era [w]
+                submitYesVote_ (DRepVoter drepC) gaId
+                submitYesVoteCCs_ committeeCs gaId
+            )
+            withdrawals
+          passNEpochs 2
 
-        let expectedTreasury =
-              F.foldl'
-                ( \acc (_, x) ->
-                    if acc >= x
-                      then acc <-> x
-                      else acc
-                )
-                initialTreasury
-                withdrawals
+          let expectedTreasury =
+                F.foldl'
+                  ( \acc (_, x) ->
+                      if acc >= x
+                        then acc <-> x
+                        else acc
+                  )
+                  initialTreasury
+                  withdrawals
 
-        getTreasury `shouldReturn` expectedTreasury
-        -- check that the sum of the rewards matches what was spent from the treasury
-        sumRewardAccounts withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
+          getTreasury `shouldReturn` expectedTreasury
+          -- check that the sum of the rewards matches what was spent from the treasury
+          sumRewardAccounts withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
   where
     getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
     sumRewardAccounts withdrawals = mconcat <$> traverse (getRewardAccountAmount . fst) withdrawals
@@ -221,7 +208,7 @@ hardForkInitiationSpec ::
   ) =>
   SpecWith (ImpTestState era)
 hardForkInitiationSpec =
-  it "HardForkInitiation" $ do
+  it "HardForkInitiation" $ whenPostBootstrap $ do
     committeeMembers' <- registerInitialCommittee
     modifyPParams $ \pp ->
       pp
@@ -319,7 +306,7 @@ pparamPredictionSpec =
 
 noConfidenceSpec :: forall era. ConwayEraImp era => SpecWith (ImpTestState era)
 noConfidenceSpec =
-  it "NoConfidence" $ do
+  it "NoConfidence" $ whenPostBootstrap $ do
     modifyPParams $ \pp ->
       pp
         & ppDRepVotingThresholdsL . dvtCommitteeNoConfidenceL .~ 1 %! 2
@@ -362,108 +349,115 @@ noConfidenceSpec =
     replicateM_ 4 passEpoch
     assertNoCommittee
 
-constitutionSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
+constitutionSpec ::
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  ) =>
+  SpecWith (ImpTestState era)
 constitutionSpec =
   it "Constitution" $ do
     (committeeMember1 :| [committeeMember2]) <- registerInitialCommittee
     (dRep, _, _) <- setupSingleDRep 1_000_000
-    (proposal, constitution) <- mkConstitutionProposal SNothing
-    govActionId <- submitProposal proposal
     initialConstitution <- getConstitution
+    (proposal, constitution) <- mkConstitutionProposal SNothing
+    mbGovActionId <-
+      submitBootstrapAwareFailingProposal proposal $
+        FailBootstrap [injectFailure (DisallowedProposalDuringBootstrap proposal)]
+    forM_ mbGovActionId $ \govActionId -> do
+      proposalsBeforeVotes <- getsNES $ newEpochStateGovStateL . proposalsGovStateL
+      pulserBeforeVotes <- getsNES newEpochStateDRepPulsingStateL
 
-    proposalsBeforeVotes <- getsNES $ newEpochStateGovStateL . proposalsGovStateL
-    pulserBeforeVotes <- getsNES newEpochStateDRepPulsingStateL
+      submitYesVote_ (DRepVoter dRep) govActionId
+      submitYesVote_ (CommitteeVoter committeeMember1) govActionId
+      submitYesVote_ (CommitteeVoter committeeMember2) govActionId
 
-    submitYesVote_ (DRepVoter dRep) govActionId
-    submitYesVote_ (CommitteeVoter committeeMember1) govActionId
-    submitYesVote_ (CommitteeVoter committeeMember2) govActionId
+      proposalsAfterVotes <- getsNES $ newEpochStateGovStateL . proposalsGovStateL
+      pulserAfterVotes <- getsNES newEpochStateDRepPulsingStateL
 
-    proposalsAfterVotes <- getsNES $ newEpochStateGovStateL . proposalsGovStateL
-    pulserAfterVotes <- getsNES newEpochStateDRepPulsingStateL
+      impAnn "Votes are recorded in the proposals" $ do
+        let proposalsWithVotes =
+              proposalsAddVote
+                (CommitteeVoter committeeMember1)
+                VoteYes
+                govActionId
+                ( proposalsAddVote
+                    (CommitteeVoter committeeMember2)
+                    VoteYes
+                    govActionId
+                    ( proposalsAddVote
+                        (DRepVoter dRep)
+                        VoteYes
+                        govActionId
+                        proposalsBeforeVotes
+                    )
+                )
+        proposalsAfterVotes `shouldBe` proposalsWithVotes
 
-    impAnn "Votes are recorded in the proposals" $ do
-      let proposalsWithVotes =
-            proposalsAddVote
-              (CommitteeVoter committeeMember1)
-              VoteYes
-              govActionId
-              ( proposalsAddVote
-                  (CommitteeVoter committeeMember2)
-                  VoteYes
-                  govActionId
-                  ( proposalsAddVote
-                      (DRepVoter dRep)
-                      VoteYes
-                      govActionId
-                      proposalsBeforeVotes
-                  )
-              )
-      proposalsAfterVotes `shouldBe` proposalsWithVotes
+      impAnn "Pulser has not changed" $
+        pulserAfterVotes `shouldBe` pulserBeforeVotes
 
-    impAnn "Pulser has not changed" $
-      pulserAfterVotes `shouldBe` pulserBeforeVotes
+      passEpoch
 
-    passEpoch
+      impAnn "New constitution is not enacted after one epoch" $ do
+        constitutionAfterOneEpoch <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+        constitutionAfterOneEpoch `shouldBe` initialConstitution
 
-    impAnn "New constitution is not enacted after one epoch" $ do
-      constitutionAfterOneEpoch <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-      constitutionAfterOneEpoch `shouldBe` initialConstitution
+      impAnn "Pulser should reflect the constitution to be enacted" $ do
+        pulser <- getsNES newEpochStateDRepPulsingStateL
+        let ratifyState = extractDRepPulsingState pulser
+        gasId <$> rsEnacted ratifyState `shouldBe` govActionId Seq.:<| Seq.Empty
+        rsEnactState ratifyState ^. ensConstitutionL `shouldBe` constitution
 
-    impAnn "Pulser should reflect the constitution to be enacted" $ do
-      pulser <- getsNES newEpochStateDRepPulsingStateL
-      let ratifyState = extractDRepPulsingState pulser
-      gasId <$> rsEnacted ratifyState `shouldBe` govActionId Seq.:<| Seq.Empty
-      rsEnactState ratifyState ^. ensConstitutionL `shouldBe` constitution
+      passEpoch
 
-    passEpoch
+      impAnn "Constitution is enacted after two epochs" $ do
+        curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+        curConstitution `shouldBe` constitution
 
-    impAnn "Constitution is enacted after two epochs" $ do
-      curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-      curConstitution `shouldBe` constitution
+      impAnn "Pulser is reset" $ do
+        pulser <- getsNES newEpochStateDRepPulsingStateL
+        let pulserRatifyState = extractDRepPulsingState pulser
+        rsEnacted pulserRatifyState `shouldBe` Seq.empty
+        enactState <- getEnactState
+        rsEnactState pulserRatifyState `shouldBe` enactState
 
-    impAnn "Pulser is reset" $ do
-      pulser <- getsNES newEpochStateDRepPulsingStateL
-      let pulserRatifyState = extractDRepPulsingState pulser
-      rsEnacted pulserRatifyState `shouldBe` Seq.empty
-      enactState <- getEnactState
-      rsEnactState pulserRatifyState `shouldBe` enactState
-
-actionPriorityCommitteePurposeSpec ::
+actionPrioritySpec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  ) =>
   SpecWith (ImpTestState era)
-actionPriorityCommitteePurposeSpec =
-  describe "Competing proposals with different priorities" $ do
+actionPrioritySpec =
+  describe "Competing proposals" $ do
     it "higher action priority wins" $ do
       (drepC, _, _) <- setupSingleDRep 1_000_000
       (poolKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
       cc <- KeyHashObj <$> freshKeyHash
-      gai1 <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 30)] (1 %! 3)
-      -- gai2 is the first action of a higher priority
-      gai2 <- submitGovAction $ NoConfidence SNothing
-      gai3 <- submitGovAction $ NoConfidence SNothing
-      traverse_ @[]
-        ( \gaid -> do
-            submitYesVote_ (DRepVoter drepC) gaid
-            submitYesVote_ (StakePoolVoter poolKH) gaid
-        )
-        [gai1, gai2, gai3]
-      passNEpochs 2
-      getLastEnactedCommittee
-        `shouldReturn` SJust (GovPurposeId gai2)
-      expectNoCurrentProposals
+      proposal <-
+        mkUpdateCommitteeProposal Nothing mempty [(cc, EpochInterval 30)] (1 %! 3)
+      mbGai1 <-
+        submitBootstrapAwareFailingProposal proposal $
+          FailBootstrap [injectFailure $ DisallowedProposalDuringBootstrap proposal]
+      forM_ mbGai1 $ \gai1 -> do
+        -- gai2 is the first action of a higher priority
+        gai2 <- submitGovAction $ NoConfidence SNothing
+        gai3 <- submitGovAction $ NoConfidence SNothing
+        traverse_ @[]
+          ( \gaid -> do
+              submitYesVote_ (DRepVoter drepC) gaid
+              submitYesVote_ (StakePoolVoter poolKH) gaid
+          )
+          [gai1, gai2, gai3]
+        passNEpochs 2
+        getLastEnactedCommittee
+          `shouldReturn` SJust (GovPurposeId gai2)
+        expectNoCurrentProposals
 
-      committee <-
-        getsNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-      committee `shouldBe` SNothing
+        committee <-
+          getsNES $
+            nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+        committee `shouldBe` SNothing
 
-actionPrioritySpec ::
-  forall era.
-  ConwayEraImp era =>
-  SpecWith (ImpTestState era)
-actionPrioritySpec =
-  describe "Competing proposals ratified in the same epoch" $ do
     let val1 = Coin 1_000_001
     let val2 = Coin 1_000_002
     let val3 = Coin 1_000_003
@@ -553,7 +547,9 @@ expectHardForkEvents actual expected =
       | otherwise = False
 
 committeeSpec ::
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  ) =>
   SpecWith (ImpTestState era)
 committeeSpec =
   describe "Committee enactment" $ do
@@ -565,15 +561,19 @@ committeeSpec =
       cc <- KeyHashObj <$> freshKeyHash
       EpochInterval committeeMaxTermLength <-
         getsNES $ nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
-      secondAddCCGaid <-
-        submitUpdateCommittee Nothing mempty [(cc, EpochInterval (committeeMaxTermLength + 2))] (1 %! 2)
-      submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
-      submitYesVote_ (StakePoolVoter spoC) secondAddCCGaid
-      passNEpochs 2
-      -- Due to longer than allowed lifetime we have to wait an extra epoch for this new action to be enacted
-      expectCommitteeMemberAbsence cc
-      passEpoch
-      expectCommitteeMemberPresence cc
+      proposal <-
+        mkUpdateCommitteeProposal Nothing mempty [(cc, EpochInterval (committeeMaxTermLength + 2))] (1 %! 2)
+      mbSecondAddCCGaid <-
+        submitBootstrapAwareFailingProposal proposal $
+          FailBootstrap [injectFailure $ DisallowedProposalDuringBootstrap proposal]
+      forM_ mbSecondAddCCGaid $ \secondAddCCGaid -> do
+        submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
+        submitYesVote_ (StakePoolVoter spoC) secondAddCCGaid
+        passNEpochs 2
+        -- Due to longer than allowed lifetime we have to wait an extra epoch for this new action to be enacted
+        expectCommitteeMemberAbsence cc
+        passEpoch
+        expectCommitteeMemberPresence cc
 
     -- A CC that has resigned will need to be first voted out and then voted in to be considered active
     it "CC re-election" $ do
@@ -582,40 +582,45 @@ committeeSpec =
       passNEpochs 2
       -- Add a fresh CC
       cc <- KeyHashObj <$> freshKeyHash
-      addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (1 %! 2)
-      submitYesVote_ (DRepVoter drepCred) addCCGaid
-      submitYesVote_ (StakePoolVoter spoC) addCCGaid
-      passNEpochs 2
-      -- Confirm that they are added
-      expectCommitteeMemberPresence cc
-      -- Confirm their hot key registration
-      _hotKey <- registerCommitteeHotKey cc
-      ccShouldNotBeResigned cc
-      -- Have them resign
-      _ <- resignCommitteeColdKey cc SNothing
-      ccShouldBeResigned cc
-      -- Re-add the same CC
-      reAddCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
-      submitYesVote_ (DRepVoter drepCred) reAddCCGaid
-      submitYesVote_ (StakePoolVoter spoC) reAddCCGaid
-      passNEpochs 2
-      -- Confirm that they are still resigned
-      ccShouldBeResigned cc
-      -- Remove them
-      removeCCGaid <-
-        submitUpdateCommittee (Just (SJust $ GovPurposeId reAddCCGaid)) (Set.singleton cc) [] (1 %! 2)
-      submitYesVote_ (DRepVoter drepCred) removeCCGaid
-      submitYesVote_ (StakePoolVoter spoC) removeCCGaid
-      passNEpochs 2
-      -- Confirm that they have been removed
-      expectCommitteeMemberAbsence cc
-      secondAddCCGaid <-
-        submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
-      submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
-      submitYesVote_ (StakePoolVoter spoC) secondAddCCGaid
-      passNEpochs 2
-      -- Confirm that they have been added
-      expectCommitteeMemberPresence cc
-      -- Confirm that after registering a hot key, they are active
-      _hotKey <- registerCommitteeHotKey cc
-      ccShouldNotBeResigned cc
+      proposal <-
+        mkUpdateCommitteeProposal Nothing mempty [(cc, EpochInterval 10)] (1 %! 2)
+      mbAddCCGaid <-
+        submitBootstrapAwareFailingProposal proposal $
+          FailBootstrap [injectFailure $ DisallowedProposalDuringBootstrap proposal]
+      forM_ mbAddCCGaid $ \addCCGaid -> do
+        submitYesVote_ (DRepVoter drepCred) addCCGaid
+        submitYesVote_ (StakePoolVoter spoC) addCCGaid
+        passNEpochs 2
+        -- Confirm that they are added
+        expectCommitteeMemberPresence cc
+        -- Confirm their hot key registration
+        _hotKey <- registerCommitteeHotKey cc
+        ccShouldNotBeResigned cc
+        -- Have them resign
+        _ <- resignCommitteeColdKey cc SNothing
+        ccShouldBeResigned cc
+        -- Re-add the same CC
+        reAddCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
+        submitYesVote_ (DRepVoter drepCred) reAddCCGaid
+        submitYesVote_ (StakePoolVoter spoC) reAddCCGaid
+        passNEpochs 2
+        -- Confirm that they are still resigned
+        ccShouldBeResigned cc
+        -- Remove them
+        removeCCGaid <-
+          submitUpdateCommittee (Just (SJust $ GovPurposeId reAddCCGaid)) (Set.singleton cc) [] (1 %! 2)
+        submitYesVote_ (DRepVoter drepCred) removeCCGaid
+        submitYesVote_ (StakePoolVoter spoC) removeCCGaid
+        passNEpochs 2
+        -- Confirm that they have been removed
+        expectCommitteeMemberAbsence cc
+        secondAddCCGaid <-
+          submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
+        submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
+        submitYesVote_ (StakePoolVoter spoC) secondAddCCGaid
+        passNEpochs 2
+        -- Confirm that they have been added
+        expectCommitteeMemberPresence cc
+        -- Confirm that after registering a hot key, they are active
+        _hotKey <- registerCommitteeHotKey cc
+        ccShouldNotBeResigned cc
