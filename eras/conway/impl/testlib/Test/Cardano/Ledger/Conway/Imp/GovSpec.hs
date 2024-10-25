@@ -54,7 +54,6 @@ spec ::
   SpecWith (ImpTestState era)
 spec = do
   relevantDuringBootstrapSpec
-  votingSpec
   policySpec
   predicateFailuresSpec
 relevantDuringBootstrapSpec ::
@@ -64,6 +63,7 @@ relevantDuringBootstrapSpec ::
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
+  votingSpec
   unknownCostModelsSpec
   constitutionSpec
   withdrawalsSpec
@@ -238,31 +238,6 @@ proposalsSpec ::
   ) =>
   SpecWith (ImpTestState era)
 proposalsSpec = do
-  describe "Voters" $ do
-    it "VotersDoNotExist" $ do
-      pp <- getsNES $ nesEsL . curPParamsEpochStateL
-      let ProtVer major minor = pp ^. ppProtocolVersionL
-      gaId <- submitGovAction $ HardForkInitiation SNothing $ ProtVer major (succ minor)
-      hotCred <- KeyHashObj <$> freshKeyHash
-      submitFailingVote (CommitteeVoter hotCred) gaId $
-        [injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]]
-      poolId <- freshKeyHash
-      submitFailingVote (StakePoolVoter poolId) gaId $
-        [injectFailure $ VotersDoNotExist [StakePoolVoter poolId]]
-      dRepCred <- KeyHashObj <$> freshKeyHash
-      whenPostBootstrap $ do
-        submitFailingVote (DRepVoter dRepCred) gaId [injectFailure $ VotersDoNotExist [DRepVoter dRepCred]]
-    it "DRep votes are removed" $ do
-      pp <- getsNES $ nesEsL . curPParamsEpochStateL
-      gaId <- submitGovAction InfoAction
-      dRepCred <- KeyHashObj <$> registerDRep
-      submitVote_ VoteNo (DRepVoter dRepCred) gaId
-      gas <- getGovActionState gaId
-      gasDRepVotes gas `shouldBe` [(dRepCred, VoteNo)]
-      let deposit = pp ^. ppDRepDepositL
-      submitTx_ $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ [UnRegDRepTxCert dRepCred deposit])
-      gasAfterRemoval <- getGovActionState gaId
-      gasDRepVotes gasAfterRemoval `shouldBe` []
   describe "Proposals" $ do
     it "Predicate failure when proposal deposit has nonexistent return address" $ do
       protVer <- getProtVer
@@ -786,101 +761,133 @@ votingSpec ::
   SpecWith (ImpTestState era)
 votingSpec =
   describe "Voting" $ do
-    describe "fails for" $ do
-      it "expired gov-actions" $ do
-        -- Voting after the 3rd epoch should fail
-        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-        (drep, _, _) <- setupSingleDRep 1_000_000
-        govActionId <- submitConstitution SNothing
-        passNEpochs 3
-        submitFailingVote
-          (DRepVoter drep)
-          govActionId
-          [ injectFailure $ VotingOnExpiredGovAction [(DRepVoter drep, govActionId)]
+    it "VotersDoNotExist" $ do
+      pp <- getsNES $ nesEsL . curPParamsEpochStateL
+      let ProtVer major minor = pp ^. ppProtocolVersionL
+      gaId <- submitGovAction $ HardForkInitiation SNothing $ ProtVer major (succ minor)
+      hotCred <- KeyHashObj <$> freshKeyHash
+      submitFailingVote (CommitteeVoter hotCred) gaId $
+        [injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]]
+      poolId <- freshKeyHash
+      submitFailingVote (StakePoolVoter poolId) gaId $
+        [injectFailure $ VotersDoNotExist [StakePoolVoter poolId]]
+      dRepCred <- KeyHashObj <$> freshKeyHash
+      let votersDoNotExistFailure = injectFailure $ VotersDoNotExist [DRepVoter dRepCred]
+      vote <- arbitrary
+      submitBootstrapAwareFailingVote vote (DRepVoter dRepCred) gaId $
+        FailBootstrapAndPostBootstrap $
+          FailBoth
+            { bootstrapFailures =
+                [votersDoNotExistFailure, disallowedVoteFailure [(DRepVoter dRepCred, gaId)]]
+            , postBootstrapFailures = [votersDoNotExistFailure]
+            }
+    it "DRep votes are removed" $ do
+      pp <- getsNES $ nesEsL . curPParamsEpochStateL
+      gaId <- submitGovAction InfoAction
+      dRepCred <- KeyHashObj <$> registerDRep
+      submitVote_ VoteNo (DRepVoter dRepCred) gaId
+      gas <- getGovActionState gaId
+      gasDRepVotes gas `shouldBe` [(dRepCred, VoteNo)]
+      let deposit = pp ^. ppDRepDepositL
+      submitTx_ $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ [UnRegDRepTxCert dRepCred deposit])
+      gasAfterRemoval <- getGovActionState gaId
+      gasDRepVotes gasAfterRemoval `shouldBe` []
+    it "expired gov-actions" $ do
+      -- Voting for expired actions should fail
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+      (drep, _, _) <- setupSingleDRep 1_000_000
+      govActionId <- mkProposal InfoAction >>= submitProposal
+      passNEpochs 3
+      submitFailingVote
+        (DRepVoter drep)
+        govActionId
+        [ injectFailure $ VotingOnExpiredGovAction [(DRepVoter drep, govActionId)]
+        ]
+    it "non-existent gov-actions" $ do
+      (drep, _, _) <- setupSingleDRep 1_000_000
+      govActionId <- mkProposal InfoAction >>= submitProposal
+      let dummyGaid = govActionId {gaidGovActionIx = GovActionIx 99} -- non-existent `GovActionId`
+      submitFailingVote
+        (DRepVoter drep)
+        dummyGaid
+        [injectFailure $ GovActionsDoNotExist $ pure dummyGaid]
+    it "committee member can not vote on UpdateCommittee action" $ whenPostBootstrap $ do
+      (ccHot :| _) <- registerInitialCommittee
+      newMembers <- listOf $ do
+        newCommitteeMember <- KeyHashObj <$> freshKeyHash
+        Positive lifetime <- arbitrary
+        pure (newCommitteeMember, EpochInterval lifetime)
+      threshold <- arbitrary
+      committeeUpdateId <- submitUpdateCommittee Nothing mempty newMembers threshold
+      let voter = CommitteeVoter ccHot
+      submitFailingVote
+        voter
+        committeeUpdateId
+        [ injectFailure $ DisallowedVoters [(voter, committeeUpdateId)]
+        ]
+    it "committee member can not vote on NoConfidence action" $ whenPostBootstrap $ do
+      hotCred :| _ <- registerInitialCommittee
+      gaid <- submitGovAction $ NoConfidence SNothing
+      let voter = CommitteeVoter hotCred
+      trySubmitVote VoteNo voter gaid
+        `shouldReturn` Left
+          [ injectFailure $ DisallowedVoters [(voter, gaid)]
           ]
-      it "non-existent gov-actions" $ do
-        (drep, _, _) <- setupSingleDRep 1_000_000
-        govActionId <- submitConstitution SNothing
-        let dummyGaid = govActionId {gaidGovActionIx = GovActionIx 99} -- non-existent `GovActionId`
-        submitFailingVote
-          (DRepVoter drep)
-          dummyGaid
-          [injectFailure $ GovActionsDoNotExist $ pure dummyGaid]
-      it "committee member can not vote on UpdateCommittee action" $ do
-        (ccHot :| _) <- registerInitialCommittee
-        newMembers <- listOf $ do
-          newCommitteeMember <- KeyHashObj <$> freshKeyHash
-          Positive lifetime <- arbitrary
-          pure (newCommitteeMember, EpochInterval lifetime)
-        threshold <- arbitrary
-        committeeUpdateId <- submitUpdateCommittee Nothing mempty newMembers threshold
-        let voter = CommitteeVoter ccHot
-        submitFailingVote
-          voter
-          committeeUpdateId
-          [ injectFailure $ DisallowedVoters [(voter, committeeUpdateId)]
+    it "committee member mixed with other voters can not vote on UpdateCommittee action" $
+      whenPostBootstrap ccVoteOnConstitutionFailsWithMultipleVotes
+    it "CC cannot ratify if below threshold" $ whenPostBootstrap $ do
+      modifyPParams $ \pp ->
+        pp
+          & ppGovActionLifetimeL .~ EpochInterval 3
+          & ppCommitteeMinSizeL .~ 2
+      (dRepCred, _, _) <- setupSingleDRep 1_000_000
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      ccColdCred0 <- KeyHashObj <$> freshKeyHash
+      ccColdCred1 <- KeyHashObj <$> freshKeyHash
+      electionGovAction <-
+        submitUpdateCommittee
+          Nothing
+          mempty
+          [ (ccColdCred0, EpochInterval 10)
+          , (ccColdCred1, EpochInterval 10)
           ]
-      it "committee member can not vote on NoConfidence action" $ do
-        hotCred :| _ <- registerInitialCommittee
-        gaid <- submitGovAction $ NoConfidence SNothing
-        let voter = CommitteeVoter hotCred
-        trySubmitVote VoteNo voter gaid
-          `shouldReturn` Left
-            [ injectFailure $ DisallowedVoters [(voter, gaid)]
-            ]
-      it "committee member mixed with other voters can not vote on UpdateCommittee action" $ do
-        ccVoteOnConstitutionFailsWithMultipleVotes
-      it "CC cannot ratify if below threshold" $ do
-        modifyPParams $ \pp ->
-          pp
-            & ppGovActionLifetimeL .~ EpochInterval 3
-            & ppCommitteeMinSizeL .~ 2
-        (dRepCred, _, _) <- setupSingleDRep 1_000_000
-        (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-        ccColdCred0 <- KeyHashObj <$> freshKeyHash
-        ccColdCred1 <- KeyHashObj <$> freshKeyHash
-        electionGovAction <-
-          submitUpdateCommittee
-            Nothing
-            mempty
-            [ (ccColdCred0, EpochInterval 10)
-            , (ccColdCred1, EpochInterval 10)
-            ]
-            (3 %! 5)
-        submitYesVote_ (DRepVoter dRepCred) electionGovAction
-        submitYesVote_ (StakePoolVoter spoC) electionGovAction
-        logAcceptedRatio electionGovAction
-        passNEpochs 3
-        expectNoCurrentProposals
-        ccHotKey0 <- registerCommitteeHotKey ccColdCred0
-        ccHotKey1 <- registerCommitteeHotKey ccColdCred1
-        anchor <- arbitrary
-        constitutionChangeId <-
-          submitGovAction $
-            NewConstitution
-              SNothing
-              Constitution
-                { constitutionScript = SNothing
-                , constitutionAnchor = anchor
-                }
-        submitYesVote_ (DRepVoter dRepCred) constitutionChangeId
-        submitYesVote_ (CommitteeVoter ccHotKey0) constitutionChangeId
-        _ <- resignCommitteeColdKey ccColdCred0 SNothing
-        submitYesVote_ (CommitteeVoter ccHotKey1) constitutionChangeId
-        passEpoch
-        logAcceptedRatio constitutionChangeId
-        logToExpr =<< lookupGovActionState constitutionChangeId
-        passNEpochs 4
-        conAnchor <-
-          getsNES $
-            nesEsL
-              . esLStateL
-              . lsUTxOStateL
-              . utxosGovStateL
-              . cgsConstitutionL
-              . constitutionAnchorL
-        expectNoCurrentProposals
-        conAnchor `shouldNotBe` anchor
+          (3 %! 5)
+      submitYesVote_ (DRepVoter dRepCred) electionGovAction
+      submitYesVote_ (StakePoolVoter spoC) electionGovAction
+      logAcceptedRatio electionGovAction
+      passNEpochs 3
+      expectNoCurrentProposals
+      ccHotKey0 <- registerCommitteeHotKey ccColdCred0
+      ccHotKey1 <- registerCommitteeHotKey ccColdCred1
+      anchor <- arbitrary
+      constitutionChangeId <-
+        submitGovAction $
+          NewConstitution
+            SNothing
+            Constitution
+              { constitutionScript = SNothing
+              , constitutionAnchor = anchor
+              }
+      submitYesVote_ (DRepVoter dRepCred) constitutionChangeId
+      submitYesVote_ (CommitteeVoter ccHotKey0) constitutionChangeId
+      _ <- resignCommitteeColdKey ccColdCred0 SNothing
+      submitYesVote_ (CommitteeVoter ccHotKey1) constitutionChangeId
+      passEpoch
+      logAcceptedRatio constitutionChangeId
+      logToExpr =<< lookupGovActionState constitutionChangeId
+      passNEpochs 4
+      conAnchor <-
+        getsNES $
+          nesEsL
+            . esLStateL
+            . lsUTxOStateL
+            . utxosGovStateL
+            . cgsConstitutionL
+            . constitutionAnchorL
+      expectNoCurrentProposals
+      conAnchor `shouldNotBe` anchor
+  where
+    disallowedVoteFailure = injectFailure . DisallowedVotesDuringBootstrap
 
 constitutionSpec ::
   forall era.
