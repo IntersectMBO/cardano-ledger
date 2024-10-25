@@ -116,7 +116,7 @@ spec = do
       describe "DELEG" $ Deleg.spec @era
       describe "ENACT" $ Enact.relevantDuringBootstrapSpec @era
       describe "EPOCH" $ Epoch.relevantDuringBootstrapSpec @era
-      describe "GOV" $ Gov.relevantDuringBootstrapSpec @era
+      describe "GOV" $ Gov.spec @era
       describe "GOVCERT" $ GovCert.relevantDuringBootstrapSpec @era
       describe "UTXO" $ Utxo.spec @era
       describe "UTXOS" $ Utxos.relevantDuringBootstrapSpec @era
