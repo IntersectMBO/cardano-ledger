@@ -54,7 +54,7 @@ spec ::
   SpecWith (ImpTestState era)
 spec = do
   relevantDuringBootstrapSpec
-  predicateFailuresSpec
+
 relevantDuringBootstrapSpec ::
   forall era.
   ( ConwayEraImp era
@@ -62,6 +62,7 @@ relevantDuringBootstrapSpec ::
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
+  predicateFailuresSpec
   policySpec
   votingSpec
   unknownCostModelsSpec
@@ -101,6 +102,16 @@ predicateFailuresSpec ::
   SpecWith (ImpTestState era)
 predicateFailuresSpec =
   describe "Predicate failures" $ do
+    it "ProposalReturnAccountDoesNotExist" $ do
+      mkProposal InfoAction >>= submitProposal_
+      unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
+
+      proposal <- mkProposalWithRewardAccount InfoAction unregisteredRewardAccount
+      void $
+        submitBootstrapAwareFailingProposal proposal $
+          FailPostBootstrap
+            [injectFailure $ ProposalReturnAccountDoesNotExist unregisteredRewardAccount]
+
     it "ExpirationEpochTooSmall" $ do
       committeeC <- KeyHashObj <$> freshKeyHash
       let expiration = EpochNo 1
@@ -111,11 +122,17 @@ predicateFailuresSpec =
               (Map.singleton committeeC expiration)
               (0 %! 1)
       passEpoch
-      mkProposal action
-        >>= flip
-          submitFailingProposal
-          [injectFailure $ ExpirationEpochTooSmall $ Map.singleton committeeC expiration]
-    -- TODO: mark as bootstrap relevant
+      let expectedFailure =
+            injectFailure $ ExpirationEpochTooSmall $ Map.singleton committeeC expiration
+      proposal <- mkProposal action
+      void $
+        submitBootstrapAwareFailingProposal proposal $
+          FailBootstrapAndPostBootstrap
+            FailBoth
+              { bootstrapFailures = [disallowedProposalFailure proposal, expectedFailure]
+              , postBootstrapFailures = [expectedFailure]
+              }
+
     it "ProposalDepositIncorrect" $ do
       rewardAccount <- registerRewardAccount
       actionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
@@ -144,9 +161,17 @@ predicateFailuresSpec =
               (Set.singleton committeeC)
               (Map.singleton committeeC (addEpochInterval curEpochNo (EpochInterval 1)))
               (1 %! 1)
-      submitFailingGovAction
-        action
-        [injectFailure $ ConflictingCommitteeUpdate $ Set.singleton committeeC]
+      let expectedFailure = injectFailure $ ConflictingCommitteeUpdate $ Set.singleton committeeC
+      proposal <- mkProposal action
+      void $
+        submitBootstrapAwareFailingProposal proposal $
+          FailBootstrapAndPostBootstrap $
+            FailBoth
+              { bootstrapFailures = [disallowedProposalFailure proposal, expectedFailure]
+              , postBootstrapFailures = [expectedFailure]
+              }
+  where
+    disallowedProposalFailure = injectFailure . DisallowedProposalDuringBootstrap
 
 hardForkSpec ::
   forall era.
@@ -238,20 +263,6 @@ proposalsSpec ::
   SpecWith (ImpTestState era)
 proposalsSpec = do
   describe "Proposals" $ do
-    it "Predicate failure when proposal deposit has nonexistent return address" $ do
-      protVer <- getProtVer
-      unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
-      if HF.bootstrapPhase protVer
-        then do
-          mkProposal InfoAction >>= submitProposal_
-          mkProposalWithRewardAccount InfoAction unregisteredRewardAccount >>= submitProposal_
-        else do
-          mkProposal InfoAction >>= submitProposal_
-          mkProposalWithRewardAccount InfoAction unregisteredRewardAccount >>= \pr ->
-            submitFailingProposal
-              pr
-              [ injectFailure $ ProposalReturnAccountDoesNotExist unregisteredRewardAccount
-              ]
     describe "Consistency" $ do
       it "Proposals submitted without proper parent fail" $ do
         let mkCorruptGovActionId :: GovActionId c -> GovActionId c
