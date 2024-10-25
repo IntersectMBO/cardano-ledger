@@ -156,7 +156,7 @@ instance (KnownSymbol rule, Era era) => DecCBOR (VoidEraRule (rule :: Symbol) er
 absurdEraRule :: VoidEraRule rule era -> a
 absurdEraRule a = case a of {}
 
--- Rules that should never have a predicate failures
+-- Rules that must never have a predicate failures
 type instance EraRuleFailure "EPOCH" era = VoidEraRule "EPOCH" era
 type instance EraRuleFailure "NEWEPOCH" era = VoidEraRule "NEWEPOCH" era
 type instance EraRuleFailure "MIR" era = VoidEraRule "MIR" era

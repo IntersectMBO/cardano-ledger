@@ -14,13 +14,12 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis (
 )
 where
 
-import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Binary (Tokens (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core (emptyPParams, ppDL, ppMaxBBSizeL, ppMaxBHSizeL)
-import Cardano.Ledger.Crypto (Crypto (HASH), StandardCrypto)
-import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF)
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Keys (KeyRoleVRF (..), VRFVerKeyHash (..), hashKey, hashVerKeyVRF)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
@@ -223,8 +222,8 @@ exampleShelleyGenesis =
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
     delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate c
     delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
-    delegVrfKeyHash :: Hash.Hash (HASH c) (L.VerKeyVRF c)
-    delegVrfKeyHash = "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
+    delegVrfKeyHash :: VRFVerKeyHash 'GenDelegVRF c
+    delegVrfKeyHash = VRFVerKeyHash "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
     initialFundedAddress :: L.Addr c
     initialFundedAddress =
       L.Addr

@@ -48,11 +48,11 @@ import Cardano.Ledger.Keys (
   DSignable,
   GenDelegPair (..),
   GenDelegs (..),
-  Hash,
   KESignable,
   KeyHash (..),
   KeyRole (..),
-  VerKeyVRF,
+  KeyRoleVRF (..),
+  VRFVerKeyHash (..),
   coerceKeyRole,
   hashKey,
   hashVerKeyVRF,
@@ -106,8 +106,8 @@ data OverlayPredicateFailure c
       !(KeyHash 'StakePool c) -- unknown VRF keyhash (not registered)
   | VRFKeyWrongVRFKey
       !(KeyHash 'StakePool c) -- KeyHash of block issuer
-      !(Hash c (VerKeyVRF c)) -- VRF KeyHash registered with stake pool
-      !(Hash c (VerKeyVRF c)) -- VRF KeyHash from Header
+      !(VRFVerKeyHash 'StakePoolVRF c) -- VRF KeyHash registered with stake pool
+      !(VRFVerKeyHash 'BlockIssuerVRF c) -- VRF KeyHash from Header
   | VRFKeyBadNonce
       !Nonce -- Nonce constant to distinguish VRF nonce values
       !SlotNo -- Slot used for VRF calculation
@@ -129,8 +129,8 @@ data OverlayPredicateFailure c
       !(KeyHash 'GenesisDelegate c) -- KeyHash genesis delegate keyhash assigned to this slot
   | WrongGenesisVRFKeyOVERLAY
       !(KeyHash 'BlockIssuer c) -- KeyHash of block issuer
-      !(Hash c (VerKeyVRF c)) -- VRF KeyHash registered with genesis delegation
-      !(Hash c (VerKeyVRF c)) -- VRF KeyHash from Header
+      !(VRFVerKeyHash 'GenDelegVRF c) -- VRF KeyHash registered with genesis delegation
+      !(VRFVerKeyHash 'BlockIssuerVRF c) -- VRF KeyHash from Header
   | UnknownGenesisKeyOVERLAY
       !(KeyHash 'Genesis c) -- KeyHash which does not correspond to o genesis node
   | OcertFailure (PredicateFailure (OCERT c)) -- Subtransition Failures
@@ -211,36 +211,36 @@ praosVrfChecks eta0 (PoolDistr pd _tot) f bhb = do
   let sigma' = Map.lookup hk pd
   case sigma' of
     Nothing -> throwError $ VRFKeyUnknown hk
-    Just (IndividualPoolStake sigma _ vrfHK) -> do
+    Just (IndividualPoolStake sigma _ stakePoolVRFVerKeyHash) -> do
       unless
-        (vrfHK == hashVerKeyVRF vrfK)
-        (throwError $ VRFKeyWrongVRFKey hk vrfHK (hashVerKeyVRF vrfK))
+        (unVRFVerKeyHash stakePoolVRFVerKeyHash == unVRFVerKeyHash blockIssuerVRFVerKeyHash)
+        (throwError $ VRFKeyWrongVRFKey hk stakePoolVRFVerKeyHash blockIssuerVRFVerKeyHash)
       vrfChecks eta0 bhb
       unless
         (checkLeaderValue (VRF.certifiedOutput $ bheaderL bhb) sigma f)
         (throwError $ VRFLeaderValueTooBig (VRF.certifiedOutput $ bheaderL bhb) sigma f)
   where
     hk = coerceKeyRole . issuerIDfromBHBody $ bhb
-    vrfK = bheaderVrfVk bhb
+    blockIssuerVRFVerKeyHash = hashVerKeyVRF (bheaderVrfVk bhb)
 
 pbftVrfChecks ::
   forall c.
   ( Crypto c
   , VRF.Signable (VRF c) Seed
   ) =>
-  Hash c (VerKeyVRF c) ->
+  VRFVerKeyHash 'GenDelegVRF c ->
   Nonce ->
   BHBody c ->
   Either (PredicateFailure (OVERLAY c)) ()
-pbftVrfChecks vrfHK eta0 bhb = do
+pbftVrfChecks genDelegVRFVerKeyHash eta0 bhb = do
   unless
-    (vrfHK == hashVerKeyVRF vrfK)
-    (throwError $ WrongGenesisVRFKeyOVERLAY hk vrfHK (hashVerKeyVRF vrfK))
+    (unVRFVerKeyHash genDelegVRFVerKeyHash == unVRFVerKeyHash blockIssuerVRFVerKeyHash)
+    (throwError $ WrongGenesisVRFKeyOVERLAY hk genDelegVRFVerKeyHash blockIssuerVRFVerKeyHash)
   vrfChecks eta0 bhb
   pure ()
   where
     hk = issuerIDfromBHBody bhb
-    vrfK = bheaderVrfVk bhb
+    blockIssuerVRFVerKeyHash = hashVerKeyVRF (bheaderVrfVk bhb)
 
 overlayTransition ::
   forall c.

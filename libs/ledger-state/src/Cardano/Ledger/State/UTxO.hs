@@ -20,6 +20,7 @@ import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API
@@ -171,6 +172,9 @@ statSingleton a = Stat (Set.singleton a) 1
 statSet :: Set.Set a -> Stat a
 statSet s = Stat s (Count (Set.size s))
 
+mapStat :: Ord b => (a -> b) -> Stat a -> Stat b
+mapStat f s = Stat (Set.map f (statUnique s)) (statCount s)
+
 statMapKeys :: Map.Map k v -> Stat k
 statMapKeys = statSet . Map.keysSet
 
@@ -282,7 +286,7 @@ instance AggregateStat RewardUpdateStats where
 
 data PoolDistrStats = PoolDistrStats
   { pdsStakePoolKeyHash :: !(Stat (KeyHash 'StakePool C))
-  , pdsStakePoolStakeVrf :: !(Stat (Hash C (VerKeyVRF C)))
+  , pdsStakePoolStakeVrf :: !(Stat (VRFVerKeyHash 'StakePoolVRF C))
   }
 
 instance Pretty PoolDistrStats where
@@ -297,7 +301,7 @@ instance AggregateStat PoolDistrStats where
   aggregateStat PoolDistrStats {..} =
     mempty
       { gsKeyHashStakePool = pdsStakePoolKeyHash
-      , gsVerKeyVRF = pdsStakePoolStakeVrf
+      , gsVerKeyVRF = mapStat unVRFVerKeyHash pdsStakePoolStakeVrf
       }
 
 calcPoolDistrStats :: PoolDistr C -> PoolDistrStats
@@ -409,7 +413,7 @@ data DStateStats = DStateStats
   , dssDelegations :: !(Stat (KeyHash 'StakePool C))
   , dssKeyHashGenesis :: !(Stat (KeyHash 'Genesis C))
   , dssKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C))
-  , dssHashVerKeyVRF :: !(Stat (Hash C (VerKeyVRF C)))
+  , dssHashVerKeyVRF :: !(Stat (VRFVerKeyHash 'GenDelegVRF C))
   }
 
 instance Pretty DStateStats where
@@ -430,7 +434,7 @@ instance AggregateStat DStateStats where
       , gsKeyHashStakePool = dssDelegations
       , gsKeyHashGenesis = dssKeyHashGenesis
       , gsKeyHashGenesisDelegate = dssKeyHashGenesisDelegate
-      , gsVerKeyVRF = dssHashVerKeyVRF
+      , gsVerKeyVRF = mapStat unVRFVerKeyHash dssHashVerKeyVRF
       }
 
 countDStateStats :: DState CurrentEra -> DStateStats
@@ -641,7 +645,7 @@ data AggregateStats = AggregateStats
   , gsKeyHashStakePool :: !(Stat (KeyHash 'StakePool C))
   , gsKeyHashGenesis :: !(Stat (KeyHash 'Genesis C))
   , gsKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C))
-  , gsVerKeyVRF :: !(Stat (Hash C (VerKeyVRF C)))
+  , gsVerKeyVRF :: !(Stat (Hash C KeyRoleVRF))
   , gsScriptHash :: !(Stat (ScriptHash C))
   }
 

@@ -47,12 +47,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (
-  Hash,
-  KeyHash (..),
-  KeyRole (..),
-  VerKeyVRF,
- )
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData ())
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
@@ -203,7 +198,7 @@ instance DecCBOR StakePoolRelay where
 -- | A stake pool.
 data PoolParams c = PoolParams
   { ppId :: !(KeyHash 'StakePool c)
-  , ppVrf :: !(Hash c (VerKeyVRF c))
+  , ppVrf :: !(VRFVerKeyHash 'StakePoolVRF c)
   , ppPledge :: !Coin
   , ppCost :: !Coin
   , ppMargin :: !UnitInterval
