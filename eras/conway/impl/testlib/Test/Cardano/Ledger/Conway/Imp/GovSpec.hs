@@ -57,8 +57,6 @@ spec = do
   votingSpec
   policySpec
   predicateFailuresSpec
-  unknownCostModelsSpec
-
 relevantDuringBootstrapSpec ::
   forall era.
   ( ConwayEraImp era
@@ -66,6 +64,7 @@ relevantDuringBootstrapSpec ::
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
+  unknownCostModelsSpec
   constitutionSpec
   withdrawalsSpec
   hardForkSpec
@@ -89,7 +88,7 @@ unknownCostModelsSpec =
         submitParameterChange SNothing $
           emptyPParamsUpdate
             & ppuCostModelsL .~ SJust newCostModels
-      submitYesVote_ (DRepVoter drepC) gai
+      whenPostBootstrap $ submitYesVote_ (DRepVoter drepC) gai
       submitYesVoteCCs_ hotCommitteeCs gai
       passNEpochs 2
       getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gai)
