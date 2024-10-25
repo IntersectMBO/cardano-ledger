@@ -1,20 +1,18 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (
-  spec,
-  relevantDuringBootstrapSpec,
-) where
+module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..))
+import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..), ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Cardano.Ledger.Val (Val (..))
@@ -30,26 +28,22 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 spec = do
-  relevantDuringBootstrapSpec
   it "Resigning proposed CC key" $ do
     ccColdCred <- KeyHashObj <$> freshKeyHash
-    _ <- submitUpdateCommittee Nothing mempty [(ccColdCred, EpochInterval 1234)] (1 %! 2)
-    submitTx_
-      ( mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ SSeq.singleton (ResignCommitteeColdTxCert ccColdCred SNothing)
-      )
-
-relevantDuringBootstrapSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
-  ) =>
-  SpecWith (ImpTestState era)
-relevantDuringBootstrapSpec = do
+    proposal <- mkUpdateCommitteeProposal Nothing mempty [(ccColdCred, EpochInterval 1234)] (1 %! 2)
+    mbGovId <-
+      submitBootstrapAwareFailingProposal proposal $
+        FailBootstrap [injectFailure $ DisallowedProposalDuringBootstrap proposal]
+    forM_ mbGovId $ \_ ->
+      submitTx_
+        ( mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ SSeq.singleton (ResignCommitteeColdTxCert ccColdCred SNothing)
+        )
   describe "succeeds for" $ do
     it "registering and unregistering a DRep" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
