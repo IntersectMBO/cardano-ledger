@@ -1311,11 +1311,11 @@ bootstrapPhaseSpec =
       proposal <- mkProposal $ NewConstitution SNothing constitution
       checkProposalFailure proposal
   where
-    checkProposalFailure proposal = do
-      curProtVer <- getProtVer
-      when (HF.bootstrapPhase curProtVer) $
-        submitFailingProposal proposal [injectFailure $ DisallowedProposalDuringBootstrap proposal]
+    checkProposalFailure proposal =
+      void $
+        submitBootstrapAwareFailingProposal proposal $
+          FailBootstrap [injectFailure $ DisallowedProposalDuringBootstrap proposal]
     checkVotingFailure voter gid = do
-      curProtVer <- getProtVer
-      when (HF.bootstrapPhase curProtVer) $
-        submitFailingVote voter gid [injectFailure $ DisallowedVotesDuringBootstrap [(voter, gid)]]
+      vote <- arbitrary
+      submitBootstrapAwareFailingVote vote voter gid $
+        FailBootstrap [injectFailure $ DisallowedVotesDuringBootstrap [(voter, gid)]]
