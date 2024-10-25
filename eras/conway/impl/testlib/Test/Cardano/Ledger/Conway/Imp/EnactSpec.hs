@@ -34,6 +34,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
 import Data.Typeable (cast)
 import Data.Word (Word64)
 import Lens.Micro
@@ -57,6 +58,7 @@ spec ::
   SpecWith (ImpTestState era)
 spec = do
   relevantDuringBootstrapSpec
+  committeeSpec
   treasuryWithdrawalsSpec
   noConfidenceSpec
   constitutionSpec
@@ -549,3 +551,71 @@ expectHardForkEvents actual expected =
           cast ev =
           True
       | otherwise = False
+
+committeeSpec ::
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+committeeSpec =
+  describe "Committee enactment" $ do
+    it "Enact UpdateCommitee with lengthy lifetime" $ do
+      NonNegative n <- arbitrary
+      passNEpochs n
+      (drepCred, _, _) <- setupSingleDRep 1_000_000
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      cc <- KeyHashObj <$> freshKeyHash
+      EpochInterval committeeMaxTermLength <-
+        getsNES $ nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
+      secondAddCCGaid <-
+        submitUpdateCommittee Nothing mempty [(cc, EpochInterval (committeeMaxTermLength + 2))] (1 %! 2)
+      submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
+      submitYesVote_ (StakePoolVoter spoC) secondAddCCGaid
+      passNEpochs 2
+      -- Due to longer than allowed lifetime we have to wait an extra epoch for this new action to be enacted
+      expectCommitteeMemberAbsence cc
+      passEpoch
+      expectCommitteeMemberPresence cc
+
+    -- A CC that has resigned will need to be first voted out and then voted in to be considered active
+    it "CC re-election" $ do
+      (drepCred, _, _) <- setupSingleDRep 1_000_000
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      passNEpochs 2
+      -- Add a fresh CC
+      cc <- KeyHashObj <$> freshKeyHash
+      addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (1 %! 2)
+      submitYesVote_ (DRepVoter drepCred) addCCGaid
+      submitYesVote_ (StakePoolVoter spoC) addCCGaid
+      passNEpochs 2
+      -- Confirm that they are added
+      expectCommitteeMemberPresence cc
+      -- Confirm their hot key registration
+      _hotKey <- registerCommitteeHotKey cc
+      ccShouldNotBeResigned cc
+      -- Have them resign
+      _ <- resignCommitteeColdKey cc SNothing
+      ccShouldBeResigned cc
+      -- Re-add the same CC
+      reAddCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
+      submitYesVote_ (DRepVoter drepCred) reAddCCGaid
+      submitYesVote_ (StakePoolVoter spoC) reAddCCGaid
+      passNEpochs 2
+      -- Confirm that they are still resigned
+      ccShouldBeResigned cc
+      -- Remove them
+      removeCCGaid <-
+        submitUpdateCommittee (Just (SJust $ GovPurposeId reAddCCGaid)) (Set.singleton cc) [] (1 %! 2)
+      submitYesVote_ (DRepVoter drepCred) removeCCGaid
+      submitYesVote_ (StakePoolVoter spoC) removeCCGaid
+      passNEpochs 2
+      -- Confirm that they have been removed
+      expectCommitteeMemberAbsence cc
+      secondAddCCGaid <-
+        submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
+      submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
+      submitYesVote_ (StakePoolVoter spoC) secondAddCCGaid
+      passNEpochs 2
+      -- Confirm that they have been added
+      expectCommitteeMemberPresence cc
+      -- Confirm that after registering a hot key, they are active
+      _hotKey <- registerCommitteeHotKey cc
+      ccShouldNotBeResigned cc
