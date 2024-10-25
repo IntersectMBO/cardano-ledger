@@ -54,7 +54,6 @@ spec ::
   SpecWith (ImpTestState era)
 spec = do
   relevantDuringBootstrapSpec
-  policySpec
   predicateFailuresSpec
 relevantDuringBootstrapSpec ::
   forall era.
@@ -63,6 +62,7 @@ relevantDuringBootstrapSpec ::
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
+  policySpec
   votingSpec
   unknownCostModelsSpec
   constitutionSpec
@@ -979,7 +979,7 @@ policySpec ::
   SpecWith (ImpTestState era)
 policySpec =
   describe "Policy" $ do
-    it "policy is respected by proposals" $ do
+    it "policy is respected by proposals" $ whenPostBootstrap $ do
       committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       keyHash <- freshKeyHash
