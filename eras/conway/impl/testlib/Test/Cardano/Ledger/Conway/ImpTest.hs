@@ -92,6 +92,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getLastEnactedCommittee,
   getLastEnactedConstitution,
   submitParameterChange,
+  mkUpdateCommitteeProposal,
   submitUpdateCommittee,
   expectCommitteeMemberPresence,
   expectCommitteeMemberAbsence,
@@ -1678,6 +1679,26 @@ submitYesVoteCCs_ ::
 submitYesVoteCCs_ committeeMembers govId =
   mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) committeeMembers
 
+mkUpdateCommitteeProposal ::
+  ConwayEraImp era =>
+  -- | Set the parent. When Nothing is supplied latest parent will be used.
+  Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose era)) ->
+  -- | CC members to remove
+  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
+  -- | CC members to add
+  [(Credential 'ColdCommitteeRole (EraCrypto era), EpochInterval)] ->
+  UnitInterval ->
+  ImpTestM era (ProposalProcedure era)
+mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold = do
+  nes <- getsNES id
+  let
+    curEpochNo = nes ^. nesELL
+    rootCommittee = nes ^. newEpochStateGovStateL . cgsProposalsL . pRootsL . grCommitteeL
+    parent = fromMaybe (prRoot rootCommittee) mParent
+    newCommitteMembers =
+      Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccsToAdd]
+  mkProposal $ UpdateCommittee parent ccsToRemove newCommitteMembers threshold
+
 submitUpdateCommittee ::
   ConwayEraImp era =>
   -- | Set the parent. When Nothing is supplied latest parent will be used.
@@ -1688,15 +1709,8 @@ submitUpdateCommittee ::
   [(Credential 'ColdCommitteeRole (EraCrypto era), EpochInterval)] ->
   UnitInterval ->
   ImpTestM era (GovActionId (EraCrypto era))
-submitUpdateCommittee mParent ccsToRemove ccsToAdd threshold = do
-  nes <- getsNES id
-  let
-    curEpochNo = nes ^. nesELL
-    rootCommittee = nes ^. newEpochStateGovStateL . cgsProposalsL . pRootsL . grCommitteeL
-    parent = fromMaybe (prRoot rootCommittee) mParent
-    newCommitteMembers =
-      Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccsToAdd]
-  submitGovAction $ UpdateCommittee parent ccsToRemove newCommitteMembers threshold
+submitUpdateCommittee mParent ccsToRemove ccsToAdd threshold =
+  mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold >>= submitProposal
 
 expectCommitteeMemberPresence ::
   (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()

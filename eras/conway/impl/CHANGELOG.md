@@ -6,6 +6,7 @@
 
 ### `testlib`
 
+* Add `mkUpdateCommitteeProposal`
 * Add `SubmitFailureExpectation`, `FailBoth`, `submitBootstrapAwareFailingVote`, `submitBootstrapAwareFailingProposal`, `submitBootstrapAwareFailingProposal_`
 * Add `mkConstitutionProposal`
 * Remove `submitConstitutionGovAction` and change signature of `submitConstitution`
