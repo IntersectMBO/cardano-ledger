@@ -23,7 +23,6 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Plutus.CostModels (updateCostModels)
-import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -34,7 +33,6 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Val (zero, (<->))
 import Data.Default.Class (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
@@ -1077,14 +1075,23 @@ withdrawalsSpec =
       unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
       registeredRewardAccount <- registerRewardAccount
       let genPositiveCoin = Coin . getPositive <$> arbitrary
-          withdrawalAccountDoesNotExist = TreasuryWithdrawalReturnAccountsDoNotExist [unregisteredRewardAccount]
       withdrawals <-
         sequence
           [ (unregisteredRewardAccount,) <$> genPositiveCoin
           , (registeredRewardAccount,) <$> genPositiveCoin
           ]
-      expectPredFailures [withdrawalAccountDoesNotExist] [] $
-        TreasuryWithdrawals (Map.fromList withdrawals) policy
+      proposal <- mkProposal $ TreasuryWithdrawals (Map.fromList withdrawals) policy
+      void $
+        submitBootstrapAwareFailingProposal proposal $
+          FailBootstrapAndPostBootstrap $
+            FailBoth
+              { bootstrapFailures = [injectFailure $ DisallowedProposalDuringBootstrap proposal]
+              , postBootstrapFailures =
+                  [ injectFailure $
+                      TreasuryWithdrawalReturnAccountsDoNotExist [unregisteredRewardAccount]
+                  ]
+              }
+
     it "Fails with invalid network ID in withdrawal addresses" $ do
       rewardCredential <- KeyHashObj <$> freshKeyHash
       let badRewardAccount =
@@ -1092,50 +1099,51 @@ withdrawalsSpec =
               { raNetwork = Mainnet -- Our network is Testnet
               , raCredential = rewardCredential
               }
-          wdrls = TreasuryWithdrawals (Map.singleton badRewardAccount $ Coin 100_000_000) SNothing
-          idMismatch = TreasuryWithdrawalsNetworkIdMismatch (Set.singleton badRewardAccount) Testnet
-          returnAddress = TreasuryWithdrawalReturnAccountsDoNotExist [badRewardAccount]
-      expectPredFailures [returnAddress, idMismatch] [idMismatch] wdrls
+      proposal <-
+        mkProposal $ TreasuryWithdrawals (Map.singleton badRewardAccount $ Coin 100_000_000) SNothing
+      let idMismatch =
+            injectFailure $
+              TreasuryWithdrawalsNetworkIdMismatch (Set.singleton badRewardAccount) Testnet
+          returnAddress =
+            injectFailure $
+              TreasuryWithdrawalReturnAccountsDoNotExist [badRewardAccount]
+      void $
+        submitBootstrapAwareFailingProposal proposal $
+          FailBootstrapAndPostBootstrap $
+            FailBoth
+              { bootstrapFailures = [disallowedProposalFailure proposal, idMismatch]
+              , postBootstrapFailures = [returnAddress, idMismatch]
+              }
 
     it "Fails for empty withdrawals" $ do
+      expectZeroTreasuryFailurePostBootstrap $ TreasuryWithdrawals Map.empty SNothing
+
       rwdAccount1 <- registerRewardAccount
+      expectZeroTreasuryFailurePostBootstrap $
+        TreasuryWithdrawals [(rwdAccount1, zero)] SNothing
+
       rwdAccount2 <- registerRewardAccount
       let withdrawals = Map.fromList [(rwdAccount1, zero), (rwdAccount2, zero)]
-      let wdrls = TreasuryWithdrawals Map.empty SNothing
-       in expectPredFailures [ZeroTreasuryWithdrawals wdrls] [] wdrls
 
-      let wdrls = TreasuryWithdrawals [(rwdAccount1, zero)] SNothing
-       in expectPredFailures [ZeroTreasuryWithdrawals wdrls] [] wdrls
+      expectZeroTreasuryFailurePostBootstrap $
+        TreasuryWithdrawals withdrawals SNothing
 
-      let wdrls = TreasuryWithdrawals withdrawals SNothing
-       in expectPredFailures [ZeroTreasuryWithdrawals wdrls] [] wdrls
-
-      rwdAccountRegistered <- registerRewardAccount
-      let wdrls = TreasuryWithdrawals [(rwdAccountRegistered, zero)] SNothing
-       in expectPredFailures [ZeroTreasuryWithdrawals wdrls] [] wdrls
-
-      curProtVer <- getProtVer
-      let wdrls = Map.insert rwdAccount2 (Coin 100_000) withdrawals
-          ga = TreasuryWithdrawals wdrls SNothing
-       in if HF.bootstrapPhase curProtVer
-            then do
-              expectPredFailures [] [] ga
-            else
-              submitGovAction_ ga
+      let wdrls = TreasuryWithdrawals (Map.insert rwdAccount2 (Coin 100_000) withdrawals) SNothing
+      proposal <- mkProposal wdrls
+      submitBootstrapAwareFailingProposal_ proposal $
+        FailBootstrap [disallowedProposalFailure proposal]
   where
-    expectPredFailures ::
-      [ConwayGovPredFailure era] -> [ConwayGovPredFailure era] -> GovAction era -> ImpTestM era ()
-    expectPredFailures predFailures bootstrapPredFailures wdrl = do
-      curProtVer <- getProtVer
-      propP <- mkProposal wdrl
-      submitFailingProposal
-        propP
-        ( injectFailure
-            <$> ( if HF.bootstrapPhase curProtVer
-                    then DisallowedProposalDuringBootstrap propP NE.:| bootstrapPredFailures
-                    else NE.fromList predFailures
-                )
-        )
+    expectZeroTreasuryFailurePostBootstrap wdrls = do
+      proposal <- mkProposal wdrls
+      void $
+        submitBootstrapAwareFailingProposal proposal $
+          FailBootstrapAndPostBootstrap $
+            FailBoth
+              { bootstrapFailures = [disallowedProposalFailure proposal]
+              , postBootstrapFailures = [injectFailure $ ZeroTreasuryWithdrawals wdrls]
+              }
+
+    disallowedProposalFailure = injectFailure . DisallowedProposalDuringBootstrap
 
 -- =========================================================
 -- Proposing a HardFork should always use a new ProtVer that
