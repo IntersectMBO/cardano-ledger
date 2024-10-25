@@ -1046,27 +1046,26 @@ networkIdSpec =
               , raCredential = rewardCredential
               }
       proposal <- mkProposalWithRewardAccount InfoAction badRewardAccount
-      pv <- getProtVer
-      if HF.bootstrapPhase pv
-        then
-          submitFailingProposal
-            proposal
-            [ injectFailure $
-                ProposalProcedureNetworkIdMismatch
-                  badRewardAccount
-                  Testnet
-            ]
-        else
-          submitFailingProposal
-            proposal
-            [ injectFailure $
-                ProposalReturnAccountDoesNotExist
-                  badRewardAccount
-            , injectFailure $
-                ProposalProcedureNetworkIdMismatch
-                  badRewardAccount
-                  Testnet
-            ]
+      void $
+        submitBootstrapAwareFailingProposal proposal $
+          FailBootstrapAndPostBootstrap $
+            FailBoth
+              { bootstrapFailures =
+                  [ injectFailure $
+                      ProposalProcedureNetworkIdMismatch
+                        badRewardAccount
+                        Testnet
+                  ]
+              , postBootstrapFailures =
+                  [ injectFailure $
+                      ProposalReturnAccountDoesNotExist
+                        badRewardAccount
+                  , injectFailure $
+                      ProposalProcedureNetworkIdMismatch
+                        badRewardAccount
+                        Testnet
+                  ]
+              }
 
 withdrawalsSpec ::
   forall era.
