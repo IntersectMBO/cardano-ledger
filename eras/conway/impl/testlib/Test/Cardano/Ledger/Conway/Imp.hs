@@ -117,7 +117,7 @@ spec = do
       describe "ENACT" $ Enact.relevantDuringBootstrapSpec @era
       describe "EPOCH" $ Epoch.relevantDuringBootstrapSpec @era
       describe "GOV" $ Gov.spec @era
-      describe "GOVCERT" $ GovCert.relevantDuringBootstrapSpec @era
+      describe "GOVCERT" $ GovCert.spec @era
       describe "UTXO" $ Utxo.spec @era
       describe "UTXOS" $ Utxos.spec @era
       describe "RATIFY" $ Ratify.relevantDuringBootstrapSpec @era
