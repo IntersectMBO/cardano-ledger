@@ -119,6 +119,6 @@ spec = do
       describe "GOV" $ Gov.spec @era
       describe "GOVCERT" $ GovCert.relevantDuringBootstrapSpec @era
       describe "UTXO" $ Utxo.spec @era
-      describe "UTXOS" $ Utxos.relevantDuringBootstrapSpec @era
+      describe "UTXOS" $ Utxos.spec @era
       describe "RATIFY" $ Ratify.relevantDuringBootstrapSpec @era
       describe "LEDGER" $ Ledger.spec @era
