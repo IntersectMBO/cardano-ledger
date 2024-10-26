@@ -13,8 +13,9 @@ module Test.Cardano.Ledger.Conway.Imp.CertsSpec (spec) where
 import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..))
+import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Val (Val (..))
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -25,6 +26,7 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 spec = do
@@ -32,31 +34,58 @@ spec = do
     it "Withdrawing from an unregistered reward account" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
 
-      rwdAccount <- KeyHashObj <$> freshKeyHash >>= getRewardAccountFor
-      submitFailingTx
-        ( mkBasicTx $
+      stakeKey <- freshKeyHash
+      rwdAccount <- getRewardAccountFor $ KeyHashObj stakeKey
+      let
+        tx =
+          mkBasicTx $
             mkBasicTxBody
               & withdrawalsTxBodyL
-                .~ Withdrawals
-                  [(rwdAccount, Coin 20)]
-        )
-        [injectFailure $ WithdrawalsNotInRewardsCERTS [(rwdAccount, Coin 20)]]
-
-      (registeredRwdAccount, reward) <- setupRewardAccount
-      submitFailingTx
-        ( mkBasicTx $
+                .~ Withdrawals [(rwdAccount, Coin 20)]
+        notInRewardsFailure = injectFailure $ WithdrawalsNotInRewardsCERTS [(rwdAccount, Coin 20)]
+       in
+        submitBootstrapAware
+          (submitTx_ tx)
+          (submitFailingTx tx)
+          ( FailBootstrapAndPostBootstrap $
+              FailBoth
+                { bootstrapFailures = [notInRewardsFailure]
+                , postBootstrapFailures =
+                    [ notInRewardsFailure
+                    , injectFailure (ConwayWdrlNotDelegatedToDRep [stakeKey])
+                    ]
+                }
+          )
+      (registeredRwdAccount, reward, stakeKey2) <- setupRewardAccount
+      void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysNoConfidence
+      let
+        tx =
+          mkBasicTx $
             mkBasicTxBody
               & withdrawalsTxBodyL
-                .~ Withdrawals
-                  [(rwdAccount, zero), (registeredRwdAccount, reward)]
-        )
-        [injectFailure $ WithdrawalsNotInRewardsCERTS [(rwdAccount, zero)]]
+                .~ Withdrawals [(rwdAccount, zero), (registeredRwdAccount, reward)]
+        notInRewardsFailure = injectFailure $ WithdrawalsNotInRewardsCERTS [(rwdAccount, zero)]
+       in
+        submitBootstrapAware
+          (submitTx_ tx)
+          (submitFailingTx tx)
+          ( FailBootstrapAndPostBootstrap $
+              FailBoth
+                { bootstrapFailures = [notInRewardsFailure]
+                , postBootstrapFailures =
+                    [ notInRewardsFailure
+                    , injectFailure (ConwayWdrlNotDelegatedToDRep [stakeKey])
+                    ]
+                }
+          )
 
     it "Withdrawing the wrong amount" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
 
-      (rwdAccount1, reward1) <- setupRewardAccount
-      (rwdAccount2, reward2) <- setupRewardAccount
+      (rwdAccount1, reward1, stakeKey1) <- setupRewardAccount
+      (rwdAccount2, reward2, stakeKey2) <- setupRewardAccount
+      void $ delegateToDRep (KeyHashObj stakeKey1) (Coin 1_000_000) DRepAlwaysAbstain
+      void $ delegateToDRep (KeyHashObj stakeKey2) (Coin 1_000_000) DRepAlwaysAbstain
       submitFailingTx
         ( mkBasicTx $
             mkBasicTxBody
@@ -78,8 +107,9 @@ spec = do
         [injectFailure $ WithdrawalsNotInRewardsCERTS [(rwdAccount1, zero)]]
   where
     setupRewardAccount = do
-      cred <- KeyHashObj <$> freshKeyHash
+      kh <- freshKeyHash
+      let cred = KeyHashObj kh
       ra <- registerStakeCredential cred
       submitAndExpireProposalToMakeReward cred
       rw <- lookupReward cred
-      pure (ra, rw)
+      pure (ra, rw, kh)
