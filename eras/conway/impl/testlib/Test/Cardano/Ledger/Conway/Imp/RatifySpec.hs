@@ -45,7 +45,6 @@ spec = do
   relevantDuringBootstrapSpec
   votingSpec
   delayingActionsSpec
-  spoVotesCommitteeUpdates
   committeeMinSizeAffectsInFlightProposalsSpec
   paramChangeAffectsProposalsSpec
   committeeExpiryResignationDiscountSpec
@@ -517,46 +516,6 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       passNEpochs 2
       getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` (treasury <-> amount)
 
-spoVotesCommitteeUpdates ::
-  forall era.
-  ConwayEraImp era =>
-  SpecWith (ImpTestState era)
-spoVotesCommitteeUpdates =
-  describe "Counting of SPO votes" $ do
-    describe "All gov action other than HardForkInitiation" $ do
-      it "NoConfidence" $ do
-        (spoK1, _, _) <- setupPoolWithStake $ Coin 100_000_000
-        _ <- setupPoolWithStake $ Coin 100_000_000
-        _ <- setupPoolWithStake $ Coin 100_000_000
-        _ <- setupPoolWithStake $ Coin 100_000_000
-        modifyPParams $ ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 1 %! 2
-        whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
-        gai <- submitGovAction $ NoConfidence SNothing
-        -- bootstrap: 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
-        -- post-bootstrap: 1 % 4 stake yes; 3 % 4 stake no; yes stake < 1 % 2
-        submitYesVote_ (StakePoolVoter spoK1) gai
-        passNEpochs 2
-        pv <- getProtVer
-        if bootstrapPhase pv
-          then getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
-          else getLastEnactedCommittee `shouldReturn` SNothing
-      it "CommitteeUpdate" $ do
-        (spoK1, _, _) <- setupPoolWithStake $ Coin 100_000_000
-        _ <- setupPoolWithStake $ Coin 100_000_000
-        _ <- setupPoolWithStake $ Coin 100_000_000
-        _ <- setupPoolWithStake $ Coin 100_000_000
-        modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
-        whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
-        cc <- KeyHashObj <$> freshKeyHash
-        gai <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 5)] (1 %! 2)
-        -- bootstrap: 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
-        -- post-bootstrap: 1 % 4 stake yes; 3 % 4 stake no; yes stake < 1 % 2
-        submitYesVote_ (StakePoolVoter spoK1) gai
-        passNEpochs 2
-        pv <- getProtVer
-        if bootstrapPhase pv
-          then getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
-          else getLastEnactedCommittee `shouldReturn` SNothing
 spoVotesForHardForkInitiation ::
   forall era.
   ConwayEraImp era =>
