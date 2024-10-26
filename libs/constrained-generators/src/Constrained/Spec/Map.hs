@@ -338,7 +338,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
                 then notMemberSpec [k | (k, v) <- Map.toList m, not $ Just v `conformsToSpec` spec]
                 else
                   memberSpecList
-                    (nubOrd $ Map.keys $ Map.filter (`conformsToSpec` spec) (Just <$> m))
+                    (Map.keys $ Map.filter ((`conformsToSpec` spec) . Just) m)
                     ( NE.fromList
                         [ "propagateSpecFun (lookup HOLE ms) on (MemberSpec ms)"
                         , "forall pairs (d,r) in ms, no 'd' conforms."

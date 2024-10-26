@@ -2659,7 +2659,7 @@ toSimpleRepSpec = \case
   TrueSpec -> TrueSpec
   ErrorSpec e -> ErrorSpec e
   TypeSpec s'' cant -> TypeSpec s'' $ map toSimpleRep cant
-  MemberSpec elems -> MemberSpec $ NE.nub $ (fmap toSimpleRep elems)
+  MemberSpec elems -> MemberSpec $ NE.nub $ fmap toSimpleRep elems
   SuspendedSpec x p ->
     constrained $ \x' ->
       Let (fromGeneric_ x') (x :-> p)
@@ -4788,7 +4788,7 @@ instance BaseUniverse fn => Functions (IntFn fn) fn where
             subtractSpec @fn i ts <> notMemberSpec (catMaybes $ map (safeSubtract @fn i) cant)
           MemberSpec es ->
             memberSpecList
-              (nub $ catMaybes (map (safeSubtract @fn i) (NE.toList es)))
+              (nub $ mapMaybe (safeSubtract @fn i) (NE.toList es))
               ( NE.fromList
                   [ "propagateSpecFn on Add"
                   , "Spec is (MemberSpec is), such that can't safely subtract from any i in is"
