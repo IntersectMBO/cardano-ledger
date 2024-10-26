@@ -1,8 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the POOL rule
@@ -46,9 +48,8 @@ pStateSpec = constrained $ \ps ->
         dom_ retiring `subset_` dom_ stakePoolParams
     , assertExplain (pure "dom of deposits is dom of stakePoolParams") $
         dom_ deposits ==. dom_ stakePoolParams
-    , assertExplain (pure "no deposit is 0") $
-        not_ $
-          lit (Coin 0) `elem_` rng_ deposits
+    , forAll (rng_ deposits) $ \ [var|dep|] ->
+        assertExplain (pure "all deposits are greater then (Coin 0)") $ dep >=. lit (Coin 0)
     , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
         dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
     ]

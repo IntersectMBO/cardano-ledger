@@ -91,7 +91,7 @@ makeNonNegativeInterval i j = fromJust (boundRational (i % j))
 instance HasSimpleRep Coin where
   type SimpleRep Coin = Word64
   toSimpleRep (Coin i) = case integerToWord64 i of
-    Nothing -> error "The impossible happened in toSimpleRep for `Coin`"
+    Nothing -> error $ "The impossible happened in toSimpleRep for (Coin " ++ show i ++ ")"
     Just w -> w
   fromSimpleRep = word64ToCoin
 instance BaseUniverse fn => HasSpec fn Coin
