@@ -40,8 +40,6 @@ cartesian ::
 cartesian (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
 cartesian (ErrorSpec es) _ = ErrorSpec (NE.cons "cartesian left" es)
 cartesian _ (ErrorSpec es) = ErrorSpec (NE.cons "cartesian right" es)
-cartesian (MemberSpec []) _ = ErrorSpec (pure "cartesian(MemberSpec [], _)")
-cartesian _ (MemberSpec []) = ErrorSpec (pure "cartesian( _, MemberSpec [])")
 cartesian s s' = typeSpec $ Cartesian s s'
 
 data PairSpec fn a b = Cartesian (Specification fn a) (Specification fn b)
@@ -126,8 +124,11 @@ instance BaseUniverse fn => Functions (PairFn fn) fn where
                   | b `conformsToSpec` sb -> sa <> foldMap notEqualSpec (sameSnd cant)
                   -- TODO: better error message
                   | otherwise ->
-                      ErrorSpec (NE.fromList ["propagateSpecFun (Pair a b) has conformance failure on b", show sb])
-                MemberSpec es -> MemberSpec $ nub (sameSnd es)
+                      ErrorSpec (NE.fromList ["propagateSpecFun (pair_ HOLE b) has conformance failure on b", show sb])
+                MemberSpec es ->
+                  memberSpecList
+                    (nub (sameSnd (NE.toList es)))
+                    (pure ("propagateSpecFun (pair_ HOLE b) on (MemberSpec bs) where b does not appear in bs."))
       | Value a :! NilCtx HOLE <- ctx ->
           let sameFst ps = [b | Prod a' b <- ps, a == a']
            in case spec of
@@ -135,8 +136,11 @@ instance BaseUniverse fn => Functions (PairFn fn) fn where
                   | a `conformsToSpec` sa -> sb <> foldMap notEqualSpec (sameFst cant)
                   -- TODO: better error message
                   | otherwise ->
-                      ErrorSpec (NE.fromList ["propagateSpecFun (Pair a b) has conformance failure on a", show sa])
-                MemberSpec es -> MemberSpec $ nub (sameFst es)
+                      ErrorSpec (NE.fromList ["propagateSpecFun (pair_ a HOLE) has conformance failure on a", show sa])
+                MemberSpec es ->
+                  memberSpecList
+                    (nub (sameFst (NE.toList es)))
+                    (pure ("propagateSpecFun (pair_ a HOLE) on (MemberSpec as) where a does not appear in as."))
 
   rewriteRules Fst ((pairView -> Just (x, _)) :> Nil) = Just x
   rewriteRules Snd ((pairView -> Just (_, y)) :> Nil) = Just y

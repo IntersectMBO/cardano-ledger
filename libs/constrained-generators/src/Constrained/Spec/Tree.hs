@@ -202,7 +202,6 @@ instance FunctionLike (TreeFn fn) where
 instance (Member (TreeFn fn) fn, BaseUniverse fn) => Functions (TreeFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
-  propagateSpecFun _ _ (MemberSpec []) = MemberSpec []
   propagateSpecFun fn ctx spec = case fn of
     _
       | SuspendedSpec v ps <- spec

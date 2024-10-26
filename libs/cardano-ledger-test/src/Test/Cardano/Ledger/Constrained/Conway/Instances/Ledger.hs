@@ -145,6 +145,7 @@ import Data.Coerce
 import Data.Foldable
 import Data.Int
 import Data.Kind
+import Data.List.NonEmpty qualified as NE
 import Data.Map (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
@@ -173,7 +174,7 @@ import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.Cardano.Slotting.Numeric ()
 import Test.QuickCheck hiding (Args, Fun, forAll)
 
--- EpochNo Num instance
+-- ==========================================================
 
 type ConwayUnivFns = CoinFn : CoerceFn : StringFn : MapFn : FunFn : TreeFn : BaseFns
 type ConwayFn = Fix (OneofL ConwayUnivFns)
@@ -1758,7 +1759,7 @@ instance (Typeable fn, Member (CoinFn fn) fn) => Functions (CoinFn fn) fn where
               (mapList (\(C.Value a) -> Lit a) pre)
               (x' :> mapList (\(C.Value a) -> Lit a) suf)
        in Let (App (injectFn fn) args) (x :-> p)
-  propagateSpecFun ToDelta (NilCtx HOLE) (MemberSpec xs) = MemberSpec (map deltaToCoin xs)
+  propagateSpecFun ToDelta (NilCtx HOLE) (MemberSpec xs) = MemberSpec (NE.map deltaToCoin xs)
   propagateSpecFun ToDelta (NilCtx HOLE) (TypeSpec (NumSpecInterval l h) cant) =
     ( TypeSpec
         (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))

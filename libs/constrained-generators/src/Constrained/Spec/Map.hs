@@ -34,6 +34,7 @@ import Constrained.Univ
 import Control.Monad
 import Data.Foldable
 import Data.List (nub)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NE
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -50,7 +51,9 @@ import Test.QuickCheck (Arbitrary (..), frequency, genericShrink, shrinkList)
 instance Ord a => Sized (Map.Map a b) where
   sizeOf = toInteger . Map.size
   liftSizeSpec sz cant = typeSpec $ defaultMapSpec {mapSpecSize = TypeSpec sz cant}
-  liftMemberSpec xs = typeSpec $ defaultMapSpec {mapSpecSize = MemberSpec (nubOrd xs)}
+  liftMemberSpec xs = case NE.nonEmpty (nubOrd xs) of
+    Nothing -> ErrorSpec (pure ("In liftMemberSpec for the (Sized Map) instance, xs is the empty list"))
+    Just ys -> typeSpec $ defaultMapSpec {mapSpecSize = MemberSpec ys}
   sizeOfTypeSpec (MapSpec _ mustk mustv size _ _) =
     geqSpec (sizeOf mustk)
       <> geqSpec (sizeOf mustv)
@@ -293,21 +296,20 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
       case fn of
         (_ :: MapFn fn '[Map k v] (Set k))
           | NilCtx HOLE <- ctx
-          , Evidence <- prerequisites @fn @(Map k v) ->
-              case spec of
-                MemberSpec [s] ->
-                  typeSpec $
-                    MapSpec Nothing s [] (equalSpec $ sizeOf s) TrueSpec NoFold
-                TypeSpec (SetSpec must elemspec size) [] ->
-                  typeSpec $
-                    MapSpec
-                      Nothing
-                      must
-                      []
-                      size
-                      (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec)
-                      NoFold
-                _ -> ErrorSpec (NE.fromList ["Dom on bad map spec", show spec])
+          , Evidence <- prerequisites @fn @(Map k v) -> case spec of
+              MemberSpec (s :| []) ->
+                typeSpec $
+                  MapSpec Nothing s [] (equalSpec $ sizeOf s) TrueSpec NoFold
+              TypeSpec (SetSpec must elemspec size) [] ->
+                typeSpec $
+                  MapSpec
+                    Nothing
+                    must
+                    []
+                    size
+                    (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec)
+                    NoFold
+              _ -> ErrorSpec (NE.fromList ["Dom on bad map spec", show spec])
     Rng ->
       -- No TypeAbstractions in ghc-8.10
       case fn of
@@ -334,7 +336,14 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           | HOLE :? Value (m :: Map k v) :> Nil <- ctx ->
               if Nothing `conformsToSpec` spec
                 then notMemberSpec [k | (k, v) <- Map.toList m, not $ Just v `conformsToSpec` spec]
-                else MemberSpec $ nubOrd $ Map.keys $ Map.filter (`conformsToSpec` spec) (Just <$> m)
+                else
+                  memberSpecList
+                    (Map.keys $ Map.filter ((`conformsToSpec` spec) . Just) m)
+                    ( NE.fromList
+                        [ "propagateSpecFun (lookup HOLE ms) on (MemberSpec ms)"
+                        , "forall pairs (d,r) in ms, no 'd' conforms."
+                        ]
+                    )
           | Value k :! NilCtx HOLE <- ctx
           , Evidence <- prerequisites @fn @(Map k v) ->
               constrained $ \m ->
@@ -348,7 +357,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
                               -- we refactor the `IsNormalType` machinery we will be able to make
                               -- this nicer.
                               case spec of
-                                MemberSpec as -> assert $ v `elem_` lit [a | Just a <- as]
+                                MemberSpec as -> assert $ v `elem_` lit [a | Just a <- NE.toList as]
                                 TypeSpec (SumSpec _ _ vspec) cant ->
                                   v `satisfies` (vspec <> notMemberSpec [a | Just a <- cant])
                      ]
