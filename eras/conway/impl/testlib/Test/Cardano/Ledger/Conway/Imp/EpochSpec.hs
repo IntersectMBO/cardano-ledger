@@ -9,10 +9,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Conway.Imp.EpochSpec (
-  spec,
-  relevantDuringBootstrapSpec,
-) where
+module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
@@ -50,19 +47,8 @@ spec ::
   ) =>
   SpecWith (ImpTestState era)
 spec = do
-  relevantDuringBootstrapSpec
   dRepVotingSpec
   treasurySpec
-
-relevantDuringBootstrapSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
-  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  ) =>
-  SpecWith (ImpTestState era)
-relevantDuringBootstrapSpec = do
   proposalsSpec
   dRepSpec
   eventsSpec
@@ -364,7 +350,9 @@ dRepVotingSpec ::
   SpecWith (ImpTestState era)
 dRepVotingSpec =
   describe "DRep" $ do
-    it "proposal is accepted after two epochs" $ do
+    -- DRep voting for anything other than Info is disallowed during bootstrap,
+    -- so we can only run this test post-bootstrap
+    it "proposal is accepted after two epochs" $ whenPostBootstrap $ do
       modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ 1 %! 1
       let getParamValue = getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
       initialParamValue <- getParamValue
@@ -408,11 +396,13 @@ treasurySpec ::
   ConwayEraImp era =>
   SpecWith (ImpTestState era)
 treasurySpec =
+  -- Treasury withdrawal are disallowed during bootstrap,
+  -- so we can run tests that submit such proposal only post-bootstrap.
   describe "Treasury" $ do
-    it "TreasuryWithdrawal" $ do
+    it "TreasuryWithdrawal" $ whenPostBootstrap $ do
       treasuryWithdrawalExpectation []
 
-    it "TreasuryWithdrawalExtra" $ do
+    it "TreasuryWithdrawalExtra" $ whenPostBootstrap $ do
       disableTreasuryExpansion
       rewardAccount <- registerRewardAccount
       rewardAccountOther <- registerRewardAccount
@@ -422,7 +412,7 @@ treasurySpec =
         , TreasuryWithdrawals (Map.singleton rewardAccountOther (Coin 668)) govPolicy
         ]
 
-    it -- TODO: mark as bootstrap relevant
+    it
       "deposit is moved to treasury when the reward address is not registered"
       depositMovesToTreasuryWhenStakingAddressUnregisters
 
