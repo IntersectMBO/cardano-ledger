@@ -16,7 +16,8 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
-import Cardano.Ledger.BaseTypes (Inject, ShelleyBase, natVersion)
+import Cardano.Ledger.BaseTypes (Inject, ShelleyBase)
+import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure,
@@ -55,7 +56,7 @@ import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
-import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, withImpState, withImpStateWithProtVer)
+import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, withImpStateWithProtVer)
 
 spec ::
   forall era.
@@ -97,28 +98,20 @@ spec ::
   Spec
 spec = do
   BabbageImp.spec @era
-  describe "ConwayImpSpec - post bootstrap (protocol version 10)" $
-    withImpStateWithProtVer @era (natVersion @10) $ do
-      describe "BBODY" $ Bbody.spec @era
-      describe "DELEG" $ Deleg.spec @era
-      describe "ENACT" $ Enact.spec @era
-      describe "EPOCH" $ Epoch.spec @era
-      describe "GOV" $ Gov.spec @era
-      describe "GOVCERT" $ GovCert.spec @era
-      describe "UTXO" $ Utxo.spec @era
-      describe "UTXOS" $ Utxos.spec @era
-      describe "RATIFY" $ Ratify.spec @era
-      describe "LEDGER" $ Ledger.spec @era
-  describe "ConwayImpSpec - bootstrap phase (protocol version 9)" $
-    withImpState @era $ do
-      describe "BBODY" $ Bbody.spec @era
-      describe "CERTS" $ Certs.spec @era
-      describe "DELEG" $ Deleg.spec @era
-      describe "ENACT" $ Enact.spec @era
-      describe "EPOCH" $ Epoch.spec @era
-      describe "GOV" $ Gov.spec @era
-      describe "GOVCERT" $ GovCert.spec @era
-      describe "UTXO" $ Utxo.spec @era
-      describe "UTXOS" $ Utxos.spec @era
-      describe "RATIFY" $ Ratify.spec @era
-      describe "LEDGER" $ Ledger.spec @era
+  let
+    conwayImpSpec protVer =
+      describe ("ConwayImpSpec - " <> show protVer) $
+        withImpStateWithProtVer @era protVer $ do
+          describe "BBODY" $ Bbody.spec @era
+          describe "CERTS" $ Certs.spec @era
+          describe "DELEG" $ Deleg.spec @era
+          describe "ENACT" $ Enact.spec @era
+          describe "EPOCH" $ Epoch.spec @era
+          describe "GOV" $ Gov.spec @era
+          describe "GOVCERT" $ GovCert.spec @era
+          describe "LEDGER" $ Ledger.spec @era
+          describe "RATIFY" $ Ratify.spec @era
+          describe "UTXO" $ Utxo.spec @era
+          describe "UTXOS" $ Utxos.spec @era
+   in
+    forM_ [eraProtVerLow @Conway .. eraProtVerHigh @Conway] conwayImpSpec
