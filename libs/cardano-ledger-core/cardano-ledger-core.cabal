@@ -153,7 +153,6 @@ library testlib
         Test.Cardano.Ledger.Core.KeyPair
         Test.Cardano.Ledger.Core.Utils
         Test.Cardano.Ledger.Core.Rational
-        Test.Cardano.Ledger.Core.Tools
         Test.Cardano.Ledger.Imp.Common
         Test.Cardano.Ledger.Plutus
         Test.Cardano.Ledger.Plutus.Examples
@@ -208,8 +207,7 @@ library testlib
         time,
         cardano-slotting,
         unliftio,
-        small-steps >=1.1,
-        quickcheck-instances
+        small-steps >=1.1
 
     if !impl(ghc >=9.2)
         ghc-options: -Wno-name-shadowing
@@ -238,6 +236,7 @@ test-suite tests
         Test.Cardano.Ledger.JsonSpec
         Test.Cardano.Ledger.PlutusSpec
         Test.Cardano.Ledger.UMapSpec
+        Test.Cardano.Ledger.ToolsSpec
 
     default-language: Haskell2010
     ghc-options:
@@ -260,6 +259,7 @@ test-suite tests
         testlib,
         genvalidity,
         genvalidity-scientific,
+        quickcheck-instances,
         scientific
 
 benchmark umap

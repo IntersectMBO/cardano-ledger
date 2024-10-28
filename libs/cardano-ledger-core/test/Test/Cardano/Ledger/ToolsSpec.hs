@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Core.Tools (spec) where
+module Test.Cardano.Ledger.ToolsSpec (spec) where
 
 import Cardano.Ledger.Tools
 import qualified Data.ByteString as BS

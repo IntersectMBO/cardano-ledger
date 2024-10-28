@@ -11,6 +11,7 @@
 ### `testlib`
 
 * Generalize the return type of `assertColorFailure` to `MonadIO`
+* Moved `Test.Cardano.Ledger.Core.Tools` into the test suite.
 
 ## 1.15.0.0
 
