@@ -22,6 +22,7 @@ library
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-conformance,
         cardano-ledger-test,
+        constrained-generators,
         data-default,
         QuickCheck,
         microlens
