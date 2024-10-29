@@ -8,10 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (
-  spec,
-  relevantDuringBootstrapSpec,
-) where
+module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (spec) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (
@@ -71,21 +68,8 @@ spec ::
   ) =>
   SpecWith (ImpTestState era)
 spec = do
-  relevantDuringBootstrapSpec
   govPolicySpec
   costModelsSpec
-
-relevantDuringBootstrapSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , Inject (BabbageContextError era) (ContextError era)
-  , Inject (ConwayContextError era) (ContextError era)
-  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
-  ) =>
-  SpecWith (ImpTestState era)
-relevantDuringBootstrapSpec = do
   datumAndReferenceInputsSpec
   conwayFeaturesPlutusV1V2FailureSpec
   describe "Spending script without a Datum" $ do
@@ -469,25 +453,19 @@ govPolicySpec ::
   SpecWith (ImpTestState era)
 govPolicySpec = do
   describe "Gov policy scripts" $ do
-    it "failing native script govPolicy" $ do
+    -- These tests rely on the script in the constitution, but we can only change the constitution after bootstrap.
+    -- So we cannot run these tests during bootstrap
+    it "failing native script govPolicy" $ whenPostBootstrap $ do
       committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       scriptHash <- impAddNativeScript $ RequireTimeStart (SlotNo 1)
       anchor <- arbitrary
       void $
         enactConstitution SNothing (Constitution anchor (SJust scriptHash)) dRep committeeMembers'
-      rewardAccount <- registerRewardAccount
-      pp <- getsNES $ nesEsL . curPParamsEpochStateL
       impAnn "ParameterChange" $ do
         let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
         let govAction = ParameterChange SNothing pparamsUpdate (SJust scriptHash)
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
+        proposal <- mkProposal govAction
         let tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
@@ -495,28 +473,21 @@ govPolicySpec = do
         submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
 
       impAnn "TreasuryWithdrawals" $ do
+        rewardAccount <- registerRewardAccount
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust scriptHash)
-
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
+        proposal <- mkProposal govAction
         let tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
                 & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing SNothing
         submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
 
-    it "alwaysSucceeds Plutus govPolicy validates" $ do
+    it "alwaysSucceeds Plutus govPolicy validates" $ whenPostBootstrap $ do
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV3)
       committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
-      pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $
         enactConstitution
           SNothing
@@ -528,60 +499,32 @@ govPolicySpec = do
       impAnn "ParameterChange" $ do
         let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
         let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
-        submitProposal_ proposal
+        mkProposal govAction >>= submitProposal_
       impAnn "TreasuryWithdrawals" $ do
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysSucceedsSh)
+        mkProposal govAction >>= submitProposal_
 
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
-        submitProposal_ proposal
-
-    it "alwaysFails Plutus govPolicy does not validate" $ do
+    it "alwaysFails Plutus govPolicy does not validate" $ whenPostBootstrap $ do
       let alwaysFailsSh = hashPlutusScript (alwaysFailsNoDatum SPlutusV3)
       committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
-      pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $
         enactConstitution SNothing (Constitution anchor (SJust alwaysFailsSh)) dRep committeeMembers'
 
-      rewardAccount <- registerRewardAccount
       impAnn "ParameterChange" $ do
         let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
         let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysFailsSh)
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
+        proposal <- mkProposal govAction
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         submitPhase2Invalid_ tx
 
       impAnn "TreasuryWithdrawals" $ do
+        rewardAccount <- registerRewardAccount
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
         let govAction = TreasuryWithdrawals withdrawals (SJust alwaysFailsSh)
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
+        proposal <- mkProposal govAction
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         submitPhase2Invalid_ tx
 
@@ -593,8 +536,10 @@ costModelsSpec ::
   ) =>
   SpecWith (ImpTestState era)
 costModelsSpec =
+  -- These tests rely on the script in the constitution, but we can only change the constitution after bootstrap.
+  -- So we cannot run these tests during bootstrap
   describe "PlutusV3 Initialization" $ do
-    it "Updating CostModels with alwaysFails govPolicy does not validate" $ do
+    it "Updating CostModels with alwaysFails govPolicy does not validate" $ whenPostBootstrap $ do
       -- no initial PlutusV3 CostModels
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
@@ -618,38 +563,31 @@ costModelsSpec =
       impAnn "Fail to update V3 Costmodels" $ do
         let pparamsUpdate = def & ppuCostModelsL .~ SJust (testingCostModels [PlutusV3])
         let govAction = ParameterChange (SJust govIdPPUpdate1) pparamsUpdate (SJust alwaysFailsSh)
-        rewardAccount <- registerRewardAccount
-        pp <- getsNES $ nesEsL . curPParamsEpochStateL
-        let proposal =
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = govAction
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = anchor
-                }
+        proposal <- mkProposal govAction
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         submitPhase2Invalid_ tx
 
-    it "Updating CostModels with alwaysSucceeds govPolicy but no PlutusV3 CostModels fails" $ do
-      modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
+    it "Updating CostModels with alwaysSucceeds govPolicy but no PlutusV3 CostModels fails" $
+      whenPostBootstrap $ do
+        modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
-      committeeMembers' <- registerInitialCommittee
-      (dRep, _, _) <- setupSingleDRep 1_000_000
-      anchor <- arbitrary
-      let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV3)
-      void $
-        enactConstitution
-          SNothing
-          (Constitution anchor (SJust alwaysSucceedsSh))
-          dRep
-          committeeMembers'
+        committeeMembers' <- registerInitialCommittee
+        (dRep, _, _) <- setupSingleDRep 1_000_000
+        anchor <- arbitrary
+        let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV3)
+        void $
+          enactConstitution
+            SNothing
+            (Constitution anchor (SJust alwaysSucceedsSh))
+            dRep
+            committeeMembers'
 
-      let pparamsUpdate = def & ppuCostModelsL .~ SJust (testingCostModels [PlutusV3])
-      let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
+        let pparamsUpdate = def & ppuCostModelsL .~ SJust (testingCostModels [PlutusV3])
+        let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
 
-      submitFailingGovAction govAction [injectFailure $ CollectErrors [NoCostModel PlutusV3]]
+        submitFailingGovAction govAction [injectFailure $ CollectErrors [NoCostModel PlutusV3]]
 
-    it "Updating CostModels and setting the govPolicy afterwards succeeds" $ do
+    it "Updating CostModels and setting the govPolicy afterwards succeeds" $ whenPostBootstrap $ do
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
       committeeMembers' <- registerInitialCommittee

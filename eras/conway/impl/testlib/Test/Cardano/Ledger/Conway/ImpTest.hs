@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -32,6 +33,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   trySubmitGovActions,
   trySubmitProposal,
   trySubmitProposals,
+  mkConstitutionProposal,
+  mkProposal,
+  mkProposalWithRewardAccount,
   submitTreasuryWithdrawals,
   submitVote,
   submitVote_,
@@ -74,7 +78,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   proposalsShowDebug,
   getGovPolicy,
   submitFailingGovAction,
-  submitConstitutionGovAction,
   submitGovActionForest,
   submitGovActionTree,
   getProposalsForest,
@@ -89,6 +92,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getLastEnactedCommittee,
   getLastEnactedConstitution,
   submitParameterChange,
+  mkUpdateCommitteeProposal,
   submitUpdateCommittee,
   expectCommitteeMemberPresence,
   expectCommitteeMemberAbsence,
@@ -120,6 +124,12 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   expectMembers,
   showConwayTxBalance,
   logConwayTxBalance,
+  submitBootstrapAware,
+  submitBootstrapAwareFailingVote,
+  submitBootstrapAwareFailingProposal,
+  submitBootstrapAwareFailingProposal_,
+  SubmitFailureExpectation (..),
+  FailBoth (..),
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -796,18 +806,32 @@ trySubmitGovActions ::
   NE.NonEmpty (GovAction era) ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
 trySubmitGovActions gas = do
-  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-  rewardAccount <- registerRewardAccount
-  anchor <- arbitrary
-  proposals <- forM gas $ \ga -> do
-    pure
-      ProposalProcedure
-        { pProcDeposit = deposit
-        , pProcReturnAddr = rewardAccount
-        , pProcGovAction = ga
-        , pProcAnchor = anchor
-        }
+  proposals <- traverse mkProposal gas
   trySubmitProposals proposals
+
+mkProposalWithRewardAccount ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  GovAction era ->
+  RewardAccount (EraCrypto era) ->
+  ImpTestM era (ProposalProcedure era)
+mkProposalWithRewardAccount ga rewardAccount = do
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+  anchor <- arbitrary
+  pure
+    ProposalProcedure
+      { pProcDeposit = deposit
+      , pProcReturnAddr = rewardAccount
+      , pProcGovAction = ga
+      , pProcAnchor = anchor
+      }
+
+mkProposal ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  GovAction era ->
+  ImpTestM era (ProposalProcedure era)
+mkProposal ga = do
+  rewardAccount <- registerRewardAccount
+  mkProposalWithRewardAccount ga rewardAccount
 
 submitGovAction ::
   forall era.
@@ -1412,24 +1436,6 @@ proposalsShowDebug ps showRoots =
          )
       <> ["----- Proposals End -----"]
 
-submitConstitutionGovAction ::
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
-  StrictMaybe (GovActionId (EraCrypto era)) ->
-  ImpTestM era (GovActionId (EraCrypto era))
-submitConstitutionGovAction gid = do
-  constitutionHash <- freshSafeHash
-  let constitutionAction =
-        NewConstitution
-          (GovPurposeId <$> gid)
-          ( Constitution
-              ( Anchor
-                  (fromJust $ textToUrl 64 "constitution.dummy.0")
-                  constitutionHash
-              )
-              SNothing
-          )
-  submitGovAction constitutionAction
-
 getProposalsForest ::
   ConwayEraGov era =>
   ImpTestM era (Forest (StrictMaybe (GovActionId (EraCrypto era))))
@@ -1518,19 +1524,22 @@ expectNumDormantEpochs expected = do
       nesEsL . esLStateL . lsCertStateL . certVStateL . vsNumDormantEpochsL
   nd `shouldBeExpr` expected
 
+mkConstitutionProposal ::
+  ConwayEraImp era =>
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  ImpTestM era (ProposalProcedure era, Constitution era)
+mkConstitutionProposal prevGovId = do
+  constitution <- arbitrary
+  (,constitution) <$> mkProposal (NewConstitution prevGovId constitution)
+
 submitConstitution ::
   forall era.
   ConwayEraImp era =>
   StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
-  ImpTestM era (GovActionId (EraCrypto era), Constitution era)
+  ImpTestM era (GovActionId (EraCrypto era))
 submitConstitution prevGovId = do
-  constitution <- arbitrary
-  let constitutionAction =
-        NewConstitution
-          prevGovId
-          constitution
-  govActionId <- submitGovAction constitutionAction
-  pure (govActionId, constitution)
+  (proposal, _) <- mkConstitutionProposal prevGovId
+  submitProposal proposal
 
 expectDRepNotRegistered ::
   HasCallStack =>
@@ -1670,6 +1679,26 @@ submitYesVoteCCs_ ::
 submitYesVoteCCs_ committeeMembers govId =
   mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) committeeMembers
 
+mkUpdateCommitteeProposal ::
+  ConwayEraImp era =>
+  -- | Set the parent. When Nothing is supplied latest parent will be used.
+  Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose era)) ->
+  -- | CC members to remove
+  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
+  -- | CC members to add
+  [(Credential 'ColdCommitteeRole (EraCrypto era), EpochInterval)] ->
+  UnitInterval ->
+  ImpTestM era (ProposalProcedure era)
+mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold = do
+  nes <- getsNES id
+  let
+    curEpochNo = nes ^. nesELL
+    rootCommittee = nes ^. newEpochStateGovStateL . cgsProposalsL . pRootsL . grCommitteeL
+    parent = fromMaybe (prRoot rootCommittee) mParent
+    newCommitteMembers =
+      Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccsToAdd]
+  mkProposal $ UpdateCommittee parent ccsToRemove newCommitteMembers threshold
+
 submitUpdateCommittee ::
   ConwayEraImp era =>
   -- | Set the parent. When Nothing is supplied latest parent will be used.
@@ -1680,15 +1709,8 @@ submitUpdateCommittee ::
   [(Credential 'ColdCommitteeRole (EraCrypto era), EpochInterval)] ->
   UnitInterval ->
   ImpTestM era (GovActionId (EraCrypto era))
-submitUpdateCommittee mParent ccsToRemove ccsToAdd threshold = do
-  nes <- getsNES id
-  let
-    curEpochNo = nes ^. nesELL
-    rootCommittee = nes ^. newEpochStateGovStateL . cgsProposalsL . pRootsL . grCommitteeL
-    parent = fromMaybe (prRoot rootCommittee) mParent
-    newCommitteMembers =
-      Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccsToAdd]
-  submitGovAction $ UpdateCommittee parent ccsToRemove newCommitteMembers threshold
+submitUpdateCommittee mParent ccsToRemove ccsToAdd threshold =
+  mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold >>= submitProposal
 
 expectCommitteeMemberPresence ::
   (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
@@ -1771,3 +1793,63 @@ logConwayTxBalance tx = do
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
   logString $ showConwayTxBalance pp certState utxo tx
+
+submitBootstrapAwareFailingVote ::
+  ConwayEraImp era =>
+  Vote ->
+  Voter (EraCrypto era) ->
+  GovActionId (EraCrypto era) ->
+  SubmitFailureExpectation era ->
+  ImpTestM era ()
+submitBootstrapAwareFailingVote vote voter gaId =
+  submitBootstrapAware
+    (submitVote_ vote voter gaId)
+    (submitFailingVote voter gaId)
+
+submitBootstrapAwareFailingProposal ::
+  ConwayEraImp era =>
+  ProposalProcedure era ->
+  SubmitFailureExpectation era ->
+  ImpTestM era (Maybe (GovActionId (EraCrypto era)))
+submitBootstrapAwareFailingProposal proposal =
+  submitBootstrapAware
+    (Just <$> submitProposal proposal)
+    ((Nothing <$) . submitFailingProposal proposal)
+
+submitBootstrapAwareFailingProposal_ ::
+  ConwayEraImp era =>
+  ProposalProcedure era ->
+  SubmitFailureExpectation era ->
+  ImpTestM era ()
+submitBootstrapAwareFailingProposal_ p = void . submitBootstrapAwareFailingProposal p
+
+data SubmitFailureExpectation era
+  = FailBootstrap (NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+  | FailPostBootstrap (NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+  | FailBootstrapAndPostBootstrap (FailBoth era)
+
+data FailBoth era = FailBoth
+  { bootstrapFailures :: NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era))
+  , postBootstrapFailures :: NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era))
+  }
+
+submitBootstrapAware ::
+  EraGov era =>
+  ImpTestM era a ->
+  (NE.NonEmpty (PredicateFailure (EraRule "LEDGER" era)) -> ImpTestM era a) ->
+  SubmitFailureExpectation era ->
+  ImpTestM era a
+submitBootstrapAware action failAction =
+  \case
+    FailBootstrap failures ->
+      ifBootstrap
+        (failAction failures)
+        action
+    FailPostBootstrap failures ->
+      ifBootstrap
+        action
+        (failAction failures)
+    FailBootstrapAndPostBootstrap (FailBoth bFailures pBFailures) ->
+      ifBootstrap
+        (failAction bFailures)
+        (failAction pBFailures)

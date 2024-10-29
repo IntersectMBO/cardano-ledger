@@ -1,27 +1,23 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (
-  spec,
-  relevantDuringBootstrapSpec,
-) where
+module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (GovPurposeId (..), Voter (..))
-import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..))
+import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..), ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Cardano.Ledger.Val (Val (..))
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
-import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -32,89 +28,22 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 spec = do
-  relevantDuringBootstrapSpec
-  it "Enact UpdateCommitee with lengthy lifetime" $ do
-    NonNegative n <- arbitrary
-    passNEpochs n
-    (drepCred, _, _) <- setupSingleDRep 1_000_000
-    (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-    cc <- KeyHashObj <$> freshKeyHash
-    EpochInterval committeeMaxTermLength <-
-      getsNES $ nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
-    secondAddCCGaid <-
-      submitUpdateCommittee Nothing mempty [(cc, EpochInterval (committeeMaxTermLength + 2))] (1 %! 2)
-    submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
-    submitYesVote_ (StakePoolVoter spoC) secondAddCCGaid
-    passNEpochs 2
-    -- Due to longer than allowed lifetime we have to wait an extra epoch for this new action to be enacted
-    expectCommitteeMemberAbsence cc
-    passEpoch
-    expectCommitteeMemberPresence cc
-
   it "Resigning proposed CC key" $ do
     ccColdCred <- KeyHashObj <$> freshKeyHash
-    _ <- submitUpdateCommittee Nothing mempty [(ccColdCred, EpochInterval 1234)] (1 %! 2)
-    submitTx_
-      ( mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ SSeq.singleton (ResignCommitteeColdTxCert ccColdCred SNothing)
-      )
-  -- A CC that has resigned will need to be first voted out and then voted in to be considered active
-  it "CC re-election" $
-    do
-      (drepCred, _, _) <- setupSingleDRep 1_000_000
-      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-      passNEpochs 2
-      -- Add a fresh CC
-      cc <- KeyHashObj <$> freshKeyHash
-      addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (1 %! 2)
-      submitYesVote_ (DRepVoter drepCred) addCCGaid
-      submitYesVote_ (StakePoolVoter spoC) addCCGaid
-      passNEpochs 2
-      -- Confirm that they are added
-      expectCommitteeMemberPresence cc
-      -- Confirm their hot key registration
-      _hotKey <- registerCommitteeHotKey cc
-      ccShouldNotBeResigned cc
-      -- Have them resign
-      _ <- resignCommitteeColdKey cc SNothing
-      ccShouldBeResigned cc
-      -- Re-add the same CC
-      reAddCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
-      submitYesVote_ (DRepVoter drepCred) reAddCCGaid
-      submitYesVote_ (StakePoolVoter spoC) reAddCCGaid
-      passNEpochs 2
-      -- Confirm that they are still resigned
-      ccShouldBeResigned cc
-      -- Remove them
-      removeCCGaid <-
-        submitUpdateCommittee (Just (SJust $ GovPurposeId reAddCCGaid)) (Set.singleton cc) [] (1 %! 2)
-      submitYesVote_ (DRepVoter drepCred) removeCCGaid
-      submitYesVote_ (StakePoolVoter spoC) removeCCGaid
-      passNEpochs 2
-      -- Confirm that they have been removed
-      expectCommitteeMemberAbsence cc
-      secondAddCCGaid <-
-        submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
-      submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
-      submitYesVote_ (StakePoolVoter spoC) secondAddCCGaid
-      passNEpochs 2
-      -- Confirm that they have been added
-      expectCommitteeMemberPresence cc
-      -- Confirm that after registering a hot key, they are active
-      _hotKey <- registerCommitteeHotKey cc
-      ccShouldNotBeResigned cc
-
-relevantDuringBootstrapSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
-  ) =>
-  SpecWith (ImpTestState era)
-relevantDuringBootstrapSpec = do
+    proposal <- mkUpdateCommitteeProposal Nothing mempty [(ccColdCred, EpochInterval 1234)] (1 %! 2)
+    mbGovId <-
+      submitBootstrapAwareFailingProposal proposal $
+        FailBootstrap [injectFailure $ DisallowedProposalDuringBootstrap proposal]
+    forM_ mbGovId $ \_ ->
+      submitTx_
+        ( mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ SSeq.singleton (ResignCommitteeColdTxCert ccColdCred SNothing)
+        )
   describe "succeeds for" $ do
     it "registering and unregistering a DRep" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100

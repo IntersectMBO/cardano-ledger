@@ -9,10 +9,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Conway.Imp.EpochSpec (
-  spec,
-  relevantDuringBootstrapSpec,
-) where
+module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
@@ -50,19 +47,8 @@ spec ::
   ) =>
   SpecWith (ImpTestState era)
 spec = do
-  relevantDuringBootstrapSpec
   dRepVotingSpec
   treasurySpec
-
-relevantDuringBootstrapSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleEvent "TICK" ConwayEpochEvent era
-  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  ) =>
-  SpecWith (ImpTestState era)
-relevantDuringBootstrapSpec = do
   proposalsSpec
   dRepSpec
   eventsSpec
@@ -109,25 +95,48 @@ proposalsSpec =
         getsNES $
           nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionScriptL
       govActionId <-
-        submitProposal $
-          ProposalProcedure
-            { pProcDeposit = deposit
-            , pProcReturnAddr = rewardAccount
-            , pProcGovAction =
-                ParameterChange
-                  SNothing
-                  (def & ppuMinFeeAL .~ SJust (Coin 3000))
-                  policy
-            , pProcAnchor = def
-            }
+        mkProposalWithRewardAccount
+          (ParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 3000)) policy)
+          rewardAccount
+          >>= submitProposal
       expectPresentGovActionId govActionId
-      passEpoch
-      passEpoch
-      passEpoch
+      passNEpochs 3
       expectMissingGovActionId govActionId
 
       getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL) `shouldReturn` initialValue
       getRewardAccountAmount rewardAccount `shouldReturn` deposit
+
+    it "Proposals are expired and removed as expected" $ whenPostBootstrap $ do
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 1
+
+      curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+      initialPulser <- getsNES $ newEpochStateGovStateL . drepPulsingStateGovStateL
+      initialEnactState <- getEnactState
+
+      govActionId <- submitConstitution SNothing
+      curConstitution' <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+      impAnn "Constitution has not been enacted yet" $
+        curConstitution' `shouldBe` curConstitution
+
+      govState <- getsNES newEpochStateGovStateL
+      let expectedProposals = govState ^. cgsProposalsL
+          expectedPulser = govState ^. cgsDRepPulsingStateL
+      expectedEnactState <- getEnactState
+
+      impAnn "EnactState reflects the submitted governance action" $ do
+        expectedEnactState `shouldBe` initialEnactState
+
+      impAnn "Proposals contain the submitted proposal" $
+        expectedProposals `shouldSatisfy` \props -> govActionId `elem` proposalsIds props
+
+      impAnn "Pulser has not changed" $
+        expectedPulser `shouldBe` initialPulser
+
+      passNEpochs 2
+      impAnn "Proposal gets removed after expiry" $ do
+        govStateFinal <- getsNES newEpochStateGovStateL
+        let ratifyState = extractDRepPulsingState (govStateFinal ^. cgsDRepPulsingStateL)
+        rsExpired ratifyState `shouldBe` Set.singleton govActionId
   where
     submitParameterChangeTree = submitGovActionTree $ submitGovAction . paramAction
     paramAction p =
@@ -341,7 +350,9 @@ dRepVotingSpec ::
   SpecWith (ImpTestState era)
 dRepVotingSpec =
   describe "DRep" $ do
-    it "proposal is accepted after two epochs" $ do
+    -- DRep voting for anything other than Info is disallowed during bootstrap,
+    -- so we can only run this test post-bootstrap
+    it "proposal is accepted after two epochs" $ whenPostBootstrap $ do
       modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ 1 %! 1
       let getParamValue = getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
       initialParamValue <- getParamValue
@@ -385,11 +396,13 @@ treasurySpec ::
   ConwayEraImp era =>
   SpecWith (ImpTestState era)
 treasurySpec =
+  -- Treasury withdrawal are disallowed during bootstrap,
+  -- so we can run tests that submit such proposal only post-bootstrap.
   describe "Treasury" $ do
-    it "TreasuryWithdrawal" $ do
+    it "TreasuryWithdrawal" $ whenPostBootstrap $ do
       treasuryWithdrawalExpectation []
 
-    it "TreasuryWithdrawalExtra" $ do
+    it "TreasuryWithdrawalExtra" $ whenPostBootstrap $ do
       disableTreasuryExpansion
       rewardAccount <- registerRewardAccount
       rewardAccountOther <- registerRewardAccount
@@ -399,7 +412,7 @@ treasurySpec =
         , TreasuryWithdrawals (Map.singleton rewardAccountOther (Coin 668)) govPolicy
         ]
 
-    it -- TODO: mark as bootstrap relevant
+    it
       "deposit is moved to treasury when the reward address is not registered"
       depositMovesToTreasuryWhenStakingAddressUnregisters
 
@@ -449,14 +462,10 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
   govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
   govPolicy <- getGovPolicy
   gaid <-
-    submitProposal
-      ProposalProcedure
-        { pProcReturnAddr = returnAddr
-        , pProcGovAction =
-            ParameterChange SNothing (emptyPParamsUpdate & ppuGovActionDepositL .~ SJust (Coin 10)) govPolicy
-        , pProcDeposit = govActionDeposit
-        , pProcAnchor = def
-        }
+    mkProposalWithRewardAccount
+      (ParameterChange SNothing (emptyPParamsUpdate & ppuGovActionDepositL .~ SJust (Coin 10)) govPolicy)
+      returnAddr
+      >>= submitProposal
   expectPresentGovActionId gaid
   replicateM_ 5 passEpoch
   expectTreasury initialTreasury
@@ -497,24 +506,17 @@ eventsSpec = describe "Events" $ do
           newVal <- arbitrary
           proposal <- submitParameterChange SNothing $ def & ppuCoinsPerUTxOByteL .~ SJust newVal
           pure
-            (proposal, (getsNES $ nesEsL . curPParamsEpochStateL . ppCoinsPerUTxOByteL) `shouldReturn` newVal)
+            (proposal, getsNES (nesEsL . curPParamsEpochStateL . ppCoinsPerUTxOByteL) `shouldReturn` newVal)
       (proposalA, checkProposedParameterA) <- proposeParameterChange
       (proposalB, _) <- proposeParameterChange
       rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccount
       passEpoch -- prevent proposalC expiry and force it's deletion due to conflit.
       proposalC <- impAnn "proposalC" $ do
         newVal <- arbitrary
-        submitProposal
-          ProposalProcedure
-            { pProcReturnAddr = rewardAccount
-            , pProcGovAction =
-                ParameterChange
-                  SNothing
-                  (def & ppuCoinsPerUTxOByteL .~ SJust newVal)
-                  SNothing
-            , pProcDeposit = propDeposit
-            , pProcAnchor = def
-            }
+        mkProposalWithRewardAccount
+          (ParameterChange SNothing (def & ppuCoinsPerUTxOByteL .~ SJust newVal) SNothing)
+          rewardAccount
+          >>= submitProposal
       let
         isGovInfoEvent (SomeSTSEvent ev)
           | Just (TickNewEpochEvent (EpochEvent (GovInfoEvent {})) :: ShelleyTickEvent era) <- cast ev = True
