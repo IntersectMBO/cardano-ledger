@@ -23,6 +23,7 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
+import qualified Data.Foldable as Set
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.VMap as VMap
@@ -34,6 +35,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
 import Test.Cardano.Ledger.Constrained.Conway.Utxo (depositsMap)
 import Test.Cardano.Ledger.Conway.TreeDiff
+import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
@@ -170,6 +172,24 @@ instance SpecTranslate ctx AccountState where
       <$> toSpecRep asTreasury
       <*> toSpecRep asReserves
 
+instance SpecTranslate ctx DeltaCoin where
+  type SpecRep DeltaCoin = Integer
+
+  toSpecRep (DeltaCoin x) = pure x
+
+instance SpecTranslate ctx (PulsingRewUpdate c) where
+  type SpecRep (PulsingRewUpdate c) = Agda.HsRewardUpdate
+
+  toSpecRep x =
+    Agda.MkRewardUpdate
+      <$> toSpecRep deltaT
+      <*> toSpecRep deltaR
+      <*> toSpecRep deltaF
+      <*> toSpecRep rwds
+    where
+      (RewardUpdate {..}, _) = runShelleyBase $ completeRupd x
+      rwds = Set.foldMap rewardAmount <$> rs
+
 instance
   ( EraPParams era
   , ConwayEraGov era
@@ -191,8 +211,7 @@ instance
     Agda.MkNewEpochState
       <$> toSpecRep nesEL
       <*> toSpecRep nesEs
-      -- TODO: replace with RewardUpdate
-      <*> pure Nothing
+      <*> toSpecRep nesRu
 
 instance SpecTranslate ctx (ConwayNewEpochPredFailure era) where
   type SpecRep (ConwayNewEpochPredFailure era) = OpaqueErrorString

@@ -69,6 +69,7 @@ library
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+        cardano-ledger-shelley-test,
         cardano-ledger-alonzo,
         cardano-ledger-allegra,
         cardano-ledger-babbage,
