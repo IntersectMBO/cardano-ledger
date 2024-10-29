@@ -3354,14 +3354,18 @@ genFromFold (nub -> must) (simplifySpec -> size) elemS fn foldS =
       let elemS' = mapSpec fn elemS
           mustVal = adds @fn (map (sem fn) must)
           foldS' = propagateSpecFun (theAddFn @fn) (HOLE :? Value mustVal :> Nil) foldS
+          sizeSpec' = propagateSpecFun (addFn @fn) (HOLE :? Value (sizeOf must) :> Nil) size
       m <- getMode
+      when (isErrorLike sizeSpec') $ genError1 "Inconsistent size spec"
       results0 <-
         withMode Loose $
           ( withMode m $
+              -- TODO: this is not the best solution to this problem, we need
+              -- to use the size information in `genList` instead
               suchThatWithTryT
-                1000
+                10
                 (genList (simplifySpec elemS') (simplifySpec foldS'))
-                (\xs -> (sizeOf must + sizeOf xs) `conformsToSpec` size)
+                (\xs -> sizeOf xs `conformsToSpec` sizeSpec')
           )
       results <-
         explain
