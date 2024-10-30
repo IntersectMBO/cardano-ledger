@@ -29,7 +29,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, enc
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Map.Strict (Map)
@@ -57,7 +57,7 @@ data IndividualPoolStake c = IndividualPoolStake
   -- ^ Total stake delegated to this pool. In addition to all the stake  that
   -- is part of `individualPoolStake` we also add proposal-deposits to this
   -- field.
-  , individualPoolStakeVrf :: !(Hash c (VerKeyVRF c))
+  , individualPoolStakeVrf :: !(VRFVerKeyHash 'StakePoolVRF c)
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)

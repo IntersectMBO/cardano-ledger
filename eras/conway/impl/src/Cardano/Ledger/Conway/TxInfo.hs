@@ -90,7 +90,7 @@ import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Keys (KeyRole (..), unVRFVerKeyHash)
 import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..))
@@ -494,7 +494,9 @@ transTxBodyWithdrawals txBody =
 transTxCert :: ConwayEraTxCert era => ProtVer -> TxCert era -> PV3.TxCert
 transTxCert pv = \case
   RegPoolTxCert PoolParams {ppId, ppVrf} ->
-    PV3.TxCertPoolRegister (transKeyHash ppId) (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes ppVrf)))
+    PV3.TxCertPoolRegister
+      (transKeyHash ppId)
+      (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
     PV3.TxCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
   RegTxCert stakeCred ->

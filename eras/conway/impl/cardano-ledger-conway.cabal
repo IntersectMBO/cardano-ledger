@@ -92,7 +92,7 @@ library
         cardano-ledger-allegra ^>=1.6.1,
         cardano-ledger-alonzo ^>=1.12,
         cardano-ledger-babbage ^>=1.10.1,
-        cardano-ledger-core ^>=1.15.1,
+        cardano-ledger-core ^>=1.16,
         cardano-ledger-mary ^>=1.7,
         cardano-ledger-shelley ^>=1.15,
         cardano-slotting,

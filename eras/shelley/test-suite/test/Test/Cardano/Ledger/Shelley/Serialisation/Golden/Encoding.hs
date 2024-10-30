@@ -66,9 +66,10 @@ import Cardano.Ledger.Keys (
   Hash,
   KeyHash (..),
   KeyRole (..),
+  KeyRoleVRF (..),
   SignedDSIGN,
   VKey (..),
-  VerKeyVRF,
+  VRFVerKeyHash,
   WitVKey (..),
   asWitness,
   encodeSignedKES,
@@ -204,7 +205,7 @@ testGKeyHash = (hashKey . vKey) testGKey
 testVRF :: Crypto c => VRFKeyPair c
 testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
 
-testVRFKH :: forall c. Crypto c => Hash c (VerKeyVRF c)
+testVRFKH :: forall c r. Crypto c => VRFVerKeyHash r c
 testVRFKH = hashVerKeyVRF $ vrfVerKey (testVRF @c)
 
 testTxb :: (EraTxOut era, EraTxCert era) => ShelleyTxBody era
@@ -550,13 +551,15 @@ tests =
               , SingleHostName (SJust 42) $ Maybe.fromJust $ textToDns 64 "singlehost.relay.com"
               , MultiHostName $ Maybe.fromJust $ textToDns 64 "multihost.relay.com"
               ]
+          vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF C_Crypto
+          vrfKeyHash = testVRFKH
        in checkEncodingCBOR
             shelleyProtVer
             "register_pool"
             ( RegPoolTxCert @C
                 ( PoolParams
                     { ppId = hashKey . vKey $ testStakePoolKey
-                    , ppVrf = testVRFKH @C_Crypto
+                    , ppVrf = vrfKeyHash
                     , ppPledge = poolPledge
                     , ppCost = poolCost
                     , ppMargin = poolMargin
@@ -575,7 +578,7 @@ tests =
             ( T (TkListLen 10)
                 <> T (TkWord 3) -- Reg Pool
                 <> S (hashKey . vKey $ testStakePoolKey @C_Crypto) -- operator
-                <> S (testVRFKH @C_Crypto) -- vrf keyhash
+                <> S vrfKeyHash
                 <> S poolPledge -- pledge
                 <> S poolCost -- cost
                 <> S poolMargin -- margin
@@ -604,22 +607,20 @@ tests =
             <> S (hashKey . vKey $ testStakePoolKey @C_Crypto) -- key hash
             <> S (EpochNo 1729) -- epoch
         )
-    , checkEncodingCBOR
-        shelleyProtVer
-        "genesis_delegation"
-        ( GenesisDelegTxCert @C
-            testGKeyHash
-            (hashKey . vKey $ testGenesisDelegateKey @C_Crypto)
-            (testVRFKH @C_Crypto)
-        )
-        ( T
-            ( TkListLen 4
-                . TkWord 5 -- genesis delegation cert
+    , let vrfKeyHash :: VRFVerKeyHash 'GenDelegVRF C_Crypto
+          vrfKeyHash = testVRFKH
+          genesisDelegate :: KeyHash 'GenesisDelegate C_Crypto
+          genesisDelegate = hashKey $ vKey testGenesisDelegateKey
+       in checkEncodingCBOR
+            shelleyProtVer
+            "genesis_delegation"
+            (GenesisDelegTxCert @C testGKeyHash genesisDelegate vrfKeyHash)
+            ( T
+                (TkListLen 4 . TkWord 5) -- genesis delegation cert
+                <> S (testGKeyHash @C_Crypto) -- delegator credential
+                <> S genesisDelegate -- delegatee key hash
+                <> S vrfKeyHash
             )
-            <> S (testGKeyHash @C_Crypto) -- delegator credential
-            <> S (hashKey . vKey $ testGenesisDelegateKey @C_Crypto) -- delegatee key hash
-            <> S (testVRFKH @C_Crypto) -- delegatee vrf key hash
-        )
     , -- checkEncodingCBOR "mir"
       let rws = StakeAddressesMIR $ Map.singleton (testStakeCred @C_Crypto) (DeltaCoin 77)
        in checkEncodingCBOR

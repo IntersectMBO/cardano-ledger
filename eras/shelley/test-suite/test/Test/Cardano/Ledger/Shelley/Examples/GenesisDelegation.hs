@@ -24,9 +24,9 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
-  Hash,
   KeyRole (..),
-  VerKeyVRF,
+  KeyRoleVRF (..),
+  VRFVerKeyHash,
   asWitness,
   hashKey,
   hashVerKeyVRF,
@@ -118,7 +118,7 @@ newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (RawSeed 108 0 0 0 1)
 
-newGenesisVrfKH :: forall c. Crypto c => Hash c (VerKeyVRF c)
+newGenesisVrfKH :: forall c. Crypto c => VRFVerKeyHash 'GenDelegVRF c
 newGenesisVrfKH = hashVerKeyVRF (vrfVerKey (mkVRFKeyPair @c (RawSeed 9 8 7 6 5)))
 
 feeTx1 :: Coin

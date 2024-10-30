@@ -111,7 +111,13 @@ import Cardano.Ledger.Credential (
   credScriptHash,
  )
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (Hash, KeyHash (..), KeyRole (..), VerKeyVRF, asWitness)
+import Cardano.Ledger.Keys (
+  KeyHash (..),
+  KeyRole (..),
+  KeyRoleVRF (..),
+  VRFVerKeyHash,
+  asWitness,
+ )
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
@@ -238,13 +244,13 @@ pattern GenesisDelegTxCert ::
   (ShelleyEraTxCert era, ProtVerAtMost era 8) =>
   KeyHash 'Genesis (EraCrypto era) ->
   KeyHash 'GenesisDelegate (EraCrypto era) ->
-  Hash (EraCrypto era) (VerKeyVRF (EraCrypto era)) ->
+  VRFVerKeyHash 'GenDelegVRF (EraCrypto era) ->
   TxCert era
-pattern GenesisDelegTxCert genKey genDelegKey vrf <-
-  (getGenesisDelegTxCert -> Just (GenesisDelegCert genKey genDelegKey vrf))
+pattern GenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
+  (getGenesisDelegTxCert -> Just (GenesisDelegCert genKey genDelegKey vrfKeyHash))
   where
-    GenesisDelegTxCert genKey genDelegKey vrf =
-      mkGenesisDelegTxCert $ GenesisDelegCert genKey genDelegKey vrf
+    GenesisDelegTxCert genKey genDelegKey vrfKeyHash =
+      mkGenesisDelegTxCert $ GenesisDelegCert genKey genDelegKey vrfKeyHash
 
 {-# COMPLETE
   RegPoolTxCert
@@ -261,7 +267,7 @@ data GenesisDelegCert c
   = GenesisDelegCert
       !(KeyHash 'Genesis c)
       !(KeyHash 'GenesisDelegate c)
-      !(Hash c (VerKeyVRF c))
+      !(VRFVerKeyHash 'GenDelegVRF c)
   deriving (Show, Generic, Eq, Ord)
 
 instance NoThunks (GenesisDelegCert c)

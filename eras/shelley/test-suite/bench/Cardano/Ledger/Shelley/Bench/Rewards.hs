@@ -12,11 +12,7 @@ module Cardano.Ledger.Shelley.Bench.Rewards (
 )
 where
 
-import Cardano.Crypto.VRF (hashVerKeyVRF)
-import Cardano.Ledger.Address (
-  Addr (..),
-  RewardAccount (..),
- )
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   Globals (activeSlotCoeff, securityParameter),
   Network (Testnet),
@@ -25,7 +21,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking), hashVerKeyVRF)
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS

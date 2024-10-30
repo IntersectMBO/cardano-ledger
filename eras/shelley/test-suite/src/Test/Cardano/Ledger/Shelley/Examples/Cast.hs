@@ -53,9 +53,9 @@ import Cardano.Ledger.Credential (
  )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
-  Hash,
   KeyRole (..),
-  VerKeyVRF,
+  KeyRoleVRF (StakePoolVRF),
+  VRFVerKeyHash,
   hashKey,
   hashVerKeyVRF,
  )
@@ -146,7 +146,7 @@ alicePoolParams =
 aliceVRFKeyHash ::
   forall c.
   Crypto c =>
-  Hash c (VerKeyVRF c)
+  VRFVerKeyHash 'StakePoolVRF c
 aliceVRFKeyHash = hashVerKeyVRF (vrfVerKey $ aikVrf (alicePoolKeys @c))
 
 -- | Bob's payment key pair
@@ -199,7 +199,7 @@ bobPoolParams =
 bobVRFKeyHash ::
   forall c.
   Crypto c =>
-  Hash c (VerKeyVRF c)
+  VRFVerKeyHash 'StakePoolVRF c
 bobVRFKeyHash = hashVerKeyVRF (vrfVerKey $ aikVrf (bobPoolKeys @c))
 
 -- Carl's payment key pair

@@ -30,6 +30,7 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys (KeyRoleVRF (GenDelegVRF), VRFVerKeyHash)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API.Types
@@ -108,7 +109,7 @@ genesisDelegCertSpec ds =
 --   This mimics what happens in the Cardano.Ledger.Shelley.Rules.Deleg module
 computeSets ::
   DState era ->
-  ( KeyHash 'Genesis (EraCrypto era) -> Set (Hash (EraCrypto era) (VerKeyVRF (EraCrypto era)))
+  ( KeyHash 'Genesis (EraCrypto era) -> Set (VRFVerKeyHash 'GenDelegVRF (EraCrypto era))
   , KeyHash 'Genesis (EraCrypto era) -> Set (KeyHash 'GenesisDelegate (EraCrypto era))
   )
 computeSets ds =

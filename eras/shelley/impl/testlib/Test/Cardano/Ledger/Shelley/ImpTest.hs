@@ -161,7 +161,8 @@ import Cardano.Ledger.Keys (
   Hash,
   KeyHash,
   KeyRole (..),
-  VerKeyVRF,
+  KeyRoleVRF (..),
+  VRFVerKeyHash,
   asWitness,
   bootstrapWitKeyHash,
   hashKey,
@@ -1550,7 +1551,7 @@ freshSafeHash = arbitrary
 
 freshKeyHashVRF ::
   Era era =>
-  ImpTestM era (Hash (EraCrypto era) (VerKeyVRF (EraCrypto era)))
+  ImpTestM era (VRFVerKeyHash (r :: KeyRoleVRF) (EraCrypto era))
 freshKeyHashVRF = arbitrary
 
 -- | Adds a key pair to the keyhash lookup map

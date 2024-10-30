@@ -168,6 +168,7 @@ import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (..),
   VKey (..),
+  VRFVerKeyHash (..),
   WitVKey (..),
   hashKey,
  )
@@ -708,6 +709,9 @@ instance PrettyA EpochInterval where
 
 ppHash :: Hash.Hash a b -> PDoc
 ppHash x = text "#" <> reAnnotate (Width 5 :) (viaShow x)
+
+ppVRFHash :: VRFVerKeyHash r c -> PDoc
+ppVRFHash = ppHash . unVRFVerKeyHash
 
 ppUnitInterval :: UnitInterval -> PDoc
 ppUnitInterval = viaShow
@@ -1914,7 +1918,7 @@ ppShelleyDelegPredFailure x = case x of
       [ppString (show pot), pcCoin mismatchSupplied, pcCoin mismatchExpected]
   MIRCertificateTooLateinEpochDELEG Mismatch {..} ->
     ppSexp "MIRCertificateTooLateinEpochDELEG" [pcSlotNo mismatchSupplied, pcSlotNo mismatchExpected]
-  DuplicateGenesisVRFDELEG hash -> ppSexp "DuplicateGenesisVRFDELEG" [ppHash hash]
+  DuplicateGenesisVRFDELEG hash -> ppSexp "DuplicateGenesisVRFDELEG" [ppVRFHash hash]
   MIRTransferNotCurrentlyAllowed -> ppString "MIRTransferNotCurrentlyAllowed"
   MIRNegativesNotCurrentlyAllowed -> ppString " MIRNegativesNotCurrentlyAllowed"
   InsufficientForTransferDELEG pot Mismatch {..} ->
@@ -2696,7 +2700,7 @@ pcGenesisDelegCert (GenesisDelegCert a b c) =
     "GenesisDelegCert"
     [ ("Genesis", pcKeyHash a)
     , ("GenesisDelegate", pcKeyHash b)
-    , ("VerKeyVRF", trim (ppHash c))
+    , ("VerKeyVRF", trim (ppVRFHash c))
     ]
 
 instance PrettyA (GenesisDelegCert c) where
@@ -3220,7 +3224,7 @@ pcIndividualPoolStake x =
   ppRecord
     "IPS"
     [ ("ratio", ppRational (individualPoolStake x))
-    , ("vrf", trim (ppHash (individualPoolStakeVrf x)))
+    , ("vrf", trim (ppVRFHash (individualPoolStakeVrf x)))
     ]
 
 instance PrettyA (IndividualPoolStake c) where prettyA = pcIndividualPoolStake
@@ -3412,7 +3416,7 @@ pcGenDelegPair x =
   ppRecord
     "GDPair"
     [ ("keyhash", pcKeyHash (genDelegKeyHash x))
-    , ("vrfhash", trim (ppHash (genDelegVrfHash x)))
+    , ("vrfhash", trim (ppVRFHash (genDelegVrfHash x)))
     ]
 
 pcIRewards :: InstantaneousRewards c -> PDoc

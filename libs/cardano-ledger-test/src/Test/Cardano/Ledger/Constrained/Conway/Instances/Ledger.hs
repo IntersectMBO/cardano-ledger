@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -105,6 +106,7 @@ import Cardano.Ledger.Keys (
   GenDelegs (..),
   KeyHash,
   KeyRole (..),
+  VRFVerKeyHash (..),
   WitVKey,
  )
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
@@ -613,22 +615,32 @@ instance HasSimpleRep (ScriptHash c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (ScriptHash c)
 
 pickFromFixedPool :: Arbitrary a => Int -> Gen a
-pickFromFixedPool n =
+pickFromFixedPool n = do
+  seed <- chooseInt (0, n)
+  variant seed arbitrary
+
+genHashWithDuplicates :: HashAlgorithm h => Gen (Hash h b)
+genHashWithDuplicates =
   oneof
-    [ variant seed arbitrary
-    | seed <- [0 .. n]
+    [ pickFromFixedPool 20
+    , arbitrary
     ]
+
+instance (IsConwayUniv fn, Typeable r, Crypto c) => HasSpec fn (VRFVerKeyHash r c) where
+  type TypeSpec fn (VRFVerKeyHash r c) = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pureGen $ VRFVerKeyHash <$> genHashWithDuplicates
+  cardinalTypeSpec _ = TrueSpec
+  shrinkWithTypeSpec _ = shrink
+  conformsTo _ _ = True
+  toPreds _ _ = toPred True
 
 instance (IsConwayUniv fn, HashAlgorithm a, Typeable b) => HasSpec fn (Hash a b) where
   type TypeSpec fn (Hash a b) = ()
   emptySpec = ()
   combineSpec _ _ = TrueSpec
-  genFromTypeSpec _ =
-    pureGen $
-      oneof
-        [ pickFromFixedPool 20
-        , arbitrary
-        ]
+  genFromTypeSpec _ = pureGen genHashWithDuplicates
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True

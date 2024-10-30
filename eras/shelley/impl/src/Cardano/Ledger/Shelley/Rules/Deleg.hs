@@ -39,10 +39,10 @@ import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
-  Hash,
   KeyHash,
   KeyRole (..),
-  VerKeyVRF,
+  KeyRoleVRF (..),
+  VRFVerKeyHash,
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELEG, ShelleyEra)
@@ -125,7 +125,7 @@ data ShelleyDelegPredFailure era
   | MIRCertificateTooLateinEpochDELEG
       !(Mismatch 'RelLT SlotNo)
   | DuplicateGenesisVRFDELEG
-      !(Hash (EraCrypto era) (VerKeyVRF (EraCrypto era))) -- VRF KeyHash which is already delegated to
+      !(VRFVerKeyHash 'GenDelegVRF (EraCrypto era)) -- VRF KeyHash which is already delegated to
   | MIRTransferNotCurrentlyAllowed
   | MIRNegativesNotCurrentlyAllowed
   | InsufficientForTransferDELEG

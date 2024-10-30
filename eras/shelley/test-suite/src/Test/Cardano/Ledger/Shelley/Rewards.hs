@@ -63,6 +63,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   VKey (..),
   hashKey,
+  hashVerKeyVRF,
  )
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
@@ -279,7 +280,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
       params =
         PoolParams
           { ppId = hashKey . vKey $ coldKey
-          , ppVrf = Crypto.hashVerKeyVRF . snd $ vrfKey
+          , ppVrf = hashVerKeyVRF $ snd vrfKey
           , ppPledge = pledge
           , ppCost = cost
           , ppMargin = margin

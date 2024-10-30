@@ -103,6 +103,7 @@ import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (StakePool, Staking),
   VKey (..),
+  VRFVerKeyHash (..),
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
@@ -372,8 +373,11 @@ instance Crypto c => Arbitrary (AuxiliaryDataHash c) where
 -- Cardano.Ledger.Keys -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (KeyHash a c) where
+instance Crypto c => Arbitrary (KeyHash r c) where
   arbitrary = KeyHash <$> genHash
+
+instance Crypto c => Arbitrary (VRFVerKeyHash r c) where
+  arbitrary = VRFVerKeyHash <$> genHash
 
 instance DSIGNAlgorithm (DSIGN c) => Arbitrary (VKey kd c) where
   arbitrary = VKey <$> arbitrary

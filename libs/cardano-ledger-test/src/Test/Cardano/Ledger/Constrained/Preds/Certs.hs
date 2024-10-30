@@ -13,8 +13,6 @@ module Test.Cardano.Ledger.Constrained.Preds.Certs where
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 
-import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Crypto.VRF.Class (VerKeyVRF)
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), maybeToStrictMaybe)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
@@ -26,7 +24,6 @@ import Cardano.Ledger.Conway.TxCert (
   pattern RegDepositDelegTxCert,
  )
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
-import Cardano.Ledger.Crypto (HASH, VRF)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -34,7 +31,6 @@ import Cardano.Ledger.PoolParams (PoolMetadata, PoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState (AccountState, InstantaneousRewards, availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (
   EraTxCert (..),
-  GenesisDelegCert (..),
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
@@ -111,16 +107,6 @@ sMirShift =
     "sMirShift"
     (typeRep @(ShelleyTxCert era))
     (\_avail x c -> ShelleyTxCertMir (MIRCert x (SendToOppositePotMIR c)))
-
-sGovern ::
-  Target
-    era
-    ( KeyHash 'Genesis (EraCrypto era) ->
-      KeyHash 'GenesisDelegate (EraCrypto era) ->
-      Hash (HASH (EraCrypto era)) (VerKeyVRF (VRF (EraCrypto era))) ->
-      ShelleyTxCert era
-    )
-sGovern = Constr "sGovern" (\a b c -> ShelleyTxCertGenesisDeleg (GenesisDelegCert a b c))
 
 -- ==========================================
 -- Conway Cert Targets

@@ -41,10 +41,10 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (
-  Hash,
   KeyHash,
   KeyRole (..),
-  VerKeyVRF,
+  KeyRoleVRF (StakePoolVRF),
+  VRFVerKeyHash,
   asWitness,
   hashKey,
   hashVerKeyVRF,
@@ -397,7 +397,7 @@ mkPoolKeyHash = hashKey . vKey
 firstStakePoolKeyHash :: KeyHash 'StakePool B_Crypto
 firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 
-vrfKeyHash :: Hash B_Crypto (VerKeyVRF B_Crypto)
+vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF B_Crypto
 vrfKeyHash = hashVerKeyVRF . vrfVerKey . mkVRFKeyPair @B_Crypto $ RawSeed 0 0 0 0 0
 
 mkPoolParameters :: KeyPair 'StakePool B_Crypto -> PoolParams B_Crypto

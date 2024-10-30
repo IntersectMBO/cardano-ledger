@@ -1,8 +1,8 @@
 # Version history for `cardano-protocol-tpraos`
 
-## 1.2.0.2
+## 1.3.0.0
 
-*
+* Change the type of hashes that are contained in `WrongGenesisVRFKeyOVERLAY` and `VRFKeyWrongVRFKey` predicate failures
 
 ## 1.2.0.1
 

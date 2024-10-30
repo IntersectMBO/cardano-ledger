@@ -32,6 +32,11 @@ module Cardano.Ledger.Keys.Internal (
   KeyHash (..),
   hashKey,
 
+  -- * VRF Key Hashes
+  KeyRoleVRF (..),
+  VRFVerKeyHash (..),
+  hashVerKeyVRF,
+
   -- * Genesis delegations
   GenDelegPair (..),
   GenDelegs (..),
@@ -56,7 +61,6 @@ module Cardano.Ledger.Keys.Internal (
   KES.verifySignedKES,
   decodeVerKeyVRF,
   encodeVerKeyVRF,
-  VRF.hashVerKeyVRF,
   VRF.verifyVRF,
 
   -- * Re-parametrised types over `crypto`
@@ -224,45 +228,28 @@ hashSignature = Hash.hashWith (DSIGN.rawSerialiseSigDSIGN . coerce)
 --------------------------------------------------------------------------------
 
 -- | Discriminated hash of public Key
-newtype KeyHash (discriminator :: KeyRole) c = KeyHash
+newtype KeyHash (r :: KeyRole) c = KeyHash
   {unKeyHash :: Hash.Hash (ADDRHASH c) (DSIGN.VerKeyDSIGN (DSIGN c))}
   deriving (Show, Eq, Ord)
   deriving newtype (NFData, NoThunks, Generic)
 
-deriving instance
-  (Crypto c, Typeable disc) =>
-  ToCBOR (KeyHash disc c)
+deriving newtype instance (Crypto c, Typeable r) => ToCBOR (KeyHash r c)
 
-deriving instance
-  (Crypto c, Typeable disc) =>
-  FromCBOR (KeyHash disc c)
+deriving newtype instance (Crypto c, Typeable r) => FromCBOR (KeyHash r c)
 
-deriving instance
-  (Crypto c, Typeable disc) =>
-  EncCBOR (KeyHash disc c)
+deriving newtype instance (Crypto c, Typeable r) => EncCBOR (KeyHash r c)
 
-deriving instance
-  (Crypto c, Typeable disc) =>
-  DecCBOR (KeyHash disc c)
+deriving newtype instance (Crypto c, Typeable r) => DecCBOR (KeyHash r c)
 
-deriving newtype instance
-  Crypto c =>
-  ToJSONKey (KeyHash disc c)
+deriving newtype instance Crypto c => ToJSONKey (KeyHash r c)
 
-deriving newtype instance
-  Crypto c =>
-  FromJSONKey (KeyHash disc c)
+deriving newtype instance Crypto c => FromJSONKey (KeyHash r c)
 
-deriving newtype instance
-  Crypto c =>
-  ToJSON (KeyHash disc c)
+deriving newtype instance Crypto c => ToJSON (KeyHash r c)
 
-deriving newtype instance
-  Crypto c =>
-  FromJSON (KeyHash disc c)
+deriving newtype instance Crypto c => FromJSON (KeyHash r c)
 
-instance Crypto b => Default (KeyHash a b) where
-  def = KeyHash def
+deriving newtype instance Crypto c => Default (KeyHash r c)
 
 instance HasKeyRole KeyHash
 
@@ -293,7 +280,7 @@ type VRFSignable c = VRF.Signable (VRF c)
 
 data GenDelegPair c = GenDelegPair
   { genDelegKeyHash :: !(KeyHash 'GenesisDelegate c)
-  , genDelegVrfHash :: !(Hash c (VerKeyVRF c))
+  , genDelegVrfHash :: !(VRFVerKeyHash 'GenDelegVRF c)
   }
   deriving (Show, Eq, Ord, Generic)
 
@@ -361,3 +348,36 @@ type CertifiedVRF c = VRF.CertifiedVRF (VRF c)
 type SignKeyVRF c = VRF.SignKeyVRF (VRF c)
 
 type VerKeyVRF c = VRF.VerKeyVRF (VRF c)
+
+data KeyRoleVRF
+  = StakePoolVRF
+  | GenDelegVRF
+  | BlockIssuerVRF
+
+-- | Discriminated hash of VRF Verification Key
+newtype VRFVerKeyHash (r :: KeyRoleVRF) c = VRFVerKeyHash
+  {unVRFVerKeyHash :: Hash.Hash (HASH c) KeyRoleVRF}
+  deriving (Show, Eq, Ord)
+  deriving newtype (NFData, NoThunks, Generic)
+
+deriving newtype instance (Crypto c, Typeable r) => ToCBOR (VRFVerKeyHash r c)
+
+deriving newtype instance (Crypto c, Typeable r) => FromCBOR (VRFVerKeyHash r c)
+
+deriving newtype instance (Crypto c, Typeable r) => EncCBOR (VRFVerKeyHash r c)
+
+deriving newtype instance (Crypto c, Typeable r) => DecCBOR (VRFVerKeyHash r c)
+
+deriving newtype instance Crypto c => ToJSONKey (VRFVerKeyHash r c)
+
+deriving newtype instance Crypto c => FromJSONKey (VRFVerKeyHash r c)
+
+deriving newtype instance Crypto c => ToJSON (VRFVerKeyHash r c)
+
+deriving newtype instance Crypto c => FromJSON (VRFVerKeyHash r c)
+
+deriving newtype instance Crypto c => Default (VRFVerKeyHash r c)
+
+hashVerKeyVRF ::
+  Crypto c => VerKeyVRF c -> VRFVerKeyHash (r :: KeyRoleVRF) c
+hashVerKeyVRF = VRFVerKeyHash . Hash.castHash . VRF.hashVerKeyVRF

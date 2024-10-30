@@ -69,6 +69,9 @@ instance ToExpr (GenDelegPair c)
 instance ToExpr (KeyHash keyrole c) where
   toExpr (KeyHash x) = App "KeyHash" [toExpr x]
 
+instance ToExpr (VRFVerKeyHash keyrole c) where
+  toExpr (VRFVerKeyHash x) = App "VRFVerKeyHash" [toExpr x]
+
 -- PoolDist
 instance ToExpr (PoolDistr c)
 

@@ -67,6 +67,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Keys (unVRFVerKeyHash)
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -343,7 +344,9 @@ transTxCertCommon = \case
     Just $ PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
   RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
     Just $
-      PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes ppVrf)))
+      PV1.DCertPoolRegister
+        (transKeyHash ppId)
+        (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes (unVRFVerKeyHash ppVrf))))
   RetirePoolTxCert poolId retireEpochNo ->
     Just $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
   _ -> Nothing
