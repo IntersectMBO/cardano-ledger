@@ -2,26 +2,23 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (nameTxCert) where
 
-import Cardano.Ledger.Address (RewardAccount)
-import Cardano.Ledger.BaseTypes (Inject)
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Constrained (lit)
+import Constrained
 import Data.Bifunctor (first)
 import qualified Data.List.NonEmpty as NE
-import Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
@@ -30,17 +27,25 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg (nameDelegCert)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert (nameGovCert)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool (namePoolCert)
 import Test.Cardano.Ledger.Constrained.Conway
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
 instance
-  ( IsConwayUniv fn
-  , Inject (ConwayCertExecContext Conway) (Map (RewardAccount StandardCrypto) Coin)
-  ) =>
+  IsConwayUniv fn =>
   ExecSpecRule fn "CERT" Conway
   where
-  type ExecContext fn "CERT" Conway = ConwayCertExecContext Conway
-  environmentSpec _ = certEnvSpec
-  stateSpec ctx _ = certStateSpec (lit $ ccecDelegatees ctx)
-  signalSpec _ = txCertSpec
+  type ExecContext fn "CERT" Conway = (WitUniv Conway, ConwayCertExecContext Conway)
+
+  genExecContext = do
+    univ <- genWitUniv @Conway 200
+    ccec <- genFromSpec @ConwayFn (conwayCertExecContextSpec univ)
+    pure (univ, ccec)
+
+  environmentSpec (univ, _) = certEnvSpec @fn @Conway univ
+
+  stateSpec (univ, ccecCtx) _ = certStateSpec @fn @Conway univ (ccecDelegatees ccecCtx)
+
+  signalSpec (univ, _) env state = conwayTxCertSpec @fn @Conway univ env state
+
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither

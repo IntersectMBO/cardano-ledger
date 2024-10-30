@@ -1574,17 +1574,11 @@ pattern AppendPat a b <- App (extractFn @(ListFn fn) -> Just AppendFn) (a :> b :
 
 short :: forall a x. (Show a, Typeable a) => [a] -> Doc x
 short [] = "[]"
-short xs =
-  let raw = show xs
-      shrunk = if length raw <= 20 then raw else take 20 raw ++ " ... "
-      refined = "[" <+> fromString shrunk <+> "]"
-      elided = "([" <+> viaShow (length xs) <+> "elements ...] @" <+> viaShow (typeRep (Proxy @a)) <+> ")"
-   in if length raw <= length (show elided)
-        then fromString raw
-        else
-          if length xs == 1
-            then refined
-            else elided
+short [x] =
+  let raw = show x
+      refined = if length raw <= 20 then raw else take 20 raw ++ " ... "
+   in "[" <+> fromString refined <+> "]"
+short xs = "([" <+> viaShow (length xs) <+> "elements ...] @" <> viaShow (typeRep (Proxy @a)) <> ")"
 
 prettyPlan :: HasSpec fn a => Specification fn a -> Doc ann
 prettyPlan (simplifySpec -> spec)
@@ -1797,7 +1791,7 @@ simplifySpec spec = case regularizeNames spec of
     let optP = optimisePred p
      in fromGESpec $
           explain
-            (pure ("SimplifySpec " ++ show x))
+            (pure ("\nWhile calling simplifySpec on var " ++ show x))
             (computeSpecSimplified x optP)
   MemberSpec xs -> MemberSpec xs
   ErrorSpec es -> ErrorSpec es
@@ -3808,8 +3802,7 @@ guardSetSpec es (SetSpec must elem ((<> geqSpec 0) -> size))
   | isErrorLike size = ErrorSpec ("guardSetSpec: error in size" :| es)
   | isErrorLike (geqSpec (sizeOf must) <> size) =
       ErrorSpec $
-        ("Must set size " ++ show (sizeOf must) ++ ", is inconsistent with SetSpec size " ++ show size)
-          :| es
+        ("Must set size " ++ show (sizeOf must) ++ ", is inconsistent with SetSpec size" ++ show size) :| es
   | isErrorLike (maxSpec (cardinality elem) <> size) =
       ErrorSpec $
         NE.fromList $
@@ -3921,7 +3914,7 @@ prettySetSpec :: HasSpec fn a => SetSpec fn a -> Doc ann
 prettySetSpec (SetSpec must elem size) =
   parens
     ( "SetSpec"
-        /> sep [parens (short (Set.toList must)), parens (pretty elem), parens (pretty size)]
+        /> sep ["must=" <> short (Set.toList must), "elem=" <> pretty elem, "size=" <> pretty size]
     )
 
 instance HasSpec fn a => Show (SetSpec fn a) where
@@ -5548,7 +5541,6 @@ instance PredLike Bool where
 instance BaseUniverse fn => PredLike (Term fn Bool) where
   type UnivConstr (Term fn Bool) fn' = fn ~ fn'
   toPredExplain es (Lit b) = toPredExplain es b
-  -- toPredExplain [] tm = Assert (pure ("Not (" ++ show tm ++ ")")) tm
   toPredExplain [] tm = Assert tm
   toPredExplain es tm = Explain (NE.fromList es) (Assert tm)
 
