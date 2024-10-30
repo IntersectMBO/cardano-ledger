@@ -106,6 +106,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   VRFVerKeyHash (..),
   WitVKey,
+  coerceKeyRole,
  )
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes
@@ -134,7 +135,7 @@ import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
 import Constrained hiding (Value)
 import Constrained qualified as C
-import Constrained.Base (Binder (..), HasGenHint (..), Pred (..), Term (..))
+import Constrained.Base (Binder (..), HasGenHint (..), Pred (..), Term (..), explainSpecOpt)
 import Constrained.Spec.Map
 import Control.DeepSeq (NFData)
 import Crypto.Hash (Blake2b_224)
@@ -1672,6 +1673,24 @@ class Coercible a b => CoercibleLike a b where
     IsConwayUniv fn =>
     TypeSpec fn a ->
     Specification fn b
+
+instance (Typeable krole, Crypto c) => CoercibleLike (KeyHash krole c) (KeyHash 'Witness c) where
+  coerceSpec (ExplainSpec es x) = explainSpecOpt es (coerceSpec x)
+  coerceSpec (TypeSpec z excl) = TypeSpec z $ coerceKeyRole <$> excl
+  coerceSpec (MemberSpec s) = MemberSpec $ coerceKeyRole <$> s
+  coerceSpec (ErrorSpec e) = ErrorSpec e
+  coerceSpec (SuspendedSpec x p) = constrained $ \x' ->
+    [ p
+    , reify x' coerceKeyRole (==. V x)
+    ]
+  coerceSpec TrueSpec = TrueSpec
+
+  getCoerceSpec ::
+    forall (fn :: [Type] -> Type -> Type).
+    IsConwayUniv fn =>
+    TypeSpec fn (KeyHash krole c) ->
+    Specification fn (KeyHash 'Witness c)
+  getCoerceSpec x = TypeSpec @fn x mempty
 
 instance CoercibleLike (CompactForm Coin) Word64 where
   coerceSpec (TypeSpec (NumSpecInterval lo hi) excl) =

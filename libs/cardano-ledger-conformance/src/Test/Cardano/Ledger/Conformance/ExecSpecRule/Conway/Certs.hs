@@ -21,36 +21,43 @@ import qualified Data.Set as Set
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert ()
 import Test.Cardano.Ledger.Constrained.Conway
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Imp.Common hiding (context)
 
 instance
   IsConwayUniv fn =>
   ExecSpecRule fn "CERTS" ConwayEra
   where
-  type ExecContext fn "CERTS" ConwayEra = ConwayCertExecContext ConwayEra
+  type ExecContext fn "CERTS" Conway = (WitUniv Conway, ConwayCertExecContext Conway)
+
+  genExecContext = do
+    univ <- genWitUniv @Conway 300
+    ccec <- genFromSpec @fn (conwayCertExecContextSpec univ)
+    pure (univ, ccec)
 
   environmentSpec _ = certsEnvSpec
 
-  stateSpec context _ =
+  stateSpec (univ, context) _ =
     constrained $ \x ->
       match x $ \vstate pstate dstate ->
-        [ satisfies vstate (vStateSpec (lit $ ccecDelegatees context))
-        , satisfies pstate pStateSpec
+        [ satisfies vstate (vStateSpec @_ @Conway univ (ccecDelegatees context))
+        , satisfies pstate (pStateSpec @_ @Conway univ)
         , -- temporary workaround because Spec does some extra tests, that the implementation does not, in the bootstrap phase.
-          satisfies dstate (bootstrapDStateSpec (ccecDelegatees context) (ccecWithdrawals context))
+          satisfies dstate (bootstrapDStateSpec univ (ccecDelegatees context) (ccecWithdrawals context))
         ]
 
-  signalSpec _ = txCertsSpec
+  signalSpec (univ, _) env state = txCertsSpec @Conway @fn univ env state
 
   runAgdaRule env st sig = unComputationResult $ Agda.certsStep env st sig
   classOf = Just . nameCerts
 
-  testConformance ctx env st sig = property $ do
+  testConformance ctx@(_, ccec) env st sig = property $ do
     -- The results of runConformance are Agda types, the `ctx` is a Haskell type, we extract and translate the Withdrawal keys.
     specWithdrawalCredSet <-
-      translateWithContext () (Map.keysSet (Map.mapKeys raCredential (ccecWithdrawals ctx)))
-    (implResTest, agdaResTest, _) <- runConformance @"CERTS" @fn @ConwayEra ctx env st sig
+      translateWithContext () (Map.keysSet (Map.mapKeys raCredential (ccecWithdrawals ccec)))
+    (implResTest, agdaResTest, _) <- runConformance @"CERTS" @fn @Conway ctx env st sig
     case (implResTest, agdaResTest) of
       (Right haskell, Right spec) ->
         checkConformance @"CERTS" @ConwayEra @fn

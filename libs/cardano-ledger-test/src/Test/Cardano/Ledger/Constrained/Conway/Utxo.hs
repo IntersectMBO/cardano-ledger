@@ -7,9 +7,12 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the UTXO rule
@@ -56,15 +59,34 @@ import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common (Arbitrary (..), ToExpr, oneof)
 import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
 
-data DepositPurpose
-  = CredentialDeposit !(Credential 'Staking)
-  | PoolDeposit !(KeyHash 'StakePool)
-  | DRepDeposit !(Credential 'DRepRole)
-  | GovActionDeposit !GovActionId
+instance HasSimpleRep (DepositPurpose c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (DepositPurpose c)
+
+witnessDepositPurpose ::
+  forall fn era.
+  (Era era, IsConwayUniv fn) =>
+  WitUniv era -> Specification fn (DepositPurpose (EraCrypto era))
+witnessDepositPurpose univ = constrained $ \ [var|depPurpose|] ->
+  (caseOn depPurpose)
+    -- CredentialDeposit !(Credential 'Staking c)
+    (branch $ \cred -> witness univ cred)
+    -- PoolDeposit !(KeyHash 'StakePool c)
+    (branch $ \keyhash -> witness univ keyhash)
+    -- DRepDeposit !(Credential 'DRepRole c)
+    (branch $ \drep -> witness univ drep)
+    -- GovActionDeposit
+    (branch $ \_ -> True)
+
+data DepositPurpose c
+  = CredentialDeposit !(Credential 'Staking c)
+  | PoolDeposit !(KeyHash 'StakePool c)
+  | DRepDeposit !(Credential 'DRepRole c)
+  | GovActionDeposit !(GovActionId c)
   deriving (Generic, Eq, Show, Ord)
 
 instance Arbitrary DepositPurpose where

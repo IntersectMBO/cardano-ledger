@@ -31,6 +31,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Deleg (someZeros)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
 -- =======================================================
 
@@ -46,22 +47,30 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 bootstrapDStateSpec ::
   forall fn era.
   EraSpecTxOut era fn =>
-  Set (Credential 'DRepRole) ->
-  CertsContext era ->
+  WitUniv era ->
+  Set (Credential 'DRepRole (EraCrypto era)) ->
+  Map (RewardAccount (EraCrypto era)) Coin ->
   Specification fn (DState era)
-bootstrapDStateSpec delegatees withdrawals =
+bootstrapDStateSpec univ delegatees withdrawals =
   let isKey (ScriptHashObj _) = False
       isKey (KeyHashObj _) = True
       withdrawalPairs = Map.toList (Map.mapKeys raCredential (Map.map coinToWord64 withdrawals))
       withdrawalKeys = Map.keysSet (Map.mapKeys raCredential withdrawals)
       setMapMaybe f = Set.foldr' (\x s -> maybe s (`Set.insert` s) $ f x) mempty
    in constrained $ \ [var| dstate |] ->
-        match dstate $ \ [var| rewardMap |] futureGenDelegs genDelegs _rewards ->
+        match dstate $ \ [var| rewardMap |] futureGenDelegs genDelegs [var|irewards|] ->
           [ assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
-          , match genDelegs $ \gd -> assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
-          , match _rewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
-          , match [var| rewardMap |] $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] dRepDelegs ->
-              [ assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
+          , match genDelegs $ \gd ->
+              [ witness univ (dom_ gd)
+              , witness univ (rng_ gd)
+              , assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
+              ]
+          , match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
+          , match [var| rewardMap |] $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepDelegs|] ->
+              [ witness univ (dom_ dRepDelegs)
+              , witness univ (rng_ dRepDelegs)
+              , witness univ (dom_ rdMap)
+              , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
               , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
               , assertExplain (pure "some rewards (not in withdrawals) are zero") $
                   forAll rdMap $
@@ -94,8 +103,6 @@ bootstrapDStateSpec delegatees withdrawals =
 coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n
 
-type CertsContext era = Map RewardAccount Coin
-
 txZero :: EraTx era => Tx era
 txZero = mkBasicTx mkBasicTxBody
 
@@ -120,15 +127,17 @@ projectEnv x =
     }
 
 txCertsSpec ::
+  forall era fn.
   EraSpecCert era fn =>
+  WitUniv era ->
   CertsEnv era ->
   CertState era ->
   Specification fn (Seq (TxCert era))
-txCertsSpec env state =
+txCertsSpec univ env state =
   constrained $ \seqs ->
     exists
       (\eval -> pure $ toList (eval seqs))
-      (\list -> satisfies (pair_ list seqs) (listSeqCertPairSpec (projectEnv env) state))
+      (\list -> satisfies (pair_ list seqs) (listSeqCertPairSpec @era @fn univ (projectEnv @era env) state))
 
 noSameKeys :: forall era fn. EraSpecCert era fn => [TxCert era] -> [TxCert era]
 noSameKeys [] = []
@@ -139,12 +148,13 @@ noSameKeys (x : xs) = x : noSameKeys @era @fn (filter (\y -> txCertKey @era @fn 
 listSeqCertPairSpec ::
   forall era fn.
   EraSpecCert era fn =>
+  WitUniv era ->
   CertEnv era ->
   CertState era ->
   Specification fn ([TxCert era], Seq (TxCert era))
-listSeqCertPairSpec env state =
+listSeqCertPairSpec univ env state =
   constrained' $ \list seqs ->
     [ assert $ sizeOf_ list <=. 5
-    , forAll list $ \x -> satisfies x (txCertSpec @era @fn env state)
+    , forAll list $ \x -> satisfies x (txCertSpec @era @fn univ env state)
     , reify list (fromList . noSameKeys @era @fn) (\x -> seqs ==. x)
     ]

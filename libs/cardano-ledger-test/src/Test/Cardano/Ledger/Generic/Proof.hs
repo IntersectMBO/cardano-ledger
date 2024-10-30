@@ -140,6 +140,7 @@ class
   , EraTx era
   , EraUTxO era
   , EraTxAuxData era
+  , EraScript era
   , ShelleyEraTxCert era
   ) =>
   Reflect era
@@ -264,7 +265,12 @@ runSTS' (ENACT _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (TALLY _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (EPOCH _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (NEWEPOCH _proof) x = runShelleyBase (applySTSTest x)
-runSTS' _ x = runShelleyBase (applySTSTest x)
+runSTS' (CERT _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (CERTS _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (DELEG _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (POOL _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (GOVCERT _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (GOV _proof) x = runShelleyBase (applySTSTest x)
 
 -- | Like runSTS, but makes the components of the TRC triple explicit.
 --   in case you can't remember, in ghci type
