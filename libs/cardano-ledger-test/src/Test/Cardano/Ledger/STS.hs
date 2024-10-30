@@ -107,12 +107,12 @@ prop_GOV =
 --     (\_env _st -> TrueSpec)
 --     $ \_env _st _sig _st' -> True
 
-prop_EPOCH :: Property
-prop_EPOCH =
+prop_EPOCH :: EpochNo -> Property
+prop_EPOCH epochNo =
   stsPropertyV2 @"EPOCH" @ConwayFn
     TrueSpec
-    (\() -> epochStateSpec)
-    (\_env _st -> TrueSpec)
+    (\() -> epochStateSpec (lit epochNo))
+    (\_env _st -> epochSignalSpec epochNo)
     $ \_env _st _sig _st' -> True
 
 prop_ENACT :: Property

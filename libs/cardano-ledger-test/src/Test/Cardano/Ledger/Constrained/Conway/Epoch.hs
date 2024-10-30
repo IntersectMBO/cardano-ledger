@@ -9,6 +9,7 @@
 module Test.Cardano.Ledger.Constrained.Conway.Epoch where
 
 import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway (Conway, ConwayEra)
@@ -27,9 +28,17 @@ newtype EpochExecEnv era = EpochExecEnv
 epochEnvSpec :: Specification fn (EpochExecEnv Conway)
 epochEnvSpec = TrueSpec
 
-epochStateSpec :: Specification ConwayFn (EpochState (ConwayEra StandardCrypto))
-epochStateSpec = constrained $ \ es ->
-  match es $ \ accountState ledgerState snapShots nonMyopic -> True
+epochStateSpec ::
+  Term ConwayFn EpochNo ->
+  Specification ConwayFn (EpochState (ConwayEra StandardCrypto))
+epochStateSpec epochNo = constrained $ \ es ->
+  match es $ \ _accountState ledgerState _snapShots _nonMyopic ->
+    match ledgerState $ \ utxoState certState ->
+      match utxoState $ \ _utxo _deposited _fees govState _stakeDistr _donation ->
+        match govState $ \ proposals _committee constitution _curPParams _prevPParams _futPParams _drepPulsingState ->
+          match constitution $ \_ policy ->
+          proposals `satisfies` proposalsSpec epochNo policy certState
 
-epochSignalSpec :: Specification fn EpochNo
-epochSignalSpec = TrueSpec
+epochSignalSpec :: EpochNo -> Specification ConwayFn EpochNo
+epochSignalSpec curEpoch = constrained $ \ e ->
+  elem_ e (lit [curEpoch, succ curEpoch])
