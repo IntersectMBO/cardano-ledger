@@ -1212,9 +1212,6 @@ committeeCredentialToStrictMaybe ::
 committeeCredentialToStrictMaybe (CommitteeHotCredential c) = SJust c
 committeeCredentialToStrictMaybe (CommitteeMemberResigned _) = SNothing
 
-instance HasSimpleRep (DepositPurpose c)
-instance (IsConwayUniv fn, Crypto c) => HasSpec fn (DepositPurpose c)
-
 instance SpecTranslate ctx (DepositPurpose c) where
   type SpecRep (DepositPurpose c) = Agda.DepositPurpose
   toSpecRep (CredentialDeposit cred) =

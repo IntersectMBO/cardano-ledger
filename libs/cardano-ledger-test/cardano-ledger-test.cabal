@@ -77,6 +77,7 @@ library
         Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
         Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
         Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests
+        Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
         Test.Cardano.Ledger.Examples.BabbageFeatures
         Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
         Test.Cardano.Ledger.Examples.AlonzoBBODY
@@ -164,6 +165,7 @@ library
         text,
         time,
         transformers,
+        tree-diff,
         unordered-containers,
         vector,
         constrained-generators,

@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests where
 
@@ -40,6 +41,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (prettyA))
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
@@ -47,9 +49,12 @@ import Test.QuickCheck (
   Gen,
   Property,
   counterexample,
+  generate,
   property,
   withMaxSuccess,
  )
+
+import System.IO.Unsafe
 
 -- ====================================================================================
 -- Some Specifications are constrained by types (say 'x') that do not appear in the type being
@@ -121,39 +126,48 @@ soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ prop
 specSuite ::
   forall (era :: Type).
   ( EraSpecLedger era ConwayFn
+  , EraUniverse era
   , PrettyA (GovState era)
   ) =>
   Int -> Spec
 specSuite n = do
-  soundSpecWith @(PState era) (5 * n) (pstateSpec !$! epochNoSpec)
+  let universe = genWitUniv @era 50
+
+  soundSpecWith @(PState era) (5 * n) (pstateSpec @ConwayFn @era <$> universe !*! epochNoSpec)
   soundSpecWith @(DState era)
     (5 * n)
-    (dstateSpec @era !$! TrueSpec !*! accountStateSpec !*! poolMapSpec)
+    (dstateSpec @era <$> universe !$! TrueSpec !*! accountStateSpec !*! poolMapSpec)
+
   soundSpecWith @(VState era)
     (10 * n)
-    ( vstateSpec @_ @era
+    ( vstateSpec @_ @era (eraWitUniv @era 50)
         !$! epochNoSpec
-        !*! ( TrueSpec @ConwayFn
-                @( Map
-                    (Credential 'DRepRole (EraCrypto era))
-                    (Set.Set (Credential 'Staking StandardCrypto))
-                 )
-            )
+        !*! goodDrep @era
     )
   soundSpecWith @(CertState era)
     (5 * n)
-    $ certStateSpec !$! (hasSize (rangeSize 6 10)) !*! accountStateSpec !*! epochNoSpec
+    (certStateSpec <$> universe !$! (hasSize (rangeSize 6 10)) !*! accountStateSpec !*! epochNoSpec)
+
+  soundSpecWith @(UTxO era) (5 * n) (utxoSpecWit @era <$> universe !*! delegationsSpec)
+
   soundSpecWith @(UTxOState era) (2 * n) (utxoStateGen @era)
-  soundSpecWith @(UTxO era) (5 * n) (utxoSpec !$! delegationsSpec)
+
   soundSpecWith @(GovState era)
     (2 * n)
     (do x <- genFromSpec (pparamsSpec @ConwayFn); pure $ govStateSpec @era x)
 
   soundSpecWith @(LedgerState era)
     (2 * n)
-    (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)
-  soundSpecWith @(EpochState era) (2 * n) (epochStateSpec <$> genConwayFn pparamsSpec !*! epochNoSpec)
-  soundSpecWith @(NewEpochState era) (2 * n) (newEpochStateSpec <$> genConwayFn pparamsSpec)
+    ( ledgerStateSpec
+        <$> genConwayFn pparamsSpec
+        <*> genWitUniv @era 50 !*! accountStateSpec !*! epochNoSpec
+    )
+  soundSpecWith @(EpochState era)
+    (2 * n)
+    (epochStateSpec @era <$> genConwayFn pparamsSpec <*> genWitUniv @era 50 !*! epochNoSpec)
+  soundSpecWith @(NewEpochState era)
+    (2 * n)
+    (newEpochStateSpec @era <$> genConwayFn pparamsSpec <*> genWitUniv @era 50)
 
 spec :: Spec
 spec = do
@@ -164,7 +178,7 @@ spec = do
     soundSpecWith @(ProtVer, ProtVer) 100 (pure protVersCanfollow)
     soundSpecWith @(InstantaneousRewards StandardCrypto)
       20
-      (irewardSpec @Shelley !$! accountStateSpec)
+      (irewardSpec @Shelley (eraWitUniv @Shelley 50) !$! accountStateSpec)
     soundSpecWith @(SnapShots StandardCrypto)
       10
       (snapShotsSpec <$> ((lit . getMarkSnapShot) <$> (wff @(LedgerState Conway) @Conway)))
@@ -180,4 +194,12 @@ utxoStateGen ::
 utxoStateGen =
   utxoStateSpec @era
     <$> genConwayFn @(PParams era) pparamsSpec
+    <*> genWitUniv @era 25
     <*> (lit <$> wff @(CertState era) @era)
+
+zzz :: IO ()
+zzz = do
+  m <- generate $ genFromSpec @ConwayFn (goodDrep @Shelley)
+  e <- generate $ genFromSpec @ConwayFn epochNoSpec
+  ans <- generate $ genFromSpec @ConwayFn (vstateSpec (eraWitUniv @Shelley 50) (lit e) (lit m))
+  putStrLn (show (prettyA ans))
