@@ -31,11 +31,13 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Typeable (cast)
 import Data.Word (Word64)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
 import Test.Cardano.Ledger.Core.Rational
 import Test.Cardano.Ledger.Imp.Common
 import Type.Reflection (Typeable)
@@ -624,3 +626,51 @@ committeeSpec =
         -- Confirm that after registering a hot key, they are active
         _hotKey <- registerCommitteeHotKey cc
         ccShouldNotBeResigned cc
+    describe "Removing CC with UpdateCommittee" $ do
+      it "Non registered" $ do
+        (drepCred, _, _) <- setupSingleDRep 1_000_000
+        (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+        passNEpochs 2
+        initialCommittee <- getCommitteeMembers
+        logToExpr initialCommittee
+        initialCommittee `shouldSatisfy` not . Set.null
+        proposal <-
+          mkUpdateCommitteeProposal Nothing initialCommittee mempty (1 %! 2)
+        mbRemoveCCGaid <-
+          submitBootstrapAwareFailingProposal proposal $
+            FailBootstrap [injectFailure $ DisallowedProposalDuringBootstrap proposal]
+        forM_ mbRemoveCCGaid $ \removeCCGaid -> do
+          submitYesVote_ (DRepVoter drepCred) removeCCGaid
+          submitYesVote_ (StakePoolVoter spoC) removeCCGaid
+          passNEpochs 2
+          finalCommittee <- getCommitteeMembers
+          logToExpr finalCommittee
+          finalCommittee `shouldSatisfy` Set.null
+      it "Registered" $ do
+        (drepCred, _, _) <- setupSingleDRep 1_000_000
+        (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+        passNEpochs 2
+        initialCommittee <- getCommitteeMembers
+        logToExpr initialCommittee
+        initialCommittee `shouldSatisfy` not . Set.null
+        forM_ (Set.toList initialCommittee) $ \kh -> do
+          ccHotCred <- KeyHashObj <$> freshKeyHash
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ SSeq.singleton (AuthCommitteeHotKeyTxCert kh ccHotCred)
+        newCommittee <- arbitrary
+        initialSubCommittee <- askStatefulGen >>= uniformSubSet Nothing initialCommittee
+        proposal <-
+          mkUpdateCommitteeProposal Nothing initialSubCommittee newCommittee (1 %! 2)
+        mbRemoveCCGaid <-
+          submitBootstrapAwareFailingProposal proposal $
+            FailBootstrap [injectFailure $ DisallowedProposalDuringBootstrap proposal]
+        forM_ mbRemoveCCGaid $ \removeCCGaid -> do
+          submitYesVote_ (DRepVoter drepCred) removeCCGaid
+          submitYesVote_ (StakePoolVoter spoC) removeCCGaid
+          passNEpochs 2
+          finalCommittee <- getCommitteeMembers
+          logToExpr finalCommittee
+          finalCommittee
+            `shouldBe` Set.union (initialCommittee Set.\\ initialSubCommittee) (Set.fromList $ fst <$> newCommittee)

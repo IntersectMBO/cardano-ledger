@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -75,6 +74,7 @@ spec = do
             mkBasicTx mkBasicTxBody
               & bodyTxL . certsTxBodyL
                 .~ SSeq.singleton (AuthCommitteeHotKeyTxCert kh ccHotCred)
+
   describe "fails for" $ do
     it "invalid deposit provided with DRep registration cert" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
