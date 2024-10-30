@@ -48,13 +48,13 @@ govProposalsSpec ::
   GovEnv (ConwayEra StandardCrypto) ->
   Specification fn (Proposals (ConwayEra StandardCrypto))
 govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
-  proposalsSpec (lit geEpoch) (lit gePPolicy) geCertState
+  proposalsSpec (lit geEpoch) (lit gePPolicy) (lit geCertState)
 
 proposalsSpec ::
   IsConwayUniv fn =>
   Term fn EpochNo ->
   Term fn (StrictMaybe (ScriptHash StandardCrypto)) ->
-  CertState Conway ->
+  Term fn (CertState Conway) ->
   Specification fn (Proposals Conway)
 proposalsSpec geEpoch gePPolicy geCertState =
   constrained $ \ [var|props|] ->
@@ -156,11 +156,14 @@ proposalsSpec geEpoch gePPolicy geCertState =
                 Explain (pure "TreasuryWithdrawal fails") $
                   Block
                     [ dependsOn gasOther withdrawMap
-                    , forAll (dom_ withdrawMap) $ \ [var|rewAcnt|] ->
-                        match rewAcnt $ \ [var|network|] [var|credential|] ->
-                          [ network ==. lit Testnet
-                          , credential `member_` lit registeredCredentials
-                          ]
+                    , match geCertState $ \ _vState _pState [var|dState|] ->
+                      match dState $ \ [var|rewardMap|] _ _ _ ->
+                      reify rewardMap (Map.keysSet . umElems) $ \ [var|registeredCredentials|] ->
+                        forAll (dom_ withdrawMap) $ \ [var|rewAcnt|] ->
+                          match rewAcnt $ \ [var|network|] [var|credential|] ->
+                            [ network ==. lit Testnet
+                            , credential `member_` registeredCredentials
+                            ]
                     , assert $ policy ==. gePPolicy
                     ]
             )
@@ -174,7 +177,6 @@ proposalsSpec geEpoch gePPolicy geCertState =
   where
     treeGenHint = (Just 2, 10)
     listSizeHint = 5
-    registeredCredentials = Map.keysSet $ umElems $ dsUnified $ certDState geCertState
 
 allGASInTree ::
   (IsConwayUniv fn, IsPred p fn) =>
