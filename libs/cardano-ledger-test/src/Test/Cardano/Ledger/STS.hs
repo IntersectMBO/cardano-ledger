@@ -31,9 +31,20 @@ import Test.Cardano.Ledger.Constrained.Conway.Pool
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Shelley.Utils
 
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Keys (KeyRole (..))
+import Data.Set (Set)
+import System.IO.Unsafe
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv, genWitUniv)
 import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.QuickCheck
+
+conwayWitUniv :: WitUniv (ConwayEra StandardCrypto)
+conwayWitUniv = unsafePerformIO $ generate $ genWitUniv @(ConwayEra StandardCrypto) 100
+
+conwayDelegatees :: Set (Credential 'DRepRole StandardCrypto)
+conwayDelegatees = unsafePerformIO $ generate $ genFromSpec @ConwayFn (delegateeSpec conwayWitUniv)
 
 ------------------------------------------------------------------------
 -- Properties
@@ -201,9 +212,9 @@ prop_RATIFY =
 prop_CERT :: Property
 prop_CERT =
   stsPropertyV2 @"CERT" @ConwayFn
-    certEnvSpec
-    (\_env -> certStateSpecEx)
-    (\env st -> txCertSpec env st)
+    (certEnvSpec conwayWitUniv)
+    (\_env -> certStateSpec conwayWitUniv conwayDelegatees)
+    (\env st -> conwayTxCertSpec conwayWitUniv env st)
     -- TODO: we should probably check more things here
     $ \_env _st _sig _st' -> True
 
@@ -211,24 +222,24 @@ prop_DELEG :: Property
 prop_DELEG =
   stsPropertyV2 @"DELEG" @ConwayFn
     delegEnvSpec
-    (\_env -> certStateSpecEx)
+    (\_env -> certStateSpec conwayWitUniv conwayDelegatees)
     conwayDelegCertSpec
     $ \_env _st _sig _st' -> True
 
 prop_POOL :: Property
 prop_POOL =
   stsPropertyV2 @"POOL" @ConwayFn
-    poolEnvSpec
-    (\_env -> pStateSpec)
-    (\env st -> poolCertSpec env st)
+    (poolEnvSpec conwayWitUniv)
+    (\_env -> pStateSpec conwayWitUniv)
+    (\env st -> poolCertSpec @ConwayFn @(ConwayEra StandardCrypto) conwayWitUniv env st)
     $ \_env _st _sig _st' -> True
 
 prop_GOVCERT :: Property
 prop_GOVCERT =
   stsPropertyV2 @"GOVCERT" @ConwayFn
-    govCertEnvSpec
-    (\_env -> certStateSpecEx)
-    (\env st -> govCertSpec env st)
+    (govCertEnvSpec conwayWitUniv)
+    (\_env -> certStateSpec conwayWitUniv conwayDelegatees)
+    (\env st -> govCertSpec conwayWitUniv env st)
     $ \_env _st _sig _st' -> True
 
 prop_UTXOW :: Property

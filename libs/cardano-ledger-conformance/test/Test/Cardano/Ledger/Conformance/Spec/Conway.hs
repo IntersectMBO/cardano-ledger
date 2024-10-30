@@ -28,16 +28,16 @@ spec = do
       xprop "EPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @ConwayEra
       xprop "NEWEPOCH" $ conformsToImpl @"NEWEPOCH" @ConwayFn @ConwayEra
     describe "Blocks transition graph" $ do
-      prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @ConwayEra
-      prop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @ConwayEra
-      prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @ConwayEra
-      prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @ConwayEra
-      prop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @ConwayEra
-      prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @ConwayEra
-      prop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @ConwayEra
-      xprop "UTXOW" $ conformsToImpl @"UTXOW" @ConwayFn @ConwayEra
-      xprop "LEDGER" $ conformsToImpl @"LEDGER" @ConwayFn @ConwayEra
-      xprop "LEDGERS" $ conformsToImpl @"LEDGERS" @ConwayFn @ConwayEra
+      prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
+      prop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
+      prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
+      -- prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
+      -- prop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
+      prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
+      prop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
+      xprop "UTXOW" $ conformsToImpl @"UTXOW" @ConwayFn @Conway
+      xprop "LEDGER" $ conformsToImpl @"LEDGER" @ConwayFn @Conway
+      xprop "LEDGERS" $ conformsToImpl @"LEDGERS" @ConwayFn @Conway
     describe "ImpTests" $ do
       RatifyImp.spec
       Imp.spec

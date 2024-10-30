@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -25,30 +26,37 @@ import Data.Set (Set)
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
+-- import Constrained(Specification)
+
+-- | There are no hard constraints on VState, other than witnessing, and delegatee conformance
+--   which must align with the conwayCertExecContextSpec
 vStateSpec ::
+  forall fn era.
   (IsConwayUniv fn, Era era) =>
-  Term fn (Set (Credential 'DRepRole)) ->
+  WitUniv era ->
+  Set (Credential 'DRepRole (EraCrypto era)) ->
   Specification fn (VState era)
-vStateSpec delegatees = constrained' $ \dreps _ _ -> dom_ dreps ==. delegatees
-
-{- There are no hard constraints on VState, but sometimes when something fails we want to
--- limit how big some of the fields of VState are. In that case one might use something
--- like this. Note that genHint limits the size, but does not require an exact size.
-vStateSpec :: IsConwayUniv fn => Specification fn (VState (ConwayEra StandardCrypto))
-vStateSpec = constrained' $ \ [var|_dreps|] [var|_commstate|] [var|dormantepochs|] ->
-  [ genHint 5 dreps -- assert $ sizeOf_ dreps >=. 1
-  , match commstate $ \ [var|committeestate|] -> genHint 5 committeestate
-  , assert $ dormantepochs >=. lit (EpochNo 4)
-  ]
--}
+vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
+  match vstate $ \ [var|dreps|] [var|committeestate|] [var|_numdormant|] ->
+    [ match committeestate $ \ [var|committeemap|] -> witness univ (dom_ committeemap)
+    , assert $ dom_ dreps ==. (lit delegatees)
+    , forAll dreps $ \ [var|pair|] ->
+        match pair $ \ [var|drep|] [var|drepstate|] ->
+          [ witness univ drep
+          , match drepstate $
+              \_expiry _anchor _deposit [var|delegs|] -> witness univ delegs
+          ]
+    ]
 
 govCertSpec ::
   IsConwayUniv fn =>
-  ConwayGovCertEnv ConwayEra ->
-  CertState ConwayEra ->
-  Specification fn ConwayGovCert
-govCertSpec ConwayGovCertEnv {..} certState =
+  WitUniv era ->
+  ConwayGovCertEnv (ConwayEra StandardCrypto) ->
+  CertState (ConwayEra StandardCrypto) ->
+  Specification fn (ConwayGovCert StandardCrypto)
+govCertSpec _univ ConwayGovCertEnv {..} certState =
   let vs = certVState certState
       reps = lit $ Map.keysSet $ vsDReps vs
       deposits = Map.map drepDeposit (vsDReps vs)
@@ -114,9 +122,11 @@ notYetResigned committeeStatus coldcred =
   )
 
 govCertEnvSpec ::
+  forall fn era.
   IsConwayUniv fn =>
-  Specification fn (ConwayGovCertEnv ConwayEra)
-govCertEnvSpec =
+  WitUniv era ->
+  Specification fn (ConwayGovCertEnv (ConwayEra StandardCrypto))
+govCertEnvSpec _univ =
   constrained $ \gce ->
     match gce $ \pp _ _ _ ->
       satisfies pp pparamsSpec

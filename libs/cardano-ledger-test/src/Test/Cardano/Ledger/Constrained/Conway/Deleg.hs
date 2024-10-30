@@ -32,6 +32,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
 -- | Specify that some of the rewards in the RDPair's are zero.
 --   without this in the DState, it is hard to generate the ConwayUnRegCert
@@ -45,12 +46,19 @@ someZeros = constrained $ \ [var| someRdpair |] ->
     ]
 
 dStateSpec ::
-  forall fn era. (IsConwayUniv fn, EraSpecDeleg era) => Specification fn (DState era)
-dStateSpec = constrained $ \ [var| dstate |] ->
+  forall fn era. (IsConwayUniv fn, EraSpecDeleg era) => WitUniv era -> Specification fn (DState era)
+dStateSpec univ = constrained $ \ [var| dstate |] ->
   match dstate $ \ [var| rewardMap |] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
-    match rewardMap $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] _dRepMap ->
-      [ assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
-      , match genDelegs $ \gd -> assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
+    match rewardMap $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepMap|] ->
+      [ witness univ (dom_ dRepMap)
+      , witness univ (rng_ dRepMap)
+      , witness univ (dom_ rdMap)
+      , assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
+      , match genDelegs $ \gd ->
+          [ witness univ (dom_ gd)
+          , witness univ (rng_ gd)
+          , assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
+          ]
       , match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
       , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
       , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
@@ -140,11 +148,12 @@ delegEnvSpec = constrained $ \env ->
 
 shelleyDelegCertSpec ::
   forall fn era.
-  IsConwayUniv fn =>
+  (EraPParams era, IsConwayUniv fn) =>
+  WitUniv era ->
   ConwayDelegEnv era ->
   DState era ->
-  Specification fn ShelleyDelegCert
-shelleyDelegCertSpec (ConwayDelegEnv _pp pools) ds =
+  Specification fn (ShelleyDelegCert (EraCrypto era))
+shelleyDelegCertSpec _univ (ConwayDelegEnv _pp pools) ds =
   let rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds
       zeroReward = (== 0) . fromCompact . rdReward

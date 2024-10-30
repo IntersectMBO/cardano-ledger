@@ -20,8 +20,9 @@
 
 module Test.Cardano.Ledger.Generic.PrettyCore where
 
+import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript (..),
@@ -691,7 +692,10 @@ instance PrettyA AuxiliaryDataHash where
 ppSafeHash :: SafeHash index -> PDoc
 ppSafeHash x = ppHash (extractHash x)
 
-instance PrettyA (SafeHash x) where
+pcDataHash :: DataHash era -> PDoc
+pcDataHash dh = trim (ppSafeHash dh)
+
+instance PrettyA (SafeHash x y) where
   prettyA = ppSafeHash
 
 ppEpochNo :: EpochNo -> Doc ann
@@ -2384,7 +2388,7 @@ networkSummary Mainnet = ppString "Main"
 addrSummary :: Addr -> PDoc
 addrSummary (Addr nw pay stk) =
   ppSexp "Addr" [networkSummary nw, credSummary pay, stakeSummary stk]
-addrSummary (AddrBootstrap _) = ppString "Bootstrap"
+addrSummary (AddrBootstrap (BootstrapAddress (Byron.Address x _ _))) = ppString ("BootAddr " ++ take 10 (show x))
 
 credSummary :: Credential keyrole -> PDoc
 credSummary (ScriptHashObj (ScriptHash h)) = ppSexp "Script" [trim (ppHash h)]
@@ -2540,9 +2544,14 @@ pcAddr (Addr nw pay stk) =
       , pcCredential pay
       , pcStakeReference stk
       ]
-pcAddr (AddrBootstrap _) = ppString "Bootstrap"
+pcAddr (AddrBootstrap x) = "BootAddr" <+> pcByronAddress x
 
 instance PrettyA Addr where prettyA = pcAddr
+
+pcByronAddress :: BootstrapAddress c -> PDoc
+pcByronAddress (BootstrapAddress (Byron.Address x _ _)) = ppString (take 10 (show x))
+
+instance PrettyA (BootstrapAddress c) where prettyA = pcByronAddress
 
 -- | Value is a type family, so it has no PrettyA instance.
 pcCoreValue :: Proof era -> Value era -> PDoc
@@ -2672,8 +2681,9 @@ pcPoolParams :: PoolParams -> PDoc
 pcPoolParams x =
   ppRecord
     "PoolParams"
-    [ ("Id", keyHashSummary (ppId x))
-    , ("reward accnt", pcCredential (raCredential (ppRewardAccount x)))
+    [ ("Id", pcKeyHash (ppId x))
+    , ("Reward accnt", pcRewardAccount (ppRewardAccount x))
+    , ("Owners", ppSet pcKeyHash (ppOwners x))
     ]
 
 instance PrettyA PoolParams where prettyA = pcPoolParams

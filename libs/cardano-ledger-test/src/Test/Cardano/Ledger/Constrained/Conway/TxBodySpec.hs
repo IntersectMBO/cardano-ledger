@@ -38,12 +38,11 @@ import Data.Word (Word64)
 import Data.Sequence.Internal (Seq)
 import Lens.Micro
 
--- , certStateSpec)
-
 import Test.Cardano.Ledger.Constrained.Conway.Cert (
   EraSpecCert (..),
   certStateSpec,
-  certStateSpecEx,
+  delegateeSpec,
+  shelleyTxCertSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.Certs (certsEnvSpec, projectEnv)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
@@ -84,6 +83,8 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   ppRecord,
   ppString,
  )
+
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
 -- =================================
 -- Move these to the MapSpec
@@ -185,7 +186,9 @@ bodyspec ::
   forall era fn.
   ( EraSpecTxOut era fn
   , EraSpecCert era fn
+  , EraSpecTxCert fn era
   ) =>
+  WitUniv era ->
   CertsEnv era ->
   CertState era ->
   Specification
@@ -194,7 +197,7 @@ bodyspec ::
     , Map TxIn (TxOut era)
     , TxIn
     )
-bodyspec certsenv certstate =
+bodyspec univ certsenv certstate =
   constrained' $ \ [var|shelleyBody|] [var|utxo|] [var|feeInput|] ->
     match shelleyBody $
       \ [var|inputs|] [var|outputs|] [var|certs|] [var|withdrawals|] [var|fee|] _ [var|update|] _ ->
@@ -215,7 +218,8 @@ bodyspec certsenv certstate =
             , subMapSuperDependsOnSub utxosubset tempUtxo
             , forAll' tempUtxo $ \_ [var|out|] -> assert $ txOutCoin_ @era @fn out >. lit (Coin 0)
             , -- Certs has no dependencies
-              forAll certs $ \ [var|oneCert|] -> satisfies oneCert (txCertSpec (projectEnv certsenv) certstate)
+              -- , forAll certs $ \ [var|oneCert|] -> satisfies oneCert (txCertSpec (projectEnv certsenv) certstate)
+              forAll certs $ \ [var|oneCert|] -> satisfies oneCert (witTxCert univ)
             , assert $ sizeOf_ certs ==. 4
             , -- withdrawals hs no dependencies
               assert $ sizeOf_ withdrawals ==. lit 2
@@ -253,19 +257,22 @@ go2 ::
   forall era.
   ( EraSpecTxOut era ConwayFn
   , EraSpecCert era ConwayFn
+  , EraSpecTxCert ConwayFn era
   , HasSpec ConwayFn (Tx era)
   ) =>
   IO ()
 go2 = do
+  univ <- generate $ genWitUniv 25
+  delegatees <- generate $ genFromSpec @ConwayFn (delegateeSpec univ)
   certState <-
     generate $
       genFromSpec @ConwayFn @(CertState era)
-        (certStateSpecEx @ConwayFn @era) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
+        (certStateSpec @ConwayFn @era univ delegatees) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
         -- error "STOP"
   certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv era) certsEnvSpec
 
   (body, utxomap, feeinput) <-
-    generate $ genFromSpec (bodyspec @era @ConwayFn certsEnv certState)
+    generate $ genFromSpec (bodyspec @era @ConwayFn univ certsEnv certState)
   let utxo = UTxO utxomap
       txbody = fromShelleyBody body
 
@@ -276,3 +283,26 @@ go2 = do
   putStrLn (show (pcTxBodyWithUTxO utxo txbody))
   print (consumedTxBody txbody (certsPParams certsEnv) certState utxo)
   print (producedTxBody txbody (certsPParams certsEnv) certState)
+
+go :: IO ()
+go = do
+  univ <- generate $ genWitUniv @Allegra 5
+  delegatees <- generate $ genFromSpec @ConwayFn (delegateeSpec univ)
+  certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv Allegra) certsEnvSpec
+  certState <-
+    generate $
+      genFromSpec @ConwayFn @(CertState Allegra)
+        (certStateSpec @ConwayFn @Allegra univ delegatees)
+
+  cert <-
+    generate $
+      genFromSpec @ConwayFn @(TxCert Allegra) $
+        (shelleyTxCertSpec @ConwayFn @Allegra univ (projectEnv certsEnv) certState)
+          <> (witShelleyTxCert univ)
+  -- The problem with this is that the CertState does not have any
+  -- thing from the universe, so any Cert that requires a member_ of someting
+  -- in the CertState, will never succeed,  because the Hashes are disjoint
+  -- between the CertState and the Universe. So those certs with member_
+  -- always fail, so the only ones that are ever generated are RegCert and RegPool
+  print univ
+  putStrLn (show (prettyA cert))

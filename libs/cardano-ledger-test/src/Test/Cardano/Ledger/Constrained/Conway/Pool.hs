@@ -23,6 +23,7 @@ import Data.Map.Strict qualified as Map
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Slotting.Numeric ()
 
@@ -32,8 +33,9 @@ currentEpoch = runIdentity . EI.epochInfoEpoch (epochInfoPure testGlobals)
 poolEnvSpec ::
   forall fn era.
   (EraSpecPParams era, IsConwayUniv fn) =>
+  WitUniv era ->
   Specification fn (PoolEnv era)
-poolEnvSpec =
+poolEnvSpec _univ =
   constrained $ \pe ->
     match pe $ \_ pp ->
       satisfies pp (pparamsSpec @fn @era)
@@ -41,10 +43,17 @@ poolEnvSpec =
 pStateSpec ::
   forall fn era.
   (Era era, IsConwayUniv fn) =>
+  WitUniv era ->
   Specification fn (PState era)
-pStateSpec = constrained $ \ps ->
+pStateSpec univ = constrained $ \ps ->
   match ps $ \stakePoolParams futureStakePoolParams retiring deposits ->
-    [ assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
+    [ witness univ (dom_ stakePoolParams)
+    , witness univ (rng_ stakePoolParams)
+    , witness univ (dom_ futureStakePoolParams)
+    , witness univ (rng_ futureStakePoolParams)
+    , witness univ (dom_ retiring)
+    , witness univ (dom_ deposits)
+    , assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
         dom_ retiring `subset_` dom_ stakePoolParams
     , assertExplain (pure "dom of deposits is dom of stakePoolParams") $
         dom_ deposits ==. dom_ stakePoolParams
@@ -57,27 +66,30 @@ pStateSpec = constrained $ \ps ->
 poolCertSpec ::
   forall fn era.
   (EraSpecPParams era, IsConwayUniv fn) =>
+  WitUniv era ->
   PoolEnv era ->
   PState era ->
-  Specification fn PoolCert
-poolCertSpec (PoolEnv e pp) ps =
+  Specification fn (PoolCert (EraCrypto era))
+poolCertSpec univ (PoolEnv e pp) ps =
   constrained $ \pc ->
     (caseOn pc)
       -- RegPool !(PoolParams c)
       ( branchW 1 $ \poolParams ->
           match poolParams $ \_ _ _ cost _ rewAccnt _ _ mMetadata ->
-            [ match rewAccnt $ \net' _ ->
+            [ witness univ poolParams
+            , match rewAccnt $ \net' _ ->
                 net' ==. lit Testnet
             , onJust' mMetadata $ \metadata ->
-                match metadata $ \_ hash -> strLen_ hash <=. lit (maxMetaLen - 1)
+                match metadata $ \_ hashstr -> strLen_ hashstr <=. lit (maxMetaLen - 1)
             , assert $ lit (pp ^. ppMinPoolCostL) <=. cost
             ]
       )
       -- RetirePool !(KeyHash 'StakePool c) !EpochNo
       ( branchW 1 $ \keyHash epochNo ->
-          [ epochNo <=. lit (maxEpochNo - 1)
-          , lit e <. epochNo
-          , elem_ keyHash $ lit rpools
+          [ witness univ keyHash
+          , assert $ epochNo <=. lit (maxEpochNo - 1)
+          , assert $ lit e <. epochNo
+          , assert $ elem_ keyHash $ lit rpools
           ]
       )
   where

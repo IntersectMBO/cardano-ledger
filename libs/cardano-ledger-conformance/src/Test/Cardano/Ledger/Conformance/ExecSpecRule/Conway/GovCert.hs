@@ -9,31 +9,47 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert (nameGovCert) where
 
-import Cardano.Ledger.BaseTypes (Inject)
+import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway
+import Cardano.Ledger.Conway.Governance (VotingProcedures)
 import Cardano.Ledger.Conway.TxCert
-import Constrained (lit)
+import Constrained
 import Data.Bifunctor (Bifunctor (..))
 import Data.Map.Strict (Map)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
+  ConwayCertExecContext (..),
+  conwayCertExecContextSpec,
+ )
 import Test.Cardano.Ledger.Constrained.Conway
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
+
+instance Inject (WitUniv Conway, ConwayCertExecContext Conway) (Map (RewardAccount StandardCrypto) Coin) where
+  inject (_, x) = ccecWithdrawals x
+
+instance Inject (WitUniv Conway, ConwayCertExecContext Conway) (VotingProcedures Conway) where
+  inject (_, x) = ccecVotes x
 
 instance
-  ( IsConwayUniv fn
-  , Inject (ConwayCertExecContext ConwayEra) (Map DepositPurpose Coin)
-  ) =>
-  ExecSpecRule fn "GOVCERT" ConwayEra
+  IsConwayUniv fn =>
+  ExecSpecRule fn "GOVCERT" Conway
   where
-  type ExecContext fn "GOVCERT" ConwayEra = ConwayCertExecContext ConwayEra
+  type ExecContext fn "GOVCERT" Conway = (WitUniv Conway, ConwayCertExecContext Conway)
 
-  environmentSpec _ctx = govCertEnvSpec
+  genExecContext = do
+    univ <- genWitUniv @Conway 200
+    ccec <- genFromSpec @ConwayFn (conwayCertExecContextSpec univ)
+    pure (univ, ccec)
 
-  stateSpec ctx _env = certStateSpec (lit $ ccecDelegatees ctx)
+  environmentSpec (univ, _) = govCertEnvSpec univ
 
-  signalSpec _ctx = govCertSpec
+  -- stateSpec ctx _env = certStateSpec (lit $ ccecDelegatees ctx)
+  stateSpec (univ, ccecCtx) _env = certStateSpec univ (ccecDelegatees ccecCtx)
+
+  signalSpec (univ, _) = govCertSpec univ
 
   classOf = Just . nameGovCert
 

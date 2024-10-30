@@ -21,6 +21,7 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   ConwayCertExecContext (..),
+  conwayCertExecContextSpec,
   ConwayRatifyExecContext (..),
   nameEpoch,
   nameEnact,
@@ -123,8 +124,16 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
 import Cardano.Crypto.Hash (ByteString, Hash)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyRole (..), VKey (..))
+import Data.Either (isRight)
+import Data.Maybe (fromMaybe)
+import Data.Set (Set)
+import Test.Cardano.Ledger.Constrained.Conway.Utxo (witnessDepositPurpose)
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv (..), witness)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
+import Test.Cardano.Ledger.Generic.Proof (Reflect)
+import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var, witness)
+
+-- ================================================================
 
 data ConwayCertExecContext era = ConwayCertExecContext
   { ccecWithdrawals :: !(Map RewardAccount Coin)
@@ -134,7 +143,24 @@ data ConwayCertExecContext era = ConwayCertExecContext
   }
   deriving (Generic, Eq, Show)
 
-instance Era era => Arbitrary (ConwayCertExecContext era) where
+instance HasSimpleRep (ConwayCertExecContext era)
+instance (IsConwayUniv fn, Era era) => HasSpec fn (ConwayCertExecContext era)
+
+-- No particular constraints, other than witnessing
+conwayCertExecContextSpec ::
+  forall fn era.
+  (Reflect era, IsConwayUniv fn) =>
+  WitUniv era -> Specification fn (ConwayCertExecContext era)
+conwayCertExecContextSpec univ = constrained $ \ [var|ccec|] ->
+  match ccec $ \ [var|withdrawals|] [var|deposits|] _ [var|delegatees|] ->
+    [ assert $ witness univ (dom_ withdrawals)
+    , forAll (dom_ deposits) $ \dp -> satisfies dp (witnessDepositPurpose univ)
+    , witness univ delegatees
+    , assert $ sizeOf_ delegatees <=. 20
+    , assert $ sizeOf_ delegatees >=. 10
+    ]
+
+instance Reflect era => Arbitrary (ConwayCertExecContext era) where
   arbitrary =
     ConwayCertExecContext
       <$> arbitrary
@@ -152,7 +178,7 @@ instance Era era => EncCBOR (ConwayCertExecContext era) where
             !> To ccecVotes
             !> To ccecDelegatees
 
-instance Era era => DecCBOR (ConwayCertExecContext era) where
+instance Reflect era => DecCBOR (ConwayCertExecContext era) where
   decCBOR =
     decode $
       RecD ConwayCertExecContext
