@@ -20,7 +20,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Slot (EpochNo (..))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.ListMap as ListMap
 import Data.Map as Map
 import Data.Maybe (fromJust)

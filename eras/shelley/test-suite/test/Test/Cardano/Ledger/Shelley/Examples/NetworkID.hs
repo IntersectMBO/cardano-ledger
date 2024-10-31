@@ -18,7 +18,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
-import Data.Default.Class (def)
+import Data.Default (def)
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast

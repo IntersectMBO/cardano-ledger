@@ -71,7 +71,7 @@ import Control.Monad (guard)
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty ((:|)))

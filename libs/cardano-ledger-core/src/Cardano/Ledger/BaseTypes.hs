@@ -155,7 +155,7 @@ import Data.Aeson.Types (Pair)
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)

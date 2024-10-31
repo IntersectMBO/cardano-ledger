@@ -223,7 +223,7 @@ import Control.Monad (forM)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (bimap)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity
 import Data.List.NonEmpty (NonEmpty)

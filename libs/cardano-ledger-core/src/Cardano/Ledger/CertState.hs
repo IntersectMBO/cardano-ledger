@@ -104,7 +104,7 @@ import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.Foldable as F
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

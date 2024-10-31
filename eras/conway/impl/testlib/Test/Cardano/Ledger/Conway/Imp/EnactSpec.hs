@@ -24,7 +24,7 @@ import Cardano.Ledger.Val (zero, (<->))
 import Control.Monad (forM)
 import Control.Monad.Writer (listen)
 import Control.State.Transition.Extended (STS (..))
-import Data.Default.Class (def)
+import Data.Default (def)
 import Data.Foldable as F (foldl', traverse_)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE

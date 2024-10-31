@@ -136,7 +136,7 @@ import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Control.Monad (unless)
 import Data.Aeson (ToJSON (..))
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Either (partitionEithers)
 import Data.Foldable as F (foldl', foldrM, toList)
 import qualified Data.Map as Map

@@ -136,7 +136,7 @@ import Data.Aeson (
  )
 import Data.Aeson.Types (toJSONKeyText)
 import Data.Data (Typeable)
-import Data.Default.Class
+import Data.Default
 import Data.Kind
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

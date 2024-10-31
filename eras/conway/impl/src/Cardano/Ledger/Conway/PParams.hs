@@ -124,7 +124,7 @@ import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson hiding (Encoding, Value, decode, encode)
 import qualified Data.Aeson as Aeson
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..), isSNothing)

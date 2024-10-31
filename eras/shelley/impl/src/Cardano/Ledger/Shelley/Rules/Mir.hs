@@ -55,7 +55,7 @@ import Control.State.Transition (
   judgmentContext,
   tellEvent,
  )
-import Data.Default.Class (Default)
+import Data.Default (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)

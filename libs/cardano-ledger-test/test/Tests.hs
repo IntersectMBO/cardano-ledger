@@ -7,7 +7,7 @@
 
 module Main where
 
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools

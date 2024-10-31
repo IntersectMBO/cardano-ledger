@@ -227,7 +227,7 @@ import Control.DeepSeq (NFData (..))
 import Control.Monad (guard)
 import Control.Monad.Trans.Reader (ReaderT, ask)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

@@ -61,7 +61,7 @@ import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Foldable (fold)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)

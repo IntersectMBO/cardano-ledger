@@ -78,7 +78,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default.Class (Default, def)
+import Data.Default (Default, def)
 import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

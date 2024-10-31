@@ -77,7 +77,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad.Trans ()
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe

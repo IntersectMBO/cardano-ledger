@@ -57,7 +57,7 @@ import Control.Monad.Trans.RWS.Strict (get, gets)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import qualified Control.State.Transition as STS
 import Control.State.Transition.Extended (IRC (), STS (..), TRC (..))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.Foldable as Fold
 import Data.Functor.Identity (Identity (runIdentity))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)

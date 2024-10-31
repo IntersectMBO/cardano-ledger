@@ -42,7 +42,7 @@ import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import Data.Default.Class (def)
+import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq

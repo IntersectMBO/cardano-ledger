@@ -53,7 +53,7 @@ import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val
 import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, pairs, withObject, (.:))
-import Data.Default.Class
+import Data.Default
 import Data.Kind
 import qualified Data.ListMap as LM
 import qualified Data.ListMap as ListMap

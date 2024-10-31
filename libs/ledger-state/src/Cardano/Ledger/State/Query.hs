@@ -32,7 +32,7 @@ import Control.Monad
 import Control.Monad.Trans.Reader
 import Data.Conduit.Internal (zipSources)
 import Data.Conduit.List (sourceList)
-import Data.Default.Class (def)
+import Data.Default (def)
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map

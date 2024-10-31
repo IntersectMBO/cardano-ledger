@@ -21,7 +21,7 @@ import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (zero, (<->))
-import Data.Default.Class (def)
+import Data.Default (def)
 import Data.Foldable
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map

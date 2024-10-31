@@ -62,7 +62,7 @@ library
         base16-bytestring,
         cardano-data,
         cardano-strict-containers,
-        data-default-class,
+        data-default,
         microlens,
         mtl,
         cardano-ledger-api:testlib,

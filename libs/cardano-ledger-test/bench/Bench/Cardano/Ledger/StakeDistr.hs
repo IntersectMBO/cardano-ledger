@@ -78,7 +78,7 @@ import Control.State.Transition.Extended (
 import Criterion (Benchmark, bench, bgroup, env, nf, whnf)
 import qualified Data.Aeson as Aeson (eitherDecode)
 import Data.ByteString.Lazy as Lazy (readFile)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (pack)

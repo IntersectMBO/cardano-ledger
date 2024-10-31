@@ -55,7 +55,7 @@ import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance, unScriptsProvi
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Control.Monad.Reader (runReader)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.Foldable as Fold (fold, toList)
 import qualified Data.List as List
 import Data.Map (Map, keysSet, restrictKeys)

@@ -7,7 +7,7 @@ module Test.Cardano.Ledger.Mary.BinarySpec (spec) where
 
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary
-import Data.Default.Class (def)
+import Data.Default (def)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary (specUpgrade)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra (..))

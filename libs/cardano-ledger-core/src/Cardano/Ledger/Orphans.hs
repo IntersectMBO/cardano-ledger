@@ -17,7 +17,7 @@ import Data.Aeson
 import qualified Data.ByteString as Long (ByteString, empty)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, empty)
 import qualified Data.ByteString.Short as Short (ShortByteString, empty, pack)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Fixed (Fixed (..))
 import Data.IP (IPv4, IPv6)
 import Data.Proxy
@@ -83,6 +83,3 @@ instance HS.HashAlgorithm h => Default (Hash h b) where
     UnsafeHash $
       Short.pack $
         replicate (fromIntegral (Hash.sizeHash (Proxy :: Proxy h))) 0
-
-instance Default Bool where
-  def = False

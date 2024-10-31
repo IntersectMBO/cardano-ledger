@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Core.Binary where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common

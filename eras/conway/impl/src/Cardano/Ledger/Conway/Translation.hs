@@ -55,7 +55,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
  )
 import qualified Cardano.Ledger.UMap as UM
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 

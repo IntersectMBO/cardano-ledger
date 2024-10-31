@@ -57,7 +57,7 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
 import Data.Aeson (FromJSON, KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default.Class (Default, def)
+import Data.Default (Default, def)
 import Data.Foldable (find)
 import Data.Function (on)
 import Data.List (sortBy)

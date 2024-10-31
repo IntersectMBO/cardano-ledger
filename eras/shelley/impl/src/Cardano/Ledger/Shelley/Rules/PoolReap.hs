@@ -61,7 +61,7 @@ import Control.State.Transition (
   judgmentContext,
   tellEvent,
  )
-import Data.Default.Class (Default, def)
+import Data.Default (Default, def)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)

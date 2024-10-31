@@ -37,7 +37,7 @@ import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
-import Data.Default.Class (def)
+import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet

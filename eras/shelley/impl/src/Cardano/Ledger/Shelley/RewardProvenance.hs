@@ -21,7 +21,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Map.Strict (Map)
 import Data.Word (Word64)
 import GHC.Generics

@@ -71,7 +71,7 @@ import Control.State.Transition (
   judgmentContext,
   trans,
  )
-import Data.Default.Class (Default)
+import Data.Default (Default)
 import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import GHC.Generics (Generic)

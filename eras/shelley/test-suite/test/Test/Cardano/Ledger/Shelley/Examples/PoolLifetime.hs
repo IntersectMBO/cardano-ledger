@@ -90,7 +90,7 @@ import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import Data.Default.Class (def)
+import Data.Default (def)
 import Data.Group (invert)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))

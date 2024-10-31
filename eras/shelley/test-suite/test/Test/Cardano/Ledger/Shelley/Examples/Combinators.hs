@@ -117,7 +117,7 @@ import Cardano.Protocol.TPraos.BHeader (
   prevHashToNonce,
  )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable as F (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

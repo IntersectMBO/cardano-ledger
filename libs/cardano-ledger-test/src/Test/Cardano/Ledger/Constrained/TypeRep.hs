@@ -109,7 +109,7 @@ import Cardano.Ledger.Val (Val ((<+>)))
 import Control.Monad.Identity (Identity)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import Data.Default.Class (def)
+import Data.Default (def)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

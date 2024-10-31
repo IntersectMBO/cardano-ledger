@@ -9,7 +9,7 @@
 module Test.Cardano.Ledger.Constrained.Preds.UTxO where
 
 import Control.Monad (when)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Env

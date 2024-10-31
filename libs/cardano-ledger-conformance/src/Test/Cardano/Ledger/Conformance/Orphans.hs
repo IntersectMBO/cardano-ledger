@@ -7,7 +7,7 @@
 module Test.Cardano.Ledger.Conformance.Orphans where
 
 import Data.Bifunctor (Bifunctor (..))
-import Data.Default.Class (Default)
+import Data.Default (Default)
 import Data.List (nub, sortOn)
 import qualified Data.Set as Set
 import Data.Void (Void)

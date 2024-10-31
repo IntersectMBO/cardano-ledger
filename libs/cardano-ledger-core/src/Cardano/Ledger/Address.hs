@@ -120,7 +120,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short as SBS (ShortByteString, fromShort, index, length, toShort)
 import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex, unsafeTake)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Function (fix)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)

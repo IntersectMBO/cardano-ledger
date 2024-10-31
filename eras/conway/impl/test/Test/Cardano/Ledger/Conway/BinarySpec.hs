@@ -14,7 +14,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.LedgerState
-import Data.Default.Class (def)
+import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.RoundTrip

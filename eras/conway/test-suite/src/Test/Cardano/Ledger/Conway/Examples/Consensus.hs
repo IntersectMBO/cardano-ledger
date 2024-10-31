@@ -56,7 +56,7 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Control.State.Transition.Extended (Embed (..))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import Data.Proxy (Proxy (..))

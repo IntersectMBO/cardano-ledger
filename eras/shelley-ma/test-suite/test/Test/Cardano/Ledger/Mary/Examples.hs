@@ -14,7 +14,7 @@ import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), sma
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.UTxO (UTxO)
 import Control.State.Transition.Extended hiding (Assertion)
-import Data.Default.Class (def)
+import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Stack
 import Lens.Micro

@@ -28,7 +28,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Val (zero, (<->))
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap

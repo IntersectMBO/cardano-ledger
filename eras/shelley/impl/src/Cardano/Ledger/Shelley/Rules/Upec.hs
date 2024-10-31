@@ -46,7 +46,7 @@ import Control.State.Transition (
   judgmentContext,
   trans,
  )
-import Data.Default.Class (Default)
+import Data.Default (Default)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 

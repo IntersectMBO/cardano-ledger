@@ -57,7 +57,7 @@ import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.State.Transition
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic)

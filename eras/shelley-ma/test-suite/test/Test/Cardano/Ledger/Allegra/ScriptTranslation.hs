@@ -21,7 +21,7 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Except (runExcept)
 import Control.State.Transition.Extended (TRC (..))
-import Data.Default.Class (def)
+import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set

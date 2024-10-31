@@ -97,7 +97,7 @@ test-suite cardano-ledger-shelley-ma-test
         cardano-slotting,
         cborg,
         containers,
-        data-default-class,
+        data-default,
         deepseq,
         groups,
         mtl,

@@ -32,7 +32,7 @@ import Cardano.Ledger.Shelley.LedgerState.Types
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<+>), (<->))
-import Data.Default.Class (def)
+import Data.Default (def)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

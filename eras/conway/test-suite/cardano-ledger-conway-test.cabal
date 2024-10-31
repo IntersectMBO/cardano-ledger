@@ -38,7 +38,7 @@ library
         cardano-ledger-shelley >=1.6,
         cardano-strict-containers,
         containers,
-        data-default-class,
+        data-default,
         small-steps >=1.1,
         plutus-ledger-api,
         microlens

@@ -115,7 +115,7 @@ import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Foldable (foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

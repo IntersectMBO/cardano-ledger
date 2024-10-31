@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (ScriptsNeeded, UTxO (..))
 import Cardano.Ledger.Val (Val (coin, modifyCoin, (<+>)))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

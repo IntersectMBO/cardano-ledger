@@ -14,7 +14,7 @@ import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Core (EraGov)
 import qualified Cardano.Ledger.UMap as UMap
 import Control.Monad (when)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import Test.Cardano.Ledger.Constrained.Ast
