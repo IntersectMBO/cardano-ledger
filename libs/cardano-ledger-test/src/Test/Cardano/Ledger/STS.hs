@@ -69,6 +69,33 @@ stsPropertyV2 ::
   (env -> st -> sig -> st -> p) ->
   Property
 stsPropertyV2 specEnv specState specSig prop =
+  stsPropertyV2' @r specEnv specState specSig (\ env _ _ -> specState env) prop
+
+stsPropertyV2' ::
+  forall r fn era env st sig fail p.
+  ( era ~ ConwayEra StandardCrypto
+  , Environment (EraRule r era) ~ env
+  , State (EraRule r era) ~ st
+  , Signal (EraRule r era) ~ sig
+  , PredicateFailure (EraRule r era) ~ fail
+  , STS (EraRule r era)
+  , BaseM (EraRule r era) ~ ReaderT Globals Identity
+  , PrettyA st
+  , PrettyA sig
+  , PrettyA env
+  , PrettyA fail
+  , Testable p
+  , HasSpec fn env
+  , HasSpec fn st
+  , HasSpec fn sig
+  ) =>
+  Specification fn env ->
+  (env -> Specification fn st) ->
+  (env -> st -> Specification fn sig) ->
+  (env -> st -> sig -> Specification fn st) ->
+  (env -> st -> sig -> st -> p) ->
+  Property
+stsPropertyV2' specEnv specState specSig specPostState prop =
   uncurry forAllShrinkBlind (genShrinkFromSpec specEnv) $ \env ->
     counterexample (show $ ppString "env = " <> prettyA env) $
       uncurry forAllShrinkBlind (genShrinkFromSpec $ specState env) $ \st ->
@@ -86,7 +113,7 @@ stsPropertyV2 specEnv specState specSig prop =
                             <> prettyA st'
                             <> ppString ("\nspec = \n" ++ show (specState env))
                       )
-                      $ conformsToSpec @fn st' (specState env) .&&. prop env st sig st'
+                      $ conformsToSpec @fn st' (specPostState env st sig) .&&. prop env st sig st'
 
 -- STS properties ---------------------------------------------------------
 
@@ -109,10 +136,11 @@ prop_GOV =
 
 prop_EPOCH :: EpochNo -> Property
 prop_EPOCH epochNo =
-  stsPropertyV2 @"EPOCH" @ConwayFn
+  stsPropertyV2' @"EPOCH" @ConwayFn
     TrueSpec
-    (\() -> epochStateSpec (lit epochNo))
+    (\_env -> epochStateSpec (lit epochNo))
     (\_env _st -> epochSignalSpec epochNo)
+    (\_env _st newEpoch -> epochStateSpec (lit newEpoch))
     $ \_env _st _sig _st' -> True
 
 prop_ENACT :: Property
