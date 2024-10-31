@@ -88,6 +88,7 @@ library
         -Wunused-packages
 
     build-depends:
+        stm ==2.5.1.0,
         base >=4.14 && <5,
         aeson >=2,
         base16-bytestring,
