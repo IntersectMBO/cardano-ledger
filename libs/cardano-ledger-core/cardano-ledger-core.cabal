@@ -88,6 +88,7 @@ library
         -Wunused-packages
 
     build-depends:
+        io-sim,
         base >=4.14 && <5,
         aeson >=2,
         base16-bytestring,
