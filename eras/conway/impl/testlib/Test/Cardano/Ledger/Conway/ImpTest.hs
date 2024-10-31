@@ -130,6 +130,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitBootstrapAwareFailingProposal_,
   SubmitFailureExpectation (..),
   FailBoth (..),
+  delegateSPORewardAddressToDRep_,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -189,6 +190,7 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
+import Cardano.Ledger.PoolParams (ppRewardAccount)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
@@ -1853,3 +1855,17 @@ submitBootstrapAware action failAction =
       ifBootstrap
         (failAction bFailures)
         (failAction pBFailures)
+
+delegateSPORewardAddressToDRep_ ::
+  ConwayEraImp era =>
+  KeyHash 'StakePool (EraCrypto era) ->
+  Coin ->
+  DRep (EraCrypto era) ->
+  ImpTestM era ()
+delegateSPORewardAddressToDRep_ kh stake drep = do
+  pp <- getRatifyEnv >>= expectJust . Map.lookup kh . rePoolParams
+  void $
+    delegateToDRep
+      (raCredential . ppRewardAccount $ pp)
+      stake
+      drep

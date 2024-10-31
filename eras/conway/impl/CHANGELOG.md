@@ -6,6 +6,7 @@
 
 ### `testlib`
 
+* Added `delegateSPORewardAddressToDRep_`
 * Add `mkUpdateCommitteeProposal`
 * Add `SubmitFailureExpectation`, `FailBoth`, `submitBootstrapAwareFailingVote`, `submitBootstrapAwareFailingProposal`, `submitBootstrapAwareFailingProposal_`
 * Add `mkConstitutionProposal`
