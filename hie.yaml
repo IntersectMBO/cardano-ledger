@@ -288,21 +288,6 @@ cradle:
     - path: "libs/constrained-generators/bench/Constrained/Bench.hs"
       component: "constrained-generators:bench:bench"
 
-    - path: "libs/ledger-state/src"
-      component: "lib:ledger-state"
-
-    - path: "libs/ledger-state/app/Main.hs"
-      component: "ledger-state:exe:ledger-state"
-
-    - path: "libs/ledger-state/bench/Memory.hs"
-      component: "ledger-state:bench:memory"
-
-    - path: "libs/ledger-state/bench/Performance.hs"
-      component: "ledger-state:bench:performance"
-
-    - path: "libs/ledger-state/bench/Address.hs"
-      component: "ledger-state:bench:address"
-
     - path: "libs/non-integral/src"
       component: "lib:non-integral"
 

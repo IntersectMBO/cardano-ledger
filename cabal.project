@@ -100,7 +100,7 @@ packages:
   libs/cardano-ledger-conformance
   libs/cardano-ledger-test
   libs/plutus-preprocessor
-  libs/ledger-state
+  -- libs/ledger-state
   libs/constrained-generators
   libs/cardano-ledger-repl-environment
 
