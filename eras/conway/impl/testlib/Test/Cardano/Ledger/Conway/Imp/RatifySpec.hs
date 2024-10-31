@@ -1207,6 +1207,85 @@ votingSpec =
           -- `NoConfidence` is ratified -> the committee is no more
           getCommitteeMembers `shouldReturn` mempty
 
+    describe "SPO default votes" $ do
+      describe "During bootstrap phase" $ do
+        it "Default vote is Abstain in general" $ whenBootstrap $ do
+          (spoC1, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+          (spoC2, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+          (spoC3, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+
+          gid <-
+            submitParameterChange SNothing $
+              emptyPParamsUpdate
+                & ppuMinFeeRefScriptCostPerByteL .~ SJust (25 %! 2)
+
+          impAnn
+            ( "No SPO has voted so far and the default vote is abstain:\n"
+                <> "YES: 0; ABSTAIN (default): 3; NO: 0 -> YES / total - ABSTAIN == 0 % 0"
+            )
+            $ calculatePoolAcceptedRatio gid `shouldReturn` 0
+
+          passNEpochs 2
+
+          impAnn
+            ( "One SPO voted yes and the default vote is abstain:\n"
+                <> "YES: 1; ABSTAIN (default): 2; NO: 0 -> YES / total - ABSTAIN == 1 % 1"
+            )
+            $ do
+              submitYesVote_ (StakePoolVoter spoC1) gid
+              calculatePoolAcceptedRatio gid `shouldReturn` 1
+
+          impAnn
+            ( "One SPO voted yes, another voted no and the default vote is abstain:\n"
+                <> "YES: 1; ABSTAIN (default): 1; NO: 1 -> YES / total - ABSTAIN == 1 % 2"
+            )
+            $ do
+              submitVote_ VoteNo (StakePoolVoter spoC2) gid
+              calculatePoolAcceptedRatio gid `shouldReturn` (1 % 2)
+
+          impAnn
+            ( "Two SPOs voted yes, another voted no and the default vote is abstain:\n"
+                <> "YES: 2; ABSTAIN (default): 0; NO: 1 -> YES / total - ABSTAIN == 2 % 3"
+            )
+            $ do
+              submitYesVote_ (StakePoolVoter spoC3) gid
+              calculatePoolAcceptedRatio gid `shouldReturn` (2 % 3)
+
+        it "HardForkInitiation - default vote is No" $ whenBootstrap $ do
+          curProtVer <- getProtVer
+          nextMajorVersion <- succVersion $ pvMajor curProtVer
+          let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
+
+          (spoC1, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+          (spoC2, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+          (_spoC3, _payment, _staking) <- setupPoolWithStake $ Coin 1_000_000
+
+          gid <- submitGovAction $ HardForkInitiation SNothing nextProtVer
+
+          impAnn
+            ( "No SPO has voted so far and the default vote is no:\n"
+                <> "YES: 0; ABSTAIN: 0; NO (default): 3 -> YES / total - ABSTAIN == 0 % 3"
+            )
+            $ calculatePoolAcceptedRatio gid `shouldReturn` 0
+
+          passNEpochs 2
+
+          impAnn
+            ( "One SPO voted yes and the default vote is no:\n"
+                <> "YES: 1; ABSTAIN: 0; NO (default): 2 -> YES / total - ABSTAIN == 1 % 3"
+            )
+            $ do
+              submitYesVote_ (StakePoolVoter spoC1) gid
+              calculatePoolAcceptedRatio gid `shouldReturn` (1 %! 3)
+
+          impAnn
+            ( "One SPO voted yes, another abstained and the default vote is no:\n"
+                <> "YES: 1; ABSTAIN: 1; NO (default): 2 -> YES / total - ABSTAIN == 1 % 2"
+            )
+            $ do
+              submitVote_ Abstain (StakePoolVoter spoC2) gid
+              calculatePoolAcceptedRatio gid `shouldReturn` (1 %! 2)
+
 delayingActionsSpec ::
   forall era.
   ConwayEraImp era =>
