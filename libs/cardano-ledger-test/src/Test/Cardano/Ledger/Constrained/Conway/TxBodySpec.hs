@@ -28,7 +28,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val
 import Constrained hiding (Value)
-import Constrained.Base -- (Pred (..), hasSize, rangeSize,toPredExplain)
+import Constrained.Base
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
