@@ -65,7 +65,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
 import Data.Aeson (ToJSON)
 import Data.Coerce (coerce)
-import Data.Default.Class (Default)
+import Data.Default (Default)
 import Data.Foldable (foldMap', toList)
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map

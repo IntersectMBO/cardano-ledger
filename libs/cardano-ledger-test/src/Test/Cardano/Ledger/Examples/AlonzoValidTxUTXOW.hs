@@ -48,7 +48,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..), inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import GHC.Stack

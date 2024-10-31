@@ -97,7 +97,7 @@ import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, 
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Arrow (first)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Foldable (toList)
 import qualified Data.Foldable as F
 import Data.Functor.Identity (Identity)

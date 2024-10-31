@@ -168,6 +168,6 @@ test-suite tests
         cardano-ledger-binary:testlib,
         cardano-ledger-core:testlib,
         cardano-ledger-alonzo:testlib,
-        data-default-class,
+        data-default,
         HUnit,
         testlib

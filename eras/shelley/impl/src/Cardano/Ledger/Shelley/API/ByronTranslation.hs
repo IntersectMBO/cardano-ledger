@@ -36,7 +36,7 @@ import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val (zero, (<->))
 import qualified Data.ByteString.Short as SBS
-import Data.Default.Class (def)
+import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Word
 import GHC.Stack (HasCallStack)

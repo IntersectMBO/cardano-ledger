@@ -39,7 +39,7 @@ import Cardano.Ledger.Shelley.TxCert (
   ShelleyTxCert (..),
  )
 import Control.Monad (when)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))

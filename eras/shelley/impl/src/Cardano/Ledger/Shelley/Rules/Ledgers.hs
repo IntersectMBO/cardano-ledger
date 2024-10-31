@@ -51,7 +51,7 @@ import Control.State.Transition (
   judgmentContext,
   trans,
  )
-import Data.Default.Class (Default)
+import Data.Default (Default)
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)

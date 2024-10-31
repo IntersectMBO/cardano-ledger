@@ -24,7 +24,7 @@ import Cardano.Ledger.UMap (UView (RewDepUView), depositMap, domain, fromCompact
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Foldable as F (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set

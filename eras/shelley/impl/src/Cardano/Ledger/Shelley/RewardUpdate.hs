@@ -61,7 +61,7 @@ import Cardano.Ledger.Shelley.Rewards (
  )
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (KeyValue, ToJSON (..), Value (Null), object, pairs, (.=))
-import Data.Default.Class (def)
+import Data.Default (def)
 import Data.Group (invert)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)

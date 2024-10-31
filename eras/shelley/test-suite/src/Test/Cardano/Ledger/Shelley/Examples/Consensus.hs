@@ -39,7 +39,7 @@ import Cardano.Protocol.TPraos.Rules.Tickn
 import Cardano.Slotting.EpochInfo
 import qualified Data.ByteString as Strict
 import Data.Coerce (coerce)
-import Data.Default.Class
+import Data.Default
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

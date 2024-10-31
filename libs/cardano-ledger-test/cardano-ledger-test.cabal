@@ -145,7 +145,7 @@ library
         haskeline,
         hashable,
         vector-map,
-        data-default-class,
+        data-default,
         microlens,
         mtl,
         nothunks,
@@ -182,7 +182,7 @@ test-suite cardano-ledger-test
         base,
         cardano-ledger-test,
         tasty,
-        data-default-class,
+        data-default,
         cardano-ledger-core:testlib
 
 benchmark bench
@@ -222,7 +222,7 @@ benchmark bench
         vector-map,
         containers,
         criterion,
-        data-default-class,
+        data-default,
         deepseq,
         QuickCheck,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},

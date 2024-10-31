@@ -30,7 +30,7 @@ import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.Shelley.LedgerState
-import Data.Default.Class (def)
+import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro

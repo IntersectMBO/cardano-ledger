@@ -42,7 +42,7 @@ library
         cardano-strict-containers,
         cardano-slotting,
         containers,
-        data-default-class,
+        data-default,
         microlens,
         QuickCheck,
         time,

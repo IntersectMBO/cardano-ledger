@@ -64,7 +64,7 @@ import Data.Aeson (
  )
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (toJSONKeyText)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable (asum)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)

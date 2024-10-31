@@ -52,7 +52,7 @@ import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.Monad (when)
 import Control.State.Transition.Extended (STS (..), TRC (..))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Foldable as F (foldl', toList)
 import qualified Data.List as List
 import Data.Map (Map)

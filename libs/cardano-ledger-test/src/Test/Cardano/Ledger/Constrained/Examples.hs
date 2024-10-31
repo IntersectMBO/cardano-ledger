@@ -25,7 +25,7 @@ import Cardano.Ledger.Keys (GenDelegPair)
 import Control.DeepSeq (deepseq)
 import Control.Exception (ErrorCall (..))
 import Control.Monad (when)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Map (Map)
 import Data.Ratio ((%))
 import qualified Debug.Trace as Debug

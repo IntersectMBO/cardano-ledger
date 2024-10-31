@@ -133,7 +133,7 @@ import Control.Monad (join, replicateM, when, zipWithM_)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (RWST (..), ask, asks, get, gets, modify)
 import Control.SetAlgebra (eval, (⨃))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))

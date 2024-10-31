@@ -79,7 +79,7 @@ import Cardano.Ledger.Val (inject, (<->))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended (STS (..))
 import qualified Data.ByteString as BS (replicate)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq

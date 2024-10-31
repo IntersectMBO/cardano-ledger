@@ -27,7 +27,7 @@ import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgersEnv (..), ShelleyLedgersEvent (..))
 import Control.State.Transition.Extended
-import Data.Default.Class (def)
+import Data.Default (def)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))

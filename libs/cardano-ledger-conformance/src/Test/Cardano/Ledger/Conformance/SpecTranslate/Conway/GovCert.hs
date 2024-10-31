@@ -33,7 +33,7 @@ import Cardano.Ledger.Conway.TxCert (
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.LedgerState
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

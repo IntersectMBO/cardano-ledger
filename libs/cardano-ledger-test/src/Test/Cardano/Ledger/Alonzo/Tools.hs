@@ -34,7 +34,7 @@ import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended (STS (BaseM, Environment, Signal, State), TRC (TRC))
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq

@@ -56,7 +56,7 @@ import Data.Aeson.Types (Parser, explicitParseField)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as Char8
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
 import Data.Proxy (Proxy (..))

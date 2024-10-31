@@ -40,7 +40,7 @@ import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap (UMap)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable (foldMap')
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isNothing)

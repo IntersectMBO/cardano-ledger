@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.NoThunks (
 ) where
 
 import Control.State.Transition.Extended (STS)
-import Data.Default.Class (def)
+import Data.Default (def)
 import Test.Cardano.Ledger.Generic.GenState (GenSize)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, noThunksGen)
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect)

@@ -95,7 +95,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Coerce (Coercible, coerce)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import Data.Typeable (Typeable)

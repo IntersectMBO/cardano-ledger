@@ -32,7 +32,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.UTxO (UTxO (..))
-import Data.Default.Class (def)
+import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
 

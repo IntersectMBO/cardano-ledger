@@ -57,7 +57,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Decoding (DecCBOR (decCBOR))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable qualified as F
 import Data.Map.Strict qualified as Map
 import Data.MapExtras qualified as MapE

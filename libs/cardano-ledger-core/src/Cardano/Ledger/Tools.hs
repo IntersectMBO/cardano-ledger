@@ -46,7 +46,7 @@ import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Data.Bits (Bits (..), shiftR)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import Data.Default.Class (def)
+import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Proxy

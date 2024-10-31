@@ -75,7 +75,7 @@ import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default.Class (Default, def)
+import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))

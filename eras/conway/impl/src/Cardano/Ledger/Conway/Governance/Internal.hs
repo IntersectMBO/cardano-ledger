@@ -128,7 +128,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.UMap
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.List (sortOn)
 import Data.Map.Strict (Map)

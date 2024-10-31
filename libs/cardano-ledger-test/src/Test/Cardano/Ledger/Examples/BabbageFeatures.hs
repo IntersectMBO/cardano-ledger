@@ -80,7 +80,7 @@ import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short as SBS (pack)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map

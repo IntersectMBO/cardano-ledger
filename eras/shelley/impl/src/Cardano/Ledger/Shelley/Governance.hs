@@ -59,7 +59,7 @@ import Data.Aeson (
   pairs,
   (.=),
  )
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Typeable
 import GHC.Generics (Generic)

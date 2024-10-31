@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
 import Cardano.Ledger.Val
 import Control.Monad.Writer (listen)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))

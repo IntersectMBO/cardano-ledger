@@ -83,7 +83,7 @@ import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.DeepSeq (rnf)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import qualified Data.ByteString.Char8 as BS (pack)
-import Data.Default.Class (def)
+import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)

@@ -70,7 +70,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS (length)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import qualified Data.ByteString.Short as SBS (length)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable (fold)
 import Data.Typeable
 import NoThunks.Class (NoThunks (..))

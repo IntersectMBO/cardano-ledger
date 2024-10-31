@@ -14,7 +14,7 @@ import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness,
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
 import Control.Monad (when)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))

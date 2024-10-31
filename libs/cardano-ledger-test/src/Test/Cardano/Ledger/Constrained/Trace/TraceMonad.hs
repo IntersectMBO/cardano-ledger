@@ -30,7 +30,7 @@ import Control.Monad.Trans.Except
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.Monad.Trans.State.Strict hiding (State)
 import Control.State.Transition.Extended (IRC (..), STS, TRC (..))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Foldable (toList)
 import qualified Data.Foldable as Fold (toList)
 import Data.Function (on)

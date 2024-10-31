@@ -96,7 +96,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Typeable)
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

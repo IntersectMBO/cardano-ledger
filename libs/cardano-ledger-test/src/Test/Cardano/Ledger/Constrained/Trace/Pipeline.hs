@@ -21,7 +21,7 @@ import Control.State.Transition.Extended (
   TRC (..),
   applySTS,
  )
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as HashSet
 import Data.List.NonEmpty (NonEmpty)

@@ -143,7 +143,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (when)
-import Data.Default.Class (def)
+import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (isSJust)
 import Data.OSet.Strict (OSet)

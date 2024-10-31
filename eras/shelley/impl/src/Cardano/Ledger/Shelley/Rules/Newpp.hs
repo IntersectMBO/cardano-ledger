@@ -37,7 +37,7 @@ import Control.State.Transition (
   judgmentContext,
   liftSTS,
  )
-import Data.Default.Class (Default, def)
+import Data.Default (Default, def)
 import Data.Void (Void)
 import Data.Word (Word64)
 

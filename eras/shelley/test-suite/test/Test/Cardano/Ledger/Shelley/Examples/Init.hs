@@ -37,7 +37,7 @@ import Cardano.Protocol.TPraos.BHeader (
   hashHeaderToNonce,
  )
 import Cardano.Slotting.Slot (WithOrigin (..))
-import Data.Default.Class
+import Data.Default
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Examples.Federation (genDelegs)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (

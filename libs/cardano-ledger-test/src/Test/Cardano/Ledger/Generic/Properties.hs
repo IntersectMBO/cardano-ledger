@@ -31,7 +31,7 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Coerce (coerce)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()

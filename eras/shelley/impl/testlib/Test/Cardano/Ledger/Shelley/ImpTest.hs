@@ -248,7 +248,7 @@ import Control.State.Transition.Extended (
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
-import Data.Default.Class (Default (..))
+import Data.Default (Default (..))
 import Data.Foldable (toList, traverse_)
 import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))

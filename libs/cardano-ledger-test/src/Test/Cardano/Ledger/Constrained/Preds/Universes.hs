@@ -51,7 +51,7 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map

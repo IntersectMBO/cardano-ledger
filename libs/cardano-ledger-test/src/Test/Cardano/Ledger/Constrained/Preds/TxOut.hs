@@ -35,7 +35,7 @@ import Cardano.Ledger.Mary.Value (
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Control.Monad (when)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe, strictMaybeToMaybe)

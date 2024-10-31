@@ -37,7 +37,7 @@ library
         aeson,
         base >=4.14 && <5,
         containers,
-        data-default-class,
+        data-default,
         free,
         mtl,
         nothunks,

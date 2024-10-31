@@ -140,7 +140,7 @@ import qualified Data.Aeson.Types as Aeson
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
-import Data.Default.Class (Default (def))
+import Data.Default (Default (def))
 import Data.Function (on)
 import Data.Functor.Identity (Identity (..))
 import Data.List (sortBy)
