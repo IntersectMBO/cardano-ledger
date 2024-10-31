@@ -113,7 +113,7 @@ stsPropertyV2' specEnv specState specSig specPostState prop =
                             <> prettyA st'
                             <> ppString ("\nspec = \n" ++ show (specState env))
                       )
-                      $ conformsToSpec @fn st' (specPostState env st sig) .&&. prop env st sig st'
+                      $ conformsToSpecProp @fn st' (specPostState env st sig) .&&. prop env st sig st'
 
 -- STS properties ---------------------------------------------------------
 
