@@ -38,10 +38,13 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 -- | Specify that some of the rewards in the RDPair's are zero.
 --   without this in the DState, it is hard to generate the ConwayUnRegCert
 --   certificate, since it requires a rewards balance of 0.
+--   We also specify that both reward and deposit are greater thn (Coin 0)
 someZeros :: forall fn. IsConwayUniv fn => Specification fn RDPair
 someZeros = constrained $ \ [var| someRdpair |] ->
-  match someRdpair $ \ [var| reward |] _deposit ->
-    satisfies reward (chooseSpec (1, constrained $ \ [var| x |] -> assert $ x ==. lit 0) (3, TrueSpec))
+  match someRdpair $ \ [var| reward |] [var|deposit|] ->
+    [ satisfies reward (chooseSpec (1, constrained $ \ [var| x |] -> assert $ x ==. lit 0) (3, gtSpec 0))
+    , satisfies deposit (geqSpec 0)
+    ]
 
 dStateSpec ::
   forall fn era. (IsConwayUniv fn, EraSpecDeleg era) => Specification fn (DState era)

@@ -2634,7 +2634,7 @@ pcMultiSig h (RequireMOf m _) = ppSexp "MOf" [ppInt m, h]
 pcMultiSig _ _ = error "Impossible: All NativeScripts should have been accounted for"
 
 instance
-  ( AllegraEraScript era
+  ( ShelleyEraScript era
   , Reflect era
   , NativeScript era ~ MultiSig era
   ) =>

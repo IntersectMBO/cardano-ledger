@@ -1221,6 +1221,7 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
 
 computeDependencies :: Pred fn -> DependGraph fn
 computeDependencies = \case
+  x@(Exists _ (_v :-> Block [Reifies (V a) _b _, _c])) -> deleteNode (Name a) (computeDependencies x)
   Monitor {} -> mempty
   Subst x t p -> computeDependencies (substitutePred x t p)
   Assert _ t -> computeTermDependencies t
@@ -4794,9 +4795,9 @@ instance BaseUniverse fn => Functions (IntFn fn) fn where
             memberSpecList
               (nub $ mapMaybe (safeSubtract @fn i) (NE.toList es))
               ( NE.fromList
-                  [ "propagateSpecFn on Add"
-                  , "Spec is (MemberSpec is), such that can't safely subtract from any i in is"
-                  , "Leads to an empty MemberSpec, and hence this ErrorSpec"
+                  [ "propagateSpecFn on (" ++ show i ++ " +. HOLE)"
+                  , "The Spec is a MemberSpec = " ++ show spec
+                  , "We can't safely subtract " ++ show i ++ " from any choice in the MemberSpec."
                   ]
               )
   propagateSpecFun Negate (NilCtx HOLE) spec = case spec of
