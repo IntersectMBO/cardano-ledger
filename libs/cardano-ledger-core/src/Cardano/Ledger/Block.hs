@@ -155,7 +155,7 @@ neededTxInsForBlock ::
   forall h era.
   EraSegWits era =>
   Block h era ->
-  Set (TxIn (EraCrypto era))
+  Set TxIn
 neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where
     txBodies = map (^. bodyTxL) $ toList $ fromTxSeq txsSeq

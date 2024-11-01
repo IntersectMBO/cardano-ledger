@@ -22,7 +22,6 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys
@@ -58,27 +57,27 @@ deriving newtype instance ToExpr (CompactForm DeltaCoin)
 instance ToExpr (NoUpdate a)
 
 -- Keys
-instance Crypto c => ToExpr (VKey r c) where
+instance ToExpr (VKey r) where
   toExpr vk =
     Rec "VKey" $ fromList [("VKey (hashOf)", toExpr $ hashKey vk)]
 
-instance ToExpr (GenDelegs c)
+instance ToExpr GenDelegs
 
-instance ToExpr (GenDelegPair c)
+instance ToExpr GenDelegPair
 
-instance ToExpr (KeyHash keyrole c) where
+instance ToExpr (KeyHash keyrole) where
   toExpr (KeyHash x) = App "KeyHash" [toExpr x]
 
-instance ToExpr (VRFVerKeyHash keyrole c) where
+instance ToExpr (VRFVerKeyHash keyrole) where
   toExpr (VRFVerKeyHash x) = App "VRFVerKeyHash" [toExpr x]
 
 -- PoolDist
-instance ToExpr (PoolDistr c)
+instance ToExpr PoolDistr
 
-instance ToExpr (IndividualPoolStake c)
+instance ToExpr IndividualPoolStake
 
 -- SafeHash
-instance ToExpr (SafeHash c index) where
+instance ToExpr (SafeHash i) where
   toExpr x = App "SafeHash" [toExpr (extractHash x)]
 
 -- Language
@@ -96,7 +95,7 @@ instance ToExpr (t era) => ToExpr (MemoBytes t era)
 instance ToExpr (VoidEraRule (rule :: Symbol) era) where
   toExpr = absurdEraRule
 
-instance ToExpr (ScriptHash c)
+instance ToExpr ScriptHash
 
 instance ToExpr CostModel where
   toExpr costModel =
@@ -114,10 +113,10 @@ instance ToExpr CostModel where
 instance ToExpr CostModels
 
 -- Keys/WitVKey
-instance Crypto c => ToExpr (WitVKey kr c)
+instance ToExpr (WitVKey kr)
 
 -- Keys/Bootstrap
-instance Crypto c => ToExpr (BootstrapWitness c)
+instance ToExpr BootstrapWitness
 
 instance ToExpr ChainCode
 
@@ -146,18 +145,18 @@ instance ToExpr Nonce where
 
 instance ToExpr DnsName
 
-instance ToExpr (BlocksMade c)
+instance ToExpr BlocksMade
 
 instance ToExpr ProtVer
 
-instance ToExpr (Anchor c)
+instance ToExpr Anchor
 
 instance ToExpr a => ToExpr (Mismatch r a)
 
 instance ToExpr EpochInterval
 
 -- AuxiliaryData
-instance ToExpr (AuxiliaryDataHash c)
+instance ToExpr AuxiliaryDataHash
 
 -- Plutus/ExUnits
 instance ToExpr Prices
@@ -166,9 +165,9 @@ instance ToExpr ExUnits where
   toExpr (WrapExUnits (ExUnits' x y)) = App "ExUnits" [defaultExprViaShow x, defaultExprViaShow y]
 
 -- Credential
-instance ToExpr (Credential keyrole c)
+instance ToExpr (Credential keyrole)
 
-instance ToExpr (StakeReference c)
+instance ToExpr StakeReference
 
 instance ToExpr Ptr
 
@@ -178,42 +177,42 @@ deriving newtype instance
 deriving newtype instance
   ToExpr (PParamsHKD StrictMaybe era) => ToExpr (PParamsUpdate era)
 
-instance ToExpr (TxIn c)
+instance ToExpr TxIn
 
-instance ToExpr (TxId c)
+instance ToExpr TxId
 
 -- CertState
-instance ToExpr (DRep c)
+instance ToExpr DRep
 
-instance ToExpr (DRepState c)
+instance ToExpr DRepState
 
 -- Address
-instance ToExpr (Addr c)
+instance ToExpr Addr
 
-instance ToExpr (RewardAccount era)
+instance ToExpr RewardAccount
 
-instance ToExpr (BootstrapAddress c) where
+instance ToExpr BootstrapAddress where
   toExpr = defaultExprViaShow
 
-instance ToExpr (Withdrawals c)
+instance ToExpr Withdrawals
 
-instance ToExpr (CompactAddr c)
+instance ToExpr CompactAddr
 
 -- PoolParams
 instance ToExpr PoolMetadata
 
-instance ToExpr (PoolParams era)
+instance ToExpr PoolParams
 
 instance ToExpr StakePoolRelay
 
-instance ToExpr (PoolCert c)
+instance ToExpr PoolCert
 
 -- UMap
 instance ToExpr RDPair
 
-instance ToExpr (UMElem c)
+instance ToExpr UMElem
 
-instance ToExpr (UMap c)
+instance ToExpr UMap
 
 instance ToExpr (PlutusData era) where
   toExpr = trimExprViaShow 30
@@ -229,11 +228,11 @@ instance ToExpr (Datum era) where
   toExpr (Datum bd) = App "Datum" [toExpr bd]
 
 -- EpochBoundary
-instance ToExpr (SnapShots c)
+instance ToExpr SnapShots
 
-instance ToExpr (SnapShot c)
+instance ToExpr SnapShot
 
-deriving newtype instance ToExpr (Stake c)
+deriving newtype instance ToExpr Stake
 
 instance ToExpr (CertState era)
 
@@ -243,11 +242,11 @@ instance ToExpr (DState era)
 
 instance ToExpr (VState era)
 
-instance ToExpr (FutureGenDeleg c)
+instance ToExpr FutureGenDeleg
 
-instance ToExpr (InstantaneousRewards c)
+instance ToExpr InstantaneousRewards
 
-instance ToExpr (CommitteeAuthorization c)
+instance ToExpr CommitteeAuthorization
 
 instance ToExpr (CommitteeState era)
 
@@ -256,4 +255,4 @@ deriving instance (Era era, ToExpr (Script era)) => ToExpr (ScriptsProvided era)
 
 instance ToExpr (TxOut era) => ToExpr (UTxO era)
 
-instance ToExpr (TxOutSource era)
+instance ToExpr TxOutSource

@@ -20,30 +20,30 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 
-type instance EraRuleFailure "LEDGERS" (MaryEra c) = ShelleyLedgersPredFailure (MaryEra c)
+type instance EraRuleFailure "LEDGERS" MaryEra = ShelleyLedgersPredFailure MaryEra
 
-instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure (MaryEra c)
+instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure MaryEra
 
-instance InjectRuleFailure "LEDGERS" ShelleyLedgerPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyLedgerPredFailure MaryEra where
   injectFailure = LedgerFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure MaryEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyUtxoPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyUtxoPredFailure MaryEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyPpupPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyPpupPredFailure MaryEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelegsPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelegsPredFailure MaryEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelplPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelplPredFailure MaryEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure MaryEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelegPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelegPredFailure MaryEra where
   injectFailure = LedgerFailure . injectFailure

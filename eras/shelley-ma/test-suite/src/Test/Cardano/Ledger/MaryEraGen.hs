@@ -24,7 +24,6 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (MaryTxBody))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -77,23 +76,17 @@ import qualified Test.QuickCheck as QC
 
 {------------------------------------------------------------------------------
  EraGen instance for MaryEra - This instance makes it possible to run the
- Shelley property tests for (MaryEra c)
-
- This instance is layered on top of the ShelleyMA instances
- in Cardano.Ledger.ShelleyMA.Scripts:
-
-   `type instance Script (MaryEra c) = Timelock (MaryEra c)`
-   `instance ValidateScript (ShelleyMAEra ma c) where ... `
+ Shelley property tests for MaryEra
 ------------------------------------------------------------------------------}
 
-instance Crypto c => ScriptClass (MaryEra c) where
+instance ScriptClass MaryEra where
   isKey _ (RequireSignature hk) = Just hk
   isKey _ _ = Nothing
-  basescript _proxy = someLeaf @(MaryEra c)
+  basescript _proxy = someLeaf @MaryEra
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
 
-instance Crypto c => EraGen (MaryEra c) where
+instance EraGen MaryEra where
   genGenesisValue = maryGenesisValue
   genEraTxBody _ge _utxo = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
@@ -106,7 +99,7 @@ instance Crypto c => EraGen (MaryEra c) where
   genEraPParams = genPParams
   genEraTxWits _scriptinfo setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
 
-genAuxiliaryData :: Crypto c => Constants -> Gen (StrictMaybe (TxAuxData (MaryEra c)))
+genAuxiliaryData :: Constants -> Gen (StrictMaybe (TxAuxData MaryEra))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
     [ (frequencyTxWithMetadata, SJust <$> arbitrary)
@@ -114,7 +107,7 @@ genAuxiliaryData Constants {frequencyTxWithMetadata} =
     ]
 
 -- | Carefully crafted to apply in any Era where Value is MaryValue
-maryGenesisValue :: GenEnv era -> Gen (MaryValue c)
+maryGenesisValue :: GenEnv era -> Gen MaryValue
 maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
   Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
 
@@ -150,13 +143,13 @@ coloredCoinMaxMint = 1000 * 1000
 redCoins :: AllegraEraScript era => NativeScript era
 redCoins = trivialPolicy 0
 
-redCoinId :: forall c. Crypto c => PolicyID c
-redCoinId = PolicyID $ hashScript @(MaryEra c) redCoins
+redCoinId :: PolicyID
+redCoinId = PolicyID $ hashScript @MaryEra redCoins
 
 red :: AssetName
 red = AssetName "red"
 
-genRed :: Crypto c => Gen (MultiAsset c)
+genRed :: Gen MultiAsset
 genRed = do
   n <- genInteger coloredCoinMinMint coloredCoinMaxMint
   pure $ multiAssetFromList [(redCoinId, red, n)]
@@ -171,8 +164,8 @@ genRed = do
 blueCoins :: AllegraEraScript era => NativeScript era
 blueCoins = trivialPolicy 1
 
-blueCoinId :: forall c. Crypto c => PolicyID c
-blueCoinId = PolicyID $ hashScript @(MaryEra c) blueCoins
+blueCoinId :: PolicyID
+blueCoinId = PolicyID $ hashScript @MaryEra blueCoins
 
 maxBlueMint :: Int
 maxBlueMint = 5
@@ -181,7 +174,7 @@ maxBlueMint = 5
 -- current coin selection algorithm does not prevent creating
 -- a multi-asset that is too large.
 
-genBlue :: Crypto c => Gen (MultiAsset c)
+genBlue :: Gen MultiAsset
 genBlue = do
   as <- QC.resize maxBlueMint $ QC.listOf genSingleBlue
   -- the transaction size gets too big if we mint too many assets
@@ -202,13 +195,13 @@ genBlue = do
 yellowCoins :: AllegraEraScript era => NativeScript era
 yellowCoins = trivialPolicy 2
 
-yellowCoinId :: forall c. Crypto c => PolicyID c
-yellowCoinId = PolicyID $ hashScript @(MaryEra c) yellowCoins
+yellowCoinId :: PolicyID
+yellowCoinId = PolicyID $ hashScript @MaryEra yellowCoins
 
 yellowNumAssets :: Int
 yellowNumAssets = 5
 
-genYellow :: Crypto c => Gen (MultiAsset c)
+genYellow :: Gen MultiAsset
 genYellow = do
   xs <- QC.sublistOf [0 .. yellowNumAssets]
   as <- mapM genSingleYellow xs
@@ -221,7 +214,7 @@ genYellow = do
 
 -- | Carefully crafted to apply in any Era where Value is MaryValue
 -- | This map allows us to lookup a minting policy by the policy ID.
-policyIndex :: AllegraEraScript era => Map (PolicyID (EraCrypto era)) (NativeScript era)
+policyIndex :: AllegraEraScript era => Map PolicyID (NativeScript era)
 policyIndex =
   Map.fromList
     [ (redCoinId, redCoins)
@@ -246,10 +239,10 @@ blueFreq = 1
 yellowFreq :: Int
 yellowFreq = 20
 
-genBundle :: Int -> Gen (MultiAsset c) -> Gen (MultiAsset c)
+genBundle :: Int -> Gen MultiAsset -> Gen MultiAsset
 genBundle freq g = QC.frequency [(freq, g), (100 - freq, pure mempty)]
 
-genMint :: Crypto c => Gen (MultiAsset c)
+genMint :: Gen MultiAsset
 genMint = do
   r <- genBundle redFreq genRed
   b <- genBundle blueFreq genBlue
@@ -267,12 +260,12 @@ genMint = do
 addTokens ::
   forall era.
   ( EraGen era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   Proxy era ->
   StrictSeq (TxOut era) -> -- This is an accumuating parameter
   PParams era ->
-  MultiAsset (EraCrypto era) ->
+  MultiAsset ->
   StrictSeq (TxOut era) ->
   Maybe (StrictSeq (TxOut era))
 addTokens proxy tooLittleLovelace pparams ts (txOut :<| os) =
@@ -286,18 +279,18 @@ genTxBody ::
   forall era.
   ( EraGen era
   , AllegraEraScript era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , TxOut era ~ ShelleyTxOut era
   ) =>
   PParams era ->
   SlotNo ->
-  Set.Set (TxIn (EraCrypto era)) ->
+  Set.Set TxIn ->
   StrictSeq (ShelleyTxOut era) ->
   StrictSeq (TxCert era) ->
-  Withdrawals (EraCrypto era) ->
+  Withdrawals ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+  StrictMaybe AuxiliaryDataHash ->
   Gen (MaryTxBody era, [NativeScript era])
 genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
@@ -323,7 +316,7 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
     , ps -- These additional scripts are for the minting policies.
     )
 
-instance Split (MaryValue era) where
+instance Split MaryValue where
   vsplit (MaryValue n _) 0 = ([], n)
   vsplit (MaryValue (Coin n) mp) m
     | m <= 0 = error "must split coins into positive parts"
@@ -334,7 +327,7 @@ instance Split (MaryValue era) where
         , Coin (n `rem` m)
         )
 
-instance Crypto c => MinGenTxout (MaryEra c) where
+instance MinGenTxout MaryEra where
   calcEraMinUTxO _txout pp = pp ^. ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do

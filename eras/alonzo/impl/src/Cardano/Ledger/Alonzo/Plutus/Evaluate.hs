@@ -76,7 +76,7 @@ import qualified PlutusLedgerApi.Common as P
 -- | When collecting inputs for two phase scripts, 3 things can go wrong.
 data CollectError era
   = NoRedeemer !(PlutusPurpose AsItem era)
-  | NoWitness !(ScriptHash (EraCrypto era))
+  | NoWitness !ScriptHash
   | NoCostModel !Language
   | BadTranslation !(ContextError era)
   deriving (Generic)
@@ -151,7 +151,7 @@ collectPlutusScriptsWithContext ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  Either [CollectError era] [PlutusWithContext (EraCrypto era)]
+  Either [CollectError era] [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
   -- TODO: remove this whole complicated check when we get into Conway. It is much simpler
   -- to fail on a CostModel lookup in the `apply` function (already implemented).
@@ -220,10 +220,10 @@ merge f (x : xs) zs = merge f xs (gg x zs)
     gg (Left a) (Left cs) = Left (a : cs)
 
 -- | Evaluate a list of Plutus scripts. All scripts in the list must evaluate to `True`.
-evalPlutusScripts :: [PlutusWithContext c] -> ScriptResult c
+evalPlutusScripts :: [PlutusWithContext] -> ScriptResult
 evalPlutusScripts pwcs = snd $ evalPlutusScriptsWithLogs pwcs
 
-evalPlutusScriptsWithLogs :: [PlutusWithContext c] -> ([Text], ScriptResult c)
+evalPlutusScriptsWithLogs :: [PlutusWithContext] -> ([Text], ScriptResult)
 evalPlutusScriptsWithLogs [] = mempty
 evalPlutusScriptsWithLogs (plutusWithContext : rest) =
   let beginMsg =
@@ -254,10 +254,10 @@ data TransactionScriptFailure era
       -- respective contexts
       !( Map
           (PlutusPurpose AsIx era)
-          (PlutusPurpose AsItem era, Maybe (PlutusScript era), ScriptHash (EraCrypto era))
+          (PlutusPurpose AsItem era, Maybe (PlutusScript era), ScriptHash)
        )
   | -- | Missing datum.
-    MissingDatum !(DataHash (EraCrypto era))
+    MissingDatum !DataHash
   | -- | Plutus evaluation error, for any version
     ValidationFailure
       -- | Supplied execution units in the transaction, which were ignored for calculating
@@ -265,13 +265,13 @@ data TransactionScriptFailure era
       !ExUnits
       !P.EvaluationError
       ![Text]
-      !(PlutusWithContext (EraCrypto era))
+      !PlutusWithContext
   | -- | A redeemer points to a transaction input which is not
     --  present in the current UTxO.
-    UnknownTxIn !(TxIn (EraCrypto era))
+    UnknownTxIn !TxIn
   | -- | A redeemer points to a transaction input which is not
     --  plutus locked.
-    InvalidTxIn !(TxIn (EraCrypto era))
+    InvalidTxIn !TxIn
   | -- | The execution budget that was calculated by the Plutus
     --  evaluator is out of bounds.
     IncompatibleBudget !P.ExBudget

@@ -124,7 +124,6 @@ test-suite cardano-ledger-api-test
   build-depends:
     base,
     bytestring,
-    cardano-crypto-class,
     cardano-ledger-api,
     cardano-ledger-babbage:testlib,
     cardano-ledger-binary,

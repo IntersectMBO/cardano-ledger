@@ -626,7 +626,7 @@ costModelsSpec =
 scriptLockedTxOut ::
   forall era.
   AlonzoEraTxOut era =>
-  ScriptHash (EraCrypto era) ->
+  ScriptHash ->
   TxOut era
 scriptLockedTxOut shSpending =
   mkBasicTxOut
@@ -638,7 +638,7 @@ mkRefTxOut ::
   ( BabbageEraTxOut era
   , AlonzoEraImp era
   ) =>
-  ScriptHash (EraCrypto era) ->
+  ScriptHash ->
   ImpTestM era (TxOut era)
 mkRefTxOut sh = do
   kpPayment <- lookupKeyPair =<< freshKeyHash
@@ -653,7 +653,7 @@ setupRefTx ::
   ( BabbageEraTxOut era
   , AlonzoEraImp era
   ) =>
-  ImpTestM era (TxId (EraCrypto era))
+  ImpTestM era TxId
 setupRefTx = do
   let shSpending = hashPlutusScript (redeemerSameAsDatum SPlutusV1)
   refTxOut <- mkRefTxOut shSpending
@@ -672,7 +672,7 @@ testPlutusV1V2Failure ::
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , HasCallStack
   ) =>
-  ScriptHash (EraCrypto era) ->
+  ScriptHash ->
   a ->
   Lens' (TxBody era) a ->
   ContextError era ->
@@ -692,8 +692,8 @@ enactCostModels ::
   ConwayEraImp era =>
   StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
   CostModels ->
-  Credential 'DRepRole (EraCrypto era) ->
-  NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)) ->
+  Credential 'DRepRole ->
+  NonEmpty (Credential 'HotCommitteeRole) ->
   ImpTestM era (GovPurposeId 'PParamUpdatePurpose era)
 enactCostModels prevGovId cms dRep committeeMembers' = do
   initialCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL

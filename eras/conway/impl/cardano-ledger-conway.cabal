@@ -157,7 +157,6 @@ library testlib
     FailT,
     base,
     bytestring,
-    cardano-crypto-class,
     cardano-data:{cardano-data, testlib},
     cardano-ledger-allegra,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},

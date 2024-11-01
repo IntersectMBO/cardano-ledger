@@ -277,7 +277,6 @@ benchmark benchProperty
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-shelley,
-    cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-test,
     small-steps >=1.1,
     tasty,

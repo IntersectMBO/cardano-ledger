@@ -42,7 +42,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Control.DeepSeq (NFData (..))
@@ -105,8 +104,8 @@ class
 
   obligationGovState :: GovState era -> Obligations
 
-instance Crypto c => EraGov (ShelleyEra c) where
-  type GovState (ShelleyEra c) = ShelleyGovState (ShelleyEra c)
+instance EraGov ShelleyEra where
+  type GovState ShelleyEra = ShelleyGovState ShelleyEra
 
   getProposedPPUpdates = Just . sgsCurProposals
 

@@ -249,7 +249,7 @@ proposalsSpec = do
   describe "Proposals" $ do
     describe "Consistency" $ do
       it "Proposals submitted without proper parent fail" $ do
-        let mkCorruptGovActionId :: GovActionId c -> GovActionId c
+        let mkCorruptGovActionId :: GovActionId -> GovActionId
             mkCorruptGovActionId (GovActionId txi (GovActionIx gaix)) =
               GovActionId txi $ GovActionIx $ gaix + 999
         Node p1 [Node _p11 []] <-

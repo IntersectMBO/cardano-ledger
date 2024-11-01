@@ -212,7 +212,7 @@ instance Arbitrary AccountState where
   arbitrary = AccountState <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (IncrementalStake c) where
+instance Arbitrary IncrementalStake where
   arbitrary = IStake <$> arbitrary <*> pure mempty -- Once in Conway Ptrs Map will be removed
   shrink = genericShrink
 
@@ -229,7 +229,7 @@ instance Arbitrary LogWeight where
 instance Arbitrary PerformanceEstimate where
   arbitrary = PerformanceEstimate <$> arbitrary
 
-instance Crypto c => Arbitrary (NonMyopic c) where
+instance Arbitrary NonMyopic where
   arbitrary = NonMyopic <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
@@ -238,11 +238,11 @@ instance Crypto c => Arbitrary (NonMyopic c) where
 ------------------------------------------------------------------------------------------
 deriving newtype instance Arbitrary StakeShare
 
-instance Crypto c => Arbitrary (LeaderOnlyReward c) where
+instance Arbitrary LeaderOnlyReward where
   arbitrary = LeaderOnlyReward <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (PoolRewardInfo c) where
+instance Arbitrary PoolRewardInfo where
   arbitrary =
     PoolRewardInfo
       <$> arbitrary
@@ -256,7 +256,7 @@ instance Crypto c => Arbitrary (PoolRewardInfo c) where
 -- Cardano.Ledger.Shelley.RewardUpdate ---------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (RewardUpdate c) where
+instance Arbitrary RewardUpdate where
   arbitrary =
     RewardUpdate
       <$> arbitrary
@@ -266,14 +266,14 @@ instance Crypto c => Arbitrary (RewardUpdate c) where
       <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (RewardAns c) where
+instance Arbitrary RewardAns where
   arbitrary = RewardAns <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance (Crypto c, a ~ RewardAns c) => Arbitrary (RewardPulser c ShelleyBase a) where
+instance Arbitrary (RewardPulser ShelleyBase RewardAns) where
   arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
-instance Crypto c => Arbitrary (PulsingRewUpdate c) where
+instance Arbitrary PulsingRewUpdate where
   arbitrary =
     oneof
       [ Pulsing <$> arbitrary <*> arbitrary
@@ -281,7 +281,7 @@ instance Crypto c => Arbitrary (PulsingRewUpdate c) where
       ]
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (RewardSnapShot c) where
+instance Arbitrary RewardSnapShot where
   arbitrary =
     RewardSnapShot
       <$> arbitrary
@@ -294,7 +294,7 @@ instance Crypto c => Arbitrary (RewardSnapShot c) where
       <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (FreeVars c) where
+instance Arbitrary FreeVars where
   arbitrary =
     FreeVars
       <$> arbitrary
@@ -441,19 +441,19 @@ instance Era era => Arbitrary (ShelleyTxCert era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (ShelleyDelegCert c) where
+instance Arbitrary ShelleyDelegCert where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (GenesisDelegCert c) where
+instance Arbitrary GenesisDelegCert where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (MIRCert c) where
+instance Arbitrary MIRCert where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (MIRTarget c) where
+instance Arbitrary MIRTarget where
   arbitrary =
     oneof
       [ StakeAddressesMIR <$> arbitrary
@@ -611,8 +611,8 @@ sizedNativeScriptGens n =
   ]
 
 instance
-  (Crypto c, Arbitrary (PParams (ShelleyEra c))) =>
-  Arbitrary (ShelleyGenesis c)
+  Arbitrary (PParams ShelleyEra) =>
+  Arbitrary ShelleyGenesis
   where
   arbitrary = do
     sgSystemStart <- arbitrary
@@ -632,7 +632,7 @@ instance
     sgStaking <- arbitrary
     pure ShelleyGenesis {..}
 
-instance Crypto c => Arbitrary (ShelleyGenesisStaking c) where
+instance Arbitrary ShelleyGenesisStaking where
   arbitrary = ShelleyGenesisStaking <$> arbitrary <*> arbitrary
 
 instance

@@ -55,7 +55,7 @@ import NoThunks.Class (NoThunks (..))
 data ShelleyNewEpochPredFailure era
   = EpochFailure (PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
   | CorruptRewardUpdate
-      !(RewardUpdate (EraCrypto era)) -- The reward update which violates an invariant
+      !RewardUpdate -- The reward update which violates an invariant
   | MirFailure (PredicateFailure (EraRule "MIR" era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -87,11 +87,11 @@ data ShelleyNewEpochEvent era
   = DeltaRewardEvent (Event (EraRule "RUPD" era))
   | RestrainedRewards
       EpochNo
-      (Map.Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
-      (Set (Credential 'Staking (EraCrypto era)))
+      (Map.Map (Credential 'Staking) (Set Reward))
+      (Set (Credential 'Staking))
   | TotalRewardEvent
       EpochNo
-      (Map.Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
+      (Map.Map (Credential 'Staking) (Set Reward))
   | EpochEvent (Event (EraRule "EPOCH" era))
   | MirEvent (Event (EraRule "MIR" era))
   | TotalAdaPotsEvent AdaPots
@@ -111,7 +111,7 @@ instance
   ) =>
   NFData (ShelleyNewEpochEvent era)
 
-type instance EraRuleEvent "NEWEPOCH" (ShelleyEra c) = ShelleyNewEpochEvent (ShelleyEra c)
+type instance EraRuleEvent "NEWEPOCH" ShelleyEra = ShelleyNewEpochEvent ShelleyEra
 
 instance
   ( EraTxOut era
@@ -121,7 +121,7 @@ instance
   , Environment (EraRule "MIR" era) ~ ()
   , State (EraRule "MIR" era) ~ EpochState era
   , Signal (EraRule "MIR" era) ~ ()
-  , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
+  , Event (EraRule "RUPD" era) ~ RupdEvent
   , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
@@ -170,7 +170,7 @@ newEpochTransition ::
   , Signal (EraRule "EPOCH" era) ~ EpochNo
   , Default (PParams era)
   , Default (StashedAVVMAddresses era)
-  , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
+  , Event (EraRule "RUPD" era) ~ RupdEvent
   , Default (State (EraRule "PPUP" era))
   ) =>
   TransitionRule (ShelleyNEWEPOCH era)
@@ -225,7 +225,7 @@ newEpochTransition = do
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
 tellReward ::
-  Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era) =>
+  Event (EraRule "RUPD" era) ~ RupdEvent =>
   ShelleyNewEpochEvent era ->
   Rule (ShelleyNEWEPOCH era) rtype ()
 tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
@@ -258,7 +258,7 @@ updateRewards ::
   EraGov era =>
   EpochState era ->
   EpochNo ->
-  RewardUpdate (EraCrypto era) ->
+  RewardUpdate ->
   Rule (ShelleyNEWEPOCH era) 'Transition (EpochState era)
 updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
   let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_

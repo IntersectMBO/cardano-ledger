@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Conway.GoldenTranslation (
 )
 where
 
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Paths_cardano_ledger_conway (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
 import Test.Cardano.Ledger.Common
@@ -33,4 +33,4 @@ spec =
       check "golden/translations.cbor"
 
 check :: String -> Assertion
-check file = assertTranslationResultsMatchGolden @Conway (getDataFileName file)
+check file = assertTranslationResultsMatchGolden @ConwayEra (getDataFileName file)

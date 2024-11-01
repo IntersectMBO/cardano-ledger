@@ -99,12 +99,12 @@ startStep ::
   forall era.
   EraGov era =>
   EpochSize ->
-  BlocksMade (EraCrypto era) ->
+  BlocksMade ->
   EpochState era ->
   Coin ->
   ActiveSlotCoeff ->
   Word64 ->
-  PulsingRewUpdate (EraCrypto era)
+  PulsingRewUpdate
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSupply asc secparam =
   let SnapShot stake delegs poolParams = ssStakeGo ss
       numStakeCreds, k :: Rational
@@ -220,7 +220,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           totalStake
           (pr ^. ppProtocolVersionL)
           blockProducingPoolInfo
-      pulser :: Pulser (EraCrypto era)
+      pulser :: Pulser
       pulser =
         RSLP
           pulseSize
@@ -233,8 +233,8 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
 
 -- | Run the pulser for a bit. If is has nothing left to do, complete it.
 pulseStep ::
-  PulsingRewUpdate c ->
-  ShelleyBase (PulsingRewUpdate c, RewardEvent c)
+  PulsingRewUpdate ->
+  ShelleyBase (PulsingRewUpdate, RewardEvent)
 pulseStep (Complete r_) = pure (Complete r_, mempty)
 pulseStep p@(Pulsing _ pulser) | done pulser = completeStep p
 pulseStep (Pulsing rewsnap pulser) = do
@@ -245,8 +245,8 @@ pulseStep (Pulsing rewsnap pulser) = do
 -- Phase 3
 
 completeStep ::
-  PulsingRewUpdate c ->
-  ShelleyBase (PulsingRewUpdate c, RewardEvent c)
+  PulsingRewUpdate ->
+  ShelleyBase (PulsingRewUpdate, RewardEvent)
 completeStep (Complete r) = pure (Complete r, mempty)
 completeStep (Pulsing rewsnap pulser) = do
   (p2, !event) <- completeRupd (Pulsing rewsnap pulser)
@@ -258,8 +258,8 @@ completeStep (Pulsing rewsnap pulser) = do
 --   c) Construct the final RewardUpdate
 --   d) Add the leader rewards to both the events and the computed Rewards
 completeRupd ::
-  PulsingRewUpdate c ->
-  ShelleyBase (RewardUpdate c, RewardEvent c)
+  PulsingRewUpdate ->
+  ShelleyBase (RewardUpdate, RewardEvent)
 completeRupd (Complete x) = pure (x, mempty)
 completeRupd
   ( Pulsing
@@ -303,12 +303,12 @@ createRUpd ::
   forall era.
   EraGov era =>
   EpochSize ->
-  BlocksMade (EraCrypto era) ->
+  BlocksMade ->
   EpochState era ->
   Coin ->
   ActiveSlotCoeff ->
   Word64 ->
-  ShelleyBase (RewardUpdate (EraCrypto era))
+  ShelleyBase RewardUpdate
 createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
   let step1 = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam
   (step2, _event) <- pulseStep step1
@@ -327,10 +327,10 @@ decayFactor :: Float
 decayFactor = 0.9
 
 updateNonMyopic ::
-  NonMyopic c ->
+  NonMyopic ->
   Coin ->
-  Map (KeyHash 'StakePool c) Likelihood ->
-  NonMyopic c
+  Map (KeyHash 'StakePool) Likelihood ->
+  NonMyopic
 updateNonMyopic nm rPot_ newLikelihoods =
   nm
     { likelihoodsNM = updatedLikelihoods

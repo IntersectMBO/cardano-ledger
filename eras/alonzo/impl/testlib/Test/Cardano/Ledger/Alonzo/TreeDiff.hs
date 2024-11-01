@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -34,7 +33,7 @@ import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Mary.TreeDiff
 
 -- Scripts
-instance ToExpr (PlutusScript (AlonzoEra c))
+instance ToExpr (PlutusScript AlonzoEra)
 
 instance ToExpr (PlutusScript era) => ToExpr (AlonzoScript era)
 
@@ -157,13 +156,13 @@ instance ToExpr (Event (EraRule "UTXOS" era)) => ToExpr (AlonzoUtxoEvent era)
 instance
   ( ToExpr (EraRuleEvent "PPUP" era)
   , ToExpr (TxOut era)
-  , ToExpr (PlutusWithContext (EraCrypto era))
+  , ToExpr PlutusWithContext
   ) =>
   ToExpr (AlonzoUtxosEvent era)
 
 instance
-  ToExpr (ScriptHash c) =>
-  ToExpr (PlutusWithContext c)
+  ToExpr ScriptHash =>
+  ToExpr PlutusWithContext
   where
   toExpr PlutusWithContext {..} =
     Rec "PlutusWithContext" $

@@ -1,11 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Plutus.Preprocessor (display) where
 
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Plutus.Language (
   Language (..),
   Plutus (..),
@@ -71,7 +68,7 @@ display h = do
           [ indent . indent . ("-- " ++) $
               show $
                 withSLanguage lang $
-                  \slang -> hashPlutusScript @StandardCrypto (asSLanguage slang (Plutus script))
+                  \slang -> hashPlutusScript (asSLanguage slang (Plutus script))
           , indent . indent . ("-- Preprocessed " ++) . shows lang $ " Script:"
           , indent . indent $ "-- @@@"
           ]

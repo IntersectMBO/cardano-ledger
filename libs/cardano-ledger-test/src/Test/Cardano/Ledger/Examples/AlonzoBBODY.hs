@@ -6,7 +6,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -117,6 +116,7 @@ import Test.Cardano.Ledger.Generic.Scriptic (
  )
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
   mkKeyPair,
@@ -139,7 +139,7 @@ alonzoBBODYexamplesP ::
   forall era.
   ( HasTokens era
   , PostShelley era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , EraSegWits era
   , Reflect era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
@@ -166,6 +166,7 @@ alonzoBBODYexamplesP proof =
     ]
 
 initialBBodyState ::
+  forall era.
   ( EraTxOut era
   , PostShelley era
   , EraGov era
@@ -195,15 +196,14 @@ initialBBodyState pf utxo =
         }
 
 testAlonzoBlock ::
-  ( GoodCrypto (EraCrypto era)
-  , HasTokens era
+  ( HasTokens era
   , Scriptic era
   , EraSegWits era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
-  Block (BHeaderView (EraCrypto era)) era
+  Block BHeaderView era
 testAlonzoBlock pf =
   makeNaiveBlock
     [ trustMeP pf True $ validatingTx pf
@@ -217,7 +217,7 @@ testAlonzoBlock pf =
     ]
 
 testAlonzoBadPMDHBlock ::
-  GoodCrypto (EraCrypto era) => Proof era -> Block (BHeaderView (EraCrypto era)) era
+  Proof era -> Block BHeaderView era
 testAlonzoBadPMDHBlock pf@Alonzo = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
 testAlonzoBadPMDHBlock pf@Babbage = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
 testAlonzoBadPMDHBlock pf@Conway = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
@@ -235,7 +235,6 @@ validatingTx ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -278,7 +277,6 @@ validatingTxOut pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4
 notValidatingTx ::
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -316,7 +314,6 @@ validatingTxWithWithdrawal ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -365,7 +362,6 @@ notValidatingTxWithWithdrawal ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -401,7 +397,6 @@ validatingTxWithCert ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
@@ -445,7 +440,6 @@ notValidatingTxWithCert ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
@@ -478,8 +472,7 @@ validatingTxWithMint ::
   ( Scriptic era
   , HasTokens era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   Proof era ->
   Tx era
@@ -495,7 +488,7 @@ validatingTxWithMint pf =
     ]
 
 validatingBodyWithMint ::
-  (HasTokens era, EraTxBody era, Scriptic era, Value era ~ MaryValue (EraCrypto era)) =>
+  (HasTokens era, EraTxBody era, Scriptic era, Value era ~ MaryValue) =>
   Proof era ->
   TxBody era
 validatingBodyWithMint pf =
@@ -512,15 +505,14 @@ validatingBodyWithMint pf =
 validatingRedeemersWithMint :: Era era => Proof era -> Redeemers era
 validatingRedeemersWithMint pf = mkSingleRedeemer pf Minting (Data (PV1.I 42))
 
-multiAsset :: forall era. (Scriptic era, HasTokens era) => Proof era -> MultiAsset (EraCrypto era)
+multiAsset :: forall era. (Scriptic era, HasTokens era) => Proof era -> MultiAsset
 multiAsset pf = forge @era 1 (always 2 pf)
 
 validatingTxWithMintOut ::
   forall era.
   ( HasTokens era
-  , EraTxOut era
   , Scriptic era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   Proof era ->
   TxOut era
@@ -532,8 +524,7 @@ notValidatingTxWithMint ::
   ( Scriptic era
   , HasTokens era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   Proof era ->
   Tx era
@@ -565,7 +556,6 @@ poolMDHTooBigTx ::
   forall era.
   ( Scriptic era
   , EraTxBody era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -589,11 +579,13 @@ poolMDHTooBigTx pf =
         , Txfee (Coin 5)
         ]
       where
-        tooManyBytes = BS.replicate (hashsize @(EraCrypto era) + 1) 0
+        tooManyBytes = BS.replicate (hashsize + 1) 0
         poolParams =
           PoolParams
             { ppId = coerceKeyRole . hashKey . vKey $ someKeys pf
-            , ppVrf = hashVerKeyVRF . vrfVerKey . mkVRFKeyPair @(EraCrypto era) $ RawSeed 0 0 0 0 0
+            , ppVrf =
+                hashVerKeyVRF @MockCrypto . vrfVerKey @MockCrypto . mkVRFKeyPair @MockCrypto $
+                  RawSeed 0 0 0 0 0
             , ppPledge = Coin 0
             , ppCost = Coin 0
             , ppMargin = minBound
@@ -607,11 +599,10 @@ poolMDHTooBigTx pf =
 
 testBBodyState ::
   forall era.
-  ( GoodCrypto (EraCrypto era)
-  , HasTokens era
+  ( HasTokens era
   , PostShelley era
   , EraTxBody era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , EraGov era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , ShelleyEraTxCert era
@@ -649,7 +640,7 @@ testBBodyState pf =
       timelockOut = newTxOut pf [Address $ timelockAddr, Amount (inject $ Coin 1)]
       timelockAddr = Addr Testnet pCred sCred
         where
-          (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 2)
+          (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 2)
           pCred = ScriptHashObj timelockHash
           sCred = StakeRefBase . KeyHashObj . hashKey $ svk
           timelockHash = hashScript @era $ fromNativeScript $ allOf [matchkey 1, after 100] pf
@@ -694,7 +685,7 @@ makeTooBig proof@Alonzo =
     . DelegsFailure
     . DelplFailure
     . PoolFailure
-    $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
+    $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize + 1)
 makeTooBig proof@Babbage =
   ShelleyInAlonzoBbodyPredFailure
     . LedgersFailure
@@ -702,23 +693,23 @@ makeTooBig proof@Babbage =
     . DelegsFailure
     . DelplFailure
     . PoolFailure
-    $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
+    $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize + 1)
 makeTooBig proof@Conway =
   Conway.LedgersFailure
     . LedgerFailure
     . ConwayCertsFailure
     . CertFailure
     . Conway.PoolFailure
-    $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
+    $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize + 1)
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 
-coldKeys :: Crypto c => KeyPair 'BlockIssuer c
+coldKeys :: KeyPair 'BlockIssuer
 coldKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 2 3 2 1)
 
 makeNaiveBlock ::
-  forall era. EraSegWits era => [Tx era] -> Block (BHeaderView (EraCrypto era)) era
+  forall era. EraSegWits era => [Tx era] -> Block BHeaderView era
 makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txSeq
   where
     bhView =
@@ -731,10 +722,10 @@ makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txSeq
         }
     txSeq = toTxSeq $ StrictSeq.fromList txs
 
-scriptStakeCredFail :: forall era. Scriptic era => Proof era -> StakeCredential (EraCrypto era)
+scriptStakeCredFail :: forall era. Scriptic era => Proof era -> StakeCredential
 scriptStakeCredFail pf = ScriptHashObj (alwaysFailsHash 1 pf)
 
-scriptStakeCredSuceed :: forall era. Scriptic era => Proof era -> StakeCredential (EraCrypto era)
+scriptStakeCredSuceed :: forall era. Scriptic era => Proof era -> StakeCredential
 scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 
 -- | The deposit made when 'scriptStakeCredSuceed' was registered. It is also
@@ -742,8 +733,8 @@ scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 successDeposit :: UM.CompactForm Coin
 successDeposit = UM.CompactCoin 7
 
-hashsize :: forall c. Crypto c => Int
-hashsize = fromIntegral $ sizeHash ([] @(HASH c))
+hashsize :: Int
+hashsize = fromIntegral $ sizeHash ([] @HASH)
 
 -- ============================== PParams ===============================
 

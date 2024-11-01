@@ -14,7 +14,6 @@ module Test.Cardano.Ledger.Shelley.Binary.RoundTrip (
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
@@ -74,9 +73,9 @@ roundTripStateEraTypesSpec = do
     roundTripEraTypeSpec @era @EpochState
     roundTripEraTypeSpec @era @NewEpochState
 
-instance Crypto c => RuleListEra (ShelleyEra c) where
+instance RuleListEra ShelleyEra where
   type
-    EraRules (ShelleyEra c) =
+    EraRules ShelleyEra =
       '[ "DELEG"
        , "DELEGS"
        , "DELPL"

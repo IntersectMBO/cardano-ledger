@@ -9,13 +9,12 @@ module Test.Cardano.Ledger.Mary.Translation (
 )
 where
 
-import Cardano.Ledger.Allegra (Allegra)
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (NoGenesis (..))
-import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Translation ()
-import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as S
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -35,9 +34,9 @@ maryEncodeDecodeTests =
     "encoded allegra types can be decoded as mary types"
     [ testProperty
         "decoding metadata"
-        ( embedTripAnnExpectation @(TxAuxData Allegra) @(TxAuxData Mary)
-            (eraProtVerLow @Shelley)
-            (eraProtVerLow @Allegra)
+        ( embedTripAnnExpectation @(TxAuxData AllegraEra) @(TxAuxData MaryEra)
+            (eraProtVerLow @AllegraEra)
+            (eraProtVerLow @MaryEra)
             (\_ _ -> pure ())
         )
     ]
@@ -47,31 +46,31 @@ maryTranslationTests =
   testGroup
     "Mary translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" $
-        translateEraEncoding @Mary @S.ShelleyTx NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @S.ShelleyTx NoGenesis toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" $
-        translateEraEncoding @Mary @S.ShelleyGovState NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @S.ShelleyGovState NoGenesis toCBOR toCBOR
     , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)
     , testProperty "UTxO compatibility" $
-        translateEraEncoding @Mary @S.UTxO NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @S.UTxO NoGenesis toCBOR toCBOR
     , testProperty "UTxOState compatibility" $
-        translateEraEncoding @Mary @S.UTxOState NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @S.UTxOState NoGenesis toCBOR toCBOR
     , testProperty "LedgerState compatibility" $
-        translateEraEncoding @Mary @S.LedgerState NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @S.LedgerState NoGenesis toCBOR toCBOR
     , testProperty "EpochState compatibility" $
-        translateEraEncoding @Mary @S.EpochState NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @S.EpochState NoGenesis toCBOR toCBOR
     , testProperty "ShelleyTxWits compatibility" $
-        translateEraEncoding @Mary @S.ShelleyTxWits NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @S.ShelleyTxWits NoGenesis toCBOR toCBOR
     , testProperty "Update compatibility" (test @S.Update)
     ]
 
 test ::
   forall f.
-  ( EncCBOR (f Allegra)
-  , EncCBOR (f Mary)
-  , TranslateEra Mary f
-  , Show (TranslationError Mary f)
+  ( EncCBOR (f AllegraEra)
+  , EncCBOR (f MaryEra)
+  , TranslateEra MaryEra f
+  , Show (TranslationError MaryEra f)
   ) =>
-  f Allegra ->
+  f AllegraEra ->
   Assertion
-test = translateEraEncCBOR ([] :: [Mary]) NoGenesis
+test = translateEraEncCBOR ([] :: [MaryEra]) NoGenesis

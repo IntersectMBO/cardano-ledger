@@ -41,7 +41,6 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -72,8 +71,7 @@ import Validation
 -- ==========================================================
 
 data AllegraUtxoPredFailure era
-  = BadInputsUTxO
-      !(Set (TxIn (EraCrypto era))) -- The bad transaction inputs
+  = BadInputsUTxO !(Set TxIn) -- The bad transaction inputs
   | OutsideValidityIntervalUTxO
       !ValidityInterval -- transaction's validity interval
       !SlotNo -- current slot
@@ -83,10 +81,10 @@ data AllegraUtxoPredFailure era
   | ValueNotConservedUTxO !(Mismatch 'RelEQ (Value era)) -- Consumed, then produced
   | WrongNetwork
       !Network -- the expected network id
-      !(Set (Addr (EraCrypto era))) -- the set of addresses with incorrect network IDs
+      !(Set Addr) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       !Network -- the expected network id
-      !(Set (RewardAccount (EraCrypto era))) -- the set of reward addresses with incorrect network IDs
+      !(Set RewardAccount) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
@@ -98,14 +96,14 @@ data AllegraUtxoPredFailure era
       ![TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
-type instance EraRuleFailure "UTXO" (AllegraEra c) = AllegraUtxoPredFailure (AllegraEra c)
+type instance EraRuleFailure "UTXO" AllegraEra = AllegraUtxoPredFailure AllegraEra
 
-instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure (AllegraEra c)
+instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure AllegraEra
 
-instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (AllegraEra c) where
+instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure AllegraEra where
   injectFailure = UpdateFailure
 
-instance InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure (AllegraEra c) where
+instance InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure AllegraEra where
   injectFailure = shelleyToAllegraUtxoPredFailure
 
 deriving stock instance
@@ -139,7 +137,7 @@ instance
 
 data AllegraUtxoEvent era
   = UpdateEvent (Event (EraRule "PPUP" era))
-  | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
+  | TotalDeposits (SafeHash EraIndependentTxBody) Coin
   | -- | The UTxOs consumed and created by a signal tx
     TxUTxODiff
       -- | UTxO consumed
@@ -340,7 +338,6 @@ instance
 --------------------------------------------------------------------------------
 instance
   ( Era era
-  , Crypto (EraCrypto era)
   , EncCBOR (Value era)
   , EncCBOR (TxOut era)
   , EncCBOR (EraRuleFailure "PPUP" era)

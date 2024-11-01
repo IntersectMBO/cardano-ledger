@@ -8,7 +8,7 @@ module Bench.Cardano.Ledger.TxOut (benchTxOut) where
 
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (decodeFull, serialize)
@@ -16,7 +16,6 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.SafeHash
@@ -30,24 +29,24 @@ import Lens.Micro
 
 benchTxOut :: Benchmark
 benchTxOut =
-  let ada :: MaryValue StandardCrypto
+  let ada :: MaryValue
       ada = inject (Coin 100)
-      key :: Int -> Credential 'Payment StandardCrypto
+      key :: Int -> Credential 'Payment
       key = KeyHashObj . payAddr28
-      stake :: StakeReference StandardCrypto
+      stake :: StakeReference
       stake = StakeRefBase (KeyHashObj stakeAddr28)
-      addr :: Int -> Addr StandardCrypto
+      addr :: Int -> Addr
       addr n = Addr Mainnet (key n) stake
-      value :: MaryValue StandardCrypto
+      value :: MaryValue
       value =
         MaryValue (Coin 200) $
           MultiAsset (singleton (PolicyID policyId28) (singleton assName 217))
-      txOutAddr :: Int -> TxOut Alonzo
+      txOutAddr :: Int -> TxOut AlonzoEra
       txOutAddr n =
         mkBasicTxOut (addr n) value & dataHashTxOutL .~ SJust dataHash32
-      txOutAddrAdaOnly :: Int -> TxOut Alonzo
+      txOutAddrAdaOnly :: Int -> TxOut AlonzoEra
       txOutAddrAdaOnly n = mkBasicTxOut (addr n) ada
-      txOutAddrAdaOnlyDataHash :: Int -> TxOut Alonzo
+      txOutAddrAdaOnlyDataHash :: Int -> TxOut AlonzoEra
       txOutAddrAdaOnlyDataHash n =
         mkBasicTxOut (addr n) ada & dataHashTxOutL .~ SJust dataHash32
       count :: Int
@@ -77,29 +76,29 @@ benchTxOut =
 constructTxOutAlonzoBench ::
   Int ->
   String ->
-  (Int -> Addr StandardCrypto) ->
-  MaryValue StandardCrypto ->
-  StrictMaybe (DataHash StandardCrypto) ->
+  (Int -> Addr) ->
+  MaryValue ->
+  StrictMaybe DataHash ->
   Benchmark
 constructTxOutAlonzoBench count name mkAddr value !mdh =
   cvalue `seq`
     bgroup
       name
       [ env (pure (mkAddr <$> [1 .. count])) $
-          bench "TxOut" . nf (map (\addr -> AlonzoTxOut addr value mdh :: TxOut Alonzo))
+          bench "TxOut" . nf (map (\addr -> AlonzoTxOut addr value mdh :: TxOut AlonzoEra))
       , env (pure (compactAddr . mkAddr <$> [1 .. count])) $
-          bench "TxOutCompact" . nf (map (\caddr -> mkTxOutCompact caddr cvalue :: TxOut Alonzo))
+          bench "TxOutCompact" . nf (map (\caddr -> mkTxOutCompact caddr cvalue :: TxOut AlonzoEra))
       ]
   where
     cvalue = maybe (error "Uncompactible") id $ toCompact value
     mkTxOutCompact ::
-      CompactAddr StandardCrypto -> CompactForm (MaryValue StandardCrypto) -> TxOut Alonzo
+      CompactAddr -> CompactForm MaryValue -> TxOut AlonzoEra
     mkTxOutCompact =
       case mdh of
         SNothing -> TxOutCompact
         SJust dh -> \a v -> TxOutCompactDH a v dh
 
-accessTxOutAlonzoBench :: Int -> String -> (Int -> TxOut Alonzo) -> Benchmark
+accessTxOutAlonzoBench :: Int -> String -> (Int -> TxOut AlonzoEra) -> Benchmark
 accessTxOutAlonzoBench count name mkTxOuts =
   bgroup
     name
@@ -127,18 +126,18 @@ accessTxOutAlonzoBench count name mkTxOuts =
         bench "coinTxOutL" $ nf (map (^. coinTxOutL)) txOuts
     ]
 
-serializeTxOutAlonzoBench :: Int -> String -> (Int -> TxOut Alonzo) -> Benchmark
+serializeTxOutAlonzoBench :: Int -> String -> (Int -> TxOut AlonzoEra) -> Benchmark
 serializeTxOutAlonzoBench count name mkTxOuts =
   bgroup
     name
     [ env (pure (mkTxOuts <$> [1 .. count])) $ bench "EncCBOR" . nf (map (serialize v))
     , env (pure (serialize v . mkTxOuts <$> [1 .. count])) $
-        bench "DecCBOR" . nf (map (either (error . show) (id @(TxOut Alonzo)) . decodeFull v))
+        bench "DecCBOR" . nf (map (either (error . show) (id @(TxOut AlonzoEra)) . decodeFull v))
     ]
   where
-    v = eraProtVerHigh @Alonzo
+    v = eraProtVerHigh @AlonzoEra
 
-payAddr28 :: Int -> KeyHash 'Payment StandardCrypto
+payAddr28 :: Int -> KeyHash 'Payment
 payAddr28 n =
   let i = n `mod` 10
       prefix = T.pack (take 6 (cycle (show i)))
@@ -147,19 +146,19 @@ payAddr28 n =
           hashFromTextAsHex
             (prefix <> "0405060708090a0b0c0d0e0f12131415161718191a1b1c1d1e")
 
-stakeAddr28 :: KeyHash 'Staking StandardCrypto
+stakeAddr28 :: KeyHash 'Staking
 stakeAddr28 =
   KeyHash $
     fromJust $
       hashFromTextAsHex "2122232425262728292a2b2c2d2e2f32333435363738393a3b3c3d3e"
 
-dataHash32 :: DataHash StandardCrypto
+dataHash32 :: DataHash
 dataHash32 =
   unsafeMakeSafeHash $
     fromJust $
       hashFromTextAsHex "404144434445464748494a4b4c4d4e4f505152555455565758595a5b5c5d5e5f"
 
-policyId28 :: ScriptHash StandardCrypto
+policyId28 :: ScriptHash
 policyId28 =
   ScriptHash $
     fromJust $

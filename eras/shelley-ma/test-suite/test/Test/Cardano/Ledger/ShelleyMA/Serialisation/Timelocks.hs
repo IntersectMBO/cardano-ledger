@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks (
 )
 where
 
-import Cardano.Ledger.Allegra (Allegra)
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
   Timelock (..),
@@ -21,9 +21,9 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Core (NativeScript, eraProtVerHigh, eraProtVerLow)
-import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.SafeHash (originalBytes)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
   pattern RequireAllOf,
@@ -57,18 +57,18 @@ timelockTests =
   testGroup
     "Timelock tests"
     $ ( testCase "Timelock examples roundtrip - Allegra" . roundTripAnnExpectation
-          <$> [s1 @Allegra, s2 @Allegra, s3 @Allegra]
+          <$> [s1 @AllegraEra, s2 @AllegraEra, s3 @AllegraEra]
       )
       ++ ( testCase "Timelock examples roundtrip - Mary" . roundTripAnnExpectation
-            <$> [s1 @Mary, s2 @Mary, s3 @Mary]
+            <$> [s1 @MaryEra, s2 @MaryEra, s3 @MaryEra]
          )
-      ++ [ testProperty "roundtripTimelock prop - Allegra" $ roundTripAnnExpectation @(Timelock Allegra)
-         , testProperty "roundtripTimelock prop - Mary" $ roundTripAnnExpectation @(Timelock Mary)
+      ++ [ testProperty "roundtripTimelock prop - Allegra" $ roundTripAnnExpectation @(Timelock AllegraEra)
+         , testProperty "roundtripTimelock prop - Mary" $ roundTripAnnExpectation @(Timelock MaryEra)
          , testProperty "MultiSig deserialises as Timelock" $
-            embedTripAnnExpectation @(MultiSig Shelley)
-              @(Timelock Allegra)
-              (eraProtVerHigh @Shelley)
-              (eraProtVerLow @Allegra)
+            embedTripAnnExpectation @(MultiSig ShelleyEra)
+              @(Timelock AllegraEra)
+              (eraProtVerHigh @ShelleyEra)
+              (eraProtVerLow @AllegraEra)
               ( \timelock multiSig ->
                   expectExprEqual (HexBytes (originalBytes timelock)) (HexBytes (originalBytes multiSig))
               )

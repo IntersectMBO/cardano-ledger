@@ -11,15 +11,15 @@ import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck
 
-genTxShelley :: IO (Tx (ShelleyEra TestCrypto))
+genTxShelley :: IO (Tx ShelleyEra)
 genTxShelley = generate arbitrary
 
 -- | Generate an arbitrary Allegra transaction
-genTxAllegra :: IO (Tx (AllegraEra TestCrypto))
+genTxAllegra :: IO (Tx AllegraEra)
 genTxAllegra = generate arbitrary
 
 -- | Generate an arbitrary Mary transaction
-genTxMary :: IO (Tx (MaryEra TestCrypto))
+genTxMary :: IO (Tx MaryEra)
 genTxMary = generate arbitrary
 
 benchTxGeneration :: Benchmark

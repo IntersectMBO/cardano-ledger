@@ -29,7 +29,7 @@ import Test.Cardano.Ledger.Alonzo.TreeDiff
 deriving newtype instance ToExpr CoinPerByte
 
 -- Scripts
-instance ToExpr (PlutusScript (BabbageEra c))
+instance ToExpr (PlutusScript BabbageEra)
 
 -- PlutusContext
 instance ToExpr (PlutusPurpose AsIx era) => ToExpr (BabbageContextError era)
@@ -41,7 +41,7 @@ instance ToExpr (BabbagePParams Identity era)
 
 -- TxOut
 instance
-  ( ToExpr (CompactAddr (EraCrypto era))
+  ( ToExpr CompactAddr
   , ToExpr (CompactForm (Value era))
   , ToExpr (Script era)
   ) =>

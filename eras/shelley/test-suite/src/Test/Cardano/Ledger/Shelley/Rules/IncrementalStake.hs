@@ -176,7 +176,7 @@ checkIncrementalStake es =
       )
       (stake === istake)
 
-tersediffincremental :: String -> Stake c -> Stake c -> String
+tersediffincremental :: String -> Stake -> Stake -> String
 tersediffincremental message (Stake a) (Stake c) =
   tersemapdiffs (message ++ " " ++ "hashes") (mp a) (mp c)
   where
@@ -190,22 +190,22 @@ stakeDistr ::
   UTxO era ->
   DState era ->
   PState era ->
-  SnapShot (EraCrypto era)
+  SnapShot
 stakeDistr u ds ps =
   SnapShot
     (Stake $ VMap.fromMap (UM.compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
     (VMap.fromMap delegs)
     (VMap.fromMap poolParams)
   where
-    rewards' :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
+    rewards' :: Map.Map (Credential 'Staking) Coin
     rewards' = UM.rewardMap (dsUnified ds)
-    delegs :: Map.Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+    delegs :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)
     delegs = UM.sPoolMap (dsUnified ds)
     ptrs' = ptrsMap ds
     PState {psStakePoolParams = poolParams} = ps
-    stakeRelation :: Map (Credential 'Staking (EraCrypto era)) Coin
+    stakeRelation :: Map (Credential 'Staking) Coin
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
-    activeDelegs :: Map.Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+    activeDelegs :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
 
 -- | Sum up all the Coin for each staking Credential. This function has an
@@ -213,10 +213,10 @@ stakeDistr u ds ps =
 aggregateUtxoCoinByCredential ::
   forall era.
   EraTxOut era =>
-  Map Ptr (Credential 'Staking (EraCrypto era)) ->
+  Map Ptr (Credential 'Staking) ->
   UTxO era ->
-  Map (Credential 'Staking (EraCrypto era)) Coin ->
-  Map (Credential 'Staking (EraCrypto era)) Coin
+  Map (Credential 'Staking) Coin ->
+  Map (Credential 'Staking) Coin
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   Map.foldl' accum initial u
   where

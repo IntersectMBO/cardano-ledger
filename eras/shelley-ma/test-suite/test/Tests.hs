@@ -5,9 +5,9 @@
 
 module Main where
 
-import Cardano.Ledger.Allegra (Allegra, AllegraEra)
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Mary (Mary, MaryEra)
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
 import System.Environment (lookupEnv)
@@ -31,9 +31,9 @@ import Test.QuickCheck (Args (maxSuccess), stdArgs)
 import Test.Tasty
 import qualified Test.Tasty.QuickCheck as TQC
 
-type instance EraRule "TICKN" (MaryEra _c) = TPraos.TICKN
+type instance EraRule "TICKN" MaryEra = TPraos.TICKN
 
-type instance EraRule "TICKN" (AllegraEra _c) = TPraos.TICKN
+type instance EraRule "TICKN" AllegraEra = TPraos.TICKN
 
 main :: IO ()
 main = do
@@ -61,11 +61,11 @@ allegraTests =
     [ allegraTranslationTests
     , ( localOption
           (TQC.QuickCheckMaxRatio 50)
-          (ClassifyTraces.relevantCasesAreCovered @Allegra (maxSuccess stdArgs))
+          (ClassifyTraces.relevantCasesAreCovered @AllegraEra (maxSuccess stdArgs))
       )
-    , AdaPreservation.tests @Allegra @(ShelleyLEDGER Allegra) (maxSuccess stdArgs)
-    , ClassifyTraces.onlyValidChainSignalsAreGenerated @Allegra
-    , WitVKeys.tests @(EraCrypto Allegra)
+    , AdaPreservation.tests @AllegraEra @(ShelleyLEDGER AllegraEra) (maxSuccess stdArgs)
+    , ClassifyTraces.onlyValidChainSignalsAreGenerated @AllegraEra
+    , WitVKeys.tests
     , testScriptPostTranslation
     ]
 
@@ -85,8 +85,8 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        (Shelley.commonTests @Allegra @(ShelleyLEDGER Allegra))
+        (Shelley.commonTests @AllegraEra @(ShelleyLEDGER AllegraEra))
     , testGroup
         "Mary Ledger - nightly"
-        (Shelley.commonTests @Mary @(ShelleyLEDGER Mary))
+        (Shelley.commonTests @MaryEra @(ShelleyLEDGER MaryEra))
     ]

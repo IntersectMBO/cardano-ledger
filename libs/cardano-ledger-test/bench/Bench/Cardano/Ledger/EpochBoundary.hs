@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
@@ -5,7 +6,7 @@
 -- | Benchmarks for things which happen on an epoch boundary.
 module Bench.Cardano.Ledger.EpochBoundary where
 
-import Cardano.Crypto.DSIGN.Mock
+import Cardano.Crypto.Hash (hashFromTextAsHex)
 import Cardano.Ledger.Address (Addr (Addr), compactAddr)
 import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (Coin))
@@ -18,7 +19,7 @@ import Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
  )
-import Cardano.Ledger.Keys (VKey (..), hashKey)
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.SafeHash (
   SafeToHash (makeHashWithExplicitProxys),
@@ -38,23 +39,31 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy
+import qualified Data.Text as T
 import Data.Word (Word64)
-import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (aggregateUtxoCoinByCredential)
 
-type TestEra = MaryEra TestCrypto
+type TestEra = MaryEra
 
-payCred :: PaymentCredential TestCrypto
-payCred = KeyHashObj (hashKey . VKey $ VerKeyMockDSIGN 0)
+payCred :: PaymentCredential
+payCred = KeyHashObj $ payAddr28 0
+  where
+    payAddr28 :: Int -> KeyHash 'Payment
+    payAddr28 n =
+      let i = n `mod` 10
+          prefix = T.pack (take 6 (cycle (show i)))
+       in KeyHash $
+            fromJust $
+              hashFromTextAsHex
+                (prefix <> "0405060708090a0b0c0d0e0f12131415161718191a1b1c1d1e")
 
 -- | Infinite list of transaction inputs
-txIns :: [TxIn TestCrypto]
+txIns :: [TxIn]
 txIns = [minBound ..] <&> TxIn txId
   where
     txId =
       TxId . castSafeHash $
         makeHashWithExplicitProxys
-          (Proxy @TestCrypto)
           (Proxy @EraIndependentTxBody)
           ("Galadriel" :: ByteString)
 
@@ -66,7 +75,7 @@ txOutUnstaked =
     (fromJust . toCompact . Val.inject $ Coin 1000)
 
 -- | Generate TxOuts for each stake credential.
-txOutsFromCreds :: [StakeCredential TestCrypto] -> [TxOut TestEra]
+txOutsFromCreds :: [StakeCredential] -> [TxOut TestEra]
 txOutsFromCreds creds =
   [ TxOutCompact
       (compactAddr $ Addr Testnet payCred (StakeRefBase cred))
@@ -87,13 +96,17 @@ txOutsFromPtrs ptrs =
     coinVal = fromJust . toCompact . Val.inject $ Coin 200
 
 -- | Generate n stake credentials
-stakeCreds :: Word64 -> [StakeCredential TestCrypto]
-stakeCreds n =
-  [0 .. n]
-    <&> (\i -> KeyHashObj (hashKey . VKey $ VerKeyMockDSIGN i))
+stakeCreds :: Word64 -> [StakeCredential]
+stakeCreds n = replicate (fromIntegral n) $ KeyHashObj stakeAddr28
+  where
+    stakeAddr28 :: KeyHash 'Staking
+    stakeAddr28 =
+      KeyHash $
+        fromJust $
+          hashFromTextAsHex "2122232425262728292a2b2c2d2e2f32333435363738393a3b3c3d3e"
 
 -- | Generate pointers to a list of stake credentials
-stakePtrs :: [StakeCredential c] -> Map Ptr (StakeCredential c)
+stakePtrs :: [StakeCredential] -> Map Ptr StakeCredential
 stakePtrs creds =
   Map.fromList
     [ (Ptr (SlotNo i) minBound minBound, cred)
@@ -127,7 +140,7 @@ utxo noUnstaked noBase ptrMap dupFactor =
     cycleTimes n xs = xs ++ cycleTimes (n - 1) xs
 
 data AggTestSetup = AggTestSetup
-  { atsPtrMap :: !(Map Ptr (StakeCredential TestCrypto))
+  { atsPtrMap :: !(Map Ptr StakeCredential)
   , atsUTxO :: !(UTxO TestEra)
   }
 

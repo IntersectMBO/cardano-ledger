@@ -12,11 +12,7 @@ module Test.Cardano.Ledger.Mary.ImpTest (
   mkTokenMintingTx,
 ) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
-import Cardano.Crypto.Hash (Hash)
-import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Allegra.Scripts
-import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
@@ -26,16 +22,7 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Mary.TreeDiff ()
 
-instance
-  ( Crypto c
-  , NFData (SigDSIGN (DSIGN c))
-  , NFData (VerKeyDSIGN (DSIGN c))
-  , ADDRHASH c ~ Blake2b_224
-  , DSIGN c ~ Ed25519DSIGN
-  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  ShelleyEraImp (MaryEra c)
-  where
+instance ShelleyEraImp MaryEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = shelleyFixupTx
 
@@ -43,21 +30,13 @@ class
   ( ShelleyEraImp era
   , MaryEraTxBody era
   , NativeScript era ~ Timelock era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   MaryEraImp era
 
-instance
-  ( Crypto c
-  , NFData (SigDSIGN (DSIGN c))
-  , NFData (VerKeyDSIGN (DSIGN c))
-  , ADDRHASH c ~ Blake2b_224
-  , DSIGN c ~ Ed25519DSIGN
-  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  MaryEraImp (MaryEra c)
+instance MaryEraImp MaryEra
 
-mkTokenMintingTx :: MaryEraImp era => ScriptHash (EraCrypto era) -> ImpTestM era (Tx era)
+mkTokenMintingTx :: MaryEraImp era => ScriptHash -> ImpTestM era (Tx era)
 mkTokenMintingTx sh = do
   name <- arbitrary
   count <- choose (1, 10)

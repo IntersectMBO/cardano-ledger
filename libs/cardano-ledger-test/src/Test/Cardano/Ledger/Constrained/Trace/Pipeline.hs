@@ -8,7 +8,6 @@
 
 module Test.Cardano.Ledger.Constrained.Trace.Pipeline where
 
-import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Core (Era, EraRule, Tx)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
@@ -214,10 +213,10 @@ sts1 state ctx sig apply test =
           )
     )
 
-proofx :: Proof (BabbageEra StandardCrypto)
+proofx :: Proof BabbageEra
 proofx = Babbage
 
-genLedgerState :: Gen (Env Babbage, Subst Babbage, LedgerState Babbage)
+genLedgerState :: Gen (Env BabbageEra, Subst BabbageEra, LedgerState BabbageEra)
 genLedgerState = do
   (env, sub, _graph) <- solvePipeline (ledgerPipeline def proofx)
   ledgerstate <- monadTyped $ runTarget env (ledgerStateT proofx)

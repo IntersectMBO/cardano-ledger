@@ -9,13 +9,11 @@ import Cardano.Ledger.Address (Addr (..), compactAddr)
 import Cardano.Ledger.BaseTypes (mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (toCompact)
-import Cardano.Ledger.Core (Era (..))
 import Cardano.Ledger.Credential (
   Credential (..),
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -51,12 +49,12 @@ genTestCase ::
   Int -> -- The size of the utxo
   Int -> -- the number of addresses
   Gen
-    ( DState (ShelleyEra StandardCrypto)
-    , PState (ShelleyEra StandardCrypto)
-    , UTxO (ShelleyEra StandardCrypto)
+    ( DState ShelleyEra
+    , PState ShelleyEra
+    , UTxO ShelleyEra
     )
 genTestCase numUTxO numAddr = do
-  addrs :: [Addr StandardCrypto] <- replicateM numAddr arbitrary
+  addrs :: [Addr] <- replicateM numAddr arbitrary
   let packedAddrs = Seq.fromList addrs
   txOuts <- replicateM numUTxO $ do
     i <- choose (0, numAddr - 1)
@@ -72,17 +70,17 @@ genTestCase numUTxO numAddr = do
       liveptrs = [p | ShelleyTxOut (Addr _ _ (StakeRefPtr p)) _ <- txOuts]
       m = length liveptrs `div` 2
   moreptrs :: [Ptr] <- replicateM m arbitrary
-  creds :: [Credential 'Staking StandardCrypto] <- replicateM (m + m) arbitrary
-  let ptrs' :: Map Ptr (Credential 'Staking StandardCrypto)
+  creds :: [Credential 'Staking] <- replicateM (m + m) arbitrary
+  let ptrs' :: Map Ptr (Credential 'Staking)
       ptrs' = Map.fromList (zip (liveptrs ++ moreptrs) creds)
-  rewards :: [(Credential 'Staking StandardCrypto, Coin)] <-
+  rewards :: [(Credential 'Staking, Coin)] <-
     replicateM (3 * (numUTxO `div` 4)) arbitrary
-  let rewards' :: Map (Credential 'Staking StandardCrypto) Coin
+  let rewards' :: Map (Credential 'Staking) Coin
       rewards' = Map.fromList rewards
 
-  keyhash :: [KeyHash 'StakePool StandardCrypto] <- replicateM 400 arbitrary
+  keyhash :: [KeyHash 'StakePool] <- replicateM 400 arbitrary
   let delegs = Map.fromList (zip creds (cycle (take 200 keyhash)))
-  reps :: [DRep StandardCrypto] <- replicateM (m `div` 10) arbitrary
+  reps :: [DRep] <- replicateM (m `div` 10) arbitrary
   let dreps = Map.fromList (zip (take (m `div` 5) creds) (cycle reps))
   let pp = alicePoolParams
   let poolParams = Map.fromList (zip keyhash (replicate 400 pp))
@@ -90,11 +88,11 @@ genTestCase numUTxO numAddr = do
   pure (dstate, pstate, UTxO utxo)
 
 makeStatePair ::
-  Map (Credential 'Staking (EraCrypto era)) Coin ->
-  Map Ptr (Credential 'Staking (EraCrypto era)) ->
-  Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)) ->
-  Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)) ->
-  Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
+  Map (Credential 'Staking) Coin ->
+  Map Ptr (Credential 'Staking) ->
+  Map (Credential 'Staking) (KeyHash 'StakePool) ->
+  Map (Credential 'Staking) DRep ->
+  Map (KeyHash 'StakePool) PoolParams ->
   (DState era, PState era)
 makeStatePair rewards' ptrs' sPools dReps poolParams =
   ( DState

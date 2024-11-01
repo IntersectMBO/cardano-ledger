@@ -65,26 +65,26 @@ import Test.Cardano.Ledger.TerseTools
 
 -- ===========================
 
-instance Terse (KeyHash 'Genesis c) where
+instance Terse (KeyHash 'Genesis) where
   terse x = show (pcKeyHash x)
 
-instance Terse (PParamsUpdate (ShelleyEra c)) where
-  terse x = show x
+instance Terse (PParamsUpdate ShelleyEra) where
+  terse = show
 
-instance Terse (PParamsUpdate (AllegraEra c)) where
-  terse x = show x
+instance Terse (PParamsUpdate AllegraEra) where
+  terse = show
 
-instance Terse (PParamsUpdate (MaryEra c)) where
-  terse x = show x
+instance Terse (PParamsUpdate MaryEra) where
+  terse = show
 
-instance Terse (PParamsUpdate (AlonzoEra c)) where
-  terse x = show x
+instance Terse (PParamsUpdate AlonzoEra) where
+  terse = show
 
-instance Terse (PParamsUpdate (BabbageEra c)) where
-  terse x = show x
+instance Terse (PParamsUpdate BabbageEra) where
+  terse = show
 
-instance Terse (PParamsUpdate (ConwayEra c)) where
-  terse x = show x
+instance Terse (PParamsUpdate ConwayEra) where
+  terse = show
 
 -- ========================================
 -- Helper functions

@@ -46,7 +46,6 @@ import Test.Cardano.Ledger.Constrained.Shrink
 import Test.Cardano.Ledger.Constrained.Size (Size (SzRng))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.Cardano.Ledger.Generic.Proof (Standard)
 import Test.QuickCheck hiding (getSize, total)
 
 {-
@@ -583,7 +582,7 @@ shrinkPreds (preds, env) =
 
 -- Tests ---
 
-type TestEra = ShelleyEra Standard
+type TestEra = ShelleyEra
 
 testProof :: Proof TestEra
 testProof = Shelley

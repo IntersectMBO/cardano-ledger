@@ -4,7 +4,7 @@
 module Test.Cardano.Ledger.Mary.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Core
-import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary (MaryEra)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
   cddlRoundTripAnnCborSpec,
@@ -18,14 +18,14 @@ import Test.Cardano.Ledger.Mary.CDDL (maryCDDL)
 spec :: Spec
 spec =
   describe "CDDL" $ do
-    let v = eraProtVerLow @Mary
+    let v = eraProtVerLow @MaryEra
     describe "Ruby-based" $ beforeAllCddlFile 3 readMaryCddlFiles $ do
-      cddlRoundTripCborSpec @(Value Mary) v "value"
-      cddlRoundTripAnnCborSpec @(TxBody Mary) v "transaction_body"
-      cddlRoundTripAnnCborSpec @(Script Mary) v "native_script"
-      cddlRoundTripAnnCborSpec @(TxAuxData Mary) v "auxiliary_data"
+      cddlRoundTripCborSpec @(Value MaryEra) v "value"
+      cddlRoundTripAnnCborSpec @(TxBody MaryEra) v "transaction_body"
+      cddlRoundTripAnnCborSpec @(Script MaryEra) v "native_script"
+      cddlRoundTripAnnCborSpec @(TxAuxData MaryEra) v "auxiliary_data"
     describe "Huddle" $ specWithHuddle maryCDDL 100 $ do
-      huddleRoundTripCborSpec @(Value Mary) v "value"
-      huddleRoundTripAnnCborSpec @(TxBody Mary) v "transaction_body"
-      huddleRoundTripAnnCborSpec @(TxAuxData Mary) v "auxiliary_data"
-      huddleRoundTripAnnCborSpec @(Script Mary) v "native_script"
+      huddleRoundTripCborSpec @(Value MaryEra) v "value"
+      huddleRoundTripAnnCborSpec @(TxBody MaryEra) v "transaction_body"
+      huddleRoundTripAnnCborSpec @(TxAuxData MaryEra) v "auxiliary_data"
+      huddleRoundTripAnnCborSpec @(Script MaryEra) v "native_script"

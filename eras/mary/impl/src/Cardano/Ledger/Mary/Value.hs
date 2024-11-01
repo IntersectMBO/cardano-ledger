@@ -67,7 +67,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Coin (Coin (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
+import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
@@ -143,7 +143,7 @@ instance DecCBOR AssetName where
       else pure $ AssetName an
 
 -- | Policy ID
-newtype PolicyID c = PolicyID {policyID :: ScriptHash c}
+newtype PolicyID = PolicyID {policyID :: ScriptHash}
   deriving
     ( Show
     , Eq
@@ -160,65 +160,65 @@ newtype PolicyID c = PolicyID {policyID :: ScriptHash c}
     )
 
 -- | The MultiAssets map
-newtype MultiAsset c = MultiAsset (Map (PolicyID c) (Map AssetName Integer))
+newtype MultiAsset = MultiAsset (Map PolicyID (Map AssetName Integer))
   deriving (Show, Generic, ToJSON, EncCBOR)
 
-instance Crypto c => Eq (MultiAsset c) where
+instance Eq MultiAsset where
   MultiAsset x == MultiAsset y = pointWise (pointWise (==)) x y
 
-instance NFData (MultiAsset cypto) where
+instance NFData MultiAsset where
   rnf (MultiAsset m) = rnf m
 
-instance NoThunks (MultiAsset c)
+instance NoThunks MultiAsset
 
-instance Semigroup (MultiAsset c) where
+instance Semigroup MultiAsset where
   MultiAsset m1 <> MultiAsset m2 =
     MultiAsset (canonicalMapUnion (canonicalMapUnion (+)) m1 m2)
 
-instance Monoid (MultiAsset c) where
+instance Monoid MultiAsset where
   mempty = MultiAsset mempty
 
-instance Group (MultiAsset c) where
+instance Group MultiAsset where
   invert (MultiAsset m) =
     MultiAsset (canonicalMap (canonicalMap ((-1 :: Integer) *)) m)
 
-instance Crypto c => DecCBOR (MultiAsset c) where
+instance DecCBOR MultiAsset where
   decCBOR = decodeMultiAsset decodeIntegerBounded64
 
 -- | The Value representing MultiAssets
-data MaryValue c = MaryValue !Coin !(MultiAsset c)
+data MaryValue = MaryValue !Coin !MultiAsset
   deriving (Show, Generic)
 
-instance Crypto c => Eq (MaryValue c) where
+instance Eq MaryValue where
   x == y = pointwise (==) x y
 
-instance NFData (MaryValue c) where
+instance NFData MaryValue where
   rnf (MaryValue c m) = c `deepseq` rnf m
 
-instance NoThunks (MaryValue c)
+instance NoThunks MaryValue
 
-instance Semigroup (MaryValue c) where
+instance Semigroup MaryValue where
   MaryValue c1 m1 <> MaryValue c2 m2 =
     MaryValue (c1 <> c2) (m1 <> m2)
 
-instance Monoid (MaryValue c) where
+instance Monoid MaryValue where
   mempty = MaryValue mempty mempty
 
-instance Group (MaryValue c) where
+instance Group MaryValue where
   invert (MaryValue c m) =
     MaryValue
       (invert c)
       (invert m)
 
-instance Abelian (MaryValue c)
+instance Abelian MaryValue
 
-instance Inject Coin (MaryValue c) where
+instance Inject Coin MaryValue where
   inject c = MaryValue c (MultiAsset Map.empty)
 
 -- ===================================================
 -- Make the Val instance of MaryValue
 
-instance Crypto c => Val (MaryValue c) where
+instance Val MaryValue where
   s <×> MaryValue c (MultiAsset m) =
     MaryValue
       (s <×> c)
@@ -291,10 +291,7 @@ roundupBytesToWords b = quot (b + wordLength - 1) wordLength
 -- ==============================================================
 -- CBOR
 
-decodeMaryValue ::
-  forall c s.
-  Crypto c =>
-  Decoder s (MaryValue c)
+decodeMaryValue :: Decoder s MaryValue
 decodeMaryValue = do
   tt <- peekTokenType
   case tt of
@@ -305,10 +302,7 @@ decodeMaryValue = do
     TypeListLenIndef -> decodeValuePair (toInteger <$> decodeWord64)
     _ -> fail $ "MaryValue: expected array or int, got " ++ show tt
 
-decodeValuePair ::
-  Crypto c =>
-  (forall t. Decoder t Integer) ->
-  Decoder s (MaryValue c)
+decodeValuePair :: (forall t. Decoder t Integer) -> Decoder s MaryValue
 decodeValuePair decodeMultiAssetAmount =
   decode $
     RecD MaryValue
@@ -322,7 +316,7 @@ decodeValuePair decodeMultiAssetAmount =
 --
 -- In both cases MultiAsset cannot be too big for compact representation and it must not
 -- contain empty Maps.
-decodeMultiAsset :: Crypto c => (forall t. Decoder t Integer) -> Decoder s (MultiAsset c)
+decodeMultiAsset :: (forall t. Decoder t Integer) -> Decoder s MultiAsset
 decodeMultiAsset decodeAmount = do
   ma <-
     ifDecoderVersionAtLeast
@@ -340,7 +334,7 @@ decodeMultiAsset decodeAmount = do
     decodeWithPrunning =
       pruneZeroMultiAsset . MultiAsset <$> decodeMap decCBOR (decodeMap decCBOR decodeAmount)
 
-instance Crypto c => EncCBOR (MaryValue c) where
+instance EncCBOR MaryValue where
   encCBOR (MaryValue c ma@(MultiAsset m)) =
     if Map.null m
       then encCBOR c
@@ -350,7 +344,7 @@ instance Crypto c => EncCBOR (MaryValue c) where
             !> To c
             !> To ma
 
-instance Crypto c => DecCBOR (MaryValue c) where
+instance DecCBOR MaryValue where
   decCBOR = decodeMaryValue
 
 -- Note: we do not use `decodeInt64` from the cborg library here because the
@@ -384,11 +378,11 @@ decodeIntegerBounded64 = do
 -- ========================================================================
 -- JSON
 
-instance Crypto c => ToJSON (MaryValue c) where
+instance ToJSON MaryValue where
   toJSON = object . toMaryValuePairs
   toEncoding = Aeson.pairs . mconcat . toMaryValuePairs
 
-toMaryValuePairs :: Crypto c => Aeson.KeyValue e a => MaryValue c -> [a]
+toMaryValuePairs :: Aeson.KeyValue e a => MaryValue -> [a]
 toMaryValuePairs (MaryValue l ps) =
   [ "lovelace" .= l
   , "policies" .= ps
@@ -404,16 +398,16 @@ instance ToJSONKey AssetName where
 -- Compactible
 -- This is used in the TxOut which stores the (CompactForm MaryValue).
 
-instance Crypto c => Compactible (MaryValue c) where
-  newtype CompactForm (MaryValue c) = CompactValue (CompactValue c)
+instance Compactible MaryValue where
+  newtype CompactForm MaryValue = CompactValue CompactValue
     deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
-instance Crypto c => EncCBOR (CompactValue c) where
+instance EncCBOR CompactValue where
   encCBOR = encCBOR . from
 
-instance Crypto c => DecCBOR (CompactValue c) where
+instance DecCBOR CompactValue where
   decCBOR = do
     v <- decodeMaryValue
     case to v of
@@ -422,7 +416,7 @@ instance Crypto c => DecCBOR (CompactValue c) where
           "impossible failure: decoded nonnegative value that cannot be compacted"
       Just x -> pure x
 
-data CompactValue c
+data CompactValue
   = CompactValueAdaOnly {-# UNPACK #-} !(CompactForm Coin)
   | CompactValueMultiAsset
       {-# UNPACK #-} !(CompactForm Coin) -- ada
@@ -430,16 +424,16 @@ data CompactValue c
       {-# UNPACK #-} !ShortByteString -- rep
   deriving (Generic, Show, Typeable)
 
-instance NFData (CompactValue c) where
+instance NFData CompactValue where
   rnf = rwhnf
 
-instance Crypto c => Eq (CompactValue c) where
+instance Eq CompactValue where
   a == b = from a == from b
 
 deriving via
-  OnlyCheckWhnfNamed "CompactValue" (CompactValue c)
+  OnlyCheckWhnfNamed "CompactValue" CompactValue
   instance
-    NoThunks (CompactValue c)
+    NoThunks CompactValue
 
 {-
 The MaryValue surface type uses a nested map. For the compact version we use a
@@ -547,12 +541,10 @@ The decoding strategy is
  -}
 
 to ::
-  forall c.
-  Crypto c =>
-  MaryValue c ->
+  MaryValue ->
   -- The Nothing case of the return value corresponds to a quantity that is outside
   -- the bounds of a Word64. x < 0 or x > (2^64 - 1)
-  Maybe (CompactValue c)
+  Maybe CompactValue
 to (MaryValue ada (MultiAsset m))
   | Map.null m = CompactValueAdaOnly <$> toCompact ada
 to v@(MaryValue _ ma) = do
@@ -628,12 +620,12 @@ to v@(MaryValue _ ma) = do
     -- abcRegionSize is the combined size of regions A, B, and C
     abcRegionSize = numTriples * 12
 
-    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy (ADDRHASH c)))
+    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy ADDRHASH))
 
     -- pids is the collection of all distinct pids
     pids = Set.fromList $ (\(pid, _, _) -> pid) <$> triples
 
-    pidOffsetMap :: Map (PolicyID c) Word16
+    pidOffsetMap :: Map PolicyID Word16
     pidOffsetMap =
       -- the pid offsets are:
       --   X, X + s, X + 2s, X + 3s, ...
@@ -678,14 +670,12 @@ to v@(MaryValue _ ma) = do
 -- maximum size for the asset name is 32 bytes, so:
 -- 8n + 2n + 2n + 28p + 32n <= 65535
 -- where: n = total number of assets, p = number of unique policy ids
-isMultiAssetSmallEnough :: MultiAsset c -> Bool
+isMultiAssetSmallEnough :: MultiAsset -> Bool
 isMultiAssetSmallEnough (MultiAsset ma) =
   44 * M.getSum (foldMap' (M.Sum . length) ma) + 28 * length ma <= 65535
 
 representationSize ::
-  forall c.
-  Crypto c =>
-  [(PolicyID c, AssetName, Integer)] ->
+  [(PolicyID, AssetName, Integer)] ->
   Int
 representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
   where
@@ -693,14 +683,14 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
     abcRegionSize = len * 12
 
     numPids = Set.size . Set.fromList $ (\(pid, _, _) -> pid) <$> xs
-    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy (ADDRHASH c)))
+    pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy ADDRHASH))
     pidBlockSize = numPids * pidSize
 
     assetNames = Set.fromList $ (\(_, an, _) -> an) <$> xs
     anameBlockSize =
       Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetNameBytes) assetNames
 
-from :: forall c. Crypto c => CompactValue c -> MaryValue c
+from :: CompactValue -> MaryValue
 from (CompactValueAdaOnly c) = MaryValue (fromCompact c) (MultiAsset Map.empty)
 from (CompactValueMultiAsset c numAssets rep) =
   let mv@(MaryValue _ ma) = valueFromList (fromCompact c) triples
@@ -728,7 +718,7 @@ from (CompactValueMultiAsset c numAssets rep) =
     rawTriples :: [(Word16, Word16, Word64)]
     rawTriples = map getTripleForIndex [0 .. (fromIntegral $ numAssets - 1)]
 
-    triples :: [(PolicyID c, AssetName, Integer)]
+    triples :: [(PolicyID, AssetName, Integer)]
     triples = map convertTriple rawTriples
 
     -- Asset name length are calculated by subtracting the offset from the
@@ -744,7 +734,7 @@ from (CompactValueMultiAsset c numAssets rep) =
     assetLen ix = fromJust (Map.lookup ix assetLens)
 
     convertTriple ::
-      (Word16, Word16, Word64) -> (PolicyID c, AssetName, Integer)
+      (Word16, Word16, Word64) -> (PolicyID, AssetName, Integer)
     convertTriple (p, a, i) =
       ( PolicyID $
           ScriptHash $
@@ -752,7 +742,7 @@ from (CompactValueMultiAsset c numAssets rep) =
               readShortByteString
                 rep
                 (fromIntegral p)
-                (fromIntegral $ Hash.sizeHash ([] :: [ADDRHASH c]))
+                (fromIntegral $ Hash.sizeHash ([] :: [ADDRHASH]))
       , AssetName $ readShortByteString rep (fromIntegral a) (assetLen a)
       , fromIntegral i
       )
@@ -785,14 +775,14 @@ readShortByteString sbs start len =
 --
 --   This function is equivalent to computing the support of the value in the
 --   spec.
-policies :: MultiAsset c -> Set (PolicyID c)
+policies :: MultiAsset -> Set PolicyID
 policies (MultiAsset m) = Map.keysSet m
 
-lookup :: PolicyID c -> AssetName -> MaryValue c -> Integer
+lookup :: PolicyID -> AssetName -> MaryValue -> Integer
 lookup = lookupMultiAsset
 {-# DEPRECATED lookup "In favor of `lookupMultiAsset`" #-}
 
-lookupMultiAsset :: PolicyID c -> AssetName -> MaryValue c -> Integer
+lookupMultiAsset :: PolicyID -> AssetName -> MaryValue -> Integer
 lookupMultiAsset pid aid (MaryValue _ (MultiAsset m)) =
   case Map.lookup pid m of
     Nothing -> 0
@@ -804,11 +794,11 @@ lookupMultiAsset pid aid (MaryValue _ (MultiAsset m)) =
 --   if (comb old new) == 0, then that value should not be stored in the MultiAsset
 insert ::
   (Integer -> Integer -> Integer) ->
-  PolicyID c ->
+  PolicyID ->
   AssetName ->
   Integer ->
-  MultiAsset c ->
-  MultiAsset c
+  MultiAsset ->
+  MultiAsset
 insert = insertMultiAsset
 {-# DEPRECATED insert "In favor of `insertMultiAsset`" #-}
 
@@ -818,11 +808,11 @@ insert = insertMultiAsset
 --   if (comb old new) == 0, then that value should not be stored in the MultiAsset
 insertMultiAsset ::
   (Integer -> Integer -> Integer) ->
-  PolicyID c ->
+  PolicyID ->
   AssetName ->
   Integer ->
-  MultiAsset c ->
-  MultiAsset c
+  MultiAsset ->
+  MultiAsset
 insertMultiAsset combine pid aid new (MultiAsset m1) =
   case Map.splitLookup pid m1 of
     (l1, Just m2, l2) ->
@@ -859,22 +849,22 @@ insertMultiAsset combine pid aid new (MultiAsset m1) =
 
 -- | Remove 0 assets from a `MultiAsset`
 prune ::
-  Map (PolicyID c) (Map AssetName Integer) ->
-  Map (PolicyID c) (Map AssetName Integer)
+  Map PolicyID (Map AssetName Integer) ->
+  Map PolicyID (Map AssetName Integer)
 prune assets =
   Map.filter (not . null) $ Map.filter (/= 0) <$> assets
 {-# DEPRECATED prune "In favor of `pruneZeroMultiAsset`" #-}
 
 -- | Remove all assets with that have zero amount specified
-pruneZeroMultiAsset :: MultiAsset c -> MultiAsset c
+pruneZeroMultiAsset :: MultiAsset -> MultiAsset
 pruneZeroMultiAsset = filterMultiAsset (\_ _ -> (/= 0))
 
 -- | Filter multi assets. Canonical form is preserved.
 filterMultiAsset ::
   -- | Predicate that needs to return `True` whenever an asset should be retained.
-  (PolicyID c -> AssetName -> Integer -> Bool) ->
-  MultiAsset c ->
-  MultiAsset c
+  (PolicyID -> AssetName -> Integer -> Bool) ->
+  MultiAsset ->
+  MultiAsset
 filterMultiAsset f (MultiAsset ma) =
   MultiAsset $ Map.mapMaybeWithKey modifyAsset ma
   where
@@ -886,9 +876,9 @@ filterMultiAsset f (MultiAsset ma) =
 -- | Map a function over each multi asset value while optionally filtering values
 -- out. Canonical form is preserved.
 mapMaybeMultiAsset ::
-  (PolicyID c -> AssetName -> Integer -> Maybe Integer) ->
-  MultiAsset c ->
-  MultiAsset c
+  (PolicyID -> AssetName -> Integer -> Maybe Integer) ->
+  MultiAsset ->
+  MultiAsset
 mapMaybeMultiAsset f (MultiAsset ma) =
   MultiAsset $ Map.mapMaybeWithKey modifyAsset ma
   where
@@ -903,14 +893,14 @@ mapMaybeMultiAsset f (MultiAsset ma) =
 
 -- | Rather than using prune to remove 0 assets, when can avoid adding them in the
 --   first place by using valueFromList to construct a MultiAsset
-multiAssetFromList :: [(PolicyID era, AssetName, Integer)] -> MultiAsset era
+multiAssetFromList :: [(PolicyID, AssetName, Integer)] -> MultiAsset
 multiAssetFromList = foldr (\(p, n, i) ans -> insertMultiAsset (+) p n i ans) mempty
 
-valueFromList :: Coin -> [(PolicyID era, AssetName, Integer)] -> MaryValue era
+valueFromList :: Coin -> [(PolicyID, AssetName, Integer)] -> MaryValue
 valueFromList ada triples = MaryValue ada (multiAssetFromList triples)
 
 -- | Display a MaryValue as a String, one token per line
-showValue :: MaryValue c -> String
+showValue :: MaryValue -> String
 showValue v = show c ++ "\n" ++ unlines (map trans ts)
   where
     (c, ts) = gettriples v
@@ -923,10 +913,10 @@ showValue v = show c ++ "\n" ++ unlines (map trans ts)
 
 -- | Turn the nested 'MaryValue' map-of-maps representation into a flat sequence
 -- of policyID, asset name and quantity, plus separately the ada quantity.
-gettriples :: MaryValue c -> (Coin, [(PolicyID c, AssetName, Integer)])
+gettriples :: MaryValue -> (Coin, [(PolicyID, AssetName, Integer)])
 gettriples (MaryValue c ma) = (c, flattenMultiAsset ma)
 
-flattenMultiAsset :: MultiAsset c -> [(PolicyID c, AssetName, Integer)]
+flattenMultiAsset :: MultiAsset -> [(PolicyID, AssetName, Integer)]
 flattenMultiAsset (MultiAsset m) =
   [ (policyId, aname, amount)
   | (policyId, m2) <- assocs m

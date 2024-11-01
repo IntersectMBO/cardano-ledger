@@ -3,13 +3,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -42,7 +40,6 @@ import Cardano.Ledger.Alonzo.TxWits (unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Credential (credScriptHash)
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
@@ -71,14 +68,14 @@ import Lens.Micro.Extras (view)
 
 -- | Alonzo era style `ScriptsNeeded` require also a `PlutusPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
-  = AlonzoScriptsNeeded [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era))]
+  = AlonzoScriptsNeeded [(PlutusPurpose AsIxItem era, ScriptHash)]
   deriving (Monoid, Semigroup)
 
 deriving instance AlonzoEraScript era => Eq (AlonzoScriptsNeeded era)
 deriving instance AlonzoEraScript era => Show (AlonzoScriptsNeeded era)
 
-instance Crypto c => EraUTxO (AlonzoEra c) where
-  type ScriptsNeeded (AlonzoEra c) = AlonzoScriptsNeeded (AlonzoEra c)
+instance EraUTxO AlonzoEra where
+  type ScriptsNeeded AlonzoEra = AlonzoScriptsNeeded AlonzoEra
 
   getConsumedValue = getConsumedMaryValue
 
@@ -102,7 +99,7 @@ class EraUTxO era => AlonzoEraUTxO era where
   getSupplementalDataHashes ::
     UTxO era ->
     TxBody era ->
-    Set.Set (DataHash (EraCrypto era))
+    Set.Set DataHash
 
   -- | Lookup the TxIn from the `Spending` ScriptPurpose and find the datum needed for
   -- spending that input. This function will return `Nothing` for all script purposes,
@@ -119,7 +116,7 @@ class EraUTxO era => AlonzoEraUTxO era where
     PlutusPurpose AsItem era ->
     Maybe (Data era)
 
-instance Crypto c => AlonzoEraUTxO (AlonzoEra c) where
+instance AlonzoEraUTxO AlonzoEra where
   getSupplementalDataHashes _ = getAlonzoSupplementalDataHashes
 
   getSpendingDatum = getAlonzoSpendingDatum
@@ -127,7 +124,7 @@ instance Crypto c => AlonzoEraUTxO (AlonzoEra c) where
 getAlonzoSupplementalDataHashes ::
   (EraTxBody era, AlonzoEraTxOut era) =>
   TxBody era ->
-  Set.Set (DataHash (EraCrypto era))
+  Set.Set DataHash
 getAlonzoSupplementalDataHashes txBody =
   Set.fromList
     [ dh
@@ -149,7 +146,7 @@ getAlonzoSpendingDatum (UTxO m) tx sp = do
   SJust hash <- Just $ txOut ^. dataHashTxOutL
   Map.lookup hash (unTxDats $ tx ^. witsTxL . datsTxWitsL)
 
-getAlonzoScriptsHashesNeeded :: AlonzoScriptsNeeded era -> Set.Set (ScriptHash (EraCrypto era))
+getAlonzoScriptsHashesNeeded :: AlonzoScriptsNeeded era -> Set.Set ScriptHash
 getAlonzoScriptsHashesNeeded (AlonzoScriptsNeeded sn) = Set.fromList (map snd sn)
 
 -- | Compute two sets for all TwoPhase scripts in a Tx.
@@ -163,7 +160,7 @@ getInputDataHashesTxBody ::
   UTxO era ->
   TxBody era ->
   ScriptsProvided era ->
-  (Set.Set (DataHash (EraCrypto era)), Set.Set (TxIn (EraCrypto era)))
+  (Set.Set DataHash, Set.Set TxIn)
 getInputDataHashesTxBody (UTxO utxo) txBody (ScriptsProvided scriptsProvided) =
   Map.foldlWithKey' accum (Set.empty, Set.empty) spendUTxO
   where
@@ -322,7 +319,7 @@ getAlonzoWitsVKeyNeeded ::
   CertState era ->
   UTxO era ->
   TxBody era ->
-  Set.Set (KeyHash 'Witness (EraCrypto era))
+  Set.Set (KeyHash 'Witness)
 getAlonzoWitsVKeyNeeded certState utxo txBody =
   getShelleyWitsVKeyNeeded certState utxo txBody
     `Set.union` (txBody ^. reqSignerHashesTxBodyL)

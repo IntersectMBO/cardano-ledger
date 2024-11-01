@@ -16,12 +16,9 @@ module Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (Signable)
-import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   KeyRole (..),
@@ -51,7 +48,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
@@ -111,20 +108,18 @@ initStGenesisDeleg = initSt initUTxO
 -- Block 1, Slot 10, Epoch 0
 --
 
-newGenDelegate ::
-  Crypto c =>
-  KeyPair 'GenesisDelegate c
+newGenDelegate :: KeyPair 'GenesisDelegate
 newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (RawSeed 108 0 0 0 1)
 
-newGenesisVrfKH :: forall c. Crypto c => VRFVerKeyHash 'GenDelegVRF c
-newGenesisVrfKH = hashVerKeyVRF (vrfVerKey (mkVRFKeyPair @c (RawSeed 9 8 7 6 5)))
+newGenesisVrfKH :: VRFVerKeyHash 'GenDelegVRF
+newGenesisVrfKH = hashVerKeyVRF @MockCrypto (vrfVerKey (mkVRFKeyPair @MockCrypto (RawSeed 9 8 7 6 5)))
 
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx1 :: ShelleyTxBody ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -133,7 +128,7 @@ txbodyEx1 =
         [ GenesisDelegTxCert
             (hashKey (coreNodeVK 0))
             (hashKey (vKey newGenDelegate))
-            (newGenesisVrfKH @c)
+            newGenesisVrfKH
         ]
     )
     (Withdrawals Map.empty)
@@ -145,62 +140,48 @@ txbodyEx1 =
     aliceCoinEx1 = aliceInitCoin <-> Val.inject feeTx1
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
-txEx1 ::
-  forall c.
-  ( Crypto c
-  , Signable (DSIGN c) (Hash.Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  ShelleyTx (ShelleyEra c)
+txEx1 :: ShelleyTx ShelleyEra
 txEx1 = ShelleyTx txbodyEx1 txwits SNothing
   where
-    txwits :: ShelleyTxWits (ShelleyEra c)
+    txwits :: ShelleyTxWits ShelleyEra
     txwits =
       mempty
         { addrWits =
-            mkWitnessesVKey @c
-              (hashAnnotated (txbodyEx1 @c))
+            mkWitnessesVKey
+              (hashAnnotated txbodyEx1)
               ( [asWitness Cast.alicePay]
                   <> [ asWitness $
-                        KeyPair @'Genesis @c
+                        KeyPair @'Genesis
                           (coreNodeVK 0)
-                          (coreNodeSK @c 0)
+                          (coreNodeSK 0)
                      ]
               )
         }
 
-blockEx1 ::
-  forall c.
-  ExMock (EraCrypto (ShelleyEra c)) =>
-  Block (BHeader c) (ShelleyEra c)
+blockEx1 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx1 =
-  mkBlockFakeVRF @(ShelleyEra c)
+  mkBlockFakeVRF @ShelleyEra
     lastByronHeaderHash
-    (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
     [txEx1]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @c)
+    nonce0
     (NatNonce 1)
     minBound
     0
     0
-    (mkOCert @c (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10) 0 (KESPeriod 0))
+    (mkOCert @MockCrypto (coreNodeKeysBySchedule @ShelleyEra ppEx 10) 0 (KESPeriod 0))
 
-newGenDeleg ::
-  forall c.
-  Crypto c =>
-  (FutureGenDeleg c, GenDelegPair c)
+newGenDeleg :: (FutureGenDeleg, GenDelegPair)
 newGenDeleg =
   ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVK 0)
-  , GenDelegPair (hashKey . vKey $ newGenDelegate) (newGenesisVrfKH @c)
+  , GenDelegPair (hashKey $ vKey newGenDelegate) newGenesisVrfKH
   )
 
-expectedStEx1 ::
-  forall c.
-  ExMock c =>
-  ChainState (ShelleyEra c)
+expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
-  C.evolveNonceUnfrozen (getBlockNonce @(ShelleyEra c) blockEx1)
+  C.evolveNonceUnfrozen (getBlockNonce @ShelleyEra blockEx1)
     . C.newLab blockEx1
     . C.feesAndDeposits ppEx feeTx1 [] []
     . C.newUTxO txbodyEx1
@@ -210,42 +191,34 @@ expectedStEx1 =
 -- === Block 1, Slot 10, Epoch 0
 --
 -- In the first block, stage a new future genesis delegate
-genesisDelegation1 ::
-  ExMock c =>
-  CHAINExample (BHeader c) (ShelleyEra c)
+genesisDelegation1 :: CHAINExample ShelleyEra
 genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStEx1)
 
 --
 -- Block 2, Slot 50, Epoch 0
 --
 
-blockEx2 ::
-  forall c.
-  ExMock (EraCrypto (ShelleyEra c)) =>
-  Block (BHeader c) (ShelleyEra c)
+blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
-  mkBlockFakeVRF @(ShelleyEra c)
+  mkBlockFakeVRF @ShelleyEra
     (bhHash $ bheader blockEx1)
-    (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 50)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 50)
     []
     (SlotNo 50)
     (BlockNo 2)
-    (nonce0 @c)
+    nonce0
     (NatNonce 2)
     minBound
     2
     0
-    (mkOCert @c (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 50) 0 (KESPeriod 0))
+    (mkOCert @MockCrypto (coreNodeKeysBySchedule @ShelleyEra ppEx 50) 0 (KESPeriod 0))
 
-pulserEx2 :: ExMock c => PulsingRewUpdate c
+pulserEx2 :: PulsingRewUpdate
 pulserEx2 = makePulser' expectedStEx1
 
-expectedStEx2 ::
-  forall c.
-  ExMock c =>
-  ChainState (ShelleyEra c)
+expectedStEx2 :: ChainState ShelleyEra
 expectedStEx2 =
-  C.evolveNonceUnfrozen (getBlockNonce @(ShelleyEra c) blockEx2)
+  C.evolveNonceUnfrozen (getBlockNonce @ShelleyEra blockEx2)
     . C.newLab blockEx2
     . C.adoptFutureGenDeleg newGenDeleg
     . C.pulserUpdate pulserEx2
@@ -255,7 +228,7 @@ expectedStEx2 =
 -- === Block 2, Slot 50, Epoch 0
 --
 -- Submit an empty block to trigger adopting the genesis delegation.
-genesisDelegation2 :: ExMock c => CHAINExample (BHeader c) (ShelleyEra c)
+genesisDelegation2 :: CHAINExample ShelleyEra
 genesisDelegation2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --

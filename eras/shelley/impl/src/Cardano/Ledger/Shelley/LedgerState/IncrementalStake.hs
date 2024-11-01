@@ -92,10 +92,10 @@ import Lens.Micro
 updateStakeDistribution ::
   EraTxOut era =>
   PParams era ->
-  IncrementalStake (EraCrypto era) ->
+  IncrementalStake ->
   UTxO era ->
   UTxO era ->
-  IncrementalStake (EraCrypto era)
+  IncrementalStake
 updateStakeDistribution pp incStake0 utxoDel utxoAdd = incStake2
   where
     incStake1 = incAggUtxoCoinByCred pp (coerce ((+) @Word64)) utxoAdd incStake0
@@ -116,8 +116,8 @@ incAggUtxoCoinByCred ::
   PParams era ->
   (CompactForm Coin -> CompactForm Coin -> CompactForm Coin) ->
   UTxO era ->
-  IncrementalStake (EraCrypto era) ->
-  IncrementalStake (EraCrypto era)
+  IncrementalStake ->
+  IncrementalStake
 incAggUtxoCoinByCred pp f (UTxO u) initial =
   Map.foldl' accum initial u
   where
@@ -203,10 +203,10 @@ incrementalStakeDistr ::
   forall era.
   EraPParams era =>
   PParams era ->
-  IncrementalStake (EraCrypto era) ->
+  IncrementalStake ->
   DState era ->
   PState era ->
-  SnapShot (EraCrypto era)
+  SnapShot
 incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
   SnapShot
     (Stake $ VMap.fromMap step2)
@@ -239,7 +239,7 @@ incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
 --   be determined if there is a (SJust deleg) in the Tuple.  This is step2 =
 --   aggregate (dom activeDelegs ◁ rewards) step1
 aggregateActiveStake ::
-  Ord k => Map k (UMElem c) -> Map k (CompactForm Coin) -> Map k (CompactForm Coin)
+  Ord k => Map k UMElem -> Map k (CompactForm Coin) -> Map k (CompactForm Coin)
 aggregateActiveStake m1 m2 = assert (Map.valid m) m
   where
     m =
@@ -269,7 +269,7 @@ aggregateActiveStake m1 m2 = assert (Map.valid m) m
 --   3) Adds fees to the UTxOState
 applyRUpd ::
   EraGov era =>
-  RewardUpdate (EraCrypto era) ->
+  RewardUpdate ->
   EpochState era ->
   EpochState era
 applyRUpd ru es =
@@ -279,7 +279,7 @@ applyRUpd ru es =
 -- TO IncrementalStake
 applyRUpdFiltered ::
   EraGov era =>
-  RewardUpdate (EraCrypto era) ->
+  RewardUpdate ->
   EpochState era ->
   (EpochState era, FilteredRewards era)
 applyRUpdFiltered
@@ -325,12 +325,12 @@ data FilteredRewards era = FilteredRewards
   { -- Only the first component is strict on purpose. The others are lazy because in most instances
     -- they are never used, so this keeps them from being evaluated.
 
-    frRegistered :: !(Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
+    frRegistered :: !(Map (Credential 'Staking) (Set Reward))
   -- ^ These are registered, in the current Unified map of the CertState
-  , frShelleyIgnored :: Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))
+  , frShelleyIgnored :: Map (Credential 'Staking) (Set Reward)
   -- ^ These are registered, but ignored in the ShelleyEra because of backward
   --   compatibility in non-Shelley Eras, this field will be Map.empty
-  , frUnregistered :: Set (Credential 'Staking (EraCrypto era))
+  , frUnregistered :: Set (Credential 'Staking)
   -- ^ These are NOT registered in the current Unified map of the CertState
   , frTotalUnregistered :: Coin
   -- ^ Total Coin of the unregistered rewards. These will end up in the Treasury or Reserves.
@@ -346,7 +346,7 @@ instance NFData (FilteredRewards era) where
 --   'prevPParams' is the ProtocolParams of the previous Epoch
 --   'rs' is the rewards mapping of the RewardUpdate from that previous Epoch
 filterAllRewards' ::
-  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
+  Map (Credential 'Staking) (Set Reward) ->
   ProtVer ->
   DState era ->
   FilteredRewards era
@@ -362,7 +362,7 @@ filterAllRewards' rs protVer dState =
 
 filterAllRewards ::
   EraGov era =>
-  Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
+  Map (Credential 'Staking) (Set Reward) ->
   EpochState era ->
   FilteredRewards era
 filterAllRewards mp epochstate = filterAllRewards' mp prevPP dState

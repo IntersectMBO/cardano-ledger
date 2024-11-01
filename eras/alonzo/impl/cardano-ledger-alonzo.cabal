@@ -140,7 +140,6 @@ library testlib
     QuickCheck,
     base,
     bytestring,
-    cardano-crypto-class,
     cardano-data,
     cardano-ledger-allegra,
     cardano-ledger-alonzo,

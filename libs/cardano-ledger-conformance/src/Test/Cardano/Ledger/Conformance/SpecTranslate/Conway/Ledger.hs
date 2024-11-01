@@ -13,7 +13,7 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledger () where
 
 import Cardano.Ledger.BaseTypes (Inject)
-import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), EraRule, ScriptHash)
+import Cardano.Ledger.Conway.Core (EraPParams (..), EraRule, ScriptHash)
 import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure, EnactState)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
@@ -29,7 +29,7 @@ instance
   ( EraPParams era
   , SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , Inject ctx (StrictMaybe (ScriptHash (EraCrypto era)))
+  , Inject ctx (StrictMaybe ScriptHash)
   , Inject ctx (EnactState era)
   ) =>
   SpecTranslate ctx (LedgerEnv era)
@@ -37,7 +37,7 @@ instance
   type SpecRep (LedgerEnv era) = Agda.LEnv
 
   toSpecRep LedgerEnv {..} = do
-    policyHash <- askCtx @(StrictMaybe (ScriptHash (EraCrypto era)))
+    policyHash <- askCtx @(StrictMaybe ScriptHash)
     enactState <- askCtx @(EnactState era)
     Agda.MkLEnv
       <$> toSpecRep ledgerSlotNo

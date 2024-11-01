@@ -4,19 +4,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Api.Tx (spec) where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
-import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.PParams
 import Cardano.Ledger.Api.Tx
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Core (EraIndependentTxBody)
-import Cardano.Ledger.Keys (DSignable, hashKey, makeBootstrapWitness)
+import Cardano.Ledger.Keys (hashKey, makeBootstrapWitness)
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Val (Val ((<×>)))
 import qualified Data.ByteString as BS
@@ -33,8 +29,6 @@ txSpec ::
   ( EraTx era
   , Arbitrary (Tx era)
   , Arbitrary (PParams era)
-  , DSIGN (EraCrypto era) ~ Ed25519DSIGN
-  , DSignable (EraCrypto era) (Hash.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
   Spec
 txSpec = describe (eraName @era) $ do
@@ -104,9 +98,9 @@ txSpec = describe (eraName @era) $ do
 
 spec :: Spec
 spec = do
-  txSpec @Shelley
-  txSpec @Allegra
-  txSpec @Mary
-  txSpec @Alonzo
-  txSpec @Babbage
-  txSpec @Conway
+  txSpec @ShelleyEra
+  txSpec @AllegraEra
+  txSpec @MaryEra
+  txSpec @AlonzoEra
+  txSpec @BabbageEra
+  txSpec @ConwayEra

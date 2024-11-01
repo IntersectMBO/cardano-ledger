@@ -20,7 +20,7 @@ import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default
 import GHC.Stack (HasCallStack)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..))
 import Test.Cardano.Ledger.Shelley.Examples.Combinators (
   evolveNonceUnfrozen,
@@ -57,11 +57,10 @@ blockEx1 ::
   forall era.
   ( HasCallStack
   , EraSegWits era
-  , ExMock (EraCrypto era)
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   ) =>
-  Block (BHeader (EraCrypto era)) era
+  Block (BHeader MockCrypto) era
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -69,7 +68,7 @@ blockEx1 =
     []
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @(EraCrypto era))
+    nonce0
     (NatNonce 1)
     minBound
     0
@@ -80,7 +79,6 @@ blockNonce ::
   forall era.
   ( HasCallStack
   , EraSegWits era
-  , ExMock (EraCrypto era)
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   ) =>
@@ -90,14 +88,13 @@ blockNonce = getBlockNonce (blockEx1 @era)
 expectedStEx1 ::
   forall era.
   ( EraSegWits era
-  , ExMock (EraCrypto era)
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , EraGov era
   , Default (StashedAVVMAddresses era)
   ) =>
   ChainState era
-expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) . newLab blockEx1 $ initStEx1
+expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) $ newLab blockEx1 initStEx1
 
 -- | = Empty Block Example
 --
@@ -107,12 +104,11 @@ expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) . newLab blockEx1 $ initSt
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
 exEmptyBlock ::
-  ( ExMock (EraCrypto era)
-  , EraSegWits era
+  ( EraSegWits era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
   , EraGov era
   ) =>
-  CHAINExample (BHeader (EraCrypto era)) era
+  CHAINExample era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

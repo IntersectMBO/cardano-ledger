@@ -49,25 +49,20 @@ data OcertPredicateFailure c
       !Word -- expected KES evolutions
       !String -- error message given by Consensus Layer
   | NoCounterForKeyHashOCERT
-      !(KeyHash 'BlockIssuer c) -- stake pool key hash
+      !(KeyHash 'BlockIssuer) -- stake pool key hash
   deriving (Show, Eq, Generic)
 
 instance NoThunks (OcertPredicateFailure c)
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   ) =>
   STS (OCERT c)
   where
-  type
-    State (OCERT c) =
-      Map (KeyHash 'BlockIssuer c) Word64
-  type
-    Signal (OCERT c) =
-      BHeader c
-  type Environment (OCERT c) = OCertEnv c
+  type State (OCERT c) = Map (KeyHash 'BlockIssuer) Word64
+  type Signal (OCERT c) = BHeader c
+  type Environment (OCERT c) = OCertEnv
   type BaseM (OCERT c) = ShelleyBase
   type PredicateFailure (OCERT c) = OcertPredicateFailure c
 
@@ -76,7 +71,6 @@ instance
 
 ocertTransition ::
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   ) =>
   TransitionRule (OCERT c)

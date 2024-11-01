@@ -28,18 +28,16 @@ where
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (ByronEra, Era (..), EraRule, Value)
-import Cardano.Ledger.Crypto (Crypto)
 
-data ShelleyEra c
+data ShelleyEra
 
-instance Crypto c => Era (ShelleyEra c) where
-  type PreviousEra (ShelleyEra c) = ByronEra c
-  type EraCrypto (ShelleyEra c) = c
-  type ProtVerLow (ShelleyEra c) = 2
+instance Era ShelleyEra where
+  type PreviousEra ShelleyEra = ByronEra
+  type ProtVerLow ShelleyEra = 2
 
   eraName = "Shelley"
 
-type instance Value (ShelleyEra _c) = Coin
+type instance Value ShelleyEra = Coin
 
 data ShelleyBBODY era
 
@@ -81,42 +79,42 @@ data ShelleyUTXO era
 
 data ShelleyUTXOW era
 
-type instance EraRule "BBODY" (ShelleyEra c) = ShelleyBBODY (ShelleyEra c)
+type instance EraRule "BBODY" ShelleyEra = ShelleyBBODY ShelleyEra
 
-type instance EraRule "DELEG" (ShelleyEra c) = ShelleyDELEG (ShelleyEra c)
+type instance EraRule "DELEG" ShelleyEra = ShelleyDELEG ShelleyEra
 
-type instance EraRule "DELEGS" (ShelleyEra c) = ShelleyDELEGS (ShelleyEra c)
+type instance EraRule "DELEGS" ShelleyEra = ShelleyDELEGS ShelleyEra
 
-type instance EraRule "DELPL" (ShelleyEra c) = ShelleyDELPL (ShelleyEra c)
+type instance EraRule "DELPL" ShelleyEra = ShelleyDELPL ShelleyEra
 
-type instance EraRule "EPOCH" (ShelleyEra c) = ShelleyEPOCH (ShelleyEra c)
+type instance EraRule "EPOCH" ShelleyEra = ShelleyEPOCH ShelleyEra
 
-type instance EraRule "LEDGER" (ShelleyEra c) = ShelleyLEDGER (ShelleyEra c)
+type instance EraRule "LEDGER" ShelleyEra = ShelleyLEDGER ShelleyEra
 
-type instance EraRule "LEDGERS" (ShelleyEra c) = ShelleyLEDGERS (ShelleyEra c)
+type instance EraRule "LEDGERS" ShelleyEra = ShelleyLEDGERS ShelleyEra
 
-type instance EraRule "MIR" (ShelleyEra c) = ShelleyMIR (ShelleyEra c)
+type instance EraRule "MIR" ShelleyEra = ShelleyMIR ShelleyEra
 
-type instance EraRule "NEWEPOCH" (ShelleyEra c) = ShelleyNEWEPOCH (ShelleyEra c)
+type instance EraRule "NEWEPOCH" ShelleyEra = ShelleyNEWEPOCH ShelleyEra
 
-type instance EraRule "NEWPP" (ShelleyEra c) = ShelleyNEWPP (ShelleyEra c)
+type instance EraRule "NEWPP" ShelleyEra = ShelleyNEWPP ShelleyEra
 
-type instance EraRule "POOL" (ShelleyEra c) = ShelleyPOOL (ShelleyEra c)
+type instance EraRule "POOL" ShelleyEra = ShelleyPOOL ShelleyEra
 
-type instance EraRule "POOLREAP" (ShelleyEra c) = ShelleyPOOLREAP (ShelleyEra c)
+type instance EraRule "POOLREAP" ShelleyEra = ShelleyPOOLREAP ShelleyEra
 
-type instance EraRule "PPUP" (ShelleyEra c) = ShelleyPPUP (ShelleyEra c)
+type instance EraRule "PPUP" ShelleyEra = ShelleyPPUP ShelleyEra
 
-type instance EraRule "RUPD" (ShelleyEra c) = ShelleyRUPD (ShelleyEra c)
+type instance EraRule "RUPD" ShelleyEra = ShelleyRUPD ShelleyEra
 
-type instance EraRule "SNAP" (ShelleyEra c) = ShelleySNAP (ShelleyEra c)
+type instance EraRule "SNAP" ShelleyEra = ShelleySNAP ShelleyEra
 
-type instance EraRule "TICK" (ShelleyEra c) = ShelleyTICK (ShelleyEra c)
+type instance EraRule "TICK" ShelleyEra = ShelleyTICK ShelleyEra
 
-type instance EraRule "TICKF" (ShelleyEra c) = ShelleyTICKF (ShelleyEra c)
+type instance EraRule "TICKF" ShelleyEra = ShelleyTICKF ShelleyEra
 
-type instance EraRule "UPEC" (ShelleyEra c) = ShelleyUPEC (ShelleyEra c)
+type instance EraRule "UPEC" ShelleyEra = ShelleyUPEC ShelleyEra
 
-type instance EraRule "UTXO" (ShelleyEra c) = ShelleyUTXO (ShelleyEra c)
+type instance EraRule "UTXO" ShelleyEra = ShelleyUTXO ShelleyEra
 
-type instance EraRule "UTXOW" (ShelleyEra c) = ShelleyUTXOW (ShelleyEra c)
+type instance EraRule "UTXOW" ShelleyEra = ShelleyUTXOW ShelleyEra

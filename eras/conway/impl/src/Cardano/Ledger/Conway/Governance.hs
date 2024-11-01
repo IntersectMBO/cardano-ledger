@@ -204,7 +204,6 @@ import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Conway.Governance.Proposals
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
@@ -291,7 +290,7 @@ govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation Stri
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
 conwayGovStateDRepDistrG ::
-  SimpleGetter (ConwayGovState era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+  SimpleGetter (ConwayGovState era) (Map DRep (CompactForm Coin))
 conwayGovStateDRepDistrG = to (psDRepDistr . fst . finishDRepPulser . cgsDRepPulsingState)
 
 getRatifyState :: ConwayGovState era -> RatifyState era
@@ -392,8 +391,8 @@ toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _ _) =
       , "futurePParams" .= cgsFuturePParams
       ]
 
-instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
-  type GovState (ConwayEra c) = ConwayGovState (ConwayEra c)
+instance EraPParams ConwayEra => EraGov ConwayEra where
+  type GovState ConwayEra = ConwayGovState ConwayEra
 
   curPParamsGovStateL = cgsCurPParamsL
 
@@ -415,7 +414,7 @@ class EraGov era => ConwayEraGov era where
   drepPulsingStateGovStateL :: Lens' (GovState era) (DRepPulsingState era)
   committeeGovStateL :: Lens' (GovState era) (StrictMaybe (Committee era))
 
-instance Crypto c => ConwayEraGov (ConwayEra c) where
+instance ConwayEraGov ConwayEra where
   constitutionGovStateL = cgsConstitutionL
   proposalsGovStateL = cgsProposalsL
   drepPulsingStateGovStateL = cgsDRepPulsingStateL
@@ -452,7 +451,7 @@ setFreshDRepPulsingState ::
   , ConwayEraGov era
   ) =>
   EpochNo ->
-  PoolDistr (EraCrypto era) ->
+  PoolDistr ->
   EpochState era ->
   ReaderT Globals m (EpochState era)
 setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
@@ -527,11 +526,11 @@ data DefaultVote
 
 defaultStakePoolVote ::
   -- | Specify the key hash of the pool whose default vote should be returned.
-  KeyHash 'StakePool c ->
+  KeyHash 'StakePool ->
   -- | Registered Stake Pools
-  Map (KeyHash 'StakePool c) (PoolParams c) ->
+  Map (KeyHash 'StakePool) PoolParams ->
   -- | Delegations of staking credneitals to a DRep
-  Map (Credential 'Staking c) (DRep c) ->
+  Map (Credential 'Staking) DRep ->
   DefaultVote
 defaultStakePoolVote poolId poolParams dRepDelegations =
   toDefaultVote $

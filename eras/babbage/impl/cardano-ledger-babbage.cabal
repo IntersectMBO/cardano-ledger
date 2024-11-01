@@ -123,7 +123,6 @@ library testlib
     QuickCheck,
     base,
     bytestring,
-    cardano-crypto-class,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-babbage,
     cardano-ledger-binary,

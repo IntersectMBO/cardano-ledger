@@ -15,12 +15,12 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPoolPredFailure,
  )
 
-type instance EraRuleFailure "DELPL" (AlonzoEra c) = ShelleyDelplPredFailure (AlonzoEra c)
+type instance EraRuleFailure "DELPL" AlonzoEra = ShelleyDelplPredFailure AlonzoEra
 
-instance InjectRuleFailure "DELPL" ShelleyDelplPredFailure (AlonzoEra c)
+instance InjectRuleFailure "DELPL" ShelleyDelplPredFailure AlonzoEra
 
-instance InjectRuleFailure "DELPL" ShelleyPoolPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "DELPL" ShelleyPoolPredFailure AlonzoEra where
   injectFailure = PoolFailure
 
-instance InjectRuleFailure "DELPL" ShelleyDelegPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "DELPL" ShelleyDelegPredFailure AlonzoEra where
   injectFailure = DelegFailure

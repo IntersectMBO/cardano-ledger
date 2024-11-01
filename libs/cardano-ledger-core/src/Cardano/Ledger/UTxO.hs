@@ -51,7 +51,6 @@ import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   DSignable,
   Hash,
@@ -80,7 +79,7 @@ import Quiet (Quiet (Quiet))
 -- ===============================================
 
 -- | The unspent transaction outputs.
-newtype UTxO era = UTxO {unUTxO :: Map.Map (TxIn (EraCrypto era)) (TxOut era)}
+newtype UTxO era = UTxO {unUTxO :: Map.Map TxIn (TxOut era)}
   deriving (Default, Generic, Semigroup)
 
 instance (EncCBOR (TxOut era), Era era) => ToCBOR (UTxO era) where
@@ -102,31 +101,28 @@ deriving newtype instance (Era era, EncCBOR (TxOut era)) => EncCBOR (UTxO era)
 deriving newtype instance (Era era, DecCBOR (TxOut era)) => DecCBOR (UTxO era)
 
 instance
-  ( Crypto (EraCrypto era)
-  , DecShareCBOR (TxOut era)
-  , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
+  ( DecShareCBOR (TxOut era)
+  , Share (TxOut era) ~ Interns (Credential 'Staking)
   ) =>
   DecShareCBOR (UTxO era)
   where
-  type
-    Share (UTxO era) =
-      Interns (Credential 'Staking (EraCrypto era))
+  type Share (UTxO era) = Interns (Credential 'Staking)
   decShareCBOR credsInterns =
     UTxO <$!> decodeMap decCBOR (decShareCBOR credsInterns)
 
 deriving via
   Quiet (UTxO era)
   instance
-    (Show (TxOut era), Crypto (EraCrypto era)) => Show (UTxO era)
+    Show (TxOut era) => Show (UTxO era)
 
-deriving newtype instance (Era era, ToJSON (TxOut era)) => ToJSON (UTxO era)
+deriving newtype instance ToJSON (TxOut era) => ToJSON (UTxO era)
 
 -- | Compute the UTxO inputs of a transaction.
 -- txins has the same problems as txouts, see notes below.
 txins ::
   EraTxBody era =>
   TxBody era ->
-  Set (TxIn (EraCrypto era))
+  Set TxIn
 txins = (^. inputsTxBodyL)
 
 -- | Compute the transaction outputs of a transaction.
@@ -146,7 +142,7 @@ txouts txBody =
 
 -- | Lookup a txin for a given UTxO collection
 txinLookup ::
-  TxIn (EraCrypto era) ->
+  TxIn ->
   UTxO era ->
   Maybe (TxOut era)
 txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
@@ -156,18 +152,17 @@ txInsFilter ::
   -- | Source `UTxO`
   UTxO era ->
   -- | Which of the `TxIn`s you would like to keep.
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
   UTxO era
 txInsFilter (UTxO utxo') txIns = UTxO (utxo' `Map.restrictKeys` txIns)
 
 -- | Verify a transaction body witness
 verifyWitVKey ::
   ( Typeable kr
-  , Crypto c
-  , DSignable c (Hash c EraIndependentTxBody)
+  , DSignable (Hash EraIndependentTxBody)
   ) =>
-  Hash c EraIndependentTxBody ->
-  WitVKey kr c ->
+  Hash EraIndependentTxBody ->
+  WitVKey kr ->
   Bool
 verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash (coerce sig)
 {-# INLINE verifyWitVKey #-}
@@ -206,7 +201,7 @@ areAllAdaOnly = all (^. isAdaOnlyTxOutF)
 {-# INLINE areAllAdaOnly #-}
 
 -- | Extract script hash from value address with script.
-getScriptHash :: Addr c -> Maybe (ScriptHash c)
+getScriptHash :: Addr -> Maybe ScriptHash
 getScriptHash (Addr _ (ScriptHashObj hs) _) = Just hs
 getScriptHash _ = Nothing
 
@@ -214,7 +209,7 @@ getScriptHash _ = Nothing
 -- expensive to compute the actual map, so we want to use the type safety guidance to
 -- avoid redundant work.
 newtype ScriptsProvided era = ScriptsProvided
-  { unScriptsProvided :: Map.Map (ScriptHash (EraCrypto era)) (Script era)
+  { unScriptsProvided :: Map.Map ScriptHash (Script era)
   }
   deriving (Generic)
 
@@ -232,9 +227,9 @@ class EraTx era => EraUTxO era where
   getConsumedValue ::
     PParams era ->
     -- | Function that can lookup current delegation deposits
-    (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+    (Credential 'Staking -> Maybe Coin) ->
     -- | Function that can lookup current drep deposits
-    (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
+    (Credential 'DRepRole -> Maybe Coin) ->
     UTxO era ->
     TxBody era ->
     Value era
@@ -242,7 +237,7 @@ class EraTx era => EraUTxO era where
   getProducedValue ::
     PParams era ->
     -- | Check whether a pool with a supplied PoolStakeId is already registered.
-    (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+    (KeyHash 'StakePool -> Bool) ->
     TxBody era ->
     Value era
 
@@ -261,11 +256,11 @@ class EraTx era => EraUTxO era where
   getScriptsNeeded :: UTxO era -> TxBody era -> ScriptsNeeded era
 
   -- | Extract the set of all script hashes that are needed for script validation.
-  getScriptsHashesNeeded :: ScriptsNeeded era -> Set (ScriptHash (EraCrypto era))
+  getScriptsHashesNeeded :: ScriptsNeeded era -> Set ScriptHash
 
   -- | Extract all of the KeyHash witnesses that are required for validating the transaction
   getWitsVKeyNeeded ::
-    CertState era -> UTxO era -> TxBody era -> Set (KeyHash 'Witness (EraCrypto era))
+    CertState era -> UTxO era -> TxBody era -> Set (KeyHash 'Witness)
 
   -- | Minimum fee computation, excluding witnesses and including ref scripts size
   getMinFeeTxUtxo :: PParams era -> Tx era -> UTxO era -> Coin

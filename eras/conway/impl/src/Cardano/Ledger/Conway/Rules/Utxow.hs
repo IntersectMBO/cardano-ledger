@@ -24,8 +24,6 @@ module Cardano.Ledger.Conway.Rules.Utxow (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
-import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent,
@@ -50,7 +48,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXO, ConwayUTXOW)
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
-import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), VKey)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
@@ -77,96 +74,96 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 data ConwayUtxowPredFailure era
   = UtxoFailure (PredicateFailure (EraRule "UTXO" era))
   | InvalidWitnessesUTXOW
-      ![VKey 'Witness (EraCrypto era)]
+      ![VKey 'Witness]
   | -- | witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
       -- | witnesses which were needed and not supplied
-      !(Set (KeyHash 'Witness (EraCrypto era)))
+      !(Set (KeyHash 'Witness))
   | -- | missing scripts
     MissingScriptWitnessesUTXOW
-      !(Set (ScriptHash (EraCrypto era)))
+      !(Set ScriptHash)
   | -- | failed scripts
     ScriptWitnessNotValidatingUTXOW
-      !(Set (ScriptHash (EraCrypto era)))
+      !(Set ScriptHash)
   | -- | hash of the full metadata
     MissingTxBodyMetadataHash
-      !(AuxiliaryDataHash (EraCrypto era))
+      !AuxiliaryDataHash
   | -- | hash of the metadata included in the transaction body
     MissingTxMetadata
-      !(AuxiliaryDataHash (EraCrypto era))
+      !AuxiliaryDataHash
   | ConflictingMetadataHash
-      !(Mismatch 'RelEQ (AuxiliaryDataHash (EraCrypto era)))
+      !(Mismatch 'RelEQ AuxiliaryDataHash)
   | -- | Contains out of range values (string`s too long)
     InvalidMetadata
   | -- | extraneous scripts
     ExtraneousScriptWitnessesUTXOW
-      !(Set (ScriptHash (EraCrypto era)))
+      !(Set ScriptHash)
   | MissingRedeemers
-      ![(PlutusPurpose AsItem era, ScriptHash (EraCrypto era))]
+      ![(PlutusPurpose AsItem era, ScriptHash)]
   | MissingRequiredDatums
       -- TODO: Make this NonEmpty #4066
 
       -- | Set of missing data hashes
-      !(Set (DataHash (EraCrypto era)))
+      !(Set DataHash)
       -- | Set of received data hashes
-      !(Set (DataHash (EraCrypto era)))
+      !(Set DataHash)
   | NotAllowedSupplementalDatums
       -- TODO: Make this NonEmpty #4066
 
       -- | Set of unallowed data hashes.
-      !(Set (DataHash (EraCrypto era)))
+      !(Set DataHash)
       -- | Set of acceptable supplemental data hashes
-      !(Set (DataHash (EraCrypto era)))
+      !(Set DataHash)
   | PPViewHashesDontMatch
-      !(Mismatch 'RelEQ (StrictMaybe (ScriptIntegrityHash (EraCrypto era))))
+      !(Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
       -- TODO: Make this NonEmpty #4066
-      (Set (TxIn (EraCrypto era)))
+      (Set TxIn)
   | -- | List of redeemers not needed
     ExtraRedeemers ![PlutusPurpose AsIx era]
   | -- | Embed UTXO rule failures
     MalformedScriptWitnesses
-      !(Set (ScriptHash (EraCrypto era)))
+      !(Set ScriptHash)
   | -- | the set of malformed script witnesses
     MalformedReferenceScripts
-      !(Set (ScriptHash (EraCrypto era)))
+      !(Set ScriptHash)
   deriving (Generic)
 
-type instance EraRuleFailure "UTXOW" (ConwayEra c) = ConwayUtxowPredFailure (ConwayEra c)
+type instance EraRuleFailure "UTXOW" ConwayEra = ConwayUtxowPredFailure ConwayEra
 
-type instance EraRuleEvent "UTXOW" (ConwayEra c) = AlonzoUtxowEvent (ConwayEra c)
+type instance EraRuleEvent "UTXOW" ConwayEra = AlonzoUtxowEvent ConwayEra
 
-instance InjectRuleFailure "UTXOW" ConwayUtxowPredFailure (ConwayEra c)
+instance InjectRuleFailure "UTXOW" ConwayUtxowPredFailure ConwayEra
 
-instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure ConwayEra where
   injectFailure = babbageToConwayUtxowPredFailure
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure ConwayEra where
   injectFailure = alonzoToConwayUtxowPredFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure ConwayEra where
   injectFailure = shelleyToConwayUtxowPredFailure
 
-instance InjectRuleFailure "UTXOW" ConwayUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOW" ConwayUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" BabbageUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOW" BabbageUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" ConwayUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOW" ConwayUtxosPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure ConwayEra where
   injectFailure = UtxoFailure . injectFailure
 
 deriving instance
@@ -190,7 +187,6 @@ instance
   ( ConwayEraScript era
   , NFData (TxCert era)
   , NFData (PredicateFailure (EraRule "UTXO" era))
-  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
   ) =>
   NFData (ConwayUtxowPredFailure era)
 
@@ -204,7 +200,6 @@ instance
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ConwayEraTxBody era
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , EraRule "UTXOW" era ~ ConwayUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era

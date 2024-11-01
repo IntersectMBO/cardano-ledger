@@ -92,9 +92,9 @@ instance NFData (ShelleyPoolreapPredFailure era)
 
 data ShelleyPoolreapEvent era = RetiredPools
   { refundPools ::
-      Map.Map (Credential 'Staking (EraCrypto era)) (Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+      Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) Coin)
   , unclaimedPools ::
-      Map.Map (Credential 'Staking (EraCrypto era)) (Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+      Map.Map (Credential 'Staking) (Map.Map (KeyHash 'StakePool) Coin)
   , epochNo :: EpochNo
   }
   deriving (Generic)
@@ -108,7 +108,7 @@ instance NoThunks (ShelleyPoolreapPredFailure era)
 instance Default (UTxOState era) => Default (ShelleyPoolreapState era) where
   def = PoolreapState def def def def
 
-type instance EraRuleEvent "POOLREAP" (ShelleyEra c) = ShelleyPoolreapEvent (ShelleyEra c)
+type instance EraRuleEvent "POOLREAP" ShelleyEra = ShelleyPoolreapEvent ShelleyEra
 
 instance
   ( Default (ShelleyPoolreapState era)
@@ -148,24 +148,24 @@ poolReapTransition = do
 
   let
     -- The set of pools retiring this epoch
-    retired :: Set (KeyHash 'StakePool (EraCrypto era))
+    retired :: Set (KeyHash 'StakePool)
     retired = eval (dom (psRetiring ps ▷ setSingleton e))
     -- The Map of pools (retiring this epoch) to their deposits
-    retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin
+    retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool) Coin
     (retiringDeposits, remainingDeposits) =
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
-    rewardAccounts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era))
+    rewardAccounts :: Map.Map (KeyHash 'StakePool) RewardAccount
     rewardAccounts = Map.map ppRewardAccount $ eval (retired ◁ psStakePoolParams ps)
     rewardAccounts_ ::
-      Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era), Coin)
+      Map.Map (KeyHash 'StakePool) (RewardAccount, Coin)
     rewardAccounts_ = Map.intersectionWith (,) rewardAccounts retiringDeposits
-    rewardAccounts' :: Map.Map (RewardAccount (EraCrypto era)) Coin
+    rewardAccounts' :: Map.Map RewardAccount Coin
     rewardAccounts' =
       Map.fromListWith (<+>)
         . Map.elems
         $ rewardAccounts_
-    refunds :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
-    mRefunds :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
+    refunds :: Map.Map (Credential 'Staking) Coin
+    mRefunds :: Map.Map (Credential 'Staking) Coin
     (refunds, mRefunds) =
       Map.partitionWithKey
         (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
