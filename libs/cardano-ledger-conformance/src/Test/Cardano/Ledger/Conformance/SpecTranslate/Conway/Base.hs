@@ -26,11 +26,15 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   ConwayExecEnactEnv (..),
   DepositPurpose (..),
   ConwayTxBodyTransContext (..),
+  vkeyToInteger,
+  vkeyFromInteger,
+  signatureToInteger,
+  signatureFromInteger,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Hash (Hash)
-import Cardano.Crypto.Util (bytesToNatural)
+import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (
   Timelock,
@@ -446,10 +450,22 @@ instance SpecTranslate ctx (KeyHash r c) where
 
   toSpecRep (KeyHash h) = toSpecRep h
 
+vkeyToInteger :: DSIGNAlgorithm (DSIGN c) => VKey kd c -> Integer
+vkeyToInteger = toInteger . bytesToNatural . rawSerialiseVerKeyDSIGN . unVKey
+
+vkeyFromInteger :: DSIGNAlgorithm (DSIGN c) => Integer -> Maybe (VKey kd c)
+vkeyFromInteger = fmap VKey . rawDeserialiseVerKeyDSIGN . naturalToBytes 32 . fromInteger
+
+signatureToInteger :: DSIGNAlgorithm v => SigDSIGN v -> Integer
+signatureToInteger = toInteger . bytesToNatural . rawSerialiseSigDSIGN
+
+signatureFromInteger :: DSIGNAlgorithm v => Integer -> Maybe (SigDSIGN v)
+signatureFromInteger = rawDeserialiseSigDSIGN . naturalToBytes 64 . fromInteger
+
 instance Crypto c => SpecTranslate ctx (VKey k c) where
   type SpecRep (VKey k c) = Integer
 
-  toSpecRep (VKey x) = pure . toInteger . bytesToNatural $ rawSerialiseVerKeyDSIGN x
+  toSpecRep = pure . vkeyToInteger
 
 instance DSIGNAlgorithm v => SpecTranslate ctx (SignedDSIGN v a) where
   type SpecRep (SignedDSIGN v a) = Integer
@@ -1094,6 +1110,8 @@ instance
       <*> dreps
       <*> toSpecRep reCommitteeState
       <*> toSpecRep treasury
+      <*> toSpecRep rePoolParams
+      <*> toSpecRep reDelegatees
 
 instance SpecTranslate ctx Bool where
   type SpecRep Bool = Bool

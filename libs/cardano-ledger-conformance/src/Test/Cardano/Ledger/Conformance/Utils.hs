@@ -1,19 +1,31 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Test.Cardano.Ledger.Conformance.Utils where
 
-import Cardano.Crypto.Hash (ByteString, Hash, hashToBytes)
+import Cardano.Crypto.Hash (ByteString, Hash, HashAlgorithm, hashFromBytes, hashToBytes, sizeHash)
 import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
+import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import qualified Data.ByteString.Base16 as B16
+import Data.Data (Proxy (..))
 import qualified Lib as Agda
 import Test.Cardano.Ledger.TreeDiff (Expr, ToExpr (..))
 
+standardHashSize :: Int
+standardHashSize = fromIntegral . sizeHash $ Proxy @(HASH StandardCrypto)
+
 agdaHashToBytes :: Int -> Integer -> ByteString
-agdaHashToBytes hashSize = B16.encode . naturalToBytes hashSize . fromInteger
+agdaHashToBytes hs = B16.encode . naturalToBytes hs . fromInteger
 
 agdaHashToExpr :: Int -> Integer -> Expr
-agdaHashToExpr hashSize = toExpr . agdaHashToBytes hashSize
+agdaHashToExpr hs = toExpr . agdaHashToBytes hs
 
 hashToInteger :: Hash a b -> Integer
 hashToInteger = toInteger . bytesToNatural . hashToBytes
+
+integerToHash :: forall h a. HashAlgorithm h => Integer -> Maybe (Hash h a)
+integerToHash = hashFromBytes . naturalToBytes (fromIntegral . sizeHash $ Proxy @h) . fromInteger
 
 computationResultToEither :: Agda.ComputationResult e a -> Either e a
 computationResultToEither (Agda.Success x) = Right x
