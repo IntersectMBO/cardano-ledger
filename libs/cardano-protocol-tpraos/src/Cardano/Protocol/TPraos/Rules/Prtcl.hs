@@ -38,7 +38,6 @@ import Cardano.Ledger.Binary.Plain (
  )
 import Cardano.Ledger.Crypto (Crypto, VRF)
 import Cardano.Ledger.Keys (
-  DSignable,
   GenDelegs (..),
   KESignable,
   KeyHash,
@@ -56,7 +55,6 @@ import Cardano.Protocol.TPraos.BHeader (
   bnonce,
   lastAppliedHash,
  )
-import Cardano.Protocol.TPraos.OCert (OCertSignable)
 import Cardano.Protocol.TPraos.Rules.Overlay (OVERLAY, OverlayEnv (..))
 import Cardano.Protocol.TPraos.Rules.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
@@ -71,19 +69,19 @@ import NoThunks.Class (NoThunks (..))
 
 data PRTCL c
 
-data PrtclState c
+data PrtclState
   = PrtclState
       -- | Operation Certificate counters
-      !(Map (KeyHash 'BlockIssuer c) Word64)
+      !(Map (KeyHash 'BlockIssuer) Word64)
       -- | Evolving nonce
       !Nonce
       -- | Candidate nonce
       !Nonce
   deriving (Generic, Show, Eq)
 
-instance Crypto c => EncCBOR (PrtclState c)
+instance EncCBOR PrtclState
 
-instance Crypto c => ToCBOR (PrtclState c) where
+instance ToCBOR PrtclState where
   toCBOR (PrtclState m n1 n2) =
     mconcat
       [ encodeListLen 3
@@ -92,9 +90,9 @@ instance Crypto c => ToCBOR (PrtclState c) where
       , toCBOR n2
       ]
 
-instance Crypto c => DecCBOR (PrtclState c)
+instance DecCBOR PrtclState
 
-instance Crypto c => FromCBOR (PrtclState c) where
+instance FromCBOR PrtclState where
   fromCBOR =
     decodeRecordNamed
       "PrtclState"
@@ -105,17 +103,17 @@ instance Crypto c => FromCBOR (PrtclState c) where
           <*> fromCBOR
       )
 
-instance Crypto c => NoThunks (PrtclState c)
+instance NoThunks PrtclState
 
-data PrtclEnv c
+data PrtclEnv
   = PrtclEnv
       UnitInterval -- the decentralization paramater @d@ from the protocal parameters
-      (PoolDistr c)
-      (GenDelegs c)
+      PoolDistr
+      GenDelegs
       Nonce
   deriving (Generic)
 
-instance NoThunks (PrtclEnv c)
+instance NoThunks PrtclEnv
 
 data PrtclPredicateFailure c
   = OverlayFailure (PredicateFailure (OVERLAY c)) -- Subtransition Failures
@@ -136,23 +134,16 @@ deriving instance
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   , VRFSignable c Seed
   ) =>
   STS (PRTCL c)
   where
-  type
-    State (PRTCL c) =
-      PrtclState c
+  type State (PRTCL c) = PrtclState
 
-  type
-    Signal (PRTCL c) =
-      BHeader c
+  type Signal (PRTCL c) = BHeader c
 
-  type
-    Environment (PRTCL c) =
-      PrtclEnv c
+  type Environment (PRTCL c) = PrtclEnv
 
   type BaseM (PRTCL c) = ShelleyBase
   type PredicateFailure (PRTCL c) = PrtclPredicateFailure c
@@ -165,7 +156,6 @@ instance
 prtclTransition ::
   forall c.
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   , VRFSignable c Seed
   ) =>
@@ -202,7 +192,6 @@ instance Crypto c => NoThunks (PrtclPredicateFailure c)
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   , VRFSignable c Seed
   ) =>
@@ -213,7 +202,6 @@ instance
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   , VRFSignable c Seed
   ) =>
@@ -222,7 +210,7 @@ instance
   wrapFailed = UpdnFailure
   wrapEvent = UpdnEvent
 
-data PrtlSeqFailure c
+data PrtlSeqFailure
   = WrongSlotIntervalPrtclSeq
       -- | Last slot number.
       SlotNo
@@ -230,21 +218,21 @@ data PrtlSeqFailure c
       SlotNo
   | WrongBlockNoPrtclSeq
       -- | Last applied block.
-      (WithOrigin (LastAppliedBlock c))
+      (WithOrigin LastAppliedBlock)
       -- | Current block number.
       BlockNo
   | WrongBlockSequencePrtclSeq
       -- | Last applied hash
-      (PrevHash c)
+      PrevHash
       -- | Current block's previous hash
-      (PrevHash c)
+      PrevHash
   deriving (Show, Eq, Generic)
 
-instance Crypto c => NoThunks (PrtlSeqFailure c)
+instance NoThunks PrtlSeqFailure
 
 prtlSeqChecks ::
-  (MonadError (PrtlSeqFailure c) m, Crypto c) =>
-  WithOrigin (LastAppliedBlock c) ->
+  (MonadError PrtlSeqFailure m, Crypto c) =>
+  WithOrigin LastAppliedBlock ->
   BHeader c ->
   m ()
 prtlSeqChecks lab bh =

@@ -2,11 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -17,7 +14,6 @@ import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Constrained (lit)
 import Data.Map.Strict (Map)
 import qualified Lib as Agda
@@ -30,11 +26,11 @@ import Test.Cardano.Ledger.Constrained.Conway
 
 instance
   ( IsConwayUniv fn
-  , Inject (ConwayCertExecContext Conway) (Map (RewardAccount StandardCrypto) Coin)
+  , Inject (ConwayCertExecContext ConwayEra) (Map RewardAccount Coin)
   ) =>
-  ExecSpecRule fn "CERT" Conway
+  ExecSpecRule fn "CERT" ConwayEra
   where
-  type ExecContext fn "CERT" Conway = ConwayCertExecContext Conway
+  type ExecContext fn "CERT" ConwayEra = ConwayCertExecContext ConwayEra
   environmentSpec _ = certEnvSpec
   stateSpec ctx _ = certStateSpec (lit $ ccecDelegatees ctx)
   signalSpec _ = txCertSpec
@@ -42,7 +38,7 @@ instance
 
   classOf = Just . nameTxCert
 
-nameTxCert :: ConwayTxCert Conway -> String
+nameTxCert :: ConwayTxCert ConwayEra -> String
 nameTxCert (ConwayTxCertDeleg x) = nameDelegCert x
 nameTxCert (ConwayTxCertPool x) = namePoolCert x
 nameTxCert (ConwayTxCertGov x) = nameGovCert x

@@ -14,7 +14,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -47,7 +46,7 @@ import Cardano.Ledger.CertState (
   CommitteeState (..),
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParams)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
@@ -122,7 +121,7 @@ import Cardano.Crypto.DSIGN (SignedDSIGN (..), verifySignedDSIGN)
 import Cardano.Crypto.Hash (ByteString, Hash)
 import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
+import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyRole (..), VKey (..))
 import Data.Either (isRight)
 import Data.Maybe (fromMaybe)
@@ -131,10 +130,10 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
 
 data ConwayCertExecContext era = ConwayCertExecContext
-  { ccecWithdrawals :: !(Map (RewardAccount (EraCrypto era)) Coin)
-  , ccecDeposits :: !(Map (DepositPurpose (EraCrypto era)) Coin)
+  { ccecWithdrawals :: !(Map RewardAccount Coin)
+  , ccecDeposits :: !(Map DepositPurpose Coin)
   , ccecVotes :: !(VotingProcedures era)
-  , ccecDelegatees :: !(Set (Credential 'DRepRole (EraCrypto era)))
+  , ccecDelegatees :: !(Set (Credential 'DRepRole))
   }
   deriving (Generic, Eq, Show)
 
@@ -165,19 +164,13 @@ instance Era era => DecCBOR (ConwayCertExecContext era) where
         <! From
         <! From
 
-instance
-  c ~ EraCrypto era =>
-  Inject (ConwayCertExecContext era) (Map (RewardAccount c) Coin)
-  where
+instance Inject (ConwayCertExecContext era) (Map RewardAccount Coin) where
   inject = ccecWithdrawals
 
 instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
   inject = ccecVotes
 
-instance
-  c ~ EraCrypto era =>
-  Inject (ConwayCertExecContext era) (Map (DepositPurpose c) Coin)
-  where
+instance Inject (ConwayCertExecContext era) (Map DepositPurpose Coin) where
   inject = ccecDeposits
 
 instance Era era => ToExpr (ConwayCertExecContext era)
@@ -248,11 +241,11 @@ instance EraPParams era => NFData (ConwayRatifyExecContext era)
 
 ratifyEnvSpec ::
   ( IsConwayUniv fn
-  , HasSpec fn (RatifyEnv Conway)
-  , HasSpec fn (SimpleRep (RatifyEnv Conway))
+  , HasSpec fn (RatifyEnv ConwayEra)
+  , HasSpec fn (SimpleRep (RatifyEnv ConwayEra))
   ) =>
-  ConwayRatifyExecContext Conway ->
-  Specification fn (RatifyEnv Conway)
+  ConwayRatifyExecContext ConwayEra ->
+  Specification fn (RatifyEnv ConwayEra)
 ratifyEnvSpec ConwayRatifyExecContext {crecGovActionMap} =
   constrained' $ \_ poolDistr drepDistr drepState _ committeeState _ _ ->
     [ -- Bias the generator towards generating DReps that have stake and are registered
@@ -329,9 +322,9 @@ ratifyEnvSpec ConwayRatifyExecContext {crecGovActionMap} =
 
 ratifyStateSpec ::
   IsConwayUniv fn =>
-  ConwayRatifyExecContext Conway ->
-  RatifyEnv Conway ->
-  Specification fn (RatifyState Conway)
+  ConwayRatifyExecContext ConwayEra ->
+  RatifyEnv ConwayEra ->
+  Specification fn (RatifyState ConwayEra)
 ratifyStateSpec _ RatifyEnv {..} =
   constrained' $ \ens enacted expired _ ->
     mconcat
@@ -364,14 +357,14 @@ ratifyStateSpec _ RatifyEnv {..} =
       let CommitteeState m = reCommitteeState
        in Map.keysSet m
     -- Bootstrap is not in the spec
-    disableBootstrap :: IsConwayUniv fn => Term fn (PParams Conway) -> Pred fn
+    disableBootstrap :: IsConwayUniv fn => Term fn (PParams ConwayEra) -> Pred fn
     disableBootstrap pp = match pp $ \simplepp ->
       match (protocolVersion_ simplepp) $ \major _ ->
         assert $ not_ (major ==. lit (natVersion @9))
 
     preferSmallerCCMinSizeValues ::
       IsConwayUniv fn =>
-      Term fn (PParams Conway) ->
+      Term fn (PParams ConwayEra) ->
       Pred fn
     preferSmallerCCMinSizeValues pp = match pp $ \simplepp ->
       satisfies (committeeMinSize_ simplepp) $
@@ -383,8 +376,8 @@ ratifyStateSpec _ RatifyEnv {..} =
 
 ratifySignalSpec ::
   IsConwayUniv fn =>
-  ConwayRatifyExecContext Conway ->
-  Specification fn (RatifySignal Conway)
+  ConwayRatifyExecContext ConwayEra ->
+  Specification fn (RatifySignal ConwayEra)
 ratifySignalSpec ConwayRatifyExecContext {crecGovActionMap} =
   constrained $ \sig ->
     match sig $ \gasS ->
@@ -392,8 +385,8 @@ ratifySignalSpec ConwayRatifyExecContext {crecGovActionMap} =
         forAll gasL $ \gas ->
           gas `elem_` lit crecGovActionMap
 
-instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
-  type ExecContext fn "RATIFY" Conway = ConwayRatifyExecContext Conway
+instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" ConwayEra where
+  type ExecContext fn "RATIFY" ConwayEra = ConwayRatifyExecContext ConwayEra
 
   genExecContext = arbitrary
 
@@ -408,7 +401,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
   extraInfo _ ctx env@RatifyEnv {..} st sig@(RatifySignal actions) _ =
     PP.vsep $ specExtraInfo : (actionAcceptedRatio <$> toList actions)
     where
-      members = foldMap' (committeeMembers @Conway) $ ensCommittee (rsEnactState st)
+      members = foldMap' (committeeMembers @ConwayEra) $ ensCommittee (rsEnactState st)
       showAccepted True = PP.brackets "✓"
       showAccepted False = PP.brackets "×"
       showRatio r = PP.viaShow (numerator r) <> "/" <> PP.viaShow (denominator r)
@@ -448,7 +441,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
 
   testConformance ctx env st@(RatifyState {rsEnactState}) sig@(RatifySignal actions) =
     labelRatios $
-      defaultTestConformance @fn @Conway @"RATIFY" ctx env st sig
+      defaultTestConformance @fn @ConwayEra @"RATIFY" ctx env st sig
     where
       bucket r
         | r == 0 % 1 = "=0%"
@@ -460,14 +453,14 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
         | r == 1 % 1 = "=100%"
         | otherwise = error "ratio is not in the unit interval"
       committee = ensCommittee rsEnactState
-      members = foldMap' (committeeMembers @Conway) committee
+      members = foldMap' (committeeMembers @ConwayEra) committee
       pv = st ^. rsEnactStateL . ensProtVerL
       ccBucket a =
         "CC yes votes ratio  \t"
           <> bucket
             ( committeeAcceptedRatio
                 members
-                (gasCommitteeVotes @Conway a)
+                (gasCommitteeVotes @ConwayEra a)
                 (reCommitteeState env)
                 (reCurrentEpoch env)
             )
@@ -509,10 +502,10 @@ instance Era era => EncCBOR (ConwayEnactExecContext era) where
 
 enactSignalSpec ::
   IsConwayUniv fn =>
-  ConwayEnactExecContext Conway ->
-  ConwayExecEnactEnv Conway ->
-  EnactState Conway ->
-  Specification fn (EnactSignal Conway)
+  ConwayEnactExecContext ConwayEra ->
+  ConwayExecEnactEnv ConwayEra ->
+  EnactState ConwayEra ->
+  Specification fn (EnactSignal ConwayEra)
 enactSignalSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} EnactState {..} =
   constrained' $ \gid action ->
     [ assert $ gid ==. lit ceeeGid
@@ -541,9 +534,9 @@ enactSignalSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} EnactState {
 
 enactStateSpec ::
   IsConwayUniv fn =>
-  ConwayEnactExecContext Conway ->
-  ConwayExecEnactEnv Conway ->
-  Specification fn (EnactState Conway)
+  ConwayEnactExecContext ConwayEra ->
+  ConwayExecEnactEnv ConwayEra ->
+  Specification fn (EnactState ConwayEra)
 enactStateSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} =
   constrained' $ \_ _ curPParams _ treasury wdrls _ ->
     [ match curPParams $ \simplepp -> committeeMaxTermLength_ simplepp ==. lit ceecMaxTerm
@@ -551,11 +544,11 @@ enactStateSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} =
     , assert $ treasury ==. lit ceeeTreasury
     ]
 
-instance IsConwayUniv fn => ExecSpecRule fn "ENACT" Conway where
-  type ExecContext fn "ENACT" Conway = ConwayEnactExecContext Conway
-  type ExecEnvironment fn "ENACT" Conway = ConwayExecEnactEnv Conway
-  type ExecState fn "ENACT" Conway = EnactState Conway
-  type ExecSignal fn "ENACT" Conway = EnactSignal Conway
+instance IsConwayUniv fn => ExecSpecRule fn "ENACT" ConwayEra where
+  type ExecContext fn "ENACT" ConwayEra = ConwayEnactExecContext ConwayEra
+  type ExecEnvironment fn "ENACT" ConwayEra = ConwayExecEnactEnv ConwayEra
+  type ExecState fn "ENACT" ConwayEra = EnactState ConwayEra
+  type ExecSignal fn "ENACT" ConwayEra = EnactSignal ConwayEra
 
   environmentSpec _ = TrueSpec
   stateSpec = enactStateSpec
@@ -579,9 +572,9 @@ nameGovAction UpdateCommittee {} = "UpdateCommittee"
 nameGovAction NewConstitution {} = "NewConstitution"
 nameGovAction InfoAction {} = "InfoAction"
 
-instance IsConwayUniv fn => ExecSpecRule fn "EPOCH" Conway where
-  type ExecContext fn "EPOCH" Conway = [GovActionState Conway]
-  type ExecEnvironment fn "EPOCH" Conway = EpochExecEnv Conway
+instance IsConwayUniv fn => ExecSpecRule fn "EPOCH" ConwayEra where
+  type ExecContext fn "EPOCH" ConwayEra = [GovActionState ConwayEra]
+  type ExecEnvironment fn "EPOCH" ConwayEra = EpochExecEnv ConwayEra
 
   environmentSpec _ = epochEnvSpec
 
@@ -596,9 +589,9 @@ instance IsConwayUniv fn => ExecSpecRule fn "EPOCH" Conway where
 nameEpoch :: EpochNo -> String
 nameEpoch x = show x
 
-instance IsConwayUniv fn => ExecSpecRule fn "NEWEPOCH" Conway where
-  type ExecContext fn "NEWEPOCH" Conway = [GovActionState Conway]
-  type ExecEnvironment fn "NEWEPOCH" Conway = EpochExecEnv Conway
+instance IsConwayUniv fn => ExecSpecRule fn "NEWEPOCH" ConwayEra where
+  type ExecContext fn "NEWEPOCH" ConwayEra = [GovActionState ConwayEra]
+  type ExecEnvironment fn "NEWEPOCH" ConwayEra = EpochExecEnv ConwayEra
 
   environmentSpec _ = epochEnvSpec
 
@@ -614,15 +607,15 @@ externalFunctions = Agda.MkExternalFunctions {..}
     extIsSigned vk ser sig =
       isRight $
         verifySignedDSIGN
-          @(DSIGN StandardCrypto)
-          @(Hash (HASH StandardCrypto) ByteString)
+          @DSIGN
+          @(Hash HASH ByteString)
           ()
           vkey
           hash
           signature
       where
         vkey =
-          unVKey @_ @StandardCrypto
+          unVKey
             . fromMaybe (error "Failed to convert an Agda VKey to a Haskell VKey")
             $ vkeyFromInteger vk
         hash =

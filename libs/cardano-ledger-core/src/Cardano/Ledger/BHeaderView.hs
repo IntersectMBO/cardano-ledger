@@ -18,15 +18,15 @@ import Data.Word (Word32)
 -- and should work independently of the protocol. The values in
 -- 'BHeaderView' provide 'BBODY' all the data that it needs from the
 -- block headers.
-data BHeaderView c = BHeaderView
-  { bhviewID :: KeyHash 'BlockIssuer c
+data BHeaderView = BHeaderView
+  { bhviewID :: KeyHash 'BlockIssuer
   -- ^ The block issuer. In the TPraos protocol, this can be a
   --  Genesis delegate, everywhere else it is the stake pool ID.
   , bhviewBSize :: Word32
   -- ^ The purported size (in bytes) of the block body.
   , bhviewHSize :: Int
   -- ^ The purported size (in bytes) of the block header.
-  , bhviewBHash :: Hash c EraIndependentBlockBody
+  , bhviewBHash :: Hash EraIndependentBlockBody
   -- ^ The purported hash of the block body.
   , bhviewSlot :: SlotNo
   -- ^ The slot for which this block was submitted to the chain.

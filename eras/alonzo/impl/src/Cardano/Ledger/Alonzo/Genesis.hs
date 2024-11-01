@@ -49,7 +49,6 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -121,8 +120,8 @@ pattern AlonzoGenesis
 
 {-# COMPLETE AlonzoGenesis #-}
 
-instance Crypto c => EraGenesis (AlonzoEra c) where
-  type Genesis (AlonzoEra c) = AlonzoGenesis
+instance EraGenesis AlonzoEra where
+  type Genesis AlonzoEra = AlonzoGenesis
 
 -- | Genesis types are always encoded with the version of era they are defined in.
 instance DecCBOR AlonzoGenesis
@@ -131,7 +130,7 @@ instance EncCBOR AlonzoGenesis
 
 instance FromCBOR AlonzoGenesis where
   fromCBOR =
-    eraDecoder @(AlonzoEra StandardCrypto) $
+    eraDecoder @AlonzoEra $
       decode $
         RecD AlonzoGenesis
           <! From
@@ -155,7 +154,7 @@ instance ToCBOR AlonzoGenesis where
       , agCollateralPercentage
       , agMaxCollateralInputs
       } =
-      toEraCBOR @(AlonzoEra StandardCrypto)
+      toEraCBOR @AlonzoEra
         . encode
         $ Rec AlonzoGenesis
           !> To agCoinsPerUTxOWord

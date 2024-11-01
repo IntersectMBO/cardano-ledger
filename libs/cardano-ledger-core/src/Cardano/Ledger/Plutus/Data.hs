@@ -40,7 +40,6 @@ module Cardano.Ledger.Plutus.Data (
 )
 where
 
-import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.HeapWords (HeapWords (..), heapWords0, heapWords1)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
@@ -57,7 +56,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes (..),
@@ -110,13 +108,13 @@ instance Typeable era => EncCBOR (Data era)
 instance Memoized Data where
   type RawType Data = PlutusData
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Data era)
+deriving instance Show (Data era)
 
 deriving via Mem PlutusData era instance Era era => DecCBOR (Annotator (Data era))
 
 type instance MemoHashIndex PlutusData = EraIndependentData
 
-instance EraCrypto era ~ c => HashAnnotated (Data era) EraIndependentData c where
+instance HashAnnotated (Data era) EraIndependentData where
   hashAnnotated = getMemoSafeHash
 
 instance Typeable era => NoThunks (Data era)
@@ -150,7 +148,7 @@ newtype BinaryData era = BinaryData ShortByteString
   deriving newtype (Eq, NoThunks, Ord, Show, SafeToHash)
   deriving (Generic)
 
-instance EraCrypto era ~ c => HashAnnotated (BinaryData era) EraIndependentData c
+instance HashAnnotated (BinaryData era) EraIndependentData
 
 instance Typeable era => EncCBOR (BinaryData era) where
   encCBOR (BinaryData sbs) = encodeTag 24 <> encCBOR sbs
@@ -188,20 +186,20 @@ binaryDataToData binaryData =
 dataToBinaryData :: Era era => Data era -> BinaryData era
 dataToBinaryData (DataConstr (Memo _ sbs)) = BinaryData sbs
 
-hashBinaryData :: Era era => BinaryData era -> DataHash (EraCrypto era)
+hashBinaryData :: BinaryData era -> DataHash
 hashBinaryData = hashAnnotated
 
 -- =============================================================================
 
-hashData :: Era era => Data era -> DataHash (EraCrypto era)
+hashData :: Data era -> DataHash
 hashData = hashAnnotated
 
 -- Size of the datum hash attached to the output (could be Nothing)
-dataHashSize :: StrictMaybe (DataHash c) -> Integer
+dataHashSize :: StrictMaybe DataHash -> Integer
 dataHashSize SNothing = 0
 dataHashSize (SJust _) = 10
 
-instance Crypto c => HeapWords (StrictMaybe (DataHash c)) where
+instance HeapWords (StrictMaybe DataHash) where
   heapWords SNothing = heapWords0
   heapWords (SJust a) = heapWords1 a
 
@@ -212,7 +210,7 @@ instance Crypto c => HeapWords (StrictMaybe (DataHash c)) where
 -- both. It can also be neither one of them.
 data Datum era
   = NoDatum
-  | DatumHash !(DataHash (EraCrypto era))
+  | DatumHash !DataHash
   | Datum !(BinaryData era)
   deriving (Eq, Generic, NoThunks, Ord, Show)
 
@@ -240,14 +238,13 @@ instance Era era => ToJSON (Datum era) where
       SJust dh -> toEncoding dh
 
 -- | Get the Hash of the datum.
-datumDataHash :: Era era => Datum era -> StrictMaybe (DataHash (EraCrypto era))
+datumDataHash :: Datum era -> StrictMaybe DataHash
 datumDataHash = \case
   NoDatum -> SNothing
   DatumHash dh -> SJust dh
   Datum bd -> SJust (hashBinaryData bd)
 
 translateDatum ::
-  EraCrypto era1 ~ EraCrypto era2 =>
   Datum era1 ->
   Datum era2
 translateDatum = \case

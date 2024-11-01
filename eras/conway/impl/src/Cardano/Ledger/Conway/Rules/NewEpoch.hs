@@ -65,7 +65,7 @@ import Lens.Micro ((%~), (&), (^.))
 
 newtype ConwayNewEpochPredFailure era
   = CorruptRewardUpdate
-      (RewardUpdate (EraCrypto era)) -- The reward update which violates an invariant
+      RewardUpdate -- The reward update which violates an invariant
   deriving (Generic)
 
 deriving instance Eq (ConwayNewEpochPredFailure era)
@@ -82,16 +82,16 @@ data ConwayNewEpochEvent era
   = DeltaRewardEvent !(Event (EraRule "RUPD" era))
   | RestrainedRewards
       !EpochNo
-      !(Map.Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
-      !(Set (Credential 'Staking (EraCrypto era)))
+      !(Map.Map (Credential 'Staking) (Set Reward))
+      !(Set (Credential 'Staking))
   | TotalRewardEvent
       !EpochNo
-      !(Map.Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
+      !(Map.Map (Credential 'Staking) (Set Reward))
   | EpochEvent !(Event (EraRule "EPOCH" era))
   | TotalAdaPotsEvent !AdaPots
   deriving (Generic)
 
-type instance EraRuleEvent "NEWEPOCH" (ConwayEra c) = ConwayNewEpochEvent (ConwayEra c)
+type instance EraRuleEvent "NEWEPOCH" ConwayEra = ConwayNewEpochEvent ConwayEra
 
 deriving instance
   ( Eq (Event (EraRule "EPOCH" era))
@@ -109,7 +109,7 @@ instance
   ( EraTxOut era
   , ConwayEraGov era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
-  , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
+  , Event (EraRule "RUPD" era) ~ RupdEvent
   , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
@@ -154,7 +154,7 @@ newEpochTransition ::
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
   , Default (StashedAVVMAddresses era)
-  , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
+  , Event (EraRule "RUPD" era) ~ RupdEvent
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , Environment (EraRule "RATIFY" era) ~ RatifyEnv era
@@ -201,7 +201,7 @@ newEpochTransition = do
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
 tellReward ::
-  Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era) =>
+  Event (EraRule "RUPD" era) ~ RupdEvent =>
   ConwayNewEpochEvent era ->
   Rule (ConwayNEWEPOCH era) rtype ()
 tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
@@ -211,7 +211,7 @@ updateRewards ::
   EraGov era =>
   EpochState era ->
   EpochNo ->
-  RewardUpdate (EraCrypto era) ->
+  RewardUpdate ->
   Rule (ConwayNEWEPOCH era) 'Transition (EpochState era)
 updateRewards es e ru'@(RewardUpdate dt dr rs_ df _) = do
   let totRs = sumRewards (es ^. prevPParamsEpochStateL . ppProtocolVersionL) rs_

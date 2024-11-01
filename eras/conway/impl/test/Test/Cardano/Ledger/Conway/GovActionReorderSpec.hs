@@ -3,7 +3,7 @@
 
 module Test.Cardano.Ledger.Conway.GovActionReorderSpec (spec) where
 
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   actionPriority,
@@ -21,17 +21,17 @@ spec :: Spec
 spec =
   describe "Conway governance actions reordering" $ do
     prop "preserves length when reordered" $
-      \(actions :: Seq.StrictSeq (GovActionState Conway)) ->
-        Seq.length actions `shouldBe` Seq.length (reorderActions @Conway actions)
+      \(actions :: Seq.StrictSeq (GovActionState ConwayEra)) ->
+        Seq.length actions `shouldBe` Seq.length (reorderActions @ConwayEra actions)
     prop "sorts by priority" $
-      \(actions :: Seq.StrictSeq (GovActionState Conway)) ->
-        sort (toList (actionPriority . gasAction @Conway <$> actions))
+      \(actions :: Seq.StrictSeq (GovActionState ConwayEra)) ->
+        sort (toList (actionPriority . gasAction @ConwayEra <$> actions))
           `shouldBe` toList (actionPriority . gasAction <$> reorderActions actions)
     prop "same priority actions are not rearranged" $
-      \(a :: GovActionState Conway) (as :: Seq.StrictSeq (GovActionState Conway)) ->
+      \(a :: GovActionState ConwayEra) (as :: Seq.StrictSeq (GovActionState ConwayEra)) ->
         let filterPrio b = actionPriority (gasAction a) == actionPriority (gasAction b)
-         in filter filterPrio (toList $ reorderActions @Conway (a Seq.:<| as))
+         in filter filterPrio (toList $ reorderActions @ConwayEra (a Seq.:<| as))
               `shouldBe` filter filterPrio (toList $ reorderActions (a Seq.:<| as))
     prop "orders actions correctly with shuffles" $
-      \(ShuffledGovActionStates gass shuffledGass :: ShuffledGovActionStates Conway) -> do
+      \(ShuffledGovActionStates gass shuffledGass :: ShuffledGovActionStates ConwayEra) -> do
         reorderActions (Seq.fromList gass) `shouldBe` reorderActions (Seq.fromList shuffledGass)

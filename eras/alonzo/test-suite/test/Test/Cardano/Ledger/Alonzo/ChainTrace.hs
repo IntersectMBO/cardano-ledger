@@ -40,7 +40,6 @@ import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (sumCollateral)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
-import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
   CHAIN,
@@ -63,9 +62,7 @@ import Test.QuickCheck (
 import Test.Tasty
 import qualified Test.Tasty.QuickCheck as TQC
 
-type A = AlonzoEra TestCrypto
-
-instance Embed (AlonzoBBODY A) (CHAIN A) where
+instance Embed (AlonzoBBODY AlonzoEra) (CHAIN AlonzoEra) where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
@@ -78,11 +75,11 @@ data HasPlutus = HasPlutus | NoPlutus
 tests :: TestTree
 tests =
   TQC.testProperty "alonzo specific" $
-    forAllChainTrace @A traceLen defaultConstants $ \tr ->
+    forAllChainTrace @AlonzoEra traceLen defaultConstants $ \tr ->
       conjoin $ map alonzoSpecificProps (sourceSignalTargets tr)
 
 alonzoSpecificProps ::
-  SourceSignalTarget (CHAIN A) ->
+  SourceSignalTarget (CHAIN AlonzoEra) ->
   Property
 alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
   conjoin $
@@ -91,7 +88,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
   where
     (tickedChainSt, ledgerTr) = ledgerTraceFromBlock chainSt block
     pp = (view curPParamsEpochStateL . nesEs . chainNes) tickedChainSt
-    alonzoSpecificPropsLEDGER :: SourceSignalTarget (AlonzoLEDGER A) -> Property
+    alonzoSpecificPropsLEDGER :: SourceSignalTarget (AlonzoLEDGER AlonzoEra) -> Property
     alonzoSpecificPropsLEDGER
       SourceSignalTarget
         { source = LedgerState UTxOState {utxosUtxo = UTxO u, utxosDeposited = dp, utxosFees = f} ds
@@ -103,7 +100,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
             collateralInFees = f <> sumCollateral tx (UTxO u) == f'
             utxoConsumed = not $ u `Map.isSubmapOf` u'
             allScripts = tx ^. witsTxL . scriptTxWitsL
-            hasPlutus = if all (isNativeScript @A) allScripts then NoPlutus else HasPlutus
+            hasPlutus = if all (isNativeScript @AlonzoEra) allScripts then NoPlutus else HasPlutus
             totEU = totExUnits tx
             nonTrivialExU = exUnitsMem totEU > 0 && exUnitsSteps totEU > 0
             collected =

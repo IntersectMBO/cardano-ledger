@@ -15,7 +15,6 @@ module Cardano.Ledger.Mary.Translation where
 
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
@@ -54,7 +53,7 @@ import qualified Data.Map.Strict as Map
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
+instance TranslateEra MaryEra NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
@@ -67,25 +66,25 @@ instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-instance (Crypto c, EraTx (MaryEra c)) => TranslateEra (MaryEra c) ShelleyTx where
-  type TranslationError (MaryEra c) ShelleyTx = DecoderError
+instance TranslateEra MaryEra ShelleyTx where
+  type TranslationError MaryEra ShelleyTx = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance Crypto c => TranslateEra (MaryEra c) PParams
+instance TranslateEra MaryEra PParams
 
-instance Crypto c => TranslateEra (MaryEra c) PParamsUpdate
+instance TranslateEra MaryEra PParamsUpdate
 
-instance Crypto c => TranslateEra (MaryEra c) FuturePParams where
+instance TranslateEra MaryEra FuturePParams where
   translateEra ctxt = \case
     NoPParamsUpdate -> pure NoPParamsUpdate
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
-instance Crypto c => TranslateEra (MaryEra c) EpochState where
+instance TranslateEra MaryEra EpochState where
   translateEra ctxt es =
     return
       EpochState
@@ -95,21 +94,21 @@ instance Crypto c => TranslateEra (MaryEra c) EpochState where
         , esNonMyopic = esNonMyopic es
         }
 
-instance Crypto c => TranslateEra (MaryEra c) DState where
+instance TranslateEra MaryEra DState where
   translateEra _ DState {..} = pure DState {..}
 
-instance Crypto c => TranslateEra (MaryEra c) CommitteeState where
+instance TranslateEra MaryEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance Crypto c => TranslateEra (MaryEra c) VState where
+instance TranslateEra MaryEra VState where
   translateEra ctx VState {..} = do
     committeeState <- translateEra ctx vsCommitteeState
     pure VState {vsCommitteeState = committeeState, ..}
 
-instance Crypto c => TranslateEra (MaryEra c) PState where
+instance TranslateEra MaryEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance Crypto c => TranslateEra (MaryEra c) CertState where
+instance TranslateEra MaryEra CertState where
   translateEra ctxt ls =
     pure
       CertState
@@ -118,7 +117,7 @@ instance Crypto c => TranslateEra (MaryEra c) CertState where
         , certVState = translateEra' ctxt $ certVState ls
         }
 
-instance Crypto c => TranslateEra (MaryEra c) LedgerState where
+instance TranslateEra MaryEra LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
@@ -126,11 +125,11 @@ instance Crypto c => TranslateEra (MaryEra c) LedgerState where
         , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
-instance Crypto c => TranslateEra (MaryEra c) ProposedPPUpdates where
+instance TranslateEra MaryEra ProposedPPUpdates where
   translateEra ctxt (ProposedPPUpdates ppup) =
     return $ ProposedPPUpdates $ Map.map (translateEra' ctxt) ppup
 
-instance Crypto c => TranslateEra (MaryEra c) ShelleyGovState where
+instance TranslateEra MaryEra ShelleyGovState where
   translateEra ctxt ps =
     return
       ShelleyGovState
@@ -141,7 +140,7 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyGovState where
         , sgsFuturePParams = translateEra' ctxt $ sgsFuturePParams ps
         }
 
-instance Crypto c => TranslateEra (MaryEra c) UTxOState where
+instance TranslateEra MaryEra UTxOState where
   translateEra ctxt us =
     return
       UTxOState
@@ -153,23 +152,23 @@ instance Crypto c => TranslateEra (MaryEra c) UTxOState where
         , utxosDonation = utxosDonation us
         }
 
-instance Crypto c => TranslateEra (MaryEra c) ShelleyTxOut where
+instance TranslateEra MaryEra ShelleyTxOut where
   translateEra NoGenesis = pure . upgradeTxOut
 
-instance Crypto c => TranslateEra (MaryEra c) UTxO where
+instance TranslateEra MaryEra UTxO where
   translateEra ctxt utxo =
     return $ UTxO (translateEra' ctxt `Map.map` unUTxO utxo)
 
-instance Crypto c => TranslateEra (MaryEra c) ShelleyTxWits where
-  type TranslationError (MaryEra c) ShelleyTxWits = DecoderError
+instance TranslateEra MaryEra ShelleyTxWits where
+  type TranslationError MaryEra ShelleyTxWits = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTxWits"
 
-instance Crypto c => TranslateEra (MaryEra c) Update where
+instance TranslateEra MaryEra Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en
 
-instance Crypto c => TranslateEra (MaryEra c) Timelock where
+instance TranslateEra MaryEra Timelock where
   translateEra _ = pure . translateTimelock
 
-instance Crypto c => TranslateEra (MaryEra c) AllegraTxAuxData where
+instance TranslateEra MaryEra AllegraTxAuxData where
   translateEra ctx (AllegraTxAuxData md as) =
     pure $ AllegraTxAuxData md $ translateEra' ctx <$> as

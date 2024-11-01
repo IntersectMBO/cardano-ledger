@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -86,7 +85,6 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -109,33 +107,32 @@ import qualified Data.Foldable as F
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (NoThunks (..))
 
 -- ======================================
 
-data FutureGenDeleg c = FutureGenDeleg
+data FutureGenDeleg = FutureGenDeleg
   { fGenDelegSlot :: !SlotNo
-  , fGenDelegGenKeyHash :: !(KeyHash 'Genesis c)
+  , fGenDelegGenKeyHash :: !(KeyHash 'Genesis)
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoThunks (FutureGenDeleg c)
+instance NoThunks FutureGenDeleg
 
-instance NFData (FutureGenDeleg c)
+instance NFData FutureGenDeleg
 
-instance Crypto c => EncCBOR (FutureGenDeleg c) where
+instance EncCBOR FutureGenDeleg where
   encCBOR (FutureGenDeleg a b) =
     encodeListLen 2 <> encCBOR a <> encCBOR b
 
-instance Crypto c => DecCBOR (FutureGenDeleg c) where
+instance DecCBOR FutureGenDeleg where
   decCBOR =
     decodeRecordNamed "FutureGenDeleg" (const 2) $
       FutureGenDeleg <$> decCBOR <*> decCBOR
 
-instance Crypto c => ToJSON (FutureGenDeleg c) where
+instance ToJSON FutureGenDeleg where
   toJSON fGenDeleg =
     object
       [ "fGenDelegSlot" .= fGenDelegSlot fGenDeleg
@@ -150,23 +147,23 @@ instance Crypto c => ToJSON (FutureGenDeleg c) where
 -- one pot to the other pot.
 -- NOTE that the following property should always hold:
 --   deltaReserves + deltaTreasury = 0
-data InstantaneousRewards c = InstantaneousRewards
-  { iRReserves :: !(Map (Credential 'Staking c) Coin)
-  , iRTreasury :: !(Map (Credential 'Staking c) Coin)
+data InstantaneousRewards = InstantaneousRewards
+  { iRReserves :: !(Map (Credential 'Staking) Coin)
+  , iRTreasury :: !(Map (Credential 'Staking) Coin)
   , deltaReserves :: !DeltaCoin
   , deltaTreasury :: !DeltaCoin
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (InstantaneousRewards c)
+instance NoThunks InstantaneousRewards
 
-instance NFData (InstantaneousRewards c)
+instance NFData InstantaneousRewards
 
-instance Crypto c => ToJSON (InstantaneousRewards c) where
+instance ToJSON InstantaneousRewards where
   toJSON = object . toInstantaneousRewardsPair
   toEncoding = pairs . mconcat . toInstantaneousRewardsPair
 
-toInstantaneousRewardsPair :: (KeyValue e a, Crypto c) => InstantaneousRewards c -> [a]
+toInstantaneousRewardsPair :: KeyValue e a => InstantaneousRewards -> [a]
 toInstantaneousRewardsPair InstantaneousRewards {..} =
   [ "iRReserves" .= iRReserves
   , "iRTreasury" .= iRTreasury
@@ -177,15 +174,15 @@ toInstantaneousRewardsPair InstantaneousRewards {..} =
 -- | The state used by the DELEG rule, which roughly tracks stake
 -- delegation and some governance features.
 data DState era = DState
-  { dsUnified :: !(UMap (EraCrypto era))
+  { dsUnified :: !UMap
   -- ^ Unified Reward Maps. This contains the reward map (which is the source
   -- of truth regarding the registered stake credentials, the deposit map,
   -- the delegation map, and the stake credential pointer map.
-  , dsFutureGenDelegs :: !(Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+  , dsFutureGenDelegs :: !(Map FutureGenDeleg GenDelegPair)
   -- ^ Future genesis key delegations
-  , dsGenDelegs :: !(GenDelegs (EraCrypto era))
+  , dsGenDelegs :: !GenDelegs
   -- ^ Genesis key delegations
-  , dsIRewards :: !(InstantaneousRewards (EraCrypto era))
+  , dsIRewards :: !InstantaneousRewards
   -- ^ Instantaneous Rewards
   }
   deriving (Show, Eq, Generic)
@@ -194,7 +191,7 @@ instance NoThunks (DState era)
 
 instance NFData (DState era)
 
-instance (Era era, EncCBOR (InstantaneousRewards (EraCrypto era))) => EncCBOR (DState era) where
+instance Era era => EncCBOR (DState era) where
   encCBOR (DState unified fgs gs ir) =
     encodeListLen 4
       <> encCBOR unified
@@ -202,10 +199,8 @@ instance (Era era, EncCBOR (InstantaneousRewards (EraCrypto era))) => EncCBOR (D
       <> encCBOR gs
       <> encCBOR ir
 
-instance (Era era, DecShareCBOR (InstantaneousRewards (EraCrypto era))) => DecShareCBOR (DState era) where
-  type
-    Share (DState era) =
-      (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
+instance DecShareCBOR (DState era) where
+  type Share (DState era) = (Interns (Credential 'Staking), Interns (KeyHash 'StakePool))
   decSharePlusCBOR =
     decodeRecordNamedT "DState" (const 4) $ do
       unified <- decSharePlusCBOR
@@ -214,11 +209,11 @@ instance (Era era, DecShareCBOR (InstantaneousRewards (EraCrypto era))) => DecSh
       ir <- decSharePlusLensCBOR _1
       pure $ DState unified fgs gs ir
 
-instance Era era => ToJSON (DState era) where
+instance ToJSON (DState era) where
   toJSON = object . toDStatePair
   toEncoding = pairs . mconcat . toDStatePair
 
-toDStatePair :: (KeyValue e a, Era era) => DState era -> [a]
+toDStatePair :: KeyValue e a => DState era -> [a]
 toDStatePair DState {..} =
   [ "unified" .= dsUnified
   , "fGenDelegs" .= Map.toList dsFutureGenDelegs
@@ -227,7 +222,7 @@ toDStatePair DState {..} =
   ]
 
 -- | Function that looks up the deposit for currently delegated staking credential
-lookupDepositDState :: DState era -> (StakeCredential (EraCrypto era) -> Maybe Coin)
+lookupDepositDState :: DState era -> (StakeCredential -> Maybe Coin)
 lookupDepositDState dstate =
   let currentRewardDeposits = RewDepUView $ dsUnified dstate
    in \k -> do
@@ -235,7 +230,7 @@ lookupDepositDState dstate =
         Just $! fromCompact deposit
 
 -- | Function that looks up curret reward for the delegated staking credential.
-lookupRewardDState :: DState era -> (StakeCredential (EraCrypto era) -> Maybe Coin)
+lookupRewardDState :: DState era -> (StakeCredential -> Maybe Coin)
 lookupRewardDState dstate =
   let currentRewardDeposits = RewDepUView $ dsUnified dstate
    in \k -> do
@@ -244,17 +239,17 @@ lookupRewardDState dstate =
 
 -- | The state used by the POOL rule, which tracks stake pool information.
 data PState era = PState
-  { psStakePoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+  { psStakePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
   -- ^ The stake pool parameters.
-  , psFutureStakePoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+  , psFutureStakePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
   -- ^ The future stake pool parameters.
   -- Changes to existing stake pool parameters are staged in order
   -- to give delegators time to react to changes.
   -- See section 11.2, "Example Illustration of the Reward Cycle",
   -- of the Shelley Ledger Specification for a sequence diagram.
-  , psRetiring :: !(Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
+  , psRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
   -- ^ A map of retiring stake pools to the epoch when they retire.
-  , psDeposits :: !(Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+  , psDeposits :: !(Map (KeyHash 'StakePool) Coin)
   -- ^ A map of the deposits for each pool
   }
   deriving (Show, Eq, Generic)
@@ -267,8 +262,8 @@ instance Era era => EncCBOR (PState era) where
   encCBOR (PState a b c d) =
     encodeListLen 4 <> encCBOR a <> encCBOR b <> encCBOR c <> encCBOR d
 
-instance Era era => DecShareCBOR (PState era) where
-  type Share (PState era) = Interns (KeyHash 'StakePool (EraCrypto era))
+instance DecShareCBOR (PState era) where
+  type Share (PState era) = Interns (KeyHash 'StakePool)
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
     psStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
     psFutureStakePoolParams <- decSharePlusLensCBOR (toMemptyLens _1 id)
@@ -279,11 +274,11 @@ instance Era era => DecShareCBOR (PState era) where
 instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
 
-instance Era era => ToJSON (PState era) where
+instance ToJSON (PState era) where
   toJSON = object . toPStatePair
   toEncoding = pairs . mconcat . toPStatePair
 
-toPStatePair :: (KeyValue e a, Era era) => PState era -> [a]
+toPStatePair :: KeyValue e a => PState era -> [a]
 toPStatePair PState {..} =
   [ "stakePoolParams" .= psStakePoolParams
   , "futureStakePoolParams" .= psFutureStakePoolParams
@@ -291,23 +286,24 @@ toPStatePair PState {..} =
   , "deposits" .= psDeposits
   ]
 
-data CommitteeAuthorization c
+data CommitteeAuthorization
   = -- | Member authorized with a Hot credential acting on behalf of their Cold credential
-    CommitteeHotCredential !(Credential 'HotCommitteeRole c)
+    CommitteeHotCredential !(Credential 'HotCommitteeRole)
   | -- | Member resigned with a potential explanation in Anchor
-    CommitteeMemberResigned !(StrictMaybe (Anchor c))
-  deriving (Eq, Ord, Show, Generic, ToJSON)
+    CommitteeMemberResigned !(StrictMaybe Anchor)
+  deriving (Eq, Ord, Show, Generic)
 
-instance NoThunks (CommitteeAuthorization c)
-instance Crypto c => NFData (CommitteeAuthorization c)
+instance NoThunks CommitteeAuthorization
+instance NFData CommitteeAuthorization
+instance ToJSON CommitteeAuthorization
 
-instance Crypto c => EncCBOR (CommitteeAuthorization c) where
+instance EncCBOR CommitteeAuthorization where
   encCBOR =
     encode . \case
       CommitteeHotCredential cred -> Sum CommitteeHotCredential 0 !> To cred
       CommitteeMemberResigned anchor -> Sum CommitteeMemberResigned 1 !> To anchor
 
-instance Crypto c => DecCBOR (CommitteeAuthorization c) where
+instance DecCBOR CommitteeAuthorization where
   decCBOR =
     decode $ Summands "CommitteeAuthorization" $ \case
       0 -> SumD CommitteeHotCredential <! From
@@ -315,30 +311,21 @@ instance Crypto c => DecCBOR (CommitteeAuthorization c) where
       k -> Invalid k
 
 newtype CommitteeState era = CommitteeState
-  { csCommitteeCreds ::
-      Map
-        (Credential 'ColdCommitteeRole (EraCrypto era))
-        (CommitteeAuthorization (EraCrypto era))
+  { csCommitteeCreds :: Map (Credential 'ColdCommitteeRole) CommitteeAuthorization
   }
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Ord, Show, Generic, EncCBOR, NFData, Default, NoThunks)
+
+instance ToJSON (CommitteeState era)
 
 -- | Extract all unique hot credential authorizations for the current committee.  Note
 -- that there is no unique mapping from Hot to Cold credential, therefore we produce a
 -- Set, instead of a Map.
-authorizedHotCommitteeCredentials ::
-  CommitteeState era -> Set.Set (Credential 'HotCommitteeRole (EraCrypto era))
+authorizedHotCommitteeCredentials :: CommitteeState era -> Set.Set (Credential 'HotCommitteeRole)
 authorizedHotCommitteeCredentials CommitteeState {csCommitteeCreds} =
   let toHotCredSet acc = \case
         CommitteeHotCredential hotCred -> Set.insert hotCred acc
         CommitteeMemberResigned {} -> acc
    in F.foldl' toHotCredSet Set.empty csCommitteeCreds
-
-instance NoThunks (CommitteeState era)
-instance Default (CommitteeState era)
-
-instance Era era => NFData (CommitteeState era)
-
-deriving newtype instance Era era => EncCBOR (CommitteeState era)
 
 -- TODO: Implement sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance Era era => DecShareCBOR (CommitteeState era) where
@@ -347,19 +334,13 @@ instance Era era => DecShareCBOR (CommitteeState era) where
 instance Era era => DecCBOR (CommitteeState era) where
   decCBOR = decNoShareCBOR
 
-deriving newtype instance Era era => ToJSON (CommitteeState era)
-
 instance Era era => ToCBOR (CommitteeState era) where
   toCBOR = toEraCBOR @era
 
 -- | The state that tracks the voting entities (DReps and Constitutional Committee
 -- members). In the formal ledger specification this type is called @GState@
 data VState era = VState
-  { vsDReps ::
-      !( Map
-          (Credential 'DRepRole (EraCrypto era))
-          (DRepState (EraCrypto era))
-       )
+  { vsDReps :: !(Map (Credential 'DRepRole) DRepState)
   , vsCommitteeState :: !(CommitteeState era)
   , vsNumDormantEpochs :: !EpochNo
   -- ^ Number of contiguous epochs in which there are exactly zero
@@ -373,15 +354,15 @@ data VState era = VState
   deriving (Show, Eq, Generic)
 
 -- | Function that looks up the deposit for currently registered DRep
-lookupDepositVState :: VState era -> Credential 'DRepRole (EraCrypto era) -> Maybe Coin
+lookupDepositVState :: VState era -> Credential 'DRepRole -> Maybe Coin
 lookupDepositVState vstate = fmap drepDeposit . flip Map.lookup (vstate ^. vsDRepsL)
 
 instance Default (VState era) where
   def = VState def def (EpochNo 0)
 
-instance Typeable (EraCrypto era) => NoThunks (VState era)
+instance NoThunks (VState era)
 
-instance Era era => NFData (VState era)
+instance NFData (VState era)
 
 -- TODO: Implement sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance Era era => DecShareCBOR (VState era) where
@@ -412,16 +393,16 @@ data CertState era = CertState
   }
   deriving (Show, Eq, Generic)
 
-instance Typeable (EraCrypto era) => NoThunks (CertState era)
+instance NoThunks (CertState era)
 
-instance Era era => NFData (CertState era)
+instance NFData (CertState era)
 
-instance Crypto c => EncCBOR (InstantaneousRewards c) where
+instance EncCBOR InstantaneousRewards where
   encCBOR (InstantaneousRewards irR irT dR dT) =
     encodeListLen 4 <> encCBOR irR <> encCBOR irT <> encCBOR dR <> encCBOR dT
 
-instance Crypto c => DecShareCBOR (InstantaneousRewards c) where
-  type Share (InstantaneousRewards c) = Interns (Credential 'Staking c)
+instance DecShareCBOR InstantaneousRewards where
+  type Share InstantaneousRewards = Interns (Credential 'Staking)
   decSharePlusCBOR =
     decodeRecordNamedT "InstantaneousRewards" (const 4) $ do
       irR <- decSharePlusLensCBOR (toMemptyLens _1 id)
@@ -438,9 +419,7 @@ instance Era era => EncCBOR (CertState era) where
       <> encCBOR certDState
 
 instance Era era => DecShareCBOR (CertState era) where
-  type
-    Share (CertState era) =
-      (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
+  type Share (CertState era) = (Interns (Credential 'Staking), Interns (KeyHash 'StakePool))
   decSharePlusCBOR = decodeRecordNamedT "CertState" (const 3) $ do
     certVState <- lift decNoShareCBOR -- TODO: add sharing of DRep credentials
     certPState <- decSharePlusLensCBOR _2
@@ -450,17 +429,17 @@ instance Era era => DecShareCBOR (CertState era) where
 instance Default (CertState era) where
   def = CertState def def def
 
-instance Era era => ToJSON (CertState era) where
+instance ToJSON (CertState era) where
   toJSON = object . toCertStatePairs
   toEncoding = pairs . mconcat . toCertStatePairs
 
-toCertStatePairs :: (KeyValue e a, Era era) => CertState era -> [a]
+toCertStatePairs :: KeyValue e a => CertState era -> [a]
 toCertStatePairs CertState {..} =
   [ "dstate" .= certDState
   , "pstate" .= certPState
   ]
 
-instance Default (InstantaneousRewards c) where
+instance Default InstantaneousRewards where
   def = InstantaneousRewards Map.empty Map.empty mempty mempty
 
 instance Default (DState era) where
@@ -471,20 +450,20 @@ instance Default (DState era) where
       (GenDelegs Map.empty)
       def
 
-instance Default (PState c) where
+instance Default (PState era) where
   def =
     PState Map.empty Map.empty Map.empty Map.empty
 
-rewards :: DState era -> UView (EraCrypto era) (Credential 'Staking (EraCrypto era)) RDPair
+rewards :: DState era -> UView (Credential 'Staking) RDPair
 rewards = RewDepUView . dsUnified
 
 delegations ::
   DState era ->
-  UView (EraCrypto era) (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+  UView (Credential 'Staking) (KeyHash 'StakePool)
 delegations = SPoolUView . dsUnified
 
 -- | get the actual ptrs map, we don't need a view
-ptrsMap :: DState era -> Map Ptr (Credential 'Staking (EraCrypto era))
+ptrsMap :: DState era -> Map Ptr (Credential 'Staking)
 ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
 
 -- ==========================================================
@@ -495,7 +474,7 @@ ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
 --   situations where a pool may be registered multiple times.
 payPoolDeposit ::
   EraPParams era =>
-  KeyHash 'StakePool (EraCrypto era) ->
+  KeyHash 'StakePool ->
   PParams era ->
   PState era ->
   PState era
@@ -507,7 +486,7 @@ payPoolDeposit keyhash pp pstate = pstate {psDeposits = newpool}
       | Map.notMember keyhash pool = Map.insert keyhash deposit pool
       | otherwise = pool
 
-refundPoolDeposit :: KeyHash 'StakePool (EraCrypto era) -> PState era -> (Coin, PState era)
+refundPoolDeposit :: KeyHash 'StakePool -> PState era -> (Coin, PState era)
 refundPoolDeposit keyhash pstate = (coin, pstate {psDeposits = newpool})
   where
     pool = psDeposits pstate
@@ -600,41 +579,38 @@ certVStateL = lens certVState (\ds u -> ds {certVState = u})
 -- ===================================
 -- DState
 
-dsUnifiedL :: Lens' (DState era) (UMap (EraCrypto era))
+dsUnifiedL :: Lens' (DState era) UMap
 dsUnifiedL = lens dsUnified (\ds u -> ds {dsUnified = u})
 
-dsGenDelegsL :: Lens' (DState era) (GenDelegs (EraCrypto era))
+dsGenDelegsL :: Lens' (DState era) GenDelegs
 dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
 
-dsIRewardsL :: Lens' (DState era) (InstantaneousRewards (EraCrypto era))
+dsIRewardsL :: Lens' (DState era) InstantaneousRewards
 dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
 
 dsFutureGenDelegsL ::
-  Lens' (DState era) (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+  Lens' (DState era) (Map FutureGenDeleg GenDelegPair)
 dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u})
 
 -- ===================================
 -- PState
 
-psStakePoolParamsL ::
-  Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+psStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool) PoolParams)
 psStakePoolParamsL = lens psStakePoolParams (\ds u -> ds {psStakePoolParams = u})
 
-psFutureStakePoolParamsL ::
-  Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool) PoolParams)
 psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ds u -> ds {psFutureStakePoolParams = u})
 
-psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
+psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool) EpochNo)
 psRetiringL = lens psRetiring (\ds u -> ds {psRetiring = u})
 
-psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool) Coin)
 psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
 
 -- ===================================
 -- VState
 
-vsDRepsL ::
-  Lens' (VState era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+vsDRepsL :: Lens' (VState era) (Map (Credential 'DRepRole) DRepState)
 vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
 
 vsCommitteeStateL :: Lens' (VState era) (CommitteeState era)
@@ -643,15 +619,10 @@ vsCommitteeStateL = lens vsCommitteeState (\vs u -> vs {vsCommitteeState = u})
 vsNumDormantEpochsL :: Lens' (VState era) EpochNo
 vsNumDormantEpochsL = lens vsNumDormantEpochs (\vs u -> vs {vsNumDormantEpochs = u})
 
-vsActualDRepExpiry :: Credential 'DRepRole (EraCrypto era) -> VState era -> Maybe EpochNo
+vsActualDRepExpiry :: Credential 'DRepRole -> VState era -> Maybe EpochNo
 vsActualDRepExpiry cred vs =
   binOpEpochNo (+) (vsNumDormantEpochs vs) . drepExpiry <$> Map.lookup cred (vsDReps vs)
 
 csCommitteeCredsL ::
-  Lens'
-    (CommitteeState era)
-    ( Map
-        (Credential 'ColdCommitteeRole (EraCrypto era))
-        (CommitteeAuthorization (EraCrypto era))
-    )
+  Lens' (CommitteeState era) (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
 csCommitteeCredsL = lens csCommitteeCreds (\cs u -> cs {csCommitteeCreds = u})

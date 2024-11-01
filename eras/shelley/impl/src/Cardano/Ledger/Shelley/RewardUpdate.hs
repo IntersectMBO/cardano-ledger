@@ -52,7 +52,6 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Core (Reward (..), RewardType (MemberReward))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic)
 import Cardano.Ledger.Shelley.Rewards (
@@ -70,53 +69,52 @@ import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), allNoThunks)
 
 -- ===============================================================
 
-type RewardEvent c = Map (Credential 'Staking c) (Set (Reward c))
+type RewardEvent = Map (Credential 'Staking) (Set Reward)
 
 -- | The result of reward calculation is a pair of aggregate Maps.
 --   One for the accumulated answer, and one for the answer since the last pulse
-data RewardAns c = RewardAns
-  { accumRewardAns :: !(Map (Credential 'Staking c) (Reward c))
-  , recentRewardAns :: !(RewardEvent c)
+data RewardAns = RewardAns
+  { accumRewardAns :: !(Map (Credential 'Staking) Reward)
+  , recentRewardAns :: !RewardEvent
   }
   deriving (Show, Eq, Generic)
   deriving (NFData)
 
-instance NoThunks (RewardAns c)
+instance NoThunks RewardAns
 
-instance Crypto c => EncCBOR (RewardAns c) where
+instance EncCBOR RewardAns where
   encCBOR (RewardAns accum recent) = encodeListLen 2 <> encCBOR accum <> encCBOR recent
 
-instance Crypto c => DecCBOR (RewardAns c) where
+instance DecCBOR RewardAns where
   decCBOR = decodeRecordNamed "RewardAns" (const 2) (RewardAns <$> decCBOR <*> decCBOR)
 
 -- | The type of RewardPulser we pulse on.
-type Pulser c = RewardPulser c ShelleyBase (RewardAns c)
+type Pulser = RewardPulser ShelleyBase RewardAns
 
 -- =====================================
 
 -- | The ultimate goal of a reward update computation.
 --     Aggregating rewards for each staking credential.
-data RewardUpdate c = RewardUpdate
+data RewardUpdate = RewardUpdate
   { deltaT :: !DeltaCoin
   , deltaR :: !DeltaCoin
-  , rs :: !(Map (Credential 'Staking c) (Set (Reward c)))
+  , rs :: !(Map (Credential 'Staking) (Set Reward))
   , deltaF :: !DeltaCoin
-  , nonMyopic :: !(NonMyopic c)
+  , nonMyopic :: !NonMyopic
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (RewardUpdate c)
+instance NoThunks RewardUpdate
 
-instance NFData (RewardUpdate c)
+instance NFData RewardUpdate
 
-instance Crypto c => EncCBOR (RewardUpdate c) where
+instance EncCBOR RewardUpdate where
   encCBOR (RewardUpdate dt dr rw df nm) =
     encodeListLen 5
       <> encCBOR dt
@@ -125,7 +123,7 @@ instance Crypto c => EncCBOR (RewardUpdate c) where
       <> encCBOR (invert df) -- TODO change Coin serialization to use integers?
       <> encCBOR nm
 
-instance Crypto c => DecCBOR (RewardUpdate c) where
+instance DecCBOR RewardUpdate where
   decCBOR = do
     decodeRecordNamed "RewardUpdate" (const 5) $ do
       dt <- decCBOR
@@ -135,11 +133,11 @@ instance Crypto c => DecCBOR (RewardUpdate c) where
       nm <- decNoShareCBOR
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
-instance Crypto c => ToJSON (RewardUpdate c) where
+instance ToJSON RewardUpdate where
   toJSON = object . toRewardUpdatePair
   toEncoding = pairs . mconcat . toRewardUpdatePair
 
-toRewardUpdatePair :: (KeyValue e a, Crypto c) => RewardUpdate c -> [a]
+toRewardUpdatePair :: KeyValue e a => RewardUpdate -> [a]
 toRewardUpdatePair ru@(RewardUpdate _ _ _ _ _) =
   let RewardUpdate {..} = ru
    in [ "deltaT" .= deltaT
@@ -149,30 +147,30 @@ toRewardUpdatePair ru@(RewardUpdate _ _ _ _ _) =
       , "nonMyopic" .= nonMyopic
       ]
 
-emptyRewardUpdate :: RewardUpdate c
+emptyRewardUpdate :: RewardUpdate
 emptyRewardUpdate =
   RewardUpdate (DeltaCoin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) def
 
 -- ===================================================
 
 -- | To complete the reward update, we need a snap shot of the EpochState particular to this computation
-data RewardSnapShot c = RewardSnapShot
+data RewardSnapShot = RewardSnapShot
   { rewFees :: !Coin
   , rewProtocolVersion :: !ProtVer
-  , rewNonMyopic :: !(NonMyopic c)
+  , rewNonMyopic :: !NonMyopic
   , rewDeltaR1 :: !Coin -- deltaR1
   , rewR :: !Coin -- r
   , rewDeltaT1 :: !Coin -- deltaT1
-  , rewLikelihoods :: !(Map (KeyHash 'StakePool c) Likelihood)
-  , rewLeaders :: !(Map (Credential 'Staking c) (Set (Reward c)))
+  , rewLikelihoods :: !(Map (KeyHash 'StakePool) Likelihood)
+  , rewLeaders :: !(Map (Credential 'Staking) (Set Reward))
   }
   deriving (Show, Eq, Generic)
 
-instance Typeable c => NoThunks (RewardSnapShot c)
+instance NoThunks RewardSnapShot
 
-instance NFData (RewardSnapShot c)
+instance NFData RewardSnapShot
 
-instance Crypto c => EncCBOR (RewardSnapShot c) where
+instance EncCBOR RewardSnapShot where
   encCBOR (RewardSnapShot fees ver nm dr1 r dt1 lhs lrs) =
     encode
       ( Rec RewardSnapShot
@@ -186,7 +184,7 @@ instance Crypto c => EncCBOR (RewardSnapShot c) where
           !> To lrs
       )
 
-instance Crypto c => DecCBOR (RewardSnapShot c) where
+instance DecCBOR RewardSnapShot where
   decCBOR =
     decode
       ( RecD RewardSnapShot
@@ -205,19 +203,19 @@ instance Crypto c => DecCBOR (RewardSnapShot c) where
 -- rewardStakePool, so that it can be made into a serializable
 -- Pulsable function.
 
-data FreeVars c = FreeVars
-  { fvDelegs :: !(VMap VB VB (Credential 'Staking c) (KeyHash 'StakePool c))
-  , fvAddrsRew :: !(Set (Credential 'Staking c))
+data FreeVars = FreeVars
+  { fvDelegs :: !(VMap VB VB (Credential 'Staking) (KeyHash 'StakePool))
+  , fvAddrsRew :: !(Set (Credential 'Staking))
   , fvTotalStake :: !Coin
   , fvProtVer :: !ProtVer
-  , fvPoolRewardInfo :: !(Map (KeyHash 'StakePool c) (PoolRewardInfo c))
+  , fvPoolRewardInfo :: !(Map (KeyHash 'StakePool) PoolRewardInfo)
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
 
-instance NFData (FreeVars c)
+instance NFData FreeVars
 
-instance Crypto c => EncCBOR (FreeVars c) where
+instance EncCBOR FreeVars where
   encCBOR
     FreeVars
       { fvDelegs
@@ -235,7 +233,7 @@ instance Crypto c => EncCBOR (FreeVars c) where
             !> To fvPoolRewardInfo
         )
 
-instance Crypto c => DecCBOR (FreeVars c) where
+instance DecCBOR FreeVars where
   decCBOR =
     decode
       ( RecD FreeVars
@@ -250,11 +248,11 @@ instance Crypto c => DecCBOR (FreeVars c) where
 
 -- | The function to call on each reward update pulse. Called by the pulser.
 rewardStakePoolMember ::
-  FreeVars c ->
-  RewardAns c ->
-  Credential 'Staking c ->
+  FreeVars ->
+  RewardAns ->
+  Credential 'Staking ->
   CompactForm Coin ->
-  RewardAns c
+  RewardAns
 rewardStakePoolMember
   FreeVars
     { fvDelegs
@@ -282,23 +280,23 @@ rewardStakePoolMember
 --     the type as a Pulser. The type must have 'm' and 'ans' as its last two
 --     parameters so we can make a Pulsable instance.
 --     RSLP = Reward Serializable Listbased Pulser
-data RewardPulser c (m :: Type -> Type) ans where
+data RewardPulser (m :: Type -> Type) ans where
   RSLP ::
-    (ans ~ RewardAns c, m ~ ShelleyBase) =>
+    (ans ~ RewardAns, m ~ ShelleyBase) =>
     !Int ->
-    !(FreeVars c) ->
-    !(VMap.VMap VMap.VB VMap.VP (Credential 'Staking c) (CompactForm Coin)) ->
+    !FreeVars ->
+    !(VMap.VMap VMap.VB VMap.VP (Credential 'Staking) (CompactForm Coin)) ->
     !ans ->
-    RewardPulser c m ans
+    RewardPulser m ans
 
 -- Because of the constraints on the Constructor RSLP, there is really only one inhabited
 -- type:  (RewardPulser c ShelleyBase (RewardAns c))
 -- All of the instances are at that type. Though only the CBOR instances need make that explicit.
 
-clearRecent :: RewardAns c -> RewardAns c
+clearRecent :: RewardAns -> RewardAns
 clearRecent (RewardAns accum _) = RewardAns accum Map.empty
 
-instance Pulsable (RewardPulser c) where
+instance Pulsable RewardPulser where
   done (RSLP _n _free zs _ans) = VMap.null zs
   current (RSLP _ _ _ ans) = ans
   pulseM p@(RSLP n free balance (clearRecent -> ans)) =
@@ -311,11 +309,11 @@ instance Pulsable (RewardPulser c) where
   completeM (RSLP _ free balance (clearRecent -> ans)) =
     pure $ VMap.foldlWithKey (rewardStakePoolMember free) ans balance
 
-deriving instance Eq ans => Eq (RewardPulser c m ans)
+deriving instance Eq ans => Eq (RewardPulser m ans)
 
-deriving instance Show ans => Show (RewardPulser c m ans)
+deriving instance Show ans => Show (RewardPulser m ans)
 
-instance Typeable c => NoThunks (Pulser c) where
+instance NoThunks Pulser where
   showTypeOf _ = "RewardPulser"
   wNoThunks ctxt (RSLP n free balance ans) =
     allNoThunks
@@ -325,39 +323,39 @@ instance Typeable c => NoThunks (Pulser c) where
       , noThunks ctxt ans
       ]
 
-instance NFData (Pulser c) where
+instance NFData Pulser where
   rnf (RSLP n1 c1 b1 a1) = seq (rnf n1) (seq (rnf c1) (seq (rnf b1) (rnf a1)))
 
-instance Crypto c => EncCBOR (Pulser c) where
+instance EncCBOR Pulser where
   encCBOR (RSLP n free balance ans) =
     encode (Rec RSLP !> To n !> To free !> To balance !> To ans)
 
-instance Crypto c => DecCBOR (Pulser c) where
+instance DecCBOR Pulser where
   decCBOR =
     decode (RecD RSLP <! From <! From <! From <! From)
 
 -- =========================================================================
 
 -- | The state used in the STS rules
-data PulsingRewUpdate c
-  = Pulsing !(RewardSnapShot c) !(Pulser c) -- Pulsing work still to do
-  | Complete !(RewardUpdate c) -- Pulsing work completed, ultimate goal reached
+data PulsingRewUpdate
+  = Pulsing !RewardSnapShot !Pulser -- Pulsing work still to do
+  | Complete !RewardUpdate -- Pulsing work completed, ultimate goal reached
   deriving (Eq, Show, Generic, NoThunks)
 
-instance Crypto c => EncCBOR (PulsingRewUpdate c) where
+instance EncCBOR PulsingRewUpdate where
   encCBOR (Pulsing s p) = encode (Sum Pulsing 0 !> To s !> To p)
   encCBOR (Complete r) = encode (Sum Complete 1 !> To r)
 
-instance Crypto c => DecCBOR (PulsingRewUpdate c) where
+instance DecCBOR PulsingRewUpdate where
   decCBOR = decode (Summands "PulsingRewUpdate" decPS)
     where
       decPS 0 = SumD Pulsing <! From <! From
       decPS 1 = SumD Complete <! From
       decPS n = Invalid n
 
-instance NFData (PulsingRewUpdate c)
+instance NFData PulsingRewUpdate
 
-instance Crypto c => ToJSON (PulsingRewUpdate c) where
+instance ToJSON PulsingRewUpdate where
   toJSON = \case
     Pulsing _ _ -> Null
     Complete ru -> toJSON ru

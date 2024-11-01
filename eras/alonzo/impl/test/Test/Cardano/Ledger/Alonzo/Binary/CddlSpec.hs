@@ -4,7 +4,7 @@
 module Test.Cardano.Ledger.Alonzo.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Allegra.Scripts
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, Redeemers)
 import Cardano.Ledger.Core
@@ -26,28 +26,28 @@ import Test.Cardano.Ledger.Common
 spec :: Spec
 spec =
   describe "CDDL" $ do
-    let v = eraProtVerHigh @Alonzo
+    let v = eraProtVerHigh @AlonzoEra
     describe "Ruby-based" $ beforeAllCddlFile 3 readAlonzoCddlFiles $ do
-      cddlRoundTripCborSpec @(Value Alonzo) v "coin"
-      cddlRoundTripAnnCborSpec @(TxBody Alonzo) v "transaction_body"
-      cddlRoundTripAnnCborSpec @(TxAuxData Alonzo) v "auxiliary_data"
-      cddlRoundTripAnnCborSpec @(Timelock Alonzo) v "native_script"
-      cddlRoundTripAnnCborSpec @(Data Alonzo) v "plutus_data"
-      cddlRoundTripCborSpec @(TxOut Alonzo) v "transaction_output"
-      cddlRoundTripAnnCborSpec @(AlonzoTxWits Alonzo) v "transaction_witness_set"
-      cddlRoundTripCborSpec @(PParamsUpdate Alonzo) v "protocol_param_update"
-      cddlRoundTripAnnCborSpec @(Redeemers Alonzo) v "redeemers"
-      cddlRoundTripAnnCborSpec @(Tx Alonzo) v "transaction"
+      cddlRoundTripCborSpec @(Value AlonzoEra) v "coin"
+      cddlRoundTripAnnCborSpec @(TxBody AlonzoEra) v "transaction_body"
+      cddlRoundTripAnnCborSpec @(TxAuxData AlonzoEra) v "auxiliary_data"
+      cddlRoundTripAnnCborSpec @(Timelock AlonzoEra) v "native_script"
+      cddlRoundTripAnnCborSpec @(Data AlonzoEra) v "plutus_data"
+      cddlRoundTripCborSpec @(TxOut AlonzoEra) v "transaction_output"
+      cddlRoundTripAnnCborSpec @(AlonzoTxWits AlonzoEra) v "transaction_witness_set"
+      cddlRoundTripCborSpec @(PParamsUpdate AlonzoEra) v "protocol_param_update"
+      cddlRoundTripAnnCborSpec @(Redeemers AlonzoEra) v "[* redeemer]"
+      cddlRoundTripAnnCborSpec @(Tx AlonzoEra) v "transaction"
       cddlRoundTripCborSpec @CostModels v "cost_models"
     describe "Huddle" $ specWithHuddle alonzoCDDL 100 $ do
-      huddleRoundTripCborSpec @(Value Alonzo) v "coin"
-      huddleRoundTripAnnCborSpec @(TxBody Alonzo) v "transaction_body"
-      huddleRoundTripAnnCborSpec @(TxAuxData Alonzo) v "auxiliary_data"
-      huddleRoundTripAnnCborSpec @(Timelock Alonzo) v "native_script"
-      huddleRoundTripAnnCborSpec @(Data Alonzo) v "plutus_data"
-      huddleRoundTripCborSpec @(TxOut Alonzo) v "transaction_output"
-      huddleRoundTripAnnCborSpec @(AlonzoTxWits Alonzo) v "transaction_witness_set"
-      huddleRoundTripCborSpec @(PParamsUpdate Alonzo) v "protocol_param_update"
-      huddleRoundTripAnnCborSpec @(Redeemers Alonzo) v "redeemers"
-      huddleRoundTripAnnCborSpec @(Tx Alonzo) v "transaction"
+      huddleRoundTripCborSpec @(Value AlonzoEra) v "coin"
+      huddleRoundTripAnnCborSpec @(TxBody AlonzoEra) v "transaction_body"
+      huddleRoundTripAnnCborSpec @(TxAuxData AlonzoEra) v "auxiliary_data"
+      huddleRoundTripAnnCborSpec @(Timelock AlonzoEra) v "native_script"
+      huddleRoundTripAnnCborSpec @(Data AlonzoEra) v "plutus_data"
+      huddleRoundTripCborSpec @(TxOut AlonzoEra) v "transaction_output"
+      huddleRoundTripAnnCborSpec @(AlonzoTxWits AlonzoEra) v "transaction_witness_set"
+      huddleRoundTripCborSpec @(PParamsUpdate AlonzoEra) v "protocol_param_update"
+      huddleRoundTripAnnCborSpec @(Redeemers AlonzoEra) v "redeemers"
+      huddleRoundTripAnnCborSpec @(Tx AlonzoEra) v "transaction"
       huddleRoundTripCborSpec @CostModels v "cost_models"

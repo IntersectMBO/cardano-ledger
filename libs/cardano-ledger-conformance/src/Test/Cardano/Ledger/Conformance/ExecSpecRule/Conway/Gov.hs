@@ -11,11 +11,10 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Gov () where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.TxIn (TxId)
 import Lens.Micro
 import qualified Lib as Agda
@@ -27,20 +26,20 @@ import Test.Cardano.Ledger.Imp.Common
 
 instance
   Inject
-    (TxId StandardCrypto, Proposals Conway, EnactState Conway)
-    (EnactState Conway)
+    (TxId, Proposals ConwayEra, EnactState ConwayEra)
+    (EnactState ConwayEra)
   where
   inject (_, _, x) = x
 
 instance
-  ( NFData (SpecRep (ConwayGovPredFailure Conway))
+  ( NFData (SpecRep (ConwayGovPredFailure ConwayEra))
   , IsConwayUniv fn
   ) =>
-  ExecSpecRule fn "GOV" Conway
+  ExecSpecRule fn "GOV" ConwayEra
   where
   type
-    ExecContext fn "GOV" Conway =
-      (TxId StandardCrypto, ProposalsSplit, EnactState Conway)
+    ExecContext fn "GOV" ConwayEra =
+      (TxId, ProposalsSplit, EnactState ConwayEra)
 
   environmentSpec _ = govEnvSpec
 

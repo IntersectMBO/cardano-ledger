@@ -10,13 +10,12 @@ module Test.Cardano.Ledger.Conway.Translation.TranslatableGen where
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AsIx (..), PlutusPurpose)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Binary (mkSized)
-import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus (Data (..), ExUnits, Language (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Data.Map.Strict as Map
@@ -35,23 +34,23 @@ import qualified Test.Cardano.Ledger.Babbage.Translation.TranslatableGen as Babb
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 
-instance TranslatableGen Conway where
+instance TranslatableGen ConwayEra where
   tgRedeemers = genRedeemers
-  tgTx l = BabbageTranslatableGen.genTx @Conway (genTxBody l)
-  tgUtxo = BabbageTranslatableGen.utxoWithTx @Conway
+  tgTx l = BabbageTranslatableGen.genTx @ConwayEra (genTxBody l)
+  tgUtxo = BabbageTranslatableGen.utxoWithTx @ConwayEra
   mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
   mkTxInfoLanguage PlutusV2 = TxInfoLanguage SPlutusV2
   mkTxInfoLanguage PlutusV3 = TxInfoLanguage SPlutusV3
 
-genTxBody :: forall c. Crypto c => Language -> Gen (ConwayTxBody (ConwayEra c))
+genTxBody :: Language -> Gen (ConwayTxBody ConwayEra)
 genTxBody l = do
   let genTxOuts =
         fromList
           <$> listOf1
-            ( mkSized (eraProtVerLow @Conway)
-                <$> BabbageTranslatableGen.genTxOut @(ConwayEra c) l
+            ( mkSized (eraProtVerLow @ConwayEra)
+                <$> BabbageTranslatableGen.genTxOut @ConwayEra l
             )
-  let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen (TxIn c))
+  let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen TxIn)
       offPrePlutusV3 freq = if l >= PlutusV3 then freq else 0
       genDelegatee =
         frequency

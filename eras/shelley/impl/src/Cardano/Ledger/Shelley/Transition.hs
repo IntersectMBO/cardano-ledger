@@ -36,7 +36,6 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Genesis (EraGenesis)
 import Cardano.Ledger.Keys
@@ -110,10 +109,10 @@ class
 
   -- | Lens for the `ShelleyGenesis` from the `TransitionConfig`. Default implementation
   -- looks in the previous era's config
-  tcShelleyGenesisL :: Lens' (TransitionConfig era) (ShelleyGenesis (EraCrypto era))
+  tcShelleyGenesisL :: Lens' (TransitionConfig era) ShelleyGenesis
   default tcShelleyGenesisL ::
-    (EraTransition (PreviousEra era), EraCrypto (PreviousEra era) ~ EraCrypto era) =>
-    Lens' (TransitionConfig era) (ShelleyGenesis (EraCrypto era))
+    EraTransition (PreviousEra era) =>
+    Lens' (TransitionConfig era) ShelleyGenesis
   tcShelleyGenesisL = tcPreviousEraConfigL . tcShelleyGenesisL
 
   -- | Get the initial PParams for the current era from the `TransitionConfig`. Note that
@@ -150,9 +149,9 @@ registerInitialFundsThenStaking cfg =
   -- information depends on it.
   registerInitialStaking cfg . registerInitialFunds cfg
 
-instance Crypto c => EraTransition (ShelleyEra c) where
-  newtype TransitionConfig (ShelleyEra c) = ShelleyTransitionConfig
-    { stcShelleyGenesis :: ShelleyGenesis c
+instance EraTransition ShelleyEra where
+  newtype TransitionConfig ShelleyEra = ShelleyTransitionConfig
+    { stcShelleyGenesis :: ShelleyGenesis
     }
     deriving (Eq, Show, Generic)
 
@@ -184,7 +183,7 @@ instance Crypto c => EraTransition (ShelleyEra c) where
 -- when NetworkId is set to Mainnet
 tcInitialFundsL ::
   (HasCallStack, EraTransition era) =>
-  Lens' (TransitionConfig era) (LM.ListMap (Addr (EraCrypto era)) Coin)
+  Lens' (TransitionConfig era) (LM.ListMap Addr Coin)
 tcInitialFundsL =
   protectMainnetLens "InitialFunds" null $
     tcShelleyGenesisL . sgInitialFundsL
@@ -196,13 +195,13 @@ tcInitialFundsL =
 -- when NetworkId is set to Mainnet
 tcInitialStakingL ::
   (HasCallStack, EraTransition era) =>
-  Lens' (TransitionConfig era) (ShelleyGenesisStaking (EraCrypto era))
+  Lens' (TransitionConfig era) ShelleyGenesisStaking
 tcInitialStakingL =
   protectMainnetLens "InitialStaking" (== mempty) $
     tcShelleyGenesisL . sgStakingL
 
 -- | Constructor for the base Shelley `TransitionConfig`
-mkShelleyTransitionConfig :: ShelleyGenesis c -> TransitionConfig (ShelleyEra c)
+mkShelleyTransitionConfig :: ShelleyGenesis -> TransitionConfig ShelleyEra
 mkShelleyTransitionConfig = ShelleyTransitionConfig
 
 protectMainnetLens ::
@@ -228,20 +227,20 @@ protectMainnet name g isMainnetSafe m =
     then error $ "Injection of " ++ name ++ " is not possible on Mainnet"
     else m
 
-deriving instance Crypto c => NoThunks (TransitionConfig (ShelleyEra c))
+deriving instance NoThunks (TransitionConfig ShelleyEra)
 
-instance Crypto c => ToJSON (TransitionConfig (ShelleyEra c)) where
+instance ToJSON (TransitionConfig ShelleyEra) where
   toJSON = object . toShelleyTransitionConfigPairs
   toEncoding = pairs . mconcat . toShelleyTransitionConfigPairs
 
-instance Crypto c => FromJSON (TransitionConfig (ShelleyEra c)) where
+instance FromJSON (TransitionConfig ShelleyEra) where
   parseJSON = withObject "ShelleyTransitionConfig" $ \o -> do
     sg <- o .: "shelley"
     pure $ ShelleyTransitionConfig {stcShelleyGenesis = sg}
 
 toShelleyTransitionConfigPairs ::
-  (KeyValue e a, Crypto c) =>
-  TransitionConfig (ShelleyEra c) ->
+  KeyValue e a =>
+  TransitionConfig ShelleyEra ->
   [a]
 toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
   ["shelley" .= object (toShelleyGenesisPairs (stcShelleyGenesis stc))]
@@ -297,7 +296,7 @@ createInitialState tc =
         & prevPParamsGovStateL .~ pp
     pp :: PParams era
     pp = tc ^. tcInitialPParamsG
-    sg :: ShelleyGenesis (EraCrypto era)
+    sg :: ShelleyGenesis
     sg = tc ^. tcShelleyGenesisL
     initialEpochNo :: EpochNo
     initialEpochNo = EpochNo 0
@@ -385,7 +384,7 @@ registerInitialStaking tc nes =
     -- The new stake distribution is made on the basis of a snapshot taken
     -- during the previous epoch. We create a "fake" snapshot in order to
     -- establish an initial stake distribution.
-    initSnapShot :: SnapShot (EraCrypto era)
+    initSnapShot :: SnapShot
     initSnapShot =
       -- Since we build a stake from nothing, we first initialise an
       -- 'IncrementalStake' as empty, and then:

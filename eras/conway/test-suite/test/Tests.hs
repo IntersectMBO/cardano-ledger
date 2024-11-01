@@ -2,7 +2,7 @@
 
 module Main where
 
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Data.Proxy (Proxy (..))
 import qualified Test.Cardano.Ledger.Babbage.TxInfo as Babbage (txInfoTests)
 import qualified Test.Cardano.Ledger.Conway.TxInfo as Conway (txInfoTests)
@@ -15,6 +15,6 @@ defaultTests :: TestTree
 defaultTests =
   testGroup
     "Conway tests"
-    [ Babbage.txInfoTests (Proxy @Conway)
-    , Conway.txInfoTests (Proxy @Conway)
+    [ Babbage.txInfoTests (Proxy @ConwayEra)
+    , Conway.txInfoTests (Proxy @ConwayEra)
     ]

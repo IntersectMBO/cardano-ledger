@@ -32,7 +32,6 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
   applySTSTest,
@@ -44,14 +43,12 @@ import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
-type ShelleyTest = ShelleyEra C_Crypto
-
 ignoreAllButIRWD ::
-  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyTest))) (DState ShelleyTest) ->
-  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyTest))) (InstantaneousRewards C_Crypto)
+  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyEra))) (DState ShelleyEra) ->
+  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyEra))) InstantaneousRewards
 ignoreAllButIRWD = fmap dsIRewards
 
-env :: ProtVer -> AccountState -> DelegEnv ShelleyTest
+env :: ProtVer -> AccountState -> DelegEnv ShelleyEra
 env pv acnt =
   DelegEnv
     { slotNo = slot
@@ -72,22 +69,22 @@ alonzoPV = ProtVer (natVersion @5) 0
 testMirTransfer ::
   ProtVer ->
   MIRPot ->
-  MIRTarget C_Crypto ->
-  InstantaneousRewards C_Crypto ->
+  MIRTarget ->
+  InstantaneousRewards ->
   AccountState ->
-  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyTest))) (InstantaneousRewards C_Crypto) ->
+  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyEra))) InstantaneousRewards ->
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
-  checkTrace @(ShelleyDELEG ShelleyTest) runShelleyBase (env pv acnt) $
+  checkTrace @(ShelleyDELEG ShelleyEra) runShelleyBase (env pv acnt) $
     (pure (dStateWithRewards ir)) .- (MirTxCert (MIRCert pot target)) .->> (dStateWithRewards expected)
 testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
-          applySTSTest @(ShelleyDELEG ShelleyTest)
+          applySTSTest @(ShelleyDELEG ShelleyEra)
             (TRC (env pv acnt, dStateWithRewards ir, MirTxCert (MIRCert pot target)))
   (ignoreAllButIRWD st) @?= predicateFailure
 
-dStateWithRewards :: InstantaneousRewards c -> DState (ShelleyEra c)
+dStateWithRewards :: InstantaneousRewards -> DState ShelleyEra
 dStateWithRewards ir =
   DState
     { dsUnified = UM.empty
@@ -96,22 +93,22 @@ dStateWithRewards ir =
     , dsIRewards = ir
     }
 
-alice :: Credential 'Staking C_Crypto
+alice :: Credential 'Staking
 alice = (KeyHashObj . hashKey . snd) $ mkKeyPair (RawSeed 0 0 0 0 1)
 
-aliceOnlyReward :: Integer -> Map (Credential 'Staking C_Crypto) Coin
+aliceOnlyReward :: Integer -> Map (Credential 'Staking) Coin
 aliceOnlyReward c = Map.fromList [(alice, Coin c)]
 
-aliceOnlyDelta :: Integer -> Map (Credential 'Staking C_Crypto) DeltaCoin
+aliceOnlyDelta :: Integer -> Map (Credential 'Staking) DeltaCoin
 aliceOnlyDelta c = Map.fromList [(alice, DeltaCoin c)]
 
-bob :: Credential 'Staking C_Crypto
+bob :: Credential 'Staking
 bob = (KeyHashObj . hashKey . snd) $ mkKeyPair (RawSeed 0 0 0 0 2)
 
-bobOnlyReward :: Integer -> Map (Credential 'Staking C_Crypto) Coin
+bobOnlyReward :: Integer -> Map (Credential 'Staking) Coin
 bobOnlyReward c = Map.fromList [(bob, Coin c)]
 
-bobOnlyDelta :: Integer -> Map (Credential 'Staking C_Crypto) DeltaCoin
+bobOnlyDelta :: Integer -> Map (Credential 'Staking) DeltaCoin
 bobOnlyDelta c = Map.fromList [(bob, DeltaCoin c)]
 
 testMIRTransfer :: TestTree

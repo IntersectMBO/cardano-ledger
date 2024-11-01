@@ -33,7 +33,6 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
 )
 where
 
-import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
@@ -59,7 +58,6 @@ import Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyRole (..), hashKey)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Shelley.API (
@@ -109,7 +107,7 @@ import Test.Cardano.Ledger.Constrained.Preds.Tx (pcTxWithUTxO)
 --   Data with specific semantics ("constants")
 -- =================================================================
 
-alwaysFailsHash :: forall era. Scriptic era => Natural -> Proof era -> ScriptHash (EraCrypto era)
+alwaysFailsHash :: forall era. Scriptic era => Natural -> Proof era -> ScriptHash
 alwaysFailsHash n pf = hashScript @era $ never n pf
 
 alwaysSucceedsHash ::
@@ -117,27 +115,27 @@ alwaysSucceedsHash ::
   Scriptic era =>
   Natural ->
   Proof era ->
-  ScriptHash (EraCrypto era)
+  ScriptHash
 alwaysSucceedsHash n pf = hashScript @era $ always n pf
 
-someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (EraCrypto era)
+someKeys :: forall era. Proof era -> KeyPair 'Payment
 someKeys _pf = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @(EraCrypto era) (RawSeed 1 1 1 1 1)
+    (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
-someAddr :: forall era. Era era => Proof era -> Addr (EraCrypto era)
+someAddr :: forall era. Proof era -> Addr
 someAddr pf = Addr Testnet pCred sCred
   where
-    (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 2)
+    (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 2)
     pCred = KeyHashObj . hashKey . vKey $ someKeys pf
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
 -- Create an address with a given payment script.
-someScriptAddr :: forall era. Scriptic era => Script era -> Addr (EraCrypto era)
+someScriptAddr :: forall era. Scriptic era => Script era -> Addr
 someScriptAddr s = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ s
-    (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 0)
+    (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 0)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
 timelockScript :: PostShelley era => Int -> Proof era -> Script era
@@ -148,10 +146,10 @@ timelockHash ::
   PostShelley era =>
   Int ->
   Proof era ->
-  ScriptHash (EraCrypto era)
+  ScriptHash
 timelockHash n pf = hashScript @era $ timelockScript n pf
 
-timelockStakeCred :: PostShelley era => Proof era -> StakeCredential (EraCrypto era)
+timelockStakeCred :: PostShelley era => Proof era -> StakeCredential
 timelockStakeCred pf = ScriptHashObj (timelockHash 2 pf)
 
 -- ======================================================================
@@ -192,7 +190,7 @@ initUTxO pf =
     timelockOut = newTxOut pf [Address $ timelockAddr, Amount (inject $ Coin 1)]
     timelockAddr = Addr Testnet pCred sCred
       where
-        (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 2)
+        (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 2)
         pCred = ScriptHashObj tlh
         sCred = StakeRefBase . KeyHashObj . hashKey $ svk
         tlh = hashScript @era $ tls 0
@@ -229,7 +227,7 @@ datumExample2 = Data (PV1.I 0)
 -- ========================= Shared helper functions  ===================
 -- ======================================================================
 
-mkGenesisTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => Integer -> TxIn c
+mkGenesisTxIn :: HasCallStack => Integer -> TxIn
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 mkTxDats :: Era era => Data era -> TxDats era
@@ -249,7 +247,7 @@ testBBODY ::
   (Reflect era, HasCallStack) =>
   WitRule "BBODY" era ->
   ShelleyBbodyState era ->
-  Block (BHeaderView (EraCrypto era)) era ->
+  Block BHeaderView era ->
   Either (NonEmpty (PredicateFailure (EraRule "BBODY" era))) (ShelleyBbodyState era) ->
   PParams era ->
   Assertion
@@ -316,8 +314,7 @@ type Result era =
 
 testUTXOWwith ::
   forall era.
-  ( GoodCrypto (EraCrypto era)
-  , EraTx era
+  ( EraTx era
   , EraGov era
   ) =>
   WitRule "UTXOW" era ->
@@ -340,8 +337,7 @@ testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
 
 runLEDGER ::
   forall era.
-  ( GoodCrypto (EraCrypto era)
-  , EraTx era
+  ( EraTx era
   , EraGov era
   ) =>
   WitRule "LEDGER" era ->

@@ -21,73 +21,70 @@ module Test.Cardano.Ledger.Mary.Examples.Cast (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys (
-  KeyRole (..),
- )
+import Cardano.Ledger.Keys (KeyRole (..))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 
 -- | Alice's payment key pair
-alicePay :: KeyPair 'Payment StandardCrypto
+alicePay :: KeyPair 'Payment
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 0)
 
 -- | Alice's stake key pair
-aliceStake :: KeyPair 'Staking StandardCrypto
+aliceStake :: KeyPair 'Staking
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 -- | Alice's base address
-aliceAddr :: Addr StandardCrypto
+aliceAddr :: Addr
 aliceAddr = mkAddr (alicePay, aliceStake)
 
 -- | Bob's payment key pair
-bobPay :: KeyPair 'Payment StandardCrypto
+bobPay :: KeyPair 'Payment
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 2 2 2 2 2)
 
 -- | Bob's stake key pair
-bobStake :: KeyPair 'Staking StandardCrypto
+bobStake :: KeyPair 'Staking
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 3 3 3 3 3)
 
 -- | Bob's address
-bobAddr :: Addr StandardCrypto
+bobAddr :: Addr
 bobAddr = mkAddr (bobPay, bobStake)
 
 -- Carl's payment key pair
-carlPay :: KeyPair 'Payment StandardCrypto
+carlPay :: KeyPair 'Payment
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 4 4 4 4 4)
 
 -- | Carl's stake key pair
-carlStake :: KeyPair 'Staking StandardCrypto
+carlStake :: KeyPair 'Staking
 carlStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 5 5 5 5 5)
 
 -- | Carl's address
-carlAddr :: Addr StandardCrypto
+carlAddr :: Addr
 carlAddr = mkAddr (carlPay, carlStake)
 
 -- | Daria's payment key pair
-dariaPay :: KeyPair 'Payment StandardCrypto
+dariaPay :: KeyPair 'Payment
 dariaPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 6 6 6 6 6)
 
 -- | Daria's stake key pair
-dariaStake :: KeyPair 'Staking StandardCrypto
+dariaStake :: KeyPair 'Staking
 dariaStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 7 7 7 7 7)
 
 -- | Daria's address
-dariaAddr :: Addr StandardCrypto
+dariaAddr :: Addr
 dariaAddr = mkAddr (dariaPay, dariaStake)

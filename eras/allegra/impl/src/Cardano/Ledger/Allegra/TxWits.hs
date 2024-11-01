@@ -12,7 +12,6 @@ module Cardano.Ledger.Allegra.TxWits () where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Core (EraScript (upgradeScript), EraTxWits (..))
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits (..),
   addrShelleyTxWitsL,
@@ -20,10 +19,8 @@ import Cardano.Ledger.Shelley.TxWits (
   scriptShelleyTxWitsL,
  )
 
-instance Crypto c => EraTxWits (AllegraEra c) where
-  {-# SPECIALIZE instance EraTxWits (AllegraEra StandardCrypto) #-}
-
-  type TxWits (AllegraEra c) = ShelleyTxWits (AllegraEra c)
+instance EraTxWits AllegraEra where
+  type TxWits AllegraEra = ShelleyTxWits AllegraEra
 
   mkBasicTxWits = mempty
 

@@ -12,7 +12,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
@@ -27,27 +26,27 @@ import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
 
 spec :: Spec
 spec = do
-  specUpgrade @Conway def
+  specUpgrade @ConwayEra def
   describe "RoundTrip" $ do
-    roundTripCborSpec @(GovActionId StandardCrypto)
-    roundTripCborSpec @(GovPurposeId 'PParamUpdatePurpose Conway)
-    roundTripCborSpec @(GovPurposeId 'HardForkPurpose Conway)
-    roundTripCborSpec @(GovPurposeId 'CommitteePurpose Conway)
-    roundTripCborSpec @(GovPurposeId 'ConstitutionPurpose Conway)
+    roundTripCborSpec @GovActionId
+    roundTripCborSpec @(GovPurposeId 'PParamUpdatePurpose ConwayEra)
+    roundTripCborSpec @(GovPurposeId 'HardForkPurpose ConwayEra)
+    roundTripCborSpec @(GovPurposeId 'CommitteePurpose ConwayEra)
+    roundTripCborSpec @(GovPurposeId 'ConstitutionPurpose ConwayEra)
     roundTripCborSpec @Vote
-    roundTripCborSpec @(Voter StandardCrypto)
-    roundTripConwayCommonSpec @Conway
+    roundTripCborSpec @Voter
+    roundTripConwayCommonSpec @ConwayEra
     -- ConwayGenesis only makes sense in Conway era
-    roundTripEraSpec @Conway @(ConwayGenesis StandardCrypto)
+    roundTripEraSpec @ConwayEra @ConwayGenesis
     describe "Regression" $ do
-      prop "Drop Ptrs from Incrementasl Stake" $ \(ls :: LedgerState Babbage) conwayGenesis slotNo testCoin -> do
+      prop "Drop Ptrs from Incrementasl Stake" $ \(ls :: LedgerState BabbageEra) conwayGenesis slotNo testCoin -> do
         let
           badPtr = Ptr slotNo (TxIx maxBound) (CertIx maxBound)
-          lsBabbage :: LedgerState Babbage
+          lsBabbage :: LedgerState BabbageEra
           lsBabbage = ls & lsUTxOStateL . utxosStakeDistrL . ptrMapL <>~ Map.singleton badPtr testCoin
-          lsConway :: LedgerState Conway
+          lsConway :: LedgerState ConwayEra
           lsConway = translateEra' conwayGenesis lsBabbage
-          v = eraProtVerLow @Conway
-          expectNoBadPtr :: LedgerState Conway -> LedgerState Conway -> Expectation
+          v = eraProtVerLow @ConwayEra
+          expectNoBadPtr :: LedgerState ConwayEra -> LedgerState ConwayEra -> Expectation
           expectNoBadPtr x y = x `shouldBe` (y & lsUTxOStateL . utxosStakeDistrL . ptrMapL .~ mempty)
         embedTripExpectation v v (mkTrip encCBOR decNoShareCBOR) expectNoBadPtr lsConway

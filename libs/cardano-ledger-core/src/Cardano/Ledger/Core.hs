@@ -91,7 +91,7 @@ import Cardano.Ledger.Core.PParams
 import Cardano.Ledger.Core.Translation
 import Cardano.Ledger.Core.TxCert
 import Cardano.Ledger.Credential (Credential)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
@@ -174,7 +174,7 @@ class
   ( EraTxOut era
   , EraTxCert era
   , EraPParams era
-  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
+  , HashAnnotated (TxBody era) EraIndependentTxBody
   , DecCBOR (Annotator (TxBody era))
   , EncCBOR (TxBody era)
   , ToCBOR (TxBody era)
@@ -194,25 +194,25 @@ class
 
   mkBasicTxBody :: TxBody era
 
-  inputsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
+  inputsTxBodyL :: Lens' (TxBody era) (Set TxIn)
 
   outputsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxOut era))
 
   feeTxBodyL :: Lens' (TxBody era) Coin
 
-  withdrawalsTxBodyL :: Lens' (TxBody era) (Withdrawals (EraCrypto era))
+  withdrawalsTxBodyL :: Lens' (TxBody era) Withdrawals
 
-  auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe AuxiliaryDataHash)
 
   -- | This getter will produce all inputs from the UTxO map that this transaction might
   -- spend, which ones will depend on the validity of the transaction itself. Starting in
   -- Alonzo this will include collateral inputs.
-  spendableInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
+  spendableInputsTxBodyF :: SimpleGetter (TxBody era) (Set TxIn)
 
   -- | This getter will produce all inputs from the UTxO map that this transaction is
   -- referencing, even if some of them cannot be spent by the transaction. For example
   -- starting with Babbage era it will also include reference inputs.
-  allInputsTxBodyF :: SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
+  allInputsTxBodyF :: SimpleGetter (TxBody era) (Set TxIn)
 
   certsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxCert era))
 
@@ -222,7 +222,7 @@ class
   getTotalDepositsTxBody ::
     PParams era ->
     -- | Check whether stake pool is registered or not
-    (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+    (KeyHash 'StakePool -> Bool) ->
     TxBody era ->
     Coin
   getTotalDepositsTxBody pp isPoolRegisted txBody =
@@ -234,9 +234,9 @@ class
   getTotalRefundsTxBody ::
     PParams era ->
     -- | Lookup current deposit for Staking credential if one is registered
-    (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+    (Credential 'Staking -> Maybe Coin) ->
     -- | Lookup current deposit for DRep credential if one is registered
-    (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
+    (Credential 'DRepRole -> Maybe Coin) ->
     TxBody era ->
     Coin
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
@@ -274,7 +274,7 @@ class
   , EncCBOR (TxOut era)
   , DecCBOR (TxOut era)
   , DecShareCBOR (TxOut era)
-  , Share (TxOut era) ~ Interns (Credential 'Staking (EraCrypto era))
+  , Share (TxOut era) ~ Interns (Credential 'Staking)
   , NoThunks (TxOut era)
   , NFData (TxOut era)
   , Show (TxOut era)
@@ -294,7 +294,7 @@ class
     , (getMinCoinSizedTxOut | getMinCoinTxOut)
     #-}
 
-  mkBasicTxOut :: HasCallStack => Addr (EraCrypto era) -> Value era -> TxOut era
+  mkBasicTxOut :: HasCallStack => Addr -> Value era -> TxOut era
 
   -- | Every era, except Shelley, must be able to upgrade a `TxOut` from a previous era.
   upgradeTxOut :: EraTxOut (PreviousEra era) => TxOut (PreviousEra era) -> TxOut era
@@ -323,7 +323,7 @@ class
   -- version by doing the least amount of work.
   valueEitherTxOutL :: Lens' (TxOut era) (Either (Value era) (CompactForm (Value era)))
 
-  addrTxOutL :: Lens' (TxOut era) (Addr (EraCrypto era))
+  addrTxOutL :: Lens' (TxOut era) Addr
   addrTxOutL =
     lens
       ( \txOut -> case txOut ^. addrEitherTxOutL of
@@ -333,7 +333,7 @@ class
       (\txOut addr -> txOut & addrEitherTxOutL .~ Left addr)
   {-# INLINE addrTxOutL #-}
 
-  compactAddrTxOutL :: Lens' (TxOut era) (CompactAddr (EraCrypto era))
+  compactAddrTxOutL :: Lens' (TxOut era) CompactAddr
   compactAddrTxOutL =
     lens
       ( \txOut -> case txOut ^. addrEitherTxOutL of
@@ -352,7 +352,7 @@ class
   -- can define just this functionality. Also sometimes it is crucial to know at
   -- the callsite which form of address we have readily available without any
   -- conversions (eg. searching millions of TxOuts for a particular address)
-  addrEitherTxOutL :: Lens' (TxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))
+  addrEitherTxOutL :: Lens' (TxOut era) (Either Addr CompactAddr)
 
   -- | Produce the minimum lovelace that a given transaction output must
   -- contain. Information about the size of the TxOut is required in some eras.
@@ -370,7 +370,7 @@ class
      in getMinCoinSizedTxOut pp (mkSized version txOut)
 
 bootAddrTxOutF ::
-  EraTxOut era => SimpleGetter (TxOut era) (Maybe (BootstrapAddress (EraCrypto era)))
+  EraTxOut era => SimpleGetter (TxOut era) (Maybe BootstrapAddress)
 bootAddrTxOutF = to $ \txOut ->
   case txOut ^. addrEitherTxOutL of
     Left (AddrBootstrap bootstrapAddr) -> Just bootstrapAddr
@@ -426,7 +426,7 @@ toCompactPartial v =
   fromMaybe (error $ "Illegal value in TxOut: " <> show v) $ toCompact v
 
 -- A version of mkBasicTxOut, which has only a Coin (no multiAssets) for every EraTxOut era.
-mkCoinTxOut :: EraTxOut era => Addr (EraCrypto era) -> Coin -> TxOut era
+mkCoinTxOut :: EraTxOut era => Addr -> Coin -> TxOut era
 mkCoinTxOut addr = mkBasicTxOut addr . inject
 
 -- | A value is something which quantifies a transaction output.
@@ -442,7 +442,7 @@ class
   , ToCBOR (TxAuxData era)
   , EncCBOR (TxAuxData era)
   , DecCBOR (Annotator (TxAuxData era))
-  , HashAnnotated (TxAuxData era) EraIndependentTxAuxData (EraCrypto era)
+  , HashAnnotated (TxAuxData era) EraIndependentTxAuxData
   ) =>
   EraTxAuxData era
   where
@@ -459,7 +459,7 @@ class
   -- preserved. If you need to retain underlying bytes you can use `translateEraThroughCBOR`
   upgradeTxAuxData :: EraTxAuxData (PreviousEra era) => TxAuxData (PreviousEra era) -> TxAuxData era
 
-  hashTxAuxData :: TxAuxData era -> AuxiliaryDataHash (EraCrypto era)
+  hashTxAuxData :: TxAuxData era -> AuxiliaryDataHash
 
   validateTxAuxData :: ProtVer -> TxAuxData era -> Bool
 
@@ -482,18 +482,18 @@ class
   mkBasicTxWits :: TxWits era
   mkBasicTxWits = mempty
 
-  addrTxWitsL :: Lens' (TxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
+  addrTxWitsL :: Lens' (TxWits era) (Set (WitVKey 'Witness))
 
-  bootAddrTxWitsL :: Lens' (TxWits era) (Set (BootstrapWitness (EraCrypto era)))
+  bootAddrTxWitsL :: Lens' (TxWits era) (Set BootstrapWitness)
 
-  scriptTxWitsL :: Lens' (TxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
+  scriptTxWitsL :: Lens' (TxWits era) (Map ScriptHash (Script era))
 
   upgradeTxWits :: EraTxWits (PreviousEra era) => TxWits (PreviousEra era) -> TxWits era
 
 -- | This is a helper lens that will hash the scripts when adding as witnesses.
 hashScriptTxWitsL ::
   EraTxWits era =>
-  Lens (TxWits era) (TxWits era) (Map (ScriptHash (EraCrypto era)) (Script era)) [Script era]
+  Lens (TxWits era) (TxWits era) (Map ScriptHash (Script era)) [Script era]
 hashScriptTxWitsL =
   lens
     (\wits -> wits ^. scriptTxWitsL)
@@ -550,7 +550,7 @@ isNativeScript :: EraScript era => Script era -> Bool
 isNativeScript = isJust . getNativeScript
 
 -- | Compute `ScriptHash` of a `Script` for a particular era.
-hashScript :: forall era. EraScript era => Script era -> ScriptHash (EraCrypto era)
+hashScript :: forall era. EraScript era => Script era -> ScriptHash
 hashScript =
   ScriptHash
     . Hash.castHash
@@ -597,9 +597,7 @@ class
   -- | Get the block body hash from the TxSeq. Note that this is not a regular
   -- "hash the stored bytes" function since the block body hash forms a small
   -- Merkle tree.
-  hashTxSeq ::
-    TxSeq era ->
-    Hash.Hash (CC.HASH (EraCrypto era)) EraIndependentBlockBody
+  hashTxSeq :: TxSeq era -> Hash.Hash HASH EraIndependentBlockBody
 
   -- | The number of segregated components
   numSegComponents :: Word64
@@ -607,8 +605,8 @@ class
 bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
-txIdTx :: EraTx era => Tx era -> TxId (EraCrypto era)
+txIdTx :: EraTx era => Tx era -> TxId
 txIdTx tx = txIdTxBody (tx ^. bodyTxL)
 
-txIdTxBody :: EraTxBody era => TxBody era -> TxId (EraCrypto era)
+txIdTxBody :: EraTxBody era => TxBody era -> TxId
 txIdTxBody = TxId . hashAnnotated

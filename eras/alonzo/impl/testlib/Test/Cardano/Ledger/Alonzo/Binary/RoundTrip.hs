@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
@@ -74,9 +73,9 @@ roundTripAlonzoEraTypesSpec = do
       -- Possibly use peekAvailable, but haven't looked into the issue too deeply
       roundTripEraTypeSpec @era @Datum
 
-instance Crypto c => RuleListEra (AlonzoEra c) where
+instance RuleListEra AlonzoEra where
   type
-    EraRules (AlonzoEra c) =
+    EraRules AlonzoEra =
       '[ "DELEG"
        , "DELEGS"
        , "DELPL"

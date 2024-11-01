@@ -30,7 +30,6 @@ import Cardano.Ledger.Binary (
   fromPlainDecoder,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys.Internal (
   Hash,
@@ -51,29 +50,25 @@ import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 -- | Proof/Witness that a transaction is authorized by the given key holder.
-data WitVKey kr c = WitVKeyInternal
-  { wvkKey :: !(VKey kr c)
-  , wvkSig :: !(SignedDSIGN c (Hash c EraIndependentTxBody))
-  , wvkKeyHash :: KeyHash 'Witness c
+data WitVKey kr = WitVKeyInternal
+  { wvkKey :: !(VKey kr)
+  , wvkSig :: !(SignedDSIGN (Hash EraIndependentTxBody))
+  , wvkKeyHash :: KeyHash 'Witness
   -- ^ Hash of the witness vkey. We store this here to avoid repeated hashing
   --   when used in ordering.
   , wvkBytes :: BSL.ByteString
   }
-  deriving (Generic)
-
-deriving instance Crypto c => Show (WitVKey kr c)
-
-deriving instance Crypto c => Eq (WitVKey kr c)
+  deriving (Generic, Show, Eq)
 
 deriving via
-  AllowThunksIn '["wvkBytes", "wvkKeyHash"] (WitVKey kr c)
+  AllowThunksIn '["wvkBytes", "wvkKeyHash"] (WitVKey kr)
   instance
-    (Crypto c, Typeable kr) => NoThunks (WitVKey kr c)
+    Typeable kr => NoThunks (WitVKey kr)
 
-instance NFData (WitVKey kr c) where
+instance NFData (WitVKey kr) where
   rnf WitVKeyInternal {wvkKeyHash, wvkBytes} = wvkKeyHash `deepseq` rnf wvkBytes
 
-instance (Typeable kr, Crypto c) => Ord (WitVKey kr c) where
+instance Typeable kr => Ord (WitVKey kr) where
   compare x y =
     -- It is advised against comparison on keys and signatures directly,
     -- therefore we use hashes of verification keys and signatures for
@@ -83,15 +78,15 @@ instance (Typeable kr, Crypto c) => Ord (WitVKey kr c) where
     -- have two WitVKeys in a same Set for different transactions. Therefore
     -- comparison on signatures is unlikely to happen and is only needed for
     -- compliance with Ord laws.
-    comparing wvkKeyHash x y <> comparing (hashSignature @c . wvkSig) x y
+    comparing wvkKeyHash x y <> comparing (hashSignature . wvkSig) x y
 
-instance (Typeable kr, Crypto c) => Plain.ToCBOR (WitVKey kr c) where
+instance Typeable kr => Plain.ToCBOR (WitVKey kr) where
   toCBOR = Plain.encodePreEncoded . BSL.toStrict . wvkBytes
 
 -- | Encodes memoized bytes created upon construction.
-instance (Typeable kr, Crypto c) => EncCBOR (WitVKey kr c)
+instance Typeable kr => EncCBOR (WitVKey kr)
 
-instance (Typeable kr, Crypto c) => DecCBOR (Annotator (WitVKey kr c)) where
+instance Typeable kr => DecCBOR (Annotator (WitVKey kr)) where
   decCBOR =
     annotatorSlice $
       fromPlainDecoder $
@@ -103,14 +98,14 @@ instance (Typeable kr, Crypto c) => DecCBOR (Annotator (WitVKey kr c)) where
       {-# INLINE mkWitVKey #-}
   {-# INLINE decCBOR #-}
 
-instance (Crypto c, Typeable kr) => EqRaw (WitVKey kr c) where
+instance Typeable kr => EqRaw (WitVKey kr) where
   eqRaw = eqWitVKeyRaw
 
 pattern WitVKey ::
-  (Typeable kr, Crypto c) =>
-  VKey kr c ->
-  SignedDSIGN c (Hash c EraIndependentTxBody) ->
-  WitVKey kr c
+  Typeable kr =>
+  VKey kr ->
+  SignedDSIGN (Hash EraIndependentTxBody) ->
+  WitVKey kr
 pattern WitVKey k s <-
   WitVKeyInternal k s _ _
   where
@@ -126,12 +121,12 @@ pattern WitVKey k s <-
 {-# COMPLETE WitVKey #-}
 
 -- | Access computed hash. Evaluated lazily
-witVKeyHash :: WitVKey kr c -> KeyHash 'Witness c
+witVKeyHash :: WitVKey kr -> KeyHash 'Witness
 witVKeyHash = wvkKeyHash
 
 -- | Access CBOR encoded representation of the witness. Evaluated lazily
-witVKeyBytes :: WitVKey kr c -> BSL.ByteString
+witVKeyBytes :: WitVKey kr -> BSL.ByteString
 witVKeyBytes = wvkBytes
 
-eqWitVKeyRaw :: (Crypto c, Typeable kr) => WitVKey kr c -> WitVKey kr c -> Bool
+eqWitVKeyRaw :: Typeable kr => WitVKey kr -> WitVKey kr -> Bool
 eqWitVKeyRaw (WitVKey k1 s1) (WitVKey k2 s2) = k1 == k2 && s1 == s2

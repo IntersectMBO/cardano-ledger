@@ -4,12 +4,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Figure 3: Functions related to scripts
@@ -32,7 +29,6 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Babbage.TxCert ()
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
@@ -40,9 +36,9 @@ import Control.DeepSeq (NFData (..), rwhnf)
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
 
-instance Crypto c => EraScript (BabbageEra c) where
-  type Script (BabbageEra c) = AlonzoScript (BabbageEra c)
-  type NativeScript (BabbageEra c) = Timelock (BabbageEra c)
+instance EraScript BabbageEra where
+  type Script BabbageEra = AlonzoScript BabbageEra
+  type NativeScript BabbageEra = Timelock BabbageEra
 
   upgradeScript = \case
     TimelockScript ts -> TimelockScript $ translateTimelock ts
@@ -56,12 +52,12 @@ instance Crypto c => EraScript (BabbageEra c) where
 
   fromNativeScript = TimelockScript
 
-instance Crypto c => AlonzoEraScript (BabbageEra c) where
-  data PlutusScript (BabbageEra c)
+instance AlonzoEraScript BabbageEra where
+  data PlutusScript BabbageEra
     = BabbagePlutusV1 !(Plutus 'PlutusV1)
     | BabbagePlutusV2 !(Plutus 'PlutusV2)
     deriving (Eq, Ord, Show, Generic)
-  type PlutusPurpose f (BabbageEra c) = AlonzoPlutusPurpose f (BabbageEra c)
+  type PlutusPurpose f BabbageEra = AlonzoPlutusPurpose f BabbageEra
 
   eraMaxLanguage = PlutusV2
 
@@ -106,9 +102,7 @@ instance Crypto c => AlonzoEraScript (BabbageEra c) where
     AlonzoRewarding (AsIx ix) -> AlonzoRewarding (AsIx ix)
     AlonzoCertifying (AsIx ix) -> AlonzoCertifying (AsIx ix)
 
-instance Crypto c => ShelleyEraScript (BabbageEra c) where
-  {-# SPECIALIZE instance ShelleyEraScript (BabbageEra StandardCrypto) #-}
-
+instance ShelleyEraScript BabbageEra where
   mkRequireSignature = mkRequireSignatureTimelock
   getRequireSignature = getRequireSignatureTimelock
 
@@ -121,17 +115,15 @@ instance Crypto c => ShelleyEraScript (BabbageEra c) where
   mkRequireMOf = mkRequireMOfTimelock
   getRequireMOf = getRequireMOfTimelock
 
-instance Crypto c => AllegraEraScript (BabbageEra c) where
-  {-# SPECIALIZE instance AllegraEraScript (BabbageEra StandardCrypto) #-}
-
+instance AllegraEraScript BabbageEra where
   mkTimeStart = mkTimeStartTimelock
   getTimeStart = getTimeStartTimelock
 
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
 
-instance NFData (PlutusScript (BabbageEra c)) where
+instance NFData (PlutusScript BabbageEra) where
   rnf = rwhnf
-instance NoThunks (PlutusScript (BabbageEra c))
-instance Crypto c => SafeToHash (PlutusScript (BabbageEra c)) where
+instance NoThunks (PlutusScript BabbageEra)
+instance SafeToHash (PlutusScript BabbageEra) where
   originalBytes ps = withPlutusScript ps originalBytes

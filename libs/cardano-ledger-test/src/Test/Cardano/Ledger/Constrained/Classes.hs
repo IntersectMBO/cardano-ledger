@@ -21,7 +21,6 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), SlotNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus (ExUnits (..))
@@ -85,7 +84,6 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   ppString,
  )
 import Test.Cardano.Ledger.Generic.Proof (
-  GoodCrypto,
   Proof (..),
   Reflect (..),
   unReflect,
@@ -365,7 +363,7 @@ class (Show x, Adds x) => Sums t x | t -> x where
   getSum :: t -> x
   genT :: [String] -> x -> Gen t
 
-instance GoodCrypto c => Sums (IndividualPoolStake c) Rational where
+instance Sums IndividualPoolStake Rational where
   getSum (IndividualPoolStake r _ _) = r
   genT _ r =
     -- We use mempty for the individualTotalPoolStake here
@@ -398,7 +396,7 @@ genValueX proof cn = do
   ValueF p v <- genValue proof
   pure (ValueF p (modifyCoin (const cn) v))
 
-instance Crypto c => Sums [Reward c] Coin where
+instance Sums [Reward] Coin where
   getSum ss = List.foldl' accum (Coin 0) ss
     where
       accum ans (Reward _ _ c) = add ans c
@@ -406,11 +404,11 @@ instance Crypto c => Sums [Reward c] Coin where
   genT msgs (Coin n) | n > 1 = do
     size <- chooseInt (1, fromIntegral n)
     cs <- partition (Coin 1) msgs size (Coin n)
-    list <- vectorOf size (arbitrary :: Gen (Reward c))
-    pure $ zipWith (updateRew @c) cs list
+    list <- vectorOf size (arbitrary :: Gen Reward)
+    pure $ zipWith updateRew cs list
   genT msgs c = errorMess ("Coin in genT must be positive: " ++ show c) msgs
 
-updateRew :: forall c. Coin -> Reward c -> Reward c
+updateRew :: Coin -> Reward -> Reward
 updateRew c (Reward a b _) = Reward a b c
 
 -- ===========================================================
@@ -447,7 +445,7 @@ instance Show t => Sizeable [t] where
 instance Sizeable Coin where
   getSize (Coin n) = fromIntegral n
 
-instance Sizeable (MultiAsset c) where
+instance Sizeable MultiAsset where
   getSize (MultiAsset m) = Map.size m
 
 instance EraPParams era => Sizeable (Proposals era) where
@@ -499,7 +497,7 @@ instance Count SlotNo where
 data TxAuxDataF era where
   TxAuxDataF :: Proof era -> TxAuxData era -> TxAuxDataF era
 
-hashTxAuxDataF :: Reflect era => TxAuxDataF era -> AuxiliaryDataHash (EraCrypto era)
+hashTxAuxDataF :: Reflect era => TxAuxDataF era -> AuxiliaryDataHash
 hashTxAuxDataF (TxAuxDataF _ x) = hashTxAuxData x
 
 unTxAuxData :: TxAuxDataF era -> TxAuxData era
@@ -685,10 +683,10 @@ instance PrettyA (ValueF era) where
 unValue :: ValueF era -> Value era
 unValue (ValueF _ v) = v
 
-instance Crypto c => Ord (MaryValue c) where
+instance Ord MaryValue where
   compare (MaryValue c1 m1) (MaryValue c2 m2) = compare (c1, m1) (c2, m2)
 
-instance Crypto c => Ord (MultiAsset c) where
+instance Ord MultiAsset where
   compare (MultiAsset m1) (MultiAsset m2) = compare m1 m2
 
 instance Eq (ValueF era) where
@@ -748,7 +746,7 @@ instance PrettyA (PParamsUpdate e) => PrettyA (ProposedPPUpdatesF e) where
   prettyA (ProposedPPUpdatesF _p x) = ppProposedPPUpdates x
 
 proposedCoreL ::
-  Lens' (PP.ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
+  Lens' (PP.ProposedPPUpdates era) (Map (KeyHash 'Genesis) (PParamsUpdate era))
 proposedCoreL = lens (\(PP.ProposedPPUpdates m) -> m) (\(PP.ProposedPPUpdates _) m -> PP.ProposedPPUpdates m)
 
 proposedWrapperL :: Lens' (ProposedPPUpdatesF era) (PP.ProposedPPUpdates era)
@@ -757,12 +755,12 @@ proposedWrapperL = lens unProposedPPUpdates (\(ProposedPPUpdatesF p _) pp -> Pro
 coreMapL ::
   Proof era ->
   Lens'
-    (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
-    (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+    (Map (KeyHash 'Genesis) (PParamsUpdate era))
+    (Map (KeyHash 'Genesis) (PParamsUpdateF era))
 coreMapL p = lens (fmap (PParamsUpdateF p)) (\_ b -> fmap unPParamsUpdate b)
 
 proposedMapL ::
-  Lens' (ProposedPPUpdatesF era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+  Lens' (ProposedPPUpdatesF era) (Map (KeyHash 'Genesis) (PParamsUpdateF era))
 proposedMapL =
   lens
     (\(ProposedPPUpdatesF p x) -> x ^. (proposedCoreL . coreMapL p))
@@ -798,7 +796,7 @@ putPPUP Babbage x = x
 putPPUP Conway _ = Gov.emptyGovState @era
 
 -- ================
-liftUTxO :: Map (TxIn (EraCrypto era)) (TxOutF era) -> UTxO era
+liftUTxO :: Map TxIn (TxOutF era) -> UTxO era
 liftUTxO m = UTxO (Map.map unTxOut m)
 
 instance Show (TxOutF era) where
@@ -917,7 +915,7 @@ instance Eq (ScriptF era) where
   (ScriptF Babbage x) == (ScriptF Babbage y) = x == y
   (ScriptF Conway x) == (ScriptF Conway y) = x == y
 
-genScriptF :: Era era => Proof era -> Gen (ScriptF era)
+genScriptF :: Proof era -> Gen (ScriptF era)
 genScriptF proof = do
   tag <- elements $ plutusPurposeTags proof
   vi <- arbitrary

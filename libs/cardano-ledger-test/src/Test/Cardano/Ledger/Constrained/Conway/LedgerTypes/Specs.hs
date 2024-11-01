@@ -81,27 +81,27 @@ class
   govStateSpec :: PParams era -> Specification fn (GovState era)
   newEpochStateSpec :: PParams era -> Specification fn (NewEpochState era)
 
-instance IsConwayUniv fn => EraSpecLedger Shelley fn where
+instance IsConwayUniv fn => EraSpecLedger ShelleyEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUTxO
 
-instance IsConwayUniv fn => EraSpecLedger Allegra fn where
+instance IsConwayUniv fn => EraSpecLedger AllegraEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => EraSpecLedger Mary fn where
+instance IsConwayUniv fn => EraSpecLedger MaryEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => EraSpecLedger Alonzo fn where
+instance IsConwayUniv fn => EraSpecLedger AlonzoEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => EraSpecLedger Babbage fn where
+instance IsConwayUniv fn => EraSpecLedger BabbageEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => EraSpecLedger Conway fn where
+instance IsConwayUniv fn => EraSpecLedger ConwayEra fn where
   govStateSpec pp = conwayGovStateSpec pp (testGovEnv pp)
   newEpochStateSpec = newEpochStateSpecUnit
 
@@ -110,9 +110,9 @@ instance IsConwayUniv fn => EraSpecLedger Conway fn where
 -- This is a very large Specification (500 lines), so we don't want to redo it.
 -- The only important part of the GovEnv is that the embedded PParams matches
 -- the PParams passed to conwayGovStateSpec.
-testGovEnv :: PParams Conway -> GovEnv Conway
+testGovEnv :: PParams ConwayEra -> GovEnv ConwayEra
 testGovEnv pp = unsafePerformIO $ generate $ do
-  env <- genFromSpec @ConwayFn @(GovEnv Conway) (govEnvSpec @ConwayFn pp)
+  env <- genFromSpec @ConwayFn @(GovEnv ConwayEra) (govEnvSpec @ConwayFn pp)
   pure env
 
 -- ================================================================================
@@ -173,7 +173,7 @@ vstateSpec ::
   forall fn era.
   (IsConwayUniv fn, Era era) =>
   Term fn EpochNo ->
-  Term fn (Map (Credential 'DRepRole (EraCrypto era)) (Set (Credential 'Staking (EraCrypto era)))) ->
+  Term fn (Map (Credential 'DRepRole) (Set (Credential 'Staking))) ->
   Specification fn (VState era)
 vstateSpec epoch delegated = constrained $ \ [var|vstate|] ->
   match vstate $ \ [var|dreps|] [var|comstate|] [var|numdormant|] ->
@@ -196,15 +196,15 @@ vstateSpec epoch delegated = constrained $ \ [var|vstate|] ->
 -- Extract the map of DReps, to those that delegate to them, from the DState
 getDelegatees ::
   DState era ->
-  Map (Credential 'DRepRole (EraCrypto era)) (Set (Credential 'Staking (EraCrypto era)))
+  Map (Credential 'DRepRole) (Set (Credential 'Staking))
 getDelegatees dstate = aggregateDRep (UMap.dRepMap (dsUnified dstate))
 
 -- | Compute the map of DReps, to those that delegate to them,
 --   from the delegation map (Map (Credential 'Staking) Drep) which is stored in the DState
 --   This ensures that every staking Credential, delegates to exactly one DRep.
 aggregateDRep ::
-  Map (Credential 'Staking c) (DRep c) ->
-  Map (Credential 'DRepRole c) (Set (Credential 'Staking c))
+  Map (Credential 'Staking) DRep ->
+  Map (Credential 'DRepRole) (Set (Credential 'Staking))
 aggregateDRep m = Map.foldlWithKey accum Map.empty m
   where
     accum ans cred (DRepKeyHash kh) = Map.insertWith Set.union (KeyHashObj kh) (Set.singleton cred) ans
@@ -214,9 +214,9 @@ aggregateDRep m = Map.foldlWithKey accum Map.empty m
 dstateSpec ::
   forall era fn.
   EraSpecLedger era fn =>
-  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
+  Term fn (Set (Credential 'DRepRole)) ->
   Term fn AccountState ->
-  Term fn (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))) ->
+  Term fn (Map (KeyHash 'StakePool) PoolParams) ->
   Specification fn (DState era)
 dstateSpec drepRoleCredSet acct poolreg = constrained $ \ [var| ds |] ->
   match ds $ \ [var|umap|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
@@ -300,7 +300,7 @@ accountStateSpec =
 certStateSpec ::
   forall era fn.
   EraSpecLedger era fn =>
-  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
+  Term fn (Set (Credential 'DRepRole)) ->
   Term fn AccountState ->
   Term fn EpochNo ->
   Specification fn (CertState era)
@@ -323,7 +323,7 @@ certStateSpec drepRoleCredSet acct epoch = constrained $ \ [var|certState|] ->
 utxoSpec ::
   forall era fn.
   EraSpecLedger era fn =>
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
+  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
   Specification fn (UTxO era)
 utxoSpec delegs = constrained $ \ [var|utxo|] ->
   match utxo $ \ [var|utxomap|] ->
@@ -353,7 +353,7 @@ utxoStateSpec pp certstate =
 getDelegs ::
   forall era.
   CertState era ->
-  Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+  Map (Credential 'Staking) (KeyHash 'StakePool)
 getDelegs cs = UMap.sPoolMap (dsUnified (certDState cs))
 
 -- ====================================================================
@@ -374,17 +374,17 @@ shelleyGovStateSpec pp =
 
 govEnvSpec ::
   IsConwayUniv fn =>
-  PParams Conway ->
-  Specification fn (GovEnv Conway)
+  PParams ConwayEra ->
+  Specification fn (GovEnv ConwayEra)
 govEnvSpec pp = constrained $ \ [var|govEnv|] ->
   match govEnv $ \_ _ [var|cppx|] _ _ -> [assert $ lit pp ==. cppx]
 
 conwayGovStateSpec ::
   forall fn.
-  EraSpecLedger Conway fn =>
-  PParams Conway ->
-  GovEnv Conway ->
-  Specification fn (ConwayGovState Conway)
+  EraSpecLedger ConwayEra fn =>
+  PParams ConwayEra ->
+  GovEnv ConwayEra ->
+  Specification fn (ConwayGovState ConwayEra)
 conwayGovStateSpec pp govenv =
   constrained $ \ [var|conwaygovstate|] ->
     match conwaygovstate $ \ [var|proposals|] _mcommittee _consti [var|curpp|] _prevpp _futurepp _derepPulstate ->
@@ -415,7 +415,7 @@ ledgerStateSpec pp acct epoch =
 -- ===========================================================
 
 -- TODO make this more realistic
-snapShotSpec :: (Crypto c, IsConwayUniv fn) => Specification fn (SnapShot c)
+snapShotSpec :: IsConwayUniv fn => Specification fn SnapShot
 snapShotSpec =
   constrained $ \ [var|snap|] ->
     match snap $ \ [var|stake|] [var|delegs|] [var|poolparams|] ->
@@ -426,7 +426,7 @@ snapShotSpec =
         ]
 
 snapShotsSpec ::
-  (Crypto c, IsConwayUniv fn) => Term fn (SnapShot c) -> Specification fn (SnapShots c)
+  IsConwayUniv fn => Term fn SnapShot -> Specification fn SnapShots
 snapShotsSpec marksnap =
   constrained $ \ [var|snap|] ->
     match snap $ \ [var|mark|] [var|pooldistr|] [var|set|] [var|go|] _fee ->
@@ -438,15 +438,15 @@ snapShotsSpec marksnap =
         ]
 
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
-getMarkSnapShot :: forall era. LedgerState era -> SnapShot (EraCrypto era)
-getMarkSnapShot ls = SnapShot @(EraCrypto era) (Stake markStake) markDelegations markPoolParams
+getMarkSnapShot :: forall era. LedgerState era -> SnapShot
+getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
   where
-    markStake :: VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
+    markStake :: VMap VB VP (Credential 'Staking) (CompactForm Coin)
     markStake = VMap.fromMap (credMap (utxosStakeDistr (lsUTxOState ls)))
     markDelegations ::
-      VMap VB VB (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+      VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
     markDelegations = VMap.fromMap (UMap.sPoolMap (dsUnified (certDState (lsCertState ls))))
-    markPoolParams :: VMap VB VB (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
+    markPoolParams :: VMap VB VB (KeyHash 'StakePool) PoolParams
     markPoolParams = VMap.fromMap (psStakePoolParams (certPState (lsCertState ls)))
 
 -- ====================================================================
@@ -469,7 +469,7 @@ epochStateSpec pp epoch =
         , match nonmyopic $ \ [var|x|] [var|c|] -> [genHint 0 x, assert $ c ==. lit (Coin 0)]
         ]
 
-getPoolDistr :: forall era. EpochState era -> PoolDistr (EraCrypto era)
+getPoolDistr :: forall era. EpochState era -> PoolDistr
 getPoolDistr es = ssStakeMarkPoolDistr (esSnapshots es)
 
 -- | Used for Eras where StashedAVVMAddresses era ~ UTxO era (Shelley)
@@ -524,7 +524,7 @@ newEpochStateSpecUnit pp =
 
 -- ===================
 
-dRepToCred :: DRep c -> Maybe (Credential 'DRepRole c)
+dRepToCred :: DRep -> Maybe (Credential 'DRepRole)
 dRepToCred (DRepKeyHash kh) = Just $ KeyHashObj kh
 dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
 dRepToCred _ = Nothing
@@ -537,12 +537,12 @@ try10 = do
     generate $
       genFromSpec
         @ConwayFn
-        @(Map (Credential 'DRepRole StandardCrypto) (Set (Credential 'Staking StandardCrypto)))
+        @(Map (Credential 'DRepRole) (Set (Credential 'Staking)))
         ( constrained $ \x ->
             [ assert $ sizeOf_ x ==. 5
             , forAll' x $ \_ s -> sizeOf_ s ==. 2
             ]
         )
-  b <- generate $ genFromSpec @ConwayFn (vstateSpec @ConwayFn @Shelley (lit (EpochNo 100)) (lit m))
+  b <- generate $ genFromSpec @ConwayFn (vstateSpec @ConwayFn @ShelleyEra (lit (EpochNo 100)) (lit m))
   putStrLn (show (prettyA m))
   putStrLn (show (prettyA b))

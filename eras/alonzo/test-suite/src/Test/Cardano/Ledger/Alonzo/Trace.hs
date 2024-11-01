@@ -33,7 +33,6 @@ import Control.State.Transition
 import Data.Functor.Identity (runIdentity)
 import Data.Sequence (Seq)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -49,7 +48,6 @@ instance
   , EraGov era
   , EraUTxO era
   , AlonzoEraTx era
-  , Mock (EraCrypto era)
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era

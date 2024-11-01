@@ -37,6 +37,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -68,6 +69,7 @@ import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary (genVersion)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, vKey)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (aikCold),
@@ -286,7 +288,7 @@ genPPUpdate ::
   EraGen era =>
   Constants ->
   PParams era ->
-  [KeyHash 'Genesis (EraCrypto era)] ->
+  [KeyHash 'Genesis] ->
   Gen (ProposedPPUpdates era)
 genPPUpdate constants pp genesisKeys = do
   pps <- genEraPParamsUpdate @era constants pp
@@ -300,7 +302,7 @@ genUpdateForNodes ::
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [KeyPair 'Genesis (EraCrypto era)] ->
+  [KeyPair 'Genesis] ->
   PParams era ->
   Gen (Maybe (Update era))
 genUpdateForNodes c s e coreKeys pp =
@@ -315,11 +317,11 @@ genUpdate ::
   EraGen era =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)] ->
-  Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
+  [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)] ->
+  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys MockCrypto 'GenesisDelegate) ->
   PParams era ->
   (UTxOState era, CertState era) ->
-  Gen (Maybe (Update era), [KeyPair 'Witness (EraCrypto era)])
+  Gen (Maybe (Update era), [KeyPair 'Witness])
 genUpdate
   c@Constants {frequencyTxUpdates}
   s

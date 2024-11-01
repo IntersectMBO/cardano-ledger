@@ -11,7 +11,6 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg (nameDelegCert)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..))
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained (lit)
 import Data.Bifunctor (Bifunctor (..))
@@ -24,8 +23,8 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Constrained.Conway
 
-instance IsConwayUniv fn => ExecSpecRule fn "DELEG" Conway where
-  type ExecContext fn "DELEG" Conway = Set (Credential 'DRepRole StandardCrypto)
+instance IsConwayUniv fn => ExecSpecRule fn "DELEG" ConwayEra where
+  type ExecContext fn "DELEG" ConwayEra = Set (Credential 'DRepRole)
 
   environmentSpec _ = delegEnvSpec
 
@@ -41,7 +40,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "DELEG" Conway where
 
   classOf = Just . nameDelegCert
 
-nameDelegCert :: ConwayDelegCert c -> String
+nameDelegCert :: ConwayDelegCert -> String
 nameDelegCert ConwayRegCert {} = "RegKey"
 nameDelegCert ConwayUnRegCert {} = "UnRegKey"
 nameDelegCert ConwayDelegCert {} = "DelegateWithKey"

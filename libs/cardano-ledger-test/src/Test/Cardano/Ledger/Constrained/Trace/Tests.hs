@@ -64,7 +64,7 @@ import Test.Tasty.QuickCheck (testProperty)
 -- | Construct and run one simpleTx, and run it through applySTS
 --  Check that the computed LedgerState is the same as the expected LedgerState
 --  Computed by using 'inputsAction' , 'outputsAction' , and 'feesAction'
-genAndRunSimpleTx :: TraceM (ConwayEra StandardCrypto) Property
+genAndRunSimpleTx :: TraceM ConwayEra Property
 genAndRunSimpleTx = do
   let proof = Conway
   _ <- genLedgerStateEnv proof

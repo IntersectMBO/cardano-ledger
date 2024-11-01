@@ -15,10 +15,9 @@ import Cardano.Ledger.Alonzo.TxAuxData (
  )
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Babbage.Scripts ()
-import Cardano.Ledger.Crypto
 
-instance Crypto c => EraTxAuxData (BabbageEra c) where
-  type TxAuxData (BabbageEra c) = AlonzoTxAuxData (BabbageEra c)
+instance EraTxAuxData BabbageEra where
+  type TxAuxData BabbageEra = AlonzoTxAuxData BabbageEra
 
   mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
 
@@ -30,8 +29,8 @@ instance Crypto c => EraTxAuxData (BabbageEra c) where
 
   validateTxAuxData = validateAlonzoTxAuxData
 
-instance Crypto c => AllegraEraTxAuxData (BabbageEra c) where
+instance AllegraEraTxAuxData BabbageEra where
   timelockScriptsTxAuxDataL = timelockScriptsAlonzoTxAuxDataL
 
-instance Crypto c => AlonzoEraTxAuxData (BabbageEra c) where
+instance AlonzoEraTxAuxData BabbageEra where
   plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL

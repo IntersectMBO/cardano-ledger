@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-shelley-test
-version: 1.5.1.0
+version: 1.6.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -84,7 +84,7 @@ library
     cardano-ledger-byron,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.14,
-    cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.0.1,
+    cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.4,
     cardano-slotting:{cardano-slotting, testlib},
     cardano-strict-containers,
     cborg,
@@ -209,8 +209,6 @@ benchmark mainbench
   build-depends:
     QuickCheck,
     base,
-    cardano-crypto-class,
-    cardano-crypto-praos,
     cardano-data,
     cardano-ledger-binary:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib},

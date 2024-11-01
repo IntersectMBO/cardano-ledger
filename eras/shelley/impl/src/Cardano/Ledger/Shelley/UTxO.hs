@@ -8,7 +8,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -44,7 +43,6 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness, credScriptHash)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   GenDelegs (..),
   KeyHash (..),
@@ -76,9 +74,9 @@ import Lens.Micro ((^.))
 -- locked by a script in the UTxO 'u'.
 txinsScriptHashes ::
   EraTxOut era =>
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
   UTxO era ->
-  Set (ScriptHash (EraCrypto era))
+  Set ScriptHash
 txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
   where
     -- to get subset, start with empty, and only insert those inputs in txInps
@@ -136,7 +134,7 @@ shelleyProducedValue ::
   EraTxBody era =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
-  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  (KeyHash 'StakePool -> Bool) ->
   TxBody era ->
   Value era
 shelleyProducedValue pp isRegPoolId txBody =
@@ -149,7 +147,7 @@ shelleyProducedValue pp isRegPoolId txBody =
 getConsumedCoin ::
   EraTxBody era =>
   PParams era ->
-  (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+  (Credential 'Staking -> Maybe Coin) ->
   UTxO era ->
   TxBody era ->
   Coin
@@ -162,11 +160,11 @@ getConsumedCoin pp lookupRefund utxo txBody =
     refunds = getTotalRefundsTxBody pp lookupRefund (const Nothing) txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
-newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set (ScriptHash (EraCrypto era)))
+newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set ScriptHash)
   deriving (Eq, Show)
 
-instance Crypto c => EraUTxO (ShelleyEra c) where
-  type ScriptsNeeded (ShelleyEra c) = ShelleyScriptsNeeded (ShelleyEra c)
+instance EraUTxO ShelleyEra where
+  type ScriptsNeeded ShelleyEra = ShelleyScriptsNeeded ShelleyEra
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
@@ -193,8 +191,8 @@ witsVKeyNeededGenDelegs ::
   forall era.
   ShelleyEraTxBody era =>
   TxBody era ->
-  GenDelegs (EraCrypto era) ->
-  Set (KeyHash 'Witness (EraCrypto era))
+  GenDelegs ->
+  Set (KeyHash 'Witness)
 witsVKeyNeededGenDelegs txBody (GenDelegs genDelegs) =
   asWitness `Set.map` proposedUpdatesWitnesses (txBody ^. updateTxBodyL)
   where
@@ -215,14 +213,14 @@ getShelleyWitsVKeyNeededNoGov ::
   EraTx era =>
   UTxO era ->
   TxBody era ->
-  Set (KeyHash 'Witness (EraCrypto era))
+  Set (KeyHash 'Witness)
 getShelleyWitsVKeyNeededNoGov utxo' txBody =
   certAuthors
     `Set.union` inputAuthors
     `Set.union` owners
     `Set.union` wdrlAuthors
   where
-    inputAuthors :: Set (KeyHash 'Witness (EraCrypto era))
+    inputAuthors :: Set (KeyHash 'Witness)
     inputAuthors = foldr' accum Set.empty (txBody ^. spendableInputsTxBodyF)
       where
         accum txin !ans =
@@ -235,14 +233,14 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
                 _ -> ans
             Nothing -> ans
 
-    wdrlAuthors :: Set (KeyHash 'Witness (EraCrypto era))
+    wdrlAuthors :: Set (KeyHash 'Witness)
     wdrlAuthors = Map.foldrWithKey' accum Set.empty (unWithdrawals (txBody ^. withdrawalsTxBodyL))
       where
         accum key _ !ans =
           case credKeyHashWitness (raCredential key) of
             Nothing -> ans
             Just vkeyWit -> Set.insert vkeyWit ans
-    owners :: Set (KeyHash 'Witness (EraCrypto era))
+    owners :: Set (KeyHash 'Witness)
     owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum (RegPoolTxCert pool) !ans =
@@ -250,7 +248,7 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
             (Set.map asWitness (ppOwners pool))
             ans
         accum _cert ans = ans
-    certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
+    certAuthors :: Set (KeyHash 'Witness)
     certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyL)
       where
         accum cert !ans =
@@ -264,7 +262,7 @@ getShelleyWitsVKeyNeeded ::
   CertState era ->
   UTxO era ->
   TxBody era ->
-  Set (KeyHash 'Witness (EraCrypto era))
+  Set (KeyHash 'Witness)
 getShelleyWitsVKeyNeeded certState utxo txBody =
   getShelleyWitsVKeyNeededNoGov utxo txBody
     `Set.union` witsVKeyNeededGenDelegs txBody (dsGenDelegs (certState ^. certDStateL))

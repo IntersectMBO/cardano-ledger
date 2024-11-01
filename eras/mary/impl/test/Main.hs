@@ -2,7 +2,7 @@
 
 module Main where
 
-import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary (MaryEra)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Mary.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Mary.BinarySpec as BinarySpec
@@ -18,4 +18,4 @@ main =
       BinarySpec.spec
       CddlSpec.spec
       describe "Imp" $ do
-        Imp.spec @Mary
+        Imp.spec @MaryEra

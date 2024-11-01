@@ -17,8 +17,8 @@ spec = do
   -- Mary had no concept of a prefix.
   -- Transactions are also not upgradeable through deserialisation, though we
   -- check them via the translateEra method
-  specUpgrade @Alonzo (BinaryUpgradeOpts False False)
+  specUpgrade @AlonzoEra (BinaryUpgradeOpts False False)
   describe "RoundTrip" $ do
-    roundTripAlonzoCommonSpec @Alonzo
+    roundTripAlonzoCommonSpec @AlonzoEra
     -- AlonzoGenesis only makes sense in Alonzo era
-    roundTripEraSpec @Alonzo @AlonzoGenesis
+    roundTripEraSpec @AlonzoEra @AlonzoGenesis

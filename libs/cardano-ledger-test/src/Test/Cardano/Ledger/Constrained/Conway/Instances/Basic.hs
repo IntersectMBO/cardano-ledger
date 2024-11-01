@@ -7,15 +7,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -51,7 +47,6 @@ import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.ExUnits
@@ -211,8 +206,8 @@ instance BaseUniverse fn => OrdLike fn Version
 succV_ :: BaseUniverse fn => Term fn Version -> Term fn Version
 succV_ = fromGeneric_ . (+ 1) . toGeneric_
 
-instance (BaseUniverse fn, Typeable r, Crypto c) => HasSpec fn (KeyHash r c) where
-  type TypeSpec fn (KeyHash r c) = ()
+instance (BaseUniverse fn, Typeable r) => HasSpec fn (KeyHash r) where
+  type TypeSpec fn (KeyHash r) = ()
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary

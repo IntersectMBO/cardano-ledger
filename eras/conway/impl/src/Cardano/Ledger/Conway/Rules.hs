@@ -47,7 +47,7 @@ import Cardano.Ledger.Conway.Rules.Utxos
 import Cardano.Ledger.Conway.Rules.Utxow
 import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent (..))
 
-type instance EraRuleEvent "TICK" (ConwayEra c) = ShelleyTickEvent (ConwayEra c)
+type instance EraRuleEvent "TICK" ConwayEra = ShelleyTickEvent ConwayEra
 
-instance InjectRuleEvent "TICK" ConwayEpochEvent (ConwayEra c) where
+instance InjectRuleEvent "TICK" ConwayEpochEvent ConwayEra where
   injectEvent = TickNewEpochEvent . EpochEvent

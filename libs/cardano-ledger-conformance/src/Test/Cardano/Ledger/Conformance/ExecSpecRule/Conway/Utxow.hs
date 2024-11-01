@@ -12,9 +12,8 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow () where
 
-import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Data.Bifunctor (Bifunctor (..))
 import qualified Data.Text as T
 import qualified Lib as Agda
@@ -45,11 +44,11 @@ import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 
 instance
   ( IsConwayUniv fn
-  , SpecTranslate (ConwayTxBodyTransContext StandardCrypto) (ConwayTxCert (ConwayEra StandardCrypto))
+  , SpecTranslate ConwayTxBodyTransContext (ConwayTxCert ConwayEra)
   ) =>
-  ExecSpecRule fn "UTXOW" Conway
+  ExecSpecRule fn "UTXOW" ConwayEra
   where
-  type ExecContext fn "UTXOW" Conway = UtxoExecContext Conway
+  type ExecContext fn "UTXOW" ConwayEra = UtxoExecContext ConwayEra
 
   genExecContext = genUtxoExecContext
   environmentSpec = utxoEnvSpec
@@ -65,8 +64,8 @@ instance
             <$> toSpecRep env
             <*> toSpecRep st
             <*> toSpecRep sig
-      stFinal = first showOpaqueErrorString $ runSTS @"UTXO" @Conway globals env st sig
-      utxoInfo = extraInfo @fn @"UTXO" @Conway globals ctx env st sig stFinal
+      stFinal = first showOpaqueErrorString $ runSTS @"UTXO" @ConwayEra globals env st sig
+      utxoInfo = extraInfo @fn @"UTXO" @ConwayEra globals ctx env st sig stFinal
      in
       PP.vcat
         [ "UTXOW"

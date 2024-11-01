@@ -6,7 +6,6 @@ module Cardano.Ledger.Mary.TxOut (scaledMinDeposit) where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Shelley.TxOut (
@@ -18,10 +17,8 @@ import Cardano.Ledger.Val (Val (isAdaOnly, size), injectCompact)
 import Data.Coerce (coerce)
 import Lens.Micro ((^.))
 
-instance Crypto c => EraTxOut (MaryEra c) where
-  {-# SPECIALIZE instance EraTxOut (MaryEra StandardCrypto) #-}
-
-  type TxOut (MaryEra c) = ShelleyTxOut (MaryEra c)
+instance EraTxOut MaryEra where
+  type TxOut MaryEra = ShelleyTxOut MaryEra
 
   mkBasicTxOut = ShelleyTxOut
 

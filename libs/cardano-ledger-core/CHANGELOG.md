@@ -2,13 +2,43 @@
 
 ## 1.17.0.0
 
+* Remove `HASH`, `ADDRHASH` and `DSIGN` type families out of `Crypto` type class and turn
+  them into type synonyms for the exact algorithms previously being used in
+  `StandardCrypto`
+* Remove crypto parametrization from types:
+  * `Addr`, `BootstrapAddress`, `RewardAccount`, `CompactAddr` and `Withdrawals`
+  * `AuxiliaryDataHash`
+  * `BlocksMade`, `Anchor`
+  * `FutureGenDeleg`, `InstantaneousRewards`, `CommitteeAuthorization`
+  * `ByronEra` and `VoidEra`
+  * `PoolCert`
+  * `Credential`, `StakeReference` and `GenesisCredential`
+  * `DRep` and `DRepState`
+  * `Stake`, `SnapShot` and `SnapShots`
+  * `DataHash`, `ScriptHash`
+  * `BootstrapWitness`
+  * `VKey`, `KeyHash`, `GenDelegPair`, `GenDelegs`, `VRFVerKeyHash`
+  * `PlutusWithConext`, `ScriptFailure`, `ScriptResult`, `PlutusDebugInfo`
+  * `TxOutSource`
+  * `IndividualPoolStake`, `PoolDistr`
+  * `PoolParams`
+  * `Reward`
+  * `SafeHash` and `SafeToHash`
+  * `TxId`, `TxIn`
+  * `UMElem`, `RewardDelegation`, `StakeCredentials`, `UView` and `UMap`
+* Remove `HashWithCrypto` as no longer needed.
+* Deprecate `hashAnchorData`
 * Change superclass of `Crypto` from `KESAlgorithm` to `UnsoundPureKESAlgorithm`
-
-## 1.16.0.0
-
 * Add `PlutusDebugOverrides` argument to `debugPlutus`
 * Add `PlutusDebugOverrides` data type
 * Add `Read` instance for `Language`
+
+### `testlib`
+
+* Remove crypto parametrization from types: `KeyPair` and `KeyPairs`
+
+## 1.16.0.0
+
 * Add `toVRFVerKeyHash` and `fromVRFVerKeyHash`
 * Change lens type of `hkdNOptL`, `ppNOptL`, and `ppuNOptL` to `Word16`
 * Add `epochFromSlot`

@@ -26,5 +26,5 @@ import Cardano.Ledger.Alonzo.Rules.Utxos
 import Cardano.Ledger.Alonzo.Rules.Utxow
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerEvent, ShelleyTickEvent)
 
-type instance EraRuleEvent "LEDGER" (AlonzoEra c) = ShelleyLedgerEvent (AlonzoEra c)
-type instance EraRuleEvent "TICK" (AlonzoEra c) = ShelleyTickEvent (AlonzoEra c)
+type instance EraRuleEvent "LEDGER" AlonzoEra = ShelleyLedgerEvent AlonzoEra
+type instance EraRuleEvent "TICK" AlonzoEra = ShelleyTickEvent AlonzoEra

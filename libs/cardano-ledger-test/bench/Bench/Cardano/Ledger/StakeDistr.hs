@@ -1,12 +1,9 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -24,7 +21,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..))
 import Cardano.Ledger.Binary.Plain as Plain (FromCBOR (..), decodeFullDecoder)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin), DeltaCoin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto ()
 import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
   SnapShots (..),
@@ -89,7 +86,7 @@ import Test.Cardano.Slotting.Numeric ()
 
 -- ======================================================================
 
-type CurrentEra = AlonzoEra StandardCrypto
+type CurrentEra = AlonzoEra
 
 -- ==============================
 -- Data files
@@ -139,7 +136,7 @@ bogusNewEpochState =
     (PoolDistr Map.empty $ CompactCoin 1)
     def
 
-mkGlobals :: ShelleyGenesis StandardCrypto -> Globals
+mkGlobals :: ShelleyGenesis -> Globals
 mkGlobals genesis =
   mkShelleyGlobals genesis epochInfoE
   where
@@ -263,16 +260,16 @@ tickfRuleBench =
                 ]
             ]
 
-getSnap :: NewEpochState (AlonzoEra StandardCrypto) -> SnapShot StandardCrypto
-getSnap nes = (ssStakeSet . esSnapshots . nesEs) nes
+getSnap :: NewEpochState AlonzoEra -> SnapShot
+getSnap nes = ssStakeSet $ esSnapshots $ nesEs nes
 
-getRewardUpdate :: NewEpochState era -> RewardUpdate (EraCrypto era)
+getRewardUpdate :: NewEpochState era -> RewardUpdate
 getRewardUpdate nes =
   case nesRu nes of
     SNothing -> error "No RewardUpdate in new epoch state"
     SJust c -> getComplete c
 
-getComplete :: PulsingRewUpdate c -> RewardUpdate c
+getComplete :: PulsingRewUpdate -> RewardUpdate
 getComplete = \case
   Pulsing _ _ -> error "RewardUpdate in new epoch state is pulsing"
   Complete ru -> ru
@@ -280,7 +277,7 @@ getComplete = \case
 -- ==================================================================
 
 -- | The inital ShelleyGenesis structure, encoded in json format as a Haskell String
-shelleyGenesis :: ShelleyGenesis StandardCrypto
+shelleyGenesis :: ShelleyGenesis
 shelleyGenesis =
   either error id $
     Aeson.eitherDecode $

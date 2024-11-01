@@ -18,8 +18,7 @@ import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
@@ -40,17 +39,17 @@ import Test.Tasty.HUnit
 -- ====================================================================================================
 -- Make a TxBody to test with
 
-txM :: TxBody Mary
+txM :: TxBody MaryEra
 txM =
   mkBasicTxBody
     & feeTxBodyL .~ Coin 6
     & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42))
     & mintTxBodyL .~ testMint
 
-testMint :: MultiAsset StandardCrypto
+testMint :: MultiAsset
 testMint = MultiAsset $ Map.singleton policyId (Map.singleton aname 2)
   where
-    policyId = PolicyID . hashScript @Mary . RequireAnyOf $ fromList []
+    policyId = PolicyID . hashScript @MaryEra . RequireAnyOf $ fromList []
     aname = AssetName $ fromString "asset name"
 
 fieldTests :: TestTree

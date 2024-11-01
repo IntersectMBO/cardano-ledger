@@ -21,8 +21,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Federation (
 where
 
 import Cardano.Ledger.BaseTypes (Globals (..))
-import Cardano.Ledger.Core (EraCrypto, EraPParams (..), PParams (..))
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Core (EraPParams (..), PParams (..))
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   KeyHash (..),
@@ -47,6 +46,7 @@ import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (..),
   VRFKeyPair (..),
@@ -58,9 +58,8 @@ numCoreNodes :: Word64
 numCoreNodes = 7
 
 mkAllCoreNodeKeys ::
-  Crypto c =>
   Word64 ->
-  AllIssuerKeys c r
+  AllIssuerKeys MockCrypto r
 mkAllCoreNodeKeys w =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -71,10 +70,8 @@ mkAllCoreNodeKeys w =
     (skCold, vkCold) = mkKeyPair (RawSeed w 0 0 0 1)
 
 coreNodes ::
-  forall c.
-  Crypto c =>
-  [ ( (SignKeyDSIGN c, VKey 'Genesis c)
-    , AllIssuerKeys c 'GenesisDelegate
+  [ ( (SignKeyDSIGN, VKey 'Genesis)
+    , AllIssuerKeys MockCrypto 'GenesisDelegate
     )
   ]
 coreNodes =
@@ -85,25 +82,23 @@ coreNodes =
 -- === Signing (Secret) Keys
 -- Retrieve the signing key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeSK :: forall c. Crypto c => Int -> SignKeyDSIGN c
-coreNodeSK = fst . fst . (coreNodes @c !!)
+coreNodeSK :: Int -> SignKeyDSIGN
+coreNodeSK = fst . fst . (coreNodes !!)
 
 -- | === Verification (Public) Keys
 -- Retrieve the verification key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeVK :: forall c. Crypto c => Int -> VKey 'Genesis c
-coreNodeVK = snd . fst . (coreNodes @c !!)
+coreNodeVK :: Int -> VKey 'Genesis
+coreNodeVK = snd . fst . (coreNodes !!)
 
 -- | === Block Issuer Keys
 -- Retrieve the block issuer keys (cold, VRF, and hot KES keys)
 -- for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
 coreNodeIssuerKeys ::
-  forall c.
-  Crypto c =>
   Int ->
-  AllIssuerKeys c 'GenesisDelegate
-coreNodeIssuerKeys = snd . (coreNodes @c !!)
+  AllIssuerKeys MockCrypto 'GenesisDelegate
+coreNodeIssuerKeys = snd . (coreNodes !!)
 
 -- | === Keys by Overlay Schedule
 -- Retrieve all the keys associated with a core node
@@ -115,7 +110,7 @@ coreNodeKeysBySchedule ::
   (HasCallStack, EraPParams era) =>
   PParams era ->
   Word64 ->
-  AllIssuerKeys (EraCrypto era) 'GenesisDelegate
+  AllIssuerKeys MockCrypto 'GenesisDelegate
 coreNodeKeysBySchedule pp slot =
   case lookupInOverlaySchedule
     firstSlot
@@ -139,16 +134,13 @@ coreNodeKeysBySchedule pp slot =
 -- | === Genesis Delegation Mapping
 -- The map from genesis/core node (verification) key hashes
 -- to their delegate's (verification) key hash.
-genDelegs ::
-  forall c.
-  Crypto c =>
-  Map (KeyHash 'Genesis c) (GenDelegPair c)
+genDelegs :: Map (KeyHash 'Genesis) GenDelegPair
 genDelegs =
   Map.fromList
     [ ( hashKey $ snd gkey
       , ( GenDelegPair
             (coerceKeyRole . hashKey . vKey $ aikCold pkeys)
-            (hashVerKeyVRF . vrfVerKey $ aikVrf pkeys)
+            (hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf pkeys)
         )
       )
     | (gkey, pkeys) <- coreNodes

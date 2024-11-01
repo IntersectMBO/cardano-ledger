@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..), IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Shelley as S (Shelley)
+import qualified Cardano.Ledger.Shelley as S (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -113,12 +113,13 @@ genTxAndUTXOState proof@Shelley gsize = do
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 
 genTxAndLEDGERStateShelley ::
-  GenSize -> Gen (TRC (EraRule "LEDGER" S.Shelley), GenState S.Shelley)
+  GenSize -> Gen (TRC (EraRule "LEDGER" S.ShelleyEra), GenState S.ShelleyEra)
 genTxAndLEDGERStateShelley genSize = do
   Box _ trc genState <- genTxAndLEDGERState Shelley genSize
   pure (trc, genState)
 
-testTxValidForLEDGERShelley :: (TRC (EraRule "LEDGER" S.Shelley), GenState S.Shelley) -> Property
+testTxValidForLEDGERShelley ::
+  (TRC (EraRule "LEDGER" S.ShelleyEra), GenState S.ShelleyEra) -> Property
 testTxValidForLEDGERShelley (trc, genState) =
   testTxValidForLEDGER Shelley (Box Shelley trc genState)
 
@@ -372,8 +373,8 @@ twiddleInvariantHoldsEras :: TestTree
 twiddleInvariantHoldsEras =
   testGroup
     "Twiddle invariant holds for TxBody"
-    [ twiddleInvariantHolds @(AlonzoTxBody (AlonzoEra StandardCrypto)) "Alonzo"
-    , twiddleInvariantHolds @(BabbageTxBody (BabbageEra StandardCrypto)) "Babbage"
+    [ twiddleInvariantHolds @(AlonzoTxBody AlonzoEra) "Alonzo"
+    , twiddleInvariantHolds @(BabbageTxBody BabbageEra) "Babbage"
     ]
 
 -- ==============================================================

@@ -16,7 +16,6 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
@@ -59,10 +58,10 @@ import qualified Data.Map.Strict as Map
 -- _back_ to the translation functions as the UTxO, allowing these addresses to
 -- be removed. This is needed because we cannot do a full scan on the UTxO at
 -- this point, since it has been persisted to disk.
-shelleyToAllegraAVVMsToDelete :: NewEpochState (ShelleyEra c) -> UTxO (ShelleyEra c)
+shelleyToAllegraAVVMsToDelete :: NewEpochState ShelleyEra -> UTxO ShelleyEra
 shelleyToAllegraAVVMsToDelete = stashedAVVMAddresses
 
-instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
+instance TranslateEra AllegraEra NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
@@ -78,29 +77,29 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
           stashedAVVMAddresses = ()
         }
 
-instance forall c. Crypto c => TranslateEra (AllegraEra c) ShelleyTx where
-  type TranslationError (AllegraEra c) ShelleyTx = DecoderError
+instance TranslateEra AllegraEra ShelleyTx where
+  type TranslationError AllegraEra ShelleyTx = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance Crypto c => TranslateEra (AllegraEra c) PParams
+instance TranslateEra AllegraEra PParams
 
-instance Crypto c => TranslateEra (AllegraEra c) PParamsUpdate
+instance TranslateEra AllegraEra PParamsUpdate
 
-instance Crypto c => TranslateEra (AllegraEra c) FuturePParams where
+instance TranslateEra AllegraEra FuturePParams where
   translateEra ctxt = \case
     NoPParamsUpdate -> pure NoPParamsUpdate
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
-instance Crypto c => TranslateEra (AllegraEra c) ProposedPPUpdates where
+instance TranslateEra AllegraEra ProposedPPUpdates where
   translateEra ctxt (ProposedPPUpdates ppup) =
     return $ ProposedPPUpdates $ Map.map (translateEra' ctxt) ppup
 
-instance Crypto c => TranslateEra (AllegraEra c) ShelleyGovState where
+instance TranslateEra AllegraEra ShelleyGovState where
   translateEra ctxt ps =
     return
       ShelleyGovState
@@ -111,14 +110,14 @@ instance Crypto c => TranslateEra (AllegraEra c) ShelleyGovState where
         , sgsFuturePParams = translateEra' ctxt $ sgsFuturePParams ps
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxOut where
+instance TranslateEra AllegraEra ShelleyTxOut where
   translateEra NoGenesis = pure . upgradeTxOut
 
-instance Crypto c => TranslateEra (AllegraEra c) UTxO where
+instance TranslateEra AllegraEra UTxO where
   translateEra ctxt utxo =
     return $ UTxO (translateEra' ctxt `Map.map` unUTxO utxo)
 
-instance Crypto c => TranslateEra (AllegraEra c) UTxOState where
+instance TranslateEra AllegraEra UTxOState where
   translateEra ctxt us =
     return
       UTxOState
@@ -130,21 +129,21 @@ instance Crypto c => TranslateEra (AllegraEra c) UTxOState where
         , utxosDonation = utxosDonation us
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) DState where
+instance TranslateEra AllegraEra DState where
   translateEra _ DState {..} = pure DState {..}
 
-instance Crypto c => TranslateEra (AllegraEra c) CommitteeState where
+instance TranslateEra AllegraEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance Crypto c => TranslateEra (AllegraEra c) VState where
+instance TranslateEra AllegraEra VState where
   translateEra ctx VState {..} = do
     committeeState <- translateEra ctx vsCommitteeState
     pure VState {vsCommitteeState = committeeState, ..}
 
-instance Crypto c => TranslateEra (AllegraEra c) PState where
+instance TranslateEra AllegraEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance Crypto c => TranslateEra (AllegraEra c) CertState where
+instance TranslateEra AllegraEra CertState where
   translateEra ctxt ls =
     pure
       CertState
@@ -153,7 +152,7 @@ instance Crypto c => TranslateEra (AllegraEra c) CertState where
         , certVState = translateEra' ctxt $ certVState ls
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) LedgerState where
+instance TranslateEra AllegraEra LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
@@ -161,7 +160,7 @@ instance Crypto c => TranslateEra (AllegraEra c) LedgerState where
         , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) EpochState where
+instance TranslateEra AllegraEra EpochState where
   translateEra ctxt es =
     return
       EpochState
@@ -171,9 +170,9 @@ instance Crypto c => TranslateEra (AllegraEra c) EpochState where
         , esNonMyopic = esNonMyopic es
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxWits where
-  type TranslationError (AllegraEra c) ShelleyTxWits = DecoderError
+instance TranslateEra AllegraEra ShelleyTxWits where
+  type TranslationError AllegraEra ShelleyTxWits = DecoderError
   translateEra _ctx = translateEraThroughCBOR "ShelleyTxWits"
 
-instance Crypto c => TranslateEra (AllegraEra c) Update where
+instance TranslateEra AllegraEra Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en

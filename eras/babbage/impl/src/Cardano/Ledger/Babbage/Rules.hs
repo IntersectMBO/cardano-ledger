@@ -25,8 +25,8 @@ import Cardano.Ledger.Babbage.Rules.Utxos
 import Cardano.Ledger.Babbage.Rules.Utxow
 import Cardano.Ledger.Shelley.Rules (PpupEvent, ShelleyLedgerEvent, ShelleyTickEvent)
 
-type instance EraRuleEvent "TICK" (BabbageEra c) = ShelleyTickEvent (BabbageEra c)
+type instance EraRuleEvent "TICK" BabbageEra = ShelleyTickEvent BabbageEra
 
-type instance EraRuleEvent "LEDGER" (BabbageEra c) = ShelleyLedgerEvent (BabbageEra c)
+type instance EraRuleEvent "LEDGER" BabbageEra = ShelleyLedgerEvent BabbageEra
 
-type instance EraRuleEvent "PPUP" (BabbageEra c) = PpupEvent (BabbageEra c)
+type instance EraRuleEvent "PPUP" BabbageEra = PpupEvent BabbageEra

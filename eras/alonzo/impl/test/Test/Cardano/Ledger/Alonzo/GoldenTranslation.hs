@@ -22,7 +22,7 @@ module Test.Cardano.Ledger.Alonzo.GoldenTranslation (
 )
 where
 
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Paths_cardano_ledger_alonzo (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
 import Test.Cardano.Ledger.Common
@@ -35,4 +35,4 @@ tests =
       goldenAssertion "golden/translations.cbor"
 
 goldenAssertion :: String -> Assertion
-goldenAssertion file = assertTranslationResultsMatchGolden @Alonzo (getDataFileName file)
+goldenAssertion file = assertTranslationResultsMatchGolden @AlonzoEra (getDataFileName file)

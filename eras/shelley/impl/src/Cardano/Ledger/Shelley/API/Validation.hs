@@ -30,8 +30,6 @@ import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curPParamsEpochStateL)
@@ -63,7 +61,7 @@ class
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era
   , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
-  , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , EncCBORGroup (TxSeq era)
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
@@ -95,7 +93,7 @@ class
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
-    Block (BHeaderView (EraCrypto era)) era ->
+    Block BHeaderView era ->
     m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
   default applyBlockOpts ::
     forall ep m.
@@ -103,7 +101,7 @@ class
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
-    Block (BHeaderView (EraCrypto era)) era ->
+    Block BHeaderView era ->
     m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
   applyBlockOpts opts globals state blk =
     liftEither
@@ -132,13 +130,13 @@ class
   reapplyBlock ::
     Globals ->
     NewEpochState era ->
-    Block (BHeaderView (EraCrypto era)) era ->
+    Block BHeaderView era ->
     NewEpochState era
   default reapplyBlock ::
     EraGov era =>
     Globals ->
     NewEpochState era ->
-    Block (BHeaderView (EraCrypto era)) era ->
+    Block BHeaderView era ->
     NewEpochState era
   reapplyBlock globals state blk =
     updateNewEpochState state res
@@ -171,7 +169,7 @@ applyBlock ::
   ) =>
   Globals ->
   NewEpochState era ->
-  Block (BHeaderView (EraCrypto era)) era ->
+  Block BHeaderView era ->
   m (NewEpochState era)
 applyBlock =
   applyBlockOpts $
@@ -181,23 +179,19 @@ applyBlock =
       , asoEvents = EPDiscard
       }
 
-instance
-  ( Crypto c
-  , DSignable c (Hash c EraIndependentTxBody)
-  ) =>
-  ApplyBlock (ShelleyEra c)
+instance ApplyBlock ShelleyEra
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
 -------------------------------------------------------------------------------}
 
 chainChecks ::
-  forall c m.
+  forall m.
   MonadError STS.ChainPredicateFailure m =>
   -- | Max major protocol version
   Version ->
   STS.ChainChecksPParams ->
-  BHeaderView c ->
+  BHeaderView ->
   m ()
 chainChecks = STS.chainChecks
 

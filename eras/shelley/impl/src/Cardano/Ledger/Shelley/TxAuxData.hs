@@ -29,12 +29,10 @@ module Cardano.Ledger.Shelley.TxAuxData (
 )
 where
 
-import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Binary (Annotator (..), DecCBOR (..), EncCBOR (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR)
 import Cardano.Ledger.Core (Era (..), EraTxAuxData (..))
-import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
@@ -92,14 +90,14 @@ deriving via
 
 newtype ShelleyTxAuxData era
   = AuxiliaryDataConstr (MemoBytes ShelleyTxAuxDataRaw era)
-  deriving (Eq, Generic)
+  deriving (Eq, Show, Generic)
   deriving newtype (NFData, Plain.ToCBOR, SafeToHash)
 
 instance Memoized ShelleyTxAuxData where
   type RawType ShelleyTxAuxData = ShelleyTxAuxDataRaw
 
-instance Crypto c => EraTxAuxData (ShelleyEra c) where
-  type TxAuxData (ShelleyEra c) = ShelleyTxAuxData (ShelleyEra c)
+instance EraTxAuxData ShelleyEra where
+  type TxAuxData ShelleyEra = ShelleyTxAuxData ShelleyEra
 
   mkBasicTxAuxData = ShelleyTxAuxData mempty
 
@@ -113,22 +111,18 @@ instance Crypto c => EraTxAuxData (ShelleyEra c) where
   validateTxAuxData _ (ShelleyTxAuxData m) = all validMetadatum m
 
   hashTxAuxData metadata =
-    AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @c) index metadata)
+    AuxiliaryDataHash (makeHashWithExplicitProxys index metadata)
     where
       index = Proxy @EraIndependentTxAuxData
 
 instance EqRaw (ShelleyTxAuxData era)
 
-instance
-  c ~ EraCrypto era =>
-  HashAnnotated (ShelleyTxAuxData era) EraIndependentTxAuxData c
-  where
+instance HashAnnotated (ShelleyTxAuxData era) EraIndependentTxAuxData where
   hashAnnotated = getMemoSafeHash
 
 hashShelleyTxAuxData ::
-  Era era =>
   ShelleyTxAuxData era ->
-  SafeHash (EraCrypto era) EraIndependentTxAuxData
+  SafeHash EraIndependentTxAuxData
 hashShelleyTxAuxData = hashAnnotated
 
 pattern ShelleyTxAuxData :: forall era. Era era => Map Word64 Metadatum -> ShelleyTxAuxData era
@@ -141,9 +135,5 @@ pattern ShelleyTxAuxData m <-
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (ShelleyTxAuxData era)
-
-deriving instance
-  HashAlgorithm (HASH (EraCrypto era)) =>
-  Show (ShelleyTxAuxData era)
 
 type instance MemoHashIndex ShelleyTxAuxDataRaw = EraIndependentTxAuxData

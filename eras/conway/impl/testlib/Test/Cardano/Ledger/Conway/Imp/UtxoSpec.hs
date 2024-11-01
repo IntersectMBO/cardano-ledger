@@ -106,7 +106,7 @@ spec =
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       pure $ getMinFeeTxUtxo pp tx utxo <-> getShelleyMinFeeTxUtxo pp tx
 
-    createScriptUtxo :: HasCallStack => NativeScript era -> ImpTestM era (TxIn (EraCrypto era))
+    createScriptUtxo :: HasCallStack => NativeScript era -> ImpTestM era TxIn
     createScriptUtxo script = do
       scriptAddr <- addScriptAddr script
       tx <-
@@ -117,7 +117,7 @@ spec =
       pure $ txInAt (0 :: Int) tx
 
     createRefScriptsUtxos ::
-      HasCallStack => [Script era] -> ImpTestM era (Map.Map (TxIn (EraCrypto era)) (Script era))
+      HasCallStack => [Script era] -> ImpTestM era (Map.Map TxIn (Script era))
     createRefScriptsUtxos scripts = do
       rootOut <- snd <$> lookupImpRootTxOut
       let outs =
@@ -135,7 +135,7 @@ spec =
       pure $ Map.fromList $ refIns `zip` scripts
 
     spendScriptUsingRefScripts ::
-      HasCallStack => TxIn (EraCrypto era) -> Set.Set (TxIn (EraCrypto era)) -> ImpTestM era (Tx era)
+      HasCallStack => TxIn -> Set.Set TxIn -> ImpTestM era (Tx era)
     spendScriptUsingRefScripts scriptIn refIns =
       submitTxAnn "spendScriptUsingRefScripts" . mkBasicTx $
         mkBasicTxBody
@@ -149,7 +149,7 @@ spec =
       _ <- impAddNativeScript script
       pure script
 
-    addScriptAddr :: HasCallStack => NativeScript era -> ImpTestM era (Addr (EraCrypto era))
+    addScriptAddr :: HasCallStack => NativeScript era -> ImpTestM era Addr
     addScriptAddr script = do
       kpStaking1 <- lookupKeyPair =<< freshKeyHash
       scriptHash <- impAddNativeScript script

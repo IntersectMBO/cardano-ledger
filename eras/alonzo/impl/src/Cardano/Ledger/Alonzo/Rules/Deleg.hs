@@ -9,6 +9,6 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
 
-type instance EraRuleFailure "DELEG" (AlonzoEra c) = ShelleyDelegPredFailure (AlonzoEra c)
+type instance EraRuleFailure "DELEG" AlonzoEra = ShelleyDelegPredFailure AlonzoEra
 
-instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure (AlonzoEra c)
+instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure AlonzoEra

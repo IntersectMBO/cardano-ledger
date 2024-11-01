@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.Alonzo.TxInfo (
 ) where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
@@ -24,7 +24,6 @@ import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
 import qualified Cardano.Ledger.BaseTypes as BT (Inject (..), ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -44,10 +43,10 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
-byronAddr :: Addr StandardCrypto
+byronAddr :: Addr
 byronAddr = AddrBootstrap (BootstrapAddress aliceByronAddr)
 
-shelleyAddr :: Addr StandardCrypto
+shelleyAddr :: Addr
 shelleyAddr = Addr Testnet alicePHK StakeRefNull
 
 ei :: EpochInfo (Either a)
@@ -58,24 +57,24 @@ ss = SystemStart $ posixSecondsToUTCTime 0
 
 -- This input is only a "Byron input" in the sense
 -- that we attach it to a Byron output in the UTxO created below.
-byronInput :: TxIn StandardCrypto
+byronInput :: TxIn
 byronInput = mkTxInPartial genesisId 0
 
 -- This input is only a "Shelley input" in the sense
 -- that we attach it to a Shelley output in the UTxO created below.
-shelleyInput :: TxIn StandardCrypto
+shelleyInput :: TxIn
 shelleyInput = mkTxInPartial genesisId 1
 
-byronOutput :: TxOut Alonzo
+byronOutput :: TxOut AlonzoEra
 byronOutput = AlonzoTxOut byronAddr (Val.inject $ Coin 1) SNothing
 
-shelleyOutput :: TxOut Alonzo
+shelleyOutput :: TxOut AlonzoEra
 shelleyOutput = AlonzoTxOut shelleyAddr (Val.inject $ Coin 2) SNothing
 
-utxo :: UTxO Alonzo
+utxo :: UTxO AlonzoEra
 utxo = UTxO $ Map.fromList [(byronInput, byronOutput), (shelleyInput, shelleyOutput)]
 
-txb :: TxIn StandardCrypto -> TxOut Alonzo -> TxBody Alonzo
+txb :: TxIn -> TxOut AlonzoEra -> TxBody AlonzoEra
 txb i o =
   AlonzoTxBody
     (Set.singleton i) -- inputs
@@ -92,14 +91,14 @@ txb i o =
     SNothing -- auxiliary data hash
     SNothing -- network ID
 
-txEx :: TxIn StandardCrypto -> TxOut Alonzo -> Tx Alonzo
+txEx :: TxIn -> TxOut AlonzoEra -> Tx AlonzoEra
 txEx i o = AlonzoTx (txb i o) mempty (IsValid True) SNothing
 
-silentlyIgnore :: Tx Alonzo -> Assertion
+silentlyIgnore :: Tx AlonzoEra -> Assertion
 silentlyIgnore tx =
   let lti =
         LedgerTxInfo
-          { ltiProtVer = BT.ProtVer (eraProtVerLow @Alonzo) 0
+          { ltiProtVer = BT.ProtVer (eraProtVerLow @AlonzoEra) 0
           , ltiEpochInfo = ei
           , ltiSystemStart = ss
           , ltiUTxO = utxo
@@ -169,9 +168,9 @@ tests =
         "transVITime"
         [ testCase
             "validity interval's upper bound is close when protocol < 9"
-            (transVITimeUpperBoundIsClosed @Alonzo)
+            (transVITimeUpperBoundIsClosed @AlonzoEra)
         , testCase
             "validity interval's upper bound is open when protocol >= 9"
-            (transVITimeUpperBoundIsOpen @Alonzo)
+            (transVITimeUpperBoundIsOpen @AlonzoEra)
         ]
     ]

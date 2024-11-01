@@ -41,7 +41,6 @@ module Cardano.Ledger.Babbage.TxOut (
   internBabbageTxOut,
 ) where
 
-import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Ledger.Address (
   Addr (..),
   CompactAddr,
@@ -101,7 +100,6 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Plutus.Data (
   BinaryData,
@@ -132,36 +130,34 @@ class (AlonzoEraTxOut era, AlonzoEraScript era) => BabbageEraTxOut era where
 
 data BabbageTxOut era
   = TxOutCompact'
-      {-# UNPACK #-} !(CompactAddr (EraCrypto era))
+      {-# UNPACK #-} !CompactAddr
       !(CompactForm (Value era))
   | TxOutCompactDH'
-      {-# UNPACK #-} !(CompactAddr (EraCrypto era))
+      {-# UNPACK #-} !CompactAddr
       !(CompactForm (Value era))
-      !(DataHash (EraCrypto era))
+      !DataHash
   | TxOutCompactDatum
-      {-# UNPACK #-} !(CompactAddr (EraCrypto era))
+      {-# UNPACK #-} !CompactAddr
       !(CompactForm (Value era))
       {-# UNPACK #-} !(BinaryData era) -- Inline data
   | TxOutCompactRefScript
-      {-# UNPACK #-} !(CompactAddr (EraCrypto era))
+      {-# UNPACK #-} !CompactAddr
       !(CompactForm (Value era))
       !(Datum era)
       !(Script era)
   | TxOut_AddrHash28_AdaOnly
-      !(Credential 'Staking (EraCrypto era))
+      !(Credential 'Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
   | TxOut_AddrHash28_AdaOnly_DataHash32
-      !(Credential 'Staking (EraCrypto era))
+      !(Credential 'Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
   deriving (Generic)
 
-instance Crypto c => EraTxOut (BabbageEra c) where
-  {-# SPECIALIZE instance EraTxOut (BabbageEra StandardCrypto) #-}
-
-  type TxOut (BabbageEra c) = BabbageTxOut (BabbageEra c)
+instance EraTxOut BabbageEra where
+  type TxOut BabbageEra = BabbageTxOut BabbageEra
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
 
@@ -180,7 +176,7 @@ instance Crypto c => EraTxOut (BabbageEra c) where
   getMinCoinSizedTxOut = babbageMinUTxOValue
 
 dataHashBabbageTxOutL ::
-  EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe (DataHash (EraCrypto era)))
+  EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe DataHash)
 dataHashBabbageTxOutL =
   lens
     getDataHashBabbageTxOut
@@ -190,9 +186,7 @@ dataHashBabbageTxOutL =
     )
 {-# INLINEABLE dataHashBabbageTxOutL #-}
 
-instance Crypto c => AlonzoEraTxOut (BabbageEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxOut (BabbageEra StandardCrypto) #-}
-
+instance AlonzoEraTxOut BabbageEra where
   dataHashTxOutL = dataHashBabbageTxOutL
   {-# INLINEABLE dataHashTxOutL #-}
 
@@ -220,8 +214,7 @@ referenceScriptBabbageTxOutL =
   lens getScriptBabbageTxOut (\(BabbageTxOut addr cv d _) s -> BabbageTxOut addr cv d s)
 {-# INLINEABLE referenceScriptBabbageTxOutL #-}
 
-instance Crypto c => BabbageEraTxOut (BabbageEra c) where
-  {-# SPECIALIZE instance BabbageEraTxOut (BabbageEra StandardCrypto) #-}
+instance BabbageEraTxOut BabbageEra where
   dataTxOutL = dataBabbageTxOutL
   {-# INLINEABLE dataTxOutL #-}
 
@@ -233,7 +226,7 @@ instance Crypto c => BabbageEraTxOut (BabbageEra c) where
 
 addrEitherBabbageTxOutL ::
   EraTxOut era =>
-  Lens' (BabbageTxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))
+  Lens' (BabbageTxOut era) (Either Addr CompactAddr)
 addrEitherBabbageTxOutL =
   lens
     getEitherAddrBabbageTxOut
@@ -293,9 +286,9 @@ toBabbageTxOutPairs (BabbageTxOut !addr !val !dat !mRefScript) =
 
 viewCompactTxOut ::
   forall era.
-  (Era era, Val (Value era)) =>
+  Val (Value era) =>
   BabbageTxOut era ->
-  (CompactAddr (EraCrypto era), CompactForm (Value era), Datum era, StrictMaybe (Script era))
+  (CompactAddr, CompactForm (Value era), Datum era, StrictMaybe (Script era))
 viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, NoDatum, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, DatumHash dh, SNothing)
@@ -318,9 +311,9 @@ viewCompactTxOut txOut = case txOut of
 
 viewTxOut ::
   forall era.
-  (Era era, Val (Value era)) =>
+  Val (Value era) =>
   BabbageTxOut era ->
-  (Addr (EraCrypto era), Value era, Datum era, StrictMaybe (Script era))
+  (Addr, Value era, Datum era, StrictMaybe (Script era))
 viewTxOut (TxOutCompact' bs c) = (addr, val, NoDatum, SNothing)
   where
     addr = decompactAddr bs
@@ -361,7 +354,7 @@ instance (Era era, NoThunks (Script era), Val (Value era)) => NoThunks (BabbageT
 
 pattern BabbageTxOut ::
   (Era era, Val (Value era), HasCallStack) =>
-  Addr (EraCrypto era) ->
+  Addr ->
   Value era ->
   Datum era ->
   StrictMaybe (Script era) ->
@@ -377,9 +370,9 @@ pattern BabbageTxOut addr vl datum refScript <-
 -- address should be the exact same address in different forms.
 mkTxOut ::
   forall era.
-  (Era era, Val (Value era), HasCallStack) =>
-  Addr (EraCrypto era) ->
-  CompactAddr (EraCrypto era) ->
+  (Val (Value era), HasCallStack) =>
+  Addr ->
+  CompactAddr ->
   Value era ->
   Datum era ->
   StrictMaybe (Script era) ->
@@ -410,9 +403,9 @@ mkTxOut _addr cAddr vl d rs =
 -- TODO: Implement mkTxOut in terms of mkTxOutCompact, it will avoid unnecessary
 -- MultiAsset serilization/deserialization
 mkTxOutCompact ::
-  (Era era, Val (Value era)) =>
-  Addr (EraCrypto era) ->
-  CompactAddr (EraCrypto era) ->
+  Val (Value era) =>
+  Addr ->
+  CompactAddr ->
   CompactForm (Value era) ->
   Datum era ->
   StrictMaybe (Script era) ->
@@ -422,7 +415,7 @@ mkTxOutCompact addr cAddr cVal = mkTxOut addr cAddr (fromCompact cVal)
 
 pattern TxOutCompact ::
   (Era era, Val (Value era), Compactible (Value era), HasCallStack) =>
-  CompactAddr (EraCrypto era) ->
+  CompactAddr ->
   CompactForm (Value era) ->
   BabbageTxOut era
 pattern TxOutCompact addr vl <-
@@ -435,9 +428,9 @@ pattern TxOutCompact addr vl <-
 
 pattern TxOutCompactDH ::
   (Era era, Val (Value era), Compactible (Value era), HasCallStack) =>
-  CompactAddr (EraCrypto era) ->
+  CompactAddr ->
   CompactForm (Value era) ->
-  DataHash (EraCrypto era) ->
+  DataHash ->
   BabbageTxOut era
 pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, DatumHash dh, SNothing))
@@ -469,7 +462,7 @@ instance (EraScript era, Val (Value era)) => DecCBOR (BabbageTxOut era) where
   {-# INLINE decCBOR #-}
 
 instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) where
-  type Share (BabbageTxOut era) = Interns (Credential 'Staking (EraCrypto era))
+  type Share (BabbageTxOut era) = Interns (Credential 'Staking)
   decShareCBOR credsInterns =
     -- Even in Babbage the ledger state still contains garbage pointers that we need to
     -- deal with. This will be taken care of upon entry to Conway era. After which this
@@ -478,7 +471,7 @@ instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) whe
   {-# INLINEABLE decShareCBOR #-}
 
 internBabbageTxOut ::
-  (Credential 'Staking (EraCrypto era) -> Credential 'Staking (EraCrypto era)) ->
+  (Credential 'Staking -> Credential 'Staking) ->
   BabbageTxOut era ->
   BabbageTxOut era
 internBabbageTxOut internCred = \case
@@ -494,7 +487,7 @@ decodeBabbageTxOut ::
   -- | We need to use a backwards compatible decoder for any address in a pre-babbage
   -- TxOut format. This is needed in order to get rid of bogus pointers from the ledger
   -- state in Conway
-  (forall s'. Decoder s' (Addr (EraCrypto era), CompactAddr (EraCrypto era))) ->
+  (forall s'. Decoder s' (Addr, CompactAddr)) ->
   Decoder s (BabbageTxOut era)
 decodeBabbageTxOut decAddr = do
   peekTokenType >>= \case
@@ -531,7 +524,7 @@ decodeBabbageTxOut decAddr = do
 encodeTxOut ::
   forall era.
   (EraScript era, Val (Value era)) =>
-  CompactAddr (EraCrypto era) ->
+  CompactAddr ->
   CompactForm (Value era) ->
   Datum era ->
   StrictMaybe (Script era) ->
@@ -546,7 +539,7 @@ encodeTxOut cAddr cVal datum script =
 {-# INLINE encodeTxOut #-}
 
 data DecodingTxOut era = DecodingTxOut
-  { decodingTxOutAddr :: !(StrictMaybe (Addr (EraCrypto era), CompactAddr (EraCrypto era)))
+  { decodingTxOutAddr :: !(StrictMaybe (Addr, CompactAddr))
   , decodingTxOutVal :: !(Value era)
   , decodingTxOutDatum :: !(Datum era)
   , decodingTxOutScript :: !(StrictMaybe (Script era))
@@ -555,7 +548,7 @@ data DecodingTxOut era = DecodingTxOut
 decodeTxOut ::
   forall s era.
   (EraScript era, Val (Value era)) =>
-  (forall s'. Decoder s' (Addr (EraCrypto era), CompactAddr (EraCrypto era))) ->
+  (forall s'. Decoder s' (Addr, CompactAddr)) ->
   Decoder s (BabbageTxOut era)
 decodeTxOut decAddr = do
   dtxo <- decode $ SparseKeyed "TxOut" initial bodyFields requiredFields
@@ -619,9 +612,9 @@ babbageMinUTxOValue pp sizedTxOut =
 {-# INLINE babbageMinUTxOValue #-}
 
 getEitherAddrBabbageTxOut ::
-  (HasCallStack, HashAlgorithm (ADDRHASH (EraCrypto era))) =>
+  HasCallStack =>
   BabbageTxOut era ->
-  Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era))
+  Either Addr CompactAddr
 getEitherAddrBabbageTxOut = \case
   TxOutCompact' cAddr _ -> Right cAddr
   TxOutCompactDH' cAddr _ _ -> Right cAddr
@@ -654,9 +647,9 @@ getDataBabbageTxOut = \case
 --  Note that this function does *not* return the hash of an inline datum
 --  if one is present.
 getDataHashBabbageTxOut ::
-  (HasCallStack, Era era) =>
+  HasCallStack =>
   BabbageTxOut era ->
-  StrictMaybe (DataHash (EraCrypto era))
+  StrictMaybe DataHash
 getDataHashBabbageTxOut txOut =
   case getDatumBabbageTxOut txOut of
     NoDatum -> SNothing
@@ -674,7 +667,7 @@ getScriptBabbageTxOut = \case
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> SNothing
 {-# INLINE getScriptBabbageTxOut #-}
 
-getDatumBabbageTxOut :: (HasCallStack, Era era) => BabbageTxOut era -> Datum era
+getDatumBabbageTxOut :: HasCallStack => BabbageTxOut era -> Datum era
 getDatumBabbageTxOut = \case
   TxOutCompact' {} -> NoDatum
   TxOutCompactDH' _ _ dh -> DatumHash dh
@@ -701,7 +694,7 @@ txOutData :: Era era => BabbageTxOut era -> Maybe (Data era)
 txOutData = strictMaybeToMaybe . getDataBabbageTxOut
 {-# DEPRECATED txOutData "In favor of `dataTxOutL` or `getDataBabbageTxOut`" #-}
 
-txOutDataHash :: Era era => BabbageTxOut era -> Maybe (DataHash (EraCrypto era))
+txOutDataHash :: BabbageTxOut era -> Maybe DataHash
 txOutDataHash = strictMaybeToMaybe . getDataHashBabbageTxOut
 {-# DEPRECATED txOutDataHash "In favor of `dataHashTxOutL` or `getDataHashBabbageTxOut`" #-}
 

@@ -1,10 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
 import CLI
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Plutus.Evaluate
 import Options.Applicative
 
@@ -28,4 +26,4 @@ main = do
                   <> "`Test.Cardano.Ledger.Plutus.Examples`."
               )
         )
-  debugPlutus @StandardCrypto optsScriptWithContext optsOverrides >>= print
+  debugPlutus optsScriptWithContext optsOverrides >>= print

@@ -20,7 +20,6 @@ import Cardano.Ledger.Allegra.TxAuxData (
  )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Core (EraTxAuxData (..), upgradeScript)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -29,8 +28,8 @@ import Control.DeepSeq (deepseq)
 
 -- =======================================
 
-instance Crypto c => EraTxAuxData (MaryEra c) where
-  type TxAuxData (MaryEra c) = AllegraTxAuxData (MaryEra c)
+instance EraTxAuxData MaryEra where
+  type TxAuxData MaryEra = AllegraTxAuxData MaryEra
 
   mkBasicTxAuxData = AllegraTxAuxData mempty mempty
 
@@ -42,5 +41,5 @@ instance Crypto c => EraTxAuxData (MaryEra c) where
 
   hashTxAuxData aux = AuxiliaryDataHash (hashAnnotated aux)
 
-instance Crypto c => AllegraEraTxAuxData (MaryEra c) where
+instance AllegraEraTxAuxData MaryEra where
   timelockScriptsTxAuxDataL = timelockScriptsAllegraTxAuxDataL

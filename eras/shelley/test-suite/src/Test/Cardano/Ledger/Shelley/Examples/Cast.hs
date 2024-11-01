@@ -51,7 +51,6 @@ import Cardano.Ledger.Credential (
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   KeyRole (..),
   KeyRoleVRF (StakePoolVRF),
@@ -71,6 +70,7 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (..),
   VRFKeyPair (..),
@@ -84,19 +84,19 @@ import Test.Cardano.Ledger.Shelley.Utils (
  )
 
 -- | Alice's payment key pair
-alicePay :: Crypto c => KeyPair 'Payment c
+alicePay :: KeyPair 'Payment
 alicePay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 0)
 
 -- | Alice's stake key pair
-aliceStake :: Crypto c => KeyPair 'Staking c
+aliceStake :: KeyPair 'Staking
 aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 -- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
-alicePoolKeys :: Crypto c => AllIssuerKeys c 'StakePool
+alicePoolKeys :: AllIssuerKeys MockCrypto 'StakePool
 alicePoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -107,27 +107,27 @@ alicePoolKeys =
     (skCold, vkCold) = mkKeyPair (RawSeed 1 0 0 0 1)
 
 -- | Alice's base address
-aliceAddr :: Crypto c => Addr c
+aliceAddr :: Addr
 aliceAddr = mkAddr (alicePay, aliceStake)
 
 -- | Alice's payment credential
-alicePHK :: Crypto c => Credential 'Payment c
+alicePHK :: Credential 'Payment
 alicePHK = (KeyHashObj . hashKey . vKey) alicePay
 
 -- | Alice's stake credential
-aliceSHK :: Crypto c => Credential 'Staking c
+aliceSHK :: Credential 'Staking
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
 -- | Alice's base address
-alicePtrAddr :: Crypto c => Addr c
+alicePtrAddr :: Addr
 alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) minBound minBound)
 
 -- | Alice's stake pool parameters
-alicePoolParams :: forall c. Crypto c => PoolParams c
+alicePoolParams :: PoolParams
 alicePoolParams =
   PoolParams
     { ppId = hashKey . vKey $ aikCold alicePoolKeys
-    , ppVrf = hashVerKeyVRF . vrfVerKey $ aikVrf (alicePoolKeys @c)
+    , ppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf alicePoolKeys
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1
@@ -143,34 +143,31 @@ alicePoolParams =
     }
 
 -- | Alice's VRF key hash
-aliceVRFKeyHash ::
-  forall c.
-  Crypto c =>
-  VRFVerKeyHash 'StakePoolVRF c
-aliceVRFKeyHash = hashVerKeyVRF (vrfVerKey $ aikVrf (alicePoolKeys @c))
+aliceVRFKeyHash :: VRFVerKeyHash 'StakePoolVRF
+aliceVRFKeyHash = hashVerKeyVRF @MockCrypto (vrfVerKey $ aikVrf alicePoolKeys)
 
 -- | Bob's payment key pair
-bobPay :: Crypto c => KeyPair 'Payment c
+bobPay :: KeyPair 'Payment
 bobPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 2 2 2 2 2)
 
 -- | Bob's stake key pair
-bobStake :: Crypto c => KeyPair 'Staking c
+bobStake :: KeyPair 'Staking
 bobStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 3 3 3 3 3)
 
 -- | Bob's address
-bobAddr :: Crypto c => Addr c
+bobAddr :: Addr
 bobAddr = mkAddr (bobPay, bobStake)
 
 -- | Bob's stake credential
-bobSHK :: Crypto c => Credential 'Staking c
+bobSHK :: Credential 'Staking
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 -- | Bob's stake pool keys (cold keys, VRF keys, hot KES keys)
-bobPoolKeys :: Crypto c => AllIssuerKeys c 'StakePool
+bobPoolKeys :: AllIssuerKeys MockCrypto 'StakePool
 bobPoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -181,11 +178,11 @@ bobPoolKeys =
     (skCold, vkCold) = mkKeyPair (RawSeed 2 0 0 0 1)
 
 -- | Bob's stake pool parameters
-bobPoolParams :: forall c. Crypto c => PoolParams c
+bobPoolParams :: PoolParams
 bobPoolParams =
   PoolParams
     { ppId = hashKey . vKey $ aikCold bobPoolKeys
-    , ppVrf = hashVerKeyVRF . vrfVerKey $ aikVrf (bobPoolKeys @c)
+    , ppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf bobPoolKeys
     , ppPledge = Coin 2
     , ppCost = Coin 1
     , ppMargin = unsafeBoundRational 0.1
@@ -196,48 +193,45 @@ bobPoolParams =
     }
 
 -- | Bob's VRF key hash
-bobVRFKeyHash ::
-  forall c.
-  Crypto c =>
-  VRFVerKeyHash 'StakePoolVRF c
-bobVRFKeyHash = hashVerKeyVRF (vrfVerKey $ aikVrf (bobPoolKeys @c))
+bobVRFKeyHash :: VRFVerKeyHash 'StakePoolVRF
+bobVRFKeyHash = hashVerKeyVRF @MockCrypto (vrfVerKey $ aikVrf bobPoolKeys)
 
 -- Carl's payment key pair
-carlPay :: Crypto c => KeyPair 'Payment c
+carlPay :: KeyPair 'Payment
 carlPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 4 4 4 4 4)
 
 -- | Carl's stake key pair
-carlStake :: Crypto c => KeyPair 'Staking c
+carlStake :: KeyPair 'Staking
 carlStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 5 5 5 5 5)
 
 -- | Carl's address
-carlAddr :: Crypto c => Addr c
+carlAddr :: Addr
 carlAddr = mkAddr (carlPay, carlStake)
 
 -- | Carl's stake credential
-carlSHK :: Crypto c => Credential 'Staking c
+carlSHK :: Credential 'Staking
 carlSHK = (KeyHashObj . hashKey . vKey) carlStake
 
 -- | Daria's payment key pair
-dariaPay :: Crypto c => KeyPair 'Payment c
+dariaPay :: KeyPair 'Payment
 dariaPay = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 6 6 6 6 6)
 
 -- | Daria's stake key pair
-dariaStake :: Crypto c => KeyPair 'Staking c
+dariaStake :: KeyPair 'Staking
 dariaStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 7 7 7 7 7)
 
 -- | Daria's address
-dariaAddr :: Crypto c => Addr c
+dariaAddr :: Addr
 dariaAddr = mkAddr (dariaPay, dariaStake)
 
 -- | Daria's stake credential
-dariaSHK :: Crypto c => Credential 'Staking c
+dariaSHK :: Credential 'Staking
 dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake

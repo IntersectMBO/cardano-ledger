@@ -1,24 +1,20 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Bench.Constrained.STS where
 
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Rules
-import Cardano.Ledger.Crypto
 import Constrained
 import Control.DeepSeq
 import Criterion
 import Test.Cardano.Ledger.Constrained.Conway
 
-govEnv :: GovEnv (ConwayEra StandardCrypto)
+govEnv :: GovEnv ConwayEra
 govEnv = genFromSpecWithSeed 10 30 (govEnvSpec @ConwayFn)
 
-singleProposalTreeSpec :: Specification ConwayFn (ProposalTree Conway)
+singleProposalTreeSpec :: Specification ConwayFn (ProposalTree ConwayEra)
 singleProposalTreeSpec = constrained $ \ppupTree ->
   [ wellFormedChildren ppupTree
   , satisfies

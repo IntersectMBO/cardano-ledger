@@ -1,16 +1,10 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -42,54 +36,54 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 
-type instance EraRuleFailure "BBODY" (BabbageEra c) = AlonzoBbodyPredFailure (BabbageEra c)
+type instance EraRuleFailure "BBODY" BabbageEra = AlonzoBbodyPredFailure BabbageEra
 
-instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure (BabbageEra c)
+instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure BabbageEra
 
-instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" BabbageUtxowPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" BabbageUtxowPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxowPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" AlonzoUtxowPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" BabbageUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" BabbageUtxoPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" AlonzoUtxoPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxosPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" AlonzoUtxosPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AllegraUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" AllegraUtxoPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure (BabbageEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure BabbageEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure

@@ -49,13 +49,12 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR (..))
 import Cardano.Ledger.Core (
-  Era (EraCrypto),
+  Era,
   EraScript (Script),
   EraTxWits (..),
   ScriptHash,
   hashScript,
  )
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
@@ -86,9 +85,9 @@ import Lens.Micro (Lens', (^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyTxWitsRaw era = ShelleyTxWitsRaw
-  { addrWits' :: !(Set (WitVKey 'Witness (EraCrypto era)))
-  , scriptWits' :: !(Map (ScriptHash (EraCrypto era)) (Script era))
-  , bootWits' :: !(Set (BootstrapWitness (EraCrypto era)))
+  { addrWits' :: !(Set (WitVKey 'Witness))
+  , scriptWits' :: !(Map ScriptHash (Script era))
+  , bootWits' :: !(Set BootstrapWitness)
   }
   deriving (Generic)
 
@@ -99,8 +98,8 @@ deriving instance EraScript era => Eq (ShelleyTxWitsRaw era)
 instance
   ( Era era
   , NFData (Script era)
-  , NFData (WitVKey 'Witness (EraCrypto era))
-  , NFData (BootstrapWitness (EraCrypto era))
+  , NFData (WitVKey 'Witness)
+  , NFData BootstrapWitness
   ) =>
   NFData (ShelleyTxWitsRaw era)
 
@@ -120,8 +119,8 @@ deriving newtype instance EraScript era => Show (ShelleyTxWits era)
 instance
   ( Era era
   , NFData (Script era)
-  , NFData (WitVKey 'Witness (EraCrypto era))
-  , NFData (BootstrapWitness (EraCrypto era))
+  , NFData (WitVKey 'Witness)
+  , NFData BootstrapWitness
   ) =>
   NFData (ShelleyTxWits era)
 
@@ -134,7 +133,7 @@ instance EraScript era => NoThunks (ShelleyTxWits era)
 -- | Addresses witness setter and getter for `ShelleyTxWits`. The
 -- setter does update memoized binary representation.
 addrShelleyTxWitsL ::
-  EraScript era => Lens' (ShelleyTxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
+  EraScript era => Lens' (ShelleyTxWits era) (Set (WitVKey 'Witness))
 addrShelleyTxWitsL =
   lensMemoRawType addrWits' $ \witsRaw aw -> witsRaw {addrWits' = aw}
 {-# INLINEABLE addrShelleyTxWitsL #-}
@@ -143,7 +142,7 @@ addrShelleyTxWitsL =
 -- setter does update memoized binary representation.
 bootAddrShelleyTxWitsL ::
   EraScript era =>
-  Lens' (ShelleyTxWits era) (Set (BootstrapWitness (EraCrypto era)))
+  Lens' (ShelleyTxWits era) (Set BootstrapWitness)
 bootAddrShelleyTxWitsL =
   lensMemoRawType bootWits' $ \witsRaw bw -> witsRaw {bootWits' = bw}
 {-# INLINEABLE bootAddrShelleyTxWitsL #-}
@@ -152,15 +151,13 @@ bootAddrShelleyTxWitsL =
 -- setter does update memoized binary representation.
 scriptShelleyTxWitsL ::
   EraScript era =>
-  Lens' (ShelleyTxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
+  Lens' (ShelleyTxWits era) (Map ScriptHash (Script era))
 scriptShelleyTxWitsL =
   lensMemoRawType scriptWits' $ \witsRaw sw -> witsRaw {scriptWits' = sw}
 {-# INLINEABLE scriptShelleyTxWitsL #-}
 
-instance Crypto c => EraTxWits (ShelleyEra c) where
-  {-# SPECIALIZE instance EraTxWits (ShelleyEra StandardCrypto) #-}
-
-  type TxWits (ShelleyEra c) = ShelleyTxWits (ShelleyEra c)
+instance EraTxWits ShelleyEra where
+  type TxWits ShelleyEra = ShelleyTxWits ShelleyEra
 
   mkBasicTxWits = mempty
 
@@ -202,9 +199,9 @@ instance EraScript era => Monoid (ShelleyTxWits era) where
 pattern ShelleyTxWits ::
   forall era.
   EraScript era =>
-  Set (WitVKey 'Witness (EraCrypto era)) ->
-  Map (ScriptHash (EraCrypto era)) (Script era) ->
-  Set (BootstrapWitness (EraCrypto era)) ->
+  Set (WitVKey 'Witness) ->
+  Map ScriptHash (Script era) ->
+  Set BootstrapWitness ->
   ShelleyTxWits era
 pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
   (getMemoRawType -> ShelleyTxWitsRaw addrWits scriptWits bootWits)
@@ -230,10 +227,10 @@ deriving via
 
 -- | This type is only used to preserve the old buggy behavior where signature
 -- was ignored in the `Ord` instance for `WitVKey`s.
-newtype IgnoreSigOrd kr c = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr c}
+newtype IgnoreSigOrd kr = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr}
   deriving (Eq)
 
-instance (Typeable kr, Crypto c) => Ord (IgnoreSigOrd kr c) where
+instance Typeable kr => Ord (IgnoreSigOrd kr) where
   compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witVKeyHash w1) (witVKeyHash w2)
 
 decodeWits ::

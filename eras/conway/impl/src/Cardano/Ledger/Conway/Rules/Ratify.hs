@@ -36,12 +36,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (csCommitteeCreds))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
-import Cardano.Ledger.Conway.Core (
-  Era (EraCrypto),
-  EraGov,
-  EraRule,
-  PParams,
- )
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
@@ -67,10 +62,6 @@ import Cardano.Ledger.Conway.Governance (
   votingDRepThreshold,
   votingStakePoolThreshold,
   withGovActionParent,
- )
-import Cardano.Ledger.Conway.PParams (
-  ConwayEraPParams,
-  ppCommitteeMaxTermLengthL,
  )
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -145,8 +136,8 @@ committeeAccepted RatifyEnv {reCommitteeState, reCurrentEpoch} rs gas =
 
 committeeAcceptedRatio ::
   forall era.
-  Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
-  Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote ->
+  Map (Credential 'ColdCommitteeRole) EpochNo ->
+  Map (Credential 'HotCommitteeRole) Vote ->
   CommitteeState era ->
   EpochNo ->
   Rational
@@ -156,7 +147,7 @@ committeeAcceptedRatio members votes committeeState currentEpoch
   where
     accumVotes ::
       (Integer, Integer) ->
-      Credential 'ColdCommitteeRole (EraCrypto era) ->
+      Credential 'ColdCommitteeRole ->
       EpochNo ->
       (Integer, Integer)
     accumVotes (!yes, !tot) member expiry
@@ -260,7 +251,7 @@ dRepAccepted re rs GovActionState {gasDRepVotes, gasProposalProcedure} =
 dRepAcceptedRatio ::
   forall era.
   RatifyEnv era ->
-  Map (Credential 'DRepRole (EraCrypto era)) Vote ->
+  Map (Credential 'DRepRole) Vote ->
   GovAction era ->
   Rational
 dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVotes govAction

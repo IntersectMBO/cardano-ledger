@@ -37,7 +37,6 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Plutus.Data (translateDatum)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
@@ -73,9 +72,9 @@ import Lens.Micro
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-type instance TranslationContext (ConwayEra c) = ConwayGenesis c
+type instance TranslationContext ConwayEra = ConwayGenesis
 
-instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
+instance TranslateEra ConwayEra NewEpochState where
   translateEra ctxt nes = do
     let es = translateEra' ctxt $ nesEs nes
         -- We need to ensure that we have the same initial EnactState in the pulser as
@@ -97,8 +96,8 @@ instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
 
-instance Crypto c => TranslateEra (ConwayEra c) Tx where
-  type TranslationError (ConwayEra c) Tx = DecoderError
+instance TranslateEra ConwayEra Tx where
+  type TranslationError ConwayEra Tx = DecoderError
   translateEra _ctxt (Tx tx) = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
@@ -118,16 +117,16 @@ instance Crypto c => TranslateEra (ConwayEra c) Tx where
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance Crypto c => TranslateEra (ConwayEra c) PParams where
+instance TranslateEra ConwayEra PParams where
   translateEra ConwayGenesis {cgUpgradePParams} = pure . upgradePParams cgUpgradePParams
 
-instance Crypto c => TranslateEra (ConwayEra c) FuturePParams where
+instance TranslateEra ConwayEra FuturePParams where
   translateEra ctxt = \case
     NoPParamsUpdate -> pure NoPParamsUpdate
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
-instance Crypto c => TranslateEra (ConwayEra c) EpochState where
+instance TranslateEra ConwayEra EpochState where
   translateEra ctxt es =
     pure $
       EpochState
@@ -137,7 +136,7 @@ instance Crypto c => TranslateEra (ConwayEra c) EpochState where
         , esNonMyopic = esNonMyopic es
         }
 
-instance Crypto c => TranslateEra (ConwayEra c) DState where
+instance TranslateEra ConwayEra DState where
   translateEra _ DState {dsUnified = umap, ..} = pure DState {dsUnified = umap', ..}
     where
       umap' =
@@ -147,18 +146,18 @@ instance Crypto c => TranslateEra (ConwayEra c) DState where
           , UM.umPtrs = mempty
           }
 
-instance Crypto c => TranslateEra (ConwayEra c) CommitteeState where
+instance TranslateEra ConwayEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance Crypto c => TranslateEra (ConwayEra c) VState where
+instance TranslateEra ConwayEra VState where
   translateEra ctx VState {..} = do
     committeeState <- translateEra ctx vsCommitteeState
     pure VState {vsCommitteeState = committeeState, ..}
 
-instance Crypto c => TranslateEra (ConwayEra c) PState where
+instance TranslateEra ConwayEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance Crypto c => TranslateEra (ConwayEra c) CertState where
+instance TranslateEra ConwayEra CertState where
   translateEra ctxt ls =
     pure
       CertState
@@ -167,7 +166,7 @@ instance Crypto c => TranslateEra (ConwayEra c) CertState where
         , certVState = translateEra' ctxt $ certVState ls
         }
 
-instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
+instance TranslateEra ConwayEra API.LedgerState where
   translateEra conwayGenesis ls =
     pure
       API.LedgerState
@@ -176,10 +175,9 @@ instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
         }
 
 translateGovState ::
-  Crypto c =>
-  TranslationContext (ConwayEra c) ->
-  GovState (BabbageEra c) ->
-  GovState (ConwayEra c)
+  TranslationContext ConwayEra ->
+  GovState BabbageEra ->
+  GovState ConwayEra
 translateGovState ctxt@ConwayGenesis {..} sgov =
   let curPParams = translateEra' ctxt (sgov ^. curPParamsGovStateL)
       prevPParams = translateEra' ctxt (sgov ^. prevPParamsGovStateL)
@@ -191,7 +189,7 @@ translateGovState ctxt@ConwayGenesis {..} sgov =
         & cgsCommitteeL .~ SJust cgCommittee
         & cgsConstitutionL .~ cgConstitution
 
-instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
+instance TranslateEra ConwayEra UTxOState where
   translateEra ctxt us =
     pure
       UTxOState
@@ -203,6 +201,6 @@ instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
         , API.utxosDonation = API.utxosDonation us
         }
 
-instance Crypto c => TranslateEra (ConwayEra c) API.UTxO where
+instance TranslateEra ConwayEra API.UTxO where
   translateEra _ctxt utxo =
     pure $ API.UTxO $ upgradeTxOut `Map.map` API.unUTxO utxo

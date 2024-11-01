@@ -10,7 +10,6 @@
 module Cardano.Ledger.Mary.TxWits () where
 
 import Cardano.Ledger.Core (EraTxWits (..), upgradeScript)
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Shelley.TxWits (
@@ -20,10 +19,8 @@ import Cardano.Ledger.Shelley.TxWits (
   scriptShelleyTxWitsL,
  )
 
-instance Crypto c => EraTxWits (MaryEra c) where
-  {-# SPECIALIZE instance EraTxWits (MaryEra StandardCrypto) #-}
-
-  type TxWits (MaryEra c) = ShelleyTxWits (MaryEra c)
+instance EraTxWits MaryEra where
+  type TxWits MaryEra = ShelleyTxWits MaryEra
 
   mkBasicTxWits = mempty
 

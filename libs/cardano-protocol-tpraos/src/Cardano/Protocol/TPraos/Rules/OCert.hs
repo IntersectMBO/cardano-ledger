@@ -29,7 +29,7 @@ import NoThunks.Class (NoThunks (..))
 
 data OCERT c
 
-data OcertPredicateFailure c
+data OcertPredicateFailure
   = KESBeforeStartOCERT
       !KESPeriod -- OCert Start KES Period
       !KESPeriod -- Current KES Period
@@ -49,34 +49,28 @@ data OcertPredicateFailure c
       !Word -- expected KES evolutions
       !String -- error message given by Consensus Layer
   | NoCounterForKeyHashOCERT
-      !(KeyHash 'BlockIssuer c) -- stake pool key hash
+      !(KeyHash 'BlockIssuer) -- stake pool key hash
   deriving (Show, Eq, Generic)
 
-instance NoThunks (OcertPredicateFailure c)
+instance NoThunks OcertPredicateFailure
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   ) =>
   STS (OCERT c)
   where
-  type
-    State (OCERT c) =
-      Map (KeyHash 'BlockIssuer c) Word64
-  type
-    Signal (OCERT c) =
-      BHeader c
-  type Environment (OCERT c) = OCertEnv c
+  type State (OCERT c) = Map (KeyHash 'BlockIssuer) Word64
+  type Signal (OCERT c) = BHeader c
+  type Environment (OCERT c) = OCertEnv
   type BaseM (OCERT c) = ShelleyBase
-  type PredicateFailure (OCERT c) = OcertPredicateFailure c
+  type PredicateFailure (OCERT c) = OcertPredicateFailure
 
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]
 
 ocertTransition ::
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   ) =>
   TransitionRule (OCERT c)

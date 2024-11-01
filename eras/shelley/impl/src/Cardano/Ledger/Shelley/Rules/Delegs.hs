@@ -118,25 +118,25 @@ deriving stock instance
 data ShelleyDelegsPredFailure era
   = -- | Target pool which is not registered
     DelegateeNotRegisteredDELEG
-      !(KeyHash 'StakePool (EraCrypto era))
+      !(KeyHash 'StakePool)
   | -- | Withdrawals that are missing or do not withdrawal the entire amount
     WithdrawalsNotInRewardsDELEGS
-      !(Map (RewardAccount (EraCrypto era)) Coin)
+      !(Map RewardAccount Coin)
   | -- | Subtransition Failures
     DelplFailure !(PredicateFailure (EraRule "DELPL" era))
   deriving (Generic)
 
-type instance EraRuleFailure "DELEGS" (ShelleyEra c) = ShelleyDelegsPredFailure (ShelleyEra c)
+type instance EraRuleFailure "DELEGS" ShelleyEra = ShelleyDelegsPredFailure ShelleyEra
 
-instance InjectRuleFailure "DELEGS" ShelleyDelegsPredFailure (ShelleyEra c)
+instance InjectRuleFailure "DELEGS" ShelleyDelegsPredFailure ShelleyEra
 
-instance InjectRuleFailure "DELEGS" ShelleyDelplPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "DELEGS" ShelleyDelplPredFailure ShelleyEra where
   injectFailure = DelplFailure
 
-instance InjectRuleFailure "DELEGS" ShelleyPoolPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "DELEGS" ShelleyPoolPredFailure ShelleyEra where
   injectFailure = DelplFailure . injectFailure
 
-instance InjectRuleFailure "DELEGS" ShelleyDelegPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "DELEGS" ShelleyDelegPredFailure ShelleyEra where
   injectFailure = DelplFailure . injectFailure
 
 newtype ShelleyDelegsEvent era = DelplEvent (Event (EraRule "DELPL" era))
@@ -264,8 +264,8 @@ delegsTransition = do
 
 validateStakePoolDelegateeRegistered ::
   PState era ->
-  KeyHash 'StakePool (EraCrypto era) ->
-  Test (KeyHash 'StakePool (EraCrypto era))
+  KeyHash 'StakePool ->
+  Test (KeyHash 'StakePool)
 validateStakePoolDelegateeRegistered pState targetPool =
   let stPools = psStakePoolParams pState
    in failureUnless (eval (targetPool ∈ dom stPools)) targetPool
@@ -273,19 +273,18 @@ validateStakePoolDelegateeRegistered pState targetPool =
 -- @withdrawals_@ is small and @rewards@ big, better to transform the former
 -- than the latter into the right shape so we can call 'Map.isSubmapOf'.
 isSubmapOfUM ::
-  forall era.
-  Map (RewardAccount (EraCrypto era)) Coin ->
-  UView (EraCrypto era) (Credential 'Staking (EraCrypto era)) UM.RDPair ->
+  Map RewardAccount Coin ->
+  UView (Credential 'Staking) UM.RDPair ->
   Bool
 isSubmapOfUM ws (RewDepUView (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
   where
-    withdrawalMap :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
+    withdrawalMap :: Map.Map (Credential 'Staking) Coin
     withdrawalMap = Map.mapKeys (\(RewardAccount _ cred) -> cred) ws
-    f :: Coin -> UMElem (EraCrypto era) -> Bool
+    f :: Coin -> UMElem -> Bool
     f coin1 (UMElem (SJust (UM.RDPair coin2 _)) _ _ _) = coin1 == fromCompact coin2
     f _ _ = False
 
-drainWithdrawals :: DState era -> Withdrawals (EraCrypto era) -> DState era
+drainWithdrawals :: DState era -> Withdrawals -> DState era
 drainWithdrawals dState (Withdrawals wdrls) =
   dState {dsUnified = rewards dState UM.⨃ drainedRewardAccounts}
   where
@@ -301,11 +300,11 @@ drainWithdrawals dState (Withdrawals wdrls) =
 validateZeroRewards ::
   forall era.
   DState era ->
-  Withdrawals (EraCrypto era) ->
+  Withdrawals ->
   Network ->
-  Test (Map (RewardAccount (EraCrypto era)) Coin)
+  Test (Map RewardAccount Coin)
 validateZeroRewards dState (Withdrawals wdrls) network = do
-  failureUnless (isSubmapOfUM @era wdrls (rewards dState)) $ -- withdrawals_ ⊆ rewards
+  failureUnless (isSubmapOfUM wdrls (rewards dState)) $ -- withdrawals_ ⊆ rewards
     Map.differenceWith
       (\x y -> if x /= y then Just x else Nothing)
       wdrls

@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Conformance.Imp (spec) where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
@@ -49,7 +49,7 @@ testImpConformance ::
   , SpecRep (TxBody era) ~ Agda.TxBody
   , ExecEnvironment ConwayFn "LEDGER" era ~ LedgerEnv era
   , Tx era ~ AlonzoTx era
-  , SpecTranslate (ConwayTxBodyTransContext (EraCrypto era)) (TxBody era)
+  , SpecTranslate ConwayTxBodyTransContext (TxBody era)
   ) =>
   Globals ->
   Either
@@ -102,11 +102,11 @@ testImpConformance _ impRuleResult env state signal = do
 
 spec :: Spec
 spec =
-  withImpInit @(LedgerSpec Conway) $
-    modifyImpInitProtVer @Conway (natVersion @10) $
+  withImpInit @(LedgerSpec ConwayEra) $
+    modifyImpInitProtVer @ConwayEra (natVersion @10) $
       modifyImpInitExpectLedgerRuleConformance testImpConformance $ do
         describe "Basic imp conformance" $ do
           it "Submit constitution" $ do
-            _ <- submitConstitution @Conway SNothing
+            _ <- submitConstitution @ConwayEra SNothing
             passNEpochs 2
-        xdescribe "Conway Imp conformance" $ ConwayImp.conwaySpec @Conway
+        xdescribe "Conway Imp conformance" $ ConwayImp.conwaySpec @ConwayEra

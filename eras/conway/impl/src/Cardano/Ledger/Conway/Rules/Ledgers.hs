@@ -31,62 +31,62 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 
-type instance EraRuleFailure "LEDGERS" (ConwayEra c) = ShelleyLedgersPredFailure (ConwayEra c)
+type instance EraRuleFailure "LEDGERS" ConwayEra = ShelleyLedgersPredFailure ConwayEra
 
-type instance EraRuleEvent "LEDGERS" (ConwayEra c) = ShelleyLedgersEvent (ConwayEra c)
+type instance EraRuleEvent "LEDGERS" ConwayEra = ShelleyLedgersEvent ConwayEra
 
-instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure (ConwayEra c)
+instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure ConwayEra
 
-instance InjectRuleFailure "LEDGERS" ConwayLedgerPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ConwayLedgerPredFailure ConwayEra where
   injectFailure = LedgerFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ConwayUtxowPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" BabbageUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" BabbageUtxowPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" AlonzoUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" AlonzoUtxowPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ConwayUtxoPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" BabbageUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" BabbageUtxoPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" AlonzoUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" AlonzoUtxoPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" AlonzoUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" AlonzoUtxosPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ConwayUtxosPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyUtxoPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" AllegraUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" AllegraUtxoPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayCertsPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ConwayCertsPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayCertPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ConwayCertPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayDelegPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ConwayDelegPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayGovCertPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ConwayGovCertPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ConwayGovPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGERS" ConwayGovPredFailure ConwayEra where
   injectFailure = LedgerFailure . injectFailure
