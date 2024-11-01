@@ -134,7 +134,6 @@ import Cardano.Ledger.Shelley.TxAuxData as X (
  )
 import Cardano.Ledger.Shelley.TxBody as X (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxCert as X (
-  Delegation (..),
   GenesisDelegCert (..),
   MIRCert (..),
   MIRPot (..),

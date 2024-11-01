@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove deprecated `Delegation`
 * Remove deprecated `txid`
 * Remove deprecated `ValidateAuxiliaryData`, `AuxiliaryData`, `hashAuxiliaryData` and `validateAuxiliaryData`
 * Remove deprecated `Cardano.Ledger.Ap` module and all if its contents

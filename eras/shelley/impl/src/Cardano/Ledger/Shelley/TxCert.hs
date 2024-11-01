@@ -18,9 +18,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
--- Due to Delegation usage.
--- TODO: remove when Delegation is gone
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 -- Due to deprecated requiresVKeyWitness.
 -- TODO: remove when requiresVKeyWitness is gone:
@@ -33,10 +30,9 @@ module Cardano.Ledger.Shelley.TxCert (
   pattern RegTxCert,
   pattern UnRegTxCert,
   pattern DelegStakeTxCert,
-  ShelleyDelegCert (.., RegKey, DeRegKey, Delegate),
+  ShelleyDelegCert (..),
   getVKeyWitnessShelleyTxCert,
   getScriptWitnessShelleyTxCert,
-  delegCWitness,
   ShelleyTxCert (..),
   upgradeShelleyTxCert,
 
@@ -49,8 +45,6 @@ module Cardano.Ledger.Shelley.TxCert (
   MIRCert (..),
   MIRPot (..),
   MIRTarget (..),
-  isRegKey,
-  isDeRegKey,
   isDelegation,
   isRegPool,
   isRetirePool,
@@ -75,7 +69,6 @@ module Cardano.Ledger.Shelley.TxCert (
   EraTxCert (..),
   pattern RegPoolTxCert,
   pattern RetirePoolTxCert,
-  Delegation (..),
   PoolCert (..),
   poolCWitness,
   isRegStakeTxCert,
@@ -511,49 +504,10 @@ instance Crypto c => ToJSON (ShelleyDelegCert c) where
         , "poolId" .= toJSON poolId
         ]
 
-pattern RegKey :: StakeCredential c -> ShelleyDelegCert c
-pattern RegKey cred = ShelleyRegCert cred
-{-# DEPRECATED RegKey "In favor of `ShelleyRegCert`" #-}
-
-pattern DeRegKey :: StakeCredential c -> ShelleyDelegCert c
-pattern DeRegKey cred = ShelleyUnRegCert cred
-{-# DEPRECATED DeRegKey "In favor of `ShelleyUnRegCert`" #-}
-
-pattern Delegate :: Delegation c -> ShelleyDelegCert c
-pattern Delegate delegation <- (mkDelegation -> Just delegation)
-  where
-    Delegate (Delegation cred poolId) = ShelleyDelegCert cred poolId
-{-# DEPRECATED Delegate "In favor of `ShelleyDelegCert`" #-}
-
-{-# COMPLETE RegKey, DeRegKey, Delegate #-}
-
-mkDelegation :: ShelleyDelegCert c -> Maybe (Delegation c)
-mkDelegation (ShelleyDelegCert cred poolId) = Just (Delegation cred poolId)
-mkDelegation _ = Nothing
-
 instance NoThunks (ShelleyDelegCert c)
 
 instance NFData (ShelleyDelegCert c) where
   rnf = rwhnf
-
--- | Determine the certificate author
-delegCWitness :: ShelleyDelegCert c -> Credential 'Staking c
-delegCWitness (ShelleyRegCert _) = error "no witness in key registration certificate"
-delegCWitness (ShelleyUnRegCert cred) = cred
-delegCWitness (ShelleyDelegCert cred _) = cred
-{-# DEPRECATED delegCWitness "This was a partial function, logic rewritten in a safer way" #-}
-
--- | Check for 'ShelleyRegCert' constructor
-isRegKey :: ShelleyEraTxCert era => TxCert era -> Bool
-isRegKey (RegTxCert _) = True
-isRegKey _ = False
-{-# DEPRECATED isRegKey "Use `isRegStakeTxCert` instead" #-}
-
--- | Check for 'ShelleyUnRegCert' constructor
-isDeRegKey :: ShelleyEraTxCert era => TxCert era -> Bool
-isDeRegKey (UnRegTxCert _) = True
-isDeRegKey _ = False
-{-# DEPRECATED isDeRegKey "Use `isUnRegStakeTxCert` instead" #-}
 
 -- | Check for 'ShelleyDelegCert' constructor
 isDelegation :: ShelleyEraTxCert era => TxCert era -> Bool
