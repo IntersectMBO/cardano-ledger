@@ -2,6 +2,7 @@
 
 ## 1.5.0.0
 
+* Add `decodeAnnotated`
 * Add `getOriginalBytes`
 * `toPlainDecoder` now optionally expects one extra argument for the original `ByteString`
 * Extend `Coders` to accommodate `{Enc|Dec}CBORGroup`. #4666
