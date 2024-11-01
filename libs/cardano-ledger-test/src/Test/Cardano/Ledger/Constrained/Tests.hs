@@ -33,7 +33,7 @@ import Prelude hiding (subtract)
 import Test.Cardano.Ledger.Constrained.Ast
 
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Shelley
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as HashSet

@@ -27,18 +27,10 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (
-  EraScript,
-  EraTxOut (..),
-  TxOut,
-  Value,
-  hashScript,
-  isNativeScript,
- )
+import Cardano.Ledger.Core (Era (EraCrypto), EraScript, EraTxOut (..), TxOut, Value, hashScript, isNativeScript)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), coerceKeyRole, hashKey)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness, makeBootstrapWitness)

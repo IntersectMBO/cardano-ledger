@@ -8,8 +8,8 @@
 
 module Test.Cardano.Ledger.Constrained.Preds.NewEpochState where
 
+import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..), calculatePoolDistr)
-import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Core (EraGov)
 import qualified Cardano.Ledger.UMap as UMap

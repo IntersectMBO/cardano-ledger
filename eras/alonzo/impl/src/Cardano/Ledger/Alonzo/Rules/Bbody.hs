@@ -38,7 +38,6 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
@@ -184,7 +183,7 @@ alonzoBbodyTransition ::
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , EraSegWits era
   , AlonzoEraTxWits era
-  , Era.TxSeq era ~ AlonzoTxSeq era
+  , TxSeq era ~ AlonzoTxSeq era
   , Tx era ~ AlonzoTx era
   , AlonzoEraPParams era
   ) =>
@@ -270,7 +269,7 @@ instance
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , Era.TxSeq era ~ AlonzoTxSeq era
+  , TxSeq era ~ AlonzoTxSeq era
   , Tx era ~ AlonzoTx era
   , EraSegWits era
   , AlonzoEraPParams era

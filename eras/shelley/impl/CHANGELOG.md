@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Remove `mkDelegation` and deprecated `Delegate`, `RegKey`, `DeRegKey`, `delegCWitness`, `isRegKey` and `isDeRegKey`
 * Remove export of deprecated `RewardAcnt` and `poolCWitness`
 * Change type of VRF key hash in `GenesisDelegCert`, `GenesisDelegTxCert` and `DuplicateGenesisVRFDELEG` to `VRFVerKeyHash`
 * Added `EncCBOR` instance for `LedgerEnv`

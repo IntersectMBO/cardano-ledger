@@ -56,7 +56,6 @@ import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsUTxOState, utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (
@@ -237,8 +236,7 @@ instance
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , Era.TxSeq era ~ AlonzoTxSeq era
-  , Tx era ~ AlonzoTx era
+  , TxSeq era ~ AlonzoTxSeq era
   , EraSegWits era
   , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
@@ -272,7 +270,7 @@ conwayBbodyTransition ::
   ( Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Era.TxSeq era ~ AlonzoTxSeq era
+  , TxSeq era ~ AlonzoTxSeq era
   , Tx era ~ AlonzoTx era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era

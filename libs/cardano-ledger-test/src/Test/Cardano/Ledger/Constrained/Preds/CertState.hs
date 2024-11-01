@@ -8,8 +8,8 @@ module Test.Cardano.Ledger.Constrained.Preds.CertState where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Core (Era, EraCrypto)
 import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
-import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
