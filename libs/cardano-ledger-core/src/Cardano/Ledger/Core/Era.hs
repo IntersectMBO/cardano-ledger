@@ -65,8 +65,7 @@ import Lens.Micro
 --------------------------------------------------------------------------------
 
 class
-  ( Crypto (EraCrypto era)
-  , Typeable era
+  ( Typeable era
   , KnownNat (ProtVerLow era)
   , KnownNat (ProtVerHigh era)
   , ProtVerLow era <= ProtVerHigh era
@@ -82,7 +81,6 @@ class
   ) =>
   Era era
   where
-  type EraCrypto era :: Type
 
   -- | Map an era to its predecessor.
   --
@@ -103,22 +101,22 @@ class
   --
   -- Designed to be used with @TypeApplications@:
   --
-  -- >>> eraName @(ByronEra StandardCrypto)
+  -- >>> eraName @ByronEra
   -- Byron
   eraName :: String
 
 -- | This is the era that preceded Shelley era. It cannot have any other class instances,
 -- except for `Era` type class.
-data ByronEra c
+data ByronEra
 
 -- | This is a non-existent era and is defined for satisfying the `PreviousEra` type family injectivity
-data VoidEra c
+data VoidEra
 
-instance Crypto c => Era (ByronEra c) where
-  type EraCrypto (ByronEra c) = c
-  type PreviousEra (ByronEra c) = VoidEra c
-  type ProtVerLow (ByronEra c) = 0
-  type ProtVerHigh (ByronEra c) = 1
+instance Era ByronEra where
+  type EraCrypto ByronEra = c
+  type PreviousEra ByronEra = VoidEra
+  type ProtVerLow ByronEra = 0
+  type ProtVerHigh ByronEra = 1
 
   eraName = "Byron"
 
@@ -219,16 +217,16 @@ type ProtVerInBounds era l h = (ProtVerAtLeast era l, ProtVerAtMost era h)
 
 -- | Restrict an era to the specific era through the protocol version. This is
 -- equivalent to @(inEra (Crypto era) ~ era)@
-type ExactEra (inEra :: Type -> Type) era =
-  ProtVerInBounds era (ProtVerLow (inEra (EraCrypto era))) (ProtVerHigh (inEra (EraCrypto era)))
+type ExactEra inEra era =
+  ProtVerInBounds era (ProtVerLow inEra) (ProtVerHigh inEra)
 
--- | Restrict the @era@ to equal to @eraName@ or come after it
-type AtLeastEra (eraName :: Type -> Type) era =
-  ProtVerAtLeast era (ProtVerLow (eraName (EraCrypto era)))
+-- | Restrict the @era@ to equal to @atLeastEra@ or come after it
+type AtLeastEra atLeastEra era =
+  ProtVerAtLeast era (ProtVerLow atLeastEra)
 
 -- | Restrict the @era@ to equal to @eraName@ or come before it.
-type AtMostEra (eraName :: Type -> Type) era =
-  ProtVerAtMost era (ProtVerHigh (eraName (EraCrypto era)))
+type AtMostEra eraMostEra era =
+  ProtVerAtMost era (ProtVerHigh eraMostEra)
 
 -- | Get the value level `Version` of the lowest major protocol version for the supplied @era@.
 eraProtVerLow :: forall era. Era era => Version
@@ -248,12 +246,12 @@ eraProtVersions = [eraProtVerLow @era .. eraProtVerHigh @era]
 --
 -- For example these will type check
 --
--- >>> atLeastEra @BabbageEra @(ConwayEra StandardCrypto)
--- >>> atLeastEra @BabbageEra @(BabbageEra StandardCrypto)
+-- >>> atLeastEra @BabbageEra @ConwayEra
+-- >>> atLeastEra @BabbageEra @BabbageEra
 --
 -- However this will result in a type error
 --
--- >>> atLeastEra @BabbageEra @(AlonzoEra StandardCrypto)
+-- >>> atLeastEra @BabbageEra @AlonzoEra
 atLeastEra :: AtLeastEra eraName era => ()
 atLeastEra = ()
 
@@ -263,12 +261,12 @@ atLeastEra = ()
 --
 -- For example these will type check
 --
--- >>> atMostEra @BabbageEra @(ShelleyEra StandardCrypto)
--- >>> atMostEra @AlonzoEra @(MaryEra StandardCrypto)
+-- >>> atMostEra @BabbageEra @ShelleyEra
+-- >>> atMostEra @AlonzoEra @MaryEra
 --
 -- However this will result in a type error
 --
--- >>> atMostEra @BabbageEra @(ConwayEra StandardCrypto)
+-- >>> atMostEra @BabbageEra @ConwayEra
 atMostEra :: AtMostEra eraName era => ()
 atMostEra = ()
 
