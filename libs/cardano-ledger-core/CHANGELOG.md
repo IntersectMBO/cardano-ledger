@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove deprecated `HashAlgorithm`
 * Remove `Safe` and `hashSafeList`
 * Remove requirement for `FromCBOR` instance for `TxOut` in `EraTxOut`
 * Add `decodeMemoized`

@@ -45,9 +45,6 @@ module Cardano.Ledger.SafeHash (
   castSafeHash,
   extractHash,
   indexProxy,
-
-  -- * Deprecated
-  HasAlgorithm,
 )
 where
 
@@ -103,10 +100,6 @@ deriving instance Crypto c => FromJSON (SafeHash c index)
 
 instance Crypto c => Default (SafeHash c i) where
   def = unsafeMakeSafeHash def
-
-{-# DEPRECATED HasAlgorithm "Use `Hash.HashAlgorithm (HASH c)` instead" #-}
-
-type HasAlgorithm c = Hash.HashAlgorithm (HASH c)
 
 -- | Extract the hash out of a 'SafeHash'
 extractHash :: SafeHash c i -> Hash.Hash (HASH c) i
