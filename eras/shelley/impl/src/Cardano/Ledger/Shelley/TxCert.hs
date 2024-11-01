@@ -70,7 +70,6 @@ module Cardano.Ledger.Shelley.TxCert (
   pattern RegPoolTxCert,
   pattern RetirePoolTxCert,
   PoolCert (..),
-  poolCWitness,
   isRegStakeTxCert,
   isUnRegStakeTxCert,
 )

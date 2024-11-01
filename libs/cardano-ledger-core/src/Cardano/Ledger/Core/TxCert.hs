@@ -18,7 +18,6 @@ module Cardano.Ledger.Core.TxCert (
   pattern RetirePoolTxCert,
   PoolCert (..),
   getPoolCertTxCert,
-  poolCWitness,
   poolCertKeyHashWitness,
   isRegStakeTxCert,
   isUnRegStakeTxCert,
@@ -165,11 +164,6 @@ poolCertKeyHashWitness :: PoolCert c -> KeyHash 'Witness c
 poolCertKeyHashWitness = \case
   RegPool poolParams -> asWitness $ ppId poolParams
   RetirePool poolId _ -> asWitness poolId
-
-poolCWitness :: PoolCert c -> Credential 'StakePool c
-poolCWitness (RegPool pool) = KeyHashObj $ ppId pool
-poolCWitness (RetirePool k _) = KeyHashObj k
-{-# DEPRECATED poolCWitness "As useless. PoolIds have nothing to do with credentials" #-}
 
 -- | Check if supplied TxCert is a stake registering certificate
 isRegStakeTxCert :: EraTxCert era => TxCert era -> Bool
