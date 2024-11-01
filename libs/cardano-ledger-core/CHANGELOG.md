@@ -3,7 +3,7 @@
 ## 1.16.0.0
 
 * Remove deprecated `txid`
-* Remove deprecated `ValidateAuxiliaryData`
+* Remove deprecated `ValidateAuxiliaryData`, `AuxiliaryData`, `hashAuxiliaryData` and `validateAuxiliaryData`
 * Remove deprecated `Cardano.Ledger.Ap` module and all if its contents
 * Remove deprecated `ppRewardAcnt`
 * Remove deprecated `mkRwdAcnt`, `deserialiseAddr`, `serialiseRewardAcnt`,

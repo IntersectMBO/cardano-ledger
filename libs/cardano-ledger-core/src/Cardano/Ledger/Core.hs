@@ -56,10 +56,6 @@ module Cardano.Ledger.Core (
   module Cardano.Ledger.Core.TxCert,
   module Cardano.Ledger.Core.PParams,
   module Cardano.Ledger.Core.Translation,
-
-  -- * Deprecations
-  hashAuxiliaryData,
-  validateAuxiliaryData,
 )
 where
 
@@ -150,7 +146,7 @@ class
 
   witsTxL :: Lens' (Tx era) (TxWits era)
 
-  auxDataTxL :: Lens' (Tx era) (StrictMaybe (AuxiliaryData era))
+  auxDataTxL :: Lens' (Tx era) (StrictMaybe (TxAuxData era))
 
   -- | For fee calculation and estimations of impact on block space
   sizeTxF :: SimpleGetter (Tx era) Integer
@@ -466,18 +462,6 @@ class
   hashTxAuxData :: TxAuxData era -> AuxiliaryDataHash (EraCrypto era)
 
   validateTxAuxData :: ProtVer -> TxAuxData era -> Bool
-
-type AuxiliaryData era = TxAuxData era
-
-{-# DEPRECATED AuxiliaryData "Use `TxAuxData` instead" #-}
-
-hashAuxiliaryData :: EraTxAuxData era => TxAuxData era -> AuxiliaryDataHash (EraCrypto era)
-hashAuxiliaryData = hashTxAuxData
-{-# DEPRECATED hashAuxiliaryData "Use `hashTxAuxData` instead" #-}
-
-validateAuxiliaryData :: EraTxAuxData era => ProtVer -> TxAuxData era -> Bool
-validateAuxiliaryData = validateTxAuxData
-{-# DEPRECATED validateAuxiliaryData "Use `validateTxAuxData` instead" #-}
 
 -- | A collection of witnesses in a Tx
 class
