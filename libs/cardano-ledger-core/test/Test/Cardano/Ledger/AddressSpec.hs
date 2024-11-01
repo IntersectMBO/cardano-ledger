@@ -75,7 +75,7 @@ roundTripAddressSpec = do
         propCompactSerializationAgree @StandardCrypto
     prop "Ensure Addr failures on incorrect binary data" $
       propDecompactErrors @StandardCrypto
-    prop "Ensure RewardAcnt failures on incorrect binary data" $
+    prop "Ensure RewardAccount failures on incorrect binary data" $
       propDeserializeRewardAccountErrors @StandardCrypto
     prop "RoundTrip-invalid" $
       forAll genCompactAddrBadPtr $
@@ -95,7 +95,7 @@ roundTripAddressSpec = do
         roundTripRangeExpectation @(Addr StandardCrypto) cborTrip (natVersion @2) (natVersion @6)
     prop "Deserializing an address matches old implementation" $
       propValidateNewDeserialize @StandardCrypto
-  describe "RewardAcnt" $ do
+  describe "RewardAccount" $ do
     roundTripCborSpec @(RewardAccount StandardCrypto)
 
 propSameAsOldDecompactAddr :: forall c. Crypto c => CompactAddr c -> Expectation

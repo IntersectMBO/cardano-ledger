@@ -15,16 +15,16 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Ledger.Address (
-  mkRwdAcnt,
   serialiseAddr,
-  deserialiseAddr,
   Addr (..),
   addrPtrNormalize,
   BootstrapAddress (..),
   bootstrapAddressAttrsSize,
   isBootstrapRedeemer,
   getNetwork,
-  RewardAccount (.., RewardAcnt, getRwdNetwork, getRwdCred),
+  RewardAccount (..),
+  rewardAccountCredentialL,
+  rewardAccountNetworkL,
   serialiseRewardAccount,
   deserialiseRewardAccount,
   bootstrapKeyHash,
@@ -56,16 +56,6 @@ module Cardano.Ledger.Address (
   decodeRewardAccount,
   fromCborRewardAccount,
   Withdrawals (..),
-
-  -- * Deprecations
-  RewardAcnt,
-  serialiseRewardAcnt,
-  deserialiseRewardAcnt,
-  putRewardAcnt,
-  decodeRewardAcnt,
-  fromCborRewardAcnt,
-  rewardAccountCredentialL,
-  rewardAccountNetworkL,
 )
 where
 
@@ -136,47 +126,19 @@ import NoThunks.Class (NoThunks (..))
 import Numeric (showIntAtBase)
 import Quiet (Quiet (Quiet))
 
-mkRwdAcnt ::
-  Network ->
-  Credential 'Staking c ->
-  RewardAcnt c
-mkRwdAcnt network script@(ScriptHashObj _) = RewardAcnt network script
-mkRwdAcnt network key@(KeyHashObj _) = RewardAcnt network key
-{-# DEPRECATED mkRwdAcnt "In favor of `RewardAcnt`" #-}
-
 -- | Serialise an address to the external format.
 serialiseAddr :: Addr c -> ByteString
 serialiseAddr = BSL.toStrict . B.runPut . putAddr
 {-# INLINE serialiseAddr #-}
 
--- | Deserialise an address from the external format. This will fail if the
--- input data is not in the right format (or if there is trailing data).
-deserialiseAddr :: Crypto c => ByteString -> Maybe (Addr c)
-deserialiseAddr = decodeAddr
-{-# INLINE deserialiseAddr #-}
-{-# DEPRECATED
-  deserialiseAddr
-  "In favor of `Cardano.Ledger.Api.Tx.Address.decodeAddr` or `Cardano.Ledger.Api.Tx.Address.decodeAddrLenient`. Please choose the appropriate variant carefully depending on your use case"
-  #-}
-
 -- | Serialise a reward account to the external format.
-serialiseRewardAccount :: RewardAcnt c -> ByteString
-serialiseRewardAccount = BSL.toStrict . B.runPut . putRewardAcnt
-
-serialiseRewardAcnt :: RewardAcnt c -> ByteString
-serialiseRewardAcnt = serialiseRewardAccount
-{-# INLINE serialiseRewardAcnt #-}
-{-# DEPRECATED serialiseRewardAcnt "Use `serialiseRewardAccount` instead" #-}
+serialiseRewardAccount :: RewardAccount c -> ByteString
+serialiseRewardAccount = BSL.toStrict . B.runPut . putRewardAccount
 
 -- | Deserialise a reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseRewardAccount :: Crypto c => ByteString -> Maybe (RewardAcnt c)
-deserialiseRewardAccount = decodeRewardAcnt
-
-deserialiseRewardAcnt :: Crypto c => ByteString -> Maybe (RewardAcnt c)
-deserialiseRewardAcnt = deserialiseRewardAccount
-{-# INLINE deserialiseRewardAcnt #-}
-{-# DEPRECATED deserialiseRewardAcnt "Use `deserialiseRewardAccount` instead" #-}
+deserialiseRewardAccount :: Crypto c => ByteString -> Maybe (RewardAccount c)
+deserialiseRewardAccount = decodeRewardAccount
 
 -- | An address for UTxO.
 --
@@ -229,38 +191,26 @@ rewardAccountCredentialL = lens raCredential $ \x y -> x {raCredential = y}
 rewardAccountNetworkL :: Lens' (RewardAccount c) Network
 rewardAccountNetworkL = lens raNetwork $ \x y -> x {raNetwork = y}
 
-pattern RewardAcnt :: Network -> Credential 'Staking c -> RewardAccount c
-pattern RewardAcnt {getRwdNetwork, getRwdCred} = RewardAccount getRwdNetwork getRwdCred
+instance Crypto c => Default (RewardAccount c) where
+  def = RewardAccount def def
 
-{-# DEPRECATED getRwdNetwork "In favor of `raNetwork`" #-}
-{-# DEPRECATED getRwdCred "In favor of `raCredential`" #-}
-
-{-# COMPLETE RewardAcnt #-}
-
-type RewardAcnt = RewardAccount
-
-{-# DEPRECATED RewardAcnt "Use `RewardAccount` instead" #-}
-
-instance Crypto c => Default (RewardAcnt c) where
-  def = RewardAcnt def def
-
-instance Crypto c => ToJSON (RewardAcnt c) where
+instance Crypto c => ToJSON (RewardAccount c) where
   toJSON ra =
     Aeson.object
       [ "network" .= raNetwork ra
       , "credential" .= raCredential ra
       ]
 
-instance Crypto c => FromJSON (RewardAcnt c) where
+instance Crypto c => FromJSON (RewardAccount c) where
   parseJSON =
-    Aeson.withObject "RewardAcnt" $ \obj ->
-      RewardAcnt
+    Aeson.withObject "RewardAccount" $ \obj ->
+      RewardAccount
         <$> obj
           .: "network"
         <*> obj
           .: "credential"
 
-instance NoThunks (RewardAcnt c)
+instance NoThunks (RewardAccount c)
 
 instance ToJSONKey (Addr c) where
   toJSONKey = Aeson.ToJSONKeyText (Aeson.fromText . addrToText) (Aeson.text . addrToText)
@@ -280,10 +230,9 @@ addrToText = Text.decodeLatin1 . B16.encode . serialiseAddr
 parseAddr :: Crypto c => Text -> Aeson.Parser (Addr c)
 parseAddr t = do
   bytes <- either badHex return (B16.decode (Text.encodeUtf8 t))
-  maybe badFormat return (deserialiseAddr bytes)
+  decodeAddr bytes
   where
     badHex h = fail $ "Addresses are expected in hex encoding for now: " ++ show h
-    badFormat = fail "Address is not in the right format"
 
 byron :: Int
 byron = 7
@@ -328,8 +277,8 @@ putAddr (Addr network pc sr) =
           putCredential pc
 {-# INLINE putAddr #-}
 
-putRewardAccount :: RewardAcnt c -> Put
-putRewardAccount (RewardAcnt network cred) = do
+putRewardAccount :: RewardAccount c -> Put
+putRewardAccount (RewardAccount network cred) = do
   let setPayCredBit = case cred of
         ScriptHashObj _ -> flip setBit payCredIsScript
         KeyHashObj _ -> id
@@ -338,10 +287,7 @@ putRewardAccount (RewardAcnt network cred) = do
       header = setPayCredBit (netId .|. rewardAccountPrefix)
   B.putWord8 header
   putCredential cred
-putRewardAcnt :: RewardAcnt c -> Put
-putRewardAcnt = putRewardAccount
-{-# INLINE putRewardAcnt #-}
-{-# DEPRECATED putRewardAcnt "Use `putRewardAccount` instead" #-}
+{-# INLINE putRewardAccount #-}
 
 putHash :: Hash.Hash h a -> Put
 putHash = B.putByteString . Hash.hashToBytes
@@ -403,12 +349,12 @@ instance Crypto c => DecCBOR (Addr c) where
   decCBOR = fromCborAddr
   {-# INLINE decCBOR #-}
 
-instance Crypto c => EncCBOR (RewardAcnt c) where
-  encCBOR = encCBOR . B.runPut . putRewardAcnt
+instance Crypto c => EncCBOR (RewardAccount c) where
+  encCBOR = encCBOR . B.runPut . putRewardAccount
   {-# INLINE encCBOR #-}
 
-instance Crypto c => DecCBOR (RewardAcnt c) where
-  decCBOR = fromCborRewardAcnt
+instance Crypto c => DecCBOR (RewardAccount c) where
+  decCBOR = fromCborRewardAccount
   {-# INLINE decCBOR #-}
 
 newtype BootstrapAddress c = BootstrapAddress
@@ -899,25 +845,13 @@ decodeRewardAccount ::
   forall c b m.
   (Crypto c, AddressBuffer b, MonadFail m) =>
   b ->
-  m (RewardAcnt c)
+  m (RewardAccount c)
 decodeRewardAccount buf = evalStateT (decodeRewardAccountT buf) 0
-decodeRewardAcnt ::
-  forall c b m.
-  (Crypto c, AddressBuffer b, MonadFail m) =>
-  b ->
-  m (RewardAcnt c)
-decodeRewardAcnt = decodeRewardAccount
-{-# INLINE decodeRewardAcnt #-}
-{-# DEPRECATED decodeRewardAcnt "Use `decodeRewardAccount` instead" #-}
 
-fromCborRewardAccount :: forall c s. Crypto c => Decoder s (RewardAcnt c)
+fromCborRewardAccount :: forall c s. Crypto c => Decoder s (RewardAccount c)
 fromCborRewardAccount = do
   sbs :: ShortByteString <- decCBOR
-  decodeRewardAcnt @c sbs
-fromCborRewardAcnt :: forall c s. Crypto c => Decoder s (RewardAcnt c)
-fromCborRewardAcnt = fromCborRewardAccount
-{-# INLINE fromCborRewardAcnt #-}
-{-# DEPRECATED fromCborRewardAcnt "Use `fromCborRewardAccount` instead" #-}
+  decodeRewardAccount @c sbs
 
 headerIsRewardAccount :: Header -> Bool
 headerIsRewardAccount header = header .&. 0b11101110 == 0b11100000
@@ -946,7 +880,7 @@ headerRewardAccountIsScript = (`testBit` 4)
 decodeRewardAccountT ::
   (MonadFail m, Crypto c, AddressBuffer b) =>
   b ->
-  StateT Int m (RewardAcnt c)
+  StateT Int m (RewardAccount c)
 decodeRewardAccountT buf = do
   guardLength "Header" 1 buf
   modify' (+ 1)
@@ -959,7 +893,7 @@ decodeRewardAccountT buf = do
       then ScriptHashObj <$> decodeScriptHash buf
       else KeyHashObj <$> decodeKeyHash buf
   ensureBufIsConsumed "RewardsAcnt" buf
-  pure $! RewardAcnt (headerNetworkId header) account
+  pure $! RewardAccount (headerNetworkId header) account
 {-# INLINE decodeRewardAccountT #-}
 
 instance Crypto c => EncCBOR (CompactAddr c) where
@@ -985,6 +919,6 @@ fromBoostrapCompactAddress :: Byron.CompactAddress -> CompactAddr c
 fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
 
 -- | This is called @wdrl@ in the spec.
-newtype Withdrawals c = Withdrawals {unWithdrawals :: Map (RewardAcnt c) Coin}
+newtype Withdrawals c = Withdrawals {unWithdrawals :: Map (RewardAccount c) Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)

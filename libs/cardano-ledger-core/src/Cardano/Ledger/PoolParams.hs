@@ -13,9 +13,6 @@ module Cardano.Ledger.PoolParams (
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
   SizeOfPoolOwners (..),
-
-  -- * Deprecations
-  ppRewardAcnt,
 )
 where
 
@@ -211,10 +208,6 @@ data PoolParams c = PoolParams
   deriving (EncCBOR) via CBORGroup (PoolParams c)
   deriving (DecCBOR) via CBORGroup (PoolParams c)
 
-ppRewardAcnt :: PoolParams c -> RewardAccount c
-ppRewardAcnt = ppRewardAccount
-{-# DEPRECATED ppRewardAcnt "Use `ppRewardAccount` instead" #-}
-
 instance Crypto c => Default (PoolParams c) where
   def = PoolParams def def (Coin 0) (Coin 0) def def def def def
 
@@ -230,7 +223,7 @@ instance Crypto c => ToJSON (PoolParams c) where
       , "pledge" .= ppPledge pp
       , "cost" .= ppCost pp
       , "margin" .= ppMargin pp
-      , "rewardAccount" .= ppRewardAcnt pp
+      , "rewardAccount" .= ppRewardAccount pp
       , "owners" .= ppOwners pp
       , "relays" .= ppRelays pp
       , "metadata" .= ppMetadata pp
@@ -281,7 +274,7 @@ instance Crypto c => EncCBORGroup (PoolParams c) where
       <> encCBOR (ppPledge poolParams)
       <> encCBOR (ppCost poolParams)
       <> encCBOR (ppMargin poolParams)
-      <> encCBOR (ppRewardAcnt poolParams)
+      <> encCBOR (ppRewardAccount poolParams)
       <> encCBOR (ppOwners poolParams)
       <> encCBOR (ppRelays poolParams)
       <> encodeNullMaybe encCBOR (strictMaybeToMaybe (ppMetadata poolParams))
@@ -292,7 +285,7 @@ instance Crypto c => EncCBORGroup (PoolParams c) where
       + encodedSizeExpr size' (ppPledge <$> proxy)
       + encodedSizeExpr size' (ppCost <$> proxy)
       + encodedSizeExpr size' (ppMargin <$> proxy)
-      + encodedSizeExpr size' (ppRewardAcnt <$> proxy)
+      + encodedSizeExpr size' (ppRewardAccount <$> proxy)
       + 2
       + poolSize * encodedSizeExpr size' (elementProxy (ppOwners <$> proxy))
       + 2

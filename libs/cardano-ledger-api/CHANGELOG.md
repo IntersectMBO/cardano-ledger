@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.9.5.0
+## 1.10.0.0
 
+* Remove deprecated `RewardAcnt`, `mkRwdAcnt`, `serialiseRewardAcnt` and `deserialiseRewardAcnt`.
 * Added `queryStakePoolDefaultVote` state query and its return type `DefaultVote`
 
 ## 1.9.4.0

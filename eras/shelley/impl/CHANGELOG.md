@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Remove export of deprecated `RewardAcnt`
 * Change type of VRF key hash in `GenesisDelegCert`, `GenesisDelegTxCert` and `DuplicateGenesisVRFDELEG` to `VRFVerKeyHash`
 * Added `EncCBOR` instance for `LedgerEnv`
 * Use `Mismatch` to clarify _some more_ predicate failures. #4711

@@ -13,9 +13,6 @@ module Test.Cardano.Ledger.Core.Address (
   deserialiseRewardAccountOld,
   decompactAddrOld,
   decompactAddrOldLazy,
-
-  -- * Deprecations
-  deserialiseRewardAcntOld,
 )
 where
 
@@ -77,16 +74,11 @@ deserialiseRewardAccountOld ::
   forall c m. (Crypto c, MonadFail m) => BS.ByteString -> m (RewardAccount c)
 deserialiseRewardAccountOld bs = case B.runGetOrFail getRewardAccount (BSL.fromStrict bs) of
   Left (_remaining, _offset, message) ->
-    fail $ "Old RewardAcnt decoder failed: " <> fromString message
+    fail $ "Old RewardAccount decoder failed: " <> fromString message
   Right (remaining, _offset, result) ->
     if BSL.null remaining
       then pure result
-      else fail $ "Old RewardAcnt decoder did not consume all input"
-
-deserialiseRewardAcntOld ::
-  forall c m. (Crypto c, MonadFail m) => BS.ByteString -> m (RewardAccount c)
-deserialiseRewardAcntOld = deserialiseRewardAccountOld
-{-# DEPRECATED deserialiseRewardAcntOld "Use `deserialiseRewardAccountOld` instead" #-}
+      else fail $ "Old RewardAccount decoder did not consume all input"
 
 byron :: Int
 byron = 7

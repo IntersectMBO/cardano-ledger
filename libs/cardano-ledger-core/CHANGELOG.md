@@ -2,6 +2,10 @@
 
 ## 1.16.0.0
 
+* Remove deprecated `ppRewardAcnt`
+* Remove deprecated `mkRwdAcnt`, `deserialiseAddr`, `serialiseRewardAcnt`,
+  `deserialiseRewardAcnt`, `RewardAcnt`, `getRwdNetwork`, `getRwdCred`, `putRewardAcnt`,
+  `decodeRewardAcnt`, `fromCborRewardAcnt`
 * Remove deprecated `HashAlgorithm`
 * Remove `Safe` and `hashSafeList`
 * Remove requirement for `FromCBOR` instance for `TxOut` in `EraTxOut`
@@ -15,6 +19,7 @@
 
 ### `testlib`
 
+* Remove deprecated `deserialiseRewardAcntOld`
 * Generalize the return type of `assertColorFailure` to `MonadIO`
 * Moved `Test.Cardano.Ledger.Core.Tools` into the test suite.
 
