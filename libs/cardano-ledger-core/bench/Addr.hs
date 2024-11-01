@@ -1,12 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
-
 import Cardano.Ledger.Address (Addr, decodeAddrEither, serialiseAddr)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Control.Monad (replicateM)
 import Criterion (Benchmark, bench, env, nf)
 import Criterion.Main (defaultMain)
@@ -32,14 +24,14 @@ generateAddrAsBytestring :: QCGen -> Int -> IO [ByteString]
 generateAddrAsBytestring qcGen count =
   pure $ unGen (replicateM count (serialiseAddr <$> genAddr)) qcGen 30
   where
-    genAddr :: Gen (Addr StandardCrypto)
+    genAddr :: Gen Addr
     genAddr = arbitrary
 
-tryDecodeAddr :: [ByteString] -> [Addr StandardCrypto]
+tryDecodeAddr :: [ByteString] -> [Addr]
 tryDecodeAddr xs =
   case mapM decode xs of
     Right addrs -> addrs
     Left err -> error $ "tryDecodeAddr: " ++ show err
   where
-    decode :: ByteString -> Either String (Addr StandardCrypto)
+    decode :: ByteString -> Either String Addr
     decode = decodeAddrEither

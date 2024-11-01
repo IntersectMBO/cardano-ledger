@@ -31,7 +31,7 @@ where
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Binary.Plain (FromCBOR, ToCBOR)
-import Cardano.Ledger.Crypto (ADDRHASH, Crypto)
+import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
@@ -61,7 +61,7 @@ data EraIndependentScript
 
 data EraIndependentData
 
-type DataHash c = SafeHash c EraIndependentData
+type DataHash = SafeHash EraIndependentData
 
 data EraIndependentScriptData
 
@@ -69,23 +69,18 @@ data EraIndependentPParamView
 
 data EraIndependentScriptIntegrity
 
-newtype ScriptHash c
-  = ScriptHash (Hash.Hash (ADDRHASH c) EraIndependentScript)
+newtype ScriptHash
+  = ScriptHash (Hash.Hash ADDRHASH EraIndependentScript)
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NFData, NoThunks)
-
-deriving newtype instance Crypto c => ToCBOR (ScriptHash c)
-
-deriving newtype instance Crypto c => FromCBOR (ScriptHash c)
-
-deriving newtype instance Crypto c => EncCBOR (ScriptHash c)
-
-deriving newtype instance Crypto c => DecCBOR (ScriptHash c)
-
-deriving newtype instance Crypto c => ToJSON (ScriptHash c)
-
-deriving newtype instance Crypto c => FromJSON (ScriptHash c)
-
-deriving newtype instance Crypto c => ToJSONKey (ScriptHash c)
-
-deriving newtype instance Crypto c => FromJSONKey (ScriptHash c)
+  deriving newtype
+    ( NFData
+    , NoThunks
+    , ToCBOR
+    , FromCBOR
+    , EncCBOR
+    , DecCBOR
+    , ToJSON
+    , FromJSON
+    , ToJSONKey
+    , FromJSONKey
+    )

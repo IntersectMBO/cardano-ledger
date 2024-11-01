@@ -1,6 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE ExistentialQuantification #-}
@@ -29,7 +28,6 @@ import Cardano.HeapWords (HeapWords (..))
 import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
 import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (..), decodeRecordNamed, encodeListLen)
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Control.DeepSeq (NFData)
@@ -52,61 +50,47 @@ import NoThunks.Class (NoThunks (..))
 -- ====================================================================================
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId c = TxId {unTxId :: SafeHash c EraIndependentTxBody}
+newtype TxId = TxId {unTxId :: SafeHash EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks, ToJSON, FromJSON)
+  deriving newtype (NoThunks, ToJSON, FromJSON, HeapWords, EncCBOR, DecCBOR, NFData)
 
-deriving newtype instance Crypto c => HeapWords (TxId c)
-
-deriving newtype instance Crypto c => EncCBOR (TxId c)
-
-deriving newtype instance Crypto c => DecCBOR (TxId c)
-
-deriving newtype instance Crypto c => NFData (TxId c)
-
-instance Crypto c => HeapWords (TxIn c) where
+instance HeapWords TxIn where
   heapWords (TxIn txId _) =
     2 + HW.heapWords txId + 1 {- txIx -}
 
-instance Crypto c => ToJSON (TxIn c) where
+instance ToJSON TxIn where
   toJSON = toJSON . txInToText
   toEncoding = toEncoding . txInToText
 
-instance Crypto c => ToJSONKey (TxIn c) where
+instance ToJSONKey TxIn where
   toJSONKey = toJSONKeyText txInToText
 
-txInToText :: TxIn c -> Text
+txInToText :: TxIn -> Text
 txInToText (TxIn (TxId txidHash) ix) =
   hashToTextAsHex (extractHash txidHash)
     <> Text.pack "#"
     <> Text.pack (show ix)
 
 -- | The input of a UTxO.
-data TxIn c = TxIn !(TxId c) {-# UNPACK #-} !TxIx
-  deriving (Generic)
+data TxIn = TxIn !TxId {-# UNPACK #-} !TxIx
+  deriving (Generic, Eq, Ord, Show)
 
 -- | Construct `TxIn` while throwing an error for an out of range `TxIx`. Make
 -- sure to use it only for testing.
-mkTxInPartial :: HasCallStack => TxId c -> Integer -> TxIn c
+mkTxInPartial :: HasCallStack => TxId -> Integer -> TxIn
 mkTxInPartial txId = TxIn txId . mkTxIxPartial
 
-deriving instance Eq (TxIn c)
+instance NFData TxIn
 
-deriving instance Ord (TxIn c)
+instance NoThunks TxIn
 
-deriving instance Show (TxIn c)
-
-deriving instance Crypto c => NFData (TxIn c)
-
-instance NoThunks (TxIn c)
-
-instance Crypto c => EncCBOR (TxIn c) where
+instance EncCBOR TxIn where
   encCBOR (TxIn txId index) =
     encodeListLen 2
       <> encCBOR txId
       <> encCBOR index
 
-instance Crypto c => DecCBOR (TxIn c) where
+instance DecCBOR TxIn where
   decCBOR =
     decodeRecordNamed
       "TxIn"
