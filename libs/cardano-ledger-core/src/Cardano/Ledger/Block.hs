@@ -19,7 +19,6 @@ module Cardano.Ledger.Block (
   bheader,
   bbody,
   neededTxInsForBlock,
-  txid,
 )
 where
 
@@ -35,8 +34,7 @@ import Cardano.Ledger.Binary (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
-import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (toList)
 import Data.Set (Set)
@@ -162,10 +160,5 @@ neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where
     txBodies = map (^. bodyTxL) $ toList $ fromTxSeq txsSeq
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
-    newTxIds = Set.fromList $ map txid txBodies
+    newTxIds = Set.fromList $ map txIdTxBody txBodies
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds
-
--- | Compute the id of a transaction.
-txid :: EraTxBody era => TxBody era -> TxId (EraCrypto era)
-txid = TxId . hashAnnotated
-{-# DEPRECATED txid "In favor of `Cardano.Ledger.Core.txIdTxBody` or `Cardano.Ledger.Core.txIdTx`" #-}
