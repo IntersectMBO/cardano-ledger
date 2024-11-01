@@ -27,7 +27,6 @@ flag asserts
 library
     exposed-modules:
         Cardano.Ledger.Address
-        Cardano.Ledger.Ap
         Cardano.Ledger.AuxiliaryData
         Cardano.Ledger.BaseTypes
         Cardano.Ledger.BHeaderView

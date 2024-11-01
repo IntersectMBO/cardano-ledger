@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove deprecated `Cardano.Ledger.Ap` module and all if its contents
 * Remove deprecated `ppRewardAcnt`
 * Remove deprecated `mkRwdAcnt`, `deserialiseAddr`, `serialiseRewardAcnt`,
   `deserialiseRewardAcnt`, `RewardAcnt`, `getRwdNetwork`, `getRwdCred`, `putRewardAcnt`,
