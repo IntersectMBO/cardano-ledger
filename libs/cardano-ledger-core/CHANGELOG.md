@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove `getAllTxInputs` as unused.
 * Remove deprecated `Delegation` and `poolCWitness`
 * Remove deprecated `txid`
 * Remove deprecated `ValidateAuxiliaryData`, `AuxiliaryData`, `hashAuxiliaryData` and `validateAuxiliaryData`
