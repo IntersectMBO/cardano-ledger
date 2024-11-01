@@ -148,6 +148,13 @@ library testlib
     build-depends:
         base,
         bytestring,
+        cardano-data:{cardano-data, testlib},
+        containers,
+        cuddle >=0.3.1.0,
+        plutus-ledger-api,
+        deepseq,
+        here,
+        microlens,
         cardano-crypto-class,
         cardano-data:{cardano-data, testlib},
         cardano-ledger-allegra,

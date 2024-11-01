@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-eras=("shelley" "conway")
+eras=("shelley" "allegra" "mary" "conway")
 
 for era in ${eras[@]}; do
 
