@@ -2,6 +2,12 @@
 
 ## 1.15.0.0
 
+* Remove deprecated module `Cardano.Ledger.Shelley.Metadata`
+* Remove deprecated module `Cardano.Ledger.Shelley.PoolParams`
+* Remove deprecated module `Cardano.Ledger.Shelley.EpochBoundary`
+* Remove deprecated module `Cardano.Ledger.Shelley.Delegation.Certificates`
+* Remove deprecated module `Cardano.Ledger.Shelley.Address.Bootstrap`
+* Remove deprecated `applyTxs` and `applyTxsTransition`
 * Remove `Cardano.Ledger.Shelley.API.Genesis` module with deprecated type class
   `CanStartFromGenesis`. Also removes helper binding `initialStateFromGenesis`.
 * Remove deprecated `ShelleyEraCrypto`
