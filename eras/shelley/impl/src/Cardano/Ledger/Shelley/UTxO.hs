@@ -17,15 +17,11 @@
 module Cardano.Ledger.Shelley.UTxO (
   EraUTxO (..),
   ShelleyScriptsNeeded (..),
-  scriptsNeeded,
   getShelleyScriptsNeeded,
-  scriptCred,
-  scriptStakeCred,
   getConsumedCoin,
   shelleyProducedValue,
   consumed,
   produced,
-  txup,
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
   getShelleyWitsVKeyNeededNoGov,
@@ -34,7 +30,7 @@ module Cardano.Ledger.Shelley.UTxO (
 where
 
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.CertState (
   CertState (..),
   certDStateL,
@@ -65,12 +61,6 @@ import Cardano.Ledger.Shelley.TxBody (
   Withdrawals (..),
   raCredential,
  )
-import Cardano.Ledger.Shelley.TxCert (
-  ShelleyEraTxCert,
-  pattern DelegStakeTxCert,
-  pattern RegTxCert,
-  pattern UnRegTxCert,
- )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO as UTxO
 import Cardano.Ledger.Val ((<+>))
@@ -81,38 +71,6 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
-
-txup :: (EraTx era, ShelleyEraTxBody era) => Tx era -> Maybe (Update era)
-txup tx = strictMaybeToMaybe (tx ^. bodyTxL . updateTxBodyL)
-{-# DEPRECATED txup "In favor of `updateTxBodyL`" #-}
-
-scriptStakeCred ::
-  ShelleyEraTxCert era =>
-  TxCert era ->
-  Maybe (ScriptHash (EraCrypto era))
-scriptStakeCred = \case
-  RegTxCert _ -> Nothing
-  UnRegTxCert cred -> credScriptHash cred
-  DelegStakeTxCert cred _ -> credScriptHash cred
-  _ -> Nothing
-{-# DEPRECATED scriptStakeCred "In favor of `getScriptWitnessTxCert`" #-}
-
-scriptCred :: Credential kr c -> Maybe (ScriptHash c)
-scriptCred = credScriptHash
-{-# DEPRECATED scriptCred "In favor of `credScriptHash`" #-}
-
--- | Computes the set of script hashes required to unlock the transaction inputs
--- and the withdrawals.
-scriptsNeeded ::
-  forall era.
-  EraTx era =>
-  UTxO era ->
-  Tx era ->
-  Set (ScriptHash (EraCrypto era))
-scriptsNeeded u tx =
-  case getShelleyScriptsNeeded u (tx ^. bodyTxL) of
-    ShelleyScriptsNeeded sn -> sn
-{-# DEPRECATED scriptsNeeded "In favor of `getScriptsNeeded`" #-}
 
 -- | Compute the subset of inputs of the set 'txIns' for which each input is
 -- locked by a script in the UTxO 'u'.

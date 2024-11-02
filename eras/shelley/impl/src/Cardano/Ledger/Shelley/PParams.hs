@@ -26,6 +26,7 @@ module Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (..),
   emptyPPPUpdates,
   Update (..),
+  upgradeUpdate,
   pvCanFollow,
   hasLegalProtVerUpdate,
 
@@ -33,10 +34,6 @@ module Cardano.Ledger.Shelley.PParams (
   shelleyCommonPParamsHKDPairs,
   shelleyCommonPParamsHKDPairsV6,
   shelleyCommonPParamsHKDPairsV8,
-
-  -- * Deprecated
-  updatePParams,
-  upgradeUpdate,
 )
 where
 
@@ -533,10 +530,6 @@ instance EraPParams era => ToJSON (ProposedPPUpdates era) where
 
 emptyPPPUpdates :: ProposedPPUpdates era
 emptyPPPUpdates = ProposedPPUpdates Map.empty
-
-updatePParams :: EraPParams era => PParams era -> PParamsUpdate era -> PParams era
-updatePParams = applyPPUpdates
-{-# DEPRECATED updatePParams "Use applyPPUpdates instead" #-}
 
 -- | Check whether the new protocol version is a legitimate version bump with respect to the
 -- previous one.
