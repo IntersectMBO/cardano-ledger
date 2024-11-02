@@ -43,7 +43,6 @@ module Cardano.Ledger.Plutus.Language (
   PlutusArgs (..),
   plutusLanguage,
   plutusSLanguage,
-  fromSLanguage,
   toSLanguage,
   withSLanguage,
   asSLanguage,
@@ -297,7 +296,7 @@ deriving instance Eq (SLanguage l)
 deriving instance Show (SLanguage l)
 
 instance PlutusLanguage l => ToCBOR (SLanguage l) where
-  toCBOR = toCBOR . fromSLanguage
+  toCBOR = toCBOR . plutusLanguage
 
 instance PlutusLanguage l => FromCBOR (SLanguage l) where
   fromCBOR = toSLanguage =<< fromCBOR @Language
@@ -305,11 +304,6 @@ instance PlutusLanguage l => FromCBOR (SLanguage l) where
 instance PlutusLanguage l => EncCBOR (SLanguage l)
 
 instance PlutusLanguage l => DecCBOR (SLanguage l)
-
--- | Reflection for '@SLanguage@'
-fromSLanguage :: PlutusLanguage l => SLanguage l -> Language
-fromSLanguage = plutusLanguage
-{-# DEPRECATED fromSLanguage "In favor of `plutusLanguage`" #-}
 
 -- | Construct value level laguage version from the type level
 plutusLanguage :: forall l proxy. PlutusLanguage l => proxy l -> Language
@@ -533,7 +527,7 @@ instance PlutusLanguage 'PlutusV3 where
 
 toSLanguage :: forall l m. (PlutusLanguage l, MonadFail m) => Language -> m (SLanguage l)
 toSLanguage lang
-  | fromSLanguage thisLanguage == lang = pure thisLanguage
+  | plutusLanguage thisLanguage == lang = pure thisLanguage
   | otherwise =
       fail $
         "Plutus language mismatch. Expected "
