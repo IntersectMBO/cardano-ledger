@@ -22,7 +22,6 @@ module Cardano.Ledger.Binary.Encoding.Encoder (
   encodeNullMaybe,
   encodeStrictMaybe,
   encodeNullStrictMaybe,
-  encodePair,
   encodeTuple,
   encodeRatio,
   encodeRatioNoTag,
@@ -342,10 +341,6 @@ encodeTuple encodeFirst encodeSecond (x, y) =
   encodeListLen 2
     <> encodeFirst x
     <> encodeSecond y
-
-encodePair :: (a -> Encoding) -> (b -> Encoding) -> (a, b) -> Encoding
-encodePair = encodeTuple
-{-# DEPRECATED encodePair "In favor of `encodeTuple`" #-}
 
 -- | Encode any Foldable with indefinite list length encoding
 encodeFoldableAsIndefLenList :: Foldable f => (a -> Encoding) -> f a -> Encoding

@@ -5,7 +5,6 @@ module Cardano.Ledger.Binary.Decoding.Sized (
   Sized (..),
   mkSized,
   decodeSized,
-  sizedDecoder,
   toSizedL,
 )
 where
@@ -57,10 +56,6 @@ decodeSized decoder = do
   Annotated v (ByteSpan start end) <- annotatedDecoder decoder
   pure $! Sized v $! end - start
 {-# INLINE decodeSized #-}
-
-sizedDecoder :: Decoder s a -> Decoder s (Sized a)
-sizedDecoder = decodeSized
-{-# DEPRECATED sizedDecoder "In favor of more consistently named `decodeSized`" #-}
 
 instance DecCBOR a => DecCBOR (Sized a) where
   decCBOR = decodeSized decCBOR

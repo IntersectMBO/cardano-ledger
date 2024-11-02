@@ -36,10 +36,6 @@ module Cardano.Ledger.Binary.Decoding (
 
   -- * Helpers
   toStrictByteString,
-
-  -- * Deprecated
-  decodeAnnotator,
-  decCBORMaybe,
 )
 where
 
@@ -240,19 +236,6 @@ decodeNestedCbor = do
 decodeNestedCborBytes :: Decoder s BS.ByteString
 decodeNestedCborBytes = decodeNestedCborTag >> decodeBytes
 {-# INLINE decodeNestedCborBytes #-}
-
-decodeAnnotator ::
-  Version ->
-  Text ->
-  (forall s. Decoder s (Annotator a)) ->
-  BSL.ByteString ->
-  Either DecoderError a
-decodeAnnotator = decodeFullAnnotator
-{-# DEPRECATED decodeAnnotator "In favor of `decodeFullAnnotator`" #-}
-
-decCBORMaybe :: Decoder s a -> Decoder s (Maybe a)
-decCBORMaybe = decodeMaybe
-{-# DEPRECATED decCBORMaybe "In favor of `decodeMaybe`" #-}
 
 -- $annotated
 --
