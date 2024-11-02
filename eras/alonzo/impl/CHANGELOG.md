@@ -2,6 +2,8 @@
 
 ## 1.12.0.0
 
+* Remove deprecated `getCoin`, `minfee`, `getMapFromValue`, `indexRedeemers` and `isTwoPhaseScriptAddressFromMap`
+* Remove deprecated `AuxiliaryData`, `TxSeq`, `hashTxSeq` and `getAlonzoSpendingTxIn`
 * Remove deprecated `alonzoGenesisAesonPairs`, `coinsPerUTxOWord`, `costmdls`, `prices`, `maxTxExUnits`, `maxBlockExUnits`, `maxValSize`, `collateralPercentage` and `maxCollateralInputs`
 * Remove deprecated module `Cardano.Ledger.Alonzo.Data`
 * Remove deprecated module `Cardano.Ledger.Alonzo.Scripts.Data`

@@ -37,7 +37,6 @@ module Cardano.Ledger.Alonzo.Tx (
   hashData,
   nonNativeLanguages,
   hashScriptIntegrity,
-  getCoin,
   EraIndependentScriptIntegrity,
   ScriptIntegrity (ScriptIntegrity),
   ScriptIntegrityHash,
@@ -58,13 +57,8 @@ module Cardano.Ledger.Alonzo.Tx (
   -- Figure 4
   totExUnits,
   alonzoMinFeeTx,
-  minfee,
   --  Figure 5
-  isTwoPhaseScriptAddressFromMap,
   Shelley.txouts,
-  indexRedeemers,
-  -- Figure 6
-  getMapFromValue,
   -- Segwit
   alonzoSegwitTx,
   -- Other
@@ -74,7 +68,6 @@ module Cardano.Ledger.Alonzo.Tx (
 )
 where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (
@@ -85,12 +78,9 @@ import Cardano.Ledger.Alonzo.PParams (
   ppPricesL,
  )
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript (PlutusPurpose, hoistPlutusPurpose),
-  AsIxItem,
+  AlonzoEraScript,
   CostModel,
   ExUnits (..),
-  lookupPlutusScript,
-  toAsIx,
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.TxBody (
@@ -125,7 +115,6 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
@@ -138,7 +127,6 @@ import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust)
 import Data.Maybe.Strict (
   StrictMaybe (..),
   maybeToStrictMaybe,
@@ -292,13 +280,6 @@ instance
   ) =>
   NFData (AlonzoTx era)
 
--- =========================================================
--- Figure 2: Definitions for Transactions
-
-getCoin :: EraTxOut era => TxOut era -> Coin
-getCoin txOut = txOut ^. coinTxOutL
-{-# DEPRECATED getCoin "In favor of `coinTxOutL`" #-}
-
 -- | A ScriptIntegrityHash is the hash of three things.  The first two come
 -- from the witnesses and the last comes from the Protocol Parameters.
 data ScriptIntegrity era
@@ -372,43 +353,12 @@ alonzoMinFeeTx pp tx =
   where
     allExunits = totExUnits tx
 
-minfee ::
-  ( EraTx era
-  , AlonzoEraTxWits era
-  , AlonzoEraPParams era
-  ) =>
-  PParams era ->
-  Tx era ->
-  Coin
-minfee = alonzoMinFeeTx
-{-# DEPRECATED minfee "In favor of `getMinFeeTx`" #-}
-
 totExUnits ::
   (EraTx era, AlonzoEraTxWits era) =>
   Tx era ->
   ExUnits
 totExUnits tx =
   foldMap snd . Map.elems . unRedeemers $ tx ^. witsTxL . rdmrsTxWitsL
-
--- ===============================================================
--- Operations on scripts from specification
--- Figure 6:Indexing script and data objects
--- ===============================================================
-
-{-# DEPRECATED getMapFromValue "No longer used" #-}
-getMapFromValue :: MaryValue c -> Map.Map (PolicyID c) (Map.Map AssetName Integer)
-getMapFromValue (MaryValue _ (MultiAsset m)) = m
-
--- | Find the Data and ExUnits assigned to a plutus script.
-indexRedeemers ::
-  (AlonzoEraTxWits era, EraTx era) =>
-  Tx era ->
-  PlutusPurpose AsIxItem era ->
-  Maybe (Data era, ExUnits)
-indexRedeemers tx sp = Map.lookup (hoistPlutusPurpose toAsIx sp) redeemers
-  where
-    redeemers = unRedeemers (tx ^. witsTxL . rdmrsTxWitsL)
-{-# DEPRECATED indexRedeemers "As no longer needed" #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -505,19 +455,6 @@ instance
               <$> decodeNullMaybe decCBOR
           )
   {-# INLINE decCBOR #-}
-
--- | Compute if an Addr has the hash of a TwoPhaseScript, we can tell
---   what kind of Script from the Hash, by looking it up in the Map
-isTwoPhaseScriptAddressFromMap ::
-  forall era.
-  AlonzoEraScript era =>
-  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
-  Addr (EraCrypto era) ->
-  Bool
-isTwoPhaseScriptAddressFromMap hashScriptMap addr = isJust $ do
-  scriptHash <- Shelley.getScriptHash addr
-  lookupPlutusScript scriptHash hashScriptMap
-{-# DEPRECATED isTwoPhaseScriptAddressFromMap "No longer used. Inline implementation if you need it" #-}
 
 alonzoEqTxRaw :: AlonzoEraTx era => Tx era -> Tx era -> Bool
 alonzoEqTxRaw tx1 tx2 =

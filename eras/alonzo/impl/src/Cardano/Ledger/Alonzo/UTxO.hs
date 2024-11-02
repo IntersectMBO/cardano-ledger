@@ -17,7 +17,6 @@
 module Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   getAlonzoSpendingDatum,
-  getAlonzoSpendingTxIn,
 
   -- * Scripts needed
   AlonzoScriptsNeeded (..),
@@ -38,11 +37,7 @@ where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoPlutusPurpose (..),
-  lookupPlutusScript,
-  plutusScriptLanguage,
- )
+import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.CertState (CertState)
@@ -153,15 +148,6 @@ getAlonzoSpendingDatum (UTxO m) tx sp = do
   txOut <- Map.lookup txIn m
   SJust hash <- Just $ txOut ^. dataHashTxOutL
   Map.lookup hash (unTxDats $ tx ^. witsTxL . datsTxWitsL)
-
--- | Only the Spending ScriptPurpose contains TxIn
-getAlonzoSpendingTxIn :: AlonzoPlutusPurpose AsItem era -> Maybe (TxIn (EraCrypto era))
-getAlonzoSpendingTxIn = \case
-  AlonzoSpending (AsItem txIn) -> Just txIn
-  AlonzoMinting _policyId -> Nothing
-  AlonzoRewarding _rewardAccount -> Nothing
-  AlonzoCertifying _txCert -> Nothing
-{-# DEPRECATED getAlonzoSpendingTxIn "In favor of more general `toSpendingPurpose`" #-}
 
 getAlonzoScriptsHashesNeeded :: AlonzoScriptsNeeded era -> Set.Set (ScriptHash (EraCrypto era))
 getAlonzoScriptsHashesNeeded (AlonzoScriptsNeeded sn) = Set.fromList (map snd sn)
