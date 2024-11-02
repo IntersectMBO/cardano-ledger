@@ -19,9 +19,6 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
--- Due to deprecated requiresVKeyWitness.
--- TODO: remove when requiresVKeyWitness is gone:
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert (..),
@@ -52,7 +49,6 @@ module Cardano.Ledger.Shelley.TxCert (
   isInstantaneousRewards,
   isReservesMIRCert,
   isTreasuryMIRCert,
-  requiresVKeyWitness,
 
   -- ** Serialization helpers
   shelleyTxCertDelegDecoder,
@@ -118,7 +114,7 @@ import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Foldable as F (Foldable (..), foldMap', foldl')
 import Data.Map.Strict (Map)
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (isJust)
 import Data.Monoid (Sum (..))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -539,17 +535,6 @@ isTreasuryMIRCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -
 isTreasuryMIRCert x = case getMirTxCert x of
   Just (MIRCert TreasuryMIR _) -> True
   _ -> False
-
--- | Returns True for delegation certificates that require at least
--- one witness, and False otherwise. It is mainly used to ensure
--- that calling a variant of 'cwitness' is safe.
---
--- Note: This will not compile for Conway, because it is incorrect for Conway, use
--- `getVKeyWitnessTxCert` instead.
-requiresVKeyWitness :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> Bool
-requiresVKeyWitness (RegTxCert _) = False
-requiresVKeyWitness x = isNothing $ getMirTxCert x
-{-# DEPRECATED requiresVKeyWitness "In favor of `getVKeyWitnessTxCert`" #-}
 
 getScriptWitnessShelleyTxCert ::
   ShelleyTxCert era ->

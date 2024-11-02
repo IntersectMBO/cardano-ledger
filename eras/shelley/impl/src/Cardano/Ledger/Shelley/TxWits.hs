@@ -19,7 +19,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxWits (
-  keyBy,
   decodeWits,
   ShelleyTxWits (
     ShelleyTxWits,
@@ -272,10 +271,6 @@ decodeWits =
         (\x wits -> wits {bootWits' = x})
         (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
     witField n = fieldAA (\_ wits -> wits) (Invalid n)
-
-keyBy :: Ord k => (a -> k) -> [a] -> Map k a
-keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
-{-# DEPRECATED keyBy "In favor of `Data.MapExtras.fromElems`" #-}
 
 mapTraverseableDecoderA ::
   Traversable f =>

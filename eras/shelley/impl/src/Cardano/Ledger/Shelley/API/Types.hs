@@ -126,7 +126,6 @@ import Cardano.Ledger.Shelley.StabilityWindow as X (
  )
 import Cardano.Ledger.Shelley.Tx as X (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData as X (
-  Metadata,
   Metadatum (..),
   ShelleyTxAuxData (..),
  )

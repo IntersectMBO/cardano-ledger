@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Remove deprecated `keyBy`, `requiresVKeyWitness` and `Metadata`
 * Remove deprecated `updatePParams`, `txup`, `scriptCred`, `scriptStakeCred`, `scriptsNeeded`
 * Remove deprecated `proposals`, `futureProposals`, `sgovPp` and `sgovPrevPp`
 * Remove deprecated module `Cardano.Ledger.Shelley.Metadata`
