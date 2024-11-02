@@ -12,6 +12,7 @@
 
 module Cardano.Ledger.Binary.Decoding.Annotated (
   Annotated (..),
+  decodeAnnotated,
   ByteSpan (..),
   Decoded (..),
   annotationBytes,
@@ -34,6 +35,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder (
   decodeList,
   decodeWithByteSpan,
   fromPlainDecoder,
+  getOriginalBytes,
   setTag,
   whenDecoderVersionAtLeast,
  )
@@ -112,6 +114,12 @@ annotationBytes bytes = fmap (BSL.toStrict . slice bytes)
 -- | Reconstruct an annotation by re-serialising the payload to a ByteString.
 reAnnotate :: EncCBOR a => Version -> Annotated a b -> Annotated a BS.ByteString
 reAnnotate version (Annotated x _) = Annotated x (serialize' version x)
+
+decodeAnnotated :: Decoder s a -> Decoder s (Annotated a BSL.ByteString)
+decodeAnnotated decoder = do
+  bsl <- getOriginalBytes
+  fmap (slice bsl) <$> annotatedDecoder decoder
+{-# INLINE decodeAnnotated #-}
 
 class Decoded t where
   type BaseType t :: Type

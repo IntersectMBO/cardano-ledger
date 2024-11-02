@@ -180,7 +180,7 @@ instance Crypto c => ToCBOR (PlutusWithContext c) where
 instance Crypto c => FromCBOR (PlutusWithContext c) where
   fromCBOR = Plain.decodeRecordNamed "PlutusWithContext" (const 6) $ do
     pwcProtocolVersion <- fromCBOR
-    toPlainDecoder pwcProtocolVersion $ decodeWithPlutus $ \plutus -> do
+    toPlainDecoder Nothing pwcProtocolVersion $ decodeWithPlutus $ \plutus -> do
       let lang = plutusLanguage plutus
           pwcScript = Left plutus
           scriptHash = hashPlutusScript plutus

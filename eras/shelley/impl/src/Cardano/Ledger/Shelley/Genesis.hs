@@ -478,7 +478,7 @@ instance Crypto c => ToCBOR (ShelleyGenesis c) where
           <> encCBOR sgStaking
 
 instance Crypto c => FromCBOR (ShelleyGenesis c) where
-  fromCBOR = toPlainDecoder shelleyProtVer $ do
+  fromCBOR = toPlainDecoder Nothing shelleyProtVer $ do
     decodeRecordNamed "ShelleyGenesis" (const 15) $ do
       sgSystemStart <- decCBOR
       sgNetworkMagic <- decCBOR

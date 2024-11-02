@@ -106,7 +106,7 @@ reAnnotateUsing ::
   f a ->
   f ByteString
 reAnnotateUsing encoder decoder =
-  (\bs -> splice bs $ CBOR.deserialiseFromBytes (toPlainDecoder byronProtVer decoder) bs)
+  (\bs -> splice bs $ CBOR.deserialiseFromBytes (toPlainDecoder (Just bs) byronProtVer decoder) bs)
     . CBOR.toLazyByteString
     . toPlainEncoding byronProtVer
     . encoder

@@ -81,7 +81,6 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (Share),
   EncCBOR,
   EncCBORGroup,
-  FromCBOR,
   Interns,
   Sized (sizedValue),
   ToCBOR,
@@ -276,7 +275,6 @@ class
   , DecCBOR (CompactForm (Value era))
   , EncCBOR (Value era)
   , ToCBOR (TxOut era)
-  , FromCBOR (TxOut era)
   , EncCBOR (TxOut era)
   , DecCBOR (TxOut era)
   , DecShareCBOR (TxOut era)

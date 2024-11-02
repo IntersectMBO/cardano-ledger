@@ -44,6 +44,7 @@ module Cardano.Ledger.MemoBytes.Internal (
   -- * Memoized
   Memoized (RawType),
   mkMemoized,
+  decodeMemoized,
   getMemoSafeHash,
   getMemoRawType,
   zipMemoRawType,
@@ -59,9 +60,12 @@ where
 
 import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
 import Cardano.Ledger.Binary (
+  Annotated (..),
   Annotator (..),
   DecCBOR (decCBOR),
+  Decoder,
   EncCBOR,
+  decodeAnnotated,
   serialize,
   withSlice,
  )
@@ -115,15 +119,15 @@ instance (Typeable t, Typeable era) => Plain.ToCBOR (MemoBytes t era) where
   toCBOR (Memo' _ bytes _hash) = Plain.encodePreEncoded (fromShort bytes)
 
 instance
-  ( Typeable t
-  , DecCBOR (Annotator (t era))
-  , Era era
-  ) =>
+  (Typeable t, DecCBOR (Annotator (t era)), Era era) =>
   DecCBOR (Annotator (MemoBytes t era))
   where
   decCBOR = do
     (Annotator getT, Annotator getBytes) <- withSlice decCBOR
     pure (Annotator (\fullbytes -> mkMemoBytes (getT fullbytes) (getBytes fullbytes)))
+
+instance (Typeable t, DecCBOR (t era), Era era) => DecCBOR (MemoBytes t era) where
+  decCBOR = decodeMemoized decCBOR
 
 -- | Both binary representation and Haskell types are compared.
 instance Eq (t era) => Eq (MemoBytes t era) where
@@ -215,6 +219,11 @@ class Memoized t where
 -- | Construct memoized type from the raw type using its EncCBOR instance
 mkMemoized :: forall era t. (Era era, EncCBOR (RawType t era), Memoized t) => RawType t era -> t era
 mkMemoized rawType = wrapMemoBytes (mkMemoBytes rawType (serialize (eraProtVerLow @era) rawType))
+
+decodeMemoized :: Era era => Decoder s (t era) -> Decoder s (MemoBytes t era)
+decodeMemoized rawTypeDecoder = do
+  Annotated rawType lazyBytes <- decodeAnnotated rawTypeDecoder
+  pure $ mkMemoBytes rawType lazyBytes
 
 -- | Extract memoized SafeHash
 getMemoSafeHash :: Memoized t => t era -> SafeHash (EraCrypto era) (MemoHashIndex (RawType t))
