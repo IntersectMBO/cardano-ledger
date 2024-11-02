@@ -21,7 +21,6 @@ module Cardano.Ledger.Shelley.API.Validation (
   TickTransitionError (..),
   BlockTransitionError (..),
   chainChecks,
-  ShelleyEraCrypto,
 )
 where
 
@@ -181,13 +180,6 @@ applyBlock =
       , asoValidation = ValidateAll
       , asoEvents = EPDiscard
       }
-
-type ShelleyEraCrypto c =
-  ( Crypto c
-  , DSignable c (Hash c EraIndependentTxBody)
-  )
-
-{-# DEPRECATED ShelleyEraCrypto "Constraint synonyms are being removed" #-}
 
 instance
   ( Crypto c

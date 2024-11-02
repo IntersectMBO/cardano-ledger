@@ -2,6 +2,8 @@
 
 ## 1.15.0.0
 
+* Remove deprecated `ShelleyEraCrypto`
+* Remove deprecated `evaluateMinLovelaceOutput`, `addShelleyKeyWitnesses`, `evaluateTransactionBalance`
 * Remove deprecated `KeyPairs` and stop exporting `KeyPair`
 * Remove `mkDelegation` and deprecated `Delegate`, `RegKey`, `DeRegKey`, `delegCWitness`, `isRegKey` and `isDeRegKey`
 * Remove export of deprecated `RewardAcnt` and `poolCWitness`
