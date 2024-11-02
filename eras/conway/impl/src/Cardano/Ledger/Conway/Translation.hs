@@ -15,7 +15,6 @@ module Cardano.Ledger.Conway.Translation (
   Tx (..),
   addrPtrNormalize,
   translateDatum,
-  translateTxOut,
 ) where
 
 import Cardano.Ledger.Address (addrPtrNormalize)
@@ -207,12 +206,3 @@ instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
 instance Crypto c => TranslateEra (ConwayEra c) API.UTxO where
   translateEra _ctxt utxo =
     pure $ API.UTxO $ upgradeTxOut `Map.map` API.unUTxO utxo
-
--- | Filter out `TxOut`s with zero Coins and normalize Pointers,
--- while converting `TxOut`s to Conway era.
-translateTxOut ::
-  Crypto c =>
-  TxOut (BabbageEra c) ->
-  TxOut (ConwayEra c)
-translateTxOut = upgradeTxOut
-{-# DEPRECATED translateTxOut "In favor of `upgradeTxOut`" #-}

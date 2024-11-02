@@ -20,7 +20,6 @@ module Cardano.Ledger.Conway.Rules.Utxow (
   babbageToConwayUtxowPredFailure,
   ConwayUTXOW,
   ConwayUtxowPredFailure (..),
-  conwayWitsVKeyNeeded,
   shelleyToConwayUtxowPredFailure,
 )
 where
@@ -51,7 +50,6 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXO, ConwayUTXOW)
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
-import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), VKey)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
@@ -65,21 +63,13 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   UtxoEnv,
  )
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
+import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (Embed (..), STS (..))
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
-
-conwayWitsVKeyNeeded ::
-  (EraTx era, ConwayEraTxBody era) =>
-  UTxO era ->
-  TxBody era ->
-  Set (KeyHash 'Witness (EraCrypto era))
-conwayWitsVKeyNeeded = getConwayWitsVKeyNeeded
-{-# DEPRECATED conwayWitsVKeyNeeded "In favor of `getConwayWitsVKeyNeeded` or `getWitsVKeyNeeded`" #-}
 
 -- ================================
 
