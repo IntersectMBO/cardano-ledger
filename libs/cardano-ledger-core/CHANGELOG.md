@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove deprecated `decodeValidAndUnknownCostModels` and `decodeCostModelFailHard`
 * Remove deprecated module `Cardano.Ledger.Language`
 * Remove deprecated `KeyPair`
 * Remove `Cardano.Ledger.Era` that had all of its contents deprecated.
