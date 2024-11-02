@@ -66,12 +66,10 @@ govCertSpec ConwayGovCertEnv {..} certState =
               , assert $ coinreg ==. lit (cgcePParams ^. ppDRepDepositL)
               ]
           )
-          -- ConwayUnRegDRep -- Commented out on purpose, to make conformance tests pass.
-          -- Should be uncommented when they are fixed to handle un registration
-          -- ( branchW 3 $ \ [var|credUnreg|] [var|coinUnreg|] ->
-          --     assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))
-          -- )
-          (branchW 3 $ \_credUnreg _coinUnreg -> False)
+          -- ConwayUnRegDRep
+          ( branchW 3 $ \ [var|credUnreg|] [var|coinUnreg|] ->
+              assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))
+          )
           -- ConwayUpdateDRep
           ( branchW 1 $ \ [var|keyupdate|] _ ->
               member_ keyupdate reps
