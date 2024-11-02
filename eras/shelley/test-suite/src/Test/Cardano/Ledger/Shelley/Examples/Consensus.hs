@@ -21,11 +21,11 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary
-import Cardano.Ledger.Keys hiding (KeyPair, vKey)
+import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley (Shelley)
-import Cardano.Ledger.Shelley.API hiding (KeyPair, vKey)
+import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules

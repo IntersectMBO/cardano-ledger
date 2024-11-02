@@ -23,7 +23,6 @@ module Cardano.Ledger.Keys.Internal (
   -- * DSIGN
   DSignable,
   VKey (..),
-  KeyPair (..), -- deprecated
   signedDSIGN,
   verifySignedDSIGN,
   hashSignature,
@@ -189,12 +188,6 @@ instance (Crypto c, Typeable kd) => ToCBOR (VKey kd c) where
 deriving instance (Crypto c, Typeable kd) => DecCBOR (VKey kd c)
 
 deriving instance (Crypto c, Typeable kd) => EncCBOR (VKey kd c)
-
-data KeyPair (kd :: KeyRole) c = KeyPair
-  { vKey :: !(VKey kd c)
-  , sKey :: !(DSIGN.SignKeyDSIGN (DSIGN c))
-  }
-{-# DEPRECATED KeyPair "Use `Test.Cardano.Ledger.Core.KeyPair (KeyPair)` instead" #-}
 
 -- | Produce a digital signature
 signedDSIGN ::

@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove deprecated `KeyPair`
 * Remove `Cardano.Ledger.Era` that had all of its contents deprecated.
 * Remove `getAllTxInputs` as unused.
 * Remove deprecated `Delegation` and `poolCWitness`
