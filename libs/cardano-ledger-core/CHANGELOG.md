@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove deprecated `_unTxId` and `adaOnly`
 * Remove deprecated module `Cardano.Ledger.Serialization`
 * Remove deprecated `fromSLanguage`
 * Remove deprecated `decodeValidAndUnknownCostModels` and `decodeCostModelFailHard`
@@ -30,6 +31,7 @@
 
 ### `testlib`
 
+* Remove deprecated `mkVKeyRwdAcnt`
 * Remove deprecated `deserialiseRewardAcntOld`
 * Generalize the return type of `assertColorFailure` to `MonadIO`
 * Moved `Test.Cardano.Ledger.Core.Tools` into the test suite.

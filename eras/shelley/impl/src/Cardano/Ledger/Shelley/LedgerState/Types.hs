@@ -60,11 +60,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (SnapShots (..), ssStakeDistrL, ssStakeMarkL)
-import Cardano.Ledger.Keys (
-  KeyHash (..),
-  KeyPair,
-  KeyRole (..),
- )
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
@@ -89,10 +85,6 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- ==================================
-
-type KeyPairs c = [(KeyPair 'Payment c, KeyPair 'Staking c)]
-
-{-# DEPRECATED KeyPairs "Use `Test.Cardano.Ledger.Core.KeyPair (KeyPairs)` instead" #-}
 
 type RewardAccounts c =
   Map (Credential 'Staking c) Coin

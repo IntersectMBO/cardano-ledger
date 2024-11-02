@@ -25,9 +25,6 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkBootKeyPairWithSeed,
   genByronVKeyAddr,
   genByronAddrFromVKey,
-
-  -- * Deprecations
-  mkVKeyRwdAcnt,
 )
 where
 
@@ -188,14 +185,6 @@ mkVKeyRewardAccount ::
   KeyPair 'Staking c ->
   RewardAccount c
 mkVKeyRewardAccount network keys = RewardAccount network $ KeyHashObj (hashKey $ vKey keys)
-
-mkVKeyRwdAcnt ::
-  Crypto c =>
-  Network ->
-  KeyPair 'Staking c ->
-  RewardAccount c
-mkVKeyRwdAcnt = mkVKeyRewardAccount
-{-# DEPRECATED mkVKeyRwdAcnt "Use `mkVKeyRewardAccount` instead" #-}
 
 mkKeyHash :: Crypto c => Int -> KeyHash kd c
 mkKeyHash = hashKey . vKey . mkKeyPair

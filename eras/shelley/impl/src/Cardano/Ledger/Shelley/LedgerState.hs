@@ -21,7 +21,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate (..),
   FutureGenDeleg (..),
   InstantaneousRewards (..),
-  KeyPairs, -- deprecated
   LedgerState (..),
   PState (..),
   PPUPPredFailure,

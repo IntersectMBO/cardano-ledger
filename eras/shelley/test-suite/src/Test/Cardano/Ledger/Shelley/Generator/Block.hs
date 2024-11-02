@@ -19,7 +19,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BHeaderView (bhviewBSize, bhviewHSize)
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Crypto (VRF)
-import Cardano.Ledger.Shelley.API hiding (vKey)
+import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL)
 import Cardano.Ledger.Slot (SlotNo (..))
