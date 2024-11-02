@@ -20,9 +20,6 @@ module Cardano.Ledger.Shelley.Rules.Delpl (
   ShelleyDelplPredFailure (..),
   ShelleyDelplEvent,
   PredicateFailure,
-
-  -- * Deprecations
-  delPlAcnt,
 )
 where
 
@@ -67,10 +64,6 @@ data DelplEnv era = DelplEnv
   , delPlPp :: PParams era
   , delPlAccount :: AccountState
   }
-
-delPlAcnt :: DelplEnv era -> AccountState
-delPlAcnt = delPlAccount
-{-# DEPRECATED delPlAcnt "Use `delPlAccount` instead" #-}
 
 data ShelleyDelplPredFailure era
   = PoolFailure (PredicateFailure (EraRule "POOL" era)) -- Subtransition Failures

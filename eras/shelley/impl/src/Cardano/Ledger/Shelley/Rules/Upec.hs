@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.Rules.Upec (
   ShelleyUPEC,
   UpecState (..),
   ShelleyUpecPredFailure (..),
-  votedValue,
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
@@ -31,13 +30,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertState,
   lsUTxOState,
  )
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Rules.Newpp (
   NewppEnv (..),
   ShelleyNEWPP,
   ShelleyNewppState (..),
  )
-import Cardano.Ledger.Shelley.Rules.Ppup (votedFuturePParams)
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
   Embed (..),
@@ -105,13 +102,3 @@ instance
   Embed (ShelleyNEWPP era) (ShelleyUPEC era)
   where
   wrapFailed = NewPpFailure
-
-votedValue ::
-  forall era.
-  EraPParams era =>
-  ProposedPPUpdates era ->
-  PParams era ->
-  Int ->
-  Maybe (PParams era)
-votedValue ppups pp = votedFuturePParams ppups pp . fromIntegral
-{-# DEPRECATED votedValue "In favor of `votedFuturePParams`" #-}

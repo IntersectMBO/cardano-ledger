@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Remove deprecated `PPUPPredFailure`, `delPlAcnt`, `prAcnt`, `votedValue`
 * Remove impossible predicate failure `StakeKeyInRewardsDELEG`
 * Change parameter type  of `StakeKeyNonZeroAccountBalanceDELEG` from  `Maybe Coin` to `Coin`
 * Remove deprecated `hashMultiSigScript` and `txwitsScript`
