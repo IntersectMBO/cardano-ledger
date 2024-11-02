@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove deprecated module `Cardano.Ledger.Serialization`
 * Remove deprecated `fromSLanguage`
 * Remove deprecated `decodeValidAndUnknownCostModels` and `decodeCostModelFailHard`
 * Remove deprecated module `Cardano.Ledger.Language`
