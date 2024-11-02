@@ -22,9 +22,6 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
   ShelleyUtxowEvent (..),
   PredicateFailure,
   transitionRulesUTXOW,
-  shelleyWitsVKeyNeeded,
-  witsVKeyNeededGov,
-  witsVKeyNeededNoGov,
 
   -- * Individual validation steps
   validateFailedNativeScripts,
@@ -33,7 +30,6 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
   validateMetadata,
   validateMIRInsufficientGenesisSigs,
   validateNeededWitnesses,
-  propWits,
 )
 where
 
@@ -45,7 +41,6 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
   invalidKey,
-  maybeToStrictMaybe,
   quorum,
   (==>),
  )
@@ -75,7 +70,6 @@ import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXOW)
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (
   ShelleyUTXO,
@@ -91,13 +85,12 @@ import Cardano.Ledger.Shelley.UTxO (
   ScriptsProvided (..),
   ShelleyScriptsNeeded (..),
   UTxO,
-  getShelleyWitsVKeyNeededNoGov,
   verifyWitVKey,
  )
 import Control.DeepSeq
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, (∩), (◁))
+import Control.SetAlgebra (eval, (∩))
 import Control.State.Transition (
   Embed,
   IRC (..),
@@ -461,40 +454,6 @@ validateNeededWitnesses witsKeyHashes certState utxo txBody =
    in failureUnless (Set.null missingWitnesses) $
         MissingVKeyWitnessesUTXOW missingWitnesses
 
--- | Collect the set of hashes of keys that needs to sign a
---  given transaction. This set consists of the txin owners,
---  certificate authors, and withdrawal reward accounts.
-witsVKeyNeededGov ::
-  forall era.
-  ShelleyEraTxBody era =>
-  TxBody era ->
-  GenDelegs (EraCrypto era) ->
-  Set (KeyHash 'Witness (EraCrypto era))
-witsVKeyNeededGov txBody genDelegs =
-  asWitness `Set.map` proposedUpdatesWitnesses (txBody ^. updateTxBodyL) genDelegs
-{-# DEPRECATED witsVKeyNeededGov "As unnecessary. Use `getWitsVKeyNeeded` instead" #-}
-
-witsVKeyNeededNoGov ::
-  forall era.
-  EraTx era =>
-  UTxO era ->
-  TxBody era ->
-  Set (KeyHash 'Witness (EraCrypto era))
-witsVKeyNeededNoGov = getShelleyWitsVKeyNeededNoGov
-{-# DEPRECATED witsVKeyNeededNoGov "Use `getShelleyWitsVKeyNeededNoGov` instead" #-}
-
-shelleyWitsVKeyNeeded ::
-  forall era.
-  (EraTx era, ShelleyEraTxBody era) =>
-  UTxO era ->
-  TxBody era ->
-  GenDelegs (EraCrypto era) ->
-  Set (KeyHash 'Witness (EraCrypto era))
-shelleyWitsVKeyNeeded utxo txBody genDelegs =
-  witsVKeyNeededNoGov utxo txBody
-    `Set.union` witsVKeyNeededGov txBody genDelegs
-{-# DEPRECATED shelleyWitsVKeyNeeded "Use `getShelleyWitsVKeyNeeded` instead" #-}
-
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
 validateMetadata :: EraTx era => PParams era -> Tx era -> Test (ShelleyUtxowPredFailure era)
@@ -543,28 +502,3 @@ validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKey
    in failureUnless
         (not (null mirCerts) ==> Set.size genSig >= fromIntegral coreNodeQuorum)
         $ MIRInsufficientGenesisSigsUTXOW genSig
-
--- | Deprecated.
-proposedUpdatesWitnesses ::
-  StrictMaybe (Update era) ->
-  GenDelegs (EraCrypto era) ->
-  Set (KeyHash 'Witness (EraCrypto era))
-proposedUpdatesWitnesses SNothing _ = Set.empty
-proposedUpdatesWitnesses (SJust (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
-  Set.map asWitness . Set.fromList $ Map.elems updateKeys''
-  where
-    updateKeys' = eval (Map.keysSet pup ◁ genDelegs)
-    updateKeys'' = Map.map genDelegKeyHash updateKeys'
-
--- | Calculate the set of hash keys of the required witnesses for update
--- proposals.
-propWits ::
-  Maybe (Update era) ->
-  GenDelegs (EraCrypto era) ->
-  Set (KeyHash 'Witness (EraCrypto era))
-propWits mu = proposedUpdatesWitnesses (maybeToStrictMaybe mu)
-{-# DEPRECATED
-  propWits
-  "This will become an internal function in the future. \
-  \ Submit an issue if you still need it. "
-  #-}
