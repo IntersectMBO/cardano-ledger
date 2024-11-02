@@ -103,11 +103,6 @@ instance NFData (PParams era) => NFData (DelegEnv era)
 data ShelleyDelegPredFailure era
   = StakeKeyAlreadyRegisteredDELEG
       !(Credential 'Staking (EraCrypto era)) -- Credential which is already registered
-  | -- | Indicates that the stake key is somehow already in the rewards map.
-    --   This error is now redundant with StakeKeyAlreadyRegisteredDELEG.
-    --   We should remove it and replace its one use with StakeKeyAlreadyRegisteredDELEG.
-    StakeKeyInRewardsDELEG
-      !(Credential 'Staking (EraCrypto era)) -- DEPRECATED, now redundant with StakeKeyAlreadyRegisteredDELEG
   | StakeKeyNotRegisteredDELEG
       !(Credential 'Staking (EraCrypto era)) -- Credential which is not registered
   | StakeKeyNonZeroAccountBalanceDELEG
@@ -188,8 +183,6 @@ instance
       encodeListLen 2 <> encCBOR (8 :: Word8) <> encCBOR m
     DuplicateGenesisVRFDELEG vrf ->
       encodeListLen 2 <> encCBOR (9 :: Word8) <> encCBOR vrf
-    StakeKeyInRewardsDELEG cred ->
-      encodeListLen 2 <> encCBOR (10 :: Word8) <> encCBOR cred
     MIRTransferNotCurrentlyAllowed ->
       encodeListLen 1 <> encCBOR (11 :: Word8)
     MIRNegativesNotCurrentlyAllowed ->
@@ -243,9 +236,6 @@ instance
       9 -> do
         vrf <- decCBOR
         pure (2, DuplicateGenesisVRFDELEG vrf)
-      10 -> do
-        kh <- decCBOR
-        pure (2, StakeKeyInRewardsDELEG kh)
       11 -> do
         pure (1, MIRTransferNotCurrentlyAllowed)
       12 -> do

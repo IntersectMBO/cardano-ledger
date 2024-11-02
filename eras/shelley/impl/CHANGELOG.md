@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Remove impossible predicate failure `StakeKeyInRewardsDELEG`
 * Remove deprecated `hashMultiSigScript` and `txwitsScript`
 * Remove deprecated `keyBy`, `requiresVKeyWitness` and `Metadata`
 * Remove deprecated `updatePParams`, `txup`, `scriptCred`, `scriptStakeCred`, `scriptsNeeded`
