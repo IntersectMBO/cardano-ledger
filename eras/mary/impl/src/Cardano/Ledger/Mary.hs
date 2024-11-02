@@ -2,8 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
--- CanStartFromGenesis
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Mary (
@@ -18,7 +16,6 @@ where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
@@ -42,6 +39,3 @@ instance
 instance
   (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
   ApplyBlock (MaryEra c)
-
-instance Crypto c => CanStartFromGenesis (MaryEra c) where
-  fromShelleyPParams () = translateEra' NoGenesis . fromShelleyPParams ()

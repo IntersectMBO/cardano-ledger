@@ -25,7 +25,6 @@ library
         Cardano.Ledger.Shelley.Address.Bootstrap
         Cardano.Ledger.Shelley.API
         Cardano.Ledger.Shelley.API.ByronTranslation
-        Cardano.Ledger.Shelley.API.Genesis
         Cardano.Ledger.Shelley.API.Validation
         Cardano.Ledger.Shelley.API.Wallet
         Cardano.Ledger.Shelley.API.Mempool

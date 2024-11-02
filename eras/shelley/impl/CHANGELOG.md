@@ -2,6 +2,8 @@
 
 ## 1.15.0.0
 
+* Remove `Cardano.Ledger.Shelley.API.Genesis` module with deprecated type class
+  `CanStartFromGenesis`. Also removes helper binding `initialStateFromGenesis`.
 * Remove deprecated `ShelleyEraCrypto`
 * Remove deprecated `evaluateMinLovelaceOutput`, `addShelleyKeyWitnesses`, `evaluateTransactionBalance`
 * Remove deprecated `KeyPairs` and stop exporting `KeyPair`

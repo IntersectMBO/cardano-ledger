@@ -5,7 +5,6 @@ module Cardano.Ledger.Shelley.API (
 where
 
 import Cardano.Ledger.Shelley.API.ByronTranslation as X
-import Cardano.Ledger.Shelley.API.Genesis as X
 import Cardano.Ledger.Shelley.API.Mempool as X
 import Cardano.Ledger.Shelley.API.Types as X
 import Cardano.Ledger.Shelley.API.Validation as X
