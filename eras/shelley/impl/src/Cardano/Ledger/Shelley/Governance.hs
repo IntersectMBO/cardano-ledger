@@ -28,12 +28,6 @@ module Cardano.Ledger.Shelley.Governance (
   curPParamsShelleyGovStateL,
   prevPParamsShelleyGovStateL,
   futurePParamsShelleyGovStateL,
-
-  -- * Deprecations
-  proposals,
-  futureProposals,
-  sgovPp,
-  sgovPrevPp,
 ) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe, maybeToStrictMaybe)
@@ -208,19 +202,6 @@ instance NFData (PParams era) => NFData (FuturePParams era) where
     NoPParamsUpdate -> ()
     PotentialPParamsUpdate pp -> rnf pp
     DefinitePParamsUpdate pp -> rnf pp
-
-proposals :: ShelleyGovState era -> ProposedPPUpdates era
-proposals = sgsCurProposals
-{-# DEPRECATED proposals "In favor of `sgsCurProposals`" #-}
-futureProposals :: ShelleyGovState era -> ProposedPPUpdates era
-futureProposals = sgsFutureProposals
-{-# DEPRECATED futureProposals "In favor of `sgsFutureProposals`" #-}
-sgovPp :: ShelleyGovState era -> PParams era
-sgovPp = sgsCurPParams
-{-# DEPRECATED sgovPp "In favor of `sgsCurPParams`" #-}
-sgovPrevPp :: ShelleyGovState era -> PParams era
-sgovPrevPp = sgsPrevPParams
-{-# DEPRECATED sgovPrevPp "In favor of `sgsPrevPParams`" #-}
 
 proposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
 proposalsL = lens sgsCurProposals (\sgov x -> sgov {sgsCurProposals = x})

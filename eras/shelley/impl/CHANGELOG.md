@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Remove deprecated `proposals`, `futureProposals`, `sgovPp` and `sgovPrevPp`
 * Remove deprecated module `Cardano.Ledger.Shelley.Metadata`
 * Remove deprecated module `Cardano.Ledger.Shelley.PoolParams`
 * Remove deprecated module `Cardano.Ledger.Shelley.EpochBoundary`
