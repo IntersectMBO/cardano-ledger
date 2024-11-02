@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Remove deprecated module `Cardano.Ledger.Alonzo.Data`
 * Use `Mismatch` to clarify predicate failures. #4711
 
 ### `testlib`
