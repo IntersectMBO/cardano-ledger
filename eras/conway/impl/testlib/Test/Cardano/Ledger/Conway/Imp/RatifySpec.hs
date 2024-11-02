@@ -41,6 +41,7 @@ spec ::
 spec = do
   votingSpec
   delayingActionsSpec
+  spoVotesCommitteeUpdates
   committeeMinSizeAffectsInFlightProposalsSpec
   paramChangeAffectsProposalsSpec
   committeeExpiryResignationDiscountSpec
@@ -509,6 +510,39 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       isCommitteeAccepted gaiTW `shouldReturn` True
       passNEpochs 2
       getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` (treasury <-> amount)
+
+spoVotesCommitteeUpdates ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+spoVotesCommitteeUpdates =
+  describe "Counting of SPO votes" $ do
+    describe "All gov action other than HardForkInitiation" $ do
+      it "NoConfidence" $ whenPostBootstrap $ do
+        (spoK1, _, _) <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
+        modifyPParams $ ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 1 %! 2
+        modifyPParams $ ppDRepVotingThresholdsL .~ def
+        gai <- submitGovAction $ NoConfidence SNothing
+        -- 1 % 4 stake yes; 3 % 4 stake no; yes stake < 1 % 2
+        submitYesVote_ (StakePoolVoter spoK1) gai
+        passNEpochs 2
+        getLastEnactedCommittee `shouldReturn` SNothing
+      it "CommitteeUpdate" $ whenPostBootstrap $ do
+        (spoK1, _, _) <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
+        modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
+        modifyPParams $ ppDRepVotingThresholdsL .~ def
+        cc <- KeyHashObj <$> freshKeyHash
+        gai <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 5)] (1 %! 2)
+        -- 1 % 4 stake yes; 3 % 4 stake no; yes stake < 1 % 2
+        submitYesVote_ (StakePoolVoter spoK1) gai
+        passNEpochs 2
+        getLastEnactedCommittee `shouldReturn` SNothing
 
 spoVotesForHardForkInitiation ::
   forall era.
