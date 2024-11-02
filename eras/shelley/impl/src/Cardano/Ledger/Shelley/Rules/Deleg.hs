@@ -106,7 +106,7 @@ data ShelleyDelegPredFailure era
   | StakeKeyNotRegisteredDELEG
       !(Credential 'Staking (EraCrypto era)) -- Credential which is not registered
   | StakeKeyNonZeroAccountBalanceDELEG
-      !(Maybe Coin) -- The remaining reward account balance, if it exists
+      !Coin -- The remaining reward account balance
   | StakeDelegationImpossibleDELEG
       !(Credential 'Staking (EraCrypto era)) -- Credential that is not registered
   | WrongCertificateTypeDELEG -- The TxCertPool constructor should not be used by this transition
@@ -275,7 +275,7 @@ delegationTransition = do
             guard (UM.rdReward rd /= mempty)
             Just $ UM.fromCompact (UM.rdReward rd)
       isJust mUMElem ?! StakeKeyNotRegisteredDELEG cred
-      failOnJust checkStakeKeyHasZeroRewardBalance (StakeKeyNonZeroAccountBalanceDELEG . Just)
+      failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyNonZeroAccountBalanceDELEG
       pure $ ds {dsUnified = umap}
     DelegStakeTxCert hk dpool -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec

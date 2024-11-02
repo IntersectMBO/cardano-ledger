@@ -3,6 +3,7 @@
 ## 1.15.0.0
 
 * Remove impossible predicate failure `StakeKeyInRewardsDELEG`
+* Change parameter type  of `StakeKeyNonZeroAccountBalanceDELEG` from  `Maybe Coin` to `Coin`
 * Remove deprecated `hashMultiSigScript` and `txwitsScript`
 * Remove deprecated `keyBy`, `requiresVKeyWitness` and `Metadata`
 * Remove deprecated `updatePParams`, `txup`, `scriptCred`, `scriptStakeCred`, `scriptsNeeded`
