@@ -2,7 +2,10 @@
 
 ## 1.12.0.0
 
+* Remove deprecated `alonzoGenesisAesonPairs`, `coinsPerUTxOWord`, `costmdls`, `prices`, `maxTxExUnits`, `maxBlockExUnits`, `maxValSize`, `collateralPercentage` and `maxCollateralInputs`
 * Remove deprecated module `Cardano.Ledger.Alonzo.Data`
+* Remove deprecated module `Cardano.Ledger.Alonzo.Scripts.Data`
+* Remove deprecated module `Cardano.Ledger.Alonzo.Language`
 * Use `Mismatch` to clarify predicate failures. #4711
 
 ### `testlib`
