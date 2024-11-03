@@ -107,6 +107,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Typeable (typeRep)
 import Data.Void (Void)
+import GHC.Conc (par)
 import NoThunks.Class (NoThunks (..))
 import Validation (Validation (..), eitherToValidation)
 
@@ -362,7 +363,7 @@ validateTrans ::
   (e -> PredicateFailure sts) ->
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
-validateTrans t v = liftF $ Predicate v t ()
+validateTrans t v = v `par` liftF $ Predicate v t ()
 
 -- | Same as `validation`, except with ability to translate opaque failures
 -- into `PredicateFailure`s with a help of supplied function.
@@ -374,7 +375,7 @@ validateTransLabeled ::
   -- | Actual validations to be executed
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
-validateTransLabeled t labels v = liftF $ Label labels (liftF $ Predicate v t ()) ()
+validateTransLabeled t labels v = v `par` liftF $ Label labels (liftF $ Predicate v t ()) ()
 
 -- | Oh noes!
 --
@@ -382,8 +383,8 @@ validateTransLabeled t labels v = liftF $ Label labels (liftF $ Predicate v t ()
 --   a clause which will throw that failure if the condition fails.
 (?!) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
 (?!) cond onFail =
-  liftF $
-    Predicate (if cond then Success () else Failure (onFail :| [])) id ()
+  let validation = if cond then Success () else Failure (onFail :| [])
+   in validation `par` liftF $ Predicate validation id ()
 
 infix 1 ?!
 
@@ -393,7 +394,9 @@ failBecause = (False ?!)
 -- | Produce a predicate failure when condition contains a Just value, contents of which
 -- can be used inside the predicate failure
 failOnJust :: Maybe a -> (a -> PredicateFailure sts) -> Rule sts ctx ()
-failOnJust cond onJust = liftF $ Predicate (failureOnJust cond onJust) id ()
+failOnJust cond onJust =
+  let validation = failureOnJust cond onJust
+   in validation `par` liftF $ Predicate validation id ()
 
 -- | Produce a failure when condition contains a Just value, contents of which can be used
 -- inside the failure
@@ -406,7 +409,9 @@ failureOnJust cond onJust =
 -- | Produce a predicate failure when supplied foldable is not empty, contents of which
 -- will be converted to a NonEmpty list and can be used inside the predicate failure.
 failOnNonEmpty :: Foldable f => f a -> (NonEmpty a -> PredicateFailure sts) -> Rule sts ctx ()
-failOnNonEmpty cond onNonEmpty = liftF $ Predicate (failureOnNonEmpty cond onNonEmpty) id ()
+failOnNonEmpty cond onNonEmpty =
+  let validation = failureOnNonEmpty cond onNonEmpty
+   in validation `par` liftF $ Predicate validation id ()
 
 -- | Produce a failure when supplied foldable is not empty, contents of which will be
 -- converted to a NonEmpty list and theh can be used inside the  failure.
@@ -418,8 +423,8 @@ failureOnNonEmpty cond = failureOnJust (NE.nonEmpty (F.toList cond))
 --   We interpret this as "What?" "No!" "Because:"
 (?!:) :: Either e () -> (e -> PredicateFailure sts) -> Rule sts ctx ()
 (?!:) cond onFail =
-  liftF $
-    Predicate (eitherToValidation $ first pure cond) onFail ()
+  let validation = eitherToValidation $ first pure cond
+   in validation `par` liftF $ Predicate validation onFail ()
 
 -- | Labeled predicate. This may be used to control which predicates are run
 -- using 'ValidateSuchThat'.
