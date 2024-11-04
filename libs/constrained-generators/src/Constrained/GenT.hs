@@ -107,7 +107,7 @@ fromGE _ (Result _ a) = a
 fromGE a (GenError [] e) = a e
 fromGE a (GenError es e) = a $ foldr1 (<>) es <> e
 fromGE _ (FatalError es e) =
-  error . unlines $ concat (map NE.toList es) ++ (NE.toList e)
+  error . ("\n" ++) . unlines $ concat (map NE.toList es) ++ (NE.toList e)
 
 errorGE :: GE a -> a
 errorGE = fromGE (error . unlines . NE.toList)
@@ -265,10 +265,10 @@ sizeT = GenT $ \mode -> sized $ \n -> runGenT (pure n) mode
 -- the program to control what happens in those cases.
 
 -- | Always succeeds, but returns the internal GE structure for analysis
-inspect :: MonadGenError m => GenT GE x -> GenT m (GE x)
+inspect :: forall m x. MonadGenError m => GenT GE x -> GenT m (GE x)
 inspect (GenT f) = GenT g
   where
-    g mode = do result <- f mode; pure (pure result)
+    g mode = do result <- f mode; pure @Gen (pure @m result)
 
 -- | Ignore all kinds of Errors, by squashing them into Nothing
 tryGenT :: MonadGenError m => GenT GE a -> GenT m (Maybe a)
@@ -332,3 +332,24 @@ frequency2 (n, g1) (m, g2)
         Right x -> pure x
 
 -- ======================================
+
+-- | Temporarily extend the stack while executing 'm', and revert to the old stack if successful
+push :: forall m a. MonadGenError m => [String] -> GenT GE a -> GenT m a
+push [] m = dropGen m
+push (x : xs) m =
+  case explain (x NE.:| xs) m of
+    GenT f -> (GenT g)
+      where
+        g :: GenMode -> Gen (m a)
+        g mode = do
+          result <- f mode
+          case result of
+            Result (_ : ys) a -> pure $ runGE (Result ys a)
+            other -> pure $ runGE other
+
+pushGE :: forall a. [String] -> GE a -> GE a
+pushGE [] x = x
+pushGE (x : xs) m = do
+  case explain (x NE.:| xs) m of
+    Result (_ : ys) a -> Result ys a
+    other -> other

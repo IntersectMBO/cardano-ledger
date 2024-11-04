@@ -73,6 +73,8 @@ instance FunctionLike (GenericsFn fn) where
 
 instance BaseUniverse fn => Functions (GenericsFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
+  propagateSpecFun fn ctx (ExplainSpec [] s) = propagateSpecFun fn ctx s
+  propagateSpecFun fn ctx (ExplainSpec es s) = ExplainSpec es $ propagateSpecFun fn ctx s
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
     _
@@ -169,6 +171,8 @@ instance
 
 instance BaseUniverse fn => Functions (SumFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
+  propagateSpecFun fn ctx (ExplainSpec [] s) = propagateSpecFun fn ctx s
+  propagateSpecFun fn ctx (ExplainSpec es s) = ExplainSpec es $ propagateSpecFun fn ctx s
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
     _
@@ -182,13 +186,18 @@ instance BaseUniverse fn => Functions (SumFn fn) fn where
       MemberSpec es ->
         memberSpecList
           [a | SumLeft a <- NE.toList es]
-          (pure "propagateSpecFun InjLeft on (MemberSpec es) with no SumLeft in es")
+          ( pure $
+              "propagateSpecFun (InjLeft HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
+          )
     InjRight | NilCtx HOLE <- ctx -> case spec of
       TypeSpec (SumSpec _ _ sr) cant -> sr <> foldMap notEqualSpec [a | SumRight a <- cant]
       MemberSpec es ->
         memberSpecList
           [a | SumRight a <- NE.toList es]
-          (pure "propagateSpecFun InjRight on (MemberSpec es) with no SumRight in es")
+          ( pure $
+              "propagateSpecFun (InjRight HOLE) on (MemberSpec es) with no SumRight in es: "
+                ++ show (NE.toList es)
+          )
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of

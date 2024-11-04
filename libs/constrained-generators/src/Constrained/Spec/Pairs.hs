@@ -94,6 +94,8 @@ instance (HasSpec fn a, HasSpec fn b) => Show (PairSpec fn a b) where
 
 instance BaseUniverse fn => Functions (PairFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
+  propagateSpecFun fn ctx (ExplainSpec [] s) = propagateSpecFun fn ctx s
+  propagateSpecFun fn ctx (ExplainSpec es s) = ExplainSpec es $ propagateSpecFun fn ctx s
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
     Fst ->

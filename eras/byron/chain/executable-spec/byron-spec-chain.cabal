@@ -62,5 +62,5 @@ test-suite chain-rules-test
         tasty-hedgehog,
         tasty-hunit,
         byron-spec-chain,
-        byron-spec-ledger,
+        byron-spec-ledger >=1.0,
         small-steps:{small-steps, testlib} >=1.1

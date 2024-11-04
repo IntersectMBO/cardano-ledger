@@ -144,18 +144,27 @@ instance
 
   combineSpec
     (MapSpec mHint mustKeys mustVals size kvs foldSpec)
-    (MapSpec mHint' mustKeys' mustVals' size' kvs' foldSpec') = fromGESpec $ do
-      typeSpec
-        . MapSpec
-          -- This is min because that allows more compositionality - if a spec specifies a
-          -- low upper bound because some part of the spec will be slow it doesn't make sense
-          -- to increase it somewhere else because that part isn't slow.
-          (unionWithMaybe min mHint mHint')
-          (mustKeys <> mustKeys')
-          (nub $ mustVals <> mustVals')
-          (size <> size')
-          (kvs <> kvs')
-        <$> combineFoldSpec foldSpec foldSpec'
+    (MapSpec mHint' mustKeys' mustVals' size' kvs' foldSpec') = case combineFoldSpec foldSpec foldSpec' of
+      Left msgs ->
+        ErrorSpec $
+          NE.fromList $
+            [ "Error in combining FoldSpec in combineSpec for Map"
+            , "  " ++ show foldSpec
+            , "  " ++ show foldSpec'
+            ]
+              ++ msgs
+      Right foldSpec'' ->
+        typeSpec $
+          MapSpec
+            -- This is min because that allows more compositionality - if a spec specifies a
+            -- low upper bound because some part of the spec will be slow it doesn't make sense
+            -- to increase it somewhere else because that part isn't slow.
+            (unionWithMaybe min mHint mHint')
+            (mustKeys <> mustKeys')
+            (nub $ mustVals <> mustVals')
+            (size <> size')
+            (kvs <> kvs')
+            foldSpec''
 
   conformsTo m (MapSpec _ mustKeys mustVals size kvs foldSpec) =
     and
@@ -283,6 +292,8 @@ instance
 
 instance BaseUniverse fn => Functions (MapFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
+  propagateSpecFun fn ctx (ExplainSpec [] s) = propagateSpecFun fn ctx s
+  propagateSpecFun fn ctx (ExplainSpec es s) = ExplainSpec es $ propagateSpecFun fn ctx s
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
     _
@@ -341,7 +352,8 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
                     (Map.keys $ Map.filter ((`conformsToSpec` spec) . Just) m)
                     ( NE.fromList
                         [ "propagateSpecFun (lookup HOLE ms) on (MemberSpec ms)"
-                        , "forall pairs (d,r) in ms, no 'd' conforms."
+                        , "forall pairs (d,r) in ms, no 'd' conforms to spec"
+                        , "  " ++ show spec
                         ]
                     )
           | Value k :! NilCtx HOLE <- ctx

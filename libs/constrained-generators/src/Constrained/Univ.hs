@@ -26,6 +26,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.Typeable
 
 class FunctionLike fn where
   -- | The semantics of a function is given by `sem`
@@ -330,31 +331,34 @@ type family SumOver as where
 singletonFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[a] (Set a)
 singletonFn = injectFn $ Singleton @_ @fn
 
-unionFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a, Set a] (Set a)
+unionFn ::
+  forall fn a. (Member (SetFn fn) fn, Ord a, Show a, Typeable a) => fn '[Set a, Set a] (Set a)
 unionFn = injectFn $ Union @_ @fn
 
-subsetFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a, Set a] Bool
+subsetFn ::
+  forall fn a. (Member (SetFn fn) fn, Ord a, Show a, Typeable a) => fn '[Set a, Set a] Bool
 subsetFn = injectFn $ Subset @_ @fn
 
-memberFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[a, Set a] Bool
+memberFn :: forall fn a. (Member (SetFn fn) fn, Ord a, Show a, Typeable a) => fn '[a, Set a] Bool
 memberFn = injectFn $ Member @_ @fn
 
-elemFn :: forall fn a. (Member (SetFn fn) fn, Eq a) => fn '[a, [a]] Bool
+elemFn :: forall fn a. (Member (SetFn fn) fn, Eq a, Show a, Typeable a) => fn '[a, [a]] Bool
 elemFn = injectFn $ Elem @_ @fn
 
-disjointFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a, Set a] Bool
+disjointFn ::
+  forall fn a. (Member (SetFn fn) fn, Ord a, Show a, Typeable a) => fn '[Set a, Set a] Bool
 disjointFn = injectFn $ Disjoint @_ @fn
 
 fromListFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[[a]] (Set a)
 fromListFn = injectFn $ FromList @_ @fn
 
 data SetFn (fn :: [Type] -> Type -> Type) args res where
-  Subset :: Ord a => SetFn fn '[Set a, Set a] Bool
-  Disjoint :: Ord a => SetFn fn '[Set a, Set a] Bool
-  Member :: Ord a => SetFn fn '[a, Set a] Bool
+  Subset :: (Ord a, Show a, Typeable a) => SetFn fn '[Set a, Set a] Bool
+  Disjoint :: (Ord a, Show a, Typeable a) => SetFn fn '[Set a, Set a] Bool
+  Member :: (Ord a, Show a, Typeable a) => SetFn fn '[a, Set a] Bool
   Singleton :: Ord a => SetFn fn '[a] (Set a)
-  Union :: Ord a => SetFn fn '[Set a, Set a] (Set a)
-  Elem :: Eq a => SetFn fn '[a, [a]] Bool
+  Union :: (Ord a, Show a, Typeable a) => SetFn fn '[Set a, Set a] (Set a)
+  Elem :: (Eq a, Show a, Typeable a) => SetFn fn '[a, [a]] Bool
   FromList :: Ord a => SetFn fn '[[a]] (Set a)
 
 deriving instance Show (SetFn fn args res)

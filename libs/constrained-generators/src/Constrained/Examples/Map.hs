@@ -9,14 +9,13 @@
 
 module Constrained.Examples.Map where
 
+import Constrained
+import Constrained.Examples.Basic
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word
-
-import Constrained
-import Constrained.Examples.Basic
 
 mapElemSpec :: Specification BaseFn (Map Int (Bool, Int))
 mapElemSpec = constrained $ \m ->
@@ -127,6 +126,7 @@ mapSetSmall = constrained $ \x ->
   forAll (dom_ x) $ \d ->
     assert $ subset_ d $ lit (Set.fromList [3 .. 4])
 
+-- | this tests the function saturatePred
 mapIsJust :: Specification BaseFn (Int, Int)
 mapIsJust = constrained' $ \ [var| x |] [var| y |] ->
-  assert $ cJust_ x ==. lookup_ y (lit $ Map.fromList [(z, z) | z <- [100 .. 102]])
+  cJust_ x ==. lookup_ y (lit $ Map.fromList [(z, z) | z <- [100 .. 102]])

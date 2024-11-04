@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -173,7 +172,7 @@ tests nightly =
         prop "Bool" $ prop_gen_sound @BaseFn @Bool
         prop "(Int, Int)" $ prop_gen_sound @BaseFn @(Int, Int)
         prop "Map Int Int" $ prop_gen_sound @BaseFn @(Map Int Int)
-        -- prop "Set Int" $ prop_gen_sound @BaseFn @(Set Int)
+        prop "Set Int" $ prop_gen_sound @BaseFn @(Set Int)
         prop "Set Bool" $ prop_gen_sound @BaseFn @(Set Bool)
         prop "[Int]" $ prop_gen_sound @BaseFn @[Int]
         prop "[(Int, Int)]" $ prop_gen_sound @BaseFn @[(Int, Int)]

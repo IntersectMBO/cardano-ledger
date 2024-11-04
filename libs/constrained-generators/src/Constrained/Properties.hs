@@ -131,11 +131,13 @@ prop_gen_sound spec =
                     conformsToSpecProp a spec
 
 specType :: Specification fn a -> String
-specType TrueSpec {} = "TrueSpec"
+specType (ExplainSpec [] s) = specType s
+specType (ExplainSpec _ s) = "(ExplainSpec " ++ specType s ++ ")"
 specType SuspendedSpec {} = "SuspendedSpec"
 specType ErrorSpec {} = "ErrorSpec"
 specType MemberSpec {} = "MemberSpec"
 specType TypeSpec {} = "TypeSpec"
+specType TrueSpec {} = "TrueSpec"
 
 showCtxWith ::
   forall fn as b.
