@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `DefaultVote` and `defaultStakePoolVote`
 * Add new event `GovRemovedVotes` for invalidated votes.
 
 ### `testlib`

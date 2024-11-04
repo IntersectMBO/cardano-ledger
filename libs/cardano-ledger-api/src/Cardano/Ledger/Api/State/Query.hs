@@ -60,7 +60,6 @@ module Cardano.Ledger.Api.State.Query (
   getNextEpochCommitteeMembers,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (raCredential))
 import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   CommitteeMemberState (..),
   CommitteeMembersState (..),
@@ -78,11 +77,13 @@ import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   DRepPulser (..),
   DRepPulsingState (..),
+  DefaultVote (..),
   GovActionId,
   GovActionState (..),
   PulsingSnapshot,
   RatifyState,
   committeeThresholdL,
+  defaultStakePoolVote,
   ensCommitteeL,
   finishDRepPulser,
   psDRepDistr,
@@ -94,7 +95,6 @@ import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolParams (PoolParams (ppRewardAccount))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), FuturePParams (..))
 import Cardano.Ledger.Shelley.LedgerState
@@ -359,18 +359,6 @@ finishedPulserState ::
   (PulsingSnapshot era, RatifyState era)
 finishedPulserState nes = finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)
 
-data DefaultVote
-  = -- | Reward account is delegated to a @DRepKeyHash@, @DRepScriptHash@ or undelegated:
-    --   default vote is @No@.
-    DefaultNo
-  | -- | Reward account is delegated to @DRepAlwaysAbstain@:
-    --   default vote is @Abstain@, except for @HardForkInitiation@ actions.
-    DefaultAbstain
-  | -- | Reward account is delegated to @DRepAlwaysNoConfidence@:
-    --   default vote is @Yes@ in case of a @NoConfidence@ action, otherwise @No@.
-    DefaultNoConfidence
-  deriving (Eq, Show)
-
 -- | Query a stake pool's reward account delegatee which determines the pool's default vote
 -- in absence of an explicit vote. Note that this is different from the delegatee determined
 -- by the credential of the stake pool itself.
@@ -379,11 +367,5 @@ queryStakePoolDefaultVote ::
   -- | Specify the key hash of the pool whose default vote should be returned.
   KeyHash 'StakePool (EraCrypto era) ->
   DefaultVote
-queryStakePoolDefaultVote nes keyHash =
-  defaultVote $
-    Map.lookup keyHash (nes ^. nesEsL . epochStatePoolParamsL) >>= \pp ->
-      Map.lookup (raCredential $ ppRewardAccount pp) (dRepMap $ nes ^. unifiedL)
-  where
-    defaultVote (Just DRepAlwaysAbstain) = DefaultAbstain
-    defaultVote (Just DRepAlwaysNoConfidence) = DefaultNoConfidence
-    defaultVote _ = DefaultNo
+queryStakePoolDefaultVote nes poolId =
+  defaultStakePoolVote poolId (nes ^. nesEsL . epochStatePoolParamsL) (dRepMap $ nes ^. unifiedL)

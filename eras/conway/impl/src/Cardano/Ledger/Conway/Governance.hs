@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -161,6 +162,8 @@ module Cardano.Ledger.Conway.Governance (
   reDRepStateL,
   reCurrentEpochL,
   reCommitteeStateL,
+  DefaultVote (..),
+  defaultStakePoolVote,
 
   -- * Exported for testing
   pparamsUpdateThreshold,
@@ -170,6 +173,7 @@ module Cardano.Ledger.Conway.Governance (
   showGovActionType,
 ) where
 
+import Cardano.Ledger.Address (RewardAccount (raCredential))
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Globals (..),
@@ -199,9 +203,12 @@ import Cardano.Ledger.Conway.Governance.Internal
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Conway.Governance.Proposals
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
+import Cardano.Ledger.PoolParams (PoolParams (ppRewardAccount))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -504,3 +511,33 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
 -- point. Whenever pulser is already in computed state this will be a noop.
 forceDRepPulsingState :: ConwayEraGov era => NewEpochState era -> NewEpochState era
 forceDRepPulsingState nes = nes & newEpochStateDRepPulsingStateL %~ completeDRepPulsingState
+
+-- | Default vote that will be used for Stake Pool.
+data DefaultVote
+  = -- | Reward account is delegated to a @DRepKeyHash@, @DRepScriptHash@ or undelegated:
+    --   default vote is @No@.
+    DefaultNo
+  | -- | Reward account is delegated to @DRepAlwaysAbstain@:
+    --   default vote is @Abstain@, except for @HardForkInitiation@ actions.
+    DefaultAbstain
+  | -- | Reward account is delegated to @DRepAlwaysNoConfidence@:
+    --   default vote is @Yes@ in case of a @NoConfidence@ action, otherwise @No@.
+    DefaultNoConfidence
+  deriving (Eq, Show)
+
+defaultStakePoolVote ::
+  -- | Specify the key hash of the pool whose default vote should be returned.
+  KeyHash 'StakePool c ->
+  -- | Registered Stake Pools
+  Map (KeyHash 'StakePool c) (PoolParams c) ->
+  -- | Delegations of staking credneitals to a DRep
+  Map (Credential 'Staking c) (DRep c) ->
+  DefaultVote
+defaultStakePoolVote poolId poolParams dRepDelegations =
+  toDefaultVote $
+    Map.lookup poolId poolParams >>= \d ->
+      Map.lookup (raCredential $ ppRewardAccount d) dRepDelegations
+  where
+    toDefaultVote (Just DRepAlwaysAbstain) = DefaultAbstain
+    toDefaultVote (Just DRepAlwaysNoConfidence) = DefaultNoConfidence
+    toDefaultVote _ = DefaultNo
