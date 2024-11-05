@@ -28,17 +28,6 @@ module Cardano.Ledger.Alonzo.Genesis (
     agMaxCollateralInputs
   ),
   toAlonzoGenesisPairs,
-
-  -- * Deprecated
-  alonzoGenesisAesonPairs,
-  coinsPerUTxOWord,
-  costmdls,
-  prices,
-  maxTxExUnits,
-  maxBlockExUnits,
-  maxValSize,
-  collateralPercentage,
-  maxCollateralInputs,
 )
 where
 
@@ -196,48 +185,12 @@ instance ToJSON AlonzoGenesis where
 
 toAlonzoGenesisPairs :: Aeson.KeyValue e a => AlonzoGenesis -> [a]
 toAlonzoGenesisPairs ag =
-  [ "lovelacePerUTxOWord" .= coinsPerUTxOWord ag
-  , "costModels" .= costmdls ag
-  , "executionPrices" .= prices ag
-  , "maxTxExUnits" .= maxTxExUnits ag
-  , "maxBlockExUnits" .= maxBlockExUnits ag
-  , "maxValueSize" .= maxValSize ag
-  , "collateralPercentage" .= collateralPercentage ag
-  , "maxCollateralInputs" .= maxCollateralInputs ag
+  [ "lovelacePerUTxOWord" .= agCoinsPerUTxOWord ag
+  , "costModels" .= agCostModels ag
+  , "executionPrices" .= agPrices ag
+  , "maxTxExUnits" .= agMaxTxExUnits ag
+  , "maxBlockExUnits" .= agMaxBlockExUnits ag
+  , "maxValueSize" .= agMaxValSize ag
+  , "collateralPercentage" .= agCollateralPercentage ag
+  , "maxCollateralInputs" .= agMaxCollateralInputs ag
   ]
-
-alonzoGenesisAesonPairs :: Aeson.KeyValue e a => AlonzoGenesis -> [a]
-alonzoGenesisAesonPairs = toAlonzoGenesisPairs
-{-# DEPRECATED alonzoGenesisAesonPairs "In favor of `toAlonzoGenesisPairs`" #-}
-
-coinsPerUTxOWord :: AlonzoGenesis -> CoinPerWord
-coinsPerUTxOWord = agCoinsPerUTxOWord
-{-# DEPRECATED coinsPerUTxOWord "Use `agCoinsPerUTxOWord` instead" #-}
-
-costmdls :: AlonzoGenesis -> CostModels
-costmdls = agCostModels
-{-# DEPRECATED costmdls "Use `agCostModels` instead" #-}
-
-prices :: AlonzoGenesis -> Prices
-prices = agPrices
-{-# DEPRECATED prices "Use `agPrices` instead" #-}
-
-maxTxExUnits :: AlonzoGenesis -> ExUnits
-maxTxExUnits = agMaxTxExUnits
-{-# DEPRECATED maxTxExUnits "Use `agMaxTxExUnits` instead" #-}
-
-maxBlockExUnits :: AlonzoGenesis -> ExUnits
-maxBlockExUnits = agMaxBlockExUnits
-{-# DEPRECATED maxBlockExUnits "Use `agMaxBlockExUnits` instead" #-}
-
-maxValSize :: AlonzoGenesis -> Natural
-maxValSize = agMaxValSize
-{-# DEPRECATED maxValSize "Use `agMaxValSize` instead" #-}
-
-collateralPercentage :: AlonzoGenesis -> Natural
-collateralPercentage = agCollateralPercentage
-{-# DEPRECATED collateralPercentage "Use `agCollateralPercentage` instead" #-}
-
-maxCollateralInputs :: AlonzoGenesis -> Natural
-maxCollateralInputs = agMaxCollateralInputs
-{-# DEPRECATED maxCollateralInputs "Use `agMaxCollateralInputs` instead" #-}

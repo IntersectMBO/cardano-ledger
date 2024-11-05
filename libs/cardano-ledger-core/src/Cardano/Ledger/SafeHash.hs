@@ -45,16 +45,6 @@ module Cardano.Ledger.SafeHash (
   castSafeHash,
   extractHash,
   indexProxy,
-
-  -- * Safe hashing aggregates
-
-  --
-  -- $AGG
-  Safe (..),
-  hashSafeList,
-
-  -- * Deprecated
-  HasAlgorithm,
 )
 where
 
@@ -71,7 +61,6 @@ import qualified Data.ByteString as BS (length)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Default (Default (..))
-import Data.Foldable (fold)
 import Data.Typeable
 import NoThunks.Class (NoThunks (..))
 
@@ -111,10 +100,6 @@ deriving instance Crypto c => FromJSON (SafeHash c index)
 
 instance Crypto c => Default (SafeHash c i) where
   def = unsafeMakeSafeHash def
-
-{-# DEPRECATED HasAlgorithm "Use `Hash.HashAlgorithm (HASH c)` instead" #-}
-
-type HasAlgorithm c = Hash.HashAlgorithm (HASH c)
 
 -- | Extract the hash out of a 'SafeHash'
 extractHash :: SafeHash c i -> Hash.Hash (HASH c) i
@@ -228,16 +213,3 @@ class SafeToHash x => HashWithCrypto x index | x -> index where
 -- | To change the index parameter of SafeHash (which is a phantom type) use castSafeHash
 castSafeHash :: forall i j c. SafeHash c i -> SafeHash c j
 castSafeHash (SafeHash h) = SafeHash (Hash.castHash h)
-
--- AGG
-
--- | Sometimes one wants to hash multiple things, simply by concatenating
---   all the bytes. This abstraction allows one to do that safely.
-data Safe where
-  Safe :: SafeToHash x => x -> Safe
-
-instance SafeToHash Safe where
-  originalBytes (Safe x) = originalBytes x
-
-hashSafeList :: Hash.HashAlgorithm (HASH c) => Proxy c -> Proxy index -> [Safe] -> SafeHash c index
-hashSafeList pc pindex xs = makeHashWithExplicitProxys pc pindex (fold $ originalBytes <$> xs)

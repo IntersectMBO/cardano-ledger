@@ -2,6 +2,7 @@
 
 ## 1.5.0.0
 
+* Remove deprecated `decodeAnnotator`, `decCBORMaybe`, `encCBORMaybe`, `sizedDecoder`, `encodePair`
 * Add `decodeAnnotated`
 * Add `getOriginalBytes`
 * `toPlainDecoder` now optionally expects one extra argument for the original `ByteString`

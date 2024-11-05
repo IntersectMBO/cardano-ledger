@@ -1905,9 +1905,8 @@ instance Reflect era => PrettyA (AlonzoUtxoPredFailure era) where
 ppShelleyDelegPredFailure :: ShelleyDelegPredFailure era -> PDoc
 ppShelleyDelegPredFailure x = case x of
   StakeKeyAlreadyRegisteredDELEG cred -> ppSexp "StakeKeyAlreadyRegisteredDELEG" [pcCredential cred]
-  StakeKeyInRewardsDELEG cred -> ppSexp "StakeKeyInRewardsDELEG" [pcCredential cred]
   Shelley.StakeKeyNotRegisteredDELEG cred -> ppSexp "StakeKeyNotRegisteredDELEG" [pcCredential cred]
-  StakeKeyNonZeroAccountBalanceDELEG mcoin -> ppSexp " StakeKeyNonZeroAccountBalanceDELEG" [ppMaybe pcCoin mcoin]
+  StakeKeyNonZeroAccountBalanceDELEG c -> ppSexp "StakeKeyNonZeroAccountBalanceDELEG" [pcCoin c]
   StakeDelegationImpossibleDELEG cred -> ppSexp "StakeDelegationImpossibleDELEG" [pcCredential cred]
   WrongCertificateTypeDELEG -> ppSexp "WrongCertificateTypeDELEG" []
   GenesisKeyNotInMappingDELEG kh -> ppSexp "GenesisKeyNotInMappingDELEG" [pcKeyHash kh]

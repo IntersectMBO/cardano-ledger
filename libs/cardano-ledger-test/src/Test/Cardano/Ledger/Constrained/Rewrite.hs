@@ -30,7 +30,7 @@ module Test.Cardano.Ledger.Constrained.Rewrite (
   rename,
 ) where
 
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Core (Era)
 import qualified Data.Array as A
 import Data.Foldable (toList)
 import Data.Graph (Graph, SCC (AcyclicSCC, CyclicSCC), Vertex, graphFromEdges, stronglyConnComp)

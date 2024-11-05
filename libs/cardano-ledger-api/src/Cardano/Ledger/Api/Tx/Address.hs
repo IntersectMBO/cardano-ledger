@@ -25,14 +25,8 @@ module Cardano.Ledger.Api.Tx.Address (
 
   -- * Reward Account
   RewardAccount (..),
-  mkRwdAcnt,
   serialiseRewardAccount,
   deserialiseRewardAccount,
-
-  -- * Deprecations
-  RewardAcnt,
-  serialiseRewardAcnt,
-  deserialiseRewardAcnt,
 )
 where
 

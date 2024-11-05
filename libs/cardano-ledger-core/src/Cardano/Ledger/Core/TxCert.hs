@@ -16,10 +16,8 @@ module Cardano.Ledger.Core.TxCert (
   EraTxCert (..),
   pattern RegPoolTxCert,
   pattern RetirePoolTxCert,
-  Delegation (..),
   PoolCert (..),
   getPoolCertTxCert,
-  poolCWitness,
   poolCertKeyHashWitness,
   isRegStakeTxCert,
   isUnRegStakeTxCert,
@@ -33,7 +31,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core.Era (Era (EraCrypto))
 import Cardano.Ledger.Core.PParams (PParams)
 import Cardano.Ledger.Core.Translation
-import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), asWitness)
@@ -134,19 +132,6 @@ getPoolCertTxCert = \case
   RetirePoolTxCert poolId epochNo -> Just $ RetirePool poolId epochNo
   _ -> Nothing
 
--- | The delegation of one stake key to another.
-data Delegation c = Delegation
-  { dDelegator :: !(StakeCredential c)
-  , dDelegatee :: !(KeyHash 'StakePool c)
-  }
-  deriving (Eq, Generic, Show)
-{-# DEPRECATED Delegation "No longer used" #-}
-
-instance NFData (Delegation c) where
-  rnf = rwhnf
-
-instance NoThunks (Delegation c)
-
 data PoolCert c
   = -- | A stake pool registration certificate.
     RegPool !(PoolParams c)
@@ -179,11 +164,6 @@ poolCertKeyHashWitness :: PoolCert c -> KeyHash 'Witness c
 poolCertKeyHashWitness = \case
   RegPool poolParams -> asWitness $ ppId poolParams
   RetirePool poolId _ -> asWitness poolId
-
-poolCWitness :: PoolCert c -> Credential 'StakePool c
-poolCWitness (RegPool pool) = KeyHashObj $ ppId pool
-poolCWitness (RetirePool k _) = KeyHashObj k
-{-# DEPRECATED poolCWitness "As useless. PoolIds have nothing to do with credentials" #-}
 
 -- | Check if supplied TxCert is a stake registering certificate
 isRegStakeTxCert :: EraTxCert era => TxCert era -> Bool

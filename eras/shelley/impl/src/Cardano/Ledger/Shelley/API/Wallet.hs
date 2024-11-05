@@ -31,9 +31,6 @@ module Cardano.Ledger.Shelley.API.Wallet (
 
   -- * Transaction helpers
   addKeyWitnesses,
-  evaluateTransactionBalance,
-  evaluateMinLovelaceOutput,
-  addShelleyKeyWitnesses,
 
   -- * Ada pots
   AdaPots (..),
@@ -90,11 +87,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   RewardUpdate,
   UTxOState (..),
   circulation,
-  consumed,
   createRUpd,
   curPParamsEpochStateL,
   incrementalStakeDistr,
-  produced,
  )
 import Cardano.Ledger.Shelley.PoolRank (
   NonMyopic (..),
@@ -106,11 +101,9 @@ import Cardano.Ledger.Shelley.PoolRank (
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txInsFilter)
-import Cardano.Ledger.Val ((<->))
+import Cardano.Ledger.UTxO (UTxO (..), txInsFilter)
 import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
@@ -433,47 +426,8 @@ getRewardProvenance globals newepochstate =
 -- Transaction helpers
 --------------------------------------------------------------------------------
 
--- | Evaluate the minimum lovelace that a given transaction output must contain.
-evaluateMinLovelaceOutput :: EraTxOut era => PParams era -> TxOut era -> Coin
-evaluateMinLovelaceOutput = getMinCoinTxOut
-{-# DEPRECATED evaluateMinLovelaceOutput "In favor of `getMinCoinTxOut`" #-}
-
 addKeyWitnesses :: EraTx era => Tx era -> Set (WitVKey 'Witness (EraCrypto era)) -> Tx era
 addKeyWitnesses tx newWits = tx & witsTxL . addrTxWitsL %~ Set.union newWits
-
--- | Evaluate the difference between the value currently being consumed by
--- a transaction and the number of lovelace being produced.
--- This value will be zero for a valid transaction.
-evaluateTransactionBalance ::
-  EraUTxO era =>
-  -- | Current protocol parameters
-  PParams era ->
-  -- | Where the deposit info is stored
-  CertState era ->
-  -- | The UTxO relevant to the transaction.
-  UTxO era ->
-  -- | The transaction being evaluated for balance.
-  TxBody era ->
-  -- | The difference between what the transaction consumes and what it produces.
-  Value era
-evaluateTransactionBalance pp dpstate u txb =
-  consumed pp dpstate u txb <-> produced pp dpstate txb
-{-# DEPRECATED
-  evaluateTransactionBalance
-  "In favor of new API function `Cardano.Ledger.Api.Tx.Body.evalBalanceTxBody`"
-  #-}
-
---------------------------------------------------------------------------------
--- Shelley specifics
---------------------------------------------------------------------------------
-
-addShelleyKeyWitnesses ::
-  (EraTx era, Tx era ~ ShelleyTx era) =>
-  ShelleyTx era ->
-  Set (WitVKey 'Witness (EraCrypto era)) ->
-  ShelleyTx era
-addShelleyKeyWitnesses = addKeyWitnesses
-{-# DEPRECATED addShelleyKeyWitnesses "In favor of 'addKeyWitnesses'" #-}
 
 --------------------------------------------------------------------------------
 -- CBOR instances

@@ -24,9 +24,6 @@ module Cardano.Ledger.Binary.Encoding (
 
   -- * Tools
   runByteBuilder,
-
-  -- * Deprecated
-  encCBORMaybe,
 )
 where
 
@@ -113,11 +110,3 @@ runByteBuilder :: Int -> Builder -> BS.ByteString
 runByteBuilder !sizeHint =
   BSL.toStrict . toLazyByteStringWith (safeStrategy sizeHint (2 * sizeHint)) mempty
 {-# NOINLINE runByteBuilder #-}
-
---------------------------------------------------------------------------------
--- Deprecations
---------------------------------------------------------------------------------
-
-encCBORMaybe :: (a -> Encoding) -> (Maybe a -> Encoding)
-encCBORMaybe = encodeMaybe
-{-# DEPRECATED encCBORMaybe "In favor of `encodeMaybe`" #-}

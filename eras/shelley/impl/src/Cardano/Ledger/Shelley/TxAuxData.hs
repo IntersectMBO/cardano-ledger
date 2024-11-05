@@ -26,9 +26,6 @@ module Cardano.Ledger.Shelley.TxAuxData (
   -- * Re-exports
   Metadatum (..),
   validMetadatum,
-
-  -- * Deprecations
-  Metadata,
 )
 where
 
@@ -100,10 +97,6 @@ newtype ShelleyTxAuxData era
 
 instance Memoized ShelleyTxAuxData where
   type RawType ShelleyTxAuxData = ShelleyTxAuxDataRaw
-
-type Metadata era = ShelleyTxAuxData era
-
-{-# DEPRECATED Metadata "Use `ShelleyTxAuxData` instead" #-}
 
 instance Crypto c => EraTxAuxData (ShelleyEra c) where
   type TxAuxData (ShelleyEra c) = ShelleyTxAuxData (ShelleyEra c)

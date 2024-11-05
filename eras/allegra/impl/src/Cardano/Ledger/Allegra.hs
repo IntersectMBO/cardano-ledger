@@ -2,8 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
--- CanStartFromGenesis
-{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra (
@@ -23,13 +21,8 @@ import Cardano.Ledger.Allegra.TxSeq ()
 import Cardano.Ledger.Allegra.UTxO ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Shelley.API (
-  ApplyBlock,
-  ApplyTx,
-  CanStartFromGenesis (fromShelleyPParams),
- )
+import Cardano.Ledger.Shelley.API (ApplyBlock, ApplyTx)
 
 type Allegra = AllegraEra StandardCrypto
 
@@ -44,6 +37,3 @@ instance
 instance
   (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
   ApplyBlock (AllegraEra c)
-
-instance Crypto c => CanStartFromGenesis (AllegraEra c) where
-  fromShelleyPParams _ = translateEra' NoGenesis

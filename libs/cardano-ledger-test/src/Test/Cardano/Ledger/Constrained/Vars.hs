@@ -43,6 +43,7 @@ import Cardano.Ledger.Conway.PParams (
   ppGovActionDepositL,
  )
 import Cardano.Ledger.Core (
+  Era (EraCrypto),
   PParams,
   TxOut,
   TxWits,
@@ -63,7 +64,6 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
-import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, ScriptHash (..))
 import Cardano.Ledger.Keys (GenDelegPair, GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)

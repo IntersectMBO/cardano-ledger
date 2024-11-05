@@ -21,7 +21,6 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..), PState (..), VState (..))
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -149,7 +148,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) UTxOState where
 
 instance Crypto c => TranslateEra (AlonzoEra c) UTxO where
   translateEra _ctxt utxo =
-    return $ UTxO $ translateTxOut `Map.map` unUTxO utxo
+    return $ UTxO $ upgradeTxOut `Map.map` unUTxO utxo
 
 instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGovState where
   translateEra ctxt ps =
@@ -165,10 +164,3 @@ instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGovState where
 instance Crypto c => TranslateEra (AlonzoEra c) ProposedPPUpdates where
   translateEra _ctxt (ProposedPPUpdates ppup) =
     return $ ProposedPPUpdates $ fmap (upgradePParamsUpdate def) ppup
-
-translateTxOut ::
-  Crypto c =>
-  TxOut (MaryEra c) ->
-  TxOut (AlonzoEra c)
-translateTxOut = upgradeTxOut
-{-# DEPRECATED translateTxOut "Use `upgradeTxOut` instead" #-}

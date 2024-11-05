@@ -3,7 +3,7 @@ module Cardano.Ledger.Shelley.API.Types (
 )
 where
 
-import Cardano.Ledger.Address as X (Addr (..), RewardAccount (..), RewardAcnt, Withdrawals (..))
+import Cardano.Ledger.Address as X (Addr (..), RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.BHeaderView as X (isOverlaySlot)
 import Cardano.Ledger.BaseTypes as X (
   CertIx,
@@ -46,7 +46,6 @@ import Cardano.Ledger.Keys as X (
   Hash,
   KESignable,
   KeyHash (..),
-  KeyPair (..),
   KeyRole (..),
   SignKeyDSIGN,
   SignKeyKES,
@@ -82,7 +81,6 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   EpochState (..),
   IncrementalStake (..),
   InstantaneousRewards (..),
-  KeyPairs,
   LedgerState (..),
   NewEpochState (..),
   PState (..),
@@ -128,13 +126,11 @@ import Cardano.Ledger.Shelley.StabilityWindow as X (
  )
 import Cardano.Ledger.Shelley.Tx as X (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData as X (
-  Metadata,
   Metadatum (..),
   ShelleyTxAuxData (..),
  )
 import Cardano.Ledger.Shelley.TxBody as X (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxCert as X (
-  Delegation (..),
   GenesisDelegCert (..),
   MIRCert (..),
   MIRPot (..),

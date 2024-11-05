@@ -24,8 +24,6 @@
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.Alonzo.TxSeq.Internal (
   AlonzoTxSeq (.., AlonzoTxSeq),
-  TxSeq,
-  hashTxSeq,
   hashAlonzoTxSeq,
 )
 where
@@ -45,8 +43,7 @@ import Cardano.Ledger.Binary (
   serialize,
   withSlice,
  )
-import Cardano.Ledger.Core hiding (TxSeq, hashTxSeq)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.SafeHash (SafeToHash, originalBytes)
@@ -132,10 +129,6 @@ pattern AlonzoTxSeq xs <-
 
 {-# COMPLETE AlonzoTxSeq #-}
 
-type TxSeq era = AlonzoTxSeq era
-
-{-# DEPRECATED TxSeq "Use `AlonzoTxSeq` instead" #-}
-
 deriving via
   AllowThunksIn
     '[ "txSeqBodyBytes"
@@ -143,19 +136,19 @@ deriving via
      , "txSeqMetadataBytes"
      , "txSeqIsValidBytes"
      ]
-    (TxSeq era)
+    (AlonzoTxSeq era)
   instance
-    (Typeable era, NoThunks (Tx era)) => NoThunks (TxSeq era)
+    (Typeable era, NoThunks (Tx era)) => NoThunks (AlonzoTxSeq era)
 
-deriving stock instance Show (Tx era) => Show (TxSeq era)
+deriving stock instance Show (Tx era) => Show (AlonzoTxSeq era)
 
-deriving stock instance Eq (Tx era) => Eq (TxSeq era)
+deriving stock instance Eq (Tx era) => Eq (AlonzoTxSeq era)
 
 --------------------------------------------------------------------------------
 -- Serialisation and hashing
 --------------------------------------------------------------------------------
 
-instance Era era => EncCBORGroup (TxSeq era) where
+instance Era era => EncCBORGroup (AlonzoTxSeq era) where
   encCBORGroup (AlonzoTxSeqRaw _ bodyBytes witsBytes metadataBytes invalidBytes) =
     encodePreEncoded $
       BSL.toStrict $
@@ -167,14 +160,6 @@ instance Era era => EncCBORGroup (TxSeq era) where
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
   listLen _ = 4
   listLenBound _ = 4
-
-hashTxSeq ::
-  forall era.
-  Era era =>
-  AlonzoTxSeq era ->
-  Hash (EraCrypto era) EraIndependentBlockBody
-hashTxSeq = hashAlonzoTxSeq
-{-# DEPRECATED hashTxSeq "Use `hashAlonzoTxSeq` instead" #-}
 
 -- | Hash a given block body
 hashAlonzoTxSeq ::
@@ -198,7 +183,7 @@ hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
     hashStrict = Hash.hashWith id
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
 
-instance AlonzoEraTx era => DecCBOR (Annotator (TxSeq era)) where
+instance AlonzoEraTx era => DecCBOR (Annotator (AlonzoTxSeq era)) where
   decCBOR = do
     (bodies, bodiesAnn) <- withSlice decCBOR
     (ws, witsAnn) <- withSlice decCBOR

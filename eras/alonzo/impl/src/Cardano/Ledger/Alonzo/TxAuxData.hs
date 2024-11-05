@@ -42,9 +42,6 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   metadataAlonzoTxAuxDataL,
   timelockScriptsAlonzoTxAuxDataL,
   plutusScriptsAllegraTxAuxDataL,
-
-  -- * Deprecated
-  AuxiliaryData,
 )
 where
 
@@ -199,7 +196,7 @@ instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
       TypeListLenIndef -> decodeShelleyMA
       TypeTag -> decodeAlonzo
       TypeTag64 -> decodeAlonzo
-      _ -> fail "Failed to decode AuxiliaryData"
+      _ -> fail "Failed to decode AlonzoTxAuxData"
     where
       decodeShelley =
         decode
@@ -219,7 +216,7 @@ instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
       decodeAlonzo =
         decode $
           TagD 259 $
-            SparseKeyed "AuxiliaryData" (pure emptyAuxData) auxDataField []
+            SparseKeyed "AlonzoTxAuxData" (pure emptyAuxData) auxDataField []
 
       addPlutusScripts lang scripts ad =
         case NE.nonEmpty scripts of
@@ -245,7 +242,7 @@ emptyAuxData = AlonzoTxAuxDataRaw mempty mempty mempty
 -- ================================================================================
 -- Version with serialized bytes.
 
-newtype AlonzoTxAuxData era = AuxiliaryDataConstr (MemoBytes AlonzoTxAuxDataRaw era)
+newtype AlonzoTxAuxData era = AlonzoTxAuxDataConstr (MemoBytes AlonzoTxAuxDataRaw era)
   deriving (Generic)
   deriving newtype (ToCBOR, SafeToHash)
 
@@ -253,10 +250,6 @@ instance Memoized AlonzoTxAuxData where
   type RawType AlonzoTxAuxData = AlonzoTxAuxDataRaw
 
 instance EqRaw (AlonzoTxAuxData era)
-
-type AuxiliaryData era = AlonzoTxAuxData era
-
-{-# DEPRECATED AuxiliaryData "Use `AlonzoTxAuxData` instead" #-}
 
 instance Crypto c => EraTxAuxData (AlonzoEra c) where
   type TxAuxData (AlonzoEra c) = AlonzoTxAuxData (AlonzoEra c)
@@ -290,7 +283,7 @@ hashAlonzoTxAuxData x = AuxiliaryDataHash (hashAnnotated x)
 validateAlonzoTxAuxData ::
   (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
   ProtVer ->
-  AuxiliaryData era ->
+  AlonzoTxAuxData era ->
   Bool
 validateAlonzoTxAuxData pv auxData@AlonzoTxAuxData {atadMetadata = metadata} =
   all validMetadatum metadata
@@ -312,26 +305,26 @@ plutusScriptsAllegraTxAuxDataL ::
 plutusScriptsAllegraTxAuxDataL =
   lensMemoRawType atadrPlutus $ \txAuxDataRaw ts -> txAuxDataRaw {atadrPlutus = ts}
 
-instance EraCrypto era ~ c => HashAnnotated (AuxiliaryData era) EraIndependentTxAuxData c where
+instance EraCrypto era ~ c => HashAnnotated (AlonzoTxAuxData era) EraIndependentTxAuxData c where
   hashAnnotated = getMemoSafeHash
 
-deriving newtype instance NFData (AuxiliaryData era)
+deriving newtype instance NFData (AlonzoTxAuxData era)
 
-deriving instance Eq (AuxiliaryData era)
+deriving instance Eq (AlonzoTxAuxData era)
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (AuxiliaryData era)
+deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (AlonzoTxAuxData era)
 
 type instance MemoHashIndex AlonzoTxAuxDataRaw = EraIndependentTxAuxData
 
 deriving via
-  InspectHeapNamed "AlonzoTxAuxDataRaw" (AuxiliaryData era)
+  InspectHeapNamed "AlonzoTxAuxDataRaw" (AlonzoTxAuxData era)
   instance
-    NoThunks (AuxiliaryData era)
+    NoThunks (AlonzoTxAuxData era)
 
 deriving via
   (Mem AlonzoTxAuxDataRaw era)
   instance
-    Era era => DecCBOR (Annotator (AuxiliaryData era))
+    Era era => DecCBOR (Annotator (AlonzoTxAuxData era))
 
 -- | Construct auxiliary data. Make sure not to supply plutus script versions that are not
 -- supported in this era, because it will result in a runtime exception. Use

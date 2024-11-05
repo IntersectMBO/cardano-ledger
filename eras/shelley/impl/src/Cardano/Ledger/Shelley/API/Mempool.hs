@@ -26,11 +26,9 @@ module Cardano.Ledger.Shelley.API.Mempool (
   -- * Exports for testing
   MempoolEnv,
   MempoolState,
-  applyTxsTransition,
   unsafeMakeValidated,
 
   -- * Exports for compatibility
-  applyTxs,
   mkMempoolEnv,
   mkMempoolState,
   overNewEpochState,
@@ -59,14 +57,12 @@ import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (ArrowChoice (right), left)
 import Control.DeepSeq (NFData)
-import Control.Monad (foldM)
 import Control.Monad.Except (Except, MonadError, liftEither)
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
-import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
@@ -263,41 +259,6 @@ instance
   FromCBOR (ApplyTxError era)
   where
   fromCBOR = fromEraCBOR @era
-
--- | Old 'applyTxs'
-applyTxs ::
-  (ApplyTx era, MonadError (ApplyTxError era) m, EraGov era) =>
-  Globals ->
-  SlotNo ->
-  Seq (Tx era) ->
-  NewEpochState era ->
-  m (NewEpochState era)
-applyTxs
-  globals
-  slot
-  txs
-  state =
-    overNewEpochState (applyTxsTransition globals mempoolEnv txs) state
-    where
-      mempoolEnv = mkMempoolEnv state slot
-{-# DEPRECATED applyTxs "Use `applyTxOpts` and `mkMempoolEnv` instead" #-}
-
-applyTxsTransition ::
-  forall era m.
-  ( ApplyTx era
-  , MonadError (ApplyTxError era) m
-  ) =>
-  Globals ->
-  MempoolEnv era ->
-  Seq (Tx era) ->
-  MempoolState era ->
-  m (MempoolState era)
-applyTxsTransition globals env txs state =
-  foldM
-    (\st tx -> fst <$> applyTx globals env st tx)
-    state
-    txs
-{-# DEPRECATED applyTxsTransition "Use `applyTxOpts` and `mkMempoolEnv` instead" #-}
 
 -- | Transform a function over mempool states to one over the full
 -- 'NewEpochState'.

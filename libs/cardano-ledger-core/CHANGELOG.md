@@ -2,6 +2,24 @@
 
 ## 1.16.0.0
 
+* Remove deprecated `_unTxId` and `adaOnly`
+* Remove deprecated module `Cardano.Ledger.Serialization`
+* Remove deprecated `fromSLanguage`
+* Remove deprecated `decodeValidAndUnknownCostModels` and `decodeCostModelFailHard`
+* Remove deprecated module `Cardano.Ledger.Language`
+* Remove deprecated `KeyPair`
+* Remove `Cardano.Ledger.Era` that had all of its contents deprecated.
+* Remove `getAllTxInputs` as unused.
+* Remove deprecated `Delegation` and `poolCWitness`
+* Remove deprecated `txid`
+* Remove deprecated `ValidateAuxiliaryData`, `AuxiliaryData`, `hashAuxiliaryData` and `validateAuxiliaryData`
+* Remove deprecated `Cardano.Ledger.Ap` module and all if its contents
+* Remove deprecated `ppRewardAcnt`
+* Remove deprecated `mkRwdAcnt`, `deserialiseAddr`, `serialiseRewardAcnt`,
+  `deserialiseRewardAcnt`, `RewardAcnt`, `getRwdNetwork`, `getRwdCred`, `putRewardAcnt`,
+  `decodeRewardAcnt`, `fromCborRewardAcnt`
+* Remove deprecated `HashAlgorithm`
+* Remove `Safe` and `hashSafeList`
 * Remove requirement for `FromCBOR` instance for `TxOut` in `EraTxOut`
 * Add `decodeMemoized`
 * Add `DecCBOR` instance for `MemoBytes`
@@ -13,6 +31,8 @@
 
 ### `testlib`
 
+* Remove deprecated `mkVKeyRwdAcnt`
+* Remove deprecated `deserialiseRewardAcntOld`
 * Generalize the return type of `assertColorFailure` to `MonadIO`
 * Moved `Test.Cardano.Ledger.Core.Tools` into the test suite.
 

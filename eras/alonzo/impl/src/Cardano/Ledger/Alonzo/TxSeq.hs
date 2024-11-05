@@ -2,8 +2,6 @@
 -- transactions with segregated witness and metadata information.
 module Cardano.Ledger.Alonzo.TxSeq (
   AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
-  TxSeq,
-  hashTxSeq,
   hashAlonzoTxSeq,
 )
 where

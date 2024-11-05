@@ -20,7 +20,6 @@ module Cardano.Ledger.Shelley.Rules.Ppup (
   PpupEvent (..),
   PredicateFailure,
   VotingPeriod (..),
-  PPUPPredFailure,
   votedFuturePParams,
 )
 where
@@ -204,9 +203,6 @@ ppupTransitionNonEmpty = do
               { sgsCurProposals = ProposedPPUpdates pupS
               , sgsFutureProposals = ProposedPPUpdates (eval (fpupS ⨃ pup))
               }
-
-type PPUPPredFailure era = EraRuleFailure "PPUP" era
-{-# DEPRECATED PPUPPredFailure "In favor of `EraRuleFailure` PPUP era" #-}
 
 -- | If at least @n@ nodes voted to change __the same__ protocol parameters to
 -- __the same__ values, return the given protocol parameters updated to these

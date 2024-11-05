@@ -20,7 +20,7 @@ import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.CertState (FutureGenDeleg (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Era (Era (EraCrypto))
+import Cardano.Ledger.Core (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair)
 import Control.DeepSeq (deepseq)
 import Control.Exception (ErrorCall (..))

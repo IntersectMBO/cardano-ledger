@@ -29,17 +29,14 @@ library
     exposed-modules:
         Cardano.Ledger.Alonzo
         Cardano.Ledger.Alonzo.Core
-        Cardano.Ledger.Alonzo.Data
         Cardano.Ledger.Alonzo.Transition
         Cardano.Ledger.Alonzo.Genesis
-        Cardano.Ledger.Alonzo.Language
         Cardano.Ledger.Alonzo.Plutus.Context
         Cardano.Ledger.Alonzo.Plutus.Evaluate
         Cardano.Ledger.Alonzo.Plutus.TxInfo
         Cardano.Ledger.Alonzo.PParams
         Cardano.Ledger.Alonzo.Rules
         Cardano.Ledger.Alonzo.Scripts
-        Cardano.Ledger.Alonzo.Scripts.Data
         Cardano.Ledger.Alonzo.Translation
         Cardano.Ledger.Alonzo.Tx
         Cardano.Ledger.Alonzo.TxAuxData

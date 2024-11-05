@@ -17,10 +17,6 @@ module Cardano.Ledger.Shelley.Tx (
   shelleyMinFeeTx,
   witsFromTxWitnesses,
   shelleyEqTxRaw,
-
-  -- * Deprecated
-  txwitsScript,
-  hashMultiSigScript,
 )
 where
 

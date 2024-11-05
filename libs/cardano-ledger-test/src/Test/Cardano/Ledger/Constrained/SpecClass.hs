@@ -15,7 +15,7 @@
 module Test.Cardano.Ledger.Constrained.SpecClass where
 
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Core (Era)
 import Data.Kind
 import Data.Map.Strict (Map)
 import Data.Set (Set)

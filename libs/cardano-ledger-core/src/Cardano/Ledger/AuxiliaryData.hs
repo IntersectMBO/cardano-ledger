@@ -9,9 +9,6 @@
 
 module Cardano.Ledger.AuxiliaryData (
   AuxiliaryDataHash (..),
-
-  -- * Deprecations
-  ValidateAuxiliaryData,
 )
 where
 
@@ -34,7 +31,3 @@ deriving instance Crypto c => EncCBOR (AuxiliaryDataHash c)
 deriving instance Crypto c => DecCBOR (AuxiliaryDataHash c)
 
 deriving newtype instance Crypto c => ToJSON (AuxiliaryDataHash c)
-
-type ValidateAuxiliaryData era c = ()
-
-{-# DEPRECATED ValidateAuxiliaryData "Use `Cardano.Ledger.Core.EraTxAuxData` instead" #-}

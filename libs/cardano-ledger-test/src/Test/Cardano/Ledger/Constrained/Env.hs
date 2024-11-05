@@ -32,7 +32,7 @@ module Test.Cardano.Ledger.Constrained.Env (
   sameName,
 ) where
 
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Core (Era)
 import Data.Hashable
 import Data.List (intercalate)
 import qualified Data.List as List

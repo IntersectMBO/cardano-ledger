@@ -33,14 +33,12 @@ module Cardano.Ledger.Plutus.CostModels (
   costModelFromMap,
   costModelParamsCount,
   decodeCostModel,
-  decodeCostModelFailHard,
 
   -- * Cost Models
   CostModels,
   mkCostModels,
   emptyCostModels,
   updateCostModels,
-  decodeValidAndUnknownCostModels,
   decodeCostModelsLenient,
   decodeCostModelsFailing,
   costModelsValid,
@@ -249,10 +247,6 @@ decodeCostModelsFailing =
   CostModels <$> decodeMapByKey decCBOR decodeCostModelLegacy <*> pure mempty
 {-# INLINE decodeCostModelsFailing #-}
 
-decodeValidAndUnknownCostModels :: Decoder s CostModels
-decodeValidAndUnknownCostModels = decodeCostModelsLenient
-{-# DEPRECATED decodeValidAndUnknownCostModels "In favor of `decodeCostModelsLenient`" #-}
-
 decodeCostModels :: Decoder s CostModels
 decodeCostModels =
   ifDecoderVersionAtLeast
@@ -313,10 +307,6 @@ decodeCostModel lang = do
         Left e -> fail $ show e
         Right cm -> pure cm
 {-# INLINEABLE decodeCostModel #-}
-
-decodeCostModelFailHard :: Language -> Decoder s CostModel
-decodeCostModelFailHard = decodeCostModel
-{-# DEPRECATED decodeCostModelFailHard "In favor of `decodeCostModel`" #-}
 
 getEvaluationContext :: CostModel -> P.EvaluationContext
 getEvaluationContext (CostModel _ _ ec) = ec

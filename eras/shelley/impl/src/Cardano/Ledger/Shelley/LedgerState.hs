@@ -21,10 +21,8 @@ module Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate (..),
   FutureGenDeleg (..),
   InstantaneousRewards (..),
-  KeyPairs, -- deprecated
   LedgerState (..),
   PState (..),
-  PPUPPredFailure,
   RewardAccounts,
   RewardUpdate (..),
   RewardSnapShot (..),
@@ -159,5 +157,5 @@ import Cardano.Ledger.Shelley.LedgerState.PulsingReward
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.Shelley.RewardUpdate
-import Cardano.Ledger.Shelley.Rules.Ppup (PPUPPredFailure, ShelleyGovState (..))
+import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyGovState (..))
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)

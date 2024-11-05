@@ -2,6 +2,27 @@
 
 ## 1.15.0.0
 
+* Remove deprecated `witsVKeyNeededGov`, `witsVKeyNeededNoGov`, `shelleyWitsVKeyNeeded` and `propWits`
+* Remove deprecated `PPUPPredFailure`, `delPlAcnt`, `prAcnt`, `votedValue`
+* Remove impossible predicate failure `StakeKeyInRewardsDELEG`
+* Change parameter type  of `StakeKeyNonZeroAccountBalanceDELEG` from  `Maybe Coin` to `Coin`
+* Remove deprecated `hashMultiSigScript` and `txwitsScript`
+* Remove deprecated `keyBy`, `requiresVKeyWitness` and `Metadata`
+* Remove deprecated `updatePParams`, `txup`, `scriptCred`, `scriptStakeCred`, `scriptsNeeded`
+* Remove deprecated `proposals`, `futureProposals`, `sgovPp` and `sgovPrevPp`
+* Remove deprecated module `Cardano.Ledger.Shelley.Metadata`
+* Remove deprecated module `Cardano.Ledger.Shelley.PoolParams`
+* Remove deprecated module `Cardano.Ledger.Shelley.EpochBoundary`
+* Remove deprecated module `Cardano.Ledger.Shelley.Delegation.Certificates`
+* Remove deprecated module `Cardano.Ledger.Shelley.Address.Bootstrap`
+* Remove deprecated `applyTxs` and `applyTxsTransition`
+* Remove `Cardano.Ledger.Shelley.API.Genesis` module with deprecated type class
+  `CanStartFromGenesis`. Also removes helper binding `initialStateFromGenesis`.
+* Remove deprecated `ShelleyEraCrypto`
+* Remove deprecated `evaluateMinLovelaceOutput`, `addShelleyKeyWitnesses`, `evaluateTransactionBalance`
+* Remove deprecated `KeyPairs` and stop exporting `KeyPair`
+* Remove `mkDelegation` and deprecated `Delegate`, `RegKey`, `DeRegKey`, `delegCWitness`, `isRegKey` and `isDeRegKey`
+* Remove export of deprecated `RewardAcnt` and `poolCWitness`
 * Change type of VRF key hash in `GenesisDelegCert`, `GenesisDelegTxCert` and `DuplicateGenesisVRFDELEG` to `VRFVerKeyHash`
 * Added `EncCBOR` instance for `LedgerEnv`
 * Use `Mismatch` to clarify _some more_ predicate failures. #4711

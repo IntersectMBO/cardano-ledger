@@ -7,15 +7,13 @@ module Test.Cardano.Ledger.TerseTools where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
   Ptr (..),
   StakeReference (..),
  )
-import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..))
@@ -95,7 +93,7 @@ instance Terse Ptr where
 instance Terse (TxId era) where
   terse (TxId safehash) = show (extractHash safehash)
 
-instance CC.Crypto era => Terse (TxIn era) where
+instance Crypto c => Terse (TxIn c) where
   terse (TxIn txid n) = "In " ++ terse txid ++ " " ++ show n
 
 instance Terse (Coin) where
@@ -109,5 +107,5 @@ tersediffincremental message (IStake a b) (IStake c d) =
   tersemapdiffs (message ++ " " ++ "hashes") a c
     ++ tersemapdiffs (message ++ " " ++ "ptrs") b d
 
-terseutxo :: (Era era, Terse (Core.TxOut era)) => String -> UTxO era -> String
+terseutxo :: (Era era, Terse (TxOut era)) => String -> UTxO era -> String
 terseutxo message (UTxO mp) = terselist message (Map.toList mp)

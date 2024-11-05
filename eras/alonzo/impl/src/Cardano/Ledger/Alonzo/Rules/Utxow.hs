@@ -23,7 +23,6 @@ module Cardano.Ledger.Alonzo.Rules.Utxow (
   hasExactSetOfRedeemers,
   missingRequiredDatums,
   ppViewHashesMatch,
-  requiredSignersAreWitnessed,
 )
 where
 
@@ -79,7 +78,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (domain, eval, (⊆), (➖))
+import Control.SetAlgebra (domain, eval, (➖))
 import Control.State.Transition.Extended
 import Data.Foldable (sequenceA_)
 import qualified Data.Map.Strict as Map
@@ -288,19 +287,6 @@ hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded
     [ failureUnless (null extraRdmrs) (ExtraRedeemers extraRdmrs)
     , failureUnless (null missingRdmrs) (MissingRedeemers (map snd missingRdmrs))
     ]
-
--- ======================
-requiredSignersAreWitnessed ::
-  AlonzoEraTxBody era =>
-  TxBody era ->
-  Set (KeyHash 'Witness (EraCrypto era)) ->
-  Test (AlonzoUtxowPredFailure era)
-requiredSignersAreWitnessed txBody witsKeyHashes = do
-  let reqSignerHashes' = txBody ^. reqSignerHashesTxBodyL
-  failureUnless
-    (eval (reqSignerHashes' ⊆ witsKeyHashes))
-    (MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes))
-{-# DEPRECATED requiredSignersAreWitnessed "As no longer used. `validateNeededWitnesses` now handles this check" #-}
 
 -- =======================
 {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}

@@ -27,7 +27,6 @@ flag asserts
 library
     exposed-modules:
         Cardano.Ledger.Address
-        Cardano.Ledger.Ap
         Cardano.Ledger.AuxiliaryData
         Cardano.Ledger.BaseTypes
         Cardano.Ledger.BHeaderView
@@ -40,14 +39,12 @@ library
         Cardano.Ledger.CertState
         Cardano.Ledger.DRep
         Cardano.Ledger.EpochBoundary
-        Cardano.Ledger.Era
         Cardano.Ledger.Genesis
         Cardano.Ledger.Hashes
         Cardano.Ledger.HKD
         Cardano.Ledger.Keys
         Cardano.Ledger.Keys.Bootstrap
         Cardano.Ledger.Keys.WitVKey
-        Cardano.Ledger.Language
         Cardano.Ledger.MemoBytes
         Cardano.Ledger.MemoBytes.Internal
         Cardano.Ledger.Metadata
@@ -65,7 +62,6 @@ library
         Cardano.Ledger.Rewards
         Cardano.Ledger.Rules.ValidationMode
         Cardano.Ledger.SafeHash
-        Cardano.Ledger.Serialization
         Cardano.Ledger.Slot
         Cardano.Ledger.Tools
         Cardano.Ledger.TxIn
@@ -114,7 +110,6 @@ library
         mtl,
         measures,
         microlens,
-        network,
         nothunks >=0.1.5 && <0.3,
         partial-order,
         plutus-core,

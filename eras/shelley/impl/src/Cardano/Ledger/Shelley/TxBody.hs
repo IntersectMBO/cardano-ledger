@@ -36,12 +36,9 @@ module Cardano.Ledger.Shelley.TxBody (
   RewardAccount (..),
   Withdrawals (..),
   getShelleyGenesisKeyHashCountTxBody,
-
-  -- * Deprecations
-  RewardAcnt,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..), RewardAcnt, Withdrawals (..))
+import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (

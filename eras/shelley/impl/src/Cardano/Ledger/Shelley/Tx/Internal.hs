@@ -44,10 +44,6 @@ module Cardano.Ledger.Shelley.Tx.Internal (
   shelleyMinFeeTx,
   witsFromTxWitnesses,
   shelleyEqTxRaw,
-
-  -- * Deprecated
-  txwitsScript,
-  hashMultiSigScript,
 )
 where
 
@@ -79,7 +75,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Scripts (MultiSig, validateMultiSig)
+import Cardano.Ledger.Shelley.Scripts (validateMultiSig)
 import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody ()
 import Cardano.Ledger.Shelley.TxWits ()
@@ -88,7 +84,6 @@ import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import Data.Functor.Classes (Eq1 (liftEq))
-import Data.Map.Strict (Map)
 import Data.Maybe.Strict (
   StrictMaybe (..),
   maybeToStrictMaybe,
@@ -387,28 +382,7 @@ segwitTx
           (maybeToStrictMaybe metadata)
           fullBytes
 
--- ===============================================================
-
--- | Hashes native multi-signature script.
-hashMultiSigScript ::
-  forall era.
-  ( EraScript era
-  , Script era ~ MultiSig (EraCrypto era)
-  ) =>
-  MultiSig (EraCrypto era) ->
-  ScriptHash (EraCrypto era)
-hashMultiSigScript = hashScript @era
-{-# DEPRECATED hashMultiSigScript "In favor of `hashScript`" #-}
-
 -- ========================================
-
--- | Multi-signature script witness accessor function for Transactions
-txwitsScript ::
-  EraTx era =>
-  Tx era ->
-  Map (ScriptHash (EraCrypto era)) (Script era)
-txwitsScript tx = tx ^. witsTxL . scriptTxWitsL
-{-# DEPRECATED txwitsScript "In favor of `scriptTxWitsL`" #-}
 
 -- | Minimum fee calculation
 shelleyMinFeeTx :: EraTx era => PParams era -> Tx era -> Coin

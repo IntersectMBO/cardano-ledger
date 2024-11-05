@@ -23,9 +23,9 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
   pattern RegDepositDelegTxCert,
  )
+import Cardano.Ledger.Core (Era (EraCrypto))
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolMetadata, PoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState (AccountState, InstantaneousRewards, availableAfterMIR)
