@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.9.4.1
+## 1.9.5.0
 
-*
+* Added `queryStakePoolDefaultVote` state query and its return type `DefaultVote`
 
 ## 1.9.4.0
 

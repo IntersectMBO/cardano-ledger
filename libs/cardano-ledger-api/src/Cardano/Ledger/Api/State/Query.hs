@@ -52,6 +52,10 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetRatifyState@
   queryRatifyState,
 
+  -- * @GetStakePoolDefaultVote
+  queryStakePoolDefaultVote,
+  DefaultVote (..),
+
   -- * For testing
   getNextEpochCommitteeMembers,
 ) where
@@ -73,11 +77,13 @@ import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   DRepPulser (..),
   DRepPulsingState (..),
+  DefaultVote (..),
   GovActionId,
   GovActionState (..),
   PulsingSnapshot,
   RatifyState,
   committeeThresholdL,
+  defaultStakePoolVote,
   ensCommitteeL,
   finishDRepPulser,
   psDRepDistr,
@@ -95,6 +101,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap (
   StakeCredentials (scRewards, scSPools),
   UMap,
+  dRepMap,
   domRestrictedStakeCredentials,
  )
 import Control.Monad (guard)
@@ -351,3 +358,14 @@ finishedPulserState ::
   NewEpochState era ->
   (PulsingSnapshot era, RatifyState era)
 finishedPulserState nes = finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)
+
+-- | Query a stake pool's reward account delegatee which determines the pool's default vote
+-- in absence of an explicit vote. Note that this is different from the delegatee determined
+-- by the credential of the stake pool itself.
+queryStakePoolDefaultVote ::
+  NewEpochState era ->
+  -- | Specify the key hash of the pool whose default vote should be returned.
+  KeyHash 'StakePool (EraCrypto era) ->
+  DefaultVote
+queryStakePoolDefaultVote nes poolId =
+  defaultStakePoolVote poolId (nes ^. nesEsL . epochStatePoolParamsL) (dRepMap $ nes ^. unifiedL)

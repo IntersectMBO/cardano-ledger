@@ -27,7 +27,6 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   withdrawalCanWithdraw,
 ) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
   ProtVer,
@@ -46,6 +45,7 @@ import Cardano.Ledger.Conway.Core (
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
+  DefaultVote (..),
   GovAction (..),
   GovActionState (..),
   GovRelation,
@@ -54,6 +54,7 @@ import Cardano.Ledger.Conway.Governance (
   RatifySignal (..),
   RatifyState (..),
   Vote (..),
+  defaultStakePoolVote,
   ensCommitteeL,
   ensProtVerL,
   ensTreasuryL,
@@ -76,7 +77,6 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualTotalPoolStake)
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.Val (Val (..), (<+>))
@@ -218,18 +218,15 @@ spoAcceptedRatio
       accumStake (!yes, !abstain) poolId distr =
         let CompactCoin stake = individualTotalPoolStake distr
             vote = Map.lookup poolId gasStakePoolVotes
-            drep =
-              Map.lookup poolId rePoolParams >>= \d ->
-                Map.lookup (raCredential $ ppRewardAccount d) reDelegatees
          in case vote of
               Nothing
                 | HardForkInitiation {} <- pProcGovAction -> (yes, abstain)
                 | bootstrapPhase pv -> (yes, abstain + stake)
-                | otherwise -> case drep of
-                    Just DRepAlwaysNoConfidence
+                | otherwise -> case defaultStakePoolVote poolId rePoolParams reDelegatees of
+                    DefaultNoConfidence
                       | NoConfidence {} <- pProcGovAction -> (yes + stake, abstain)
-                    Just DRepAlwaysAbstain -> (yes, abstain + stake)
-                    _ -> (yes, abstain)
+                    DefaultAbstain -> (yes, abstain + stake)
+                    _ -> (yes, abstain) -- Default is No, unless overridden by one of the above cases
               Just Abstain -> (yes, abstain + stake)
               Just VoteNo -> (yes, abstain)
               Just VoteYes -> (yes + stake, abstain)
