@@ -172,7 +172,7 @@ prop_CERT :: Property
 prop_CERT =
   stsPropertyV2 @"CERT" @ConwayFn
     certEnvSpec
-    (\_env -> certStateSpec)
+    (\_env -> certStateSpecEx)
     (\env st -> txCertSpec env st)
     -- TODO: we should probably check more things here
     $ \_env _st _sig _st' -> True
@@ -181,7 +181,7 @@ prop_DELEG :: Property
 prop_DELEG =
   stsPropertyV2 @"DELEG" @ConwayFn
     delegEnvSpec
-    (\_env -> certStateSpec)
+    (\_env -> certStateSpecEx)
     conwayDelegCertSpec
     $ \_env _st _sig _st' -> True
 
@@ -197,7 +197,7 @@ prop_GOVCERT :: Property
 prop_GOVCERT =
   stsPropertyV2 @"GOVCERT" @ConwayFn
     govCertEnvSpec
-    (\_env -> certStateSpec)
+    (\_env -> certStateSpecEx)
     (\env st -> govCertSpec env st)
     $ \_env _st _sig _st' -> True
 

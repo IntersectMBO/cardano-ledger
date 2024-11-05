@@ -40,7 +40,11 @@ import Lens.Micro
 
 -- , certStateSpec)
 
-import Test.Cardano.Ledger.Constrained.Conway.Cert (EraSpecCert (..), certStateSpec)
+import Test.Cardano.Ledger.Constrained.Conway.Cert (
+  EraSpecCert (..),
+  certStateSpec,
+  certStateSpecEx,
+ )
 import Test.Cardano.Ledger.Constrained.Conway.Certs (certsEnvSpec, projectEnv)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody (fromShelleyBody)
@@ -256,7 +260,7 @@ go2 = do
   certState <-
     generate $
       genFromSpec @ConwayFn @(CertState era)
-        (certStateSpec @ConwayFn @era) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
+        (certStateSpecEx @ConwayFn @era) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
         -- error "STOP"
   certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv era) certsEnvSpec
 

@@ -37,10 +37,10 @@ instance
   stateSpec context _ =
     constrained $ \x ->
       match x $ \vstate pstate dstate ->
-        [ satisfies vstate vStateSpec
+        [ satisfies vstate (vStateSpec (lit $ ccecDelegatees context))
         , satisfies pstate pStateSpec
         , -- temporary workaround because Spec does some extra tests, that the implementation does not, in the bootstrap phase.
-          satisfies dstate (bootstrapDStateSpec (ccecWithdrawals context))
+          satisfies dstate (bootstrapDStateSpec (ccecDelegatees context) (ccecWithdrawals context))
         ]
 
   signalSpec _ = txCertsSpec

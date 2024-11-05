@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -11,19 +12,26 @@ module Test.Cardano.Ledger.Constrained.Conway.GovCert where
 
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core (Era (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained
 import qualified Data.Map as Map
+import Data.Set (Set)
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 
-vStateSpec :: Specification fn (VState era)
-vStateSpec = TrueSpec
+vStateSpec ::
+  (IsConwayUniv fn, Era era) =>
+  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
+  Specification fn (VState era)
+vStateSpec delegatees = constrained' $ \dreps _ _ -> dom_ dreps ==. delegatees
 
 {- There are no hard constraints on VState, but sometimes when something fails we want to
 -- limit how big some of the fields of VState are. In that case one might use something

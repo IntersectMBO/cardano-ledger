@@ -57,7 +57,7 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   vstateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Arbitrary (..), Gen)
 
 -- ==============================================================
 -- Generators for all the types found in the Ledger State.
@@ -96,7 +96,8 @@ csX :: forall era. EraSpecLedger era ConwayFn => Gen (CertState era)
 csX = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
-  genFromSpec @ConwayFn @(CertState era) (certStateSpec (lit acct) (lit epoch))
+  delegatees <- arbitrary
+  genFromSpec @ConwayFn @(CertState era) (certStateSpec (lit delegatees) (lit acct) (lit epoch))
 
 utxoX :: forall era. EraSpecLedger era ConwayFn => Gen (UTxO era)
 utxoX = do

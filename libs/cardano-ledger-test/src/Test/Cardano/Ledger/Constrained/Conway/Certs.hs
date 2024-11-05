@@ -16,13 +16,15 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), credKeyHash, credScriptHash)
+import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained
 import Constrained.Base (Pred (..))
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq, fromList)
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Constrained.Conway.Cert
@@ -44,13 +46,15 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 bootstrapDStateSpec ::
   forall fn era.
   EraSpecTxOut era fn =>
+  Set (Credential 'DRepRole (EraCrypto era)) ->
   CertsContext era ->
   Specification fn (DState era)
-bootstrapDStateSpec withdrawals =
+bootstrapDStateSpec delegatees withdrawals =
   let isKey (ScriptHashObj _) = False
       isKey (KeyHashObj _) = True
       withdrawalPairs = Map.toList (Map.mapKeys raCredential (Map.map coinToWord64 withdrawals))
       withdrawalKeys = Map.keysSet (Map.mapKeys raCredential withdrawals)
+      setMapMaybe f = Set.foldr' (\x s -> maybe s (`Set.insert` s) $ f x) mempty
    in constrained $ \ [var| dstate |] ->
         match dstate $ \ [var| rewardMap |] futureGenDelegs genDelegs _rewards ->
           [ assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
@@ -65,6 +69,13 @@ bootstrapDStateSpec withdrawals =
                       -- Apply this only to entries NOT IN the withdrawal set, since withdrawals already set the reward in the RDPair.
                       whenTrue (not_ (member_ cred (lit withdrawalKeys))) (satisfies rdpair someZeros)
               , forAll (lit (Set.filter isKey withdrawalKeys)) $ \cred -> assert $ member_ cred (dom_ dRepDelegs)
+              , forAll' dRepDelegs $ \_ dRep ->
+                  [ (caseOn dRep)
+                      (branch $ \kh -> assert (kh `member_` lit (setMapMaybe credKeyHash delegatees)))
+                      (branch $ \sh -> assert (sh `member_` lit (setMapMaybe credScriptHash delegatees)))
+                      (branch $ \_ -> assert True)
+                      (branch $ \_ -> assert True)
+                  ]
               , forAll (lit withdrawalPairs) $ \ [var| pair |] ->
                   match pair $ \ [var| cred |] [var| coin |] ->
                     [ assert $ member_ cred (dom_ rdMap)

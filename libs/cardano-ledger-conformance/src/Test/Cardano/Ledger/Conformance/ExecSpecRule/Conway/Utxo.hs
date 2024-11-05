@@ -32,6 +32,7 @@ import Test.Cardano.Ledger.Conformance (
   computationResultToEither,
   runSpecTransM,
  )
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo ()
 import Test.Cardano.Ledger.Constrained.Conway (
@@ -97,7 +98,7 @@ instance
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
-      $ Agda.utxoStep env st sig
+      $ Agda.utxoStep externalFunctions env st sig
 
   extraInfo ctx env@UtxoEnv {..} st@UTxOState {..} sig =
     "Impl:\n"
@@ -105,7 +106,7 @@ instance
       <> "\n\nSpec:\n"
       <> PP.ppString
         ( either show T.unpack . runSpecTransM ctx $
-            Agda.utxoDebug
+            Agda.utxoDebug externalFunctions
               <$> toSpecRep env
               <*> toSpecRep st
               <*> toSpecRep sig

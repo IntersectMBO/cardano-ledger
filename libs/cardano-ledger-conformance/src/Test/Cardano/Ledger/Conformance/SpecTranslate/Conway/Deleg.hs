@@ -1,7 +1,10 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -20,11 +23,13 @@ import Cardano.Ledger.Conway.TxCert (
   getVoteDelegatee,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash (..))
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (DState (..))
 import Cardano.Ledger.Shelley.Rules
 import qualified Cardano.Ledger.UMap as UMap
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance (
   hashToInteger,
@@ -36,15 +41,18 @@ import Test.Cardano.Ledger.Conway.TreeDiff
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecTranslate ctx (PParamsHKD Identity era)
+  , Inject ctx (Set (Credential 'DRepRole (EraCrypto era)))
   ) =>
   SpecTranslate ctx (ConwayDelegEnv era)
   where
   type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
 
-  toSpecRep ConwayDelegEnv {..} =
+  toSpecRep ConwayDelegEnv {..} = do
+    delegatees <- askCtx @(Set (Credential 'DRepRole (EraCrypto era)))
     Agda.MkDelegEnv
       <$> toSpecRep cdePParams
       <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
+      <*> toSpecRep delegatees
 
 instance SpecTranslate ctx (ConwayDelegCert c) where
   type SpecRep (ConwayDelegCert c) = Agda.DCert
