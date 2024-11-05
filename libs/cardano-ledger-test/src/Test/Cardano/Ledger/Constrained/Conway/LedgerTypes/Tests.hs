@@ -141,7 +141,9 @@ specSuite n = do
             )
     )
 
-  soundSpecWith @(CertState era) (5 * n) (certStateSpec !$! accountStateSpec !*! epochNoSpec)
+  soundSpecWith @(CertState era)
+    (5 * n)
+    $ certStateSpec !$! TrueSpec !*! accountStateSpec !*! epochNoSpec
   soundSpecWith @(UTxO era) (5 * n) (utxoSpec !$! delegationsSpec)
   soundSpecWith @(GovState era)
     (2 * n)

@@ -18,6 +18,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Constrained (lit)
 import Data.Bifunctor (first)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
@@ -38,7 +39,7 @@ instance
   where
   type ExecContext fn "CERT" Conway = ConwayCertExecContext Conway
   environmentSpec _ = certEnvSpec
-  stateSpec _ _ = certStateSpec
+  stateSpec ctx _ = certStateSpec (lit $ ccecDelegatees ctx)
   signalSpec _ = txCertSpec
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])

@@ -58,14 +58,23 @@ certEnvSpec =
 
 certStateSpec ::
   (IsConwayUniv fn, EraSpecDeleg era) =>
+  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
   Specification fn (CertState era)
-certStateSpec =
+certStateSpec delegatees =
   constrained $ \cs ->
     match cs $ \vState pState dState ->
-      [ satisfies vState vStateSpec
+      [ satisfies vState (vStateSpec delegatees)
       , satisfies pState pStateSpec
       , satisfies dState dStateSpec
       ]
+
+certStateSpecEx ::
+  (IsConwayUniv fn, EraSpecDeleg era) =>
+  Specification fn (CertState era)
+certStateSpecEx = constrained $ \st ->
+  exists
+    (\eval -> pure . Map.keysSet . vsDReps . certVState $ eval st)
+    (\delegatees -> st `satisfies` certStateSpec delegatees)
 
 conwayTxCertSpec ::
   IsConwayUniv fn =>
@@ -232,7 +241,7 @@ testShelleyCert ::
   forall era. (AtMostEra BabbageEra era, EraSpecPParams era, EraSpecDeleg era) => Gen Property
 testShelleyCert = do
   env <- genFromSpec @ConwayFn @(CertEnv era) certEnvSpec
-  dstate <- genFromSpec @ConwayFn @(CertState era) certStateSpec
+  dstate <- genFromSpec @ConwayFn @(CertState era) certStateSpecEx
   let spec = shelleyTxCertSpec env dstate
   ans <- genFromSpec @ConwayFn spec
   let tag = case ans of
@@ -250,7 +259,7 @@ testShelleyCert = do
 testConwayCert :: Gen Property
 testConwayCert = do
   env <- genFromSpec @ConwayFn @(CertEnv Conway) certEnvSpec
-  dstate <- genFromSpec @ConwayFn @(CertState Conway) certStateSpec
+  dstate <- genFromSpec @ConwayFn @(CertState Conway) certStateSpecEx
   let spec = conwayTxCertSpec env dstate
   ans <- genFromSpec @ConwayFn spec
   let tag = case ans of

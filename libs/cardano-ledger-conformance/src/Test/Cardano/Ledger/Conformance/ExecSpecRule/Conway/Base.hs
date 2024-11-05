@@ -28,12 +28,14 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   crecTreasuryL,
   crecGovActionMapL,
   enactStateSpec,
+  externalFunctions,
 ) where
 
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
   Inject (..),
+  Network (..),
   StrictMaybe (..),
   addEpochInterval,
   natVersion,
@@ -55,7 +57,6 @@ import Cardano.Ledger.Conway.Governance (
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
-  Vote (Abstain),
   VotingProcedures,
   ensProtVerL,
   gasAction,
@@ -92,13 +93,15 @@ import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   SpecTranslate (..),
   computationResultToEither,
+  integerToHash,
   runSpecTransM,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (defaultTestConformance)
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (vkeyFromInteger)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   ConwayExecEnactEnv (..),
   DepositPurpose,
+  signatureFromInteger,
  )
 import Test.Cardano.Ledger.Constrained.Conway (
   EpochExecEnv,
@@ -115,7 +118,15 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   protocolVersion_,
  )
 
+import Cardano.Crypto.DSIGN (SignedDSIGN (..), verifySignedDSIGN)
+import Cardano.Crypto.Hash (ByteString, Hash)
 import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
+import Cardano.Ledger.Keys (KeyRole (..), VKey (..))
+import Data.Either (isRight)
+import Data.Maybe (fromMaybe)
+import Data.Set (Set)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
 
@@ -123,6 +134,7 @@ data ConwayCertExecContext era = ConwayCertExecContext
   { ccecWithdrawals :: !(Map (RewardAccount (EraCrypto era)) Coin)
   , ccecDeposits :: !(Map (DepositPurpose (EraCrypto era)) Coin)
   , ccecVotes :: !(VotingProcedures era)
+  , ccecDelegatees :: !(Set (Credential 'DRepRole (EraCrypto era)))
   }
   deriving (Generic, Eq, Show)
 
@@ -132,20 +144,23 @@ instance Era era => Arbitrary (ConwayCertExecContext era) where
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Era era => EncCBOR (ConwayCertExecContext era) where
-  encCBOR x@(ConwayCertExecContext _ _ _) =
+  encCBOR x@(ConwayCertExecContext _ _ _ _) =
     let ConwayCertExecContext {..} = x
      in encode $
           Rec ConwayCertExecContext
             !> To ccecWithdrawals
             !> To ccecDeposits
             !> To ccecVotes
+            !> To ccecDelegatees
 
 instance Era era => DecCBOR (ConwayCertExecContext era) where
   decCBOR =
     decode $
       RecD ConwayCertExecContext
+        <! From
         <! From
         <! From
         <! From
@@ -300,9 +315,7 @@ ratifyEnvSpec ConwayRatifyExecContext {crecGovActionMap} =
     spoVotes =
       foldr'
         ( \GovActionState {gasStakePoolVotes} s ->
-            -- TODO: Remove the filter when
-            -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/578 is resolved
-            Map.keysSet (Map.filter (== Abstain) gasStakePoolVotes) <> s
+            Map.keysSet gasStakePoolVotes <> s
         )
         mempty
         crecGovActionMap
@@ -514,7 +527,11 @@ enactSignalSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} EnactState {
         (branch $ \_ _ _ -> True)
         (branch $ \_ _ -> True)
         ( branch $ \newWdrls _ ->
-            sum_ (rng_ newWdrls) + lit (sum ensWithdrawals) <=. lit ceeeTreasury
+            [ assert $ sum_ (rng_ newWdrls) + lit (sum ensWithdrawals) <=. lit ceeeTreasury
+            , assert $ forAll' newWdrls $ \acct _ ->
+                match acct $ \network _ ->
+                  network ==. lit Testnet
+            ]
         )
         (branch $ \_ -> True)
         ( branch $ \_ _ newMembers _ ->
@@ -602,3 +619,30 @@ instance IsConwayUniv fn => ExecSpecRule fn "NEWEPOCH" Conway where
     first (\case {})
       . computationResultToEither
       $ Agda.newEpochStep env st sig
+
+externalFunctions :: Agda.ExternalFunctions
+externalFunctions = Agda.MkExternalFunctions {..}
+  where
+    extIsSigned vk ser sig =
+      isRight $
+        verifySignedDSIGN
+          @(DSIGN StandardCrypto)
+          @(Hash (HASH StandardCrypto) ByteString)
+          ()
+          vkey
+          hash
+          signature
+      where
+        vkey =
+          unVKey @_ @StandardCrypto
+            . fromMaybe (error "Failed to convert an Agda VKey to a Haskell VKey")
+            $ vkeyFromInteger vk
+        hash =
+          fromMaybe
+            (error $ "Failed to get hash from integer:\n" <> show ser)
+            $ integerToHash ser
+        signature =
+          SignedDSIGN
+            . fromMaybe
+              (error "Failed to decode the signature")
+            $ signatureFromInteger sig

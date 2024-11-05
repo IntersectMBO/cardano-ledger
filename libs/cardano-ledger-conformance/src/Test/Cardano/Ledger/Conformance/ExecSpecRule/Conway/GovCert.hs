@@ -20,6 +20,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Constrained (lit)
 import Data.Bifunctor (Bifunctor (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
@@ -39,7 +40,7 @@ instance
 
   environmentSpec _ctx = govCertEnvSpec
 
-  stateSpec _ctx _env = certStateSpec
+  stateSpec ctx _env = certStateSpec (lit $ ccecDelegatees ctx)
 
   signalSpec _ctx = govCertSpec
 

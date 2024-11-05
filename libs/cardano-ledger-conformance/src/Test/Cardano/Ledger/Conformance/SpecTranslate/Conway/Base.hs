@@ -45,7 +45,7 @@ import Cardano.Ledger.Alonzo (AlonzoTxAuxData, MaryValue)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash)
+import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
@@ -77,7 +77,7 @@ import Cardano.Ledger.Plutus (CostModels, ExUnits (..), Prices)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.SafeHash (SafeHash, extractHash)
+import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Rules (Identity)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -175,25 +175,10 @@ instance SpecTranslate ctx (Hash a b) where
 
   toSpecRep = pure . hashToInteger
 
-instance SpecTranslate ctx (SafeHash c EraIndependentData) where
-  type SpecRep (SafeHash c EraIndependentData) = Agda.DataHash
-
-  toSpecRep _ = pure ()
-
-instance SpecTranslate ctx (SafeHash c EraIndependentTxBody) where
-  type SpecRep (SafeHash c EraIndependentTxBody) = Integer
+instance SpecTranslate ctx (SafeHash c a) where
+  type SpecRep (SafeHash c a) = Agda.DataHash
 
   toSpecRep = toSpecRep . extractHash
-
-instance SpecTranslate ctx (SafeHash c EraIndependentScriptIntegrity) where
-  type SpecRep (SafeHash c EraIndependentScriptIntegrity) = Integer
-
-  toSpecRep = toSpecRep . extractHash
-
-instance SpecTranslate ctx (SafeHash c AnchorData) where
-  type SpecRep (SafeHash c AnchorData) = Agda.DataHash
-
-  toSpecRep _ = pure ()
 
 instance
   ( SpecRep (DataHash (EraCrypto era)) ~ Agda.DataHash
@@ -533,10 +518,10 @@ instance
 
   toSpecRep (x, y) = (,) <$> toSpecRep x <*> toSpecRep y
 
-instance SpecTranslate ctx (Data era) where
-  type SpecRep (Data era) = ()
+instance Era era => SpecTranslate ctx (Data era) where
+  type SpecRep (Data era) = Agda.DataHash
 
-  toSpecRep _ = pure ()
+  toSpecRep = toSpecRep . hashAnnotated
 
 instance
   ( AlonzoEraScript era
@@ -580,10 +565,10 @@ instance SpecTranslate ctx a => SpecTranslate ctx (Maybe a) where
 
   toSpecRep = traverse toSpecRep
 
-instance SpecTranslate ctx (AlonzoTxAuxData era) where
+instance Era era => SpecTranslate ctx (AlonzoTxAuxData era) where
   type SpecRep (AlonzoTxAuxData era) = Agda.AuxiliaryData
 
-  toSpecRep _ = pure ()
+  toSpecRep = toSpecRep . hashAnnotated
 
 instance SpecTranslate ctx (ScriptHash c) where
   type SpecRep (ScriptHash c) = Integer
@@ -597,9 +582,9 @@ instance SpecTranslate ctx (Credential k c) where
   toSpecRep (ScriptHashObj h) = Agda.ScriptObj <$> toSpecRep h
 
 instance SpecTranslate ctx Network where
-  type SpecRep Network = ()
+  type SpecRep Network = Integer
 
-  toSpecRep = pure . const ()
+  toSpecRep = pure . fromIntegral . fromEnum
 
 instance SpecTranslate ctx (RewardAccount c) where
   type SpecRep (RewardAccount c) = Agda.RwdAddr
@@ -624,7 +609,7 @@ instance SpecTranslate ctx Url where
 
 instance SpecTranslate ctx (Anchor c) where
   type SpecRep (Anchor c) = Agda.Anchor
-  toSpecRep (Anchor url _) = Agda.Anchor <$> toSpecRep url <*> pure ()
+  toSpecRep (Anchor url h) = Agda.Anchor <$> toSpecRep url <*> toSpecRep h
 
 instance SpecTranslate ctx (TxId era) where
   type SpecRep (TxId era) = Agda.TxId
@@ -637,9 +622,9 @@ instance SpecTranslate ctx (Withdrawals era) where
   toSpecRep (Withdrawals w) = toSpecRep w
 
 instance SpecTranslate ctx (AuxiliaryDataHash c) where
-  type SpecRep (AuxiliaryDataHash c) = ()
+  type SpecRep (AuxiliaryDataHash c) = Agda.DataHash
 
-  toSpecRep _ = pure ()
+  toSpecRep (AuxiliaryDataHash x) = toSpecRep x
 
 instance
   ( ConwayEraTxBody era
@@ -775,7 +760,8 @@ instance
       transWithdrawals ws = fmap Agda.MkHSMap . forM (Map.toList ws) $
         \(cred, Coin amount) -> do
           agdaCred <- toSpecRep cred
-          pure (Agda.RwdAddr () agdaCred, amount)
+          network <- toSpecRep Testnet -- TODO where should this really come from?
+          pure (Agda.RwdAddr network agdaCred, amount)
       transHashProtected x h = do
         committee <- toSpecRep x
         agdaLastId <- case h of

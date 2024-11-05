@@ -287,10 +287,11 @@ accountStateSpec =
 certStateSpec ::
   forall era fn.
   EraSpecLedger era fn =>
+  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
   Term fn AccountState ->
   Term fn EpochNo ->
   Specification fn (CertState era)
-certStateSpec acct epoch = constrained $ \ [var|certState|] ->
+certStateSpec ctxDelegatees acct epoch = constrained $ \ [var|certState|] ->
   match certState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pstateSpec epoch)
     , reify pState psStakePoolParams $ \ [var|poolreg|] ->
@@ -298,7 +299,9 @@ certStateSpec acct epoch = constrained $ \ [var|certState|] ->
         , satisfies dState (dstateSpec acct poolreg)
         ]
     , reify dState getDelegatees $ \ [var|delegatees|] ->
-        satisfies vState (vstateSpec epoch delegatees)
+        [ satisfies vState (vstateSpec epoch delegatees)
+        , assert $ ctxDelegatees ==. dom_ delegatees
+        ]
     ]
 
 -- ==============================================================
@@ -391,7 +394,9 @@ ledgerStateSpec ::
 ledgerStateSpec pp acct epoch =
   constrained $ \ [var|ledgerState|] ->
     match ledgerState $ \ [var|utxoS|] [var|csg|] ->
-      [ satisfies csg (certStateSpec @era @fn acct epoch)
+      [ exists
+          (\eval -> pure . Map.keysSet . getDelegatees . certDState $ eval csg)
+          (\delegatees -> csg `satisfies` certStateSpec @era @fn delegatees acct epoch)
       , reify csg id (\ [var|certstate|] -> satisfies utxoS (utxoStateSpec @era @fn pp certstate))
       ]
 
@@ -513,21 +518,6 @@ dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
 dRepToCred _ = Nothing
 
 -- ===================================
-
-xxx :: Specification ConwayFn (CertState Shelley)
-xxx =
-  certStateSpec @Shelley @ConwayFn
-    (lit (AccountState (Coin 100) (Coin 100)))
-    (lit (EpochNo 100))
-goC :: IO ()
-goC = do
-  cs <-
-    generate $
-      genFromSpec $
-        certStateSpec @Shelley @ConwayFn
-          (lit (AccountState (Coin 100) (Coin 100)))
-          (lit (EpochNo 100))
-  putStrLn (show (prettyA cs))
 
 try10 :: IO ()
 try10 = do
