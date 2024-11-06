@@ -57,7 +57,6 @@ spec = do
   withdrawalsSpec
   hardForkSpec
   pparamUpdateSpec
-  proposalsSpec
   networkIdSpec
   bootstrapPhaseSpec
 
@@ -1256,7 +1255,7 @@ bootstrapPhaseSpec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 bootstrapPhaseSpec =
-  describe "Proposing and voting during bootstrap phase" $ do
+  describe "Proposing and voting" $ do
     it "Parameter change" $ do
       gid <- submitParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 3000))
       (committee :| _) <- registerInitialCommittee
