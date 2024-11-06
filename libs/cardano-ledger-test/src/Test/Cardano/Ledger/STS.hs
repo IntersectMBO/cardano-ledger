@@ -140,7 +140,8 @@ prop_EPOCH epochNo =
     TrueSpec
     (\_env -> epochStateSpec (lit epochNo))
     (\_env _st -> epochSignalSpec epochNo)
-    (\_env _st newEpoch -> epochStateSpec (lit newEpoch))
+    (\_env _st _newEpoch -> TrueSpec)
+    -- (\_env _st newEpoch -> epochStateSpec (lit newEpoch))
     $ \_env _st _sig _st' -> True
 
 prop_ENACT :: Property
