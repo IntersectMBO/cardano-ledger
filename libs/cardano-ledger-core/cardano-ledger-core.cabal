@@ -151,6 +151,7 @@ library testlib
         Test.Cardano.Ledger.Imp.Common
         Test.Cardano.Ledger.Plutus
         Test.Cardano.Ledger.Plutus.Examples
+        Test.Cardano.Ledger.Plutus.Guardrail
         Test.Cardano.Ledger.TreeDiff
         Test.Cardano.Ledger.Plutus.ToPlutusData
         Test.Cardano.Ledger.Plutus.ScriptTestContext

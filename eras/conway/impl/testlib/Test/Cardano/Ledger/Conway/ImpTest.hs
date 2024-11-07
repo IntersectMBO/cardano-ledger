@@ -84,7 +84,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getProposalsForest,
   logProposalsForest,
   logProposalsForestDiff,
-  constitutionShouldBe,
   getCCExpiry,
   ccShouldBeExpired,
   ccShouldNotBeExpired,
@@ -235,7 +234,6 @@ import Data.Maybe (fromJust, fromMaybe, isJust)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-import qualified Data.Text as T
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
@@ -1508,14 +1506,6 @@ enactConstitution prevGovId constitution dRep committeeMembers = impAnn "Enactin
   enactedConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
   enactedConstitution `shouldBe` constitution
   pure govId
-
--- | Asserts that the URL of the current constitution is equal to the given
--- string
-constitutionShouldBe :: (HasCallStack, ConwayEraGov era) => String -> ImpTestM era ()
-constitutionShouldBe cUrl = do
-  Constitution {constitutionAnchor = Anchor {anchorUrl}} <-
-    getsNES $ newEpochStateGovStateL . constitutionGovStateL
-  anchorUrl `shouldBe` errorFail (textToUrl 128 $ T.pack cUrl)
 
 expectNumDormantEpochs :: HasCallStack => EpochNo -> ImpTestM era ()
 expectNumDormantEpochs expected = do
