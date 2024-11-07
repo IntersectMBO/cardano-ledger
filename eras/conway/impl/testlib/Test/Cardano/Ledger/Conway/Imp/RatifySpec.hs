@@ -308,14 +308,13 @@ paramChangeAffectsProposalsSpec =
           enactThreshold threshold drepC hotCommitteeC = do
             modifyPParams $ ppDRepVotingThresholdsL . dvtPPGovGroupL .~ 1 %! 10
             drepVotingThresholds <- getsPParams ppDRepVotingThresholdsL
-            let paramChange =
-                  ParameterChange
-                    SNothing
-                    ( emptyPParamsUpdate
-                        & ppuDRepVotingThresholdsL
-                          .~ SJust (drepVotingThresholds & dvtCommitteeNormalL .~ threshold)
-                    )
-                    SNothing
+            paramChange <-
+              mkParameterChangeGovAction
+                SNothing
+                ( emptyPParamsUpdate
+                    & ppuDRepVotingThresholdsL
+                      .~ SJust (drepVotingThresholds & dvtCommitteeNormalL .~ threshold)
+                )
             pcGai <- submitGovAction paramChange
             submitYesVote_ (DRepVoter drepC) pcGai
             submitYesVote_ (CommitteeVoter hotCommitteeC) pcGai
@@ -354,14 +353,13 @@ paramChangeAffectsProposalsSpec =
             modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ threshold
           enactThreshold threshold drepC hotCommitteeC = do
             poolVotingThresholds <- getsPParams ppPoolVotingThresholdsL
-            let paramChange =
-                  ParameterChange
-                    SNothing
-                    ( emptyPParamsUpdate
-                        & ppuPoolVotingThresholdsL
-                          .~ SJust (poolVotingThresholds & pvtCommitteeNormalL .~ threshold)
-                    )
-                    SNothing
+            paramChange <-
+              mkParameterChangeGovAction
+                SNothing
+                ( emptyPParamsUpdate
+                    & ppuPoolVotingThresholdsL
+                      .~ SJust (poolVotingThresholds & pvtCommitteeNormalL .~ threshold)
+                )
             pcGai <- submitGovAction paramChange
             submitYesVote_ (DRepVoter drepC) pcGai
             submitYesVote_ (CommitteeVoter hotCommitteeC) pcGai
@@ -420,15 +418,14 @@ paramChangeAffectsProposalsSpec =
       -- both equally, so that both may be ratified. But, the parent increases
       -- the threshold, and it should prevent the child from being ratified.
       let paramChange parent threshold =
-            ParameterChange
+            mkParameterChangeGovAction
               parent
               ( emptyPParamsUpdate
                   & ppuDRepVotingThresholdsL
                     .~ SJust (drepVotingThresholds & dvtPPGovGroupL .~ threshold)
               )
-              SNothing
-      parentGai <- submitGovAction $ paramChange SNothing largerThreshold
-      childGai <- submitGovAction $ paramChange (SJust $ GovPurposeId parentGai) smallerThreshold
+      parentGai <- paramChange SNothing largerThreshold >>= submitGovAction
+      childGai <- paramChange (SJust parentGai) smallerThreshold >>= submitGovAction
       submitYesVote_ (DRepVoter drepC) parentGai
       submitYesVoteCCs_ hotCommitteeCs parentGai
       submitYesVote_ (DRepVoter drepC) childGai
@@ -567,7 +564,8 @@ votingSpec =
                       , pvtCommitteeNoConfidence = 1 %! 2
                       }
                 & ppuGovActionLifetimeL .~ SJust (EpochInterval 100)
-        gaidThreshold <- mkProposal (ParameterChange SNothing ppUpdate SNothing) >>= submitProposal
+        ppUpdateGa <- mkParameterChangeGovAction SNothing ppUpdate
+        gaidThreshold <- mkProposal ppUpdateGa >>= submitProposal
         submitYesVote_ (DRepVoter drep) gaidThreshold
         submitYesVoteCCs_ ccCreds gaidThreshold
         logAcceptedRatio gaidThreshold
@@ -580,11 +578,10 @@ votingSpec =
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
         impAnn "Security group threshold should be 1/2" $
           (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` (1 %! 2)
-        let ga =
-              ParameterChange
-                (SJust (GovPurposeId gaidThreshold))
-                (emptyPParamsUpdate & ppuMinFeeAL .~ SJust newMinFeeA)
-                SNothing
+        ga <-
+          mkParameterChangeGovAction
+            (SJust gaidThreshold)
+            (emptyPParamsUpdate & ppuMinFeeAL .~ SJust newMinFeeA)
         gaidMinFee <- mkProposal ga >>= submitProposal
         submitYesVote_ (DRepVoter drep) gaidMinFee
         submitYesVoteCCs_ ccCreds gaidMinFee

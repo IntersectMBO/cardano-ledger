@@ -501,21 +501,22 @@ actionPrioritySpec =
 
       committeeCs <- registerInitialCommittee
       (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      policy <- getGovPolicy
       gaids <-
         submitGovActions $
           NE.fromList
             [ ParameterChange
                 SNothing
                 (def & ppuMinFeeAL .~ SJust val1)
-                SNothing
+                policy
             , ParameterChange
                 SNothing
                 (def & ppuMinFeeAL .~ SJust val2)
-                SNothing
+                policy
             , ParameterChange
                 SNothing
                 (def & ppuMinFeeAL .~ SJust val3)
-                SNothing
+                policy
             ]
       traverse_
         ( \gaid -> do

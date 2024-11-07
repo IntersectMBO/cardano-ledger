@@ -36,6 +36,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   mkConstitutionProposal,
   mkProposal,
   mkProposalWithRewardAccount,
+  mkTreasuryWithdrawalsGovAction,
   submitTreasuryWithdrawals,
   submitVote,
   submitVote_,
@@ -92,6 +93,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getLastEnactedCommittee,
   getLastEnactedConstitution,
   submitParameterChange,
+  mkParameterChangeGovAction,
   mkUpdateCommitteeProposal,
   submitUpdateCommittee,
   expectCommitteeMemberPresence,
@@ -187,7 +189,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
+import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.PoolParams (ppRewardAccount)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -245,6 +247,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCred)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModel)
+import Test.Cardano.Ledger.Plutus.Examples
 
 -- | Modify the PParams in the current state with the given function
 conwayModifyPParams ::
@@ -283,6 +286,7 @@ instance
           { anchorUrl = errorFail $ textToUrl 128 "https://cardano-constitution.crypto"
           , anchorDataHash = hashAnchorData (AnchorData "Cardano Constitution Content")
           }
+      constitutionHash = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
     pure
       ConwayGenesis
         { cgUpgradePParams =
@@ -318,7 +322,7 @@ instance
               , -- TODO: Replace with correct cost model.
                 ucppPlutusV3CostModel = testingCostModel PlutusV3
               }
-        , cgConstitution = Constitution constitutionAnchor SNothing
+        , cgConstitution = Constitution constitutionAnchor (SJust constitutionHash)
         , cgCommittee = committee
         , cgDelegs = mempty
         , cgInitialDReps = mempty
@@ -851,6 +855,13 @@ submitGovActions gas = do
   let txId = txIdTx tx
   pure $ NE.zipWith (\idx _ -> GovActionId txId (GovActionIx idx)) (0 NE.:| [1 ..]) gas
 
+mkTreasuryWithdrawalsGovAction ::
+  ConwayEraGov era =>
+  [(RewardAccount (EraCrypto era), Coin)] ->
+  ImpTestM era (GovAction era)
+mkTreasuryWithdrawalsGovAction wdrls =
+  TreasuryWithdrawals (Map.fromList wdrls) <$> getGovPolicy
+
 submitTreasuryWithdrawals ::
   ( ShelleyEraImp era
   , ConwayEraTxBody era
@@ -858,9 +869,8 @@ submitTreasuryWithdrawals ::
   ) =>
   [(RewardAccount (EraCrypto era), Coin)] ->
   ImpTestM era (GovActionId (EraCrypto era))
-submitTreasuryWithdrawals wdrls = do
-  policy <- getGovPolicy
-  submitGovAction $ TreasuryWithdrawals (Map.fromList wdrls) policy
+submitTreasuryWithdrawals wdrls =
+  mkTreasuryWithdrawalsGovAction wdrls >>= submitGovAction
 
 enactTreasuryWithdrawals ::
   ConwayEraImp era =>
@@ -880,9 +890,16 @@ submitParameterChange ::
   StrictMaybe (GovActionId (EraCrypto era)) ->
   PParamsUpdate era ->
   ImpTestM era (GovActionId (EraCrypto era))
-submitParameterChange parent ppu = do
-  policy <- getGovPolicy
-  submitGovAction $ ParameterChange (GovPurposeId <$> parent) ppu policy
+submitParameterChange parent ppu =
+  mkParameterChangeGovAction parent ppu >>= submitGovAction
+
+mkParameterChangeGovAction ::
+  ConwayEraImp era =>
+  StrictMaybe (GovActionId (EraCrypto era)) ->
+  PParamsUpdate era ->
+  ImpTestM era (GovAction era)
+mkParameterChangeGovAction parent ppu =
+  ParameterChange (GovPurposeId <$> parent) ppu <$> getGovPolicy
 
 getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe (ScriptHash (EraCrypto era)))
 getGovPolicy =

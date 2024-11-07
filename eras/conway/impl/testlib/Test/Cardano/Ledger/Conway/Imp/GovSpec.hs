@@ -187,7 +187,7 @@ pparamUpdateSpec =
             let ppUpdate =
                   emptyPParamsUpdate
                     & lenz .~ SJust val
-                ga = ParameterChange SNothing ppUpdate SNothing
+            ga <- mkParameterChangeGovAction SNothing ppUpdate
             mkProposal ga
               >>= flip
                 submitFailingProposal
@@ -233,7 +233,7 @@ pparamUpdateSpec =
         ppuDRepDepositL
         zero
       it "PPU cannot be empty" $ do
-        let ga = ParameterChange SNothing emptyPParamsUpdate SNothing
+        ga <- mkParameterChangeGovAction SNothing emptyPParamsUpdate
         mkProposal ga
           >>= flip
             submitFailingProposal
@@ -259,11 +259,10 @@ proposalsSpec = do
               ()
               [ Node () []
               ]
-        let parameterChangeAction =
-              ParameterChange
-                (SJust $ GovPurposeId $ mkCorruptGovActionId p1)
-                (def & ppuMinFeeAL .~ SJust (Coin 3000))
-                SNothing
+        parameterChangeAction <-
+          mkParameterChangeGovAction
+            (SJust $ mkCorruptGovActionId p1)
+            (def & ppuMinFeeAL .~ SJust (Coin 3000))
         parameterChangeProposal <- mkProposal parameterChangeAction
         submitFailingProposal
           parameterChangeProposal
@@ -715,15 +714,16 @@ proposalsSpec = do
         ens <- getEnactState
         returnAddr <- registerRewardAccount
         withdrawal <-
-          Map.singleton returnAddr . Coin . getPositive
+          (: []) . (returnAddr,) . Coin . getPositive
             <$> (arbitrary :: ImpTestM era (Positive Integer))
+        wdrl <- mkTreasuryWithdrawalsGovAction withdrawal
         [prop0, prop1, prop2, prop3] <-
           traverse
             mkProposal
             ( [ InfoAction
               , NoConfidence (ens ^. ensPrevCommitteeL)
               , InfoAction
-              , TreasuryWithdrawals withdrawal SNothing
+              , wdrl
               ] ::
                 [GovAction era]
             )
@@ -741,11 +741,10 @@ proposalsSpec = do
         submitProposal_ prop3
         checkProps [prop0, prop1, prop2, prop3]
   where
-    submitParameterChangeForest = submitGovActionForest $ submitGovAction . paramAction
-    submitParameterChangeTree = submitGovActionTree $ submitGovAction . paramAction
+    submitParameterChangeForest = submitGovActionForest $ paramAction >=> submitGovAction
+    submitParameterChangeTree = submitGovActionTree (paramAction >=> submitGovAction)
     submitConstitutionForest = submitGovActionForest $ submitConstitution . fmap GovPurposeId
-    paramAction p =
-      ParameterChange (GovPurposeId <$> p) (def & ppuMinFeeAL .~ SJust (Coin 10)) SNothing
+    paramAction p = mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin 10))
 
 votingSpec ::
   forall era.
@@ -1088,7 +1087,7 @@ withdrawalsSpec =
               , raCredential = rewardCredential
               }
       proposal <-
-        mkProposal $ TreasuryWithdrawals (Map.singleton badRewardAccount $ Coin 100_000_000) SNothing
+        mkTreasuryWithdrawalsGovAction [(badRewardAccount, Coin 100_000_000)] >>= mkProposal
       let idMismatch =
             injectFailure $
               TreasuryWithdrawalsNetworkIdMismatch (Set.singleton badRewardAccount) Testnet
@@ -1104,19 +1103,17 @@ withdrawalsSpec =
               }
 
     it "Fails for empty withdrawals" $ do
-      expectZeroTreasuryFailurePostBootstrap $ TreasuryWithdrawals Map.empty SNothing
+      mkTreasuryWithdrawalsGovAction [] >>= expectZeroTreasuryFailurePostBootstrap
 
       rwdAccount1 <- registerRewardAccount
-      expectZeroTreasuryFailurePostBootstrap $
-        TreasuryWithdrawals [(rwdAccount1, zero)] SNothing
+      mkTreasuryWithdrawalsGovAction [(rwdAccount1, zero)] >>= expectZeroTreasuryFailurePostBootstrap
 
       rwdAccount2 <- registerRewardAccount
-      let withdrawals = Map.fromList [(rwdAccount1, zero), (rwdAccount2, zero)]
+      let withdrawals = [(rwdAccount1, zero), (rwdAccount2, zero)]
 
-      expectZeroTreasuryFailurePostBootstrap $
-        TreasuryWithdrawals withdrawals SNothing
+      mkTreasuryWithdrawalsGovAction withdrawals >>= expectZeroTreasuryFailurePostBootstrap
 
-      let wdrls = TreasuryWithdrawals (Map.insert rwdAccount2 (Coin 100_000) withdrawals) SNothing
+      wdrls <- mkTreasuryWithdrawalsGovAction $ withdrawals ++ [(rwdAccount2, Coin 100_000)]
       proposal <- mkProposal wdrls
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrap [disallowedProposalFailure proposal]
@@ -1286,7 +1283,7 @@ bootstrapPhaseSpec =
       submitYesVote_ (CommitteeVoter committee) gid
     it "Treasury withdrawal" $ do
       rewardAccount <- registerRewardAccount
-      let action = TreasuryWithdrawals [(rewardAccount, Coin 1000)] SNothing
+      action <- mkTreasuryWithdrawalsGovAction [(rewardAccount, Coin 1000)]
       proposal <- mkProposalWithRewardAccount action rewardAccount
       checkProposalFailure proposal
     it "NoConfidence" $ do

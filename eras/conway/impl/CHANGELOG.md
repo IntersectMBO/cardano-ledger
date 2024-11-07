@@ -8,6 +8,7 @@
 
 ### `testlib`
 
+* Add `mkTreasuryWithdrawalsGovAction` and `mkParameterChangeGovAction`
 * Switch to using `ImpSpec` package
 * Remove `withImpStateWithProtVer`
 * Added `delegateSPORewardAddressToDRep_`

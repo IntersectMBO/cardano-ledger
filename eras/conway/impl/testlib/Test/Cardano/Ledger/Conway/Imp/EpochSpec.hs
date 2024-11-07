@@ -138,9 +138,8 @@ proposalsSpec =
         let ratifyState = extractDRepPulsingState (govStateFinal ^. cgsDRepPulsingStateL)
         rsExpired ratifyState `shouldBe` Set.singleton govActionId
   where
-    submitParameterChangeTree = submitGovActionTree $ submitGovAction . paramAction
-    paramAction p =
-      ParameterChange (GovPurposeId <$> p) (def & ppuMinFeeAL .~ SJust (Coin 10)) SNothing
+    submitParameterChangeTree = submitGovActionTree $ paramAction >=> submitGovAction
+    paramAction p = mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin 10))
 
 dRepSpec ::
   forall era.
@@ -513,8 +512,9 @@ eventsSpec = describe "Events" $ do
       passEpoch -- prevent proposalC expiry and force it's deletion due to conflit.
       proposalC <- impAnn "proposalC" $ do
         newVal <- arbitrary
+        paramChange <- mkParameterChangeGovAction SNothing $ (def & ppuCoinsPerUTxOByteL .~ SJust newVal)
         mkProposalWithRewardAccount
-          (ParameterChange SNothing (def & ppuCoinsPerUTxOByteL .~ SJust newVal) SNothing)
+          paramChange
           rewardAccount
           >>= submitProposal
       let
