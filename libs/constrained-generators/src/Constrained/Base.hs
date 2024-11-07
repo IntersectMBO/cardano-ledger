@@ -49,6 +49,8 @@
 -- depends in turn on `Pred` and so on.
 module Constrained.Base where
 
+import Control.Exception (catch, SomeException)
+import System.IO.Unsafe
 import Control.Applicative
 import Control.Arrow (first)
 import Control.Monad
@@ -1278,7 +1280,9 @@ envFromPred env p = case p of
 -- | A version of `genFromSpecT` that simply errors if the generator fails
 genFromSpec :: forall fn a. (HasCallStack, HasSpec fn a) => Specification fn a -> Gen a
 genFromSpec spec = do
-  res <- strictGen $ explain1 "Calling genFromSpec" $ genFromSpecT spec
+  res <- strictGen $ explain1 "Calling genFromSpec" $ do
+    r <- genFromSpecT spec
+    unsafePerformIO $ r `seq` pure (pure r) `catch` \ (e :: SomeException) -> pure (fatalError (pure $ show e))
   errorGE $ fmap pure res
 
 -- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
@@ -1375,7 +1379,7 @@ data SolverStage fn where
 
 instance Pretty (SolverStage fn) where
   pretty SolverStage {..} =
-    ("\nSolving for variable " <+> viaShow stageVar)
+    viaShow stageVar
       <+> "<-"
         /> vsep'
           ( [pretty stageSpec | not $ isTrueSpec stageSpec]

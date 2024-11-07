@@ -2,16 +2,22 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the EPOCH rule
 module Test.Cardano.Ledger.Constrained.Conway.Epoch where
 
+import Data.Set
+import Data.Foldable
+import Data.Sequence.Strict
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway (Conway, ConwayEra)
-import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, proposalsActionsMap)
+import Cardano.Ledger.Conway.Governance
+import Control.Monad.Identity
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API.Types
@@ -32,11 +38,11 @@ epochEnvSpec = TrueSpec
 epochStateSpec ::
   Term ConwayFn EpochNo ->
   Specification ConwayFn (EpochState (ConwayEra StandardCrypto))
-epochStateSpec epochNo = constrained $ \es ->
+epochStateSpec epochNo = constrained $ \ es ->
   match es $ \_accountState ledgerState _snapShots _nonMyopic ->
     match ledgerState $ \utxoState certState ->
       match utxoState $ \_utxo _deposited _fees govState _stakeDistr _donation ->
-        match govState $ \proposals _committee constitution _curPParams _prevPParams _futPParams drepPulsingState ->
+        match govState $ \ [var| proposals |] _committee constitution _curPParams _prevPParams _futPParams drepPulsingState ->
           [ match constitution $ \_ policy ->
               proposals `satisfies` proposalsSpec epochNo policy certState
           , caseOn
@@ -52,11 +58,46 @@ epochStateSpec epochNo = constrained $ \es ->
               )
               -- DRComplete
               ( branch $ \_snap ratifyState ->
-                  match ratifyState $ \_enactState _enacted expired _delayed ->
-                    forAll expired $ \gasId ->
-                      proposalExists gasId proposals
+                  match ratifyState $ \_enactState [var| enacted |] expired _delayed ->
+                    [ forAll expired $ \[var| gasId |] ->
+                        proposalExists gasId proposals
+                    , forAll enacted $ \govact ->
+                        caseOn (pProcGovAction_ . gasProposalProcedure_ $ govact)
+                          -- ParameterChange
+                          (branch $ \ prev _ _ -> reify (fst_ (psPParamUpdate_ proposals))
+                                                        (fmap GovPurposeId)
+                                                        (prev ==.)
+                          )
+                          -- Hard fork
+                          (branch $ \ prev _ -> False)
+                          -- TreasuryWithdrawals
+                          (branch $ \ _ _ -> True)
+                          -- NoConfidence
+                          (branch $ \ prev -> False)
+                          -- UpdateCommittee
+                          (branch $ \ prev _ _ _ -> False)
+                          -- NewConstitution
+                          (branch $ \ prev _ -> False)
+                          -- Info
+                          (branch $ \ _ -> True)
+                    ]
               )
           ]
+
+wtfSpec ::
+  Specification ConwayFn ( [Int]
+                         , Maybe ((), [Int])
+                         )
+wtfSpec = constrained' $ \ [var| options |] [var| mpair |] ->
+    [ assert $ 0 <=. sizeOf_ options
+    , caseOn mpair
+        (branch $ \ _ -> False)
+        (branch $ \ pair -> match pair $ \ unit ints ->
+          [ forAll ints $ \int -> reify options id $ \xs -> int `elem_` xs
+          , assert $ unit ==. lit ()
+          ]
+        )
+    ]
 
 proposalExists ::
   Term ConwayFn (GovActionId StandardCrypto) ->
@@ -64,8 +105,7 @@ proposalExists ::
   Pred ConwayFn
 proposalExists gasId proposals =
   reify proposals proposalsActionsMap $ \actionMap ->
-    [ gasId `member_` dom_ actionMap
-    ]
+    gasId `member_` dom_ actionMap
 
 epochSignalSpec :: EpochNo -> Specification ConwayFn EpochNo
 epochSignalSpec curEpoch = constrained $ \e ->

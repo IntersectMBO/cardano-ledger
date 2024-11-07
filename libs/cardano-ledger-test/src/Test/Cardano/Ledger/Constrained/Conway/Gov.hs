@@ -282,6 +282,7 @@ withPrevActId gas k =
         -- InfoAction
         (branch $ \_ -> True)
     ]
+
 onHardFork ::
   (IsConwayUniv fn, IsPred p fn) =>
   Term fn (GovActionState (ConwayEra StandardCrypto)) ->
