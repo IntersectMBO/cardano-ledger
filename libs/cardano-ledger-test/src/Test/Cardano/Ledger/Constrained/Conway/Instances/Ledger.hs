@@ -296,6 +296,7 @@ instance HasSimpleRep (StrictSeq a) where
   toSimpleRep = toList
   fromSimpleRep = StrictSeq.fromList
 instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (StrictSeq a)
+instance Forallable (StrictSeq a) a
 
 instance HasSimpleRep (Seq a) where
   type SimpleRep (Seq a) = [a]
