@@ -156,14 +156,14 @@ proposalsSpec geEpoch gePPolicy geCertState =
                 Explain (pure "TreasuryWithdrawal fails") $
                   Block
                     [ dependsOn gasOther withdrawMap
-                    , match geCertState $ \ _vState _pState [var|dState|] ->
-                      match dState $ \ [var|rewardMap|] _ _ _ ->
-                      reify rewardMap (Map.keysSet . umElems) $ \ [var|registeredCredentials|] ->
-                        forAll (dom_ withdrawMap) $ \ [var|rewAcnt|] ->
-                          match rewAcnt $ \ [var|network|] [var|credential|] ->
-                            [ network ==. lit Testnet
-                            , credential `member_` registeredCredentials
-                            ]
+                    , match geCertState $ \_vState _pState [var|dState|] ->
+                        match dState $ \ [var|rewardMap|] _ _ _ ->
+                          reify rewardMap (Map.keysSet . umElems) $ \ [var|registeredCredentials|] ->
+                            forAll (dom_ withdrawMap) $ \ [var|rewAcnt|] ->
+                              match rewAcnt $ \ [var|network|] [var|credential|] ->
+                                [ network ==. lit Testnet
+                                , credential `member_` registeredCredentials
+                                ]
                     , assert $ policy ==. gePPolicy
                     ]
             )

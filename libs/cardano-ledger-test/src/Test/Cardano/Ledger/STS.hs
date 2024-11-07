@@ -23,11 +23,11 @@ import Constrained
 
 import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
+import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.Pool
-import Test.Cardano.Ledger.Constrained.Conway.Epoch
 
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Shelley.Utils
@@ -69,7 +69,7 @@ stsPropertyV2 ::
   (env -> st -> sig -> st -> p) ->
   Property
 stsPropertyV2 specEnv specState specSig prop =
-  stsPropertyV2' @r specEnv specState specSig (\ env _ _ -> specState env) prop
+  stsPropertyV2' @r specEnv specState specSig (\env _ _ -> specState env) prop
 
 stsPropertyV2' ::
   forall r fn era env st sig fail p.
@@ -297,12 +297,12 @@ tests_STS =
   testGroup
     "STS property tests"
     [ govTests
-    -- , utxoTests
-    -- TODO: this is probably one of the last things we want to
-    -- get passing as it depends on being able to generate a complete
-    -- `EpochState era`
-    , testProperty "prop_EPOCH" prop_EPOCH
-    -- , testProperty "prop_LEDGER" prop_LEDGER
+    , -- , utxoTests
+      -- TODO: this is probably one of the last things we want to
+      -- get passing as it depends on being able to generate a complete
+      -- `EpochState era`
+      testProperty "prop_EPOCH" prop_EPOCH
+      -- , testProperty "prop_LEDGER" prop_LEDGER
     ]
 
 govTests :: TestTree
