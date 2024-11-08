@@ -92,6 +92,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getLastEnactedCommittee,
   getLastEnactedConstitution,
   submitParameterChange,
+  mkMinFeeUpdateGovAction,
   mkParameterChangeGovAction,
   mkUpdateCommitteeProposal,
   submitUpdateCommittee,
@@ -245,7 +246,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCred)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModel)
-import Test.Cardano.Ledger.Plutus.Examples
+import Test.Cardano.Ledger.Plutus.Guardrail (guardrailScript)
 
 -- | Modify the PParams in the current state with the given function
 conwayModifyPParams ::
@@ -284,7 +285,7 @@ instance
           { anchorUrl = errorFail $ textToUrl 128 "https://cardano-constitution.crypto"
           , anchorDataHash = hashAnchorData (AnchorData "Cardano Constitution Content")
           }
-      constitutionHash = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
+      guardrailScriptHash = hashPlutusScript guardrailScript
     pure
       ConwayGenesis
         { cgUpgradePParams =
@@ -320,7 +321,7 @@ instance
               , -- TODO: Replace with correct cost model.
                 ucppPlutusV3CostModel = testingCostModel PlutusV3
               }
-        , cgConstitution = Constitution constitutionAnchor (SJust constitutionHash)
+        , cgConstitution = Constitution constitutionAnchor (SJust guardrailScriptHash)
         , cgCommittee = committee
         , cgDelegs = mempty
         , cgInitialDReps = mempty
@@ -898,6 +899,13 @@ mkParameterChangeGovAction ::
   ImpTestM era (GovAction era)
 mkParameterChangeGovAction parent ppu =
   ParameterChange (GovPurposeId <$> parent) ppu <$> getGovPolicy
+
+mkMinFeeUpdateGovAction ::
+  ConwayEraImp era =>
+  StrictMaybe (GovActionId (EraCrypto era)) -> ImpTestM era (GovAction era)
+mkMinFeeUpdateGovAction p = do
+  minFeeValue <- uniformRM (30, 1000)
+  mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin minFeeValue))
 
 getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe (ScriptHash (EraCrypto era)))
 getGovPolicy =

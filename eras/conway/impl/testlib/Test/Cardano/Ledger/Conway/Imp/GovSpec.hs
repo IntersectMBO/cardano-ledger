@@ -259,10 +259,7 @@ proposalsSpec = do
               ()
               [ Node () []
               ]
-        parameterChangeAction <-
-          mkParameterChangeGovAction
-            (SJust $ mkCorruptGovActionId p1)
-            (def & ppuMinFeeAL .~ SJust (Coin 3000))
+        parameterChangeAction <- mkMinFeeUpdateGovAction (SJust $ mkCorruptGovActionId p1)
         parameterChangeProposal <- mkProposal parameterChangeAction
         submitFailingProposal
           parameterChangeProposal
@@ -270,7 +267,7 @@ proposalsSpec = do
           ]
       it "Subtrees are pruned when proposals expire" $ do
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
-        p1 <- submitParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 3000))
+        p1 <- mkMinFeeUpdateGovAction SNothing >>= submitGovAction
         passNEpochs 3
         a <-
           submitParameterChangeTree
@@ -305,7 +302,7 @@ proposalsSpec = do
                          , Node SNothing []
                          ]
       it "Subtrees are pruned when proposals expire over multiple rounds" $ do
-        let ppupdate = def & ppuMinFeeAL .~ SJust (Coin 3000)
+        let ppupdate = def & ppuMinFeeAL .~ SJust (Coin 1000)
         let submitInitialProposal = submitParameterChange SNothing ppupdate
         let submitChildProposal parent = submitParameterChange (SJust parent) ppupdate
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
@@ -744,7 +741,7 @@ proposalsSpec = do
     submitParameterChangeForest = submitGovActionForest $ paramAction >=> submitGovAction
     submitParameterChangeTree = submitGovActionTree (paramAction >=> submitGovAction)
     submitConstitutionForest = submitGovActionForest $ submitConstitution . fmap GovPurposeId
-    paramAction p = mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin 10))
+    paramAction p = mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin 500))
 
 votingSpec ::
   forall era.
@@ -1254,7 +1251,7 @@ bootstrapPhaseSpec ::
 bootstrapPhaseSpec =
   describe "Proposing and voting" $ do
     it "Parameter change" $ do
-      gid <- submitParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 3000))
+      gid <- mkMinFeeUpdateGovAction SNothing >>= submitGovAction
       (committee :| _) <- registerInitialCommittee
       (drep, _, _) <- setupSingleDRep 1_000_000
       (spo, _, _) <- setupPoolWithStake $ Coin 42_000_000

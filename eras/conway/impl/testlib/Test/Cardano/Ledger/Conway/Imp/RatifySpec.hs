@@ -51,7 +51,7 @@ spec = do
   it "Many CC Cold Credentials map to the same Hot Credential act as many votes" $ do
     hotCred NE.:| _ <- registerInitialCommittee
     (dRep, _, _) <- setupSingleDRep =<< uniformRM (10_000_000, 1_000_000_000)
-    Positive deposit <- arbitrary
+    deposit <- uniformRM (1_000_000, 100_000_000_000)
     gaId <- submitParameterChange SNothing $ def & ppuDRepDepositL .~ SJust (Coin deposit)
     submitYesVote_ (CommitteeVoter hotCred) gaId
     whenPostBootstrap $ submitYesVote_ (DRepVoter dRep) gaId
@@ -278,11 +278,7 @@ paramChangeAffectsProposalsSpec =
   -- These tests rely on submitting committee-update proposals and on drep votes, which are disallowed during bootstrap,
   -- so we can only run them post-bootstrap
   describe "ParameterChange affects existing proposals" $ do
-    let largerThreshold :: UnitInterval
-        largerThreshold = 51 %! 100
-        smallerThreshold :: UnitInterval
-        smallerThreshold = 1 %! 2
-        submitTwoExampleProposalsAndVoteOnTheChild ::
+    let submitTwoExampleProposalsAndVoteOnTheChild ::
           [(KeyHash 'StakePool (EraCrypto era), Vote)] ->
           [(Credential 'DRepRole (EraCrypto era), Vote)] ->
           ImpTestM era (GovActionId (EraCrypto era), GovActionId (EraCrypto era))
@@ -303,11 +299,11 @@ paramChangeAffectsProposalsSpec =
           passEpoch -- Make the votes count
           pure (gaiParent, gaiChild)
     describe "DRep" $ do
-      let setThreshold threshold =
+      let setCommitteeUpdateThreshold threshold =
             modifyPParams $ ppDRepVotingThresholdsL . dvtCommitteeNormalL .~ threshold
-          enactThreshold threshold drepC hotCommitteeC = do
-            modifyPParams $ ppDRepVotingThresholdsL . dvtPPGovGroupL .~ 1 %! 10
-            drepVotingThresholds <- getsPParams ppDRepVotingThresholdsL
+          getDrepVotingThresholds = getsPParams ppDRepVotingThresholdsL
+          enactCommitteeUpdateThreshold threshold dreps hotCommitteeC = do
+            drepVotingThresholds <- getDrepVotingThresholds
             paramChange <-
               mkParameterChangeGovAction
                 SNothing
@@ -316,27 +312,37 @@ paramChangeAffectsProposalsSpec =
                       .~ SJust (drepVotingThresholds & dvtCommitteeNormalL .~ threshold)
                 )
             pcGai <- submitGovAction paramChange
-            submitYesVote_ (DRepVoter drepC) pcGai
+            forM_ dreps $ \drep -> submitYesVote_ (DRepVoter drep) pcGai
             submitYesVote_ (CommitteeVoter hotCommitteeC) pcGai
+            isDRepAccepted pcGai `shouldReturn` True
             passNEpochs 2
+            (^. dvtCommitteeNormalL) <$> getDrepVotingThresholds `shouldReturn` threshold
+
       it "Increasing the threshold prevents a hitherto-ratifiable proposal from being ratified" $ whenPostBootstrap $ do
         (drepC, hotCommitteeC, _) <- electBasicCommittee
-        setThreshold smallerThreshold
+        setCommitteeUpdateThreshold $ 1 %! 2 -- small threshold
         (drep, _, _) <- setupSingleDRep 1_000_000
         (_gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild [] [(drep, VoteYes)]
         isDRepAccepted gaiChild `shouldReturn` True
-        enactThreshold largerThreshold drepC hotCommitteeC
+        enactCommitteeUpdateThreshold
+          (65 %! 100)
+          ([drepC, drep] :: [Credential 'DRepRole (EraCrypto era)])
+          hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` False
       it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ whenPostBootstrap $ do
         -- This sets up a stake pool with 1_000_000 Coin
         (drepC, hotCommitteeC, _) <- electBasicCommittee
-        setThreshold largerThreshold
-        (drep, _, _) <- setupSingleDRep 1_000_000
+        setCommitteeUpdateThreshold $ 1 %! 1 -- too large threshold
+        (drep, _, _) <- setupSingleDRep 3_000_000
         (spoC, _, _) <- setupPoolWithStake $ Coin 3_000_000
         (gaiParent, gaiChild) <-
           submitTwoExampleProposalsAndVoteOnTheChild [(spoC, VoteYes)] [(drep, VoteYes)]
+        logAcceptedRatio gaiChild
         isDRepAccepted gaiChild `shouldReturn` False
-        enactThreshold smallerThreshold drepC hotCommitteeC
+        enactCommitteeUpdateThreshold
+          (65 %! 100)
+          ([drepC, drep] :: [Credential 'DRepRole (EraCrypto era)])
+          hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` True
         -- Not vote on the parent too to make sure both get enacted
         submitYesVote_ (DRepVoter drep) gaiParent
@@ -348,10 +354,10 @@ paramChangeAffectsProposalsSpec =
         passEpoch -- UpdateCommittee is a delaying action
         getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiChild)
     describe "SPO" $ do
-      let setThreshold :: UnitInterval -> ImpTestM era ()
-          setThreshold threshold =
+      let setCommitteeUpdateThreshold :: UnitInterval -> ImpTestM era ()
+          setCommitteeUpdateThreshold threshold =
             modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ threshold
-          enactThreshold threshold drepC hotCommitteeC = do
+          enactCommitteeUpdateThreshold threshold drepC hotCommitteeC = do
             poolVotingThresholds <- getsPParams ppPoolVotingThresholdsL
             paramChange <-
               mkParameterChangeGovAction
@@ -364,10 +370,12 @@ paramChangeAffectsProposalsSpec =
             submitYesVote_ (DRepVoter drepC) pcGai
             submitYesVote_ (CommitteeVoter hotCommitteeC) pcGai
             passNEpochs 2
+            (^. pvtCommitteeNormalL) <$> (getsPParams ppPoolVotingThresholdsL) `shouldReturn` threshold
+
       it "Increasing the threshold prevents a hitherto-ratifiable proposal from being ratified" $ whenPostBootstrap $ do
         -- This sets up a stake pool with 1_000_000 Coin
         (drepC, hotCommitteeC, _) <- electBasicCommittee
-        setThreshold smallerThreshold
+        setCommitteeUpdateThreshold $ 1 %! 2
         (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 2_000_000
         (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
         passEpoch -- Make the new pool distribution count
@@ -378,13 +386,13 @@ paramChangeAffectsProposalsSpec =
             [(poolKH1, VoteYes), (poolKH2, VoteNo)]
             [(drepC, VoteYes)]
         isSpoAccepted gaiChild `shouldReturn` True
-        enactThreshold largerThreshold drepC hotCommitteeC
+        enactCommitteeUpdateThreshold (65 %! 100) drepC hotCommitteeC
         isSpoAccepted gaiChild `shouldReturn` False
       it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ whenPostBootstrap $ do
         -- This sets up a stake pool with 1_000_000 Coin
         (drepC, hotCommitteeC, _) <- electBasicCommittee
-        setThreshold largerThreshold
-        (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 2_000_000
+        setCommitteeUpdateThreshold $ 1 %! 1 -- too large threshold
+        (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 4_000_000
         (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
         -- bootstrap: 1 % 2 stake yes (2_000_000); 1 % 2 stake abstain; yes / stake - abstain == 1 % 2
         -- post-bootstrap: 1 % 2 stake yes (2_000_000); 1 % 4 stake didn't vote; 1 % 4 stake no
@@ -393,7 +401,7 @@ paramChangeAffectsProposalsSpec =
             [(poolKH1, VoteYes), (poolKH2, VoteNo)]
             [(drepC, VoteYes)]
         isSpoAccepted gaiChild `shouldReturn` False
-        enactThreshold smallerThreshold drepC hotCommitteeC
+        enactCommitteeUpdateThreshold (65 %! 100) drepC hotCommitteeC -- smaller threshold
         isSpoAccepted gaiChild `shouldReturn` True
         -- Not vote on the parent too to make sure both get enacted
         submitYesVote_ (DRepVoter drepC) gaiParent
@@ -413,7 +421,7 @@ paramChangeAffectsProposalsSpec =
       drepVotingThresholds <- getsPParams ppDRepVotingThresholdsL
       modifyPParams $
         ppDRepVotingThresholdsL
-          .~ (drepVotingThresholds & dvtPPGovGroupL .~ smallerThreshold)
+          .~ (drepVotingThresholds & dvtPPGovGroupL .~ 1 %! 2)
       -- Submit a parent-child sequence of ParameterChange proposals and vote on
       -- both equally, so that both may be ratified. But, the parent increases
       -- the threshold, and it should prevent the child from being ratified.
@@ -424,8 +432,8 @@ paramChangeAffectsProposalsSpec =
                   & ppuDRepVotingThresholdsL
                     .~ SJust (drepVotingThresholds & dvtPPGovGroupL .~ threshold)
               )
-      parentGai <- paramChange SNothing largerThreshold >>= submitGovAction
-      childGai <- paramChange (SJust parentGai) smallerThreshold >>= submitGovAction
+      parentGai <- paramChange SNothing ((90 %! 100)) >>= submitGovAction
+      childGai <- paramChange (SJust parentGai) (75 %! 100) >>= submitGovAction
       submitYesVote_ (DRepVoter drepC) parentGai
       submitYesVoteCCs_ hotCommitteeCs parentGai
       submitYesVote_ (DRepVoter drepC) childGai
@@ -558,12 +566,12 @@ votingSpec =
                   .~ SJust
                     PoolVotingThresholds
                       { pvtPPSecurityGroup = 1 %! 2
-                      , pvtMotionNoConfidence = 1 %! 2
-                      , pvtHardForkInitiation = 1 %! 2
-                      , pvtCommitteeNormal = 1 %! 2
-                      , pvtCommitteeNoConfidence = 1 %! 2
+                      , pvtMotionNoConfidence = 51 %! 100
+                      , pvtHardForkInitiation = 51 %! 100
+                      , pvtCommitteeNormal = 65 %! 100
+                      , pvtCommitteeNoConfidence = 65 %! 100
                       }
-                & ppuGovActionLifetimeL .~ SJust (EpochInterval 100)
+                & ppuGovActionLifetimeL .~ SJust (EpochInterval 15)
         ppUpdateGa <- mkParameterChangeGovAction SNothing ppUpdate
         gaidThreshold <- mkProposal ppUpdateGa >>= submitProposal
         submitYesVote_ (DRepVoter drep) gaidThreshold
@@ -573,7 +581,7 @@ votingSpec =
       passEpoch
       logAcceptedRatio gaidThreshold
       passEpoch
-      let newMinFeeA = Coin 12_345
+      let newMinFeeA = Coin 1000
       gaidMinFee <- do
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
         impAnn "Security group threshold should be 1/2" $
@@ -790,7 +798,7 @@ votingSpec =
           (drep1, _, committeeGovId) <- electBasicCommittee
           (_, drep2Staking, _) <- setupSingleDRep 1_000_000
 
-          paramChangeGovId <- submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+          paramChangeGovId <- submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 1000)
           submitYesVote_ (DRepVoter drep1) paramChangeGovId
 
           passEpoch

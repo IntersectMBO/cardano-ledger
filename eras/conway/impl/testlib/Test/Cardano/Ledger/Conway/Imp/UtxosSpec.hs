@@ -230,7 +230,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             $ inject (CurrentTreasuryFieldNotSupported @era donation)
       describe "VotingProcedures" $ do
         it "V1" $ do
-          action <- mkParameterChangeGovAction SNothing (def & ppuMinFeeAL .~ SJust (Coin 10))
+          action <- mkMinFeeUpdateGovAction SNothing
           (ccCred :| _) <- registerInitialCommittee
           proposal <- submitGovAction action
           let badField =
@@ -246,7 +246,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             $ inject
             $ VotingProceduresFieldNotSupported badField
         it "V2" $ do
-          action <- mkParameterChangeGovAction SNothing (def & ppuMinFeeAL .~ SJust (Coin 10))
+          action <- mkMinFeeUpdateGovAction SNothing
           (ccCred :| _) <- registerInitialCommittee
           proposal <- submitGovAction action
           let badField =
