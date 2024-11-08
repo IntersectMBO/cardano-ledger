@@ -113,6 +113,7 @@ import Test.Cardano.Ledger.Plutus (
   testingCostModels,
  )
 import Test.Cardano.Ledger.Plutus.Examples
+import Test.Cardano.Ledger.Plutus.Guardrail (guardrailScript)
 
 class
   ( MaryEraImp era
@@ -392,6 +393,7 @@ plutusTestScripts lang =
     , mkScriptTestEntry (datumIsWellformed lang) $ PlutusArgs (P.I 221) (Just $ P.I 5)
     , mkScriptTestEntry (inputsOutputsAreNotEmptyNoDatum lang) $ PlutusArgs (P.I 122) Nothing
     , mkScriptTestEntry (inputsOutputsAreNotEmptyWithDatum lang) $ PlutusArgs (P.I 222) (Just $ P.I 5)
+    , mkScriptTestEntry guardrailScript $ PlutusArgs (P.I 0) Nothing
     ]
 
 malformedPlutus :: Plutus l

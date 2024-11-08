@@ -32,6 +32,8 @@
 
 ### `testlib`
 
+* Add `decodeHexPlutus` to `Plutus` module
+* Add `Guardrail` module
 * Switch to using `ImpSpec` package
 * Remove `HasSubState`, `subStateM`, `setSubStateM`, `StateGen` and `StateGenM` as no longer useful.
 * Re-export `withImpInit` and `modifyImpInit`
