@@ -8,6 +8,8 @@
 
 ### `testlib`
 
+* Switch to using `ImpSpec` package
+* Remove `withImpStateWithProtVer`
 * Added `delegateSPORewardAddressToDRep_`
 * Add `mkUpdateCommitteeProposal`
 * Add `SubmitFailureExpectation`, `FailBoth`, `submitBootstrapAwareFailingVote`, `submitBootstrapAwareFailingProposal`, `submitBootstrapAwareFailingProposal_`

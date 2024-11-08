@@ -44,7 +44,7 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
 spec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec =
   describe "Reference scripts" $ do
     it "required reference script counts towards the minFee calculation" $ do

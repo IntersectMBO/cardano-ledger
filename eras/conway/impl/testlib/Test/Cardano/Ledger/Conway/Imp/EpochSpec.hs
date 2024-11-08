@@ -45,7 +45,7 @@ spec ::
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   dRepVotingSpec
   treasurySpec
@@ -56,7 +56,7 @@ spec = do
 proposalsSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 proposalsSpec =
   describe "Proposals" $ do
     it "Proposals survive multiple epochs without any activity" $ do
@@ -145,7 +145,7 @@ proposalsSpec =
 dRepSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 dRepSpec =
   describe "DRep" $ do
     it "expiry is updated based on the number of dormant epochs" $ do
@@ -347,7 +347,7 @@ dRepSpec =
 dRepVotingSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 dRepVotingSpec =
   describe "DRep" $ do
     -- DRep voting for anything other than Info is disallowed during bootstrap,
@@ -394,7 +394,7 @@ dRepVotingSpec =
 treasurySpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 treasurySpec =
   -- Treasury withdrawal are disallowed during bootstrap,
   -- so we can run tests that submit such proposal only post-bootstrap.
@@ -487,7 +487,7 @@ eventsSpec ::
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 eventsSpec = describe "Events" $ do
   describe "emits event" $ do
     it "GovInfoEvent" $ do

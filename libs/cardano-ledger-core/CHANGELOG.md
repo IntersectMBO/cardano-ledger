@@ -31,6 +31,9 @@
 
 ### `testlib`
 
+* Switch to using `ImpSpec` package
+* Remove `HasSubState`, `subStateM`, `setSubStateM`, `StateGen` and `StateGenM` as no longer useful.
+* Re-export `withImpInit` and `modifyImpInit`
 * Remove deprecated `mkVKeyRwdAcnt`
 * Remove deprecated `deserialiseRewardAcntOld`
 * Generalize the return type of `assertColorFailure` to `MonadIO`

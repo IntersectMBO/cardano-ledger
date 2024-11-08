@@ -33,7 +33,7 @@ spec ::
   , Arbitrary (TxAuxData era)
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   describe "Bootstrap Witness" $ do
     it "Valid Witnesses" $ do

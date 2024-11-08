@@ -64,7 +64,7 @@ library
         bytestring,
         cardano-crypto-class,
         cardano-ledger-binary >=1.4,
-        cardano-ledger-core >=1.15 && <1.17,
+        cardano-ledger-core >=1.16 && <1.17,
         cardano-ledger-shelley ^>=1.15,
         cardano-strict-containers,
         cardano-slotting,

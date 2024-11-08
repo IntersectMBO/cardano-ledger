@@ -37,7 +37,7 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   votingSpec
   delayingActionsSpec
@@ -69,7 +69,7 @@ spec = do
 initiateHardForkWithLessThanMinimalCommitteeSize ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 initiateHardForkWithLessThanMinimalCommitteeSize =
   it "Hard Fork can still be initiated with less than minimal committee size" $ do
     hotCs <- registerInitialCommittee
@@ -97,7 +97,7 @@ initiateHardForkWithLessThanMinimalCommitteeSize =
 spoAndCCVotingSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spoAndCCVotingSpec = do
   describe "When CC expired" $ do
     let expireCommitteeMembers = do
@@ -201,7 +201,7 @@ spoAndCCVotingSpec = do
 committeeExpiryResignationDiscountSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 committeeExpiryResignationDiscountSpec =
   -- Committee-update proposals are disallowed during bootstrap, so we can only run these tests post-bootstrap
   describe "Expired and resigned committee members are discounted from quorum" $ do
@@ -273,7 +273,7 @@ committeeExpiryResignationDiscountSpec =
 paramChangeAffectsProposalsSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 paramChangeAffectsProposalsSpec =
   -- These tests rely on submitting committee-update proposals and on drep votes, which are disallowed during bootstrap,
   -- so we can only run them post-bootstrap
@@ -446,7 +446,7 @@ paramChangeAffectsProposalsSpec =
 committeeMinSizeAffectsInFlightProposalsSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 committeeMinSizeAffectsInFlightProposalsSpec =
   -- Treasury withdrawals are disallowed during bootstrap, so we can only run these tests post-bootstrap
   describe "CommitteeMinSize affects in-flight proposals" $ do
@@ -513,7 +513,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
 spoVotesForHardForkInitiation ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spoVotesForHardForkInitiation =
   describe "Counting of SPO votes" $ do
     it "HardForkInitiation" $ do
@@ -542,7 +542,7 @@ spoVotesForHardForkInitiation =
 votingSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 votingSpec =
   describe "Voting" $ do
     -- These tests involve DRep voting, which is not possible in bootstrap,
@@ -1450,7 +1450,7 @@ votingSpec =
 delayingActionsSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 delayingActionsSpec =
   -- All tests below are relying on submitting constitution of committe-update proposals, which are disallowed during bootstrap,
   -- so we can only run them post-bootstrap.
@@ -1667,7 +1667,7 @@ delayingActionsSpec =
 committeeMaxTermLengthSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 committeeMaxTermLengthSpec =
   -- Committee-update proposals are disallowed during bootstrap, so we can only run these tests post-bootstrap
   describe "Committee members can serve full `CommitteeMaxTermLength`" $ do

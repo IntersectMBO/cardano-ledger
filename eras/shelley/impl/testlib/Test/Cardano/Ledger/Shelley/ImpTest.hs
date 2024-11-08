@@ -25,15 +25,8 @@
 
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
+  LedgerSpec,
   SomeSTSEvent (..),
-  runImpTestM,
-  runImpTestM_,
-  evalImpTestM,
-  execImpTestM,
-  runImpTestGenM,
-  runImpTestGenM_,
-  evalImpTestGenM,
-  execImpTestGenM,
   ImpTestState,
   ImpTestEnv (..),
   ImpException (..),
@@ -84,8 +77,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   registerPoolWithRewardAccount,
   registerAndRetirePoolToMakeReward,
   getRewardAccountAmount,
-  withImpState,
-  withImpStateModified,
   shelleyFixupTx,
   lookupImpRootTxOut,
   sendValueTo,
@@ -107,6 +98,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   defaultInitImpTestState,
   impEraStartEpochNo,
   impSetSeed,
+  modifyImpInitProtVer,
 
   -- * Logging
   Doc,
@@ -132,6 +124,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impNativeScriptsG,
   produceScript,
   advanceToPointOfNoReturn,
+
+  -- * ImpSpec re-exports
+  ImpM,
+  ImpInit,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -234,7 +230,7 @@ import Cardano.Slotting.Time (mkSlotLength)
 import Control.Monad (forM)
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
-import Control.Monad.State.Strict (MonadState (..), StateT, evalStateT, gets, modify)
+import Control.Monad.State.Strict (MonadState (..), evalStateT, gets, modify)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Writer.Class (MonadWriter (..))
@@ -252,39 +248,26 @@ import Data.Default (Default (..))
 import Data.Foldable (toList, traverse_)
 import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))
-import Data.IORef
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.TreeDiff (ansiWlExpr)
 import Data.Type.Equality (TestEquality (..))
 import Data.Void
-import GHC.Stack (CallStack, SrcLoc (..), getCallStack)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Numeric.Natural (Natural)
-import Prettyprinter (
-  Doc,
-  Pretty (..),
-  annotate,
-  hcat,
-  indent,
-  line,
-  vsep,
- )
-import Prettyprinter.Render.Terminal (AnsiStyle, Color (..), color)
-import System.Random
-import qualified System.Random as Random
+import Prettyprinter (Doc)
+import Prettyprinter.Render.Terminal (AnsiStyle)
+import qualified System.Random.Stateful as R
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborRangeFailureExpectation)
-import Test.Cardano.Ledger.Binary.TreeDiff (srcLocToLocation)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Core.KeyPair (
@@ -299,26 +282,35 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
 import Test.Cardano.Ledger.Shelley.TreeDiff (Expr (..))
 import Test.Cardano.Slotting.Numeric ()
-import Test.HUnit.Lang (FailureReason (..), HUnitFailure (..))
-import Test.Hspec.Core.Spec (
-  Example (..),
-  Params,
-  Result (..),
-  paramsQuickCheckArgs,
- )
-import qualified Test.Hspec.Core.Spec as H
-import Test.QuickCheck.Gen (Gen (..))
-import Test.QuickCheck.Random (QCGen (..), integerVariant, mkQCGen)
+import Test.ImpSpec
 import Type.Reflection (Typeable, typeOf)
-import UnliftIO (MonadUnliftIO (..))
-import UnliftIO.Exception (
-  Exception (..),
-  SomeException (..),
-  catchAny,
-  catchAnyDeep,
-  evaluateDeep,
-  throwIO,
- )
+import UnliftIO.Exception (evaluateDeep)
+
+type ImpTestM era = ImpM (LedgerSpec era)
+
+data LedgerSpec era
+
+instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
+  type ImpSpecEnv (LedgerSpec era) = ImpTestEnv era
+  type ImpSpecState (LedgerSpec era) = ImpTestState era
+  impInitIO qcGen = do
+    ioGen <- R.newIOGenM qcGen
+    initState <- evalStateT (runReaderT initImpTestState ioGen) (mempty :: ImpPrepState (EraCrypto era))
+    pure $
+      ImpInit
+        { impInitEnv =
+            ImpTestEnv
+              { iteFixup = fixupTx
+              , iteCborRoundTripFailures = True
+              }
+        , impInitState = initState
+        }
+
+  -- There is an important step here of running TICK rule. This is necessary as a final
+  -- step of `era` initialization, because on the very first TICK of an era the
+  -- `futurePParams` are applied and the epoch number is updated to the first epoch
+  -- number of the current era
+  impPrepAction = passTick
 
 data SomeSTSEvent era
   = forall (rule :: Symbol).
@@ -344,8 +336,6 @@ data ImpTestState era = ImpTestState
   , impNativeScripts :: !(Map (ScriptHash (EraCrypto era)) (NativeScript era))
   , impLastTick :: !SlotNo
   , impGlobals :: !Globals
-  , impLog :: !(Doc AnsiStyle)
-  , impGen :: !QCGen
   , impEvents :: [SomeSTSEvent era]
   }
 
@@ -353,13 +343,21 @@ data ImpTestState era = ImpTestState
 data ImpPrepState c = ImpPrepState
   { impPrepKeyPairs :: !(Map (KeyHash 'Witness c) (KeyPair 'Witness c))
   , impPrepByronKeyPairs :: !(Map (BootstrapAddress c) ByronKeyPair)
-  , impPrepGen :: !QCGen
   }
 
-instance HasSubState (ImpPrepState era) where
-  type SubState (ImpPrepState era) = StateGen QCGen
-  getSubState = StateGen . impPrepGen
-  setSubState s (StateGen g) = s {impPrepGen = g}
+instance Semigroup (ImpPrepState c) where
+  (<>) ips1 ips2 =
+    ImpPrepState
+      { impPrepKeyPairs = impPrepKeyPairs ips1 <> impPrepKeyPairs ips2
+      , impPrepByronKeyPairs = impPrepByronKeyPairs ips1 <> impPrepByronKeyPairs ips2
+      }
+
+instance Monoid (ImpPrepState c) where
+  mempty =
+    ImpPrepState
+      { impPrepKeyPairs = mempty
+      , impPrepByronKeyPairs = mempty
+      }
 
 class Crypto c => HasKeyPairs t c | t -> c where
   keyPairsL :: Lens' t (Map (KeyHash 'Witness c) (KeyPair 'Witness c))
@@ -373,14 +371,8 @@ instance Crypto c => HasKeyPairs (ImpPrepState c) c where
   keyPairsL = lens impPrepKeyPairs (\x y -> x {impPrepKeyPairs = y})
   keyPairsByronL = lens impPrepByronKeyPairs (\x y -> x {impPrepByronKeyPairs = y})
 
-instance Monad m => HasStatefulGen (StateGenM (ImpPrepState era)) (StateT (ImpPrepState era) m) where
-  askStatefulGen = pure StateGenM
-
 impGlobalsL :: Lens' (ImpTestState era) Globals
 impGlobalsL = lens impGlobals (\x y -> x {impGlobals = y})
-
-impLogL :: Lens' (ImpTestState era) (Doc AnsiStyle)
-impLogL = lens impLog (\x y -> x {impLog = y})
 
 impNESL :: Lens' (ImpTestState era) (NewEpochState era)
 impNESL = lens impNES (\x y -> x {impNES = y})
@@ -482,7 +474,7 @@ class
   ShelleyEraImp era
   where
   initGenesis ::
-    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m, MonadFail m) =>
+    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen g m, MonadFail m) =>
     m (Genesis era)
   default initGenesis ::
     (Monad m, Genesis era ~ NoGenesis era) =>
@@ -490,12 +482,12 @@ class
   initGenesis = pure NoGenesis
 
   initNewEpochState ::
-    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m, MonadFail m) =>
+    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen g m, MonadFail m) =>
     m (NewEpochState era)
   default initNewEpochState ::
     ( HasKeyPairs s (EraCrypto era)
     , MonadState s m
-    , HasStatefulGen (StateGenM s) m
+    , HasStatefulGen g m
     , MonadFail m
     , ShelleyEraImp (PreviousEra era)
     , TranslateEra era NewEpochState
@@ -509,9 +501,7 @@ class
   initImpTestState ::
     ( HasKeyPairs s (EraCrypto era)
     , MonadState s m
-    , HasSubState s
-    , SubState s ~ StateGen QCGen
-    , HasStatefulGen (StateGenM s) m
+    , HasStatefulGen g m
     , MonadFail m
     ) =>
     m (ImpTestState era)
@@ -536,10 +526,10 @@ class
   fixupTx :: HasCallStack => Tx era -> ImpTestM era (Tx era)
 
 defaultInitNewEpochState ::
-  forall era s m.
+  forall era g s m.
   ( MonadState s m
   , HasKeyPairs s (EraCrypto era)
-  , HasStatefulGen (StateGenM s) m
+  , HasStatefulGen g m
   , MonadFail m
   , ShelleyEraImp era
   , ShelleyEraImp (PreviousEra era)
@@ -574,17 +564,15 @@ impEraStartEpochNo = EpochNo (getVersion majProtVer * 100)
     majProtVer = eraProtVerLow @era
 
 defaultInitImpTestState ::
-  forall era s m.
+  forall era s g m.
   ( EraGov era
   , EraTxOut era
   , DSIGN (EraCrypto era) ~ Ed25519DSIGN
   , ADDRHASH (EraCrypto era) ~ Blake2b_224
   , HasKeyPairs s (EraCrypto era)
   , MonadState s m
-  , HasStatefulGen (StateGenM s) m
+  , HasStatefulGen g m
   , MonadFail m
-  , HasSubState s
-  , SubState s ~ StateGen QCGen
   ) =>
   NewEpochState era ->
   m (ImpTestState era)
@@ -602,8 +590,7 @@ defaultInitImpTestState nes = do
     nesWithRoot =
       nes & nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL <>~ UTxO (Map.singleton rootTxIn rootTxOut)
   prepState <- get
-  let StateGen qcGen = getSubState prepState
-      epochInfoE =
+  let epochInfoE =
         fixedEpochInfo
           (sgEpochLength shelleyGenesis)
           (mkSlotLength . fromNominalDiffTimeMicro $ sgSlotLength shelleyGenesis)
@@ -619,9 +606,25 @@ defaultInitImpTestState nes = do
       , impNativeScripts = mempty
       , impLastTick = slotNo
       , impGlobals = globals
-      , impLog = mempty
-      , impGen = qcGen
       , impEvents = mempty
+      }
+
+modifyImpInitProtVer ::
+  forall era.
+  ShelleyEraImp era =>
+  Version ->
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+modifyImpInitProtVer ver =
+  modifyImpInit $ \impInit ->
+    impInit
+      { impInitState =
+          impInitState impInit
+            & impNESL
+              . nesEsL
+              . curPParamsEpochStateL
+              . ppProtocolVersionL
+              .~ ProtVer ver 0
       }
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
@@ -761,9 +764,7 @@ impWitsVKeyNeeded txBody = do
   pure (bootAddrs, allKeyHashes Set.\\ bootKeyHashes)
 
 data ImpTestEnv era = ImpTestEnv
-  { iteState :: !(IORef (ImpTestState era))
-  , iteFixup :: Tx era -> ImpTestM era (Tx era)
-  , iteQuickCheckSize :: !Int
+  { iteFixup :: Tx era -> ImpTestM era (Tx era)
   , iteCborRoundTripFailures :: !Bool
   -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
   }
@@ -773,22 +774,6 @@ iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
 
 iteCborRoundTripFailuresL :: Lens' (ImpTestEnv era) Bool
 iteCborRoundTripFailuresL = lens iteCborRoundTripFailures (\x y -> x {iteCborRoundTripFailures = y})
-
-newtype ImpTestM era a = ImpTestM {unImpTestM :: ReaderT (ImpTestEnv era) IO a}
-  deriving
-    ( Functor
-    , Applicative
-    , Monad
-    , MonadIO
-    , MonadUnliftIO
-    , MonadReader (ImpTestEnv era)
-    )
-
-instance (Testable a, ShelleyEraImp era) => Testable (ImpTestM era a) where
-  property m = property $ MkGen $ \qcGen qcSize ->
-    ioProperty $ do
-      impTestState <- evalStateT initImpTestState (emptyImpPrepState @(EraCrypto era) (Just qcGen))
-      evalImpTestM (Just qcSize) impTestState m
 
 instance MonadWriter [SomeSTSEvent era] (ImpTestM era) where
   writer (x, evs) = (impEventsL %= (<> evs)) $> x
@@ -802,204 +787,6 @@ instance MonadWriter [SomeSTSEvent era] (ImpTestM era) where
   pass act = do
     ((a, f), evs) <- listen act
     writer (a, f evs)
-
-instance MonadFail (ImpTestM era) where
-  fail = assertFailure
-
-instance MonadState (ImpTestState era) (ImpTestM era) where
-  get = ImpTestM $ do
-    liftIO . readIORef . iteState =<< ask
-  put x = ImpTestM $ do
-    liftIO . flip writeIORef x . iteState =<< ask
-
-instance (ShelleyEraImp era, Testable prop) => Example (ImpTestM era prop) where
-  type Arg (ImpTestM era prop) = ImpTestState era
-
-  evaluateExample impTest =
-    evaluateExample (\() -> impTest)
-
-instance (ShelleyEraImp era, Arbitrary a, Show a, Testable prop) => Example (a -> ImpTestM era prop) where
-  type Arg (a -> ImpTestM era prop) = ImpTestState era
-
-  evaluateExample impTest params hook progressCallback =
-    let runImpTestExample s = property $ \x -> do
-          let args = paramsQuickCheckArgs params
-          (r, testable, logs) <- uncurry evalImpTestM (applyParamsQCGen params s) $ do
-            t <- impTest x
-            qcSize <- asks iteQuickCheckSize
-            StateGen qcGen <- subStateM split
-            logs <- gets impLog
-            pure (Just (qcGen, qcSize), t, logs)
-          let params' = params {paramsQuickCheckArgs = args {replay = r, chatty = False}}
-          res <-
-            evaluateExample
-              (counterexample (ansiDocToString logs) testable)
-              params'
-              (\f -> hook (\_st -> f ()))
-              progressCallback
-          void $ throwIO $ resultStatus res
-     in evaluateExample runImpTestExample params hook progressCallback
-
-instance MonadGen (ImpTestM era) where
-  liftGen (MkGen f) = do
-    qcSize <- asks iteQuickCheckSize
-    StateGen qcGen <- subStateM split
-    pure $ f qcGen qcSize
-  variant n action = do
-    subStateM (\(StateGen qcGen) -> ((), StateGen (integerVariant (toInteger n) qcGen)))
-    action
-  sized f = do
-    qcSize <- asks iteQuickCheckSize
-    f qcSize
-  resize n = local (\env -> env {iteQuickCheckSize = n})
-  choose r = subStateM (Random.randomR r)
-
-instance HasStatefulGen (StateGenM (ImpTestState era)) (ImpTestM era) where
-  askStatefulGen = pure StateGenM
-
-instance HasSubState (ImpTestState era) where
-  type SubState (ImpTestState era) = StateGen QCGen
-  getSubState = StateGen . impGen
-  setSubState s (StateGen g) = s {impGen = g}
-
--- | Override the QuickCheck generator using a fixed seed.
-impSetSeed :: Int -> ImpTestM era ()
-impSetSeed seed = setSubStateM $ StateGen $ mkQCGen seed
-
-applyParamsQCGen :: Params -> ImpTestState era -> (Maybe Int, ImpTestState era)
-applyParamsQCGen params impTestState =
-  case replay (paramsQuickCheckArgs params) of
-    Nothing -> (Nothing, impTestState)
-    Just (qcGen, qcSize) -> (Just qcSize, mixinCurrentGen impTestState qcGen)
-
--- | Instead of reqplacing the current QC generator in the state, we use the current and
--- the supplied to make the new generator
-mixinCurrentGen :: ImpTestState era -> QCGen -> ImpTestState era
-mixinCurrentGen impTestState qcGen =
-  impTestState {impGen = integerVariant (fst (Random.random (impGen impTestState))) qcGen}
-
-evalImpTestGenM :: ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO b)
-evalImpTestGenM impState = fmap (fmap fst) . runImpTestGenM impState
-
-evalImpTestM ::
-  ShelleyEraImp era => Maybe Int -> ImpTestState era -> ImpTestM era b -> IO b
-evalImpTestM qc impState = fmap fst . runImpTestM qc impState
-
-execImpTestGenM ::
-  ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO (ImpTestState era))
-execImpTestGenM impState = fmap (fmap snd) . runImpTestGenM impState
-
-emptyImpPrepState :: Maybe QCGen -> ImpPrepState c
-emptyImpPrepState mQCGen =
-  ImpPrepState
-    { impPrepKeyPairs = mempty
-    , impPrepByronKeyPairs = mempty
-    , impPrepGen = fromMaybe (mkQCGen 2024) mQCGen
-    }
-
-execImpTestM ::
-  ShelleyEraImp era =>
-  Maybe Int ->
-  ImpTestState era ->
-  ImpTestM era b ->
-  IO (ImpTestState era)
-execImpTestM qcSize impState = fmap snd . runImpTestM qcSize impState
-
-runImpTestGenM_ :: ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO ())
-runImpTestGenM_ impState = fmap void . runImpTestGenM impState
-
-runImpTestM_ ::
-  ShelleyEraImp era => Maybe Int -> ImpTestState era -> ImpTestM era b -> IO ()
-runImpTestM_ qcSize impState = void . runImpTestM qcSize impState
-
-runImpTestGenM ::
-  ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO (b, ImpTestState era))
-runImpTestGenM impState m =
-  MkGen $ \qcGen qcSz -> runImpTestM (Just qcSz) (mixinCurrentGen impState qcGen) m
-
-runImpTestM ::
-  ShelleyEraImp era =>
-  Maybe Int ->
-  ImpTestState era ->
-  ImpTestM era b ->
-  IO (b, ImpTestState era)
-runImpTestM mQCSize impState action = do
-  let qcSize = fromMaybe 30 mQCSize
-  ioRef <- newIORef impState
-  let
-    env =
-      ImpTestEnv
-        { iteState = ioRef
-        , iteFixup = fixupTx
-        , iteQuickCheckSize = qcSize
-        , iteCborRoundTripFailures = True
-        }
-  res <-
-    -- There is an important step here of running TICK rule. This is necessary as a final
-    -- step of `era` initialization, because on the very first TICK of an era the
-    -- `futurePParams` are applied and the epoch number is updated to the first epoch
-    -- number of the current era
-    runReaderT (unImpTestM (passTick >> action)) env `catchAny` \exc -> do
-      logs <- impLog <$> readIORef ioRef
-      let x <?> my = case my of
-            Nothing -> x
-            Just y -> x ++ [pretty y]
-          uncaughtException header excThrown =
-            H.ColorizedReason $
-              ansiDocToString $
-                vsep $
-                  header ++ [pretty $ "Uncaught Exception: " <> displayException excThrown]
-          fromHUnitFailure header (HUnitFailure mSrcLoc failReason) =
-            case failReason of
-              Reason msg ->
-                H.Failure (srcLocToLocation <$> mSrcLoc) $
-                  H.ColorizedReason $
-                    ansiDocToString $
-                      vsep $
-                        header ++ [annotate (color Red) (pretty msg)]
-              ExpectedButGot mMsg expected got ->
-                H.Failure (srcLocToLocation <$> mSrcLoc) $
-                  H.ExpectedButGot (Just (ansiDocToString $ vsep (header <?> mMsg))) expected got
-          adjustFailureReason header = \case
-            H.Failure mLoc failureReason ->
-              H.Failure mLoc $
-                case failureReason of
-                  H.NoReason ->
-                    H.ColorizedReason $ ansiDocToString $ vsep $ header ++ [annotate (color Red) "NoReason"]
-                  H.Reason msg ->
-                    H.ColorizedReason $ ansiDocToString $ vsep $ header ++ [annotate (color Red) (pretty msg)]
-                  H.ColorizedReason msg ->
-                    H.ColorizedReason $ ansiDocToString $ vsep $ header ++ [pretty msg]
-                  H.ExpectedButGot mPreface expected actual ->
-                    H.ExpectedButGot (Just (ansiDocToString $ vsep (header <?> mPreface))) expected actual
-                  H.Error mInfo excThrown -> uncaughtException (header <?> mInfo) excThrown
-            result -> result
-          newExc
-            | Just hUnitExc <- fromException exc = fromHUnitFailure [logs] hUnitExc
-            | Just hspecFailure <- fromException exc = adjustFailureReason [logs] hspecFailure
-            | Just (ImpException ann excThrown) <- fromException exc =
-                let annLen = length ann
-                    header =
-                      logs
-                        : [ let prefix
-                                  | annLen <= 1 = "╺╸"
-                                  | n <= 0 = "┏╸"
-                                  | n + 1 == annLen = indent (n - 1) "┗━╸"
-                                  | otherwise = indent (n - 1) "┗┳╸"
-                             in annotate (color Red) prefix <> annotate (color Yellow) a
-                          | (n, a) <- zip [0 ..] ann
-                          ]
-                        ++ [""]
-                 in case fromException excThrown of
-                      Just hUnitExc -> fromHUnitFailure header hUnitExc
-                      Nothing ->
-                        case fromException excThrown of
-                          Just hspecFailure -> adjustFailureReason header hspecFailure
-                          Nothing -> H.Failure Nothing $ uncaughtException header excThrown
-            | otherwise = H.Failure Nothing $ uncaughtException [logs] exc
-      throwIO newExc
-  endState <- readIORef ioRef
-  pure (res, endState)
 
 runShelleyBase :: ShelleyBase a -> ImpTestM era a
 runShelleyBase act = do
@@ -1450,75 +1237,6 @@ passNEpochsChecking ::
 passNEpochsChecking n checks =
   replicateM_ (fromIntegral n) $ passEpoch >> checks
 
--- | Stores extra information about the failure of the unit test
-data ImpException = ImpException
-  { ieAnnotation :: [Doc AnsiStyle]
-  -- ^ Description of the IO action that caused the failure
-  , ieThrownException :: SomeException
-  -- ^ Exception that caused the test to fail
-  }
-  deriving (Show)
-
-instance Exception ImpException where
-  displayException = ansiDocToString . prettyImpException
-
-prettyImpException :: ImpException -> Doc AnsiStyle
-prettyImpException (ImpException ann e) =
-  vsep $
-    mconcat
-      [ ["Annotations:"]
-      , zipWith indent [0, 2 ..] ann
-      , ["Failed with Exception:", indent 4 $ pretty (displayException e)]
-      ]
-
--- | Annotation for when failure happens. All the logging done within annotation will be
--- discarded if there no failures within the annotation.
-impAnn :: NFData a => String -> ImpTestM era a -> ImpTestM era a
-impAnn msg = impAnnDoc (pretty msg)
-
-impAnnDoc :: NFData a => Doc AnsiStyle -> ImpTestM era a -> ImpTestM era a
-impAnnDoc msg m = do
-  logs <- use impLogL
-  res <- catchAnyDeep m $ \exc ->
-    throwIO $
-      case fromException exc of
-        Just (ImpException ann origExc) -> ImpException (msg : ann) origExc
-        Nothing -> ImpException [msg] exc
-  impLogL .= logs
-  pure res
-
--- | Adds a source location and Doc to the log, which are only shown if the test fails
-logWithCallStack :: CallStack -> Doc AnsiStyle -> ImpTestM era ()
-logWithCallStack callStack entry = impLogL %= (<> stack <> line <> indent 2 entry <> line)
-  where
-    prettySrcLoc' SrcLoc {..} =
-      hcat
-        [ annotate (color c) d
-        | (c, d) <-
-            [ (Yellow, "[")
-            , (Blue, pretty srcLocModule)
-            , (Yellow, ":")
-            , (Magenta, pretty srcLocStartLine)
-            , (Yellow, "]")
-            ]
-        ]
-    prefix n = if n <= 0 then "" else indent (n - 1) "└"
-    stack =
-      vsep
-        [prefix n <> prettySrcLoc' loc | (n, (_, loc)) <- zip [0, 2 ..] . reverse $ getCallStack callStack]
-
--- | Adds a Doc to the log, which is only shown if the test fails
-logDoc :: HasCallStack => Doc AnsiStyle -> ImpTestM era ()
-logDoc = logWithCallStack ?callStack
-
--- | Adds a Text to the log, which is only shown if the test fails
-logText :: HasCallStack => Text -> ImpTestM era ()
-logText = logWithCallStack ?callStack . pretty
-
--- | Adds a String to the log, which is only shown if the test fails
-logString :: HasCallStack => String -> ImpTestM era ()
-logString = logWithCallStack ?callStack . pretty
-
 -- | Adds a ToExpr to the log, which is only shown if the test fails
 logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()
 logToExpr = logWithCallStack ?callStack . ansiWlExpr . toExpr
@@ -1529,21 +1247,6 @@ impLogToExpr action = do
   e <- action
   logWithCallStack ?callStack . ansiWlExpr . toExpr $ e
   pure e
-
-withImpState ::
-  ShelleyEraImp era =>
-  SpecWith (ImpTestState era) ->
-  Spec
-withImpState = withImpStateModified id
-
-withImpStateModified ::
-  forall era.
-  ShelleyEraImp era =>
-  (ImpTestState era -> ImpTestState era) ->
-  SpecWith (ImpTestState era) ->
-  Spec
-withImpStateModified f =
-  beforeAll (f <$> evalStateT initImpTestState (emptyImpPrepState @(EraCrypto era) Nothing))
 
 -- | Creates a fresh @SafeHash@
 freshSafeHash :: Era era => ImpTestM era (SafeHash (EraCrypto era) a)
@@ -1584,13 +1287,13 @@ lookupKeyPair keyHash = do
 -- ImpTestState. If you also need the `KeyPair` consider using `freshKeyPair` for
 -- generation or `lookupKeyPair` to look up the `KeyPair` corresponding to the `KeyHash`
 freshKeyHash ::
-  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) =>
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r c)
 freshKeyHash = fst <$> freshKeyPair
 
 -- | Generate a random `KeyPair` and add it to the known keys in the Imp state
 freshKeyPair ::
-  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) =>
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r c, KeyPair r c)
 freshKeyPair = do
   keyPair <- uniformM
@@ -1600,13 +1303,13 @@ freshKeyPair = do
 -- | Generate a random `Addr` that uses a `KeyHash`, and add the corresponding `KeyPair`
 -- to the known keys in the Imp state.
 freshKeyAddr_ ::
-  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) => m (Addr c)
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen g m) => m (Addr c)
 freshKeyAddr_ = snd <$> freshKeyAddr
 
 -- | Generate a random `Addr` that uses a `KeyHash`, add the corresponding `KeyPair`
 -- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
 freshKeyAddr ::
-  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) =>
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r c, Addr c)
 freshKeyAddr = do
   keyHash <- freshKeyHash
@@ -1632,12 +1335,12 @@ lookupByronKeyPair bootAddr = do
 -- ImpTestState. If you also need the `ByronKeyPair` consider using `freshByronKeyPair` for
 -- generation or `lookupByronKeyPair` to look up the `ByronKeyPair` corresponding to the `KeyHash`
 freshByronKeyHash ::
-  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) =>
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r c)
 freshByronKeyHash = coerceKeyRole . bootstrapKeyHash <$> freshBootstapAddress
 
 freshBootstapAddress ::
-  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) =>
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen g m) =>
   m (BootstrapAddress c)
 freshBootstapAddress = do
   keyPair@(ByronKeyPair verificationKey _) <- uniformM

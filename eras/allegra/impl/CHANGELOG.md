@@ -4,6 +4,10 @@
 
 * Use `Mismatch` to clarify predicate failures. #4711
 
+### `testlib`
+
+* Switch to using `ImpSpec` package
+
 ## 1.6.0.1
 
 *

@@ -42,7 +42,7 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   describe "DRep" $ do
     describe "Expiries are reported correctly" $ do

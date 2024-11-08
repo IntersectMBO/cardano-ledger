@@ -29,7 +29,7 @@ spec ::
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "Resigning proposed CC key" $ do
     ccColdCred <- KeyHashObj <$> freshKeyHash

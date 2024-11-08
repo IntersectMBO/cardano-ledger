@@ -17,8 +17,8 @@ import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFai
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
-import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, withImpState)
-import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, LedgerSpec)
+import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
 
 spec ::
@@ -34,7 +34,7 @@ spec ::
   Spec
 spec = do
   MaryImp.spec @era
-  describe "AlonzoImpSpec" . withImpState @era $ do
-    Utxo.spec @era
-    Utxos.spec @era
-    Utxow.spec @era
+  describe "AlonzoImpSpec" . withImpInit @(LedgerSpec era) $ do
+    Utxo.spec
+    Utxos.spec
+    Utxow.spec

@@ -33,7 +33,7 @@ spec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   it "MalformedScriptWitnesses" $ do
     let scriptHash = hashPlutusScript (malformedPlutus @'PlutusV2)

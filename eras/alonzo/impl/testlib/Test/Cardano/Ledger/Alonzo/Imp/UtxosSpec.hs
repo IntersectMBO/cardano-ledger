@@ -42,7 +42,7 @@ spec ::
   ( AlonzoEraImp era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOS" $
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->

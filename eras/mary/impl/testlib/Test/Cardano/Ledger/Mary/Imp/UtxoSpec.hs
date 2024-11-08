@@ -45,7 +45,7 @@ spec ::
   , AllegraEraScript era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   it "Mint a Token" $ void mintBasicToken
   describe "ShelleyUtxoPredFailure" $ do

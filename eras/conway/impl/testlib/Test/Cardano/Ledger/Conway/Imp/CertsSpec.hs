@@ -28,7 +28,7 @@ spec ::
   , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   describe "Withdrawals" $ do
     it "Withdrawing from an unregistered reward account" $ do

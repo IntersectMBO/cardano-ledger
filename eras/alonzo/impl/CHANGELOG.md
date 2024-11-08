@@ -14,6 +14,7 @@
 
 ### `testlib`
 
+* Switch to using `ImpSpec` package
 * Rename `expectPhase2Invalid` to `submitPhase2Invalid_`
 * Add `submitPhase2Invalid`
 * Add `expectTxSuccess`

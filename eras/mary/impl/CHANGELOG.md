@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.7.0.2
+## 1.7.1.0
 
 *
+
+### `testlib`
+
+* Switch to using `ImpSpec` package
 
 ## 1.7.0.1
 
