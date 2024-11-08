@@ -82,9 +82,10 @@ instance Monad GE where
 instance MonadGenError GE where
   genError neStr = GenError [] neStr
   fatalError neStr = FatalError [] neStr
-  explain nes (GenError es' err) = GenError (nes : es') err
-  explain nes (FatalError es' err) = FatalError (nes : es') err
-  explain nes (Result es' a) = Result (nes : es') a
+  explain nes ge = case ge of
+    GenError es' err -> GenError (nes : es') err
+    FatalError es' err -> FatalError (nes : es') err
+    Result es' a -> Result (nes : es') a
 
 instance MonadGenError m => MonadGenError (GenT m) where
   genError es = GenT $ \_ -> pure $ genError es

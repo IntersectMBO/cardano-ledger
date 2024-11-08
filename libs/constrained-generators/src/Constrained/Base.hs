@@ -1317,7 +1317,6 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
 
 computeDependencies :: Pred fn -> DependGraph fn
 computeDependencies = \case
-  x@(Exists _ (_v :-> Block [Reifies (V a) _b _, _c])) -> deleteNode (Name a) (computeDependencies x)
   Monitor {} -> mempty
   Subst x t p -> computeDependencies (substitutePred x t p)
   Assert _ t -> computeTermDependencies t
@@ -1388,7 +1387,15 @@ prepareLinearization p = do
   let preds = concatMap saturatePred $ flattenPred p
       hints = computeHints preds
       graph = transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
-  plan <- linearize preds graph
+  plan <-
+    explain
+      ( NE.fromList
+          [ "Linearizing"
+          , show $ "  preds: " <> pretty preds
+          , show $ "  graph: " <> pretty graph
+          ]
+      )
+      $ linearize preds graph
   pure $ backPropagation $ SolverPlan plan graph
 
 -- TODO: generalize this to make it more flexible and extensible
@@ -2339,7 +2346,9 @@ simplifyPred = \case
     t' -> GenHint h t'
   Subst x t p -> simplifyPred $ substitutePred x t p
   Assert es t -> assertExplain es (simplifyTerm t)
-  Reifies t' t f -> Reifies (simplifyTerm t') (simplifyTerm t) f
+  Reifies t' t f -> case simplifyTerm t of
+    Lit a -> assert $ simplifyTerm t' ==. Lit (f a)
+    t'' -> Reifies (simplifyTerm t') t'' f
   ForAll set b -> case simplifyTerm set of
     Lit as -> foldMap (`unBind` b) (forAllToList as)
     App (extractFn @(SetFn fn) @fn -> Just Union) (xs :> ys :> Nil) ->

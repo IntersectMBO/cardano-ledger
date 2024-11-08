@@ -312,3 +312,14 @@ whenTrueExists = constrained $ \x ->
       [ not_ [var| b |]
       , not_ (not_ b)
       ]
+
+wtfSpec :: Specification BaseFn ([Int], Maybe ((), [Int]))
+wtfSpec = constrained' $ \ [var| options |] [var| mpair |] ->
+  caseOn
+    mpair
+    (branch $ \_ -> False)
+    ( branch $ \pair -> match pair $ \unit ints ->
+        [ forAll ints $ \int -> reify options id $ \xs -> int `elem_` xs
+        , assert $ unit ==. lit ()
+        ]
+    )
