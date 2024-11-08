@@ -25,7 +25,6 @@ import GHC.Natural
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck hiding (Args, Fun, forAll)
-import Test.QuickCheck qualified as QC
 
 import Constrained.Examples
 import Constrained.Internals
@@ -151,6 +150,7 @@ tests nightly =
     testSpecNoShrink "powersetPickOne" powersetPickOne
     testSpecNoShrink "appendSuffix" appendSuffix
     testSpecNoShrink "appendForAll" appendForAll
+    testSpec "wtfSpec" wtfSpec
     numberyTests
     sizeTests
     numNumSpecTree
@@ -295,8 +295,7 @@ testSpec' withShrink n s = do
     prop "prop_constrained_explained" $
       within 10_000_0000 $
         checkCoverage' $
-          QC.forAll arbitrary $ \es ->
-            prop_sound $ constrained $ \x -> explanation es $ x `satisfies` s
+          prop_constrained_explained s
     when withShrink $
       prop "prop_shrink_sound" $
         discardAfter 100_000 $

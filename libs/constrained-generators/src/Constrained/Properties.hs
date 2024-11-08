@@ -61,6 +61,11 @@ prop_sound spec =
 prop_constrained_satisfies_sound :: HasSpec fn a => Specification fn a -> QC.Property
 prop_constrained_satisfies_sound spec = prop_sound (constrained $ \a -> satisfies a spec)
 
+prop_constrained_explained :: HasSpec fn a => Specification fn a -> QC.Property
+prop_constrained_explained spec =
+  QC.forAll QC.arbitrary $ \es ->
+    prop_sound $ constrained $ \x -> explanation es $ x `satisfies` spec
+
 -- | `prop_complete ps` assumes that `ps` is satisfiable
 prop_complete :: HasSpec fn a => Specification fn a -> QC.Property
 prop_complete s =
