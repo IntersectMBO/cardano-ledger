@@ -62,11 +62,13 @@ library
         Test.Cardano.Ledger.Constrained.Conway.GovCert
         Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
         Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
+        Test.Cardano.Ledger.Constrained.Conway.Instances.Ledgers
         Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody
         Test.Cardano.Ledger.Constrained.Conway.Instances.PParams
         Test.Cardano.Ledger.Constrained.Conway.Instances
         Test.Cardano.Ledger.Constrained.Conway.TxBodySpec
         Test.Cardano.Ledger.Constrained.Conway.Ledger
+        Test.Cardano.Ledger.Constrained.Conway.Ledgers
         Test.Cardano.Ledger.Constrained.Conway.NewEpoch
         Test.Cardano.Ledger.Constrained.Conway.PParams
         Test.Cardano.Ledger.Constrained.Conway.Pool

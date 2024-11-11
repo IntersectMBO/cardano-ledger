@@ -17,6 +17,7 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg as X (nameDeleg
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Gov as X ()
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert as X (nameGovCert)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledger as X ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledgers as X ()
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool as X (namePoolCert)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo as X ()
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow as X ()

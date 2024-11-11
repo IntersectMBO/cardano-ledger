@@ -271,3 +271,9 @@ instance ToExpr (RupdEvent era)
 instance ToExpr (PParamsHKD Identity era) => ToExpr (UtxoEnv era)
 
 instance ToExpr (PParamsHKD Identity era) => ToExpr (LedgerEnv era)
+
+instance ToExpr (PParamsHKD Identity era) => ToExpr (ShelleyLedgersEnv era)
+
+instance
+  ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
+  ToExpr (ShelleyLedgersPredFailure era)

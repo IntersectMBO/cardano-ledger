@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,6 +25,7 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGERS)
@@ -42,6 +44,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (SlotNo)
+import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.State.Transition (
   Embed (..),
@@ -53,6 +56,7 @@ import Control.State.Transition (
  )
 import Data.Default (Default)
 import Data.Foldable (toList)
+import Data.Functor.Identity (Identity)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -62,6 +66,27 @@ data ShelleyLedgersEnv era = LedgersEnv
   , ledgersPp :: PParams era
   , ledgersAccount :: AccountState
   }
+  deriving (Generic)
+
+deriving instance Eq (PParamsHKD Identity era) => Eq (ShelleyLedgersEnv era)
+
+deriving instance Show (PParamsHKD Identity era) => Show (ShelleyLedgersEnv era)
+
+instance NFData (PParamsHKD Identity era) => NFData (ShelleyLedgersEnv era)
+
+instance
+  ( Era era
+  , EncCBOR (PParamsHKD Identity era)
+  ) =>
+  EncCBOR (ShelleyLedgersEnv era)
+  where
+  encCBOR x@(LedgersEnv _ _ _) =
+    let LedgersEnv {..} = x
+     in encode $
+          Rec LedgersEnv
+            !> To ledgersSlotNo
+            !> To ledgersPp
+            !> To ledgersAccount
 
 newtype ShelleyLedgersPredFailure era
   = LedgerFailure (PredicateFailure (EraRule "LEDGER" era)) -- Subtransition Failures
