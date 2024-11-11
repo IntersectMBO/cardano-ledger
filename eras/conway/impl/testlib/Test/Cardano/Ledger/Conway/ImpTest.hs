@@ -292,22 +292,22 @@ instance
               { ucppPoolVotingThresholds =
                   PoolVotingThresholds
                     { pvtMotionNoConfidence = 51 %! 100
-                    , pvtCommitteeNormal = 51 %! 100
-                    , pvtCommitteeNoConfidence = 51 %! 100
+                    , pvtCommitteeNormal = 65 %! 100
+                    , pvtCommitteeNoConfidence = 65 %! 100
                     , pvtHardForkInitiation = 51 %! 100
                     , pvtPPSecurityGroup = 51 %! 100
                     }
               , ucppDRepVotingThresholds =
                   DRepVotingThresholds
                     { dvtMotionNoConfidence = 51 %! 100
-                    , dvtCommitteeNormal = 51 %! 100
-                    , dvtCommitteeNoConfidence = 51 %! 100
-                    , dvtUpdateToConstitution = 51 %! 100
+                    , dvtCommitteeNormal = 65 %! 100
+                    , dvtCommitteeNoConfidence = 65 %! 100
+                    , dvtUpdateToConstitution = 65 %! 100
                     , dvtHardForkInitiation = 51 %! 100
                     , dvtPPNetworkGroup = 51 %! 100
                     , dvtPPEconomicGroup = 51 %! 100
                     , dvtPPTechnicalGroup = 51 %! 100
-                    , dvtPPGovGroup = 51 %! 100
+                    , dvtPPGovGroup = 75 %! 100
                     , dvtTreasuryWithdrawal = 51 %! 100
                     }
               , ucppCommitteeMinSize = 1

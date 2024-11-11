@@ -619,9 +619,9 @@ votingSpec =
           isDRepAccepted addCCGaid `shouldReturn` False
           getLastEnactedCommittee `shouldReturn` SNothing
           -- Bump up the UTxO delegated
-          -- to barely make the threshold (51 %! 100)
+          -- to barely make the threshold (65 %! 100)
           stakingKP1 <- lookupKeyPair stakingKH1
-          _ <- sendCoinTo (mkAddr (paymentKP1, stakingKP1)) (inject $ Coin 200_000_000)
+          _ <- sendCoinTo (mkAddr (paymentKP1, stakingKP1)) (inject $ Coin 858_000_000)
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -642,11 +642,11 @@ votingSpec =
           isDRepAccepted addCCGaid `shouldReturn` False
           getLastEnactedCommittee `shouldReturn` SNothing
           -- Add to the rewards of the delegator to this DRep
-          -- to barely make the threshold (51 %! 100)
+          -- to barely make the threshold (61 %! 100)
           modifyNES $
             nesEsL . epochStateUMapL
               %~ UM.adjust
-                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000_000) d)
+                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 858_000_000) d)
                 staking1
                 . UM.RewDepUView
           passNEpochs 2
@@ -655,7 +655,7 @@ votingSpec =
         it "Rewards contribute to active voting stake even in the absence of StakeDistr" $ whenPostBootstrap $ do
           let govActionLifetime = 5
               govActionDeposit = Coin 1_000_000
-              poolDeposit = Coin 200_000
+              poolDeposit = Coin 858_000
           -- Only modify the applicable thresholds
           modifyPParams $ \pp ->
             pp
@@ -687,7 +687,7 @@ votingSpec =
           isDRepAccepted addCCGaid `shouldReturn` False
           getLastEnactedCommittee `shouldReturn` SNothing
           -- Increase the rewards of the delegator to this DRep
-          -- to barely make the threshold (51 %! 100)
+          -- to barely make the threshold (65 %! 100)
           registerAndRetirePoolToMakeReward $ KeyHashObj stakingKH1
           lookupReward (KeyHashObj stakingKH1) `shouldReturn` poolDeposit <> govActionDeposit
           isDRepAccepted addCCGaid `shouldReturn` True
@@ -697,7 +697,7 @@ votingSpec =
         describe "Proposal deposits contribute to active voting stake" $ do
           it "Directly" $ whenPostBootstrap $ do
             -- Only modify the applicable thresholds
-            modifyPParams $ ppGovActionDepositL .~ Coin 600_000
+            modifyPParams $ ppGovActionDepositL .~ Coin 1_000_000
             -- Setup DRep delegation without stake #1
             (drepKH1, stakingKH1) <- setupDRepWithoutStake
             -- Setup DRep delegation #2
