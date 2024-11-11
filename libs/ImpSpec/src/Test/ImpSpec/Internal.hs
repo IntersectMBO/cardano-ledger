@@ -25,6 +25,7 @@ import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text.Lazy as TL
 import GHC.Stack (CallStack, HasCallStack, SrcLoc (..), getCallStack)
+import Lens.Micro
 import Prettyprinter (
   Doc,
   Pretty (..),
@@ -96,6 +97,12 @@ data ImpInit t = ImpInit
 deriving instance (Eq (ImpSpecEnv t), Eq (ImpSpecState t)) => Eq (ImpInit t)
 deriving instance (Ord (ImpSpecEnv t), Ord (ImpSpecState t)) => Ord (ImpInit t)
 deriving instance (Show (ImpSpecEnv t), Show (ImpSpecState t)) => Show (ImpInit t)
+
+impInitEnvL :: Lens' (ImpInit t) (ImpSpecEnv t)
+impInitEnvL = lens impInitEnv $ \x y -> x {impInitEnv = y}
+
+impInitStateL :: Lens' (ImpInit t) (ImpSpecState t)
+impInitStateL = lens impInitState $ \x y -> x {impInitState = y}
 
 -- | Stores extra information about the failure of the unit test
 data ImpException = ImpException

@@ -22,13 +22,13 @@ library
     exposed-modules:
         Test.Cardano.Ledger.Conformance
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
+        Test.Cardano.Ledger.Conformance.SpecTranslate.Core
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway
 
     hs-source-dirs:   src
     other-modules:
-        Test.Cardano.Ledger.Conformance.SpecTranslate.Core
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool
@@ -106,6 +106,7 @@ test-suite tests
         Test.Cardano.Ledger.Conformance.Spec.Conway
         Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace
         Test.Cardano.Ledger.Conformance.Imp.Ratify
+        Test.Cardano.Ledger.Conformance.Imp
 
     default-language: Haskell2010
     ghc-options:
@@ -116,9 +117,11 @@ test-suite tests
     build-depends:
         base >=4.14 && <5,
         containers,
+        data-default,
         cardano-data,
         constrained-generators,
         small-steps,
+        cardano-ledger-binary,
         cardano-ledger-conformance,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-strict-containers,
@@ -126,4 +129,6 @@ test-suite tests
         cardano-ledger-alonzo,
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-test,
-        microlens
+        microlens,
+        microlens-mtl,
+        unliftio

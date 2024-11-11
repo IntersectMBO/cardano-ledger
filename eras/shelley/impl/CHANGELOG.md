@@ -35,6 +35,10 @@
 
 ### `testlib`
 
+* Add `iteHook` to `ImpTesEnv` for additionally checking conformance with ImpTests. #4748
+  * Add lens `iteHookL`.
+  * Add `withHook` modifier for `ImpTestM era a`
+  * Add `modifyImpInitHook`.
 * Switch to using `ImpSpec` package
 * Remove: `runImpTestM`, `runImpTestM_`, `evalImpTestM`, `execImpTestM`, `runImpTestGenM`, `runImpTestGenM_`, `evalImpTestGenM`, `execImpTestGenM`, `withImpState` and `withImpStateModified`.
 * Add `LedgerSpec`, `modifyImpInitProtVer`.

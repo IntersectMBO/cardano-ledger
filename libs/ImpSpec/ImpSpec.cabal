@@ -47,7 +47,8 @@ library
         prettyprinter-ansi-terminal,
         random,
         text,
-        unliftio
+        unliftio,
+        microlens
 
 test-suite tests
     type:             exitcode-stdio-1.0

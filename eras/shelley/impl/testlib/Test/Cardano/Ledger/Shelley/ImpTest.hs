@@ -99,6 +99,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impEraStartEpochNo,
   impSetSeed,
   modifyImpInitProtVer,
+  modifyImpInitHook,
 
   -- * Logging
   Doc,
@@ -117,6 +118,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withPostFixup,
   withPreFixup,
   withCborRoundTripFailures,
+  withHook,
   impNESL,
   impGlobalsL,
   impLastTickG,
@@ -302,6 +304,7 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
             ImpTestEnv
               { iteFixup = fixupTx
               , iteCborRoundTripFailures = True
+              , iteHook = \_ _ _ _ -> pure ()
               }
         , impInitState = initState
         }
@@ -618,16 +621,30 @@ modifyImpInitProtVer ::
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
 modifyImpInitProtVer ver =
-  modifyImpInit $ \impInit ->
-    impInit
-      { impInitState =
-          impInitState impInit
-            & impNESL
-              . nesEsL
-              . curPParamsEpochStateL
-              . ppProtocolVersionL
-              .~ ProtVer ver 0
-      }
+  modifyImpInit
+    ( impInitStateL
+        . impNESL
+        . nesEsL
+        . curPParamsEpochStateL @era
+        . ppProtocolVersionL
+        .~ ProtVer ver 0
+    )
+
+modifyImpInitHook ::
+  forall era.
+  ShelleyEraImp era =>
+  ( Either
+      (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+      (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
+    LedgerEnv era ->
+    LedgerState era ->
+    Tx era ->
+    ImpTestM era ()
+  ) ->
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+modifyImpInitHook f =
+  modifyImpInit (impInitEnvL . iteHookL .~ f)
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
@@ -767,12 +784,33 @@ impWitsVKeyNeeded txBody = do
 
 data ImpTestEnv era = ImpTestEnv
   { iteFixup :: Tx era -> ImpTestM era (Tx era)
+  , iteHook ::
+      Either
+        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+        (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
+      LedgerEnv era ->
+      LedgerState era ->
+      Tx era ->
+      ImpTestM era ()
   , iteCborRoundTripFailures :: !Bool
   -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
   }
 
 iteFixupL :: Lens' (ImpTestEnv era) (Tx era -> ImpTestM era (Tx era))
 iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
+
+iteHookL ::
+  Lens'
+    (ImpTestEnv era)
+    ( Either
+        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+        (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
+      LedgerEnv era ->
+      LedgerState era ->
+      Tx era ->
+      ImpTestM era ()
+    )
+iteHookL = lens iteHook (\x y -> x {iteHook = y})
 
 iteCborRoundTripFailuresL :: Lens' (ImpTestEnv era) Bool
 iteCborRoundTripFailuresL = lens iteCborRoundTripFailures (\x y -> x {iteCborRoundTripFailures = y})
@@ -1032,6 +1070,10 @@ trySubmitTx tx = do
   ImpTestState {impRootTxIn} <- get
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
   roundTripCheck <- asks iteCborRoundTripFailures
+
+  -- Check for conformance
+  asks iteHook >>= (\f -> f res lEnv (st ^. nesEsL . esLStateL) txFixed)
+
   case res of
     Left predFailures -> do
       -- Verify that produced predicate failures are ready for the node-to-client protocol
@@ -1550,6 +1592,20 @@ withPostFixup ::
   ImpTestM era a ->
   ImpTestM era a
 withPostFixup f = withCustomFixup (>=> f)
+
+-- | Replace the hook with the given hook
+withHook ::
+  ( Either
+      (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+      (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
+    LedgerEnv era ->
+    LedgerState era ->
+    Tx era ->
+    ImpTestM era ()
+  ) ->
+  ImpTestM era a ->
+  ImpTestM era a
+withHook f = local $ iteHookL .~ f
 
 expectUTxOContent ::
   (HasCallStack, ToExpr (TxOut era)) =>

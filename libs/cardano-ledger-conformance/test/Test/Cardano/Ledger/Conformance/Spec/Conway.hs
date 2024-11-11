@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -7,8 +8,9 @@ module Test.Cardano.Ledger.Conformance.Spec.Conway (spec) where
 import Cardano.Ledger.Conway (Conway)
 import Test.Cardano.Ledger.Conformance (conformsToImpl, inputsGenerateWithin)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
-import qualified Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace as MiniTrace
-import qualified Test.Cardano.Ledger.Conformance.Imp.Ratify as RatifyImp
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace qualified as MiniTrace
+import Test.Cardano.Ledger.Conformance.Imp qualified as Imp (spec)
+import Test.Cardano.Ledger.Conformance.Imp.Ratify qualified as RatifyImp
 import Test.Cardano.Ledger.Constrained.Conway
 import Test.Cardano.Ledger.Conway.ImpTest ()
 import Test.Cardano.Ledger.Imp.Common
@@ -38,3 +40,4 @@ spec = do
       xprop "LEDGERS" $ conformsToImpl @"LEDGERS" @ConwayFn @Conway
     describe "ImpTests" $ do
       RatifyImp.spec
+      Imp.spec

@@ -13,7 +13,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledger () where
+module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledger (ConwayLedgerExecContext (..)) where
 
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Identity (Identity)
