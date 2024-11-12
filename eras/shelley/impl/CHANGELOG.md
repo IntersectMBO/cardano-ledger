@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Added `Generic`, `Eq`, `Show`, `NFData`, `EncCBOR` instances for `ShelleyLedgersEnv`
 * Remove deprecated `witsVKeyNeededGov`, `witsVKeyNeededNoGov`, `shelleyWitsVKeyNeeded` and `propWits`
 * Remove deprecated `PPUPPredFailure`, `delPlAcnt`, `prAcnt`, `votedValue`
 * Remove impossible predicate failure `StakeKeyInRewardsDELEG`
@@ -34,6 +35,7 @@
 
 ### `testlib`
 
+* Added `ToExpr` instance for `ShelleyLedgersEnv`
 * Changed type signature of `freshKeyHashVRF` to return `VRFVerKeyHash` instead of just a `Hash`
 * Added `expectUTxOContent`
 * Added `disableTreasuryExpansion`

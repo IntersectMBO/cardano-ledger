@@ -151,11 +151,11 @@ instance SpecTranslate ctx (TxIn era) where
   toSpecRep (TxIn txId txIx) = toSpecRep (txId, txIx)
 
 instance SpecTranslate ctx (StakeReference era) where
-  type SpecRep (StakeReference era) = Agda.Credential
+  type SpecRep (StakeReference era) = Maybe Agda.Credential
 
-  toSpecRep (StakeRefBase c) = toSpecRep c
-  toSpecRep (StakeRefPtr _) = error "Cannot translate StakeRefPtr"
-  toSpecRep StakeRefNull = error "Cannot translate StakeRefNull"
+  toSpecRep (StakeRefBase c) = Just <$> toSpecRep c
+  toSpecRep (StakeRefPtr _) = pure Nothing
+  toSpecRep StakeRefNull = pure Nothing
 
 instance SpecTranslate ctx (BootstrapAddress era) where
   type SpecRep (BootstrapAddress era) = Agda.BootstrapAddr
