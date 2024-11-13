@@ -11,6 +11,10 @@
   * Add `FromGroup` to `Decode`
 * Add `{Enc|Dec}CBORGroup` instance for `(a, a)`. #4666
 
+### `testlib`
+
+* Remove `Arbitrary` instances for `Data.Vector.Primitive` that are now in `quickcheck-instances`
+
 ## 1.4.0.0
 
 ### `testlib`
