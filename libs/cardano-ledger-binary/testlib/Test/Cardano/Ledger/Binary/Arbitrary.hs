@@ -45,7 +45,6 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.VMap as VMap
-import qualified Data.Vector.Primitive as VP
 import Data.Word
 import GHC.Stack
 import System.Random.Stateful hiding (genByteString, genShortByteString)
@@ -148,10 +147,6 @@ instance Arbitrary IPv6 where
   arbitrary = do
     t <- (,,,) <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
     pure $ toIPv6w t
-
-instance (VP.Prim e, Arbitrary e) => Arbitrary (VP.Vector e) where
-  arbitrary = VP.fromList <$> arbitrary
-  shrink = fmap VP.fromList . shrink . VP.toList
 
 instance Arbitrary e => Arbitrary (SSeq.StrictSeq e) where
   arbitrary = SSeq.fromList <$> arbitrary
