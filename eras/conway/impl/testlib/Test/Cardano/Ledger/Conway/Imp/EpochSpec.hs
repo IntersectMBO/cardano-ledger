@@ -91,12 +91,10 @@ proposalsSpec =
 
       initialValue <- getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
 
-      policy <-
-        getsNES $
-          nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionScriptL
+      parameterChangeAction <- mkMinFeeUpdateGovAction SNothing
       govActionId <-
         mkProposalWithRewardAccount
-          (ParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 3000)) policy)
+          parameterChangeAction
           rewardAccount
           >>= submitProposal
       expectPresentGovActionId govActionId
@@ -138,9 +136,7 @@ proposalsSpec =
         let ratifyState = extractDRepPulsingState (govStateFinal ^. cgsDRepPulsingStateL)
         rsExpired ratifyState `shouldBe` Set.singleton govActionId
   where
-    submitParameterChangeTree = submitGovActionTree $ submitGovAction . paramAction
-    paramAction p =
-      ParameterChange (GovPurposeId <$> p) (def & ppuMinFeeAL .~ SJust (Coin 10)) SNothing
+    submitParameterChangeTree = submitGovActionTree $ mkMinFeeUpdateGovAction >=> submitGovAction
 
 dRepSpec ::
   forall era.
@@ -148,6 +144,7 @@ dRepSpec ::
   SpecWith (ImpInit (LedgerSpec era))
 dRepSpec =
   describe "DRep" $ do
+    let submitParamChangeProposal = mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
     it "expiry is updated based on the number of dormant epochs" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
       (drep, _, _) <- setupSingleDRep 1_000_000
@@ -156,12 +153,10 @@ dRepSpec =
       let
         -- compute the epoch number that is an offset from starting epoch number
         offDRepActivity = addEpochInterval startEpochNo . EpochInterval
-        submitParamChangeProposal =
-          submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
       expectNumDormantEpochs 0
 
       -- epoch 0: we submit a proposal
-      _ <- submitParamChangeProposal
+      submitParamChangeProposal
       passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
         expectDRepExpiry drep $ offDRepActivity 100
@@ -179,7 +174,7 @@ dRepSpec =
       expectNumDormantEpochs 3
       expectDRepExpiry drep $ offDRepActivity 100
 
-      _ <- submitParamChangeProposal
+      submitParamChangeProposal
       -- number of dormant epochs is added to the drep expiry and reset to 0
       expectNumDormantEpochs 0
       expectDRepExpiry drep $ offDRepActivity 103
@@ -202,12 +197,10 @@ dRepSpec =
         offDRepActivity offset =
           addEpochInterval startEpochNo $ EpochInterval (drepActivity + offset)
 
-      let submitParamChangeProposal =
-            submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
       expectNumDormantEpochs 0
 
       -- epoch 0: we submit a proposal
-      _ <- submitParamChangeProposal
+      submitParamChangeProposal
       passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
         expectDRepExpiry drep $ offDRepActivity 0
@@ -229,7 +222,7 @@ dRepSpec =
       expectDRepExpiry drep $ offDRepActivity 0
       expectActualDRepExpiry drep $ offDRepActivity 3
 
-      _ <- submitParamChangeProposal
+      submitParamChangeProposal
       -- number of dormant epochs is added to the drep, considering they are not actually expired,
       -- and is reset to 0
       expectNumDormantEpochs 0
@@ -463,7 +456,11 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
   govPolicy <- getGovPolicy
   gaid <-
     mkProposalWithRewardAccount
-      (ParameterChange SNothing (emptyPParamsUpdate & ppuGovActionDepositL .~ SJust (Coin 10)) govPolicy)
+      ( ParameterChange
+          SNothing
+          (emptyPParamsUpdate & ppuGovActionDepositL .~ SJust (Coin 1000000))
+          govPolicy
+      )
       returnAddr
       >>= submitProposal
   expectPresentGovActionId gaid
@@ -503,7 +500,7 @@ eventsSpec = describe "Events" $ do
       propDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
       let
         proposeParameterChange = do
-          newVal <- arbitrary
+          newVal <- CoinPerByte . Coin <$> choose (3000, 6500)
           proposal <- submitParameterChange SNothing $ def & ppuCoinsPerUTxOByteL .~ SJust newVal
           pure
             (proposal, getsNES (nesEsL . curPParamsEpochStateL . ppCoinsPerUTxOByteL) `shouldReturn` newVal)
@@ -512,9 +509,10 @@ eventsSpec = describe "Events" $ do
       rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccount
       passEpoch -- prevent proposalC expiry and force it's deletion due to conflit.
       proposalC <- impAnn "proposalC" $ do
-        newVal <- arbitrary
+        newVal <- CoinPerByte . Coin <$> choose (3000, 6500)
+        paramChange <- mkParameterChangeGovAction SNothing $ (def & ppuCoinsPerUTxOByteL .~ SJust newVal)
         mkProposalWithRewardAccount
-          (ParameterChange SNothing (def & ppuCoinsPerUTxOByteL .~ SJust newVal) SNothing)
+          paramChange
           rewardAccount
           >>= submitProposal
       let

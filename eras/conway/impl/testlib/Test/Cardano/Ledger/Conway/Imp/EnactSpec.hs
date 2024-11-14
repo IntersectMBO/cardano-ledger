@@ -460,13 +460,16 @@ actionPrioritySpec =
             nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
         committee `shouldBe` SNothing
 
-    let val1 = Coin 1_000_001
-    let val2 = Coin 1_000_002
-    let val3 = Coin 1_000_003
-
+    -- distinct constitutional values for minFee
+    let genMinFeeVals =
+          (\x y z -> (Coin x, Coin y, Coin z))
+            <$> uniformRM (30, 330)
+            <*> uniformRM (330, 660)
+            <*> uniformRM (660, 1000)
     it "proposals of same priority are enacted in order of submission" $ do
       modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
       whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
+      (val1, val2, val3) <- genMinFeeVals
 
       committeeCs <- registerInitialCommittee
       (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
@@ -498,24 +501,26 @@ actionPrioritySpec =
     it "only the first action of a transaction gets enacted" $ do
       modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
       whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
+      (val1, val2, val3) <- genMinFeeVals
 
       committeeCs <- registerInitialCommittee
       (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      policy <- getGovPolicy
       gaids <-
         submitGovActions $
           NE.fromList
             [ ParameterChange
                 SNothing
                 (def & ppuMinFeeAL .~ SJust val1)
-                SNothing
+                policy
             , ParameterChange
                 SNothing
                 (def & ppuMinFeeAL .~ SJust val2)
-                SNothing
+                policy
             , ParameterChange
                 SNothing
                 (def & ppuMinFeeAL .~ SJust val3)
-                SNothing
+                policy
             ]
       traverse_
         ( \gaid -> do

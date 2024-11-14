@@ -30,7 +30,6 @@ import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.Shelley.LedgerState
-import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro
@@ -91,7 +90,7 @@ spec = do
         expectedExpiry >>= expectActualDRepExpiry drep
 
         nes <- getsNES id
-        void $ submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+        mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
 
         expectedExpiry >>= expectDRepExpiry drep
         drepState <- drepStateFromQuery drep nes
@@ -101,8 +100,6 @@ spec = do
         curEpochNo <- getsNES nesELL
         let drepActivity = 3
         modifyPParams $ ppDRepActivityL .~ EpochInterval drepActivity
-        let submitParamChangeProposal =
-              submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
         drepState <- drepStateFromQuery drep nes
@@ -113,7 +110,7 @@ spec = do
           isDRepExpired drep `shouldReturn` False
         expectActualDRepExpiry drep actualExpiry
         expectDRepExpiry drep $ addEpochInterval curEpochNo $ EpochInterval drepActivity
-        void submitParamChangeProposal
+        mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
         expectDRepExpiry drep actualExpiry
         nes1 <- getsNES id
         drepState1 <- drepStateFromQuery drep nes1
@@ -126,8 +123,6 @@ spec = do
         curEpochNo <- getsNES nesELL
         let drepActivity = 3
         modifyPParams $ ppDRepActivityL .~ EpochInterval drepActivity
-        let submitParamChangeProposal =
-              submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
         drepState <- drepStateFromQuery drep nes
@@ -156,7 +151,7 @@ spec = do
         expectDRepExpiry drep $ addEpochInterval curEpochNo $ EpochInterval drepActivity
         passEpoch
         expectNumDormantEpochs $ EpochNo (fromIntegral n + 1)
-        void submitParamChangeProposal
+        mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
         expectNumDormantEpochs $ EpochNo 0
         nes2 <- getsNES id
         drepState2 <- drepStateFromQuery drep nes2

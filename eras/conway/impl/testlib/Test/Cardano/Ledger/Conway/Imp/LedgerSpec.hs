@@ -27,7 +27,6 @@ import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgersEnv (..), ShelleyLedgersEvent (..))
 import Control.State.Transition.Extended
-import Data.Default (def)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
@@ -162,7 +161,7 @@ spec = do
     (drep, _, _) <- setupSingleDRep 1_000_000
 
     -- expire the drep before delegation
-    void $ submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+    mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
     passNEpochs 4
     isDRepExpired drep `shouldReturn` True
 
@@ -191,7 +190,8 @@ spec = do
     _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
 
     -- expire the drep after delegation
-    void $ submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+    mkMinFeeUpdateGovAction SNothing >>= submitGovAction_
+
     passNEpochs 4
     isDRepExpired drep `shouldReturn` True
 

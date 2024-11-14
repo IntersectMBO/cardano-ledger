@@ -57,7 +57,6 @@ spec = do
   withdrawalsSpec
   hardForkSpec
   pparamUpdateSpec
-  proposalsSpec
   networkIdSpec
   bootstrapPhaseSpec
 
@@ -188,7 +187,7 @@ pparamUpdateSpec =
             let ppUpdate =
                   emptyPParamsUpdate
                     & lenz .~ SJust val
-                ga = ParameterChange SNothing ppUpdate SNothing
+            ga <- mkParameterChangeGovAction SNothing ppUpdate
             mkProposal ga
               >>= flip
                 submitFailingProposal
@@ -234,7 +233,7 @@ pparamUpdateSpec =
         ppuDRepDepositL
         zero
       it "PPU cannot be empty" $ do
-        let ga = ParameterChange SNothing emptyPParamsUpdate SNothing
+        ga <- mkParameterChangeGovAction SNothing emptyPParamsUpdate
         mkProposal ga
           >>= flip
             submitFailingProposal
@@ -260,11 +259,7 @@ proposalsSpec = do
               ()
               [ Node () []
               ]
-        let parameterChangeAction =
-              ParameterChange
-                (SJust $ GovPurposeId $ mkCorruptGovActionId p1)
-                (def & ppuMinFeeAL .~ SJust (Coin 3000))
-                SNothing
+        parameterChangeAction <- mkMinFeeUpdateGovAction (SJust $ mkCorruptGovActionId p1)
         parameterChangeProposal <- mkProposal parameterChangeAction
         submitFailingProposal
           parameterChangeProposal
@@ -272,7 +267,7 @@ proposalsSpec = do
           ]
       it "Subtrees are pruned when proposals expire" $ do
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
-        p1 <- submitParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 3000))
+        p1 <- mkMinFeeUpdateGovAction SNothing >>= submitGovAction
         passNEpochs 3
         a <-
           submitParameterChangeTree
@@ -307,7 +302,7 @@ proposalsSpec = do
                          , Node SNothing []
                          ]
       it "Subtrees are pruned when proposals expire over multiple rounds" $ do
-        let ppupdate = def & ppuMinFeeAL .~ SJust (Coin 3000)
+        let ppupdate = def & ppuMinFeeAL .~ SJust (Coin 1000)
         let submitInitialProposal = submitParameterChange SNothing ppupdate
         let submitChildProposal parent = submitParameterChange (SJust parent) ppupdate
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
@@ -716,15 +711,16 @@ proposalsSpec = do
         ens <- getEnactState
         returnAddr <- registerRewardAccount
         withdrawal <-
-          Map.singleton returnAddr . Coin . getPositive
+          (: []) . (returnAddr,) . Coin . getPositive
             <$> (arbitrary :: ImpTestM era (Positive Integer))
+        wdrl <- mkTreasuryWithdrawalsGovAction withdrawal
         [prop0, prop1, prop2, prop3] <-
           traverse
             mkProposal
             ( [ InfoAction
               , NoConfidence (ens ^. ensPrevCommitteeL)
               , InfoAction
-              , TreasuryWithdrawals withdrawal SNothing
+              , wdrl
               ] ::
                 [GovAction era]
             )
@@ -742,11 +738,10 @@ proposalsSpec = do
         submitProposal_ prop3
         checkProps [prop0, prop1, prop2, prop3]
   where
-    submitParameterChangeForest = submitGovActionForest $ submitGovAction . paramAction
-    submitParameterChangeTree = submitGovActionTree $ submitGovAction . paramAction
+    submitParameterChangeForest = submitGovActionForest $ paramAction >=> submitGovAction
+    submitParameterChangeTree = submitGovActionTree (paramAction >=> submitGovAction)
     submitConstitutionForest = submitGovActionForest $ submitConstitution . fmap GovPurposeId
-    paramAction p =
-      ParameterChange (GovPurposeId <$> p) (def & ppuMinFeeAL .~ SJust (Coin 10)) SNothing
+    paramAction p = mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin 500))
 
 votingSpec ::
   forall era.
@@ -1089,7 +1084,7 @@ withdrawalsSpec =
               , raCredential = rewardCredential
               }
       proposal <-
-        mkProposal $ TreasuryWithdrawals (Map.singleton badRewardAccount $ Coin 100_000_000) SNothing
+        mkTreasuryWithdrawalsGovAction [(badRewardAccount, Coin 100_000_000)] >>= mkProposal
       let idMismatch =
             injectFailure $
               TreasuryWithdrawalsNetworkIdMismatch (Set.singleton badRewardAccount) Testnet
@@ -1105,19 +1100,17 @@ withdrawalsSpec =
               }
 
     it "Fails for empty withdrawals" $ do
-      expectZeroTreasuryFailurePostBootstrap $ TreasuryWithdrawals Map.empty SNothing
+      mkTreasuryWithdrawalsGovAction [] >>= expectZeroTreasuryFailurePostBootstrap
 
       rwdAccount1 <- registerRewardAccount
-      expectZeroTreasuryFailurePostBootstrap $
-        TreasuryWithdrawals [(rwdAccount1, zero)] SNothing
+      mkTreasuryWithdrawalsGovAction [(rwdAccount1, zero)] >>= expectZeroTreasuryFailurePostBootstrap
 
       rwdAccount2 <- registerRewardAccount
-      let withdrawals = Map.fromList [(rwdAccount1, zero), (rwdAccount2, zero)]
+      let withdrawals = [(rwdAccount1, zero), (rwdAccount2, zero)]
 
-      expectZeroTreasuryFailurePostBootstrap $
-        TreasuryWithdrawals withdrawals SNothing
+      mkTreasuryWithdrawalsGovAction withdrawals >>= expectZeroTreasuryFailurePostBootstrap
 
-      let wdrls = TreasuryWithdrawals (Map.insert rwdAccount2 (Coin 100_000) withdrawals) SNothing
+      wdrls <- mkTreasuryWithdrawalsGovAction $ withdrawals ++ [(rwdAccount2, Coin 100_000)]
       proposal <- mkProposal wdrls
       submitBootstrapAwareFailingProposal_ proposal $
         FailBootstrap [disallowedProposalFailure proposal]
@@ -1256,9 +1249,9 @@ bootstrapPhaseSpec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 bootstrapPhaseSpec =
-  describe "Proposing and voting during bootstrap phase" $ do
+  describe "Proposing and voting" $ do
     it "Parameter change" $ do
-      gid <- submitParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 3000))
+      gid <- mkMinFeeUpdateGovAction SNothing >>= submitGovAction
       (committee :| _) <- registerInitialCommittee
       (drep, _, _) <- setupSingleDRep 1_000_000
       (spo, _, _) <- setupPoolWithStake $ Coin 42_000_000
@@ -1287,7 +1280,7 @@ bootstrapPhaseSpec =
       submitYesVote_ (CommitteeVoter committee) gid
     it "Treasury withdrawal" $ do
       rewardAccount <- registerRewardAccount
-      let action = TreasuryWithdrawals [(rewardAccount, Coin 1000)] SNothing
+      action <- mkTreasuryWithdrawalsGovAction [(rewardAccount, Coin 1000)]
       proposal <- mkProposalWithRewardAccount action rewardAccount
       checkProposalFailure proposal
     it "NoConfidence" $ do

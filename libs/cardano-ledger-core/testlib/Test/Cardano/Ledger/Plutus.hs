@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Plutus (
   PlutusArgs (..),
@@ -8,6 +9,7 @@ module Test.Cardano.Ledger.Plutus (
   -- * Plutus
   alwaysSucceedsPlutus,
   alwaysFailsPlutus,
+  decodeHexPlutus,
 
   -- * CostModel
   mkCostModelConst,
@@ -26,6 +28,7 @@ module Test.Cardano.Ledger.Plutus (
   zeroTestingCostModels,
 ) where
 
+import Cardano.Ledger.Binary.Plain (decodeFullFromHexText)
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   CostModels,
@@ -41,6 +44,7 @@ import Cardano.Ledger.Plutus.Language (
  )
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text (Text)
 import GHC.Stack
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Test.Examples as P (
@@ -127,3 +131,7 @@ alwaysSucceedsPlutus n = Plutus (PlutusBinary (P.alwaysSucceedingNAryFunction n)
 
 alwaysFailsPlutus :: Natural -> Plutus l
 alwaysFailsPlutus n = Plutus (PlutusBinary (P.alwaysFailingNAryFunction n))
+
+decodeHexPlutus :: HasCallStack => Text.Text -> Plutus l
+decodeHexPlutus =
+  either (error . show) (Plutus . PlutusBinary) . decodeFullFromHexText
