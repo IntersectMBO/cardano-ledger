@@ -182,6 +182,7 @@ tests nightly =
       prop "[(Set Int, Set Bool)]" $ prop_gen_sound @BaseFn @[(Set Int, Set Bool)]
       prop "Set (Set Bool)" $ prop_gen_sound @BaseFn @(Set (Set Bool))
     negativeTests
+    prop "prop_noNarrowLoop" $ withMaxSuccess 1000 prop_noNarrowLoop
 
 negativeTests :: Spec
 negativeTests =
@@ -369,3 +370,15 @@ hasSizeSet = hasSize (rangeSize 1 3)
 
 hasSizeMap :: Specification BaseFn (Map Int Int)
 hasSizeMap = hasSize (rangeSize 1 3)
+
+------------------------------------------------------------------------
+-- Tests for narrowing
+------------------------------------------------------------------------
+
+prop_noNarrowLoop :: Int -> Int -> Specification BaseFn Int -> Specification BaseFn Int -> Property
+prop_noNarrowLoop f s eSpec fSpec =
+  -- Make sure the fuel is non-negative
+  f >= 0 ==>
+    discardAfter 100_000 $
+      narrowByFuelAndSize f s (eSpec, fSpec) `seq`
+        property True

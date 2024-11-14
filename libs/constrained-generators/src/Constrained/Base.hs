@@ -3209,7 +3209,7 @@ narrowByFuelAndSize ::
   (Specification fn a, Specification fn a) ->
   (Specification fn a, Specification fn a)
 narrowByFuelAndSize fuel size specs =
-  loop (1000 :: Int) (narrowFoldSpecs specs)
+  loop (100 :: Int) (onlyOnceTransformations $ narrowFoldSpecs specs)
   where
     loop 0 specs =
       error $
@@ -3224,6 +3224,13 @@ narrowByFuelAndSize fuel size specs =
     loop n specs = case go specs of
       Nothing -> specs
       Just specs' -> loop (n - 1) (narrowFoldSpecs specs')
+
+    -- Transformations only applied once. It's annoying to check if you're
+    -- going to change the spec with these so easier to just make sure you only apply
+    -- these once
+    onlyOnceTransformations (elemS, foldS)
+      | fuel == 1 = (elemS <> foldS, foldS)
+      | otherwise = (elemS, foldS)
 
     canReach _ 0 s = s == 0
     canReach e fuel s
@@ -3246,9 +3253,11 @@ narrowByFuelAndSize fuel size specs =
       where
         d = a `div` b
 
-    go (elemS, foldS)
+    go (simplifySpec -> elemS, simplifySpec -> foldS)
       -- There is nothing we can do
       | fuel == 0 = Nothing
+      | ErrorSpec {} <- elemS = Nothing
+      | ErrorSpec {} <- foldS = Nothing
       -- Give up as early as possible
       | Just 0 <- knownUpperBound elemS
       , Just 0 <- knownLowerBound elemS
@@ -3285,14 +3294,15 @@ narrowByFuelAndSize fuel size specs =
       , Just s <- knownUpperBound foldS
       , s < 0
       , let c = divCeil (safeNegate s) fuel
-      , negate c < e =
+      , negate c < e
+      , maybe True (c <) (knownUpperBound elemS) =
           Just (elemS <> leqSpec @fn c, foldS)
       -- It's time to stop generating negative numbers
       | Just s <- knownLowerBound foldS
       , s > 0
       , Just e <- knownUpperBound elemS
       , e > 0
-      , not $ canReach e (fuel `div` 2) s
+      , not $ canReach e (fuel `div` 2 + 1) s
       , maybe True (<= 0) (knownLowerBound elemS) =
           Just (elemS <> gtSpec @fn 0, foldS)
       -- It's time to stop generating positive numbers
@@ -3300,16 +3310,9 @@ narrowByFuelAndSize fuel size specs =
       , s < 0
       , Just e <- knownLowerBound elemS
       , e < 0
-      , not $ canReach (safeNegate e) (fuel `div` 2) (safeNegate s)
-      , maybe True (<= 0) (knownLowerBound elemS) =
-          Just (elemS <> gtSpec @fn 0, foldS)
-      -- We HAVE to set the lower bound to the lower
-      -- bound on the sum
-      | Just s <- knownLowerBound foldS
-      , fuel == 1
-      , s `conformsToSpec` elemS
-      , maybe True (< s) (knownLowerBound elemS) =
-          Just (elemS <> geqSpec @fn s, foldS)
+      , not $ canReach (safeNegate e) (fuel `div` 2 + 1) (safeNegate s)
+      , maybe True (0 <=) (knownUpperBound elemS) =
+          Just (elemS <> ltSpec @fn 0, foldS)
       -- There is nothing we need to do
       | otherwise = Nothing
 
@@ -3329,7 +3332,7 @@ narrowFoldSpecs ::
 narrowFoldSpecs specs = maybe specs narrowFoldSpecs (go specs)
   where
     -- Note: make sure there is some progress when returning Just or this will loop forever
-    go (elemS, foldS) = case (elemS, foldS) of
+    go (simplifySpec -> elemS, simplifySpec -> foldS) = case (elemS, foldS) of
       -- Empty foldSpec
       (_, ErrorSpec {}) -> Nothing
       _ | isEmptyNumSpec foldS -> Just (elemS, ErrorSpec (NE.fromList ["Empty foldSpec:", show foldS]))
