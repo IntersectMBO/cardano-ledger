@@ -351,6 +351,10 @@ instance
   Arbitrary (Proposals era)
   where
   arbitrary = genProposals (0, 30)
+  shrink ps = [ ps' | gais' <- shrink gais
+                           , let (ps', _) = proposalsRemoveWithDescendants (gais Set.\\ gais') ps
+                           ]
+    where gais = Set.fromList (toList $ proposalsIds ps)
 
 genProposals ::
   forall era.

@@ -10,7 +10,8 @@
 -- for the EPOCH rule
 module Test.Cardano.Ledger.Constrained.Conway.Epoch where
 
-import Data.Set
+import qualified Data.Set as Set
+import Data.Set (Set)
 import Data.Foldable
 import Data.Sequence.Strict
 import Cardano.Ledger.BaseTypes
@@ -22,10 +23,12 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API.Types
 import Constrained
-import Data.Map.Strict
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Cardano.Ledger.Conway.Governance (isRoot)
 
 newtype EpochExecEnv era = EpochExecEnv
   { eeeStakeDistr :: Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
@@ -62,24 +65,7 @@ epochStateSpec epochNo = constrained $ \ es ->
                     [ forAll expired $ \[var| gasId |] ->
                         proposalExists gasId proposals
                     , forAll enacted $ \govact ->
-                        caseOn (pProcGovAction_ . gasProposalProcedure_ $ govact)
-                          -- ParameterChange
-                          (branch $ \ prev _ _ -> reify (fst_ (psPParamUpdate_ proposals))
-                                                        (fmap GovPurposeId)
-                                                        (prev ==.)
-                          )
-                          -- Hard fork
-                          (branch $ \ prev _ -> False)
-                          -- TreasuryWithdrawals
-                          (branch $ \ _ _ -> True)
-                          -- NoConfidence
-                          (branch $ \ prev -> False)
-                          -- UpdateCommittee
-                          (branch $ \ prev _ _ _ -> False)
-                          -- NewConstitution
-                          (branch $ \ prev _ -> False)
-                          -- Info
-                          (branch $ \ _ -> True)
+                        reify proposals enactableProposals $ \ enactable -> govact `elem_` enactable
                     ]
               )
           ]
@@ -110,3 +96,11 @@ proposalExists gasId proposals =
 epochSignalSpec :: EpochNo -> Specification ConwayFn EpochNo
 epochSignalSpec curEpoch = constrained $ \e ->
   elem_ e (lit [curEpoch, succ curEpoch])
+
+enactableProposals :: Proposals era -> [GovActionId (EraCrypto era)]
+enactableProposals proposals =
+                                  [ gact | gact <- toList (proposalsActions proposals)
+                                         , gact' <- withGovActionParent gact [gact]
+                                                    $ \ _ parent ->
+                                                        if isRoot parent proposals then [gact] else []
+                                         ]

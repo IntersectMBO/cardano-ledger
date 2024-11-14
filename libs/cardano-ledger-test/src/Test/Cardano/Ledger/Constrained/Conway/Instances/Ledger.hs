@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -62,6 +63,9 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger (
   toDelta_,
   module Test.Cardano.Ledger.Constrained.Conway.Instances.Basic,
 ) where
+
+import Test.Cardano.Ledger.Conway.Arbitrary
+import Constrained.Univ
 
 import Cardano.Chain.Common (
   AddrAttributes (..),
@@ -1121,9 +1125,10 @@ instance EraPParams era => HasSimpleRep (Proposals era) where
     where
       mkOMap (Node a ts) = a OMap.<| foldMap mkOMap ts
 
-instance (EraSpecPParams era, IsConwayUniv fn) => HasSpec fn (Proposals era)
+instance (EraSpecPParams era, IsConwayUniv fn, Arbitrary (Proposals era)) => HasSpec fn (Proposals era) where
+  shrinkWithTypeSpec _ props = shrink props
 
-psPParamUpdate_ :: (EraSpecPParams era, IsConwayUniv fn) => Term fn (Proposals era) -> Term fn (ProposalTree era)
+psPParamUpdate_ :: (EraSpecPParams era, Arbitrary (Proposals era), IsConwayUniv fn) => Term fn (Proposals era) -> Term fn (ProposalTree era)
 psPParamUpdate_ = sel @0
 
 data ProposalsSplit = ProposalsSplit

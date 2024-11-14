@@ -112,6 +112,7 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   PGraph (..),
   pGraphNodesL,
   proposalsDeposits,
+  isRoot
 ) where
 
 import Cardano.Ledger.Address (rewardAccountCredentialL)
@@ -739,3 +740,6 @@ checkInvariantAfterDeletion gais psPre ps = assert check ps
       case toGovRelationTreeEither ps of
         Left err -> error $ "Deletion error: " ++ err ++ "\n" ++ show gais ++ "\n" ++ show psPre
         Right _ -> True
+
+isRoot :: GovActionId (EraCrypto era) -> Proposals era -> Bool
+isRoot = undefined
