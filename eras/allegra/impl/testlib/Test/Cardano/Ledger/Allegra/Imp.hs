@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Allegra.Imp (spec) where
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Allegra.Imp.UtxowSpec as UtxowSpec
-import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 import Test.Cardano.Ledger.Shelley.ImpTest
 
@@ -24,5 +24,5 @@ spec ::
   Spec
 spec = do
   ShelleyImp.spec @era
-  describe "AllegraImpSpec" . withImpState @era $ do
+  describe "AllegraImpSpec" . withImpInit @(LedgerSpec era) $ do
     UtxowSpec.spec

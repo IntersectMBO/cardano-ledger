@@ -35,6 +35,11 @@
 
 ### `testlib`
 
+* Switch to using `ImpSpec` package
+* Remove: `runImpTestM`, `runImpTestM_`, `evalImpTestM`, `execImpTestM`, `runImpTestGenM`, `runImpTestGenM_`, `evalImpTestGenM`, `execImpTestGenM`, `withImpState` and `withImpStateModified`.
+* Add `LedgerSpec`, `modifyImpInitProtVer`.
+* Re-export `ImpM` and `ImpInit`
+* Remove `iteState` and `iteQuickCheckSize` from `ImpTestEnv`
 * Added `ToExpr` instance for `ShelleyLedgersEnv`
 * Changed type signature of `freshKeyHashVRF` to return `VRFVerKeyHash` instead of just a `Hash`
 * Added `expectUTxOContent`

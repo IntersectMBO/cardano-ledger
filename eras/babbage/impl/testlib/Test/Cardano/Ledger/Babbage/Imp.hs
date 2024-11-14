@@ -19,9 +19,9 @@ import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
-import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, withImpState)
+import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, LedgerSpec)
 import qualified Test.Cardano.Ledger.Babbage.Imp.UtxowSpec as Utxow
-import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
@@ -39,5 +39,5 @@ spec ::
   Spec
 spec = do
   AlonzoImp.spec @era
-  describe "BabbageImpSpec" . withImpState @era $ do
-    Utxow.spec @era
+  describe "BabbageImpSpec" . withImpInit @(LedgerSpec era) $ do
+    Utxow.spec

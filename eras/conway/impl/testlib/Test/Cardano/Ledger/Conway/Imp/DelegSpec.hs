@@ -41,7 +41,7 @@ spec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   describe "Register stake credential" $ do
     it "With correct deposit or without any deposit" $ do

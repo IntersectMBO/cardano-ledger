@@ -57,7 +57,7 @@ spec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Invalid transactions" $ do
   it "Phase 1 script failure" $ do
     -- Script will be invalid because slot 100 will be in the future

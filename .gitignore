@@ -24,7 +24,8 @@
 **/*-blx.bib
 **/*.run.xml
 
-## Cabal & Stack
+## Cabal & Stack (we no longer use stack)
+stack.yaml
 .stack-work*/
 .stack-work-local/
 */dist

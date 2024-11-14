@@ -44,7 +44,6 @@ import Cardano.Crypto.Hash.Class ()
 import Cardano.Ledger.Binary
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Term as CBOR
-import Control.Exception (throwIO)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
@@ -54,41 +53,16 @@ import Data.Foldable (toList)
 import Data.IP (IPv4, IPv6)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Text.Lazy as TL
 import Data.TreeDiff
-import GHC.Stack (CallStack, HasCallStack, SrcLoc (..), getCallStack)
+import GHC.Stack (HasCallStack)
 import Prettyprinter (Doc)
 import qualified Prettyprinter as Pretty
 import Prettyprinter.Render.Terminal (AnsiStyle)
-import qualified Prettyprinter.Render.Terminal as Pretty
 import Test.Cardano.Slotting.TreeDiff ()
 import Test.Hspec (Expectation)
-import Test.Hspec.Core.Spec (
-  FailureReason (ColorizedReason),
-  Location (..),
-  ResultStatus (Failure),
- )
+import Test.ImpSpec (ansiDocToString)
+import Test.ImpSpec.Expectations (assertColorFailure, callStackToLocation, srcLocToLocation)
 import Test.Tasty.HUnit (Assertion, assertFailure)
-
-callStackToLocation :: CallStack -> Maybe Location
-callStackToLocation cs =
-  case getCallStack cs of
-    [] -> Nothing
-    (_, loc) : _ -> Just $ srcLocToLocation loc
-
-srcLocToLocation :: SrcLoc -> Location
-srcLocToLocation loc =
-  Location
-    { locationFile = srcLocFile loc
-    , locationLine = srcLocStartLine loc
-    , locationColumn = srcLocStartCol loc
-    }
-
--- | Similar to `assertFailure`, except hspec will not interfer with any escape sequences
--- that indicate color output.
-assertColorFailure :: HasCallStack => String -> IO a
-assertColorFailure msg =
-  throwIO $ Failure (callStackToLocation ?callStack) (ColorizedReason msg)
 
 -- =====================================================
 -- Cardano functions that deal with TreeDiff and ToExpr
@@ -151,9 +125,6 @@ diffExprCompact x y = ansiWlEditExprCompact (ediff x y)
 
 diffExprCompactString :: ToExpr a => a -> a -> String
 diffExprCompactString x y = ansiDocToString $ diffExprCompact x y
-
-ansiDocToString :: Doc AnsiStyle -> String
-ansiDocToString = TL.unpack . Pretty.renderLazy . Pretty.layoutPretty Pretty.defaultLayoutOptions
 
 -- | Wraps regular ByteString, but shows and diffs it as hex
 newtype HexBytes = HexBytes {unHexBytes :: BS.ByteString}

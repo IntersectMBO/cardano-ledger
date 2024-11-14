@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `eraProtVersions`
 * Remove deprecated `_unTxId` and `adaOnly`
 * Remove deprecated module `Cardano.Ledger.Serialization`
 * Remove deprecated `fromSLanguage`
@@ -31,6 +32,9 @@
 
 ### `testlib`
 
+* Switch to using `ImpSpec` package
+* Remove `HasSubState`, `subStateM`, `setSubStateM`, `StateGen` and `StateGenM` as no longer useful.
+* Re-export `withImpInit` and `modifyImpInit`
 * Remove deprecated `mkVKeyRwdAcnt`
 * Remove deprecated `deserialiseRewardAcntOld`
 * Generalize the return type of `assertColorFailure` to `MonadIO`

@@ -31,7 +31,7 @@ spec ::
   ( AlonzoEraImp era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   it "Wrong network ID" $ do
     submitFailingTx

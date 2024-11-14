@@ -115,7 +115,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   cantFollow,
   getsPParams,
   currentProposalsShouldContain,
-  withImpStateWithProtVer,
   ifBootstrap,
   whenBootstrap,
   whenPostBootstrap,
@@ -147,7 +146,6 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
   UnitInterval,
-  Version,
   addEpochInterval,
   binOpEpochNo,
   hashAnchorData,
@@ -262,23 +260,6 @@ conwayModifyPParams f = modifyNES $ \nes ->
       case finishDRepPulser pulser of
         (snapshot, ratifyState) ->
           DRComplete snapshot (ratifyState & rsEnactStateL . ensCurPParamsL %~ f)
-
-withImpStateWithProtVer ::
-  forall era.
-  ConwayEraImp era =>
-  Version ->
-  SpecWith (ImpTestState era) ->
-  Spec
-withImpStateWithProtVer ver = do
-  withImpStateModified $
-    impNESL
-      . nesEsL
-      . esLStateL
-      . lsUTxOStateL
-      . utxosGovStateL
-      . cgsCurPParamsL
-      . ppProtocolVersionL
-      .~ ProtVer ver 0
 
 instance
   ( Crypto c

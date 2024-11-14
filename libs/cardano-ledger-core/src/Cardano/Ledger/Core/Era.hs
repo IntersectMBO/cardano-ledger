@@ -41,6 +41,7 @@ module Cardano.Ledger.Core.Era (
   notSupportedInThisEraL,
   eraProtVerLow,
   eraProtVerHigh,
+  eraProtVersions,
   toEraCBOR,
   fromEraCBOR,
   fromEraShareCBOR,
@@ -236,6 +237,10 @@ eraProtVerLow = natVersion @(ProtVerLow era)
 -- | Get the value level `Version` of the highest major protocol version for the supplied @era@.
 eraProtVerHigh :: forall era. Era era => Version
 eraProtVerHigh = natVersion @(ProtVerHigh era)
+
+-- | List with all major versions that are used in the particular era.
+eraProtVersions :: forall era. Era era => [Version]
+eraProtVersions = [eraProtVerLow @era .. eraProtVerHigh @era]
 
 -- | Enforce era to be at least the specified era at the type level. In other words
 -- compiler will produce type error when applied to eras prior to the specified era.

@@ -11,10 +11,10 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Allegra.Imp as AllegraImp
-import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Mary.Imp.UtxoSpec as Utxo
 import Test.Cardano.Ledger.Mary.ImpTest (MaryEraImp)
-import Test.Cardano.Ledger.Shelley.ImpTest (withImpState)
+import Test.Cardano.Ledger.Shelley.ImpTest (LedgerSpec)
 
 spec ::
   forall era.
@@ -27,5 +27,5 @@ spec ::
   Spec
 spec = do
   AllegraImp.spec @era
-  describe "MaryImpSpec" $ withImpState @era $ do
-    Utxo.spec @era
+  describe "MaryImpSpec" $ withImpInit @(LedgerSpec era) $ do
+    Utxo.spec

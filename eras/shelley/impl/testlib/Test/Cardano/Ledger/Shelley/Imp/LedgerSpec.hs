@@ -21,7 +21,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 spec ::
   forall era.
   ShelleyEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "LEDGER" $ do
   it "Transactions update UTxO" $ do
     kpPayment1 <- lookupKeyPair =<< freshKeyHash

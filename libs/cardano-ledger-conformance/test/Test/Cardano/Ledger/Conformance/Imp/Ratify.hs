@@ -5,10 +5,10 @@
 
 module Test.Cardano.Ledger.Conformance.Imp.Ratify (spec) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval, natVersion)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
-import Cardano.Ledger.Conway.Core (CoinPerByte (..), ppCoinsPerUTxOByteL, ppCommitteeMinSizeL)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   GovAction (..),
@@ -20,9 +20,6 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.PParams (
   dvtMotionNoConfidenceL,
-  ppCommitteeMaxTermLengthL,
-  ppDRepVotingThresholdsL,
-  ppPoolVotingThresholdsL,
   pvtMotionNoConfidenceL,
  )
 import Cardano.Ledger.Credential (Credential (..))
@@ -48,7 +45,7 @@ import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
-spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $ do
+spec = withImpInit @(LedgerSpec Conway) $ describe "RATIFY" $ modifyImpInitProtVer (eraProtVerHigh @Conway) $ do
   it "NoConfidence accepted conforms" $ do
     modifyPParams $ \pp ->
       pp

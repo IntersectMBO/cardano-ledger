@@ -47,7 +47,7 @@ spec ::
   , EraSegWits era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "BBODY" $ do
   it "BodyRefScriptsSizeTooBig" $ do
     Just (script :: Script era) <- pure largeScript

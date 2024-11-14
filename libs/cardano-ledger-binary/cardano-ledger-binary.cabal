@@ -114,6 +114,7 @@ library testlib
         cuddle >=0.3.2,
         formatting,
         tree-diff,
+        ImpSpec,
         iproute,
         half,
         hedgehog,

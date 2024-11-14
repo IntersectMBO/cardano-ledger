@@ -29,7 +29,7 @@ spec ::
   ( ShelleyEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   it "InvalidMetadata" $ do
     invalidMetadatum <- genInvalidMetadata

@@ -55,7 +55,7 @@ spec ::
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   committeeSpec
   treasuryWithdrawalsSpec
@@ -74,7 +74,7 @@ treasuryWithdrawalsSpec ::
   , Eq (Event (EraRule "ENACT" era))
   , Typeable (Event (EraRule "ENACT" era))
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 treasuryWithdrawalsSpec =
   describe "Treasury withdrawals" $ do
     -- Treasury withdrawals are disallowed in bootstrap, so we're running these tests only post-bootstrap
@@ -208,7 +208,7 @@ hardForkInitiationSpec ::
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 hardForkInitiationSpec =
   it "HardForkInitiation" $ whenPostBootstrap $ do
     committeeMembers' <- registerInitialCommittee
@@ -256,7 +256,7 @@ hardForkInitiationNoDRepsSpec ::
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 hardForkInitiationNoDRepsSpec =
   it "HardForkInitiation without DRep voting" $ do
     committeeMembers' <- registerInitialCommittee
@@ -285,7 +285,7 @@ hardForkInitiationNoDRepsSpec =
           ]
     getProtVer `shouldReturn` nextProtVer
 
-pparamPredictionSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
+pparamPredictionSpec :: ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 pparamPredictionSpec =
   it "futurePParams" $ do
     committeeMembers' <- registerInitialCommittee
@@ -306,7 +306,7 @@ pparamPredictionSpec =
     passEpoch
     getProtVer `shouldReturn` nextProtVer
 
-noConfidenceSpec :: forall era. ConwayEraImp era => SpecWith (ImpTestState era)
+noConfidenceSpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
 noConfidenceSpec =
   it "NoConfidence" $ whenPostBootstrap $ do
     modifyPParams $ \pp ->
@@ -355,7 +355,7 @@ constitutionSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 constitutionSpec =
   it "Constitution" $ do
     (committeeMember1 :| [committeeMember2]) <- registerInitialCommittee
@@ -428,7 +428,7 @@ actionPrioritySpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 actionPrioritySpec =
   describe "Competing proposals" $ do
     it "higher action priority wins" $ do
@@ -552,7 +552,7 @@ committeeSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 committeeSpec =
   describe "Committee enactment" $ do
     it "Enact UpdateCommitee with lengthy lifetime" $ do

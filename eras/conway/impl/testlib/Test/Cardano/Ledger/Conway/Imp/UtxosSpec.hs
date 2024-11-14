@@ -66,7 +66,7 @@ spec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   govPolicySpec
   costModelsSpec
@@ -95,7 +95,7 @@ datumAndReferenceInputsSpec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , ConwayEraImp era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 datumAndReferenceInputsSpec = do
   it "can use reference scripts" $ do
     producingTx <- setupRefTx
@@ -205,7 +205,7 @@ conwayFeaturesPlutusV1V2FailureSpec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , Inject (ConwayContextError era) (ContextError era)
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 conwayFeaturesPlutusV1V2FailureSpec = do
   describe "Conway features fail in Plutusdescribe v1 and v2" $ do
     describe "Unsupported Fields" $ do
@@ -450,7 +450,7 @@ govPolicySpec ::
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 govPolicySpec = do
   describe "Gov policy scripts" $ do
     -- These tests rely on the script in the constitution, but we can only change the constitution after bootstrap.
@@ -534,7 +534,7 @@ costModelsSpec ::
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 costModelsSpec =
   -- These tests rely on the script in the constitution, but we can only change the constitution after bootstrap.
   -- So we cannot run these tests during bootstrap

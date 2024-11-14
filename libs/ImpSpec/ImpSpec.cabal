@@ -1,0 +1,65 @@
+cabal-version:      3.0
+name:               ImpSpec
+version:            0.1.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+homepage:           https://github.com/intersectmbo/cardano-ledger
+synopsis:
+    Imperative approach of testing that extends HSpec and QuickCheck
+
+category:           Control
+build-type:         Simple
+extra-source-files: CHANGELOG.md
+
+source-repository head
+    type:     git
+    location: https://github.com/intersectmbo/cardano-ledger
+    subdir:   libs/ImpSpec
+
+library
+    exposed-modules:
+        Test.ImpSpec
+        Test.ImpSpec.Expectations
+        Test.ImpSpec.Expectations.Lifted
+        Test.ImpSpec.Main
+        Test.ImpSpec.Random
+
+    hs-source-dirs:   src
+    other-modules:    Test.ImpSpec.Internal
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+
+    build-depends:
+        base >=4.14 && <5,
+        bytestring,
+        deepseq,
+        hspec,
+        hspec-core,
+        hspec-expectations-lifted,
+        HUnit,
+        mtl,
+        QuickCheck,
+        quickcheck-transformer,
+        prettyprinter,
+        prettyprinter-ansi-terminal,
+        random,
+        text,
+        unliftio
+
+test-suite tests
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    other-modules:    Test.Suite.ImpSpec
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -threaded -rtsopts
+
+    build-depends:
+        base,
+        ImpSpec

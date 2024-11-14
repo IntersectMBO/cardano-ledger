@@ -8,12 +8,12 @@ module Test.Cardano.Ledger.Shelley.Imp (spec) where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
-import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Imp.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Shelley.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Shelley.Imp.UtxowSpec as Utxow
-import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp, withImpState)
+import Test.Cardano.Ledger.Shelley.ImpTest (LedgerSpec, ShelleyEraImp)
 import qualified Test.Cardano.Ledger.Shelley.UnitTests.IncrementalStakeTest as Incremental
 
 spec ::
@@ -25,10 +25,10 @@ spec ::
   ) =>
   Spec
 spec = do
-  describe "ShelleyImpSpec" $ withImpState @era $ do
-    Ledger.spec @era
-    Epoch.spec @era
-    Utxow.spec @era
-    Utxo.spec @era
+  describe "ShelleyImpSpec" $ withImpInit @(LedgerSpec era) $ do
+    Ledger.spec
+    Epoch.spec
+    Utxow.spec
+    Utxo.spec
   describe "ShelleyPureTests" $ do
     Incremental.spec @era

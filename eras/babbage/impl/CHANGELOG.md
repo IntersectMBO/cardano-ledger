@@ -4,6 +4,10 @@
 
 * Use `Mismatch` to clarify predicate failures. #4711
 
+### `testlib`
+
+* Switch to using `ImpSpec` package
+
 ## 1.10.0.0
 
 * Add `ProtVer` argument to `TxInfo` functions:

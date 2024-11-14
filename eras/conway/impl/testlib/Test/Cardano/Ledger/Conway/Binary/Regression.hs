@@ -92,7 +92,7 @@ spec = describe "Regression" $ do
           , "49848004800504d9010281d8799f182aff0581840000d8799f182aff820000f4f6"
           ]
   describe "ImpTest" $
-    withImpState @Conway $
+    withImpInit @(LedgerSpec Conway) $
       it "InsufficientCollateral is not encoded with negative coin #4198" $ do
         collateralAddress <- freshKeyAddr_
         (_, skp) <- freshKeyPair

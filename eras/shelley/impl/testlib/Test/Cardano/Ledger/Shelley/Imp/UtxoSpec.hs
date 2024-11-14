@@ -20,7 +20,7 @@ spec ::
   ( ShelleyEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   describe "ShelleyUtxoPredFailure" $ do
     it "ValueNotConservedUTxO" $ do

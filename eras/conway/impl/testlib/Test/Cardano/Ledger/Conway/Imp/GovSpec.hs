@@ -46,7 +46,7 @@ spec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   constitutionSpec
   proposalsSpec
@@ -64,7 +64,7 @@ spec = do
 unknownCostModelsSpec ::
   forall era.
   ConwayEraImp era =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 unknownCostModelsSpec =
   describe "Unknown CostModels" $ do
     it "Are accepted" $ do
@@ -87,7 +87,7 @@ predicateFailuresSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 predicateFailuresSpec =
   describe "Predicate failures" $ do
     it "ProposalReturnAccountDoesNotExist" $ do
@@ -163,7 +163,7 @@ hardForkSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 hardForkSpec =
   describe "HardFork" $ do
     describe "Hardfork is the first one (doesn't have a GovPurposeId) " $ do
@@ -180,7 +180,7 @@ pparamUpdateSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 pparamUpdateSpec =
   describe "PParamUpdate" $ do
     describe "PPU needs to be wellformed" $ do
@@ -245,7 +245,7 @@ proposalsSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 proposalsSpec = do
   describe "Proposals" $ do
     describe "Consistency" $ do
@@ -753,7 +753,7 @@ votingSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 votingSpec =
   describe "Voting" $ do
     it "VotersDoNotExist" $ do
@@ -889,7 +889,7 @@ constitutionSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 constitutionSpec =
   describe "Constitution proposals" $ do
     describe "accepted for" $ do
@@ -972,7 +972,7 @@ policySpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 policySpec =
   describe "Policy" $ do
     it "policy is respected by proposals" $ whenPostBootstrap $ do
@@ -1020,7 +1020,7 @@ networkIdSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 networkIdSpec =
   describe "Network ID" $ do
     it "Fails with invalid network ID in proposal return address" $ do
@@ -1056,7 +1056,7 @@ withdrawalsSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 withdrawalsSpec =
   describe "Withdrawals" $ do
     it "Fails predicate when treasury withdrawal has nonexistent return address" $ do
@@ -1254,7 +1254,7 @@ bootstrapPhaseSpec ::
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 bootstrapPhaseSpec =
   describe "Proposing and voting during bootstrap phase" $ do
     it "Parameter change" $ do

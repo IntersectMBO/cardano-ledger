@@ -52,7 +52,7 @@ spec ::
   , STS (EraRule "LEDGERS" era)
   , ApplyTx era
   ) =>
-  SpecWith (ImpTestState era)
+  SpecWith (ImpInit (LedgerSpec era))
 spec = do
   it "TxRefScriptsSizeTooBig" $ do
     -- we use here the largest script we currently have as many times as necessary to
