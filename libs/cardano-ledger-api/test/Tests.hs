@@ -26,7 +26,7 @@ apiSpec =
       StateQuery.spec
     describe "Imp" $
       withImpInit @(LedgerSpec Conway) $
-        forM_ [eraProtVerLow @Conway .. eraProtVerHigh @Conway] $ \v ->
+        forM_ (eraProtVersions @Conway) $ \v ->
           modifyImpInitProtVer v $ do
             ImpQuery.spec @Conway
 

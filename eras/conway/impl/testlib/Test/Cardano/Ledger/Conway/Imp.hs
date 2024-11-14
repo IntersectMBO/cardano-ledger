@@ -98,7 +98,7 @@ spec ::
 spec = do
   BabbageImp.spec @era
   withImpInit @(LedgerSpec era) $
-    forM_ [eraProtVerLow @era .. eraProtVerHigh @era] $ \protVer ->
+    forM_ (eraProtVersions @era) $ \protVer ->
       describe ("ConwayImpSpec - " <> show protVer) $
         modifyImpInitProtVer protVer $ do
           describe "BBODY" Bbody.spec

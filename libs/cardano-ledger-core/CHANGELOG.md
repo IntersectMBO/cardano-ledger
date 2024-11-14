@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `eraProtVersions`
 * Remove deprecated `_unTxId` and `adaOnly`
 * Remove deprecated module `Cardano.Ledger.Serialization`
 * Remove deprecated `fromSLanguage`
