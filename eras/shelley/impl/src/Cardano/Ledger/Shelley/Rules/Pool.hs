@@ -33,7 +33,6 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   addEpochInterval,
-  epochInfoPure,
   invalidKey,
   networkId,
  )
@@ -53,7 +52,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOL)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
+import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq
 import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
@@ -75,14 +74,14 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data PoolEnv era
-  = PoolEnv !SlotNo !(PParams era)
+  = PoolEnv !EpochNo !(PParams era)
   deriving (Generic)
 
 instance EraPParams era => EncCBOR (PoolEnv era) where
-  encCBOR (PoolEnv s pp) =
+  encCBOR (PoolEnv e pp) =
     encode $
       Rec PoolEnv
-        !> To s
+        !> To e
         !> To pp
 
 deriving instance Show (PParams era) => Show (PoolEnv era)
@@ -199,7 +198,7 @@ poolDelegationTransition ::
   TransitionRule (ledger era)
 poolDelegationTransition = do
   TRC
-    ( PoolEnv slot pp
+    ( PoolEnv cEpoch pp
       , ps@PState {psStakePoolParams, psFutureStakePoolParams, psRetiring}
       , poolCert
       ) <-
@@ -260,16 +259,13 @@ poolDelegationTransition = do
               }
     RetirePool hk e -> do
       eval (hk ∈ dom psStakePoolParams) ?! StakePoolNotRegisteredOnKeyPOOL hk
-      cepoch <- liftSTS $ do
-        ei <- asks epochInfoPure
-        epochInfoEpoch ei slot
       let maxEpoch = pp ^. ppEMaxL
-          limitEpoch = addEpochInterval cepoch maxEpoch
-      (cepoch < e && e <= limitEpoch)
+          limitEpoch = addEpochInterval cEpoch maxEpoch
+      (cEpoch < e && e <= limitEpoch)
         ?! StakePoolRetirementWrongEpochPOOL
           Mismatch -- 'RelGT - The supplied value should be greater than the current epoch
             { mismatchSupplied = e
-            , mismatchExpected = cepoch
+            , mismatchExpected = cEpoch
             }
           Mismatch -- 'RelLTEQ - The supplied value should be less then or equal to ppEMax after the current epoch
             { mismatchSupplied = e

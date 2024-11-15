@@ -16,13 +16,12 @@ import Cardano.Ledger.Shelley.API (
   ShelleyPOOL,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default (def)
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
-import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
+import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, epochFromSlotNo, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
@@ -47,7 +46,7 @@ testPoolNetworkID pv poolParams e = do
         runShelleyBase $
           applySTSTest @(ShelleyPOOL ShelleyTest)
             ( TRC
-                ( PoolEnv (SlotNo 0) $ emptyPParams & ppProtocolVersionL .~ pv
+                ( PoolEnv (epochFromSlotNo 0) $ emptyPParams & ppProtocolVersionL .~ pv
                 , def
                 , RegPool poolParams
                 )

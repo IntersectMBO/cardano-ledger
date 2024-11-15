@@ -74,6 +74,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
+  epochFromSlotNo,
   runShelleyBase,
   testGlobals,
  )
@@ -198,7 +199,7 @@ poolTraceFromBlock chainSt block =
     poolCerts = mapMaybe getPoolCertTxCert (certs txs)
     poolEnv =
       let (LedgerEnv s _ pp _ _) = ledgerEnv
-       in PoolEnv s pp
+       in PoolEnv (epochFromSlotNo s) pp
     poolSt0 =
       certPState (lsCertState ledgerSt0)
 

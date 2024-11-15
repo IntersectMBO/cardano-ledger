@@ -103,7 +103,7 @@ certsEnvSpec ::
   (EraSpecPParams era, HasSpec fn (Tx era), IsConwayUniv fn) =>
   Specification fn (CertsEnv era)
 certsEnvSpec = constrained $ \ce ->
-  match ce $ \tx pp _slot _currepoch _currcommittee commproposals ->
+  match ce $ \tx pp _currepoch _currcommittee commproposals ->
     [ satisfies pp pparamsSpec
     , assert $ tx ==. lit txZero
     , genHint 3 commproposals
@@ -114,7 +114,6 @@ projectEnv :: CertsEnv era -> CertEnv era
 projectEnv x =
   CertEnv
     { cePParams = certsPParams x
-    , ceSlotNo = certsSlotNo x
     , ceCurrentEpoch = certsCurrentEpoch x
     , ceCurrentCommittee = certsCurrentCommittee x
     , ceCommitteeProposals = certsCommitteeProposals x

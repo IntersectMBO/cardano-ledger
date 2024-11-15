@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Delpl (
 )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
+import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure, invalidKey)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -50,8 +50,9 @@ import Cardano.Ledger.Shelley.Rules.Deleg (
 import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPoolPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Pool as Pool
 import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyTxCert (..))
-import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.Slot (SlotNo, epochInfoEpoch)
 import Control.DeepSeq
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
@@ -196,14 +197,18 @@ delplTransition ::
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
   , TxCert era ~ ShelleyTxCert era
+  , Era era
   ) =>
   TransitionRule (ShelleyDELPL era)
 delplTransition = do
   TRC (DelplEnv slot ptr pp acnt, d, c) <- judgmentContext
   case c of
     ShelleyTxCertPool poolCert -> do
+      cEpoch <- liftSTS $ do
+        ei <- asks epochInfoPure
+        epochInfoEpoch ei slot
       ps <-
-        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState d, poolCert)
+        trans @(EraRule "POOL" era) $ TRC (PoolEnv cEpoch pp, certPState d, poolCert)
       pure $ d {certPState = ps}
     ShelleyTxCertGenesisDeleg GenesisDelegCert {} -> do
       ds <-

@@ -446,7 +446,7 @@ ledgerTransition = do
         certStateAfterCERTS <-
           trans @(EraRule "CERTS" era) $
             TRC
-              ( CertsEnv tx pp slot currentEpoch committee committeeProposals
+              ( CertsEnv tx pp currentEpoch committee committeeProposals
               , certState
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
