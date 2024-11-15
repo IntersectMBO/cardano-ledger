@@ -227,6 +227,8 @@ newtype AlonzoUtxoEvent era
   = UtxosEvent (Event (EraRule "UTXOS" era))
   deriving (Generic)
 
+deriving instance Show (Event (EraRule "UTXOS" era)) => Show (AlonzoUtxoEvent era)
+
 deriving instance Eq (Event (EraRule "UTXOS" era)) => Eq (AlonzoUtxoEvent era)
 
 instance NFData (Event (EraRule "UTXOS" era)) => NFData (AlonzoUtxoEvent era)

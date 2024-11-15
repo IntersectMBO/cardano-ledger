@@ -25,4 +25,5 @@ library
         constrained-generators,
         data-default,
         QuickCheck,
+        ImpSpec,
         microlens

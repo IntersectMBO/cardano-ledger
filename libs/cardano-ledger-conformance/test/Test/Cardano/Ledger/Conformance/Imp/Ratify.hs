@@ -133,7 +133,7 @@ spec = withImpInit @(LedgerSpec Conway) $ describe "RATIFY" $ modifyImpInitProtV
     let
       ratSt = getRatifyState govSt
       ratSig = RatifySignal (constitutionGAS SSeq.:<| mempty)
-    (implRes, agdaRes) <-
+    (implRes, agdaRes, implRes') <-
       runConformance @"RATIFY" @ConwayFn @Conway
         execCtx
         ratEnv
@@ -158,4 +158,5 @@ spec = withImpInit @(LedgerSpec Conway) $ describe "RATIFY" $ modifyImpInitProtV
         ratEnv
         ratSt
         ratSig
+        implRes'
     impAnn "Conformance failed" $ implRes `shouldBeExpr` agdaRes

@@ -29,6 +29,7 @@ import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (Val (..))
 import Data.Functor ((<&>))
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -179,6 +180,47 @@ spec = do
                  , UnRegDepositTxCert (KeyHashObj kh) expectedDeposit
                  ]
         expectNotRegistered (KeyHashObj kh)
+
+    it "deregistering returns the deposit" $ do
+      let
+        keyDeposit = Coin 2
+        -- This is paid out as the reward
+        govActionDeposit = Coin 3
+      modifyPParams $ \pp ->
+        pp
+          & ppKeyDepositL .~ keyDeposit
+          & ppGovActionDepositL .~ govActionDeposit
+      stakeCred <- KeyHashObj <$> freshKeyHash
+      rewardAccount <- registerStakeCredential stakeCred
+      otherStakeCred <- KeyHashObj <$> freshKeyHash
+      otherRewardAccount <- registerStakeCredential otherStakeCred
+      khStakePool <- freshKeyHash
+      registerPool khStakePool
+      submitTx_ . mkBasicTx $
+        mkBasicTxBody
+          & certsTxBodyL
+            .~ SSeq.fromList
+              [ DelegTxCert stakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain)
+              , DelegTxCert otherStakeCred (DelegStakeVote khStakePool DRepAlwaysAbstain)
+              ]
+      expectRegisteredRewardAddress rewardAccount
+      expectRegisteredRewardAddress otherRewardAccount
+      submitAndExpireProposalToMakeReward otherStakeCred
+      lookupReward otherStakeCred `shouldReturn` govActionDeposit
+      submitTx_ . mkBasicTx $
+        mkBasicTxBody
+          & certsTxBodyL
+            .~ SSeq.fromList
+              [UnRegTxCert stakeCred]
+          & withdrawalsTxBodyL
+            .~ Withdrawals
+              ( Map.fromList
+                  [ (rewardAccount, Coin 0)
+                  , (otherRewardAccount, govActionDeposit)
+                  ]
+              )
+      lookupReward otherStakeCred `shouldReturn` Coin 0
+      expectNotRegisteredRewardAddress rewardAccount
 
   describe "Delegate stake" $ do
     it "Delegate registered stake credentials to registered pool" $ do
