@@ -25,6 +25,7 @@ import Cardano.Ledger.Val
 import Test.Cardano.Ledger.Api.DebugTools
 
 import Control.Monad
+import Control.Monad.IO.Class
 
 import qualified Data.ByteString as BS
 import Data.Default
@@ -41,13 +42,14 @@ import Lens.Micro
 
 import System.IO
 
-import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (crecGovActionMapL)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational
+import Test.Cardano.Ledger.Imp.Common
+
+import Test.ImpSpec
 
 import Test.QuickCheck
 

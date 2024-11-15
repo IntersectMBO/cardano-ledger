@@ -127,6 +127,14 @@ instance EraPParams era => EncCBOR (UtxoEnv era) where
             !> To uePParams
             !> To ueCertState
 
+instance EraPParams era => DecCBOR (UtxoEnv era) where
+  decCBOR =
+    decode $
+      RecD UtxoEnv
+        <! From
+        <! From
+        <! D decNoShareCBOR
+
 utxoEnvSlotL :: Lens' (UtxoEnv era) SlotNo
 utxoEnvSlotL = lens ueSlot $ \x y -> x {ueSlot = y}
 

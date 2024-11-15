@@ -213,8 +213,11 @@ class
     Environment (EraRule rule era) ->
     State (EraRule rule era) ->
     Signal (EraRule rule era) ->
+    Either
+      (NonEmpty (PredicateFailure (EraRule rule era)))
+      (State (EraRule rule era), [Event (EraRule rule era)]) ->
     Doc AnsiStyle
-  extraInfo _ _ _ _ = mempty
+  extraInfo _ _ _ _ _ = mempty
 
 dumpCbor ::
   forall era a.
@@ -266,10 +269,6 @@ checkConformance ctx env st sig implResTest agdaResTest = do
       annotate (color Yellow) . vsep $
         [ "===== DIFF ====="
         , ppEditExpr conformancePretty (ediff implResTest agdaResTest)
-        , ""
-        , "Legend:"
-        , indent 2 $ annotate (color delColor) "-Implementation"
-        , indent 2 $ annotate (color insColor) "+Specification"
         ]
   unless (implResTest == agdaResTest) $ do
     let envVarName = "CONFORMANCE_CBOR_DUMP_PATH"
@@ -315,8 +314,8 @@ defaultTestConformance ::
   ExecSignal fn rule era ->
   Property
 defaultTestConformance ctx env st sig = property $ do
-  (implResTest, agdaResTest) <- runConformance @rule @fn @era ctx env st sig
-  let extra = extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig)
+  (implResTest, agdaResTest, implRes) <- runConformance @rule @fn @era ctx env st sig
+  let extra = extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig) implRes
   logDoc extra
   checkConformance @rule @_ @fn ctx (inject env) (inject st) (inject sig) implResTest agdaResTest
 
@@ -345,6 +344,9 @@ runConformance ::
     , Either
         (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
         (SpecRep (ExecState fn rule era))
+    , Either
+        (NonEmpty (PredicateFailure (EraRule rule era)))
+        (State (EraRule rule era), [Event (EraRule rule era)])
     )
 runConformance execContext env st sig = do
   (specEnv, specSt, specSig) <-
@@ -368,7 +370,7 @@ runConformance execContext env st sig = do
       expectRightExpr $
         runSpecTransM execContext $
           bimapM (traverse toTestRep) (toTestRep . inject @_ @(ExecState fn rule era) . fst) implRes
-  pure (implResTest, agdaResTest)
+  pure (implResTest, agdaResTest, implRes)
 
 conformsToImpl ::
   forall (rule :: Symbol) fn era.

@@ -158,8 +158,11 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.CertState (
   CertState,
   CommitteeAuthorization (..),
+  certDStateL,
   certPStateL,
   csCommitteeCredsL,
+  lookupDepositDState,
+  lookupDepositVState,
   psStakePoolParamsL,
   vsActualDRepExpiry,
   vsNumDormantEpochsL,
@@ -190,7 +193,7 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.PoolParams (ppRewardAccount)
+import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
@@ -1756,13 +1759,13 @@ showConwayTxBalance ::
   String
 showConwayTxBalance pp certState utxo tx =
   unlines
-    [ "Consumed:   \t"
+    [ "Consumed:"
     , "\tInputs:     \t" <> show (coin inputs)
-    , -- , "Refunds:    \t" <> show refunds
-      "\tWithdrawals \t" <> show withdrawals
+    , "\tRefunds:    \t" <> show refunds
+    , "\tWithdrawals \t" <> show withdrawals
     , "\tTotal:      \t" <> (show . coin $ consumed pp certState utxo txBody)
     , ""
-    , "Produced:  \t"
+    , "Produced:"
     , "\tOutputs:   \t" <> show (coin $ sumAllValue (txBody ^. outputsTxBodyL))
     , "\tDonations: \t" <> show (txBody ^. treasuryDonationTxBodyL)
     , "\tDeposits:  \t" <> show (getTotalDepositsTxBody pp isRegPoolId txBody)
@@ -1770,11 +1773,14 @@ showConwayTxBalance pp certState utxo tx =
     , "\tTotal:     \t" <> (show . coin $ produced pp certState txBody)
     ]
   where
-    -- lookupStakingDeposit c = certState ^. certPStateL . psStakePoolParamsL
-    -- lookupDRepDeposit c = undefined
     txBody = tx ^. bodyTxL
     inputs = balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
-    -- refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
+    refunds =
+      getTotalRefundsTxBody
+        pp
+        (lookupDepositDState $ certState ^. certDStateL)
+        (lookupDepositVState $ certState ^. certVStateL)
+        txBody
     isRegPoolId = (`Map.member` (certState ^. certPStateL . psStakePoolParamsL))
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 

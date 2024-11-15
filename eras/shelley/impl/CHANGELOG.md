@@ -35,6 +35,7 @@
 
 ### `testlib`
 
+* Added `tryLookupReward`
 * Switch to using `ImpSpec` package
 * Remove: `runImpTestM`, `runImpTestM_`, `evalImpTestM`, `execImpTestM`, `runImpTestGenM`, `runImpTestGenM_`, `evalImpTestGenM`, `execImpTestGenM`, `withImpState` and `withImpStateModified`.
 * Add `LedgerSpec`, `modifyImpInitProtVer`.

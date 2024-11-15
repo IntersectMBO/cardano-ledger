@@ -175,7 +175,7 @@ instance
         expectRightExpr $
           runSpecTransM ctx $
             bimapM (traverse toTestRep) (toTestRep . inject @_ @(ExecState fn "LEDGER" Conway) . fst) implRes
-    let extra = extraInfo @fn @"LEDGER" @Conway ctx (inject env) (inject st) (inject sig)
+    let extra = extraInfo @fn @"LEDGER" @Conway ctx (inject env) (inject st) (inject sig) implRes
     logDoc extra
     checkConformance @"LEDGER" @Conway @fn
       ctx

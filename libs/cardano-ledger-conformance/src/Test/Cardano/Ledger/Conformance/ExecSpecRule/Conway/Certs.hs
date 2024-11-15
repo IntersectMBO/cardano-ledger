@@ -55,7 +55,7 @@ instance
     -- The results of runConformance are Agda types, the `ctx` is a Haskell type, we extract and translate the Withdrawal keys.
     specWithdrawalCredSet <-
       translateWithContext () (Map.keysSet (Map.mapKeys raCredential (ccecWithdrawals ctx)))
-    (implResTest, agdaResTest) <- runConformance @"CERTS" @fn @Conway ctx env st sig
+    (implResTest, agdaResTest, _) <- runConformance @"CERTS" @fn @Conway ctx env st sig
     case (implResTest, agdaResTest) of
       (Right haskell, Right spec) ->
         checkConformance @"CERTS" @Conway @fn

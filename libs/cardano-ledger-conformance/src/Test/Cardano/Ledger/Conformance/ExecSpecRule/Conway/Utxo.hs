@@ -24,7 +24,9 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Lens.Micro ((&), (.~), (^.))
 import qualified Lib as Agda
-import Test.Cardano.Ledger.Common (Arbitrary (..), Gen)
+import Prettyprinter ((<+>))
+import qualified Prettyprinter as PP
+import Test.Cardano.Ledger.Common (Arbitrary (..), Gen, showExpr)
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   OpaqueErrorString (..),
@@ -43,6 +45,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoTxSpec,
  )
 import Test.Cardano.Ledger.Conway.ImpTest (showConwayTxBalance)
+import Test.Cardano.Ledger.Generic.Functions (TotalAda (..))
 import Test.Cardano.Ledger.Generic.GenState (
   GenEnv (..),
   GenSize (..),
@@ -100,14 +103,21 @@ instance
       . computationResultToEither
       $ Agda.utxoStep externalFunctions env st sig
 
-  extraInfo ctx env@UtxoEnv {..} st@UTxOState {..} sig =
-    "Impl:\n"
-      <> PP.ppString (showConwayTxBalance uePParams ueCertState utxosUtxo sig)
-      <> "\n\nSpec:\n"
-      <> PP.ppString
-        ( either show T.unpack . runSpecTransM ctx $
-            Agda.utxoDebug externalFunctions
-              <$> toSpecRep env
-              <*> toSpecRep st
-              <*> toSpecRep sig
-        )
+  extraInfo ctx env@UtxoEnv {..} st@UTxOState {..} sig st' =
+    PP.vcat
+      [ "Impl:"
+      , PP.ppString (showConwayTxBalance uePParams ueCertState utxosUtxo sig)
+      , "initial TotalAda:" <+> PP.ppString (showExpr $ totalAda st)
+      , "final TotalAda:  " <+> case st' of
+          Right (x, _) -> PP.ppString (showExpr $ totalAda x)
+          Left _ -> "N/A"
+      , mempty
+      , "Spec:"
+      , PP.ppString
+          ( either show T.unpack . runSpecTransM ctx $
+              Agda.utxoDebug externalFunctions
+                <$> toSpecRep env
+                <*> toSpecRep st
+                <*> toSpecRep sig
+          )
+      ]

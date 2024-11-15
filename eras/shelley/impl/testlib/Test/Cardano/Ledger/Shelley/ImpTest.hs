@@ -71,6 +71,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   registerRewardAccount,
   registerStakeCredential,
   getRewardAccountFor,
+  tryLookupReward,
   lookupReward,
   poolParams,
   registerPool,
@@ -1447,17 +1448,22 @@ registerRewardAccount = do
   khDelegator <- freshKeyHash
   registerStakeCredential (KeyHashObj khDelegator)
 
+tryLookupReward :: Credential 'Staking (EraCrypto era) -> ImpTestM era (Maybe Coin)
+tryLookupReward stakingCredential = do
+  umap <- getsNES (nesEsL . epochStateUMapL)
+  pure $ fromCompact . rdReward <$> UMap.lookup stakingCredential (RewDepUView umap)
+
 lookupReward :: HasCallStack => Credential 'Staking (EraCrypto era) -> ImpTestM era Coin
 lookupReward stakingCredential = do
-  umap <- getsNES (nesEsL . epochStateUMapL)
-  case UMap.lookup stakingCredential (RewDepUView umap) of
+  mbyRwd <- tryLookupReward stakingCredential
+  case mbyRwd of
+    Just c -> pure c
     Nothing ->
       error $
         "Staking Credential is not found in the state: "
           <> show stakingCredential
           <> "\nMake sure you have the reward account registered with `registerRewardAccount` "
           <> "or by some other means."
-    Just rd -> pure $ fromCompact (rdReward rd)
 
 poolParams ::
   ShelleyEraImp era =>
