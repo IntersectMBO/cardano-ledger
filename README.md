@@ -177,3 +177,18 @@ However, note that this is pre-release software, so we will not usually be provi
 # Contributing
 
 See [CONTRIBUTING](https://github.com/intersectmbo/cardano-ledger/blob/master/CONTRIBUTING.md).
+
+# Using `git fsck`
+
+There's some ancient history in the repo that causes `git fsck` version `2.44.0` or later to report errors when running semantic checks on an old version of the `.gitmodules` file.
+
+This can be overcome by running `git config fsck.skipList .git-fsck-skiplist` once, sometime after cloning.
+
+However, the problem prevents cloning if you have `transfer.fsckObjects` enabled in your global git configuration. You can overcome this by downloading the skiplist file before you clone and then specifying it in a config option to the `clone` command:
+
+```shell
+$ curl -sSLO https://raw.githubusercontent.com/IntersectMBO/cardano-ledger/refs/heads/master/.git-fsck-skiplist
+$ git clone -c fetch.fsck.skipList=.git-fsck-skiplist ...
+...
+$ rm .git-fsck-skiplist
+```
