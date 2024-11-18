@@ -70,21 +70,6 @@ epochStateSpec epochNo = constrained $ \ es ->
               )
           ]
 
-wtfSpec ::
-  Specification ConwayFn ( [Int]
-                         , Maybe ((), [Int])
-                         )
-wtfSpec = constrained' $ \ [var| options |] [var| mpair |] ->
-    [ assert $ 0 <=. sizeOf_ options
-    , caseOn mpair
-        (branch $ \ _ -> False)
-        (branch $ \ pair -> match pair $ \ unit ints ->
-          [ forAll ints $ \int -> reify options id $ \xs -> int `elem_` xs
-          , assert $ unit ==. lit ()
-          ]
-        )
-    ]
-
 proposalExists ::
   Term ConwayFn (GovActionId StandardCrypto) ->
   Term ConwayFn (Proposals Conway) ->
@@ -97,10 +82,10 @@ epochSignalSpec :: EpochNo -> Specification ConwayFn EpochNo
 epochSignalSpec curEpoch = constrained $ \e ->
   elem_ e (lit [curEpoch, succ curEpoch])
 
-enactableProposals :: Proposals era -> [GovActionId (EraCrypto era)]
+enactableProposals :: Proposals era -> [GovActionState era]
 enactableProposals proposals =
-                                  [ gact | gact <- toList (proposalsActions proposals)
-                                         , gact' <- withGovActionParent gact [gact]
-                                                    $ \ _ parent ->
-                                                        if isRoot parent proposals then [gact] else []
-                                         ]
+  [ gact' | gact <- toList (proposalsActions proposals)
+          , gact' <- withGovActionParent gact [gact]
+                      $ \ _ parent ->
+                          if isRoot parent proposals then [gact] else []
+  ]
