@@ -266,11 +266,29 @@ instance EraPParams era => NoThunks (EnactState era)
 
 -- ========================================
 
+-- | `RatifyState` stores information about what will happen to the active
+-- governance actions at the next epoch boundary.
 data RatifyState era = RatifyState
   { rsEnactState :: !(EnactState era)
+  -- ^ This is the currently active `EnactState`. It contains all the changes
+  -- that were applied to it at the last epoch boundary by all the proposals
+  -- that were enacted.
   , rsEnacted :: !(Seq (GovActionState era))
+  -- ^ Governance actions that are going to be enacted at the next epoch
+  -- boundary.
   , rsExpired :: !(Set (GovActionId (EraCrypto era)))
+  -- ^ Governance actions that are going to be removed at the next epoch
+  -- boundary, either due to expiring or because they would become invalid
+  -- after another governance action gets enacted or expired before it
   , rsDelayed :: !Bool
+  -- ^ This flag is set to true if one of the proposals that was ratified at the
+  -- last epoch boundary was a delaying action. This means that no other
+  -- proposals will be ratified this epoch and each active proposal that has not
+  -- become invalid will have its expiry date extended by one epoch.
+  --
+  -- This flag is reset at each epoch boundary before the `RATIFY` rule gets
+  -- called, but it might immediately be set to `True` again after the `RATIFY`
+  -- rule has finished execution.
   }
   deriving (Generic)
 
