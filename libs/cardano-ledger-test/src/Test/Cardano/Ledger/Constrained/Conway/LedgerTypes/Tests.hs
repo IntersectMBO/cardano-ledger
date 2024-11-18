@@ -26,7 +26,6 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.UTxO (UTxO (..))
 import Constrained hiding (Value)
-import Constrained.Base (hasSize, rangeSize)
 import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Set as Set

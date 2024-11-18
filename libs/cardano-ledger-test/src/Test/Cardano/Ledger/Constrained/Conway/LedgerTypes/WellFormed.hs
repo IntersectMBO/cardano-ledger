@@ -32,7 +32,6 @@ import Cardano.Ledger.SafeHash ()
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UTxO (UTxO (..))
 import Constrained hiding (Value)
-import Constrained.Base (hasSize, rangeSize)
 import Data.Map (Map)
 import Test.Cardano.Ledger.Constrained.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway.Instances

@@ -49,7 +49,7 @@ import Cardano.Ledger.UMap (CompactForm (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (UTxO (..))
 import Constrained hiding (Value)
-import Constrained.Base (Pred (..), hasSize, rangeSize)
+import Constrained.Base (Pred (..))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)

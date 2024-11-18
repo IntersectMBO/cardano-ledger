@@ -1687,6 +1687,7 @@ instance CoercibleLike (CompactForm Coin) Word64 where
     , reify x' unCompactCoin (==. V x)
     ]
   coerceSpec TrueSpec = TrueSpec
+  coerceSpec (ExplainSpec es x) = ExplainSpec es (coerceSpec x)
 
   getCoerceSpec ::
     forall (fn :: [Type] -> Type -> Type).
@@ -1762,6 +1763,8 @@ toDelta_ ::
 toDelta_ = app toDeltaFn
 
 instance (Typeable fn, Member (CoinFn fn) fn) => Functions (CoinFn fn) fn where
+  propagateSpecFun fn ctx (ExplainSpec [] s) = propagateSpecFun fn ctx s
+  propagateSpecFun fn ctx (ExplainSpec es s) = ExplainSpec es $ propagateSpecFun fn ctx s
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn (ListCtx pre HOLE suf) (SuspendedSpec x p) =
