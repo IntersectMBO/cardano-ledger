@@ -112,6 +112,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
+import Debug.Trace (trace)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -451,8 +452,16 @@ validateNeededWitnesses ::
 validateNeededWitnesses witsKeyHashes certState utxo txBody =
   let needed = getWitsVKeyNeeded certState utxo txBody
       missingWitnesses = Set.difference needed witsKeyHashes
-   in failureUnless (Set.null missingWitnesses) $
-        MissingVKeyWitnessesUTXOW missingWitnesses
+   in trace
+        ( unlines
+            [ "NEEDED HASHES"
+            , show needed
+            , show witsKeyHashes
+            , ""
+            ]
+        )
+        $ failureUnless (Set.null missingWitnesses)
+        $ MissingVKeyWitnessesUTXOW missingWitnesses
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)

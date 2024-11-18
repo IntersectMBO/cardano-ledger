@@ -34,12 +34,15 @@ import Test.Cardano.Ledger.Conway.Imp qualified as ConwayImp (conwaySpec)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
+import Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
 
 testImpConformance ::
   forall era.
   ( ConwayEraImp era
   , ExecSpecRule ConwayFn "LEDGER" era
   , ExecContext ConwayFn "LEDGER" era ~ ConwayLedgerExecContext era
+  , ExecContext ConwayFn "UTXOW" era ~ UtxoExecContext era
   , ExecSignal ConwayFn "LEDGER" era ~ AlonzoTx era
   , ExecState ConwayFn "LEDGER" era ~ LedgerState era
   , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (ExecState ConwayFn "LEDGER" era)
@@ -82,12 +85,11 @@ testImpConformance impRuleResult env state signal = do
                 }
           }
   -- translate inputs
-  let failOnLeft = either (assertFailure . unpack) pure
   (specEnv, specState, specSignal) <-
     (,,)
-      <$> failOnLeft (runSpecTransM ctx $ toSpecRep env)
-      <*> failOnLeft (runSpecTransM ctx $ toSpecRep state)
-      <*> failOnLeft (runSpecTransM ctx $ toSpecRep signal)
+      <$> expectRight (runSpecTransM ctx $ toSpecRep env)
+      <*> expectRight (runSpecTransM ctx $ toSpecRep state)
+      <*> expectRight (runSpecTransM ctx $ toSpecRep signal)
   -- get agda response
   agdaResponse <-
     fmap (bimap (fixup <$>) fixup) $
@@ -112,4 +114,4 @@ spec =
         xdescribe "Tx conformance" $ it "Tx conformance" $ do
           _ <- submitConstitution @Conway SNothing
           passNEpochs 2
-        xdescribe "Test.Cardano.Ledger.Conway.Imp conformance" $ ConwayImp.conwaySpec @Conway
+        xdescribe "Conway Imp conformance" $ ConwayImp.conwaySpec @Conway

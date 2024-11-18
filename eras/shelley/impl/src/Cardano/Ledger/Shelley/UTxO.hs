@@ -70,6 +70,7 @@ import Data.Foldable (Foldable (fold), foldr', toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Debug.Trace (trace)
 import Lens.Micro ((^.))
 
 -- | Compute the subset of inputs of the set 'txIns' for which each input is
@@ -217,10 +218,22 @@ getShelleyWitsVKeyNeededNoGov ::
   TxBody era ->
   Set (KeyHash 'Witness (EraCrypto era))
 getShelleyWitsVKeyNeededNoGov utxo' txBody =
-  certAuthors
-    `Set.union` inputAuthors
-    `Set.union` owners
-    `Set.union` wdrlAuthors
+  trace
+    ( unlines
+        [ "CertAuthors"
+        , show certAuthors
+        , "inputAuthors"
+        , show inputAuthors
+        , "Owners"
+        , show owners
+        , "WdrlAuthors"
+        , show wdrlAuthors
+        ]
+    )
+    $ certAuthors
+      `Set.union` inputAuthors
+      `Set.union` owners
+      `Set.union` wdrlAuthors
   where
     inputAuthors :: Set (KeyHash 'Witness (EraCrypto era))
     inputAuthors = foldr' accum Set.empty (txBody ^. spendableInputsTxBodyF)
@@ -229,9 +242,10 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
           case txinLookup txin utxo' of
             Just txOut ->
               case txOut ^. addrTxOutL of
-                Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
+                Addr _ (KeyHashObj pay) _ -> trace "ADDR NORMAL" $ Set.insert (asWitness pay) ans
                 AddrBootstrap bootAddr ->
-                  Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
+                  trace "BOOTSTRAP ADDR" $
+                    Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
                 _ -> ans
             Nothing -> ans
 

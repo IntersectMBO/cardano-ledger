@@ -455,8 +455,7 @@ instance Crypto c => SpecTranslate ctx (VKey k c) where
 instance DSIGNAlgorithm v => SpecTranslate ctx (SignedDSIGN v a) where
   type SpecRep (SignedDSIGN v a) = Integer
 
-  toSpecRep (SignedDSIGN x) =
-    pure . toInteger . bytesToNatural $ rawSerialiseSigDSIGN x
+  toSpecRep (SignedDSIGN x) = pure $ signatureToInteger x
 
 instance (Crypto c, Typeable k) => SpecTranslate ctx (WitVKey k c) where
   type SpecRep (WitVKey k c) = (Integer, Integer)

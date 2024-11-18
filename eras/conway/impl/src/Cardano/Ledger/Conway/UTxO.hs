@@ -53,6 +53,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Monoid (Sum (..))
 import qualified Data.Set as Set
+import Debug.Trace (trace)
 import Lens.Micro ((^.))
 
 getConwayScriptsNeeded ::
@@ -161,9 +162,24 @@ getConwayWitsVKeyNeeded ::
   TxBody era ->
   Set.Set (KeyHash 'Witness (EraCrypto era))
 getConwayWitsVKeyNeeded utxo txBody =
-  getShelleyWitsVKeyNeededNoGov utxo txBody
-    `Set.union` (txBody ^. reqSignerHashesTxBodyL)
-    `Set.union` voterWitnesses txBody
+  let shelleyOnes = getShelleyWitsVKeyNeededNoGov utxo txBody
+      reqSignerOnes = txBody ^. reqSignerHashesTxBodyL
+      voterOnes = voterWitnesses txBody
+   in trace
+        ( unlines
+            [ "ShelleyOnes"
+            , show shelleyOnes
+            , "ReqSignerOnes"
+            , show reqSignerOnes
+            , "VoterOnes"
+            , show voterOnes
+            ]
+        )
+        $ shelleyOnes `Set.union` reqSignerOnes `Set.union` voterOnes
+
+-- getShelleyWitsVKeyNeededNoGov utxo txBody
+--   `Set.union` (txBody ^. reqSignerHashesTxBodyL)
+--   `Set.union` voterWitnesses txBody
 
 voterWitnesses ::
   ConwayEraTxBody era =>

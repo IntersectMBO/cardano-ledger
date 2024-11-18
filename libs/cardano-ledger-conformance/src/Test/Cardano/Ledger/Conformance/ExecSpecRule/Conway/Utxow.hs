@@ -19,11 +19,14 @@ import Data.Bifunctor (Bifunctor (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Lib as Agda
+import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   OpaqueErrorString (..),
   SpecTranslate,
   computationResultToEither,
+  runSpecTransM,
+  toSpecRep,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo (genUtxoExecContext)
@@ -55,3 +58,11 @@ instance
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.utxowStep externalFunctions env st sig
+  extraInfo ctx env st sig =
+    let result = 
+          either show T.unpack . runSpecTransM ctx $
+            Agda.utxowDebug externalFunctions
+              <$> toSpecRep env
+              <*> toSpecRep st
+              <*> toSpecRep sig
+     in PP.ppString result
