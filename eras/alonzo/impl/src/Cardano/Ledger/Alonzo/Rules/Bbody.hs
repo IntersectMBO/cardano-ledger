@@ -224,10 +224,6 @@ alonzoBbodyTransition =
                   )
               )
 
-        ls' <-
-          trans @(EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bhviewSlot bh) pp account, ls, StrictSeq.fromStrict txs)
-
         -- Note that this may not actually be a stake pool - it could be a
         -- genesis key delegate. However, this would only entail an overhead of
         -- 7 counts, and it's easier than differentiating here.
@@ -238,10 +234,15 @@ alonzoBbodyTransition =
         -- enforced.
         let hkAsStakePool = coerceKeyRole . bhviewID $ bh
             slot = bhviewSlot bh
-        firstSlotNo <- liftSTS $ do
+        (firstSlotNo, currEpoch) <- liftSTS $ do
           ei <- asks epochInfoPure
           e <- epochInfoEpoch ei slot
-          epochInfoFirst ei e
+          firstSlot <- epochInfoFirst ei e
+          pure (firstSlot, e)
+
+        ls' <-
+          trans @(EraRule "LEDGERS" era) $
+            TRC (LedgersEnv (bhviewSlot bh) currEpoch pp account, ls, StrictSeq.fromStrict txs)
 
         {- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp  -}
         let txTotal, ppMax :: ExUnits

@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -23,7 +24,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -54,12 +55,15 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgersPredFailure (..),
   renderDepositEqualsObligationViolation,
  )
+import Cardano.Ledger.Slot (epochInfoEpoch)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
   STS (..),
   TRC (..),
   TransitionRule,
   judgmentContext,
+  liftSTS,
   trans,
  )
 import Data.Kind (Type)
@@ -110,7 +114,9 @@ instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure (AlonzoEra c) where
 --   make it concrete.
 ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
-  ( Signal (someLEDGER era) ~ Tx era
+  ( STS (someLEDGER era)
+  , BaseM (someLEDGER era) ~ ShelleyBase
+  , Signal (someLEDGER era) ~ Tx era
   , State (someLEDGER era) ~ LedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
@@ -125,15 +131,22 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account _, LedgerState utxoSt certState, tx) <- judgmentContext
+  TRC (LedgerEnv slot mbEpochNo txIx pp account _, LedgerState utxoSt certState, tx) <-
+    judgmentContext
   let txBody = tx ^. bodyTxL
+
+  epochNo <- case mbEpochNo of
+    Nothing -> liftSTS $ do
+      ei <- asks epochInfoPure
+      epochInfoEpoch ei slot
+    Just e -> pure e
 
   certState' <-
     if tx ^. isValidTxL == IsValid True
       then
         trans @(EraRule "DELEGS" era) $
           TRC
-            ( DelegsEnv slot txIx pp tx account
+            ( DelegsEnv slot epochNo txIx pp tx account
             , certState
             , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
             )

@@ -16,7 +16,7 @@ import Cardano.Ledger.Shelley.API (
   ShelleyPOOL,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Slot (EpochNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default (def)
 import Lens.Micro
@@ -47,7 +47,7 @@ testPoolNetworkID pv poolParams e = do
         runShelleyBase $
           applySTSTest @(ShelleyPOOL ShelleyTest)
             ( TRC
-                ( PoolEnv (SlotNo 0) $ emptyPParams & ppProtocolVersionL .~ pv
+                ( PoolEnv (EpochNo 0) $ emptyPParams & ppProtocolVersionL .~ pv
                 , def
                 , RegPool poolParams
                 )

@@ -70,7 +70,7 @@ instance
   TQC.HasTrace (AlonzoLEDGER era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
-    LedgerEnv (SlotNo 0) minBound
+    LedgerEnv (SlotNo 0) Nothing minBound
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
       <*> pure False

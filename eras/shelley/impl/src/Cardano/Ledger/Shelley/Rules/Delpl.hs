@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Delpl (
 )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
+import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, invalidKey)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -60,6 +60,7 @@ import NoThunks.Class (NoThunks (..))
 
 data DelplEnv era = DelplEnv
   { delplSlotNo :: SlotNo
+  , delpEpochNo :: EpochNo
   , delPlPtr :: Ptr
   , delPlPp :: PParams era
   , delPlAccount :: AccountState
@@ -199,22 +200,22 @@ delplTransition ::
   ) =>
   TransitionRule (ShelleyDELPL era)
 delplTransition = do
-  TRC (DelplEnv slot ptr pp acnt, d, c) <- judgmentContext
+  TRC (DelplEnv slot eNo ptr pp acnt, d, c) <- judgmentContext
   case c of
     ShelleyTxCertPool poolCert -> do
       ps <-
-        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState d, poolCert)
+        trans @(EraRule "POOL" era) $ TRC (PoolEnv eNo pp, certPState d, poolCert)
       pure $ d {certPState = ps}
     ShelleyTxCertGenesisDeleg GenesisDelegCert {} -> do
       ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, certDState d, c)
       pure $ d {certDState = ds}
     ShelleyTxCertDelegCert _ -> do
       ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, certDState d, c)
       pure $ d {certDState = ds}
     ShelleyTxCertMir _ -> do
-      ds <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, certDState d, c)
+      ds <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, certDState d, c)
       pure $ d {certDState = ds}
 
 instance

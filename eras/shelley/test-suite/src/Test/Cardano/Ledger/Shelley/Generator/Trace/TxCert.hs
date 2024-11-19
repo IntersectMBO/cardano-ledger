@@ -70,7 +70,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
 import Test.Cardano.Ledger.Shelley.Generator.TxCert (CertCred (..), genTxCert)
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, testGlobals)
 import Test.Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, traceSignals)
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (Gen)
@@ -133,9 +133,10 @@ certsTransition = do
   case c of
     Just (cert, _wits) -> do
       let ptr = Ptr slot txIx nextCertIx
+      let epoch = epochFromSlotNo slot
       dpState' <-
         trans @(Core.EraRule "DELPL" era) $
-          TRC (DelplEnv slot ptr pp acnt, dpState, cert)
+          TRC (DelplEnv slot epoch ptr pp acnt, dpState, cert)
 
       pure (dpState', succ nextCertIx)
     Nothing ->

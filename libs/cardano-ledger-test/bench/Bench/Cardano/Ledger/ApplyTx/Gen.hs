@@ -49,6 +49,7 @@ applyTxMempoolEnv :: PParams era -> MempoolEnv era
 applyTxMempoolEnv pp =
   LedgerEnv
     { ledgerSlotNo = SlotNo 0
+    , ledgerEpochNo = Nothing
     , ledgerIx = minBound
     , ledgerPp = pp
     , ledgerAccount = AccountState (Coin 45000000000) (Coin 45000000000)

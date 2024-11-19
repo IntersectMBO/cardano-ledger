@@ -130,7 +130,7 @@ instance
 
   environmentSpec ConwayLedgerExecContext {..} =
     let UtxoExecContext {..} = clecUtxoExecContext
-     in constrained' $ \slotNo _txIx pp _acntSt _mempool ->
+     in constrained' $ \slotNo _ _txIx pp _acntSt _mempool ->
           [ assert $ pp ==. lit (uePParams uecUtxoEnv)
           , assert $ slotNo ==. lit (ueSlot uecUtxoEnv)
           ]

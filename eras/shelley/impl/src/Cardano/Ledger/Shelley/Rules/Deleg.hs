@@ -63,7 +63,6 @@ import Cardano.Ledger.Slot (
   Duration (..),
   EpochNo (..),
   SlotNo,
-  epochInfoEpoch,
   epochInfoFirst,
   (*-),
   (+*),
@@ -88,6 +87,7 @@ import NoThunks.Class (NoThunks (..))
 
 data DelegEnv era = DelegEnv
   { slotNo :: !SlotNo
+  , curEpochNo :: !EpochNo
   , ptr_ :: !Ptr
   , acnt_ :: !AccountState
   , ppDE :: !(PParams era) -- The protocol parameters are only used for the HardFork mechanism
@@ -256,7 +256,7 @@ delegationTransition ::
   (ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
   TransitionRule (ShelleyDELEG era)
 delegationTransition = do
-  TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
+  TRC (DelegEnv slot epochNo ptr acnt pp, ds, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
   case c of
     RegTxCert hk -> do
@@ -315,7 +315,7 @@ delegationTransition = do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure ds
     _ | Just (MIRCert targetPot mirTarget) <- getMirTxCert c -> do
-      checkSlotNotTooLate slot
+      checkSlotNotTooLate slot epochNo
       case mirTarget of
         StakeAddressesMIR credCoinMap -> do
           let (potAmount, delta, instantaneousRewards) =
@@ -375,11 +375,11 @@ delegationTransition = do
 checkSlotNotTooLate ::
   (ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
   SlotNo ->
+  EpochNo ->
   Rule (ShelleyDELEG era) 'Transition ()
-checkSlotNotTooLate slot = do
+checkSlotNotTooLate slot (EpochNo currEpoch) = do
   sp <- liftSTS $ asks stabilityWindow
   ei <- liftSTS $ asks epochInfoPure
-  EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
   let newEpoch = EpochNo (currEpoch + 1)
   tellEvent (DelegNewEpoch newEpoch)
   firstSlot <- liftSTS $ epochInfoFirst ei newEpoch

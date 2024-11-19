@@ -193,6 +193,7 @@ mkMempoolEnv
   slot =
     Ledger.LedgerEnv
       { Ledger.ledgerSlotNo = slot
+      , Ledger.ledgerEpochNo = Nothing
       , Ledger.ledgerIx = minBound
       , Ledger.ledgerPp = nesEs ^. curPParamsEpochStateL
       , Ledger.ledgerAccount = LedgerState.esAccountState nesEs

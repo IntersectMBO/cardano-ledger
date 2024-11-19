@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Remove `SlotNo` from `CertEnv` and `CertsEnv`
 * Remove deprecated `translateTxOut` and `conwayWitsVKeyNeeded`
 * Add `DefaultVote` and `defaultStakePoolVote`
 * Add new event `GovRemovedVotes` for invalidated votes.

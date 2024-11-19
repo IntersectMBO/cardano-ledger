@@ -29,7 +29,6 @@ import Cardano.Ledger.BaseTypes (
   EpochNo (EpochNo),
   Globals (..),
   ShelleyBase,
-  SlotNo,
   StrictMaybe,
   binOpEpochNo,
  )
@@ -89,7 +88,6 @@ import NoThunks.Class (NoThunks (..))
 data CertsEnv era = CertsEnv
   { certsTx :: !(Tx era)
   , certsPParams :: !(PParams era)
-  , certsSlotNo :: !SlotNo
   , certsCurrentEpoch :: !EpochNo
   , certsCurrentCommittee :: StrictMaybe (Committee era)
   , certsCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
@@ -97,13 +95,12 @@ data CertsEnv era = CertsEnv
   deriving (Generic)
 
 instance EraTx era => EncCBOR (CertsEnv era) where
-  encCBOR x@(CertsEnv _ _ _ _ _ _) =
+  encCBOR x@(CertsEnv _ _ _ _ _) =
     let CertsEnv {..} = x
      in encode $
           Rec CertsEnv
             !> To certsTx
             !> To certsPParams
-            !> To certsSlotNo
             !> To certsCurrentEpoch
             !> To certsCurrentCommittee
             !> To certsCommitteeProposals
@@ -217,7 +214,7 @@ conwayCertsTransition ::
   TransitionRule (ConwayCERTS era)
 conwayCertsTransition = do
   TRC
-    ( env@(CertsEnv tx pp slot currentEpoch committee committeeProposals)
+    ( env@(CertsEnv tx pp currentEpoch committee committeeProposals)
       , certState
       , certificates
       ) <-
@@ -271,7 +268,7 @@ conwayCertsTransition = do
       certState' <-
         trans @(ConwayCERTS era) $ TRC (env, certState, gamma)
       trans @(EraRule "CERT" era) $
-        TRC (CertEnv slot pp currentEpoch committee committeeProposals, certState', txCert)
+        TRC (CertEnv pp currentEpoch committee committeeProposals, certState', txCert)
 
 instance
   ( Era era

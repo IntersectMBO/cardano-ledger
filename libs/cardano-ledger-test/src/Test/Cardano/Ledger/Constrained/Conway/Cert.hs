@@ -52,7 +52,7 @@ certEnvSpec ::
   Specification fn (CertEnv era)
 certEnvSpec =
   constrained $ \ce ->
-    match ce $ \_slot pp _currEpoch _currCommittee _proposals ->
+    match ce $ \pp _currEpoch _currCommittee _proposals ->
       [ satisfies pp pparamsSpec
       ]
 
@@ -81,7 +81,7 @@ conwayTxCertSpec ::
   CertEnv (ConwayEra StandardCrypto) ->
   CertState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayTxCert (ConwayEra StandardCrypto))
-conwayTxCertSpec (CertEnv slot pp ce cc cp) certState@CertState {..} =
+conwayTxCertSpec (CertEnv pp ce cc cp) certState@CertState {..} =
   constrained $ \txCert ->
     caseOn
       txCert
@@ -92,7 +92,7 @@ conwayTxCertSpec (CertEnv slot pp ce cc cp) certState@CertState {..} =
       (branchW 2 $ \govCert -> satisfies govCert $ govCertSpec govCertEnv certState)
   where
     delegEnv = ConwayDelegEnv pp (psStakePoolParams certPState)
-    poolEnv = PoolEnv slot pp
+    poolEnv = PoolEnv ce pp
     govCertEnv = ConwayGovCertEnv pp ce cc cp
 
 -- ==============================================================
@@ -143,7 +143,7 @@ shelleyTxCertSpec ::
   CertEnv era ->
   CertState era ->
   Specification fn (ShelleyTxCert era)
-shelleyTxCertSpec (CertEnv slot pp _ _ _) (CertState _vstate pstate dstate) =
+shelleyTxCertSpec (CertEnv pp e _ _) (CertState _vstate pstate dstate) =
   constrained $ \ [var|shelleyTxCert|] ->
     -- These weights try to make it equally likely that each of the many certs
     -- across the 3 categories are chosen at similar frequencies.
@@ -156,7 +156,7 @@ shelleyTxCertSpec (CertEnv slot pp _ _ _) (CertState _vstate pstate dstate) =
                 dstate
             )
       )
-      (branchW 3 $ \ [var|poolCert|] -> satisfies poolCert $ poolCertSpec (PoolEnv slot pp) pstate)
+      (branchW 3 $ \ [var|poolCert|] -> satisfies poolCert $ poolCertSpec (PoolEnv e pp) pstate)
       (branchW 1 $ \ [var|genesis|] -> satisfies genesis (genesisDelegCertSpec @fn @era dstate))
       (branchW 1 $ \ [var|_mir|] -> False) -- By design, we never generate a MIR cert
 

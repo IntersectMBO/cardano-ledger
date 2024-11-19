@@ -203,6 +203,7 @@ import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   LedgerEnv (..),
   ShelleyBbodyState,
+  epochFromSlot,
  )
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
@@ -633,9 +634,11 @@ modifyImpInitProtVer ver =
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
   slotNo <- gets impLastTick
+  epochNo <- runShelleyBase $ epochFromSlot slotNo
   pure
     LedgerEnv
       { ledgerSlotNo = slotNo
+      , ledgerEpochNo = Just epochNo
       , ledgerPp = nes ^. nesEsL . curPParamsEpochStateL
       , ledgerIx = TxIx 0
       , ledgerAccount = nes ^. nesEsL . esAccountStateL
