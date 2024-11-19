@@ -8,6 +8,7 @@
 
 ### `testlib`
 
+* Remove `mintingTokenTx` (which is replaced by `mkTokenMintingTx` in Mary)
 * Add `minFeeUpdateGovAction`
 * Add `mkTreasuryWithdrawalsGovAction` and `mkParameterChangeGovAction`
 * Switch to using `ImpSpec` package

@@ -28,11 +28,6 @@ import Cardano.Ledger.Conway.TxInfo
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.Mary.Value (
-  MaryValue (..),
-  MultiAsset (..),
-  PolicyID (..),
- )
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
@@ -597,11 +592,10 @@ costModelsSpec =
       govIdConstitution1 <-
         enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMembers'
 
-      let mintingScriptHash = hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
+      mintingTokenTx <- mkTokenMintingTx $ hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
 
       impAnn "Minting token fails" $ do
-        tx <- mintingTokenTx @era (mkBasicTx @era mkBasicTxBody) mintingScriptHash
-        submitFailingTx tx [injectFailure $ CollectErrors [NoCostModel PlutusV3]]
+        submitFailingTx mintingTokenTx [injectFailure $ CollectErrors [NoCostModel PlutusV3]]
 
       govIdPPUpdate1 <-
         enactCostModels
@@ -619,8 +613,7 @@ costModelsSpec =
           committeeMembers'
 
       impAnn "Minting token succeeds" $ do
-        tx <- mintingTokenTx @era (mkBasicTx @era mkBasicTxBody) mintingScriptHash
-        submitTx_ tx
+        submitTx_ mintingTokenTx
 
       impAnn "Updating CostModels succeeds" $ do
         void $
@@ -694,18 +687,6 @@ testPlutusV1V2Failure sh badField lenz errorField = do
     ( pure . injectFailure $
         CollectErrors [BadTranslation errorField]
     )
-
-mintingTokenTx :: ConwayEraImp era => Tx era -> ScriptHash (EraCrypto era) -> ImpTestM era (Tx era)
-mintingTokenTx tx sh = do
-  name <- arbitrary
-  count <- choose (0, 10)
-  let policyId = PolicyID sh
-  let ma = MultiAsset $ Map.singleton policyId [(name, count)]
-  addr <- freshKeyAddr_
-  pure $
-    tx
-      & bodyTxL . mintTxBodyL .~ ma
-      & bodyTxL . outputsTxBodyL <>~ [mkBasicTxOut addr (MaryValue mempty ma)]
 
 enactCostModels ::
   ConwayEraImp era =>

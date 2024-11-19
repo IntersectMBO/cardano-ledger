@@ -6,6 +6,7 @@
 
 ### `testlib`
 
+* Add `mkTokenMintingTx`
 * Switch to using `ImpSpec` package
 
 ## 1.7.0.1

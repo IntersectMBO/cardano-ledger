@@ -515,10 +515,15 @@ submitPhase2Invalid ::
   Tx era ->
   ImpTestM era (Tx era)
 submitPhase2Invalid tx = do
-  (predFailure, fixedUpTx) <- expectLeft =<< trySubmitTx tx
-  scriptPredicateFailure <- impScriptPredicateFailure fixedUpTx
-  predFailure `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
-  withNoFixup $ submitTx $ fixedUpTx & isValidTxL .~ IsValid False
+  fixedUpTx <-
+    impAnn "Check that tx fails with IsValid True" $ do
+      tx ^. isValidTxL `shouldBe` IsValid True
+      (predFailure, fixedUpTx) <- expectLeft =<< trySubmitTx tx
+      scriptPredicateFailure <- impScriptPredicateFailure fixedUpTx
+      predFailure `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
+      pure fixedUpTx
+  impAnn "Submit tx with IsValid False" $ do
+    withNoFixup $ submitTx $ fixedUpTx & isValidTxL .~ IsValid False
 
 expectTxSuccess ::
   ( HasCallStack

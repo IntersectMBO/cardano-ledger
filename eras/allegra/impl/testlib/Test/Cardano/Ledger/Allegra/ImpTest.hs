@@ -19,6 +19,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (
   AllegraEraScript,
+  evalTimelock,
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
@@ -55,15 +56,18 @@ instance
   fixupTx = shelleyFixupTx
 
 impAllegraSatisfyNativeScript ::
-  AllegraEraScript era =>
+  ( AllegraEraScript era
+  , AllegraEraTxBody era
+  ) =>
   Set.Set (KeyHash 'Witness (EraCrypto era)) ->
+  TxBody era ->
   NativeScript era ->
   ImpTestM era (Maybe (Map.Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))))
-impAllegraSatisfyNativeScript providedVKeyHashes script = do
+impAllegraSatisfyNativeScript providedVKeyHashes txBody script = do
   impState <- get
   let
     keyPairs = impState ^. impKeyPairsG
-    prevSlotNo = impState ^. impLastTickG
+    vi = txBody ^. vldtTxBodyL
     satisfyMOf m Empty
       | m <= 0 = Just mempty
       | otherwise = Nothing
@@ -82,10 +86,10 @@ impAllegraSatisfyNativeScript providedVKeyHashes script = do
       RequireAllOf ss -> satisfyMOf (length ss) ss
       RequireAnyOf ss -> satisfyMOf 1 ss
       RequireMOf m ss -> satisfyMOf m ss
-      RequireTimeExpire slotNo
-        | slotNo < prevSlotNo -> Just mempty
+      lock@(RequireTimeStart _)
+        | evalTimelock mempty vi lock -> Just mempty
         | otherwise -> Nothing
-      RequireTimeStart slotNo
-        | slotNo > prevSlotNo -> Just mempty
+      lock@(RequireTimeExpire _)
+        | evalTimelock mempty vi lock -> Just mempty
         | otherwise -> Nothing
   pure $ satisfyScript script
