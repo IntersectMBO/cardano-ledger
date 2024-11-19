@@ -100,6 +100,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impSetSeed,
   modifyImpInitProtVer,
   modifyImpInitHook,
+  modifyImpInitPassTickHook,
 
   -- * Logging
   Doc,
@@ -119,6 +120,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withPreFixup,
   withCborRoundTripFailures,
   withHook,
+  withPassTickHook,
   impNESL,
   impGlobalsL,
   impLastTickG,
@@ -305,6 +307,7 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
               { iteFixup = fixupTx
               , iteCborRoundTripFailures = True
               , iteHook = \_ _ _ _ -> pure ()
+              , itePassTickHook = pure ()
               }
         , impInitState = initState
         }
@@ -646,6 +649,14 @@ modifyImpInitHook ::
 modifyImpInitHook f =
   modifyImpInit (impInitEnvL . iteHookL .~ f)
 
+modifyImpInitPassTickHook ::
+  forall era.
+  ImpTestM era () ->
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+modifyImpInitPassTickHook f =
+  modifyImpInit (impInitEnvL . itePassTickHookL .~ f)
+
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
   slotNo <- gets impLastTick
@@ -792,6 +803,7 @@ data ImpTestEnv era = ImpTestEnv
       LedgerState era ->
       Tx era ->
       ImpTestM era ()
+  , itePassTickHook :: ImpTestM era ()
   , iteCborRoundTripFailures :: !Bool
   -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
   }
@@ -811,6 +823,9 @@ iteHookL ::
       ImpTestM era ()
     )
 iteHookL = lens iteHook (\x y -> x {iteHook = y})
+
+itePassTickHookL :: Lens' (ImpTestEnv era) (ImpTestM era ())
+itePassTickHookL = lens itePassTickHook (\x y -> x {itePassTickHook = y})
 
 iteCborRoundTripFailuresL :: Lens' (ImpTestEnv era) Bool
 iteCborRoundTripFailuresL = lens iteCborRoundTripFailures (\x y -> x {iteCborRoundTripFailures = y})
@@ -1220,6 +1235,7 @@ passTick ::
   ) =>
   ImpTestM era ()
 passTick = do
+  impAnn "Running passTickHook" =<< asks itePassTickHook
   impLastTick <- gets impLastTick
   curNES <- getsNES id
   nes <- runImpRule @"TICK" () curNES impLastTick
@@ -1606,6 +1622,9 @@ withHook ::
   ImpTestM era a ->
   ImpTestM era a
 withHook f = local $ iteHookL .~ f
+
+withPassTickHook :: ImpTestM era () -> ImpTestM era a -> ImpTestM era a
+withPassTickHook f = local $ itePassTickHookL .~ f
 
 expectUTxOContent ::
   (HasCallStack, ToExpr (TxOut era)) =>
