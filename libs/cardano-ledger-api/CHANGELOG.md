@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Added `queryRegisteredDRepStakeDistr` state query
 * Remove deprecated `RewardAcnt`, `mkRwdAcnt`, `serialiseRewardAcnt` and `deserialiseRewardAcnt`.
 * Added `queryStakePoolDefaultVote` state query and its return type `DefaultVote`
 
