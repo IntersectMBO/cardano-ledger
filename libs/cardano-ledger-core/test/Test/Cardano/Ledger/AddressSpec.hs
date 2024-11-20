@@ -14,7 +14,7 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
 import Cardano.Ledger.Binary (Version, byronProtVer, decodeFull', natVersion, serialize')
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
+import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Keys (
   BootstrapWitness (..),
   bootstrapWitKeyHash,
@@ -50,8 +50,8 @@ spec =
       (byronVKey, byronAddr) <- genByronVKeyAddr
       sig <- arbitrary
       let addr = BootstrapAddress byronAddr
-          (shelleyVKey, chainCode) = unpackByronVKey @StandardCrypto byronVKey
-          wit :: BootstrapWitness StandardCrypto
+          (shelleyVKey, chainCode) = unpackByronVKey byronVKey
+          wit :: BootstrapWitness
           wit =
             BootstrapWitness
               { bwKey = shelleyVKey
@@ -60,55 +60,54 @@ spec =
               , bwAttributes = serialize' byronProtVer $ Byron.addrAttributes byronAddr
               }
       pure $
-        coerceKeyRole (bootstrapKeyHash @StandardCrypto addr)
+        coerceKeyRole (bootstrapKeyHash addr)
           === bootstrapWitKeyHash wit
 
 roundTripAddressSpec :: Spec
 roundTripAddressSpec = do
   describe "CompactAddr" $ do
-    roundTripCborSpec @(CompactAddr StandardCrypto)
+    roundTripCborSpec @CompactAddr
     prop "compactAddr/decompactAddr round trip" $
       forAll genAddrBadPtr $
-        propCompactAddrRoundTrip @StandardCrypto
+        propCompactAddrRoundTrip
     prop "Compact address binary representation" $
       forAll genAddrBadPtr $
-        propCompactSerializationAgree @StandardCrypto
+        propCompactSerializationAgree
     prop "Ensure Addr failures on incorrect binary data" $
-      propDecompactErrors @StandardCrypto
+      propDecompactErrors
     prop "Ensure RewardAccount failures on incorrect binary data" $
-      propDeserializeRewardAccountErrors @StandardCrypto
+      propDeserializeRewardAccountErrors
     prop "RoundTrip-invalid" $
       forAll genCompactAddrBadPtr $
-        roundTripRangeExpectation @(CompactAddr StandardCrypto)
+        roundTripRangeExpectation @CompactAddr
           cborTrip
           (natVersion @2)
           (natVersion @6)
     prop "Decompact addr with junk" $
-      propDecompactAddrWithJunk @StandardCrypto
-    prop "Same as old decompactor" $ propSameAsOldDecompactAddr @StandardCrypto
+      propDecompactAddrWithJunk
+    prop "Same as old decompactor" $ propSameAsOldDecompactAddr
     it "fail on extraneous bytes" $
-      decodeAddr @StandardCrypto addressWithExtraneousBytes `shouldBe` Nothing
+      decodeAddr addressWithExtraneousBytes `shouldBe` Nothing
   describe "Addr" $ do
-    roundTripCborSpec @(Addr StandardCrypto)
+    roundTripCborSpec @Addr
     prop "RoundTrip-invalid" $
       forAll genAddrBadPtr $
-        roundTripRangeExpectation @(Addr StandardCrypto) cborTrip (natVersion @2) (natVersion @6)
+        roundTripRangeExpectation @Addr cborTrip (natVersion @2) (natVersion @6)
     prop "Deserializing an address matches old implementation" $
-      propValidateNewDeserialize @StandardCrypto
+      propValidateNewDeserialize
   describe "RewardAccount" $ do
-    roundTripCborSpec @(RewardAccount StandardCrypto)
+    roundTripCborSpec @RewardAccount
 
-propSameAsOldDecompactAddr :: forall c. Crypto c => CompactAddr c -> Expectation
+propSameAsOldDecompactAddr :: CompactAddr -> Expectation
 propSameAsOldDecompactAddr cAddr = do
-  addr `shouldBe` decompactAddrOld @c cAddr
-  addr `shouldBe` decompactAddrOldLazy @c cAddr
+  addr `shouldBe` decompactAddrOld cAddr
+  addr `shouldBe` decompactAddrOldLazy cAddr
   where
-    addr = decompactAddr @c cAddr
+    addr = decompactAddr cAddr
 
 propDecompactAddrWithJunk ::
-  forall c.
-  (HasCallStack, Crypto c) =>
-  Addr c ->
+  HasCallStack =>
+  Addr ->
   BS.ByteString ->
   Expectation
 propDecompactAddrWithJunk addr junk = do
@@ -121,7 +120,7 @@ propDecompactAddrWithJunk addr junk = do
       when (BS.length junk > 0) $ do
         forM_ [natVersion @7 .. maxBound] $ \version -> do
           let cbor = serialize' version bs
-          forM_ (decodeFull' version cbor) $ \(cAddr :: CompactAddr c) ->
+          forM_ (decodeFull' version cbor) $ \(cAddr :: CompactAddr) ->
             expectationFailure $
               unlines
                 [ "Decoding with version: " ++ show version
@@ -136,34 +135,34 @@ propDecompactAddrWithJunk addr junk = do
     -- Encode with garbage
     let cbor = serialize' version bs
     -- Decode as compact address
-    cAddr :: CompactAddr c <-
+    cAddr :: CompactAddr <-
       either (error . show) pure $ decodeFull' version cbor
     -- Ensure that garbage is gone (decodeAddr will fail otherwise)
     decodeAddr (serialiseAddr (decompactAddr cAddr)) `shouldReturn` addr
 
-propValidateNewDeserialize :: forall c. (HasCallStack, Crypto c) => Addr c -> Property
+propValidateNewDeserialize :: HasCallStack => Addr -> Property
 propValidateNewDeserialize addr = property $ do
   let bs = serialiseAddr addr
-      deserializedOld = errorFail $ deserialiseAddrOld @c bs
-      deserializedNew = errorFail $ decodeAddr @c bs
+      deserializedOld = errorFail $ deserialiseAddrOld bs
+      deserializedNew = errorFail $ decodeAddr bs
   deserializedNew `shouldBe` addr
   deserializedOld `shouldBe` deserializedNew
 
-propCompactAddrRoundTrip :: Crypto c => Addr c -> Property
+propCompactAddrRoundTrip :: Addr -> Property
 propCompactAddrRoundTrip addr =
   let compact = compactAddr addr
       decompact = decompactAddr compact
    in addr === decompact
 
-propCompactSerializationAgree :: Addr c -> Property
+propCompactSerializationAgree :: Addr -> Property
 propCompactSerializationAgree addr =
   let sbs = unCompactAddr $ compactAddr addr
    in sbs === SBS.toShort (serialiseAddr addr)
 
-propDecompactErrors :: forall c. Crypto c => Addr c -> Gen Property
+propDecompactErrors :: Addr -> Gen Property
 propDecompactErrors addr = do
   let sbs = unCompactAddr $ compactAddr addr
-      hashLen = fromIntegral $ Hash.sizeHash (Proxy :: Proxy (ADDRHASH c))
+      hashLen = fromIntegral $ Hash.sizeHash (Proxy :: Proxy ADDRHASH)
       bs = SBS.fromShort sbs
       flipHeaderBit b =
         case BS.uncons bs of
@@ -228,10 +227,9 @@ propDecompactErrors addr = do
     $ counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
     $ isLeft
-    $ decodeAddrEither @c badAddr
+    $ decodeAddrEither badAddr
 
-propDeserializeRewardAccountErrors ::
-  forall c. Crypto c => Version -> RewardAccount c -> Gen Property
+propDeserializeRewardAccountErrors :: Version -> RewardAccount -> Gen Property
 propDeserializeRewardAccountErrors v acnt = do
   let bs = serialize' v acnt
       flipHeaderBit b =
@@ -257,7 +255,7 @@ propDeserializeRewardAccountErrors v acnt = do
     $ counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
     $ isNothing
-    $ decodeRewardAccount @c badAddr
+    $ decodeRewardAccount badAddr
 
 addressWithExtraneousBytes :: HasCallStack => BS.ByteString
 addressWithExtraneousBytes = bs
