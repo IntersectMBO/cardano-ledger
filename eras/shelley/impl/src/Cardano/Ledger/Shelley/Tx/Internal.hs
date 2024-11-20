@@ -60,7 +60,6 @@ import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
@@ -196,10 +195,8 @@ mkBasicShelleyTx txBody =
       , strAuxiliaryData = SNothing
       }
 
-instance Crypto c => EraTx (ShelleyEra c) where
-  {-# SPECIALIZE instance EraTx (ShelleyEra StandardCrypto) #-}
-
-  type Tx (ShelleyEra c) = ShelleyTx (ShelleyEra c)
+instance EraTx ShelleyEra where
+  type Tx ShelleyEra = ShelleyTx ShelleyEra
 
   mkBasicTx = mkBasicShelleyTx
 
@@ -342,7 +339,6 @@ deriving via
 --
 --   The only intended use case for this is for segregated witness.
 unsafeConstructTxWithBytes ::
-  Era era =>
   TxBody era ->
   TxWits era ->
   StrictMaybe (TxAuxData era) ->
@@ -393,7 +389,7 @@ shelleyMinFeeTx pp tx =
 witsFromTxWitnesses ::
   EraTx era =>
   Tx era ->
-  Set (KeyHash 'Witness (EraCrypto era))
+  Set (KeyHash 'Witness)
 witsFromTxWitnesses tx =
   Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
     `Set.union` Set.map bootstrapWitKeyHash (tx ^. witsTxL . bootAddrTxWitsL)

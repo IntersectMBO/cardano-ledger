@@ -24,7 +24,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto
 import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Keys (asWitness, hashKey)
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -52,7 +51,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
@@ -88,7 +87,7 @@ aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 bobInitCoin :: Coin
 bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Crypto c => UTxO (ShelleyEra c)
+initUTxO :: UTxO ShelleyEra
 initUTxO =
   genesisCoins
     genesisId
@@ -96,29 +95,27 @@ initUTxO =
     , ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
     ]
 
-initStUpdates :: Crypto c => ChainState (ShelleyEra c)
+initStUpdates :: ChainState ShelleyEra
 initStUpdates = initSt initUTxO
 
 --
 -- Block 1, Slot 10, Epoch 0
 --
 
-ppVoteA :: Crypto c => PParamsUpdate (ShelleyEra c)
+ppVoteA :: PParamsUpdate ShelleyEra
 ppVoteA =
   emptyPParamsUpdate
     & ppuPoolDepositL .~ SJust (Coin 200)
     & ppuExtraEntropyL .~ SJust (mkNonceFromNumber 123)
 
 collectVotes ::
-  forall c.
-  Crypto c =>
-  PParamsUpdate (ShelleyEra c) ->
+  PParamsUpdate ShelleyEra ->
   [Int] ->
-  ProposedPPUpdates (ShelleyEra c)
+  ProposedPPUpdates ShelleyEra
 collectVotes vote =
   ProposedPPUpdates . Map.fromList . (fmap (\n -> (hashKey $ coreNodeVK n, vote)))
 
-ppVotes1 :: Crypto c => ProposedPPUpdates (ShelleyEra c)
+ppVotes1 :: ProposedPPUpdates ShelleyEra
 ppVotes1 = collectVotes ppVoteA [0, 3, 4]
 
 feeTx1 :: Coin
@@ -127,7 +124,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> feeTx1
 
-txbodyEx1 :: Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx1 :: ShelleyTxBody ShelleyEra
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -139,14 +136,14 @@ txbodyEx1 =
     (SJust (Update ppVotes1 (EpochNo 0)))
     SNothing
 
-txEx1 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ShelleyTx (ShelleyEra c)
+txEx1 :: ShelleyTx ShelleyEra
 txEx1 =
   ShelleyTx
     txbodyEx1
     mempty
       { addrWits =
           mkWitnessesVKey
-            (hashAnnotated $ txbodyEx1 @c)
+            (hashAnnotated txbodyEx1)
             ( [asWitness Cast.alicePay]
                 <> [ asWitness . aikCold $ coreNodeIssuerKeys 0
                    , asWitness . aikCold $ coreNodeIssuerKeys 3
@@ -156,24 +153,24 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Block (BHeader c) (ShelleyEra c)
+blockEx1 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
-    (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 10)
     [txEx1]
     (SlotNo 10)
     (BlockNo 1)
-    (nonce0 @(EraCrypto (ShelleyEra c)))
+    nonce0
     (NatNonce 1)
     minBound
     0
     0
-    (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 10) 0 (KESPeriod 0))
 
-expectedStEx1 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ChainState (ShelleyEra c)
+expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx1 @c))
+  C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
     . C.feesAndDeposits ppEx feeTx1 [] []
     . C.newUTxO txbodyEx1
@@ -183,17 +180,17 @@ expectedStEx1 =
 -- === Block 1, Slot 10, Epoch 0
 --
 -- In the first block, three genesis keys vote on the same new parameters.
-updates1 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
+updates1 :: CHAINExample ShelleyEra
 updates1 = CHAINExample initStUpdates blockEx1 (Right expectedStEx1)
 
 --
 -- Block 2, Slot 20, Epoch 0
 --
 
-ppVotes2 :: Era (ShelleyEra c) => ProposedPPUpdates (ShelleyEra c)
+ppVotes2 :: ProposedPPUpdates ShelleyEra
 ppVotes2 = collectVotes ppVoteA [1, 5]
 
-updateEx3B :: Era (ShelleyEra c) => Update (ShelleyEra c)
+updateEx3B :: Update ShelleyEra
 updateEx3B = Update ppVotes2 (EpochNo 0)
 
 feeTx2 :: Coin
@@ -202,7 +199,7 @@ feeTx2 = Coin 1
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-txbodyEx2 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx2 :: ShelleyTxBody ShelleyEra
 txbodyEx2 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
@@ -214,14 +211,14 @@ txbodyEx2 =
     (SJust updateEx3B)
     SNothing
 
-txEx2 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ShelleyTx (ShelleyEra c)
+txEx2 :: ShelleyTx ShelleyEra
 txEx2 =
   ShelleyTx
     txbodyEx2
     mempty
       { addrWits =
           mkWitnessesVKey
-            (hashAnnotated $ txbodyEx2 @c)
+            (hashAnnotated txbodyEx2)
             ( [asWitness Cast.alicePay]
                 <> [ asWitness . aikCold $ coreNodeIssuerKeys 1
                    , asWitness . aikCold $ coreNodeIssuerKeys 5
@@ -230,24 +227,24 @@ txEx2 =
       }
     SNothing
 
-blockEx2 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Block (BHeader c) (ShelleyEra c)
+blockEx2 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx1)
-    (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 20)
+    (bhHash $ bheader blockEx1)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 20)
     [txEx2]
     (SlotNo 20)
     (BlockNo 2)
-    (nonce0 @(EraCrypto (ShelleyEra c)))
+    nonce0
     (NatNonce 2)
     minBound
     1
     0
-    (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 20) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 20) 0 (KESPeriod 0))
 
-expectedStEx2 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ChainState (ShelleyEra c)
+expectedStEx2 :: ChainState ShelleyEra
 expectedStEx2 =
-  C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c))
+  C.evolveNonceUnfrozen (getBlockNonce blockEx2)
     . C.newLab blockEx2
     . C.feesAndDeposits ppEx feeTx2 [] []
     . C.newUTxO txbodyEx2
@@ -257,19 +254,19 @@ expectedStEx2 =
 -- === Block 2, Slot 20, Epoch 0
 --
 -- In the second block, two more genesis keys vote for the same new parameters.
-updates2 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
+updates2 :: CHAINExample ShelleyEra
 updates2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
 -- Block 3, Slot 80, Epoch 0
 --
 
-ppVoteB :: Crypto c => PParamsUpdate (ShelleyEra c)
+ppVoteB :: PParamsUpdate ShelleyEra
 ppVoteB =
   emptyPParamsUpdate
     & ppuMinUTxOValueL .~ SJust (Coin 99)
 
-ppVotes3 :: Era (ShelleyEra c) => ProposedPPUpdates (ShelleyEra c)
+ppVotes3 :: ProposedPPUpdates ShelleyEra
 ppVotes3 = collectVotes ppVoteB [1]
 
 feeTx3 :: Coin
@@ -278,7 +275,7 @@ feeTx3 = Coin 1
 aliceCoinEx3 :: Coin
 aliceCoinEx3 = aliceCoinEx2 <-> feeTx3
 
-txbodyEx3 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx3 :: ShelleyTxBody ShelleyEra
 txbodyEx3 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound])
@@ -290,39 +287,39 @@ txbodyEx3 =
     (SJust (Update ppVotes3 (EpochNo 1)))
     SNothing
 
-txEx3 :: forall c. (Crypto c, ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
+txEx3 :: ShelleyTx ShelleyEra
 txEx3 =
   ShelleyTx
     txbodyEx3
     mempty
       { addrWits =
           mkWitnessesVKey
-            (hashAnnotated $ txbodyEx3 @c)
+            (hashAnnotated txbodyEx3)
             [asWitness Cast.alicePay, asWitness . aikCold $ coreNodeIssuerKeys 1]
       }
     SNothing
 
-blockEx3 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Block (BHeader c) (ShelleyEra c)
+blockEx3 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx2)
-    (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 80)
+    (bhHash $ bheader blockEx2)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 80)
     [txEx3]
     (SlotNo 80)
     (BlockNo 3)
-    (nonce0 @(EraCrypto (ShelleyEra c)))
+    nonce0
     (NatNonce 3)
     minBound
     4
     0
-    (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 80) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 80) 0 (KESPeriod 0))
 
-pulserEx3 :: forall c. ExMock c => PulsingRewUpdate c
+pulserEx3 :: PulsingRewUpdate
 pulserEx3 = makeCompletedPulser (BlocksMade mempty) expectedStEx2
 
-expectedStEx3 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ChainState (ShelleyEra c)
+expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
-  C.evolveNonceFrozen (getBlockNonce (blockEx3 @c))
+  C.evolveNonceFrozen (getBlockNonce blockEx3)
     . C.newLab blockEx3
     . C.feesAndDeposits ppEx feeTx3 [] []
     . C.newUTxO txbodyEx3
@@ -334,38 +331,38 @@ expectedStEx3 =
 -- === Block 3, Slot 80, Epoch 0
 --
 -- In the third block, one genesis keys votes for the next epoch
-updates3 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
+updates3 :: CHAINExample ShelleyEra
 updates3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
 -- Block 4, Slot 110, Epoch 1
 --
 
-epoch1Nonce :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Nonce
-epoch1Nonce = chainCandidateNonce (expectedStEx3 @c) ⭒ mkNonceFromNumber 123
+epoch1Nonce :: Nonce
+epoch1Nonce = chainCandidateNonce expectedStEx3 ⭒ mkNonceFromNumber 123
 
-blockEx4 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Block (BHeader c) (ShelleyEra c)
+blockEx4 :: Block (BHeader MockCrypto) ShelleyEra
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx3)
-    (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110)
+    (bhHash $ bheader blockEx3)
+    (coreNodeKeysBySchedule @ShelleyEra ppEx 110)
     []
     (SlotNo 110)
     (BlockNo 4)
-    (epoch1Nonce @c)
+    epoch1Nonce
     (NatNonce 4)
     minBound
     5
     0
-    (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
+    (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 110) 0 (KESPeriod 0))
 
-ppExUpdated :: forall c. Crypto c => PParams (ShelleyEra c)
+ppExUpdated :: PParams ShelleyEra
 ppExUpdated =
-  (ppEx @(ShelleyEra c))
+  ppEx
     & ppPoolDepositL .~ Coin 200
     & ppExtraEntropyL .~ mkNonceFromNumber 123
 
-expectedStEx4 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => ChainState (ShelleyEra c)
+expectedStEx4 :: ChainState ShelleyEra
 expectedStEx4 =
   C.newEpoch blockEx4
     . C.newSnapshot EB.emptySnapShot (feeTx1 <+> feeTx2 <+> feeTx3)
@@ -381,7 +378,7 @@ expectedStEx4 =
 -- and the future vote becomes a current vote.
 -- Since the extra entropy was voted on, notice that it is a part
 -- of the new epoch nonce.
-updates4 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
+updates4 :: CHAINExample ShelleyEra
 updates4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
 --

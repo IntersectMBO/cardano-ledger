@@ -9,7 +9,6 @@ module Cardano.Ledger.Shelley (
 )
 where
 
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis ()
 import Cardano.Ledger.Shelley.PParams ()
@@ -22,4 +21,6 @@ import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.UTxO ()
 
-type Shelley = ShelleyEra StandardCrypto
+type Shelley = ShelleyEra
+
+{-# DEPRECATED Shelley "In favor of `ShelleyEra`" #-}

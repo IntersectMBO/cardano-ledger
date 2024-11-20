@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
 import Cardano.Crypto.Libsodium (sodiumInit)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
@@ -49,7 +48,7 @@ defaultTests =
       )
     , AdaPreservation.tests @C @(ShelleyLEDGER C) (maxSuccess stdArgs)
     , ClassifyTraces.onlyValidChainSignalsAreGenerated @C
-    , WitVKeys.tests @(EraCrypto C)
+    , WitVKeys.tests
     , Rewards.tests
     , Serialisation.tests
     , RulesTests.chainExamples

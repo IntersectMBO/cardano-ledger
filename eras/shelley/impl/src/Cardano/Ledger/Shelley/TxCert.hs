@@ -98,7 +98,6 @@ import Cardano.Ledger.Credential (
   credKeyHashWitness,
   credScriptHash,
  )
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (..),
@@ -121,10 +120,8 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
-instance Crypto c => EraTxCert (ShelleyEra c) where
-  {-# SPECIALIZE instance EraTxCert (ShelleyEra StandardCrypto) #-}
-
-  type TxCert (ShelleyEra c) = ShelleyTxCert (ShelleyEra c)
+instance EraTxCert ShelleyEra where
+  type TxCert ShelleyEra = ShelleyTxCert ShelleyEra
 
   -- Calling this partial function will result in compilation error, since ByronEra has
   -- no instance for EraTxOut type class.
@@ -156,28 +153,22 @@ instance Crypto c => EraTxCert (ShelleyEra c) where
   getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
 class EraTxCert era => ShelleyEraTxCert era where
-  mkRegTxCert :: StakeCredential (EraCrypto era) -> TxCert era
-  getRegTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era))
+  mkRegTxCert :: StakeCredential -> TxCert era
+  getRegTxCert :: TxCert era -> Maybe StakeCredential
 
-  mkUnRegTxCert :: StakeCredential (EraCrypto era) -> TxCert era
-  getUnRegTxCert :: TxCert era -> Maybe (StakeCredential (EraCrypto era))
+  mkUnRegTxCert :: StakeCredential -> TxCert era
+  getUnRegTxCert :: TxCert era -> Maybe StakeCredential
 
-  mkDelegStakeTxCert ::
-    StakeCredential (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> TxCert era
-  getDelegStakeTxCert ::
-    TxCert era -> Maybe (StakeCredential (EraCrypto era), KeyHash 'StakePool (EraCrypto era))
+  mkDelegStakeTxCert :: StakeCredential -> KeyHash 'StakePool -> TxCert era
+  getDelegStakeTxCert :: TxCert era -> Maybe (StakeCredential, KeyHash 'StakePool)
 
-  mkGenesisDelegTxCert :: ProtVerAtMost era 8 => GenesisDelegCert (EraCrypto era) -> TxCert era
-  getGenesisDelegTxCert ::
-    ProtVerAtMost era 8 => TxCert era -> Maybe (GenesisDelegCert (EraCrypto era))
+  mkGenesisDelegTxCert :: ProtVerAtMost era 8 => GenesisDelegCert -> TxCert era
+  getGenesisDelegTxCert :: ProtVerAtMost era 8 => TxCert era -> Maybe GenesisDelegCert
 
-  mkMirTxCert :: ProtVerAtMost era 8 => MIRCert (EraCrypto era) -> TxCert era
-  getMirTxCert ::
-    ProtVerAtMost era 8 => TxCert era -> Maybe (MIRCert (EraCrypto era))
+  mkMirTxCert :: ProtVerAtMost era 8 => MIRCert -> TxCert era
+  getMirTxCert :: ProtVerAtMost era 8 => TxCert era -> Maybe MIRCert
 
-instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxCert (ShelleyEra StandardCrypto) #-}
-
+instance ShelleyEraTxCert ShelleyEra where
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
 
   getRegTxCert (ShelleyTxCertDelegCert (ShelleyRegCert c)) = Just c
@@ -203,36 +194,36 @@ instance Crypto c => ShelleyEraTxCert (ShelleyEra c) where
   getMirTxCert (ShelleyTxCertMir c) = Just c
   getMirTxCert _ = Nothing
 
-pattern RegTxCert :: ShelleyEraTxCert era => StakeCredential (EraCrypto era) -> TxCert era
+pattern RegTxCert :: ShelleyEraTxCert era => StakeCredential -> TxCert era
 pattern RegTxCert c <- (getRegTxCert -> Just c)
   where
     RegTxCert c = mkRegTxCert c
 
-pattern UnRegTxCert :: ShelleyEraTxCert era => StakeCredential (EraCrypto era) -> TxCert era
+pattern UnRegTxCert :: ShelleyEraTxCert era => StakeCredential -> TxCert era
 pattern UnRegTxCert c <- (getUnRegTxCert -> Just c)
   where
     UnRegTxCert c = mkUnRegTxCert c
 
 pattern DelegStakeTxCert ::
   ShelleyEraTxCert era =>
-  StakeCredential (EraCrypto era) ->
-  KeyHash 'StakePool (EraCrypto era) ->
+  StakeCredential ->
+  KeyHash 'StakePool ->
   TxCert era
 pattern DelegStakeTxCert c kh <- (getDelegStakeTxCert -> Just (c, kh))
   where
     DelegStakeTxCert c kh = mkDelegStakeTxCert c kh
 
 pattern MirTxCert ::
-  (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert (EraCrypto era) -> TxCert era
+  (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert -> TxCert era
 pattern MirTxCert d <- (getMirTxCert -> Just d)
   where
     MirTxCert d = mkMirTxCert d
 
 pattern GenesisDelegTxCert ::
   (ShelleyEraTxCert era, ProtVerAtMost era 8) =>
-  KeyHash 'Genesis (EraCrypto era) ->
-  KeyHash 'GenesisDelegate (EraCrypto era) ->
-  VRFVerKeyHash 'GenDelegVRF (EraCrypto era) ->
+  KeyHash 'Genesis ->
+  KeyHash 'GenesisDelegate ->
+  VRFVerKeyHash 'GenDelegVRF ->
   TxCert era
 pattern GenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
   (getGenesisDelegTxCert -> Just (GenesisDelegCert genKey genDelegKey vrfKeyHash))
@@ -251,19 +242,19 @@ pattern GenesisDelegTxCert genKey genDelegKey vrfKeyHash <-
   #-}
 
 -- | Genesis key delegation certificate
-data GenesisDelegCert c
+data GenesisDelegCert
   = GenesisDelegCert
-      !(KeyHash 'Genesis c)
-      !(KeyHash 'GenesisDelegate c)
-      !(VRFVerKeyHash 'GenDelegVRF c)
+      !(KeyHash 'Genesis)
+      !(KeyHash 'GenesisDelegate)
+      !(VRFVerKeyHash 'GenDelegVRF)
   deriving (Show, Generic, Eq, Ord)
 
-instance NoThunks (GenesisDelegCert c)
+instance NoThunks GenesisDelegCert
 
-instance NFData (GenesisDelegCert c) where
+instance NFData GenesisDelegCert where
   rnf = rwhnf
 
-instance Crypto c => ToJSON (GenesisDelegCert c) where
+instance ToJSON GenesisDelegCert where
   toJSON (GenesisDelegCert genKeyHash genDelegKeyHash hashVrf) =
     kindObject "GenesisDelegCert" $
       [ "genKeyHash" .= toJSON genKeyHash
@@ -271,10 +262,10 @@ instance Crypto c => ToJSON (GenesisDelegCert c) where
       , "hashVrf" .= toJSON hashVrf
       ]
 
-genesisKeyHashWitness :: GenesisDelegCert c -> KeyHash 'Witness c
+genesisKeyHashWitness :: GenesisDelegCert -> KeyHash 'Witness
 genesisKeyHashWitness (GenesisDelegCert gk _ _) = asWitness gk
 
-genesisCWitness :: GenesisDelegCert c -> KeyHash 'Genesis c
+genesisCWitness :: GenesisDelegCert -> KeyHash 'Genesis
 genesisCWitness (GenesisDelegCert gk _ _) = gk
 
 data MIRPot = ReservesMIR | TreasuryMIR
@@ -301,14 +292,14 @@ instance ToJSON MIRPot where
 -- | MIRTarget specifies if funds from either the reserves
 -- or the treasury are to be handed out to a collection of
 -- reward accounts or instead transfered to the opposite pot.
-data MIRTarget c
-  = StakeAddressesMIR !(Map (Credential 'Staking c) DeltaCoin)
+data MIRTarget
+  = StakeAddressesMIR !(Map (Credential 'Staking) DeltaCoin)
   | SendToOppositePotMIR !Coin
   deriving (Show, Generic, Eq, Ord, NFData)
 
-deriving instance NoThunks (MIRTarget c)
+deriving instance NoThunks MIRTarget
 
-instance Crypto c => DecCBOR (MIRTarget c) where
+instance DecCBOR MIRTarget where
   decCBOR = do
     peekTokenType >>= \case
       TypeMapLen -> StakeAddressesMIR <$> decCBOR
@@ -316,12 +307,12 @@ instance Crypto c => DecCBOR (MIRTarget c) where
       TypeMapLenIndef -> StakeAddressesMIR <$> decCBOR
       _ -> SendToOppositePotMIR <$> decCBOR
 
-instance Crypto c => EncCBOR (MIRTarget c) where
+instance EncCBOR MIRTarget where
   encCBOR = \case
     StakeAddressesMIR m -> encCBOR m
     SendToOppositePotMIR c -> encCBOR c
 
-instance Crypto c => ToJSON (MIRTarget c) where
+instance ToJSON MIRTarget where
   toJSON = \case
     StakeAddressesMIR mirAddresses ->
       kindObject "StakeAddressesMIR" ["addresses" .= toJSON mirAddresses]
@@ -329,23 +320,23 @@ instance Crypto c => ToJSON (MIRTarget c) where
       kindObject "SendToOppositePotMIR" ["coin" .= toJSON c]
 
 -- | Move instantaneous rewards certificate
-data MIRCert c = MIRCert
+data MIRCert = MIRCert
   { mirPot :: !MIRPot
-  , mirRewards :: !(MIRTarget c)
+  , mirRewards :: !MIRTarget
   }
   deriving (Show, Generic, Eq, Ord, NFData)
 
-instance NoThunks (MIRCert c)
+instance NoThunks MIRCert
 
-instance Crypto c => DecCBOR (MIRCert c) where
+instance DecCBOR MIRCert where
   decCBOR =
     decodeRecordNamed "MIRCert" (const 2) (MIRCert <$> decCBOR <*> decCBOR)
 
-instance Crypto c => EncCBOR (MIRCert c) where
+instance EncCBOR MIRCert where
   encCBOR (MIRCert pot targets) =
     encodeListLen 2 <> encCBOR pot <> encCBOR targets
 
-instance Crypto c => ToJSON (MIRCert c) where
+instance ToJSON MIRCert where
   toJSON MIRCert {mirPot, mirRewards} =
     kindObject "MIRCert" $
       [ "pot" .= toJSON mirPot
@@ -354,10 +345,10 @@ instance Crypto c => ToJSON (MIRCert c) where
 
 -- | A heavyweight certificate.
 data ShelleyTxCert era
-  = ShelleyTxCertDelegCert !(ShelleyDelegCert (EraCrypto era))
-  | ShelleyTxCertPool !(PoolCert (EraCrypto era))
-  | ShelleyTxCertGenesisDeleg !(GenesisDelegCert (EraCrypto era))
-  | ShelleyTxCertMir !(MIRCert (EraCrypto era))
+  = ShelleyTxCertDelegCert !ShelleyDelegCert
+  | ShelleyTxCertPool !PoolCert
+  | ShelleyTxCertGenesisDeleg !GenesisDelegCert
+  | ShelleyTxCertMir !MIRCert
   deriving (Show, Generic, Eq, Ord, NFData)
 
 instance NoThunks (ShelleyTxCert era)
@@ -370,7 +361,6 @@ instance Era era => ToJSON (ShelleyTxCert era) where
     ShelleyTxCertMir mirCert -> toJSON mirCert
 
 upgradeShelleyTxCert ::
-  EraCrypto era1 ~ EraCrypto era2 =>
   ShelleyTxCert era1 ->
   ShelleyTxCert era2
 upgradeShelleyTxCert = \case
@@ -389,7 +379,7 @@ instance Era era => EncCBOR (ShelleyTxCert era) where
     ShelleyTxCertMir mir ->
       encodeListLen 2 <> encodeWord8 6 <> encCBOR mir
 
-encodeShelleyDelegCert :: Crypto c => ShelleyDelegCert c -> Encoding
+encodeShelleyDelegCert :: ShelleyDelegCert -> Encoding
 encodeShelleyDelegCert = \case
   ShelleyRegCert cred ->
     encodeListLen 2 <> encodeWord8 0 <> encCBOR cred
@@ -398,7 +388,7 @@ encodeShelleyDelegCert = \case
   ShelleyDelegCert cred poolId ->
     encodeListLen 3 <> encodeWord8 2 <> encCBOR cred <> encCBOR poolId
 
-encodePoolCert :: Crypto c => PoolCert c -> Encoding
+encodePoolCert :: PoolCert -> Encoding
 encodePoolCert = \case
   RegPool poolParams ->
     encodeListLen (1 + listLen poolParams)
@@ -410,7 +400,7 @@ encodePoolCert = \case
       <> encCBOR vk
       <> encCBOR epoch
 
-encodeGenesisDelegCert :: Crypto c => GenesisDelegCert c -> Encoding
+encodeGenesisDelegCert :: GenesisDelegCert -> Encoding
 encodeGenesisDelegCert (GenesisDelegCert gk kh vrf) =
   encodeListLen 4
     <> encodeWord8 5
@@ -480,16 +470,16 @@ poolTxCertDecoder = \case
   k -> invalidKey k
 {-# INLINE poolTxCertDecoder #-}
 
-data ShelleyDelegCert c
+data ShelleyDelegCert
   = -- | A stake credential registration certificate.
-    ShelleyRegCert !(StakeCredential c)
+    ShelleyRegCert !StakeCredential
   | -- | A stake credential deregistration certificate.
-    ShelleyUnRegCert !(StakeCredential c)
+    ShelleyUnRegCert !StakeCredential
   | -- | A stake delegation certificate.
-    ShelleyDelegCert !(StakeCredential c) !(KeyHash 'StakePool c)
+    ShelleyDelegCert !StakeCredential !(KeyHash 'StakePool)
   deriving (Show, Generic, Eq, Ord)
 
-instance Crypto c => ToJSON (ShelleyDelegCert c) where
+instance ToJSON ShelleyDelegCert where
   toJSON = \case
     ShelleyRegCert cred -> kindObject "RegCert" ["credential" .= toJSON cred]
     ShelleyUnRegCert cred -> kindObject "UnRegCert" ["credential" .= toJSON cred]
@@ -499,9 +489,9 @@ instance Crypto c => ToJSON (ShelleyDelegCert c) where
         , "poolId" .= toJSON poolId
         ]
 
-instance NoThunks (ShelleyDelegCert c)
+instance NoThunks ShelleyDelegCert
 
-instance NFData (ShelleyDelegCert c) where
+instance NFData ShelleyDelegCert where
   rnf = rwhnf
 
 -- | Check for 'ShelleyDelegCert' constructor
@@ -538,7 +528,7 @@ isTreasuryMIRCert x = case getMirTxCert x of
 
 getScriptWitnessShelleyTxCert ::
   ShelleyTxCert era ->
-  Maybe (ScriptHash (EraCrypto era))
+  Maybe ScriptHash
 getScriptWitnessShelleyTxCert = \case
   ShelleyTxCertDelegCert delegCert ->
     case delegCert of
@@ -547,7 +537,7 @@ getScriptWitnessShelleyTxCert = \case
       ShelleyDelegCert cred _ -> credScriptHash cred
   _ -> Nothing
 
-getVKeyWitnessShelleyTxCert :: ShelleyTxCert era -> Maybe (KeyHash 'Witness (EraCrypto era))
+getVKeyWitnessShelleyTxCert :: ShelleyTxCert era -> Maybe (KeyHash 'Witness)
 getVKeyWitnessShelleyTxCert = \case
   ShelleyTxCertDelegCert delegCert ->
     case delegCert of
@@ -574,7 +564,7 @@ shelleyTotalDepositsTxCerts ::
   (EraPParams era, Foldable f, EraTxCert era) =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
-  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  (KeyHash 'StakePool -> Bool) ->
   f (TxCert era) ->
   Coin
 shelleyTotalDepositsTxCerts pp isRegPoolRegistered certs =
@@ -596,7 +586,7 @@ shelleyTotalRefundsTxCerts ::
   (EraPParams era, Foldable f, EraTxCert era) =>
   PParams era ->
   -- | Function that can lookup current deposit, in case when the stake key is registered.
-  (StakeCredential (EraCrypto era) -> Maybe Coin) ->
+  (StakeCredential -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
 shelleyTotalRefundsTxCerts pp lookupDeposit = snd . F.foldl' accum (mempty, Coin 0)

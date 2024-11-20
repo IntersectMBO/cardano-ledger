@@ -19,7 +19,6 @@ import Cardano.Ledger.Credential (
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (
   KeyRole (..),
   pattern KeyHash,
@@ -116,7 +115,7 @@ goldenTests_MockCrypto =
   where
     keyHashHex :: IsString s => s
     keyHashHex = "01020304a1a2a3a4a5a6a7a8a9b0b1b2b3b4b5b6b7b8b9c0c1c2c3c4"
-    keyHash :: Credential kh StandardCrypto
+    keyHash :: Credential kh
     keyHash =
       KeyHashObj
         . KeyHash
@@ -124,7 +123,7 @@ goldenTests_MockCrypto =
         $ hashFromTextAsHex keyHashHex
     scriptHashHex :: IsString s => s
     scriptHashHex = "05060708b5b6b7b8d5d6d7d8d9e0e1e2e3e4e5e6e7e8e9f0f1f2f3f4"
-    scriptHash :: Credential kh StandardCrypto
+    scriptHash :: Credential kh
     scriptHash =
       ScriptHashObj
         . ScriptHash
@@ -195,16 +194,16 @@ goldenTests_ShelleyCrypto =
         "82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5"
     ]
   where
-    paymentKey :: Credential 'Payment StandardCrypto
+    paymentKey :: Credential 'Payment
     paymentKey = keyBlake2b224 $ B16.encode "1a2a3a4a5a6a7a8a"
-    stakeKey :: Credential 'Staking StandardCrypto
+    stakeKey :: Credential 'Staking
     stakeKey = keyBlake2b224 $ B16.encode "1c2c3c4c5c6c7c8c"
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) (mkTxIxPartial 2) (mkCertIxPartial 3)
     -- 32-byte verification key is expected, vk, ie., public key without chain code.
     -- The verification key undergoes Blake2b_224 hashing
     -- and should be 28-byte in the aftermath
-    keyBlake2b224 :: BS.ByteString -> Credential kh StandardCrypto
+    keyBlake2b224 :: BS.ByteString -> Credential kh
     keyBlake2b224 vk =
       KeyHashObj
         . KeyHash

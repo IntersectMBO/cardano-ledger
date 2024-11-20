@@ -51,7 +51,6 @@ import Cardano.Ledger.Binary (
   withSlice,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -81,8 +80,8 @@ data ShelleyTxSeq era = TxSeq'
   }
   deriving (Generic)
 
-instance Crypto c => EraSegWits (ShelleyEra c) where
-  type TxSeq (ShelleyEra c) = ShelleyTxSeq (ShelleyEra c)
+instance EraSegWits ShelleyEra where
+  type TxSeq ShelleyEra = ShelleyTxSeq ShelleyEra
   fromTxSeq = txSeqTxns
   toTxSeq = ShelleyTxSeq
   hashTxSeq = bbHash
@@ -177,11 +176,7 @@ instance
   listLenBound _ = 3
 
 -- | Hash a given block body
-bbHash ::
-  forall era.
-  Era era =>
-  ShelleyTxSeq era ->
-  Hash (EraCrypto era) EraIndependentBlockBody
+bbHash :: ShelleyTxSeq era -> Hash EraIndependentBlockBody
 bbHash (TxSeq' _ bodies wits md) =
   coerce $
     hashStrict
@@ -190,7 +185,7 @@ bbHash (TxSeq' _ bodies wits md) =
           <> hashPart md
       )
   where
-    hashStrict :: ByteString -> Hash (EraCrypto era) ByteString
+    hashStrict :: ByteString -> Hash ByteString
     hashStrict = Hash.hashWith id
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
@@ -251,9 +246,9 @@ slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 incrBlocks ::
   Bool ->
-  KeyHash 'StakePool c ->
-  BlocksMade c ->
-  BlocksMade c
+  KeyHash 'StakePool ->
+  BlocksMade ->
+  BlocksMade
 incrBlocks isOverlay hk b'@(BlocksMade b)
   | isOverlay = b'
   | otherwise = BlocksMade $ case hkVal of

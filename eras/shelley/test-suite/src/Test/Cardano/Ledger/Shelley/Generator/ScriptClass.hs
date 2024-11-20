@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -34,9 +33,7 @@ module Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness, hashKey)
 import Data.List (permutations)
 import qualified Data.List as List
@@ -56,8 +53,8 @@ import qualified Test.QuickCheck as QC
 ------------------------------------------------------------------------------}
 
 class EraScript era => ScriptClass era where
-  basescript :: Proxy era -> KeyHash 'Witness (EraCrypto era) -> Script era
-  isKey :: Proxy era -> Script era -> Maybe (KeyHash 'Witness (EraCrypto era))
+  basescript :: Proxy era -> KeyHash 'Witness -> Script era
+  isKey :: Proxy era -> Script era -> Maybe (KeyHash 'Witness)
   isOnePhase :: Proxy era -> Script era -> Bool
   isOnePhase _proxy _ = True -- Many Eras have only OnePhase Scripts.
   quantify :: Proxy era -> Script era -> Quantifier (Script era)
@@ -99,7 +96,7 @@ scriptKeyCombination ::
   ScriptClass era =>
   Proxy era ->
   Script era ->
-  [KeyHash 'Witness (EraCrypto era)]
+  [KeyHash 'Witness]
 scriptKeyCombination prox script = case quantify prox script of
   AllOf xs -> concatMap (scriptKeyCombination prox) xs
   AnyOf xs -> getFirst (not . null) (map (scriptKeyCombination prox) xs)
@@ -115,7 +112,7 @@ scriptKeyCombinations ::
   ScriptClass era =>
   Proxy era ->
   Script era ->
-  [[KeyHash 'Witness (EraCrypto era)]]
+  [[KeyHash 'Witness]]
 scriptKeyCombinations prox script = case quantify prox script of
   AllOf xs -> [concat $ concatMap (scriptKeyCombinations prox) xs]
   AnyOf xs -> concatMap (scriptKeyCombinations prox) xs
@@ -128,13 +125,13 @@ scriptKeyCombinations prox script = case quantify prox script of
 
 -- | Make a simple (non-combined, ie NO quantifer like All, Any, MofN, etc.) script.
 --   'basescript' is a method of ScriptClass, and is different for every Era.
-mkScriptFromKey :: forall era. ScriptClass era => KeyPair 'Witness (EraCrypto era) -> Script era
-mkScriptFromKey = (basescript (Proxy :: Proxy era) . hashKey . vKey)
+mkScriptFromKey :: forall era. ScriptClass era => KeyPair 'Witness -> Script era
+mkScriptFromKey = basescript (Proxy :: Proxy era) . hashKey . vKey
 
 mkScriptsFromKeyPair ::
   forall era.
   ScriptClass era =>
-  (KeyPair 'Payment (EraCrypto era), KeyPair 'Staking (EraCrypto era)) ->
+  (KeyPair 'Payment, KeyPair 'Staking) ->
   (Script era, Script era)
 mkScriptsFromKeyPair (k0, k1) =
   (mkScriptFromKey @era $ asWitness k0, mkScriptFromKey @era $ asWitness k1)
@@ -143,7 +140,7 @@ mkScriptsFromKeyPair (k0, k1) =
 mkScripts ::
   forall era.
   ScriptClass era =>
-  KeyPairs (EraCrypto era) ->
+  KeyPairs ->
   [(Script era, Script era)]
 mkScripts = map (mkScriptsFromKeyPair @era)
 
@@ -151,7 +148,7 @@ mkPayScriptHashMap ::
   forall era.
   ScriptClass era =>
   [(Script era, Script era)] ->
-  Map.Map (ScriptHash (EraCrypto era)) (Script era, Script era)
+  Map.Map ScriptHash (Script era, Script era)
 mkPayScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
@@ -162,7 +159,7 @@ mkStakeScriptHashMap ::
   forall era.
   ScriptClass era =>
   [(Script era, Script era)] ->
-  Map.Map (ScriptHash (EraCrypto era)) (Script era, Script era)
+  Map.Map ScriptHash (Script era, Script era)
 mkStakeScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
@@ -228,13 +225,12 @@ combinedScripts c@(Constants {numBaseScripts}) =
   mkScriptCombinations @era . take numBaseScripts $ baseScripts @era c
 
 -- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: Crypto c => Constants -> KeyPairs c
+keyPairs :: Constants -> KeyPairs
 keyPairs Constants {numKeyPairs} = mkKeyPairs <$> [1 .. numKeyPairs]
 
 mkKeyPairs ::
-  DSIGNAlgorithm (DSIGN c) =>
   Word64 ->
-  (KeyPair kr c, KeyPair kr' c)
+  (KeyPair kr, KeyPair kr')
 mkKeyPairs n =
   (mkKeyPair_ (2 * n), mkKeyPair_ (2 * n + 1))
   where

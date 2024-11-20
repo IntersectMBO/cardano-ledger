@@ -65,8 +65,7 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
-data PpupEnv era
-  = PPUPEnv SlotNo (PParams era) (GenDelegs (EraCrypto era))
+data PpupEnv era = PPUPEnv SlotNo (PParams era) GenDelegs
 
 data VotingPeriod = VoteForThisEpoch | VoteForNextEpoch
   deriving (Show, Eq, Generic)
@@ -91,7 +90,7 @@ data ShelleyPpupPredFailure era
     --  `mismatchSupplied` ~ key hashes which were a part of the update.
     --  `mismatchExpected` ~ key hashes of the genesis keys.
     NonGenesisUpdatePPUP
-      !(Mismatch 'RelSubset (Set (KeyHash 'Genesis (EraCrypto era))))
+      !(Mismatch 'RelSubset (Set (KeyHash 'Genesis)))
   | -- | An update was proposed for the wrong epoch.
     --  The first 'EpochNo' is the current epoch.
     --  The second 'EpochNo' is the epoch listed in the update.
@@ -110,9 +109,9 @@ data ShelleyPpupPredFailure era
       !ProtVer
   deriving (Show, Eq, Generic)
 
-type instance EraRuleFailure "PPUP" (ShelleyEra c) = ShelleyPpupPredFailure (ShelleyEra c)
+type instance EraRuleFailure "PPUP" ShelleyEra = ShelleyPpupPredFailure ShelleyEra
 
-instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure (ShelleyEra c)
+instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure ShelleyEra
 
 instance NoThunks (ShelleyPpupPredFailure era)
 

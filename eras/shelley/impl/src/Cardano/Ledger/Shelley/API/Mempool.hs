@@ -46,7 +46,6 @@ import Cardano.Ledger.Binary (
   natVersion,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
@@ -159,10 +158,8 @@ class
           $ res
 
 instance
-  ( EraPParams (ShelleyEra c)
-  , DSignable c (Hash c EraIndependentTxBody)
-  ) =>
-  ApplyTx (ShelleyEra c)
+  EraPParams ShelleyEra =>
+  ApplyTx ShelleyEra
 
 type MempoolEnv era = Ledger.LedgerEnv era
 

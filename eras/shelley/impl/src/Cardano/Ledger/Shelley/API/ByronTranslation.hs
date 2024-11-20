@@ -2,7 +2,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Shelley.API.ByronTranslation (
@@ -23,7 +22,6 @@ import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.Address (fromBoostrapCompactAddress, isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, TxIx (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
-import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -47,9 +45,8 @@ import Lens.Micro.Extras (view)
 -- We don't care about the type that is hashed, which will differ going from
 -- Byron to Shelley, we just use the hashes as IDs.
 translateTxIdByronToShelley ::
-  (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.TxId ->
-  TxId c
+  TxId
 translateTxIdByronToShelley =
   TxId . unsafeMakeSafeHash . hashFromShortBytesE . Hashing.abstractHashToShort
 
@@ -64,26 +61,23 @@ hashFromShortBytesE sbs =
     Nothing ->
       error $ "hashFromBytesShort called with ShortByteString of the wrong length: " <> show sbs
 
-translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> ShelleyTxOut (ShelleyEra c)
+translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> ShelleyTxOut ShelleyEra
 translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
   TxOutCompact
     (fromBoostrapCompactAddress compactAddr)
     (CompactCoin (Byron.unsafeGetLovelace amount))
 
 translateCompactTxInByronToShelley ::
-  (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.CompactTxIn ->
-  TxIn c
+  TxIn
 translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
   TxIn
     (translateTxIdByronToShelley (Byron.fromCompactTxId compactTxId))
     (TxIx ((fromIntegral :: Word16 -> Word64) idx))
 
 translateUTxOByronToShelley ::
-  forall c.
-  (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
   Byron.UTxO ->
-  UTxO (ShelleyEra c)
+  UTxO ShelleyEra
 translateUTxOByronToShelley (Byron.UTxO utxoByron) =
   UTxO $
     Map.fromList
@@ -98,22 +92,18 @@ translateUTxOByronToShelley (Byron.UTxO utxoByron) =
       ]
 
 translateToShelleyLedgerState ::
-  forall c.
-  (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
-  FromByronTranslationContext c ->
+  FromByronTranslationContext ->
   EpochNo ->
   Byron.ChainValidationState ->
-  NewEpochState (ShelleyEra c)
+  NewEpochState ShelleyEra
 translateToShelleyLedgerState transContext epochNo cvs =
   translateToShelleyLedgerStateFromUtxo transContext epochNo (Byron.cvsUtxo cvs)
 
 translateToShelleyLedgerStateFromUtxo ::
-  forall c.
-  (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
-  FromByronTranslationContext c ->
+  FromByronTranslationContext ->
   EpochNo ->
   Byron.UTxO ->
-  NewEpochState (ShelleyEra c)
+  NewEpochState ShelleyEra
 translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
   NewEpochState
     { nesEL = epochNo
@@ -132,7 +122,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
          in UTxO redeemers
     }
   where
-    pparams :: PParams (ShelleyEra c)
+    pparams :: PParams ShelleyEra
     pparams = fbtcProtocolParams transCtxt
 
     -- NOTE: we ignore the Byron delegation map because the genesis and
@@ -145,14 +135,14 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
     -- instigate the hard fork. We just have to make sure that the hard-coded
     -- Shelley genesis contains the same genesis and delegation verification
     -- keys, but hashed with the right algorithm.
-    genDelegs :: GenDelegs c
+    genDelegs :: GenDelegs
     genDelegs = GenDelegs $ fbtcGenDelegs transCtxt
 
     reserves :: Coin
     reserves =
       word64ToCoin (fbtcMaxLovelaceSupply transCtxt) <-> coinBalance utxoShelley
 
-    epochState :: EpochState (ShelleyEra c)
+    epochState :: EpochState ShelleyEra
     epochState =
       EpochState
         { esAccountState = AccountState (Coin 0) reserves
@@ -163,10 +153,10 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
         & prevPParamsEpochStateL .~ pparams
         & curPParamsEpochStateL .~ pparams
 
-    utxoShelley :: UTxO (ShelleyEra c)
+    utxoShelley :: UTxO ShelleyEra
     utxoShelley = translateUTxOByronToShelley utxoByron
 
-    ledgerState :: LedgerState (ShelleyEra c)
+    ledgerState :: LedgerState ShelleyEra
     ledgerState =
       LedgerState
         { lsUTxOState =
@@ -186,7 +176,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
               }
         }
 
-    dState :: DState (ShelleyEra c)
+    dState :: DState ShelleyEra
     dState =
       DState
         { dsUnified = UM.empty
