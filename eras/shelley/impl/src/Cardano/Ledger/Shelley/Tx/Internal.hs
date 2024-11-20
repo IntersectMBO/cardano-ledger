@@ -60,7 +60,6 @@ import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
@@ -196,10 +195,9 @@ mkBasicShelleyTx txBody =
       , strAuxiliaryData = SNothing
       }
 
-instance Crypto c => EraTx (ShelleyEra c) where
-  {-# SPECIALIZE instance EraTx (ShelleyEra StandardCrypto) #-}
+instance EraTx ShelleyEra where
 
-  type Tx (ShelleyEra c) = ShelleyTx (ShelleyEra c)
+  type Tx ShelleyEra = ShelleyTx ShelleyEra
 
   mkBasicTx = mkBasicShelleyTx
 
@@ -393,7 +391,7 @@ shelleyMinFeeTx pp tx =
 witsFromTxWitnesses ::
   EraTx era =>
   Tx era ->
-  Set (KeyHash 'Witness (EraCrypto era))
+  Set (KeyHash 'Witness)
 witsFromTxWitnesses tx =
   Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
     `Set.union` Set.map bootstrapWitKeyHash (tx ^. witsTxL . bootAddrTxWitsL)

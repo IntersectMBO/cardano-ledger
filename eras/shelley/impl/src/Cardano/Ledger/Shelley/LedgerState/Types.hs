@@ -58,7 +58,6 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (SnapShots (..), ssStakeDistrL, ssStakeMarkL)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
@@ -86,8 +85,8 @@ import Numeric.Natural (Natural)
 
 -- ==================================
 
-type RewardAccounts c =
-  Map (Credential 'Staking c) Coin
+type RewardAccounts =
+  Map (Credential 'Staking) Coin
 
 data AccountState = AccountState
   { asTreasury :: !Coin
@@ -121,8 +120,8 @@ instance NFData AccountState
 data EpochState era = EpochState
   { esAccountState :: !AccountState
   , esLState :: !(LedgerState era)
-  , esSnapshots :: !(SnapShots (EraCrypto era))
-  , esNonMyopic :: !(NonMyopic (EraCrypto era))
+  , esSnapshots :: !SnapShots
+  , esNonMyopic :: !NonMyopic
   -- ^ This field, esNonMyopic, does not appear in the formal spec
   -- and is not a part of the protocol. It is only used for providing
   -- data to the stake pool ranking calculation @getNonMyopicMemberRewards@.
@@ -219,18 +218,18 @@ toEpochStatePairs es@(EpochState _ _ _ _) =
 --   that might point to something by the time the epoch boundary is reached. When
 --   the epoch boundary is reached we 'resolve' these pointers, to see if any have
 --   become non-dangling since the time they were first used in the incremental computation.
-data IncrementalStake c = IStake
-  { credMap :: !(Map (Credential 'Staking c) (CompactForm Coin))
+data IncrementalStake = IStake
+  { credMap :: !(Map (Credential 'Staking) (CompactForm Coin))
   , ptrMap :: !(Map Ptr (CompactForm Coin))
   }
   deriving (Generic, Show, Eq, Ord, NoThunks, NFData)
 
-instance Crypto c => EncCBOR (IncrementalStake c) where
+instance EncCBOR IncrementalStake where
   encCBOR (IStake st dangle) =
     encodeListLen 2 <> encCBOR st <> encCBOR dangle
 
-instance Crypto c => DecShareCBOR (IncrementalStake c) where
-  type Share (IncrementalStake c) = Interns (Credential 'Staking c)
+instance DecShareCBOR IncrementalStake where
+  type Share IncrementalStake = Interns (Credential 'Staking)
   decShareCBOR credInterns =
     decodeRecordNamed "Stake" (const 2) $ do
       stake <- decShareCBOR (credInterns, mempty)
@@ -240,24 +239,23 @@ instance Crypto c => DecShareCBOR (IncrementalStake c) where
       ptrs <- ifDecoderVersionAtLeast (natVersion @9) dropPtrs decCBOR
       pure $ IStake stake ptrs
 
-instance Semigroup (IncrementalStake c) where
+instance Semigroup IncrementalStake where
   (IStake a b) <> (IStake c d) = IStake (Map.unionWith (<>) a c) (Map.unionWith (<>) b d)
 
-instance Monoid (IncrementalStake c) where
+instance Monoid IncrementalStake where
   mempty = IStake Map.empty Map.empty
 
-instance Data.Group.Group (IncrementalStake c) where
+instance Data.Group.Group IncrementalStake where
   invert (IStake m1 m2) = IStake (Map.map invert m1) (Map.map invert m2)
 
-instance Default (IncrementalStake c) where
+instance Default IncrementalStake where
   def = IStake Map.empty Map.empty
 
-instance Crypto c => ToJSON (IncrementalStake c) where
+instance ToJSON IncrementalStake where
   toJSON = object . toIncrementalStakePairs
   toEncoding = pairs . mconcat . toIncrementalStakePairs
 
-toIncrementalStakePairs ::
-  (KeyValue e a, Crypto c) => IncrementalStake c -> [a]
+toIncrementalStakePairs :: KeyValue e a => IncrementalStake -> [a]
 toIncrementalStakePairs iStake@(IStake _ _) =
   let IStake {..} = iStake -- guard against addition or removal of fields
    in [ "credentials" .= credMap
@@ -279,7 +277,7 @@ data UTxOState era = UTxOState
   -- ^ This field is left lazy, because we only use it for assertions
   , utxosFees :: !Coin
   , utxosGovState :: !(GovState era)
-  , utxosStakeDistr :: !(IncrementalStake (EraCrypto era))
+  , utxosStakeDistr :: !IncrementalStake
   , utxosDonation :: !Coin
   }
   deriving (Generic)
@@ -335,9 +333,7 @@ instance
   ) =>
   DecShareCBOR (UTxOState era)
   where
-  type
-    Share (UTxOState era) =
-      Interns (Credential 'Staking (EraCrypto era))
+  type Share (UTxOState era) = Interns (Credential 'Staking)
   decShareCBOR credInterns =
     decodeRecordNamed "UTxOState" (const 6) $ do
       utxosUtxo <- decShareCBOR credInterns
@@ -377,15 +373,15 @@ data NewEpochState era = NewEpochState
   -- block and transactions validation this will always be the current epoch
   -- number. However, when it comes to the TICK rule, it will be the epoch number of the
   -- previous epoch whenever we are crossing the epoch boundary.
-  , nesBprev :: !(BlocksMade (EraCrypto era))
+  , nesBprev :: !BlocksMade
   -- ^ Blocks made before current epoch
-  , nesBcur :: !(BlocksMade (EraCrypto era))
+  , nesBcur :: !BlocksMade
   -- ^ Blocks made in current epoch
   , nesEs :: !(EpochState era)
   -- ^ Epoch state
-  , nesRu :: !(StrictMaybe (PulsingRewUpdate (EraCrypto era)))
+  , nesRu :: !(StrictMaybe PulsingRewUpdate)
   -- ^ Possible reward update
-  , nesPd :: !(PoolDistr (EraCrypto era))
+  , nesPd :: !PoolDistr
   -- ^ Stake distribution within the stake pool
   , stashedAVVMAddresses :: !(StashedAVVMAddresses era)
   -- ^ AVVM addresses to be removed at the end of the Shelley era. Note that
@@ -403,7 +399,7 @@ data NewEpochState era = NewEpochState
   deriving (Generic)
 
 type family StashedAVVMAddresses era where
-  StashedAVVMAddresses (ShelleyEra c) = UTxO (ShelleyEra c)
+  StashedAVVMAddresses ShelleyEra = UTxO ShelleyEra
   StashedAVVMAddresses _ = ()
 
 deriving stock instance
@@ -476,9 +472,7 @@ instance
 
 instance
   ( Era era
-  , NoThunks (BlocksMade (EraCrypto era))
   , NoThunks (EpochState era)
-  , NoThunks (PulsingRewUpdate (EraCrypto era))
   , NoThunks (StashedAVVMAddresses era)
   ) =>
   NoThunks (NewEpochState era)
@@ -534,9 +528,7 @@ instance
   where
   type
     Share (LedgerState era) =
-      ( Interns (Credential 'Staking (EraCrypto era))
-      , Interns (KeyHash 'StakePool (EraCrypto era))
-      )
+      (Interns (Credential 'Staking), Interns (KeyHash 'StakePool))
   decSharePlusCBOR =
     decodeRecordNamedT "LedgerState" (const 2) $ do
       lsCertState <- decSharePlusCBOR
@@ -588,26 +580,26 @@ instance Default AccountState where
 -- ==========================================
 -- NewEpochState
 
-nesPdL :: Lens' (NewEpochState era) (PoolDistr (EraCrypto era))
+nesPdL :: Lens' (NewEpochState era) PoolDistr
 nesPdL = lens nesPd (\ds u -> ds {nesPd = u})
 
 {- Called nesEpochStateL elsewhere -}
 nesEsL :: Lens' (NewEpochState era) (EpochState era)
 nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
 
-unifiedL :: Lens' (NewEpochState era) (UMap (EraCrypto era))
+unifiedL :: Lens' (NewEpochState era) UMap
 unifiedL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
 
 nesELL :: Lens' (NewEpochState era) EpochNo
 nesELL = lens nesEL (\ds u -> ds {nesEL = u})
 
-nesBprevL :: Lens' (NewEpochState era) (Map (KeyHash 'StakePool (EraCrypto era)) Natural)
+nesBprevL :: Lens' (NewEpochState era) (Map (KeyHash 'StakePool) Natural)
 nesBprevL = lens (unBlocksMade . nesBprev) (\ds u -> ds {nesBprev = BlocksMade u})
 
-nesBcurL :: Lens' (NewEpochState era) (Map (KeyHash 'StakePool (EraCrypto era)) Natural)
+nesBcurL :: Lens' (NewEpochState era) (Map (KeyHash 'StakePool) Natural)
 nesBcurL = lens (unBlocksMade . nesBcur) (\ds u -> ds {nesBcur = BlocksMade u})
 
-nesRuL :: Lens' (NewEpochState era) (StrictMaybe (PulsingRewUpdate (EraCrypto era)))
+nesRuL :: Lens' (NewEpochState era) (StrictMaybe PulsingRewUpdate)
 nesRuL = lens nesRu (\ds u -> ds {nesRu = u})
 
 nesStashedAVVMAddressesL :: Lens' (NewEpochState era) (StashedAVVMAddresses era)
@@ -623,13 +615,13 @@ nesEpochStateL = lens nesEs $ \x y -> x {nesEs = y}
 esAccountStateL :: Lens' (EpochState era) AccountState
 esAccountStateL = lens esAccountState (\x y -> x {esAccountState = y})
 
-esSnapshotsL :: Lens' (EpochState era) (SnapShots (EraCrypto era))
+esSnapshotsL :: Lens' (EpochState era) SnapShots
 esSnapshotsL = lens esSnapshots (\x y -> x {esSnapshots = y})
 
 esLStateL :: Lens' (EpochState era) (LedgerState era)
 esLStateL = lens esLState (\x y -> x {esLState = y})
 
-esNonMyopicL :: Lens' (EpochState era) (NonMyopic (EraCrypto era))
+esNonMyopicL :: Lens' (EpochState era) NonMyopic
 esNonMyopicL = lens esNonMyopic (\x y -> x {esNonMyopic = y})
 
 curPParamsEpochStateL :: EraGov era => Lens' (EpochState era) (PParams era)
@@ -673,7 +665,7 @@ utxosFeesL = lens utxosFees (\x y -> x {utxosFees = y})
 utxosGovStateL :: Lens' (UTxOState era) (GovState era)
 utxosGovStateL = lens utxosGovState (\x y -> x {utxosGovState = y})
 
-utxosStakeDistrL :: Lens' (UTxOState era) (IncrementalStake (EraCrypto era))
+utxosStakeDistrL :: Lens' (UTxOState era) IncrementalStake
 utxosStakeDistrL = lens utxosStakeDistr (\x y -> x {utxosStakeDistr = y})
 
 utxosDonationL :: Lens' (UTxOState era) Coin
@@ -681,10 +673,10 @@ utxosDonationL = lens utxosDonation (\x y -> x {utxosDonation = y})
 
 -- ================ IncremetalStake ===========================
 
-credMapL :: Lens' (IncrementalStake c) (Map (Credential 'Staking c) (CompactForm Coin))
+credMapL :: Lens' IncrementalStake (Map (Credential 'Staking) (CompactForm Coin))
 credMapL = lens credMap (\x y -> x {credMap = y})
 
-ptrMapL :: Lens' (IncrementalStake c) (Map Ptr (CompactForm Coin))
+ptrMapL :: Lens' IncrementalStake (Map Ptr (CompactForm Coin))
 ptrMapL = lens ptrMap (\x y -> x {ptrMap = y})
 
 -- ====================  Compound Lenses =======================
@@ -702,30 +694,20 @@ epochStateTreasuryL :: Lens' (EpochState era) Coin
 epochStateTreasuryL = esAccountStateL . asTreasuryL
 
 epochStateIncrStakeDistrL ::
-  Lens'
-    (EpochState era)
-    (Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+  Lens' (EpochState era) (Map (Credential 'Staking) (CompactForm Coin))
 epochStateIncrStakeDistrL = esLStateL . lsUTxOStateL . utxosStakeDistrL . credMapL
 
-epochStateRegDrepL ::
-  Lens'
-    (EpochState era)
-    (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+epochStateRegDrepL :: Lens' (EpochState era) (Map (Credential 'DRepRole) DRepState)
 epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
-epochStatePoolParamsL ::
-  Lens'
-    (EpochState era)
-    (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+epochStatePoolParamsL :: Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
 epochStatePoolParamsL = esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
 
-epochStateUMapL :: Lens' (EpochState era) (UMap (EraCrypto era))
+epochStateUMapL :: Lens' (EpochState era) UMap
 epochStateUMapL = esLStateL . lsCertStateL . certDStateL . dsUnifiedL
 
 epochStateStakeDistrL ::
-  Lens'
-    (EpochState era)
-    (VMap VB VP (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+  Lens' (EpochState era) (VMap VB VP (Credential 'Staking) (CompactForm Coin))
 epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssStakeDistrL
 
 potEqualsObligation ::

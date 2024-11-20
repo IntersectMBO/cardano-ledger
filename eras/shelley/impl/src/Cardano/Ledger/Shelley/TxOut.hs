@@ -40,7 +40,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
+import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
@@ -57,14 +57,12 @@ import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 data ShelleyTxOut era = TxOutCompact
-  { txOutCompactAddr :: {-# UNPACK #-} !(CompactAddr (EraCrypto era))
+  { txOutCompactAddr :: {-# UNPACK #-} !CompactAddr
   , txOutCompactValue :: !(CompactForm (Value era))
   }
 
-instance Crypto crypto => EraTxOut (ShelleyEra crypto) where
-  {-# SPECIALIZE instance EraTxOut (ShelleyEra StandardCrypto) #-}
-
-  type TxOut (ShelleyEra crypto) = ShelleyTxOut (ShelleyEra crypto)
+instance EraTxOut ShelleyEra where
+  type TxOut ShelleyEra = ShelleyTxOut ShelleyEra
 
   mkBasicTxOut = ShelleyTxOut
 
@@ -80,8 +78,7 @@ instance Crypto crypto => EraTxOut (ShelleyEra crypto) where
 
   getMinCoinTxOut pp _ = pp ^. ppMinUTxOValueL
 
-addrEitherShelleyTxOutL ::
-  Lens' (ShelleyTxOut era) (Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era)))
+addrEitherShelleyTxOutL :: Lens' (ShelleyTxOut era) (Either Addr CompactAddr)
 addrEitherShelleyTxOutL =
   lens
     (Right . txOutCompactAddr)
@@ -109,9 +106,7 @@ valueEitherShelleyTxOutL =
 -- assume Shelley+ type address : payment addr, staking addr (same length as payment), plus 1 word overhead
 instance (Era era, HeapWords (CompactForm (Value era))) => HeapWords (ShelleyTxOut era) where
   heapWords (TxOutCompact _ vl) =
-    3
-      + heapWords (packedADDRHASH (Proxy :: Proxy era))
-      + heapWords vl
+    3 + heapWords packedADDRHASH + heapWords vl
 
 instance (Era era, Val (Value era)) => Show (ShelleyTxOut era) where
   show = show . viewCompactTxOut -- FIXME: showing TxOut as a tuple is just sad
@@ -125,7 +120,7 @@ deriving via InspectHeapNamed "TxOut" (ShelleyTxOut era) instance NoThunks (Shel
 
 pattern ShelleyTxOut ::
   (HasCallStack, Era era, Val (Value era)) =>
-  Addr (EraCrypto era) ->
+  Addr ->
   Value era ->
   ShelleyTxOut era
 pattern ShelleyTxOut addr vl <-
@@ -138,8 +133,7 @@ pattern ShelleyTxOut addr vl <-
 
 {-# COMPLETE ShelleyTxOut #-}
 
-viewCompactTxOut ::
-  (Era era, Val (Value era)) => ShelleyTxOut era -> (Addr (EraCrypto era), Value era)
+viewCompactTxOut :: Val (Value era) => ShelleyTxOut era -> (Addr, Value era)
 viewCompactTxOut TxOutCompact {txOutCompactAddr, txOutCompactValue} =
   (decompactAddr txOutCompactAddr, fromCompact txOutCompactValue)
 
@@ -156,7 +150,7 @@ instance (Era era, DecCBOR (CompactForm (Value era))) => DecCBOR (ShelleyTxOut e
       TxOutCompact cAddr <$> decCBOR
 
 instance (Era era, DecCBOR (CompactForm (Value era))) => DecShareCBOR (ShelleyTxOut era) where
-  type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
+  type Share (ShelleyTxOut era) = Interns (Credential 'Staking)
   decShareCBOR _ = decCBOR
 
 instance (Era era, EncCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut era) where
@@ -177,9 +171,9 @@ toTxOutPair (ShelleyTxOut !addr !amount) =
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords
-packedADDRHASH :: forall proxy era. Crypto (EraCrypto era) => proxy era -> ShortByteString
-packedADDRHASH _ =
+packedADDRHASH :: ShortByteString
+packedADDRHASH =
   pack $
     replicate
-      (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (ADDRHASH (EraCrypto era)))))
+      (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy ADDRHASH)))
       (1 :: Word8)
