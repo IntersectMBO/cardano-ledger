@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -10,6 +11,7 @@
 -- for the EPOCH rule
 module Test.Cardano.Ledger.Constrained.Conway.Epoch where
 
+import Control.Lens
 import qualified Data.Set as Set
 import Data.Set (Set)
 import Data.Foldable
@@ -28,7 +30,7 @@ import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.Instances
-import Cardano.Ledger.Conway.Governance (isRoot)
+import Cardano.Ledger.Conway.Governance
 
 newtype EpochExecEnv era = EpochExecEnv
   { eeeStakeDistr :: Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
@@ -86,6 +88,15 @@ enactableProposals :: Proposals era -> [GovActionState era]
 enactableProposals proposals =
   [ gact' | gact <- toList (proposalsActions proposals)
           , gact' <- withGovActionParent gact [gact]
-                      $ \ _ parent ->
-                          if isRoot parent proposals then [gact] else []
+                      $ \ _ mparent _ ->
+                          case mparent of
+                            SNothing -> [] -- TODO: this is not right!!
+                            SJust (GovPurposeId gpid')
+                              | isRoot gpid' proposals -> [gact]
+                              | otherwise              -> []
   ]
+
+isRoot :: GovActionId (EraCrypto era) -> Proposals era -> Bool
+isRoot gid (view pRootsL -> GovRelation{..}) =
+  SJust gid `elem` [getGID grPParamUpdate, getGID grHardFork, getGID grCommittee, getGID grConstitution]
+  where getGID = fmap unGovPurposeId . prRoot

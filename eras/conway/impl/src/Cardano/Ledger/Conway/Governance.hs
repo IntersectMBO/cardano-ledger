@@ -57,7 +57,6 @@ module Cardano.Ledger.Conway.Governance (
   Proposals,
   mkProposals,
   unsafeMkProposals,
-  isRoot,
   GovPurposeId (..),
   PRoot (..),
   PEdges (..),
