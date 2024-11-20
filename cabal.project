@@ -69,7 +69,6 @@ packages:
   libs/cardano-data
   libs/set-algebra
   libs/vector-map
-  libs/ImpSpec
 
   -- == Byron era ==
   -- byron-spec-chain:
