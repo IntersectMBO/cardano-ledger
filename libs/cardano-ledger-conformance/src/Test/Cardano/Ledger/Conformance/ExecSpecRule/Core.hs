@@ -21,6 +21,8 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   checkConformance,
   defaultTestConformance,
   translateWithContext,
+  ForAllExecSpecRep,
+  ForAllExecTypes,
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase)
@@ -279,7 +281,7 @@ checkConformance ctx env st sig implResTest agdaResTest = do
         dumpCbor path env "conformance_dump_env"
         dumpCbor path st "conformance_dump_st"
         dumpCbor path sig "conformance_dump_sig"
-        logDoc $ "Dumped a CBOR files to " <> ansiExpr path
+        logDoc $ "Dumped the CBOR files to " <> ansiExpr path
       Nothing ->
         logDoc $
           "Run the test again with "

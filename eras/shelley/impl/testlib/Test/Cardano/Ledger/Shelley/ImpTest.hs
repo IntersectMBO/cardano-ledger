@@ -1,12 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -15,7 +13,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -100,6 +97,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impEraStartEpochNo,
   impSetSeed,
   modifyImpInitProtVer,
+  modifyImpInitExpectLedgerRuleConformance,
 
   -- * Logging
   Doc,
@@ -286,7 +284,7 @@ import Test.Cardano.Ledger.Shelley.TreeDiff (Expr (..))
 import Test.Cardano.Slotting.Numeric ()
 import Test.ImpSpec
 import Type.Reflection (Typeable, typeOf)
-import UnliftIO.Exception (evaluateDeep)
+import UnliftIO (evaluateDeep)
 
 type ImpTestM era = ImpM (LedgerSpec era)
 
@@ -304,6 +302,7 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
             ImpTestEnv
               { iteFixup = fixupTx
               , iteCborRoundTripFailures = True
+              , iteExpectLedgerRuleConformance = \_ _ _ _ -> pure ()
               }
         , impInitState = initState
         }
@@ -631,6 +630,27 @@ modifyImpInitProtVer ver =
               .~ ProtVer ver 0
       }
 
+modifyImpInitExpectLedgerRuleConformance ::
+  forall era.
+  ShelleyEraImp era =>
+  ( Either
+      (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+      (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
+    LedgerEnv era ->
+    LedgerState era ->
+    Tx era ->
+    Expectation
+  ) ->
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+modifyImpInitExpectLedgerRuleConformance f =
+  modifyImpInit $ \impInit ->
+    impInit
+      { impInitEnv =
+          impInitEnv impInit
+            & iteExpectLedgerRuleConformanceL .~ f
+      }
+
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
   slotNo <- gets impLastTick
@@ -771,12 +791,33 @@ impWitsVKeyNeeded txBody = do
 
 data ImpTestEnv era = ImpTestEnv
   { iteFixup :: Tx era -> ImpTestM era (Tx era)
+  , iteExpectLedgerRuleConformance ::
+      Either
+        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+        (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
+      LedgerEnv era ->
+      LedgerState era ->
+      Tx era ->
+      Expectation
   , iteCborRoundTripFailures :: !Bool
   -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
   }
 
 iteFixupL :: Lens' (ImpTestEnv era) (Tx era -> ImpTestM era (Tx era))
 iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
+
+iteExpectLedgerRuleConformanceL ::
+  Lens'
+    (ImpTestEnv era)
+    ( Either
+        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+        (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
+      LedgerEnv era ->
+      LedgerState era ->
+      Tx era ->
+      Expectation
+    )
+iteExpectLedgerRuleConformanceL = lens iteExpectLedgerRuleConformance (\x y -> x {iteExpectLedgerRuleConformance = y})
 
 iteCborRoundTripFailuresL :: Lens' (ImpTestEnv era) Bool
 iteCborRoundTripFailuresL = lens iteCborRoundTripFailures (\x y -> x {iteCborRoundTripFailures = y})
@@ -1036,6 +1077,11 @@ trySubmitTx tx = do
   ImpTestState {impRootTxIn} <- get
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
   roundTripCheck <- asks iteCborRoundTripFailures
+
+  -- Check for conformance
+  asks iteExpectLedgerRuleConformance
+    >>= (\f -> liftIO $ f res lEnv (st ^. nesEsL . esLStateL) txFixed)
+
   case res of
     Left predFailures -> do
       -- Verify that produced predicate failures are ready for the node-to-client protocol

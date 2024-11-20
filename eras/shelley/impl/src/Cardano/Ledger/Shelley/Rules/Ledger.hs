@@ -19,6 +19,12 @@
 module Cardano.Ledger.Shelley.Rules.Ledger (
   ShelleyLEDGER,
   LedgerEnv (..),
+  ledgerSlotNoL,
+  ledgerEpochNoL,
+  ledgerIxL,
+  ledgerPpL,
+  ledgerAccountL,
+  ledgerMempoolL,
   ShelleyLedgerPredFailure (..),
   ShelleyLedgerEvent (..),
   Event,
@@ -118,6 +124,24 @@ data ShelleyLedgerPredFailure era
   = UtxowFailure (PredicateFailure (EraRule "UTXOW" era)) -- Subtransition Failures
   | DelegsFailure (PredicateFailure (EraRule "DELEGS" era)) -- Subtransition Failures
   deriving (Generic)
+
+ledgerSlotNoL :: Lens' (LedgerEnv era) SlotNo
+ledgerSlotNoL = lens ledgerSlotNo $ \x y -> x {ledgerSlotNo = y}
+
+ledgerEpochNoL :: Lens' (LedgerEnv era) (Maybe EpochNo)
+ledgerEpochNoL = lens ledgerEpochNo $ \x y -> x {ledgerEpochNo = y}
+
+ledgerIxL :: Lens' (LedgerEnv era) TxIx
+ledgerIxL = lens ledgerIx $ \x y -> x {ledgerIx = y}
+
+ledgerPpL :: Lens' (LedgerEnv era) (PParams era)
+ledgerPpL = lens ledgerPp $ \x y -> x {ledgerPp = y}
+
+ledgerAccountL :: Lens' (LedgerEnv era) AccountState
+ledgerAccountL = lens ledgerAccount $ \x y -> x {ledgerAccount = y}
+
+ledgerMempoolL :: Lens' (LedgerEnv era) Bool
+ledgerMempoolL = lens ledgerMempool $ \x y -> x {ledgerMempool = y}
 
 type instance EraRuleFailure "LEDGER" (ShelleyEra c) = ShelleyLedgerPredFailure (ShelleyEra c)
 

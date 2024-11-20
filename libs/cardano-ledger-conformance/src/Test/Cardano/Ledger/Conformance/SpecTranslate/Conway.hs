@@ -1,6 +1,14 @@
-module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (vkeyFromInteger, vkeyToInteger) where
+module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (
+  vkeyFromInteger,
+  vkeyToInteger,
+  ConwayTxBodyTransContext,
+) where
 
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (vkeyFromInteger, vkeyToInteger)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
+  ConwayTxBodyTransContext,
+  vkeyFromInteger,
+  vkeyToInteger,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Certs ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()

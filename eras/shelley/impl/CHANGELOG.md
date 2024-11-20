@@ -2,6 +2,13 @@
 
 ## 1.15.0.0
 
+* Add lenses for `LedgerEnv`. #4748
+  * `ledgerSlotNoL`
+  * `ledgerEpochNoL`
+  * `ledgerIxL`
+  * `ledgerPpL`
+  * `ledgerAccountL`
+  * `ledgerMempoolL`
 * Change `PoolEnv` to take `EpochNo` instead of `SlotNo`
 * Add `EpochNo` to `DelplEnv`
 * Add `Maybe EpochNo` to `LedgerEnv`
@@ -39,6 +46,9 @@
 
 ### `testlib`
 
+* Add `iteExpectLedgerRuleConformance` to `ImpTestEnv` for additionally checking conformance with ImpTests. #4748
+  * Add lens `iteExpectLedgerRuleConformanceL`.
+  * Add `modifyImpInitExpectLedgerRuleConformance`.
 * Added `tryLookupReward`
 * Switch to using `ImpSpec` package
 * Remove: `runImpTestM`, `runImpTestM_`, `evalImpTestM`, `execImpTestM`, `runImpTestGenM`, `runImpTestGenM_`, `evalImpTestGenM`, `execImpTestGenM`, `withImpState` and `withImpStateModified`.
