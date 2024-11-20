@@ -65,7 +65,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), decode, (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Orphans ()
@@ -161,11 +160,11 @@ instance NoThunks (ShelleyPParams StrictMaybe era)
 
 instance NFData (ShelleyPParams StrictMaybe era)
 
-instance Crypto c => EraPParams (ShelleyEra c) where
-  type PParamsHKD f (ShelleyEra c) = ShelleyPParams f (ShelleyEra c)
+instance EraPParams ShelleyEra where
+  type PParamsHKD f ShelleyEra = ShelleyPParams f ShelleyEra
 
-  type UpgradePParams f (ShelleyEra c) = Void
-  type DowngradePParams f (ShelleyEra c) = Void
+  type UpgradePParams f ShelleyEra = Void
+  type DowngradePParams f ShelleyEra = Void
 
   emptyPParamsIdentity = emptyShelleyPParams
   emptyPParamsStrictMaybe = emptyShelleyPParamsUpdate
@@ -356,10 +355,12 @@ instance
   where
   decCBOR = decode $ RecD Update <! From <! From
 
-data PPUpdateEnv era = PPUpdateEnv SlotNo (GenDelegs era)
+data PPUpdateEnv = PPUpdateEnv SlotNo GenDelegs
   deriving (Show, Eq, Generic)
 
-instance NoThunks (PPUpdateEnv era)
+instance NoThunks PPUpdateEnv
+
+{-# DEPRECATED PPUpdateEnv "As unused" #-}
 
 instance Era era => EncCBOR (ShelleyPParams StrictMaybe era) where
   encCBOR ppup =
@@ -505,7 +506,7 @@ shelleyCommonPParamsHKDPairs px pp =
 
 -- | Update operation for protocol parameters structure @PParams@
 newtype ProposedPPUpdates era
-  = ProposedPPUpdates (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
+  = ProposedPPUpdates (Map (KeyHash 'Genesis) (PParamsUpdate era))
   deriving (Generic, Semigroup, Monoid)
 
 deriving instance Eq (PParamsUpdate era) => Eq (ProposedPPUpdates era)
@@ -556,7 +557,6 @@ upgradeUpdate ::
   forall era.
   ( EraPParams era
   , EraPParams (PreviousEra era)
-  , EraCrypto (PreviousEra era) ~ EraCrypto era
   ) =>
   UpgradePParams StrictMaybe era ->
   Update (PreviousEra era) ->
@@ -566,7 +566,6 @@ upgradeUpdate args (Update pp epoch) = Update (upgradeProposedPPUpdates @era arg
 upgradeProposedPPUpdates ::
   ( EraPParams era
   , EraPParams (PreviousEra era)
-  , EraCrypto (PreviousEra era) ~ EraCrypto era
   ) =>
   UpgradePParams StrictMaybe era ->
   ProposedPPUpdates (PreviousEra era) ->
