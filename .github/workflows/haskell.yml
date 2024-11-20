@@ -213,7 +213,6 @@ jobs:
         - set-algebra
         - small-steps
         - vector-map
-        - ImpSpec
         ghc: ["8.10.7", "9.2.8", "9.6.6", "9.8.2", "9.10.1"]
         os: [ubuntu-latest]
       fail-fast: false
