@@ -129,18 +129,18 @@ data KeyRole
   | ColdCommitteeRole
   deriving (Show)
 
-class HasKeyRole (a :: KeyRole -> Type -> Type) where
+class HasKeyRole (a :: KeyRole -> Type) where
   -- | General coercion of key roles.
   --
   --   The presence of this function is mostly to help the user realise where they
   --   are converting key roles.
   coerceKeyRole ::
-    a r c ->
-    a r' c
+    a r ->
+    a r'
   default coerceKeyRole ::
-    Coercible (a r c) (a r' c) =>
-    a r c ->
-    a r' c
+    Coercible (a r) (a r') =>
+    a r ->
+    a r'
   coerceKeyRole = coerce
 
 -- | Use a key as a witness.
@@ -150,59 +150,47 @@ class HasKeyRole (a :: KeyRole -> Type -> Type) where
 --   explicit coercion for it.
 asWitness ::
   HasKeyRole a =>
-  a r c ->
-  a 'Witness c
+  a r ->
+  a 'Witness
 asWitness = coerceKeyRole
 
 --------------------------------------------------------------------------------
 -- Verification keys
 --------------------------------------------------------------------------------
 
-type DSignable c = DSIGN.Signable (DSIGN c)
+type DSignable = DSIGN.Signable DSIGN
 
 -- | Discriminated verification key
 --
 --   We wrap the basic `VerKeyDSIGN` in order to add the key role.
-newtype VKey (kd :: KeyRole) c = VKey {unVKey :: DSIGN.VerKeyDSIGN (DSIGN c)}
-  deriving (Generic)
+newtype VKey (kd :: KeyRole) = VKey {unVKey :: DSIGN.VerKeyDSIGN DSIGN}
+  deriving (Generic, Eq, NFData, NoThunks, DecCBOR, EncCBOR)
 
-deriving via Quiet (VKey kd c) instance Crypto c => Show (VKey kd c)
-
-deriving instance Crypto c => Eq (VKey kd c)
-
-deriving instance
-  (Crypto c, NFData (DSIGN.VerKeyDSIGN (DSIGN c))) =>
-  NFData (VKey kd c)
-
-deriving instance Crypto c => NoThunks (VKey kd c)
+deriving via Quiet (VKey kd) instance Show (VKey kd)
 
 instance HasKeyRole VKey
 
-instance (Crypto c, Typeable kd) => FromCBOR (VKey kd c) where
+instance Typeable kd => FromCBOR (VKey kd) where
   fromCBOR = VKey <$> DSIGN.decodeVerKeyDSIGN
   {-# INLINE fromCBOR #-}
 
-instance (Crypto c, Typeable kd) => ToCBOR (VKey kd c) where
+instance Typeable kd => ToCBOR (VKey kd) where
   toCBOR = DSIGN.encodeVerKeyDSIGN . unVKey
-
-deriving instance (Crypto c, Typeable kd) => DecCBOR (VKey kd c)
-
-deriving instance (Crypto c, Typeable kd) => EncCBOR (VKey kd c)
 
 -- | Produce a digital signature
 signedDSIGN ::
-  (Crypto c, DSIGN.Signable (DSIGN c) a) =>
-  DSIGN.SignKeyDSIGN (DSIGN c) ->
+  DSIGN.Signable DSIGN a =>
+  DSIGN.SignKeyDSIGN DSIGN ->
   a ->
-  SignedDSIGN c a
+  SignedDSIGN a
 signedDSIGN key a = DSIGN.signedDSIGN () a key
 
 -- | Verify a digital signature
 verifySignedDSIGN ::
-  (Crypto c, DSIGN.Signable (DSIGN c) a) =>
-  VKey kd c ->
+  DSIGN.Signable DSIGN a =>
+  VKey kd ->
   a ->
-  SignedDSIGN c a ->
+  SignedDSIGN a ->
   Bool
 verifySignedDSIGN (VKey vk) vd sigDSIGN =
   either (const False) (const True) $ DSIGN.verifySignedDSIGN () vk vd sigDSIGN
@@ -210,10 +198,9 @@ verifySignedDSIGN (VKey vk) vd sigDSIGN =
 
 -- | Hash a given signature
 hashSignature ::
-  Crypto c =>
-  SignedDSIGN c (Hash c h) ->
-  Hash c (SignedDSIGN c (Hash c h))
-hashSignature = Hash.hashWith (DSIGN.rawSerialiseSigDSIGN . coerce)
+  SignedDSIGN (Hash h) ->
+  Hash (SignedDSIGN (Hash h))
+hashSignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith DSIGN.rawSerialiseSigDSIGN sigDSIGN
 {-# INLINE hashSignature #-}
 
 --------------------------------------------------------------------------------
@@ -221,36 +208,30 @@ hashSignature = Hash.hashWith (DSIGN.rawSerialiseSigDSIGN . coerce)
 --------------------------------------------------------------------------------
 
 -- | Discriminated hash of public Key
-newtype KeyHash (r :: KeyRole) c = KeyHash
-  {unKeyHash :: Hash.Hash (ADDRHASH c) (DSIGN.VerKeyDSIGN (DSIGN c))}
+newtype KeyHash (r :: KeyRole) = KeyHash
+  {unKeyHash :: Hash.Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN)}
   deriving (Show, Eq, Ord)
-  deriving newtype (NFData, NoThunks, Generic)
-
-deriving newtype instance (Crypto c, Typeable r) => ToCBOR (KeyHash r c)
-
-deriving newtype instance (Crypto c, Typeable r) => FromCBOR (KeyHash r c)
-
-deriving newtype instance (Crypto c, Typeable r) => EncCBOR (KeyHash r c)
-
-deriving newtype instance (Crypto c, Typeable r) => DecCBOR (KeyHash r c)
-
-deriving newtype instance Crypto c => ToJSONKey (KeyHash r c)
-
-deriving newtype instance Crypto c => FromJSONKey (KeyHash r c)
-
-deriving newtype instance Crypto c => ToJSON (KeyHash r c)
-
-deriving newtype instance Crypto c => FromJSON (KeyHash r c)
-
-deriving newtype instance Crypto c => Default (KeyHash r c)
+  deriving newtype
+    ( NFData
+    , NoThunks
+    , Generic
+    , ToCBOR
+    , FromCBOR
+    , EncCBOR
+    , DecCBOR
+    , ToJSONKey
+    , FromJSONKey
+    , ToJSON
+    , FromJSON
+    , Default
+    )
 
 instance HasKeyRole KeyHash
 
 -- | Hash a given public key
 hashKey ::
-  Crypto c =>
-  VKey kd c ->
-  KeyHash kd c
+  VKey kd ->
+  KeyHash kd
 hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
 
 --------------------------------------------------------------------------------
@@ -271,21 +252,21 @@ type VRFSignable c = VRF.Signable (VRF c)
 -- TODO should this really live in here?
 --------------------------------------------------------------------------------
 
-data GenDelegPair c = GenDelegPair
-  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate c)
-  , genDelegVrfHash :: !(VRFVerKeyHash 'GenDelegVRF c)
+data GenDelegPair = GenDelegPair
+  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate)
+  , genDelegVrfHash :: !(VRFVerKeyHash 'GenDelegVRF)
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoThunks (GenDelegPair c)
+instance NoThunks GenDelegPair
 
-instance NFData (GenDelegPair c)
+instance NFData GenDelegPair
 
-instance Crypto c => EncCBOR (GenDelegPair c) where
+instance EncCBOR GenDelegPair where
   encCBOR (GenDelegPair hk vrf) =
     encodeListLen 2 <> encCBOR hk <> encCBOR vrf
 
-instance Crypto c => DecCBOR (GenDelegPair c) where
+instance DecCBOR GenDelegPair where
   decCBOR = do
     decodeRecordNamed
       "GenDelegPair"
@@ -293,27 +274,25 @@ instance Crypto c => DecCBOR (GenDelegPair c) where
       (GenDelegPair <$> decCBOR <*> decCBOR)
   {-# INLINE decCBOR #-}
 
-instance Crypto c => ToJSON (GenDelegPair c) where
+instance ToJSON GenDelegPair where
   toJSON (GenDelegPair d v) =
     Aeson.object
       [ "delegate" .= d
       , "vrf" .= v
       ]
 
-instance Crypto c => FromJSON (GenDelegPair c) where
+instance FromJSON GenDelegPair where
   parseJSON =
     Aeson.withObject "GenDelegPair" $ \obj ->
       GenDelegPair
         <$> obj .: "delegate"
         <*> obj .: "vrf"
 
-newtype GenDelegs c = GenDelegs
-  { unGenDelegs :: Map (KeyHash 'Genesis c) (GenDelegPair c)
+newtype GenDelegs = GenDelegs
+  { unGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
   }
-  deriving (Eq, EncCBOR, DecCBOR, NoThunks, NFData, Generic, FromJSON)
-  deriving (Show) via Quiet (GenDelegs c)
-
-deriving instance Crypto c => ToJSON (GenDelegs c)
+  deriving (Eq, EncCBOR, DecCBOR, NoThunks, NFData, Generic, FromJSON, ToJSON)
+  deriving (Show) via Quiet GenDelegs
 
 --------------------------------------------------------------------------------
 -- crypto-parametrised types
@@ -324,11 +303,11 @@ deriving instance Crypto c => ToJSON (GenDelegs c)
 -- provide some type aliases which unwrap the crypto parameters.
 --------------------------------------------------------------------------------
 
-type Hash c = Hash.Hash (HASH c)
+type Hash = Hash.Hash HASH
 
-type SignedDSIGN c = DSIGN.SignedDSIGN (DSIGN c)
+type SignedDSIGN = DSIGN.SignedDSIGN DSIGN
 
-type SignKeyDSIGN c = DSIGN.SignKeyDSIGN (DSIGN c)
+type SignKeyDSIGN = DSIGN.SignKeyDSIGN DSIGN
 
 type SignedKES c = KES.SignedKES (KES c)
 
@@ -348,29 +327,23 @@ data KeyRoleVRF
   | BlockIssuerVRF
 
 -- | Discriminated hash of VRF Verification Key
-newtype VRFVerKeyHash (r :: KeyRoleVRF) c = VRFVerKeyHash
-  {unVRFVerKeyHash :: Hash.Hash (HASH c) KeyRoleVRF}
+newtype VRFVerKeyHash (r :: KeyRoleVRF) = VRFVerKeyHash
+  {unVRFVerKeyHash :: Hash.Hash HASH KeyRoleVRF}
   deriving (Show, Eq, Ord)
-  deriving newtype (NFData, NoThunks, Generic)
+  deriving newtype
+    ( NFData
+    , NoThunks
+    , Generic
+    , ToCBOR
+    , FromCBOR
+    , EncCBOR
+    , DecCBOR
+    , ToJSONKey
+    , FromJSONKey
+    , ToJSON
+    , FromJSON
+    , Default
+    )
 
-deriving newtype instance (Crypto c, Typeable r) => ToCBOR (VRFVerKeyHash r c)
-
-deriving newtype instance (Crypto c, Typeable r) => FromCBOR (VRFVerKeyHash r c)
-
-deriving newtype instance (Crypto c, Typeable r) => EncCBOR (VRFVerKeyHash r c)
-
-deriving newtype instance (Crypto c, Typeable r) => DecCBOR (VRFVerKeyHash r c)
-
-deriving newtype instance Crypto c => ToJSONKey (VRFVerKeyHash r c)
-
-deriving newtype instance Crypto c => FromJSONKey (VRFVerKeyHash r c)
-
-deriving newtype instance Crypto c => ToJSON (VRFVerKeyHash r c)
-
-deriving newtype instance Crypto c => FromJSON (VRFVerKeyHash r c)
-
-deriving newtype instance Crypto c => Default (VRFVerKeyHash r c)
-
-hashVerKeyVRF ::
-  Crypto c => VerKeyVRF c -> VRFVerKeyHash (r :: KeyRoleVRF) c
+hashVerKeyVRF :: Crypto c => VerKeyVRF c -> VRFVerKeyHash (r :: KeyRoleVRF)
 hashVerKeyVRF = VRFVerKeyHash . Hash.castHash . VRF.hashVerKeyVRF

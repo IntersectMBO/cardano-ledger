@@ -35,7 +35,6 @@ module Cardano.Ledger.SafeHash (
   -- $MAKE
   HashAnnotated,
   hashAnnotated,
-  HashWithCrypto (..),
   unsafeMakeSafeHash,
 
   -- * Other operations
@@ -77,28 +76,28 @@ import NoThunks.Class (NoThunks (..))
 --     such as 'hashWithCrypto, 'hashAnnotated' and 'extractHash' which have constraints
 --     that limit their application to types which preserve their original serialization
 --     bytes.
-newtype SafeHash index = SafeHash (Hash.Hash HASH index)
+newtype SafeHash i = SafeHash (Hash.Hash HASH i)
   deriving (Show, Eq, Ord, NoThunks, NFData)
 
 deriving newtype instance
   Hash.HashAlgorithm HASH =>
-  SafeToHash (SafeHash index)
+  SafeToHash (SafeHash i)
 
 deriving newtype instance HeapWords (SafeHash i)
 
-deriving instance (Typeable index, Crypto c) => ToCBOR (SafeHash index)
+deriving instance Typeable i => ToCBOR (SafeHash i)
 
-deriving instance (Typeable index, Crypto c) => FromCBOR (SafeHash index)
+deriving instance Typeable i => FromCBOR (SafeHash i)
 
-deriving instance (Typeable index, Crypto c) => EncCBOR (SafeHash index)
+deriving instance Typeable i => EncCBOR (SafeHash i)
 
-deriving instance (Typeable index, Crypto c) => DecCBOR (SafeHash index)
+deriving instance Typeable i => DecCBOR (SafeHash i)
 
-deriving instance Crypto c => ToJSON (SafeHash index)
+deriving instance ToJSON (SafeHash i)
 
-deriving instance Crypto c => FromJSON (SafeHash index)
+deriving instance FromJSON (SafeHash i)
 
-instance Crypto c => Default (SafeHash i) where
+instance Default (SafeHash i) where
   def = unsafeMakeSafeHash def
 
 -- | Extract the hash out of a 'SafeHash'
@@ -109,7 +108,7 @@ extractHash (SafeHash h) = h
 
 -- | Don't use this except in Testing to make Arbitrary instances, etc.
 --   Defined here, only because the Constructor is in scope here.
-unsafeMakeSafeHash :: Hash.Hash HASH index -> SafeHash index
+unsafeMakeSafeHash :: Hash.Hash HASH i -> SafeHash i
 unsafeMakeSafeHash = SafeHash
 
 -- =====================================================================
@@ -132,16 +131,11 @@ class SafeToHash t where
   originalBytesSize :: t -> Int
   originalBytesSize = BS.length . originalBytes
 
-  makeHashWithExplicitProxys ::
-    Hash.HashAlgorithm HASH =>
-    Proxy c ->
-    Proxy index ->
-    t ->
-    SafeHash index
+  makeHashWithExplicitProxys :: Proxy i -> t -> SafeHash i
 
   -- | Build a @(SafeHashrypto index)@ value given to proxies (determining @i@ and @crypto@), and the
   --   value to be hashed.
-  makeHashWithExplicitProxys _ _ x = SafeHash $ Hash.castHash (Hash.hashWith originalBytes x)
+  makeHashWithExplicitProxys _ x = SafeHash $ Hash.castHash (Hash.hashWith originalBytes x)
 
 -- There are a limited number of direct instances. Everything else should come
 -- from newtype deriving.
@@ -157,7 +151,7 @@ instance SafeToHash ByteString where
 -- derive that it is SafeToHash. We can derive this instance because SafeHash is
 -- a newtype around (Hash.Hash c i) which is a primitive SafeToHash type.
 
-instance Hash.HashAlgorithm c => SafeToHash (Hash.Hash c i) where
+instance Hash.HashAlgorithm h => SafeToHash (Hash.Hash h i) where
   originalBytes = Hash.hashToBytes
 
 -- | Types that are 'SafeToHash', AND have both of the following two invariants,
@@ -169,44 +163,16 @@ instance Hash.HashAlgorithm c => SafeToHash (Hash.Hash c i) where
 --   The 'SafeToHash' and the 'HashAnnotated' classes are designed so that their
 --   instances can be easily derived (because their methods have default methods
 --   when the type is a newtype around a type that is 'SafeToHash'). For example,
---
--- @
---   newtype T era = T S
---      deriving Eq
---      deriving newtype SafeToHash -- Uses {-# LANGUAGE DerivingStrategies #-}
---
---   instance HashAnnotated (T era) Index (Crypto era)
--- @
---
--- After these declarations. One specialization of 'hashAnnotated' is
---    @(hashAnnotated :: Era e => T e -> SafeHash (Crypto e) Index)@
-class SafeToHash x => HashAnnotated x index c | x -> index c where
+class SafeToHash x => HashAnnotated x index | x -> index where
   indexProxy :: x -> Proxy index
   indexProxy _ = Proxy @index
 
   -- | Create a @('SafeHash' i crypto)@,
   -- given @(Hash.HashAlgorithm (HASH crypto))@
   -- and  @(HashAnnotated x i crypto)@ instances.
-  hashAnnotated :: Hash.HashAlgorithm HASH => x -> SafeHash index
-  hashAnnotated = makeHashWithExplicitProxys (Proxy @c) (Proxy @index)
+  hashAnnotated :: x -> SafeHash index
+  hashAnnotated = makeHashWithExplicitProxys (Proxy @index)
   {-# INLINE hashAnnotated #-}
-
--- ========================================================================
-
--- | Create @('SafeHash' index crypto)@ values, used when the type being hashed:
---   @x@ determines the @index@ tag but not the @crypto@ tag of @x@
-class SafeToHash x => HashWithCrypto x index | x -> index where
-  -- | Create a @('SafeHash' index crypto)@ value from @x@, the @proxy@ determines the crypto.
-  hashWithCrypto ::
-    forall c.
-    Hash.HashAlgorithm HASH =>
-    Proxy c ->
-    x ->
-    SafeHash index
-  hashWithCrypto proxy = makeHashWithExplicitProxys proxy (Proxy @index)
-  {-# INLINE hashWithCrypto #-}
-
--- ======================================================================
 
 -- OTHER
 

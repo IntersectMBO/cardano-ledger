@@ -51,7 +51,6 @@ where
 
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition.Extended (PredicateFailure, STS (..))
 import Data.Kind (Constraint, Type)
@@ -113,7 +112,6 @@ data ByronEra
 data VoidEra
 
 instance Era ByronEra where
-  type EraCrypto ByronEra = c
   type PreviousEra ByronEra = VoidEra
   type ProtVerLow ByronEra = 0
   type ProtVerHigh ByronEra = 1

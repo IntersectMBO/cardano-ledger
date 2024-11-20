@@ -72,7 +72,6 @@ import Cardano.Ledger.Binary (
   unlessDecoderVersionAtLeast,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Control.DeepSeq (NFData (..), deepseq)
@@ -157,7 +156,7 @@ plutusSLanguage _ = isLanguage
 
 -- | Compute a `ScriptHash` of a `Plutus` script. This function is equivalent to
 -- `Cardano.Ledger.Core.hashScript`, except it is restricted to Plutus scripts
-hashPlutusScript :: forall c l. (Crypto c, PlutusLanguage l) => Plutus l -> ScriptHash c
+hashPlutusScript :: forall l. (PlutusLanguage l) => Plutus l -> ScriptHash
 hashPlutusScript plutusScript =
   ScriptHash $
     Hash.castHash $

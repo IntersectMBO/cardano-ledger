@@ -31,7 +31,7 @@ where
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Binary.Plain (FromCBOR, ToCBOR)
-import Cardano.Ledger.Crypto (ADDRHASH, Crypto)
+import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
