@@ -432,8 +432,7 @@ instance
     pure
       AlonzoGenesis
         { agCoinsPerUTxOWord = CoinPerWord (Coin 34482)
-        , -- TODO: Replace with correct cost model.
-          agCostModels = testingCostModels [PlutusV1]
+        , agCostModels = testingCostModels [PlutusV1]
         , agPrices =
             Prices
               { prMem = 577 %! 10_000
