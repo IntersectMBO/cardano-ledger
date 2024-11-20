@@ -2,6 +2,10 @@
 
 ## 1.15.0.0
 
+* Change `PoolEnv` to take `EpochNo` instead of `SlotNo`
+* Add `EpochNo` to `DelplEnv`
+* Add `Maybe EpochNo` to `LedgerEnv`
+* Add `EpochNo` to `LedgersEnv`
 * Added `Generic`, `Eq`, `Show`, `NFData`, `EncCBOR` instances for `ShelleyLedgersEnv`
 * Remove deprecated `witsVKeyNeededGov`, `witsVKeyNeededNoGov`, `shelleyWitsVKeyNeeded` and `propWits`
 * Remove deprecated `PPUPPredFailure`, `delPlAcnt`, `prAcnt`, `votedValue`

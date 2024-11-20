@@ -204,20 +204,21 @@ bbodyTransition =
                   , mismatchExpected = bhviewBHash bhview
                   }
               )
-
-        ls' <-
-          trans @(EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bhviewSlot bhview) pp account, ls, StrictSeq.fromStrict txs)
-
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
         let hkAsStakePool = coerceKeyRole $ bhviewID bhview
             slot = bhviewSlot bhview
-        firstSlotNo <- liftSTS $ do
+        (firstSlotNo, currEpoch) <- liftSTS $ do
           ei <- asks epochInfoPure
           e <- epochInfoEpoch ei slot
-          epochInfoFirst ei e
+          firstSlot <- epochInfoFirst ei e
+          pure (firstSlot, e)
+
+        ls' <-
+          trans @(EraRule "LEDGERS" era) $
+            TRC (LedgersEnv (bhviewSlot bhview) currEpoch pp account, ls, StrictSeq.fromStrict txs)
+
         let isOverlay = isOverlaySlot firstSlotNo (pp ^. ppDG) slot
         pure $ BbodyState ls' (incrBlocks isOverlay hkAsStakePool b)
 

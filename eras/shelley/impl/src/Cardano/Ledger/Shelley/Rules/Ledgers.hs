@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Ledgers (
 )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Core
@@ -63,6 +63,7 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyLedgersEnv era = LedgersEnv
   { ledgersSlotNo :: SlotNo
+  , ledgersEpochNo :: EpochNo
   , ledgersPp :: PParams era
   , ledgersAccount :: AccountState
   }
@@ -80,11 +81,12 @@ instance
   ) =>
   EncCBOR (ShelleyLedgersEnv era)
   where
-  encCBOR x@(LedgersEnv _ _ _) =
+  encCBOR x@(LedgersEnv _ _ _ _) =
     let LedgersEnv {..} = x
      in encode $
           Rec LedgersEnv
             !> To ledgersSlotNo
+            !> To ledgersEpochNo
             !> To ledgersPp
             !> To ledgersAccount
 
@@ -188,11 +190,11 @@ ledgersTransition ::
   ) =>
   TransitionRule (ShelleyLEDGERS era)
 ledgersTransition = do
-  TRC (LedgersEnv slot pp account, ls, txwits) <- judgmentContext
+  TRC (LedgersEnv slot epochNo pp account, ls, txwits) <- judgmentContext
   foldM
     ( \ !ls' (ix, tx) ->
         trans @(EraRule "LEDGER" era) $
-          TRC (LedgerEnv slot ix pp account False, ls', tx)
+          TRC (LedgerEnv slot (Just epochNo) ix pp account False, ls', tx)
     )
     ls
     $ zip [minBound ..]

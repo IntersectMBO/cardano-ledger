@@ -58,7 +58,14 @@ testScriptPostTranslation =
               Map.singleton
                 (S.TxIn bootstrapTxId minBound)
                 (S.ShelleyTxOut addr (Val.inject (S.Coin 1)))
-          env = S.LedgerEnv (SlotNo 0) minBound emptyPParams (S.AccountState (S.Coin 0) (S.Coin 0)) False
+          env =
+            S.LedgerEnv
+              (SlotNo 0)
+              Nothing
+              minBound
+              emptyPParams
+              (S.AccountState (S.Coin 0) (S.Coin 0))
+              False
           utxoStShelley = def {S.utxosUtxo = utxo}
           utxoStAllegra = fromRight . runExcept $ translateEra @Allegra NoGenesis utxoStShelley
           txb =

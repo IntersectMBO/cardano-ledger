@@ -74,6 +74,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
+  epochFromSlotNo,
   runShelleyBase,
   testGlobals,
  )
@@ -197,8 +198,8 @@ poolTraceFromBlock chainSt block =
     certs = concatMap (toList . view certsTxBodyL . view bodyTxL)
     poolCerts = mapMaybe getPoolCertTxCert (certs txs)
     poolEnv =
-      let (LedgerEnv s _ pp _ _) = ledgerEnv
-       in PoolEnv s pp
+      let (LedgerEnv sl _ _ pp _ _) = ledgerEnv
+       in PoolEnv (epochFromSlotNo sl) pp
     poolSt0 =
       certPState (lsCertState ledgerSt0)
 
@@ -222,10 +223,10 @@ delegTraceFromBlock chainSt block =
     certs = concatMap (reverse . toList . view certsTxBodyL . view bodyTxL)
     blockCerts = filter delegCert (certs txs)
     delegEnv =
-      let (LedgerEnv s txIx pp reserves _) = ledgerEnv
+      let (LedgerEnv s _ txIx pp reserves _) = ledgerEnv
           dummyCertIx = minBound
           ptr = Ptr s txIx dummyCertIx
-       in DelegEnv s ptr reserves pp
+       in DelegEnv s (epochFromSlotNo s) ptr reserves pp
     delegSt0 =
       certDState (lsCertState ledgerSt0)
     delegCert (RegTxCert _) = True
@@ -250,7 +251,7 @@ ledgerTraceBase ::
   (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt
-  , LedgerEnv slot minBound pp_ (esAccountState nes) False
+  , LedgerEnv slot Nothing minBound pp_ (esAccountState nes) False
   , esLState nes
   , txs
   )

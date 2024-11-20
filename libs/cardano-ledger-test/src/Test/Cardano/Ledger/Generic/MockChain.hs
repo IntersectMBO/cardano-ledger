@@ -66,6 +66,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   ppTickPredicateFailure,
  )
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (reify))
+import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 -- ================================================
 
@@ -161,7 +162,8 @@ instance
         let newblocksmade = BlocksMade (Map.unionWith (+) current (Map.singleton issuer 1))
 
         newledgerState <-
-          trans @(EraRule "LEDGERS" era) $ TRC (LedgersEnv slot pparams account, ledgerState, fromStrict txs)
+          trans @(EraRule "LEDGERS" era) $
+            TRC (LedgersEnv slot (epochFromSlotNo slot) pparams account, ledgerState, fromStrict txs)
 
         let newEpochstate = epochState {esLState = newledgerState}
             newNewEpochState = nes' {nesEs = newEpochstate, nesBcur = newblocksmade}

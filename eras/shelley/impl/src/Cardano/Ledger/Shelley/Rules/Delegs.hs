@@ -29,6 +29,7 @@ module Cardano.Ledger.Shelley.Rules.Delegs (
 where
 
 import Cardano.Ledger.BaseTypes (
+  EpochNo,
   Network,
   ShelleyBase,
   TxIx,
@@ -100,6 +101,7 @@ import Validation (failureUnless)
 
 data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: !SlotNo
+  , delegsEpochNo :: !EpochNo
   , delegsIx :: !TxIx
   , delegspp :: !(PParams era)
   , delegsTx :: !(Tx era)
@@ -235,7 +237,7 @@ delegsTransition ::
   ) =>
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
-  TRC (env@(DelegsEnv slot txIx pp tx acnt), certState, certificates) <- judgmentContext
+  TRC (env@(DelegsEnv slot epochNo txIx pp tx acnt), certState, certificates) <- judgmentContext
   network <- liftSTS $ asks networkId
 
   case certificates of
@@ -257,7 +259,7 @@ delegsTransition = do
       -- transaction, therefore partial function is justified.
       let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
       trans @(EraRule "DELPL" era) $
-        TRC (DelplEnv slot ptr pp acnt, certState', txCert)
+        TRC (DelplEnv slot epochNo ptr pp acnt, certState', txCert)
 
 validateStakePoolDelegateeRegistered ::
   PState era ->

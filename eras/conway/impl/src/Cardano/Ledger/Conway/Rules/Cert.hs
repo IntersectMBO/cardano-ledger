@@ -23,7 +23,7 @@ module Cardano.Ledger.Conway.Rules.Cert (
   CertEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, SlotNo, StrictMaybe)
+import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
@@ -76,8 +76,7 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
 data CertEnv era = CertEnv
-  { ceSlotNo :: !SlotNo
-  , cePParams :: !(PParams era)
+  { cePParams :: !(PParams era)
   , ceCurrentEpoch :: !EpochNo
   , ceCurrentCommittee :: StrictMaybe (Committee era)
   , ceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
@@ -85,11 +84,10 @@ data CertEnv era = CertEnv
   deriving (Generic)
 
 instance EraPParams era => EncCBOR (CertEnv era) where
-  encCBOR x@(CertEnv _ _ _ _ _) =
+  encCBOR x@(CertEnv _ _ _ _) =
     let CertEnv {..} = x
      in encode $
           Rec CertEnv
-            !> To ceSlotNo
             !> To cePParams
             !> To ceCurrentEpoch
             !> To ceCurrentCommittee
@@ -215,7 +213,7 @@ certTransition ::
   ) =>
   TransitionRule (ConwayCERT era)
 certTransition = do
-  TRC (CertEnv slot pp currentEpoch committee committeeProposals, certState, c) <- judgmentContext
+  TRC (CertEnv pp currentEpoch committee committeeProposals, certState, c) <- judgmentContext
   let
     CertState {certPState} = certState
     pools = psStakePoolParams certPState
@@ -223,7 +221,7 @@ certTransition = do
     ConwayTxCertDeleg delegCert -> do
       trans @(EraRule "DELEG" era) $ TRC (ConwayDelegEnv pp pools, certState, delegCert)
     ConwayTxCertPool poolCert -> do
-      newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState, poolCert)
+      newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv currentEpoch pp, certPState, poolCert)
       pure $ certState {certPState = newPState}
     ConwayTxCertGov govCert -> do
       trans @(EraRule "GOVCERT" era) $

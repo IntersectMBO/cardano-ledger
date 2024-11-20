@@ -97,7 +97,7 @@ pp =
     & ppMinUTxOValueL .~ Coin 100
 
 ledgerEnv :: SlotNo -> LedgerEnv Mary
-ledgerEnv s = LedgerEnv s minBound pp (AccountState (Coin 0) (Coin 0)) False
+ledgerEnv s = LedgerEnv s Nothing minBound pp (AccountState (Coin 0) (Coin 0)) False
 
 feeEx :: Coin
 feeEx = Coin 3

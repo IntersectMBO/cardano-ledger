@@ -33,7 +33,13 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
-import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), applySTSTest, mkKeyPair, runShelleyBase)
+import Test.Cardano.Ledger.Shelley.Utils (
+  RawSeed (..),
+  applySTSTest,
+  epochFromSlotNo,
+  mkKeyPair,
+  runShelleyBase,
+ )
 import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
@@ -48,11 +54,14 @@ ignoreAllButIRWD = fmap dsIRewards
 env :: ProtVer -> AccountState -> DelegEnv ShelleyTest
 env pv acnt =
   DelegEnv
-    { slotNo = SlotNo 50
-    , ptr_ = Ptr (SlotNo 50) minBound minBound
+    { slotNo = slot
+    , curEpochNo = epochFromSlotNo slot
+    , ptr_ = Ptr slot minBound minBound
     , acnt_ = acnt
     , ppDE = emptyPParams & ppProtocolVersionL .~ pv
     }
+  where
+    slot = SlotNo 50
 
 shelleyPV :: ProtVer
 shelleyPV = ProtVer (natVersion @2) 0

@@ -3572,7 +3572,7 @@ instance Reflect era => PrettyA (ConwayGovCertEnv era) where
   prettyA = pcConwayGovCertEnv
 
 pcPoolEnv :: Reflect era => PoolEnv era -> PDoc
-pcPoolEnv (PoolEnv sn pp) = ppSexp "PoolEnv" [pcSlotNo sn, pcPParams reify pp]
+pcPoolEnv (PoolEnv en pp) = ppSexp "PoolEnv" [ppEpochNo en, pcPParams reify pp]
 
 instance forall era. Reflect era => PrettyA (PoolEnv era) where
   prettyA = pcPoolEnv
@@ -3646,7 +3646,7 @@ instance Reflect era => PrettyA (CertEnv era) where
   prettyA CertEnv {..} =
     ppRecord
       "CertEnv"
-      [ ("slot no", prettyA ceSlotNo)
+      [ ("slot no", prettyA ceCurrentEpoch)
       , ("pparams", prettyA cePParams)
       , ("currentEpoch", prettyA ceCurrentEpoch)
       ]
@@ -3664,12 +3664,11 @@ instance PrettyA x => PrettyA (Seq x) where
   prettyA x = prettyA (toList x)
 
 instance PrettyA (ConwayRules.CertsEnv era) where
-  prettyA (ConwayRules.CertsEnv _ _ slot epoch com prop) =
+  prettyA (ConwayRules.CertsEnv _ _ epoch com prop) =
     ppRecord
       "CertsEnv"
       [ ("Tx", ppString "Tx")
       , ("pparams", ppString "PParams")
-      , ("slot", pcSlotNo slot)
       , ("epoch", ppEpochNo epoch)
       , ("committee", ppStrictMaybe pcCommittee com)
       , ("proposals", ppMap pcGovPurposeId prettyA prop)

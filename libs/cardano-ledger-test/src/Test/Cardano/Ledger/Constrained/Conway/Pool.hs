@@ -60,7 +60,7 @@ poolCertSpec ::
   PoolEnv era ->
   PState era ->
   Specification fn (PoolCert (EraCrypto era))
-poolCertSpec (PoolEnv s pp) ps =
+poolCertSpec (PoolEnv e pp) ps =
   constrained $ \pc ->
     (caseOn pc)
       -- RegPool !(PoolParams c)
@@ -76,7 +76,7 @@ poolCertSpec (PoolEnv s pp) ps =
       -- RetirePool !(KeyHash 'StakePool c) !EpochNo
       ( branchW 1 $ \keyHash epochNo ->
           [ epochNo <=. lit (maxEpochNo - 1)
-          , lit (currentEpoch s) <. epochNo
+          , lit e <. epochNo
           , elem_ keyHash $ lit rpools
           ]
       )

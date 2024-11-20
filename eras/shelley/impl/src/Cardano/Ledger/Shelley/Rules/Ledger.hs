@@ -62,7 +62,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
-import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Reader (Reader)
 import Control.Monad.Trans.Reader (asks)
@@ -74,6 +74,7 @@ import Control.State.Transition (
   TRC (..),
   TransitionRule,
   judgmentContext,
+  liftSTS,
   trans,
  )
 import Data.Sequence (Seq)
@@ -87,6 +88,7 @@ import NoThunks.Class (NoThunks (..))
 
 data LedgerEnv era = LedgerEnv
   { ledgerSlotNo :: !SlotNo
+  , ledgerEpochNo :: !(Maybe EpochNo)
   , ledgerIx :: !TxIx
   , ledgerPp :: !(PParams era)
   , ledgerAccount :: !AccountState
@@ -98,14 +100,15 @@ deriving instance Show (PParams era) => Show (LedgerEnv era)
 deriving instance Eq (PParams era) => Eq (LedgerEnv era)
 
 instance NFData (PParams era) => NFData (LedgerEnv era) where
-  rnf (LedgerEnv _slotNo _ix pp _account _mempool) = rnf pp
+  rnf (LedgerEnv _slotNo _ _ix pp _account _mempool) = rnf pp
 
 instance EraPParams era => EncCBOR (LedgerEnv era) where
-  encCBOR env@(LedgerEnv _ _ _ _ _) =
+  encCBOR env@(LedgerEnv _ _ _ _ _ _) =
     let LedgerEnv {..} = env
      in encode $
           Rec LedgerEnv
             !> To ledgerSlotNo
+            !> To ledgerEpochNo
             !> To ledgerIx
             !> To ledgerPp
             !> To ledgerAccount
@@ -268,6 +271,7 @@ instance
 ledgerTransition ::
   forall era.
   ( EraTx era
+  , STS (ShelleyLEDGER era)
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Environment (EraRule "DELEGS" era) ~ DelegsEnv era
   , State (EraRule "DELEGS" era) ~ CertState era
@@ -279,11 +283,17 @@ ledgerTransition ::
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account _, LedgerState utxoSt certState, tx) <- judgmentContext
+  TRC (LedgerEnv slot mbEpochNo txIx pp account _, LedgerState utxoSt certState, tx) <-
+    judgmentContext
+  epochNo <- case mbEpochNo of
+    Nothing -> liftSTS $ do
+      ei <- asks epochInfoPure
+      epochInfoEpoch ei slot
+    Just e -> pure e
   certState' <-
     trans @(EraRule "DELEGS" era) $
       TRC
-        ( DelegsEnv slot txIx pp tx account
+        ( DelegsEnv slot epochNo txIx pp tx account
         , certState
         , StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL
         )
@@ -330,7 +340,7 @@ renderDepositEqualsObligationViolation ::
   AssertionViolation t ->
   String
 renderDepositEqualsObligationViolation
-  AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ pp _ _, _, tx), avState} =
+  AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ _ pp _ _, _, tx), avState} =
     case avState of
       Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
       Just lstate ->

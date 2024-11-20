@@ -382,7 +382,11 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (le@(LedgerEnv slot _txIx pp account mempool), ls@(LedgerState utxoState certState), tx) <-
+  TRC
+    ( le@(LedgerEnv slot mbCurrentEpoch _txIx pp account mempool)
+      , ls@(LedgerState utxoState certState)
+      , tx
+      ) <-
     judgmentContext
 
   when mempool $
@@ -390,9 +394,11 @@ ledgerTransition = do
       trans @(EraRule "MEMPOOL" era) $
         TRC (le, ls, tx)
 
-  currentEpoch <- liftSTS $ do
-    ei <- asks epochInfoPure
-    epochInfoEpoch ei slot
+  currentEpoch <- case mbCurrentEpoch of
+    Nothing -> liftSTS $ do
+      ei <- asks epochInfoPure
+      epochInfoEpoch ei slot
+    Just e -> pure e
 
   (utxoState', certStateAfterCERTS) <-
     if tx ^. isValidTxL == IsValid True
@@ -446,7 +452,7 @@ ledgerTransition = do
         certStateAfterCERTS <-
           trans @(EraRule "CERTS" era) $
             TRC
-              ( CertsEnv tx pp slot currentEpoch committee committeeProposals
+              ( CertsEnv tx pp currentEpoch committee committeeProposals
               , certState
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )

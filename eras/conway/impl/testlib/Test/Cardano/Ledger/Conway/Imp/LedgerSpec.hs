@@ -226,10 +226,11 @@ spec = do
       let ls = nes ^. nesEsL . esLStateL
           pp = nes ^. nesEsL . curPParamsEpochStateL
           account = nes ^. nesEsL . esAccountStateL
+          epochNo = nes ^. nesELL
       tx <- fixupTx $ mkBasicTx mkBasicTxBody
       Right (_, evs) <-
         tryRunImpRule @"LEDGERS"
-          (LedgersEnv slotNo pp account)
+          (LedgersEnv slotNo epochNo pp account)
           ls
           (Seq.singleton tx)
       let mempoolEvents = [ev | LedgerEvent ev@(MempoolEvent (ConwayMempoolEvent _)) <- evs]
