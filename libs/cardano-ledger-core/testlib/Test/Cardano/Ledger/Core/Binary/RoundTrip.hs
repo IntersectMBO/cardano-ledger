@@ -211,14 +211,14 @@ roundTripCoreEraTypesSpec = do
     roundTripEraSpec @era @(TxCert era)
     roundTripEraSpec @era @(PParams era)
     roundTripEraSpec @era @(PParamsUpdate era)
-    roundTripAnnEraSpec @era @(BootstrapWitness (EraCrypto era))
     roundTripAnnEraSpec @era @(Script era)
     roundTripAnnEraSpec @era @(TxAuxData era)
     roundTripAnnEraSpec @era @(TxWits era)
     roundTripAnnEraSpec @era @(TxBody era)
     roundTripAnnEraSpec @era @(Tx era)
   describe "Core State Types" $ do
-    roundTripShareEraSpec @era @(SnapShots (EraCrypto era))
+    roundTripAnnEraSpec @era @BootstrapWitness
+    roundTripShareEraSpec @era @SnapShots
     roundTripShareEraTypeSpec @era @DState
     roundTripShareEraTypeSpec @era @PState
     roundTripShareEraTypeSpec @era @CommitteeState

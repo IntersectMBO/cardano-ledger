@@ -24,7 +24,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
@@ -69,9 +68,9 @@ instance DecCBOR RewardType where
 -- * the stake pool ID associated with the reward
 --
 -- * the number of Lovelace in the reward
-data Reward c = Reward
+data Reward = Reward
   { rewardType :: !RewardType
-  , rewardPool :: !(KeyHash 'StakePool c)
+  , rewardPool :: !(KeyHash 'StakePool)
   , rewardAmount :: !Coin
   }
   deriving (Eq, Show, Generic)
@@ -80,28 +79,28 @@ data Reward c = Reward
 --  with the Allegra reward aggregation, as given by the
 --  function 'aggregateRewards' so that 'Set.findMax' returns
 --  the expected value.
-instance Ord (Reward c) where
+instance Ord Reward where
   compare (Reward MemberReward _ _) (Reward LeaderReward _ _) = GT
   compare (Reward LeaderReward _ _) (Reward MemberReward _ _) = LT
   compare (Reward _ pool1 _) (Reward _ pool2 _) = compare pool1 pool2
 
-instance NoThunks (Reward c)
+instance NoThunks Reward
 
-instance NFData (Reward c)
+instance NFData Reward
 
-instance Crypto c => EncCBOR (Reward c) where
+instance EncCBOR Reward where
   encCBOR (Reward rt pool c) =
     encode $ Rec Reward !> To rt !> To pool !> To c
 
-instance Crypto c => DecCBOR (Reward c) where
+instance DecCBOR Reward where
   decCBOR =
     decode $ RecD Reward <! From <! From <! From
 
-instance Crypto c => ToJSON (Reward c) where
+instance ToJSON Reward where
   toJSON = object . toRewardPair
   toEncoding = pairs . mconcat . toRewardPair
 
-toRewardPair :: (KeyValue e a, Crypto c) => Reward c -> [a]
+toRewardPair :: KeyValue e a => Reward -> [a]
 toRewardPair r@(Reward _ _ _) =
   let Reward {..} = r
    in [ "rewardType" .= rewardType

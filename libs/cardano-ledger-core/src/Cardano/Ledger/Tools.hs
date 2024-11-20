@@ -116,7 +116,7 @@ calcMinFeeTxNativeScriptWits ::
   -- impossible to know how many of these is required without knowing the actual witnesses
   -- supplied and the time when the transaction will be submitted. Therefore we put this
   -- burden on the user.
-  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
+  Set.Set (KeyHash 'Witness) ->
   -- | The required minimum fee.
   Coin
 calcMinFeeTxNativeScriptWits utxo pp tx nativeScriptsKeyWitsHashes =
@@ -169,7 +169,7 @@ calcMinFeeTxInternal ::
   -- | Number of KeyHash witnesses that will be supplied for native scripts
   Int ->
   -- | KeyHash witnesses that will be supplied for native scripts
-  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
+  Set.Set (KeyHash 'Witness) ->
   Coin
 calcMinFeeTxInternal utxo pp tx extraKeyWitsCount nativeScriptsKeyWitsHashes =
   setMinFeeTxUtxo pp tx' utxo ^. bodyTxL . feeTxBodyL
@@ -250,7 +250,7 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
     & (witsTxL . addrTxWitsL <>~ dummyKeyWits)
     & (witsTxL . bootAddrTxWitsL <>~ dummyByronKeyWits)
   where
-    dsign :: Proxy (DSIGN (EraCrypto era))
+    dsign :: Proxy DSIGN
     dsign = Proxy
     version = pvMajor (pp ^. ppProtocolVersionL)
     -- We need to make sure that dummies are unique, since they'll be placed into a Set
@@ -273,9 +273,9 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
     chainCode = ChainCode $ BS.replicate 32 0
 
     mkDummyByronKeyWit ::
-      VKey 'Witness (EraCrypto era) ->
+      VKey 'Witness ->
       Byron.Attributes Byron.AddrAttributes ->
-      BootstrapWitness (EraCrypto era)
+      BootstrapWitness
     mkDummyByronKeyWit key =
       BootstrapWitness key dummySig chainCode . serialize' byronProtVer
     dummyByronKeyWits =
