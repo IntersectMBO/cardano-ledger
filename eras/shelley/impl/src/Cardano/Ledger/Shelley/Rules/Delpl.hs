@@ -71,14 +71,14 @@ data ShelleyDelplPredFailure era
   | DelegFailure (PredicateFailure (EraRule "DELEG" era)) -- Subtransition Failures
   deriving (Generic)
 
-type instance EraRuleFailure "DELPL" (ShelleyEra c) = ShelleyDelplPredFailure (ShelleyEra c)
+type instance EraRuleFailure "DELPL" ShelleyEra = ShelleyDelplPredFailure ShelleyEra
 
-instance InjectRuleFailure "DELPL" ShelleyDelplPredFailure (ShelleyEra c)
+instance InjectRuleFailure "DELPL" ShelleyDelplPredFailure ShelleyEra
 
-instance InjectRuleFailure "DELPL" ShelleyPoolPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "DELPL" ShelleyPoolPredFailure ShelleyEra where
   injectFailure = PoolFailure
 
-instance InjectRuleFailure "DELPL" ShelleyDelegPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "DELPL" ShelleyDelegPredFailure ShelleyEra where
   injectFailure = DelegFailure
 
 data ShelleyDelplEvent era
@@ -133,7 +133,7 @@ instance
   , Signal (EraRule "DELEG" era) ~ TxCert era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
+  , Signal (EraRule "POOL" era) ~ PoolCert
   , TxCert era ~ ShelleyTxCert era
   ) =>
   STS (ShelleyDELPL era)
@@ -195,7 +195,7 @@ delplTransition ::
   , Signal (EraRule "DELEG" era) ~ TxCert era
   , Embed (EraRule "POOL" era) (ShelleyDELPL era)
   , Environment (EraRule "POOL" era) ~ PoolEnv era
-  , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
+  , Signal (EraRule "POOL" era) ~ PoolCert
   , TxCert era ~ ShelleyTxCert era
   ) =>
   TransitionRule (ShelleyDELPL era)

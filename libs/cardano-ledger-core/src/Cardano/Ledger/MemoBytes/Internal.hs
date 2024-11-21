@@ -155,7 +155,7 @@ shorten x = toShort (toStrict x)
 type Mem t era = Annotator (MemoBytes t era)
 
 -- | Smart constructor
-mkMemoBytes :: forall era t. Era era => t era -> BSL.ByteString -> MemoBytes t era
+mkMemoBytes :: forall era t. t era -> BSL.ByteString -> MemoBytes t era
 mkMemoBytes t bsl =
   Memo'
     t
@@ -220,7 +220,7 @@ class Memoized t where
 mkMemoized :: forall era t. (Era era, EncCBOR (RawType t era), Memoized t) => RawType t era -> t era
 mkMemoized rawType = wrapMemoBytes (mkMemoBytes rawType (serialize (eraProtVerLow @era) rawType))
 
-decodeMemoized :: Era era => Decoder s (t era) -> Decoder s (MemoBytes t era)
+decodeMemoized :: Decoder s (t era) -> Decoder s (MemoBytes t era)
 decodeMemoized rawTypeDecoder = do
   Annotated rawType lazyBytes <- decodeAnnotated rawTypeDecoder
   pure $ mkMemoBytes rawType lazyBytes

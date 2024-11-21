@@ -33,7 +33,6 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (VerKeyDSIGN))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -47,7 +46,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum, encodeListLen)
 import Cardano.Ledger.CertState (CertState, certDState, dsGenDelegs)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Keys (
   DSignable,
   GenDelegPair (..),
@@ -121,36 +119,36 @@ import Validation
 
 data ShelleyUtxowPredFailure era
   = InvalidWitnessesUTXOW
-      ![VKey 'Witness (EraCrypto era)]
+      ![VKey 'Witness]
   | -- witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
-      !(Set (KeyHash 'Witness (EraCrypto era))) -- witnesses which were needed and not supplied
+      !(Set (KeyHash 'Witness)) -- witnesses which were needed and not supplied
   | MissingScriptWitnessesUTXOW
-      !(Set (ScriptHash (EraCrypto era))) -- missing scripts
+      !(Set ScriptHash) -- missing scripts
   | ScriptWitnessNotValidatingUTXOW
-      !(Set (ScriptHash (EraCrypto era))) -- failed scripts
+      !(Set ScriptHash) -- failed scripts
   | UtxoFailure (PredicateFailure (EraRule "UTXO" era))
-  | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness (EraCrypto era)))
+  | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness))
   | MissingTxBodyMetadataHash
-      !(AuxiliaryDataHash (EraCrypto era)) -- hash of the full metadata
+      !AuxiliaryDataHash -- hash of the full metadata
   | MissingTxMetadata
-      !(AuxiliaryDataHash (EraCrypto era)) -- hash of the metadata included in the transaction body
+      !AuxiliaryDataHash -- hash of the metadata included in the transaction body
   | ConflictingMetadataHash
-      !(Mismatch 'RelEQ (AuxiliaryDataHash (EraCrypto era)))
+      !(Mismatch 'RelEQ AuxiliaryDataHash)
   | -- Contains out of range values (strings too long)
     InvalidMetadata
   | ExtraneousScriptWitnessesUTXOW
-      !(Set (ScriptHash (EraCrypto era))) -- extraneous scripts
+      !(Set ScriptHash) -- extraneous scripts
   deriving (Generic)
 
-type instance EraRuleFailure "UTXOW" (ShelleyEra c) = ShelleyUtxowPredFailure (ShelleyEra c)
+type instance EraRuleFailure "UTXOW" ShelleyEra = ShelleyUtxowPredFailure ShelleyEra
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (ShelleyEra c)
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure ShelleyEra
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure ShelleyEra where
   injectFailure = UtxoFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure ShelleyEra where
   injectFailure = UtxoFailure . injectFailure
 
 newtype ShelleyUtxowEvent era
@@ -169,7 +167,6 @@ instance
 
 instance
   ( NFData (PredicateFailure (EraRule "UTXO" era))
-  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
   , Era era
   ) =>
   NFData (ShelleyUtxowPredFailure era)
@@ -303,7 +300,7 @@ transitionRulesUTXOW ::
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , STS (EraRule "UTXOW" era)
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , DSignable (Hash EraIndependentTxBody)
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 transitionRulesUTXOW = do
@@ -361,7 +358,7 @@ instance
   , EraUTxO era
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , DSignable (Hash EraIndependentTxBody)
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ShelleyUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -369,7 +366,7 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , EraRule "UTXOW" era ~ ShelleyUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , DSignable (Hash EraIndependentTxBody)
   , EraGov era
   ) =>
   STS (ShelleyUTXOW era)
@@ -414,7 +411,7 @@ validateMissingScripts (ShelleyScriptsNeeded sNeeded) scriptsprovided =
 -- | Determine if the UTxO witnesses in a given transaction are correct.
 validateVerifiedWits ::
   ( EraTx era
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , DSignable (Hash EraIndependentTxBody)
   ) =>
   Tx era ->
   Test (ShelleyUtxowPredFailure era)
@@ -443,7 +440,7 @@ validateVerifiedWits tx =
 validateNeededWitnesses ::
   EraUTxO era =>
   -- | Provided witness
-  Set (KeyHash 'Witness (EraCrypto era)) ->
+  Set (KeyHash 'Witness) ->
   CertState era ->
   UTxO era ->
   TxBody era ->
@@ -483,9 +480,9 @@ validateMIRInsufficientGenesisSigs ::
   ( EraTx era
   , ShelleyEraTxBody era
   ) =>
-  GenDelegs (EraCrypto era) ->
+  GenDelegs ->
   Word64 ->
-  Set (KeyHash 'Witness (EraCrypto era)) ->
+  Set (KeyHash 'Witness) ->
   Tx era ->
   Test (ShelleyUtxowPredFailure era)
 validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKeyHashes tx =

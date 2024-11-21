@@ -43,7 +43,7 @@ import Lens.Micro.Extras (view)
 -- | This function returns the coin balance of a given pot, either the
 -- reserves or the treasury, after the instantaneous rewards and pot
 -- transfers are accounted for.
-availableAfterMIR :: MIRPot -> AccountState -> InstantaneousRewards c -> Coin
+availableAfterMIR :: MIRPot -> AccountState -> InstantaneousRewards -> Coin
 availableAfterMIR ReservesMIR as ir =
   asReserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
 availableAfterMIR TreasuryMIR as ir =
@@ -54,7 +54,7 @@ availableAfterMIR TreasuryMIR as ir =
 
 getGKeys ::
   NewEpochState era ->
-  Set (KeyHash 'Genesis (EraCrypto era))
+  Set (KeyHash 'Genesis)
 getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
@@ -66,7 +66,7 @@ getGKeys nes = Map.keysSet genDelegs
 genesisState ::
   forall era.
   EraGov era =>
-  Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
+  Map (KeyHash 'Genesis) GenDelegPair ->
   UTxO era ->
   LedgerState era
 genesisState genDelegs0 utxo0 =
@@ -86,7 +86,7 @@ genesisState genDelegs0 utxo0 =
       DState
         { dsUnified = UM.empty
         , dsFutureGenDelegs = Map.empty
-        , dsGenDelegs = GenDelegs genDelegs0 :: GenDelegs (EraCrypto era)
+        , dsGenDelegs = GenDelegs genDelegs0 :: GenDelegs
         , dsIRewards = def
         }
 
@@ -103,7 +103,7 @@ genesisState genDelegs0 utxo0 =
 updateNES ::
   EraGov era =>
   NewEpochState era ->
-  BlocksMade (EraCrypto era) ->
+  BlocksMade ->
   LedgerState era ->
   NewEpochState era
 updateNES

@@ -21,7 +21,6 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
-import Cardano.Ledger.Core (EraCrypto)
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -68,11 +67,11 @@ data ShelleyMirPredFailure era
 instance NFData (ShelleyMirPredFailure era)
 
 data ShelleyMirEvent era
-  = MirTransfer (InstantaneousRewards (EraCrypto era))
+  = MirTransfer InstantaneousRewards
   | -- | We were not able to perform an MIR transfer due to insufficient funds.
     --   This event gives the rewards we wanted to pay, plus the available
     --   reserves and treasury.
-    NoMirTransfer (InstantaneousRewards (EraCrypto era)) Coin Coin
+    NoMirTransfer InstantaneousRewards Coin Coin
   deriving (Generic)
 
 deriving instance Eq (ShelleyMirEvent era)
@@ -128,13 +127,13 @@ mirTransition = do
       rewards' = rewards ds
       reserves = asReserves acnt
       treasury = asTreasury acnt
-      irwdR = rewards' UM.◁ iRReserves (dsIRewards ds) :: RewardAccounts (EraCrypto era)
-      irwdT = rewards' UM.◁ iRTreasury (dsIRewards ds) :: RewardAccounts (EraCrypto era)
+      irwdR = rewards' UM.◁ iRReserves (dsIRewards ds) :: RewardAccounts
+      irwdT = rewards' UM.◁ iRTreasury (dsIRewards ds) :: RewardAccounts
       totR = fold irwdR
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` deltaReserves (dsIRewards ds)
       availableTreasury = treasury `addDeltaCoin` deltaTreasury (dsIRewards ds)
-      update = eval (irwdR ∪+ irwdT) :: RewardAccounts (EraCrypto era)
+      update = eval (irwdR ∪+ irwdT) :: RewardAccounts
 
   if totR <= availableReserves && totT <= availableTreasury
     then do
@@ -180,5 +179,5 @@ mirTransition = do
           & prevPParamsEpochStateL .~ pr
           & curPParamsEpochStateL .~ pp
 
-emptyInstantaneousRewards :: InstantaneousRewards c
+emptyInstantaneousRewards :: InstantaneousRewards
 emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty mempty mempty

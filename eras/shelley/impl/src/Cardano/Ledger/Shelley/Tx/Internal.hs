@@ -196,7 +196,6 @@ mkBasicShelleyTx txBody =
       }
 
 instance EraTx ShelleyEra where
-
   type Tx ShelleyEra = ShelleyTx ShelleyEra
 
   mkBasicTx = mkBasicShelleyTx
@@ -340,7 +339,6 @@ deriving via
 --
 --   The only intended use case for this is for segregated witness.
 unsafeConstructTxWithBytes ::
-  Era era =>
   TxBody era ->
   TxWits era ->
   StrictMaybe (TxAuxData era) ->

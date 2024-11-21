@@ -45,7 +45,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..))
 import Cardano.Ledger.Shelley.Core
@@ -92,7 +92,7 @@ instance NFData (PParams era) => NFData (PoolEnv era)
 
 data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
-      !(KeyHash 'StakePool (EraCrypto era)) -- KeyHash which cannot be retired since it is not registered
+      !(KeyHash 'StakePool) -- KeyHash which cannot be retired since it is not registered
   | StakePoolRetirementWrongEpochPOOL
       !(Mismatch 'RelGT EpochNo)
       !(Mismatch 'RelLTEQ EpochNo)
@@ -100,15 +100,15 @@ data ShelleyPoolPredFailure era
       !(Mismatch 'RelGTEQ Coin)
   | WrongNetworkPOOL
       !(Mismatch 'RelEQ Network)
-      !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
+      !(KeyHash 'StakePool) -- Stake Pool ID
   | PoolMedataHashTooBig
-      !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
+      !(KeyHash 'StakePool) -- Stake Pool ID
       !Int -- Size of the metadata hash
   deriving (Eq, Show, Generic)
 
-type instance EraRuleFailure "POOL" (ShelleyEra c) = ShelleyPoolPredFailure (ShelleyEra c)
+type instance EraRuleFailure "POOL" ShelleyEra = ShelleyPoolPredFailure ShelleyEra
 
-instance InjectRuleFailure "POOL" ShelleyPoolPredFailure (ShelleyEra c)
+instance InjectRuleFailure "POOL" ShelleyPoolPredFailure ShelleyEra
 
 instance NoThunks (ShelleyPoolPredFailure era)
 
@@ -117,7 +117,7 @@ instance NFData (ShelleyPoolPredFailure era)
 instance (ShelleyEraTxCert era, EraPParams era) => STS (ShelleyPOOL era) where
   type State (ShelleyPOOL era) = PState era
 
-  type Signal (ShelleyPOOL era) = PoolCert (EraCrypto era)
+  type Signal (ShelleyPOOL era) = PoolCert
 
   type Environment (ShelleyPOOL era) = PoolEnv era
 
@@ -128,8 +128,8 @@ instance (ShelleyEraTxCert era, EraPParams era) => STS (ShelleyPOOL era) where
   transitionRules = [poolDelegationTransition]
 
 data PoolEvent era
-  = RegisterPool (KeyHash 'StakePool (EraCrypto era))
-  | ReregisterPool (KeyHash 'StakePool (EraCrypto era))
+  = RegisterPool (KeyHash 'StakePool)
+  | ReregisterPool (KeyHash 'StakePool)
   deriving (Generic, Eq)
 
 instance NFData (PoolEvent era)
@@ -187,7 +187,7 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
 poolDelegationTransition ::
   forall (ledger :: Type -> Type) era.
   ( EraPParams era
-  , Signal (ledger era) ~ PoolCert (EraCrypto era)
+  , Signal (ledger era) ~ PoolCert
   , Environment (ledger era) ~ PoolEnv era
   , State (ledger era) ~ PState era
   , STS (ledger era)
@@ -222,7 +222,7 @@ poolDelegationTransition = do
         forM_ ppMetadata $ \pmd ->
           let s = BS.length (pmHash pmd)
            in s
-                <= fromIntegral (sizeHash ([] @(CC.HASH (EraCrypto era))))
+                <= fromIntegral (sizeHash ([] @CC.HASH))
                   ?! PoolMedataHashTooBig ppId s
 
       let minPoolCost = pp ^. ppMinPoolCostL

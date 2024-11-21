@@ -94,34 +94,34 @@ newtype ShelleyLedgersPredFailure era
   = LedgerFailure (PredicateFailure (EraRule "LEDGER" era)) -- Subtransition Failures
   deriving (Generic)
 
-type instance EraRuleFailure "LEDGERS" (ShelleyEra c) = ShelleyLedgersPredFailure (ShelleyEra c)
+type instance EraRuleFailure "LEDGERS" ShelleyEra = ShelleyLedgersPredFailure ShelleyEra
 
-type instance EraRuleEvent "LEDGERS" (ShelleyEra c) = ShelleyLedgersEvent (ShelleyEra c)
+type instance EraRuleEvent "LEDGERS" ShelleyEra = ShelleyLedgersEvent ShelleyEra
 
-instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure (ShelleyEra c)
+instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure ShelleyEra
 
-instance InjectRuleFailure "LEDGERS" ShelleyLedgerPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyLedgerPredFailure ShelleyEra where
   injectFailure = LedgerFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure ShelleyEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyUtxoPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyUtxoPredFailure ShelleyEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyPpupPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyPpupPredFailure ShelleyEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelegsPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelegsPredFailure ShelleyEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelplPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelplPredFailure ShelleyEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure ShelleyEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelegPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelegPredFailure ShelleyEra where
   injectFailure = LedgerFailure . injectFailure
 
 newtype ShelleyLedgersEvent era
@@ -167,7 +167,7 @@ instance
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Signal (EraRule "LEDGER" era) ~ Tx era
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , DSignable (Hash EraIndependentTxBody)
   , Default (LedgerState era)
   ) =>
   STS (ShelleyLEDGERS era)

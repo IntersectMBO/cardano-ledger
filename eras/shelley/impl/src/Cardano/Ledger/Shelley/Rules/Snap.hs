@@ -63,7 +63,7 @@ instance NoThunks (ShelleySnapPredFailure era)
 
 newtype SnapEvent era
   = StakeDistEvent
-      (Map (Credential 'Staking (EraCrypto era)) (Coin, KeyHash 'StakePool (EraCrypto era)))
+      (Map (Credential 'Staking) (Coin, KeyHash 'StakePool))
   deriving (Generic)
 
 deriving instance Eq (SnapEvent era)
@@ -73,7 +73,7 @@ instance NFData (SnapEvent era)
 data SnapEnv era = SnapEnv !(LedgerState era) !(PParams era)
 
 instance EraTxOut era => STS (ShelleySNAP era) where
-  type State (ShelleySNAP era) = SnapShots (EraCrypto era)
+  type State (ShelleySNAP era) = SnapShots
   type Signal (ShelleySNAP era) = ()
   type Environment (ShelleySNAP era) = SnapEnv era
   type BaseM (ShelleySNAP era) = ShelleyBase
@@ -102,16 +102,16 @@ snapTransition = do
       istakeSnap = incrementalStakeDistr pp incStake dstate pstate
 
   tellEvent $
-    let stMap :: Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
+    let stMap :: Map (Credential 'Staking) (CompactForm Coin)
         stMap = VMap.toMap . unStake $ ssStake istakeSnap
 
-        stakeCoinMap :: Map (Credential 'Staking (EraCrypto era)) Coin
+        stakeCoinMap :: Map (Credential 'Staking) Coin
         stakeCoinMap = fmap fromCompact stMap
 
-        stakePoolMap :: Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
+        stakePoolMap :: Map (Credential 'Staking) (KeyHash 'StakePool)
         stakePoolMap = VMap.toMap $ ssDelegations istakeSnap
 
-        stakeMap :: Map (Credential 'Staking (EraCrypto era)) (Coin, KeyHash 'StakePool (EraCrypto era))
+        stakeMap :: Map (Credential 'Staking) (Coin, KeyHash 'StakePool)
         stakeMap = Map.intersectionWith (,) stakeCoinMap stakePoolMap
      in StakeDistEvent stakeMap
 

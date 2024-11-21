@@ -109,7 +109,7 @@ data ShelleyTickEvent era
   | TickRupdEvent (Event (EraRule "RUPD" era))
   deriving (Generic)
 
-type instance EraRuleEvent "TICK" (ShelleyEra c) = ShelleyTickEvent (ShelleyEra c)
+type instance EraRuleEvent "TICK" ShelleyEra = ShelleyTickEvent ShelleyEra
 
 deriving instance
   ( Eq (Event (EraRule "NEWEPOCH" era))
@@ -130,7 +130,7 @@ instance
   , State (ShelleyTICK era) ~ NewEpochState era
   , BaseM (ShelleyTICK era) ~ ShelleyBase
   , Environment (EraRule "RUPD" era) ~ RupdEnv era
-  , State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (EraCrypto era))
+  , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
   , Signal (EraRule "RUPD" era) ~ SlotNo
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
@@ -287,7 +287,7 @@ bheadTransition ::
   , State (ShelleyTICK era) ~ NewEpochState era
   , BaseM (ShelleyTICK era) ~ ShelleyBase
   , Environment (EraRule "RUPD" era) ~ RupdEnv era
-  , State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (EraCrypto era))
+  , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
   , Signal (EraRule "RUPD" era) ~ SlotNo
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
@@ -329,7 +329,7 @@ instance
   ( Era era
   , STS (ShelleyRUPD era)
   , PredicateFailure (EraRule "RUPD" era) ~ ShelleyRupdPredFailure era
-  , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
+  , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
   Embed (ShelleyRUPD era) (ShelleyTICK era)
   where
