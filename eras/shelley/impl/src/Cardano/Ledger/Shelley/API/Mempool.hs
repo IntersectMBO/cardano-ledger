@@ -46,6 +46,7 @@ import Cardano.Ledger.Binary (
   natVersion,
  )
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
@@ -155,6 +156,10 @@ class
      in liftEither
           . left ApplyTxError
           $ res
+
+instance
+  EraPParams ShelleyEra =>
+  ApplyTx ShelleyEra
 
 type MempoolEnv era = Ledger.LedgerEnv era
 

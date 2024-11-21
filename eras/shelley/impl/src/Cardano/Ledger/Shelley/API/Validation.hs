@@ -30,6 +30,7 @@ import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
@@ -177,6 +178,8 @@ applyBlock =
       , asoValidation = ValidateAll
       , asoEvents = EPDiscard
       }
+
+instance ApplyBlock ShelleyEra
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
