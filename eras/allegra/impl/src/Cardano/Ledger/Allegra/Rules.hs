@@ -22,4 +22,4 @@ import Cardano.Ledger.Allegra.Rules.Utxo
 import Cardano.Ledger.Allegra.Rules.Utxow
 import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent)
 
-type instance EraRuleEvent "TICK" (AllegraEra c) = ShelleyTickEvent (AllegraEra c)
+type instance EraRuleEvent "TICK" AllegraEra = ShelleyTickEvent AllegraEra

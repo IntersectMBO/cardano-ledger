@@ -156,7 +156,7 @@ plutusSLanguage _ = isLanguage
 
 -- | Compute a `ScriptHash` of a `Plutus` script. This function is equivalent to
 -- `Cardano.Ledger.Core.hashScript`, except it is restricted to Plutus scripts
-hashPlutusScript :: forall l. (PlutusLanguage l) => Plutus l -> ScriptHash
+hashPlutusScript :: forall l. PlutusLanguage l => Plutus l -> ScriptHash
 hashPlutusScript plutusScript =
   ScriptHash $
     Hash.castHash $

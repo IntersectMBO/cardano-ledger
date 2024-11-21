@@ -80,7 +80,6 @@ class
   ) =>
   Era era
   where
-
   -- | Map an era to its predecessor.
   --
   -- For example:

@@ -140,7 +140,6 @@ instance EraScript ShelleyEra where
   scriptPrefixTag _script = nativeMultiSigTag
 
 instance ShelleyEraScript ShelleyEra where
-
   mkRequireSignature kh =
     MultiSigConstr $ memoBytes (Sum RequireSignature' 0 !> To kh)
   getRequireSignature (MultiSigConstr (Memo (RequireSignature' kh) _)) = Just kh

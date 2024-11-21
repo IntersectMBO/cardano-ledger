@@ -34,7 +34,6 @@ instance Crypto StandardCrypto where
   type KES StandardCrypto = Sum6KES Ed25519DSIGN Blake2b_256
   type VRF StandardCrypto = PraosVRF
 
-
 type HASH = Blake2b_256
 type ADDRHASH = Blake2b_224
 type DSIGN = Ed25519DSIGN

@@ -19,21 +19,16 @@ import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Allegra.TxSeq ()
 import Cardano.Ledger.Allegra.UTxO ()
-import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.API (ApplyBlock, ApplyTx)
 
-type Allegra = AllegraEra StandardCrypto
+type Allegra = AllegraEra
+
+{-# DEPRECATED Allegra "In favor of `AllegraEra`" #-}
 
 --------------------------------------------------------------------------------
 -- Mempool instances
 --------------------------------------------------------------------------------
 
-instance
-  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
-  ApplyTx (AllegraEra c)
+instance ApplyTx AllegraEra
 
-instance
-  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
-  ApplyBlock (AllegraEra c)
+instance ApplyBlock AllegraEra
