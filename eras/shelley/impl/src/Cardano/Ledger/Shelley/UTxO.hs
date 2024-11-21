@@ -43,7 +43,6 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness, credScriptHash)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   GenDelegs (..),
   KeyHash (..),
@@ -164,7 +163,7 @@ getConsumedCoin pp lookupRefund utxo txBody =
 newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set ScriptHash)
   deriving (Eq, Show)
 
-instance Crypto c => EraUTxO ShelleyEra where
+instance EraUTxO ShelleyEra where
   type ScriptsNeeded ShelleyEra = ShelleyScriptsNeeded ShelleyEra
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
