@@ -209,15 +209,14 @@ bbodyTransition =
         -- easier than differentiating here.
         let hkAsStakePool = coerceKeyRole $ bhviewID bhview
             slot = bhviewSlot bhview
-        (firstSlotNo, currEpoch) <- liftSTS $ do
+        (firstSlotNo, curEpochNo) <- liftSTS $ do
           ei <- asks epochInfoPure
-          e <- epochInfoEpoch ei slot
-          firstSlot <- epochInfoFirst ei e
-          pure (firstSlot, e)
+          let curEpochNo = epochInfoEpoch ei slot
+          pure (epochInfoFirst ei curEpochNo, curEpochNo)
 
         ls' <-
           trans @(EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bhviewSlot bhview) currEpoch pp account, ls, StrictSeq.fromStrict txs)
+            TRC (LedgersEnv (bhviewSlot bhview) curEpochNo pp account, ls, StrictSeq.fromStrict txs)
 
         let isOverlay = isOverlaySlot firstSlotNo (pp ^. ppDG) slot
         pure $ BbodyState ls' (incrBlocks isOverlay hkAsStakePool b)

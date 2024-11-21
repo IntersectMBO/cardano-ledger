@@ -101,7 +101,8 @@ import Validation (failureUnless)
 
 data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: !SlotNo
-  , delegsEpochNo :: !EpochNo
+  , delegsEpochNo :: EpochNo
+  -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , delegsIx :: !TxIx
   , delegspp :: !(PParams era)
   , delegsTx :: !(Tx era)

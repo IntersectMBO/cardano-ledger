@@ -266,8 +266,7 @@ overlayTransition =
         asc <- liftSTS $ asks activeSlotCoeff
         firstSlotNo <- liftSTS $ do
           ei <- asks epochInfoPure
-          e <- epochInfoEpoch ei slot
-          epochInfoFirst ei e
+          pure $ epochInfoFirst ei $ epochInfoEpoch ei slot
 
         case (lookupInOverlaySchedule firstSlotNo gkeys dval asc slot :: Maybe (OBftSlot c)) of
           Nothing ->

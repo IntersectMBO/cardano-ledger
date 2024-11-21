@@ -69,7 +69,6 @@ import Control.State.Transition (
   liftSTS,
   tellEvent,
  )
-import Data.Functor ((<&>))
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic)
@@ -129,9 +128,9 @@ rupdTransition = do
   (slotsPerEpoch, slot, slotForce, maxLL, asc, k, e) <- liftSTS $ do
     ei <- asks epochInfoPure
     sr <- asks randomnessStabilisationWindow
-    e <- epochInfoEpoch ei s
-    slotsPerEpoch <- epochInfoSize ei e
-    slot <- epochInfoFirst ei e <&> (+* Duration sr)
+    let e = epochInfoEpoch ei s
+        slotsPerEpoch = epochInfoSize ei e
+        slot = epochInfoFirst ei e +* Duration sr
     maxLL <- asks maxLovelaceSupply
     asc <- asks activeSlotCoeff
     k <- asks securityParameter -- Maximum number of blocks we are allowed to roll back

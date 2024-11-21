@@ -35,7 +35,7 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
 )
 where
 
-import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, TxIx, epochInfoPure, invalidKey)
+import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -68,10 +68,8 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
-import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochFromSlot)
 import Control.DeepSeq (NFData (..))
-import Control.Monad.Reader (Reader)
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Assertion (PostCondition),
   AssertionViolation (..),
@@ -244,11 +242,6 @@ instance
           pure (2, DelegsFailure a)
         k -> invalidKey k
 
-epochFromSlot :: SlotNo -> Reader Globals EpochNo
-epochFromSlot slot = do
-  ei <- asks epochInfoPure
-  epochInfoEpoch ei slot
-
 shelleyLedgerAssertions ::
   ( EraGov era
   , State (rule era) ~ LedgerState era
@@ -307,17 +300,13 @@ ledgerTransition ::
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot mbEpochNo txIx pp account _, LedgerState utxoSt certState, tx) <-
+  TRC (LedgerEnv slot mbCurEpochNo txIx pp account _, LedgerState utxoSt certState, tx) <-
     judgmentContext
-  epochNo <- case mbEpochNo of
-    Nothing -> liftSTS $ do
-      ei <- asks epochInfoPure
-      epochInfoEpoch ei slot
-    Just e -> pure e
+  curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
   certState' <-
     trans @(EraRule "DELEGS" era) $
       TRC
-        ( DelegsEnv slot epochNo txIx pp tx account
+        ( DelegsEnv slot curEpochNo txIx pp tx account
         , certState
         , StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL
         )

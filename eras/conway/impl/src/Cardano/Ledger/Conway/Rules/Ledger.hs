@@ -44,7 +44,6 @@ import Cardano.Ledger.BaseTypes (
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
-  epochInfoPure,
   swapMismatch,
   unswapMismatch,
  )
@@ -114,13 +113,12 @@ import Cardano.Ledger.Shelley.Rules (
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
  )
-import Cardano.Ledger.Slot (epochInfoEpoch)
+import Cardano.Ledger.Slot (epochFromSlot)
 import Cardano.Ledger.UMap (UView (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, void, when)
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
@@ -383,7 +381,7 @@ ledgerTransition ::
   TransitionRule (someLEDGER era)
 ledgerTransition = do
   TRC
-    ( le@(LedgerEnv slot mbCurrentEpoch _txIx pp account mempool)
+    ( le@(LedgerEnv slot mbCurEpochNo _txIx pp account mempool)
       , ls@(LedgerState utxoState certState)
       , tx
       ) <-
@@ -394,11 +392,7 @@ ledgerTransition = do
       trans @(EraRule "MEMPOOL" era) $
         TRC (le, ls, tx)
 
-  currentEpoch <- case mbCurrentEpoch of
-    Nothing -> liftSTS $ do
-      ei <- asks epochInfoPure
-      epochInfoEpoch ei slot
-    Just e -> pure e
+  curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
 
   (utxoState', certStateAfterCERTS) <-
     if tx ^. isValidTxL == IsValid True
@@ -452,7 +446,7 @@ ledgerTransition = do
         certStateAfterCERTS <-
           trans @(EraRule "CERTS" era) $
             TRC
-              ( CertsEnv tx pp currentEpoch committee committeeProposals
+              ( CertsEnv tx pp curEpochNo committee committeeProposals
               , certState
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
@@ -469,7 +463,7 @@ ledgerTransition = do
             TRC
               ( GovEnv
                   (txIdTxBody txBody)
-                  currentEpoch
+                  curEpochNo
                   pp
                   (govState ^. constitutionGovStateL . constitutionScriptL)
                   certStateAfterCERTS

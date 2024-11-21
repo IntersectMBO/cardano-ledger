@@ -24,7 +24,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -55,8 +55,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgersPredFailure (..),
   renderDepositEqualsObligationViolation,
  )
-import Cardano.Ledger.Slot (epochInfoEpoch)
-import Control.Monad.Trans.Reader (asks)
+import Cardano.Ledger.Slot (epochFromSlot)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -131,22 +130,18 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot mbEpochNo txIx pp account _, LedgerState utxoSt certState, tx) <-
+  TRC (LedgerEnv slot mbCurEpochNo txIx pp account _, LedgerState utxoSt certState, tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
 
-  epochNo <- case mbEpochNo of
-    Nothing -> liftSTS $ do
-      ei <- asks epochInfoPure
-      epochInfoEpoch ei slot
-    Just e -> pure e
+  curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
 
   certState' <-
     if tx ^. isValidTxL == IsValid True
       then
         trans @(EraRule "DELEGS" era) $
           TRC
-            ( DelegsEnv slot epochNo txIx pp tx account
+            ( DelegsEnv slot curEpochNo txIx pp tx account
             , certState
             , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
             )

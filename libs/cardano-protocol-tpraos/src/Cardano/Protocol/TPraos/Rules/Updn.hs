@@ -63,10 +63,10 @@ updTransition = do
   TRC (UpdnEnv eta, UpdnState eta_v eta_c, s) <- judgmentContext
   ei <- liftSTS $ asks epochInfoPure
   sp <- liftSTS $ asks stabilityWindow
-  EpochNo e <- liftSTS $ epochInfoEpoch ei s
-  let newEpochNo = EpochNo (e + 1)
-  firstSlotNextEpoch <- liftSTS $ epochInfoFirst ei newEpochNo
-  tellEvent $ NewEpoch newEpochNo
+  let curEpochNo = epochInfoEpoch ei s
+      nextEpochNo = addEpochInterval curEpochNo (EpochInterval 1)
+      firstSlotNextEpoch = epochInfoFirst ei nextEpochNo
+  tellEvent $ NewEpoch nextEpochNo
   pure $
     UpdnState
       (eta_v ⭒ eta)

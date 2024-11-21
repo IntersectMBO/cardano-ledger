@@ -635,9 +635,9 @@ oldEqualsNew pv newepochstate =
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
     blocksmade :: BlocksMade (EraCrypto era)
     blocksmade = nesBprev newepochstate
-    epochnumber = nesEL newepochstate
+    epochNumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
+    slotsPerEpoch = epochInfoSize (epochInfoPure globals) epochNumber
     unAggregated =
       runReader (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
@@ -660,9 +660,9 @@ oldEqualsNewOn pv newepochstate = old === new
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
     blocksmade :: BlocksMade (EraCrypto era)
     blocksmade = nesBprev newepochstate
-    epochnumber = nesEL newepochstate
+    epochNumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
+    slotsPerEpoch = epochInfoSize (epochInfoPure globals) epochNumber
     unAggregated =
       runReader (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old :: Map (Credential 'Staking (EraCrypto era)) Coin

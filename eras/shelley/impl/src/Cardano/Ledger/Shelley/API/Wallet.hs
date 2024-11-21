@@ -41,7 +41,6 @@ where
 
 import Cardano.Ledger.Address (Addr (..), compactAddr)
 import Cardano.Ledger.BaseTypes (
-  BlocksMade,
   Globals (..),
   NonNegativeInterval,
   UnitInterval,
@@ -404,21 +403,19 @@ getRewardProvenance ::
   Globals ->
   NewEpochState era ->
   (RewardUpdate (EraCrypto era), RewardProvenance (EraCrypto era))
-getRewardProvenance globals newepochstate =
+getRewardProvenance globals newEpochState =
   ( runReader
-      (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam)
+      (createRUpd slotsPerEpoch blocksMade epochState maxSupply asc secparam)
       globals
   , def
   )
   where
-    epochstate = nesEs newepochstate
-    maxsupply :: Coin
-    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: BlocksMade (EraCrypto era)
-    blocksmade = nesBprev newepochstate
-    epochnumber = nesEL newepochstate
+    epochState = nesEs newEpochState
+    maxSupply = Coin (fromIntegral (maxLovelaceSupply globals))
+    blocksMade = nesBprev newEpochState
+    epochNo = nesEL newEpochState
     slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
+    slotsPerEpoch = epochInfoSize (epochInfoPure globals) epochNo
     asc = activeSlotCoeff globals
     secparam = securityParameter globals
 

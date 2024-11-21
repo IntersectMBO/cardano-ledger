@@ -2,6 +2,8 @@
 
 ## 1.16.0.0
 
+* Add `epochFromSlot`
+* Remove usage of a `Reader` monad in `epochInfoEpoch`, `epochInfoFirst` and `epochInfoSize`.
 * Add `eraProtVersions`
 * Remove deprecated `_unTxId` and `adaOnly`
 * Remove deprecated module `Cardano.Ledger.Serialization`

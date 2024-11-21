@@ -599,7 +599,7 @@ defaultInitImpTestState nes = do
           (mkSlotLength . fromNominalDiffTimeMicro $ sgSlotLength shelleyGenesis)
       globals = mkShelleyGlobals shelleyGenesis epochInfoE
       epochNo = nesWithRoot ^. nesELL
-      slotNo = runIdentity $ runReaderT (epochInfoFirst (epochInfoPure globals) epochNo) globals
+      slotNo = epochInfoFirst (epochInfoPure globals) epochNo
   pure $
     ImpTestState
       { impNES = nesWithRoot

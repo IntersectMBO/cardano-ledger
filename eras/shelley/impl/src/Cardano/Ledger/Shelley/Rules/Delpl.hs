@@ -60,7 +60,7 @@ import NoThunks.Class (NoThunks (..))
 
 data DelplEnv era = DelplEnv
   { delplSlotNo :: SlotNo
-  , delpEpochNo :: EpochNo
+  , delplEpochNo :: EpochNo
   , delPlPtr :: Ptr
   , delPlPp :: PParams era
   , delPlAccount :: AccountState

@@ -55,7 +55,7 @@ env :: ProtVer -> AccountState -> DelegEnv ShelleyTest
 env pv acnt =
   DelegEnv
     { slotNo = slot
-    , curEpochNo = epochFromSlotNo slot
+    , deCurEpochNo = epochFromSlotNo slot
     , ptr_ = Ptr slot minBound minBound
     , acnt_ = acnt
     , ppDE = emptyPParams & ppProtocolVersionL .~ pv
