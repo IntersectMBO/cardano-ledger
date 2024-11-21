@@ -232,17 +232,16 @@ alonzoBbodyTransition =
         -- we make an assumption that 'incrBlocks' must enforce, better for it
         -- to be done in 'incrBlocks' where we can see that the assumption is
         -- enforced.
-        let hkAsStakePool = coerceKeyRole . bhviewID $ bh
+        let hkAsStakePool = coerceKeyRole $ bhviewID bh
             slot = bhviewSlot bh
-        (firstSlotNo, currEpoch) <- liftSTS $ do
+        (firstSlotNo, curEpochNo) <- liftSTS $ do
           ei <- asks epochInfoPure
-          e <- epochInfoEpoch ei slot
-          firstSlot <- epochInfoFirst ei e
-          pure (firstSlot, e)
+          let curEpochNo = epochInfoEpoch ei slot
+          pure (epochInfoFirst ei curEpochNo, curEpochNo)
 
         ls' <-
           trans @(EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bhviewSlot bh) currEpoch pp account, ls, StrictSeq.fromStrict txs)
+            TRC (LedgersEnv (bhviewSlot bh) curEpochNo pp account, ls, StrictSeq.fromStrict txs)
 
         {- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp  -}
         let txTotal, ppMax :: ExUnits

@@ -91,7 +91,8 @@ import NoThunks.Class (NoThunks (..))
 
 data ConwayGovCertEnv era = ConwayGovCertEnv
   { cgcePParams :: !(PParams era)
-  , cgceCurrentEpoch :: !EpochNo
+  , cgceCurrentEpoch :: EpochNo
+  -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , cgceCurrentCommittee :: StrictMaybe (Committee era)
   , cgceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
   -- ^ All of the `UpdateCommittee` proposals

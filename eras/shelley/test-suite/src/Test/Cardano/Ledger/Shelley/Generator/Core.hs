@@ -503,7 +503,7 @@ getKESPeriodRenewalNo keys (KESPeriod kp) =
 tooLateInEpoch :: SlotNo -> Bool
 tooLateInEpoch s = runShelleyBase $ do
   ei <- asks epochInfoPure
-  firstSlotNo <- epochInfoFirst ei (epochFromSlotNo s + 1)
+  let firstSlotNo = epochInfoFirst ei (epochFromSlotNo s + 1)
   stabilityWindow <- asks stabilityWindow
 
   return (s >= firstSlotNo *- Duration (2 * stabilityWindow))

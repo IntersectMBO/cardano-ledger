@@ -20,11 +20,13 @@ module Cardano.Ledger.Shelley.Rules.Deleg (
 where
 
 import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
   Globals (..),
   Mismatch (..),
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
+  addEpochInterval,
   epochInfoPure,
   invalidKey,
  )
@@ -87,7 +89,8 @@ import NoThunks.Class (NoThunks (..))
 
 data DelegEnv era = DelegEnv
   { slotNo :: !SlotNo
-  , curEpochNo :: !EpochNo
+  , deCurEpochNo :: EpochNo
+  -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , ptr_ :: !Ptr
   , acnt_ :: !AccountState
   , ppDE :: !(PParams era) -- The protocol parameters are only used for the HardFork mechanism
@@ -377,13 +380,13 @@ checkSlotNotTooLate ::
   SlotNo ->
   EpochNo ->
   Rule (ShelleyDELEG era) 'Transition ()
-checkSlotNotTooLate slot (EpochNo currEpoch) = do
+checkSlotNotTooLate slot curEpochNo = do
   sp <- liftSTS $ asks stabilityWindow
   ei <- liftSTS $ asks epochInfoPure
-  let newEpoch = EpochNo (currEpoch + 1)
+  let firstSlot = epochInfoFirst ei newEpoch
+      tooLate = firstSlot *- Duration sp
+      newEpoch = addEpochInterval curEpochNo (EpochInterval 1)
   tellEvent (DelegNewEpoch newEpoch)
-  firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
-  let tooLate = firstSlot *- Duration sp
   slot < tooLate ?! MIRCertificateTooLateinEpochDELEG (Mismatch slot tooLate)
 
 updateReservesAndTreasury ::

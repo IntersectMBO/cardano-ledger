@@ -409,7 +409,9 @@ epochsInTrace bs'
       let
         fromEpoch = atEpoch . blockSlot $ NE.head bs
         toEpoch = atEpoch . blockSlot $ NE.last bs
-        EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfoPure) testGlobals undefined
+        EpochSize slotsPerEpoch =
+          epochInfoSize (epochInfoPure testGlobals) $
+            error "Impossible: Fixed epoch size does not care about current epoch number"
         blockSlot = bheaderSlotNo . bhbody . bheader
         atEpoch (SlotNo s) = s `div` slotsPerEpoch
        in
