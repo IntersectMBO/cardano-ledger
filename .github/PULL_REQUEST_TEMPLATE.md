@@ -17,4 +17,5 @@ to the issue. -->
 - [x] Code is formatted with [`fourmolu`](https://github.com/fourmolu/fourmolu) (use `scripts/fourmolize.sh`)
 - [x] Cabal files are formatted (use `scripts/cabal-format.sh`)
 - [x] [`hie.yaml`](https://github.com/intersectmbo/cardano-ledger/blob/master/hie.yaml) has been updated (use `scripts/gen-hie.sh`)
+- [ ] Commits that only contain large amounts of formatting changes were added to [`.git-blame-ignore-revs`](https://github.com/intersectmbo/cardano-ledger/blob/master/.git-blame-ignore-revs)
 - [ ] Self-reviewed the diff
