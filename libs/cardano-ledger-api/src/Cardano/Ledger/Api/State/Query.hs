@@ -23,6 +23,9 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetDRepStakeDistr@
   queryDRepStakeDistr,
 
+  -- * @GetRegisteredDRepStakeDistr@
+  queryRegisteredDRepStakeDistr,
+
   -- * @GetSPOStakeDistr@
   querySPOStakeDistr,
 
@@ -69,7 +72,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
  )
 import Cardano.Ledger.BaseTypes (EpochNo, strictMaybeToMaybe)
 import Cardano.Ledger.CertState
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
   Committee (committeeMembers),
@@ -86,6 +89,7 @@ import Cardano.Ledger.Conway.Governance (
   defaultStakePoolVote,
   ensCommitteeL,
   finishDRepPulser,
+  proposalsDeposits,
   psDRepDistr,
   psPoolDistr,
   psProposalsL,
@@ -108,7 +112,7 @@ import Control.Monad (guard)
 import Data.Foldable (foldMap')
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Sequence (Seq (..))
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq (..))
@@ -184,6 +188,32 @@ queryDRepStakeDistr nes creds
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` creds
   where
     distr = psDRepDistr . fst $ finishedPulserState nes
+
+-- | Query the stake distribution of the registered DReps. This does not
+-- include the @AlwaysAbstain@ and @NoConfidence@ DReps.
+queryRegisteredDRepStakeDistr ::
+  ConwayEraGov era =>
+  NewEpochState era ->
+  -- | Specify DRep Ids whose stake distribution should be returned. When this set is
+  -- empty, distributions for all of the registered DReps will be returned.
+  Set (Credential 'DRepRole (EraCrypto era)) ->
+  Map (Credential 'DRepRole (EraCrypto era)) Coin
+queryRegisteredDRepStakeDistr nes creds =
+  Map.foldlWithKey' computeDistr mempty selectedDReps
+  where
+    selectedDReps
+      | null creds = registeredDReps
+      | otherwise = registeredDReps `Map.restrictKeys` creds
+    registeredDReps = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+    computeDistr distrAcc dRepCred (DRepState {..}) =
+      Map.insert dRepCred (totalDelegations drepDelegs) distrAcc
+    totalDelegations =
+      fromCompact . foldMap stakeAndDeposits
+    stakeDistr = nes ^. nesEsL . epochStateIncrStakeDistrL
+    proposalDeposits = proposalsDeposits $ nes ^. newEpochStateGovStateL . proposalsGovStateL
+    stakeAndDeposits stakeCred =
+      fromMaybe (CompactCoin 0) $
+        Map.lookup stakeCred stakeDistr <> Map.lookup stakeCred proposalDeposits
 
 -- | Query pool stake distribution.
 querySPOStakeDistr ::
