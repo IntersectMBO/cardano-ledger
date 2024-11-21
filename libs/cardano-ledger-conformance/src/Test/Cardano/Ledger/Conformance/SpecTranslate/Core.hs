@@ -38,7 +38,7 @@ import Test.Cardano.Ledger.TreeDiff (Expr (..), ToExpr (..))
 -- | OpaqueErrorString behaves like unit in comparisons, but contains an
 -- error string that can be displayed.
 newtype OpaqueErrorString = OpaqueErrorString String
-  deriving (Generic)
+  deriving (Generic, Show)
 
 instance Eq OpaqueErrorString where
   _ == _ = True

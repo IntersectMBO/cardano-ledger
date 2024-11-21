@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Conway.Imp (spec) where
+module Test.Cardano.Ledger.Conway.Imp (spec, conwaySpec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Rules (
@@ -54,18 +54,23 @@ import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
-import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, LedgerSpec, modifyImpInitProtVer)
+import Test.Cardano.Ledger.Conway.ImpTest (
+  ConwayEraImp,
+  LedgerSpec,
+  modifyImpInitProtVer,
+ )
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Shelley.ImpTest (ImpInit)
 
 spec ::
   forall era.
   ( Arbitrary (TxAuxData era)
   , ConwayEraImp era
   , EraSegWits era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
@@ -77,22 +82,22 @@ spec ::
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
-  , NFData (Event (EraRule "ENACT" era))
-  , ToExpr (Event (EraRule "ENACT" era))
-  , Eq (Event (EraRule "ENACT" era))
-  , Typeable (Event (EraRule "ENACT" era))
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
   , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , STS (EraRule "LEDGERS" era)
   , ApplyTx era
-  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
+  , NFData (Event (EraRule "ENACT" era))
+  , ToExpr (Event (EraRule "ENACT" era))
+  , Eq (Event (EraRule "ENACT" era))
+  , Typeable (Event (EraRule "ENACT" era))
   ) =>
   Spec
 spec = do
@@ -100,15 +105,52 @@ spec = do
   withImpInit @(LedgerSpec era) $
     forM_ (eraProtVersions @era) $ \protVer ->
       describe ("ConwayImpSpec - " <> show protVer) $
-        modifyImpInitProtVer protVer $ do
-          describe "BBODY" Bbody.spec
-          describe "CERTS" Certs.spec
-          describe "DELEG" Deleg.spec
-          describe "ENACT" Enact.spec
-          describe "EPOCH" Epoch.spec
-          describe "GOV" Gov.spec
-          describe "GOVCERT" GovCert.spec
-          describe "LEDGER" Ledger.spec
-          describe "RATIFY" Ratify.spec
-          describe "UTXO" Utxo.spec
-          describe "UTXOS" Utxos.spec
+        modifyImpInitProtVer protVer $
+          conwaySpec @era
+
+conwaySpec ::
+  forall era.
+  ( ConwayEraImp era
+  , EraSegWits era
+  , Inject (BabbageContextError era) (ContextError era)
+  , Inject (ConwayContextError era) (ContextError era)
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
+  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayDelegPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
+  , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
+  , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
+  , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , STS (EraRule "LEDGERS" era)
+  , ApplyTx era
+  , NFData (Event (EraRule "ENACT" era))
+  , ToExpr (Event (EraRule "ENACT" era))
+  , Eq (Event (EraRule "ENACT" era))
+  , Typeable (Event (EraRule "ENACT" era))
+  ) =>
+  SpecWith (ImpInit (LedgerSpec era))
+conwaySpec = do
+  describe "BBODY" Bbody.spec
+  describe "CERTS" Certs.spec
+  describe "DELEG" Deleg.spec
+  describe "ENACT" Enact.spec
+  describe "EPOCH" Epoch.spec
+  describe "GOV" Gov.spec
+  describe "GOVCERT" GovCert.spec
+  describe "LEDGER" Ledger.spec
+  describe "RATIFY" Ratify.spec
+  describe "UTXO" Utxo.spec
+  describe "UTXOS" Utxos.spec
