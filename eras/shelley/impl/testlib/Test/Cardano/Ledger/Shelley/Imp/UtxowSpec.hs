@@ -112,7 +112,7 @@ spec = describe "UTXOW" $ do
   it "ConflictingMetadataHash" $ do
     auxData <- arbitrary @(TxAuxData era)
     let auxDataHash = hashTxAuxData auxData
-    wrongAuxDataHash <- arbitrary @(AuxiliaryDataHash (EraCrypto era))
+    wrongAuxDataHash <- arbitrary @AuxiliaryDataHash
     let tx =
           mkBasicTx mkBasicTxBody
             & bodyTxL . auxDataHashTxBodyL .~ SJust wrongAuxDataHash
