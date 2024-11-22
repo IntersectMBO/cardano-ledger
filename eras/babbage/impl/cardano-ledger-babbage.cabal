@@ -116,7 +116,6 @@ library testlib
         bytestring,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-shelley,
-        cardano-crypto-class,
         cardano-ledger-babbage,
         cardano-ledger-binary,
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.13.2,
