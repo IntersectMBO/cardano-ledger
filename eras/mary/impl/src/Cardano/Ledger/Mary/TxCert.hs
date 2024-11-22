@@ -5,7 +5,6 @@
 
 module Cardano.Ledger.Mary.TxCert () where
 
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Shelley.TxCert (
@@ -24,7 +23,6 @@ import Cardano.Ledger.Shelley.TxCert (
  )
 
 instance EraTxCert MaryEra where
-
   type TxCert MaryEra = ShelleyTxCert MaryEra
 
   upgradeTxCert = Right . upgradeShelleyTxCert
@@ -55,7 +53,6 @@ instance EraTxCert MaryEra where
   getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
 instance ShelleyEraTxCert MaryEra where
-
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
 
   getRegTxCert (ShelleyTxCertDelegCert (ShelleyRegCert c)) = Just c
