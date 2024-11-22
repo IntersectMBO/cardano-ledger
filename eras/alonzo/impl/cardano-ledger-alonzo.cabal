@@ -132,7 +132,6 @@ library testlib
         base,
         bytestring,
         containers,
-        cardano-crypto-class,
         cardano-data,
         cardano-ledger-alonzo,
         cardano-ledger-allegra,
