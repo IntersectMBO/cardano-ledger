@@ -2,7 +2,7 @@
 
 module Main where
 
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
@@ -19,11 +19,11 @@ main =
     describe "Alonzo" $ do
       BinarySpec.spec
       CddlSpec.spec
-      roundTripJsonEraSpec @Alonzo
+      roundTripJsonEraSpec @AlonzoEra
       Golden.tests
       describe "Imp" $ do
-        Imp.spec @Alonzo
+        Imp.spec @AlonzoEra
       describe "CostModels" $ do
-        CostModelsSpec.spec @Alonzo
+        CostModelsSpec.spec @AlonzoEra
       describe "TxWits" $ do
-        TxWitsSpec.spec @Alonzo
+        TxWitsSpec.spec @AlonzoEra
