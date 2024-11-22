@@ -9,7 +9,6 @@ where
 
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
@@ -19,9 +18,9 @@ import Cardano.Ledger.Shelley.Scripts (
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
 -- for the ValidateScript instance in MultiSig
-instance Crypto c => EraScript (MaryEra c) where
-  type Script (MaryEra c) = Timelock (MaryEra c)
-  type NativeScript (MaryEra c) = Timelock (MaryEra c)
+instance EraScript MaryEra where
+  type Script MaryEra = Timelock MaryEra
+  type NativeScript MaryEra = Timelock MaryEra
 
   upgradeScript = translateTimelock
 
@@ -31,8 +30,8 @@ instance Crypto c => EraScript (MaryEra c) where
 
   fromNativeScript = id
 
-instance Crypto c => ShelleyEraScript (MaryEra c) where
-  {-# SPECIALIZE instance ShelleyEraScript (MaryEra StandardCrypto) #-}
+instance ShelleyEraScript MaryEra where
+  {-# SPECIALIZE instance ShelleyEraScript MaryEra #-}
 
   mkRequireSignature = mkRequireSignatureTimelock
   getRequireSignature = getRequireSignatureTimelock
@@ -46,8 +45,8 @@ instance Crypto c => ShelleyEraScript (MaryEra c) where
   mkRequireMOf = mkRequireMOfTimelock
   getRequireMOf = getRequireMOfTimelock
 
-instance Crypto c => AllegraEraScript (MaryEra c) where
-  {-# SPECIALIZE instance AllegraEraScript (MaryEra StandardCrypto) #-}
+instance AllegraEraScript MaryEra where
+  {-# SPECIALIZE instance AllegraEraScript MaryEra #-}
 
   mkTimeStart = mkTimeStartTimelock
   getTimeStart = getTimeStartTimelock

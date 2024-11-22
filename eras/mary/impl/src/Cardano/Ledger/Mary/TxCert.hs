@@ -23,10 +23,9 @@ import Cardano.Ledger.Shelley.TxCert (
   pattern UnRegTxCert,
  )
 
-instance Crypto c => EraTxCert (MaryEra c) where
-  {-# SPECIALIZE instance EraTxCert (MaryEra StandardCrypto) #-}
+instance EraTxCert MaryEra where
 
-  type TxCert (MaryEra c) = ShelleyTxCert (MaryEra c)
+  type TxCert MaryEra = ShelleyTxCert MaryEra
 
   upgradeTxCert = Right . upgradeShelleyTxCert
 
@@ -55,8 +54,7 @@ instance Crypto c => EraTxCert (MaryEra c) where
 
   getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
-instance Crypto c => ShelleyEraTxCert (MaryEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxCert (MaryEra StandardCrypto) #-}
+instance ShelleyEraTxCert MaryEra where
 
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
 

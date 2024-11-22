@@ -21,29 +21,29 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 
-type instance EraRuleFailure "LEDGER" (MaryEra c) = ShelleyLedgerPredFailure (MaryEra c)
+type instance EraRuleFailure "LEDGER" MaryEra = ShelleyLedgerPredFailure MaryEra
 
-instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (MaryEra c)
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure MaryEra
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure MaryEra where
   injectFailure = UtxowFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure MaryEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure MaryEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure MaryEra where
   injectFailure = DelegsFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure MaryEra where
   injectFailure = DelegsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure MaryEra where
   injectFailure = DelegsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure (MaryEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure MaryEra where
   injectFailure = DelegsFailure . injectFailure
 
-type instance EraRuleEvent "LEDGER" (MaryEra c) = ShelleyLedgerEvent (MaryEra c)
+type instance EraRuleEvent "LEDGER" MaryEra = ShelleyLedgerEvent MaryEra

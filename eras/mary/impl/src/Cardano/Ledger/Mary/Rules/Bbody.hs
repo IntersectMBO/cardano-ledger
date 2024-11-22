@@ -21,33 +21,33 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 
-type instance EraRuleFailure "BBODY" (MaryEra c) = ShelleyBbodyPredFailure (MaryEra c)
+type instance EraRuleFailure "BBODY" MaryEra = ShelleyBbodyPredFailure MaryEra
 
-instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure (MaryEra c)
+instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure MaryEra
 
-instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure (MaryEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure MaryEra where
   injectFailure = LedgersFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure (MaryEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure MaryEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure (MaryEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure MaryEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure (MaryEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure MaryEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure (MaryEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure MaryEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure (MaryEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure MaryEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure (MaryEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure MaryEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure (MaryEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure MaryEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure (MaryEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure MaryEra where
   injectFailure = LedgersFailure . injectFailure

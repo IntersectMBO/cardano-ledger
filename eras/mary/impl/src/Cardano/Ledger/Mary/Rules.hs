@@ -18,4 +18,4 @@ import Cardano.Ledger.Mary.Rules.Utxo ()
 import Cardano.Ledger.Mary.Rules.Utxow ()
 import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent)
 
-type instance EraRuleEvent "TICK" (MaryEra c) = ShelleyTickEvent (MaryEra c)
+type instance EraRuleEvent "TICK" MaryEra = ShelleyTickEvent MaryEra
