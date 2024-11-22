@@ -50,7 +50,6 @@ import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxCert ()
 import Cardano.Ledger.Mary.TxOut ()
@@ -78,16 +77,16 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 class AllegraEraTxBody era => MaryEraTxBody era where
-  mintTxBodyL :: Lens' (TxBody era) (MultiAsset (EraCrypto era))
+  mintTxBodyL :: Lens' (TxBody era) MultiAsset
 
   mintValueTxBodyF :: SimpleGetter (TxBody era) (Value era)
 
-  mintedTxBodyF :: SimpleGetter (TxBody era) (Set (PolicyID (EraCrypto era)))
+  mintedTxBodyF :: SimpleGetter (TxBody era) (Set PolicyID)
 
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern constructor.
 
-newtype MaryTxBodyRaw era = MaryTxBodyRaw (AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era)
+newtype MaryTxBodyRaw era = MaryTxBodyRaw (AllegraTxBodyRaw MultiAsset era)
 
 deriving newtype instance
   (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
@@ -152,21 +151,21 @@ deriving via
 
 type instance MemoHashIndex MaryTxBodyRaw = EraIndependentTxBody
 
-instance (c ~ EraCrypto era, Era era) => HashAnnotated (MaryTxBody era) EraIndependentTxBody c where
+instance Era era => HashAnnotated (MaryTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern MaryTxBody ::
   (EraTxOut era, EraTxCert era) =>
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
   StrictSeq (TxOut era) ->
   StrictSeq (TxCert era) ->
-  Withdrawals (EraCrypto era) ->
+  Withdrawals ->
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
-  MultiAsset (EraCrypto era) ->
+  StrictMaybe AuxiliaryDataHash ->
+  MultiAsset ->
   MaryTxBody era
 pattern MaryTxBody
   { mtbInputs
@@ -224,11 +223,8 @@ pattern MaryTxBody
 -- | This is a helper Lens creator for any Memoized type.
 lensMaryTxBodyRaw ::
   (EraTxOut era, EraTxCert era) =>
-  (AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era -> a) ->
-  ( AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era ->
-    b ->
-    AllegraTxBodyRaw (MultiAsset (EraCrypto era)) era
-  ) ->
+  (AllegraTxBodyRaw MultiAsset era -> a) ->
+  (AllegraTxBodyRaw MultiAsset era -> b -> AllegraTxBodyRaw MultiAsset era) ->
   Lens (MaryTxBody era) (MaryTxBody era) a b
 lensMaryTxBodyRaw getter setter =
   lensMemoRawType
@@ -236,10 +232,10 @@ lensMaryTxBodyRaw getter setter =
     (\(MaryTxBodyRaw atbr) a -> MaryTxBodyRaw (setter atbr a))
 {-# INLINEABLE lensMaryTxBodyRaw #-}
 
-instance Crypto c => EraTxBody (MaryEra c) where
-  {-# SPECIALIZE instance EraTxBody (MaryEra StandardCrypto) #-}
+instance EraTxBody MaryEra where
+  {-# SPECIALIZE instance EraTxBody MaryEra #-}
 
-  type TxBody (MaryEra c) = MaryTxBody (MaryEra c)
+  type TxBody MaryEra = MaryTxBody MaryEra
 
   mkBasicTxBody = mkMemoized $ MaryTxBodyRaw emptyAllegraTxBodyRaw
 
@@ -291,8 +287,8 @@ instance Crypto c => EraTxBody (MaryEra c) where
         , mtbMint = mempty
         }
 
-instance Crypto c => ShelleyEraTxBody (MaryEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxBody (MaryEra StandardCrypto) #-}
+instance ShelleyEraTxBody MaryEra where
+  {-# SPECIALIZE instance ShelleyEraTxBody MaryEra #-}
 
   ttlTxBodyL = notSupportedInThisEraL
   {-# INLINEABLE ttlTxBodyL #-}
@@ -301,16 +297,16 @@ instance Crypto c => ShelleyEraTxBody (MaryEra c) where
     lensMaryTxBodyRaw atbrUpdate $ \txBodyRaw update -> txBodyRaw {atbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
 
-instance Crypto c => AllegraEraTxBody (MaryEra c) where
-  {-# SPECIALIZE instance AllegraEraTxBody (MaryEra StandardCrypto) #-}
+instance AllegraEraTxBody MaryEra where
+  {-# SPECIALIZE instance AllegraEraTxBody MaryEra #-}
 
   vldtTxBodyL =
     lensMaryTxBodyRaw atbrValidityInterval $
       \txBodyRaw vldt -> txBodyRaw {atbrValidityInterval = vldt}
   {-# INLINEABLE vldtTxBodyL #-}
 
-instance Crypto c => MaryEraTxBody (MaryEra c) where
-  {-# SPECIALIZE instance MaryEraTxBody (MaryEra StandardCrypto) #-}
+instance MaryEraTxBody MaryEra where
+  {-# SPECIALIZE instance MaryEraTxBody MaryEra #-}
 
   mintTxBodyL =
     lensMaryTxBodyRaw atbrMint (\txBodyRaw mint -> txBodyRaw {atbrMint = mint})

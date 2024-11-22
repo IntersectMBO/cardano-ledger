@@ -14,9 +14,6 @@ module Cardano.Ledger.Mary (
 )
 where
 
-import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.Rules ()
@@ -30,12 +27,10 @@ import Cardano.Ledger.Mary.UTxO ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.API
 
-type Mary = MaryEra StandardCrypto
+type Mary = MaryEra
 
-instance
-  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
-  ApplyTx (MaryEra c)
+{-# DEPRECATED Mary "In favor of `MaryEra`" #-}
 
-instance
-  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
-  ApplyBlock (MaryEra c)
+instance ApplyTx MaryEra
+
+instance ApplyBlock MaryEra

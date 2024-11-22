@@ -14,12 +14,12 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
  )
 
-type instance EraRuleFailure "UTXO" (MaryEra c) = AllegraUtxoPredFailure (MaryEra c)
+type instance EraRuleFailure "UTXO" MaryEra = AllegraUtxoPredFailure MaryEra
 
-instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure (MaryEra c)
+instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure MaryEra
 
-instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure (MaryEra c) where
+instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure MaryEra where
   injectFailure = shelleyToAllegraUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (MaryEra c) where
+instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure MaryEra where
   injectFailure = UpdateFailure
