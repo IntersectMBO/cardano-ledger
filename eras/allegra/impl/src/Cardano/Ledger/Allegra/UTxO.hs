@@ -8,7 +8,6 @@ module Cardano.Ledger.Allegra.UTxO () where
 
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraEra)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getConsumedCoin,
@@ -20,8 +19,8 @@ import Cardano.Ledger.Shelley.UTxO (
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Lens.Micro
 
-instance Crypto c => EraUTxO (AllegraEra c) where
-  type ScriptsNeeded (AllegraEra c) = ShelleyScriptsNeeded (AllegraEra c)
+instance EraUTxO AllegraEra where
+  type ScriptsNeeded AllegraEra = ShelleyScriptsNeeded AllegraEra
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 

@@ -9,6 +9,6 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure)
 
-type instance EraRuleFailure "PPUP" (AllegraEra c) = ShelleyPpupPredFailure (AllegraEra c)
+type instance EraRuleFailure "PPUP" AllegraEra = ShelleyPpupPredFailure AllegraEra
 
-instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure (AllegraEra c)
+instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure AllegraEra

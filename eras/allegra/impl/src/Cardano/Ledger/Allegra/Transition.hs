@@ -15,9 +15,9 @@ import Data.Aeson (FromJSON (..), ToJSON (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
-instance Crypto c => EraTransition (AllegraEra c) where
-  newtype TransitionConfig (AllegraEra c) = AllegraTransitionConfig
-    { atcShelleyTransitionConfig :: TransitionConfig (ShelleyEra c)
+instance EraTransition AllegraEra where
+  newtype TransitionConfig AllegraEra = AllegraTransitionConfig
+    { atcShelleyTransitionConfig :: TransitionConfig ShelleyEra
     }
     deriving (Show, Eq, NoThunks, ToJSON, FromJSON)
 

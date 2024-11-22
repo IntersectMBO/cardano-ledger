@@ -157,7 +157,6 @@ scriptShelleyTxWitsL =
 {-# INLINEABLE scriptShelleyTxWitsL #-}
 
 instance EraTxWits ShelleyEra where
-
   type TxWits ShelleyEra = ShelleyTxWits ShelleyEra
 
   mkBasicTxWits = mempty

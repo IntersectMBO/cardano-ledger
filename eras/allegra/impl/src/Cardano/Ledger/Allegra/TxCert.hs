@@ -6,13 +6,10 @@ module Cardano.Ledger.Allegra.TxCert () where
 
 import Cardano.Ledger.Allegra.Era
 import Cardano.Ledger.Allegra.PParams ()
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.TxCert
 
-instance Crypto c => EraTxCert (AllegraEra c) where
-  {-# SPECIALIZE instance EraTxCert (AllegraEra StandardCrypto) #-}
-
-  type TxCert (AllegraEra c) = ShelleyTxCert (AllegraEra c)
+instance EraTxCert AllegraEra where
+  type TxCert AllegraEra = ShelleyTxCert AllegraEra
 
   upgradeTxCert = Right . upgradeShelleyTxCert
 
@@ -41,9 +38,7 @@ instance Crypto c => EraTxCert (AllegraEra c) where
 
   getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
-instance Crypto c => ShelleyEraTxCert (AllegraEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxCert (AllegraEra StandardCrypto) #-}
-
+instance ShelleyEraTxCert AllegraEra where
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
 
   getRegTxCert (ShelleyTxCertDelegCert (ShelleyRegCert c)) = Just c
