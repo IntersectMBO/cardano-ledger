@@ -7,7 +7,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -114,7 +113,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
@@ -159,11 +157,11 @@ data AlonzoTx era = AlonzoTx
 newtype AlonzoTxUpgradeError = ATUEBodyUpgradeError AlonzoTxBodyUpgradeError
   deriving (Show)
 
-instance Crypto c => EraTx (AlonzoEra c) where
-  {-# SPECIALIZE instance EraTx (AlonzoEra StandardCrypto) #-}
+instance EraTx AlonzoEra where
+  {-# SPECIALIZE instance EraTx AlonzoEra #-}
 
-  type Tx (AlonzoEra c) = AlonzoTx (AlonzoEra c)
-  type TxUpgradeError (AlonzoEra c) = AlonzoTxUpgradeError
+  type Tx AlonzoEra = AlonzoTx AlonzoEra
+  type TxUpgradeError AlonzoEra = AlonzoTxUpgradeError
 
   mkBasicTx = mkBasicAlonzoTx
 
@@ -204,8 +202,8 @@ class
   where
   isValidTxL :: Lens' (Tx era) IsValid
 
-instance Crypto c => AlonzoEraTx (AlonzoEra c) where
-  {-# SPECIALIZE instance AlonzoEraTx (AlonzoEra StandardCrypto) #-}
+instance AlonzoEraTx AlonzoEra where
+  {-# SPECIALIZE instance AlonzoEraTx AlonzoEra #-}
 
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
@@ -303,8 +301,8 @@ instance Era era => SafeToHash (ScriptIntegrity era) where
      in originalBytes m <> dBytes <> lBytes
 
 instance
-  (Era era, c ~ EraCrypto era) =>
-  HashAnnotated (ScriptIntegrity era) EraIndependentScriptIntegrity c
+  Era era =>
+  HashAnnotated (ScriptIntegrity era) EraIndependentScriptIntegrity
 
 hashScriptIntegrity ::
   forall era.
@@ -312,7 +310,7 @@ hashScriptIntegrity ::
   Set LangDepView ->
   Redeemers era ->
   TxDats era ->
-  StrictMaybe (ScriptIntegrityHash (EraCrypto era))
+  StrictMaybe ScriptIntegrityHash
 hashScriptIntegrity langViews rdmrs dats =
   if nullRedeemers rdmrs && Set.null langViews && nullDats dats
     then SNothing

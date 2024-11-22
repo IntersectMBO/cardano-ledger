@@ -60,8 +60,6 @@ module Cardano.Ledger.Alonzo.TxWits (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
-import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
@@ -98,7 +96,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto (DSIGN, HASH), StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (Witness), WitVKey)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.MemoBytes (
@@ -252,9 +249,9 @@ upgradeRedeemers =
 
 -- | Internal 'AlonzoTxWits' type, lacking serialised bytes.
 data AlonzoTxWitsRaw era = AlonzoTxWitsRaw
-  { atwrAddrTxWits :: !(Set (WitVKey 'Witness (EraCrypto era)))
-  , atwrBootAddrTxWits :: !(Set (BootstrapWitness (EraCrypto era)))
-  , atwrScriptTxWits :: !(Map (ScriptHash (EraCrypto era)) (Script era))
+  { atwrAddrTxWits :: !(Set (WitVKey 'Witness))
+  , atwrBootAddrTxWits :: !(Set BootstrapWitness)
+  , atwrScriptTxWits :: !(Map ScriptHash (Script era))
   , atwrDatsTxWits :: !(TxDats era)
   , atwrRdmrsTxWits :: !(Redeemers era)
   }
@@ -265,8 +262,6 @@ instance
   , NFData (Script era)
   , NFData (TxDats era)
   , NFData (Redeemers era)
-  , NFData (SigDSIGN (DSIGN (EraCrypto era)))
-  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
   ) =>
   NFData (AlonzoTxWitsRaw era)
 
@@ -293,8 +288,6 @@ deriving instance
   , NFData (Script era)
   , NFData (TxDats era)
   , NFData (Redeemers era)
-  , NFData (SigDSIGN (DSIGN (EraCrypto era)))
-  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
   ) =>
   NFData (AlonzoTxWits era)
 
@@ -303,28 +296,28 @@ isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e)) =
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
 -- =====================================================
-newtype TxDatsRaw era = TxDatsRaw {unTxDatsRaw :: Map (DataHash (EraCrypto era)) (Data era)}
+newtype TxDatsRaw era = TxDatsRaw {unTxDatsRaw :: Map (DataHash) (Data era)}
   deriving (Generic, Typeable, Eq)
   deriving newtype (NoThunks, NFData)
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDatsRaw era)
+deriving instance Show (TxDatsRaw era)
 
 instance (Typeable era, EncCBOR (Data era)) => EncCBOR (TxDatsRaw era) where
   encCBOR = encodeWithSetTag . Map.elems . unTxDatsRaw
 
-pattern TxDats' :: Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
+pattern TxDats' :: Map DataHash (Data era) -> TxDats era
 pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
 
 {-# COMPLETE TxDats' #-}
 
-pattern TxDats :: Era era => Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
+pattern TxDats :: Era era => Map DataHash (Data era) -> TxDats era
 pattern TxDats m <- (getMemoRawType -> TxDatsRaw m)
   where
     TxDats m = mkMemoized (TxDatsRaw m)
 
 {-# COMPLETE TxDats #-}
 
-unTxDats :: TxDats era -> Map (DataHash (EraCrypto era)) (Data era)
+unTxDats :: TxDats era -> Map DataHash (Data era)
 unTxDats (TxDats' m) = m
 
 nullDats :: TxDats era -> Bool
@@ -353,7 +346,7 @@ newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
 instance Memoized TxDats where
   type RawType TxDats = TxDatsRaw
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDats era)
+deriving instance Show (TxDats era)
 
 instance Era era => Semigroup (TxDats era) where
   (TxDats m) <> (TxDats m') = TxDats (m <> m')
@@ -373,7 +366,7 @@ deriving via
 -- will remain identical, but the memoised serialisation may change to reflect
 -- the versioned serialisation of the new era.
 upgradeTxDats ::
-  (Era era1, Era era2, EraCrypto era1 ~ EraCrypto era2) =>
+  (Era era1, Era era2) =>
   TxDats era1 ->
   TxDats era2
 upgradeTxDats (TxDats datMap) = TxDats $ fmap upgradeData datMap
@@ -398,9 +391,9 @@ deriving newtype instance AlonzoEraScript era => NoThunks (AlonzoTxWits era)
 
 pattern AlonzoTxWits' ::
   Era era =>
-  Set (WitVKey 'Witness (EraCrypto era)) ->
-  Set (BootstrapWitness (EraCrypto era)) ->
-  Map (ScriptHash (EraCrypto era)) (Script era) ->
+  Set (WitVKey 'Witness) ->
+  Set BootstrapWitness ->
+  Map ScriptHash (Script era) ->
   TxDats era ->
   Redeemers era ->
   AlonzoTxWits era
@@ -411,9 +404,9 @@ pattern AlonzoTxWits' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} 
 
 pattern AlonzoTxWits ::
   AlonzoEraScript era =>
-  Set (WitVKey 'Witness (EraCrypto era)) ->
-  Set (BootstrapWitness (EraCrypto era)) ->
-  Map (ScriptHash (EraCrypto era)) (Script era) ->
+  Set (WitVKey 'Witness) ->
+  Set BootstrapWitness ->
+  Map ScriptHash (Script era) ->
   TxDats era ->
   Redeemers era ->
   AlonzoTxWits era
@@ -431,14 +424,14 @@ pattern AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
 
 addrAlonzoTxWitsL ::
   AlonzoEraScript era =>
-  Lens' (AlonzoTxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
+  Lens' (AlonzoTxWits era) (Set (WitVKey 'Witness))
 addrAlonzoTxWitsL =
   lensMemoRawType atwrAddrTxWits $ \witsRaw addrWits -> witsRaw {atwrAddrTxWits = addrWits}
 {-# INLINEABLE addrAlonzoTxWitsL #-}
 
 bootAddrAlonzoTxWitsL ::
   AlonzoEraScript era =>
-  Lens' (AlonzoTxWits era) (Set (BootstrapWitness (EraCrypto era)))
+  Lens' (AlonzoTxWits era) (Set BootstrapWitness)
 bootAddrAlonzoTxWitsL =
   lensMemoRawType atwrBootAddrTxWits $
     \witsRaw bootAddrWits -> witsRaw {atwrBootAddrTxWits = bootAddrWits}
@@ -446,7 +439,7 @@ bootAddrAlonzoTxWitsL =
 
 scriptAlonzoTxWitsL ::
   AlonzoEraScript era =>
-  Lens' (AlonzoTxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
+  Lens' (AlonzoTxWits era) (Map ScriptHash (Script era))
 scriptAlonzoTxWitsL =
   lensMemoRawType atwrScriptTxWits $ \witsRaw scriptWits -> witsRaw {atwrScriptTxWits = scriptWits}
 {-# INLINEABLE scriptAlonzoTxWitsL #-}
@@ -465,10 +458,10 @@ rdmrsAlonzoTxWitsL =
   lensMemoRawType atwrRdmrsTxWits $ \witsRaw rdmrsWits -> witsRaw {atwrRdmrsTxWits = rdmrsWits}
 {-# INLINEABLE rdmrsAlonzoTxWitsL #-}
 
-instance (EraScript (AlonzoEra c), Crypto c) => EraTxWits (AlonzoEra c) where
-  {-# SPECIALIZE instance EraTxWits (AlonzoEra StandardCrypto) #-}
+instance EraScript AlonzoEra => EraTxWits AlonzoEra where
+  {-# SPECIALIZE instance EraTxWits AlonzoEra #-}
 
-  type TxWits (AlonzoEra c) = AlonzoTxWits (AlonzoEra c)
+  type TxWits AlonzoEra = AlonzoTxWits AlonzoEra
 
   mkBasicTxWits = mempty
 
@@ -489,8 +482,8 @@ class (EraTxWits era, AlonzoEraScript era) => AlonzoEraTxWits era where
 
   rdmrsTxWitsL :: Lens' (TxWits era) (Redeemers era)
 
-instance (EraScript (AlonzoEra c), Crypto c) => AlonzoEraTxWits (AlonzoEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxWits (AlonzoEra StandardCrypto) #-}
+instance EraScript AlonzoEra => AlonzoEraTxWits AlonzoEra where
+  {-# SPECIALIZE instance AlonzoEraTxWits AlonzoEra #-}
 
   datsTxWitsL = datsAlonzoTxWitsL
   {-# INLINE datsTxWitsL #-}
@@ -543,7 +536,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
       encodePlutus ::
         PlutusLanguage l =>
         SLanguage l ->
-        Encode ('Closed 'Dense) (Map.Map (ScriptHash (EraCrypto era)) (Plutus l))
+        Encode ('Closed 'Dense) (Map.Map ScriptHash (Plutus l))
       encodePlutus slang =
         E
           (encodeWithSetTag . encCBOR . map plutusBinary . Map.elems)
@@ -665,7 +658,7 @@ instance
       txWitnessField n = field (\_ t -> t) (Invalid n)
       {-# INLINE txWitnessField #-}
 
-      nativeScriptsDecoder :: Decoder s (Annotator (Map (ScriptHash (EraCrypto era)) (Script era)))
+      nativeScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
       nativeScriptsDecoder =
         ifDecoderVersionAtLeast
           (natVersion @9)
@@ -674,11 +667,11 @@ instance
           )
           (mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
         where
-          pairDecoder :: Decoder s (Annotator (ScriptHash (EraCrypto era), Script era))
+          pairDecoder :: Decoder s (Annotator (ScriptHash, Script era))
           pairDecoder = fmap (asHashedPair . fromNativeScript) <$> decCBOR
 
       addScripts ::
-        Map (ScriptHash (EraCrypto era)) (Script era) ->
+        Map ScriptHash (Script era) ->
         AlonzoTxWitsRaw era ->
         AlonzoTxWitsRaw era
       addScripts scriptWitnesses txWits =
@@ -690,7 +683,7 @@ instance
       decodePlutus ::
         PlutusLanguage l =>
         SLanguage l ->
-        Decode ('Closed 'Dense) (Map (ScriptHash (EraCrypto era)) (Script era))
+        Decode ('Closed 'Dense) (Map ScriptHash (Script era))
       decodePlutus slang =
         D $
           ifDecoderVersionAtLeast
@@ -701,7 +694,7 @@ instance
 
       scriptDecoderV9 ::
         Decoder s (Script era) ->
-        Decoder s (Map (ScriptHash (EraCrypto era)) (Script era))
+        Decoder s (Map ScriptHash (Script era))
       scriptDecoderV9 decodeScript = do
         allowTag setTag
         scriptMap <- decodeMapLikeEnforceNoDuplicates decodeListLenOrIndef $ do
@@ -712,7 +705,7 @@ instance
 
       scriptDecoder ::
         Decoder s (Script era) ->
-        Decoder s (Map (ScriptHash (EraCrypto era)) (Script era))
+        Decoder s (Map ScriptHash (Script era))
       scriptDecoder decodeScript =
         fmap Map.fromList $
           decodeList $

@@ -44,7 +44,6 @@ import Cardano.Ledger.Binary (
   withSlice,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.SafeHash (SafeToHash, originalBytes)
 import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
@@ -89,8 +88,8 @@ data AlonzoTxSeq era = AlonzoTxSeqRaw
   }
   deriving (Generic)
 
-instance Crypto c => EraSegWits (AlonzoEra c) where
-  type TxSeq (AlonzoEra c) = AlonzoTxSeq (AlonzoEra c)
+instance EraSegWits AlonzoEra where
+  type TxSeq AlonzoEra = AlonzoTxSeq AlonzoEra
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq
@@ -164,9 +163,8 @@ instance Era era => EncCBORGroup (AlonzoTxSeq era) where
 -- | Hash a given block body
 hashAlonzoTxSeq ::
   forall era.
-  Era era =>
   AlonzoTxSeq era ->
-  Hash (EraCrypto era) EraIndependentBlockBody
+  Hash EraIndependentBlockBody
 hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
   coerce $
     hashStrict $
@@ -179,7 +177,7 @@ hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
             , hashPart vs
             ]
   where
-    hashStrict :: ByteString -> Hash (EraCrypto era) ByteString
+    hashStrict :: ByteString -> Hash ByteString
     hashStrict = Hash.hashWith id
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
 

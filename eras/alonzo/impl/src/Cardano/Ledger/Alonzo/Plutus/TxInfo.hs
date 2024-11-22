@@ -1,6 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -11,9 +9,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -66,7 +62,6 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (unVRFVerKeyHash)
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -101,7 +96,7 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 
-instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
+instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
   toPlutusTxCert _ _ = pure . transTxCert
 
   toPlutusScriptPurpose proxy pv = transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
@@ -162,13 +157,13 @@ toLegacyPlutusArgs proxy pv mkScriptContext scriptPurpose maybeSpendingData rede
     Nothing -> LegacyPlutusArgs2 redeemer scriptContext
     Just spendingData -> LegacyPlutusArgs3 (getPlutusData spendingData) redeemer scriptContext
 
-instance Crypto c => EraPlutusContext (AlonzoEra c) where
-  type ContextError (AlonzoEra c) = AlonzoContextError (AlonzoEra c)
+instance EraPlutusContext AlonzoEra where
+  type ContextError AlonzoEra = AlonzoContextError AlonzoEra
 
   mkPlutusWithContext (AlonzoPlutusV1 p) = toPlutusWithContext (Left p)
 
 data AlonzoContextError era
-  = TranslationLogicMissingInput !(TxIn (EraCrypto era))
+  = TranslationLogicMissingInput !TxIn
   | TimeTranslationPastHorizon !Text
   deriving (Eq, Show, Generic)
 
@@ -200,7 +195,7 @@ transLookupTxOut ::
   forall era a.
   Inject (AlonzoContextError era) a =>
   UTxO era ->
-  TxIn (EraCrypto era) ->
+  TxIn ->
   Either a (TxOut era)
 transLookupTxOut (UTxO utxo) txIn =
   case Map.lookup txIn utxo of
@@ -243,7 +238,7 @@ transValidityInterval _ protVer epochInfo systemStart = \case
 
 -- | Translate a TxOut. Returns `Nothing` if a Byron address is present in the TxOut.
 transTxOut ::
-  (Value era ~ MaryValue c, AlonzoEraTxOut era) => TxOut era -> Maybe PV1.TxOut
+  (Value era ~ MaryValue, AlonzoEraTxOut era) => TxOut era -> Maybe PV1.TxOut
 transTxOut txOut = do
   -- Minor optimization:
   -- We can check for Byron address without decompacting the address in the TxOut
@@ -266,7 +261,7 @@ transTxBodyCerts ::
 transTxBodyCerts proxy pv txBody =
   mapM (toPlutusTxCert proxy pv) $ F.toList (txBody ^. certsTxBodyL)
 
-transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
+transWithdrawals :: Withdrawals -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
   where
     accum ans rewardAccount (Coin n) =
@@ -288,16 +283,16 @@ transTxWitsDatums txWits = transDataPair <$> Map.toList (unTxDats $ txWits ^. da
 -- ==================================
 -- translate Values
 
-transPolicyID :: PolicyID c -> PV1.CurrencySymbol
+transPolicyID :: PolicyID -> PV1.CurrencySymbol
 transPolicyID (PolicyID (ScriptHash x)) = PV1.CurrencySymbol (PV1.toBuiltin (hashToBytes x))
 
 transAssetName :: AssetName -> PV1.TokenName
 transAssetName (AssetName bs) = PV1.TokenName (PV1.toBuiltin (SBS.fromShort bs))
 
-transMultiAsset :: MultiAsset c -> PV1.Value
+transMultiAsset :: MultiAsset -> PV1.Value
 transMultiAsset ma = transMultiAssetInternal ma mempty
 
-transMultiAssetInternal :: MultiAsset c -> PV1.Value -> PV1.Value
+transMultiAssetInternal :: MultiAsset -> PV1.Value -> PV1.Value
 transMultiAssetInternal (MultiAsset m) initAcc = Map.foldlWithKey' accum1 initAcc m
   where
     accum1 ans sym mp2 = Map.foldlWithKey' accum2 ans mp2
@@ -314,10 +309,10 @@ transMultiAssetInternal (MultiAsset m) initAcc = Map.foldlWithKey' accum1 initAc
 -- MultiAsset, which has changed since then to just MultiAsset (because minting ADA
 -- makes no sense). However, if we don't preserve previous translation, scripts that
 -- previously succeeded will fail.
-transMintValue :: MultiAsset c -> PV1.Value
+transMintValue :: MultiAsset -> PV1.Value
 transMintValue m = transMultiAssetInternal m (transCoinToValue zero)
 
-transValue :: MaryValue c -> PV1.Value
+transValue :: MaryValue -> PV1.Value
 transValue (MaryValue c m) = transCoinToValue c <> transMultiAsset m
 
 -- =============================================
