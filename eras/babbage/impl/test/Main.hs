@@ -2,7 +2,7 @@
 
 module Main where
 
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Babbage (BabbageEra)
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Babbage.Binary.CddlSpec as CddlSpec
@@ -20,10 +20,10 @@ main =
       Golden.spec
       BinarySpec.spec
       CddlSpec.spec
-      roundTripJsonEraSpec @Babbage
+      roundTripJsonEraSpec @BabbageEra
       describe "Imp" $ do
-        Imp.spec @Babbage
+        Imp.spec @BabbageEra
       describe "CostModels" $ do
-        CostModelsSpec.spec @Babbage
+        CostModelsSpec.spec @BabbageEra
       describe "TxWits" $ do
-        TxWitsSpec.spec @Babbage
+        TxWitsSpec.spec @BabbageEra

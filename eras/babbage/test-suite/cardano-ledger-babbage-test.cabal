@@ -71,7 +71,6 @@ test-suite cardano-ledger-babbage-test
         cardano-ledger-babbage-test,
         cardano-ledger-core,
         cardano-ledger-shelley-ma-test,
-        cardano-ledger-shelley-test,
         cardano-protocol-tpraos >=1.0,
         tasty-quickcheck,
         tasty

@@ -79,14 +79,14 @@ import Data.MapExtras (extractKeys)
 import qualified Debug.Trace as Debug
 import Lens.Micro
 
-type instance EraRuleFailure "UTXOS" (BabbageEra c) = AlonzoUtxosPredFailure (BabbageEra c)
-type instance EraRuleEvent "UTXOS" (BabbageEra c) = AlonzoUtxosEvent (BabbageEra c)
+type instance EraRuleFailure "UTXOS" BabbageEra = AlonzoUtxosPredFailure BabbageEra
+type instance EraRuleEvent "UTXOS" BabbageEra = AlonzoUtxosEvent BabbageEra
 
-instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (BabbageEra c)
+instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure BabbageEra
 
-instance InjectRuleEvent "UTXOS" AlonzoUtxosEvent (BabbageEra c)
+instance InjectRuleEvent "UTXOS" AlonzoUtxosEvent BabbageEra
 
-instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure BabbageEra where
   injectFailure = UpdateFailure
 
 -- =====================================================

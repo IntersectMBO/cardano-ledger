@@ -100,38 +100,38 @@ data BabbageUtxowPredFailure era
     UtxoFailure !(PredicateFailure (EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
     MalformedScriptWitnesses
-      !(Set (ScriptHash (EraCrypto era)))
+      !(Set ScriptHash)
   | -- | the set of malformed script witnesses
     MalformedReferenceScripts
-      !(Set (ScriptHash (EraCrypto era)))
+      !(Set ScriptHash)
   deriving (Generic)
 
-type instance EraRuleFailure "UTXOW" (BabbageEra c) = BabbageUtxowPredFailure (BabbageEra c)
+type instance EraRuleFailure "UTXOW" BabbageEra = BabbageUtxowPredFailure BabbageEra
 
-instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure (BabbageEra c)
+instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure BabbageEra
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure BabbageEra where
   injectFailure = AlonzoInBabbageUtxowPredFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure BabbageEra where
   injectFailure = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
 
-instance InjectRuleFailure "UTXOW" BabbageUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXOW" BabbageUtxoPredFailure BabbageEra where
   injectFailure = UtxoFailure
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure BabbageEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure BabbageEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure BabbageEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure BabbageEra where
   injectFailure = UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure BabbageEra where
   injectFailure = UtxoFailure . injectFailure
 
 deriving instance
@@ -200,7 +200,7 @@ instance
   ( AlonzoEraScript era
   , NFData (TxCert era)
   , NFData (PredicateFailure (EraRule "UTXO" era))
-  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
+  , NFData (VerKeyDSIGN DSIGN)
   ) =>
   NFData (BabbageUtxowPredFailure era)
 
@@ -215,9 +215,9 @@ instance
 babbageMissingScripts ::
   forall era.
   PParams era ->
-  Set (ScriptHash (EraCrypto era)) ->
-  Set (ScriptHash (EraCrypto era)) ->
-  Set (ScriptHash (EraCrypto era)) ->
+  Set ScriptHash ->
+  Set ScriptHash ->
+  Set ScriptHash ->
   Test (ShelleyUtxowPredFailure era)
 babbageMissingScripts _ sNeeded sRefs sReceived =
   sequenceA_
@@ -234,7 +234,7 @@ validateFailedBabbageScripts ::
   EraTx era =>
   Tx era ->
   ScriptsProvided era ->
-  Set (ScriptHash (EraCrypto era)) ->
+  Set ScriptHash ->
   Test (ShelleyUtxowPredFailure era)
 validateFailedBabbageScripts tx (ScriptsProvided scriptsProvided) neededHashes =
   let failedScripts =
@@ -317,7 +317,7 @@ babbageUtxowTransition ::
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , Signable (DSIGN) (Hash (HASH) EraIndependentTxBody)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , State (EraRule "UTXOW" era) ~ UTxOState era
@@ -403,7 +403,7 @@ instance
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , Signable DSIGN (Hash HASH EraIndependentTxBody)
   , EraRule "UTXOW" era ~ BabbageUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era

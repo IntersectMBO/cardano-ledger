@@ -62,7 +62,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
@@ -105,10 +104,10 @@ transReferenceScript (SJust s) = Just . transScriptHash . hashScript @era $ s
 transTxOutV1 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
-  TxOutSource (EraCrypto era) ->
+  TxOutSource ->
   TxOut era ->
   Either (ContextError era) PV1.TxOut
 transTxOutV1 txOutSource txOut = do
@@ -125,10 +124,10 @@ transTxOutV1 txOutSource txOut = do
 transTxOutV2 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
-  TxOutSource (EraCrypto era) ->
+  TxOutSource ->
   TxOut era ->
   Either (ContextError era) PV2.TxOut
 transTxOutV2 txOutSource txOut = do
@@ -154,11 +153,11 @@ transTxOutV2 txOutSource txOut = do
 transTxInInfoV1 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
   UTxO era ->
-  TxIn (EraCrypto era) ->
+  TxIn ->
   Either (ContextError era) PV1.TxInInfo
 transTxInInfoV1 utxo txIn = do
   txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
@@ -169,11 +168,11 @@ transTxInInfoV1 utxo txIn = do
 transTxInInfoV2 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
   UTxO era ->
-  TxIn (EraCrypto era) ->
+  TxIn ->
   Either (ContextError era) PV2.TxInInfo
 transTxInInfoV2 utxo txIn = do
   txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
@@ -220,8 +219,8 @@ transTxRedeemers proxy pv tx =
       (transRedeemerPtr proxy pv (tx ^. bodyTxL))
       (Map.toList (unRedeemers $ tx ^. witsTxL . rdmrsTxWitsL))
 
-instance Crypto c => EraPlutusContext (BabbageEra c) where
-  type ContextError (BabbageEra c) = BabbageContextError (BabbageEra c)
+instance EraPlutusContext BabbageEra where
+  type ContextError BabbageEra = BabbageContextError BabbageEra
 
   mkPlutusWithContext = \case
     BabbagePlutusV1 p -> toPlutusWithContext $ Left p
@@ -229,11 +228,11 @@ instance Crypto c => EraPlutusContext (BabbageEra c) where
 
 data BabbageContextError era
   = AlonzoContextError !(AlonzoContextError era)
-  | ByronTxOutInContext !(TxOutSource (EraCrypto era))
+  | ByronTxOutInContext !TxOutSource
   | RedeemerPointerPointsToNothing !(PlutusPurpose AsIx era)
-  | InlineDatumsNotSupported !(TxOutSource (EraCrypto era))
-  | ReferenceScriptsNotSupported !(TxOutSource (EraCrypto era))
-  | ReferenceInputsNotSupported !(Set.Set (TxIn (EraCrypto era)))
+  | InlineDatumsNotSupported !TxOutSource
+  | ReferenceScriptsNotSupported !TxOutSource
+  | ReferenceInputsNotSupported !(Set.Set TxIn)
   deriving (Generic)
 
 deriving instance
@@ -295,7 +294,7 @@ instance ToJSON (PlutusPurpose AsIx era) => ToJSON (BabbageContextError era) whe
         "Reference inputs not supported: "
           <> T.intercalate ", " (map txInToText (Set.toList txIns))
 
-instance Crypto c => EraPlutusTxInfo 'PlutusV1 (BabbageEra c) where
+instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
   toPlutusTxCert _ _ = pure . Alonzo.transTxCert
 
   toPlutusScriptPurpose proxy pv = Alonzo.transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
@@ -331,7 +330,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (BabbageEra c) where
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
-instance Crypto c => EraPlutusTxInfo 'PlutusV2 (BabbageEra c) where
+instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
   toPlutusTxCert _ _ = pure . Alonzo.transTxCert
 
   toPlutusScriptPurpose proxy pv = Alonzo.transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
