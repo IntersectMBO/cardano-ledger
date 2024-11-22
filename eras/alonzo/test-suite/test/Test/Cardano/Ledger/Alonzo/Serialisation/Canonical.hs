@@ -4,7 +4,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Canonical (tests) where
 
-import Cardano.Ledger.Alonzo (Alonzo, AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -25,7 +25,6 @@ import Cardano.Ledger.Binary (
   withSlice,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Language (Language)
 import Control.Monad (replicateM, unless, void)
 import qualified Data.ByteString.Base16 as B16
@@ -40,12 +39,12 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 
 tests :: TestTree
-tests = testProperty "LangDepView encoding is canonical" (canonicalLangDepView @StandardCrypto)
+tests = testProperty "LangDepView encoding is canonical" canonicalLangDepView
 
-canonicalLangDepView :: forall c. Crypto c => PParams (AlonzoEra c) -> Set Language -> Property
+canonicalLangDepView :: PParams AlonzoEra -> Set Language -> Property
 canonicalLangDepView pparams langs =
   let langViews = Set.fromList $ getLanguageView pparams <$> Set.toList langs
-      encodedViews = serialize (eraProtVerHigh @(AlonzoEra c)) $ encodeLangViews langViews
+      encodedViews = serialize (eraProtVerHigh @AlonzoEra) $ encodeLangViews langViews
       base16String = show (B16.encode $ LBS.toStrict encodedViews)
    in counterexample base16String $ case isCanonical encodedViews of
         Right () -> QCP.succeeded
@@ -53,7 +52,7 @@ canonicalLangDepView pparams langs =
 
 isCanonical :: LBS.ByteString -> Either String ()
 isCanonical bytes =
-  case decodeFullAnnotator (eraProtVerHigh @Alonzo) "Canonicity check" checkCanonicalTerm bytes of
+  case decodeFullAnnotator (eraProtVerHigh @AlonzoEra) "Canonicity check" checkCanonicalTerm bytes of
     Left err -> Left (show err)
     Right x -> x
 

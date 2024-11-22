@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -7,13 +6,12 @@ module Cardano.Ledger.Alonzo.TxCert () where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Shelley.TxCert
 
-instance Crypto c => EraTxCert (AlonzoEra c) where
-  {-# SPECIALIZE instance EraTxCert (AlonzoEra StandardCrypto) #-}
+instance EraTxCert AlonzoEra where
+  {-# SPECIALIZE instance EraTxCert AlonzoEra #-}
 
-  type TxCert (AlonzoEra c) = ShelleyTxCert (AlonzoEra c)
+  type TxCert AlonzoEra = ShelleyTxCert AlonzoEra
 
   upgradeTxCert = Right . upgradeShelleyTxCert
 
@@ -42,9 +40,7 @@ instance Crypto c => EraTxCert (AlonzoEra c) where
 
   getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
-instance Crypto c => ShelleyEraTxCert (AlonzoEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxCert (AlonzoEra StandardCrypto) #-}
-
+instance ShelleyEraTxCert AlonzoEra where
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
 
   getRegTxCert (ShelleyTxCertDelegCert (ShelleyRegCert c)) = Just c

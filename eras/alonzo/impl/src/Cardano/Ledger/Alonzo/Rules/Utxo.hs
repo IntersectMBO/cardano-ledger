@@ -118,7 +118,7 @@ import Validation
 data AlonzoUtxoPredFailure era
   = -- | The bad transaction inputs
     BadInputsUTxO
-      !(Set (TxIn (EraCrypto era)))
+      !(Set TxIn)
   | OutsideValidityIntervalUTxO
       -- | transaction's validity interval
       !ValidityInterval
@@ -133,12 +133,12 @@ data AlonzoUtxoPredFailure era
       -- | the expected network id
       !Network
       -- | the set of addresses with incorrect network IDs
-      !(Set (Addr (EraCrypto era)))
+      !(Set Addr)
   | WrongNetworkWithdrawal
       -- | the expected network id
       !Network
       -- | the set of reward addresses with incorrect network IDs
-      !(Set (RewardAccount (EraCrypto era)))
+      !(Set RewardAccount)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
       ![TxOut era]
@@ -173,20 +173,20 @@ data AlonzoUtxoPredFailure era
   | NoCollateralInputs
   deriving (Generic)
 
-type instance EraRuleFailure "UTXO" (AlonzoEra c) = AlonzoUtxoPredFailure (AlonzoEra c)
+type instance EraRuleFailure "UTXO" AlonzoEra = AlonzoUtxoPredFailure AlonzoEra
 
-instance InjectRuleFailure "UTXO" AlonzoUtxoPredFailure (AlonzoEra c)
+instance InjectRuleFailure "UTXO" AlonzoUtxoPredFailure AlonzoEra
 
-instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure AlonzoEra where
   injectFailure = UtxosFailure . injectFailure
 
-instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure AlonzoEra where
   injectFailure = allegraToAlonzoUtxoPredFailure . shelleyToAllegraUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure AlonzoEra where
   injectFailure = allegraToAlonzoUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure AlonzoEra where
   injectFailure = UtxosFailure
 
 deriving stock instance
@@ -235,13 +235,13 @@ instance NFData (Event (EraRule "UTXOS" era)) => NFData (AlonzoUtxoEvent era)
 
 -- | Returns true for VKey locked addresses, and false for any kind of
 -- script-locked address.
-isKeyHashAddr :: Addr c -> Bool
+isKeyHashAddr :: Addr -> Bool
 isKeyHashAddr (AddrBootstrap _) = True
 isKeyHashAddr (Addr _ (KeyHashObj _) _) = True
 isKeyHashAddr _ = False
 
 -- | This is equivalent to `isKeyHashAddr`, but for compacted version of an address.
-isKeyHashCompactAddr :: CompactAddr c -> Bool
+isKeyHashCompactAddr :: CompactAddr -> Bool
 isKeyHashCompactAddr cAddr =
   isBootstrapCompactAddr cAddr || not (isPayCredScriptCompactAddr cAddr)
 
@@ -293,7 +293,7 @@ validateCollateral ::
   ) =>
   PParams era ->
   TxBody era ->
-  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
+  Map.Map TxIn (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateCollateral pp txb utxoCollateral =
   sequenceA_
@@ -312,7 +312,7 @@ validateCollateral pp txb utxoCollateral =
 -- > (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
 validateScriptsNotPaidUTxO ::
   EraTxOut era =>
-  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
+  Map.Map TxIn (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateScriptsNotPaidUTxO utxoCollateral =
   failureUnless (all vKeyLocked utxoCollateral) $
@@ -661,8 +661,7 @@ encFail NoCollateralInputs =
   Sum NoCollateralInputs 20
 
 decFail ::
-  ( Era era
-  , DecCBOR (TxOut era)
+  ( DecCBOR (TxOut era)
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>

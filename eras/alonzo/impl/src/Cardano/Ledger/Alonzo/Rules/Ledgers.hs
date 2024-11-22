@@ -24,42 +24,42 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 
-type instance EraRuleFailure "LEDGERS" (AlonzoEra c) = ShelleyLedgersPredFailure (AlonzoEra c)
+type instance EraRuleFailure "LEDGERS" AlonzoEra = ShelleyLedgersPredFailure AlonzoEra
 
-instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure (AlonzoEra c)
+instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure AlonzoEra
 
-instance InjectRuleFailure "LEDGERS" ShelleyLedgerPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyLedgerPredFailure AlonzoEra where
   injectFailure = LedgerFailure
 
-instance InjectRuleFailure "LEDGERS" AlonzoUtxowPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" AlonzoUtxowPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" AlonzoUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" AlonzoUtxoPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" AlonzoUtxosPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" AlonzoUtxosPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyPpupPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyPpupPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyUtxoPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" AllegraUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" AllegraUtxoPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelegsPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelegsPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelplPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelplPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelegPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelegPredFailure AlonzoEra where
   injectFailure = LedgerFailure . injectFailure

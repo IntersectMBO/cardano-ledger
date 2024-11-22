@@ -16,7 +16,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -114,7 +113,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
@@ -159,15 +157,15 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
-type ScriptIntegrityHash c = SafeHash c EraIndependentScriptIntegrity
+type ScriptIntegrityHash = SafeHash EraIndependentScriptIntegrity
 
 class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
-  collateralInputsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
+  collateralInputsTxBodyL :: Lens' (TxBody era) (Set TxIn)
 
-  reqSignerHashesTxBodyL :: Lens' (TxBody era) (Set (KeyHash 'Witness (EraCrypto era)))
+  reqSignerHashesTxBodyL :: Lens' (TxBody era) (Set (KeyHash 'Witness))
 
   scriptIntegrityHashTxBodyL ::
-    Lens' (TxBody era) (StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+    Lens' (TxBody era) (StrictMaybe ScriptIntegrityHash)
 
   networkIdTxBodyL :: Lens' (TxBody era) (StrictMaybe Network)
 
@@ -187,18 +185,18 @@ class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
 -- ======================================
 
 data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
-  { atbrInputs :: !(Set (TxIn (EraCrypto era)))
-  , atbrCollateral :: !(Set (TxIn (EraCrypto era)))
+  { atbrInputs :: !(Set TxIn)
+  , atbrCollateral :: !(Set TxIn)
   , atbrOutputs :: !(StrictSeq (TxOut era))
   , atbrCerts :: !(StrictSeq (TxCert era))
-  , atbrWithdrawals :: !(Withdrawals (EraCrypto era))
+  , atbrWithdrawals :: !Withdrawals
   , atbrTxFee :: !Coin
   , atbrValidityInterval :: !ValidityInterval
   , atbrUpdate :: !(StrictMaybe (Update era))
-  , atbrReqSignerHashes :: Set (KeyHash 'Witness (EraCrypto era))
-  , atbrMint :: !(MultiAsset (EraCrypto era))
-  , atbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
-  , atbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  , atbrReqSignerHashes :: Set (KeyHash 'Witness)
+  , atbrMint :: !MultiAsset
+  , atbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
+  , atbrAuxDataHash :: !(StrictMaybe AuxiliaryDataHash)
   , atbrTxNetworkId :: !(StrictMaybe Network)
   }
   deriving (Generic, Typeable)
@@ -233,11 +231,9 @@ data AlonzoTxBodyUpgradeError
     ATBUEMinUTxOUpdated
   deriving (Show)
 
-instance Crypto c => EraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance EraTxBody (AlonzoEra StandardCrypto) #-}
-
-  type TxBody (AlonzoEra c) = AlonzoTxBody (AlonzoEra c)
-  type TxBodyUpgradeError (AlonzoEra c) = AlonzoTxBodyUpgradeError
+instance EraTxBody AlonzoEra where
+  type TxBody AlonzoEra = AlonzoTxBody AlonzoEra
+  type TxBodyUpgradeError AlonzoEra = AlonzoTxBodyUpgradeError
 
   mkBasicTxBody = mkMemoized emptyAlonzoTxBodyRaw
 
@@ -314,14 +310,14 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
           }
       where
         upgradeUpdate ::
-          Update (MaryEra c) ->
-          Either AlonzoTxBodyUpgradeError (Update (AlonzoEra c))
+          Update MaryEra ->
+          Either AlonzoTxBodyUpgradeError (Update AlonzoEra)
         upgradeUpdate (Update pp epoch) =
           Update <$> upgradeProposedPPUpdates pp <*> pure epoch
 
         upgradeProposedPPUpdates ::
-          ProposedPPUpdates (MaryEra c) ->
-          Either AlonzoTxBodyUpgradeError (ProposedPPUpdates (AlonzoEra c))
+          ProposedPPUpdates MaryEra ->
+          Either AlonzoTxBodyUpgradeError (ProposedPPUpdates AlonzoEra)
         upgradeProposedPPUpdates (ProposedPPUpdates m) =
           ProposedPPUpdates
             <$> traverse
@@ -332,25 +328,19 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
               )
               m
 
-instance Crypto c => ShelleyEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxBody (AlonzoEra StandardCrypto) #-}
-
+instance ShelleyEraTxBody AlonzoEra where
   ttlTxBodyL = notSupportedInThisEraL
 
   updateTxBodyL =
     lensMemoRawType atbrUpdate (\txBodyRaw update_ -> txBodyRaw {atbrUpdate = update_})
   {-# INLINEABLE updateTxBodyL #-}
 
-instance Crypto c => AllegraEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance AllegraEraTxBody (AlonzoEra StandardCrypto) #-}
-
+instance AllegraEraTxBody AlonzoEra where
   vldtTxBodyL =
     lensMemoRawType atbrValidityInterval (\txBodyRaw vldt_ -> txBodyRaw {atbrValidityInterval = vldt_})
   {-# INLINEABLE vldtTxBodyL #-}
 
-instance Crypto c => MaryEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance MaryEraTxBody (AlonzoEra StandardCrypto) #-}
-
+instance MaryEraTxBody AlonzoEra where
   mintTxBodyL =
     lensMemoRawType atbrMint (\txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_})
   {-# INLINEABLE mintTxBodyL #-}
@@ -361,9 +351,7 @@ instance Crypto c => MaryEraTxBody (AlonzoEra c) where
   mintedTxBodyF = to (policies . atbrMint . getMemoRawType)
   {-# INLINEABLE mintedTxBodyF #-}
 
-instance Crypto c => AlonzoEraTxBody (AlonzoEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxBody (AlonzoEra StandardCrypto) #-}
-
+instance AlonzoEraTxBody AlonzoEra where
   collateralInputsTxBodyL =
     lensMemoRawType atbrCollateral (\txBodyRaw collateral_ -> txBodyRaw {atbrCollateral = collateral_})
   {-# INLINEABLE collateralInputsTxBodyL #-}
@@ -412,18 +400,18 @@ deriving via
 
 pattern AlonzoTxBody ::
   (EraTxOut era, EraTxCert era) =>
-  Set (TxIn (EraCrypto era)) ->
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
+  Set TxIn ->
   StrictSeq (TxOut era) ->
   StrictSeq (TxCert era) ->
-  Withdrawals (EraCrypto era) ->
+  Withdrawals ->
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  Set (KeyHash 'Witness (EraCrypto era)) ->
-  MultiAsset (EraCrypto era) ->
-  StrictMaybe (ScriptIntegrityHash (EraCrypto era)) ->
-  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+  Set (KeyHash 'Witness) ->
+  MultiAsset ->
+  StrictMaybe ScriptIntegrityHash ->
+  StrictMaybe AuxiliaryDataHash ->
   StrictMaybe Network ->
   AlonzoTxBody era
 pattern AlonzoTxBody
@@ -494,7 +482,7 @@ pattern AlonzoTxBody
 
 type instance MemoHashIndex AlonzoTxBodyRaw = EraIndependentTxBody
 
-instance c ~ EraCrypto era => HashAnnotated (AlonzoTxBody era) EraIndependentTxBody c where
+instance HashAnnotated (AlonzoTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- ==============================================================================
@@ -503,18 +491,18 @@ instance c ~ EraCrypto era => HashAnnotated (AlonzoTxBody era) EraIndependentTxB
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
-inputs' :: AlonzoTxBody era -> Set (TxIn (EraCrypto era))
-collateral' :: AlonzoTxBody era -> Set (TxIn (EraCrypto era))
+inputs' :: AlonzoTxBody era -> Set TxIn
+collateral' :: AlonzoTxBody era -> Set TxIn
 outputs' :: AlonzoTxBody era -> StrictSeq (TxOut era)
 certs' :: AlonzoTxBody era -> StrictSeq (TxCert era)
 txfee' :: AlonzoTxBody era -> Coin
-withdrawals' :: AlonzoTxBody era -> Withdrawals (EraCrypto era)
+withdrawals' :: AlonzoTxBody era -> Withdrawals
 vldt' :: AlonzoTxBody era -> ValidityInterval
 update' :: AlonzoTxBody era -> StrictMaybe (Update era)
-reqSignerHashes' :: AlonzoTxBody era -> Set (KeyHash 'Witness (EraCrypto era))
-adHash' :: AlonzoTxBody era -> StrictMaybe (AuxiliaryDataHash (EraCrypto era))
-mint' :: AlonzoTxBody era -> MultiAsset (EraCrypto era)
-scriptIntegrityHash' :: AlonzoTxBody era -> StrictMaybe (ScriptIntegrityHash (EraCrypto era))
+reqSignerHashes' :: AlonzoTxBody era -> Set (KeyHash 'Witness)
+adHash' :: AlonzoTxBody era -> StrictMaybe AuxiliaryDataHash
+mint' :: AlonzoTxBody era -> MultiAsset
+scriptIntegrityHash' :: AlonzoTxBody era -> StrictMaybe ScriptIntegrityHash
 txnetworkid' :: AlonzoTxBody era -> StrictMaybe Network
 inputs' = atbrInputs . getMemoRawType
 
@@ -666,7 +654,7 @@ alonzoRedeemerPointer txBody = \case
   AlonzoSpending txIn ->
     AlonzoSpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
   AlonzoMinting policyID ->
-    AlonzoMinting <$> indexOf policyID (txBody ^. mintedTxBodyF :: Set (PolicyID (EraCrypto era)))
+    AlonzoMinting <$> indexOf policyID (txBody ^. mintedTxBodyF :: Set PolicyID)
   AlonzoCertifying txCert ->
     AlonzoCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
   AlonzoRewarding rewardAccount ->

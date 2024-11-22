@@ -101,7 +101,6 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Plutus.CostModels (
@@ -328,10 +327,10 @@ instance NoThunks (AlonzoPParams StrictMaybe era)
 
 instance NFData (AlonzoPParams StrictMaybe era)
 
-instance Crypto c => EraPParams (AlonzoEra c) where
-  type PParamsHKD f (AlonzoEra c) = AlonzoPParams f (AlonzoEra c)
-  type UpgradePParams f (AlonzoEra c) = UpgradeAlonzoPParams f
-  type DowngradePParams f (AlonzoEra c) = DowngradeAlonzoPParams f
+instance EraPParams AlonzoEra where
+  type PParamsHKD f AlonzoEra = AlonzoPParams f AlonzoEra
+  type UpgradePParams f AlonzoEra = UpgradeAlonzoPParams f
+  type DowngradePParams f AlonzoEra = DowngradeAlonzoPParams f
 
   emptyPParamsIdentity = emptyAlonzoPParams
   emptyPParamsStrictMaybe = emptyAlonzoPParamsUpdate
@@ -357,15 +356,15 @@ instance Crypto c => EraPParams (AlonzoEra c) where
   hkdMinUTxOValueL = notSupportedInThisEraL
   hkdMinPoolCostL = lens appMinPoolCost $ \pp x -> pp {appMinPoolCost = x}
 
-instance Crypto c => AlonzoEraPParams (AlonzoEra c) where
+instance AlonzoEraPParams AlonzoEra where
   hkdCoinsPerUTxOWordL = lens appCoinsPerUTxOWord $ \pp x -> pp {appCoinsPerUTxOWord = x}
   hkdCostModelsL = lens appCostModels $ \pp x -> pp {appCostModels = x}
   hkdPricesL = lens appPrices $ \pp x -> pp {appPrices = x}
-  hkdMaxTxExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (AlonzoEra c)) (HKD f ExUnits)
+  hkdMaxTxExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f AlonzoEra) (HKD f ExUnits)
   hkdMaxTxExUnitsL =
     lens (hkdMap (Proxy @f) unOrdExUnits . appMaxTxExUnits) $ \pp x ->
       pp {appMaxTxExUnits = hkdMap (Proxy @f) OrdExUnits x}
-  hkdMaxBlockExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (AlonzoEra c)) (HKD f ExUnits)
+  hkdMaxBlockExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f AlonzoEra) (HKD f ExUnits)
   hkdMaxBlockExUnitsL =
     lens (hkdMap (Proxy @f) unOrdExUnits . appMaxBlockExUnits) $ \pp x ->
       pp {appMaxBlockExUnits = hkdMap (Proxy @f) OrdExUnits x}
@@ -375,8 +374,8 @@ instance Crypto c => AlonzoEraPParams (AlonzoEra c) where
   hkdMaxCollateralInputsL =
     lens appMaxCollateralInputs $ \pp x -> pp {appMaxCollateralInputs = x}
 
-instance Crypto c => EraGov (AlonzoEra c) where
-  type GovState (AlonzoEra c) = ShelleyGovState (AlonzoEra c)
+instance EraGov AlonzoEra where
+  type GovState AlonzoEra = ShelleyGovState AlonzoEra
   emptyGovState = emptyShelleyGovState
 
   getProposedPPUpdates = Just . sgsCurProposals
@@ -454,14 +453,14 @@ instance Era era => ToCBOR (AlonzoPParams Identity era) where
 instance Era era => FromCBOR (AlonzoPParams Identity era) where
   fromCBOR = fromEraCBOR @era
 
-instance Crypto c => ToJSON (AlonzoPParams Identity (AlonzoEra c)) where
+instance ToJSON (AlonzoPParams Identity AlonzoEra) where
   toJSON = object . alonzoPParamsPairs
   toEncoding = pairs . mconcat . alonzoPParamsPairs
 
 alonzoPParamsPairs ::
-  forall c a e.
-  (Crypto c, KeyValue e a) =>
-  PParamsHKD Identity (AlonzoEra c) ->
+  forall a e.
+  KeyValue e a =>
+  PParamsHKD Identity AlonzoEra ->
   [a]
 alonzoPParamsPairs pp =
   uncurry (.=) <$> alonzoPParamsHKDPairs (Proxy @Identity) pp
@@ -702,14 +701,14 @@ instance Era era => ToCBOR (AlonzoPParams StrictMaybe era) where
 instance Era era => FromCBOR (AlonzoPParams StrictMaybe era) where
   fromCBOR = fromEraCBOR @era
 
-instance Crypto c => ToJSON (AlonzoPParams StrictMaybe (AlonzoEra c)) where
+instance ToJSON (AlonzoPParams StrictMaybe AlonzoEra) where
   toJSON = object . alonzoPParamsUpdatePairs
   toEncoding = pairs . mconcat . alonzoPParamsUpdatePairs
 
 alonzoPParamsUpdatePairs ::
-  forall c a e.
-  (Crypto c, KeyValue e a) =>
-  PParamsHKD StrictMaybe (AlonzoEra c) ->
+  forall a e.
+  KeyValue e a =>
+  PParamsHKD StrictMaybe AlonzoEra ->
   [a]
 alonzoPParamsUpdatePairs pp =
   [ k .= v
@@ -717,10 +716,10 @@ alonzoPParamsUpdatePairs pp =
   ]
 
 alonzoPParamsHKDPairs ::
-  forall f c.
-  (HKDFunctor f, Crypto c) =>
+  forall f.
+  HKDFunctor f =>
   Proxy f ->
-  PParamsHKD f (AlonzoEra c) ->
+  PParamsHKD f AlonzoEra ->
   [(Key, HKD f Aeson.Value)]
 alonzoPParamsHKDPairs px pp =
   alonzoCommonPParamsHKDPairs px pp

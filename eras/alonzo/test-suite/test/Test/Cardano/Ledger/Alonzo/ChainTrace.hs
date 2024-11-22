@@ -40,7 +40,6 @@ import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (sumCollateral)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
-import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
   CHAIN,
@@ -63,7 +62,7 @@ import Test.QuickCheck (
 import Test.Tasty
 import qualified Test.Tasty.QuickCheck as TQC
 
-type A = AlonzoEra TestCrypto
+type A = AlonzoEra
 
 instance Embed (AlonzoBBODY A) (CHAIN A) where
   wrapFailed = BbodyFailure

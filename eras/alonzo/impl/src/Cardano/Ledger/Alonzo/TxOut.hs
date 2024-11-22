@@ -93,7 +93,7 @@ import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 
 class (AlonzoEraPParams era, EraTxOut era) => AlonzoEraTxOut era where
-  dataHashTxOutL :: Lens' (TxOut era) (StrictMaybe (DataHash (EraCrypto era)))
+  dataHashTxOutL :: Lens' (TxOut era) (StrictMaybe DataHash)
 
   datumTxOutF :: SimpleGetter (TxOut era) (Datum era)
 
@@ -114,19 +114,17 @@ data DataHash32
   deriving (Eq, Show, Generic, NoThunks)
 
 decodeAddress28 ::
-  forall c.
-  HashAlgorithm (ADDRHASH c) =>
-  Credential 'Staking c ->
+  Credential 'Staking ->
   Addr28Extra ->
-  Maybe (Addr c)
+  Maybe Addr
 decodeAddress28 stakeRef (Addr28Extra a b c d) = do
-  Refl <- sameNat (Proxy @(SizeHash (ADDRHASH c))) (Proxy @28)
+  Refl <- sameNat (Proxy @(SizeHash ADDRHASH)) (Proxy @28)
   let network = if d `testBit` 1 then Mainnet else Testnet
       paymentCred =
         if d `testBit` 0
           then KeyHashObj (KeyHash addrHash)
           else ScriptHashObj (ScriptHash addrHash)
-      addrHash :: Hash (ADDRHASH c) a
+      addrHash :: Hash ADDRHASH a
       addrHash =
         hashFromPackedBytes $
           PackedBytes28 a b c (fromIntegral (d `shiftR` 32))
@@ -135,18 +133,18 @@ decodeAddress28 stakeRef (Addr28Extra a b c d) = do
 
 data AlonzoTxOut era
   = TxOutCompact'
-      {-# UNPACK #-} !(CompactAddr (EraCrypto era))
+      {-# UNPACK #-} !CompactAddr
       !(CompactForm (Value era))
   | TxOutCompactDH'
-      {-# UNPACK #-} !(CompactAddr (EraCrypto era))
+      {-# UNPACK #-} !CompactAddr
       !(CompactForm (Value era))
-      !(DataHash (EraCrypto era))
+      !DataHash
   | TxOut_AddrHash28_AdaOnly
-      !(Credential 'Staking (EraCrypto era))
+      !(Credential 'Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
   | TxOut_AddrHash28_AdaOnly_DataHash32
-      !(Credential 'Staking (EraCrypto era))
+      !(Credential 'Staking)
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
@@ -164,18 +162,16 @@ addressErrorMsg = "Impossible: Compacted an address of non-standard size"
 {-# NOINLINE addressErrorMsg #-}
 
 decodeDataHash32 ::
-  forall c.
-  HashAlgorithm (HASH c) =>
   DataHash32 ->
-  Maybe (DataHash c)
+  Maybe DataHash
 decodeDataHash32 (DataHash32 a b c d) = do
-  Refl <- sameNat (Proxy @(SizeHash (HASH c))) (Proxy @32)
+  Refl <- sameNat (Proxy @(SizeHash HASH)) (Proxy @32)
   Just $! unsafeMakeSafeHash $ hashFromPackedBytes $ PackedBytes32 a b c d
 
 viewCompactTxOut ::
-  (Era era, Val (Value era)) =>
+  Val (Value era) =>
   AlonzoTxOut era ->
-  (CompactAddr (EraCrypto era), CompactForm (Value era), StrictMaybe (DataHash (EraCrypto era)))
+  (CompactAddr, CompactForm (Value era), StrictMaybe (DataHash))
 viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
@@ -190,9 +186,9 @@ viewCompactTxOut txOut = case txOut of
     | otherwise -> error addressErrorMsg
 
 viewTxOut ::
-  (Era era, Val (Value era)) =>
+  Val (Value era) =>
   AlonzoTxOut era ->
-  (Addr (EraCrypto era), Value era, StrictMaybe (DataHash (EraCrypto era)))
+  (Addr, Value era, StrictMaybe DataHash)
 viewTxOut (TxOutCompact' bs c) = (addr, val, SNothing)
   where
     addr = decompactAddr bs
@@ -217,11 +213,9 @@ instance (Era era, Val (Value era)) => Show (AlonzoTxOut era) where
 deriving via InspectHeapNamed "AlonzoTxOut" (AlonzoTxOut era) instance NoThunks (AlonzoTxOut era)
 
 encodeAddress28 ::
-  forall c.
-  HashAlgorithm (ADDRHASH c) =>
   Network ->
-  PaymentCredential c ->
-  Maybe (SizeHash (ADDRHASH c) :~: 28, Addr28Extra)
+  PaymentCredential ->
+  Maybe (SizeHash ADDRHASH :~: 28, Addr28Extra)
 encodeAddress28 network paymentCred = do
   let networkBit, payCredTypeBit :: Word64
       networkBit =
@@ -233,10 +227,10 @@ encodeAddress28 network paymentCred = do
           KeyHashObj {} -> 0 `setBit` 0
           ScriptHashObj {} -> 0
       encodeAddr ::
-        Hash (ADDRHASH c) a ->
-        Maybe (SizeHash (ADDRHASH c) :~: 28, Addr28Extra)
+        Hash ADDRHASH a ->
+        Maybe (SizeHash ADDRHASH :~: 28, Addr28Extra)
       encodeAddr h = do
-        refl@Refl <- sameNat (Proxy @(SizeHash (ADDRHASH c))) (Proxy @28)
+        refl@Refl <- sameNat (Proxy @(SizeHash ADDRHASH)) (Proxy @28)
         case hashToPackedBytes h of
           PackedBytes28 a b c d ->
             let d' = (fromIntegral d `shiftL` 32) .|. networkBit .|. payCredTypeBit
@@ -247,12 +241,10 @@ encodeAddress28 network paymentCred = do
     ScriptHashObj (ScriptHash addrHash) -> encodeAddr addrHash
 
 encodeDataHash32 ::
-  forall c.
-  HashAlgorithm (HASH c) =>
-  DataHash c ->
-  Maybe (SizeHash (HASH c) :~: 32, DataHash32)
+  DataHash ->
+  Maybe (SizeHash HASH :~: 32, DataHash32)
 encodeDataHash32 dataHash = do
-  refl@Refl <- sameNat (Proxy @(SizeHash (HASH c))) (Proxy @32)
+  refl@Refl <- sameNat (Proxy @(SizeHash HASH)) (Proxy @32)
   case hashToPackedBytes (extractHash dataHash) of
     PackedBytes32 a b c d -> Just (refl, DataHash32 a b c d)
     _ -> Nothing
@@ -270,9 +262,9 @@ getAdaOnly _ v = do
 pattern AlonzoTxOut ::
   forall era.
   (Era era, Val (Value era), HasCallStack) =>
-  Addr (EraCrypto era) ->
+  Addr ->
   Value era ->
-  StrictMaybe (DataHash (EraCrypto era)) ->
+  StrictMaybe DataHash ->
   AlonzoTxOut era
 pattern AlonzoTxOut addr vl dh <-
   (viewTxOut -> (addr, vl, dh))
@@ -297,10 +289,8 @@ pattern AlonzoTxOut addr vl dh <-
 
 {-# COMPLETE AlonzoTxOut #-}
 
-instance Crypto c => EraTxOut (AlonzoEra c) where
-  {-# SPECIALIZE instance EraTxOut (AlonzoEra StandardCrypto) #-}
-
-  type TxOut (AlonzoEra c) = AlonzoTxOut (AlonzoEra c)
+instance EraTxOut AlonzoEra where
+  type TxOut AlonzoEra = AlonzoTxOut AlonzoEra
 
   mkBasicTxOut addr vl = AlonzoTxOut addr vl SNothing
 
@@ -378,13 +368,13 @@ instance (Era era, Val (Value era)) => DecCBOR (AlonzoTxOut era) where
   {-# INLINEABLE decCBOR #-}
 
 instance (Era era, Val (Value era)) => DecShareCBOR (AlonzoTxOut era) where
-  type Share (AlonzoTxOut era) = Interns (Credential 'Staking (EraCrypto era))
+  type Share (AlonzoTxOut era) = Interns (Credential 'Staking)
   decShareCBOR credsInterns = do
     internAlonzoTxOut (interns credsInterns) <$!> decCBOR
   {-# INLINEABLE decShareCBOR #-}
 
 internAlonzoTxOut ::
-  (Credential 'Staking (EraCrypto era) -> Credential 'Staking (EraCrypto era)) ->
+  (Credential 'Staking -> Credential 'Staking) ->
   AlonzoTxOut era ->
   AlonzoTxOut era
 internAlonzoTxOut internCred = \case
@@ -417,7 +407,7 @@ instance (Era era, Val (Value era)) => ToJSON (AlonzoTxOut era) where
 
 pattern TxOutCompact ::
   (Era era, Val (Value era), HasCallStack) =>
-  CompactAddr (EraCrypto era) ->
+  CompactAddr ->
   CompactForm (Value era) ->
   AlonzoTxOut era
 pattern TxOutCompact addr vl <-
@@ -427,9 +417,9 @@ pattern TxOutCompact addr vl <-
 
 pattern TxOutCompactDH ::
   (Era era, Val (Value era), HasCallStack) =>
-  CompactAddr (EraCrypto era) ->
+  CompactAddr ->
   CompactForm (Value era) ->
-  DataHash (EraCrypto era) ->
+  DataHash ->
   AlonzoTxOut era
 pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, SJust dh))
@@ -440,10 +430,10 @@ pattern TxOutCompactDH addr vl dh <-
 
 mkTxOutCompact ::
   (Era era, HasCallStack, Val (Value era)) =>
-  Addr (EraCrypto era) ->
-  CompactAddr (EraCrypto era) ->
+  Addr ->
+  CompactAddr ->
   CompactForm (Value era) ->
-  StrictMaybe (DataHash (EraCrypto era)) ->
+  StrictMaybe (DataHash) ->
   AlonzoTxOut era
 mkTxOutCompact addr cAddr cVal mdh
   | isAdaOnlyCompact cVal = AlonzoTxOut addr (fromCompact cVal) mdh
@@ -452,9 +442,9 @@ mkTxOutCompact addr cAddr cVal mdh
 
 getAlonzoTxOutDataHash ::
   forall era.
-  (HasCallStack, HashAlgorithm (HASH (EraCrypto era))) =>
+  HasCallStack =>
   AlonzoTxOut era ->
-  StrictMaybe (DataHash (EraCrypto era))
+  StrictMaybe DataHash
 getAlonzoTxOutDataHash = \case
   TxOutCompactDH' _ _ dh -> SJust dh
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dh ->
@@ -464,9 +454,8 @@ getAlonzoTxOutDataHash = \case
   _ -> SNothing
 
 getAlonzoTxOutEitherAddr ::
-  HashAlgorithm (ADDRHASH (EraCrypto era)) =>
   AlonzoTxOut era ->
-  Either (Addr (EraCrypto era)) (CompactAddr (EraCrypto era))
+  Either Addr CompactAddr
 getAlonzoTxOutEitherAddr = \case
   TxOutCompact' cAddr _ -> Right cAddr
   TxOutCompactDH' cAddr _ _ -> Right cAddr
@@ -492,9 +481,7 @@ utxoEntrySize txOut = utxoEntrySizeWithoutVal + size v + dataHashSize dh
     utxoEntrySizeWithoutVal :: Integer
     utxoEntrySizeWithoutVal = 27 -- 6 + txoutLenNoVal [14] + txinLen [7]
 
-instance Crypto c => AlonzoEraTxOut (AlonzoEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxOut (AlonzoEra StandardCrypto) #-}
-
+instance AlonzoEraTxOut AlonzoEra where
   dataHashTxOutL =
     lens getAlonzoTxOutDataHash (\(AlonzoTxOut addr cv _) dh -> AlonzoTxOut addr cv dh)
   {-# INLINEABLE dataHashTxOutL #-}
