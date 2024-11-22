@@ -6,13 +6,10 @@ module Cardano.Ledger.Babbage.TxCert () where
 
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Babbage.PParams ()
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.TxCert
 
-instance Crypto c => EraTxCert (BabbageEra c) where
-  {-# SPECIALIZE instance EraTxCert (BabbageEra StandardCrypto) #-}
-
-  type TxCert (BabbageEra c) = ShelleyTxCert (BabbageEra c)
+instance EraTxCert BabbageEra where
+  type TxCert BabbageEra = ShelleyTxCert BabbageEra
 
   upgradeTxCert = Right . upgradeShelleyTxCert
 
@@ -41,9 +38,7 @@ instance Crypto c => EraTxCert (BabbageEra c) where
 
   getTotalRefundsTxCerts pp lookupStakeDeposit _ = shelleyTotalRefundsTxCerts pp lookupStakeDeposit
 
-instance Crypto c => ShelleyEraTxCert (BabbageEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxCert (BabbageEra StandardCrypto) #-}
-
+instance ShelleyEraTxCert BabbageEra where
   mkRegTxCert = ShelleyTxCertDelegCert . ShelleyRegCert
 
   getRegTxCert (ShelleyTxCertDelegCert (ShelleyRegCert c)) = Just c

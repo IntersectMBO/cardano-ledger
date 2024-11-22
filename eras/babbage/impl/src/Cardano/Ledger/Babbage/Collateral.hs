@@ -31,7 +31,7 @@ collAdaBalance ::
   forall era.
   BabbageEraTxBody era =>
   TxBody era ->
-  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
+  Map.Map TxIn (TxOut era) ->
   DeltaCoin
 collAdaBalance txBody utxoCollateral = toDeltaCoin $
   case txBody ^. collateralReturnTxBodyL of

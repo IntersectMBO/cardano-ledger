@@ -25,15 +25,14 @@ import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody, BabbageTxOut)
 import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Shelley.API
 
-type Babbage = BabbageEra StandardCrypto
+type Babbage = BabbageEra
 
 -- =====================================================
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => ApplyTx (BabbageEra c) where
+instance DSignable (Hash EraIndependentTxBody) => ApplyTx BabbageEra where
   reapplyTx = reapplyAlonzoTx
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => ApplyBlock (BabbageEra c)
+instance DSignable (Hash EraIndependentTxBody) => ApplyBlock BabbageEra

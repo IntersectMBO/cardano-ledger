@@ -9,16 +9,15 @@ import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Transition
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Babbage.Translation ()
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley.Transition
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
-instance Crypto c => EraTransition (BabbageEra c) where
-  newtype TransitionConfig (BabbageEra c) = BabbageTransitionConfig
-    { btcAlonzoTransitionConfig :: TransitionConfig (AlonzoEra c)
+instance EraTransition BabbageEra where
+  newtype TransitionConfig BabbageEra = BabbageTransitionConfig
+    { btcAlonzoTransitionConfig :: TransitionConfig AlonzoEra
     }
     deriving (Show, Eq, NoThunks, ToJSON, FromJSON)
 
