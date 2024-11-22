@@ -22,7 +22,6 @@ import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -75,7 +74,7 @@ instance
 -- | Variant on @multiAssetFromList@ that makes sure that generated values stay
 -- bounded within the range of a given integral type.
 multiAssetFromListBounded ::
-  forall i .
+  forall i.
   (Bounded i, Integral i) =>
   [(PolicyID, AssetName, i)] ->
   MultiAsset
@@ -90,7 +89,7 @@ multiAssetFromListBounded =
         (fromIntegral $ minBound @i)
         (min (fromIntegral $ maxBound @i) (a + b))
 
-instance Arbitrary PolicyID  where
+instance Arbitrary PolicyID where
   arbitrary =
     PolicyID . ScriptHash
       <$> oneof
