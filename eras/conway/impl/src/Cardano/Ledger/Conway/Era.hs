@@ -24,7 +24,6 @@ module Cardano.Ledger.Conway.Era (
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules (
@@ -37,41 +36,40 @@ import Cardano.Ledger.Shelley.Rules (
 -- =====================================================
 
 -- | The Conway era
-data ConwayEra c
+data ConwayEra
 
-instance Crypto c => Era (ConwayEra c) where
-  type PreviousEra (ConwayEra c) = BabbageEra c
-  type EraCrypto (ConwayEra c) = c
-  type ProtVerLow (ConwayEra c) = 9
-  type ProtVerHigh (ConwayEra c) = 10
+instance Era ConwayEra where
+  type PreviousEra ConwayEra = BabbageEra
+  type ProtVerLow ConwayEra = 9
+  type ProtVerHigh ConwayEra = 10
 
   eraName = "Conway"
 
-type instance Value (ConwayEra c) = MaryValue c
+type instance Value ConwayEra = MaryValue
 
 -------------------------------------------------------------------------------
 -- Deprecated rules
 -------------------------------------------------------------------------------
 
-type instance EraRule "UPEC" (ConwayEra c) = VoidEraRule "UPEC" (ConwayEra c)
-type instance EraRuleFailure "UPEC" (ConwayEra c) = VoidEraRule "UPEC" (ConwayEra c)
-type instance EraRuleEvent "UPEC" (ConwayEra c) = VoidEraRule "UPEC" (ConwayEra c)
+type instance EraRule "UPEC" ConwayEra = VoidEraRule "UPEC" ConwayEra
+type instance EraRuleFailure "UPEC" ConwayEra = VoidEraRule "UPEC" ConwayEra
+type instance EraRuleEvent "UPEC" ConwayEra = VoidEraRule "UPEC" ConwayEra
 
-type instance EraRule "NEWPP" (ConwayEra c) = VoidEraRule "NEWPP" (ConwayEra c)
-type instance EraRuleFailure "NEWPP" (ConwayEra c) = VoidEraRule "NEWPP" (ConwayEra c)
-type instance EraRuleEvent "NEWPP" (ConwayEra c) = VoidEraRule "NEWPP" (ConwayEra c)
+type instance EraRule "NEWPP" ConwayEra = VoidEraRule "NEWPP" ConwayEra
+type instance EraRuleFailure "NEWPP" ConwayEra = VoidEraRule "NEWPP" ConwayEra
+type instance EraRuleEvent "NEWPP" ConwayEra = VoidEraRule "NEWPP" ConwayEra
 
-type instance EraRule "PPUP" (ConwayEra c) = VoidEraRule "PPUP" (ConwayEra c)
-type instance EraRuleFailure "PPUP" (ConwayEra c) = VoidEraRule "PPUP" (ConwayEra c)
-type instance EraRuleEvent "PPUP" (ConwayEra c) = VoidEraRule "PPUP" (ConwayEra c)
+type instance EraRule "PPUP" ConwayEra = VoidEraRule "PPUP" ConwayEra
+type instance EraRuleFailure "PPUP" ConwayEra = VoidEraRule "PPUP" ConwayEra
+type instance EraRuleEvent "PPUP" ConwayEra = VoidEraRule "PPUP" ConwayEra
 
-type instance EraRule "MIR" (ConwayEra c) = VoidEraRule "MIR" (ConwayEra c)
-type instance EraRuleFailure "MIR" (ConwayEra c) = VoidEraRule "MIR" (ConwayEra c)
-type instance EraRuleEvent "MIR" (ConwayEra c) = VoidEraRule "MIR" (ConwayEra c)
+type instance EraRule "MIR" ConwayEra = VoidEraRule "MIR" ConwayEra
+type instance EraRuleFailure "MIR" ConwayEra = VoidEraRule "MIR" ConwayEra
+type instance EraRuleEvent "MIR" ConwayEra = VoidEraRule "MIR" ConwayEra
 
-type instance EraRule "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
-type instance EraRuleFailure "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
-type instance EraRuleEvent "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
+type instance EraRule "DELEGS" ConwayEra = VoidEraRule "DELEGS" ConwayEra
+type instance EraRuleFailure "DELEGS" ConwayEra = VoidEraRule "DELEGS" ConwayEra
+type instance EraRuleEvent "DELEGS" ConwayEra = VoidEraRule "DELEGS" ConwayEra
 
 -------------------------------------------------------------------------------
 -- Era Mapping
@@ -79,84 +77,84 @@ type instance EraRuleEvent "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (Conway
 
 data ConwayGOV era
 
-type instance EraRule "GOV" (ConwayEra c) = ConwayGOV (ConwayEra c)
+type instance EraRule "GOV" ConwayEra = ConwayGOV ConwayEra
 
 data ConwayNEWEPOCH era
 
-type instance EraRule "NEWEPOCH" (ConwayEra c) = ConwayNEWEPOCH (ConwayEra c)
+type instance EraRule "NEWEPOCH" ConwayEra = ConwayNEWEPOCH ConwayEra
 
 data ConwayEPOCH era
 
-type instance EraRule "EPOCH" (ConwayEra c) = ConwayEPOCH (ConwayEra c)
+type instance EraRule "EPOCH" ConwayEra = ConwayEPOCH ConwayEra
 
 data ConwayENACT era
 
-type instance EraRule "ENACT" (ConwayEra c) = ConwayENACT (ConwayEra c)
+type instance EraRule "ENACT" ConwayEra = ConwayENACT ConwayEra
 
 data ConwayUTXOS era
 
-type instance EraRule "UTXOS" (ConwayEra c) = ConwayUTXOS (ConwayEra c)
+type instance EraRule "UTXOS" ConwayEra = ConwayUTXOS ConwayEra
 
 data ConwayLEDGER era
 
-type instance EraRule "LEDGER" (ConwayEra c) = ConwayLEDGER (ConwayEra c)
+type instance EraRule "LEDGER" ConwayEra = ConwayLEDGER ConwayEra
 
 data ConwayTICKF era
 
-type instance EraRule "TICKF" (ConwayEra c) = ConwayTICKF (ConwayEra c)
+type instance EraRule "TICKF" ConwayEra = ConwayTICKF ConwayEra
 
 data ConwayRATIFY era
 
-type instance EraRule "RATIFY" (ConwayEra c) = ConwayRATIFY (ConwayEra c)
+type instance EraRule "RATIFY" ConwayEra = ConwayRATIFY ConwayEra
 
 data ConwayCERTS era
 
-type instance EraRule "CERTS" (ConwayEra c) = ConwayCERTS (ConwayEra c)
+type instance EraRule "CERTS" ConwayEra = ConwayCERTS ConwayEra
 
 data ConwayCERT era
 
-type instance EraRule "CERT" (ConwayEra c) = ConwayCERT (ConwayEra c)
+type instance EraRule "CERT" ConwayEra = ConwayCERT ConwayEra
 
 data ConwayDELEG era
 
-type instance EraRule "DELEG" (ConwayEra c) = ConwayDELEG (ConwayEra c)
+type instance EraRule "DELEG" ConwayEra = ConwayDELEG ConwayEra
 
 data ConwayGOVCERT era
 
-type instance EraRule "GOVCERT" (ConwayEra c) = ConwayGOVCERT (ConwayEra c)
+type instance EraRule "GOVCERT" ConwayEra = ConwayGOVCERT ConwayEra
 
 data ConwayUTXOW era
 
-type instance EraRule "UTXOW" (ConwayEra c) = ConwayUTXOW (ConwayEra c)
+type instance EraRule "UTXOW" ConwayEra = ConwayUTXOW ConwayEra
 
 data ConwayUTXO era
 
-type instance EraRule "UTXO" (ConwayEra c) = ConwayUTXO (ConwayEra c)
+type instance EraRule "UTXO" ConwayEra = ConwayUTXO ConwayEra
 
 data ConwayBBODY era
 
-type instance EraRule "BBODY" (ConwayEra c) = ConwayBBODY (ConwayEra c)
+type instance EraRule "BBODY" ConwayEra = ConwayBBODY ConwayEra
 
 data ConwayMEMPOOL era
 
-type instance EraRule "MEMPOOL" (ConwayEra c) = ConwayMEMPOOL (ConwayEra c)
+type instance EraRule "MEMPOOL" ConwayEra = ConwayMEMPOOL ConwayEra
 
 data ConwayHARDFORK era
 
-type instance EraRule "HARDFORK" (ConwayEra c) = ConwayHARDFORK (ConwayEra c)
+type instance EraRule "HARDFORK" ConwayEra = ConwayHARDFORK ConwayEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "LEDGERS" (ConwayEra c) = API.ShelleyLEDGERS (ConwayEra c)
+type instance EraRule "LEDGERS" ConwayEra = API.ShelleyLEDGERS ConwayEra
 
-type instance EraRule "POOLREAP" (ConwayEra c) = API.ShelleyPOOLREAP (ConwayEra c)
+type instance EraRule "POOLREAP" ConwayEra = API.ShelleyPOOLREAP ConwayEra
 
-type instance EraRule "RUPD" (ConwayEra c) = ShelleyRUPD (ConwayEra c)
+type instance EraRule "RUPD" ConwayEra = ShelleyRUPD ConwayEra
 
-type instance EraRule "SNAP" (ConwayEra c) = ShelleySNAP (ConwayEra c)
+type instance EraRule "SNAP" ConwayEra = ShelleySNAP ConwayEra
 
-type instance EraRule "TICK" (ConwayEra c) = ShelleyTICK (ConwayEra c)
+type instance EraRule "TICK" ConwayEra = ShelleyTICK ConwayEra
 
-type instance EraRule "POOL" (ConwayEra c) = ShelleyPOOL (ConwayEra c)
+type instance EraRule "POOL" ConwayEra = ShelleyPOOL ConwayEra
 
 -- =================================================

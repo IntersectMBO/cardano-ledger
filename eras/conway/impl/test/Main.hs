@@ -2,7 +2,7 @@
 
 module Main where
 
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import Test.Cardano.Ledger.Common
@@ -36,14 +36,14 @@ main =
       SPORatifySpec.spec
       Genesis.spec
       GovActionReorder.spec
-      roundTripJsonEraSpec @Conway
+      roundTripJsonEraSpec @ConwayEra
       describe "Imp" $
-        Imp.spec @Conway
+        Imp.spec @ConwayEra
       describe "CostModels" $ do
-        CostModelsSpec.spec @Conway
+        CostModelsSpec.spec @ConwayEra
       describe "TxWits" $ do
-        TxWitsSpec.spec @Conway
+        TxWitsSpec.spec @ConwayEra
       describe "Plutus" $ do
         PlutusSpec.spec
-      Regression.spec @Conway
+      Regression.spec @ConwayEra
       TxInfo.spec

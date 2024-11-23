@@ -28,7 +28,7 @@ spec = do
   describe "Proposals" $ do
     describe "Construction" $ do
       prop "Adding new nodes keeps Proposals consistent" $
-        \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
+        \(ProposalsNewActions ps actions :: ProposalsNewActions ConwayEra) ->
           let ps' =
                 F.foldl'
                   (\p action -> fromMaybe (error "Unable to add action") $ proposalsAddAction action p)
@@ -38,23 +38,23 @@ spec = do
            in actionsMap `shouldBe` (actionsMap `Map.intersection` proposalsActionsMap ps')
     describe "Removal" $ do
       prop "Removing leaf nodes keeps Proposals consistent" $
-        \(ps :: Proposals Conway) -> do
+        \(ps :: Proposals ConwayEra) -> do
           let gais = Set.fromList $ toList $ SSeq.takeLast 4 $ proposalsIds ps
               ps' = fst $ proposalsRemoveWithDescendants gais ps
           proposalsSize ps' `shouldBe` proposalsSize ps - Set.size gais
       prop "Removing root nodes keeps Proposals consistent" $
-        \(ps :: Proposals Conway) -> do
+        \(ps :: Proposals ConwayEra) -> do
           let gais = Set.fromList $ toList $ SSeq.take 4 $ proposalsIds ps
               ps' = fst $ proposalsRemoveWithDescendants gais ps
           proposalsSize ps' `shouldSatisfy` (<= proposalsSize ps)
       prop "Removing non-member nodes throws an AssertionFailure" $
-        \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
+        \(ProposalsNewActions ps actions :: ProposalsNewActions ConwayEra) ->
           (evaluate . force) (proposalsRemoveWithDescendants (Set.fromList $ gasId <$> actions) ps)
             `shouldThrow` \AssertionFailed {} -> True
     describe "Enactment" $ do
       prop "Adding votes preserves consistency" $
-        \( ProposalsForEnactment {pfeProposals, pfeToEnact} :: ProposalsForEnactment Conway
-          , voter :: Voter era
+        \( ProposalsForEnactment {pfeProposals, pfeToEnact} :: ProposalsForEnactment ConwayEra
+          , voter :: Voter
           , vote :: Vote
           ) -> do
             case pfeToEnact of
@@ -62,7 +62,7 @@ spec = do
               _ -> True
       prop "Enacting exhaustive lineages reduces Proposals to their roots" $
         \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
-            ProposalsForEnactment Conway
+            ProposalsForEnactment ConwayEra
           ) -> do
             let (ps', enacted, removedDueToEnactment, expiredRemoved) = proposalsApplyEnactment pfeToEnact Set.empty pfeProposals
             expiredRemoved `shouldSatisfy` Map.null
@@ -70,12 +70,12 @@ spec = do
             Map.keysSet removedDueToEnactment `shouldBe` pfeToRemove
             proposalsSize ps' `shouldBe` Set.size pfeToRetain
       prop "Enacting non-member nodes throws an AssertionFailure" $
-        \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
+        \(ProposalsNewActions ps actions :: ProposalsNewActions ConwayEra) ->
           (evaluate . force) (proposalsApplyEnactment (fromList actions) Set.empty ps)
             `shouldThrow` \AssertionFailed {} -> True
       prop "Expiring compliments of exhaustive lineages keeps proposals consistent" $
         \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
-            ProposalsForEnactment Conway
+            ProposalsForEnactment ConwayEra
           ) -> do
             let (ps', enacted, removedDueToEnactment, expiredRemoved) =
                   proposalsApplyEnactment Seq.Empty pfeToRemove pfeProposals
@@ -88,12 +88,12 @@ spec = do
             proposalsSize emptyProposals `shouldBe` Set.size pfeToRetain
             enactedMap `shouldBe` enactMap
       prop "Expiring non-member nodes throws an AssertionFailure" $
-        \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
+        \(ProposalsNewActions ps actions :: ProposalsNewActions ConwayEra) ->
           (evaluate . force) (proposalsApplyEnactment Seq.Empty (Set.fromList $ gasId <$> actions) ps)
             `shouldThrow` \AssertionFailed {} -> True
       prop "Enacting and expiring conflicting proposals does not lead to removal due to enactment" $
         \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
-            ProposalsForEnactment Conway
+            ProposalsForEnactment ConwayEra
           ) -> do
             let (ps', enacted, enactedRemoved, expiredRemoved) = proposalsApplyEnactment pfeToEnact pfeToRemove pfeProposals
             Map.keysSet expiredRemoved `shouldBe` pfeToRemove

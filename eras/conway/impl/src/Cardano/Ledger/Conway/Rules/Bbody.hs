@@ -56,7 +56,7 @@ import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsUTxOState, utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
@@ -93,7 +93,7 @@ maxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
 
 data ConwayBbodyPredFailure era
   = WrongBlockBodySizeBBODY !(Mismatch 'RelEQ Int)
-  | InvalidBodyHashBBODY !(Mismatch 'RelEQ (Hash (EraCrypto era) EraIndependentBlockBody))
+  | InvalidBodyHashBBODY !(Mismatch 'RelEQ (Hash EraIndependentBlockBody))
   | -- | LEDGERS rule subtransition Failures
     LedgersFailure !(PredicateFailure (EraRule "LEDGERS" era))
   | TooManyExUnits !(Mismatch 'RelLTEQ ExUnits)
@@ -140,73 +140,73 @@ instance
     4 -> SumD BodyRefScriptsSizeTooBig <! FromGroup
     n -> Invalid n
 
-type instance EraRuleFailure "BBODY" (ConwayEra c) = ConwayBbodyPredFailure (ConwayEra c)
+type instance EraRuleFailure "BBODY" ConwayEra = ConwayBbodyPredFailure ConwayEra
 
-type instance EraRuleEvent "BBODY" (ConwayEra c) = AlonzoBbodyEvent (ConwayEra c)
+type instance EraRuleEvent "BBODY" ConwayEra = AlonzoBbodyEvent ConwayEra
 
-instance InjectRuleFailure "BBODY" ConwayBbodyPredFailure (ConwayEra c)
+instance InjectRuleFailure "BBODY" ConwayBbodyPredFailure ConwayEra
 
-instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure ConwayEra where
   injectFailure = alonzoToConwayBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure
 
-instance InjectRuleFailure "BBODY" ConwayLedgerPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ConwayLedgerPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ConwayUtxowPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" BabbageUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" BabbageUtxowPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" AlonzoUtxowPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ConwayUtxoPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" BabbageUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" BabbageUtxoPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" AlonzoUtxoPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" AlonzoUtxosPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ConwayUtxosPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AllegraUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" AllegraUtxoPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayCertsPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ConwayCertsPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayCertPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ConwayCertPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayDelegPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ConwayDelegPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayGovCertPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ConwayGovCertPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ConwayGovPredFailure (ConwayEra c) where
+instance InjectRuleFailure "BBODY" ConwayGovPredFailure ConwayEra where
   injectFailure = shelleyToConwayBbodyPredFailure . Shelley.LedgersFailure . injectFailure
 
 shelleyToConwayBbodyPredFailure ::
@@ -229,8 +229,7 @@ alonzoToConwayBbodyPredFailure (ShelleyInAlonzoBbodyPredFailure x) = shelleyToCo
 alonzoToConwayBbodyPredFailure (Alonzo.TooManyExUnits m) = TooManyExUnits m
 
 instance
-  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-  , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
+  ( Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
@@ -247,19 +246,16 @@ instance
   ) =>
   STS (ConwayBBODY era)
   where
-  type
-    State (ConwayBBODY era) =
-      ShelleyBbodyState era
+  type State (ConwayBBODY era) = ShelleyBbodyState era
 
-  type
-    Signal (ConwayBBODY era) =
-      Block (BHeaderView (EraCrypto era)) era
+  type Signal (ConwayBBODY era) = Block BHeaderView era
 
   type Environment (ConwayBBODY era) = BbodyEnv era
 
   type BaseM (ConwayBBODY era) = ShelleyBase
 
   type PredicateFailure (ConwayBBODY era) = ConwayBbodyPredFailure era
+
   type Event (ConwayBBODY era) = AlonzoBbodyEvent era
 
   initialRules = []
@@ -267,7 +263,7 @@ instance
 
 conwayBbodyTransition ::
   forall era.
-  ( Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  ( Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , TxSeq era ~ AlonzoTxSeq era
@@ -306,8 +302,6 @@ instance
   , BaseM ledgers ~ ShelleyBase
   , ledgers ~ EraRule "LEDGERS" era
   , STS ledgers
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-  , Era era
   ) =>
   Embed ledgers (ConwayBBODY era)
   where

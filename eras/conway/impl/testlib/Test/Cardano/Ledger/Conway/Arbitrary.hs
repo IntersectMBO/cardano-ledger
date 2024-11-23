@@ -51,7 +51,6 @@ import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, NoUpdate (..))
 import Cardano.Ledger.Plutus (Language (PlutusV3))
 import Control.State.Transition.Extended (STS (Event))
@@ -97,7 +96,7 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance Crypto c => Arbitrary (ConwayGenesis c) where
+instance Arbitrary ConwayGenesis where
   arbitrary =
     ConwayGenesis
       <$> arbitrary
@@ -120,7 +119,7 @@ instance Arbitrary (UpgradeConwayPParams Identity) where
       <*> arbitrary
       <*> genValidCostModel PlutusV3
 
-instance Crypto c => Arbitrary (Delegatee c) where
+instance Arbitrary Delegatee where
   arbitrary =
     oneof
       [ DelegStake <$> arbitrary
@@ -128,7 +127,7 @@ instance Crypto c => Arbitrary (Delegatee c) where
       , DelegStakeVote <$> arbitrary <*> arbitrary
       ]
 
-instance Crypto c => Arbitrary (ConwayDelegCert c) where
+instance Arbitrary ConwayDelegCert where
   arbitrary =
     oneof
       [ ConwayRegCert <$> arbitrary <*> arbitrary
@@ -145,7 +144,7 @@ instance Era era => Arbitrary (ConwayTxCert era) where
       , ConwayTxCertGov <$> arbitrary
       ]
 
-instance Crypto c => Arbitrary (ConwayGovCert c) where
+instance Arbitrary ConwayGovCert where
   arbitrary =
     oneof
       [ ConwayRegDRep <$> arbitrary <*> arbitrary <*> arbitrary
@@ -255,8 +254,8 @@ data ProposalsForEnactment era
   = ProposalsForEnactment
   { pfeProposals :: Proposals era
   , pfeToEnact :: Seq.Seq (GovActionState era)
-  , pfeToRemove :: Set.Set (GovActionId (EraCrypto era))
-  , pfeToRetain :: Set.Set (GovActionId (EraCrypto era))
+  , pfeToRemove :: Set.Set GovActionId
+  , pfeToRetain :: Set.Set GovActionId
   -- ^ Those that are retained can only be the ones that don't have any lineage
   }
   deriving (Show, Eq)
@@ -414,7 +413,6 @@ genHardForkGovAction ::
 genHardForkGovAction parent = HardForkInitiation parent <$> arbitrary
 
 genCommitteeGovAction ::
-  Era era =>
   StrictMaybe (GovPurposeId 'CommitteePurpose era) ->
   Gen (GovAction era)
 genCommitteeGovAction parent =
@@ -429,7 +427,7 @@ genConstitutionGovAction ::
   Gen (GovAction era)
 genConstitutionGovAction parent = NewConstitution parent <$> arbitrary
 
-genGovActionState :: Era era => GovAction era -> Gen (GovActionState era)
+genGovActionState :: GovAction era -> Gen (GovActionState era)
 genGovActionState ga =
   GovActionState
     <$> arbitrary
@@ -459,19 +457,19 @@ instance
     shuffledGass <- shuffle gass
     pure $ ShuffledGovActionStates gass shuffledGass
 
-genParameterChange :: (Era era, Arbitrary (PParamsUpdate era)) => Gen (GovAction era)
+genParameterChange :: Arbitrary (PParamsUpdate era) => Gen (GovAction era)
 genParameterChange = ParameterChange <$> arbitrary <*> arbitrary <*> arbitrary
 
-genHardForkInitiation :: Era era => Gen (GovAction era)
+genHardForkInitiation :: Gen (GovAction era)
 genHardForkInitiation = HardForkInitiation <$> arbitrary <*> arbitrary
 
-genTreasuryWithdrawals :: Era era => Gen (GovAction era)
+genTreasuryWithdrawals :: Gen (GovAction era)
 genTreasuryWithdrawals = TreasuryWithdrawals <$> arbitrary <*> arbitrary
 
-genNoConfidence :: Era era => Gen (GovAction era)
+genNoConfidence :: Gen (GovAction era)
 genNoConfidence = NoConfidence <$> arbitrary
 
-genUpdateCommittee :: Era era => Gen (GovAction era)
+genUpdateCommittee :: Gen (GovAction era)
 genUpdateCommittee =
   UpdateCommittee
     <$> arbitrary
@@ -503,17 +501,14 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovAction era) w
 instance Era era => Arbitrary (Committee era) where
   arbitrary = Committee <$> arbitrary <*> arbitrary
 
-instance Crypto c => Arbitrary (GovActionId c) where
+instance Arbitrary GovActionId where
   arbitrary = GovActionId <$> arbitrary <*> arbitrary
 
 deriving instance Arbitrary GovActionIx
 
-deriving instance
-  forall (p :: GovActionPurpose) era.
-  Crypto (EraCrypto era) =>
-  Arbitrary (GovPurposeId p era)
+deriving instance Arbitrary (GovPurposeId p era)
 
-instance Crypto c => Arbitrary (Voter c) where
+instance Arbitrary Voter where
   arbitrary =
     oneof
       [ CommitteeVoter <$> arbitrary

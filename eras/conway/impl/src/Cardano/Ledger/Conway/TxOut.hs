@@ -27,15 +27,14 @@ import Cardano.Ledger.Babbage.TxOut (
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.PParams ()
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Data (Datum (..), translateDatum)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Lens.Micro
 
-instance Crypto c => EraTxOut (ConwayEra c) where
-  {-# SPECIALIZE instance EraTxOut (ConwayEra StandardCrypto) #-}
+instance EraTxOut ConwayEra where
+  {-# SPECIALIZE instance EraTxOut ConwayEra #-}
 
-  type TxOut (ConwayEra c) = BabbageTxOut (ConwayEra c)
+  type TxOut ConwayEra = BabbageTxOut ConwayEra
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
 
@@ -50,8 +49,8 @@ instance Crypto c => EraTxOut (ConwayEra c) where
 
   getMinCoinSizedTxOut = babbageMinUTxOValue
 
-instance Crypto c => AlonzoEraTxOut (ConwayEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxOut (ConwayEra StandardCrypto) #-}
+instance AlonzoEraTxOut ConwayEra where
+  {-# SPECIALIZE instance AlonzoEraTxOut ConwayEra #-}
 
   dataHashTxOutL = dataHashBabbageTxOutL
   {-# INLINE dataHashTxOutL #-}
@@ -59,8 +58,8 @@ instance Crypto c => AlonzoEraTxOut (ConwayEra c) where
   datumTxOutF = to getDatumBabbageTxOut
   {-# INLINE datumTxOutF #-}
 
-instance Crypto c => BabbageEraTxOut (ConwayEra c) where
-  {-# SPECIALIZE instance BabbageEraTxOut (ConwayEra StandardCrypto) #-}
+instance BabbageEraTxOut ConwayEra where
+  {-# SPECIALIZE instance BabbageEraTxOut ConwayEra #-}
 
   dataTxOutL = dataBabbageTxOutL
   {-# INLINE dataTxOutL #-}

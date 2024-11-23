@@ -48,7 +48,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Conway.TxCert ()
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.SafeHash (SafeToHash (..))
@@ -62,17 +61,17 @@ import GHC.Generics
 import NoThunks.Class (NoThunks (..))
 
 class AlonzoEraScript era => ConwayEraScript era where
-  mkVotingPurpose :: f Word32 (Voter (EraCrypto era)) -> PlutusPurpose f era
+  mkVotingPurpose :: f Word32 Voter -> PlutusPurpose f era
 
-  toVotingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (Voter (EraCrypto era)))
+  toVotingPurpose :: PlutusPurpose f era -> Maybe (f Word32 Voter)
 
   mkProposingPurpose :: f Word32 (ProposalProcedure era) -> PlutusPurpose f era
 
   toProposingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (ProposalProcedure era))
 
-instance Crypto c => EraScript (ConwayEra c) where
-  type Script (ConwayEra c) = AlonzoScript (ConwayEra c)
-  type NativeScript (ConwayEra c) = Timelock (ConwayEra c)
+instance EraScript ConwayEra where
+  type Script ConwayEra = AlonzoScript ConwayEra
+  type NativeScript ConwayEra = Timelock ConwayEra
 
   upgradeScript = \case
     TimelockScript ts -> TimelockScript $ translateTimelock ts
@@ -87,14 +86,14 @@ instance Crypto c => EraScript (ConwayEra c) where
 
   fromNativeScript = TimelockScript
 
-instance Crypto c => AlonzoEraScript (ConwayEra c) where
-  data PlutusScript (ConwayEra c)
+instance AlonzoEraScript ConwayEra where
+  data PlutusScript ConwayEra
     = ConwayPlutusV1 !(Plutus 'PlutusV1)
     | ConwayPlutusV2 !(Plutus 'PlutusV2)
     | ConwayPlutusV3 !(Plutus 'PlutusV3)
     deriving (Eq, Ord, Show, Generic)
 
-  type PlutusPurpose f (ConwayEra c) = ConwayPlutusPurpose f (ConwayEra c)
+  type PlutusPurpose f ConwayEra = ConwayPlutusPurpose f ConwayEra
 
   eraMaxLanguage = PlutusV3
 
@@ -142,8 +141,8 @@ instance Crypto c => AlonzoEraScript (ConwayEra c) where
     AlonzoCertifying (AsIx ix) -> ConwayCertifying (AsIx ix)
     AlonzoRewarding (AsIx ix) -> ConwayRewarding (AsIx ix)
 
-instance Crypto c => ConwayEraScript (ConwayEra c) where
-  {-# SPECIALIZE instance ConwayEraScript (ConwayEra StandardCrypto) #-}
+instance ConwayEraScript ConwayEra where
+  {-# SPECIALIZE instance ConwayEraScript ConwayEra #-}
 
   mkVotingPurpose = ConwayVoting
 
@@ -155,8 +154,8 @@ instance Crypto c => ConwayEraScript (ConwayEra c) where
   toProposingPurpose (ConwayProposing i) = Just i
   toProposingPurpose _ = Nothing
 
-instance Crypto c => ShelleyEraScript (ConwayEra c) where
-  {-# SPECIALIZE instance ShelleyEraScript (ConwayEra StandardCrypto) #-}
+instance ShelleyEraScript ConwayEra where
+  {-# SPECIALIZE instance ShelleyEraScript ConwayEra #-}
 
   mkRequireSignature = mkRequireSignatureTimelock
   getRequireSignature = getRequireSignatureTimelock
@@ -170,8 +169,8 @@ instance Crypto c => ShelleyEraScript (ConwayEra c) where
   mkRequireMOf = mkRequireMOfTimelock
   getRequireMOf = getRequireMOfTimelock
 
-instance Crypto c => AllegraEraScript (ConwayEra c) where
-  {-# SPECIALIZE instance AllegraEraScript (ConwayEra StandardCrypto) #-}
+instance AllegraEraScript ConwayEra where
+  {-# SPECIALIZE instance AllegraEraScript ConwayEra #-}
 
   mkTimeStart = mkTimeStartTimelock
   getTimeStart = getTimeStartTimelock
@@ -179,18 +178,18 @@ instance Crypto c => AllegraEraScript (ConwayEra c) where
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
 
-instance NFData (PlutusScript (ConwayEra c)) where
+instance NFData (PlutusScript ConwayEra) where
   rnf = rwhnf
-instance NoThunks (PlutusScript (ConwayEra c))
-instance Crypto c => SafeToHash (PlutusScript (ConwayEra c)) where
+instance NoThunks (PlutusScript ConwayEra)
+instance SafeToHash (PlutusScript ConwayEra) where
   originalBytes ps = withPlutusScript ps originalBytes
 
 data ConwayPlutusPurpose f era
-  = ConwaySpending !(f Word32 (TxIn (EraCrypto era)))
-  | ConwayMinting !(f Word32 (PolicyID (EraCrypto era)))
+  = ConwaySpending !(f Word32 TxIn)
+  | ConwayMinting !(f Word32 PolicyID)
   | ConwayCertifying !(f Word32 (TxCert era))
-  | ConwayRewarding !(f Word32 (RewardAccount (EraCrypto era)))
-  | ConwayVoting !(f Word32 (Voter (EraCrypto era)))
+  | ConwayRewarding !(f Word32 RewardAccount)
+  | ConwayVoting !(f Word32 Voter)
   | ConwayProposing !(f Word32 (ProposalProcedure era))
   deriving (Generic)
 
@@ -296,7 +295,7 @@ instance
       kindObjectWithValue name n = kindObject name ["value" .= n]
 
 pattern VotingPurpose ::
-  ConwayEraScript era => f Word32 (Voter (EraCrypto era)) -> PlutusPurpose f era
+  ConwayEraScript era => f Word32 Voter -> PlutusPurpose f era
 pattern VotingPurpose c <- (toVotingPurpose -> Just c)
   where
     VotingPurpose c = mkVotingPurpose c

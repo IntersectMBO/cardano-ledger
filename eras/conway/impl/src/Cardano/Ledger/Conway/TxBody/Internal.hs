@@ -103,14 +103,8 @@ import Cardano.Ledger.Conway.TxCert (
   ConwayTxCertUpgradeError,
  )
 import Cardano.Ledger.Conway.TxOut ()
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Mary.Value (
-  MaryValue (..),
-  MultiAsset (..),
-  PolicyID,
-  policies,
- )
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -141,20 +135,20 @@ instance Memoized ConwayTxBody where
   type RawType ConwayTxBody = ConwayTxBodyRaw
 
 data ConwayTxBodyRaw era = ConwayTxBodyRaw
-  { ctbrSpendInputs :: !(Set (TxIn (EraCrypto era)))
-  , ctbrCollateralInputs :: !(Set (TxIn (EraCrypto era)))
-  , ctbrReferenceInputs :: !(Set (TxIn (EraCrypto era)))
+  { ctbrSpendInputs :: !(Set TxIn)
+  , ctbrCollateralInputs :: !(Set TxIn)
+  , ctbrReferenceInputs :: !(Set TxIn)
   , ctbrOutputs :: !(StrictSeq (Sized (TxOut era)))
   , ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
   , ctbrTotalCollateral :: !(StrictMaybe Coin)
   , ctbrCerts :: !(OSet.OSet (ConwayTxCert era))
-  , ctbrWithdrawals :: !(Withdrawals (EraCrypto era))
+  , ctbrWithdrawals :: !Withdrawals
   , ctbrTxfee :: !Coin
   , ctbrVldt :: !ValidityInterval
-  , ctbrReqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era)))
-  , ctbrMint :: !(MultiAsset (EraCrypto era))
-  , ctbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
-  , ctbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  , ctbrReqSignerHashes :: !(Set (KeyHash 'Witness))
+  , ctbrMint :: !MultiAsset
+  , ctbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
+  , ctbrAuxDataHash :: !(StrictMaybe AuxiliaryDataHash)
   , ctbrTxNetworkId :: !(StrictMaybe Network)
   , ctbrVotingProcedures :: !(VotingProcedures era)
   , ctbrProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
@@ -294,7 +288,7 @@ deriving instance
 
 type instance MemoHashIndex ConwayTxBodyRaw = EraIndependentTxBody
 
-instance c ~ EraCrypto era => HashAnnotated (ConwayTxBody era) EraIndependentTxBody c where
+instance HashAnnotated (ConwayTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 instance
@@ -343,20 +337,20 @@ basicConwayTxBodyRaw =
     SNothing
     mempty
 
-data ConwayTxBodyUpgradeError c
+data ConwayTxBodyUpgradeError
   = CTBUETxCert ConwayTxCertUpgradeError
   | -- | The TxBody contains an update proposal from a pre-Conway era. Since
     --   this can only have come from the genesis delegates, we just discard it.
     CTBUEContainsUpdate
   | -- | In eras prior to Conway duplicate certificates where allowed
-    CTBUEContainsDuplicateCerts (Set (TxCert (ConwayEra c)))
+    CTBUEContainsDuplicateCerts (Set (TxCert ConwayEra))
   deriving (Eq, Show)
 
-instance Crypto c => EraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance EraTxBody (ConwayEra StandardCrypto) #-}
+instance EraTxBody ConwayEra where
+  {-# SPECIALIZE instance EraTxBody ConwayEra #-}
 
-  type TxBody (ConwayEra c) = ConwayTxBody (ConwayEra c)
-  type TxBodyUpgradeError (ConwayEra c) = ConwayTxBodyUpgradeError c
+  type TxBody ConwayEra = ConwayTxBody ConwayEra
+  type TxBodyUpgradeError ConwayEra = ConwayTxBodyUpgradeError
 
   mkBasicTxBody = mkConwayTxBody
 
@@ -366,7 +360,7 @@ instance Crypto c => EraTxBody (ConwayEra c) where
   outputsTxBodyL =
     lensMemoRawType
       (fmap sizedValue . ctbrOutputs)
-      (\txb x -> txb {ctbrOutputs = mkSized (eraProtVerLow @(ConwayEra c)) <$> x})
+      (\txb x -> txb {ctbrOutputs = mkSized (eraProtVerLow @ConwayEra) <$> x})
   {-# INLINE outputsTxBodyL #-}
 
   feeTxBodyL = lensMemoRawType ctbrTxfee (\txb x -> txb {ctbrTxfee = x})
@@ -402,7 +396,7 @@ instance Crypto c => EraTxBody (ConwayEra c) where
       ConwayTxBody
         { ctbSpendInputs = btbInputs btb
         , ctbOutputs =
-            mkSized (eraProtVerLow @(ConwayEra c))
+            mkSized (eraProtVerLow @ConwayEra)
               . upgradeTxOut
               . sizedValue
               <$> btbOutputs btb
@@ -418,7 +412,7 @@ instance Crypto c => EraTxBody (ConwayEra c) where
         , ctbTxNetworkId = btbTxNetworkId btb
         , ctbReferenceInputs = btbReferenceInputs btb
         , ctbCollateralReturn =
-            mkSized (eraProtVerLow @(ConwayEra c))
+            mkSized (eraProtVerLow @ConwayEra)
               . upgradeTxOut
               . sizedValue
               <$> btbCollateralReturn btb
@@ -444,7 +438,7 @@ instance Crypto c => EraTxBody (ConwayEra c) where
 conwayTotalDepositsTxBody ::
   ConwayEraTxBody era =>
   PParams era ->
-  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  (KeyHash 'StakePool -> Bool) ->
   TxBody era ->
   Coin
 conwayTotalDepositsTxBody pp isPoolRegisted txBody =
@@ -462,14 +456,14 @@ conwayProposalsDeposits pp txBody = numProposals <×> depositPerProposal
     numProposals = length (txBody ^. proposalProceduresTxBodyL)
     depositPerProposal = pp ^. ppGovActionDepositL
 
-instance Crypto c => AllegraEraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance AllegraEraTxBody (ConwayEra StandardCrypto) #-}
+instance AllegraEraTxBody ConwayEra where
+  {-# SPECIALIZE instance AllegraEraTxBody ConwayEra #-}
 
   vldtTxBodyL = lensMemoRawType ctbrVldt (\txb x -> txb {ctbrVldt = x})
   {-# INLINE vldtTxBodyL #-}
 
-instance Crypto c => MaryEraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance MaryEraTxBody (ConwayEra StandardCrypto) #-}
+instance MaryEraTxBody ConwayEra where
+  {-# SPECIALIZE instance MaryEraTxBody ConwayEra #-}
 
   mintTxBodyL = lensMemoRawType ctbrMint (\txb x -> txb {ctbrMint = x})
   {-# INLINE mintTxBodyL #-}
@@ -480,8 +474,8 @@ instance Crypto c => MaryEraTxBody (ConwayEra c) where
     to (\(TxBodyConstr (Memo txBodyRaw _)) -> policies (ctbrMint txBodyRaw))
   {-# INLINE mintedTxBodyF #-}
 
-instance Crypto c => AlonzoEraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxBody (ConwayEra StandardCrypto) #-}
+instance AlonzoEraTxBody ConwayEra where
+  {-# SPECIALIZE instance AlonzoEraTxBody ConwayEra #-}
 
   collateralInputsTxBodyL =
     lensMemoRawType ctbrCollateralInputs (\txb x -> txb {ctbrCollateralInputs = x})
@@ -502,8 +496,8 @@ instance Crypto c => AlonzoEraTxBody (ConwayEra c) where
 
   redeemerPointerInverse = conwayRedeemerPointerInverse
 
-instance Crypto c => BabbageEraTxBody (ConwayEra c) where
-  {-# SPECIALIZE instance BabbageEraTxBody (ConwayEra StandardCrypto) #-}
+instance BabbageEraTxBody ConwayEra where
+  {-# SPECIALIZE instance BabbageEraTxBody ConwayEra #-}
 
   sizedOutputsTxBodyL = lensMemoRawType ctbrOutputs (\txb x -> txb {ctbrOutputs = x})
   {-# INLINE sizedOutputsTxBodyL #-}
@@ -519,7 +513,7 @@ instance Crypto c => BabbageEraTxBody (ConwayEra c) where
   collateralReturnTxBodyL =
     lensMemoRawType
       (fmap sizedValue . ctbrCollateralReturn)
-      (\txb x -> txb {ctbrCollateralReturn = mkSized (eraProtVerLow @(ConwayEra c)) <$> x})
+      (\txb x -> txb {ctbrCollateralReturn = mkSized (eraProtVerLow @ConwayEra) <$> x})
   {-# INLINE collateralReturnTxBodyL #-}
 
   sizedCollateralReturnTxBodyL =
@@ -529,7 +523,8 @@ instance Crypto c => BabbageEraTxBody (ConwayEra c) where
   allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
   {-# INLINE allSizedOutputsTxBodyF #-}
 
-instance Crypto c => ConwayEraTxBody (ConwayEra c) where
+instance ConwayEraTxBody ConwayEra where
+  {-# SPECIALIZE instance ConwayEraTxBody ConwayEra #-}
   votingProceduresTxBodyL =
     lensMemoRawType ctbrVotingProcedures (\txb x -> txb {ctbrVotingProcedures = x})
   {-# INLINE votingProceduresTxBodyL #-}
@@ -549,20 +544,20 @@ instance
 
 pattern ConwayTxBody ::
   ConwayEraTxBody era =>
-  Set (TxIn (EraCrypto era)) ->
-  Set (TxIn (EraCrypto era)) ->
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
+  Set TxIn ->
+  Set TxIn ->
   StrictSeq (Sized (TxOut era)) ->
   StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
   OSet.OSet (ConwayTxCert era) ->
-  Withdrawals (EraCrypto era) ->
+  Withdrawals ->
   Coin ->
   ValidityInterval ->
-  Set (KeyHash 'Witness (EraCrypto era)) ->
-  MultiAsset (EraCrypto era) ->
-  StrictMaybe (ScriptIntegrityHash (EraCrypto era)) ->
-  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+  Set (KeyHash 'Witness) ->
+  MultiAsset ->
+  StrictMaybe ScriptIntegrityHash ->
+  StrictMaybe AuxiliaryDataHash ->
   StrictMaybe Network ->
   VotingProcedures era ->
   OSet.OSet (ProposalProcedure era) ->
@@ -723,7 +718,7 @@ conwayRedeemerPointer ::
   StrictMaybe (ConwayPlutusPurpose AsIx era)
 conwayRedeemerPointer txBody = \case
   ConwayMinting policyID ->
-    ConwayMinting <$> indexOf policyID (txBody ^. mintedTxBodyF :: Set (PolicyID (EraCrypto era)))
+    ConwayMinting <$> indexOf policyID (txBody ^. mintedTxBodyF)
   ConwaySpending txIn ->
     ConwaySpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
   ConwayRewarding rewardAccount ->

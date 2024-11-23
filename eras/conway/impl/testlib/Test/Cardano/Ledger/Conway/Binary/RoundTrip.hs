@@ -17,7 +17,6 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Plutus (CostModels)
 import Cardano.Ledger.Shelley.LedgerState
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
@@ -74,9 +73,9 @@ roundTripConwayEraTypesSpec = do
     roundTripShareEraTypeSpec @era @PulsingSnapshot
     roundTripShareEraTypeSpec @era @RatifyState
 
-instance Crypto c => RuleListEra (ConwayEra c) where
+instance RuleListEra ConwayEra where
   type
-    EraRules (ConwayEra c) =
+    EraRules ConwayEra =
       '[ "GOV"
        , "UTXOS"
        , "LEDGER"

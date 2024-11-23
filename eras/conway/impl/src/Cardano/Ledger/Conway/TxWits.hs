@@ -23,12 +23,11 @@ import Cardano.Ledger.Alonzo.TxWits as BabbageTxWitsReExport (
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 
-instance Crypto c => EraTxWits (ConwayEra c) where
-  {-# SPECIALIZE instance EraTxWits (ConwayEra StandardCrypto) #-}
+instance EraTxWits ConwayEra where
+  {-# SPECIALIZE instance EraTxWits ConwayEra #-}
 
-  type TxWits (ConwayEra c) = AlonzoTxWits (ConwayEra c)
+  type TxWits ConwayEra = AlonzoTxWits ConwayEra
 
   mkBasicTxWits = mempty
 
@@ -50,8 +49,8 @@ instance Crypto c => EraTxWits (ConwayEra c) where
       , txrdmrs = upgradeRedeemers (txrdmrs atw)
       }
 
-instance Crypto c => AlonzoEraTxWits (ConwayEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxWits (ConwayEra StandardCrypto) #-}
+instance AlonzoEraTxWits ConwayEra where
+  {-# SPECIALIZE instance AlonzoEraTxWits ConwayEra #-}
 
   datsTxWitsL = datsAlonzoTxWitsL
   {-# INLINE datsTxWitsL #-}
