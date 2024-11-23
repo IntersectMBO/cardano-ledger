@@ -34,7 +34,7 @@ class
   ) =>
   MaryEraImp era
 
-instance  MaryEraImp MaryEra
+instance MaryEraImp MaryEra
 
 mkTokenMintingTx :: MaryEraImp era => ScriptHash -> ImpTestM era (Tx era)
 mkTokenMintingTx sh = do

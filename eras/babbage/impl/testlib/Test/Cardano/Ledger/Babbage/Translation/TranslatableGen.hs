@@ -16,7 +16,7 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits
-import Cardano.Ledger.Babbage (Babbage, BabbageEra)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..))
 import Cardano.Ledger.Binary (mkSized)
@@ -49,14 +49,14 @@ import Test.QuickCheck (
   vectorOf,
  )
 
-instance TranslatableGen Babbage where
+instance TranslatableGen BabbageEra where
   tgRedeemers = genRedeemers
-  tgTx l = genTx @Babbage (genTxBody l)
-  tgUtxo = utxoWithTx @Babbage
+  tgTx l = genTx @BabbageEra (genTxBody l)
+  tgUtxo = utxoWithTx @BabbageEra
   mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
   mkTxInfoLanguage PlutusV2 = TxInfoLanguage SPlutusV2
   mkTxInfoLanguage lang =
-    error $ "Language " ++ show lang ++ " is not supported in " ++ eraName @Babbage
+    error $ "Language " ++ show lang ++ " is not supported in " ++ eraName @BabbageEra
 
 utxoWithTx ::
   forall era.
@@ -111,7 +111,7 @@ genTxOut l = do
 
 genTxBody :: Language -> Gen (BabbageTxBody BabbageEra)
 genTxBody l = do
-  let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @Babbage) <$> genTxOut @BabbageEra l)
+  let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @BabbageEra) <$> genTxOut @BabbageEra l)
   let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen TxIn)
   BabbageTxBody
     <$> genTxIns

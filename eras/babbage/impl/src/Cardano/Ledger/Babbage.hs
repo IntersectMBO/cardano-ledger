@@ -30,6 +30,8 @@ import Cardano.Ledger.Shelley.API
 
 type Babbage = BabbageEra
 
+{-# DEPRECATED Babbage "In favor of `BabbageEra`" #-}
+
 -- =====================================================
 
 instance DSignable (Hash EraIndependentTxBody) => ApplyTx BabbageEra where

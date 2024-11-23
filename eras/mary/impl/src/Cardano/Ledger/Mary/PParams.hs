@@ -47,7 +47,7 @@ instance EraPParams MaryEra where
   hkdMinUTxOValueL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
-instance  EraGov MaryEra where
+instance EraGov MaryEra where
   type GovState MaryEra = ShelleyGovState MaryEra
   emptyGovState = emptyShelleyGovState
 
