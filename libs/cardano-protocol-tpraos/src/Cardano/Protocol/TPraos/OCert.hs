@@ -61,17 +61,17 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
 
-data OCertEnv c = OCertEnv
-  { ocertEnvStPools :: !(Set (KeyHash 'StakePool c))
-  , ocertEnvGenDelegs :: !(Set (KeyHash 'GenesisDelegate c))
+data OCertEnv = OCertEnv
+  { ocertEnvStPools :: !(Set (KeyHash 'StakePool))
+  , ocertEnvGenDelegs :: !(Set (KeyHash 'GenesisDelegate))
   }
   deriving (Show, Eq)
 
 currentIssueNo ::
-  OCertEnv c ->
-  Map (KeyHash 'BlockIssuer c) Word64 ->
+  OCertEnv ->
+  Map (KeyHash 'BlockIssuer) Word64 ->
   -- | Pool hash
-  KeyHash 'BlockIssuer c ->
+  KeyHash 'BlockIssuer ->
   Maybe Word64
 currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | Map.member hk cs = Map.lookup hk cs
@@ -90,7 +90,7 @@ data OCert c = OCert
   -- ^ counter
   , ocertKESPeriod :: !KESPeriod
   -- ^ Start of key evolving signature period
-  , ocertSigma :: !(SignedDSIGN c (OCertSignable c))
+  , ocertSigma :: !(SignedDSIGN (OCertSignable c))
   -- ^ Signature of block operational certificate content
   }
   deriving (Generic)

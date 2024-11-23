@@ -23,7 +23,6 @@ module Test.Cardano.Protocol.TPraos.Create (
   evolveKESUntil,
 ) where
 
-import Cardano.Crypto.DSIGN (Signable)
 import qualified Cardano.Crypto.KES.Class as KES
 import qualified Cardano.Crypto.VRF.Class as VRF
 import Cardano.Ledger.BaseTypes (
@@ -70,17 +69,20 @@ import Test.Cardano.Protocol.Crypto.KES (KESKeyPair (..))
 import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
 import Test.Cardano.Protocol.Crypto.VRF.Fake (NatNonce (..), WithResult (..))
 
-data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
-  { aikCold :: KeyPair r v
-  , aikVrf :: VRFKeyPair v
-  , aikHot :: NonEmpty (KESPeriod, KESKeyPair v)
-  , aikColdKeyHash :: KeyHash r v
+data AllIssuerKeys c (r :: KeyRole) = AllIssuerKeys
+  { aikCold :: KeyPair r
+  , aikVrf :: VRFKeyPair c
+  , aikHot :: NonEmpty (KESPeriod, KESKeyPair c)
+  , aikColdKeyHash :: KeyHash r
   }
-  deriving (Show)
+
+deriving instance
+  (Show (VRF.SignKeyVRF (VRF c)), Show (VRF.VerKeyVRF (VRF c)), Show (KES.VerKeyKES (KES c))) =>
+  Show (AllIssuerKeys c r)
 
 mkOCert ::
   forall c r.
-  (Crypto c, Signable (DSIGN c) (OCertSignable c)) =>
+  Crypto c =>
   AllIssuerKeys c r ->
   Word64 ->
   KESPeriod ->
@@ -92,43 +94,43 @@ mkOCert pKeys kesPeriod keyRegKesPeriod =
         { ocertVkHot = vKeyHot
         , ocertN = kesPeriod
         , ocertKESPeriod = keyRegKesPeriod
-        , ocertSigma = signedDSIGN @c sKeyCold (OCertSignable vKeyHot kesPeriod keyRegKesPeriod)
+        , ocertSigma = signedDSIGN sKeyCold (OCertSignable vKeyHot kesPeriod keyRegKesPeriod)
         }
 
 mkBHBody ::
-  ( VRF.ContextVRF (VRF v) ~ ()
-  , VRF.Signable (VRF v) Seed
-  , VRF.VRFAlgorithm (VRF v)
+  ( VRF.ContextVRF (VRF c) ~ ()
+  , VRF.Signable (VRF c) Seed
+  , VRF.VRFAlgorithm (VRF c)
   ) =>
   ProtVer ->
-  HashHeader v ->
-  AllIssuerKeys v r ->
+  HashHeader ->
+  AllIssuerKeys c r ->
   SlotNo ->
   BlockNo ->
   Nonce ->
-  OCert v ->
+  OCert c ->
   Word32 ->
-  Hash v EraIndependentBlockBody ->
-  BHBody v
+  Hash EraIndependentBlockBody ->
+  BHBody c
 mkBHBody = mkBHBodyWithVRF (VRF.evalCertified ()) (VRF.evalCertified ())
 
 mkBHBodyFakeVRF ::
-  ( VRF.ContextVRF (VRF v) ~ ()
-  , VRF.Signable (VRF v) (WithResult Seed)
-  , VRF.VRFAlgorithm (VRF v)
+  ( VRF.ContextVRF (VRF c) ~ ()
+  , VRF.Signable (VRF c) (WithResult Seed)
+  , VRF.VRFAlgorithm (VRF c)
   ) =>
   NatNonce ->
   UnitInterval ->
   ProtVer ->
-  HashHeader v ->
-  AllIssuerKeys v r ->
+  HashHeader ->
+  AllIssuerKeys c r ->
   SlotNo ->
   BlockNo ->
   Nonce ->
-  OCert v ->
+  OCert c ->
   Word32 ->
-  Hash v EraIndependentBlockBody ->
-  BHBody v
+  Hash EraIndependentBlockBody ->
+  BHBody c
 mkBHBodyFakeVRF (NatNonce bnonce) l =
   mkBHBodyWithVRF
     (\nonce -> VRF.evalCertified () (WithResult nonce (fromIntegral bnonce)))
@@ -150,14 +152,14 @@ mkBHBodyWithVRF ::
   (Seed -> VRF.SignKeyVRF (VRF c) -> a) ->
   (Seed -> VRF.SignKeyVRF (VRF c) -> b) ->
   ProtVer ->
-  HashHeader c ->
+  HashHeader ->
   AllIssuerKeys c r ->
   SlotNo ->
   BlockNo ->
   Nonce ->
   OCert c ->
   Word32 ->
-  Hash c EraIndependentBlockBody ->
+  Hash EraIndependentBlockBody ->
   BHBody c
 mkBHBodyWithVRF mkVrfEta mkVrfL protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash =
   let nonceNonce = mkSeed seedEta slotNo enonce
@@ -204,13 +206,13 @@ mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody =
 -- | Try to evolve KES key until specific KES period is reached, given the
 -- current KES period.
 evolveKESUntil ::
-  (KES.UnsoundPureKESAlgorithm v, KES.ContextKES v ~ ()) =>
-  KES.UnsoundPureSignKeyKES v ->
+  (KES.UnsoundPureKESAlgorithm c, KES.ContextKES c ~ ()) =>
+  KES.UnsoundPureSignKeyKES c ->
   -- | Current KES period
   KESPeriod ->
   -- | Target KES period
   KESPeriod ->
-  Maybe (KES.UnsoundPureSignKeyKES v)
+  Maybe (KES.UnsoundPureSignKeyKES c)
 evolveKESUntil sk1 (KESPeriod current) (KESPeriod target) = go sk1 current target
   where
     go !_ c t | t < c = Nothing
@@ -220,15 +222,16 @@ evolveKESUntil sk1 (KESPeriod current) (KESPeriod target) = go sk1 current targe
       Just sk' -> go sk' (c + 1) t
 
 mkBlock ::
-  forall era r.
-  ( EraSegWits era
-  , VRF.Signable (VRF (EraCrypto era)) Seed
-  , KES.Signable (KES (EraCrypto era)) (BHBody (EraCrypto era))
+  forall era r c.
+  ( Crypto c
+  , EraSegWits era
+  , VRF.Signable (VRF c) Seed
+  , KES.Signable (KES c) (BHBody c)
   ) =>
   -- | Hash of previous block
-  HashHeader (EraCrypto era) ->
+  HashHeader ->
   -- | All keys in the stake pool
-  AllIssuerKeys (EraCrypto era) r ->
+  AllIssuerKeys c r ->
   -- | Transactions to record
   [Tx era] ->
   -- | Current slot
@@ -242,8 +245,8 @@ mkBlock ::
   -- | KES period of key registration
   Word ->
   -- | Operational certificate
-  OCert (EraCrypto era) ->
-  Block (BHeader (EraCrypto era)) era
+  OCert c ->
+  Block (BHeader c) era
 mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
       txseq = toTxSeq @era (StrictSeq.fromList txns)
@@ -255,15 +258,16 @@ mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
 
 -- | Create a block with a faked VRF result.
 mkBlockFakeVRF ::
-  forall era r.
-  ( EraSegWits era
-  , VRF.Signable (VRF (EraCrypto era)) (WithResult Seed)
-  , KES.Signable (KES (EraCrypto era)) (BHBody (EraCrypto era))
+  forall era r c.
+  ( Crypto c
+  , EraSegWits era
+  , VRF.Signable (VRF c) (WithResult Seed)
+  , KES.Signable (KES c) (BHBody c)
   ) =>
   -- | Hash of previous block
-  HashHeader (EraCrypto era) ->
+  HashHeader ->
   -- | All keys in the stake pool
-  AllIssuerKeys (EraCrypto era) r ->
+  AllIssuerKeys c r ->
   -- | Transactions to record
   [Tx era] ->
   -- | Current slot
@@ -281,8 +285,8 @@ mkBlockFakeVRF ::
   -- | KES period of key registration
   Word ->
   -- | Operational certificate
-  OCert (EraCrypto era) ->
-  Block (BHeader (EraCrypto era)) era
+  OCert c ->
+  Block (BHeader c) era
 mkBlockFakeVRF prev pKeys txns slotNo blockNo enonce bnonce l kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
       txSeq = toTxSeq @era (StrictSeq.fromList txns)

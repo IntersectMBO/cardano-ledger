@@ -17,14 +17,13 @@ module Test.Cardano.Protocol.TPraos.Arbitrary (
   genCoherentBlock,
 ) where
 
-import qualified Cardano.Crypto.DSIGN.Class as DSIGN (Signable)
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (BlockNo (..), Nonce, Seed, SlotNo (..))
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto (KES, VRF), DSIGN)
+import Cardano.Ledger.Crypto (Crypto (KES, VRF))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (BHBody),
@@ -32,7 +31,7 @@ import Cardano.Protocol.TPraos.BHeader (
   HashHeader (HashHeader),
   PrevHash (BlockHash, GenesisHash),
  )
-import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..), OCertSignable (..))
+import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..))
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState)
@@ -43,18 +42,18 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Protocol.TPraos.Create (AllIssuerKeys, mkBHBody, mkBHeader, mkBlock, mkOCert)
 
-instance Crypto c => Arbitrary (HashHeader c) where
+instance Arbitrary HashHeader where
   arbitrary = HashHeader <$> arbitrary
 
 instance Arbitrary TicknState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (PrtclState c) where
+instance Arbitrary PrtclState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (OBftSlot c) where
+instance Arbitrary OBftSlot where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -72,8 +71,7 @@ instance
     pure $ BHeader bhBody sig
 
 genBHeader ::
-  ( DSIGN.Signable (DSIGN c) (OCertSignable c)
-  , VRF.Signable (VRF c) Seed
+  ( VRF.Signable (VRF c) Seed
   , KES.Signable (KES c) (BHBody c)
   , Crypto c
   ) =>
@@ -115,7 +113,7 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance Crypto c => Arbitrary (PrevHash c) where
+instance Arbitrary PrevHash where
   arbitrary = do
     hash <- arbitrary
     frequency [(1, pure GenesisHash), (9999, pure (BlockHash hash))]
@@ -131,8 +129,7 @@ instance Crypto c => Arbitrary (OCert c) where
 deriving newtype instance Arbitrary KESPeriod
 
 instance
-  ( Era era
-  , c ~ EraCrypto era
+  ( Crypto c
   , EraSegWits era
   , KES.Signable (KES c) ~ SignableRepresentation
   , VRF.Signable (VRF c) ~ SignableRepresentation
@@ -144,12 +141,11 @@ instance
 
 -- | Use supplied keys to generate a Block.
 genBlock ::
-  ( DSIGN.Signable (DSIGN c) (OCertSignable c)
+  ( Crypto c
   , VRF.Signable (VRF c) Seed
   , KES.Signable (KES c) (BHBody c)
   , EraSegWits era
   , Arbitrary (Tx era)
-  , c ~ EraCrypto era
   ) =>
   [AllIssuerKeys c r] ->
   Gen (Block (BHeader c) era)
@@ -164,17 +160,16 @@ genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary)
 --
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
-  forall era r.
+  forall era r c.
   ( EraSegWits era
   , Arbitrary (Tx era)
-  , KES.Signable (KES (EraCrypto era)) ~ SignableRepresentation
-  , DSIGN.Signable (DSIGN (EraCrypto era)) ~ SignableRepresentation
-  , PraosCrypto (EraCrypto era)
+  , KES.Signable (KES c) ~ SignableRepresentation
+  , PraosCrypto c
   ) =>
-  [AllIssuerKeys (EraCrypto era) r] ->
-  Gen (Block (BHeader (EraCrypto era)) era)
+  [AllIssuerKeys c r] ->
+  Gen (Block (BHeader c) era)
 genCoherentBlock aiks = do
-  prevHash <- arbitrary :: Gen (HashHeader (EraCrypto era))
+  prevHash <- arbitrary :: Gen HashHeader
   allPoolKeys <- elements aiks
   txs <- arbitrary
   curSlotNo <- SlotNo <$> choose (0, 10)
