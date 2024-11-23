@@ -48,14 +48,14 @@ newtype ConwayMempoolPredFailure era = ConwayMempoolPredFailure Text
   deriving (Eq, Show, Generic)
   deriving newtype (NoThunks, NFData, ToCBOR, FromCBOR, EncCBOR, DecCBOR)
 
-type instance EraRuleFailure "MEMPOOL" (ConwayEra c) = ConwayMempoolPredFailure (ConwayEra c)
-instance InjectRuleFailure "MEMPOOL" ConwayMempoolPredFailure (ConwayEra c)
+type instance EraRuleFailure "MEMPOOL" ConwayEra = ConwayMempoolPredFailure ConwayEra
+instance InjectRuleFailure "MEMPOOL" ConwayMempoolPredFailure ConwayEra
 
 newtype ConwayMempoolEvent era = ConwayMempoolEvent Text
   deriving (Generic, Eq)
   deriving newtype (NFData)
 
-type instance EraRuleEvent "MEMPOOL" (ConwayEra c) = ConwayMempoolEvent (ConwayEra c)
+type instance EraRuleEvent "MEMPOOL" ConwayEra = ConwayMempoolEvent ConwayEra
 
 instance
   (EraTx era, EraGov era) =>

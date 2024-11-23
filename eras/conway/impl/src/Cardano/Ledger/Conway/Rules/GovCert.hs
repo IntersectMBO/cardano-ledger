@@ -58,7 +58,6 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
@@ -116,31 +115,28 @@ deriving instance EraPParams era => Show (ConwayGovCertEnv era)
 deriving instance EraPParams era => Eq (ConwayGovCertEnv era)
 
 data ConwayGovCertPredFailure era
-  = ConwayDRepAlreadyRegistered !(Credential 'DRepRole (EraCrypto era))
-  | ConwayDRepNotRegistered !(Credential 'DRepRole (EraCrypto era))
+  = ConwayDRepAlreadyRegistered !(Credential 'DRepRole)
+  | ConwayDRepNotRegistered !(Credential 'DRepRole)
   | ConwayDRepIncorrectDeposit !(Mismatch 'RelEQ Coin)
-  | ConwayCommitteeHasPreviouslyResigned !(Credential 'ColdCommitteeRole (EraCrypto era))
+  | ConwayCommitteeHasPreviouslyResigned !(Credential 'ColdCommitteeRole)
   | ConwayDRepIncorrectRefund !(Mismatch 'RelEQ Coin)
   | -- | Predicate failure whenever an update to an unknown committee member is
     -- attempted. Current Constitutional Committee and all available proposals will be
     -- searched before reporting this predicate failure.
-    ConwayCommitteeIsUnknown !(Credential 'ColdCommitteeRole (EraCrypto era))
+    ConwayCommitteeIsUnknown !(Credential 'ColdCommitteeRole)
   deriving (Show, Eq, Generic)
 
-type instance EraRuleFailure "GOVCERT" (ConwayEra c) = ConwayGovCertPredFailure (ConwayEra c)
+type instance EraRuleFailure "GOVCERT" ConwayEra = ConwayGovCertPredFailure ConwayEra
 
-type instance EraRuleEvent "GOVCERT" (ConwayEra c) = VoidEraRule "GOVCERT" (ConwayEra c)
+type instance EraRuleEvent "GOVCERT" ConwayEra = VoidEraRule "GOVCERT" ConwayEra
 
-instance InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure (ConwayEra c)
+instance InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure ConwayEra
 
 instance NoThunks (ConwayGovCertPredFailure era)
 
 instance NFData (ConwayGovCertPredFailure era)
 
-instance
-  Era era =>
-  EncCBOR (ConwayGovCertPredFailure era)
-  where
+instance Era era => EncCBOR (ConwayGovCertPredFailure era) where
   encCBOR =
     encode @_ @(ConwayGovCertPredFailure era) . \case
       ConwayDRepAlreadyRegistered cred -> Sum ConwayDRepAlreadyRegistered 0 !> To cred
@@ -150,10 +146,7 @@ instance
       ConwayDRepIncorrectRefund mm -> Sum ConwayDRepIncorrectRefund 4 !> ToGroup mm
       ConwayCommitteeIsUnknown coldCred -> Sum ConwayCommitteeIsUnknown 5 !> To coldCred
 
-instance
-  (Typeable era, Crypto (EraCrypto era)) =>
-  DecCBOR (ConwayGovCertPredFailure era)
-  where
+instance Typeable era => DecCBOR (ConwayGovCertPredFailure era) where
   decCBOR = decode . Summands "ConwayGovCertPredFailure" $ \case
     0 -> SumD ConwayDRepAlreadyRegistered <! From
     1 -> SumD ConwayDRepNotRegistered <! From
@@ -166,7 +159,7 @@ instance
 instance
   ( ConwayEraPParams era
   , State (EraRule "GOVCERT" era) ~ CertState era
-  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert (EraCrypto era)
+  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , EraRule "GOVCERT" era ~ ConwayGOVCERT era
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
@@ -175,7 +168,7 @@ instance
   STS (ConwayGOVCERT era)
   where
   type State (ConwayGOVCERT era) = CertState era
-  type Signal (ConwayGOVCERT era) = ConwayGovCert (EraCrypto era)
+  type Signal (ConwayGOVCERT era) = ConwayGovCert
   type Environment (ConwayGOVCERT era) = ConwayGovCertEnv era
   type BaseM (ConwayGOVCERT era) = ShelleyBase
   type PredicateFailure (ConwayGOVCERT era) = ConwayGovCertPredFailure era

@@ -20,7 +20,7 @@ import Cardano.Ledger.Binary (
   serialize,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   BabbageEraTxBody (..),
   EraTx (..),
@@ -92,7 +92,7 @@ spec = describe "Regression" $ do
           , "49848004800504d9010281d8799f182aff0581840000d8799f182aff820000f4f6"
           ]
   describe "ImpTest" $
-    withImpInit @(LedgerSpec Conway) $
+    withImpInit @(LedgerSpec ConwayEra) $
       it "InsufficientCollateral is not encoded with negative coin #4198" $ do
         collateralAddress <- freshKeyAddr_
         (_, skp) <- freshKeyPair
@@ -102,7 +102,7 @@ spec = describe "Regression" $ do
           lockScriptAddress = mkScriptAddr scriptHash skp
         collateralReturnAddr <- freshKeyAddr_
         lockedTx <-
-          submitTxAnn @Conway "Script locked tx" $
+          submitTxAnn @ConwayEra "Script locked tx" $
             mkBasicTx mkBasicTxBody
               & bodyTxL . outputsTxBodyL
                 .~ SSeq.fromList
@@ -129,7 +129,7 @@ spec = describe "Regression" $ do
         res <-
           impAnn "Consume the script locked output" $
             withPostFixup (updateAddrTxWits <=< breakCollaterals) $ do
-              trySubmitTx @Conway $
+              trySubmitTx @ConwayEra $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . inputsTxBodyL .~ Set.singleton (TxIn (txIdTx lockedTx) $ TxIx 0)
         (pFailure, _) <- impAnn "Expecting failure" $ expectLeftDeepExpr res

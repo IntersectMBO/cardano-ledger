@@ -41,17 +41,16 @@ import Cardano.Ledger.Conway.TxAuxData ()
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Val (Val (..))
 import Data.Ratio ((%))
 import GHC.Stack
 import Lens.Micro ((^.))
 
-instance Crypto c => EraTx (ConwayEra c) where
-  {-# SPECIALIZE instance EraTx (ConwayEra StandardCrypto) #-}
+instance EraTx ConwayEra where
+  {-# SPECIALIZE instance EraTx ConwayEra #-}
 
-  type Tx (ConwayEra c) = AlonzoTx (ConwayEra c)
-  type TxUpgradeError (ConwayEra c) = TxBodyUpgradeError (ConwayEra c)
+  type Tx ConwayEra = AlonzoTx ConwayEra
+  type TxUpgradeError ConwayEra = TxBodyUpgradeError ConwayEra
 
   mkBasicTx = mkBasicAlonzoTx
 
@@ -133,14 +132,14 @@ tierRefScriptFee multiplier sizeIncrement
           go (acc + sizeIncrementRational * curTierPrice) (multiplier * curTierPrice) (n - sizeIncrement)
     sizeIncrementRational = toInteger sizeIncrement % 1
 
-instance Crypto c => AlonzoEraTx (ConwayEra c) where
-  {-# SPECIALIZE instance AlonzoEraTx (ConwayEra StandardCrypto) #-}
+instance AlonzoEraTx ConwayEra where
+  {-# SPECIALIZE instance AlonzoEraTx ConwayEra #-}
 
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance Crypto c => EraSegWits (ConwayEra c) where
-  type TxSeq (ConwayEra c) = AlonzoTxSeq (ConwayEra c)
+instance EraSegWits ConwayEra where
+  type TxSeq ConwayEra = AlonzoTxSeq ConwayEra
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq

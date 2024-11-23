@@ -105,19 +105,19 @@ data ConwayCertPredFailure era
   | GovCertFailure (PredicateFailure (EraRule "GOVCERT" era))
   deriving (Generic)
 
-type instance EraRuleFailure "CERT" (ConwayEra c) = ConwayCertPredFailure (ConwayEra c)
+type instance EraRuleFailure "CERT" ConwayEra = ConwayCertPredFailure ConwayEra
 
-type instance EraRuleEvent "CERT" (ConwayEra c) = ConwayCertEvent (ConwayEra c)
+type instance EraRuleEvent "CERT" ConwayEra = ConwayCertEvent ConwayEra
 
-instance InjectRuleFailure "CERT" ConwayCertPredFailure (ConwayEra c)
+instance InjectRuleFailure "CERT" ConwayCertPredFailure ConwayEra
 
-instance InjectRuleFailure "CERT" ConwayDelegPredFailure (ConwayEra c) where
+instance InjectRuleFailure "CERT" ConwayDelegPredFailure ConwayEra where
   injectFailure = DelegFailure
 
-instance InjectRuleFailure "CERT" ShelleyPoolPredFailure (ConwayEra c) where
+instance InjectRuleFailure "CERT" ShelleyPoolPredFailure ConwayEra where
   injectFailure = PoolFailure
 
-instance InjectRuleFailure "CERT" ConwayGovCertPredFailure (ConwayEra c) where
+instance InjectRuleFailure "CERT" ConwayGovCertPredFailure ConwayEra where
   injectFailure = GovCertFailure
 
 deriving stock instance
@@ -177,9 +177,9 @@ instance
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
-  , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
-  , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
-  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert (EraCrypto era)
+  , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
+  , Signal (EraRule "POOL" era) ~ PoolCert
+  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Embed (EraRule "DELEG" era) (ConwayCERT era)
   , Embed (EraRule "POOL" era) (ConwayCERT era)
   , Embed (EraRule "GOVCERT" era) (ConwayCERT era)
@@ -204,9 +204,9 @@ certTransition ::
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
-  , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
-  , Signal (EraRule "POOL" era) ~ PoolCert (EraCrypto era)
-  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert (EraCrypto era)
+  , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
+  , Signal (EraRule "POOL" era) ~ PoolCert
+  , Signal (EraRule "GOVCERT" era) ~ ConwayGovCert
   , Embed (EraRule "DELEG" era) (ConwayCERT era)
   , Embed (EraRule "POOL" era) (ConwayCERT era)
   , Embed (EraRule "GOVCERT" era) (ConwayCERT era)

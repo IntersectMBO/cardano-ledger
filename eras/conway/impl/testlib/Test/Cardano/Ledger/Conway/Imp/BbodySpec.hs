@@ -105,7 +105,7 @@ spec = describe "BBODY" $ do
             )
         ]
   where
-    mkTxIn :: ImpTestM era (TxIn (EraCrypto era))
+    mkTxIn :: ImpTestM era TxIn
     mkTxIn = do
       addr <- freshKeyAddr_
       sendCoinTo addr (Coin 7_000_000)
@@ -115,7 +115,7 @@ spec = describe "BBODY" $ do
       script <- mkPlutusScript @era $ alwaysFailsWithDatum SPlutusV2
       pure $ fromPlutusScript script
 
-    mkTxWithNScripts :: TxIn (EraCrypto era) -> Script era -> Int -> ImpTestM era (Tx era)
+    mkTxWithNScripts :: TxIn -> Script era -> Int -> ImpTestM era (Tx era)
     mkTxWithNScripts txIn script n = do
       txIns <- replicateM n (produceRefScript script)
       pure $

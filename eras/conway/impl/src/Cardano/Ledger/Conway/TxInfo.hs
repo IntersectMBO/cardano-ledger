@@ -88,7 +88,6 @@ import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyRole (..), unVRFVerKeyHash)
 import Cardano.Ledger.Mary (MaryValue)
@@ -128,8 +127,8 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
-instance Crypto c => EraPlutusContext (ConwayEra c) where
-  type ContextError (ConwayEra c) = ConwayContextError (ConwayEra c)
+instance EraPlutusContext ConwayEra where
+  type ContextError ConwayEra = ConwayContextError ConwayEra
 
   mkPlutusWithContext = \case
     ConwayPlutusV1 p -> toPlutusWithContext $ Left p
@@ -265,10 +264,10 @@ instance
 transTxOutV1 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
-  TxOutSource (EraCrypto era) ->
+  TxOutSource ->
   TxOut era ->
   Either (ContextError era) PV1.TxOut
 transTxOutV1 txOutSource txOut = do
@@ -282,11 +281,11 @@ transTxOutV1 txOutSource txOut = do
 transTxInInfoV1 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
   UTxO era ->
-  TxIn (EraCrypto era) ->
+  TxIn ->
   Either (ContextError era) PV1.TxInInfo
 transTxInInfoV1 utxo txIn = do
   txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
@@ -297,11 +296,11 @@ transTxInInfoV1 utxo txIn = do
 transTxInInfoV3 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , BabbageEraTxOut era
   ) =>
   UTxO era ->
-  TxIn (EraCrypto era) ->
+  TxIn ->
   Either (ContextError era) PV3.TxInInfo
 transTxInInfoV3 utxo txIn = do
   txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
@@ -354,7 +353,7 @@ transTxCertV1V2 = \case
     | Just dCert <- Alonzo.transTxCertCommon txCert -> Right dCert
     | otherwise -> Left $ inject $ CertificateNotSupported txCert
 
-instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
+instance EraPlutusTxInfo 'PlutusV1 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
   toPlutusScriptPurpose proxy pv = transPlutusPurposeV1V2 proxy pv . hoistPlutusPurpose toAsItem
@@ -389,7 +388,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
-instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
+instance EraPlutusTxInfo 'PlutusV2 ConwayEra where
   toPlutusTxCert _ _ = transTxCertV1V2
 
   toPlutusScriptPurpose proxy pv = transPlutusPurposeV1V2 proxy pv . hoistPlutusPurpose toAsItem
@@ -427,7 +426,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
 
   toPlutusArgs = Babbage.toPlutusV2Args
 
-instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
+instance EraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusTxCert _ pv = pure . transTxCert pv
 
   toPlutusScriptPurpose = transScriptPurpose
@@ -473,13 +472,13 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
 
   toPlutusArgs = toPlutusV3Args
 
-transTxId :: TxId c -> PV3.TxId
+transTxId :: TxId -> PV3.TxId
 transTxId txId = PV3.TxId (transSafeHash (unTxId txId))
 
 transTxBodyId :: EraTxBody era => TxBody era -> PV3.TxId
 transTxBodyId txBody = PV3.TxId (transSafeHash (hashAnnotated txBody))
 
-transTxIn :: TxIn c -> PV3.TxOutRef
+transTxIn :: TxIn -> PV3.TxOutRef
 transTxIn (TxIn txid txIx) = PV3.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
@@ -528,22 +527,22 @@ transTxCert pv = \case
   UpdateDRepTxCert drepCred _anchor ->
     PV3.TxCertUpdateDRep (transDRepCred drepCred)
 
-transDRepCred :: Credential 'DRepRole c -> PV3.DRepCredential
+transDRepCred :: Credential 'DRepRole -> PV3.DRepCredential
 transDRepCred = PV3.DRepCredential . transCred
 
-transColdCommitteeCred :: Credential 'ColdCommitteeRole c -> PV3.ColdCommitteeCredential
+transColdCommitteeCred :: Credential 'ColdCommitteeRole -> PV3.ColdCommitteeCredential
 transColdCommitteeCred = PV3.ColdCommitteeCredential . transCred
 
-transHotCommitteeCred :: Credential 'HotCommitteeRole c -> PV3.HotCommitteeCredential
+transHotCommitteeCred :: Credential 'HotCommitteeRole -> PV3.HotCommitteeCredential
 transHotCommitteeCred = PV3.HotCommitteeCredential . transCred
 
-transDelegatee :: Delegatee c -> PV3.Delegatee
+transDelegatee :: Delegatee -> PV3.Delegatee
 transDelegatee = \case
   DelegStake poolId -> PV3.DelegStake (transKeyHash poolId)
   DelegVote drep -> PV3.DelegVote (transDRep drep)
   DelegStakeVote poolId drep -> PV3.DelegStakeVote (transKeyHash poolId) (transDRep drep)
 
-transDRep :: DRep c -> PV3.DRep
+transDRep :: DRep -> PV3.DRep
 transDRep = \case
   DRepCredential drepCred -> PV3.DRep (transDRepCred drepCred)
   DRepAlwaysAbstain -> PV3.DRepAlwaysAbstain
@@ -572,13 +571,13 @@ transScriptPurpose proxy pv = \case
   ConwayProposing (AsIxItem ix proposal) ->
     pure $ PV3.Proposing (toInteger ix) (transProposal proxy proposal)
 
-transVoter :: Voter c -> PV3.Voter
+transVoter :: Voter -> PV3.Voter
 transVoter = \case
   CommitteeVoter cred -> PV3.CommitteeVoter $ PV3.HotCommitteeCredential $ transCred cred
   DRepVoter cred -> PV3.DRepVoter $ PV3.DRepCredential $ transCred cred
   StakePoolVoter keyHash -> PV3.StakePoolVoter $ transKeyHash keyHash
 
-transGovActionId :: GovActionId c -> PV3.GovernanceActionId
+transGovActionId :: GovActionId -> PV3.GovernanceActionId
 transGovActionId GovActionId {gaidTxId, gaidGovActionIx} =
   PV3.GovernanceActionId
     { PV3.gaidTxId = transTxId gaidTxId
@@ -706,9 +705,9 @@ scriptPurposeToScriptInfo sp maybeSpendingData =
 -- ==========================
 -- Instances
 
-instance Crypto c => ToPlutusData (PParamsUpdate (ConwayEra c)) where
+instance ToPlutusData (PParamsUpdate ConwayEra) where
   toPlutusData = pparamUpdateToData conwayPParamMap
   fromPlutusData = pparamUpdateFromData conwayPParamMap
 
-instance Crypto c => ConwayEraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
+instance ConwayEraPlutusTxInfo 'PlutusV3 ConwayEra where
   toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))

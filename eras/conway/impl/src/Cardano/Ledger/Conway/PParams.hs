@@ -103,7 +103,6 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core (EraPParams (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD (
   HKD,
   HKDApplicative (hkdLiftA2),
@@ -678,10 +677,10 @@ instance DecCBOR (UpgradeConwayPParams Identity) where
         <! From
         <! D (decodeCostModel PlutusV3)
 
-instance Crypto c => EraPParams (ConwayEra c) where
-  type PParamsHKD f (ConwayEra c) = ConwayPParams f (ConwayEra c)
-  type UpgradePParams f (ConwayEra c) = UpgradeConwayPParams f
-  type DowngradePParams f (ConwayEra c) = ()
+instance EraPParams ConwayEra where
+  type PParamsHKD f ConwayEra = ConwayPParams f ConwayEra
+  type UpgradePParams f ConwayEra = UpgradeConwayPParams f
+  type DowngradePParams f ConwayEra = ()
 
   applyPPUpdates (PParams pp) (PParamsUpdate ppu) =
     PParams $ conwayApplyPPUpdates pp ppu
@@ -700,7 +699,7 @@ instance Crypto c => EraPParams (ConwayEra c) where
   hkdKeyDepositL = lens (unTHKD . cppKeyDeposit) $ \pp x -> pp {cppKeyDeposit = THKD x}
   hkdPoolDepositL = lens (unTHKD . cppPoolDeposit) $ \pp x -> pp {cppPoolDeposit = THKD x}
   hkdEMaxL = lens (unTHKD . cppEMax) $ \pp x -> pp {cppEMax = THKD x}
-  hkdNOptL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
+  hkdNOptL :: forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
   hkdNOptL =
     lens (asNaturalHKD @f @Word16 . (unTHKD . cppNOpt)) $
       \pp x -> pp {cppNOpt = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
@@ -717,39 +716,39 @@ instance Crypto c => EraPParams (ConwayEra c) where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueL = notSupportedInThisEraL
 
-instance Crypto c => AlonzoEraPParams (ConwayEra c) where
+instance AlonzoEraPParams ConwayEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
   hkdCostModelsL = lens (unTHKD . cppCostModels) $ \pp x -> pp {cppCostModels = THKD x}
   hkdPricesL = lens (unTHKD . cppPrices) $ \pp x -> pp {cppPrices = THKD x}
 
-  hkdMaxTxExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f ExUnits)
+  hkdMaxTxExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f ExUnits)
   hkdMaxTxExUnitsL =
     lens (hkdMap (Proxy @f) unOrdExUnits . unTHKD . cppMaxTxExUnits) $ \pp x ->
       pp {cppMaxTxExUnits = THKD $ hkdMap (Proxy @f) OrdExUnits x}
-  hkdMaxBlockExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f ExUnits)
+  hkdMaxBlockExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f ExUnits)
   hkdMaxBlockExUnitsL =
     lens (hkdMap (Proxy @f) unOrdExUnits . unTHKD . cppMaxBlockExUnits) $ \pp x ->
       pp {cppMaxBlockExUnits = THKD $ hkdMap (Proxy @f) OrdExUnits x}
-  hkdMaxValSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
+  hkdMaxValSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
   hkdMaxValSizeL =
     lens (asNaturalHKD @f @Word32 . (unTHKD . cppMaxValSize)) $
       \pp x -> pp {cppMaxValSize = THKD (asBoundedIntegralHKD @f @Natural @Word32 x)}
   hkdCollateralPercentageL ::
-    forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
+    forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
   hkdCollateralPercentageL =
     lens (asNaturalHKD @f @Word16 . (unTHKD . cppCollateralPercentage)) $
       \pp x -> pp {cppCollateralPercentage = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
   hkdMaxCollateralInputsL ::
-    forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
+    forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
   hkdMaxCollateralInputsL =
     lens (asNaturalHKD @f @Word16 . (unTHKD . cppMaxCollateralInputs)) $
       \pp x -> pp {cppMaxCollateralInputs = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
 
-instance Crypto c => BabbageEraPParams (ConwayEra c) where
+instance BabbageEraPParams ConwayEra where
   hkdCoinsPerUTxOByteL =
     lens (unTHKD . cppCoinsPerUTxOByte) $ \pp x -> pp {cppCoinsPerUTxOByte = THKD x}
 
-instance Crypto c => ConwayEraPParams (ConwayEra c) where
+instance ConwayEraPParams ConwayEra where
   modifiedPPGroups (PParamsUpdate ppu) = conwayModifiedPPGroups ppu
   ppuWellFormed pv ppu =
     and
@@ -772,7 +771,7 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
     where
       isValid ::
         (t -> Bool) ->
-        Lens' (PParamsUpdate (ConwayEra c)) (StrictMaybe t) ->
+        Lens' (PParamsUpdate ConwayEra) (StrictMaybe t) ->
         Bool
       isValid p l = case ppu ^. l of
         SJust x -> p x
@@ -781,7 +780,7 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
     lens (unTHKD . cppPoolVotingThresholds) $ \pp x -> pp {cppPoolVotingThresholds = THKD x}
   hkdDRepVotingThresholdsL =
     lens (unTHKD . cppDRepVotingThresholds) $ \pp x -> pp {cppDRepVotingThresholds = THKD x}
-  hkdCommitteeMinSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
+  hkdCommitteeMinSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f ConwayEra) (HKD f Natural)
   hkdCommitteeMinSizeL =
     lens (asNaturalHKD @f @Word16 . (unTHKD . cppCommitteeMinSize)) $
       \pp x -> pp {cppCommitteeMinSize = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
@@ -878,7 +877,7 @@ instance Era era => DecCBOR (ConwayPParams Identity era) where
 instance Era era => FromCBOR (ConwayPParams Identity era) where
   fromCBOR = fromEraCBOR @era
 
-instance Crypto c => ToJSON (ConwayPParams Identity (ConwayEra c)) where
+instance ToJSON (ConwayPParams Identity ConwayEra) where
   toJSON = object . conwayPParamsPairs
   toEncoding = pairs . mconcat . conwayPParamsPairs
 
@@ -1198,11 +1197,11 @@ instance FromJSON (UpgradeConwayPParams Identity) where
         <*> (either (fail . show) pure . mkCostModel PlutusV3 =<< o .: "plutusV3CostModel")
 
 upgradeConwayPParams ::
-  forall f c.
+  forall f.
   HKDApplicative f =>
   UpgradeConwayPParams f ->
-  PParamsHKD f (BabbageEra c) ->
-  ConwayPParams f (ConwayEra c)
+  PParamsHKD f BabbageEra ->
+  ConwayPParams f ConwayEra
 upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
   ConwayPParams
     { cppMinFeeA = THKD bppMinFeeA
@@ -1253,10 +1252,10 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
     }
 
 downgradeConwayPParams ::
-  forall f c.
+  forall f.
   HKDFunctor f =>
-  ConwayPParams f (ConwayEra c) ->
-  PParamsHKD f (BabbageEra c)
+  ConwayPParams f ConwayEra ->
+  PParamsHKD f BabbageEra
 downgradeConwayPParams ConwayPParams {..} =
   BabbagePParams
     { bppMinFeeA = unTHKD cppMinFeeA

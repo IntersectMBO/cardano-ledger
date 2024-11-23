@@ -103,16 +103,7 @@ import Cardano.Ledger.Conway.PParams (
   ppDRepVotingThresholdsL,
   ppPoolVotingThresholdsL,
  )
-import Cardano.Ledger.Core (
-  Era (EraCrypto),
-  EraPParams (..),
-  PParams (..),
-  PParamsUpdate,
-  emptyPParams,
-  fromEraCBOR,
-  ppProtocolVersionL,
-  toEraCBOR,
- )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -151,7 +142,7 @@ data EnactState era = EnactState
   , ensCurPParams :: !(PParams era)
   , ensPrevPParams :: !(PParams era)
   , ensTreasury :: !Coin
-  , ensWithdrawals :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
+  , ensWithdrawals :: !(Map (Credential 'Staking) Coin)
   , ensPrevGovActionIds :: !(GovRelation StrictMaybe era)
   -- ^ Last enacted GovAction Ids
   }
@@ -175,7 +166,7 @@ ensPrevPParamsL = lens ensPrevPParams (\es x -> es {ensPrevPParams = x})
 ensTreasuryL :: Lens' (EnactState era) Coin
 ensTreasuryL = lens ensTreasury $ \es x -> es {ensTreasury = x}
 
-ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential 'Staking (EraCrypto era)) Coin)
+ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential 'Staking) Coin)
 ensWithdrawalsL = lens ensWithdrawals $ \es x -> es {ensWithdrawals = x}
 
 ensPrevGovActionIdsL :: Lens' (EnactState era) (GovRelation StrictMaybe era)
@@ -276,7 +267,7 @@ data RatifyState era = RatifyState
   , rsEnacted :: !(Seq (GovActionState era))
   -- ^ Governance actions that are going to be enacted at the next epoch
   -- boundary.
-  , rsExpired :: !(Set (GovActionId (EraCrypto era)))
+  , rsExpired :: !(Set GovActionId)
   -- ^ Governance actions that are going to be removed at the next epoch
   -- boundary, either due to expiring or because they would become invalid
   -- after another governance action gets enacted or expired before it
@@ -302,7 +293,7 @@ rsEnactStateL = lens rsEnactState (\x y -> x {rsEnactState = y})
 rsEnactedL :: Lens' (RatifyState era) (Seq (GovActionState era))
 rsEnactedL = lens rsEnacted (\x y -> x {rsEnacted = y})
 
-rsExpiredL :: Lens' (RatifyState era) (Set (GovActionId (EraCrypto era)))
+rsExpiredL :: Lens' (RatifyState era) (Set GovActionId)
 rsExpiredL = lens rsExpired (\x y -> x {rsExpired = y})
 
 rsDelayedL :: Lens' (RatifyState era) Bool
@@ -571,29 +562,29 @@ ratifySignalL = lens unRatifySignal (\x y -> x {unRatifySignal = y})
 instance EraPParams era => NFData (RatifySignal era)
 
 data RatifyEnv era = RatifyEnv
-  { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
-  , reStakePoolDistr :: !(PoolDistr (EraCrypto era))
-  , reDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
-  , reDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+  { reStakeDistr :: !(Map (Credential 'Staking) (CompactForm Coin))
+  , reStakePoolDistr :: !PoolDistr
+  , reDRepDistr :: !(Map DRep (CompactForm Coin))
+  , reDRepState :: !(Map (Credential 'DRepRole) DRepState)
   , reCurrentEpoch :: !EpochNo
   , reCommitteeState :: !(CommitteeState era)
-  , reDelegatees :: !(Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
-  , rePoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+  , reDelegatees :: !(Map (Credential 'Staking) DRep)
+  , rePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
   }
   deriving (Generic)
 
 reStakeDistrL ::
-  Lens' (RatifyEnv era) (Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+  Lens' (RatifyEnv era) (Map (Credential 'Staking) (CompactForm Coin))
 reStakeDistrL = lens reStakeDistr (\x y -> x {reStakeDistr = y})
 
-reStakePoolDistrL :: Lens' (RatifyEnv era) (PoolDistr (EraCrypto era))
+reStakePoolDistrL :: Lens' (RatifyEnv era) PoolDistr
 reStakePoolDistrL = lens reStakePoolDistr (\x y -> x {reStakePoolDistr = y})
 
-reDRepDistrL :: Lens' (RatifyEnv era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+reDRepDistrL :: Lens' (RatifyEnv era) (Map DRep (CompactForm Coin))
 reDRepDistrL = lens reDRepDistr (\x y -> x {reDRepDistr = y})
 
 reDRepStateL ::
-  Lens' (RatifyEnv era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+  Lens' (RatifyEnv era) (Map (Credential 'DRepRole) DRepState)
 reDRepStateL = lens reDRepState (\x y -> x {reDRepState = y})
 
 reCurrentEpochL :: Lens' (RatifyEnv era) EpochNo
