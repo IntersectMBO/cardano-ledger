@@ -123,9 +123,9 @@ import Lens.Micro.Extras (view)
 
 -- | Filter out stake pool delegations and rewards for a set of stake credentials
 filterStakePoolDelegsAndRewards ::
-  UMap c ->
-  Set (Credential 'Staking c) ->
-  (Map (Credential 'Staking c) (KeyHash 'StakePool c), Map (Credential 'Staking c) Coin)
+  UMap ->
+  Set (Credential 'Staking) ->
+  (Map (Credential 'Staking) (KeyHash 'StakePool), Map (Credential 'Staking) Coin)
 filterStakePoolDelegsAndRewards umap creds =
   (scSPools stakeCredentials, scRewards stakeCredentials)
   where
@@ -136,9 +136,9 @@ filterStakePoolDelegsAndRewards umap creds =
 -- Implementation for @GetFilteredDelegationsAndRewardAccounts@ query.
 queryStakePoolDelegsAndRewards ::
   NewEpochState era ->
-  Set (Credential 'Staking (EraCrypto era)) ->
-  ( Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
-  , Map (Credential 'Staking (EraCrypto era)) Coin
+  Set (Credential 'Staking) ->
+  ( Map (Credential 'Staking) (KeyHash 'StakePool)
+  , Map (Credential 'Staking) Coin
   )
 queryStakePoolDelegsAndRewards nes = filterStakePoolDelegsAndRewards (dsUnified (getDState nes))
 
@@ -151,7 +151,7 @@ queryConstitution = (^. constitutionGovStateL) . queryGovState
 queryConstitutionHash ::
   ConwayEraGov era =>
   NewEpochState era ->
-  SafeHash (EraCrypto era) AnchorData
+  SafeHash AnchorData
 queryConstitutionHash nes =
   anchorDataHash . constitutionAnchor $ queryConstitution nes
 
@@ -164,8 +164,8 @@ queryDRepState ::
   NewEpochState era ->
   -- | Specify a set of DRep credentials whose state should be returned. When this set is
   -- empty, states for all of the DReps will be returned.
-  Set (Credential 'DRepRole (EraCrypto era)) ->
-  Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era))
+  Set (Credential 'DRepRole) ->
+  Map (Credential 'DRepRole) (DRepState)
 queryDRepState nes creds
   | null creds = updateDormantDRepExpiry' vState ^. vsDRepsL
   | otherwise = updateDormantDRepExpiry' vStateFiltered ^. vsDRepsL
@@ -181,8 +181,8 @@ queryDRepStakeDistr ::
   NewEpochState era ->
   -- | Specify DRep Ids whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the DReps will be returned.
-  Set (DRep (EraCrypto era)) ->
-  Map (DRep (EraCrypto era)) Coin
+  Set DRep ->
+  Map DRep Coin
 queryDRepStakeDistr nes creds
   | null creds = Map.map fromCompact distr
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` creds
@@ -196,8 +196,8 @@ queryRegisteredDRepStakeDistr ::
   NewEpochState era ->
   -- | Specify DRep Ids whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the registered DReps will be returned.
-  Set (Credential 'DRepRole (EraCrypto era)) ->
-  Map (Credential 'DRepRole (EraCrypto era)) Coin
+  Set (Credential 'DRepRole) ->
+  Map (Credential 'DRepRole) Coin
 queryRegisteredDRepStakeDistr nes creds =
   Map.foldlWithKey' computeDistr mempty selectedDReps
   where
@@ -219,10 +219,10 @@ queryRegisteredDRepStakeDistr nes creds =
 querySPOStakeDistr ::
   ConwayEraGov era =>
   NewEpochState era ->
-  Set (KeyHash 'StakePool (EraCrypto era)) ->
+  Set (KeyHash 'StakePool) ->
   -- | Specify pool key hashes whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the pools will be returned.
-  Map (KeyHash 'StakePool (EraCrypto era)) Coin
+  Map (KeyHash 'StakePool) Coin
 querySPOStakeDistr nes keys
   | null keys = Map.map fromCompact distr
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` keys
@@ -241,14 +241,14 @@ queryCommitteeMembersState ::
   forall era.
   ConwayEraGov era =>
   -- | filter by cold credentials (don't filter when empty)
-  Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
+  Set (Credential 'ColdCommitteeRole) ->
   -- | filter by hot credentials (don't filter when empty)
-  Set (Credential 'HotCommitteeRole (EraCrypto era)) ->
+  Set (Credential 'HotCommitteeRole) ->
   -- | filter by status (don't filter when empty)
   -- (useful, for discovering, for example, only active members)
   Set MemberStatus ->
   NewEpochState era ->
-  CommitteeMembersState (EraCrypto era)
+  CommitteeMembersState
 queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
   let
     committee = queryGovState nes ^. committeeGovStateL
@@ -287,8 +287,8 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
     currentEpoch = nes ^. nesELL
 
     mkMaybeMemberState ::
-      Credential 'ColdCommitteeRole (EraCrypto era) ->
-      Maybe (CommitteeMemberState (EraCrypto era))
+      Credential 'ColdCommitteeRole ->
+      Maybe (CommitteeMemberState)
     mkMaybeMemberState coldCred = do
       let mbExpiry = Map.lookup coldCred comMembers
       let status = case mbExpiry of
@@ -304,7 +304,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
               Just (CommitteeHotCredential hk) -> MemberAuthorized hk
       pure $ CommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
 
-    nextEpochChange :: Credential 'ColdCommitteeRole (EraCrypto era) -> NextEpochChange
+    nextEpochChange :: Credential 'ColdCommitteeRole -> NextEpochChange
     nextEpochChange ck
       | not inCurrent && inNext = ToBeEnacted
       | not inNext = ToBeRemoved
@@ -339,7 +339,7 @@ queryAccountState = view $ nesEsL . esAccountStateL
 getNextEpochCommitteeMembers ::
   ConwayEraGov era =>
   NewEpochState era ->
-  Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
+  Map (Credential 'ColdCommitteeRole) EpochNo
 getNextEpochCommitteeMembers nes =
   let ratifyState = queryRatifyState nes
       committee = ratifyState ^. rsEnactStateL . ensCommitteeL
@@ -367,7 +367,7 @@ queryProposals ::
   NewEpochState era ->
   -- | Specify a set of Governance Action IDs to filter the proposals. When this set is
   -- empty, all the proposals considered for ratification will be returned.
-  Set (GovActionId (EraCrypto era)) ->
+  Set GovActionId ->
   Seq (GovActionState era)
 queryProposals nes gids
   | null gids = proposals
@@ -395,7 +395,7 @@ finishedPulserState nes = finishDRepPulser (nes ^. newEpochStateGovStateL . drep
 queryStakePoolDefaultVote ::
   NewEpochState era ->
   -- | Specify the key hash of the pool whose default vote should be returned.
-  KeyHash 'StakePool (EraCrypto era) ->
+  KeyHash 'StakePool ->
   DefaultVote
 queryStakePoolDefaultVote nes poolId =
   defaultStakePoolVote poolId (nes ^. nesEsL . epochStatePoolParamsL) (dRepMap $ nes ^. unifiedL)

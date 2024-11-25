@@ -114,7 +114,6 @@ test-suite cardano-ledger-api-test
         cardano-ledger-byron,
         data-default,
         testlib,
-        cardano-crypto-class,
         cardano-ledger-binary,
         cardano-ledger-babbage:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},

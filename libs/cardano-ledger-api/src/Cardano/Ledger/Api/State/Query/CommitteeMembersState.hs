@@ -25,7 +25,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   KeyRole (..),
  )
@@ -52,21 +51,21 @@ instance EncCBOR MemberStatus where
 instance DecCBOR MemberStatus where
   decCBOR = decodeEnumBounded
 
-data HotCredAuthStatus c
-  = MemberAuthorized (Credential 'HotCommitteeRole c)
+data HotCredAuthStatus
+  = MemberAuthorized (Credential 'HotCommitteeRole)
   | -- | Member enacted, but no hot credential for voting has been registered
     MemberNotAuthorized
-  | MemberResigned (Maybe (Anchor c))
+  | MemberResigned (Maybe (Anchor))
   deriving (Show, Eq, Generic, Ord, ToJSON)
 
-instance Crypto c => EncCBOR (HotCredAuthStatus c) where
+instance EncCBOR HotCredAuthStatus where
   encCBOR =
     encode . \case
       MemberAuthorized cred -> Sum MemberAuthorized 0 !> To cred
       MemberNotAuthorized -> Sum MemberNotAuthorized 1
       MemberResigned anchor -> Sum MemberResigned 2 !> To anchor
 
-instance Crypto c => DecCBOR (HotCredAuthStatus c) where
+instance DecCBOR HotCredAuthStatus where
   decCBOR =
     decode $ Summands "HotCredAuthStatus" $ \case
       0 -> SumD MemberAuthorized <! From
@@ -103,8 +102,8 @@ instance DecCBOR NextEpochChange where
       4 -> SumD TermAdjusted <! From
       k -> Invalid k
 
-data CommitteeMemberState c = CommitteeMemberState
-  { cmsHotCredAuthStatus :: !(HotCredAuthStatus c)
+data CommitteeMemberState = CommitteeMemberState
+  { cmsHotCredAuthStatus :: !(HotCredAuthStatus)
   , cmsStatus :: !MemberStatus
   , cmsExpiration :: !(Maybe EpochNo)
   -- ^ Absolute epoch number when the member expires
@@ -113,18 +112,18 @@ data CommitteeMemberState c = CommitteeMemberState
   }
   deriving (Show, Eq, Generic)
 
-deriving instance Ord (CommitteeMemberState c)
+deriving instance Ord (CommitteeMemberState)
 
-instance Crypto c => EncCBOR (CommitteeMemberState c) where
+instance EncCBOR CommitteeMemberState where
   encCBOR (CommitteeMemberState cStatus mStatus ex nec) =
     encode $
-      Rec (CommitteeMemberState @c)
+      Rec (CommitteeMemberState)
         !> To cStatus
         !> To mStatus
         !> To ex
         !> To nec
 
-instance Crypto c => DecCBOR (CommitteeMemberState c) where
+instance DecCBOR CommitteeMemberState where
   decCBOR =
     decode $
       RecD CommitteeMemberState
@@ -133,11 +132,11 @@ instance Crypto c => DecCBOR (CommitteeMemberState c) where
         <! From
         <! From
 
-instance Crypto c => ToJSON (CommitteeMemberState c) where
+instance ToJSON CommitteeMemberState where
   toJSON = object . toCommitteeMemberStatePairs
   toEncoding = pairs . mconcat . toCommitteeMemberStatePairs
 
-toCommitteeMemberStatePairs :: (Crypto c, KeyValue e a) => CommitteeMemberState c -> [a]
+toCommitteeMemberStatePairs :: KeyValue e a => CommitteeMemberState -> [a]
 toCommitteeMemberStatePairs c@(CommitteeMemberState _ _ _ _) =
   let CommitteeMemberState {..} = c
    in [ "hotCredsAuthStatus" .= cmsHotCredAuthStatus
@@ -146,26 +145,26 @@ toCommitteeMemberStatePairs c@(CommitteeMemberState _ _ _ _) =
       , "nextEpochChange" .= cmsNextEpochChange
       ]
 
-data CommitteeMembersState c = CommitteeMembersState
-  { csCommittee :: !(Map (Credential 'ColdCommitteeRole c) (CommitteeMemberState c))
+data CommitteeMembersState = CommitteeMembersState
+  { csCommittee :: !(Map (Credential 'ColdCommitteeRole) (CommitteeMemberState))
   , csThreshold :: !(Maybe UnitInterval)
   , csEpochNo :: !EpochNo
   -- ^ Current epoch number. This is necessary to interpret committee member states
   }
   deriving (Eq, Show, Generic)
 
-deriving instance Ord (CommitteeMembersState c)
+deriving instance Ord (CommitteeMembersState)
 
-instance Crypto c => EncCBOR (CommitteeMembersState c) where
+instance EncCBOR CommitteeMembersState where
   encCBOR c@(CommitteeMembersState _ _ _) =
     let CommitteeMembersState {..} = c
      in encode $
-          Rec (CommitteeMembersState @c)
+          Rec (CommitteeMembersState)
             !> To csCommittee
             !> To csThreshold
             !> To csEpochNo
 
-instance Crypto c => DecCBOR (CommitteeMembersState c) where
+instance DecCBOR CommitteeMembersState where
   decCBOR =
     decode $
       RecD CommitteeMembersState
@@ -173,11 +172,11 @@ instance Crypto c => DecCBOR (CommitteeMembersState c) where
         <! From
         <! From
 
-instance Crypto c => ToJSON (CommitteeMembersState c) where
+instance ToJSON CommitteeMembersState where
   toJSON = object . toCommitteeMembersStatePairs
   toEncoding = pairs . mconcat . toCommitteeMembersStatePairs
 
-toCommitteeMembersStatePairs :: (KeyValue e a, Crypto c) => CommitteeMembersState c -> [a]
+toCommitteeMembersStatePairs :: KeyValue e a => CommitteeMembersState -> [a]
 toCommitteeMembersStatePairs c@(CommitteeMembersState _ _ _) =
   let CommitteeMembersState {..} = c
    in [ "committee" .= csCommittee

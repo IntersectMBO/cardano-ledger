@@ -29,7 +29,6 @@ module Cardano.Ledger.Api.Transition (
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Api.Era (LatestKnownEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
 import Cardano.Ledger.Shelley.Transition (
@@ -43,11 +42,10 @@ import Cardano.Ledger.Shelley.Transition (
 import Data.Function ((&))
 
 mkLatestTransitionConfig ::
-  Crypto c =>
-  ShelleyGenesis c ->
+  ShelleyGenesis ->
   AlonzoGenesis ->
-  ConwayGenesis c ->
-  TransitionConfig (LatestKnownEra c)
+  ConwayGenesis ->
+  TransitionConfig (LatestKnownEra)
 mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis =
   mkShelleyTransitionConfig shelleyGenesis
     & mkTransitionConfig NoGenesis

@@ -160,12 +160,12 @@ spec :: Spec
 spec =
   describe "TxBody" $ do
     describe "ShelleyEra" $ do
-      prop "evalBalanceTxBody" $ propEvalBalanceShelleyTxBody @Shelley
+      prop "evalBalanceTxBody" $ propEvalBalanceShelleyTxBody @ShelleyEra
     describe "AllegraEra" $ do
-      prop "evalBalanceTxBody" $ propEvalBalanceShelleyTxBody @Allegra
+      prop "evalBalanceTxBody" $ propEvalBalanceShelleyTxBody @AllegraEra
     describe "MaryEra" $ do
-      prop "evalBalanceTxBody" $ propEvalBalanceTxBody @Mary
+      prop "evalBalanceTxBody" $ propEvalBalanceTxBody @MaryEra
     describe "AlonzoEra" $ do
-      prop "evalBalanceTxBody" $ propEvalBalanceTxBody @Alonzo
+      prop "evalBalanceTxBody" $ propEvalBalanceTxBody @AlonzoEra
     describe "BabbageEra" $ do
-      prop "evalBalanceTxBody" $ propEvalBalanceTxBody @Babbage
+      prop "evalBalanceTxBody" $ propEvalBalanceTxBody @BabbageEra

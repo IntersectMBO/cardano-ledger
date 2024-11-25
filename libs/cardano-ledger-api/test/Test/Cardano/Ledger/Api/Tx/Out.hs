@@ -43,7 +43,7 @@ propSetShelleyMinTxOut =
 
 propSetAlonzoMinTxOut :: Spec
 propSetAlonzoMinTxOut =
-  prop "setAlonzoMinTxOut" $ \(pp :: PParams Alonzo) (txOut :: TxOut Alonzo) ->
+  prop "setAlonzoMinTxOut" $ \(pp :: PParams AlonzoEra) (txOut :: TxOut AlonzoEra) ->
     within 1000000 $ -- just in case if there is a problem with termination
       let txOut' = setMinCoinTxOut pp txOut
           valSize = Val.size (txOut' ^. valueTxOutL)
@@ -92,20 +92,20 @@ spec :: Spec
 spec =
   describe "TxOut" $ do
     describe "ShelleyEra" $ do
-      propSetShelleyMinTxOut @Shelley
-      propSetEnsureMinTxOut @Shelley
+      propSetShelleyMinTxOut @ShelleyEra
+      propSetEnsureMinTxOut @ShelleyEra
     describe "AllegraEra" $ do
-      propSetShelleyMinTxOut @Allegra
-      propSetEnsureMinTxOut @Allegra
+      propSetShelleyMinTxOut @AllegraEra
+      propSetEnsureMinTxOut @AllegraEra
     describe "MaryEra" $ do
-      propSetShelleyMinTxOut @Mary
-      propSetEnsureMinTxOut @Mary
+      propSetShelleyMinTxOut @MaryEra
+      propSetEnsureMinTxOut @MaryEra
     describe "AlonzoEra" $ do
       propSetAlonzoMinTxOut
-      propSetEnsureMinTxOut @Alonzo
+      propSetEnsureMinTxOut @AlonzoEra
     describe "BabbageEra" $ do
-      propSetBabbageMinTxOut @Babbage
-      propSetEnsureMinTxOut @Babbage
+      propSetBabbageMinTxOut @BabbageEra
+      propSetEnsureMinTxOut @BabbageEra
     describe "ConwayEra" $ do
-      propSetBabbageMinTxOut @Conway
-      propSetEnsureMinTxOut @Conway
+      propSetBabbageMinTxOut @ConwayEra
+      propSetEnsureMinTxOut @ConwayEra
