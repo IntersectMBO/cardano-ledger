@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.17.3.0
+
+* Fix buggy behavior of DRep delegations: #4772
+
 ## 1.17.2.0
 
 * Change the state used for `ConwayWdrlNotDelegatedToDRep` predicate failure checking
