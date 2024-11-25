@@ -278,7 +278,7 @@ processDelegationInternal stakeCred mCurDelegatee newDelegatee =
             processDRepUnDelegation stakeCred mCurDelegatee cState
               & certDStateL . dsUnifiedL %~ \umap ->
                 UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
-          dReps = vsDReps (certVState cState)
+          dReps = vsDReps (certVState cState')
        in case dRep of
             DRepCredential targetDRep
               | Just dRepState <- Map.lookup targetDRep dReps ->
