@@ -6,8 +6,8 @@
 
 module Test.Cardano.Ledger.Conway.GenesisSpec (spec) where
 
-import Cardano.Ledger.Babbage (Babbage)
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Plutus.CostModels (costModelsValid)
@@ -40,9 +40,9 @@ goldenConwayGenesisJSON =
       Right x -> pure x
     cg `shouldBe` expectedConwayGenesis
 
-propConwayPParamsUpgrade :: UpgradeConwayPParams Identity -> PParams Babbage -> Property
+propConwayPParamsUpgrade :: UpgradeConwayPParams Identity -> PParams BabbageEra -> Property
 propConwayPParamsUpgrade ppu pp = property $ do
-  let pp' = upgradePParams ppu pp :: PParams Conway
+  let pp' = upgradePParams ppu pp :: PParams ConwayEra
   pp' ^. ppPoolVotingThresholdsL `shouldBe` ucppPoolVotingThresholds ppu
   pp' ^. ppDRepVotingThresholdsL `shouldBe` ucppDRepVotingThresholds ppu
   fromIntegral (pp' ^. ppCommitteeMinSizeL) `shouldBe` ucppCommitteeMinSize ppu
