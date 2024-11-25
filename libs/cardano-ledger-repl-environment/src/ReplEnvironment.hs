@@ -12,7 +12,10 @@
 -- the REPL should load this module automatically.
 module ReplEnvironment where
 
+import Cardano.Ledger.Allegra
+import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Api
+import Cardano.Ledger.Babbage
 import Cardano.Ledger.Binary
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
@@ -20,7 +23,10 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Mary
 import Cardano.Ledger.PoolDistr
+import Cardano.Ledger.Shelley
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Val
 import Test.Cardano.Ledger.Api.DebugTools
 
