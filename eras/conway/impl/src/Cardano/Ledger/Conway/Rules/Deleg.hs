@@ -23,7 +23,7 @@ module Cardano.Ledger.Conway.Rules.Deleg (
   processDelegation,
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, StrictMaybe (..), natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (From, Invalid, SumD, Summands),
@@ -174,6 +174,7 @@ conwayDelegTransition = do
     judgmentContext
   let
     ppKeyDeposit = pp ^. ppKeyDepositL
+    pv = pp ^. ppProtocolVersionL
     checkDepositAgainstPParams deposit =
       deposit == ppKeyDeposit ?! IncorrectDepositDELEG deposit
     registerStakeCredential stakeCred =
@@ -228,13 +229,14 @@ conwayDelegTransition = do
     ConwayDelegCert stakeCred delegatee -> do
       mCurDelegatee <- checkStakeKeyIsRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
-      pure $ processDelegationInternal stakeCred mCurDelegatee delegatee certState
+      pure $
+        processDelegationInternal (pvMajor pv < natVersion @10) stakeCred mCurDelegatee delegatee certState
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       checkDepositAgainstPParams deposit
       checkStakeKeyNotRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
       pure $
-        processDelegationInternal stakeCred Nothing delegatee $
+        processDelegationInternal (pvMajor pv < natVersion @10) stakeCred Nothing delegatee $
           certState & certDStateL . dsUnifiedL .~ registerStakeCredential stakeCred
 
 -- | Apply new delegation, while properly cleaning up older delegations. This function
@@ -248,13 +250,15 @@ processDelegation ::
   CertState era
 processDelegation stakeCred newDelegatee !certState = certState'
   where
-    !certState' = processDelegationInternal stakeCred mCurDelegatee newDelegatee certState
+    !certState' = processDelegationInternal False stakeCred mCurDelegatee newDelegatee certState
     mUMElem = Map.lookup stakeCred (UM.umElems (dsUnified (certDState certState)))
     mCurDelegatee = mUMElem >>= umElemToDelegatee
 
 -- | Same as `processDelegation`, except it expects the current delegation supplied as an
 -- argument, because in ledger rules we already have it readily available.
 processDelegationInternal ::
+  -- | Preserve the buggy behavior where DRep delegations are not updated correctly (See #4772)
+  Bool ->
   -- | Delegator
   Credential 'Staking (EraCrypto era) ->
   -- | Current delegatee for the above stake credential that needs to be cleaned up.
@@ -263,7 +267,7 @@ processDelegationInternal ::
   Delegatee (EraCrypto era) ->
   CertState era ->
   CertState era
-processDelegationInternal stakeCred mCurDelegatee newDelegatee =
+processDelegationInternal preserveIncorrectDelegation stakeCred mCurDelegatee newDelegatee =
   case newDelegatee of
     DelegStake sPool -> delegStake sPool
     DelegVote dRep -> delegVote dRep
@@ -278,7 +282,9 @@ processDelegationInternal stakeCred mCurDelegatee newDelegatee =
             processDRepUnDelegation stakeCred mCurDelegatee cState
               & certDStateL . dsUnifiedL %~ \umap ->
                 UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
-          dReps = vsDReps (certVState cState)
+          dReps
+            | preserveIncorrectDelegation = vsDReps (certVState cState)
+            | otherwise = vsDReps (certVState cState')
        in case dRep of
             DRepCredential targetDRep
               | Just dRepState <- Map.lookup targetDRep dReps ->

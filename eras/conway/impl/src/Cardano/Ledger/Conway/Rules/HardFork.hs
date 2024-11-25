@@ -74,7 +74,11 @@ hardforkTransition = do
         epochState
           & esLStateL . lsCertStateL %~ \certState ->
             let umap = certState ^. certDStateL . dsUnifiedL
-                dReps = certState ^. certVStateL . vsDRepsL
+                dReps =
+                  -- Reset all delegations in order to remove any inconsistencies
+                  -- Delegations will be reset accordingly below.
+                  Map.map (\dRepState -> dRepState {drepDelegs = Set.empty}) $
+                    certState ^. certVStateL . vsDRepsL
                 (dRepsWithDelegations, elemsWithoutUnknownDRepDelegations) =
                   Map.mapAccumWithKey adjustDelegations dReps (UM.umElems umap)
                 adjustDelegations ds stakeCred umElem@(UM.UMElem rd ptr stakePool mDrep) =
