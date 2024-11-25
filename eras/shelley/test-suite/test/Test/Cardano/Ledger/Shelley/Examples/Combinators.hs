@@ -127,6 +127,7 @@ import Lens.Micro ((%~), (&), (.~), (^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce, testGlobals)
+import Cardano.Ledger.Crypto (StandardCrypto)
 
 -- ======================================================
 
@@ -159,7 +160,7 @@ evolveNonceUnfrozen n cs =
 newLab ::
   forall era.
   Era era =>
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader StandardCrypto) era ->
   ChainState era ->
   ChainState era
 newLab b cs =
@@ -182,8 +183,8 @@ feesAndDeposits ::
   EraPParams era =>
   PParams era ->
   Coin ->
-  [Credential 'Staking (EraCrypto era)] ->
-  [PoolParams (EraCrypto era)] ->
+  [Credential 'Staking] ->
+  [PoolParams] ->
   ChainState era ->
   ChainState era
 feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
@@ -220,7 +221,7 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
 feesAndKeyRefund ::
   forall era.
   Coin ->
-  Credential 'Staking (EraCrypto era) ->
+  Credential 'Staking ->
   ChainState era ->
   ChainState era
 feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
@@ -278,7 +279,7 @@ newUTxO txb cs = cs {chainNes = nes'}
 --   The rdDeposit component of the RDPair is set by 'feesAndDeposits'
 newStakeCred ::
   forall era.
-  Credential 'Staking (EraCrypto era) ->
+  Credential 'Staking ->
   Ptr ->
   ChainState era ->
   ChainState era
@@ -310,7 +311,7 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
 -- can't be used to balance the utxosDeposited field in 'feesAndKeyRefund'
 deregStakeCred ::
   forall era.
-  Credential 'Staking (EraCrypto era) ->
+  Credential 'Staking ->
   ChainState era ->
   ChainState era
 deregStakeCred cred cs = cs {chainNes = nes'}
@@ -340,8 +341,8 @@ deregStakeCred cred cs = cs {chainNes = nes'}
 -- stake pool.
 delegation ::
   forall era.
-  Credential 'Staking (EraCrypto era) ->
-  KeyHash 'StakePool (EraCrypto era) ->
+  Credential 'Staking ->
+  KeyHash 'StakePool ->
   ChainState era ->
   ChainState era
 delegation cred pool cs = cs {chainNes = nes'}
@@ -365,7 +366,7 @@ delegation cred pool cs = cs {chainNes = nes'}
 -- Add a newly registered stake pool
 newPool ::
   forall era.
-  PoolParams (EraCrypto era) ->
+  PoolParams ->
   ChainState era ->
   ChainState era
 newPool pool cs = cs {chainNes = nes'}
@@ -387,7 +388,7 @@ newPool pool cs = cs {chainNes = nes'}
 -- | = Re-Register Stake Pool
 reregPool ::
   forall era.
-  PoolParams (EraCrypto era) ->
+  PoolParams ->
   ChainState era ->
   ChainState era
 reregPool pool cs = cs {chainNes = nes'}
@@ -409,7 +410,7 @@ reregPool pool cs = cs {chainNes = nes'}
 -- | = Re-Register Stake Pool
 updatePoolParams ::
   forall era.
-  PoolParams (EraCrypto era) ->
+  PoolParams ->
   ChainState era ->
   ChainState era
 updatePoolParams pool cs = cs {chainNes = nes'}
@@ -434,7 +435,7 @@ updatePoolParams pool cs = cs {chainNes = nes'}
 -- Stage a stake pool for retirement.
 stageRetirement ::
   forall era.
-  KeyHash 'StakePool (EraCrypto era) ->
+  KeyHash 'StakePool ->
   EpochNo ->
   ChainState era ->
   ChainState era
@@ -457,7 +458,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 reapPool ::
   forall era.
   EraGov era =>
-  PoolParams (EraCrypto era) ->
+  PoolParams ->
   ChainState era ->
   ChainState era
 reapPool pool cs = cs {chainNes = nes'}
@@ -505,7 +506,7 @@ reapPool pool cs = cs {chainNes = nes'}
 -- Add a credential to the MIR mapping for the given pot (reserves or treasury)
 mir ::
   forall era.
-  Credential 'Staking (EraCrypto era) ->
+  Credential 'Staking ->
   MIRPot ->
   Coin ->
   ChainState era ->
@@ -538,7 +539,7 @@ mir cred pot amnt cs = cs {chainNes = nes'}
 applyMIR ::
   forall era.
   MIRPot ->
-  Map (Credential 'Staking (EraCrypto era)) Coin ->
+  Map (Credential 'Staking) Coin ->
   ChainState era ->
   ChainState era
 applyMIR pot newrewards cs = cs {chainNes = nes'}
@@ -569,7 +570,7 @@ applyMIR pot newrewards cs = cs {chainNes = nes'}
 -- Update the chain state with the given reward update
 rewardUpdate ::
   forall era.
-  RewardUpdate (EraCrypto era) ->
+  RewardUpdate ->
   ChainState era ->
   ChainState era
 rewardUpdate ru cs = cs {chainNes = nes'}
@@ -581,7 +582,7 @@ rewardUpdate ru cs = cs {chainNes = nes'}
 -- Update the chain state with the given reward update pulser
 pulserUpdate ::
   forall era.
-  PulsingRewUpdate (EraCrypto era) ->
+  PulsingRewUpdate ->
   ChainState era ->
   ChainState era
 pulserUpdate p cs = cs {chainNes = nes'}
@@ -594,7 +595,7 @@ pulserUpdate p cs = cs {chainNes = nes'}
 applyRewardUpdate ::
   forall era.
   EraGov era =>
-  RewardUpdate (EraCrypto era) ->
+  RewardUpdate ->
   ChainState era ->
   ChainState era
 applyRewardUpdate ru cs = cs {chainNes = nes'}
@@ -608,7 +609,7 @@ applyRewardUpdate ru cs = cs {chainNes = nes'}
 -- Add a new snapshot and rotate the others
 newSnapshot ::
   forall era.
-  SnapShot (EraCrypto era) ->
+  SnapShot ->
   Coin ->
   ChainState era ->
   ChainState era
@@ -636,7 +637,7 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
 -- Set the stake pool distribution to the given one.
 setPoolDistr ::
   forall era.
-  PoolDistr (EraCrypto era) ->
+  PoolDistr ->
   ChainState era ->
   ChainState era
 setPoolDistr pd cs = cs {chainNes = nes'}
@@ -648,7 +649,7 @@ setPoolDistr pd cs = cs {chainNes = nes'}
 -- Set the operational certificates counter for a given stake pool.
 setOCertCounter ::
   forall era.
-  KeyHash 'BlockIssuer (EraCrypto era) ->
+  KeyHash 'BlockIssuer ->
   Word64 ->
   ChainState era ->
   ChainState era
@@ -661,7 +662,7 @@ setOCertCounter kh n cs = cs {chainOCertIssue = counters}
 -- Record that the given stake pool (non-core node) produced a block.
 incrBlockCount ::
   forall era.
-  KeyHash 'StakePool (EraCrypto era) ->
+  KeyHash 'StakePool ->
   ChainState era ->
   ChainState era
 incrBlockCount kh cs = cs {chainNes = nes'}
@@ -681,7 +682,7 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 newEpoch ::
   forall era.
   (ProtVerAtMost era 6, EraGov era) =>
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader StandardCrypto) era ->
   ChainState era ->
   ChainState era
 newEpoch b cs = cs'
@@ -810,7 +811,7 @@ setPrevPParams pp cs = cs {chainNes = nes'}
 -- | = Set a future genesis delegation.
 setFutureGenDeleg ::
   forall era.
-  (FutureGenDeleg (EraCrypto era), GenDelegPair (EraCrypto era)) ->
+  (FutureGenDeleg, GenDelegPair) ->
   ChainState era ->
   ChainState era
 setFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
@@ -829,7 +830,7 @@ setFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
 -- | = Set a future genesis delegation.
 adoptFutureGenDeleg ::
   forall era.
-  (FutureGenDeleg (EraCrypto era), GenDelegPair (EraCrypto era)) ->
+  (FutureGenDeleg, GenDelegPair) ->
   ChainState era ->
   ChainState era
 adoptFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}

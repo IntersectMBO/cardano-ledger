@@ -18,7 +18,7 @@ import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Binary (Tokens (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core (emptyPParams, ppDL, ppMaxBBSizeL, ppMaxBHSizeL)
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRoleVRF (..), VRFVerKeyHash (..), hashKey, hashVerKeyVRF)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as L
@@ -61,7 +61,7 @@ golden_json_ShelleyGenesis :: Assertion
 golden_json_ShelleyGenesis =
   goldenTestJSON example =<< getDataFileName "test/Golden/ShelleyGenesis"
   where
-    example :: ShelleyGenesis StandardCrypto
+    example :: ShelleyGenesis
     example = exampleShelleyGenesis
 
 golden_cbor_ShelleyGenesis :: Assertion
@@ -70,7 +70,7 @@ golden_cbor_ShelleyGenesis =
     assertFailure . ansiDocToString $
       diffExpr (CBORBytes expected) (CBORBytes received)
   where
-    example :: ShelleyGenesis StandardCrypto
+    example :: ShelleyGenesis
     example = exampleShelleyGenesis
 
     received = Plain.serialize' expectedTokens
@@ -188,10 +188,7 @@ tests =
     , testCase "ShelleyGenesis CBOR golden test" golden_cbor_ShelleyGenesis
     ]
 
-exampleShelleyGenesis ::
-  forall c.
-  Crypto c =>
-  ShelleyGenesis c
+exampleShelleyGenesis :: ShelleyGenesis 
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
@@ -206,7 +203,7 @@ exampleShelleyGenesis =
     , sgUpdateQuorum = 16991
     , sgMaxLovelaceSupply = 71
     , sgProtocolParams =
-        emptyPParams @(ShelleyEra c)
+        emptyPParams @(ShelleyEra)
           & ppDL .~ unsafeBoundRational (realToFrac (1.9e-2 :: Scientific))
           & ppMaxBBSizeL .~ 239857
           & ppMaxBHSizeL .~ 17569
@@ -216,15 +213,15 @@ exampleShelleyGenesis =
     }
   where
     -- hash of the genesis verification key
-    genesisVerKeyHash :: L.KeyHash 'L.Genesis c
+    genesisVerKeyHash :: L.KeyHash 'L.Genesis 
     genesisVerKeyHash = L.KeyHash "38e7c5986a34f334e19b712c0aa525146dab8f0ff889b2ad16894241"
     -- hash of the delegators verififation key
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
-    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate c
+    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate 
     delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
-    delegVrfKeyHash :: VRFVerKeyHash 'GenDelegVRF c
+    delegVrfKeyHash :: VRFVerKeyHash 'GenDelegVRF 
     delegVrfKeyHash = VRFVerKeyHash "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
-    initialFundedAddress :: L.Addr c
+    initialFundedAddress :: L.Addr 
     initialFundedAddress =
       L.Addr
         L.Testnet
@@ -250,11 +247,11 @@ exampleShelleyGenesis =
         , L.SingleHostName L.SNothing (fromJust $ textToDns 64 "cool.domain.com")
         , L.MultiHostName (fromJust $ textToDns 64 "cool.domain.com")
         ]
-    poolParams :: L.PoolParams c
+    poolParams :: L.PoolParams
     poolParams =
       L.PoolParams
         { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
-        , L.ppVrf = hashVerKeyVRF . vrfVerKey $ mkVRFKeyPair @c (RawSeed 1 0 0 0 2)
+        , L.ppVrf = hashVerKeyVRF @StandardCrypto . vrfVerKey $ mkVRFKeyPair @StandardCrypto (RawSeed 1 0 0 0 2)
         , L.ppPledge = L.Coin 1
         , L.ppCost = L.Coin 5
         , L.ppMargin = unsafeBoundRational 0.25

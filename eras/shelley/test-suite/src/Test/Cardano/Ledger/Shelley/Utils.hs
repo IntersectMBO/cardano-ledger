@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -10,7 +9,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
+{-# HLINT ignore "Use replicate" #-}
 
 module Test.Cardano.Ledger.Shelley.Utils (
   mkSeedFromWords,
@@ -73,7 +75,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto (DSIGN))
+import Cardano.Ledger.Crypto (Crypto, DSIGN, StandardCrypto)
 import Cardano.Ledger.Shelley.API (ApplyBlock, KeyRole (..), VKey (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
@@ -110,7 +112,7 @@ import Test.Tasty.HUnit (
  )
 
 type ChainProperty era =
-  ( Mock (EraCrypto era)
+  ( Mock StandardCrypto
   , ApplyBlock era
   , GetLedgerView era
   , EraTx era
@@ -141,7 +143,7 @@ instance Split Coin where
     | m <= 0 = error "must split coins into positive parts"
     | otherwise = (take (fromIntegral m) (repeat (Coin (n `div` m))), Coin (n `rem` m))
 
-type GenesisKeyPair c = KeyPair 'Genesis c
+type GenesisKeyPair c = KeyPair 'Genesis
 
 instance EncCBOR RawSeed where
   encCBOR (RawSeed w1 w2 w3 w4 w5) = encCBOR (w1, w2, w3, w4, w5)
@@ -159,28 +161,25 @@ mkSeedFromWords stuff =
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey ::
-  DSIGNAlgorithm (DSIGN c) =>
   RawSeed ->
-  (SignKeyDSIGN (DSIGN c), VKey kd c)
+  (SignKeyDSIGN DSIGN, VKey kd)
 mkGenKey seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
 mkKeyPair ::
-  forall c kd.
-  DSIGNAlgorithm (DSIGN c) =>
+  forall kd.
   RawSeed ->
-  (SignKeyDSIGN (DSIGN c), VKey kd c)
+  (SignKeyDSIGN DSIGN, VKey kd)
 mkKeyPair seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
 mkKeyPair' ::
-  DSIGNAlgorithm (DSIGN c) =>
   RawSeed ->
-  KeyPair kd c
+  KeyPair kd
 mkKeyPair' seed = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair seed
@@ -255,6 +254,6 @@ testSTS env initSt sig predicateFailure@(Left _) = do
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
 mkHash i = coerce (hashWithEncoder @h shelleyProtVer encCBOR i)
 
-getBlockNonce :: forall era. Era era => Block (BHeader (EraCrypto era)) era -> Nonce
+getBlockNonce :: forall era. Block (BHeader StandardCrypto) era -> Nonce
 getBlockNonce =
   mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader

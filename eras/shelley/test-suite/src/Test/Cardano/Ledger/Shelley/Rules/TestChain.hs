@@ -2,7 +2,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -93,6 +92,7 @@ import Test.QuickCheck (
   conjoin,
   withMaxSuccess,
  )
+import Cardano.Ledger.Crypto (StandardCrypto)
 
 ------------------------------
 -- Constants for Properties --
@@ -143,7 +143,7 @@ ledgerTraceFromBlock ::
   , TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader StandardCrypto) era ->
   (ChainState era, Trace ledger)
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt
@@ -163,7 +163,7 @@ ledgerTraceFromBlockWithRestrictedUTxO ::
   , TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader StandardCrypto) era ->
   (UTxO era, Trace ledger)
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO
@@ -186,7 +186,7 @@ poolTraceFromBlock ::
   , EraSegWits era
   ) =>
   ChainState era ->
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader StandardCrypto) era ->
   (ChainState era, Trace (ShelleyPOOL era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt
@@ -211,7 +211,7 @@ delegTraceFromBlock ::
   , EraSegWits era
   ) =>
   ChainState era ->
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader StandardCrypto) era ->
   (DelegEnv era, Trace (ShelleyDELEG era))
 delegTraceFromBlock chainSt block =
   ( delegEnv
@@ -247,7 +247,7 @@ ledgerTraceBase ::
   , ApplyBlock era
   ) =>
   ChainState era ->
-  Block (BHeader (EraCrypto era)) era ->
+  Block (BHeader StandardCrypto) era ->
   (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt

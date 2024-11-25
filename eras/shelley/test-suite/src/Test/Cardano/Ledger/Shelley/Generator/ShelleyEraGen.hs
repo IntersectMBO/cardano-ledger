@@ -17,8 +17,7 @@ import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (DSIGN, KES)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Crypto (DSIGN, KES, StandardCrypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   Coin (..),
@@ -40,13 +39,11 @@ import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (ShelleyTxWits))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>))
-import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Control.Monad (replicateM)
 import Data.Foldable (toList)
 import Data.Sequence.Strict (StrictSeq ((:|>)), fromList)
 import Data.Set (Set)
 import Lens.Micro.Extras (view)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   GenEnv (..),
@@ -68,11 +65,10 @@ import Test.QuickCheck (Gen)
  -----------------------------------------------------------------------------}
 
 instance
-  ( PraosCrypto c
-  , DSIGN.Signable (DSIGN c) ~ SignableRepresentation
-  , KES.Signable (KES c) ~ SignableRepresentation
+  ( DSIGN.Signable (DSIGN) ~ SignableRepresentation
+  , KES.Signable (KES StandardCrypto) ~ SignableRepresentation
   ) =>
-  EraGen (ShelleyEra c)
+  EraGen (ShelleyEra)
   where
   genGenesisValue
     ( GenEnv
@@ -90,12 +86,12 @@ instance
       , stbInputs = stbInputs body' <> ins
       , stbOutputs = stbOutputs body' :|> out
       }
-  genEraPParamsUpdate = genShelleyPParamsUpdate @(ShelleyEra c)
+  genEraPParamsUpdate = genShelleyPParamsUpdate @(ShelleyEra)
   genEraPParams = genPParams
 
   genEraTxWits _ setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
 
-instance CC.Crypto c => ScriptClass (ShelleyEra c) where
+instance ScriptClass (ShelleyEra) where
   basescript _proxy = RequireSignature
   isKey _ (RequireSignature hk) = Just hk
   isKey _ _ = Nothing
@@ -118,13 +114,13 @@ genTxBody ::
   ) =>
   PParams era ->
   SlotNo ->
-  Set (TxIn (EraCrypto era)) ->
+  Set (TxIn) ->
   StrictSeq (TxOut era) ->
   StrictSeq (TxCert era) ->
-  Withdrawals (EraCrypto era) ->
+  Withdrawals ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+  StrictMaybe (AuxiliaryDataHash) ->
   Gen (ShelleyTxBody era, [MultiSig era])
 genTxBody _pparams slot inputs outputs certs withdrawals fee update adHash = do
   ttl <- genTimeToLive slot
@@ -146,7 +142,7 @@ genTimeToLive currentSlot = do
   ttl <- genNatural 50 100
   pure $ currentSlot + SlotNo (fromIntegral ttl)
 
-instance Mock c => MinGenTxout (ShelleyEra c) where
+instance MinGenTxout (ShelleyEra) where
   calcEraMinUTxO _txout = view ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do

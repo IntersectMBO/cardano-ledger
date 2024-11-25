@@ -235,14 +235,14 @@ epochAt x =
 action2m ::
   EraTxOut era =>
   (DState era, PState era, UTxO era) ->
-  EB.SnapShot (EraCrypto era)
+  EB.SnapShot
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 action2im ::
   forall era.
   EraTxOut era =>
   (DState era, PState era, UTxO era) ->
-  EB.SnapShot (EraCrypto era)
+  EB.SnapShot
 action2im (dstate, pstate, utxo) =
   let pp = emptyPParams @era
       incStake = updateStakeDistribution pp mempty mempty utxo

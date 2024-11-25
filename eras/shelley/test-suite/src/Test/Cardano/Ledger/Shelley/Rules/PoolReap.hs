@@ -3,11 +3,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.PoolReap (
   tests,
@@ -24,7 +21,6 @@ import Cardano.Ledger.Block (
   Block (..),
  )
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
-import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   EpochState (..),
@@ -104,7 +100,7 @@ removedAfterPoolreap p p' e =
     stp' = psStakePoolParams p'
     retiring = psRetiring p
     retiring' = psRetiring p'
-    retire :: Set.Set (KeyHash 'StakePool (EraCrypto era)) -- This declaration needed to disambiguate 'eval'
+    retire :: Set.Set (KeyHash 'StakePool) -- This declaration needed to disambiguate 'eval'
     retire = eval (dom (retiring ▷ setSingleton e))
 
 sameEpoch ::

@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
 )
 where
 
-import Cardano.Crypto.DSIGN (MockDSIGN, VerKeyDSIGN)
+import Cardano.Crypto.DSIGN (VerKeyDSIGN)
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
 import Cardano.Crypto.KES (MockKES)
 import qualified Cardano.Crypto.KES.Class as KES
@@ -31,28 +31,25 @@ import Test.Cardano.Protocol.Crypto.VRF.Fake (FakeVRF)
 type Mock c =
   ( PraosCrypto c
   , KES.Signable (KES c) ~ SignableRepresentation
-  , DSIGN.Signable (DSIGN c) ~ SignableRepresentation
+  , DSIGN.Signable DSIGN ~ SignableRepresentation
   , VRF.Signable (VRF c) Seed
   )
 
 -- | Additional mocking constraints used in examples.
 type ExMock c =
   ( Mock c
-  , Num (DSIGN.SignKeyDSIGN (DSIGN c))
-  , Num (VerKeyDSIGN (DSIGN c))
+  , Num (DSIGN.SignKeyDSIGN DSIGN)
+  , Num (VerKeyDSIGN DSIGN)
   , VRF c ~ FakeVRF
   )
 
-type C = ShelleyEra C_Crypto
+type C = ShelleyEra
 
 type TestCrypto = C_Crypto
 
 data C_Crypto
 
 instance Cardano.Ledger.Crypto.Crypto C_Crypto where
-  type HASH C_Crypto = HASH StandardCrypto
-  type ADDRHASH C_Crypto = ADDRHASH StandardCrypto
-  type DSIGN C_Crypto = MockDSIGN
   type KES C_Crypto = MockKES 10
   type VRF C_Crypto = FakeVRF
 

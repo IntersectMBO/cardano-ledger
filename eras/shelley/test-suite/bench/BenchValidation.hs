@@ -66,7 +66,7 @@ import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 
-data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block (BHeader (EraCrypto era)) era)
+data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block (BHeader StandardCrypto) era)
 
 sizes :: ValidateInput era -> String
 sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocksMade (nesBcur ss)))
@@ -76,7 +76,7 @@ instance NFData (ValidateInput era) where
 
 validateInput ::
   ( EraGen era
-  , Mock (EraCrypto era)
+  , Mock StandardCrypto
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
   , API.ApplyBlock era
@@ -89,7 +89,7 @@ validateInput utxoSize = genValidateInput utxoSize
 
 genValidateInput ::
   ( EraGen era
-  , Mock (EraCrypto era)
+  , Mock StandardCrypto
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
   , API.ApplyBlock era
@@ -141,21 +141,21 @@ benchreValidate (ValidateInput globals state (Block bh txs)) =
 data UpdateInputs c
   = UpdateInputs
       !Globals
-      !(LedgerView c)
+      !(LedgerView)
       !(BHeader c)
-      !(ChainDepState c)
+      !(ChainDepState)
 
 instance Crypto c => Show (UpdateInputs c) where
   show (UpdateInputs _globals vl bh st) =
     show vl ++ "\n" ++ show bh ++ "\n" ++ show st
 
-instance NFData (LedgerView era) where
+instance NFData (LedgerView) where
   rnf (LedgerView _D _extraEntropy _pool _delegs _ccd) = ()
 
 instance Crypto c => NFData (BHeader c) where
   rnf (BHeader _ _) = ()
 
-instance NFData (ChainDepState c) where
+instance NFData (ChainDepState) where
   rnf (ChainDepState _ _ _) = ()
 
 instance NFData (ChainTransitionError c) where
@@ -168,7 +168,7 @@ instance Crypto c => NFData (UpdateInputs c) where
 genUpdateInputs ::
   forall era.
   ( EraGen era
-  , Mock (EraCrypto era)
+  , Mock StandardCrypto
   , MinLEDGER_STS era
   , GetLedgerView era
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
@@ -176,7 +176,7 @@ genUpdateInputs ::
   , API.ApplyBlock era
   ) =>
   Int ->
-  IO (UpdateInputs (EraCrypto era))
+  IO (UpdateInputs StandardCrypto)
 genUpdateInputs utxoSize = do
   let ge = genEnv (Proxy :: Proxy era) defaultConstants
   chainstate <- genChainState utxoSize ge
@@ -199,13 +199,13 @@ genUpdateInputs utxoSize = do
 updateChain ::
   Mock c =>
   UpdateInputs c ->
-  Either (ChainTransitionError c) (ChainDepState c)
+  Either (ChainTransitionError c) (ChainDepState)
 updateChain (UpdateInputs gl lv bh st) = updateChainDepState gl lv bh st
 
 updateAndTickChain ::
   Mock c =>
   UpdateInputs c ->
-  Either (ChainTransitionError c) (ChainDepState c)
+  Either (ChainTransitionError c) (ChainDepState)
 updateAndTickChain (UpdateInputs gl lv bh st) =
   updateChainDepState gl lv bh
     . tickChainDepState gl lv True

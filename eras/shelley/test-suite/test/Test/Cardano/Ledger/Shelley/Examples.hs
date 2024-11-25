@@ -16,12 +16,13 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Stack
 import Lens.Micro
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, chainStateNesL, totalAda)
 import Test.Cardano.Ledger.Shelley.TreeDiff (expectExprEqual)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, maxLLSupply, runShelleyBase)
 import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Test.Tasty.HUnit (Assertion, (@?=))
+import Cardano.Ledger.Crypto (StandardCrypto)
 
 data CHAINExample h era = CHAINExample
   { startState :: ChainState era
@@ -34,7 +35,7 @@ data CHAINExample h era = CHAINExample
 
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.
-testCHAINExample :: HasCallStack => CHAINExample (BHeader C_Crypto) C -> Assertion
+testCHAINExample :: HasCallStack => CHAINExample (BHeader StandardCrypto) C -> Assertion
 testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
   ( checkTrace @(CHAIN C) runShelleyBase () $
       ( pure initSt .- block

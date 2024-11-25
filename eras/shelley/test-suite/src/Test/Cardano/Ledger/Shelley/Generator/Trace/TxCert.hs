@@ -207,7 +207,7 @@ genTxCerts ::
     , Coin
     , Coin
     , CertState era
-    , [KeyPair 'Witness (EraCrypto era)]
+    , [KeyPair 'Witness]
     , [(Core.Script era, Core.Script era)]
     )
 genTxCerts
@@ -279,7 +279,7 @@ extractScriptCred x =
 keyCredAsWitness ::
   (HasCallStack, Era era, Show (Core.Script era)) =>
   CertCred era ->
-  [KeyPair 'Witness (EraCrypto era)]
+  [KeyPair 'Witness]
 keyCredAsWitness (DelegateCred c) = asWitness <$> c
 keyCredAsWitness (CoreKeyCred c) = asWitness <$> c
 keyCredAsWitness (StakeCred c) = [asWitness c]

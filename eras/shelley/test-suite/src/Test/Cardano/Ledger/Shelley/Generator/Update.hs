@@ -37,6 +37,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -286,7 +287,7 @@ genPPUpdate ::
   EraGen era =>
   Constants ->
   PParams era ->
-  [KeyHash 'Genesis (EraCrypto era)] ->
+  [KeyHash 'Genesis] ->
   Gen (ProposedPPUpdates era)
 genPPUpdate constants pp genesisKeys = do
   pps <- genEraPParamsUpdate @era constants pp
@@ -300,7 +301,7 @@ genUpdateForNodes ::
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [KeyPair 'Genesis (EraCrypto era)] ->
+  [KeyPair 'Genesis] ->
   PParams era ->
   Gen (Maybe (Update era))
 genUpdateForNodes c s e coreKeys pp =
@@ -315,11 +316,11 @@ genUpdate ::
   EraGen era =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)] ->
-  Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate) ->
+  [(GenesisKeyPair StandardCrypto, AllIssuerKeys StandardCrypto 'GenesisDelegate)] ->
+  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys StandardCrypto 'GenesisDelegate) ->
   PParams era ->
   (UTxOState era, CertState era) ->
-  Gen (Maybe (Update era), [KeyPair 'Witness (EraCrypto era)])
+  Gen (Maybe (Update era), [KeyPair 'Witness])
 genUpdate
   c@Constants {frequencyTxUpdates}
   s

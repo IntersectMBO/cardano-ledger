@@ -62,6 +62,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
  )
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Test.QuickCheck (Gen)
+import Cardano.Ledger.Crypto (StandardCrypto)
 
 -- ======================================================
 
@@ -77,7 +78,7 @@ instance
   ( EraGen era
   , EraGov era
   , EraUTxO era
-  , Mock (EraCrypto era)
+  , Mock StandardCrypto
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -114,7 +115,7 @@ instance
   ( EraGen era
   , EraGov era
   , EraUTxO era
-  , Mock (EraCrypto era)
+  , Mock StandardCrypto
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era

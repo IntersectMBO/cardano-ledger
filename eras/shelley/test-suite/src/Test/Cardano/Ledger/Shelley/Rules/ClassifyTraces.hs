@@ -94,6 +94,7 @@ import Test.QuickCheck (
  )
 import Test.Tasty (TestTree)
 import qualified Test.Tasty.QuickCheck as TQC
+import Cardano.Ledger.Crypto (StandardCrypto)
 
 -- =================================================================
 
@@ -129,7 +130,7 @@ relevantCasesAreCoveredForTrace ::
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs :: Block (BHeader (EraCrypto era)) era -> [Tx era]
+  let blockTxs :: Block (BHeader StandardCrypto) era -> [Tx era]
       blockTxs (UnserialisedBlock _ txSeq) = toList (fromTxSeq @era txSeq)
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
@@ -403,7 +404,7 @@ onlyValidChainSignalsAreGenerated =
     genesisChainSt = Just (mkGenesisChainState (genEnv p defaultConstants))
 
 -- | Counts the epochs spanned by this trace
-epochsInTrace :: forall era. Era era => [Block (BHeader (EraCrypto era)) era] -> Int
+epochsInTrace :: forall era. [Block (BHeader StandardCrypto) era] -> Int
 epochsInTrace bs'
   | Just bs <- nonEmpty bs' =
       let

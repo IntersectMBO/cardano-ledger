@@ -79,7 +79,7 @@ import Cardano.Ledger.Credential (
   pattern StakeRefBase,
   pattern StakeRefPtr,
  )
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (
   Hash,
   KeyHash,
@@ -157,17 +157,17 @@ type PreAlonzo era =
 
 -- =========================================
 
-type DataHash c = SafeHash c EraIndependentData
+type DataHash = SafeHash EraIndependentData
 
 type ScriptInfo era =
-  ( Map (ScriptHash (EraCrypto era)) (TwoPhase3ArgInfo era)
-  , Map (ScriptHash (EraCrypto era)) (TwoPhase2ArgInfo era)
+  ( Map ScriptHash (TwoPhase3ArgInfo era)
+  , Map (ScriptHash) (TwoPhase2ArgInfo era)
   )
 
 data TwoPhase3ArgInfo era = TwoPhase3ArgInfo
   { getScript3 :: Script era
   -- ^ A Plutus Script
-  , getHash3 :: ScriptHash (EraCrypto era)
+  , getHash3 :: ScriptHash
   -- ^ Its ScriptHash
   , getData3 :: PV1.Data
   -- ^ A Data that will make it succeed
@@ -183,7 +183,7 @@ data TwoPhase3ArgInfo era = TwoPhase3ArgInfo
 data TwoPhase2ArgInfo era = TwoPhase2ArgInfo
   { getScript2 :: Script era
   -- ^ A Plutus Script
-  , getHash2 :: ScriptHash (EraCrypto era)
+  , getHash2 :: ScriptHash
   -- ^ Its ScriptHash
   , getRedeemer2 ::
       ( PV1.Data -- The redeeming data
@@ -203,8 +203,8 @@ data ScriptSpace era = ScriptSpace
   -- ^ A list of Two Phase 3 Arg Scripts and their associated data we can use.
   , ssScripts2 :: [TwoPhase2ArgInfo era]
   -- ^ A list of Two Phase 2 Arg Scripts and their associated data we can use.
-  , ssHash3 :: Map (ScriptHash (EraCrypto era)) (TwoPhase3ArgInfo era)
-  , ssHash2 :: Map (ScriptHash (EraCrypto era)) (TwoPhase2ArgInfo era)
+  , ssHash3 :: Map (ScriptHash) (TwoPhase3ArgInfo era)
+  , ssHash2 :: Map (ScriptHash) (TwoPhase2ArgInfo era)
   }
 
 deriving instance Show (Script era) => Show (ScriptSpace era)
@@ -220,24 +220,24 @@ data GenEnv era = GenEnv
 --
 --   These are the _only_ keys which should be involved in the trace.
 data KeySpace era = KeySpace_
-  { ksCoreNodes :: [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)]
-  , ksGenesisDelegates :: [AllIssuerKeys (EraCrypto era) 'GenesisDelegate]
+  { ksCoreNodes :: [(GenesisKeyPair StandardCrypto, AllIssuerKeys StandardCrypto 'GenesisDelegate)]
+  , ksGenesisDelegates :: [AllIssuerKeys StandardCrypto 'GenesisDelegate]
   -- ^ Bag of keys to be used for future genesis delegates
-  , ksStakePools :: [AllIssuerKeys (EraCrypto era) 'StakePool]
+  , ksStakePools :: [AllIssuerKeys StandardCrypto 'StakePool]
   -- ^ Bag of keys to be used for future stake pools
-  , ksKeyPairs :: KeyPairs (EraCrypto era)
+  , ksKeyPairs :: KeyPairs
   -- ^ Bag of keys to be used for future payment/staking addresses
   , ksMSigScripts :: [(Script era, Script era)]
-  , ksIndexedPaymentKeys :: Map (KeyHash 'Payment (EraCrypto era)) (KeyPair 'Payment (EraCrypto era))
+  , ksIndexedPaymentKeys :: Map (KeyHash 'Payment) (KeyPair 'Payment)
   -- ^ Index over the payment keys in 'ksKeyPairs'
-  , ksIndexedStakingKeys :: Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era))
+  , ksIndexedStakingKeys :: Map (KeyHash 'Staking) (KeyPair 'Staking)
   -- ^ Index over the staking keys in 'ksKeyPairs'
   , ksIndexedGenDelegates ::
-      Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate)
+      Map (KeyHash 'GenesisDelegate) (AllIssuerKeys StandardCrypto 'GenesisDelegate)
   -- ^ Index over the cold key hashes in Genesis Delegates
-  , ksIndexedPayScripts :: Map (ScriptHash (EraCrypto era)) (Script era, Script era)
+  , ksIndexedPayScripts :: Map (ScriptHash) (Script era, Script era)
   -- ^ Index over the pay script hashes in Script pairs
-  , ksIndexedStakeScripts :: Map (ScriptHash (EraCrypto era)) (Script era, Script era)
+  , ksIndexedStakeScripts :: Map (ScriptHash) (Script era, Script era)
   -- ^ Index over the stake script hashes in Script pairs
   }
 
@@ -246,10 +246,10 @@ deriving instance (Era era, Show (Script era)) => Show (KeySpace era)
 pattern KeySpace ::
   forall era.
   ScriptClass era =>
-  [(GenesisKeyPair (EraCrypto era), AllIssuerKeys (EraCrypto era) 'GenesisDelegate)] ->
-  [AllIssuerKeys (EraCrypto era) 'GenesisDelegate] ->
-  [AllIssuerKeys (EraCrypto era) 'StakePool] ->
-  KeyPairs (EraCrypto era) ->
+  [(GenesisKeyPair StandardCrypto, AllIssuerKeys StandardCrypto 'GenesisDelegate)] ->
+  [AllIssuerKeys StandardCrypto 'GenesisDelegate] ->
+  [AllIssuerKeys StandardCrypto 'StakePool] ->
+  KeyPairs ->
   [(Script era, Script era)] ->
   KeySpace era
 pattern KeySpace
@@ -306,10 +306,9 @@ genWord64 lower upper =
 -- Note: we index all possible genesis delegate keys, that is,
 -- core nodes and all potential keys.
 mkGenesisDelegatesHashMap ::
-  Crypto c =>
-  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
-  [AllIssuerKeys c 'GenesisDelegate] ->
-  Map (KeyHash 'GenesisDelegate c) (AllIssuerKeys c 'GenesisDelegate)
+  [(GenesisKeyPair StandardCrypto, AllIssuerKeys StandardCrypto 'GenesisDelegate)] ->
+  [AllIssuerKeys StandardCrypto 'GenesisDelegate] ->
+  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys StandardCrypto 'GenesisDelegate)
 mkGenesisDelegatesHashMap coreNodes genesisDelegates =
   Map.fromList (f <$> allDelegateKeys)
   where
@@ -318,7 +317,7 @@ mkGenesisDelegatesHashMap coreNodes genesisDelegates =
 
 -- | Generate a mapping from stake key hash to stake key pair, from a list of
 -- (payment, staking) key pairs.
-mkStakeKeyHashMap :: Crypto c => KeyPairs c -> Map (KeyHash 'Staking c) (KeyPair 'Staking c)
+mkStakeKeyHashMap :: KeyPairs -> Map (KeyHash 'Staking) (KeyPair 'Staking)
 mkStakeKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
@@ -327,9 +326,8 @@ mkStakeKeyHashMap keyPairs =
 -- | Generate a mapping from payment key hash to keypair
 -- from a list of (payment, staking) key pairs.
 mkPayKeyHashMap ::
-  Crypto c =>
-  KeyPairs c ->
-  Map (KeyHash 'Payment c) (KeyPair 'Payment c)
+  KeyPairs ->
+  Map (KeyHash 'Payment) (KeyPair 'Payment)
 mkPayKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
@@ -338,10 +336,10 @@ mkPayKeyHashMap keyPairs =
 -- | Find first matching key pair for a credential. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPairCred ::
-  forall era kr.
-  Credential kr (EraCrypto era) ->
-  Map (KeyHash kr (EraCrypto era)) (KeyPair kr (EraCrypto era)) ->
-  KeyPair kr (EraCrypto era)
+  forall kr.
+  Credential kr ->
+  Map (KeyHash kr) (KeyPair kr) ->
+  KeyPair kr
 findPayKeyPairCred (KeyHashObj addr) keyHashMap =
   fromMaybe
     (error $ "findPayKeyPairCred: could not find a match for the given credential: " <> show addr)
@@ -352,22 +350,21 @@ findPayKeyPairCred _ _ =
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPairAddr ::
-  forall era.
-  Addr (EraCrypto era) ->
-  Map (KeyHash 'Payment (EraCrypto era)) (KeyPair 'Payment (EraCrypto era)) ->
-  KeyPair 'Payment (EraCrypto era)
+  Addr ->
+  Map (KeyHash 'Payment) (KeyPair 'Payment) ->
+  KeyPair 'Payment
 findPayKeyPairAddr a keyHashMap =
   case a of
-    Addr _ addr (StakeRefBase _) -> findPayKeyPairCred @era addr keyHashMap
-    Addr _ addr (StakeRefPtr _) -> findPayKeyPairCred @era addr keyHashMap
+    Addr _ addr (StakeRefBase _) -> findPayKeyPairCred addr keyHashMap
+    Addr _ addr (StakeRefPtr _) -> findPayKeyPairCred addr keyHashMap
     _ ->
       error "findPayKeyPairAddr: expects only Base or Ptr addresses"
 
 -- | Find matching multisig scripts for a credential.
 findPayScriptFromCred ::
   forall era.
-  Credential 'Witness (EraCrypto era) ->
-  Map (ScriptHash (EraCrypto era)) (Script era, Script era) ->
+  Credential 'Witness ->
+  Map (ScriptHash) (Script era, Script era) ->
   (Script era, Script era)
 findPayScriptFromCred (ScriptHashObj scriptHash) scriptsByPayHash =
   fromMaybe
@@ -378,8 +375,8 @@ findPayScriptFromCred _ _ =
 
 -- | Find first matching script for a credential.
 findStakeScriptFromCred ::
-  Credential 'Witness (EraCrypto era) ->
-  Map (ScriptHash (EraCrypto era)) (Script era, Script era) ->
+  Credential 'Witness ->
+  Map (ScriptHash) (Script era, Script era) ->
   (Script era, Script era)
 findStakeScriptFromCred (ScriptHashObj scriptHash) scriptsByStakeHash =
   fromMaybe
@@ -391,8 +388,8 @@ findStakeScriptFromCred _ _ =
 -- | Find first matching multisig script for an address.
 findPayScriptFromAddr ::
   forall era.
-  Addr (EraCrypto era) ->
-  Map (ScriptHash (EraCrypto era)) (Script era, Script era) ->
+  Addr ->
+  Map (ScriptHash) (Script era, Script era) ->
   (Script era, Script era)
 findPayScriptFromAddr (Addr _ scriptHash (StakeRefBase _)) scriptsByPayHash =
   findPayScriptFromCred @era (asWitness scriptHash) scriptsByPayHash
@@ -402,7 +399,7 @@ findPayScriptFromAddr _ _ =
   error "findPayScriptFromAddr: expects only base and pointer script addresses"
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-pickStakeKey :: KeyPairs c -> Gen (VKey 'Staking c)
+pickStakeKey :: KeyPairs -> Gen (VKey 'Staking)
 pickStakeKey keys = vKey . snd <$> QC.elements keys
 
 -- | Generates a list of coins for the given 'Addr' and produced a 'TxOut' for each 'Addr'
@@ -414,7 +411,7 @@ genTxOut ::
   forall era.
   EraTxOut era =>
   Gen (Value era) ->
-  [Addr (EraCrypto era)] ->
+  [Addr] ->
   Gen [TxOut era]
 genTxOut genEraVal addrs = do
   values <- replicateM (length addrs) genEraVal
@@ -460,7 +457,7 @@ mkBlockHeader ::
   Mock c =>
   ProtVer ->
   -- | Hash of previous block
-  HashHeader c ->
+  HashHeader ->
   -- | All keys in the stake pool
   AllIssuerKeys c r ->
   -- | Current slot
@@ -478,7 +475,7 @@ mkBlockHeader ::
   -- | Block size
   Word32 ->
   -- | Block body hash
-  Hash c EraIndependentBlockBody ->
+  Hash EraIndependentBlockBody ->
   BHeader c
 mkBlockHeader protVer prev pKeys slotNo blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
   let bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
@@ -519,7 +516,7 @@ genesisAccountState =
 -- | Creates the UTxO for a new ledger with the specified
 -- genesis TxId and transaction outputs.
 genesisCoins ::
-  TxId (EraCrypto era) ->
+  TxId ->
   [TxOut era] ->
   UTxO era
 genesisCoins genesisTxId outs =
@@ -529,7 +526,7 @@ genesisCoins genesisTxId outs =
 -- ==================================================================
 -- Operations on GenEnv that deal with ScriptSpace
 
-hashData :: forall era. Era era => PV1.Data -> DataHash (EraCrypto era)
+hashData :: PV1.Data -> DataHash
 hashData x = unsafeMakeSafeHash (Hash.castHash (Hash.hashWith (toStrict . serialise) x))
 
 {-
@@ -542,13 +539,12 @@ genPlutus (GenEnv _ (ScriptSpace scripts _) _) = gettriple <$> oneof (pure <$> s
 -- | Find the preallocated Script from its Hash.
 findPlutus ::
   forall era.
-  Era era =>
   GenEnv era ->
-  ScriptHash (EraCrypto era) ->
-  (Script era, StrictMaybe (DataHash (EraCrypto era)))
+  ScriptHash ->
+  (Script era, StrictMaybe (DataHash))
 findPlutus (GenEnv keyspace (ScriptSpace _ _ mp3 mp2) _) hsh =
   case Map.lookup hsh mp3 of
-    Just info3 -> (getScript3 info3, SJust (hashData @era (getData3 info3)))
+    Just info3 -> (getScript3 info3, SJust (hashData (getData3 info3)))
     Nothing ->
       case Map.lookup hsh mp2 of
         Just info2 -> (getScript2 info2, SNothing)

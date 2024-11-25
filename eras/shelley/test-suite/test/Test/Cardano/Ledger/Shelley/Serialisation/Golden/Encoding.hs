@@ -167,7 +167,7 @@ import Test.Tasty.HUnit (assertFailure, testCase)
 
 -- ============================================
 
-type MultiSigMap = Map.Map (ScriptHash C_Crypto) (MultiSig (ShelleyEra C_Crypto))
+type MultiSigMap = Map.Map (ScriptHash) (MultiSig (ShelleyEra))
 
 decodeMultiSigMap :: Decoder s (Annotator MultiSigMap)
 decodeMultiSigMap = decodeMapTraverse (pure <$> decCBOR) decCBOR
@@ -186,26 +186,26 @@ checkEncodingCBORCBORGroup name x t =
   let d = decodeFullDecoder shelleyProtVer (fromString name) decCBORGroup
    in checkEncoding shelleyProtVer encCBORGroup d name x t
 
-getRawKeyHash :: KeyHash 'Payment h -> ByteString
+getRawKeyHash :: KeyHash 'Payment -> ByteString
 getRawKeyHash (KeyHash hsh) = Monomorphic.hashToBytes hsh
 
 getRawNonce :: Nonce -> ByteString
 getRawNonce (Nonce hsh) = Monomorphic.hashToBytes hsh
 getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
 
-testGKey :: Crypto c => GenesisKeyPair c
+testGKey :: GenesisKeyPair c
 testGKey = KeyPair vk sk
   where
     (sk, vk) = mkGenKey (RawSeed 0 0 0 0 0)
 
-testGKeyHash :: Crypto c => KeyHash 'Genesis c
+testGKeyHash :: Crypto c => KeyHash 'Genesis
 testGKeyHash = (hashKey . vKey) testGKey
 
 testVRF :: Crypto c => VRFKeyPair c
 testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
 
-testVRFKH :: forall c r. Crypto c => VRFVerKeyHash r c
-testVRFKH = hashVerKeyVRF $ vrfVerKey (testVRF @c)
+testVRFKH :: forall r. VRFVerKeyHash r
+testVRFKH = hashVerKeyVRF @StandardCrypto $ vrfVerKey @StandardCrypto (testVRF)
 
 testTxb :: (EraTxOut era, EraTxCert era) => ShelleyTxBody era
 testTxb =
@@ -222,32 +222,32 @@ testTxb =
 testTxbHash ::
   forall era.
   (EraTxOut era, EraTxCert era) =>
-  SafeHash (EraCrypto era) EraIndependentTxBody
+  SafeHash EraIndependentTxBody
 testTxbHash = hashAnnotated $ testTxb @era
 
-testKey1 :: Crypto c => KeyPair 'Payment c
+testKey1 :: KeyPair 'Payment 
 testKey1 = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
-testKey2 :: Crypto c => KeyPair kr c
+testKey2 ::  KeyPair kr 
 testKey2 = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 2)
 
-testBlockIssuerKey :: Crypto c => KeyPair 'BlockIssuer c
+testBlockIssuerKey :: Crypto c => KeyPair 'BlockIssuer 
 testBlockIssuerKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 4)
 
-testStakePoolKey :: Crypto c => KeyPair 'StakePool c
+testStakePoolKey :: Crypto c => KeyPair 'StakePool 
 testStakePoolKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 5)
 
 testGenesisDelegateKey ::
   Crypto c =>
-  KeyPair 'GenesisDelegate c
+  KeyPair 'GenesisDelegate 
 testGenesisDelegateKey = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 6)
@@ -260,16 +260,16 @@ testBlockIssuerKeyTokens = e
 
 testKey1SigToken ::
   forall era.
-  (EraTxOut era, Mock (EraCrypto era), EraTxCert era) =>
+  (EraTxOut era, Mock StandardCrypto, EraTxCert era) =>
   Tokens ->
   Tokens
 testKey1SigToken = e
   where
     s =
-      signedDSIGN @(EraCrypto era)
-        (sKey $ testKey1 @(EraCrypto era))
+      signedDSIGN
+        (sKey $ testKey1)
         (extractHash (testTxbHash @era)) ::
-        SignedDSIGN (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+        SignedDSIGN (Hash EraIndependentTxBody)
     CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedDSIGN s)
 
 testOpCertSigTokens ::
@@ -281,56 +281,54 @@ testOpCertSigTokens = e
   where
     s =
       signedDSIGN @c
-        (sKey $ testKey1 @c)
+        (sKey $ testKey1 )
         (OCertSignable @c (kesVerKey $ testKESKeys @c) 0 (KESPeriod 0))
     CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedDSIGN s)
 
-testKeyHash1 :: Crypto c => KeyHash 'Payment c
+testKeyHash1 ::  KeyHash 'Payment 
 testKeyHash1 = (hashKey . vKey) testKey1
 
-testKeyHash2 :: Crypto c => KeyHash 'Staking c
+testKeyHash2 ::  KeyHash 'Staking 
 testKeyHash2 = (hashKey . vKey) testKey2
 
 testKESKeys :: Crypto c => KESKeyPair c
 testKESKeys = mkKESKeyPair (RawSeed 0 0 0 0 3)
 
-testAddrE :: Crypto c => Addr c
+testAddrE ::  Addr 
 testAddrE =
   Addr
     Testnet
     (KeyHashObj testKeyHash1)
     StakeRefNull
 
-testPayCred :: forall c. Crypto c => Credential 'Payment c
-testPayCred = KeyHashObj (testKeyHash1 @c)
+testPayCred :: forall c.  Credential 'Payment 
+testPayCred = KeyHashObj (testKeyHash1)
 
-testStakeCred :: forall c. Crypto c => Credential 'Staking c
-testStakeCred = KeyHashObj $ testKeyHash2 @c
+testStakeCred :: forall c.  Credential 'Staking 
+testStakeCred = KeyHashObj $ testKeyHash2
 
-testScript :: forall c. Crypto c => MultiSig (ShelleyEra c)
-testScript = RequireSignature $ asWitness (testKeyHash1 @c)
+testScript :: forall c.  MultiSig (ShelleyEra)
+testScript = RequireSignature $ asWitness (testKeyHash1 )
 
-testScriptHash :: forall c. Crypto c => ScriptHash c
-testScriptHash = hashScript @(ShelleyEra c) testScript
+testScriptHash :: forall c.  ScriptHash 
+testScriptHash = hashScript @(ShelleyEra ) testScript
 
-testScript2 :: forall c. Crypto c => MultiSig (ShelleyEra c)
-testScript2 = RequireSignature $ asWitness (testKeyHash2 @c)
+testScript2 :: forall c.  MultiSig (ShelleyEra )
+testScript2 = RequireSignature $ asWitness (testKeyHash2 )
 
 testHeaderHash ::
-  forall c.
-  Crypto c =>
-  HashHeader c
+  
+  HashHeader 
 testHeaderHash =
   HashHeader $
     coerce
-      (hashWithEncoder shelleyProtVer encCBOR 0 :: Hash c Int)
+      (hashWithEncoder shelleyProtVer encCBOR 0 :: Hash Int )
 
 testBHB ::
   forall era c.
   ( EraTx era
   , PreAlonzo era
   , ExMock c
-  , c ~ EraCrypto era
   , Tx era ~ ShelleyTx era
   ) =>
   BHBody c
@@ -363,7 +361,7 @@ testBHB =
           0
           (KESPeriod 0)
           ( signedDSIGN @c
-              (sKey $ testKey1 @c)
+              (sKey $ testKey1)
               (OCertSignable (kesVerKey $ testKESKeys @c) 0 (KESPeriod 0))
           )
     , bprotver = ProtVer minBound 0
@@ -373,7 +371,7 @@ testBHBSigTokens ::
   forall era.
   ( EraTx era
   , PreAlonzo era
-  , ExMock (EraCrypto era)
+  , ExMock StandardCrypto
   , Tx era ~ ShelleyTx era
   ) =>
   Tokens ->
@@ -381,11 +379,11 @@ testBHBSigTokens ::
 testBHBSigTokens = e
   where
     s =
-      unsoundPureSignedKES @(KES (EraCrypto era))
+      unsoundPureSignedKES @(KES StandardCrypto)
         ()
         0
         (testBHB @era)
-        (kesSignKey $ testKESKeys @(EraCrypto era))
+        (kesSignKey $ testKESKeys @)
     CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedKES s)
 
 tests :: TestTree
@@ -445,18 +443,18 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "key_hash"
-        (testKeyHash1 @C_Crypto)
-        (T (TkBytes (getRawKeyHash (testKeyHash1 @C_Crypto))))
+        (testKeyHash1 )
+        (T (TkBytes (getRawKeyHash (testKeyHash1 ))))
     , checkEncodingCBOR
         shelleyProtVer
         "credential_key_hash"
         (testPayCred @C_Crypto)
-        (T (TkListLen 2 . TkWord 0) <> S (testKeyHash1 @C_Crypto))
+        (T (TkListLen 2 . TkWord 0) <> S (testKeyHash1))
     , checkEncodingCBOR
         shelleyProtVer
         "txin"
-        (TxIn @C_Crypto genesisId minBound)
-        (T (TkListLen 2) <> S (genesisId :: TxId C_Crypto) <> T (TkWord64 0))
+        (TxIn genesisId minBound)
+        (T (TkListLen 2) <> S (genesisId :: TxId) <> T (TkWord64 0))
     , let a = Addr Testnet testPayCred StakeRefNull
        in checkEncodingCBOR
             shelleyProtVer
@@ -466,7 +464,7 @@ tests =
                 <> S a
                 <> S (Coin 2)
             )
-    , case mkWitnessVKey @C_Crypto (testTxbHash @C) testKey1 of
+    , case mkWitnessVKey (testTxbHash @C) testKey1 of
         w@(WitVKey vk _sig) ->
           checkEncodingCBORAnnotated
             shelleyProtVer
@@ -535,7 +533,7 @@ tests =
             <> S (hashKey . vKey $ testStakePoolKey @C_Crypto)
         )
     , -- checkEncodingCBOR "register-pool"
-      let poolOwner = testKeyHash2 @C_Crypto
+      let poolOwner = testKeyHash2 
           poolMargin = unsafeBoundRational 0.7
           poolRAcnt = RewardAccount Testnet (testStakeCred @C_Crypto)
           poolPledge = Coin 11
@@ -550,7 +548,7 @@ tests =
               , SingleHostName (SJust 42) $ Maybe.fromJust $ textToDns 64 "singlehost.relay.com"
               , MultiHostName $ Maybe.fromJust $ textToDns 64 "multihost.relay.com"
               ]
-          vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF C_Crypto
+          vrfKeyHash :: VRFVerKeyHash 'StakePoolVRF
           vrfKeyHash = testVRFKH
        in checkEncodingCBOR
             shelleyProtVer
@@ -606,9 +604,9 @@ tests =
             <> S (hashKey . vKey $ testStakePoolKey @C_Crypto) -- key hash
             <> S (EpochNo 1729) -- epoch
         )
-    , let vrfKeyHash :: VRFVerKeyHash 'GenDelegVRF C_Crypto
+    , let vrfKeyHash :: VRFVerKeyHash 'GenDelegVRF
           vrfKeyHash = testVRFKH
-          genesisDelegate :: KeyHash 'GenesisDelegate C_Crypto
+          genesisDelegate :: KeyHash 'GenesisDelegate
           genesisDelegate = hashKey $ vKey testGenesisDelegateKey
        in checkEncodingCBOR
             shelleyProtVer
@@ -637,7 +635,7 @@ tests =
     , checkEncodingCBOR
         shelleyProtVer
         "pparams_update_key_deposit_only"
-        (emptyPParamsUpdate @Shelley & ppuKeyDepositL .~ SJust (Coin 5))
+        (emptyPParamsUpdate @ShelleyEra & ppuKeyDepositL .~ SJust (Coin 5))
         ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5))
     , -- checkEncodingCBOR "pparams_update_all"
       let minfeea = Coin 0
@@ -857,11 +855,11 @@ tests =
               SNothing
               SNothing
           txbh = (hashAnnotated txb)
-          w = mkWitnessVKey @C_Crypto txbh testKey1
+          w = mkWitnessVKey txbh testKey1
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "tx_min"
-            ( ShelleyTx @(ShelleyEra C_Crypto)
+            ( ShelleyTx @(ShelleyEra)
                 txb
                 (mempty {addrWits = Set.singleton w} :: ShelleyTxWits C)
                 SNothing
@@ -886,7 +884,7 @@ tests =
               SNothing
               SNothing
           txbh = hashAnnotated txb
-          w = mkWitnessVKey @C_Crypto txbh testKey1
+          w = mkWitnessVKey txbh testKey1
           s = Map.singleton (hashScript @C testScript) (testScript @C_Crypto)
           txwits :: ShelleyTxWits C
           txwits = mkBasicTxWits @C & addrTxWitsL .~ Set.singleton w & scriptTxWitsL .~ s
@@ -894,7 +892,7 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "tx_full"
-            (ShelleyTx @(ShelleyEra C_Crypto) txb txwits (SJust md))
+            (ShelleyTx @(ShelleyEra) txb txwits (SJust md))
             ( T (TkListLen 3)
                 <> S txb
                 <> T (TkMapLen 2)
@@ -972,7 +970,7 @@ tests =
           kesperiod = KESPeriod 0
           signature =
             signedDSIGN @C_Crypto
-              (sKey $ testKey1 @C_Crypto)
+              (sKey $ testKey1 )
               (OCertSignable (kesVerKey $ testKESKeys @C_Crypto) 0 (KESPeriod 0))
        in checkEncodingCBORCBORGroup
             "operational_cert"
@@ -1145,4 +1143,4 @@ tests =
                   ]
     ]
   where
-    genesisTxIn1 = TxIn @C_Crypto genesisId (mkTxIxPartial 1)
+    genesisTxIn1 = TxIn genesisId (mkTxIxPartial 1)

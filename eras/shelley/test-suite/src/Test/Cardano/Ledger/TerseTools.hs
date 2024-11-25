@@ -13,7 +13,6 @@ import Cardano.Ledger.Credential (
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..))
@@ -35,7 +34,7 @@ instance (Terse a, Terse b) => Show (Case a b) where
   show (SameKey a b c) = "Same " ++ terse (a, b, c)
 
 instance (Terse a, Terse b) => Terse (Case a b) where
-  terse x = show x
+  terse = show
 
 instance (Terse a, Terse b) => Terse (a, b) where
   terse (a, b) = "(" ++ terse a ++ ", " ++ terse b ++ ")"
@@ -77,23 +76,23 @@ tersemapfilter message p mp = terselistfilter message (\(_, a) -> p a) (Map.toAs
 tersemapdiffs :: (Terse a, Terse b, Ord a, Eq b) => String -> Map.Map a b -> Map.Map a b -> [Char]
 tersemapdiffs message mp1 mp2 = terselist message (mapdiffs mp1 mp2)
 
-instance Terse (Addr c) where
+instance Terse (Addr) where
   terse (Addr _net cred1 (StakeRefBase cred2)) = "Addr (" ++ terse cred1 ++ ") (" ++ terse cred2 ++ ")"
   terse (Addr _net cred (StakeRefPtr ptr)) = "Addr (" ++ terse cred ++ ") (" ++ terse ptr ++ ")"
   terse (Addr _net cred StakeRefNull) = "Addr (" ++ terse cred ++ ") Null"
   terse (AddrBootstrap x) = "BootStrap " ++ show x
 
-instance Terse (Credential keyrole c) where
+instance Terse (Credential keyrole) where
   terse (ScriptHashObj (ScriptHash hash)) = "Script " ++ show hash
   terse (KeyHashObj (KeyHash hash)) = "Key " ++ show hash
 
 instance Terse Ptr where
   terse (Ptr (SlotNo n) i j) = "Ptr " ++ show n ++ " " ++ show i ++ " " ++ show j
 
-instance Terse (TxId era) where
+instance Terse (TxId) where
   terse (TxId safehash) = show (extractHash safehash)
 
-instance Crypto c => Terse (TxIn c) where
+instance Terse (TxIn) where
   terse (TxIn txid n) = "In " ++ terse txid ++ " " ++ show n
 
 instance Terse (Coin) where
@@ -102,10 +101,10 @@ instance Terse (Coin) where
 instance Terse (CompactForm Coin) where
   terse (CompactCoin n) = show n
 
-tersediffincremental :: String -> IncrementalStake c -> IncrementalStake c -> String
+tersediffincremental :: String -> IncrementalStake -> IncrementalStake -> String
 tersediffincremental message (IStake a b) (IStake c d) =
   tersemapdiffs (message ++ " " ++ "hashes") a c
     ++ tersemapdiffs (message ++ " " ++ "ptrs") b d
 
-terseutxo :: (Era era, Terse (TxOut era)) => String -> UTxO era -> String
+terseutxo :: Terse (TxOut era) => String -> UTxO era -> String
 terseutxo message (UTxO mp) = terselist message (Map.toList mp)
