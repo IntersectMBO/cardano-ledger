@@ -456,6 +456,11 @@ spec = do
 
       expectDelegatedVote cred (DRepCredential drepCred2)
 
+      impAnn "Check that unregistration of previous delegation does not affect current delegation" $ do
+        unRegisterDRep drepCred
+
+        expectDelegatedVote cred (DRepCredential drepCred2)
+
     it "Delegate vote and unregister stake credentials" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
       cred <- KeyHashObj <$> freshKeyHash
