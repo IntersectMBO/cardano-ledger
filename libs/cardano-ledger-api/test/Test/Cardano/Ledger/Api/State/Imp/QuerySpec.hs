@@ -24,7 +24,6 @@ import Cardano.Ledger.Conway.Governance (
   Voter (StakePoolVoter),
  )
 import Cardano.Ledger.Conway.PParams (ppDRepActivityL)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -47,9 +46,9 @@ spec = do
     describe "Expiries are reported correctly" $ do
       let drepStateFromQuery ::
             (HasCallStack, Monad m) =>
-            Credential 'DRepRole (EraCrypto era) ->
+            Credential 'DRepRole ->
             NewEpochState era ->
-            m (DRepState (EraCrypto era))
+            m DRepState
           drepStateFromQuery drep nes =
             case Map.lookup drep (queryDRepState nes mempty) of
               Nothing -> error $ "Expected for DRep " ++ show drep ++ " to be present in the query result"
@@ -417,10 +416,10 @@ spec = do
   where
     expectQueryResult ::
       HasCallStack =>
-      Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
-      Set.Set (Credential 'HotCommitteeRole (EraCrypto era)) ->
+      Set.Set (Credential 'ColdCommitteeRole) ->
+      Set.Set (Credential 'HotCommitteeRole) ->
       Set.Set MemberStatus ->
-      Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) (CommitteeMemberState (EraCrypto era)) ->
+      Map.Map (Credential 'ColdCommitteeRole) CommitteeMemberState ->
       ImpTestM era ()
     expectQueryResult ckFilter hkFilter statusFilter expResult = do
       nes <- use impNESL
@@ -435,7 +434,7 @@ spec = do
 
     expectNoFilterQueryResult ::
       HasCallStack =>
-      Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) (CommitteeMemberState (EraCrypto era)) ->
+      Map.Map (Credential 'ColdCommitteeRole) CommitteeMemberState ->
       ImpTestM era ()
     expectNoFilterQueryResult =
       expectQueryResult mempty mempty mempty
