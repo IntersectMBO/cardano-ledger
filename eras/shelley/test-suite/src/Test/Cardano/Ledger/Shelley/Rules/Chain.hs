@@ -42,8 +42,7 @@ import Cardano.Ledger.Chain (
   pparamsToChainChecksPParams,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto
+import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -128,6 +127,7 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
 
@@ -160,7 +160,7 @@ data TestChainPredicateFailure era
   | BbodyFailure !(PredicateFailure (EraRule "BBODY" era)) -- Subtransition Failures
   | TickFailure !(PredicateFailure (EraRule "TICK" era)) -- Subtransition Failures
   | TicknFailure !(PredicateFailure (EraRule "TICKN" era)) -- Subtransition Failures
-  | PrtclFailure !(PredicateFailure (PRTCL StandardCrypto)) -- Subtransition Failures
+  | PrtclFailure !(PredicateFailure (PRTCL MockCrypto)) -- Subtransition Failures
   | PrtclSeqFailure !PrtlSeqFailure -- Subtransition Failures
   deriving (Generic)
 
@@ -168,7 +168,7 @@ data ChainEvent era
   = BbodyEvent !(Event (EraRule "BBODY" era))
   | TickEvent !(Event (EraRule "TICK" era))
   | TicknEvent !(Event (EraRule "TICKN" era))
-  | PrtclEvent !(Event (PRTCL StandardCrypto))
+  | PrtclEvent !(Event (PRTCL MockCrypto))
 
 deriving stock instance
   ( Era era
@@ -275,20 +275,16 @@ instance
   , Environment (EraRule "TICK" era) ~ ()
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , Embed (PRTCL StandardCrypto) (CHAIN era)
+  , Embed (PRTCL MockCrypto) (CHAIN era)
   , EncCBORGroup (TxSeq era)
   , ProtVerAtMost era 6
-  , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   STS (CHAIN era)
   where
-  type
-    State (CHAIN era) =
-      ChainState era
+  type State (CHAIN era) = ChainState era
 
-  type
-    Signal (CHAIN era) =
-      Block (BHeader StandardCrypto) era
+  type Signal (CHAIN era) = Block (BHeader MockCrypto) era
 
   type Environment (CHAIN era) = ()
   type BaseM (CHAIN era) = ShelleyBase
@@ -313,10 +309,10 @@ chainTransition ::
   , Environment (EraRule "TICK" era) ~ ()
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , Embed (PRTCL StandardCrypto) (CHAIN era)
+  , Embed (PRTCL MockCrypto) (CHAIN era)
   , EncCBORGroup (TxSeq era)
   , ProtVerAtMost era 6
-  , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraGov era
   ) =>
   TransitionRule (CHAIN era)
@@ -374,7 +370,7 @@ chainTransition =
               )
 
         PrtclState cs' etaV' etaC' <-
-          trans @(PRTCL StandardCrypto) $
+          trans @(PRTCL MockCrypto) $
             TRC
               ( PrtclEnv (pp' ^. ppDL) _pd genDelegs eta0'
               , PrtclState cs etaV etaC
@@ -432,13 +428,7 @@ instance
   wrapFailed = TickFailure
   wrapEvent = TickEvent
 
-instance
-  ( Era era
-  , Era era
-  , STS (PRTCL StandardCrypto)
-  ) =>
-  Embed (PRTCL StandardCrypto) (CHAIN era)
-  where
+instance Era era => Embed (PRTCL MockCrypto) (CHAIN era) where
   wrapFailed = PrtclFailure
   wrapEvent = PrtclEvent
 

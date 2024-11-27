@@ -58,8 +58,6 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.Generator.Core
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
-type KeyPairWits era = [KeyPair 'Witness]
-
 {-------------------------------------------------------------------------------
   ShelleyLedgerExamples
 -------------------------------------------------------------------------------}
@@ -108,9 +106,6 @@ deriving instance
   Default constructor
 -------------------------------------------------------------------------------}
 
-type ShelleyBasedEra' era =
-  (PraosCrypto StandardCrypto)
-
 defaultShelleyLedgerExamples ::
   forall era.
   ( EraSegWits era
@@ -120,7 +115,7 @@ defaultShelleyLedgerExamples ::
   , Default (StashedAVVMAddresses era)
   , ProtVerAtMost era 4
   ) =>
-  (TxBody era -> KeyPairWits era -> TxWits era) ->
+  (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
   (ShelleyTx era -> Tx era) ->
   Value era ->
   TxBody era ->
@@ -130,7 +125,7 @@ defaultShelleyLedgerExamples ::
 defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData translationContext =
   ShelleyLedgerExamples
     { sleBlock = exampleShelleyLedgerBlock (mkAlonzoTx tx)
-    , sleHashHeader = exampleHashHeader (Proxy @era)
+    , sleHashHeader = exampleHashHeader
     , sleTx = mkAlonzoTx tx
     , sleApplyTxError =
         ApplyTxError . pure . DelegsFailure $
@@ -168,7 +163,7 @@ defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData transla
 
 exampleShelleyLedgerBlock ::
   forall era.
-  (EraSegWits era, PraosCrypto StandardCrypto) =>
+  EraSegWits era =>
   Tx era ->
   Block (BHeader StandardCrypto) era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody
@@ -203,8 +198,8 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
     mkBytes = Seed . mkDummyHash @Blake2b_256
 
-exampleHashHeader :: forall era. Proxy era -> HashHeader
-exampleHashHeader _ = coerce $ mkDummyHash @HASH (0 :: Int)
+exampleHashHeader :: HashHeader
+exampleHashHeader = coerce $ mkDummyHash @HASH (0 :: Int)
 
 mkKeyHash :: forall discriminator. Int -> KeyHash discriminator
 mkKeyHash = KeyHash . mkDummyHash @ADDRHASH
@@ -217,14 +212,13 @@ mkScriptHash = ScriptHash . mkDummyHash @ADDRHASH
 exampleTx ::
   forall era.
   EraTx era =>
-  (TxBody era -> KeyPairWits era -> TxWits era) ->
+  (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
   TxBody era ->
   TxAuxData era ->
   ShelleyTx era
 exampleTx mkWitnesses txBody auxData =
   ShelleyTx txBody (mkWitnesses txBody keyPairWits) (SJust auxData)
   where
-    keyPairWits :: KeyPairWits era
     keyPairWits =
       [ asWitness examplePayKey
       , asWitness exampleStakeKey
@@ -412,7 +406,7 @@ mkWitnessesPreAlonzo ::
   EraTx era =>
   Proxy era ->
   TxBody era ->
-  KeyPairWits era ->
+  [KeyPair 'Witness] ->
   ShelleyTxWits era
 mkWitnessesPreAlonzo _ txBody keyPairWits =
   mempty
@@ -496,7 +490,7 @@ examplePayKey = mkDSIGNKeyPair 0
 exampleStakeKey :: KeyPair 'Staking
 exampleStakeKey = mkDSIGNKeyPair 1
 
-exampleKeys :: forall r. AllIssuerKeys StandardCrypto r
+exampleKeys :: AllIssuerKeys StandardCrypto r
 exampleKeys =
   AllIssuerKeys
     coldKey

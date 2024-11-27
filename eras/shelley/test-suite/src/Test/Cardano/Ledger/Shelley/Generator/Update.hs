@@ -69,6 +69,7 @@ import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary (genVersion)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, vKey)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (aikCold),
@@ -316,8 +317,8 @@ genUpdate ::
   EraGen era =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair StandardCrypto, AllIssuerKeys StandardCrypto 'GenesisDelegate)] ->
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys StandardCrypto 'GenesisDelegate) ->
+  [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)] ->
+  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys MockCrypto 'GenesisDelegate) ->
   PParams era ->
   (UTxOState era, CertState era) ->
   Gen (Maybe (Update era), [KeyPair 'Witness])

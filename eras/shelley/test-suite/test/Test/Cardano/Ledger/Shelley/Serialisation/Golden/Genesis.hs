@@ -188,7 +188,7 @@ tests =
     , testCase "ShelleyGenesis CBOR golden test" golden_cbor_ShelleyGenesis
     ]
 
-exampleShelleyGenesis :: ShelleyGenesis 
+exampleShelleyGenesis :: ShelleyGenesis
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer)
@@ -203,7 +203,7 @@ exampleShelleyGenesis =
     , sgUpdateQuorum = 16991
     , sgMaxLovelaceSupply = 71
     , sgProtocolParams =
-        emptyPParams @(ShelleyEra)
+        emptyPParams @ShelleyEra
           & ppDL .~ unsafeBoundRational (realToFrac (1.9e-2 :: Scientific))
           & ppMaxBBSizeL .~ 239857
           & ppMaxBHSizeL .~ 17569
@@ -213,15 +213,15 @@ exampleShelleyGenesis =
     }
   where
     -- hash of the genesis verification key
-    genesisVerKeyHash :: L.KeyHash 'L.Genesis 
+    genesisVerKeyHash :: L.KeyHash 'L.Genesis
     genesisVerKeyHash = L.KeyHash "38e7c5986a34f334e19b712c0aa525146dab8f0ff889b2ad16894241"
     -- hash of the delegators verififation key
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
-    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate 
+    delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate
     delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
-    delegVrfKeyHash :: VRFVerKeyHash 'GenDelegVRF 
+    delegVrfKeyHash :: VRFVerKeyHash 'GenDelegVRF
     delegVrfKeyHash = VRFVerKeyHash "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
-    initialFundedAddress :: L.Addr 
+    initialFundedAddress :: L.Addr
     initialFundedAddress =
       L.Addr
         L.Testnet
@@ -251,7 +251,8 @@ exampleShelleyGenesis =
     poolParams =
       L.PoolParams
         { L.ppId = hashKey . snd $ mkKeyPair (RawSeed 1 0 0 0 1)
-        , L.ppVrf = hashVerKeyVRF @StandardCrypto . vrfVerKey $ mkVRFKeyPair @StandardCrypto (RawSeed 1 0 0 0 2)
+        , L.ppVrf =
+            hashVerKeyVRF @StandardCrypto . vrfVerKey $ mkVRFKeyPair @StandardCrypto (RawSeed 1 0 0 0 2)
         , L.ppPledge = L.Coin 1
         , L.ppCost = L.Coin 5
         , L.ppMargin = unsafeBoundRational 0.25

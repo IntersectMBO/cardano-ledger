@@ -11,13 +11,9 @@
 
 module Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen (genCoin) where
 
-import qualified Cardano.Crypto.DSIGN as DSIGN
-import qualified Cardano.Crypto.KES as KES
-import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (DSIGN, KES, StandardCrypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   Coin (..),
@@ -64,12 +60,7 @@ import Test.QuickCheck (Gen)
   ShelleyEra instances for EraGen and ScriptClass
  -----------------------------------------------------------------------------}
 
-instance
-  ( DSIGN.Signable (DSIGN) ~ SignableRepresentation
-  , KES.Signable (KES StandardCrypto) ~ SignableRepresentation
-  ) =>
-  EraGen (ShelleyEra)
-  where
+instance EraGen ShelleyEra where
   genGenesisValue
     ( GenEnv
         _keySpace
@@ -86,12 +77,12 @@ instance
       , stbInputs = stbInputs body' <> ins
       , stbOutputs = stbOutputs body' :|> out
       }
-  genEraPParamsUpdate = genShelleyPParamsUpdate @(ShelleyEra)
+  genEraPParamsUpdate = genShelleyPParamsUpdate @ShelleyEra
   genEraPParams = genPParams
 
   genEraTxWits _ setWitVKey mapScriptWit = ShelleyTxWits setWitVKey mapScriptWit mempty
 
-instance ScriptClass (ShelleyEra) where
+instance ScriptClass ShelleyEra where
   basescript _proxy = RequireSignature
   isKey _ (RequireSignature hk) = Just hk
   isKey _ _ = Nothing
@@ -114,7 +105,7 @@ genTxBody ::
   ) =>
   PParams era ->
   SlotNo ->
-  Set (TxIn) ->
+  Set TxIn ->
   StrictSeq (TxOut era) ->
   StrictSeq (TxCert era) ->
   Withdrawals ->
@@ -142,7 +133,7 @@ genTimeToLive currentSlot = do
   ttl <- genNatural 50 100
   pure $ currentSlot + SlotNo (fromIntegral ttl)
 
-instance MinGenTxout (ShelleyEra) where
+instance MinGenTxout ShelleyEra where
   calcEraMinUTxO _txout = view ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do

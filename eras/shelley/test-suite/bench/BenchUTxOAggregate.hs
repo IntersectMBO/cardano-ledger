@@ -49,9 +49,9 @@ genTestCase ::
   Int -> -- The size of the utxo
   Int -> -- the number of addresses
   Gen
-    ( DState (ShelleyEra)
-    , PState (ShelleyEra)
-    , UTxO (ShelleyEra)
+    ( DState ShelleyEra
+    , PState ShelleyEra
+    , UTxO ShelleyEra
     )
 genTestCase numUTxO numAddr = do
   addrs :: [Addr] <- replicateM numAddr arbitrary
@@ -71,7 +71,7 @@ genTestCase numUTxO numAddr = do
       m = length liveptrs `div` 2
   moreptrs :: [Ptr] <- replicateM m arbitrary
   creds :: [Credential 'Staking] <- replicateM (m + m) arbitrary
-  let ptrs' :: Map Ptr (Credential 'Staking )
+  let ptrs' :: Map Ptr (Credential 'Staking)
       ptrs' = Map.fromList (zip (liveptrs ++ moreptrs) creds)
   rewards :: [(Credential 'Staking, Coin)] <-
     replicateM (3 * (numUTxO `div` 4)) arbitrary
@@ -91,8 +91,8 @@ makeStatePair ::
   Map (Credential 'Staking) Coin ->
   Map Ptr (Credential 'Staking) ->
   Map (Credential 'Staking) (KeyHash 'StakePool) ->
-  Map (Credential 'Staking) (DRep) ->
-  Map (KeyHash 'StakePool) (PoolParams) ->
+  Map (Credential 'Staking) DRep ->
+  Map (KeyHash 'StakePool) PoolParams ->
   (DState era, PState era)
 makeStatePair rewards' ptrs' sPools dReps poolParams =
   ( DState

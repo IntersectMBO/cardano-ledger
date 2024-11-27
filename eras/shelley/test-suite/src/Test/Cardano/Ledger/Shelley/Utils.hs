@@ -9,10 +9,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-
-{-# HLINT ignore "Use replicate" #-}
 
 module Test.Cardano.Ledger.Shelley.Utils (
   mkSeedFromWords,
@@ -75,7 +72,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto, DSIGN, StandardCrypto)
+import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.Shelley.API (ApplyBlock, KeyRole (..), VKey (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
@@ -97,7 +94,7 @@ import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils as CoreUtils
 import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.Cardano.Protocol.TPraos.Create (KESKeyPair (..), VRFKeyPair (..), evolveKESUntil)
 import Test.Control.State.Transition.Trace (
@@ -112,8 +109,7 @@ import Test.Tasty.HUnit (
  )
 
 type ChainProperty era =
-  ( Mock StandardCrypto
-  , ApplyBlock era
+  ( ApplyBlock era
   , GetLedgerView era
   , EraTx era
   )
@@ -254,6 +250,6 @@ testSTS env initSt sig predicateFailure@(Left _) = do
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
 mkHash i = coerce (hashWithEncoder @h shelleyProtVer encCBOR i)
 
-getBlockNonce :: forall era. Block (BHeader StandardCrypto) era -> Nonce
+getBlockNonce :: forall era. Block (BHeader MockCrypto) era -> Nonce
 getBlockNonce =
   mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader

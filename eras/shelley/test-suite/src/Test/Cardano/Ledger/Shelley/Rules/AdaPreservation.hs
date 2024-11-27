@@ -77,6 +77,7 @@ import qualified Data.Map.Strict as Map
 import Data.TreeDiff.QuickCheck (ediffEq)
 import Lens.Micro hiding (ix)
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -105,7 +106,6 @@ import Test.QuickCheck (
 import Test.QuickCheck.Property (withMaxSuccess)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty.QuickCheck as TQC
-import Cardano.Ledger.Crypto (StandardCrypto)
 
 tests ::
   forall era ledger.
@@ -136,7 +136,7 @@ adaPreservationProps =
   forAllChainTrace @era longTraceLen defaultConstants $ \tr -> do
     let ssts :: [SourceSignalTarget (CHAIN era)]
         -- In this test, the STS Signal has this definition
-        -- Signal(CHAIN era) = Block (BHeader StandardCrypto) era
+        -- Signal(CHAIN era) = Block (BHeader MockCrypto) era
         ssts = sourceSignalTargets tr
         noEpochBoundarySsts = filter sameEpoch ssts
         justBoundarySsts = filter (not . sameEpoch) ssts
@@ -579,7 +579,7 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
 withdrawals ::
   forall era.
   EraGen era =>
-  Block (BHeader StandardCrypto) era ->
+  Block (BHeader MockCrypto) era ->
   Coin
 withdrawals (UnserialisedBlock _ txseq) =
   F.foldl'

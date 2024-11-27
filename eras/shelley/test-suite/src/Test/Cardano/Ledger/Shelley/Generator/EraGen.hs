@@ -35,7 +35,6 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyRole (Witness), WitVKey)
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.API (
@@ -64,6 +63,7 @@ import Data.Set (Set)
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPairs, mkAddr)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   GenEnv (..),
@@ -131,7 +131,7 @@ type MinCHAIN_STS era =
   , BaseM (CHAIN era) ~ ShelleyBase
   , Environment (CHAIN era) ~ ()
   , State (CHAIN era) ~ ChainState era
-  , Signal (CHAIN era) ~ Block (BHeader StandardCrypto) era
+  , Signal (CHAIN era) ~ Block (BHeader MockCrypto) era
   )
 
 -- | Minimal requirements on the UTxO instances
@@ -185,13 +185,13 @@ class
     UTxO era ->
     PParams era ->
     SlotNo ->
-    Set (TxIn) ->
+    Set TxIn ->
     StrictSeq (TxOut era) ->
     StrictSeq (TxCert era) ->
     Withdrawals ->
     Coin ->
     StrictMaybe (Update era) ->
-    StrictMaybe (AuxiliaryDataHash) ->
+    StrictMaybe AuxiliaryDataHash ->
     Gen (TxBody era, [Script era])
 
   -- | Generate era-specific auxiliary data
@@ -205,14 +205,14 @@ class
     TxBody era ->
     Coin ->
     -- | This overrides the existing TxFee
-    Set (TxIn) ->
+    Set TxIn ->
     -- | This is to be Unioned with the existing TxIn
     TxOut era ->
     -- | This is to be Appended to the end of the existing TxOut
     TxBody era
 
   -- |  Union the TxIn with the existing TxIn in the TxBody
-  addInputs :: TxBody era -> Set (TxIn) -> TxBody era
+  addInputs :: TxBody era -> Set TxIn -> TxBody era
   addInputs txb _ins = txb
 
   genEraPParamsUpdate :: Constants -> PParams era -> Gen (PParamsUpdate era)
@@ -226,7 +226,7 @@ class
   genEraTxWits ::
     (UTxO era, TxBody era, ScriptInfo era) ->
     Set (WitVKey 'Witness) ->
-    Map (ScriptHash) (Script era) ->
+    Map ScriptHash (Script era) ->
     TxWits era
 
   -- When choosing new recipients from the UTxO, choose only those whose Outputs meet this predicate.
@@ -267,7 +267,7 @@ class
  -----------------------------------------------------------------------------}
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: Constants -> (Int, Int) -> Gen (KeyPairs)
+someKeyPairs :: Constants -> (Int, Int) -> Gen KeyPairs
 someKeyPairs c range = take <$> choose range <*> shuffle (keyPairs c)
 
 genUtxo0 :: forall era. EraGen era => GenEnv era -> Gen (UTxO era)

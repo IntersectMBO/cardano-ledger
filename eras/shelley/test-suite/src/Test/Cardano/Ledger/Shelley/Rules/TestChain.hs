@@ -63,6 +63,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants)
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -92,7 +93,6 @@ import Test.QuickCheck (
   conjoin,
   withMaxSuccess,
  )
-import Cardano.Ledger.Crypto (StandardCrypto)
 
 ------------------------------
 -- Constants for Properties --
@@ -143,7 +143,7 @@ ledgerTraceFromBlock ::
   , TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block (BHeader StandardCrypto) era ->
+  Block (BHeader MockCrypto) era ->
   (ChainState era, Trace ledger)
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt
@@ -163,7 +163,7 @@ ledgerTraceFromBlockWithRestrictedUTxO ::
   , TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block (BHeader StandardCrypto) era ->
+  Block (BHeader MockCrypto) era ->
   (UTxO era, Trace ledger)
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO
@@ -186,7 +186,7 @@ poolTraceFromBlock ::
   , EraSegWits era
   ) =>
   ChainState era ->
-  Block (BHeader StandardCrypto) era ->
+  Block (BHeader MockCrypto) era ->
   (ChainState era, Trace (ShelleyPOOL era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt
@@ -211,7 +211,7 @@ delegTraceFromBlock ::
   , EraSegWits era
   ) =>
   ChainState era ->
-  Block (BHeader StandardCrypto) era ->
+  Block (BHeader MockCrypto) era ->
   (DelegEnv era, Trace (ShelleyDELEG era))
 delegTraceFromBlock chainSt block =
   ( delegEnv
@@ -247,7 +247,7 @@ ledgerTraceBase ::
   , ApplyBlock era
   ) =>
   ChainState era ->
-  Block (BHeader StandardCrypto) era ->
+  Block (BHeader MockCrypto) era ->
   (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt

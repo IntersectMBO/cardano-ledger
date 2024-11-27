@@ -23,6 +23,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking), hashVerKeyVRF)
 import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -39,7 +40,7 @@ import qualified Data.Maybe as Maybe
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (B, B_Crypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (
   defaultConstants,
   maxGenesisUTxOouts,
@@ -56,6 +57,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
   ksStakePools,
  )
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
+import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (
   mkGenesisChainState,
   registerGenesisStaking,
@@ -67,11 +69,11 @@ import Test.QuickCheck (Gen)
 -- | Generate a chain state at a given epoch. Since we are only concerned about
 -- rewards, this will populate the chain with empty blocks (only issued by the
 -- original genesis delegates).
-genChainInEpoch :: EpochNo -> Gen (ChainState B)
+genChainInEpoch :: EpochNo -> Gen (ChainState ShelleyEra)
 genChainInEpoch epoch = do
   genesisChainState <-
     fromRight (error "genChainState failed")
-      <$> mkGenesisChainState @B (GenEnv ks (ScriptSpace [] [] Map.empty Map.empty) cs) (IRC ())
+      <$> mkGenesisChainState @ShelleyEra (GenEnv ks (ScriptSpace [] [] Map.empty Map.empty) cs) (IRC ())
   -- Our genesis chain state contains no registered staking. Since we want to
   -- calculate a reward update, we will set some up.
   -- What do we want to do here?
@@ -116,12 +118,12 @@ genChainInEpoch epoch = do
     applyBlk cs' blk =
       (either err id)
         . flip runReader testGlobals
-        . applySTS @(CHAIN B)
+        . applySTS @(CHAIN ShelleyEra)
         $ TRC ((), cs', blk)
       where
         err :: Show a => a -> b
         err msg = error $ "Panic! applyBlk failed: " <> (show msg)
-    ge = genEnv (Proxy @B) defaultConstants
+    ge = genEnv (Proxy @ShelleyEra) defaultConstants
     -- Small UTxO set; we just want enough to stake to pools
     cs =
       (geConstants ge)
@@ -129,7 +131,7 @@ genChainInEpoch epoch = do
         , maxGenesisUTxOouts = 5000
         }
     ks = geKeySpace ge
-    genEmptyBlock = genBlockWithTxGen @B (\_ _ _ _ -> pure mempty) ge
+    genEmptyBlock = genBlockWithTxGen @ShelleyEra (\_ _ _ _ -> pure mempty) ge
     mkGenesisStaking stakeMap =
       ShelleyGenesisStaking
         { sgsPools =
@@ -139,7 +141,7 @@ genChainInEpoch epoch = do
               , let pp =
                       PoolParams
                         { ppId = aikColdKeyHash
-                        , ppVrf = hashVerKeyVRF $ vrfVerKey aikVrf
+                        , ppVrf = hashVerKeyVRF @MockCrypto $ vrfVerKey aikVrf
                         , ppPledge = Coin 1
                         , ppCost = Coin 1
                         , ppMargin = minBound
@@ -164,15 +166,15 @@ genChainInEpoch epoch = do
         go !acc [] = acc
         go !acc xs' = let (a, b) = splitAt n xs' in go (a : acc) b
 
-    addrToKeyHash :: Addr c -> Maybe (KeyHash 'Staking c)
+    addrToKeyHash :: Addr -> Maybe (KeyHash 'Staking)
     addrToKeyHash (Addr _ _ (StakeRefBase (KeyHashObj kh))) = Just kh
     addrToKeyHash _ = Nothing
 
 -- | Benchmark creating a reward update.
 createRUpd ::
   Globals ->
-  ChainState B ->
-  LS.RewardUpdate B_Crypto
+  ChainState ShelleyEra ->
+  LS.RewardUpdate
 createRUpd globals cs =
   runIdentity $
     runReaderT
@@ -192,8 +194,8 @@ createRUpd globals cs =
 -- | Benchmark creating a reward update.
 createRUpdWithProv ::
   Globals ->
-  ChainState B ->
-  (LS.RewardUpdate B_Crypto)
+  ChainState ShelleyEra ->
+  LS.RewardUpdate
 createRUpdWithProv globals cs =
   runIdentity $
     runReaderT

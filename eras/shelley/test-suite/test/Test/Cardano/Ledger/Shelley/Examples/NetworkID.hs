@@ -20,13 +20,12 @@ import Cardano.Ledger.Slot (EpochNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default (def)
 import Lens.Micro
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
-type ShelleyTest = ShelleyEra C_Crypto
+type ShelleyTest = ShelleyEra
 
 shelleyPV :: ProtVer
 shelleyPV = ProtVer (natVersion @2) 0
@@ -39,7 +38,7 @@ data Expectation = ExpectSuccess | ExpectFailure
 
 testPoolNetworkID ::
   ProtVer ->
-  PoolParams C_Crypto ->
+  PoolParams ->
   Expectation ->
   Assertion
 testPoolNetworkID pv poolParams e = do
@@ -58,13 +57,13 @@ testPoolNetworkID pv poolParams e = do
     (Right _, ExpectFailure) -> assertBool "We expected failure." False
     (Left _, ExpectSuccess) -> assertBool "We expected success." False
 
-matchingNetworkIDPoolParams :: PoolParams C_Crypto
+matchingNetworkIDPoolParams :: PoolParams
 matchingNetworkIDPoolParams =
   Cast.alicePoolParams {ppRewardAccount = RewardAccount Testnet Cast.aliceSHK}
 
 -- test globals use Testnet
 
-mismatchingNetworkIDPoolParams :: PoolParams C_Crypto
+mismatchingNetworkIDPoolParams :: PoolParams
 mismatchingNetworkIDPoolParams =
   Cast.alicePoolParams {ppRewardAccount = RewardAccount Mainnet Cast.aliceSHK}
 

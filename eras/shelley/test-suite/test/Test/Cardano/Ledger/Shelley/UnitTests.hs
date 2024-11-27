@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
-import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..), raCredential, pattern RewardAccount)
 import Cardano.Ledger.BaseTypes hiding ((==>))
@@ -22,7 +21,7 @@ import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (Crypto, HASH, StandardCrypto, VRF)
+import Cardano.Ledger.Crypto (StandardCrypto, VRF)
 import Cardano.Ledger.Keys (
   KeyRole (..),
   asWitness,
@@ -108,7 +107,7 @@ import Test.Cardano.Ledger.Shelley.Arbitrary (
   StakeProportion (StakeProportion),
   VRFNatVal (VRFNatVal),
  )
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, MockCrypto)
 import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
 import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..), genesisCoins)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
@@ -123,33 +122,33 @@ import Test.Tasty.QuickCheck
 
 -- ========================================================================================
 
-alicePay :: Crypto c => KeyPair 'Payment c
+alicePay :: KeyPair 'Payment
 alicePay = mkKeyPair' $ RawSeed 1 1 1 1 1
 
-aliceStake :: Crypto c => KeyPair 'Staking c
+aliceStake :: KeyPair 'Staking
 aliceStake = mkKeyPair' $ RawSeed 2 2 2 2 2
 
-aliceAddr :: Crypto c => Addr c
+aliceAddr :: Addr
 aliceAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey alicePay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay :: Crypto c => KeyPair 'Payment c
+bobPay :: KeyPair 'Payment
 bobPay = mkKeyPair' $ RawSeed 3 3 3 3 3
 
-bobStake :: Crypto c => KeyPair 'Staking c
+bobStake :: KeyPair 'Staking
 bobStake = mkKeyPair' $ RawSeed 4 4 4 4 4
 
-bobAddr :: Crypto c => Addr c
+bobAddr :: Addr
 bobAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey bobPay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
 
-mkGenesisTxIn :: (HashAlgorithm (HASH c), HasCallStack) => Integer -> TxIn c
+mkGenesisTxIn :: HasCallStack => Integer -> TxIn
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 pp :: forall era. (EraPParams era, ProtVerAtMost era 4) => PParams era
@@ -167,7 +166,7 @@ pp =
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
   checkLeaderValue
-    (VRF.mkTestOutputVRF 0 :: VRF.OutputVRF (VRF C_Crypto))
+    (VRF.mkTestOutputVRF 0 :: VRF.OutputVRF (VRF MockCrypto))
     (1 % 2)
     (mkActiveSlotCoeff $ unsafeBoundRational 1)
     @?= True
@@ -276,14 +275,14 @@ aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
 
 data AliceToBob = AliceToBob
-  { input :: TxIn C_Crypto
+  { input :: TxIn
   , toBob :: Coin
   , fee :: Coin
   , deposits :: Coin
   , refunds :: Coin
   , certs :: [TxCert C]
   , ttl :: SlotNo
-  , signers :: [KeyPair 'Witness C_Crypto]
+  , signers :: [KeyPair 'Witness]
   }
 
 aliceGivesBobLovelace :: AliceToBob -> ShelleyTx C
@@ -337,7 +336,7 @@ dpState = CertState def def def
 ledgerState :: LedgerState C
 ledgerState = LedgerState utxoState dpState
 
-addReward :: CertState C -> Credential 'Staking C_Crypto -> Coin -> CertState C
+addReward :: CertState C -> Credential 'Staking -> Coin -> CertState C
 addReward dp ra c = dp {certDState = ds {dsUnified = rewards'}}
   where
     ds = certDState dp
@@ -581,7 +580,7 @@ testWithdrawalWrongAmt =
       txwits =
         mempty
           { addrWits =
-              mkWitnessesVKey @C_Crypto
+              mkWitnessesVKey
                 (hashAnnotated txb)
                 [asWitness alicePay, asWitness bobStake]
           }
@@ -607,16 +606,16 @@ testOutputTooSmall =
       , signers = [asWitness alicePay]
       }
 
-alicePoolColdKeys :: KeyPair 'StakePool C_Crypto
+alicePoolColdKeys :: KeyPair 'StakePool
 alicePoolColdKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
-alicePoolParamsSmallCost :: PoolParams C_Crypto
+alicePoolParamsSmallCost :: PoolParams
 alicePoolParamsSmallCost =
   PoolParams
-    { ppId = hashKey . vKey $ alicePoolColdKeys
-    , ppVrf = hashVerKeyVRF vkVrf
+    { ppId = hashKey $ vKey alicePoolColdKeys
+    , ppVrf = hashVerKeyVRF @MockCrypto vkVrf
     , ppPledge = Coin 1
     , ppCost = Coin 5 -- Too Small!
     , ppMargin = unsafeBoundRational 0.1
@@ -631,7 +630,7 @@ alicePoolParamsSmallCost =
             }
     }
   where
-    vkVrf = vrfVerKey $ mkVRFKeyPair @C_Crypto (RawSeed 0 0 0 0 2)
+    vkVrf = vrfVerKey $ mkVRFKeyPair @MockCrypto (RawSeed 0 0 0 0 2)
 
 testPoolCostTooSmall :: Assertion
 testPoolCostTooSmall =
@@ -672,7 +671,7 @@ testProducedOverMaxWord64 =
           (SlotNo 100)
           SNothing
           SNothing
-      txwits = mempty {addrWits = mkWitnessesVKey @C_Crypto (hashAnnotated txbody) [alicePay]}
+      txwits = mempty {addrWits = mkWitnessesVKey (hashAnnotated txbody) [alicePay]}
       tx = ShelleyTx @C txbody txwits SNothing
       st =
         runShelleyBase $

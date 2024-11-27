@@ -76,26 +76,26 @@ tersemapfilter message p mp = terselistfilter message (\(_, a) -> p a) (Map.toAs
 tersemapdiffs :: (Terse a, Terse b, Ord a, Eq b) => String -> Map.Map a b -> Map.Map a b -> [Char]
 tersemapdiffs message mp1 mp2 = terselist message (mapdiffs mp1 mp2)
 
-instance Terse (Addr) where
+instance Terse Addr where
   terse (Addr _net cred1 (StakeRefBase cred2)) = "Addr (" ++ terse cred1 ++ ") (" ++ terse cred2 ++ ")"
   terse (Addr _net cred (StakeRefPtr ptr)) = "Addr (" ++ terse cred ++ ") (" ++ terse ptr ++ ")"
   terse (Addr _net cred StakeRefNull) = "Addr (" ++ terse cred ++ ") Null"
   terse (AddrBootstrap x) = "BootStrap " ++ show x
 
-instance Terse (Credential keyrole) where
+instance Terse (Credential r) where
   terse (ScriptHashObj (ScriptHash hash)) = "Script " ++ show hash
   terse (KeyHashObj (KeyHash hash)) = "Key " ++ show hash
 
 instance Terse Ptr where
   terse (Ptr (SlotNo n) i j) = "Ptr " ++ show n ++ " " ++ show i ++ " " ++ show j
 
-instance Terse (TxId) where
+instance Terse TxId where
   terse (TxId safehash) = show (extractHash safehash)
 
-instance Terse (TxIn) where
+instance Terse TxIn where
   terse (TxIn txid n) = "In " ++ terse txid ++ " " ++ show n
 
-instance Terse (Coin) where
+instance Terse Coin where
   terse (Coin n) = show n
 
 instance Terse (CompactForm Coin) where

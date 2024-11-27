@@ -288,7 +288,7 @@ genTx
 -- the transaction balance.
 data Delta era = Delta
   { dfees :: Coin
-  , extraInputs :: Set.Set (TxIn)
+  , extraInputs :: Set.Set TxIn
   , extraWitnesses :: TxWits era
   , change :: TxOut era
   , deltaVKeys :: [KeyPair 'Witness]
@@ -502,8 +502,7 @@ genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace
 
 applyDelta ::
   forall era.
-  ( EraGen era
-  ) =>
+  EraGen era =>
   UTxO era ->
   ScriptInfo era ->
   PParams era ->
@@ -768,7 +767,7 @@ genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo)
 genWithdrawals ::
   forall era.
   Constants ->
-  Map (ScriptHash) (Script era, Script era) ->
+  Map ScriptHash (Script era, Script era) ->
   Map (KeyHash 'Staking) (KeyPair 'Staking) ->
   Map (Credential 'Staking) Coin ->
   Gen

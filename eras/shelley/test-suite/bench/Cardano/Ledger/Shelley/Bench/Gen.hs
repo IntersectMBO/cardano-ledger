@@ -33,7 +33,7 @@ import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (ledgerEnv)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (
   Constants (
     maxGenesisUTxOouts,
@@ -53,7 +53,6 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (generate)
-import Cardano.Ledger.Crypto (StandardCrypto)
 
 -- ===============================================================
 
@@ -83,8 +82,7 @@ genChainState n ge =
 
 -- | Benchmark generating a block given a chain state.
 genBlock ::
-  ( Mock StandardCrypto
-  , EraGen era
+  ( EraGen era
   , MinLEDGER_STS era
   , GetLedgerView era
   , EraRule "LEDGERS" era ~ ShelleyLEDGERS era
@@ -93,7 +91,7 @@ genBlock ::
   ) =>
   GenEnv era ->
   ChainState era ->
-  IO (Block (BHeader StandardCrypto) era)
+  IO (Block (BHeader MockCrypto) era)
 genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 -- The order one does this is important, since all these things must flow from the same

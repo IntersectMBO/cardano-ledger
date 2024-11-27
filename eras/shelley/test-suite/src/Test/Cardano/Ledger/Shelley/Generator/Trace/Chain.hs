@@ -17,7 +17,6 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, incrementalStakeDistr)
@@ -54,7 +53,6 @@ import Data.Proxy (Proxy (..))
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (
@@ -88,7 +86,6 @@ import Test.QuickCheck (Gen)
 instance
   ( EraGen era
   , EraSegWits era
-  , Mock StandardCrypto
   , ApplyBlock era
   , GetLedgerView era
   , MinLEDGER_STS era

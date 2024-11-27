@@ -33,8 +33,7 @@ testGroupByronTranslation =
 
 prop_translateTxOut_correctness :: Byron.CompactTxOut -> Property
 prop_translateTxOut_correctness compactTxOut =
-  translateTxOutByronToShelley
-    (Byron.fromCompactTxOut compactTxOut)
+  translateTxOutByronToShelley (Byron.fromCompactTxOut compactTxOut)
     === translateCompactTxOutByronToShelley compactTxOut
 
 {------------------------------------------------------------------------------

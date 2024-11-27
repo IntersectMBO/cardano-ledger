@@ -40,9 +40,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Core (
   pickStakeKey,
   mkAddr,
   mkCred,
-  unitIntervalToNatural,
   mkBlock,
-  mkBlockHeader,
   mkBlockFakeVRF,
   mkOCert,
   getKESPeriodRenewalNo,
@@ -61,15 +59,7 @@ where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (
-  BoundedRational (..),
-  Nonce (..),
-  ProtVer (..),
-  StrictMaybe (..),
-  UnitInterval,
-  epochInfoPure,
-  stabilityWindow,
- )
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), epochInfoPure, stabilityWindow)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (DataHash)
 import Cardano.Ledger.Credential (
@@ -79,9 +69,7 @@ import Cardano.Ledger.Credential (
   pattern StakeRefBase,
   pattern StakeRefPtr,
  )
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (
-  Hash,
   KeyHash,
   KeyRole (..),
   VKey,
@@ -90,11 +78,8 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
-import Cardano.Ledger.Shelley.TxWits (
-  ShelleyTxWits,
- )
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.Slot (
-  BlockNo (..),
   Duration (..),
   SlotNo (..),
   epochInfoFirst,
@@ -102,8 +87,7 @@ import Cardano.Ledger.Slot (
  )
 import Cardano.Ledger.TxIn (TxId, TxIn (TxIn))
 import Cardano.Ledger.UTxO (UTxO (UTxO))
-import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
-import Cardano.Protocol.TPraos.OCert (KESPeriod (..), OCert)
+import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Codec.Serialise (serialise)
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
@@ -112,12 +96,11 @@ import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Ratio (denominator, numerator, (%))
-import Data.Word (Word32, Word64)
+import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, mkAddr, mkCred, vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
   ScriptClass,
@@ -141,8 +124,6 @@ import Test.Cardano.Protocol.TPraos.Create (
   AllIssuerKeys (..),
   KESKeyPair (..),
   VRFKeyPair (..),
-  mkBHBody,
-  mkBHeader,
   mkBlock,
   mkBlockFakeVRF,
   mkOCert,
@@ -161,7 +142,7 @@ type DataHash = SafeHash EraIndependentData
 
 type ScriptInfo era =
   ( Map ScriptHash (TwoPhase3ArgInfo era)
-  , Map (ScriptHash) (TwoPhase2ArgInfo era)
+  , Map ScriptHash (TwoPhase2ArgInfo era)
   )
 
 data TwoPhase3ArgInfo era = TwoPhase3ArgInfo
@@ -203,8 +184,8 @@ data ScriptSpace era = ScriptSpace
   -- ^ A list of Two Phase 3 Arg Scripts and their associated data we can use.
   , ssScripts2 :: [TwoPhase2ArgInfo era]
   -- ^ A list of Two Phase 2 Arg Scripts and their associated data we can use.
-  , ssHash3 :: Map (ScriptHash) (TwoPhase3ArgInfo era)
-  , ssHash2 :: Map (ScriptHash) (TwoPhase2ArgInfo era)
+  , ssHash3 :: Map ScriptHash (TwoPhase3ArgInfo era)
+  , ssHash2 :: Map ScriptHash (TwoPhase2ArgInfo era)
   }
 
 deriving instance Show (Script era) => Show (ScriptSpace era)
@@ -220,10 +201,10 @@ data GenEnv era = GenEnv
 --
 --   These are the _only_ keys which should be involved in the trace.
 data KeySpace era = KeySpace_
-  { ksCoreNodes :: [(GenesisKeyPair StandardCrypto, AllIssuerKeys StandardCrypto 'GenesisDelegate)]
-  , ksGenesisDelegates :: [AllIssuerKeys StandardCrypto 'GenesisDelegate]
+  { ksCoreNodes :: [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)]
+  , ksGenesisDelegates :: [AllIssuerKeys MockCrypto 'GenesisDelegate]
   -- ^ Bag of keys to be used for future genesis delegates
-  , ksStakePools :: [AllIssuerKeys StandardCrypto 'StakePool]
+  , ksStakePools :: [AllIssuerKeys MockCrypto 'StakePool]
   -- ^ Bag of keys to be used for future stake pools
   , ksKeyPairs :: KeyPairs
   -- ^ Bag of keys to be used for future payment/staking addresses
@@ -233,11 +214,11 @@ data KeySpace era = KeySpace_
   , ksIndexedStakingKeys :: Map (KeyHash 'Staking) (KeyPair 'Staking)
   -- ^ Index over the staking keys in 'ksKeyPairs'
   , ksIndexedGenDelegates ::
-      Map (KeyHash 'GenesisDelegate) (AllIssuerKeys StandardCrypto 'GenesisDelegate)
+      Map (KeyHash 'GenesisDelegate) (AllIssuerKeys MockCrypto 'GenesisDelegate)
   -- ^ Index over the cold key hashes in Genesis Delegates
-  , ksIndexedPayScripts :: Map (ScriptHash) (Script era, Script era)
+  , ksIndexedPayScripts :: Map ScriptHash (Script era, Script era)
   -- ^ Index over the pay script hashes in Script pairs
-  , ksIndexedStakeScripts :: Map (ScriptHash) (Script era, Script era)
+  , ksIndexedStakeScripts :: Map ScriptHash (Script era, Script era)
   -- ^ Index over the stake script hashes in Script pairs
   }
 
@@ -246,9 +227,9 @@ deriving instance (Era era, Show (Script era)) => Show (KeySpace era)
 pattern KeySpace ::
   forall era.
   ScriptClass era =>
-  [(GenesisKeyPair StandardCrypto, AllIssuerKeys StandardCrypto 'GenesisDelegate)] ->
-  [AllIssuerKeys StandardCrypto 'GenesisDelegate] ->
-  [AllIssuerKeys StandardCrypto 'StakePool] ->
+  [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)] ->
+  [AllIssuerKeys MockCrypto 'GenesisDelegate] ->
+  [AllIssuerKeys MockCrypto 'StakePool] ->
   KeyPairs ->
   [(Script era, Script era)] ->
   KeySpace era
@@ -306,9 +287,9 @@ genWord64 lower upper =
 -- Note: we index all possible genesis delegate keys, that is,
 -- core nodes and all potential keys.
 mkGenesisDelegatesHashMap ::
-  [(GenesisKeyPair StandardCrypto, AllIssuerKeys StandardCrypto 'GenesisDelegate)] ->
-  [AllIssuerKeys StandardCrypto 'GenesisDelegate] ->
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys StandardCrypto 'GenesisDelegate)
+  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  [AllIssuerKeys c 'GenesisDelegate] ->
+  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate)
 mkGenesisDelegatesHashMap coreNodes genesisDelegates =
   Map.fromList (f <$> allDelegateKeys)
   where
@@ -364,7 +345,7 @@ findPayKeyPairAddr a keyHashMap =
 findPayScriptFromCred ::
   forall era.
   Credential 'Witness ->
-  Map (ScriptHash) (Script era, Script era) ->
+  Map ScriptHash (Script era, Script era) ->
   (Script era, Script era)
 findPayScriptFromCred (ScriptHashObj scriptHash) scriptsByPayHash =
   fromMaybe
@@ -376,7 +357,7 @@ findPayScriptFromCred _ _ =
 -- | Find first matching script for a credential.
 findStakeScriptFromCred ::
   Credential 'Witness ->
-  Map (ScriptHash) (Script era, Script era) ->
+  Map ScriptHash (Script era, Script era) ->
   (Script era, Script era)
 findStakeScriptFromCred (ScriptHashObj scriptHash) scriptsByStakeHash =
   fromMaybe
@@ -389,7 +370,7 @@ findStakeScriptFromCred _ _ =
 findPayScriptFromAddr ::
   forall era.
   Addr ->
-  Map (ScriptHash) (Script era, Script era) ->
+  Map ScriptHash (Script era, Script era) ->
   (Script era, Script era)
 findPayScriptFromAddr (Addr _ scriptHash (StakeRefBase _)) scriptsByPayHash =
   findPayScriptFromCred @era (asWitness scriptHash) scriptsByPayHash
@@ -439,48 +420,6 @@ increasingProbabilityAt gen (lower, upper) =
     , (90, gen)
     , (5, pure upper)
     ]
-
--- | Try to map the unit interval to a natural number. We don't care whether
--- this is surjective. But it should be right inverse to `fromNatural` - that
--- is, one should be able to recover the `UnitInterval` value used here.
-unitIntervalToNatural :: UnitInterval -> Natural
-unitIntervalToNatural ui =
-  toNat ((toInteger (maxBound :: Word64) % 1) * unboundRational ui)
-  where
-    toNat r = fromInteger (numerator r `quot` denominator r)
-{-# DEPRECATED
-  unitIntervalToNatural
-  "This function has been made private in cardano-protocol-tpraos:testlib. Open an issue if you need it"
-  #-}
-
-mkBlockHeader ::
-  Mock c =>
-  ProtVer ->
-  -- | Hash of previous block
-  HashHeader ->
-  -- | All keys in the stake pool
-  AllIssuerKeys c r ->
-  -- | Current slot
-  SlotNo ->
-  -- | Block number/chain length/chain "difficulty"
-  BlockNo ->
-  -- | EpochNo nonce
-  Nonce ->
-  -- | Period of KES (key evolving signature scheme)
-  Word ->
-  -- | KES period of key registration
-  Word ->
-  -- | Operational certificate
-  OCert c ->
-  -- | Block size
-  Word32 ->
-  -- | Block body hash
-  Hash EraIndependentBlockBody ->
-  BHeader c
-mkBlockHeader protVer prev pKeys slotNo blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
-  let bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
-   in mkBHeader pKeys kesPeriod c0 bhBody
-{-# DEPRECATED mkBlockHeader "In favor of `mkBHeader` and `mkBHBody`" #-}
 
 -- | Takes a sequence of KES hot keys and checks to see whether there is one whose
 -- range contains the current KES period. If so, return its index in the list of
@@ -541,7 +480,7 @@ findPlutus ::
   forall era.
   GenEnv era ->
   ScriptHash ->
-  (Script era, StrictMaybe (DataHash))
+  (Script era, StrictMaybe DataHash)
 findPlutus (GenEnv keyspace (ScriptSpace _ _ mp3 mp2) _) hsh =
   case Map.lookup hsh mp3 of
     Just info3 -> (getScript3 info3, SJust (hashData (getData3 info3)))

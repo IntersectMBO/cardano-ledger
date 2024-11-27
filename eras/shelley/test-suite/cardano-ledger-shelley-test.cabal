@@ -192,8 +192,6 @@ benchmark mainbench
     build-depends:
         base,
         QuickCheck,
-        cardano-crypto-class,
-        cardano-crypto-praos,
         cardano-data,
         cardano-ledger-binary:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},

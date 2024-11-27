@@ -22,7 +22,6 @@ where
 
 import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Core (EraPParams (..), PParams (..))
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   KeyHash (..),
@@ -47,6 +46,7 @@ import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (..),
   VRFKeyPair (..),
@@ -58,9 +58,8 @@ numCoreNodes :: Word64
 numCoreNodes = 7
 
 mkAllCoreNodeKeys ::
-  Crypto c =>
   Word64 ->
-  AllIssuerKeys c r
+  AllIssuerKeys MockCrypto r
 mkAllCoreNodeKeys w =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -72,7 +71,7 @@ mkAllCoreNodeKeys w =
 
 coreNodes ::
   [ ( (SignKeyDSIGN, VKey 'Genesis)
-    , AllIssuerKeys StandardCrypto 'GenesisDelegate
+    , AllIssuerKeys MockCrypto 'GenesisDelegate
     )
   ]
 coreNodes =
@@ -98,7 +97,7 @@ coreNodeVK = snd . fst . (coreNodes !!)
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
 coreNodeIssuerKeys ::
   Int ->
-  AllIssuerKeys StandardCrypto 'GenesisDelegate
+  AllIssuerKeys MockCrypto 'GenesisDelegate
 coreNodeIssuerKeys = snd . (coreNodes !!)
 
 -- | === Keys by Overlay Schedule
@@ -111,7 +110,7 @@ coreNodeKeysBySchedule ::
   (HasCallStack, EraPParams era) =>
   PParams era ->
   Word64 ->
-  AllIssuerKeys StandardCrypto 'GenesisDelegate
+  AllIssuerKeys MockCrypto 'GenesisDelegate
 coreNodeKeysBySchedule pp slot =
   case lookupInOverlaySchedule
     firstSlot
@@ -141,7 +140,7 @@ genDelegs =
     [ ( hashKey $ snd gkey
       , ( GenDelegPair
             (coerceKeyRole . hashKey . vKey $ aikCold pkeys)
-            (hashVerKeyVRF @StandardCrypto . vrfVerKey $ aikVrf pkeys)
+            (hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf pkeys)
         )
       )
     | (gkey, pkeys) <- coreNodes

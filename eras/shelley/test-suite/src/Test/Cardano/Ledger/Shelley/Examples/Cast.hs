@@ -51,7 +51,6 @@ import Cardano.Ledger.Credential (
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   KeyRole (..),
   KeyRoleVRF (StakePoolVRF),
@@ -71,6 +70,7 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (..),
   VRFKeyPair (..),
@@ -96,7 +96,7 @@ aliceStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 -- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
-alicePoolKeys :: AllIssuerKeys StandardCrypto 'StakePool
+alicePoolKeys :: AllIssuerKeys MockCrypto 'StakePool
 alicePoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -127,7 +127,7 @@ alicePoolParams :: PoolParams
 alicePoolParams =
   PoolParams
     { ppId = hashKey . vKey $ aikCold alicePoolKeys
-    , ppVrf = hashVerKeyVRF @StandardCrypto . vrfVerKey $ aikVrf (alicePoolKeys)
+    , ppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf alicePoolKeys
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1
@@ -144,7 +144,7 @@ alicePoolParams =
 
 -- | Alice's VRF key hash
 aliceVRFKeyHash :: VRFVerKeyHash 'StakePoolVRF
-aliceVRFKeyHash = hashVerKeyVRF @StandardCrypto (vrfVerKey $ aikVrf (alicePoolKeys))
+aliceVRFKeyHash = hashVerKeyVRF @MockCrypto (vrfVerKey $ aikVrf alicePoolKeys)
 
 -- | Bob's payment key pair
 bobPay :: KeyPair 'Payment
@@ -167,7 +167,7 @@ bobSHK :: Credential 'Staking
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 -- | Bob's stake pool keys (cold keys, VRF keys, hot KES keys)
-bobPoolKeys :: AllIssuerKeys StandardCrypto 'StakePool
+bobPoolKeys :: AllIssuerKeys MockCrypto 'StakePool
 bobPoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -182,7 +182,7 @@ bobPoolParams :: PoolParams
 bobPoolParams =
   PoolParams
     { ppId = hashKey . vKey $ aikCold bobPoolKeys
-    , ppVrf = hashVerKeyVRF @StandardCrypto . vrfVerKey $ aikVrf (bobPoolKeys)
+    , ppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf bobPoolKeys
     , ppPledge = Coin 2
     , ppCost = Coin 1
     , ppMargin = unsafeBoundRational 0.1
@@ -194,7 +194,7 @@ bobPoolParams =
 
 -- | Bob's VRF key hash
 bobVRFKeyHash :: VRFVerKeyHash 'StakePoolVRF
-bobVRFKeyHash = hashVerKeyVRF @StandardCrypto (vrfVerKey $ aikVrf (bobPoolKeys))
+bobVRFKeyHash = hashVerKeyVRF @MockCrypto (vrfVerKey $ aikVrf bobPoolKeys)
 
 -- Carl's payment key pair
 carlPay :: KeyPair 'Payment

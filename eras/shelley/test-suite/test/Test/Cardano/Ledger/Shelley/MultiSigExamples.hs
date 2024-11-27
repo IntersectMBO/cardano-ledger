@@ -71,13 +71,8 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
-  Mock,
- )
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
-import Test.Cardano.Ledger.Shelley.Generator.Core (
-  genesisCoins,
- )
+import Test.Cardano.Ledger.Shelley.Generator.Core (genesisCoins)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
@@ -90,11 +85,8 @@ import Test.Cardano.Ledger.Shelley.Utils
 -- casting function which changes what the hash is of, without changing the
 -- hashing algorithm.
 --
-_assertScriptHashSizeMatchesAddrHashSize ::
-  ScriptHash c ->
-  KeyHash r c
-_assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
-  KeyHash (Hash.castHash h)
+_assertScriptHashSizeMatchesAddrHashSize :: ScriptHash -> KeyHash r
+_assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) = KeyHash (Hash.castHash h)
 
 -- Multi-signature scripts
 singleKeyOnly :: ShelleyEraScript era => Addr -> NativeScript era
@@ -172,16 +164,14 @@ makeTxBody inp addrCs wdrl =
     SNothing
 
 makeTx ::
-  forall c.
-  Mock c =>
-  TxBody (ShelleyEra c) ->
-  [KeyPair 'Witness c] ->
-  Map (ScriptHash c) (MultiSig (ShelleyEra c)) ->
-  Maybe (ShelleyTxAuxData (ShelleyEra c)) ->
-  ShelleyTx (ShelleyEra c)
+  TxBody ShelleyEra ->
+  [KeyPair 'Witness] ->
+  Map ScriptHash (MultiSig ShelleyEra) ->
+  Maybe (ShelleyTxAuxData ShelleyEra) ->
+  ShelleyTx ShelleyEra
 makeTx txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
   where
-    txWits :: ShelleyTxWits (ShelleyEra c)
+    txWits :: ShelleyTxWits ShelleyEra
     txWits =
       mkBasicTxWits
         & addrTxWitsL .~ mkWitnessesVKey (hashAnnotated txBody) keyPairs
@@ -219,14 +209,12 @@ initPParams =
 -- 'aliceKeep' is greater than 0, gives that amount to Alice and creates outputs
 -- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState ::
-  forall c.
-  Mock c =>
   Coin ->
-  [(MultiSig (ShelleyEra c), Coin)] ->
-  ( TxId c
+  [(MultiSig ShelleyEra, Coin)] ->
+  ( TxId
   , Either
-      (NonEmpty (PredicateFailure (ShelleyUTXOW (ShelleyEra c))))
-      (UTxOState (ShelleyEra c))
+      (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra)))
+      (UTxOState ShelleyEra)
   )
 initialUTxOState aliceKeep msigs =
   let addresses =
@@ -235,8 +223,8 @@ initialUTxOState aliceKeep msigs =
             ( \(msig, era) ->
                 ( Addr
                     Testnet
-                    (ScriptHashObj $ hashScript @(ShelleyEra c) msig)
-                    (StakeRefBase $ ScriptHashObj $ hashScript @(ShelleyEra c) msig)
+                    (ScriptHashObj $ hashScript @ShelleyEra msig)
+                    (StakeRefBase $ ScriptHashObj $ hashScript @ShelleyEra msig)
                 , era
                 )
             )
@@ -249,7 +237,7 @@ initialUTxOState aliceKeep msigs =
               Nothing
        in ( txIdTx tx
           , runShelleyBase $
-              applySTSTest @(ShelleyUTXOW (ShelleyEra c))
+              applySTSTest @(ShelleyUTXOW ShelleyEra)
                 ( TRC
                     ( UtxoEnv
                         (SlotNo 0)
@@ -269,14 +257,12 @@ initialUTxOState aliceKeep msigs =
 -- 'aliceKeep' in the case of it being non-zero) to spend all funds back to
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript ::
-  forall c.
-  Mock c =>
-  [(MultiSig (ShelleyEra c), Coin)] ->
-  [MultiSig (ShelleyEra c)] ->
-  Withdrawals c ->
+  [(MultiSig ShelleyEra, Coin)] ->
+  [MultiSig ShelleyEra] ->
+  Withdrawals ->
   Coin ->
-  [KeyPair 'Witness c] ->
-  Either (NonEmpty (PredicateFailure (ShelleyUTXOW (ShelleyEra c)))) (UTxOState (ShelleyEra c))
+  [KeyPair 'Witness] ->
+  Either (NonEmpty (PredicateFailure (ShelleyUTXOW ShelleyEra))) (UTxOState ShelleyEra)
 applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
@@ -298,11 +284,11 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
       makeTx
         txbody
         signers
-        (Map.fromList $ map (\scr -> (hashScript @(ShelleyEra c) scr, scr)) unlockScripts)
+        (Map.fromList $ map (\scr -> (hashScript @ShelleyEra scr, scr)) unlockScripts)
         Nothing
     utxoSt' =
       runShelleyBase $
-        applySTSTest @(ShelleyUTXOW (ShelleyEra c))
+        applySTSTest @(ShelleyUTXOW ShelleyEra)
           ( TRC
               ( UtxoEnv
                   (SlotNo 0)

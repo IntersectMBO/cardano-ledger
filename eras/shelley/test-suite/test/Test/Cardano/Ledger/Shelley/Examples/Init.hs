@@ -20,7 +20,6 @@ where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Nonce (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Slot (
@@ -70,12 +69,12 @@ ppEx =
 -- When this transition actually occurs,
 -- the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork.
-lastByronHeaderHash :: HashHeader 
+lastByronHeaderHash :: HashHeader
 lastByronHeaderHash = HashHeader $ mkHash 0
 
 -- | === Initial Nonce
 nonce0 :: Nonce
-nonce0 = hashHeaderToNonce (lastByronHeaderHash)
+nonce0 = hashHeaderToNonce lastByronHeaderHash
 
 -- | === Initial Chain State
 --
@@ -100,4 +99,4 @@ initSt utxo =
     (maxLLSupply <-> Val.coin (balance utxo))
     genDelegs
     (ppEx @era)
-    (nonce0)
+    nonce0

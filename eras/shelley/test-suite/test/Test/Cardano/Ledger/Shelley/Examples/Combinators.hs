@@ -56,15 +56,9 @@ import Cardano.Ledger.BaseTypes (
   quorum,
   (⭒),
  )
-import Cardano.Ledger.Block (
-  Block (..),
-  bheader,
- )
+import Cardano.Ledger.Block (Block (..), bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Credential (
-  Credential (..),
-  Ptr,
- )
+import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.EpochBoundary (SnapShot, SnapShots (..), calculatePoolDistr)
 import Cardano.Ledger.Keys (
   GenDelegPair,
@@ -125,9 +119,9 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro ((%~), (&), (.~), (^.))
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce, testGlobals)
-import Cardano.Ledger.Crypto (StandardCrypto)
 
 -- ======================================================
 
@@ -159,16 +153,15 @@ evolveNonceUnfrozen n cs =
 -- instead use 'newEpoch'.
 newLab ::
   forall era.
-  Era era =>
-  Block (BHeader StandardCrypto) era ->
+  Block (BHeader MockCrypto) era ->
   ChainState era ->
   ChainState era
 newLab b cs =
   cs {chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)}
   where
     bh = bheader b
-    bn = bheaderBlockNo . bhbody $ bh
-    sn = bheaderSlotNo . bhbody $ bh
+    bn = bheaderBlockNo $ bhbody bh
+    sn = bheaderSlotNo $ bhbody bh
 
 -- | = Update Fees and Deposits
 --
@@ -682,7 +675,7 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 newEpoch ::
   forall era.
   (ProtVerAtMost era 6, EraGov era) =>
-  Block (BHeader StandardCrypto) era ->
+  Block (BHeader MockCrypto) era ->
   ChainState era ->
   ChainState era
 newEpoch b cs = cs'

@@ -45,11 +45,12 @@ testCoreTypes =
 tests :: TestTree
 tests =
   testGroup
-    "Serialisation roundtrip Property Tests" [ testProperty "Block" $
-          roundTripAnnRangeExpectation @(Block (TP.BHeader StandardCrypto) ShelleyEra)
-            (eraProtVerLow @ShelleyEra)
-            (eraProtVerHigh @ShelleyEra)
-      , testProperty "LEDGER Predicate Failures" $
-          roundTripExpectation @[STS.PredicateFailure (STS.ShelleyLEDGERS ShelleyEra)] cborTrip
-      , testCoreTypes
-      ]
+    "Serialisation roundtrip Property Tests"
+    [ testProperty "Block" $
+        roundTripAnnRangeExpectation @(Block (TP.BHeader StandardCrypto) ShelleyEra)
+          (eraProtVerLow @ShelleyEra)
+          (eraProtVerHigh @ShelleyEra)
+    , testProperty "LEDGER Predicate Failures" $
+        roundTripExpectation @[STS.PredicateFailure (STS.ShelleyLEDGERS ShelleyEra)] cborTrip
+    , testCoreTypes
+    ]
