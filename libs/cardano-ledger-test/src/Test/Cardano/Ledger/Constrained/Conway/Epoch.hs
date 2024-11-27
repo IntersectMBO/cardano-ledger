@@ -63,11 +63,16 @@ epochStateSpec epochNo = constrained $ \ es ->
               )
               -- DRComplete
               ( branch $ \_snap ratifyState ->
-                  match ratifyState $ \_enactState [var| enacted |] expired _delayed ->
+                  match ratifyState $ \enactState [var| enacted |] expired _delayed ->
                     [ forAll expired $ \[var| gasId |] ->
                         proposalExists gasId proposals
                     , forAll enacted $ \govact ->
-                        reify proposals enactableProposals $ \ enactable -> govact `elem_` enactable
+                        [ reify proposals enactableProposals $ \ enactable -> govact `elem_` enactable
+                        , assert $ not_ $ gasId_ govact `member_` expired
+                        ]
+                    , match enactState $
+                        \ _cc _con _cpp _ppp _tr _wth prevGACTIDS ->
+                          reify proposals (toPrevGovActionIds . view pRootsL) (prevGACTIDS ==.)
                     ]
               )
           ]
