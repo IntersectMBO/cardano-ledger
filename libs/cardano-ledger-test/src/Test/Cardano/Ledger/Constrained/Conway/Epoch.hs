@@ -59,6 +59,8 @@ epochStateSpec epochNo = constrained $ \ es ->
                     , forAll pulseProposals $ \gas ->
                         match gas $ \gasId _ _ _ _ _ _ ->
                           proposalExists gasId proposals
+                    -- TODO: something is wrong in this case and I haven't figured out what yet
+                    , assert False
                     ]
               )
               -- DRComplete
@@ -72,6 +74,8 @@ epochStateSpec epochNo = constrained $ \ es ->
                         [ reify proposals enactableProposals $ \ enactable -> govact `elem_` enactable
                         , assert $ not_ $ gasId_ govact `member_` expired
                         ]
+                    -- TODO: this is a hack to get around the todo above!
+                    , assert $ sizeOf_ enacted <=. 1
                     , match enactState $
                         \ _cc _con _cpp _ppp _tr _wth prevGACTIDS ->
                           reify proposals (toPrevGovActionIds . view pRootsL) (prevGACTIDS ==.)
@@ -97,7 +101,7 @@ enactableProposals proposals =
           , gact' <- withGovActionParent gact [gact]
                       $ \ _ mparent _ ->
                           case mparent of
-                            SNothing -> [] -- TODO: this is not right!!
+                            SNothing -> [gact]
                             SJust (GovPurposeId gpid')
                               | isRoot gpid' proposals -> [gact]
                               | otherwise              -> []

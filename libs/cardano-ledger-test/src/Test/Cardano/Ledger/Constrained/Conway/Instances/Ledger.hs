@@ -139,7 +139,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
-import Constrained hiding (Value)
+import Constrained hiding (Value, Sized)
 import Constrained qualified as C
 import Constrained.Base (Binder (..), HasGenHint (..), Pred (..), Term (..))
 import Constrained.Spec.Map
@@ -307,8 +307,9 @@ instance HasSimpleRep (Seq a) where
   type SimpleRep (Seq a) = [a]
   toSimpleRep = toList
   fromSimpleRep = Seq.fromList
-instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Seq a)
+instance HasSpec fn a => HasSpec fn (Seq a)
 instance Forallable (Seq a) a
+instance HasSpec fn a => C.Sized fn (Seq a)
 
 instance HasSimpleRep (Sized a)
 instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Sized a)
