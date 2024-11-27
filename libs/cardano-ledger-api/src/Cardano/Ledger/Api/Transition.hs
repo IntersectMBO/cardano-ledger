@@ -45,7 +45,7 @@ mkLatestTransitionConfig ::
   ShelleyGenesis ->
   AlonzoGenesis ->
   ConwayGenesis ->
-  TransitionConfig (LatestKnownEra)
+  TransitionConfig LatestKnownEra
 mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis =
   mkShelleyTransitionConfig shelleyGenesis
     & mkTransitionConfig NoGenesis

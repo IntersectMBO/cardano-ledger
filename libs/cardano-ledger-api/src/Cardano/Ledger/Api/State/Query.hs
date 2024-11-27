@@ -165,7 +165,7 @@ queryDRepState ::
   -- | Specify a set of DRep credentials whose state should be returned. When this set is
   -- empty, states for all of the DReps will be returned.
   Set (Credential 'DRepRole) ->
-  Map (Credential 'DRepRole) (DRepState)
+  Map (Credential 'DRepRole) DRepState
 queryDRepState nes creds
   | null creds = updateDormantDRepExpiry' vState ^. vsDRepsL
   | otherwise = updateDormantDRepExpiry' vStateFiltered ^. vsDRepsL
@@ -288,7 +288,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
 
     mkMaybeMemberState ::
       Credential 'ColdCommitteeRole ->
-      Maybe (CommitteeMemberState)
+      Maybe CommitteeMemberState
     mkMaybeMemberState coldCred = do
       let mbExpiry = Map.lookup coldCred comMembers
       let status = case mbExpiry of

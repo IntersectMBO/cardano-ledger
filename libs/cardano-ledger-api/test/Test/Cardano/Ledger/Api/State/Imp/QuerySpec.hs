@@ -48,7 +48,7 @@ spec = do
             (HasCallStack, Monad m) =>
             Credential 'DRepRole ->
             NewEpochState era ->
-            m (DRepState)
+            m DRepState
           drepStateFromQuery drep nes =
             case Map.lookup drep (queryDRepState nes mempty) of
               Nothing -> error $ "Expected for DRep " ++ show drep ++ " to be present in the query result"

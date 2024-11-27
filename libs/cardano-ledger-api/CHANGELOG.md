@@ -104,7 +104,7 @@
 ## 1.5.0.0
 
 * Add one more parameter to `evalBalanceTxBody` #3688
-  * `Credential 'DRepRole  -> Maybe Coin`
+  * `Credential 'DRepRole (EraCrypto era) -> Maybe Coin`
 * Add `cgEnactStateL`
 
 ## 1.4.0.0
@@ -126,7 +126,7 @@
 * Add optional `PrevGovActionId` to `ParameterChange`, `HardForkInitiation`,
   `NoConfidence`, `NewCommittee` and `NewConstitution` governance actions.
 * Rename `*governance*` to `*gov*` #3607
-* Update `queryConstitutionHash` return type to `SafeHash  (Constitution era)` #3556
+* Update `queryConstitutionHash` return type to `SafeHash (EraCrypto era) (Constitution era)` #3556
 * Rename `cgTallyL` to `cgGovL`
 * Rename `ConwayTallyState` to `ConwayGovState`
 * Change constraints on `evalBalanceTxBody`

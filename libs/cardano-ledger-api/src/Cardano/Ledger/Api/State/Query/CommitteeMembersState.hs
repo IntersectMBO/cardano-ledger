@@ -55,7 +55,7 @@ data HotCredAuthStatus
   = MemberAuthorized (Credential 'HotCommitteeRole)
   | -- | Member enacted, but no hot credential for voting has been registered
     MemberNotAuthorized
-  | MemberResigned (Maybe (Anchor))
+  | MemberResigned (Maybe Anchor)
   deriving (Show, Eq, Generic, Ord, ToJSON)
 
 instance EncCBOR HotCredAuthStatus where
@@ -103,7 +103,7 @@ instance DecCBOR NextEpochChange where
       k -> Invalid k
 
 data CommitteeMemberState = CommitteeMemberState
-  { cmsHotCredAuthStatus :: !(HotCredAuthStatus)
+  { cmsHotCredAuthStatus :: !HotCredAuthStatus
   , cmsStatus :: !MemberStatus
   , cmsExpiration :: !(Maybe EpochNo)
   -- ^ Absolute epoch number when the member expires
@@ -112,7 +112,7 @@ data CommitteeMemberState = CommitteeMemberState
   }
   deriving (Show, Eq, Generic)
 
-deriving instance Ord (CommitteeMemberState)
+deriving instance Ord CommitteeMemberState
 
 instance EncCBOR CommitteeMemberState where
   encCBOR (CommitteeMemberState cStatus mStatus ex nec) =
@@ -146,14 +146,14 @@ toCommitteeMemberStatePairs c@(CommitteeMemberState _ _ _ _) =
       ]
 
 data CommitteeMembersState = CommitteeMembersState
-  { csCommittee :: !(Map (Credential 'ColdCommitteeRole) (CommitteeMemberState))
+  { csCommittee :: !(Map (Credential 'ColdCommitteeRole) CommitteeMemberState)
   , csThreshold :: !(Maybe UnitInterval)
   , csEpochNo :: !EpochNo
   -- ^ Current epoch number. This is necessary to interpret committee member states
   }
   deriving (Eq, Show, Generic)
 
-deriving instance Ord (CommitteeMembersState)
+deriving instance Ord CommitteeMembersState
 
 instance EncCBOR CommitteeMembersState where
   encCBOR c@(CommitteeMembersState _ _ _) =

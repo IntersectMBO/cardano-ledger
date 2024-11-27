@@ -40,7 +40,7 @@ import Data.ByteString.Short (ShortByteString)
 -- | Same as `decodeAddrShort`, but produces an `Either` result
 decodeAddrShortEither ::
   ShortByteString ->
-  Either String (Addr)
+  Either String Addr
 decodeAddrShortEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
 {-# INLINE decodeAddrShortEither #-}
 
@@ -48,19 +48,19 @@ decodeAddrShortEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
 decodeAddrShort ::
   MonadFail m =>
   ShortByteString ->
-  m (Addr)
+  m Addr
 decodeAddrShort sbs = evalStateT (decodeAddrStateT sbs) 0
 {-# INLINE decodeAddrShort #-}
 
 -- | Decoded Address.
 data DecAddr
   = -- | Address was decoded with no problems
-    DecAddr (Addr)
+    DecAddr Addr
   | -- | Address was decoded, but it contains an invalid `Cardano.Ledger.Credential.Ptr`
-    DecAddrBadPtr (Addr)
+    DecAddrBadPtr Addr
   | -- | Address was decoded, but not all of input was consumed
     DecAddrUnconsumed
-      (Addr)
+      Addr
       -- | Left over bytes after consuming the input
       BS.ByteString
   deriving (Eq, Show)
@@ -75,7 +75,7 @@ data DecAddr
 decodeAddrLenient ::
   MonadFail m =>
   BS.ByteString ->
-  m (Addr)
+  m Addr
 decodeAddrLenient bs = evalStateT (decodeAddrStateLenientT True True bs) 0
 
 -- | Decode an address and fail only for addresses that could have never been placed on
@@ -86,7 +86,7 @@ decodeAddrLenient bs = evalStateT (decodeAddrStateLenientT True True bs) 0
 -- @since 1.8.0
 decodeAddrLenientEither ::
   BS.ByteString ->
-  Either String (DecAddr)
+  Either String DecAddr
 decodeAddrLenientEither bs =
   runFailLast $
     (DecAddr <$> decodeAddr bs)
