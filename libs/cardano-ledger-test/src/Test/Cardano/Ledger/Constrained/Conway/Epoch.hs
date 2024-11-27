@@ -66,6 +66,8 @@ epochStateSpec epochNo = constrained $ \ es ->
                   match ratifyState $ \enactState [var| enacted |] expired _delayed ->
                     [ forAll expired $ \[var| gasId |] ->
                         proposalExists gasId proposals
+                    -- TODO: this isn't enough, we need to ensure it's at most
+                    -- one of each type of action that's being enacted
                     , forAll enacted $ \govact ->
                         [ reify proposals enactableProposals $ \ enactable -> govact `elem_` enactable
                         , assert $ not_ $ gasId_ govact `member_` expired
