@@ -24,6 +24,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness, hashKey)
 import Cardano.Ledger.PoolParams (PoolMetadata (..), StakePoolRelay (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -70,7 +71,6 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessesVKey, vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -113,7 +113,7 @@ alicePoolParams :: PoolParams
 alicePoolParams =
   PoolParams
     { ppId = alicePoolKH
-    , ppVrf = hashVerKeyVRF @MockCrypto . vrfVerKey $ mkVRFKeyPair @MockCrypto (RawSeed 0 0 0 0 3)
+    , ppVrf = hashVerKeyVRF @StandardCrypto . vrfVerKey $ mkVRFKeyPair @StandardCrypto (RawSeed 0 0 0 0 3)
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1

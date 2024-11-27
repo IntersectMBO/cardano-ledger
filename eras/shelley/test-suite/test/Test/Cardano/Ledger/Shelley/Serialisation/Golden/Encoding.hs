@@ -1075,8 +1075,6 @@ tests =
                 -- tx 2, two keys
                 <> T (TkMapLen 1 . TkWord 0)
                 <> T (TkListLen 2)
-                -- The test is unfortunately sensitive to this ordering. TODO make it
-                -- better
                 <> S w2
                 <> S w1
                 -- tx 3, one script
@@ -1086,8 +1084,8 @@ tests =
                 -- tx 4, two scripts
                 <> T (TkMapLen 1 . TkWord 1)
                 <> T (TkListLen 2)
-                <> S testScript2
                 <> S testScript
+                <> S testScript2
                 -- tx 5, two keys and two scripts
                 <> T (TkMapLen 2)
                 <> T (TkWord 0)
@@ -1096,8 +1094,8 @@ tests =
                 <> S w1
                 <> T (TkWord 1)
                 <> T (TkListLen 2)
-                <> S testScript2
                 <> S testScript
+                <> S testScript2
                 -- metadata
                 <> T (TkMapLen 1)
                 <> T (TkInt 4)
