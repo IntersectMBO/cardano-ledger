@@ -7,9 +7,8 @@
 module Test.Cardano.Ledger.Mary.Examples.Consensus where
 
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Genesis (NoGenesis (..))
-import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
 import qualified Data.Map.Strict as Map (singleton)
@@ -20,24 +19,23 @@ import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
 
 -- | ShelleyLedgerExamples for Allegra era
-ledgerExamplesMary :: ShelleyLedgerExamples Mary
+ledgerExamplesMary :: ShelleyLedgerExamples MaryEra
 ledgerExamplesMary =
   defaultShelleyLedgerExamples
-    (mkWitnessesPreAlonzo (Proxy @Mary))
+    (mkWitnessesPreAlonzo (Proxy @MaryEra))
     id
     (exampleMultiAssetValue 1)
     ((exampleAllegraTxBody (exampleMultiAssetValue 1)) & mintTxBodyL .~ exampleMultiAsset 1)
     exampleAllegraTxAuxData
     NoGenesis
 
-exampleMultiAssetValue :: Crypto c => Int -> MaryValue c
+exampleMultiAssetValue :: Int -> MaryValue
 exampleMultiAssetValue x = MaryValue (Coin 100) $ exampleMultiAsset x
 
-exampleMultiAsset :: forall c. Crypto c => Int -> MultiAsset c
+exampleMultiAsset :: Int -> MultiAsset
 exampleMultiAsset x =
   MultiAsset (Map.singleton policyId $ Map.singleton couttsCoin 1000)
   where
-    policyId :: PolicyID c
     policyId = PolicyID $ mkScriptHash x
 
     couttsCoin :: AssetName

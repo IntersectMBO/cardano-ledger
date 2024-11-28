@@ -24,7 +24,7 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashScript)
-import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.TxOut (scaledMinDeposit)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Shelley.Scripts
@@ -35,7 +35,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import Data.Word (Word8)
-import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
@@ -43,22 +42,22 @@ import Test.Tasty.HUnit (testCase, (@?=))
 -- Golden Tests for the scaled MinUTxO function
 --
 
-pid1 :: PolicyID StandardCrypto
+pid1 :: PolicyID
 pid1 =
   PolicyID $
-    hashScript @Mary $
+    hashScript @MaryEra $
       RequireAllOf (StrictSeq.fromList [])
 
-pid2 :: PolicyID StandardCrypto
+pid2 :: PolicyID
 pid2 =
   PolicyID $
-    hashScript @Mary $
+    hashScript @MaryEra $
       RequireAllOf (StrictSeq.fromList [RequireTimeStart (SlotNo 1)])
 
-pid3 :: PolicyID StandardCrypto
+pid3 :: PolicyID
 pid3 =
   PolicyID $
-    hashScript @Mary $
+    hashScript @MaryEra $
       RequireAllOf (StrictSeq.fromList [RequireTimeExpire (SlotNo 1)])
 
 -- | The smallest asset name has length zero
