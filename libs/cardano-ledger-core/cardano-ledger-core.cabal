@@ -126,7 +126,6 @@ library
         text,
         time,
         transformers,
-        utf8-string,
         validation-selective,
         vector-map ^>=1.1
 
@@ -211,6 +210,8 @@ library testlib
 executable plutus-debug
     main-is:          PlutusDebug.hs
     hs-source-dirs:   app
+    other-modules:
+        CLI
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -219,7 +220,15 @@ executable plutus-debug
 
     build-depends:
         base >=4.14 && <5,
-        cardano-ledger-core
+        base16-bytestring,
+        base64-bytestring,
+        bytestring,
+        cardano-ledger-binary,
+        cardano-ledger-core,
+        deepseq,
+        optparse-applicative,
+        plutus-ledger-api,
+        utf8-string
 
 test-suite tests
     type:             exitcode-stdio-1.0
