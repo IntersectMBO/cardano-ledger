@@ -140,7 +140,6 @@ import Constrained hiding (Sized, Value)
 import Constrained qualified as C
 import Constrained.Base (Binder (..), HasGenHint (..), Pred (..), Term (..))
 import Constrained.Spec.Map
-import Constrained.Univ
 import Control.DeepSeq (NFData)
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
