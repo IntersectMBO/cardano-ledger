@@ -127,7 +127,7 @@ purposeIsWellformedNoDatumQ =
           PV3.ScriptContext txInfo _redeemer scriptInfo ->
             case scriptInfo of
               PV3.MintingScript cs ->
-                PAM.member cs $ PV3.getValue $ PV3.txInfoMint txInfo
+                PAM.member cs $ PV3.getValue . PV3.mintValueMinted $ PV3.txInfoMint txInfo
               -- Expecting No Datum, therefore should fail when it is supplied
               PV3.SpendingScript txOutRef mDatum ->
                 case mDatum of

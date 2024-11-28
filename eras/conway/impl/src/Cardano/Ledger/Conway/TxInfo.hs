@@ -92,6 +92,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyRole (..), unVRFVerKeyHash)
 import Cardano.Ledger.Mary (MaryValue)
+import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
@@ -127,6 +128,7 @@ import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V3.MintValue as PV3
 
 instance Crypto c => EraPlutusContext (ConwayEra c) where
   type ContextError (ConwayEra c) = ConwayContextError (ConwayEra c)
@@ -450,7 +452,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
         , PV3.txInfoOutputs = outputs
         , PV3.txInfoReferenceInputs = refInputs
         , PV3.txInfoFee = transCoinToLovelace (txBody ^. feeTxBodyL)
-        , PV3.txInfoMint = Alonzo.transMultiAsset (txBody ^. mintTxBodyL)
+        , PV3.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
         , PV3.txInfoTxCerts = txCerts
         , PV3.txInfoWdrl = transTxBodyWithdrawals txBody
         , PV3.txInfoValidRange = timeRange
@@ -481,6 +483,9 @@ transTxBodyId txBody = PV3.TxId (transSafeHash (hashAnnotated txBody))
 
 transTxIn :: TxIn c -> PV3.TxOutRef
 transTxIn (TxIn txid txIx) = PV3.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
+
+transMintValue :: MultiAsset c -> PV3.MintValue
+transMintValue = PV3.UnsafeMintValue . PV1.getValue . Alonzo.transMultiAsset
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
 transTxBodyWithdrawals :: EraTxBody era => TxBody era -> PV3.Map PV3.Credential PV3.Lovelace

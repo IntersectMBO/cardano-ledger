@@ -94,6 +94,7 @@ instance Cborg.Serialise PV3.GovernanceAction
 instance Cborg.Serialise PV3.GovernanceActionId
 instance Cborg.Serialise PV3.HotCommitteeCredential
 instance Cborg.Serialise PV3.Lovelace
+instance Cborg.Serialise PV3.MintValue
 instance Cborg.Serialise PV3.OutputDatum
 instance Cborg.Serialise PV3.POSIXTime
 instance Cborg.Serialise PV3.ProposalProcedure
