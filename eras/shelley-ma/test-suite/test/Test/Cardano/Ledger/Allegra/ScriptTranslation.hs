@@ -6,10 +6,9 @@ module Test.Cardano.Ledger.Allegra.ScriptTranslation (
 )
 where
 
-import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Genesis (NoGenesis (..))
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as S
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
@@ -31,18 +30,18 @@ import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 
-bootstrapTxId :: S.TxId StandardCrypto
-bootstrapTxId = txIdTxBody @Shelley mkBasicTxBody
+bootstrapTxId :: S.TxId
+bootstrapTxId = txIdTxBody @ShelleyEra mkBasicTxBody
 
 fromRight :: HasCallStack => Either e a -> a
 fromRight (Right x) = x
 fromRight _ = error "Expected Right"
 
-script :: MultiSig Shelley
+script :: MultiSig ShelleyEra
 script = RequireAllOf StrictSeq.empty
 
-scriptHash :: S.ScriptHash StandardCrypto
-scriptHash = hashScript @Shelley script
+scriptHash :: S.ScriptHash
+scriptHash = hashScript @ShelleyEra script
 
 testScriptPostTranslation :: TestTree
 testScriptPostTranslation =
@@ -67,7 +66,7 @@ testScriptPostTranslation =
               (S.AccountState (S.Coin 0) (S.Coin 0))
               False
           utxoStShelley = def {S.utxosUtxo = utxo}
-          utxoStAllegra = fromRight . runExcept $ translateEra @Allegra NoGenesis utxoStShelley
+          utxoStAllegra = fromRight . runExcept $ translateEra @AllegraEra NoGenesis utxoStShelley
           txb =
             S.ShelleyTxBody
               (Set.singleton $ S.TxIn bootstrapTxId minBound)
@@ -80,10 +79,10 @@ testScriptPostTranslation =
               S.SNothing
           wits = mkBasicTxWits & scriptTxWitsL .~ Map.singleton scriptHash script
           txs = S.ShelleyTx txb wits S.SNothing
-          txa = fromRight . runExcept $ translateEra @Allegra NoGenesis txs
+          txa = fromRight . runExcept $ translateEra @AllegraEra NoGenesis txs
           result =
             runShelleyBase $
-              applySTSTest @(S.ShelleyLEDGER Allegra)
+              applySTSTest @(S.ShelleyLEDGER AllegraEra)
                 (TRC (env, LedgerState utxoStAllegra def, txa))
        in case result of
             Left e -> error $ show e

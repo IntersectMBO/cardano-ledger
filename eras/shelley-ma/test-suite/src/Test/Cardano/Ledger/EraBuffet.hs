@@ -1,5 +1,4 @@
 module Test.Cardano.Ledger.EraBuffet (
-  TestCrypto,
   StandardCrypto,
   ShelleyEra,
   MaryEra,
@@ -8,12 +7,12 @@ module Test.Cardano.Ledger.EraBuffet (
   Script,
   TxBody,
   TxAuxData,
-  Era (..),
+  Era,
 )
 where
 
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Core (Era, EraCrypto, Script, TxAuxData, TxBody, Value)
+import Cardano.Ledger.Core (Era, Script, TxAuxData, TxBody, Value)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (StandardCrypto, TestCrypto)
