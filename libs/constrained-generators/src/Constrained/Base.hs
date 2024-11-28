@@ -6082,7 +6082,6 @@ sizeOfSpec (SuspendedSpec x p) =
     Exists
       (\_ -> fatalError1 "sizeOfSpec: Exists")
       (x :-> (Explain (pure "sizeOfSpec") $ Assert (len ==. sizeOf_ (V x)) <> p))
-sizeOfSpec (TypeSpec x _) = sizeOfTypeSpec @t @fn x
 sizeOfSpec (TypeSpec x _) = sizeOfTypeSpec @fn @t x
 
 -- | Turn a Size spec into an ErrorSpec if it has negative numbers.
