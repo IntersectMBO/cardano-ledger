@@ -49,10 +49,9 @@
 -- depends in turn on `Pred` and so on.
 module Constrained.Base where
 
-import Control.Exception (catch, SomeException)
-import System.IO.Unsafe
 import Control.Applicative
 import Control.Arrow (first)
+import Control.Exception (SomeException, catch)
 import Control.Monad
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, runWriter, tell)
@@ -77,6 +76,7 @@ import GHC.Real
 import GHC.Stack
 import GHC.TypeLits
 import Prettyprinter
+import System.IO.Unsafe
 import System.Random
 import System.Random.Stateful
 import Test.QuickCheck hiding (Args, Fun, forAll)
@@ -1282,7 +1282,9 @@ genFromSpec :: forall fn a. (HasCallStack, HasSpec fn a) => Specification fn a -
 genFromSpec spec = do
   res <- strictGen $ explain1 "Calling genFromSpec" $ do
     r <- genFromSpecT spec
-    unsafePerformIO $ r `seq` pure (pure r) `catch` \ (e :: SomeException) -> pure (fatalError (pure $ show e))
+    unsafePerformIO $
+      r `seq`
+        pure (pure r) `catch` \(e :: SomeException) -> pure (fatalError (pure $ show e))
   errorGE $ fmap pure res
 
 -- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
@@ -5755,15 +5757,36 @@ class Sized fn t where
   sizeOf = sizeOf @fn . toSimpleRep
 
   liftSizeSpec :: HasSpec fn t => SizeSpec fn -> [Integer] -> Specification fn t
-  default liftSizeSpec :: (HasSpec fn t, HasSimpleRep t, Sized fn (SimpleRep t), HasSpec fn (SimpleRep t), TypeSpec fn t ~ TypeSpec fn (SimpleRep t)) => SizeSpec fn -> [Integer] -> Specification fn t
+  default liftSizeSpec ::
+    ( HasSpec fn t
+    , HasSimpleRep t
+    , Sized fn (SimpleRep t)
+    , HasSpec fn (SimpleRep t)
+    , TypeSpec fn t ~ TypeSpec fn (SimpleRep t)
+    ) =>
+    SizeSpec fn -> [Integer] -> Specification fn t
   liftSizeSpec sz cant = fromSimpleRepSpec $ liftSizeSpec sz cant
 
   liftMemberSpec :: HasSpec fn t => OrdSet Integer -> Specification fn t
-  default liftMemberSpec :: (HasSpec fn t, HasSpec fn (SimpleRep t), HasSimpleRep t, Sized fn (SimpleRep t),TypeSpec fn t ~ TypeSpec fn (SimpleRep t)) => OrdSet Integer -> Specification fn t
+  default liftMemberSpec ::
+    ( HasSpec fn t
+    , HasSpec fn (SimpleRep t)
+    , HasSimpleRep t
+    , Sized fn (SimpleRep t)
+    , TypeSpec fn t ~ TypeSpec fn (SimpleRep t)
+    ) =>
+    OrdSet Integer -> Specification fn t
   liftMemberSpec = fromSimpleRepSpec . liftMemberSpec
 
   sizeOfTypeSpec :: HasSpec fn t => TypeSpec fn t -> Specification fn Integer
-  default sizeOfTypeSpec :: (HasSpec fn t, HasSpec fn (SimpleRep t), HasSimpleRep t, Sized fn (SimpleRep t),TypeSpec fn t ~ TypeSpec fn (SimpleRep t)) => TypeSpec fn t -> Specification fn Integer
+  default sizeOfTypeSpec ::
+    ( HasSpec fn t
+    , HasSpec fn (SimpleRep t)
+    , HasSimpleRep t
+    , Sized fn (SimpleRep t)
+    , TypeSpec fn t ~ TypeSpec fn (SimpleRep t)
+    ) =>
+    TypeSpec fn t -> Specification fn Integer
   sizeOfTypeSpec = sizeOfTypeSpec @fn @(SimpleRep t)
 
 instance Ord a => Sized fn (Set.Set a) where

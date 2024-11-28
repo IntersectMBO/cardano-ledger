@@ -111,7 +111,7 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   peChildrenL,
   PGraph (..),
   pGraphNodesL,
-  proposalsDeposits
+  proposalsDeposits,
 ) where
 
 import Cardano.Ledger.Address (rewardAccountCredentialL)

@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -20,6 +19,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -63,9 +63,6 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger (
   toDelta_,
   module Test.Cardano.Ledger.Constrained.Conway.Instances.Basic,
 ) where
-
-import Test.Cardano.Ledger.Conway.Arbitrary
-import Constrained.Univ
 
 import Cardano.Chain.Common (
   AddrAttributes (..),
@@ -139,10 +136,11 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
-import Constrained hiding (Value, Sized)
+import Constrained hiding (Sized, Value)
 import Constrained qualified as C
 import Constrained.Base (Binder (..), HasGenHint (..), Pred (..), Term (..))
 import Constrained.Spec.Map
+import Constrained.Univ
 import Control.DeepSeq (NFData)
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
@@ -175,6 +173,7 @@ import PlutusLedgerApi.V1 qualified as PV1
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
@@ -1129,7 +1128,9 @@ instance EraPParams era => HasSimpleRep (Proposals era) where
 instance (EraSpecPParams era, IsConwayUniv fn, Arbitrary (Proposals era)) => HasSpec fn (Proposals era) where
   shrinkWithTypeSpec _ props = shrink props
 
-psPParamUpdate_ :: (EraSpecPParams era, Arbitrary (Proposals era), IsConwayUniv fn) => Term fn (Proposals era) -> Term fn (ProposalTree era)
+psPParamUpdate_ ::
+  (EraSpecPParams era, Arbitrary (Proposals era), IsConwayUniv fn) =>
+  Term fn (Proposals era) -> Term fn (ProposalTree era)
 psPParamUpdate_ = sel @0
 
 data ProposalsSplit = ProposalsSplit
