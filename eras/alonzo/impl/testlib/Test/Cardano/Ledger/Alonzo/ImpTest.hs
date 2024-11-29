@@ -198,14 +198,9 @@ fixupRedeemers ::
 fixupRedeemers tx = impAnn "fixupRedeemers" $ do
   contexts <- impGetPlutusContexts tx
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  let
-    maxExUnit = pp ^. ppMaxTxExUnitsL
-    mkNewMaxRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
-      (hoistPlutusPurpose @era toAsIx prpIdx, (Data dat, maxExUnit))
-    Redeemers oldRedeemers = tx ^. witsTxL . rdmrsTxWitsL
-    newMaxRedeemers = Map.fromList (mkNewMaxRedeemers <$> contexts)
-    txWithMaxExUnits =
-      tx & witsTxL . rdmrsTxWitsL .~ Redeemers newMaxRedeemers
+  let Redeemers oldRedeemers = tx ^. witsTxL . rdmrsTxWitsL
+  txWithMaxExUnits <- txWithMaxRedeemers tx
+  let Redeemers newMaxRedeemers = txWithMaxExUnits ^. witsTxL . rdmrsTxWitsL
   utxo <- getUTxO
   Globals {systemStart, epochInfo} <- use impGlobalsL
   let reports = evalTxExUnits pp txWithMaxExUnits utxo epochInfo systemStart
@@ -232,6 +227,21 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
   pure $
     tx
       & witsTxL . rdmrsTxWitsL .~ Redeemers (Map.unions [oldRedeemers, newRedeemers, newMaxRedeemers])
+
+txWithMaxRedeemers ::
+  forall era.
+  AlonzoEraImp era =>
+  Tx era ->
+  ImpTestM era (Tx era)
+txWithMaxRedeemers tx = do
+  contexts <- impGetPlutusContexts tx
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let
+    maxExUnit = pp ^. ppMaxTxExUnitsL
+    mkNewMaxRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
+      (hoistPlutusPurpose @era toAsIx prpIdx, (Data dat, maxExUnit))
+    newMaxRedeemers = Map.fromList (mkNewMaxRedeemers <$> contexts)
+  pure $ tx & witsTxL . rdmrsTxWitsL .~ Redeemers newMaxRedeemers
 
 fixupScriptWits ::
   forall era.
@@ -353,11 +363,20 @@ alonzoFixupTx =
     >=> fixupOutputDatums
     >=> fixupDatums
     >=> fixupRedeemerIndices
+    >=> fixupTxOuts
+    >=> alonzoFixupFees
     >=> fixupRedeemers
     >=> fixupPPHash
-    >=> fixupTxOuts
-    >=> fixupFees
     >=> updateAddrTxWits
+
+alonzoFixupFees :: forall era. (HasCallStack, AlonzoEraImp era) => Tx era -> ImpTestM era (Tx era)
+alonzoFixupFees tx = do
+  let originalRedeemers = tx ^. witsTxL . rdmrsTxWitsL
+  txWithMax <- txWithMaxRedeemers tx
+  -- we are maximizing the fees relative to the the redeemers, in order to break the circular dependency
+  -- of the fee being impacted by the redeemers and viceversa
+  txWithFees <- fixupFees txWithMax
+  pure $ txWithFees & witsTxL . rdmrsTxWitsL .~ originalRedeemers
 
 mkScriptTestEntry ::
   (PlutusLanguage l, Crypto c) =>
