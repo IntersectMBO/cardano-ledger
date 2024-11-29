@@ -40,7 +40,7 @@ library
         cardano-ledger-binary:testlib,
         plutus-tx,
         plutus-tx-plugin,
-        plutus-ledger-api,
+        plutus-ledger-api >=1.37,
         template-haskell
 
     if ((impl(ghc <9.6) || impl(ghc >=9.7)) || os(windows))
