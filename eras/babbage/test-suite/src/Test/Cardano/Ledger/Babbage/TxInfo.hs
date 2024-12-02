@@ -27,7 +27,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
@@ -53,10 +52,10 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
 
-byronAddr :: Addr c
+byronAddr :: Addr
 byronAddr = AddrBootstrap (BootstrapAddress aliceByronAddr)
 
-shelleyAddr :: Crypto c => Addr c
+shelleyAddr :: Addr
 shelleyAddr = Addr Testnet alicePHK StakeRefNull
 
 ei :: EpochInfo (Either a)
@@ -67,12 +66,12 @@ ss = SystemStart $ posixSecondsToUTCTime 0
 
 -- This input is only a "Byron input" in the sense
 -- that we attach it to a Byron output in the UTxO created below.
-byronInput :: Crypto c => TxIn c
+byronInput :: TxIn
 byronInput = mkTxInPartial genesisId 0
 
 -- This input is only unknown in the sense
 -- that it is not present in the UTxO created below.
-unknownInput :: Crypto c => TxIn c
+unknownInput :: TxIn
 unknownInput = mkTxInPartial genesisId 1
 
 byronOutput :: forall era. EraTxOut era => TxOut era
@@ -87,7 +86,7 @@ datumEx = Datum . dataToBinaryData . Data . PV1.I $ 123
 inlineDatumOutput ::
   forall era.
   ( BabbageEraTxOut era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   TxOut era
 inlineDatumOutput =
@@ -101,18 +100,18 @@ refScriptOutput =
 
 -- This input is only a "Shelley input" in the sense
 -- that we attach it to a Shelley output in the UTxO created below.
-shelleyInput :: Crypto c => TxIn c
+shelleyInput :: TxIn
 shelleyInput = mkTxInPartial genesisId 2
 
-inputWithInlineDatum :: Crypto c => TxIn c
+inputWithInlineDatum :: TxIn
 inputWithInlineDatum = mkTxInPartial genesisId 3
 
-inputWithRefScript :: Crypto c => TxIn c
+inputWithRefScript :: TxIn
 inputWithRefScript = mkTxInPartial genesisId 4
 
 utxo ::
   ( BabbageEraTxOut era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   UTxO era
 utxo =
@@ -127,8 +126,8 @@ utxo =
 txb ::
   forall era.
   BabbageEraTxBody era =>
-  TxIn (EraCrypto era) ->
-  Maybe (TxIn (EraCrypto era)) ->
+  TxIn ->
+  Maybe (TxIn) ->
   TxOut era ->
   TxBody era
 txb i mRefInp o =
@@ -141,12 +140,12 @@ txb i mRefInp o =
 txBare ::
   forall era.
   (EraTx era, BabbageEraTxBody era) =>
-  TxIn (EraCrypto era) ->
+  TxIn ->
   TxOut era ->
   Tx era
 txBare i o = mkBasicTx (txb i Nothing o)
 
-txRefInput :: forall era. (EraTx era, BabbageEraTxBody era) => TxIn (EraCrypto era) -> Tx era
+txRefInput :: forall era. (EraTx era, BabbageEraTxBody era) => TxIn -> Tx era
 txRefInput refInput = mkBasicTx (txb shelleyInput (Just refInput) shelleyOutput)
 
 hasReferenceInput :: SLanguage l -> PlutusTxInfo l -> Bool
@@ -174,7 +173,7 @@ successfulTranslation ::
   forall era l.
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   SLanguage l ->
   Tx era ->
@@ -197,7 +196,7 @@ expectTranslationError ::
   forall era l.
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   SLanguage l ->
   Tx era ->
@@ -219,7 +218,7 @@ expectTranslationError slang tx expected =
 expectV1TranslationError ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo 'PlutusV1 era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   Tx era ->
   ContextError era ->
@@ -239,7 +238,7 @@ translatedInputEx1 ::
   forall era.
   ( BabbageEraTxOut era
   , Show (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
@@ -251,7 +250,7 @@ translatedInputEx2 ::
   forall era.
   ( BabbageEraTxOut era
   , Show (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
@@ -263,7 +262,7 @@ translatedOutputEx1 ::
   forall era.
   ( BabbageEraTxOut era
   , Show (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
@@ -276,7 +275,7 @@ translatedOutputEx2 ::
   forall era.
   ( BabbageEraTxOut era
   , Show (ContextError era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
@@ -289,7 +288,7 @@ txInfoTestsV1 ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , EraPlutusTxInfo 'PlutusV1 era
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
@@ -341,7 +340,7 @@ txInfoTestsV2 ::
   ( EraTx era
   , EraPlutusTxInfo l era
   , BabbageEraTxBody era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
@@ -396,7 +395,7 @@ txInfoTests ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , Inject (BabbageContextError era) (ContextError era)
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era

@@ -6,7 +6,7 @@
 
 module Test.Cardano.Ledger.Babbage.Serialisation.Tripping where
 
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
@@ -24,11 +24,11 @@ tests =
   testGroup
     "Babbage CBOR round-trip"
     [ testProperty "babbage/BabbageUtxoPredFailure" $
-        roundTripCborRangeExpectation @(BabbageUtxoPredFailure Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
+        roundTripCborRangeExpectation @(BabbageUtxoPredFailure BabbageEra)
+          (eraProtVerLow @BabbageEra)
+          (eraProtVerHigh @BabbageEra)
     , testProperty "babbage/Block" $
-        roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto) Babbage)
-          (eraProtVerLow @Babbage)
-          (eraProtVerHigh @Babbage)
+        roundTripAnnRangeExpectation @(Block BabbageEra)
+          (eraProtVerLow @BabbageEra)
+          (eraProtVerHigh @BabbageEra)
     ]
