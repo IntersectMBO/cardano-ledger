@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Alonzo.Golden (
 )
 where
 
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (
@@ -81,7 +81,7 @@ coinsPerUTxOWordLocal = quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
     utxoEntrySizeWithoutValLocal = 29
     Coin minUTxOValueShelleyMA = minUTxO
 
-calcMinUTxO :: AlonzoTxOut Alonzo -> Coin
+calcMinUTxO :: AlonzoTxOut AlonzoEra -> Coin
 calcMinUTxO tout = Coin (utxoEntrySize tout * coinsPerUTxOWordLocal)
 
 tests :: TestTree
@@ -106,7 +106,7 @@ goldenUTxOEntryMinAda =
           ( AlonzoTxOut
               carlAddr
               (valueFromList (Coin 1407406) [(pid1, smallestName, 1)])
-              (SJust $ hashData @Alonzo (Data (PV1.List [])))
+              (SJust $ hashData @AlonzoEra (Data (PV1.List [])))
           )
           @?= Coin 1655136
     , testCase "one policy, one (smallest) name, no datum hash" $
@@ -158,7 +158,7 @@ goldenUTxOEntryMinAda =
                   , (pid1, largestName 67, 1)
                   ]
               )
-              (SJust $ hashData @Alonzo (Data (PV1.Constr 0 [PV1.Constr 0 []])))
+              (SJust $ hashData @AlonzoEra (Data (PV1.Constr 0 [PV1.Constr 0 []])))
           )
           @?= Coin 2172366
     , testCase "two policies, one (smallest) name" $
@@ -174,7 +174,7 @@ goldenUTxOEntryMinAda =
           ( AlonzoTxOut
               aliceAddr
               (valueFromList (Coin 1592591) [(pid1, smallestName, 1), (pid2, smallestName, 1)])
-              (SJust $ hashData @Alonzo (Data (PV1.Constr 0 [])))
+              (SJust $ hashData @AlonzoEra (Data (PV1.Constr 0 [])))
           )
           @?= Coin 1827546
     , testCase "two policies, two (small) names" $
@@ -206,7 +206,7 @@ goldenUTxOEntryMinAda =
         -- with the old parameter minUTxOValue.
         -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
         -- we can divide minUTxOValue by 29 and round.
-        utxoEntrySize @Alonzo (AlonzoTxOut aliceAddr mempty SNothing) @?= 29
+        utxoEntrySize @AlonzoEra (AlonzoTxOut aliceAddr mempty SNothing) @?= 29
     ]
 
 goldenCborSerialization :: TestTree
@@ -298,11 +298,11 @@ goldenMinFee =
                 Left err -> error err
                 Right val -> val
             txsSeq =
-              case decodeFullAnnotator (eraProtVerHigh @Alonzo) "Block" decCBOR cborBytesBlock of
+              case decodeFullAnnotator (eraProtVerHigh @AlonzoEra) "Block" decCBOR cborBytesBlock of
                 Left err -> error (show err)
-                Right (Block _h txs :: Block (BHeader StandardCrypto) Alonzo) -> txs
+                Right (Block _h txs :: Block (BHeader StandardCrypto) AlonzoEra) -> txs
             firstTx =
-              case fromTxSeq @Alonzo txsSeq of
+              case fromTxSeq @AlonzoEra txsSeq of
                 tx :<| _ -> tx
                 Empty -> error "Block doesn't have any transactions"
 
@@ -324,7 +324,7 @@ fromRightError :: (HasCallStack, Show a) => String -> Either a b -> b
 fromRightError errorMsg =
   either (\e -> error $ errorMsg ++ ": " ++ show e) id
 
-exPP :: PParams Alonzo
+exPP :: PParams AlonzoEra
 exPP =
   emptyPParams
     & ppCostModelsL .~ zeroTestingCostModels [PlutusV1, PlutusV2]
@@ -363,7 +363,7 @@ exampleLangDepViewPV2 = LangDepView b1 b2
 
 testScriptIntegritpHash ::
   HasCallStack =>
-  PParams Alonzo ->
+  PParams AlonzoEra ->
   Language ->
   LangDepView ->
   Assertion
