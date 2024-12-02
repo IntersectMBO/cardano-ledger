@@ -14,7 +14,6 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (TxIx, inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (
-  Era (..),
   EraTx (..),
   EraTxBody (..),
   EraTxOut (..),
@@ -115,27 +114,27 @@ getSTSLedgerEnv proof txIx env = do
 
 -- | Does a TxOut have only Non-Plutus Scripts. Non-Plutus status is measured by non-membership
 --   in the Map of script hashes of all Plutus scripts.
-plutusFree :: forall era a. Reflect era => Map (ScriptHash (EraCrypto era)) a -> TxOut era -> Bool
+plutusFree :: forall era a. Reflect era => Map ScriptHash a -> TxOut era -> Bool
 plutusFree plutusmap txout =
   plutusFreeAddr plutusmap (txout ^. addrTxOutL)
     && plutusFreeValue (reify @era) plutusmap (txout ^. valueTxOutL)
 
-plutusFreeAddr :: Map (ScriptHash c) a -> Addr c -> Bool
+plutusFreeAddr :: Map ScriptHash a -> Addr -> Bool
 plutusFreeAddr plutusmap addr = case addr of
   Addr _ (ScriptHashObj h1) (StakeRefBase (ScriptHashObj h2)) -> Map.notMember h1 plutusmap && Map.notMember h2 plutusmap
   Addr _ (ScriptHashObj h1) _ -> Map.notMember h1 plutusmap
   Addr _ _ (StakeRefBase (ScriptHashObj h2)) -> Map.notMember h2 plutusmap
   _ -> True
 
-plutusFreeValue :: Proof era -> Map (ScriptHash (EraCrypto era)) a -> Value era -> Bool
+plutusFreeValue :: Proof era -> Map ScriptHash a -> Value era -> Bool
 plutusFreeValue proof plutusmap v = case (whichValue proof, v) of
   (ValueShelleyToAllegra, _) -> True
   (ValueMaryToConway, MaryValue _ (MultiAsset m)) -> all (plutusFreePolicyID plutusmap) (Map.keysSet m)
 
-plutusFreePolicyID :: Map (ScriptHash c) a -> PolicyID c -> Bool
+plutusFreePolicyID :: Map ScriptHash a -> PolicyID -> Bool
 plutusFreePolicyID plutusmap (PolicyID h) = Map.notMember h plutusmap
 
-plutusFreeCredential :: Map (ScriptHash c) a -> Credential kr c -> Bool
+plutusFreeCredential :: Map ScriptHash a -> Credential kr -> Bool
 plutusFreeCredential _ (KeyHashObj _) = True
 plutusFreeCredential plutusmap (ScriptHashObj h) = Map.notMember h plutusmap
 
@@ -256,22 +255,22 @@ addWitnesses ::
   forall era.
   Reflect era =>
   Proof era ->
-  Map (ScriptHash (EraCrypto era)) (Script era) ->
-  Map (ScriptHash (EraCrypto era)) (IsValid, ScriptF era) ->
-  Map (KeyHash 'Payment (EraCrypto era)) (Addr (EraCrypto era), SigningKey) ->
-  Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)) ->
-  Map (DataHash (EraCrypto era)) (Data era) ->
+  Map (ScriptHash) (Script era) ->
+  Map (ScriptHash) (IsValid, ScriptF era) ->
+  Map (KeyHash 'Payment) (Addr, SigningKey) ->
+  Map (KeyHash 'Witness) (KeyPair 'Witness) ->
+  Map (DataHash) (Data era) ->
   TxBody era ->
   UTxO era ->
-  GenDelegs (EraCrypto era) ->
+  GenDelegs ->
   Tx era
 addWitnesses proof scriptUniv plutusuniv byronuniv keymapuniv datauniv txb ut gd = tx
   where
     needed = getScriptsNeeded ut txb
-    neededWits, scriptwits :: Map (ScriptHash (EraCrypto era)) (Script era)
+    neededWits, scriptwits :: Map (ScriptHash) (Script era)
     plutusValids :: [IsValid]
     rptrs :: Set (PlutusPointerF era)
-    dataw :: Map (DataHash (EraCrypto era)) (Data era)
+    dataw :: Map (DataHash) (Data era)
     (scriptwits, neededWits, plutusValids, rptrs, dataw) = case whichUTxO proof of
       UTxOShelleyToMary -> (witss, witss, [], Set.empty, Map.empty)
         where

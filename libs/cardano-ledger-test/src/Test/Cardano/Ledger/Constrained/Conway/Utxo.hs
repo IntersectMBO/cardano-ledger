@@ -33,9 +33,8 @@ import Cardano.Ledger.CertState (
   psDepositsL,
   vsDRepsL,
  )
-import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
-  Era (..),
   EraPParams (..),
   EraTx,
   EraTxAuxData (..),
@@ -44,7 +43,6 @@ import Cardano.Ledger.Conway.Core (
  )
 import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot)
 import Cardano.Ledger.UMap (depositMap)
 import Control.DeepSeq (NFData)
@@ -62,14 +60,14 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
 
-data DepositPurpose c
-  = CredentialDeposit !(Credential 'Staking c)
-  | PoolDeposit !(KeyHash 'StakePool c)
-  | DRepDeposit !(Credential 'DRepRole c)
-  | GovActionDeposit !(GovActionId c)
+data DepositPurpose
+  = CredentialDeposit !(Credential 'Staking)
+  | PoolDeposit !(KeyHash 'StakePool)
+  | DRepDeposit !(Credential 'DRepRole)
+  | GovActionDeposit !GovActionId
   deriving (Generic, Eq, Show, Ord)
 
-instance Crypto c => Arbitrary (DepositPurpose c) where
+instance Arbitrary DepositPurpose where
   arbitrary =
     oneof
       [ CredentialDeposit <$> arbitrary
@@ -78,7 +76,7 @@ instance Crypto c => Arbitrary (DepositPurpose c) where
       , GovActionDeposit <$> arbitrary
       ]
 
-instance Crypto c => DecCBOR (DepositPurpose c) where
+instance DecCBOR DepositPurpose where
   decCBOR =
     decode . Summands "DepositPurpose" $
       \case
@@ -88,7 +86,7 @@ instance Crypto c => DecCBOR (DepositPurpose c) where
         3 -> SumD GovActionDeposit <! From
         k -> Invalid k
 
-instance Crypto c => EncCBOR (DepositPurpose c) where
+instance EncCBOR DepositPurpose where
   encCBOR =
     encode . \case
       CredentialDeposit c -> Sum CredentialDeposit 0 !> To c
@@ -96,23 +94,23 @@ instance Crypto c => EncCBOR (DepositPurpose c) where
       DRepDeposit c -> Sum DRepDeposit 2 !> To c
       GovActionDeposit gaid -> Sum GovActionDeposit 3 !> To gaid
 
-instance Crypto c => NFData (DepositPurpose c)
+instance NFData DepositPurpose
 
-instance ToExpr (DepositPurpose c)
+instance ToExpr DepositPurpose
 
 utxoEnvSpec ::
   IsConwayUniv fn =>
-  UtxoExecContext Conway ->
-  Specification fn (UtxoEnv (ConwayEra StandardCrypto))
+  UtxoExecContext ConwayEra ->
+  Specification fn (UtxoEnv ConwayEra)
 utxoEnvSpec UtxoExecContext {..} =
   constrained $ \utxoEnv ->
     utxoEnv ==. lit uecUtxoEnv
 
 utxoStateSpec ::
   IsConwayUniv fn =>
-  UtxoExecContext (ConwayEra StandardCrypto) ->
-  UtxoEnv (ConwayEra StandardCrypto) ->
-  Specification fn (UTxOState (ConwayEra StandardCrypto))
+  UtxoExecContext ConwayEra ->
+  UtxoEnv ConwayEra ->
+  Specification fn (UTxOState ConwayEra)
 utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, ueCertState} =
   constrained $ \utxoState ->
     match utxoState $
@@ -185,7 +183,7 @@ utxoTxSpec UtxoExecContext {uecTx} =
 
 correctAddrAndWFCoin ::
   IsConwayUniv fn =>
-  Term fn (TxOut (ConwayEra StandardCrypto)) ->
+  Term fn (TxOut ConwayEra) ->
   Pred fn
 correctAddrAndWFCoin txOut =
   match txOut $ \addr v _ _ ->
@@ -200,7 +198,7 @@ correctAddrAndWFCoin txOut =
         )
     ]
 
-depositsMap :: CertState era -> Proposals era -> Map.Map (DepositPurpose (EraCrypto era)) Coin
+depositsMap :: CertState era -> Proposals era -> Map.Map DepositPurpose Coin
 depositsMap certState props =
   Map.unions
     [ Map.mapKeys CredentialDeposit $ depositMap (certState ^. certDStateL . dsUnifiedL)

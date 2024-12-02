@@ -15,11 +15,10 @@ module Test.Cardano.Ledger.Constrained.Conway.Gov where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.HardForks qualified as HardForks
 import Cardano.Ledger.UMap (umElems)
 import Constrained
@@ -35,7 +34,7 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams
 
 govEnvSpec ::
   IsConwayUniv fn =>
-  Specification fn (GovEnv (ConwayEra StandardCrypto))
+  Specification fn (GovEnv ConwayEra)
 govEnvSpec = constrained $ \ge ->
   match ge $ \_ _ pp _ _ ->
     satisfies pp pparamsSpec
@@ -45,17 +44,17 @@ govEnvSpec = constrained $ \ge ->
 -- allow the id to appear twice.
 govProposalsSpec ::
   IsConwayUniv fn =>
-  GovEnv (ConwayEra StandardCrypto) ->
-  Specification fn (Proposals (ConwayEra StandardCrypto))
+  GovEnv ConwayEra ->
+  Specification fn (Proposals ConwayEra)
 govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
   proposalsSpec (lit geEpoch) (lit gePPolicy) geCertState
 
 proposalsSpec ::
   IsConwayUniv fn =>
   Term fn EpochNo ->
-  Term fn (StrictMaybe (ScriptHash StandardCrypto)) ->
-  CertState Conway ->
-  Specification fn (Proposals Conway)
+  Term fn (StrictMaybe ScriptHash) ->
+  CertState ConwayEra ->
+  Specification fn (Proposals ConwayEra)
 proposalsSpec geEpoch gePPolicy geCertState =
   constrained $ \ [var|props|] ->
     -- Note each of ppupTree, hardForkTree, committeeTree, constitutionTree
@@ -178,8 +177,8 @@ proposalsSpec geEpoch gePPolicy geCertState =
 
 allGASInTree ::
   (IsConwayUniv fn, IsPred p fn) =>
-  (Term fn (GovActionState (ConwayEra StandardCrypto)) -> p) ->
-  Specification fn (ProposalTree (ConwayEra StandardCrypto))
+  (Term fn (GovActionState ConwayEra) -> p) ->
+  Specification fn (ProposalTree ConwayEra)
 allGASInTree k = constrained $ \ [var|proposalTree|] ->
   forAll (snd_ proposalTree) $ \ [var|subtree|] ->
     forAll' subtree $ \ [var|gas|] _ ->
@@ -187,9 +186,9 @@ allGASInTree k = constrained $ \ [var|proposalTree|] ->
 
 allGASAndChildInTree ::
   (IsConwayUniv fn, IsPred p fn) =>
-  Term fn (ProposalTree (ConwayEra StandardCrypto)) ->
-  ( Term fn (GovActionState (ConwayEra StandardCrypto)) ->
-    Term fn (GovActionState (ConwayEra StandardCrypto)) ->
+  Term fn (ProposalTree ConwayEra) ->
+  ( Term fn (GovActionState ConwayEra) ->
+    Term fn (GovActionState ConwayEra) ->
     p
   ) ->
   Pred fn
@@ -201,7 +200,7 @@ allGASAndChildInTree t k =
 
 wellFormedChildren ::
   IsConwayUniv fn =>
-  Term fn (ProposalTree (ConwayEra StandardCrypto)) ->
+  Term fn (ProposalTree ConwayEra) ->
   Pred fn
 wellFormedChildren rootAndTrees =
   match rootAndTrees $ \root trees ->
@@ -224,8 +223,8 @@ wellFormedChildren rootAndTrees =
 
 withPrevActId ::
   IsConwayUniv fn =>
-  Term fn (GovActionState (ConwayEra StandardCrypto)) ->
-  (Term fn (StrictMaybe (GovActionId StandardCrypto)) -> Pred fn) ->
+  Term fn (GovActionState ConwayEra) ->
+  (Term fn (StrictMaybe GovActionId) -> Pred fn) ->
   Pred fn
 withPrevActId gas k =
   Block
@@ -282,8 +281,8 @@ withPrevActId gas k =
     ]
 onHardFork ::
   (IsConwayUniv fn, IsPred p fn) =>
-  Term fn (GovActionState (ConwayEra StandardCrypto)) ->
-  ( Term fn (StrictMaybe (GovPurposeId 'HardForkPurpose (ConwayEra StandardCrypto))) ->
+  Term fn (GovActionState ConwayEra) ->
+  ( Term fn (StrictMaybe (GovPurposeId 'HardForkPurpose ConwayEra)) ->
     Term fn ProtVer ->
     p
   ) ->
@@ -292,9 +291,9 @@ onHardFork gas k = onCon @"HardForkInitiation" (pProcGovAction_ . gasProposalPro
 
 govProceduresSpec ::
   IsConwayUniv fn =>
-  GovEnv (ConwayEra StandardCrypto) ->
-  Proposals (ConwayEra StandardCrypto) ->
-  Specification fn (GovSignal (ConwayEra StandardCrypto))
+  GovEnv ConwayEra ->
+  Proposals ConwayEra ->
+  Specification fn (GovSignal ConwayEra)
 govProceduresSpec ge@GovEnv {..} ps =
   let actions f =
         [ gid
@@ -348,9 +347,9 @@ govProceduresSpec ge@GovEnv {..} ps =
 
 wfGovAction ::
   IsConwayUniv fn =>
-  GovEnv (ConwayEra StandardCrypto) ->
-  Proposals (ConwayEra StandardCrypto) ->
-  Term fn (GovAction (ConwayEra StandardCrypto)) ->
+  GovEnv ConwayEra ->
+  Proposals ConwayEra ->
+  Term fn (GovAction ConwayEra) ->
   Pred fn
 wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
   caseOn
@@ -468,7 +467,7 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
 
     actions = toList $ proposalsActions ps
 
-wfPParamsUpdateSpec :: forall fn. IsConwayUniv fn => Specification fn (PParamsUpdate Conway)
+wfPParamsUpdateSpec :: forall fn. IsConwayUniv fn => Specification fn (PParamsUpdate ConwayEra)
 wfPParamsUpdateSpec =
   constrained' $ \ppupdate ->
     -- Note that ppupdate :: SimplePPUpdate

@@ -14,7 +14,6 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
-import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusArgs, toPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..), collectPlutusScriptsWithContext)
 import Cardano.Ledger.Alonzo.Scripts (
@@ -96,8 +95,8 @@ collectTwoPhaseScriptInputsOutputOrdering = do
                 (pp apf ^. ppProtocolVersionL)
                 txInfo
                 (spendingPurpose1 apf)
-                (Just (datum @Alonzo))
-                (redeemer @Alonzo)
+                (Just (datum @AlonzoEra))
+                (redeemer @AlonzoEra)
           , pwcExUnits = ExUnits 5000 5000
           , pwcCostModel = zeroTestingCostModel PlutusV1
           }
@@ -135,7 +134,6 @@ validatingTx ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -177,7 +175,7 @@ collectInputs ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  Either [CollectError era] [PlutusWithContext (EraCrypto era)]
+  Either [CollectError era] [PlutusWithContext]
 collectInputs Alonzo = collectPlutusScriptsWithContext
 collectInputs Babbage = collectPlutusScriptsWithContext
 collectInputs Conway = collectPlutusScriptsWithContext

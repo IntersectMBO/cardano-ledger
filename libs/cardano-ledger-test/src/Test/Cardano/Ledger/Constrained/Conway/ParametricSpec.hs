@@ -8,7 +8,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -34,21 +33,20 @@ module Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (
   CertKey (..),
 ) where
 
-import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..), AlonzoTxOut (..))
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Mary (Mary, MaryValue)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Mary (MaryEra, MaryValue)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..), StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Constrained hiding (Value)
@@ -82,10 +80,10 @@ class
   ) =>
   EraSpecTxOut era fn
   where
-  irewardSpec :: Term fn AccountState -> Specification fn (InstantaneousRewards (EraCrypto era))
+  irewardSpec :: Term fn AccountState -> Specification fn (InstantaneousRewards)
   hasPtrs :: proxy era -> Term fn Bool
   correctTxOut ::
-    Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
+    Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
     Term fn (TxOut era) ->
     Pred fn
 
@@ -97,7 +95,7 @@ class
 
 betterTxOutShelley ::
   (EraTxOut era, Value era ~ Coin, IsConwayUniv fn) =>
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
+  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
   Term fn (ShelleyTxOut era) ->
   Pred fn
 betterTxOutShelley delegs txOut =
@@ -118,8 +116,8 @@ betterTxOutShelley delegs txOut =
     ]
 
 betterTxOutMary ::
-  (EraTxOut era, Value era ~ MaryValue (EraCrypto era), IsConwayUniv fn) =>
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
+  (EraTxOut era, Value era ~ MaryValue, IsConwayUniv fn) =>
+  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
   Term fn (ShelleyTxOut era) ->
   Pred fn
 betterTxOutMary delegs txOut =
@@ -140,8 +138,8 @@ betterTxOutMary delegs txOut =
     ]
 
 betterTxOutAlonzo ::
-  (AlonzoEraTxOut era, Value era ~ MaryValue (EraCrypto era), IsConwayUniv fn) =>
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
+  (AlonzoEraTxOut era, Value era ~ MaryValue, IsConwayUniv fn) =>
+  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
   Term fn (AlonzoTxOut era) ->
   Pred fn
 betterTxOutAlonzo delegs txOut =
@@ -164,12 +162,12 @@ betterTxOutAlonzo delegs txOut =
 
 betterTxOutBabbage ::
   ( EraTxOut era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , IsNormalType (Script era)
   , HasSpec fn (Script era)
   , IsConwayUniv fn
   ) =>
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
+  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
   Term fn (BabbageTxOut era) ->
   Pred fn
 betterTxOutBabbage delegs txOut =
@@ -191,9 +189,9 @@ betterTxOutBabbage delegs txOut =
 
 -- | Generate random Stake references that have a high probability of being delegated.
 delegatedStakeReference ::
-  (IsConwayUniv fn, Crypto c) =>
-  Term fn (Map (Credential 'Staking c) (KeyHash 'StakePool c)) ->
-  Specification fn (StakeReference c)
+  IsConwayUniv fn =>
+  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
+  Specification fn StakeReference
 delegatedStakeReference delegs =
   constrained $ \ [var|ref|] ->
     caseOn
@@ -203,10 +201,10 @@ delegatedStakeReference delegs =
       (branchW 1 $ \_null -> True) -- just an occaisional NullRef
 
 instantaneousRewardsSpec ::
-  forall c fn.
-  (IsConwayUniv fn, Crypto c) =>
+  forall fn.
+  IsConwayUniv fn =>
   Term fn AccountState ->
-  Specification fn (InstantaneousRewards c)
+  Specification fn InstantaneousRewards
 instantaneousRewardsSpec acct = constrained $ \ [var| irewards |] ->
   match acct $ \ [var| acctRes |] [var| acctTreas |] ->
     match irewards $ \ [var| reserves |] [var| treasury |] [var| deltaRes |] [var| deltaTreas |] ->
@@ -221,42 +219,42 @@ instantaneousRewardsSpec acct = constrained $ \ [var| irewards |] ->
       , assert $ (toDelta_ (foldMap_ id (rng_ treasury))) - deltaTreas <=. toDelta_ acctTreas
       ]
 
-instance IsConwayUniv fn => EraSpecTxOut Shelley fn where
+instance IsConwayUniv fn => EraSpecTxOut ShelleyEra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
   correctTxOut = betterTxOutShelley
   txOutValue_ x = sel @1 x
   txOutCoin_ x = sel @1 x
 
-instance IsConwayUniv fn => EraSpecTxOut Allegra fn where
+instance IsConwayUniv fn => EraSpecTxOut AllegraEra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
   correctTxOut = betterTxOutShelley
   txOutValue_ x = sel @1 x
   txOutCoin_ x = sel @1 x
 
-instance IsConwayUniv fn => EraSpecTxOut Mary fn where
+instance IsConwayUniv fn => EraSpecTxOut MaryEra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
   correctTxOut = betterTxOutMary
   txOutValue_ x = sel @1 x
   txOutCoin_ x = maryValueCoin_ (sel @1 x)
 
-instance IsConwayUniv fn => EraSpecTxOut Alonzo fn where
+instance IsConwayUniv fn => EraSpecTxOut AlonzoEra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
   correctTxOut = betterTxOutAlonzo
   txOutValue_ x = sel @1 x
   txOutCoin_ x = maryValueCoin_ (sel @1 x)
 
-instance IsConwayUniv fn => EraSpecTxOut Babbage fn where
+instance IsConwayUniv fn => EraSpecTxOut BabbageEra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
   correctTxOut = betterTxOutBabbage
   txOutValue_ x = sel @1 x
   txOutCoin_ x = maryValueCoin_ (sel @1 x)
 
-instance IsConwayUniv fn => EraSpecTxOut Conway fn where
+instance IsConwayUniv fn => EraSpecTxOut ConwayEra fn where
   irewardSpec _ = constrained $ \ [var|irewards|] ->
     match irewards $ \ [var|reserves|] [var|treasury|] [var|deltaRes|] [var|deltaTreas|] ->
       [ reserves ==. lit Map.empty

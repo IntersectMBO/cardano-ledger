@@ -1,6 +1,5 @@
 -- | Everything you need to build Era polymorphic transactions, all in one place
 module Test.Cardano.Ledger.EraClass (
-  Era (EraCrypto),
   -- Tx
   EraTx (Tx, mkBasicTx, bodyTxL, witsTxL),
   AlonzoEraTx (isValidTxL),

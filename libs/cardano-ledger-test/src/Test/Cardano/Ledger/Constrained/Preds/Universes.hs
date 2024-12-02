@@ -11,7 +11,6 @@ module Test.Cardano.Ledger.Constrained.Preds.Universes
 where
 
 import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Signing as Byron
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
@@ -28,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
 import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (
-  Era (EraCrypto),
+  Era,
   EraScript,
   EraTxOut (..),
   TxOut,
@@ -37,7 +36,6 @@ import Cardano.Ledger.Core (
   isNativeScript,
  )
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto, DSIGN)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), coerceKeyRole, hashKey)
@@ -184,7 +182,7 @@ noZeroCoin =
 -- Generating Byron address and their universe
 
 -- | Generate a pair, A Byron address, and the key that can sign it.
-genAddrPair :: Network -> Gen (BootstrapAddress c, Byron.SigningKey)
+genAddrPair :: Network -> Gen (BootstrapAddress, Byron.SigningKey)
 genAddrPair netwrk = do
   signkey <- genSigningKey
   let verificationKey = Byron.toVerification signkey
@@ -200,7 +198,7 @@ genAddrPair netwrk = do
 
 -- | Generate a Map, that maps the Hash of a Byron address to a pair of
 --   the actual Byron address and the key that can sign it.
-genByronUniv :: Crypto c => Network -> Gen (Map (KeyHash 'Payment c) (Addr c, Byron.SigningKey))
+genByronUniv :: Network -> Gen (Map (KeyHash 'Payment) (Addr, Byron.SigningKey))
 genByronUniv netwrk = do
   list <- vectorOf 50 (genAddrPair netwrk)
   pure $
@@ -210,11 +208,10 @@ genByronUniv netwrk = do
 -- | Given a list of Byron addresses, compute BootStrap witnesses of all of those addresses
 --   Can only be used with StandardCrypto
 bootWitness ::
-  (Crypto c, DSIGN c ~ DSIGN.Ed25519DSIGN) =>
-  Hash c EraIndependentTxBody ->
-  [BootstrapAddress c] ->
-  Map (KeyHash 'Payment c) (Addr c, Byron.SigningKey) ->
-  Set (BootstrapWitness c)
+  Hash EraIndependentTxBody ->
+  [BootstrapAddress] ->
+  Map (KeyHash 'Payment) (Addr, Byron.SigningKey) ->
+  Set BootstrapWitness
 bootWitness hash bootaddrs byronuniv = List.foldl' accum Set.empty bootaddrs
   where
     accum ans bootaddr@(BootstrapAddress a) = case Map.lookup (bootstrapKeyHash bootaddr) byronuniv of
@@ -227,11 +224,11 @@ bootWitness hash bootaddrs byronuniv = List.foldl' accum Set.empty bootaddrs
 
 -- | The universe of non-empty Datums. i.e. There are no NoDatum Datums in this list
 genDatums ::
-  Era era => UnivSize -> Int -> Map (DataHash (EraCrypto era)) (Data era) -> Gen [Datum era]
+  Era era => UnivSize -> Int -> Map (DataHash) (Data era) -> Gen [Datum era]
 genDatums sizes n datauniv = vectorOf n (genDatum sizes datauniv)
 
 -- | Only generate non-empty Datums. I.e. There are no NoDatum Datums generated.
-genDatum :: Era era => UnivSize -> Map (DataHash (EraCrypto era)) (Data era) -> Gen (Datum era)
+genDatum :: Era era => UnivSize -> Map (DataHash) (Data era) -> Gen (Datum era)
 genDatum UnivSize {usDatumFreq} datauniv =
   frequency
     [ (1, DatumHash . fst <$> genFromMap ["from genDatums DatumHash case"] datauniv)
@@ -249,13 +246,13 @@ genDatum UnivSize {usDatumFreq} datauniv =
 genTxOut ::
   Reflect era =>
   UnivSize ->
-  (Coin -> Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (Value era)) ->
+  (Coin -> Map (ScriptHash) (ScriptF era) -> Gen (Value era)) ->
   Proof era ->
   Coin ->
-  Set (Addr (EraCrypto era)) ->
-  Map (ScriptHash (EraCrypto era)) (ScriptF era) ->
-  Map (ScriptHash (EraCrypto era)) (ScriptF era) ->
-  Map (DataHash (EraCrypto era)) (Data era) ->
+  Set (Addr) ->
+  Map (ScriptHash) (ScriptF era) ->
+  Map (ScriptHash) (ScriptF era) ->
+  Map (DataHash) (Data era) ->
   Gen (TxOut era)
 genTxOut sizes genvalue p c addruniv scriptuniv spendscriptuniv datauniv =
   case whichTxOut p of
@@ -286,8 +283,8 @@ genTxOut sizes genvalue p c addruniv scriptuniv spendscriptuniv datauniv =
 
 needsDatum ::
   EraScript era =>
-  Credential 'Payment (EraCrypto era) ->
-  Map (ScriptHash (EraCrypto era)) (ScriptF era) ->
+  Credential 'Payment ->
+  Map (ScriptHash) (ScriptF era) ->
   Bool
 needsDatum (ScriptHashObj hash) spendScriptUniv = case Map.lookup hash spendScriptUniv of
   Nothing -> False
@@ -297,13 +294,13 @@ needsDatum _ _ = False
 genTxOuts ::
   Reflect era =>
   UnivSize ->
-  (Coin -> Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (Value era)) ->
+  (Coin -> Map (ScriptHash) (ScriptF era) -> Gen (Value era)) ->
   Proof era ->
   Int ->
-  Set (Addr (EraCrypto era)) ->
-  Map (ScriptHash (EraCrypto era)) (ScriptF era) ->
-  Map (ScriptHash (EraCrypto era)) (ScriptF era) ->
-  Map (DataHash (EraCrypto era)) (Data era) ->
+  Set (Addr) ->
+  Map (ScriptHash) (ScriptF era) ->
+  Map (ScriptHash) (ScriptF era) ->
+  Map (DataHash) (Data era) ->
   Gen [TxOutF era]
 genTxOuts sizes genvalue p ntxouts addruniv scriptuniv spendscriptuniv datauniv = do
   let genOne = do
@@ -315,10 +312,10 @@ genTxOuts sizes genvalue p ntxouts addruniv scriptuniv spendscriptuniv datauniv 
 -- MultiAssets
 
 genMultiAssetTriple ::
-  Map.Map (ScriptHash (EraCrypto era)) (ScriptF era) ->
+  Map.Map (ScriptHash) (ScriptF era) ->
   Set AssetName ->
   Gen Integer ->
-  Gen (PolicyID (EraCrypto era), AssetName, Integer)
+  Gen (PolicyID, AssetName, Integer)
 genMultiAssetTriple scriptMap assetSet genAmount =
   (,,)
     <$> (PolicyID . fst <$> (genFromMap [] scriptMap))
@@ -336,9 +333,9 @@ makeHashScriptMap ::
   Proof era ->
   Int ->
   PlutusPurposeTag ->
-  Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)) ->
+  Map (KeyHash 'Witness) (KeyPair 'Witness) ->
   ValidityInterval ->
-  Gen (Map (ScriptHash (EraCrypto era)) (ScriptF era))
+  Gen (Map (ScriptHash) (ScriptF era))
 makeHashScriptMap p size tag m vi = do
   let genOne Spending =
         -- Make an effort to get as many plutus scripts as possible (in Eras that support plutus)
@@ -358,7 +355,7 @@ genDataWits ::
   Era era =>
   Proof era ->
   Int ->
-  Gen (Map (DataHash (EraCrypto era)) (Data era))
+  Gen (Map (DataHash) (Data era))
 genDataWits _p size = do
   scs <- vectorOf size arbitrary
   pure $ Map.fromList $ map (\x -> (hashData x, x)) scs
@@ -368,11 +365,11 @@ genDataWits _p size = do
 genAddrWith ::
   Proof era ->
   Network ->
-  Set (Credential 'Payment (EraCrypto era)) ->
+  Set (Credential 'Payment) ->
   Set Ptr ->
-  Set (Credential 'Staking (EraCrypto era)) ->
-  Map (KeyHash 'Payment (EraCrypto era)) (Addr (EraCrypto era), Byron.SigningKey) -> -- The Byron Addresss Universe
-  Gen (Addr (EraCrypto era))
+  Set (Credential 'Staking) ->
+  Map (KeyHash 'Payment) (Addr, Byron.SigningKey) -> -- The Byron Addresss Universe
+  Gen (Addr)
 genAddrWith proof net ps ptrss cs byronMap =
   case whichTxOut proof of
     TxOutBabbageToConway -> Addr net <$> pick1 ["from genPayCred ScriptHashObj"] ps <*> genStakeRefWith proof ptrss cs
@@ -393,8 +390,8 @@ genStakeRefWith ::
   forall era.
   Proof era ->
   Set Ptr ->
-  Set (Credential 'Staking (EraCrypto era)) ->
-  Gen (StakeReference (EraCrypto era))
+  Set (Credential 'Staking) ->
+  Gen (StakeReference)
 genStakeRefWith proof ps cs =
   frequency
     [ (80, StakeRefBase <$> pick1 ["from genStakeRefWith StakeRefBase"] cs)
@@ -405,14 +402,14 @@ genStakeRefWith proof ps cs =
     , (15, pure StakeRefNull)
     ]
 
-noScripts :: Proof era -> Addr (EraCrypto era) -> Bool
+noScripts :: Proof era -> Addr -> Bool
 noScripts _ (Addr _ (ScriptHashObj _) _) = False
 noScripts _ (Addr _ _ (StakeRefBase (ScriptHashObj _))) = False
 noScripts _ (AddrBootstrap _) = False
 noScripts _ _ = True
 
 -- | Make some candidate DReps. The 'Always...' and one from each Credential.
-genDReps :: Set (Credential 'Staking c) -> Gen [DRep c]
+genDReps :: Set (Credential 'Staking) -> Gen [DRep]
 genDReps creds =
   shuffle
     ( map (DRepCredential . coerceKeyRole) (Set.toList creds)
@@ -421,8 +418,8 @@ genDReps creds =
 
 genDRepsT ::
   UnivSize ->
-  Term era (Set (Credential 'Staking (EraCrypto era))) ->
-  Target era (Gen (Set (DRep (EraCrypto era))))
+  Term era (Set (Credential 'Staking)) ->
+  Target era (Gen (Set (DRep)))
 genDRepsT sizes creds = Constr "listToSet" (\cs -> (Set.fromList . take (usNumDReps sizes)) <$> genDReps cs) ^$ creds
 
 -- ======================================================================
@@ -433,30 +430,30 @@ genDRepsT sizes creds = Constr "listToSet" (\cs -> (Set.fromList . take (usNumDR
 -- post-fixing their names with a captial "T". These may be a bit more
 -- prescriptive rather than descriptive, but you do what you have to do.
 
-txOutT :: Reflect era => Proof era -> Addr (EraCrypto era) -> Coin -> TxOutF era
+txOutT :: Reflect era => Proof era -> Addr -> Coin -> TxOutF era
 txOutT p x c = TxOutF p (mkBasicTxOut x (inject c))
 
 -- | The collateral consists only of VKey addresses
 --   and the collateral outputs in the UTxO do not contain any non-ADA part
-colTxOutT :: EraTxOut era => Proof era -> Set (Addr (EraCrypto era)) -> Gen (TxOutF era)
+colTxOutT :: EraTxOut era => Proof era -> Set (Addr) -> Gen (TxOutF era)
 colTxOutT p noScriptAddr =
   TxOutF p
     <$> (mkBasicTxOut <$> pick1 ["from colTxOutT noScriptAddr"] noScriptAddr <*> (inject <$> noZeroCoin))
 
 -- | The collateral consists only of VKey addresses
 --   and the collateral outputs in the UTxO do not contain any non-ADA part
-colTxOutSetT :: EraTxOut era => Proof era -> Set (Addr (EraCrypto era)) -> Gen (Set (TxOutF era))
+colTxOutSetT :: EraTxOut era => Proof era -> Set (Addr) -> Gen (Set (TxOutF era))
 colTxOutSetT p noScriptAddr = Set.foldl' accum (pure Set.empty) noScriptAddr
   where
     accum ansM addr = do
       c <- noZeroCoin
       Set.insert (TxOutF p (mkBasicTxOut addr (inject c))) <$> ansM
 
-scriptHashObjT :: Term era (ScriptHash (EraCrypto era)) -> Target era (Credential k (EraCrypto era))
+scriptHashObjT :: Term era (ScriptHash) -> Target era (Credential k)
 scriptHashObjT x = Constr "ScriptHashObj" ScriptHashObj ^$ x
 
 keyHashObjT ::
-  Term era (KeyHash 'Witness (EraCrypto era)) -> Target era (Credential k (EraCrypto era))
+  Term era (KeyHash 'Witness) -> Target era (Credential k)
 keyHashObjT x = Constr "KeyHashObj" (KeyHashObj . coerceKeyRole) ^$ x
 
 makeValidityT ::
@@ -476,11 +473,11 @@ addrUnivT ::
   Proof era ->
   Int ->
   Term era Network ->
-  Term era (Set (Credential 'Payment (EraCrypto era))) ->
+  Term era (Set (Credential 'Payment)) ->
   Term era (Set Ptr) ->
-  Term era (Set (Credential 'Staking (EraCrypto era))) ->
-  Term era (Map (KeyHash 'Payment (EraCrypto era)) (Addr (EraCrypto era), Byron.SigningKey)) ->
-  Target era (Gen (Set (Addr (EraCrypto era))))
+  Term era (Set (Credential 'Staking)) ->
+  Term era (Map (KeyHash 'Payment) (Addr, Byron.SigningKey)) ->
+  Target era (Gen (Set (Addr)))
 addrUnivT p naddr net ps pts cs byronAddrUnivT =
   Constr "" (setSized ["From addrUnivT"] naddr)
     :$ (Constr "genAddrWith" (genAddrWith p) ^$ net ^$ ps ^$ pts ^$ cs ^$ byronAddrUnivT)
@@ -489,9 +486,9 @@ makeHashScriptMapT ::
   Proof era ->
   Int ->
   PlutusPurposeTag ->
-  Term era (Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))) ->
+  Term era (Map (KeyHash 'Witness) (KeyPair 'Witness)) ->
   Term era ValidityInterval ->
-  Target era (Gen (Map (ScriptHash (EraCrypto era)) (ScriptF era)))
+  Target era (Gen (Map (ScriptHash) (ScriptF era)))
 makeHashScriptMapT p size tag m vi =
   Constr
     "makeHashScriptMap"
@@ -499,17 +496,17 @@ makeHashScriptMapT p size tag m vi =
     ^$ m
     ^$ vi
 
-cast :: forall c k. Set (KeyHash 'Witness c) -> Set (KeyHash k c)
+cast :: forall k. Set (KeyHash 'Witness) -> Set (KeyHash k)
 cast x = Set.map (\kh -> coerceKeyRole @KeyHash @'Witness kh) x
 
 -- TODO make some Script Credentials in addition to Key credentials
-castCredCold :: Set (KeyHash 'Witness c) -> Set (Credential 'ColdCommitteeRole c)
+castCredCold :: Set (KeyHash 'Witness) -> Set (Credential 'ColdCommitteeRole)
 castCredCold = Set.map (coerceKeyRole . KeyHashObj)
 
-castCredHot :: Set (KeyHash 'Witness c) -> Set (Credential 'HotCommitteeRole c)
+castCredHot :: Set (KeyHash 'Witness) -> Set (Credential 'HotCommitteeRole)
 castCredHot = Set.map (coerceKeyRole . KeyHashObj)
 
-txinToGovactionId :: TxIn c -> GovActionId c
+txinToGovactionId :: TxIn -> GovActionId
 txinToGovactionId (TxIn idx (TxIx n)) = GovActionId idx (GovActionIx (fromIntegral n))
 
 -- =================================================================
@@ -637,7 +634,7 @@ universePreds size p =
     preVoteUniv = Var (V "preVoteUniv" (SetR WitHashR) No)
 
 multiAsset ::
-  UnivSize -> Map.Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (MultiAsset (EraCrypto era))
+  UnivSize -> Map.Map (ScriptHash) (ScriptF era) -> Gen (MultiAsset)
 multiAsset size scripts = do
   let assets =
         Set.fromList [AssetName (fromString (show (n :: Int) ++ "Asset")) | n <- [0 .. (usMaxAssets size)]]
@@ -650,18 +647,18 @@ multiAsset size scripts = do
       pure $ multiAssetFromList xs
 
 genValueF ::
-  UnivSize -> Proof era -> Coin -> Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (Value era)
+  UnivSize -> Proof era -> Coin -> Map (ScriptHash) (ScriptF era) -> Gen (Value era)
 genValueF size proof c scripts = case whichValue proof of
   ValueShelleyToAllegra -> pure c
   ValueMaryToConway -> MaryValue c <$> multiAsset size scripts
 
-stakeToDRepRole :: Credential 'Staking c -> Credential 'DRepRole c
+stakeToDRepRole :: Credential 'Staking -> Credential 'DRepRole
 stakeToDRepRole = coerceKeyRole
 
-stakeToHotCommittee :: Credential 'Staking c -> Credential 'HotCommitteeRole c
+stakeToHotCommittee :: Credential 'Staking -> Credential 'HotCommitteeRole
 stakeToHotCommittee = coerceKeyRole
 
-stakeToColdCommittee :: Credential 'Staking c -> Credential 'ColdCommitteeRole c
+stakeToColdCommittee :: Credential 'Staking -> Credential 'ColdCommitteeRole
 stakeToColdCommittee = coerceKeyRole
 
 solveUniv :: Reflect era => UnivSize -> Proof era -> Gen (Subst era)

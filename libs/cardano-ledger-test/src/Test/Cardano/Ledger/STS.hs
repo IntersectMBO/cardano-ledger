@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -46,7 +45,7 @@ genShrinkFromSpec spec = (genFromSpec @fn spec, shrinkWithSpec @fn spec)
 
 stsPropertyV2 ::
   forall r fn era env st sig fail p.
-  ( era ~ ConwayEra StandardCrypto
+  ( era ~ ConwayEra
   , Environment (EraRule r era) ~ env
   , State (EraRule r era) ~ st
   , Signal (EraRule r era) ~ sig

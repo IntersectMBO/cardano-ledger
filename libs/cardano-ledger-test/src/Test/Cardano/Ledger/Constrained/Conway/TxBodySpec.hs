@@ -191,8 +191,8 @@ bodyspec ::
   Specification
     fn
     ( ShelleyTxBody era
-    , Map (TxIn (EraCrypto era)) (TxOut era)
-    , TxIn (EraCrypto era)
+    , Map (TxIn) (TxOut era)
+    , TxIn
     )
 bodyspec certsenv certstate =
   constrained' $ \ [var|shelleyBody|] [var|utxo|] [var|feeInput|] ->
