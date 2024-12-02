@@ -62,7 +62,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (
@@ -107,7 +106,6 @@ import Test.Cardano.Ledger.Common (tracedDiscard)
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Plutus.Examples
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   GenEnv (..),
@@ -129,7 +127,7 @@ import Test.QuickCheck hiding ((><))
 -- ============================================================
 
 -- | We are choosing new TxOut to pay fees, We want only Key locked addresss with Ada only values.
-vKeyLockedAdaOnly :: Crypto c => TxOut (AlonzoEra c) -> Bool
+vKeyLockedAdaOnly :: TxOut AlonzoEra -> Bool
 vKeyLockedAdaOnly txOut = vKeyLocked txOut && isAdaOnly (txOut ^. valueTxOutL)
 
 phase2scripts3Arg :: forall era. AlonzoEraScript era => [TwoPhase3ArgInfo era]
@@ -192,7 +190,7 @@ genPlutus2Arg :: AlonzoEraScript era => Gen (Maybe (TwoPhase2ArgInfo era))
 genPlutus2Arg = frequency [(10, Just <$> elements phase2scripts2Arg), (90, pure Nothing)]
 
 -- | Gen a Mint value in the Alonzo Era, with a 10% chance that it includes an AlonzoScript
-genAlonzoMint :: Crypto c => MultiAsset c -> Gen (MultiAsset c, [AlonzoScript (AlonzoEra c)])
+genAlonzoMint :: MultiAsset -> Gen (MultiAsset, [AlonzoScript AlonzoEra])
 genAlonzoMint startvalue = do
   ans <- genPlutus2Arg
   case ans of
@@ -227,54 +225,52 @@ genSet gen =
     , (1, Set.fromList <$> sequence [gen, gen])
     ]
 
-genAux :: forall c. Mock c => Constants -> Gen (StrictMaybe (AlonzoTxAuxData (AlonzoEra c)))
+genAux :: Constants -> Gen (StrictMaybe (AlonzoTxAuxData AlonzoEra))
 genAux constants = do
-  maybeAux <- genEraAuxiliaryData @(MaryEra c) constants
+  maybeAux <- genEraAuxiliaryData @MaryEra constants
   pure $
     fmap
       (\(AllegraTxAuxData x y) -> mkAlonzoTxAuxData x (TimelockScript . translateTimelock <$> y))
       maybeAux
 
-instance Crypto c => ScriptClass (AlonzoEra c) where
+instance ScriptClass AlonzoEra where
   basescript = someLeaf
-  isKey _ (TimelockScript x) = isKey (Proxy @(MaryEra c)) $ translateTimelock x
+  isKey _ (TimelockScript x) = isKey (Proxy @MaryEra) $ translateTimelock x
   isKey _ (PlutusScript _) = Nothing
   isOnePhase _ (TimelockScript _) = True
   isOnePhase _ (PlutusScript _) = False
-  quantify _ (TimelockScript x) = fmap (TimelockScript . translateTimelock) (quantify (Proxy @(MaryEra c)) (translateTimelock x))
+  quantify _ (TimelockScript x) = fmap (TimelockScript . translateTimelock) (quantify (Proxy @MaryEra) (translateTimelock x))
   quantify _ x = Leaf x
   unQuantify _ quant =
     TimelockScript . translateTimelock $
-      unQuantify (Proxy @(MaryEra c)) (fmap (translateTimelock . unTime) quant)
+      unQuantify (Proxy @MaryEra) (fmap (translateTimelock . unTime) quant)
 
 unTime :: AlonzoScript era -> Timelock era
 unTime (TimelockScript x) = x
 unTime (PlutusScript _) = error "Plutus in Timelock"
 
-okAsCollateral :: forall c. Mock c => UTxO (AlonzoEra c) -> TxIn c -> Bool
+okAsCollateral :: UTxO AlonzoEra -> TxIn -> Bool
 okAsCollateral utxo inputx =
   maybe False vKeyLockedAdaOnly $ Map.lookup inputx (unUTxO utxo)
 
 genAlonzoTxBody ::
-  forall c.
-  Mock c =>
-  GenEnv (AlonzoEra c) ->
-  UTxO (AlonzoEra c) ->
-  PParams (AlonzoEra c) ->
+  GenEnv AlonzoEra ->
+  UTxO AlonzoEra ->
+  PParams AlonzoEra ->
   SlotNo ->
-  Set.Set (TxIn c) ->
-  StrictSeq (TxOut (AlonzoEra c)) ->
-  StrictSeq (TxCert (AlonzoEra c)) ->
-  Withdrawals c ->
+  Set.Set (TxIn) ->
+  StrictSeq (TxOut AlonzoEra) ->
+  StrictSeq (TxCert AlonzoEra) ->
+  Withdrawals ->
   Coin ->
-  StrictMaybe (Update (AlonzoEra c)) ->
-  StrictMaybe (AuxiliaryDataHash c) ->
-  Gen (TxBody (AlonzoEra c), [Script (AlonzoEra c)])
+  StrictMaybe (Update AlonzoEra) ->
+  StrictMaybe AuxiliaryDataHash ->
+  Gen (TxBody AlonzoEra, [Script AlonzoEra])
 genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals fee updates auxDHash = do
   netid <- genM $ pure Testnet -- frequency [(2, pure Mainnet), (1, pure Testnet)]
   startvalue <- genMint
   (minted, plutusScripts) <- genAlonzoMint startvalue
-  let (minted2, txouts2) = case addTokens (Proxy @(AlonzoEra c)) mempty pparams minted txOuts of
+  let (minted2, txouts2) = case addTokens (Proxy @AlonzoEra) mempty pparams minted txOuts of
         Nothing -> (mempty, txOuts)
         Just os -> (minted, os)
       scriptsFromPolicies = (policyIndex Map.!) <$> Set.toList (policies startvalue)
@@ -295,7 +291,7 @@ genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals 
         minted2
         -- scriptIntegrityHash starts out with empty Redeemers,
         -- as Remdeemers are added it is recomputed in updateEraTxBody
-        (hashScriptIntegrity @(AlonzoEra c) Set.empty (Redeemers Map.empty) (TxDats Map.empty))
+        (hashScriptIntegrity @AlonzoEra Set.empty (Redeemers Map.empty) (TxDats Map.empty))
         auxDHash
         netid
     , List.map TimelockScript scriptsFromPolicies <> plutusScripts
@@ -308,14 +304,12 @@ genSlotAfter currentSlot = do
 
 -- | Gen an Alonzo PParamsUpdate, by adding to a Shelley PParamsData
 genAlonzoPParamsUpdate ::
-  forall c.
-  Crypto c =>
   Constants ->
-  PParams (AlonzoEra c) ->
-  Gen (PParamsUpdate (AlonzoEra c))
+  PParams AlonzoEra ->
+  Gen (PParamsUpdate AlonzoEra)
 genAlonzoPParamsUpdate constants pp = do
   maryPPUpdate <-
-    genShelleyPParamsUpdate @(MaryEra c) constants $
+    genShelleyPParamsUpdate @MaryEra constants $
       downgradePParams (DowngradeAlonzoPParams {dappMinUTxOValue = Coin 100}) pp
   coinPerWord <- genM (CoinPerWord . Coin <$> choose (1, 5))
   let genPrice = unsafeBoundRational . (% 100) <$> choose (0, 200)
@@ -339,15 +333,13 @@ genAlonzoPParamsUpdate constants pp = do
   pure $ upgradePParamsUpdate alonzoUpgrade maryPPUpdate
 
 genAlonzoPParams ::
-  forall c.
-  Crypto c =>
   Constants ->
-  Gen (PParams (AlonzoEra c))
+  Gen (PParams AlonzoEra)
 genAlonzoPParams constants = do
   -- This ensures that "_d" field is not 0, and that the major protocol version
   -- is large enough to not trigger plutus script failures
   -- (no bultins are alllowed before major version 5).
-  maryPP' <- Shelley.genPParams @(MaryEra c) constants
+  maryPP' <- Shelley.genPParams @MaryEra constants
   let maryPP = maryPP' & ppProtocolVersionL .~ ProtVer (natVersion @5) 0
       prices = Prices minBound minBound
   coinPerWord <- CoinPerWord . Coin <$> choose (1, 5)
@@ -388,7 +380,7 @@ genMaxBlockExUnits =
     <$> genNatural (60 * bigMem + 1) (100 * bigMem + 1)
     <*> genNatural (60 * bigStep + 1) (100 * bigStep + 1)
 
-instance Mock c => EraGen (AlonzoEra c) where
+instance EraGen AlonzoEra where
   genEraAuxiliaryData = genAux
   genGenesisValue = maryGenesisValue
   genEraTwoPhase3Arg = phase2scripts3Arg
@@ -409,7 +401,7 @@ instance Mock c => EraGen (AlonzoEra c) where
             (wits ^. datsTxWitsL)
       }
     where
-      langs = langsUsed @(AlonzoEra c) (wits ^. scriptTxWitsL)
+      langs = langsUsed @AlonzoEra (wits ^. scriptTxWitsL)
       langViews = Set.map (getLanguageView pp) langs
       requiredCollateral = ceiling $ fromIntegral (pp ^. ppCollateralPercentageL) * unCoin coinx % 100
       potentialCollateral = Set.filter (okAsCollateral utxo) txin
@@ -439,15 +431,15 @@ instance Mock c => EraGen (AlonzoEra c) where
           -- The data hashes come from two places
           (Redeemers rdmrMap)
       txinputs = inputs' txbody
-      smallUtxo :: [TxOut (AlonzoEra c)]
+      smallUtxo :: [TxOut AlonzoEra]
       smallUtxo = Map.elems (unUTxO (txInsFilter utxo txinputs))
-      AlonzoScriptsNeeded purposeHashPairs = getScriptsNeeded @(AlonzoEra c) utxo txbody
+      AlonzoScriptsNeeded purposeHashPairs = getScriptsNeeded @AlonzoEra utxo txbody
       rdmrMap = List.foldl' accum Map.empty purposeHashPairs -- Search through the pairs for Plutus scripts
       accum ans (purpose, hash1) =
         case Map.lookup hash1 mapScriptWit of
           Nothing -> ans
           Just script ->
-            if isNativeScript @(AlonzoEra c) script
+            if isNativeScript @AlonzoEra script
               then ans -- Native scripts don't have redeemers
               else case Map.lookup hash1 (fst scriptinfo) of -- It could be one of the known 3-Arg Plutus Scripts
                 Just info -> addRedeemMap (getRedeemer3 info) purpose ans -- Add it to the redeemer map
@@ -459,14 +451,14 @@ instance Mock c => EraGen (AlonzoEra c) where
     where
       v = all twoPhaseValidates (txscripts' wit)
       twoPhaseValidates script =
-        isNativeScript @(AlonzoEra c) script
+        isNativeScript @AlonzoEra script
           || (phase2scripts3ArgSucceeds script && phase2scripts2ArgSucceeds script)
 
   genEraGoodTxOut = vKeyLockedAdaOnly
 
   genEraScriptCost pp script =
     if isPlutusScript script
-      then case List.find (\info -> getScript3 @(AlonzoEra c) info == script) genEraTwoPhase3Arg of
+      then case List.find (\info -> getScript3 @AlonzoEra info == script) genEraTwoPhase3Arg of
         Just (TwoPhase3ArgInfo _script _hash inputdata (rdmr, mems, steps) _succeed) ->
           txscriptfee (pp ^. ppPricesL) (ExUnits mems steps)
             <+> storageCost 10 pp (rdmr, ExUnits mems steps) -- Extra 10 for the RdmrPtr
@@ -481,10 +473,10 @@ instance Mock c => EraGen (AlonzoEra c) where
   --    discarding the trace. Note that this is failure to generate a "random" but valid
   --    transaction. Discarding the trace adjust for this inadequacy in the generation process.
   --    This only appears in the Alonzo era, so this "fix" is applied here, in the genEraDone
-  --    method of the EraGen class in the (AlonzoEra c) instance.
+  --    method of the EraGen class in the AlonzoEra instance.
   genEraDone utxo pp tx =
     let theFee = tx ^. bodyTxL . feeTxBodyL -- Coin supplied to pay fees
-        minimumFee = getMinFeeTxUtxo @(AlonzoEra c) pp tx utxo
+        minimumFee = getMinFeeTxUtxo @AlonzoEra pp tx utxo
         neededHashes = getScriptsHashesNeeded $ getScriptsNeeded utxo (tx ^. bodyTxL)
         oldScriptWits = tx ^. witsTxL . scriptTxWitsL
         newWits = oldScriptWits `Map.restrictKeys` neededHashes
@@ -523,12 +515,10 @@ storageCost :: forall era t. (EraPParams era, EncCBOR t) => Integer -> PParams e
 storageCost extra pp x = (extra + encodedLen @era x) <×> pp ^. ppMinFeeAL
 
 addRedeemMap ::
-  forall c.
-  Crypto c =>
   (P.Data, Natural, Natural) ->
-  AlonzoPlutusPurpose AsIxItem (AlonzoEra c) ->
-  Map (AlonzoPlutusPurpose AsIx (AlonzoEra c)) (Data (AlonzoEra c), ExUnits) ->
-  Map (AlonzoPlutusPurpose AsIx (AlonzoEra c)) (Data (AlonzoEra c), ExUnits)
+  AlonzoPlutusPurpose AsIxItem AlonzoEra ->
+  Map (AlonzoPlutusPurpose AsIx AlonzoEra) (Data AlonzoEra, ExUnits) ->
+  Map (AlonzoPlutusPurpose AsIx AlonzoEra) (Data AlonzoEra, ExUnits)
 addRedeemMap (dat, space, steps) purpose ans =
   let ptr = hoistPlutusPurpose toAsIx purpose
    in Map.insert ptr (Data dat, ExUnits space steps) ans
@@ -537,17 +527,17 @@ getDataMap ::
   forall era.
   Era era =>
   ScriptInfo era ->
-  Map (ScriptHash (EraCrypto era)) (Script era) ->
-  Map (DataHash (EraCrypto era)) (Data era)
+  Map ScriptHash (Script era) ->
+  Map DataHash (Data era)
 getDataMap (scriptInfo3, _) = Map.foldlWithKey' accum Map.empty
   where
     accum ans hsh _script =
       case Map.lookup hsh scriptInfo3 of
         Nothing -> ans
         Just (TwoPhase3ArgInfo _script _hash dat _redeem _) ->
-          Map.insert (hashData @era dat) (Data dat) ans
+          Map.insert (hashData dat) (Data dat) ans
 
-instance Mock c => MinGenTxout (AlonzoEra c) where
+instance MinGenTxout AlonzoEra where
   calcEraMinUTxO txOut pp = utxoEntrySize txOut <×> unCoinPerWord (pp ^. ppCoinsPerUTxOWordL)
   addValToTxOut v (AlonzoTxOut a u _b) = AlonzoTxOut a (v <+> u) (dataFromAddr a)
   genEraTxOut genv genVal addrs = do
@@ -562,32 +552,30 @@ instance Mock c => MinGenTxout (AlonzoEra c) where
 -- | If an Address is script address, we can find a potential data hash for it from
 --   genEraTwoPhase3Arg, which contains all known 3 arg plutus scripts in the tests set.
 -- If the script has is not in that map, then its data hash is SNothing.
-dataFromAddr :: forall c. Mock c => Addr c -> StrictMaybe (DataHash c)
+dataFromAddr :: Addr -> StrictMaybe DataHash
 dataFromAddr (Addr _network (ScriptHashObj shash) _stakeref) =
-  let f info = shash == hashScript @(AlonzoEra c) (getScript3 @(AlonzoEra c) info)
+  let f info = shash == hashScript @AlonzoEra (getScript3 @AlonzoEra info)
    in case List.find f genEraTwoPhase3Arg of
-        Just info -> SJust (hashData @(AlonzoEra c) (getData3 info))
+        Just info -> SJust (hashData (getData3 info))
         Nothing -> SNothing
 dataFromAddr _ = SNothing
 
 -- | We can find the data associated with the data hashes in the TxOuts, since
 --   genEraTwoPhase3Arg, which contains all known 3 arg plutus scripts stores the data.
 dataMapFromTxOut ::
-  forall c.
-  Mock c =>
-  [TxOut (AlonzoEra c)] ->
-  TxDats (AlonzoEra c) ->
-  TxDats (AlonzoEra c)
+  [TxOut AlonzoEra] ->
+  TxDats AlonzoEra ->
+  TxDats AlonzoEra
 dataMapFromTxOut txouts datahashmap = Prelude.foldl accum datahashmap txouts
   where
-    f dhash info = hashData @(AlonzoEra c) (getData3 info) == dhash
+    f dhash info = hashData (getData3 info) == dhash
     accum !ans (AlonzoTxOut _ _ SNothing) = ans
     accum ans@(TxDats' m) (AlonzoTxOut _ _ (SJust dhash)) =
-      case List.find (f dhash) (genEraTwoPhase3Arg @(AlonzoEra c)) of
+      case List.find (f dhash) (genEraTwoPhase3Arg @AlonzoEra) of
         Just info -> TxDats (Map.insert dhash (Data (getData3 info)) m)
         Nothing -> ans
 
-addMaybeDataHashToTxOut :: Mock c => TxOut (AlonzoEra c) -> TxOut (AlonzoEra c)
+addMaybeDataHashToTxOut :: TxOut AlonzoEra -> TxOut AlonzoEra
 addMaybeDataHashToTxOut (AlonzoTxOut addr val _) = AlonzoTxOut addr val (dataFromAddr addr)
 
 someLeaf ::
@@ -596,7 +584,7 @@ someLeaf ::
   , NativeScript era ~ Timelock era
   ) =>
   Proxy era ->
-  KeyHash 'Witness (EraCrypto era) ->
+  KeyHash 'Witness ->
   AlonzoScript era
 someLeaf _proxy keyHash =
   let
@@ -615,7 +603,7 @@ someLeaf _proxy keyHash =
 -- | given the "txscripts" field of the TxWits, compute the set of languages used in a transaction
 langsUsed ::
   AlonzoEraScript era =>
-  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
+  Map.Map (ScriptHash) (Script era) ->
   Set Language
 langsUsed hashScriptMap =
   Set.fromList

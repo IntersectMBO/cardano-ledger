@@ -9,7 +9,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
@@ -36,26 +36,26 @@ tests =
     "Alonzo CBOR round-trip"
     [ skip $
         testProperty "alonzo/Script twiddled" $
-          roundTripAnnTwiddledProperty @(Script Alonzo) eqAlonzoScriptRaw
+          roundTripAnnTwiddledProperty @(Script AlonzoEra) eqAlonzoScriptRaw
     , skip $
         testProperty "alonzo/Data twiddled" $
-          roundTripAnnTwiddledProperty @(Data Alonzo) (zipMemoRawType (===))
+          roundTripAnnTwiddledProperty @(Data AlonzoEra) (zipMemoRawType (===))
     , skip $
         testProperty "alonzo/BinaryData twiddled" $
-          roundTripTwiddledProperty @(BinaryData Alonzo)
+          roundTripTwiddledProperty @(BinaryData AlonzoEra)
     , skip $
         testProperty "alonzo/TxBody twiddled" $
-          roundTripAnnTwiddledProperty @(TxBody Alonzo) (zipMemoRawType (===))
+          roundTripAnnTwiddledProperty @(TxBody AlonzoEra) (zipMemoRawType (===))
     , testProperty "alonzo/AlonzoUtxowPredFailure" $
-        roundTripCborExpectation @(AlonzoUtxowPredFailure Alonzo)
+        roundTripCborExpectation @(AlonzoUtxowPredFailure AlonzoEra)
     , testProperty "alonzo/AlonzoUtxoPredFailure" $
-        roundTripCborExpectation @(AlonzoUtxoPredFailure Alonzo)
+        roundTripCborExpectation @(AlonzoUtxoPredFailure AlonzoEra)
     , testProperty "alonzo/AlonzoUtxosPredFailure" $
-        roundTripCborExpectation @(AlonzoUtxosPredFailure Alonzo)
+        roundTripCborExpectation @(AlonzoUtxosPredFailure AlonzoEra)
     , testProperty "alonzo/Block" $
-        roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto) Alonzo)
-          (eraProtVerLow @Alonzo)
-          (eraProtVerHigh @Alonzo)
+        roundTripAnnRangeExpectation @(Block AlonzoEra)
+          (eraProtVerLow @AlonzoEra)
+          (eraProtVerHigh @AlonzoEra)
     ]
   where
     skip _ = testProperty "Test skipped" True
