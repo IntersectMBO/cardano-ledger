@@ -448,18 +448,20 @@ signatureFromInteger :: DSIGNAlgorithm v => Integer -> Maybe (SigDSIGN v)
 signatureFromInteger = rawDeserialiseSigDSIGN . naturalToBytes 64 . fromInteger
 
 instance Crypto c => SpecTranslate ctx (VKey k c) where
-  type SpecRep (VKey k c) = Integer
+  type SpecRep (VKey k c) = Agda.HSVKey
 
-  toSpecRep = pure . vkeyToInteger
+  toSpecRep x = do
+    let hvkVKey = vkeyToInteger x
+    hvkStoredHash <- toSpecRep (hashVerKeyDSIGN @_ @(ADDRHASH c) $ unVKey x)
+    pure Agda.MkHSVKey {..}
 
 instance DSIGNAlgorithm v => SpecTranslate ctx (SignedDSIGN v a) where
   type SpecRep (SignedDSIGN v a) = Integer
 
-  toSpecRep (SignedDSIGN x) =
-    pure . toInteger . bytesToNatural $ rawSerialiseSigDSIGN x
+  toSpecRep (SignedDSIGN x) = pure $ signatureToInteger x
 
 instance (Crypto c, Typeable k) => SpecTranslate ctx (WitVKey k c) where
-  type SpecRep (WitVKey k c) = (Integer, Integer)
+  type SpecRep (WitVKey k c) = (SpecRep (VKey k c), Integer)
 
   toSpecRep (WitVKey vk sk) = toSpecRep (vk, sk)
 

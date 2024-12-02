@@ -58,10 +58,8 @@ instance SpecTranslate ctx (ConwayDelegCert c) where
   type SpecRep (ConwayDelegCert c) = Agda.DCert
 
   toSpecRep (ConwayRegCert c d) =
-    Agda.Delegate
+    Agda.Reg
       <$> toSpecRep c
-      <*> pure Nothing
-      <*> pure Nothing
       <*> strictMaybe (pure 0) toSpecRep d
   toSpecRep (ConwayUnRegCert c d) =
     Agda.Dereg

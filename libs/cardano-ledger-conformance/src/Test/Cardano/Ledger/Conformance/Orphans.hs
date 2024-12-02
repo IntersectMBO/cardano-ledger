@@ -98,6 +98,8 @@ instance NFData TxBody
 
 instance NFData Tag
 
+instance NFData HSVKey
+
 instance NFData TxWitnesses
 
 instance NFData Tx
@@ -195,6 +197,8 @@ instance ToExpr HashedTimelock
 instance ToExpr TxBody
 
 instance ToExpr Tag
+
+instance ToExpr HSVKey
 
 instance ToExpr TxWitnesses
 

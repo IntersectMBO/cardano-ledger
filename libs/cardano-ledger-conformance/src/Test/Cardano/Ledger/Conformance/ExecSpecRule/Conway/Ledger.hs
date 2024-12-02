@@ -59,16 +59,20 @@ import Constrained (
 
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
-import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
 import Data.Bitraversable (bimapM)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
+import Lens.Micro.Mtl (use)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Common (Arbitrary (..), NFData, Testable (..), ToExpr, ansiExpr)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (enactStateSpec)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo (genUtxoExecContext)
-import Test.Cardano.Ledger.Conway.ImpTest (impAnn, logDoc, tryRunImpRuleNoAssertions)
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow ()
+import Test.Cardano.Ledger.Conway.ImpTest (impAnn, impGlobalsL, logDoc, tryRunImpRuleNoAssertions)
 import Test.Cardano.Ledger.Imp.Common (expectRightExpr)
+import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 import UnliftIO (evaluateDeep)
 
 data ConwayLedgerExecContext era
@@ -151,6 +155,24 @@ instance
       . computationResultToEither
       $ Agda.ledgerStep env st sig
 
+  extraInfo
+    globals
+    ConwayLedgerExecContext {..}
+    LedgerEnv {..}
+    LedgerState {..}
+    sig
+    _ =
+      extraInfo @fn @"UTXOW" @Conway
+        globals
+        clecUtxoExecContext
+        utxoEnv
+        lsUTxOState
+        sig
+        stFinal
+      where
+        utxoEnv = UtxoEnv ledgerSlotNo ledgerPp lsCertState
+        stFinal = runSTS @"UTXOW" @Conway globals utxoEnv lsUTxOState sig
+
   testConformance ctx env st sig = property $ do
     (specEnv, specSt, specSig) <-
       impAnn "Translating the inputs" $
@@ -175,7 +197,8 @@ instance
         expectRightExpr $
           runSpecTransM ctx $
             bimapM (traverse toTestRep) (toTestRep . inject @_ @(ExecState fn "LEDGER" Conway) . fst) implRes
-    let extra = extraInfo @fn @"LEDGER" @Conway ctx (inject env) (inject st) (inject sig) implRes
+    globals <- use impGlobalsL
+    let extra = extraInfo @fn @"LEDGER" @Conway globals ctx (inject env) (inject st) (inject sig) implRes
     logDoc extra
     checkConformance @"LEDGER" @Conway @fn
       ctx

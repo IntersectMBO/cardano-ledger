@@ -408,7 +408,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
       . computationResultToEither
       $ Agda.ratifyStep env st sig
 
-  extraInfo ctx env@RatifyEnv {..} st sig@(RatifySignal actions) _ =
+  extraInfo _ ctx env@RatifyEnv {..} st sig@(RatifySignal actions) _ =
     PP.vsep $ specExtraInfo : (actionAcceptedRatio <$> toList actions)
     where
       members = foldMap' (committeeMembers @Conway) $ ensCommittee (rsEnactState st)

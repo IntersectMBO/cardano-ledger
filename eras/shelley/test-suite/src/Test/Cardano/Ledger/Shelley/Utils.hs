@@ -28,6 +28,7 @@ module Test.Cardano.Ledger.Shelley.Utils (
   runShelleyBase,
   maxKESIterations,
   slotsPerKESIteration,
+  runSTS,
   testSTS,
   maxLLSupply,
   applySTSTest,
@@ -85,7 +86,7 @@ import Cardano.Slotting.EpochInfo (
   epochInfoSize,
  )
 import Control.Monad.Reader.Class (asks)
-import Control.Monad.Trans.Reader (runReaderT)
+import Control.Monad.Trans.Reader (runReader, runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Coerce (Coercible, coerce)
 import Data.Functor.Identity (runIdentity)
@@ -236,6 +237,29 @@ slotsPerKESIteration = runShelleyBase (asks slotsPerKESPeriod)
 
 maxLLSupply :: Coin
 maxLLSupply = Coin $ fromIntegral $ runShelleyBase (asks maxLovelaceSupply)
+
+runSTS ::
+  forall rule era.
+  ( BaseM (EraRule rule era) ~ ShelleyBase
+  , STS (EraRule rule era)
+  ) =>
+  Globals ->
+  Environment (EraRule rule era) ->
+  State (EraRule rule era) ->
+  Signal (EraRule rule era) ->
+  Either
+    (NonEmpty (PredicateFailure (EraRule rule era)))
+    (State (EraRule rule era), [Event (EraRule rule era)])
+runSTS globals env st sig =
+  let
+    stsOpts =
+      ApplySTSOpts
+        { asoValidation = ValidateAll
+        , asoEvents = EPReturn
+        , asoAssertions = AssertionsAll
+        }
+   in
+    (`runReader` globals) (applySTSOptsEither @(EraRule rule era) stsOpts (TRC (env, st, sig)))
 
 testSTS ::
   forall s.
