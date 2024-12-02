@@ -1,7 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -10,8 +8,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -21,18 +17,17 @@
 -- for the CERT rule
 module Test.Cardano.Ledger.Constrained.Conway.Cert where
 
-import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Babbage (Babbage, BabbageEra)
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.CertState
-import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRoleVRF (GenDelegVRF), VRFVerKeyHash)
-import Cardano.Ledger.Mary (Mary)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Constrained
@@ -58,7 +53,7 @@ certEnvSpec =
 
 certStateSpec ::
   (IsConwayUniv fn, EraSpecDeleg era) =>
-  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
+  Term fn (Set (Credential 'DRepRole)) ->
   Specification fn (CertState era)
 certStateSpec delegatees =
   constrained $ \cs ->
@@ -78,9 +73,9 @@ certStateSpecEx = constrained $ \st ->
 
 conwayTxCertSpec ::
   IsConwayUniv fn =>
-  CertEnv (ConwayEra StandardCrypto) ->
-  CertState (ConwayEra StandardCrypto) ->
-  Specification fn (ConwayTxCert (ConwayEra StandardCrypto))
+  CertEnv ConwayEra ->
+  CertState ConwayEra ->
+  Specification fn (ConwayTxCert ConwayEra)
 conwayTxCertSpec (CertEnv pp ce cc cp) certState@CertState {..} =
   constrained $ \txCert ->
     caseOn
@@ -102,7 +97,7 @@ conwayTxCertSpec (CertEnv pp ce cc cp) certState@CertState {..} =
 genesisDelegCertSpec ::
   forall fn era.
   (AtMostEra BabbageEra era, IsConwayUniv fn, Era era) =>
-  DState era -> Specification fn (GenesisDelegCert (EraCrypto era))
+  DState era -> Specification fn GenesisDelegCert
 genesisDelegCertSpec ds =
   let (vrfKeyHashes, coldKeyHashes) = computeSets ds
       GenDelegs genDelegs = dsGenDelegs ds
@@ -118,8 +113,8 @@ genesisDelegCertSpec ds =
 --   This mimics what happens in the Cardano.Ledger.Shelley.Rules.Deleg module
 computeSets ::
   DState era ->
-  ( KeyHash 'Genesis (EraCrypto era) -> Set (VRFVerKeyHash 'GenDelegVRF (EraCrypto era))
-  , KeyHash 'Genesis (EraCrypto era) -> Set (KeyHash 'GenesisDelegate (EraCrypto era))
+  ( KeyHash 'Genesis -> Set (VRFVerKeyHash 'GenDelegVRF)
+  , KeyHash 'Genesis -> Set (KeyHash 'GenesisDelegate)
   )
 computeSets ds =
   let genDelegs = unGenDelegs (dsGenDelegs ds)
@@ -171,41 +166,41 @@ class
   EraSpecCert era fn
   where
   txCertSpec :: CertEnv era -> CertState era -> Specification fn (TxCert era)
-  txCertKey :: TxCert era -> CertKey (EraCrypto era)
+  txCertKey :: TxCert era -> CertKey
 
-instance IsConwayUniv fn => EraSpecCert Shelley fn where
+instance IsConwayUniv fn => EraSpecCert ShelleyEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
-instance IsConwayUniv fn => EraSpecCert Allegra fn where
+instance IsConwayUniv fn => EraSpecCert AllegraEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
-instance IsConwayUniv fn => EraSpecCert Mary fn where
+instance IsConwayUniv fn => EraSpecCert MaryEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
-instance IsConwayUniv fn => EraSpecCert Alonzo fn where
+instance IsConwayUniv fn => EraSpecCert AlonzoEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
-instance IsConwayUniv fn => EraSpecCert Babbage fn where
+instance IsConwayUniv fn => EraSpecCert BabbageEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
-instance IsConwayUniv fn => EraSpecCert Conway fn where
+instance IsConwayUniv fn => EraSpecCert ConwayEra fn where
   txCertSpec = conwayTxCertSpec
   txCertKey = conwayTxCertKey
 
 -- | Used to aggregate the key used in registering a Certificate. Different
 --   certificates use different kinds of Keys, that allows us to use one
 --   type to represent all kinds of keys (Similar to DepositPurpose)
-data CertKey c
-  = StakeKey !(Credential 'Staking c)
-  | PoolKey !(KeyHash 'StakePool c)
-  | DRepKey !(Credential 'DRepRole c)
-  | ColdKey !(Credential 'ColdCommitteeRole c)
-  | GenesisKey !(KeyHash 'Genesis c)
+data CertKey
+  = StakeKey !(Credential 'Staking)
+  | PoolKey !(KeyHash 'StakePool)
+  | DRepKey !(Credential 'DRepRole)
+  | ColdKey !(Credential 'ColdCommitteeRole)
+  | GenesisKey !(KeyHash 'Genesis)
   | MirKey !MIRPot
   deriving (Eq, Show, Ord)
 
 -- | Compute the aggregate key type of a Certificater
-conwayTxCertKey :: ConwayTxCert era -> CertKey (EraCrypto era)
+conwayTxCertKey :: ConwayTxCert era -> CertKey
 conwayTxCertKey (ConwayTxCertDeleg (ConwayRegCert x _)) = StakeKey x
 conwayTxCertKey (ConwayTxCertDeleg (ConwayUnRegCert x _)) = StakeKey x
 conwayTxCertKey (ConwayTxCertDeleg (ConwayDelegCert x _)) = StakeKey x
@@ -218,7 +213,7 @@ conwayTxCertKey (ConwayTxCertGov (ConwayUpdateDRep x _)) = DRepKey x
 conwayTxCertKey (ConwayTxCertGov (ConwayAuthCommitteeHotKey x _)) = ColdKey x
 conwayTxCertKey (ConwayTxCertGov (ConwayResignCommitteeColdKey x _)) = ColdKey x
 
-shelleyTxCertKey :: ShelleyTxCert era -> CertKey (EraCrypto era)
+shelleyTxCertKey :: ShelleyTxCert era -> CertKey
 shelleyTxCertKey (ShelleyTxCertDelegCert (ShelleyRegCert x)) = StakeKey x
 shelleyTxCertKey (ShelleyTxCertDelegCert (ShelleyUnRegCert x)) = StakeKey x
 shelleyTxCertKey (ShelleyTxCertDelegCert (ShelleyDelegCert x _)) = StakeKey x
@@ -258,8 +253,8 @@ testShelleyCert = do
 
 testConwayCert :: Gen Property
 testConwayCert = do
-  env <- genFromSpec @ConwayFn @(CertEnv Conway) certEnvSpec
-  dstate <- genFromSpec @ConwayFn @(CertState Conway) certStateSpecEx
+  env <- genFromSpec @ConwayFn @(CertEnv ConwayEra) certEnvSpec
+  dstate <- genFromSpec @ConwayFn @(CertState ConwayEra) certStateSpecEx
   let spec = conwayTxCertSpec env dstate
   ans <- genFromSpec @ConwayFn spec
   let tag = case ans of

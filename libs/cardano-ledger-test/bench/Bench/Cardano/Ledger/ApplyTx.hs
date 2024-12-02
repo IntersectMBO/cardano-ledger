@@ -38,18 +38,17 @@ import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.MaryEraGen ()
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
 
-type ShelleyBench = ShelleyEra C_Crypto
+type ShelleyBench = ShelleyEra
 
-type AllegraBench = AllegraEra C_Crypto
+type AllegraBench = AllegraEra
 
-type MaryBench = MaryEra C_Crypto
+type MaryBench = MaryEra
 
-type AlonzoBench = AlonzoEra C_Crypto
+type AlonzoBench = AlonzoEra
 
 --------------------------------------------------------------------------------
 -- Applying a Shelley transaction in multiple eras.

@@ -13,7 +13,7 @@
 module Test.Cardano.Ledger.Constrained.Ast where
 
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Core (Era (EraCrypto), hashScript)
+import Cardano.Ledger.Core (Era, hashScript)
 import Cardano.Ledger.Hashes (DataHash, ScriptHash (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Data.Char (toLower)
@@ -115,8 +115,8 @@ data Term era t where
   Delta :: Term era Coin -> Term era DeltaCoin
   Negate :: Term era DeltaCoin -> Term era DeltaCoin
   Restrict :: Ord a => Term era (Set a) -> Term era (Map a b) -> Term era (Map a b)
-  HashD :: Era era => Term era (Data era) -> Term era (DataHash (EraCrypto era))
-  HashS :: Reflect era => Term era (ScriptF era) -> Term era (ScriptHash (EraCrypto era))
+  HashD :: Era era => Term era (Data era) -> Term era (DataHash)
+  HashS :: Reflect era => Term era (ScriptF era) -> Term era (ScriptHash)
   Pair :: Term era a -> Term era b -> Term era (a, b)
 
 infix 4 :=:

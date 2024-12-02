@@ -234,7 +234,7 @@ go = generate (genTree [1, 2, 3, 4, 5, 6, 7 :: Int])
 -- | Tie together GovActionState and GovAction using the (parent,child) links
 --   that describe the shape of the Tree
 useTriples ::
-  [(Maybe (GovActionId (EraCrypto era)), GovActionId (EraCrypto era))] ->
+  [(Maybe (GovActionId), GovActionId)] ->
   [GovAction era] ->
   [GovActionState era] ->
   [GovActionState era]
@@ -322,7 +322,7 @@ govStatePreds p =
     govActionMap = Var (pV p "govActionMap" (MapR GovActionIdR GovActionStateR) No)
 
 toProposalMap ::
-  forall era. [GovActionState era] -> Map.Map (GovActionId (EraCrypto era)) (GovActionState era)
+  forall era. [GovActionState era] -> Map.Map GovActionId (GovActionState era)
 toProposalMap xs = Map.fromList (map pairup xs)
   where
     pairup gas = (gasId gas, gas)
@@ -342,7 +342,7 @@ demoGov proof mode = do
 mainGov :: IO ()
 mainGov = demoGov Conway Interactive
 
-setActionId :: GovAction era -> Maybe (GovActionId (EraCrypto era)) -> GovAction era
+setActionId :: GovAction era -> Maybe GovActionId -> GovAction era
 setActionId (ParameterChange _ pp p) x = ParameterChange (liftId x) pp p
 setActionId (HardForkInitiation _ y) x = HardForkInitiation (liftId x) y
 setActionId (UpdateCommittee _ w y z) x = UpdateCommittee (liftId x) w y z
@@ -351,7 +351,7 @@ setActionId InfoAction _ = InfoAction
 setActionId (NoConfidence _) x = NoConfidence (liftId x)
 setActionId x@(TreasuryWithdrawals _ _) _ = x
 
-actionIdL :: Lens' (GovAction era) (Maybe (GovActionId (EraCrypto era)))
+actionIdL :: Lens' (GovAction era) (Maybe GovActionId)
 actionIdL = lens getter setter
   where
     getter (ParameterChange x _ _) = dropId x
@@ -363,7 +363,7 @@ actionIdL = lens getter setter
     getter InfoAction = Nothing
     setter ga mid = setActionId ga mid
 
-children :: GovActionId c -> [(Maybe (GovActionId c), GovActionId c)] -> Set (GovActionId c)
+children :: GovActionId -> [(Maybe GovActionId, GovActionId)] -> Set GovActionId
 children x ys = List.foldl' accum Set.empty ys
   where
     accum ans (Just y, z) | x == y = Set.insert z ans
@@ -373,8 +373,8 @@ genGovActionStates ::
   forall era.
   Era era =>
   Proof era ->
-  Set (GovActionId (EraCrypto era)) ->
-  Gen (Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
+  Set GovActionId ->
+  Gen (Map.Map GovActionId (GovActionState era))
 genGovActionStates proof gaids = do
   pairs <- genTree (Set.toList gaids)
   let genGovState (parent, idx) = do
@@ -401,7 +401,7 @@ genGovAction ::
   Era era =>
   Proof era ->
   GovActionPurpose ->
-  Maybe (GovActionId (EraCrypto era)) ->
+  Maybe GovActionId ->
   Gen (GovAction era)
 genGovAction proof purpose gaid = case purpose of
   PParamUpdatePurpose -> ParameterChange (liftId gaid) <$> (unPParamsUpdate <$> genPParamsUpdate proof) <*> arbitrary

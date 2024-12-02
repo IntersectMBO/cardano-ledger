@@ -2,25 +2,22 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Constrained.Examples where
 
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.CertState (FutureGenDeleg (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Core (Era (EraCrypto))
+import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Keys (GenDelegPair)
 import Control.DeepSeq (deepseq)
 import Control.Exception (ErrorCall (..))
@@ -44,7 +41,7 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (explainBad, testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
-import Test.Cardano.Ledger.Generic.Proof (ConwayEra, Reflect (..), StandardCrypto)
+import Test.Cardano.Ledger.Generic.Proof (ConwayEra, Reflect (..))
 import Test.Cardano.Ledger.Generic.Trace (testPropMax)
 import Test.Hspec (shouldThrow)
 import Test.QuickCheck hiding (Fixed, total)
@@ -188,7 +185,7 @@ cyclicPred = [a :⊆: b, b :⊆: c, c :⊆: d, d :⊆: a, Random d]
 test1 :: IO ()
 test1 = do
   putStrLn "testing: Detect cycles"
-  runCompile @Babbage aCyclicPred
+  runCompile @BabbageEra aCyclicPred
   putStrLn "+++ OK, passed 1 test."
 
 -- ===================================
@@ -720,7 +717,7 @@ help19 ::
   forall era.
   Era era =>
   Proof era ->
-  Gen (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+  Gen (Map (FutureGenDeleg) (GenDelegPair))
 help19 _proof = do
   setA <- genRep @era (SetR GenHashR)
   ans <- projOnDom @era setA (fGenDelegGenKeyHashL) FutureGenDelegR GenDelegPairR
@@ -812,11 +809,11 @@ allExampleTests =
   testGroup
     "Example tests"
     [ testCase "test 1A. Cyclic preds detected" $
-        case runTyped (compile @Babbage standardOrderInfo cyclicPred) of
+        case runTyped (compile @BabbageEra standardOrderInfo cyclicPred) of
           Right _ -> assertFailure ("Cyclic preds Not detected.")
           Left _ -> pure ()
     , testCase "test 1B. ACyclic preds solved" $
-        case runTyped (compile @Babbage standardOrderInfo aCyclicPred) of
+        case runTyped (compile @BabbageEra standardOrderInfo aCyclicPred) of
           Right _ -> pure ()
           Left xs -> assertFailure (unlines xs)
     , testIO
@@ -882,7 +879,7 @@ testPreds name proof preds = do
     let pairs = map (tryPred env) preds
     pure (property (and (map snd pairs)))
 
-listWherePreds :: [Pred (ConwayEra StandardCrypto)]
+listWherePreds :: [Pred ConwayEra]
 listWherePreds =
   [ Sized (ExactSize 10) credsUniv
   , Sized (ExactSize 10) voteUniv
@@ -898,7 +895,7 @@ listWherePreds =
 mainListWhere :: IO ()
 mainListWhere = demoPreds Conway listWherePreds
 
-govPreds :: [Pred (ConwayEra StandardCrypto)]
+govPreds :: [Pred ConwayEra]
 govPreds =
   [ ListWhere
       (Range 2 4)
