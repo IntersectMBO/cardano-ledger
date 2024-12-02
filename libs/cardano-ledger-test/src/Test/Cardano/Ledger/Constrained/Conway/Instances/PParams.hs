@@ -2,20 +2,14 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -78,20 +72,20 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
 )
 where
 
-import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Mary (Mary)
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.ExUnits
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Constrained hiding (Value)
 import Constrained.Univ ()
 import Data.Word
@@ -103,37 +97,37 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
 
 -- ============================================
 
-instance EraSpecPParams Shelley where
+instance EraSpecPParams ShelleyEra where
   subsetToPP = liftShelley
   ppToSubset x = dropAtMost4 x $ dropShelley x
   updateToPPU x = (uLiftProtVer x . uLiftShelley) x
   ppuToUpdate x = uDropProtVer x $ uDropShelley x
 
-instance EraSpecPParams Allegra where
+instance EraSpecPParams AllegraEra where
   subsetToPP = liftShelley
   ppToSubset x = dropAtMost4 x $ dropShelley x
   updateToPPU x = (uLiftProtVer x . uLiftShelley) x
   ppuToUpdate x = uDropProtVer x $ uDropShelley x
 
-instance EraSpecPParams Mary where
+instance EraSpecPParams MaryEra where
   subsetToPP x = liftShelley x
   ppToSubset x = dropAtMost4 x $ dropShelley x
   updateToPPU x = (uLiftProtVer x . uLiftShelley) x
   ppuToUpdate x = uDropProtVer x $ uDropShelley x
 
-instance EraSpecPParams Alonzo where
+instance EraSpecPParams AlonzoEra where
   subsetToPP x = (liftAlonzo x . liftShelley) x
   ppToSubset x = dropAlonzo x $ dropAtMost6 x $ dropShelley x
   updateToPPU x = (uLiftAlonzo x . uLiftProtVer x . uLiftShelley) x
   ppuToUpdate x = uDropAlonzo x $ uDropProtVer x $ uDropShelley x
 
-instance EraSpecPParams Babbage where
+instance EraSpecPParams BabbageEra where
   subsetToPP x = (liftBabbage x . liftAlonzo x . liftShelley) x
   ppToSubset x = dropBabbage x $ dropAlonzo x $ dropShelley x
   updateToPPU x = (uLiftBabbage x . uLiftAlonzo x . uLiftProtVer x . uLiftShelley) x
   ppuToUpdate x = uDropBabbage x $ uDropAlonzo x $ uDropProtVer x $ uDropShelley x
 
-instance EraSpecPParams Conway where
+instance EraSpecPParams ConwayEra where
   subsetToPP x = (liftConway x . liftBabbage x . liftAlonzo x . liftShelley) x
   ppToSubset x = dropConway x $ dropBabbage x $ dropAlonzo x $ dropShelley x
   updateToPPU x = (uLiftConway x . uLiftBabbage x . uLiftAlonzo x . uLiftShelley) x

@@ -6,7 +6,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests where
 
@@ -88,13 +87,13 @@ infixl 4 !*!
 (!*!) gentf specA = do a <- genFromSpec @fn @a specA; f <- gentf; pure (f (lit a))
 
 poolMapSpec ::
-  Specification ConwayFn (Map (KeyHash 'StakePool StandardCrypto) (PoolParams StandardCrypto))
+  Specification ConwayFn (Map (KeyHash 'StakePool) PoolParams)
 poolMapSpec = hasSize (rangeSize 8 8)
 
 delegationsSpec ::
   Specification
     ConwayFn
-    (Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto))
+    (Map (Credential 'Staking) (KeyHash 'StakePool))
 delegationsSpec = (hasSize (rangeSize 8 12))
 
 -- ====================================================================
@@ -135,8 +134,8 @@ specSuite n = do
         !$! epochNoSpec
         !*! ( TrueSpec @ConwayFn
                 @( Map
-                    (Credential 'DRepRole (EraCrypto era))
-                    (Set.Set (Credential 'Staking StandardCrypto))
+                    (Credential 'DRepRole)
+                    (Set.Set (Credential 'Staking))
                  )
             )
     )
@@ -157,23 +156,23 @@ specSuite n = do
 
 spec :: Spec
 spec = do
-  prop "Classify GenesisCert" (testGenesisCert @Shelley)
-  prop "Classify ShelleyCert" (testShelleyCert @Babbage)
+  prop "Classify GenesisCert" (testGenesisCert @ShelleyEra)
+  prop "Classify ShelleyCert" (testShelleyCert @BabbageEra)
   prop "Classify ConwayCert" testConwayCert
   describe "Soundness of WellFormed types from the Cardano Ledger: " $ do
     soundSpecWith @(ProtVer, ProtVer) 100 (pure protVersCanfollow)
-    soundSpecWith @(InstantaneousRewards StandardCrypto)
+    soundSpecWith @InstantaneousRewards
       20
-      (irewardSpec @Shelley !$! accountStateSpec)
-    soundSpecWith @(SnapShots StandardCrypto)
+      (irewardSpec @ShelleyEra !$! accountStateSpec)
+    soundSpecWith @SnapShots
       10
-      (snapShotsSpec <$> ((lit . getMarkSnapShot) <$> (wff @(LedgerState Conway) @Conway)))
-  specSuite @Shelley 10
-  specSuite @Allegra 10
-  specSuite @Mary 10
-  specSuite @Alonzo 10
-  specSuite @Babbage 10
-  specSuite @Conway 10
+      (snapShotsSpec <$> ((lit . getMarkSnapShot) <$> (wff @(LedgerState ConwayEra) @ConwayEra)))
+  specSuite @ShelleyEra 10
+  specSuite @AllegraEra 10
+  specSuite @MaryEra 10
+  specSuite @AlonzoEra 10
+  specSuite @BabbageEra 10
+  specSuite @ConwayEra 10
 
 utxoStateGen ::
   forall era. EraSpecLedger era ConwayFn => Gen (Specification ConwayFn (UTxOState era))

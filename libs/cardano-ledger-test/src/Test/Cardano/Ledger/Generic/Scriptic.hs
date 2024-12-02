@@ -16,7 +16,6 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
@@ -44,7 +43,7 @@ class (EraScript era, Show (Script era)) => Scriptic era where
   always :: Natural -> Proof era -> Script era
   alwaysAlt :: Natural -> Proof era -> Script era
   never :: Natural -> Proof era -> Script era
-  require :: KeyHash 'Witness (EraCrypto era) -> Proof era -> NativeScript era
+  require :: KeyHash 'Witness -> Proof era -> NativeScript era
   allOf :: [Proof era -> NativeScript era] -> Proof era -> NativeScript era
   anyOf :: [Proof era -> NativeScript era] -> Proof era -> NativeScript era
   mOf :: Int -> [Proof era -> NativeScript era] -> Proof era -> NativeScript era
@@ -54,9 +53,9 @@ class Scriptic era => PostShelley era where
   after :: Int -> Proof era -> NativeScript era
 
 class HasTokens era where
-  forge :: Integer -> Script era -> MultiAsset (EraCrypto era)
+  forge :: Integer -> Script era -> MultiAsset
 
-instance Crypto c => Scriptic (ShelleyEra c) where
+instance Scriptic ShelleyEra where
   never _ Shelley = RequireAnyOf mempty -- always False
   always _ Shelley = RequireAllOf mempty -- always True
   alwaysAlt _ Shelley = RequireAllOf mempty -- always True
@@ -67,7 +66,7 @@ instance Crypto c => Scriptic (ShelleyEra c) where
 
 -- Make Scripts in AllegraEra
 
-instance Crypto c => Scriptic (AllegraEra c) where
+instance Scriptic AllegraEra where
   never _ Allegra = RequireAnyOf mempty -- always False
   always _ Allegra = RequireAllOf mempty -- always True
   alwaysAlt _ Allegra = RequireAllOf mempty -- always True
@@ -76,13 +75,13 @@ instance Crypto c => Scriptic (AllegraEra c) where
   anyOf xs proof = RequireAnyOf (Seq.fromList (map ($ proof) xs))
   mOf n xs proof = RequireMOf n (Seq.fromList (map ($ proof) xs))
 
-instance Crypto c => PostShelley (AllegraEra c) where
+instance PostShelley AllegraEra where
   before n Allegra = RequireTimeStart (theSlot n)
   after n Allegra = RequireTimeExpire (theSlot n)
 
 -- Make Scripts in Mary era
 
-instance Crypto c => Scriptic (MaryEra c) where
+instance Scriptic MaryEra where
   never _ Mary = RequireAnyOf mempty -- always False
   always _ Mary = RequireAllOf mempty -- always True
   alwaysAlt _ Mary = RequireAllOf mempty -- always True
@@ -91,38 +90,38 @@ instance Crypto c => Scriptic (MaryEra c) where
   anyOf xs proof = RequireAnyOf (Seq.fromList (map ($ proof) xs))
   mOf n xs proof = RequireMOf n (Seq.fromList (map ($ proof) xs))
 
-instance Crypto c => PostShelley (MaryEra c) where
+instance PostShelley MaryEra where
   before n Mary = RequireTimeStart (theSlot n)
   after n Mary = RequireTimeExpire (theSlot n)
 
-instance forall c. Crypto c => HasTokens (MaryEra c) where
+instance HasTokens MaryEra where
   forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
-      pid = PolicyID (hashScript @(MaryEra c) s)
+      pid = PolicyID (hashScript @MaryEra s)
       an = AssetName "an"
 
-instance forall c. Crypto c => HasTokens (AlonzoEra c) where
+instance HasTokens AlonzoEra where
   forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
-      pid = PolicyID (hashScript @(AlonzoEra c) s)
+      pid = PolicyID (hashScript @AlonzoEra s)
       an = AssetName "an"
 
-instance forall c. Crypto c => HasTokens (BabbageEra c) where
+instance HasTokens BabbageEra where
   forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
-      pid = PolicyID (hashScript @(BabbageEra c) s)
+      pid = PolicyID (hashScript @BabbageEra s)
       an = AssetName "an"
 
-instance forall c. Crypto c => HasTokens (ConwayEra c) where
+instance HasTokens ConwayEra where
   forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
-      pid = PolicyID (hashScript @(ConwayEra c) s)
+      pid = PolicyID (hashScript @ConwayEra s)
       an = AssetName "an"
 
 -- =================================
 -- Make Scripts in Alonzo era
 
-instance Crypto c => Scriptic (AlonzoEra c) where
+instance Scriptic AlonzoEra where
   never n Alonzo = alwaysFails @'PlutusV1 n -- always False
   always n Alonzo = alwaysSucceeds @'PlutusV1 n -- always True
   alwaysAlt n Alonzo = alwaysSucceeds @'PlutusV1 n -- always True
@@ -131,13 +130,13 @@ instance Crypto c => Scriptic (AlonzoEra c) where
   anyOf xs proof = RequireAnyOf (Seq.fromList (($ proof) <$> xs))
   mOf n xs proof = RequireMOf n (Seq.fromList (($ proof) <$> xs))
 
-instance Crypto c => PostShelley (AlonzoEra c) where
+instance PostShelley AlonzoEra where
   before n Alonzo = RequireTimeStart (theSlot n)
   after n Alonzo = RequireTimeExpire (theSlot n)
 
 -- =================================
 
-instance Crypto c => Scriptic (BabbageEra c) where
+instance Scriptic BabbageEra where
   never n Babbage = alwaysFails @'PlutusV1 n -- always False
   always n Babbage = alwaysSucceeds @'PlutusV1 n -- always True
   alwaysAlt n Babbage = alwaysSucceeds @'PlutusV2 n -- always True
@@ -146,13 +145,13 @@ instance Crypto c => Scriptic (BabbageEra c) where
   anyOf xs proof = RequireAnyOf (Seq.fromList (($ proof) <$> xs))
   mOf n xs proof = RequireMOf n (Seq.fromList (($ proof) <$> xs))
 
-instance Crypto c => PostShelley (BabbageEra c) where
+instance PostShelley BabbageEra where
   before n Babbage = RequireTimeStart (theSlot n)
   after n Babbage = RequireTimeExpire (theSlot n)
 
 -- =================================
 
-instance Crypto c => Scriptic (ConwayEra c) where
+instance Scriptic ConwayEra where
   never n Conway = alwaysFails @'PlutusV1 n -- always False
   always n Conway = alwaysSucceeds @'PlutusV1 n -- always True
   alwaysAlt n Conway = alwaysSucceeds @'PlutusV2 n -- always True
@@ -161,7 +160,7 @@ instance Crypto c => Scriptic (ConwayEra c) where
   anyOf xs proof = RequireAnyOf (Seq.fromList (($ proof) <$> xs))
   mOf n xs proof = RequireMOf n (Seq.fromList (($ proof) <$> xs))
 
-instance Crypto c => PostShelley (ConwayEra c) where
+instance PostShelley ConwayEra where
   before n Conway = RequireTimeStart (theSlot n)
   after n Conway = RequireTimeExpire (theSlot n)
 

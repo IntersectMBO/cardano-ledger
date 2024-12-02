@@ -220,7 +220,7 @@ makeEpochState gstate ledgerstate =
     & prevPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
     & curPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
 
-snaps :: EraTxOut era => LedgerState era -> SnapShots (EraCrypto era)
+snaps :: EraTxOut era => LedgerState era -> SnapShots
 snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (CertState _ pstate dstate)) =
   SnapShots snap (calculatePoolDistr snap) snap snap f
   where
@@ -294,10 +294,10 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
           , ppString ("Protocol Parameters\n" ++ show (epochstate ^. curPParamsEpochStateL))
           ]
 
-badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash (EraCrypto era))
+badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash)
 badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.empty xs
   where
-    getw :: Proof era -> MockChainFailure era -> Set.Set (ScriptHash (EraCrypto era))
+    getw :: Proof era -> MockChainFailure era -> Set.Set (ScriptHash)
     getw
       Babbage
       ( MockChainFromLedgersFailure
@@ -454,7 +454,7 @@ mapProportion epochnum lastSlot count m =
   where
     pairs = [(n, pure k) | (k, n) <- Map.toList m]
 
-chooseIssuer :: EpochNo -> Word64 -> Int -> PoolDistr c -> Gen (KeyHash 'StakePool c)
+chooseIssuer :: EpochNo -> Word64 -> Int -> PoolDistr -> Gen (KeyHash 'StakePool)
 chooseIssuer epochnum lastSlot count (PoolDistr m _) = mapProportion epochnum lastSlot count (getInt <$> m)
   where
     getInt x = floor (individualPoolStake x * 1000)

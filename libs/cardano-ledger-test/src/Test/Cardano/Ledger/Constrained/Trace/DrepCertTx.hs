@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -26,7 +25,7 @@ import Cardano.Ledger.Conway.Governance (
   proposalsGovStateL,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
-import Cardano.Ledger.Crypto (Crypto (..), HASH)
+import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.DRep hiding (drepDeposit)
 import Cardano.Ledger.EpochBoundary (ssStakeMarkPoolDistrL)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
@@ -179,7 +178,7 @@ drepTree =
     [ testProperty
         "All Tx are valid on traces of length 150."
         $ withMaxSuccess 20
-        $ mockChainProp Conway 150 (drepCertTxForTrace @(ConwayEra _) (Coin 100000))
+        $ mockChainProp Conway 150 (drepCertTxForTrace @ConwayEra (Coin 100000))
         $ stepProp (allValidSignals Conway)
     , testProperty
         "Bruteforce = Pulsed, in every epoch, on traces of length 150"
@@ -201,7 +200,7 @@ getpp :: EraGov era => NewEpochState era -> PParams era
 getpp nes = nes ^. (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL)
 
 getProposals ::
-  ConwayEraGov era => NewEpochState era -> Map.Map (GovActionId (EraCrypto era)) (GovActionState era)
+  ConwayEraGov era => NewEpochState era -> Map.Map GovActionId (GovActionState era)
 getProposals nes =
   proposalsActionsMap
     (nes ^. (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL))
@@ -227,7 +226,7 @@ bruteForceDRepDistr ::
   forall era.
   ConwayEraGov era =>
   NewEpochState era ->
-  Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
+  Map.Map (DRep) (CompactForm Coin)
 bruteForceDRepDistr nes =
   fst $ computeDRepDistr incstk dreps propDeps poolD Map.empty $ UMap.umElems umap
   where
@@ -242,7 +241,7 @@ bruteForceDRepDistr nes =
 extractPulsingDRepDistr ::
   ConwayEraGov era =>
   NewEpochState era ->
-  Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
+  Map.Map (DRep) (CompactForm Coin)
 extractPulsingDRepDistr nes =
   (psDRepDistr . fst . finishDRepPulser) (nes ^. newEpochStateDRepPulsingStateL)
 
@@ -255,7 +254,7 @@ showCerts proof cs = show (ppList (pcTxCert proof) cs)
 certsOf :: EraTx era => Tx era -> [TxCert era]
 certsOf tx = toList (tx ^. (bodyTxL . certsTxBodyL))
 
-hashTx :: EraTx era => Proof era -> Tx era -> Hash (HASH (EraCrypto era)) EraIndependentTxBody
+hashTx :: EraTx era => Proof era -> Tx era -> Hash HASH EraIndependentTxBody
 hashTx proof tx = hashBody proof (tx ^. bodyTxL)
 
 showMap :: (Show k, Show v) => String -> Map.Map k v -> String

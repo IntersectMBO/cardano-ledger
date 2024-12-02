@@ -51,7 +51,7 @@ tests :: TestTree
 tests =
   testGroup "Alonzo API" [testCase "estimateMinFee" testEstimateMinFee]
 
-type A = AlonzoEra StandardCrypto
+type A = AlonzoEra
 
 testEstimateMinFee :: Assertion
 testEstimateMinFee =
