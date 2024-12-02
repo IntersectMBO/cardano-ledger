@@ -4,7 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -19,11 +19,14 @@ import Data.Bifunctor (Bifunctor (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Lib as Agda
+import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   OpaqueErrorString (..),
   SpecTranslate,
   computationResultToEither,
+  runSpecTransM,
+  toSpecRep,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo (genUtxoExecContext)
@@ -38,6 +41,8 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoStateSpec,
   utxoTxSpec,
  )
+import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
+import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 
 instance
   ( IsConwayUniv fn
@@ -55,3 +60,21 @@ instance
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.utxowStep externalFunctions env st sig
+  extraInfo globals ctx env st sig _ =
+    let
+      result =
+        either show T.unpack . runSpecTransM ctx $
+          Agda.utxowDebug externalFunctions
+            <$> toSpecRep env
+            <*> toSpecRep st
+            <*> toSpecRep sig
+      stFinal = runSTS @"UTXO" @Conway globals env st sig
+      utxoInfo = extraInfo @fn @"UTXO" @Conway globals ctx env st sig stFinal
+     in
+      PP.vcat
+        [ "UTXOW"
+        , PP.ppString result
+        , mempty
+        , "UTXO"
+        , utxoInfo
+        ]

@@ -23,9 +23,10 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   translateWithContext,
   ForAllExecSpecRep,
   ForAllExecTypes,
+  diffConformance,
 ) where
 
-import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals, Inject (..), ShelleyBase)
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Core (Era, EraRule, eraProtVerLow)
 import qualified Constrained as CV2
@@ -42,6 +43,7 @@ import qualified Data.Text as T
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Base (Constraint, NonEmpty, Symbol, Type)
 import GHC.TypeLits (KnownSymbol)
+import Lens.Micro.Mtl (use)
 import Prettyprinter
 import Prettyprinter.Render.Terminal
 import System.FilePath ((<.>))
@@ -58,6 +60,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
   ShelleyEraImp,
   impAnn,
+  impGlobalsL,
   logDoc,
   tryRunImpRule,
  )
@@ -211,6 +214,7 @@ class
 
   extraInfo ::
     HasCallStack =>
+    Globals ->
     ExecContext fn rule era ->
     Environment (EraRule rule era) ->
     State (EraRule rule era) ->
@@ -233,6 +237,18 @@ dumpCbor ::
 dumpCbor path x name = do
   fullPath <- makeAbsolute $ path <> "/" <> name <.> "cbor"
   writeCBOR (eraProtVerLow @era) fullPath x
+
+diffConformance :: ToExpr a => a -> a -> Doc AnsiStyle
+diffConformance implRes agdaRes =
+  ppEditExpr conformancePretty (ediff implRes agdaRes)
+  where
+    delColor = Red
+    insColor = Magenta
+    conformancePretty =
+      ansiWlPretty
+        { ppDel = annotate (color delColor) . parens . ("Impl: " <>)
+        , ppIns = annotate (color insColor) . parens . ("Agda: " <>)
+        }
 
 checkConformance ::
   forall rule era fn.
@@ -260,17 +276,10 @@ checkConformance ::
   ImpTestM era ()
 checkConformance ctx env st sig implResTest agdaResTest = do
   let
-    delColor = Red
-    insColor = Magenta
-    conformancePretty =
-      ansiWlPretty
-        { ppDel = annotate (color delColor) . parens . ("Impl: " <>)
-        , ppIns = annotate (color insColor) . parens . ("Agda: " <>)
-        }
     failMsg =
       annotate (color Yellow) . vsep $
         [ "===== DIFF ====="
-        , ppEditExpr conformancePretty (ediff implResTest agdaResTest)
+        , diffConformance implResTest agdaResTest
         ]
   unless (implResTest == agdaResTest) $ do
     let envVarName = "CONFORMANCE_CBOR_DUMP_PATH"
@@ -317,7 +326,8 @@ defaultTestConformance ::
   Property
 defaultTestConformance ctx env st sig = property $ do
   (implResTest, agdaResTest, implRes) <- runConformance @rule @fn @era ctx env st sig
-  let extra = extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig) implRes
+  globals <- use impGlobalsL
+  let extra = extraInfo @fn @rule @era globals ctx (inject env) (inject st) (inject sig) implRes
   logDoc extra
   checkConformance @rule @_ @fn ctx (inject env) (inject st) (inject sig) implResTest agdaResTest
 

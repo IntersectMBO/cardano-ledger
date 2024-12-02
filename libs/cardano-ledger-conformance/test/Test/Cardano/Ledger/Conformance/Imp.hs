@@ -22,7 +22,6 @@ import Control.State.Transition
 import Data.Bifunctor (bimap)
 import Data.Bitraversable (bimapM)
 import Data.List.NonEmpty
-import Data.Text (unpack)
 import Lens.Micro
 import Lib qualified as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayLedgerExecContext (..))
@@ -36,7 +35,7 @@ import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
 
 testImpConformance ::
-  forall era.
+  forall era t.
   ( ConwayEraImp era
   , ExecSpecRule ConwayFn "LEDGER" era
   , ExecContext ConwayFn "LEDGER" era ~ ConwayLedgerExecContext era
@@ -46,7 +45,6 @@ testImpConformance ::
   , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (ExecEnvironment ConwayFn "LEDGER" era)
   , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (TxWits era)
   , NFData (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
-  , Show (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
   , Eq (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
   , FixupSpecRep (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
   , HasCallStack
@@ -55,15 +53,17 @@ testImpConformance ::
   , ExecEnvironment ConwayFn "LEDGER" era ~ LedgerEnv era
   , Tx era ~ AlonzoTx era
   , SpecTranslate (ConwayTxBodyTransContext (EraCrypto era)) (TxBody era)
+  , ToExpr (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
   ) =>
+  Globals ->
   Either
     (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
     (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
   ExecEnvironment ConwayFn "LEDGER" era ->
   ExecState ConwayFn "LEDGER" era ->
   ExecSignal ConwayFn "LEDGER" era ->
-  Expectation
-testImpConformance impRuleResult env state signal = do
+  ImpM t ()
+testImpConformance globals impRuleResult env state signal = impAnn "`submitTx` conformance" $ do
   let ctx =
         ConwayLedgerExecContext
           { clecPolicyHash =
@@ -82,12 +82,11 @@ testImpConformance impRuleResult env state signal = do
                 }
           }
   -- translate inputs
-  let failOnLeft = either (assertFailure . unpack) pure
   (specEnv, specState, specSignal) <-
     (,,)
-      <$> failOnLeft (runSpecTransM ctx $ toSpecRep env)
-      <*> failOnLeft (runSpecTransM ctx $ toSpecRep state)
-      <*> failOnLeft (runSpecTransM ctx $ toSpecRep signal)
+      <$> expectRight (runSpecTransM ctx $ toSpecRep env)
+      <*> expectRight (runSpecTransM ctx $ toSpecRep state)
+      <*> expectRight (runSpecTransM ctx $ toSpecRep signal)
   -- get agda response
   agdaResponse <-
     fmap (bimap (fixup <$>) fixup) $
@@ -102,14 +101,31 @@ testImpConformance impRuleResult env state signal = do
           (toTestRep . inject @_ @(ExecState ConwayFn "LEDGER" era) . fst)
           impRuleResult
 
-  impResponse `shouldBe` agdaResponse
+  logString "implEnv"
+  logToExpr env
+  logString "implState"
+  logToExpr state
+  logString "implSignal"
+  logToExpr signal
+  logString "specEnv"
+  logToExpr specEnv
+  logString "specState"
+  logToExpr specState
+  logString "specSignal"
+  logToExpr specSignal
+  logString "Extra info:"
+  logDoc $ extraInfo @ConwayFn @"LEDGER" @era globals ctx env state signal impRuleResult
+  when (impResponse /= agdaResponse) $ do
+    logDoc $ diffConformance impResponse agdaResponse
+    assertFailure "Conformance failure"
 
 spec :: Spec
 spec =
   withImpInit @(LedgerSpec Conway) $
     modifyImpInitProtVer @Conway (natVersion @10) $
       modifyImpInitExpectLedgerRuleConformance testImpConformance $ do
-        xdescribe "Tx conformance" $ it "Tx conformance" $ do
-          _ <- submitConstitution @Conway SNothing
-          passNEpochs 2
-        xdescribe "Test.Cardano.Ledger.Conway.Imp conformance" $ ConwayImp.conwaySpec @Conway
+        describe "Basic imp conformance" $
+          it "Submit constitution" $ do
+            _ <- submitConstitution @Conway SNothing
+            passNEpochs 2
+        xdescribe "Conway Imp conformance" $ ConwayImp.conwaySpec @Conway

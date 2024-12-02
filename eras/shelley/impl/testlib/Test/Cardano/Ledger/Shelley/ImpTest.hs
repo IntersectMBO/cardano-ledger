@@ -6,6 +6,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -302,7 +303,7 @@ instance ShelleyEraImp era => ImpSpec (LedgerSpec era) where
             ImpTestEnv
               { iteFixup = fixupTx
               , iteCborRoundTripFailures = True
-              , iteExpectLedgerRuleConformance = \_ _ _ _ -> pure ()
+              , iteExpectLedgerRuleConformance = \_ _ _ _ _ -> pure ()
               }
         , impInitState = initState
         }
@@ -632,14 +633,15 @@ modifyImpInitProtVer ver =
 
 modifyImpInitExpectLedgerRuleConformance ::
   forall era.
-  ShelleyEraImp era =>
-  ( Either
+  ( forall t.
+    Globals ->
+    Either
       (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
       (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
     LedgerEnv era ->
     LedgerState era ->
     Tx era ->
-    Expectation
+    ImpM t ()
   ) ->
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
@@ -792,13 +794,19 @@ impWitsVKeyNeeded txBody = do
 data ImpTestEnv era = ImpTestEnv
   { iteFixup :: Tx era -> ImpTestM era (Tx era)
   , iteExpectLedgerRuleConformance ::
+      forall t.
+      Globals ->
       Either
         (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
       LedgerEnv era ->
       LedgerState era ->
       Tx era ->
-      Expectation
+      ImpM t ()
+  -- ^ Note the use of higher ranked types here. This prevents the hook from
+  -- accessing the state while still permitting the use of more general
+  -- functions that return some `ImpM t a` and that don't constrain the
+  -- state in any way (e.g. `logString`, `shouldBe` are still fine to use).
   , iteCborRoundTripFailures :: !Bool
   -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
   }
@@ -807,15 +815,18 @@ iteFixupL :: Lens' (ImpTestEnv era) (Tx era -> ImpTestM era (Tx era))
 iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
 
 iteExpectLedgerRuleConformanceL ::
+  forall era.
   Lens'
     (ImpTestEnv era)
-    ( Either
+    ( forall t.
+      Globals ->
+      Either
         (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
       LedgerEnv era ->
       LedgerState era ->
       Tx era ->
-      Expectation
+      ImpM t ()
     )
 iteExpectLedgerRuleConformanceL = lens iteExpectLedgerRuleConformance (\x y -> x {iteExpectLedgerRuleConformance = y})
 
@@ -1077,10 +1088,11 @@ trySubmitTx tx = do
   ImpTestState {impRootTxIn} <- get
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
   roundTripCheck <- asks iteCborRoundTripFailures
+  globals <- use impGlobalsL
 
   -- Check for conformance
   asks iteExpectLedgerRuleConformance
-    >>= (\f -> liftIO $ f res lEnv (st ^. nesEsL . esLStateL) txFixed)
+    >>= (\f -> f globals res lEnv (st ^. nesEsL . esLStateL) txFixed)
 
   case res of
     Left predFailures -> do
@@ -1291,7 +1303,7 @@ passNEpochsChecking n checks =
   replicateM_ (fromIntegral n) $ passEpoch >> checks
 
 -- | Adds a ToExpr to the log, which is only shown if the test fails
-logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()
+logToExpr :: (HasCallStack, ToExpr a) => a -> ImpM t ()
 logToExpr = logWithCallStack ?callStack . ansiWlExpr . toExpr
 
 -- | Adds the result of an action to the log, which is only shown if the test fails

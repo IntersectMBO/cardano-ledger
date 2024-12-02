@@ -103,7 +103,7 @@ instance
       . computationResultToEither
       $ Agda.utxoStep externalFunctions env st sig
 
-  extraInfo ctx env@UtxoEnv {..} st@UTxOState {..} sig st' =
+  extraInfo _ ctx env@UtxoEnv {..} st@UTxOState {..} sig st' =
     PP.vcat
       [ "Impl:"
       , PP.ppString (showConwayTxBalance uePParams ueCertState utxosUtxo sig)
