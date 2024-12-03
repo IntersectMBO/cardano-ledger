@@ -71,6 +71,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
+import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.), _1)
 import NoThunks.Class (NoThunks (..))
@@ -266,7 +267,7 @@ toNonMyopicPair nm@(NonMyopic _ _) =
 -- corresponding to f^~ in section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 desirability ::
-  (NonNegativeInterval, Natural) ->
+  (NonNegativeInterval, Word16) ->
   Coin ->
   PoolParams c ->
   PerformanceEstimate ->

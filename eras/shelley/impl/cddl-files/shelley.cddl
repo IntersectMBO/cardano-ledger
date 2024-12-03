@@ -141,7 +141,7 @@ protocol_param_update = {? 0 : uint
                         , ? 5 : coin
                         , ? 6 : coin
                         , ? 7 : epoch
-                        , ? 8 : uint
+                        , ? 8 : uint .size 2
                         , ? 9 : nonnegative_interval
                         , ? 10 : unit_interval
                         , ? 11 : unit_interval

@@ -268,7 +268,7 @@ data AlonzoPParams f era = AlonzoPParams
   , appEMax :: !(HKD f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
   -- be scheduled for.
-  , appNOpt :: !(HKD f Natural)
+  , appNOpt :: !(HKD f Word16)
   -- ^ Desired number of pools
   , appA0 :: !(HKD f NonNegativeInterval)
   -- ^ Pool influence

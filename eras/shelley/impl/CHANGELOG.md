@@ -2,6 +2,8 @@
 
 ## 1.15.0.0
 
+* Change param of `PoolRank.desirability` to `Word16`
+* Change type of `nOpt` in `RewardParams` to `Word16`
 * Add lenses for `LedgerEnv`. #4748
   * `ledgerSlotNoL`
   * `ledgerEpochNoL`

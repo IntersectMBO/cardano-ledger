@@ -439,7 +439,7 @@ eMax_ ::
   (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn EpochInterval
 eMax_ simplepp = sel @7 simplepp
 
-nOpt_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Natural
+nOpt_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Word16
 nOpt_ simplepp = sel @8 simplepp
 
 a0_ ::

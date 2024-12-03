@@ -102,7 +102,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
-import GHC.Natural (Natural)
 import Lens.Micro (Lens', SimpleGetter, lens)
 import NoThunks.Class (NoThunks)
 
@@ -322,7 +321,7 @@ class
   hkdEMaxL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
 
   -- | Desired number of pools
-  hkdNOptL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdNOptL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word16)
 
   -- | Pool influence
   hkdA0L :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f NonNegativeInterval)
@@ -409,7 +408,7 @@ ppEMaxL :: forall era. EraPParams era => Lens' (PParams era) EpochInterval
 ppEMaxL = ppLens . hkdEMaxL @era @Identity
 
 -- | Desired number of pools
-ppNOptL :: forall era. EraPParams era => Lens' (PParams era) Natural
+ppNOptL :: forall era. EraPParams era => Lens' (PParams era) Word16
 ppNOptL = ppLens . hkdNOptL @era @Identity
 
 -- | Pool influence
@@ -475,7 +474,7 @@ ppuEMaxL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe
 ppuEMaxL = ppuLens . hkdEMaxL @era @StrictMaybe
 
 -- | Desired number of pools
-ppuNOptL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuNOptL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
 ppuNOptL = ppuLens . hkdNOptL @era @StrictMaybe
 
 -- | Pool influence

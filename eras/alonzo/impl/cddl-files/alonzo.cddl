@@ -248,7 +248,7 @@ protocol_param_update =
   , ? 5:  coin                ; key deposit
   , ? 6:  coin                ; pool deposit
   , ? 7: epoch                ; maximum epoch
-  , ? 8: uint                 ; n_opt: desired number of stake pools
+  , ? 8: uint .size 2         ; n_opt: desired number of stake pools
   , ? 9: nonnegative_interval ; pool pledge influence
   , ? 10: unit_interval       ; expansion rate
   , ? 11: unit_interval       ; treasury growth rate

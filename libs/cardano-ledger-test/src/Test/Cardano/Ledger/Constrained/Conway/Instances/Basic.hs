@@ -239,7 +239,7 @@ data SimplePParams era = SimplePParams
   , keyDeposit :: Coin
   , poolDeposit :: Coin
   , eMax :: EpochInterval
-  , nOpt :: Natural
+  , nOpt :: Word16
   , a0 :: NonNegativeInterval
   , rho :: UnitInterval
   , tau :: UnitInterval
@@ -289,7 +289,7 @@ data SimplePPUpdate = SimplePPUpdate
   , ukeyDeposit :: StrictMaybe Coin
   , upoolDeposit :: StrictMaybe Coin
   , ueMax :: StrictMaybe EpochInterval
-  , unOpt :: StrictMaybe Natural
+  , unOpt :: StrictMaybe Word16
   , ua0 :: StrictMaybe NonNegativeInterval
   , urho :: StrictMaybe UnitInterval
   , utau :: StrictMaybe UnitInterval

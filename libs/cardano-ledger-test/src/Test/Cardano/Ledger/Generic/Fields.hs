@@ -211,7 +211,7 @@ data PParamsField era
   | -- | epoch bound on pool retirement
     EMax EpochInterval
   | -- | Desired number of pools
-    NOpt Natural
+    NOpt Word16
   | -- | Pool influence
     A0 NonNegativeInterval
   | -- | Monetary expansion

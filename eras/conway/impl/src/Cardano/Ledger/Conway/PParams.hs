@@ -700,10 +700,7 @@ instance Crypto c => EraPParams (ConwayEra c) where
   hkdKeyDepositL = lens (unTHKD . cppKeyDeposit) $ \pp x -> pp {cppKeyDeposit = THKD x}
   hkdPoolDepositL = lens (unTHKD . cppPoolDeposit) $ \pp x -> pp {cppPoolDeposit = THKD x}
   hkdEMaxL = lens (unTHKD . cppEMax) $ \pp x -> pp {cppEMax = THKD x}
-  hkdNOptL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
-  hkdNOptL =
-    lens (asNaturalHKD @f @Word16 . (unTHKD . cppNOpt)) $
-      \pp x -> pp {cppNOpt = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
+  hkdNOptL = lens (unTHKD . cppNOpt) $ \pp x -> pp {cppNOpt = THKD x}
   hkdA0L = lens (unTHKD . cppA0) $ \pp x -> pp {cppA0 = THKD x}
   hkdRhoL = lens (unTHKD . cppRho) $ \pp x -> pp {cppRho = THKD x}
   hkdTauL = lens (unTHKD . cppTau) $ \pp x -> pp {cppTau = THKD x}
@@ -1213,7 +1210,7 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
     , cppKeyDeposit = THKD bppKeyDeposit
     , cppPoolDeposit = THKD bppPoolDeposit
     , cppEMax = THKD bppEMax
-    , cppNOpt = THKD (asBoundedIntegralHKD @f @Natural @Word16 bppNOpt)
+    , cppNOpt = THKD bppNOpt
     , cppA0 = THKD bppA0
     , cppRho = THKD bppRho
     , cppTau = THKD bppTau
@@ -1267,7 +1264,7 @@ downgradeConwayPParams ConwayPParams {..} =
     , bppKeyDeposit = unTHKD cppKeyDeposit
     , bppPoolDeposit = unTHKD cppPoolDeposit
     , bppEMax = unTHKD cppEMax
-    , bppNOpt = asNaturalHKD @f @Word16 (unTHKD cppNOpt)
+    , bppNOpt = unTHKD cppNOpt
     , bppA0 = unTHKD cppA0
     , bppRho = unTHKD cppRho
     , bppTau = unTHKD cppTau
