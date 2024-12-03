@@ -33,6 +33,8 @@ import Test.Cardano.Ledger.Shelley.Utils
 
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
+import Constrained.Base (conformsToSpecE)
+import qualified Data.List.NonEmpty as NE
 import Data.Set (Set)
 import System.IO.Unsafe
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv, genWitUniv)
@@ -41,7 +43,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 
 conwayWitUniv :: WitUniv (ConwayEra StandardCrypto)
-conwayWitUniv = unsafePerformIO $ generate $ genWitUniv @(ConwayEra StandardCrypto) 100
+conwayWitUniv = unsafePerformIO $ generate $ genWitUniv @(ConwayEra StandardCrypto) 200
 
 conwayDelegatees :: Set (Credential 'DRepRole StandardCrypto)
 conwayDelegatees = unsafePerformIO $ generate $ genFromSpec @ConwayFn (delegateeSpec conwayWitUniv)
@@ -90,13 +92,19 @@ stsPropertyV2 specEnv specState specSig prop =
                 pure $ case res of
                   Left pfailures -> counterexample (show $ prettyA pfailures) $ property False
                   Right st' ->
-                    counterexample
-                      ( show $
-                          ppString "st' = "
-                            <> prettyA st'
-                            <> ppString ("\nspec = \n" ++ show (specState env))
-                      )
-                      $ conformsToSpec @fn st' (specState env) .&&. prop env st sig st'
+                    case conformsToSpecE @fn
+                      st
+                      (specState env)
+                      (pure "conformsToSpecE fails in STS tests") of
+                      Just es -> counterexample (unlines (NE.toList es)) False
+                      Nothing ->
+                        counterexample
+                          ( show $
+                              ppString "st' = "
+                                <> prettyA st'
+                                <> ppString ("\nspec = \n" ++ show (specState env))
+                          )
+                          $ prop env st sig st'
 
 -- STS properties ---------------------------------------------------------
 

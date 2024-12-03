@@ -62,7 +62,11 @@ delegateeSpec ::
   (IsConwayUniv fn, Era era) =>
   WitUniv era ->
   Specification fn (Set (Credential 'DRepRole (EraCrypto era)))
-delegateeSpec univ = constrained $ \x -> witness univ x
+delegateeSpec univ = constrained $ \x ->
+  [ witness univ x
+  , assert $ sizeOf_ x <=. 6
+  , assert $ sizeOf_ x >=. 2
+  ]
 
 certStateSpec ::
   forall fn era.
