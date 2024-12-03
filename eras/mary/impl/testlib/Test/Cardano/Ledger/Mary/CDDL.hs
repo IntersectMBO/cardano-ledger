@@ -6,38 +6,32 @@
 {-# HLINT ignore "Use camelCase" #-}
 {-# HLINT ignore "Evaluate" #-}
 
-module Test.Cardano.Ledger.Mary.CDDL where
+module Test.Cardano.Ledger.Mary.CDDL (
+  module Test.Cardano.Ledger.Allegra.CDDL,
+  module Test.Cardano.Ledger.Mary.CDDL,
+) where
 
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
-import Test.Cardano.Ledger.Allegra.CDDL (auxiliary_data, transaction_witness_set)
-import Test.Cardano.Ledger.Core.Binary.CDDL
-import Test.Cardano.Ledger.Shelley.CDDL (
-  certificate,
-  header,
-  metadata_hash,
-  scripthash,
-  set,
-  transaction_index,
-  transaction_input,
-  update,
-  withdrawals,
+import Test.Cardano.Ledger.Allegra.CDDL hiding (
+  block,
+  transaction,
+  transaction_body,
+  transaction_output,
  )
 
-cddl :: Huddle
-cddl = collectFrom [block, transaction]
+maryCDDL :: Huddle
+maryCDDL = collectFrom [block, transaction]
 
---------------------------------------------------------------------------------
--- Things changed in Mary
---------------------------------------------------------------------------------
 multiasset :: IsType0 a => a -> GRuleCall
-multiasset = binding $ \x ->
-  "multiasset"
-    =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> x]]
+multiasset =
+  binding $ \x ->
+    "multiasset"
+      =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> x]]
 
 policy_id :: Rule
-policy_id = "policy_id" =:= scripthash
+policy_id = "policy_id" =:= script_hash
 
 asset_name :: Rule
 asset_name = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
@@ -65,16 +59,7 @@ transaction_body =
       ]
 
 transaction_output :: Rule
-transaction_output =
-  "transaction_output"
-    =:= arr
-      [ a address
-      , "amount" ==> value
-      ]
-
---------------------------------------------------------------------------------
--- Closure
---------------------------------------------------------------------------------
+transaction_output = "transaction_output" =:= arr [a address, "amount" ==> value]
 
 block :: Rule
 block =
@@ -82,10 +67,8 @@ block =
     =:= arr
       [ a header
       , "transaction_bodies" ==> arr [0 <+ a transaction_body]
-      , "transaction_witness_sets"
-          ==> arr [0 <+ a transaction_witness_set]
-      , "auxiliary_data_set"
-          ==> mp [0 <+ asKey transaction_index ==> auxiliary_data]
+      , "transaction_witness_sets" ==> arr [0 <+ a transaction_witness_set]
+      , "auxiliary_data_set" ==> mp [0 <+ asKey transaction_index ==> auxiliary_data]
       ]
 
 transaction :: Rule
