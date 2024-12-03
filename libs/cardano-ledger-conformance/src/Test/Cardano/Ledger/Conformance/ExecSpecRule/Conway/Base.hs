@@ -107,6 +107,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   EpochExecEnv,
   IsConwayUniv,
   coerce_,
+  delegateeSpec,
   epochEnvSpec,
   epochSignalSpec,
   epochStateSpec,
@@ -140,7 +141,14 @@ data ConwayCertExecContext era = ConwayCertExecContext
   , ccecDeposits :: !(Map DepositPurpose Coin)
   , ccecVotes :: !(VotingProcedures era)
   , ccecDelegatees :: !(Set (Credential 'DRepRole))
-  }
+  -- ^ The UMap of the DState has a field with type: Map (Credential 'Staking) DRep
+  --   The VState field vsDReps has type: Map (Credential DRepRole) DRepState
+  --   The DRepState field drepDelegs has type: Set (Credential Staking)
+  --   Every (Credential 'DRepRole c) corresponds to a unique (DRep)
+  -- the ccecDelegatees field helps maintain that correspondance, It is used in
+  -- vstateSpec and bootstrapDStateSpec. Also see
+  -- getDelegatees :: DState era -> Map (Credential 'DRepRole) (Set (Credential 'Staking))
+  -- in Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs, which defines the exact correspondance.  }
   deriving (Generic, Eq, Show)
 
 instance HasSimpleRep (ConwayCertExecContext era)
@@ -150,14 +158,15 @@ instance (IsConwayUniv fn, Era era) => HasSpec fn (ConwayCertExecContext era)
 conwayCertExecContextSpec ::
   forall fn era.
   (Reflect era, IsConwayUniv fn) =>
-  WitUniv era -> Specification fn (ConwayCertExecContext era)
-conwayCertExecContextSpec univ = constrained $ \ [var|ccec|] ->
+  WitUniv era -> Integer -> Specification fn (ConwayCertExecContext era)
+conwayCertExecContextSpec univ wdrlsize = constrained $ \ [var|ccec|] ->
   match ccec $ \ [var|withdrawals|] [var|deposits|] _ [var|delegatees|] ->
-    [ assert $ witness univ (dom_ withdrawals)
+    [ assert $
+        [ witness univ (dom_ withdrawals)
+        , assert $ sizeOf_ (dom_ withdrawals) <=. (lit wdrlsize)
+        ]
     , forAll (dom_ deposits) $ \dp -> satisfies dp (witnessDepositPurpose univ)
-    , witness univ delegatees
-    , assert $ sizeOf_ delegatees <=. 20
-    , assert $ sizeOf_ delegatees >=. 10
+    , satisfies delegatees (delegateeSpec @fn @era univ)
     ]
 
 instance Reflect era => Arbitrary (ConwayCertExecContext era) where

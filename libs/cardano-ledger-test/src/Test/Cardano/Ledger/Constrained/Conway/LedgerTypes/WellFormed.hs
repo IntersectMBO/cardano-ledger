@@ -79,11 +79,10 @@ dsX :: forall era. EraSpecLedger era ConwayFn => Gen (DState era)
 dsX = do
   univ <- genWitUniv 25
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
-  drepRoleSet <- genFromSpec @ConwayFn TrueSpec
   pools <-
     genFromSpec @ConwayFn @(Map (KeyHash 'StakePool) PoolParams)
       (hasSize (rangeSize 8 8))
-  genFromSpec @ConwayFn @(DState era) (dstateSpec @era univ (lit drepRoleSet) (lit acct) (lit pools))
+  genFromSpec @ConwayFn @(DState era) (dstateSpec @era univ (lit acct) (lit pools))
 
 vsX :: forall era. GenScript era => Gen (VState era)
 vsX = do
@@ -101,7 +100,8 @@ csX = do
   univ <- genWitUniv 25
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
-  genFromSpec @ConwayFn @(CertState era) (certStateSpec univ (lit acct) (lit epoch))
+  genFromSpec @ConwayFn @(CertState era)
+    (certStateSpec univ (lit acct) (lit epoch))
 
 utxoX :: forall era. EraSpecLedger era ConwayFn => Gen (UTxO era)
 utxoX = do

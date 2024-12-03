@@ -31,7 +31,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Constrained.Conway.Instances (ConwayFn)
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
-import Test.Cardano.Ledger.Generic.Proof (WitRule (..), goSTS)
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), WitRule (..), goSTS)
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 
 -- \| This is where most of the ExecSpecRule instances are defined
@@ -120,12 +120,11 @@ minitraceProp ::
   , PrettyA (State (EraRule s e))
   ) =>
   WitRule s e ->
-  Proxy ConwayFn ->
   Int ->
   (Signal (EraRule s e) -> String) ->
   Gen Property
-minitraceProp witrule proxy n0 namef = do
-  ans <- minitraceEither @ConwayFn @s @e witrule proxy n0
+minitraceProp witrule n0 namef = do
+  ans <- minitraceEither @ConwayFn @s @e witrule (Proxy @ConwayFn) n0
   case ans of
     Left zs -> pure $ counterexample (unlines zs) (property False)
     Right sigs -> pure $ classifyFirst namef sigs $ property True
@@ -162,39 +161,39 @@ spec = do
   describe "50 MiniTrace tests with trace length of 50" $ do
     prop
       "POOL"
-      (withMaxSuccess 50 (minitraceProp (POOL Proof.Conway) (Proxy @ConwayFn) 50 namePoolCert))
+      (withMaxSuccess 50 (minitraceProp (POOL Conway) 50 namePoolCert))
     prop
       "DELEG"
-      (withMaxSuccess 50 (minitraceProp (DELEG Proof.Conway) (Proxy @ConwayFn) 50 nameDelegCert))
+      (withMaxSuccess 50 (minitraceProp (DELEG Conway) 50 nameDelegCert))
     prop
       "GOVCERT"
       ( withMaxSuccess
           50
-          (minitraceProp @"GOVCERT" @Conway (GOVCERT Proof.Conway) (Proxy @ConwayFn) 50 nameGovCert)
+          (minitraceProp (GOVCERT Conway) 50 nameGovCert)
       )
     prop
       "CERT"
-      (withMaxSuccess 50 (minitraceProp @_ @_ (CERT Proof.Conway) (Proxy @ConwayFn) 50 nameTxCert))
+      (withMaxSuccess 50 (minitraceProp (CERT Conway) 50 nameTxCert))
     prop
       "CERTS"
       ( withMaxSuccess
           50
-          (minitraceProp @"CERTS" @Conway (CERTS Proof.Conway) (Proxy @ConwayFn) 50 nameCerts)
+          (minitraceProp (CERTS Conway) 50 nameCerts)
       )
     prop
       "RATIFY"
-      (withMaxSuccess 50 (minitraceProp (RATIFY Proof.Conway) (Proxy @ConwayFn) 50 nameRatify))
-    -- prop "ENACT" (withMaxSuccess 50 (minitraceProp (ENACT Proof.Conway) (Proxy @ConwayFn) 50 nameEnact))
+      (withMaxSuccess 50 (minitraceProp (RATIFY Conway) 50 nameRatify))
+    -- prop "ENACT" (withMaxSuccess 50 (minitraceProp (ENACT Conway) (Proxy @ConwayFn) 50 nameEnact))
     -- These properties do not have working 'signalSpec' Specifications yet.
     xprop
       "GOV"
-      (withMaxSuccess 50 (minitraceProp (GOV Proof.Conway) (Proxy @ConwayFn) 50 nameGovSignal))
+      (withMaxSuccess 50 (minitraceProp (GOV Conway) 50 nameGovSignal))
     xprop
       "UTXO"
-      (withMaxSuccess 50 (minitraceProp (UTXO Proof.Conway) (Proxy @ConwayFn) 50 nameAlonzoTx))
+      (withMaxSuccess 50 (minitraceProp (UTXO Conway) 50 nameAlonzoTx))
     xprop
       "EPOCH"
-      (withMaxSuccess 50 (minitraceProp (EPOCH Proof.Conway) (Proxy @ConwayFn) 50 nameEpoch))
+      (withMaxSuccess 50 (minitraceProp (EPOCH Conway) 50 nameEpoch))
     xprop
       "NEWEPOCH"
-      (withMaxSuccess 50 (minitraceProp (NEWEPOCH Proof.Conway) (Proxy @ConwayFn) 50 nameEpoch))
+      (withMaxSuccess 50 (minitraceProp (NEWEPOCH Conway) 50 nameEpoch))

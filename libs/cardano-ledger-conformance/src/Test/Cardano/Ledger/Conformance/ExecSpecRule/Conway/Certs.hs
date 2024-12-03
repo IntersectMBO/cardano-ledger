@@ -34,7 +34,7 @@ instance
 
   genExecContext = do
     univ <- genWitUniv @Conway 300
-    ccec <- genFromSpec @fn (conwayCertExecContextSpec univ)
+    ccec <- genFromSpec @fn (conwayCertExecContextSpec univ 5)
     pure (univ, ccec)
 
   environmentSpec _ = certsEnvSpec

@@ -5,6 +5,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
@@ -28,8 +30,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
--- import Constrained(Specification)
-
 -- | There are no hard constraints on VState, other than witnessing, and delegatee conformance
 --   which must align with the conwayCertExecContextSpec
 vStateSpec ::
@@ -41,22 +41,23 @@ vStateSpec ::
 vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
   match vstate $ \ [var|dreps|] [var|committeestate|] [var|_numdormant|] ->
     [ match committeestate $ \ [var|committeemap|] -> witness univ (dom_ committeemap)
-    , assert $ dom_ dreps ==. (lit delegatees)
+    , assert $ dom_ dreps ==. (lit delegatees) -- TODO, there are missing constraints about the (rng_ dreps)
     , forAll dreps $ \ [var|pair|] ->
         match pair $ \ [var|drep|] [var|drepstate|] ->
-          [ witness univ drep
+          [ dependsOn drepstate drep
+          , witness univ drep
           , match drepstate $
               \_expiry _anchor _deposit [var|delegs|] -> witness univ delegs
           ]
     ]
 
 govCertSpec ::
-  IsConwayUniv fn =>
+  (IsConwayUniv fn, Era era, EraCrypto era ~ StandardCrypto) =>
   WitUniv era ->
   ConwayGovCertEnv (ConwayEra StandardCrypto) ->
   CertState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayGovCert StandardCrypto)
-govCertSpec _univ ConwayGovCertEnv {..} certState =
+govCertSpec univ ConwayGovCertEnv {..} certState =
   let vs = certVState certState
       reps = lit $ Map.keysSet $ vsDReps vs
       deposits = Map.map drepDeposit (vsDReps vs)
@@ -75,10 +76,10 @@ govCertSpec _univ ConwayGovCertEnv {..} certState =
           -- The weights on each 'branchW' case try to make it likely
           -- that each branch is choosen with similar frequency
           -- ConwayRegDRep
-
           ( branchW 1 $ \ [var|keyreg|] [var|coinreg|] _ ->
               [ assert $ not_ $ member_ keyreg (dom_ (lit deposits))
               , assert $ coinreg ==. lit (cgcePParams ^. ppDRepDepositL)
+              , witness univ keyreg
               ]
           )
           -- ConwayUnRegDRep -- Commented out on purpose, to make conformance tests pass.
@@ -89,13 +90,22 @@ govCertSpec _univ ConwayGovCertEnv {..} certState =
           (branchW 3 $ \_credUnreg _coinUnreg -> False)
           -- ConwayUpdateDRep
           ( branchW 1 $ \ [var|keyupdate|] _ ->
-              member_ keyupdate reps
+              [witness univ keyupdate, assert $ member_ keyupdate reps]
           )
           -- ConwayAuthCommitteeHotKey
-          ( branchW 1 $ \ [var|coldCredAuth|] _ -> [ccCertSpec coldCredAuth, notYetResigned commiteeStatus coldCredAuth]
+          ( branchW 1 $ \ [var|coldCredAuth|] [var|hotcred|] ->
+              [ ccCertSpec coldCredAuth
+              , notYetResigned commiteeStatus coldCredAuth
+              , witness univ coldCredAuth
+              , witness univ hotcred
+              ]
           )
           -- ConwayResignCommitteeColdKey
-          ( branchW 1 $ \ [var|coldCredResign|] _ -> [ccCertSpec coldCredResign, notYetResigned commiteeStatus coldCredResign]
+          ( branchW 1 $ \ [var|coldCredResign|] _ ->
+              [ witness univ coldCredResign
+              , ccCertSpec coldCredResign
+              , notYetResigned commiteeStatus coldCredResign
+              ]
           )
 
 -- | Operations for authenticating a HotKey, or resigning a ColdKey are illegal
@@ -122,11 +132,16 @@ notYetResigned committeeStatus coldcred =
   )
 
 govCertEnvSpec ::
-  forall fn era.
+  forall fn.
   IsConwayUniv fn =>
-  WitUniv era ->
+  WitUniv (ConwayEra StandardCrypto) ->
   Specification fn (ConwayGovCertEnv (ConwayEra StandardCrypto))
-govCertEnvSpec _univ =
-  constrained $ \gce ->
-    match gce $ \pp _ _ _ ->
-      satisfies pp pparamsSpec
+govCertEnvSpec univ =
+  constrained $ \ [var|gce|] ->
+    match gce $ \ [var|pp|] _ [var|committee|] [var|proposalmap|] ->
+      [ satisfies pp pparamsSpec
+      , unsafeExists (\x -> [satisfies x (committeeWitness univ), assert $ committee ==. cSJust_ x])
+      , assert $ sizeOf_ (dom_ proposalmap) <=. lit 5
+      , assert $ sizeOf_ (dom_ proposalmap) >=. lit 1
+      , forAll (rng_ proposalmap) $ \x -> satisfies x (govActionStateWitness univ)
+      ]

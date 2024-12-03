@@ -27,6 +27,10 @@
 {-# OPTIONS_GHC -O0 #-}
 #endif
 
+#if __GLASGOW_HASKELL__ <= 966
+{-# OPTIONS_GHC -O0 #-}
+#endif
+
 -- | This module provides the necessary instances of `HasSpec`
 -- and `HasSimpleRep` to write specs for the environments,
 -- states, and signals in the STS rules of the Ledger. Note some simple

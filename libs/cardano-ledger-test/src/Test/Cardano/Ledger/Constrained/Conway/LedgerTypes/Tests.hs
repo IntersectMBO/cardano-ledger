@@ -54,6 +54,7 @@ import Test.QuickCheck (
  )
 
 import System.IO.Unsafe
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (certStateSpec, dstateSpec)
 
 -- ====================================================================================
 -- Some Specifications are constrained by types (say 'x') that do not appear in the type being
@@ -125,27 +126,34 @@ soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ prop
 specSuite ::
   forall (era :: Type).
   ( EraSpecLedger era ConwayFn
-  , EraUniverse era
   , PrettyA (GovState era)
   ) =>
   Int -> Spec
 specSuite n = do
-  let universe = genWitUniv @era 50
+  let universe = genWitUniv @era 200
 
   soundSpecWith @(PState era) (5 * n) (pstateSpec @ConwayFn @era <$> universe !*! epochNoSpec)
+
   soundSpecWith @(DState era)
     (5 * n)
-    (dstateSpec @era <$> universe !$! TrueSpec !*! accountStateSpec !*! poolMapSpec)
+    $ do
+      univ <- genWitUniv @era 50
+      (dstateSpec @era univ !$! accountStateSpec !*! poolMapSpec)
 
   soundSpecWith @(VState era)
     (10 * n)
-    ( vstateSpec @_ @era (eraWitUniv @era 50)
-        !$! epochNoSpec
-        !*! goodDrep @era
-    )
+    $ do
+      univ <- genWitUniv @era 25
+      ( vstateSpec @_ @era univ
+          !$! epochNoSpec
+          !*! (goodDrep @era univ)
+        )
+
   soundSpecWith @(CertState era)
     (5 * n)
-    (certStateSpec <$> universe !$! (hasSize (rangeSize 6 10)) !*! accountStateSpec !*! epochNoSpec)
+    $ do
+      univ <- genWitUniv @era 50
+      (certStateSpec @era @ConwayFn univ {- (lit drepRoleCredSet) -} !$! accountStateSpec !*! epochNoSpec)
 
   soundSpecWith @(UTxO era) (5 * n) (utxoSpecWit @era <$> universe !*! delegationsSpec)
 
@@ -159,7 +167,7 @@ specSuite n = do
     (2 * n)
     ( ledgerStateSpec
         <$> genConwayFn pparamsSpec
-        <*> genWitUniv @era 50 !*! accountStateSpec !*! epochNoSpec
+        <*> genWitUniv @era 100 !*! accountStateSpec !*! epochNoSpec
     )
   soundSpecWith @(EpochState era)
     (2 * n)
@@ -195,10 +203,3 @@ utxoStateGen =
     <$> genConwayFn @(PParams era) pparamsSpec
     <*> genWitUniv @era 25
     <*> (lit <$> wff @(CertState era) @era)
-
-zzz :: IO ()
-zzz = do
-  m <- generate $ genFromSpec @ConwayFn (goodDrep @Shelley)
-  e <- generate $ genFromSpec @ConwayFn epochNoSpec
-  ans <- generate $ genFromSpec @ConwayFn (vstateSpec (eraWitUniv @Shelley 50) (lit e) (lit m))
-  putStrLn (show (prettyA ans))

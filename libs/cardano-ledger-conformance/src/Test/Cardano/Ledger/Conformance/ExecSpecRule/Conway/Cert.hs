@@ -35,13 +35,14 @@ instance
   type ExecContext fn "CERT" Conway = (WitUniv Conway, ConwayCertExecContext Conway)
 
   genExecContext = do
-    univ <- genWitUniv @Conway 200
-    ccec <- genFromSpec @ConwayFn (conwayCertExecContextSpec univ)
+    univ <- genWitUniv @Conway 300
+    ccec <- genFromSpec @ConwayFn (conwayCertExecContextSpec univ 5)
     pure (univ, ccec)
 
   environmentSpec (univ, _) = certEnvSpec @fn @Conway univ
 
-  stateSpec (univ, ccecCtx) _ = certStateSpec @fn @Conway univ (ccecDelegatees ccecCtx)
+  stateSpec (univ, ccec) _ =
+    certStateSpec @fn @Conway univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
 
   signalSpec (univ, _) env state = conwayTxCertSpec @fn @Conway univ env state
 

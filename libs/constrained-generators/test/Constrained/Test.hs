@@ -28,6 +28,7 @@ import Test.QuickCheck hiding (Args, Fun, forAll)
 import Constrained.Examples
 import Constrained.Internals
 import Constrained.Properties
+import qualified Data.List.NonEmpty as NE
 
 ------------------------------------------------------------------------
 -- Test suite
@@ -183,6 +184,7 @@ tests nightly =
       prop "Set (Set Bool)" $ prop_gen_sound @BaseFn @(Set (Set Bool))
     negativeTests
     prop "prop_noNarrowLoop" $ withMaxSuccess 1000 prop_noNarrowLoop
+    conformsToSpecESpec
 
 negativeTests :: Spec
 negativeTests =
@@ -382,3 +384,31 @@ prop_noNarrowLoop f s eSpec fSpec =
     discardAfter 100_000 $
       narrowByFuelAndSize f s (eSpec, fSpec) `seq`
         property True
+
+-- | The test succeeds if conformsToSpec and conformsToSpecE both conform, or both fail to conform.
+--   We collect answers by specType (ErrorSpec, MemberSpec, SuspendedSpec, ...) and whether
+--   they both conform, or they both fail to conform.
+conformsToSpecETest :: forall a. HasSpec BaseFn a => a -> Specification BaseFn a -> Property
+conformsToSpecETest a speca =
+  let resultE = conformsToSpecE a speca (pure ("ConformsToSpecETest " ++ show a ++ " " ++ show speca))
+   in if conformsToSpec a speca
+        then case resultE of
+          Nothing -> property (collect (specType speca ++ " both conform") True)
+          Just xs -> counterexample (unlines (NE.toList xs)) False
+        else case resultE of
+          Nothing ->
+            counterexample ("conformstoSpec returns False, but conformsToSpecE returns no explanations") False
+          Just _ -> property (collect (specType speca ++ " both fail to conform") True)
+
+conformsToSpecESpec :: Spec
+conformsToSpecESpec =
+  describe "Testing alignment of conformsToSpec and conformsToSpecE" $
+    modifyMaxSuccess (const 1000) $ do
+      prop "Int" (conformsToSpecETest @Int)
+      prop "Word64" (conformsToSpecETest @Word64)
+      prop "Bool" (conformsToSpecETest @Bool)
+      prop "[Int]" (conformsToSpecETest @[Int])
+      prop "(Int,Bool)" (conformsToSpecETest @(Int, Bool))
+      prop "Set Integer" (conformsToSpecETest @(Set Integer))
+      prop "Set[Int]" (conformsToSpecETest @(Set [Int]))
+      prop "Map Int Int" (conformsToSpecETest @(Map Int Int))
