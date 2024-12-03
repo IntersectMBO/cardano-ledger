@@ -107,6 +107,7 @@ library testlib
         containers,
         cuddle,
         generic-random,
+        heredoc,
         microlens,
         mtl,
         small-steps,
