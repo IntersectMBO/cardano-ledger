@@ -21,6 +21,12 @@ cradle:
     - path: "eras/alonzo/impl/testlib"
       component: "cardano-ledger-alonzo:lib:testlib"
 
+    - path: "eras/alonzo/impl/huddle-cddl/Main.hs"
+      component: "cardano-ledger-alonzo:exe:huddle-cddl"
+
+    - path: "eras/alonzo/impl/huddle-cddl/Paths_cardano_ledger_alonzo.hs"
+      component: "cardano-ledger-alonzo:exe:huddle-cddl"
+
     - path: "eras/alonzo/impl/test/GenerateGoldenFileMain.hs"
       component: "cardano-ledger-alonzo:exe:gen-golden"
 
