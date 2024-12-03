@@ -152,7 +152,7 @@ data BabbagePParams f era = BabbagePParams
   , bppEMax :: !(HKD f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
   -- be scheduled for.
-  , bppNOpt :: !(HKD f Natural)
+  , bppNOpt :: !(HKD f Word16)
   -- ^ Desired number of pools
   , bppA0 :: !(HKD f NonNegativeInterval)
   -- ^ Pool influence

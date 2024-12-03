@@ -115,10 +115,10 @@ import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
+import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 
 --------------------------------------------------------------------------------
 -- UTxOs
@@ -320,7 +320,7 @@ deriving instance ToJSON RewardInfoPool
 
 -- | Global information that influences stake pool rewards
 data RewardParams = RewardParams
-  { nOpt :: Natural
+  { nOpt :: Word16
   -- ^ Desired number of stake pools
   , a0 :: NonNegativeInterval
   -- ^ Influence of the pool owner's pledge on rewards

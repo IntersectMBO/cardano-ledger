@@ -264,7 +264,7 @@ protocol_param_update =
       , opt (idx 5 ==> coin) -- key deposit
       , opt (idx 6 ==> coin) -- pool deposit
       , opt (idx 7 ==> epoch) -- maximum epoch
-      , opt (idx 8 ==> VUInt) -- n_opt: desired number of stake pools
+      , opt (idx 8 ==> VUInt `sized` (2 :: Word64)) -- n_opt: desired number of stake pools
       , opt (idx 9 ==> nonnegative_interval) -- pool pledge influence
       , opt (idx 10 ==> unit_interval) -- expansion rate
       , opt (idx 11 ==> unit_interval) -- treasury growth rate

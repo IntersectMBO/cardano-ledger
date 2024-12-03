@@ -1130,7 +1130,7 @@ pcPParamsField x = case x of
   KeyDeposit coin -> [("keydeposit", pcCoin coin)]
   PoolDeposit coin -> [("pooldeposit", pcCoin coin)]
   EMax n -> [("emax", ppEpochInterval n)]
-  NOpt natural -> [("NOpt", ppNatural natural)]
+  NOpt n -> [("NOpt", ppWord16 n)]
   A0 i -> [("A0", viaShow i)]
   Rho u -> [("Rho", ppUnitInterval u)]
   Tau u -> [("Tau", ppUnitInterval u)]

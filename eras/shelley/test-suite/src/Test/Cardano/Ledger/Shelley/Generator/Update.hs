@@ -180,8 +180,8 @@ genEMax Constants {frequencyLowMaxEpoch} =
   EpochInterval . fromIntegral <$> genWord64 frequencyLowMaxEpoch 500
 
 -- | nOpt
-genNOpt :: HasCallStack => Gen Natural
-genNOpt = genNatural 1 100
+genNOpt :: HasCallStack => Gen Word16
+genNOpt = fromIntegral <$> genNatural 1 100
 
 -- | genKeyDeposit
 -- NOTE: we need to keep these deposits small, otherwise

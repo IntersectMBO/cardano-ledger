@@ -98,7 +98,6 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (lens, (^.))
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 
 -- ====================================================================
 
@@ -120,7 +119,7 @@ data ShelleyPParams f era = ShelleyPParams
   -- ^ The amount of a pool registration deposit
   , sppEMax :: !(HKD f EpochInterval)
   -- ^ epoch bound on pool retirement
-  , sppNOpt :: !(HKD f Natural)
+  , sppNOpt :: !(HKD f Word16)
   -- ^ Desired number of pools
   , sppA0 :: !(HKD f NonNegativeInterval)
   -- ^ Pool influence
@@ -496,7 +495,7 @@ shelleyCommonPParamsHKDPairs px pp =
   , ("stakeAddressDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdKeyDepositL @era @f))
   , ("stakePoolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))
   , ("poolRetireMaxEpoch", hkdMap px (toJSON @EpochInterval) (pp ^. hkdEMaxL @era @f))
-  , ("stakePoolTargetNum", hkdMap px (toJSON @Natural) (pp ^. hkdNOptL @era @f))
+  , ("stakePoolTargetNum", hkdMap px (toJSON @Word16) (pp ^. hkdNOptL @era @f))
   , ("poolPledgeInfluence", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
   , ("monetaryExpansion", hkdMap px (toJSON @UnitInterval) (pp ^. hkdRhoL @era @f))
   , ("treasuryCut", hkdMap px (toJSON @UnitInterval) (pp ^. hkdTauL @era @f))

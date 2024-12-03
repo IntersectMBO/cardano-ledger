@@ -81,11 +81,11 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Typeable
 import Data.VMap as VMap
+import Data.Word (Word16)
 import GHC.Generics (Generic)
 import GHC.Word (Word64)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
-import Numeric.Natural (Natural)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake c = Stake
@@ -135,7 +135,7 @@ sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
 -- | Calculate maximal pool reward
 maxPool' ::
   NonNegativeInterval ->
-  Natural ->
+  Word16 ->
   Coin ->
   Rational ->
   Rational ->
