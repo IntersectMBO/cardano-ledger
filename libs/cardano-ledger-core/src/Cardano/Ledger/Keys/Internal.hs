@@ -35,6 +35,8 @@ module Cardano.Ledger.Keys.Internal (
   KeyRoleVRF (..),
   VRFVerKeyHash (..),
   hashVerKeyVRF,
+  toVRFVerKeyHash,
+  fromVRFVerKeyHash,
 
   -- * Genesis delegations
   GenDelegPair (..),
@@ -373,4 +375,12 @@ deriving newtype instance Crypto c => Default (VRFVerKeyHash r c)
 
 hashVerKeyVRF ::
   Crypto c => VerKeyVRF c -> VRFVerKeyHash (r :: KeyRoleVRF) c
-hashVerKeyVRF = VRFVerKeyHash . Hash.castHash . VRF.hashVerKeyVRF
+hashVerKeyVRF = toVRFVerKeyHash . VRF.hashVerKeyVRF
+
+toVRFVerKeyHash ::
+  Hash.Hash (HASH c) (VRF.VerKeyVRF v) -> VRFVerKeyHash (r :: KeyRoleVRF) c
+toVRFVerKeyHash = VRFVerKeyHash . Hash.castHash
+
+fromVRFVerKeyHash ::
+  VRFVerKeyHash (r :: KeyRoleVRF) c -> Hash.Hash (HASH c) (VRF.VerKeyVRF v)
+fromVRFVerKeyHash = Hash.castHash . unVRFVerKeyHash

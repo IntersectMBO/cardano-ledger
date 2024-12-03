@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `toVRFVerKeyHash` and `fromVRFVerKeyHash`
 * Change lens type of `hkdNOptL`, `ppNOptL`, and `ppuNOptL` to `Word16`
 * Add `epochFromSlot`
 * Remove usage of a `Reader` monad in `epochInfoEpoch`, `epochInfoFirst` and `epochInfoSize`.
