@@ -1684,7 +1684,7 @@ class Coercible a b => CoercibleLike a b where
     TypeSpec fn a ->
     Specification fn b
 
-instance (Typeable krole, Crypto c) => CoercibleLike (KeyHash krole c) (KeyHash 'Witness c) where
+instance Typeable krole => CoercibleLike (KeyHash krole) (KeyHash 'Witness) where
   coerceSpec (ExplainSpec es x) = explainSpecOpt es (coerceSpec x)
   coerceSpec (TypeSpec z excl) = TypeSpec z $ coerceKeyRole <$> excl
   coerceSpec (MemberSpec s) = MemberSpec $ coerceKeyRole <$> s
@@ -1698,8 +1698,8 @@ instance (Typeable krole, Crypto c) => CoercibleLike (KeyHash krole c) (KeyHash 
   getCoerceSpec ::
     forall (fn :: [Type] -> Type -> Type).
     IsConwayUniv fn =>
-    TypeSpec fn (KeyHash krole c) ->
-    Specification fn (KeyHash 'Witness c)
+    TypeSpec fn (KeyHash krole) ->
+    Specification fn (KeyHash 'Witness)
   getCoerceSpec x = TypeSpec @fn x mempty
 
 instance CoercibleLike (CompactForm Coin) Word64 where

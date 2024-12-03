@@ -19,25 +19,25 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHash, credScriptHash)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained
-import Constrained.Base (Pred (..))
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq, fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Word (Word64)
 import Test.Cardano.Ledger.Constrained.Conway.Cert
-import Test.Cardano.Ledger.Constrained.Conway.Deleg (someZeros)
+import Test.Cardano.Ledger.Constrained.Conway.Deleg (keyHashWdrl, rewDepMapSpec2)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
 -- =======================================================
 
+setMapMaybe :: Ord a => (t -> Maybe a) -> Set t -> Set a
+setMapMaybe f set = Set.foldr' (\x s -> maybe s (`Set.insert` s) $ f x) mempty set
+
 -- The current spec is written to specify the phase when Voting goes into effect (the Post BootStrap phase)
 -- The implementation is written to implement the phase before Voting goes into effect (the BootStrap phase)
--- This affects the Certs rule beacuse in the Post Bootstrap Phase, the spec tests that the (Credential 'Staking c)
+-- This affects the Certs rule because in the Post Bootstrap Phase, the spec tests that the (Credential 'Staking c)
 -- of every withdrawal, is delegated to some DRep, and that every Withdrawal is consistent with some Rewards entry.
 -- This is tested in the Spec, but it is not tested in implementation.
 -- A hardfork, sometime in the future will turn this test on.
@@ -48,60 +48,52 @@ bootstrapDStateSpec ::
   forall fn era.
   EraSpecTxOut era fn =>
   WitUniv era ->
-  Set (Credential 'DRepRole (EraCrypto era)) ->
-  Map (RewardAccount (EraCrypto era)) Coin ->
+  -- Set of credentials, each uniquely identifying a DRep,
+  -- Every delegation of a stake credential to a DRep should be in this set.
+  Set (Credential 'DRepRole) ->
+  Map RewardAccount Coin ->
   Specification fn (DState era)
 bootstrapDStateSpec univ delegatees withdrawals =
-  let isKey (ScriptHashObj _) = False
-      isKey (KeyHashObj _) = True
-      withdrawalPairs = Map.toList (Map.mapKeys raCredential (Map.map coinToWord64 withdrawals))
-      withdrawalKeys = Map.keysSet (Map.mapKeys raCredential withdrawals)
-      setMapMaybe f = Set.foldr' (\x s -> maybe s (`Set.insert` s) $ f x) mempty
-   in constrained $ \ [var| dstate |] ->
-        match dstate $ \ [var| rewardMap |] futureGenDelegs genDelegs [var|irewards|] ->
-          [ assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
-          , match genDelegs $ \gd ->
-              [ witness univ (dom_ gd)
-              , witness univ (rng_ gd)
-              , assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
-              ]
-          , match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
-          , match [var| rewardMap |] $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepDelegs|] ->
-              [ witness univ (dom_ dRepDelegs)
-              , witness univ (rng_ dRepDelegs)
-              , witness univ (dom_ rdMap)
-              , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
-              , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
-              , assertExplain (pure "some rewards (not in withdrawals) are zero") $
-                  forAll rdMap $
-                    \ [var| keycoinpair |] -> match keycoinpair $ \cred [var| rdpair |] ->
-                      -- Apply this only to entries NOT IN the withdrawal set, since withdrawals already set the reward in the RDPair.
-                      whenTrue (not_ (member_ cred (lit withdrawalKeys))) (satisfies rdpair someZeros)
-              , forAll (lit (Set.filter isKey withdrawalKeys)) $ \cred -> assert $ member_ cred (dom_ dRepDelegs)
-              , forAll' dRepDelegs $ \_ dRep ->
+  constrained $ \ [var| dstate |] ->
+    match dstate $ \ [var| uMap |] futureGenDelegs genDelegs [var|irewards|] ->
+      [ -- futureGenDelegs
+        assert $ sizeOf_ futureGenDelegs ==. (if hasGenDelegs @era [] then 3 else 0)
+      , -- genDelegs
+        match genDelegs $ \gd ->
+          [ witness univ (dom_ gd)
+          , witness univ (rng_ gd)
+          , assert $ sizeOf_ gd ==. (if hasGenDelegs @era [] then 3 else 0)
+          ]
+      , -- irewards
+        match irewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
+      , -- uMap
+        match [var| uMap |] $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] [var|dRepMap|] ->
+          [ -- rdMap
+            satisfies rdMap (rewDepMapSpec2 univ withdrawals)
+          , -- dRepMap
+            dependsOn dRepMap rdMap
+          , reify rdMap id $ \ [var|rdm|] ->
+              [ witness univ (dom_ dRepMap)
+              , assert $ subset_ (lit (keyHashWdrl withdrawals)) (dom_ dRepMap)
+              , witness univ (rng_ dRepMap)
+              , assert $ subset_ (dom_ dRepMap) (dom_ rdm)
+              , -- All DReps delegated to are known delegatees
+                forAll' dRepMap $ \_ dRep ->
                   [ (caseOn dRep)
                       (branch $ \kh -> assert (kh `member_` lit (setMapMaybe credKeyHash delegatees)))
                       (branch $ \sh -> assert (sh `member_` lit (setMapMaybe credScriptHash delegatees)))
                       (branch $ \_ -> assert True)
                       (branch $ \_ -> assert True)
                   ]
-              , forAll (lit withdrawalPairs) $ \ [var| pair |] ->
-                  match pair $ \ [var| cred |] [var| coin |] ->
-                    [ assert $ member_ cred (dom_ rdMap)
-                    , (caseOn (lookup_ cred rdMap))
-                        -- Nothing
-                        ( branch $ \_ -> FalsePred (pure ("credential " ++ show cred ++ " not in rdMap, bootstrapCertStateSpec"))
-                        )
-                        -- Just
-                        ( branch $ \ [var| rdpair |] ->
-                            match rdpair $ \rew _deposit -> assert $ rew ==. coin
-                        )
-                    ]
               ]
+          , -- sPoolMap
+            dependsOn sPoolMap rdMap
+          , reify rdMap id $ \ [var|rdmp|] ->
+              assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdmp
+          , -- ptrMap
+            assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
           ]
-
-coinToWord64 :: Coin -> Word64
-coinToWord64 (Coin n) = fromIntegral n
+      ]
 
 txZero :: EraTx era => Tx era
 txZero = mkBasicTx mkBasicTxBody

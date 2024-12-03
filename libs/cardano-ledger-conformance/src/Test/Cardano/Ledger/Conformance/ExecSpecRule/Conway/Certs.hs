@@ -30,11 +30,11 @@ instance
   IsConwayUniv fn =>
   ExecSpecRule fn "CERTS" ConwayEra
   where
-  type ExecContext fn "CERTS" Conway = (WitUniv Conway, ConwayCertExecContext Conway)
+  type ExecContext fn "CERTS" ConwayEra = (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
 
   genExecContext = do
-    univ <- genWitUniv @Conway 300
-    ccec <- genFromSpec @fn (conwayCertExecContextSpec univ)
+    univ <- genWitUniv @ConwayEra 300
+    ccec <- genFromSpec @fn (conwayCertExecContextSpec univ 5)
     pure (univ, ccec)
 
   environmentSpec _ = certsEnvSpec
@@ -42,13 +42,13 @@ instance
   stateSpec (univ, context) _ =
     constrained $ \x ->
       match x $ \vstate pstate dstate ->
-        [ satisfies vstate (vStateSpec @_ @Conway univ (ccecDelegatees context))
-        , satisfies pstate (pStateSpec @_ @Conway univ)
+        [ satisfies vstate (vStateSpec @_ @ConwayEra univ (ccecDelegatees context))
+        , satisfies pstate (pStateSpec @_ @ConwayEra univ)
         , -- temporary workaround because Spec does some extra tests, that the implementation does not, in the bootstrap phase.
           satisfies dstate (bootstrapDStateSpec univ (ccecDelegatees context) (ccecWithdrawals context))
         ]
 
-  signalSpec (univ, _) env state = txCertsSpec @Conway @fn univ env state
+  signalSpec (univ, _) env state = txCertsSpec @ConwayEra @fn univ env state
 
   runAgdaRule env st sig = unComputationResult $ Agda.certsStep env st sig
   classOf = Just . nameCerts
@@ -57,7 +57,7 @@ instance
     -- The results of runConformance are Agda types, the `ctx` is a Haskell type, we extract and translate the Withdrawal keys.
     specWithdrawalCredSet <-
       translateWithContext () (Map.keysSet (Map.mapKeys raCredential (ccecWithdrawals ccec)))
-    (implResTest, agdaResTest, _) <- runConformance @"CERTS" @fn @Conway ctx env st sig
+    (implResTest, agdaResTest, _) <- runConformance @"CERTS" @fn @ConwayEra ctx env st sig
     case (implResTest, agdaResTest) of
       (Right haskell, Right spec) ->
         checkConformance @"CERTS" @ConwayEra @fn

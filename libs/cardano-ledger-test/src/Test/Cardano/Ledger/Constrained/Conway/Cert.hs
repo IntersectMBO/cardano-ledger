@@ -9,6 +9,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -32,6 +33,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Constrained
+import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -56,21 +58,26 @@ certEnvSpec _univ =
 delegateeSpec ::
   (IsConwayUniv fn, Era era) =>
   WitUniv era ->
-  Specification fn (Set (Credential 'DRepRole (EraCrypto era)))
-delegateeSpec univ = constrained $ \x -> witness univ x
+  Specification fn (Set (Credential 'DRepRole))
+delegateeSpec univ = constrained $ \x ->
+  [ witness univ x
+  , assert $ sizeOf_ x <=. 20
+  , assert $ sizeOf_ x >=. 10
+  ]
 
 certStateSpec ::
   forall fn era.
   (IsConwayUniv fn, EraSpecDeleg era, Era era) =>
   WitUniv era ->
-  Set (Credential 'DRepRole (EraCrypto era)) ->
+  Set (Credential 'DRepRole) ->
+  Map (RewardAccount) Coin ->
   Specification fn (CertState era)
-certStateSpec univ delegatees =
+certStateSpec univ delegatees wdrls =
   constrained $ \cs ->
     match cs $ \vState pState dState ->
       [ satisfies vState (vStateSpec @fn @era univ delegatees)
       , satisfies pState (pStateSpec @fn @era univ)
-      , satisfies dState (dStateSpec @fn @era univ)
+      , satisfies dState (dStateSpec @fn @era univ wdrls)
       ]
 
 conwayTxCertSpec ::
@@ -173,7 +180,7 @@ class
   EraSpecCert era fn
   where
   txCertSpec :: WitUniv era -> CertEnv era -> CertState era -> Specification fn (TxCert era)
-  txCertKey :: TxCert era -> CertKey (EraCrypto era)
+  txCertKey :: TxCert era -> CertKey
 
 instance IsConwayUniv fn => EraSpecCert ShelleyEra fn where
   txCertSpec = shelleyTxCertSpec
@@ -235,8 +242,9 @@ testGenesisCert ::
   forall era.
   (AtMostEra BabbageEra era, EraSpecDeleg era, EraSpecPParams era, GenScript era) => Gen Property
 testGenesisCert = do
-  univ <- genWitUniv @era 50
-  dstate <- genFromSpec @ConwayFn @(DState era) (dStateSpec @ConwayFn @era univ)
+  univ <- genWitUniv @era 200
+  wdrls <- genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
+  dstate <- genFromSpec @ConwayFn @(DState era) (dStateSpec @ConwayFn @era univ wdrls)
   let spec = genesisDelegCertSpec @ConwayFn dstate
   ans <- genFromSpec @ConwayFn spec
   pure $ property (conformsToSpec ans spec)
@@ -246,10 +254,12 @@ testShelleyCert ::
   (Era era, AtMostEra BabbageEra era, EraSpecPParams era, EraSpecDeleg era, GenScript era) =>
   Gen Property
 testShelleyCert = do
-  univ <- genWitUniv @era 50
+  univ <- genWitUniv @era 200
+  wdrls <- genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
   delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
   env <- genFromSpec @ConwayFn @(CertEnv era) (certEnvSpec @ConwayFn @era univ)
-  dstate <- genFromSpec @ConwayFn @(CertState era) (certStateSpec @ConwayFn @era univ delegatees)
+  dstate <-
+    genFromSpec @ConwayFn @(CertState era) (certStateSpec @ConwayFn @era univ delegatees wdrls)
   let spec = shelleyTxCertSpec univ env dstate
   ans <- genFromSpec @ConwayFn spec
   let tag = case ans of
@@ -266,12 +276,14 @@ testShelleyCert = do
 
 testConwayCert :: Gen Property
 testConwayCert = do
-  univ <- genWitUniv @Conway 5
-  env <- genFromSpec @ConwayFn @(CertEnv Conway) (certEnvSpec @ConwayFn @Conway univ)
+  univ <- genWitUniv @ConwayEra 200
+  env <- genFromSpec @ConwayFn @(CertEnv ConwayEra) (certEnvSpec @ConwayFn @ConwayEra univ)
+  wdrls <- genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
   delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
   dstate <-
-    genFromSpec @ConwayFn @(CertState Conway) (certStateSpec @ConwayFn @Conway univ delegatees)
-  let spec :: Specification ConwayFn (ConwayTxCert (ConwayEra StandardCrypto))
+    genFromSpec @ConwayFn @(CertState ConwayEra)
+      (certStateSpec @ConwayFn @ConwayEra univ delegatees wdrls)
+  let spec :: Specification ConwayFn (ConwayTxCert ConwayEra)
       spec = conwayTxCertSpec univ env dstate
   ans <- genFromSpec @ConwayFn spec
   let tag = case ans of

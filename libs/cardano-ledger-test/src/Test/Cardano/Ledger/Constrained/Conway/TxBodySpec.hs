@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Constrained.Conway.TxBodySpec where
 
 import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (CertsEnv (..))
 import Cardano.Ledger.Core
 
@@ -52,16 +52,16 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraSpecLedger (
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
-import Test.QuickCheck hiding (forAll)
+import Test.QuickCheck hiding (forAll, witness)
 import Prelude hiding (seq)
 
 import Cardano.Ledger.Address (Withdrawals (..))
-import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.CertState (lookupDepositDState, lookupDepositVState)
-import Cardano.Ledger.Mary (Mary)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (Consumed (..), Produced (..), consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (CertState (..), PState (..))
 import Data.Text (pack)
@@ -218,7 +218,6 @@ bodyspec univ certsenv certstate =
             , subMapSuperDependsOnSub utxosubset tempUtxo
             , forAll' tempUtxo $ \_ [var|out|] -> assert $ txOutCoin_ @era @fn out >. lit (Coin 0)
             , -- Certs has no dependencies
-              -- , forAll certs $ \ [var|oneCert|] -> satisfies oneCert (txCertSpec (projectEnv certsenv) certstate)
               forAll certs $ \ [var|oneCert|] -> satisfies oneCert (witTxCert univ)
             , assert $ sizeOf_ certs ==. 4
             , -- withdrawals hs no dependencies
@@ -263,11 +262,12 @@ go2 ::
   IO ()
 go2 = do
   univ <- generate $ genWitUniv 25
+  wdrls <- generate $ genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
   delegatees <- generate $ genFromSpec @ConwayFn (delegateeSpec univ)
   certState <-
     generate $
       genFromSpec @ConwayFn @(CertState era)
-        (certStateSpec @ConwayFn @era univ delegatees) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
+        (certStateSpec @ConwayFn @era univ delegatees wdrls) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
         -- error "STOP"
   certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv era) certsEnvSpec
 
@@ -284,20 +284,21 @@ go2 = do
   print (consumedTxBody txbody (certsPParams certsEnv) certState utxo)
   print (producedTxBody txbody (certsPParams certsEnv) certState)
 
-go :: IO ()
-go = do
-  univ <- generate $ genWitUniv @Allegra 5
+testBody :: IO ()
+testBody = do
+  univ <- generate $ genWitUniv @AllegraEra 5
+  wdrls <- generate $ genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
   delegatees <- generate $ genFromSpec @ConwayFn (delegateeSpec univ)
-  certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv Allegra) certsEnvSpec
+  certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv AllegraEra) certsEnvSpec
   certState <-
     generate $
-      genFromSpec @ConwayFn @(CertState Allegra)
-        (certStateSpec @ConwayFn @Allegra univ delegatees)
+      genFromSpec @ConwayFn @(CertState AllegraEra)
+        (certStateSpec @ConwayFn @AllegraEra univ delegatees wdrls)
 
   cert <-
     generate $
-      genFromSpec @ConwayFn @(TxCert Allegra) $
-        (shelleyTxCertSpec @ConwayFn @Allegra univ (projectEnv certsEnv) certState)
+      genFromSpec @ConwayFn @(TxCert AllegraEra) $
+        (shelleyTxCertSpec @ConwayFn @AllegraEra univ (projectEnv certsEnv) certState)
           <> (witShelleyTxCert univ)
   -- The problem with this is that the CertState does not have any
   -- thing from the universe, so any Cert that requires a member_ of someting

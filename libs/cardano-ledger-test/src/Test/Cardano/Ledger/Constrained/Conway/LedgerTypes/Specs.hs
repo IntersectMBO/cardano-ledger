@@ -61,7 +61,6 @@ import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Constrained.Conway.Gov (govProposalsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
-import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.QuickCheck hiding (forAll, witness)
 
 -- ===========================================================
@@ -177,24 +176,22 @@ protVersCanfollow =
 
 goodDrep ::
   forall era.
-  Era era =>
-  EraUniverse era =>
+  WitUniv era ->
   Specification
     ConwayFn
     ( Map
-        (Credential 'DRepRole (EraCrypto era))
-        (Set.Set (Credential 'Staking (EraCrypto era)))
+        (Credential 'DRepRole)
+        (Set.Set (Credential 'Staking))
     )
-goodDrep =
-  let goodWitUniv = eraWitUniv @era 100
-   in constrained $ \dRepMap ->
-        [ forAll dRepMap $ \pair ->
-            [ satisfies (fst_ pair) (witCredSpec @ConwayFn @era goodWitUniv)
-            , satisfies (snd_ pair) (hasSize (rangeSize 1 5))
-            , forAll (snd_ pair) (`satisfies` (witCredSpec @ConwayFn @era goodWitUniv))
-            ]
-        , satisfies (dom_ dRepMap) (hasSize (rangeSize 6 10))
+goodDrep univ =
+  constrained $ \dRepMap ->
+    [ forAll dRepMap $ \pair ->
+        [ satisfies (fst_ pair) (witCredSpec @ConwayFn @era univ)
+        , satisfies (snd_ pair) (hasSize (rangeSize 1 5))
+        , forAll (snd_ pair) (`satisfies` (witCredSpec @ConwayFn @era univ))
         ]
+    , satisfies (dom_ dRepMap) (hasSize (rangeSize 6 10))
+    ]
 
 -- ========================================================================
 -- The CertState specs
@@ -259,49 +256,46 @@ dstateSpec ::
   forall era fn.
   EraSpecLedger era fn =>
   WitUniv era ->
-  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
   Term fn AccountState ->
   Term fn (Map (KeyHash 'StakePool) PoolParams) ->
   Specification fn (DState era)
-dstateSpec univ drepRoleCredSet acct poolreg = constrained $ \ [var| ds |] ->
+dstateSpec univ acct poolreg = constrained $ \ [var| ds |] ->
   match ds $ \ [var|umap|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     match umap $ \ [var|rdMap|] [var|ptrmap|] [var|sPoolMap|] [var|dRepMap|] ->
-      [ -- The "inverse" of this field, dRepMap, is passed to vstateSpec to enforce that the set of DReps
-        -- delegated to actually are registered and appear in the DState, and that every credential
-        -- delegated to a DRep, appears in the set of credentials for that DRep.
-        -- The inverse is computed by getDelagatees, and the call site is in certStateSpec.
-        -- The dRepMap depends on the rdMap, so it is computed afterwards, forced by the reify
-        dependsOn dRepMap rdMap
+      [ dependsOn dRepMap rdMap
+      , -- The dRepMap depends on the rdMap, so it is computed afterwards, forced by the reify
         reify rdMap id $ \ [var|rdm|] ->
           [ witness univ (dom_ dRepMap)
           , witness univ (rng_ dRepMap)
-          -- This will fail unless 'drepRoleCredSet' is witnessed at the call site of dstateSpec
-          , Explain (pure "'drepRoleCredSet' is witnessed at the call site of dstateSpec") 
-                    (witness univ drepRoleCredSet) 
           , assert $ subset_ (dom_ dRepMap) (dom_ rdm)
           , forAll dRepMap $ \ [var|pair|] ->
-              match pair $ \_ [var|drep|] ->
+              match pair $ \ [var|_stakecred|] [var|drep|] ->
                 (caseOn drep)
-                  (branchW 3 $ \keyhash -> assert $ member_ (con @"KeyHashObj" keyhash) drepRoleCredSet)
-                  (branchW 3 $ \scripthash -> assert $ member_ (con @"ScriptHashObj" scripthash) drepRoleCredSet)
+                  (branchW 3 $ \keyhash -> witness univ keyhash)
+                  (branchW 3 $ \scripthash -> witness univ scripthash)
                   (branchW 1 $ \_abstain -> True)
                   (branchW 1 $ \_noconfidence -> True)
           ]
-      , dependsOn rdMap ptrmap
       , whenTrue (not_ (hasPtrs (Proxy @era))) (assert $ ptrmap ==. lit Map.empty)
       , whenTrue
           (hasPtrs (Proxy @era))
           [ witness univ (rng_ ptrmap)
+          , dependsOn rdMap ptrmap
           , -- reify here, forces us to solve for ptrmap, before solving for rdMap
+            -- If there are Ptrs, then the range of the Ptrs must equal the domain of the rdMap
             reify ptrmap id (\ [var|pm|] -> domEqualRng pm rdMap)
           ]
+      , witness univ (dom_ rdMap) -- rdMap must be witnessed, whether of not there are Ptrs
       , dependsOn sPoolMap rdMap
-      , witness univ (dom_ rdMap) -- rdMap is random, except that it is witnessed
-      , genHint 5 sPoolMap
-      , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
-      , assertExplain (pure "The delegations delegate to actual pools") $
-          forAll (rng_ sPoolMap) (\ [var|keyhash|] -> member_ keyhash (dom_ poolreg))   
-      , satisfies irewards (irewardSpec @era univ acct)
+      , -- reify here, forces us to solve for rdMap, before solving for sPoolMap
+        reify rdMap Map.keysSet $ \ [var|rdcreds|] ->
+          [ genHint 5 sPoolMap
+          , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` rdcreds
+          , assertExplain (pure "The delegations delegate to actual pools") $
+              forAll (rng_ sPoolMap) (\ [var|keyhash|] -> member_ keyhash (dom_ poolreg))
+          ]
+      , -- futureGenDelegs and genDelegs and irewards can be solved in any order
+        satisfies irewards (irewardSpec @era univ acct)
       , satisfies
           futureGenDelegs
           (hasSize (if hasGenDelegs @era [] then (rangeSize 0 3) else (rangeSize 0 0)))
@@ -312,9 +306,6 @@ dstateSpec univ drepRoleCredSet acct poolreg = constrained $ \ [var| ds |] ->
           , witness univ (dom_ gdmap)
           , witness univ (rng_ gdmap)
           ]
-      , whenTrue (not_ (hasPtrs (Proxy @era))) (assert $ ptrmap ==. lit Map.empty)
-        -- reify here, forces us to solve for ptrmap, before sovling for rdMap
-      , whenTrue (hasPtrs (Proxy @era)) (reify ptrmap id (\ [var|pm|] -> domEqualRng pm rdMap))
       ]
 
 epochNoSpec :: IsConwayUniv fn => Specification fn EpochNo
@@ -367,16 +358,15 @@ certStateSpec ::
   forall era fn.
   EraSpecLedger era fn =>
   WitUniv era ->
-  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
   Term fn AccountState ->
   Term fn EpochNo ->
   Specification fn (CertState era)
-certStateSpec univ drepRoleCredSet acct epoch = constrained $ \ [var|certState|] ->
+certStateSpec univ acct epoch = constrained $ \ [var|certState|] ->
   match certState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pstateSpec univ epoch)
     , reify pState psStakePoolParams $ \ [var|poolreg|] ->
         [ dependsOn dState poolreg
-        , satisfies dState (dstateSpec univ drepRoleCredSet acct poolreg)
+        , satisfies dState (dstateSpec univ acct poolreg)
         ]
     , reify dState getDelegatees $ \ [var|delegatees|] ->
         satisfies vState (vstateSpec univ epoch delegatees)
@@ -391,7 +381,7 @@ utxoSpecWit ::
   -- EraSpecLedger era fn =>
   EraSpecTxOut era fn =>
   WitUniv era ->
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
+  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
   Specification fn (UTxO era)
 utxoSpecWit univ delegs = constrained $ \ [var|utxo|] ->
   match utxo $ \ [var|utxomap|] ->
@@ -470,18 +460,13 @@ ledgerStateSpec ::
   EraSpecLedger era fn =>
   PParams era ->
   WitUniv era ->
-  Term fn AccountState ->univ 
+  Term fn AccountState ->
   Term fn EpochNo ->
   Specification fn (LedgerState era)
 ledgerStateSpec pp univ acct epoch =
   constrained $ \ [var|ledgerState|] ->
     match ledgerState $ \ [var|utxoS|] [var|csg|] ->
-      [ exists 
-          (\eval -> pure . Map.keysSet . getDelegatees . certDState $ eval csg)
-          (\ drepRoleCredSet -> 
-              [ witness univ drepRoleCredSet
-              , satisfies csg 
-                          (certStateSpec @era @fn univ drepRoleCredSet acct epoch) ])
+      [ satisfies csg (certStateSpec @era @fn univ acct epoch)
       , reify csg id (\ [var|certstate|] -> satisfies utxoS (utxoStateSpec @era @fn pp univ certstate))
       ]
 
@@ -595,51 +580,3 @@ newEpochStateSpecUnit pp univ =
                 ]
           )
     )
-
--- ===============================
-
-dRepToCred :: DRep -> Maybe (Credential 'DRepRole)
-dRepToCred (DRepKeyHash kh) = Just $ KeyHashObj kh
-dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
-dRepToCred _ = Nothing
-
--- ===================================
-
-goC :: IO ()
-goC = do
-  univ <- generate $ genWitUniv @Shelley 8
-  print univ
-  cs <-
-    generate $
-      genFromSpec $
-        certStateSpec @Shelley @ConwayFn
-          univ
-          (lit (AccountState (Coin 100) (Coin 100)))
-          (lit (EpochNo 100))
-  putStrLn (show (prettyA cs))
-
-try10 :: IO ()
-try10 = do
-  univ <- generate $ genWitUniv @Shelley 10
-  m <-
-    generate $
-      genFromSpec
-        @ConwayFn
-        @(Map (Credential 'DRepRole) (Set (Credential 'Staking)))
-        ( constrained $ \x ->
-            [ assert $ sizeOf_ x ==. 5
-            , forAll' x $ \_ s -> sizeOf_ s ==. 2
-            ]
-        )
-  b <-
-    generate $ genFromSpec @ConwayFn (vstateSpec @ConwayFn @Shelley univ (lit (EpochNo 100)) (lit m))
-  putStrLn (show (prettyA m))
-  putStrLn (show (prettyA b))
-
-_go :: forall era. EraSpecTxOut era ConwayFn => IO ()
-_go = do
-  univ <- generate $ genWitUniv @era 25
-  m <- generate $ Map.fromList <$> vectorOf 5 arbitrary
-  ans <- generate $ genFromSpec @ConwayFn (utxoSpecWit univ (lit m))
-  putStrLn (show (prettyA univ))
-  putStrLn (show (prettyA ans))

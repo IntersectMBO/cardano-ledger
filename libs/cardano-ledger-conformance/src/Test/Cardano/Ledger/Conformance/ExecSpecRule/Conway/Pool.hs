@@ -12,10 +12,6 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool where
 
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Core (PoolCert (..))
-import Cardano.Ledger.Core
-import Data.Bifunctor (first)
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core ()
@@ -24,14 +20,13 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
 import Test.Cardano.Ledger.Constrained.Conway
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
-
-instance IsConwayUniv fn => ExecSpecRule fn "POOL" Conway where
-  type ExecContext fn "POOL" Conway = WitUniv Conway
+instance IsConwayUniv fn => ExecSpecRule fn "POOL" ConwayEra where
+  type ExecContext fn "POOL" ConwayEra = WitUniv ConwayEra
   environmentSpec ctx = poolEnvSpec ctx
 
   stateSpec ctx _ = pStateSpec ctx
 
-  signalSpec wituniv env st = poolCertSpec @fn @Conway wituniv env st
+  signalSpec wituniv env st = poolCertSpec @fn @ConwayEra wituniv env st
 
   runAgdaRule env st sig = unComputationResult $ Agda.poolStep env st sig
 

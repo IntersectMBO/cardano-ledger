@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -40,6 +41,9 @@ import qualified Cardano.Crypto.Signing as Byron (
  )
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.Binary (EncCBOR (encCBOR))
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
+import qualified Cardano.Ledger.Binary.Coders as Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
@@ -66,12 +70,16 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.TreeDiff as Tree (Expr (..))
+import Data.Typeable
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import System.Random.Stateful
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Ledger.Binary.Random (QC (..))
+import Test.Cardano.Ledger.Common (ToExpr (..))
+import Test.Cardano.Ledger.TreeDiff ()
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)
 
@@ -97,6 +105,14 @@ instance Uniform (KeyPair kd) where
   uniformM g =
     mkKeyPairWithSeed
       <$> uniformByteStringM (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @DSIGN))) g
+
+instance Typeable r => EncCBOR (KeyPair r) where
+  encCBOR (KeyPair x y) = encode $ Coders.Rec KeyPair !> To x !> To y
+
+deriving instance Typeable r => Eq (KeyPair r)
+
+instance ToExpr (KeyPair r) where
+  toExpr (KeyPair x y) = Tree.App "KeyPair" [toExpr x, Tree.App (take 10 (show y)) []]
 
 mkAddr :: (KeyPair 'Payment, KeyPair 'Staking) -> Addr
 mkAddr (payKey, stakeKey) = Addr Testnet (mkCred payKey) (StakeRefBase $ mkCred stakeKey)

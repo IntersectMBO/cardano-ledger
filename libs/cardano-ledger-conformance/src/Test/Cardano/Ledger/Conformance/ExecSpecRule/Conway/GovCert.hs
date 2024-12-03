@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -27,27 +28,27 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
 import Test.Cardano.Ledger.Constrained.Conway
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
-instance Inject (WitUniv Conway, ConwayCertExecContext Conway) (Map (RewardAccount StandardCrypto) Coin) where
+instance Inject (WitUniv ConwayEra, ConwayCertExecContext ConwayEra) (Map RewardAccount Coin) where
   inject (_, x) = ccecWithdrawals x
 
-instance Inject (WitUniv Conway, ConwayCertExecContext Conway) (VotingProcedures Conway) where
+instance Inject (WitUniv ConwayEra, ConwayCertExecContext ConwayEra) (VotingProcedures ConwayEra) where
   inject (_, x) = ccecVotes x
 
 instance
   IsConwayUniv fn =>
-  ExecSpecRule fn "GOVCERT" Conway
+  ExecSpecRule fn "GOVCERT" ConwayEra
   where
-  type ExecContext fn "GOVCERT" Conway = (WitUniv Conway, ConwayCertExecContext Conway)
+  type ExecContext fn "GOVCERT" ConwayEra = (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
 
   genExecContext = do
-    univ <- genWitUniv @Conway 200
-    ccec <- genFromSpec @ConwayFn (conwayCertExecContextSpec univ)
+    univ <- genWitUniv @ConwayEra 300
+    ccec <- genFromSpec @ConwayFn (conwayCertExecContextSpec univ 5)
     pure (univ, ccec)
 
   environmentSpec (univ, _) = govCertEnvSpec univ
 
-  -- stateSpec ctx _env = certStateSpec (lit $ ccecDelegatees ctx)
-  stateSpec (univ, ccecCtx) _env = certStateSpec univ (ccecDelegatees ccecCtx)
+  stateSpec (univ, ccec) _env =
+    certStateSpec @fn @ConwayEra univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
 
   signalSpec (univ, _) = govCertSpec univ
 
