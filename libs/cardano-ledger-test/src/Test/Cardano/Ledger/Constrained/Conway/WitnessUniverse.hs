@@ -43,6 +43,7 @@ import Cardano.Ledger.BaseTypes (Network (..), SlotNo (..))
 import Cardano.Ledger.Binary (EncCBOR (encCBOR))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
@@ -74,9 +75,11 @@ import Control.Monad (replicateM)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (pack)
 import qualified Data.TreeDiff as Tree (Expr (..))
 import Data.Typeable
 import GHC.Generics
@@ -84,27 +87,15 @@ import Lens.Micro
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Common (ToExpr (..))
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (cSJust_)
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
+import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
 import Test.Cardano.Ledger.Constrained.Preds.Universes (genAddrPair)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 import Test.QuickCheck hiding (forAll, witness)
-
--- import Cardano.Ledger.Conway.Governance(GovActionId(..)) TxId and GovActionIX, no need to witness
--- import Cardano.Ledger.TxIn (TxId (..)) Hash of a TxBody, no need to witness
--- import Test.Cardano.Ledger.Constrained.Conway.Utxo(DepositPurpose(..))
-
-{-
-Will need a winessing Spec for this
-data ConwayCertExecContext era = ConwayCertExecContext
-  { ccecWithdrawals :: !(Map (RewardAccount (EraCrypto era)) Coin)
-  , ccecDeposits :: !(Map (DepositPurpose (EraCrypto era)) Coin)
-  , ccecVotes :: !(VotingProcedures era)
-  }
-  deriving (Generic, Eq, Show)
--}
 
 -- ===============================================
 -- Move these somewhere else?
@@ -168,7 +159,7 @@ class
 
 -- ============================================================
 
--- | A WitBlock is desined to have five purposes
+-- | A WitBlock is designed to have five purposes
 --   1) To efficiently constrain objects to be witnessed when using constraint generators
 --      the (Set hashtype) allows efficient constraints like :: (member_ t) (lit (wbHash witblock))
 --   2) To efficiently compute witnesses from a 'hashtype'
@@ -180,7 +171,7 @@ class
 --      using 'getTypeHashed'. This makes Gen and CBOR instances, especially easy. We compute only with
 --      [ProofType hashtype era] and then reconstruct the rest
 --   4) WitBlock is a Monoid, so we can combine them easily
---   5) We can easily to make (Gen (WitBlock t era)), so we can make them for testing.
+--   5) We can easily make (Gen (WitBlock t era)), so we can make them for testing.
 data WitBlock t era where
   WitBlock :: (Era era, HasWitness t era) => Set t -> Map t (ProofType t era) -> WitBlock t era
 
@@ -312,7 +303,8 @@ instance (EraScript era, EraCrypto era ~ c) => HasWitness (DataHash c) era where
 
 data WitUniv era
   = WitUniv
-  { wvVKey :: WitBlock (KeyHash 'Witness (EraCrypto era)) era
+  { wvSize :: Int
+  , wvVKey :: WitBlock (KeyHash 'Witness (EraCrypto era)) era
   , wvBoot :: WitBlock (BootstrapAddress (EraCrypto era)) era
   , wvScript :: WitBlock (ScriptHash (EraCrypto era)) era
   , wvDats :: WitBlock (DataHash (EraCrypto era)) era
@@ -322,9 +314,9 @@ data WitUniv era
 -- Non deriveable instances for WitUniv
 
 instance Proof.Reflect era => PrettyA (WitUniv era) where
-  prettyA (WitUniv keys boot script dats) =
+  prettyA (WitUniv n keys boot script dats) =
     ppRecord
-      "WitnessUniverse"
+      ("WitnessUniverse " <> pack (show n))
       [ ("keys", ppSet pcKeyHash (wbHash keys))
       , ("boot", ppSet pcByronAddress (wbHash boot))
       , ("scripts", ppSet pcScriptHash (wbHash script))
@@ -334,16 +326,16 @@ instance Proof.Reflect era => PrettyA (WitUniv era) where
 instance Proof.Reflect era => Show (WitUniv era) where show x = show (prettyA x)
 
 instance Era era => EncCBOR (WitUniv era) where
-  encCBOR (WitUniv w x y z) = encode $ Rec WitUniv !> To w !> To x !> To y !> To z
+  encCBOR (WitUniv n w x y z) = encode $ Rec WitUniv !> To n !> To w !> To x !> To y !> To z
 
 -- ====================================================================
 -- Purpose 1) To efficiently constrain objects to be witnessed when using constraint generators
 -- the (Set hashtype) allows efficient constraints like :: (member_ t) (lit (wbHash witblock))
 
 explainWit :: String -> WitUniv era -> Specification fn t -> Specification fn t
-explainWit str (WitUniv (WitBlock s _) _ _ _) spec =
-  addToErrorSpec
-    (pure ("While witnessing " ++ str ++ " with WitUniv of size " ++ show (Set.size s)))
+explainWit str (WitUniv n _ _ _ _) spec =
+  ExplainSpec
+    ["While witnessing " ++ str ++ " with WitUniv of size " ++ show n]
     spec
 
 witKeyHashSpec ::
@@ -351,10 +343,10 @@ witKeyHashSpec ::
   (Era era, IsConwayUniv fn, Typeable krole) =>
   WitUniv era -> Specification fn (KeyHash krole (EraCrypto era))
 witKeyHashSpec univ =
-  explainWit "(KeyHash r c)" univ $
+  explainWit "keyhash :: (KeyHash r c)" univ $
     constrained $
       \ [var|keyhash|] ->
-        Explain (pure "witnessing (KeyHash r c)") $
+        Explain (pure ("witnessing " ++ show keyhash)) $
           Assert $
             member_ (coerce_ keyhash) (lit (wbHash (wvVKey univ)))
 
@@ -363,7 +355,7 @@ witScriptHashSpec ::
   (Era era, IsConwayUniv fn) =>
   WitUniv era -> Specification fn (ScriptHash (EraCrypto era))
 witScriptHashSpec univ =
-  explainWit "(ScriptHash c)" univ $
+  explainWit "scripthash :: (ScriptHash c)" univ $
     constrained $
       \ [var|scripthash|] -> member_ scripthash (lit (wbHash (wvScript univ)))
 
@@ -372,7 +364,7 @@ witBootstrapAddress ::
   (Era era, IsConwayUniv fn) =>
   WitUniv era -> Specification fn (BootstrapAddress (EraCrypto era))
 witBootstrapAddress univ =
-  explainWit "(BootstrapAddress c)" univ $
+  explainWit "bootAddr :: (BootstrapAddress c)" univ $
     constrained $
       \ [var|bootAddr|] -> member_ bootAddr (lit (wbHash (wvBoot univ)))
 
@@ -381,7 +373,7 @@ witCredSpec ::
   (IsConwayUniv fn, Era era, Typeable krole) =>
   WitUniv era -> Specification fn (Credential krole (EraCrypto era))
 witCredSpec univ =
-  explainWit "(Credential c)" univ $
+  explainWit "cred :: (Credential c)" univ $
     constrained $ \ [var|cred|] ->
       [ (caseOn cred)
           -- ScriptHash c -> Credential
@@ -395,7 +387,7 @@ witDRepSpec ::
   (IsConwayUniv fn, Era era) =>
   WitUniv era -> Specification fn (DRep (EraCrypto era))
 witDRepSpec univ =
-  explainWit "(DRep c)" univ $
+  explainWit "drep :: (DRep c)" univ $
     constrained $ \ [var|drep|] ->
       [ (caseOn drep)
           -- KeyHash kr c -> Drep
@@ -414,7 +406,7 @@ witRewardAccountSpec ::
   (Era era, IsConwayUniv fn) =>
   WitUniv era -> Specification fn (RewardAccount (EraCrypto era))
 witRewardAccountSpec univ =
-  explainWit "(RewardAccount c)" univ $
+  explainWit "rewaccount :: (RewardAccount c)" univ $
     constrained $ \ [var|rewaccount|] ->
       match rewaccount $ \ [var|network|] [var|raCred|] ->
         [ assert $ network ==. lit (Testnet)
@@ -430,7 +422,7 @@ witPoolParamsSpec ::
   (Era era, IsConwayUniv fn) =>
   WitUniv era -> Specification fn (PoolParams (EraCrypto era))
 witPoolParamsSpec univ =
-  explainWit "(PoolParams c)" univ $
+  explainWit "poolparams :: (PoolParams c)" univ $
     constrained $ \ [var|poolparams|] ->
       [ forAll (owners_ poolparams) $ \ [var|ownerKeyHash|] -> satisfies ownerKeyHash (witKeyHashSpec univ)
       , satisfies (owners_ poolparams) (hasSize (rangeSize 1 3))
@@ -441,7 +433,7 @@ witGenDelegPairSpec ::
   (Era era, IsConwayUniv fn) =>
   WitUniv era -> Specification fn (GenDelegPair (EraCrypto era))
 witGenDelegPairSpec univ =
-  explainWit "(GenDelegPair  c)" univ $
+  explainWit "gdpair :: (GenDelegPair  c)" univ $
     constrained $ \ [var|gdpair|] ->
       match gdpair $ \ [var|keyhash|] [var|_hash|] -> satisfies keyhash (witKeyHashSpec univ)
 
@@ -451,7 +443,7 @@ witShelleyTxCert ::
   (Era era, IsConwayUniv fn) =>
   WitUniv era -> Specification fn (ShelleyTxCert era)
 witShelleyTxCert univ =
-  explainWit ("(ShelleyTxCert " ++ "typeRep (Proxy @era)" ++ ")") univ $
+  explainWit ("txcert :: (ShelleyTxCert " ++ "typeRep (Proxy @era)" ++ ")") univ $
     constrained $ \ [var|txcert|] ->
       (caseOn txcert)
         ( branchW 5 $ \delegcert ->
@@ -475,7 +467,7 @@ witConwayTxCert ::
   (Era era, IsConwayUniv fn) =>
   WitUniv era -> Specification fn (ConwayTxCert era)
 witConwayTxCert univ =
-  explainWit ("(ConwayTxCert " ++ "typeRep (Proxy @era)" ++ ")") univ $
+  explainWit ("txcert :: (ConwayTxCert " ++ "typeRep (Proxy @era)" ++ ")") univ $
     constrained $ \ [var|txcert|] ->
       (caseOn txcert)
         ( branch $ \delegcert ->
@@ -572,14 +564,15 @@ instance (Era era, Ord t, HasWitness t era) => Monoid (WitBlock t era) where
 instance Era era => Semigroup (WitUniv era) where
   x <> y =
     WitUniv
-      { wvVKey = wvVKey x <> wvVKey y
+      { wvSize = min (wvSize x) (wvSize y)
+      , wvVKey = wvVKey x <> wvVKey y
       , wvBoot = wvBoot x <> wvBoot y
       , wvScript = wvScript x <> wvScript y
       , wvDats = wvDats x <> wvDats y
       }
 
 instance (Reflect era, HasWitness (ScriptHash (EraCrypto era)) era) => Monoid (WitUniv era) where
-  mempty = WitUniv {wvVKey = mempty, wvBoot = mempty, wvScript = mempty, wvDats = mempty}
+  mempty = WitUniv {wvSize = 0, wvVKey = mempty, wvBoot = mempty, wvScript = mempty, wvDats = mempty}
 
 -- =======================================================================
 -- Purpose 5) We can easily to make (Gen (WitBlock t era)), so we can make them for testing.
@@ -599,7 +592,7 @@ genWitUniv ::
   (GenScript era, HasWitness (ScriptHash (EraCrypto era)) era) =>
   Int -> Gen (WitUniv era)
 genWitUniv n =
-  WitUniv
+  WitUniv n
     <$> genWitBlock n (arbitrary @(KeyPair 'Witness (EraCrypto era)))
     <*> genWitBlock n (snd <$> genAddrPair Testnet)
     <*> genWitBlock n (NewScript <$> genScript @era)
@@ -683,7 +676,7 @@ instance (IsConwayUniv fn, Era era, Typeable r, EraCrypto era ~ c) => Witnessed 
   witness univ t = satisfies t (witKeyHashSpec univ)
 
 instance (IsConwayUniv fn, Era era, EraCrypto era ~ c) => Witnessed fn era (ScriptHash c) where
-  witness univ t = satisfies2 (pure "BAD-SCRIPT-HASH") t (witScriptHashSpec univ)
+  witness univ t = satisfies t (witScriptHashSpec univ)
 
 instance (IsConwayUniv fn, Era era, Typeable r, EraCrypto era ~ c) => Witnessed fn era (Credential r c) where
   witness univ t = satisfies t (witCredSpec univ)
@@ -709,23 +702,50 @@ instance (IsConwayUniv fn, Era era) => Witnessed fn era (ShelleyTxCert era) wher
 instance (IsConwayUniv fn, Era era) => Witnessed fn era (ConwayTxCert era) where
   witness univ t = satisfies t (witConwayTxCert univ)
 
+instance (IsConwayUniv fn, EraSpecPParams era) => Witnessed fn era (Committee era) where
+  witness univ t = satisfies t (committeeWitness univ)
+
 instance (Era era, HasSpec fn t, Ord t, Witnessed fn era t) => Witnessed fn era (Set t) where
   witness univ t =
     forAll
       t
       ( \x ->
-          assertExplain (pure ("While witnessing " ++ show (typeRep (Proxy @(Set t))))) $
+          assertExplain (pure ("In the " ++ show (typeRep (Proxy @(Set t))) ++ " instance of Witnesssed")) $
             witness univ x
+      )
+
+instance (Era era, HasSpec fn t, Witnessed fn era t, IsNormalType t) => Witnessed fn era (StrictMaybe t) where
+  witness univ t =
+    (caseOn t)
+      -- SNothing
+      (branch $ \_ -> True)
+      -- SJust
+      ( branch $ \x ->
+          assertExplain
+            (pure ("In the " ++ show (typeRep (Proxy @(StrictMaybe t))) ++ " instance of Witnesssed"))
+            (witness univ x)
+      )
+
+instance (Era era, HasSpec fn t, Witnessed fn era t, IsNormalType t) => Witnessed fn era (Maybe t) where
+  witness univ t =
+    (caseOn t)
+      -- Nothing
+      (branch $ \_ -> False)
+      -- Just
+      ( branch $ \x ->
+          Explain
+            (pure ("In the " ++ show (typeRep (Proxy @(Maybe t))) ++ " instance of Witnesssed"))
+            (witness univ x)
       )
 
 instance (Era era, HasSpec fn t, HasSpec fn v, Ord t, Witnessed fn era t) => Witnessed fn era (Map t v) where
   witness univ t =
-    assertExplain (pure ("While witnessing " ++ show (typeRep (Proxy @(Map t v))))) $
+    assertExplain (pure ("In the " ++ show (typeRep (Proxy @(Map t v))) ++ " instance of Witnesssed")) $
       forAll (dom_ t) (witness univ)
 
 instance (Era era, HasSpec fn t, Witnessed fn era t) => Witnessed fn era [t] where
   witness univ t =
-    assertExplain (pure ("While witnessing " ++ show (typeRep (Proxy @([t]))))) $
+    assertExplain (pure ("In the " ++ show (typeRep (Proxy @([t]))) ++ " instance of Witnessed")) $
       forAll t (witness univ)
 
 -- ===================================================================
@@ -798,32 +818,6 @@ go2 = do
   ans <- generate $ genFromSpec (spec2 univ big)
   putStrLn (show (prettyA ans))
 
--- =================================================================
-explainSpec2 :: HasSpec fn a => NE.NonEmpty String -> Specification fn a -> Specification fn a
-explainSpec2 es spec = case simplifySpec spec of
-  ErrorSpec es' -> ErrorSpec (es <> es')
-  TypeSpec tyspec cs1 -> case guardTypeSpec (NE.toList es) tyspec of
-    TypeSpec tyspec2 [] -> TypeSpec tyspec2 cs1
-    other -> other
-  SuspendedSpec v p -> SuspendedSpec v (assertExplain es p)
-  MemberSpec xs -> constrained $ \x -> [assertExplain es $ satisfies x (MemberSpec xs)]
-  s -> s
-
-satisfies2 ::
-  forall fn a. HasSpec fn a => NE.NonEmpty String -> Term fn a -> Specification fn a -> Pred fn
-satisfies2 nes e (ExplainSpec [] x) = satisfies2 nes e x
-satisfies2 nes e (ExplainSpec (w : ws) x) = satisfies2 (nes <> (w NE.:| ws)) e x
-satisfies2 _ _ TrueSpec = TruePred
-satisfies2 nes e (MemberSpec nonempty) = assertExplain nes $ elem_ e (lit (NE.toList nonempty))
-satisfies2 nes t (SuspendedSpec x p) = assertExplain nes $ Subst x t p
-satisfies2 nes e (TypeSpec s cant)
-  | null cant = toPreds e s
-  | otherwise =
-      Explain (pure (show e ++ " `notElem` " ++ show cant) <> nes) $
-        Assert (not_ (elem_ e $ lit cant))
-          <> toPreds e s
-satisfies2 nes _ (ErrorSpec e) = FalsePred (nes <> e)
-
 -- ======================================================================
 
 conwayWitUniv :: Int -> WitUniv Conway
@@ -853,3 +847,72 @@ instance EraUniverse Alonzo where eraWitUniv = alonzoWitUniv
 instance EraUniverse Mary where eraWitUniv = maryWitUniv
 instance EraUniverse Allegra where eraWitUniv = allegraWitUniv
 instance EraUniverse Shelley where eraWitUniv = shelleyWitUniv
+
+-- =======================================================================
+
+-- | Constrains just the parts that need witnessing in GovActionState
+govActionStateWitness ::
+  forall fn era.
+  (IsConwayUniv fn, EraSpecPParams era) =>
+  WitUniv era -> Specification fn (GovActionState era)
+govActionStateWitness univ = ExplainSpec ["Witnessing GovActionState"] $
+  constrained $ \ [var|govactstate|] ->
+    match govactstate $
+      \_gaid [var|comVotemap|] [var|drepVotemap|] [var|poolVotemap|] [var|proposalProc|] _proposed _expires ->
+        [ witness univ (dom_ comVotemap)
+        , assert $ sizeOf_ (dom_ comVotemap) ==. lit 3
+        , witness univ (dom_ drepVotemap)
+        , assert $ sizeOf_ (dom_ drepVotemap) ==. lit 2
+        , witness univ (dom_ poolVotemap)
+        , assert $ sizeOf_ (dom_ poolVotemap) ==. lit 2
+        , satisfies proposalProc (proposalProcedureWitness univ)
+        ]
+
+-- | Constrains just the parts that need witnessing in GovAction
+govActionWitness ::
+  forall fn era.
+  (IsConwayUniv fn, EraSpecPParams era) =>
+  WitUniv era -> Specification fn (GovAction era)
+govActionWitness univ = ExplainSpec ["Witnessing GovAction"] $
+  constrained $ \ [var|govaction|] ->
+    (caseOn govaction)
+      -- ParameterChange
+      (branch $ \_ _ mhash -> witness univ mhash)
+      -- HardFork
+      (branch $ \_ _ -> True)
+      -- TreasuryWithdrawals
+      (branch $ \rewacctmap mhash -> [witness univ (dom_ rewacctmap), witness univ mhash])
+      -- NoConfidence
+      (branch $ \_ -> True)
+      -- UpdateCommitee
+      (branch $ \_ credSet credMap _ -> [witness univ credSet, witness univ (dom_ credMap)])
+      -- NewConstituion
+      (branch $ \_ _ -> True)
+      -- InfoAction
+      (branch $ \_ -> True)
+
+-- | Constrains just the parts that need witnessing in ProposalProcedure
+proposalProcedureWitness ::
+  forall fn era.
+  (IsConwayUniv fn, EraSpecPParams era) =>
+  WitUniv era -> Specification fn (ProposalProcedure era)
+proposalProcedureWitness univ =
+  constrained $ \ [var|proposalProc|] ->
+    match proposalProc $ \_dep [var|returnAddr|] [var|govAction|] _anchor ->
+      [witness univ returnAddr, satisfies govAction (govActionWitness univ)]
+
+-- | Constrains just the parts that need witnessing in Committee
+committeeWitness ::
+  (IsConwayUniv fn, EraSpecPParams era) =>
+  WitUniv era -> Specification fn (Committee era)
+committeeWitness univ =
+  constrained $ \ [var|committee|] ->
+    match committee $ \ [var|epochMap|] _threshold ->
+      [witness univ (dom_ epochMap), assert $ sizeOf_ (dom_ epochMap) ==. lit 3]
+
+go9 :: IO ()
+go9 = do
+  univ <- generate $ genWitUniv @Conway 5
+  ans <- generate $ genFromSpec (committeeWitness @ConwayFn @Conway univ)
+  putStrLn (show (prettyA ans))
+  putStrLn (show (prettyA univ))

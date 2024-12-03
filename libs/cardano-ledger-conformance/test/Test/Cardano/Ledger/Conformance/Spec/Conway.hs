@@ -31,8 +31,8 @@ spec = do
       prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
       prop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
       prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
-      -- prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
-      -- prop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
+      prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
+      prop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
       prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
       prop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
       xprop "UTXOW" $ conformsToImpl @"UTXOW" @ConwayFn @Conway

@@ -52,7 +52,7 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraSpecLedger (
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
-import Test.QuickCheck hiding (forAll)
+import Test.QuickCheck hiding (forAll, witness)
 import Prelude hiding (seq)
 
 import Cardano.Ledger.Address (Withdrawals (..))
@@ -263,11 +263,12 @@ go2 ::
   IO ()
 go2 = do
   univ <- generate $ genWitUniv 25
+  wdrls <- generate $ genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
   delegatees <- generate $ genFromSpec @ConwayFn (delegateeSpec univ)
   certState <-
     generate $
       genFromSpec @ConwayFn @(CertState era)
-        (certStateSpec @ConwayFn @era univ delegatees) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
+        (certStateSpec @ConwayFn @era univ delegatees wdrls) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
         -- error "STOP"
   certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv era) certsEnvSpec
 
@@ -287,12 +288,13 @@ go2 = do
 go :: IO ()
 go = do
   univ <- generate $ genWitUniv @Allegra 5
+  wdrls <- generate $ genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
   delegatees <- generate $ genFromSpec @ConwayFn (delegateeSpec univ)
   certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv Allegra) certsEnvSpec
   certState <-
     generate $
       genFromSpec @ConwayFn @(CertState Allegra)
-        (certStateSpec @ConwayFn @Allegra univ delegatees)
+        (certStateSpec @ConwayFn @Allegra univ delegatees wdrls)
 
   cert <-
     generate $

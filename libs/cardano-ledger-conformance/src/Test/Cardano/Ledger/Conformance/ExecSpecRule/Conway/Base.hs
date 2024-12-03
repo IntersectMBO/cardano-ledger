@@ -108,6 +108,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   EpochExecEnv,
   IsConwayUniv,
   coerce_,
+  delegateeSpec,
   epochEnvSpec,
   epochSignalSpec,
   epochStateSpec,
@@ -151,14 +152,15 @@ instance (IsConwayUniv fn, Era era) => HasSpec fn (ConwayCertExecContext era)
 conwayCertExecContextSpec ::
   forall fn era.
   (Reflect era, IsConwayUniv fn) =>
-  WitUniv era -> Specification fn (ConwayCertExecContext era)
-conwayCertExecContextSpec univ = constrained $ \ [var|ccec|] ->
+  WitUniv era -> Integer -> Specification fn (ConwayCertExecContext era)
+conwayCertExecContextSpec univ wdrlsize = constrained $ \ [var|ccec|] ->
   match ccec $ \ [var|withdrawals|] [var|deposits|] _ [var|delegatees|] ->
-    [ assert $ witness univ (dom_ withdrawals)
+    [ assert $
+        [ witness univ (dom_ withdrawals)
+        , assert $ sizeOf_ (dom_ withdrawals) <=. (lit wdrlsize)
+        ]
     , forAll (dom_ deposits) $ \dp -> satisfies dp (witnessDepositPurpose univ)
-    , witness univ delegatees
-    , assert $ sizeOf_ delegatees <=. 20
-    , assert $ sizeOf_ delegatees >=. 10
+    , satisfies delegatees (delegateeSpec @fn @era univ)
     ]
 
 instance Reflect era => Arbitrary (ConwayCertExecContext era) where
