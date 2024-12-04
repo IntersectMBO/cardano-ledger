@@ -105,8 +105,6 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
  )
 import Test.Cardano.Ledger.Constrained.Conway (
   EpochExecEnv (..),
-  IsConwayUniv,
-  coerce_,
   epochEnvSpec,
   epochSignalSpec,
   epochStateSpec,
