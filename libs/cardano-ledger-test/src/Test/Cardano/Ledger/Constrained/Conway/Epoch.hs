@@ -28,7 +28,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances
 
 data EpochExecEnv era = EpochExecEnv
   { eeeStakeDistr :: Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
-  , eeeEpochNo    :: EpochNo
+  , eeeEpochNo :: EpochNo
   }
   deriving (Generic, Eq, Show)
 

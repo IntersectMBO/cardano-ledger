@@ -104,7 +104,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   signatureFromInteger,
  )
 import Test.Cardano.Ledger.Constrained.Conway (
-  EpochExecEnv(..),
+  EpochExecEnv (..),
   IsConwayUniv,
   coerce_,
   epochEnvSpec,
@@ -118,7 +118,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   protocolVersion_,
  )
 
-import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Cardano.Crypto.DSIGN (SignedDSIGN (..), verifySignedDSIGN)
 import Cardano.Crypto.Hash (ByteString, Hash)
 import Cardano.Ledger.Address (RewardAccount)
@@ -128,6 +127,7 @@ import Cardano.Ledger.Keys (KeyRole (..), VKey (..))
 import Data.Either (isRight)
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
 
