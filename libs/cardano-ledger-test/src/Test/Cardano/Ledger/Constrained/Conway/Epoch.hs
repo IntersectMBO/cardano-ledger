@@ -26,8 +26,9 @@ import GHC.Generics (Generic)
 import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 
-newtype EpochExecEnv era = EpochExecEnv
+data EpochExecEnv era = EpochExecEnv
   { eeeStakeDistr :: Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
+  , eeeEpochNo    :: EpochNo
   }
   deriving (Generic, Eq, Show)
 

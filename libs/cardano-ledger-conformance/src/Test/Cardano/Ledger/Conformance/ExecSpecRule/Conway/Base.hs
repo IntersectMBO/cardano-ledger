@@ -104,7 +104,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   signatureFromInteger,
  )
 import Test.Cardano.Ledger.Constrained.Conway (
-  EpochExecEnv,
+  EpochExecEnv(..),
   IsConwayUniv,
   coerce_,
   epochEnvSpec,
@@ -118,6 +118,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   protocolVersion_,
  )
 
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Cardano.Crypto.DSIGN (SignedDSIGN (..), verifySignedDSIGN)
 import Cardano.Crypto.Hash (ByteString, Hash)
 import Cardano.Ledger.Address (RewardAccount)
@@ -585,15 +586,15 @@ nameGovAction UpdateCommittee {} = "UpdateCommittee"
 nameGovAction NewConstitution {} = "NewConstitution"
 nameGovAction InfoAction {} = "InfoAction"
 
-instance IsConwayUniv fn => ExecSpecRule fn "EPOCH" Conway where
+instance fn ~ ConwayFn => ExecSpecRule fn "EPOCH" Conway where
   type ExecContext fn "EPOCH" Conway = [GovActionState Conway]
   type ExecEnvironment fn "EPOCH" Conway = EpochExecEnv Conway
 
   environmentSpec _ = epochEnvSpec
 
-  stateSpec _ _ = epochStateSpec
+  stateSpec _ eee = epochStateSpec (lit $ eeeEpochNo eee)
 
-  signalSpec _ _ _ = epochSignalSpec
+  signalSpec _ eee _ = epochSignalSpec (eeeEpochNo eee)
 
   runAgdaRule env st sig =
     first (\case {})
@@ -605,7 +606,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "EPOCH" Conway where
 nameEpoch :: EpochNo -> String
 nameEpoch x = show x
 
-instance IsConwayUniv fn => ExecSpecRule fn "NEWEPOCH" Conway where
+instance fn ~ ConwayFn => ExecSpecRule fn "NEWEPOCH" Conway where
   type ExecContext fn "NEWEPOCH" Conway = [GovActionState Conway]
   type ExecEnvironment fn "NEWEPOCH" Conway = EpochExecEnv Conway
 
@@ -613,7 +614,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "NEWEPOCH" Conway where
 
   stateSpec _ _ = newEpochStateSpec
 
-  signalSpec _ _ _ = epochSignalSpec
+  signalSpec _ eee _ = epochSignalSpec (eeeEpochNo eee)
 
   runAgdaRule env st sig =
     first (\case {})
