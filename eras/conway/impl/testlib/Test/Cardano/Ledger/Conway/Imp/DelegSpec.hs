@@ -44,6 +44,41 @@ spec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = do
+  it "Deregister stake credential and delegate to DRep in the same transaction" $ do
+    expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+    -- register stake credentials
+    cred <- KeyHashObj <$> freshKeyHash
+    submitTx_ $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . certsTxBodyL .~ [RegDepositTxCert cred expectedDeposit]
+    expectRegistered cred
+
+    -- unregister and delegate
+    submitFailingTx
+      ( mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [ UnRegDepositTxCert cred expectedDeposit
+               , DelegTxCert cred (DelegVote DRepAlwaysAbstain)
+               ]
+      )
+      [injectFailure $ StakeKeyNotRegisteredDELEG cred]
+
+    expectRegistered cred
+    expectNotDelegatedVote cred
+
+    -- delegate and unregister
+
+    submitTx_ $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . certsTxBodyL
+          .~ [ DelegTxCert cred (DelegVote DRepAlwaysAbstain)
+             , UnRegDepositTxCert cred expectedDeposit
+             ]
+
+    expectNotRegistered cred
+    expectNotDelegatedVote cred
+
   describe "Register stake credential" $ do
     it "With correct deposit or without any deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
