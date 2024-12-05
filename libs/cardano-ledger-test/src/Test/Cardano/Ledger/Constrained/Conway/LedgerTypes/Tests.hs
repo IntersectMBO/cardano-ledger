@@ -126,8 +126,9 @@ specSuite ::
   Int -> Spec
 specSuite n = do
   soundSpecWith @(PState era) (5 * n) (pstateSpec !$! epochNoSpec)
-  soundSpecWith @(DState era) (5 * n) (dstateSpec @era !$! accountStateSpec !*! poolMapSpec)
-
+  soundSpecWith @(DState era)
+    (5 * n)
+    (dstateSpec @era !$! TrueSpec !*! accountStateSpec !*! poolMapSpec)
   soundSpecWith @(VState era)
     (10 * n)
     ( vstateSpec @_ @era
@@ -139,15 +140,15 @@ specSuite n = do
                  )
             )
     )
-
   soundSpecWith @(CertState era)
     (5 * n)
-    $ certStateSpec !$! TrueSpec !*! accountStateSpec !*! epochNoSpec
+    $ certStateSpec !$! (hasSize (rangeSize 6 10)) !*! accountStateSpec !*! epochNoSpec
+  soundSpecWith @(UTxOState era) (2 * n) (utxoStateGen @era)
   soundSpecWith @(UTxO era) (5 * n) (utxoSpec !$! delegationsSpec)
   soundSpecWith @(GovState era)
     (2 * n)
     (do x <- genFromSpec (pparamsSpec @ConwayFn); pure $ govStateSpec @era x)
-  soundSpecWith @(UTxOState era) (2 * n) (utxoStateGen @era)
+
   soundSpecWith @(LedgerState era)
     (2 * n)
     (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)

@@ -76,10 +76,11 @@ psX = do
 dsX :: forall era. EraSpecLedger era ConwayFn => Gen (DState era)
 dsX = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
+  drepRoleSet <- genFromSpec @ConwayFn TrueSpec
   pools <-
     genFromSpec @ConwayFn @(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
       (hasSize (rangeSize 8 8))
-  genFromSpec @ConwayFn @(DState era) (dstateSpec (lit acct) (lit pools))
+  genFromSpec @ConwayFn @(DState era) (dstateSpec @era (lit drepRoleSet) (lit acct) (lit pools))
 
 vsX :: forall era. EraSpecPParams era => Gen (VState era)
 vsX = do

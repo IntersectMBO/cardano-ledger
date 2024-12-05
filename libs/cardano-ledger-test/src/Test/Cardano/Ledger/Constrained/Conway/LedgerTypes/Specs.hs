@@ -73,6 +73,7 @@ import Test.QuickCheck (generate)
 --   and the EraSpecLedger class has methods that asbtract over those changes.
 class
   ( EraSpecTxOut era fn
+  , Era era
   , HasSpec fn (GovState era)
   ) =>
   EraSpecLedger era fn
@@ -213,17 +214,29 @@ aggregateDRep m = Map.foldlWithKey accum Map.empty m
 dstateSpec ::
   forall era fn.
   EraSpecLedger era fn =>
+  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
   Term fn AccountState ->
   Term fn (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))) ->
   Specification fn (DState era)
-dstateSpec acct poolreg = constrained $ \ [var| ds |] ->
+dstateSpec drepRoleCredSet acct poolreg = constrained $ \ [var| ds |] ->
   match ds $ \ [var|umap|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     match umap $ \ [var|rdMap|] [var|ptrmap|] [var|sPoolMap|] [var|dRepMap|] ->
-      [ satisfies dRepMap TrueSpec
-      , -- This is passed to vstateSpec to enforce that the random set of DReps
-        -- delegated to actually exist and are registered, and that credentials appear as delegatees
-        -- TODO, see that more than one credential delegates to the same DRep
-        genHint 5 sPoolMap
+      [ -- This field, dRepMap, is passed to vstateSpec to enforce that the set of DReps
+        -- delegated to actually are registered and appear in the DState, and that every credential
+        -- delegated to a DRep, appears in the set of credentials for that DRep.
+        -- The dRepMap depends on the rdMap, so it is computed afterwards, forced by the reify
+        reify rdMap id $ \ [var|rdm|] ->
+          [ assert $ subset_ (dom_ dRepMap) (dom_ rdm)
+          , -- , assert $ sizeOf_ (dom_ dRepMap) >=. lit 1
+            forAll dRepMap $ \ [var|pair|] ->
+              match pair $ \_ [var|drep|] ->
+                (caseOn drep)
+                  (branchW 3 $ \keyhash -> assert $ member_ (con @"KeyHashObj" keyhash) drepRoleCredSet)
+                  (branchW 3 $ \scripthash -> assert $ member_ (con @"ScriptHashObj" scripthash) drepRoleCredSet)
+                  (branchW 1 $ \_abstain -> True)
+                  (branchW 1 $ \_noconfidence -> True)
+          ]
+      , genHint 5 sPoolMap
       , assertExplain (pure "The delegations delegate to actual pools") $
           forAll (rng_ sPoolMap) (\ [var|keyhash|] -> member_ keyhash (dom_ poolreg))
       , assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
@@ -291,16 +304,15 @@ certStateSpec ::
   Term fn AccountState ->
   Term fn EpochNo ->
   Specification fn (CertState era)
-certStateSpec ctxDelegatees acct epoch = constrained $ \ [var|certState|] ->
+certStateSpec drepRoleCredSet acct epoch = constrained $ \ [var|certState|] ->
   match certState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pstateSpec epoch)
     , reify pState psStakePoolParams $ \ [var|poolreg|] ->
         [ dependsOn dState poolreg
-        , satisfies dState (dstateSpec acct poolreg)
+        , satisfies dState (dstateSpec drepRoleCredSet acct poolreg)
         ]
     , reify dState getDelegatees $ \ [var|delegatees|] ->
         [ satisfies vState (vstateSpec epoch delegatees)
-        , assert $ ctxDelegatees ==. dom_ delegatees
         ]
     ]
 
