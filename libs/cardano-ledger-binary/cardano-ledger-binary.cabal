@@ -130,7 +130,6 @@ library testlib
         text,
         typed-process,
         unliftio,
-        vector,
         vector-map
 
 test-suite tests
