@@ -54,6 +54,7 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   utxoSpecWit,
   utxoStateSpec,
   vstateSpec,
+  witnessedDRepRoleCredSet,
  )
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (GenScript (..), genWitUniv)
@@ -99,9 +100,11 @@ vsX = do
 csX :: forall era. EraSpecLedger era ConwayFn => Gen (CertState era)
 csX = do
   univ <- genWitUniv 25
+  drepRoleCredSet <- witnessedDRepRoleCredSet univ
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
-  genFromSpec @ConwayFn @(CertState era) (certStateSpec univ (lit acct) (lit epoch))
+  genFromSpec @ConwayFn @(CertState era)
+    (certStateSpec univ (lit drepRoleCredSet) (lit acct) (lit epoch))
 
 utxoX :: forall era. EraSpecLedger era ConwayFn => Gen (UTxO era)
 utxoX = do

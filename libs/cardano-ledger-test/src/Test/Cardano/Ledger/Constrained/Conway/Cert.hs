@@ -244,7 +244,7 @@ testGenesisCert ::
   forall era.
   (AtMostEra BabbageEra era, EraSpecDeleg era, EraSpecPParams era, GenScript era) => Gen Property
 testGenesisCert = do
-  univ <- genWitUniv @era 50
+  univ <- genWitUniv @era 200
   dstate <- genFromSpec @ConwayFn @(DState era) (dStateSpec @ConwayFn @era univ)
   let spec = genesisDelegCertSpec @ConwayFn dstate
   ans <- genFromSpec @ConwayFn spec
@@ -255,7 +255,7 @@ testShelleyCert ::
   (Era era, AtMostEra BabbageEra era, EraSpecPParams era, EraSpecDeleg era, GenScript era) =>
   Gen Property
 testShelleyCert = do
-  univ <- genWitUniv @era 50
+  univ <- genWitUniv @era 200
   delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
   env <- genFromSpec @ConwayFn @(CertEnv era) (certEnvSpec @ConwayFn @era univ)
   dstate <- genFromSpec @ConwayFn @(CertState era) (certStateSpec @ConwayFn @era univ delegatees)
