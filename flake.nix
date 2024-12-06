@@ -104,6 +104,7 @@
               {
                 cabal = "3.12.1.0";
                 ghcid = "0.8.9";
+                cabal-gild = "1.5.0.1";
               }
               // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
