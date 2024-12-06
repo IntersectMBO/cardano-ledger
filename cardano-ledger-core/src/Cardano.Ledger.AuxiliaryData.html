@@ -1,0 +1,114 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.AuxiliaryData</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.AuxiliaryData.html#AuxiliaryDataHash"><span class="hs-identifier">AuxiliaryDataHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.5.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.5.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.5.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html"><span class="hs-identifier">Cardano.Ledger.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#Crypto"><span class="hs-identifier">Crypto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html"><span class="hs-identifier">Cardano.Ledger.Hashes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxAuxData"><span class="hs-identifier">EraIndependentTxAuxData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.SafeHash.html"><span class="hs-identifier">Cardano.Ledger.SafeHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.SafeHash.html#SafeHash"><span class="hs-identifier">SafeHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier">NFData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-a3ddaa9ceea7451878ee066cf29adb42e24e70b8a37b2cd6aa6c26d29c2f5300/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-a3ddaa9ceea7451878ee066cf29adb42e24e70b8a37b2cd6aa6c26d29c2f5300/share/doc/html/src"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span id="local-6989586621679512635"><span id="local-6989586621679512636"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="AuxiliaryDataHash"><span class="annot"><a href="Cardano.Ledger.AuxiliaryData.html#AuxiliaryDataHash"><span class="hs-identifier hs-var">AuxiliaryDataHash</span></a></span></span><span> </span><span id="local-6989586621679512697"><span class="annot"><a href="#local-6989586621679512697"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AuxiliaryDataHash"><span class="annot"><a href="Cardano.Ledger.AuxiliaryData.html#AuxiliaryDataHash"><span class="hs-identifier hs-var">AuxiliaryDataHash</span></a></span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unsafeAuxiliaryDataHash"><span class="annot"><span class="annottext">forall c. AuxiliaryDataHash c -&gt; SafeHash c EraIndependentTxAuxData
+</span><a href="Cardano.Ledger.AuxiliaryData.html#unsafeAuxiliaryDataHash"><span class="hs-identifier hs-var hs-var">unsafeAuxiliaryDataHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.SafeHash.html#SafeHash"><span class="hs-identifier hs-type">SafeHash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679512697"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxAuxData"><span class="hs-identifier hs-type">EraIndependentTxAuxData</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679512623"><span id="local-6989586621679512625"><span id="local-6989586621679512631"><span class="annot"><span class="annottext">Int -&gt; AuxiliaryDataHash c -&gt; ShowS
+forall c. Int -&gt; AuxiliaryDataHash c -&gt; ShowS
+forall c. [AuxiliaryDataHash c] -&gt; ShowS
+forall c. AuxiliaryDataHash c -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [AuxiliaryDataHash c] -&gt; ShowS
+$cshowList :: forall c. [AuxiliaryDataHash c] -&gt; ShowS
+show :: AuxiliaryDataHash c -&gt; String
+$cshow :: forall c. AuxiliaryDataHash c -&gt; String
+showsPrec :: Int -&gt; AuxiliaryDataHash c -&gt; ShowS
+$cshowsPrec :: forall c. Int -&gt; AuxiliaryDataHash c -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679512615"><span id="local-6989586621679512620"><span class="annot"><span class="annottext">AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+forall c. AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+$c/= :: forall c. AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+== :: AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+$c== :: forall c. AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679512582"><span id="local-6989586621679512586"><span id="local-6989586621679512590"><span id="local-6989586621679512594"><span id="local-6989586621679512598"><span id="local-6989586621679512602"><span id="local-6989586621679512607"><span class="annot"><span class="annottext">AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Ordering
+AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; AuxiliaryDataHash c
+forall c. Eq (AuxiliaryDataHash c)
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall c. AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+forall c. AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Ordering
+forall c.
+AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; AuxiliaryDataHash c
+min :: AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; AuxiliaryDataHash c
+$cmin :: forall c.
+AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; AuxiliaryDataHash c
+max :: AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; AuxiliaryDataHash c
+$cmax :: forall c.
+AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; AuxiliaryDataHash c
+&gt;= :: AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+$c&gt;= :: forall c. AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+&gt; :: AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+$c&gt; :: forall c. AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+&lt;= :: AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+$c&lt;= :: forall c. AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+&lt; :: AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+$c&lt; :: forall c. AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Bool
+compare :: AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Ordering
+$ccompare :: forall c. AuxiliaryDataHash c -&gt; AuxiliaryDataHash c -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall c x. Rep (AuxiliaryDataHash c) x -&gt; AuxiliaryDataHash c
+forall c x. AuxiliaryDataHash c -&gt; Rep (AuxiliaryDataHash c) x
+$cto :: forall c x. Rep (AuxiliaryDataHash c) x -&gt; AuxiliaryDataHash c
+$cfrom :: forall c x. AuxiliaryDataHash c -&gt; Rep (AuxiliaryDataHash c) x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679512563"><span id="local-6989586621679512567"><span id="local-6989586621679512572"><span class="annot"><span class="annottext">Context -&gt; AuxiliaryDataHash c -&gt; IO (Maybe ThunkInfo)
+Proxy (AuxiliaryDataHash c) -&gt; String
+forall c. Context -&gt; AuxiliaryDataHash c -&gt; IO (Maybe ThunkInfo)
+forall c. Proxy (AuxiliaryDataHash c) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy (AuxiliaryDataHash c) -&gt; String
+$cshowTypeOf :: forall c. Proxy (AuxiliaryDataHash c) -&gt; String
+wNoThunks :: Context -&gt; AuxiliaryDataHash c -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall c. Context -&gt; AuxiliaryDataHash c -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; AuxiliaryDataHash c -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: forall c. Context -&gt; AuxiliaryDataHash c -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679512557"><span class="annot"><span class="annottext">AuxiliaryDataHash c -&gt; ()
+forall c. AuxiliaryDataHash c -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: AuxiliaryDataHash c -&gt; ()
+$crnf :: forall c. AuxiliaryDataHash c -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span id="local-6989586621679512530"><span id="local-6989586621679512537"><span id="local-6989586621679512545"><span id="local-6989586621679512664"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679512664"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.5.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.AuxiliaryData.html#AuxiliaryDataHash"><span class="hs-identifier hs-type">AuxiliaryDataHash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679512664"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span id="local-6989586621679512506"><span id="local-6989586621679512511"><span id="local-6989586621679512517"><span id="local-6989586621679512652"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679512652"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.5.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.AuxiliaryData.html#AuxiliaryDataHash"><span class="hs-identifier hs-type">AuxiliaryDataHash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679512652"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span id="local-6989586621679512481"><span id="local-6989586621679512485"><span id="local-6989586621679512489"><span id="local-6989586621679512493"><span id="local-6989586621679512498"><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679512644"><span class="annot"><a href="#local-6989586621679512644"><span class="hs-keyword hs-type">newtype</span></a></span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679512644"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-a3ddaa9ceea7451878ee066cf29adb42e24e70b8a37b2cd6aa6c26d29c2f5300/share/doc/html/src"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.AuxiliaryData.html#AuxiliaryDataHash"><span class="hs-identifier hs-type">AuxiliaryDataHash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679512644"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span></span></span></span></span><span>
+</span><span id="line-34"></span></pre></body></html>
