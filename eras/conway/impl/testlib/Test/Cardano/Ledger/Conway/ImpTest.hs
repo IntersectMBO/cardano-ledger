@@ -321,8 +321,7 @@ instance
               , ucppDRepDeposit = Coin 70_000_000
               , ucppDRepActivity = EpochInterval 100
               , ucppMinFeeRefScriptCostPerByte = 15 %! 1
-              , -- TODO: Replace with correct cost model.
-                ucppPlutusV3CostModel = testingCostModel PlutusV3
+              , ucppPlutusV3CostModel = testingCostModel PlutusV3
               }
         , cgConstitution = Constitution constitutionAnchor (SJust guardrailScriptHash)
         , cgCommittee = committee

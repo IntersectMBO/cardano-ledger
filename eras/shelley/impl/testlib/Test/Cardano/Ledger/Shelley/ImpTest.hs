@@ -147,7 +147,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
@@ -252,6 +252,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
+import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -1010,9 +1011,10 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
     txNoWits = tx & bodyTxL . outputsTxBodyL %~ (:|> changeBeforeFeeTxOut)
     outsBeforeFee = tx ^. bodyTxL . outputsTxBodyL
     suppliedFee = txOriginal ^. bodyTxL . feeTxBodyL
-    fee
+    fee0
       | suppliedFee == zero = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
       | otherwise = suppliedFee
+    fee = rationalToCoinViaCeiling $ coinToRational fee0 * (11 % 10)
   logString "Validating change"
   change <- ensureNonNegativeCoin $ changeBeforeFeeTxOut ^. coinTxOutL <-> fee
   logToExpr change
