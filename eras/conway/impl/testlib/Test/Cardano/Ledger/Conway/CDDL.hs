@@ -869,11 +869,11 @@ scripthash =
 datum_hash :: Rule
 datum_hash = "datum_hash" =:= hash32
 
-data_a :: Rule
-data_a = "data" =:= tag 24 (VBytes `cbor` plutus_data)
+data' :: Rule
+data' = "data" =:= tag 24 (VBytes `cbor` plutus_data)
 
 datum_option :: Rule
-datum_option = "datum_option" =:= arr [0, a hash32] / arr [1, a data_a]
+datum_option = "datum_option" =:= arr [0, a hash32] / arr [1, a data']
 
 script_ref :: Rule
 script_ref = "script_ref" =:= tag 24 (VBytes `cbor` script)

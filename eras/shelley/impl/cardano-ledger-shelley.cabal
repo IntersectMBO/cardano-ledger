@@ -166,6 +166,7 @@ library testlib
         FailT,
         generic-random,
         hedgehog-quickcheck,
+        heredoc,
         ImpSpec,
         prettyprinter,
         prettyprinter-ansi-terminal,

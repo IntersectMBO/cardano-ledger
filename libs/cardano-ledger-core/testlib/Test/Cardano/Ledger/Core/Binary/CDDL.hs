@@ -12,10 +12,10 @@ module Test.Cardano.Ledger.Core.Binary.CDDL where
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Semigroup ((<>))
-import Data.String.Here (here)
 import qualified Data.Text as T
 import Data.Word (Word64)
 import GHC.Show (Show (show))
+import Text.Heredoc
 import Prelude (Integer)
 
 --------------------------------------------------------------------------------
@@ -30,41 +30,39 @@ positive_coin = "positive_coin" =:= 1 ... maxWord64
 address :: Rule
 address =
   comment
-    [here|
-    address = bytes
-    reward_account = bytes
-
-    address format:
-    [ 8 bit header | payload ];
-
-    shelley payment addresses:
-    bit 7: 0
-    bit 6: base/other
-    bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
-    bit 4: payment cred is keyhash/scripthash
-    bits 3-0: network id
-
-    reward addresses:
-    bits 7-5: 111
-    bit 4: credential is keyhash/scripthash
-    bits 3-0: network id
-
-    byron addresses:
-    bits 7-4: 1000
-
-    0000: base address: keyhash28,keyhash28
-    0001: base address: scripthash28,keyhash28
-    0010: base address: keyhash28,scripthash28
-    0011: base address: scripthash28,scripthash28
-    0100: pointer address: keyhash28, 3 variable length uint
-    0101: pointer address: scripthash28, 3 variable length uint
-    0110: enterprise address: keyhash28
-    0111: enterprise address: scripthash28
-    1000: byron address
-    1110: reward account: keyhash28
-    1111: reward account: scripthash28
-    1001 - 1101: future formats
-  |]
+    [str|address = bytes
+        |
+        |address format:
+        |  [ 8 bit header | payload ];
+        |
+        |shelley payment addresses:
+        |     bit 7: 0
+        |     bit 6: base/other
+        |     bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
+        |     bit 4: payment cred is keyhash/scripthash
+        |  bits 3-0: network id
+        |
+        |reward addresses:
+        |  bits 7-5: 111
+        |     bit 4: credential is keyhash/scripthash
+        |  bits 3-0: network id
+        |
+        |byron addresses:
+        |  bits 7-4: 1000
+        |
+        |     0000: base address: keyhash28,keyhash28
+        |     0001: base address: scripthash28,keyhash28
+        |     0010: base address: keyhash28,scripthash28
+        |     0011: base address: scripthash28,scripthash28
+        |     0100: pointer address: keyhash28, 3 variable length uint
+        |     0101: pointer address: scripthash28, 3 variable length uint
+        |     0110: enterprise address: keyhash28
+        |     0111: enterprise address: scripthash28
+        |     1000: byron address
+        |     1110: reward account: keyhash28
+        |     1111: reward account: scripthash28
+        |1001-1101: future formats
+        |]
     $ "address"
       =:= bstr
         "001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000"
@@ -81,9 +79,12 @@ address =
 
 reward_account :: Rule
 reward_account =
-  "reward_account"
-    =:= bstr "E090000000000000000000000000000000000000000000000000000000"
-    / bstr "F0A0000000000000000000000000000000000000000000000000000000"
+  comment
+    [str|reward_account = bytes
+        |]
+    $ "reward_account"
+      =:= bstr "E090000000000000000000000000000000000000000000000000000000"
+      / bstr "F0A0000000000000000000000000000000000000000000000000000000"
 
 addr_keyhash :: Rule
 addr_keyhash = "addr_keyhash" =:= hash28
@@ -168,8 +169,9 @@ negInt64 = "negInt64" =:= minInt64 ... (-1)
 posInt64 :: Rule
 posInt64 = "posInt64" =:= 1 ... maxInt64
 
+-- | this is the same as the current int64 definition but without zero
 nonZeroInt64 :: Rule
-nonZeroInt64 = "nonZeroInt64" =:= negInt64 / posInt64 -- this is the same as the current int64 definition but without zero
+nonZeroInt64 = "nonZeroInt64" =:= negInt64 / posInt64
 
 int64 :: Rule
 int64 = "int64" =:= minInt64 ... maxInt64
@@ -178,48 +180,56 @@ positive_int :: Rule
 positive_int = "positive_int" =:= 1 ... 18446744073709551615
 
 unit_interval :: Rule
-unit_interval = "unit_interval" =:= tag 30 (arr [1, 2])
+unit_interval =
+  comment
+    [str|The real unit_interval is: #6.30([uint, uint])
+        |
+        |A unit interval is a number in the range between 0 and 1, which
+        |means there are two extra constraints:
+        |  1. numerator <= denominator
+        |  2. denominator > 0
+        |
+        |The relation between numerator and denominator can be
+        |expressed in CDDL, but we have a limitation currently
+        |(see: https://github.com/input-output-hk/cuddle/issues/30)
+        |which poses a problem for testing. We need to be able to
+        |generate random valid data for testing implementation of
+        |our encoders/decoders. Which means we cannot use the actual
+        |definition here and we hard code the value to 1/2        
+        |]
+    $ "unit_interval" =:= tag 30 (arr [1, 2])
 
--- unit_interval = tag 0 [uint, uint]
---
--- Comment above depicts the actual definition for `unit_interval`.
---
--- Unit interval is a number in the range between 0 and 1, which
--- means there are two extra constraints:
--- \* numerator <= denominator
--- \* denominator > 0
---
--- Relation between numerator and denominator cannot be expressed in CDDL, which
--- poses a problem for testing. We need to be able to generate random valid data
--- for testing implementation of our encoders/decoders. Which means we cannot use
--- the actual definition here and we hard code the value to 1/2
-
--- nonnegative_interval = tag 0 [uint, positive_int]
+-- | nonnegative_interval = tag 0 [uint, positive_int]
 nonnegative_interval :: Rule
 nonnegative_interval = "nonnegative_interval" =:= tag 30 (arr [a VUInt, a positive_int])
 
 bounded_bytes :: Rule
-bounded_bytes = "bounded_bytes" =:= VBytes `sized` (0 :: Word64, 64 :: Word64)
+bounded_bytes =
+  comment
+    [str|The real bounded_bytes does not have this limit. it instead has
+        |a different limit which cannot be expressed in CDDL.
+        |
+        |The limit is as follows:
+        | - bytes with a definite-length encoding are limited to size 0..64
+        | - for bytes with an indefinite-length CBOR encoding, each chunk is
+        |   limited to size 0..64
+        | ( reminder: in CBOR, the indefinite-length encoding of
+        | bytestrings consists of a token #2.31 followed by a sequence
+        | of definite-length encoded bytestrings and a stop code )
+        |]
+    $ "bounded_bytes" =:= VBytes `sized` (0 :: Word64, 64 :: Word64)
 
--- the real bounded_bytes does not have this limit. it instead has a different
--- limit which cannot be expressed in CDDL.
--- The limit is as follows:
---  - bytes with a definite-length encoding are limited to size 0..64
---  - for bytes with an indefinite-length CBOR encoding, each chunk is
---    limited to size 0..64
---  ( reminder: in CBOR, the indefinite-length encoding of bytestrings
---    consists of a token #2.31 followed by a sequence of definite-length
---    encoded bytestrings and a stop code )
-
--- a type for distinct values.
--- The type parameter must support .size, for example: bytes or uint
 distinct :: IsSizeable s => Value s -> Rule
 distinct x =
-  "distinct_"
-    <> T.pack (show x)
-      =:= (x `sized` (8 :: Word64))
-      / (x `sized` (16 :: Word64))
-      / (x `sized` (20 :: Word64))
-      / (x `sized` (24 :: Word64))
-      / (x `sized` (30 :: Word64))
-      / (x `sized` (32 :: Word64))
+  comment
+    [str|A type for distinct values.
+        |The type parameter must support .size, for example: bytes or uint
+        |]
+    $ "distinct_"
+      <> T.pack (show x)
+        =:= (x `sized` (8 :: Word64))
+        / (x `sized` (16 :: Word64))
+        / (x `sized` (20 :: Word64))
+        / (x `sized` (24 :: Word64))
+        / (x `sized` (30 :: Word64))
+        / (x `sized` (32 :: Word64))
