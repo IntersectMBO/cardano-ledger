@@ -6,7 +6,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -633,15 +632,14 @@ modifyImpInitProtVer ver =
 
 modifyImpInitExpectLedgerRuleConformance ::
   forall era.
-  ( forall t.
-    Globals ->
+  ( Globals ->
     Either
       (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
       (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
     LedgerEnv era ->
     LedgerState era ->
     Tx era ->
-    ImpM t ()
+    Expectation
   ) ->
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
@@ -794,7 +792,6 @@ impWitsVKeyNeeded txBody = do
 data ImpTestEnv era = ImpTestEnv
   { iteFixup :: Tx era -> ImpTestM era (Tx era)
   , iteExpectLedgerRuleConformance ::
-      forall t.
       Globals ->
       Either
         (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
@@ -802,7 +799,7 @@ data ImpTestEnv era = ImpTestEnv
       LedgerEnv era ->
       LedgerState era ->
       Tx era ->
-      ImpM t ()
+      Expectation
   -- ^ Note the use of higher ranked types here. This prevents the hook from
   -- accessing the state while still permitting the use of more general
   -- functions that return some `ImpM t a` and that don't constrain the
@@ -818,15 +815,14 @@ iteExpectLedgerRuleConformanceL ::
   forall era.
   Lens'
     (ImpTestEnv era)
-    ( forall t.
-      Globals ->
+    ( Globals ->
       Either
         (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
       LedgerEnv era ->
       LedgerState era ->
       Tx era ->
-      ImpM t ()
+      Expectation
     )
 iteExpectLedgerRuleConformanceL = lens iteExpectLedgerRuleConformance (\x y -> x {iteExpectLedgerRuleConformance = y})
 
@@ -1092,7 +1088,7 @@ trySubmitTx tx = do
 
   -- Check for conformance
   asks iteExpectLedgerRuleConformance
-    >>= (\f -> f globals res lEnv (st ^. nesEsL . esLStateL) txFixed)
+    >>= (\f -> liftIO $ f globals res lEnv (st ^. nesEsL . esLStateL) txFixed)
 
   case res of
     Left predFailures -> do
