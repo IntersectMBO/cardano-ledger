@@ -64,18 +64,21 @@ header_body =
       , a protocol_version
       ]
 
--- FIXME: A `Named Group` does not write the spec with key-value pairs but
--- rather as a tuple of just the values, or, in other words, as data-types
--- without the labels
 operational_cert :: Named Group
 operational_cert =
-  "operational_cert"
-    =:~ grp
-      [ "hot_vkey" ==> kes_vkey
-      , "sequence_number" ==> VUInt
-      , "kes_period" ==> VUInt
-      , "sigma" ==> signature
-      ]
+  comment
+    [str| kes_vkey: hot_vkey
+        |     uint: sequence_number
+        |     uint: key_period
+        |signature: sigma
+        |]
+    $ "operational_cert"
+      =:~ grp
+        [ "hot_vkey" ==> kes_vkey
+        , "sequence_number" ==> VUInt
+        , "kes_period" ==> VUInt
+        , "sigma" ==> signature
+        ]
 
 -- TODO Replace with the following once
 -- https://github.com/input-output-hk/cuddle/issues/29 is addressed in cuddle.

@@ -279,6 +279,11 @@ multisig_n_of_k = (3, uint, [* multisig_script])
 
 multisig_pubkey = (0, addr_keyhash)
 
+;  kes_vkey: hot_vkey
+;      uint: sequence_number
+;      uint: key_period
+; signature: sigma
+; 
 operational_cert = ($kes_vkey, uint, uint, $signature)
 
 ;         pool_keyhash: operator       
