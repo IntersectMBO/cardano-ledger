@@ -28,9 +28,9 @@ import Test.Cardano.Ledger.Imp.Common hiding (context)
 
 instance
   IsConwayUniv fn =>
-  ExecSpecRule fn "CERTS" Conway
+  ExecSpecRule fn "CERTS" ConwayEra
   where
-  type ExecContext fn "CERTS" Conway = ConwayCertExecContext Conway
+  type ExecContext fn "CERTS" ConwayEra = ConwayCertExecContext ConwayEra
 
   environmentSpec _ = certsEnvSpec
 
@@ -55,10 +55,10 @@ instance
     -- The results of runConformance are Agda types, the `ctx` is a Haskell type, we extract and translate the Withdrawal keys.
     specWithdrawalCredSet <-
       translateWithContext () (Map.keysSet (Map.mapKeys raCredential (ccecWithdrawals ctx)))
-    (implResTest, agdaResTest, _) <- runConformance @"CERTS" @fn @Conway ctx env st sig
+    (implResTest, agdaResTest, _) <- runConformance @"CERTS" @fn @ConwayEra ctx env st sig
     case (implResTest, agdaResTest) of
       (Right haskell, Right spec) ->
-        checkConformance @"CERTS" @Conway @fn
+        checkConformance @"CERTS" @ConwayEra @fn
           ctx
           env
           st
@@ -74,7 +74,7 @@ instance
               credsSet = Set.fromList creds
               zeroRewards (Agda.MkHSMap pairs) =
                 Agda.MkHSMap (map (\(c, r) -> if c `Set.member` credsSet then (c, 0) else (c, r)) pairs)
-      _ -> checkConformance @"CERTS" @Conway @fn ctx env st sig implResTest agdaResTest
+      _ -> checkConformance @"CERTS" @ConwayEra @fn ctx env st sig implResTest agdaResTest
 
-nameCerts :: Seq (ConwayTxCert Conway) -> String
+nameCerts :: Seq (ConwayTxCert ConwayEra) -> String
 nameCerts x = "Certs length " ++ show (length x)

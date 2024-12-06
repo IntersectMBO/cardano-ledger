@@ -12,9 +12,8 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow () where
 
-import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Data.Bifunctor (Bifunctor (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
@@ -46,11 +45,11 @@ import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 
 instance
   ( IsConwayUniv fn
-  , SpecTranslate (ConwayTxBodyTransContext StandardCrypto) (ConwayTxCert (ConwayEra StandardCrypto))
+  , SpecTranslate ConwayTxBodyTransContext (ConwayTxCert ConwayEra)
   ) =>
-  ExecSpecRule fn "UTXOW" Conway
+  ExecSpecRule fn "UTXOW" ConwayEra
   where
-  type ExecContext fn "UTXOW" Conway = UtxoExecContext Conway
+  type ExecContext fn "UTXOW" ConwayEra = UtxoExecContext ConwayEra
 
   genExecContext = genUtxoExecContext
   environmentSpec = utxoEnvSpec
