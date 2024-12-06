@@ -401,9 +401,12 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Format all cabal files
-      run: ./scripts/cabal-format.sh
+      - uses: actions/checkout@v4
+      - uses: tfausak/cabal-gild-setup-action@v2
+        with:
+          version: 1.5.0.1
+      - name: Format all cabal files
+        run: ./scripts/cabal-format.sh check
 
   gen-hie:
     runs-on: ubuntu-latest
