@@ -2,6 +2,23 @@
 
 set -euo pipefail
 
-for f in $(git ls-files -- '*.cabal'); do cabal format $f; done
+mode="${1:-format}"
 
-git diff --exit-code
+if [[ "$mode" != "format" && "$mode" != "check" ]]; then
+  echo "Error: Invalid mode: ${mode}. Allowed values are 'format' or 'check'." >&2
+  exit 1
+fi
+
+git ls-files -- '*.cabal' | while IFS= read -r f; do
+  cmd=(cabal-gild -i "$f" -m "$mode")
+
+  if [[ "$mode" == "format" ]]; then
+    cmd+=(-o "$f")
+  fi
+
+  "${cmd[@]}"
+done
+
+if [[ "$mode" == "format" ]]; then
+  git diff --exit-code
+fi
