@@ -41,14 +41,14 @@ instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map (RewardAccount (EraCrypto era)) Coin)
+  , Inject ctx (Map RewardAccount Coin)
   ) =>
   SpecTranslate ctx (CertEnv era)
   where
   type SpecRep (CertEnv era) = Agda.CertEnv
   toSpecRep CertEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map (RewardAccount (EraCrypto era)) Coin)
+    withdrawals <- askCtx @(Map RewardAccount Coin)
     Agda.MkCertEnv
       <$> toSpecRep ceCurrentEpoch
       <*> toSpecRep cePParams
@@ -141,8 +141,8 @@ instance
       enactState = mkEnactState $ utxosGovState lsUTxOState
       ratifyState = RatifyState enactState mempty mempty False
 
-instance SpecTranslate ctx (SnapShots c) where
-  type SpecRep (SnapShots c) = Agda.Snapshots
+instance SpecTranslate ctx SnapShots where
+  type SpecRep SnapShots = Agda.Snapshots
 
   toSpecRep (SnapShots {..}) =
     Agda.MkSnapshots
@@ -151,16 +151,16 @@ instance SpecTranslate ctx (SnapShots c) where
       <*> toSpecRep ssStakeGo
       <*> toSpecRep ssFee
 
-instance SpecTranslate ctx (SnapShot c) where
-  type SpecRep (SnapShot c) = Agda.Snapshot
+instance SpecTranslate ctx SnapShot where
+  type SpecRep SnapShot = Agda.Snapshot
 
   toSpecRep (SnapShot {..}) =
     Agda.MkSnapshot
       <$> toSpecRep ssStake
       <*> toSpecRep (VMap.toMap ssDelegations)
 
-instance SpecTranslate ctx (Stake c) where
-  type SpecRep (Stake c) = Agda.HSMap Agda.Credential Agda.Coin
+instance SpecTranslate ctx Stake where
+  type SpecRep Stake = Agda.HSMap Agda.Credential Agda.Coin
 
   toSpecRep (Stake stake) = toSpecRep $ VMap.toMap stake
 
@@ -177,8 +177,8 @@ instance SpecTranslate ctx DeltaCoin where
 
   toSpecRep (DeltaCoin x) = pure x
 
-instance SpecTranslate ctx (PulsingRewUpdate c) where
-  type SpecRep (PulsingRewUpdate c) = Agda.HsRewardUpdate
+instance SpecTranslate ctx PulsingRewUpdate where
+  type SpecRep PulsingRewUpdate = Agda.HsRewardUpdate
 
   toSpecRep x =
     Agda.MkRewardUpdate
