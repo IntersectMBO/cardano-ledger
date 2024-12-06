@@ -1,173 +1,192 @@
-cabal-version:      3.0
-name:               cardano-ledger-babbage
-version:            1.10.1.0
-license:            Apache-2.0
-maintainer:         operations@iohk.io
-author:             IOHK
-bug-reports:        https://github.com/intersectmbo/cardano-ledger/issues
+cabal-version: 3.0
+name: cardano-ledger-babbage
+version: 1.10.1.0
+license: Apache-2.0
+maintainer: operations@iohk.io
+author: IOHK
+bug-reports: https://github.com/intersectmbo/cardano-ledger/issues
 synopsis:
-    Cardano ledger introducing refrence scripts and inline datums
+  Cardano ledger introducing refrence scripts and inline datums
 
 description:
-    This package builds upon the Alonzo ledger with support for reference scripts,
-    reference inputs and inline datums.
+  This package builds upon the Alonzo ledger with support for reference scripts,
+  reference inputs and inline datums.
 
-category:           Network
-build-type:         Simple
+category: Network
+build-type: Simple
 data-files:
-    cddl-files/babbage.cddl
-    cddl-files/crypto.cddl
-    cddl-files/extras.cddl
-    golden/*.cbor
+  cddl-files/babbage.cddl
+  cddl-files/crypto.cddl
+  cddl-files/extras.cddl
+  golden/*.cbor
 
 extra-source-files: CHANGELOG.md
 
 source-repository head
-    type:     git
-    location: https://github.com/intersectmbo/cardano-ledger
-    subdir:   eras/babbage/impl
+  type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  subdir: eras/babbage/impl
 
 library
-    exposed-modules:
-        Cardano.Ledger.Babbage
-        Cardano.Ledger.Babbage.Collateral
-        Cardano.Ledger.Babbage.Core
-        Cardano.Ledger.Babbage.PParams
-        Cardano.Ledger.Babbage.Rules
-        Cardano.Ledger.Babbage.Scripts
-        Cardano.Ledger.Babbage.Tx
-        Cardano.Ledger.Babbage.TxBody
-        Cardano.Ledger.Babbage.TxBody.Internal
-        Cardano.Ledger.Babbage.TxOut
-        Cardano.Ledger.Babbage.TxInfo
-        Cardano.Ledger.Babbage.TxWits
-        Cardano.Ledger.Babbage.Transition
-        Cardano.Ledger.Babbage.Translation
-        Cardano.Ledger.Babbage.UTxO
+  exposed-modules:
+    Cardano.Ledger.Babbage
+    Cardano.Ledger.Babbage.Collateral
+    Cardano.Ledger.Babbage.Core
+    Cardano.Ledger.Babbage.PParams
+    Cardano.Ledger.Babbage.Rules
+    Cardano.Ledger.Babbage.Scripts
+    Cardano.Ledger.Babbage.Transition
+    Cardano.Ledger.Babbage.Translation
+    Cardano.Ledger.Babbage.Tx
+    Cardano.Ledger.Babbage.TxBody
+    Cardano.Ledger.Babbage.TxBody.Internal
+    Cardano.Ledger.Babbage.TxInfo
+    Cardano.Ledger.Babbage.TxOut
+    Cardano.Ledger.Babbage.TxWits
+    Cardano.Ledger.Babbage.UTxO
 
-    hs-source-dirs:   src
-    other-modules:
-        Cardano.Ledger.Babbage.Era
-        Cardano.Ledger.Babbage.TxAuxData
-        Cardano.Ledger.Babbage.TxCert
-        Cardano.Ledger.Babbage.Rules.Bbody
-        Cardano.Ledger.Babbage.Rules.Deleg
-        Cardano.Ledger.Babbage.Rules.Delegs
-        Cardano.Ledger.Babbage.Rules.Delpl
-        Cardano.Ledger.Babbage.Rules.Pool
-        Cardano.Ledger.Babbage.Rules.Ppup
-        Cardano.Ledger.Babbage.Rules.Ledger
-        Cardano.Ledger.Babbage.Rules.Ledgers
-        Cardano.Ledger.Babbage.Rules.Utxo
-        Cardano.Ledger.Babbage.Rules.Utxos
-        Cardano.Ledger.Babbage.Rules.Utxow
+  hs-source-dirs: src
+  other-modules:
+    Cardano.Ledger.Babbage.Era
+    Cardano.Ledger.Babbage.Rules.Bbody
+    Cardano.Ledger.Babbage.Rules.Deleg
+    Cardano.Ledger.Babbage.Rules.Delegs
+    Cardano.Ledger.Babbage.Rules.Delpl
+    Cardano.Ledger.Babbage.Rules.Ledger
+    Cardano.Ledger.Babbage.Rules.Ledgers
+    Cardano.Ledger.Babbage.Rules.Pool
+    Cardano.Ledger.Babbage.Rules.Ppup
+    Cardano.Ledger.Babbage.Rules.Utxo
+    Cardano.Ledger.Babbage.Rules.Utxos
+    Cardano.Ledger.Babbage.Rules.Utxow
+    Cardano.Ledger.Babbage.TxAuxData
+    Cardano.Ledger.Babbage.TxCert
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
-        -Wunused-packages
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
 
-    build-depends:
-        base >=4.14 && <5,
-        aeson >=2.2,
-        bytestring,
-        cardano-crypto-class,
-        cardano-data >=1.2,
-        cardano-ledger-allegra ^>=1.6.1,
-        cardano-ledger-alonzo >=1.12,
-        cardano-ledger-binary >=1.4,
-        cardano-ledger-core >=1.16 && <1.17,
-        cardano-ledger-mary ^>=1.7,
-        cardano-ledger-shelley ^>=1.15,
-        cardano-strict-containers,
-        containers,
-        deepseq,
-        microlens,
-        nothunks,
-        plutus-ledger-api >=1.33,
-        set-algebra,
-        small-steps >=1.1,
-        text,
-        transformers,
-        validation-selective
+  build-depends:
+    aeson >=2.2,
+    base >=4.14 && <5,
+    bytestring,
+    cardano-crypto-class,
+    cardano-data >=1.2,
+    cardano-ledger-allegra ^>=1.6.1,
+    cardano-ledger-alonzo >=1.12,
+    cardano-ledger-binary >=1.4,
+    cardano-ledger-core >=1.16 && <1.17,
+    cardano-ledger-mary ^>=1.7,
+    cardano-ledger-shelley ^>=1.15,
+    cardano-strict-containers,
+    containers,
+    deepseq,
+    microlens,
+    nothunks,
+    plutus-ledger-api >=1.33,
+    set-algebra,
+    small-steps >=1.1,
+    text,
+    transformers,
+    validation-selective,
 
 library testlib
-    exposed-modules:
-        Test.Cardano.Ledger.Babbage.Arbitrary
-        Test.Cardano.Ledger.Babbage.Binary.Cddl
-        Test.Cardano.Ledger.Babbage.Imp
-        Test.Cardano.Ledger.Babbage.Imp.UtxowSpec
-        Test.Cardano.Ledger.Babbage.ImpTest
-        Test.Cardano.Ledger.Babbage.TreeDiff
-        Test.Cardano.Ledger.Babbage.Translation.TranslatableGen
+  exposed-modules:
+    Test.Cardano.Ledger.Babbage.Arbitrary
+    Test.Cardano.Ledger.Babbage.Binary.Cddl
+    Test.Cardano.Ledger.Babbage.Imp
+    Test.Cardano.Ledger.Babbage.Imp.UtxowSpec
+    Test.Cardano.Ledger.Babbage.ImpTest
+    Test.Cardano.Ledger.Babbage.Translation.TranslatableGen
+    Test.Cardano.Ledger.Babbage.TreeDiff
 
-    visibility:       public
-    hs-source-dirs:   testlib
-    other-modules:    Paths_cardano_ledger_babbage
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
-        -Wunused-packages
+  visibility: public
+  hs-source-dirs: testlib
+  other-modules: Paths_cardano_ledger_babbage
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
 
-    build-depends:
-        base,
-        bytestring,
-        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
-        cardano-ledger-shelley,
-        cardano-crypto-class,
-        cardano-ledger-babbage,
-        cardano-ledger-binary,
-        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.13.2,
-        cardano-strict-containers,
-        containers,
-        generic-random,
-        microlens,
-        small-steps >=1.1,
-        QuickCheck
+  build-depends:
+    QuickCheck,
+    base,
+    bytestring,
+    cardano-crypto-class,
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
+    cardano-ledger-babbage,
+    cardano-ledger-binary,
+    cardano-ledger-core:{cardano-ledger-core, testlib} >=1.13.2,
+    cardano-ledger-shelley,
+    cardano-strict-containers,
+    containers,
+    generic-random,
+    microlens,
+    small-steps >=1.1,
 
 executable gen-golden
-    main-is:          GenerateGoldenFileMain.hs
-    hs-source-dirs:   test
-    other-modules:    Paths_cardano_ledger_babbage
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
-        -Wunused-packages
+  main-is: GenerateGoldenFileMain.hs
+  hs-source-dirs: test
+  other-modules: Paths_cardano_ledger_babbage
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
 
-    build-depends:
-        base,
-        cardano-ledger-alonzo:testlib,
-        cardano-ledger-babbage,
-        testlib
+  build-depends:
+    base,
+    cardano-ledger-alonzo:testlib,
+    cardano-ledger-babbage,
+    testlib,
 
 test-suite tests
-    type:             exitcode-stdio-1.0
-    main-is:          Main.hs
-    hs-source-dirs:   test
-    other-modules:
-        Test.Cardano.Ledger.Babbage.BinarySpec
-        Test.Cardano.Ledger.Babbage.Binary.CddlSpec
-        Test.Cardano.Ledger.Babbage.GoldenTranslation
-        Paths_cardano_ledger_babbage
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: test
+  other-modules:
+    Paths_cardano_ledger_babbage
+    Test.Cardano.Ledger.Babbage.Binary.CddlSpec
+    Test.Cardano.Ledger.Babbage.BinarySpec
+    Test.Cardano.Ledger.Babbage.GoldenTranslation
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
 
-    build-depends:
-        base,
-        cardano-ledger-alonzo,
-        cardano-ledger-allegra,
-        cardano-ledger-babbage,
-        cardano-ledger-core,
-        cardano-ledger-binary:testlib,
-        cardano-ledger-core:testlib,
-        cardano-ledger-alonzo:testlib,
-        data-default,
-        HUnit,
-        testlib
+  build-depends:
+    HUnit,
+    base,
+    cardano-ledger-allegra,
+    cardano-ledger-alonzo,
+    cardano-ledger-alonzo:testlib,
+    cardano-ledger-babbage,
+    cardano-ledger-binary:testlib,
+    cardano-ledger-core,
+    cardano-ledger-core:testlib,
+    data-default,
+    testlib,
