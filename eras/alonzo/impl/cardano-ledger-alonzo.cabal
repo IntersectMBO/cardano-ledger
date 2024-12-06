@@ -14,8 +14,6 @@ category:           Network
 build-type:         Simple
 data-files:
     cddl-files/alonzo.cddl
-    cddl-files/crypto.cddl
-    cddl-files/extras.cddl
     golden/*.cbor
 
 extra-source-files: CHANGELOG.md
@@ -103,6 +101,7 @@ library
 library testlib
     exposed-modules:
         Test.Cardano.Ledger.Alonzo.Arbitrary
+        Test.Cardano.Ledger.Alonzo.CDDL
         Test.Cardano.Ledger.Alonzo.Binary.Cddl
         Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec
         Test.Cardano.Ledger.Alonzo.Binary.RoundTrip
@@ -142,6 +141,8 @@ library testlib
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-strict-containers,
         cardano-slotting,
+        cuddle,
+        heredoc,
         plutus-ledger-api,
         generic-random,
         microlens,
@@ -152,6 +153,21 @@ library testlib
         text,
         tree-diff,
         QuickCheck
+
+executable huddle-cddl
+    main-is:          Main.hs
+    hs-source-dirs:   huddle-cddl
+    other-modules:    Paths_cardano_ledger_alonzo
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:
+        base,
+        testlib,
+        cardano-ledger-binary:testlib >=1.5
 
 executable gen-golden
     main-is:          GenerateGoldenFileMain.hs

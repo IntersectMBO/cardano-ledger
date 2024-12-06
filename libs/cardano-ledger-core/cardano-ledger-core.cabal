@@ -187,7 +187,7 @@ library testlib
         genvalidity,
         hspec,
         hedgehog-quickcheck,
-        here,
+        heredoc,
         ImpSpec,
         mtl,
         nothunks,
