@@ -1096,7 +1096,12 @@ conformsToSpecM a spec@(SuspendedSpec v ps) = do
     else
       fatalError
         ( NE.fromList
-            ["conformsToSpecM SuspendedSpec case", "  " ++ show a, "  (" ++ show spec ++ ")", "fails", ""]
+            [ "conformsToSpecM SuspendedSpec case on var " ++ show v
+            , "\n " ++ show a
+            , "\n  (" ++ show spec ++ ")"
+            , "fails"
+            , ""
+            ]
         )
 conformsToSpecM _ (ErrorSpec es) = fatalError ("conformsToSpecM ErrorSpec case" NE.<| es)
 
@@ -1574,17 +1579,11 @@ pattern AppendPat a b <- App (extractFn @(ListFn fn) -> Just AppendFn) (a :> b :
 
 short :: forall a x. (Show a, Typeable a) => [a] -> Doc x
 short [] = "[]"
-short xs =
-  let raw = show xs
-      shrunk = if length raw <= 20 then raw else take 20 raw ++ " ... "
-      refined = "[" <+> fromString shrunk <+> "]"
-      elided = "([" <+> viaShow (length xs) <+> "elements ...] @" <+> viaShow (typeRep (Proxy @a)) <+> ")"
-   in if length raw <= length (show elided)
-        then fromString raw
-        else
-          if length xs == 1
-            then refined
-            else elided
+short [x] =
+  let raw = show x
+      refined = if length raw <= 20 then raw else take 20 raw ++ " ... "
+   in "[" <+> fromString refined <+> "]"
+short xs = "([" <+> viaShow (length xs) <+> "elements ...] @" <> viaShow (typeRep (Proxy @a)) <> ")"
 
 prettyPlan :: HasSpec fn a => Specification fn a -> Doc ann
 prettyPlan (simplifySpec -> spec)
@@ -1797,7 +1796,7 @@ simplifySpec spec = case regularizeNames spec of
     let optP = optimisePred p
      in fromGESpec $
           explain
-            (pure ("SimplifySpec " ++ show x))
+            (pure ("\nWhile calling simplifySpec on var " ++ show x))
             (computeSpecSimplified x optP)
   MemberSpec xs -> MemberSpec xs
   ErrorSpec es -> ErrorSpec es
@@ -3808,8 +3807,7 @@ guardSetSpec es (SetSpec must elem ((<> geqSpec 0) -> size))
   | isErrorLike size = ErrorSpec ("guardSetSpec: error in size" :| es)
   | isErrorLike (geqSpec (sizeOf must) <> size) =
       ErrorSpec $
-        ("Must set size " ++ show (sizeOf must) ++ ", is inconsistent with SetSpec size " ++ show size)
-          :| es
+        ("Must set size " ++ show (sizeOf must) ++ ", is inconsistent with SetSpec size" ++ show size) :| es
   | isErrorLike (maxSpec (cardinality elem) <> size) =
       ErrorSpec $
         NE.fromList $
@@ -3921,7 +3919,7 @@ prettySetSpec :: HasSpec fn a => SetSpec fn a -> Doc ann
 prettySetSpec (SetSpec must elem size) =
   parens
     ( "SetSpec"
-        /> sep [parens (short (Set.toList must)), parens (pretty elem), parens (pretty size)]
+        /> sep ["must=" <> short (Set.toList must), "elem=" <> pretty elem, "size=" <> pretty size]
     )
 
 instance HasSpec fn a => Show (SetSpec fn a) where
@@ -5548,7 +5546,6 @@ instance PredLike Bool where
 instance BaseUniverse fn => PredLike (Term fn Bool) where
   type UnivConstr (Term fn Bool) fn' = fn ~ fn'
   toPredExplain es (Lit b) = toPredExplain es b
-  -- toPredExplain [] tm = Assert (pure ("Not (" ++ show tm ++ ")")) tm
   toPredExplain [] tm = Assert tm
   toPredExplain es tm = Explain (NE.fromList es) (Assert tm)
 
@@ -6084,3 +6081,120 @@ nubOrdMemberSpec message xs =
         , "The input is the empty list."
         ]
     )
+
+-- ==============================================================================
+-- Experimental changes to conformsToSpecM
+
+runTermE :: Env -> Term fn a -> Either (NE.NonEmpty String) a
+runTermE env = \case
+  Lit a -> Right a
+  V v -> case lookupEnv env v of
+    Just a -> Right a
+    Nothing -> Left (pure ("Couldn't find " ++ show v ++ " in " ++ show env))
+  App f ts -> do
+    vs <- mapMList (fmap Identity . runTermE env) ts
+    pure $ uncurryList_ runIdentity (sem f) vs
+
+checkPredE ::
+  forall fn.
+  FunctionLike fn =>
+  Env -> NE.NonEmpty String -> Pred fn -> Maybe (NE.NonEmpty String)
+checkPredE env msgs = \case
+  Monitor {} -> Nothing
+  Subst x t p -> checkPredE env msgs $ substitutePred x t p
+  Assert t -> case runTermE env t of
+    Right True -> Nothing
+    Right False ->
+      Just
+        (msgs <> pure ("Assert " ++ show t ++ " returns False") <> pure ("\nenv=\n" ++ show (pretty env)))
+    Left es -> Just (msgs <> es)
+  GenHint {} -> Nothing
+  p@(Reifies t' t f) ->
+    case runTermE env t of
+      Left es -> Just (msgs <> NE.fromList ["checkPredE: Reification fails", "  " ++ show p] <> es)
+      Right val -> case runTermE env t' of
+        Left es -> Just (msgs <> NE.fromList ["checkPredE: Reification fails", "  " ++ show p] <> es)
+        Right val' ->
+          if f val == val'
+            then Nothing
+            else
+              Just
+                ( msgs
+                    <> NE.fromList
+                      [ "checkPredE: Reification doesn't match up"
+                      , "  " ++ show p
+                      , show (f val) ++ " /= " ++ show val'
+                      ]
+                )
+  ForAll t (x :-> p) -> case runTermE env t of
+    Left es -> Just $ (msgs <> NE.fromList ["checkPredE: ForAll fails to run."] <> es)
+    Right set ->
+      let answers =
+            catMaybes
+              [ checkPredE env' (pure "Some items in ForAll fail") p
+              | v <- forAllToList set
+              , let env' = extendEnv x v env
+              ]
+       in case answers of
+            [] -> Nothing
+            (x : xs) -> Just (msgs <> NE.nub (foldr (<>) x xs))
+  Case t bs -> case runTermE env t of
+    Right v -> runCaseOn v (mapList thing bs) (\x val ps -> checkPredE (extendEnv x val env) msgs ps)
+    Left es -> Just (msgs <> pure "checkPredE: Case fails" <> es)
+  When bt p -> case runTermE env bt of
+    Right b -> if b then checkPredE env msgs p else Nothing
+    Left es -> Just (msgs <> pure "checkPredE: When fails" <> es)
+  TruePred -> Nothing
+  FalsePred es -> Just (msgs <> pure "checkPredE: FalsePred" <> es)
+  DependsOn {} -> Nothing
+  Block ps ->
+    case catMaybes (fmap (checkPredE env (pure "Some items in Block fail")) ps) of
+      [] -> Nothing
+      (x : xs) -> Just (msgs <> (NE.nub (foldr (<>) x xs)))
+  Let t (x :-> p) -> case runTermE env t of
+    Right val -> checkPredE (extendEnv x val env) msgs p
+    Left es -> Just (msgs <> pure "checkPredE: Let fails" <> es)
+  Exists k (x :-> p) ->
+    let eval :: forall b. Term fn b -> b
+        eval x = case runTermE env x of
+          Right v -> v
+          Left es -> error $ unlines $ NE.toList (msgs <> es)
+     in case k eval of
+          Result _ a -> checkPredE (extendEnv x a env) msgs p
+          FatalError ess es -> Just (msgs <> foldr1 (<>) ess <> es)
+          GenError ess es -> Just (msgs <> foldr1 (<>) ess <> es)
+  Explain es p -> checkPredE env (msgs <> es) p
+
+conformsToSpecE ::
+  forall fn a.
+  HasSpec fn a =>
+  a ->
+  Specification fn a ->
+  NE.NonEmpty String ->
+  Maybe (NE.NonEmpty String)
+conformsToSpecE a (ExplainSpec [] s) msgs = conformsToSpecE a s msgs
+conformsToSpecE a (ExplainSpec (x : xs) s) msgs = conformsToSpecE a s (msgs <> (x NE.:| xs))
+conformsToSpecE _ TrueSpec _ = Nothing
+conformsToSpecE a (MemberSpec as) msgs =
+  if elem a as
+    then Nothing
+    else
+      Just
+        ( msgs
+            <> NE.fromList
+              ["conformsToSpecE MemberSpec case", "  " ++ show a, "  not an element of", "  " ++ show as, ""]
+        )
+conformsToSpecE a spec@(TypeSpec s cant) msgs =
+  if notElem a cant && conformsTo @fn a s
+    then Nothing
+    else
+      Just
+        ( msgs
+            <> NE.fromList
+              ["conformsToSpecE TypeSpec case", "  " ++ show a, "  (" ++ show spec ++ ")", "fails", ""]
+        )
+conformsToSpecE a (SuspendedSpec v ps) msgs =
+  case checkPredE (singletonEnv v a) msgs ps of
+    Nothing -> Nothing
+    Just es -> Just (pure ("conformsToSpecE SuspendedSpec case on var " ++ show v ++ " fails") <> es)
+conformsToSpecE _ (ErrorSpec es) msgs = Just (msgs <> pure "conformsToSpecE ErrorSpec case" <> es)
