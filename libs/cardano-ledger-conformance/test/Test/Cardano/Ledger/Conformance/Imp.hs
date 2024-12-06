@@ -35,7 +35,7 @@ import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
 
 testImpConformance ::
-  forall era t.
+  forall era.
   ( ConwayEraImp era
   , ExecSpecRule ConwayFn "LEDGER" era
   , ExecContext ConwayFn "LEDGER" era ~ ConwayLedgerExecContext era
@@ -53,7 +53,6 @@ testImpConformance ::
   , ExecEnvironment ConwayFn "LEDGER" era ~ LedgerEnv era
   , Tx era ~ AlonzoTx era
   , SpecTranslate (ConwayTxBodyTransContext (EraCrypto era)) (TxBody era)
-  , ToExpr (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
   ) =>
   Globals ->
   Either
@@ -62,8 +61,8 @@ testImpConformance ::
   ExecEnvironment ConwayFn "LEDGER" era ->
   ExecState ConwayFn "LEDGER" era ->
   ExecSignal ConwayFn "LEDGER" era ->
-  ImpM t ()
-testImpConformance globals impRuleResult env state signal = impAnn "`submitTx` conformance" $ do
+  Expectation
+testImpConformance _ impRuleResult env state signal = do
   let ctx =
         ConwayLedgerExecContext
           { clecPolicyHash =
@@ -101,22 +100,7 @@ testImpConformance globals impRuleResult env state signal = impAnn "`submitTx` c
           (toTestRep . inject @_ @(ExecState ConwayFn "LEDGER" era) . fst)
           impRuleResult
 
-  logString "implEnv"
-  logToExpr env
-  logString "implState"
-  logToExpr state
-  logString "implSignal"
-  logToExpr signal
-  logString "specEnv"
-  logToExpr specEnv
-  logString "specState"
-  logToExpr specState
-  logString "specSignal"
-  logToExpr specSignal
-  logString "Extra info:"
-  logDoc $ extraInfo @ConwayFn @"LEDGER" @era globals ctx env state signal impRuleResult
   when (impResponse /= agdaResponse) $ do
-    logDoc $ diffConformance impResponse agdaResponse
     assertFailure "Conformance failure"
 
 spec :: Spec
