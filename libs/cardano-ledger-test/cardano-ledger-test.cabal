@@ -168,7 +168,8 @@ library
         vector,
         constrained-generators,
         random,
-        FailT
+        FailT,
+        lens
 
 test-suite cardano-ledger-test
     type:             exitcode-stdio-1.0
