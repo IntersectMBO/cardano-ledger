@@ -5,7 +5,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -24,11 +23,11 @@ module Cardano.Ledger.Plutus.Evaluate (
   scriptPass,
   scriptFail,
   PlutusDebugInfo (..),
-  debugPlutus,
   runPlutusScript,
   runPlutusScriptWithLogs,
   evaluatePlutusWithContext,
   explainPlutusEvaluationError,
+  withRunnablePlutusWithContext,
 )
 where
 
@@ -50,7 +49,7 @@ import Cardano.Ledger.Plutus.CostModels (
   encodeCostModel,
   getEvaluationContext,
  )
-import Cardano.Ledger.Plutus.ExUnits (ExUnits)
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (
   Plutus (..),
   PlutusLanguage (..),
@@ -62,25 +61,21 @@ import Cardano.Ledger.Plutus.Language (
   withSamePlutusLanguage,
  )
 import Cardano.Ledger.Plutus.TxInfo
-import Control.DeepSeq (NFData (..), force)
-import Control.Exception (evaluate)
-import Control.Monad (join, unless)
-import qualified Data.ByteString.Base64 as B64
-import qualified Data.ByteString.UTF8 as BSU
+import Control.DeepSeq (NFData (..))
+import Control.Monad (unless)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import PlutusLedgerApi.Common as P (EvaluationError (CodecError), ExBudget, VerboseMode (..))
 import Prettyprinter (Pretty (..))
-import System.Timeout (timeout)
 
 -- | This type contains all that is necessary from Ledger to evaluate a plutus script.
 data PlutusWithContext c where
   PlutusWithContext ::
     PlutusLanguage l =>
     { pwcProtocolVersion :: !Version
-    -- ^ Mayjor protocol version that is necessary for [de]serialization
+    -- ^ Major protocol version that is necessary for [de]serialization
     , pwcScript :: !(Either (Plutus l) (PlutusRunnable l))
     -- ^ Actual plutus script that will be evaluated. Script is allowed to be in two forms:
     -- serialized and deserialized. This is necesary for implementing the opptimization
@@ -217,33 +212,6 @@ data PlutusDebugInfo c
       -- itself.
       (Maybe P.ExBudget)
   deriving (Show)
-
-debugPlutus :: Crypto c => String -> IO (PlutusDebugInfo c)
-debugPlutus db =
-  case B64.decode (BSU.fromString db) of
-    Left e -> pure $ DebugBadHex (show e)
-    Right bs ->
-      case Plain.decodeFull' bs of
-        Left e -> pure $ DebugCannotDecode $ show e
-        Right pwc@(PlutusWithContext {..}) ->
-          let cm = getEvaluationContext pwcCostModel
-              eu = transExUnits pwcExUnits
-              onDecoderError err = pure $ DebugFailure [] err pwc Nothing
-           in withRunnablePlutusWithContext pwc onDecoderError $ \plutusRunnable args ->
-                let toDebugInfo = \case
-                      (logs, Left err@(P.CodecError {})) -> pure $ DebugFailure logs err pwc Nothing
-                      (logs, Left err) -> do
-                        mExpectedExUnits <-
-                          timeout 5_000_000 $ do
-                            let res =
-                                  evaluatePlutusRunnableBudget pwcProtocolVersion P.Verbose cm plutusRunnable args
-                            case snd res of
-                              Left {} -> pure Nothing
-                              Right exUnits -> Just <$> evaluate (force exUnits)
-                        pure $ DebugFailure logs err pwc (join mExpectedExUnits)
-                      (logs, Right ex) -> pure $ DebugSuccess logs ex
-                 in toDebugInfo $
-                      evaluatePlutusRunnable pwcProtocolVersion P.Verbose cm eu plutusRunnable args
 
 runPlutusScript :: PlutusWithContext c -> ScriptResult c
 runPlutusScript = snd . runPlutusScriptWithLogs
