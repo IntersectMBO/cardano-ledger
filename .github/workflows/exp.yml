@@ -19,8 +19,5 @@ jobs:
         - uses: tfausak/cabal-gild-setup-action@v2
           with:
             version: 1.5.0.1
-        - name: Chek where we are!
-          run: pwd && ls
         - name: Format all cabal files
           run: ./scripts/cabal-format.sh check
-          # run: cabal-gild -i eras/allegra/impl/cardano-ledger-allegra.cabal -m check

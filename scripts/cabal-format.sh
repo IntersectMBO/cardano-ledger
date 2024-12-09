@@ -16,9 +16,9 @@ git ls-files -- '*.cabal' | while IFS= read -r f; do
     cmd+=(-o "$f")
   fi
 
+  printf '%s ' "${cmd[@]}"
+  printf '\n'
   "${cmd[@]}"
-  # printf '%s ' "${cmd[@]}"
-  # printf '\n'
 done
 
 if [[ "$mode" == "format" ]]; then
