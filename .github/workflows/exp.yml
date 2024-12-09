@@ -22,4 +22,5 @@ jobs:
         - name: Chek where we are!
           run: pwd && ls
         - name: Format all cabal files
-          run: cabal-gild -i eras/allegra/impl/cardano-ledger-allegra.cabal -m check
+          run: ./scripts/cabal-format.sh check
+          # run: cabal-gild -i eras/allegra/impl/cardano-ledger-allegra.cabal -m check
