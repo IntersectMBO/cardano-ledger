@@ -1,258 +1,278 @@
-cabal-version:      3.0
-name:               cardano-ledger-conway
-version:            1.18.0.0
-license:            Apache-2.0
-maintainer:         operations@iohk.io
-author:             IOHK
-bug-reports:        https://github.com/intersectmbo/cardano-ledger/issues
-synopsis:           Cardano ledger with an updated on-chain governance system.
+cabal-version: 3.0
+name: cardano-ledger-conway
+version: 1.18.0.0
+license: Apache-2.0
+maintainer: operations@iohk.io
+author: IOHK
+bug-reports: https://github.com/intersectmbo/cardano-ledger/issues
+synopsis: Cardano ledger with an updated on-chain governance system.
 description:
-    This package builds upon the Babbage ledger with an updated on-chain governance system.
+  This package builds upon the Babbage ledger with an updated on-chain governance system.
 
-category:           Network
-build-type:         Simple
+category: Network
+build-type: Simple
 data-files:
-    test/data/*.json
-    cddl-files/conway.cddl
-    golden/*.cbor
+  cddl-files/conway.cddl
+  golden/*.cbor
+  test/data/*.json
 
 extra-source-files: CHANGELOG.md
 
 source-repository head
-    type:     git
-    location: https://github.com/intersectmbo/cardano-ledger
-    subdir:   eras/conway/impl
+  type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  subdir: eras/conway/impl
 
 flag asserts
-    description: Enable assertions
-    default:     False
+  description: Enable assertions
+  default: False
 
 library
-    exposed-modules:
-        Cardano.Ledger.Conway.Genesis
-        Cardano.Ledger.Conway.Governance
-        Cardano.Ledger.Conway.Governance.DRepPulser
-        Cardano.Ledger.Conway.PParams
-        Cardano.Ledger.Conway.Tx
-        Cardano.Ledger.Conway.TxBody
-        Cardano.Ledger.Conway.TxBody.Internal
-        Cardano.Ledger.Conway.TxInfo
-        Cardano.Ledger.Conway.TxWits
-        Cardano.Ledger.Conway.Transition
-        Cardano.Ledger.Conway.Translation
-        Cardano.Ledger.Conway.Scripts
-        Cardano.Ledger.Conway
-        Cardano.Ledger.Conway.Rules
-        Cardano.Ledger.Conway.Core
-        Cardano.Ledger.Conway.TxCert
-        Cardano.Ledger.Conway.UTxO
-        Cardano.Ledger.Conway.Plutus.Context
+  exposed-modules:
+    Cardano.Ledger.Conway
+    Cardano.Ledger.Conway.Core
+    Cardano.Ledger.Conway.Genesis
+    Cardano.Ledger.Conway.Governance
+    Cardano.Ledger.Conway.Governance.DRepPulser
+    Cardano.Ledger.Conway.PParams
+    Cardano.Ledger.Conway.Plutus.Context
+    Cardano.Ledger.Conway.Rules
+    Cardano.Ledger.Conway.Scripts
+    Cardano.Ledger.Conway.Transition
+    Cardano.Ledger.Conway.Translation
+    Cardano.Ledger.Conway.Tx
+    Cardano.Ledger.Conway.TxBody
+    Cardano.Ledger.Conway.TxBody.Internal
+    Cardano.Ledger.Conway.TxCert
+    Cardano.Ledger.Conway.TxInfo
+    Cardano.Ledger.Conway.TxWits
+    Cardano.Ledger.Conway.UTxO
 
-    hs-source-dirs:   src
-    other-modules:
-        Cardano.Ledger.Conway.Era
-        Cardano.Ledger.Conway.Governance.Internal
-        Cardano.Ledger.Conway.Governance.Procedures
-        Cardano.Ledger.Conway.Governance.Proposals
-        Cardano.Ledger.Conway.Rules.Bbody
-        Cardano.Ledger.Conway.Rules.Cert
-        Cardano.Ledger.Conway.Rules.Deleg
-        Cardano.Ledger.Conway.Rules.GovCert
-        Cardano.Ledger.Conway.Rules.Certs
-        Cardano.Ledger.Conway.Rules.Enact
-        Cardano.Ledger.Conway.Rules.Epoch
-        Cardano.Ledger.Conway.Rules.HardFork
-        Cardano.Ledger.Conway.Rules.Ledger
-        Cardano.Ledger.Conway.Rules.Ledgers
-        Cardano.Ledger.Conway.Rules.Mempool
-        Cardano.Ledger.Conway.Rules.NewEpoch
-        Cardano.Ledger.Conway.Rules.Gov
-        Cardano.Ledger.Conway.Rules.Pool
-        Cardano.Ledger.Conway.Rules.Ratify
-        Cardano.Ledger.Conway.Rules.Tickf
-        Cardano.Ledger.Conway.Rules.Utxo
-        Cardano.Ledger.Conway.Rules.Utxos
-        Cardano.Ledger.Conway.Rules.Utxow
-        Cardano.Ledger.Conway.TxAuxData
-        Cardano.Ledger.Conway.TxOut
+  hs-source-dirs: src
+  other-modules:
+    Cardano.Ledger.Conway.Era
+    Cardano.Ledger.Conway.Governance.Internal
+    Cardano.Ledger.Conway.Governance.Procedures
+    Cardano.Ledger.Conway.Governance.Proposals
+    Cardano.Ledger.Conway.Rules.Bbody
+    Cardano.Ledger.Conway.Rules.Cert
+    Cardano.Ledger.Conway.Rules.Certs
+    Cardano.Ledger.Conway.Rules.Deleg
+    Cardano.Ledger.Conway.Rules.Enact
+    Cardano.Ledger.Conway.Rules.Epoch
+    Cardano.Ledger.Conway.Rules.Gov
+    Cardano.Ledger.Conway.Rules.GovCert
+    Cardano.Ledger.Conway.Rules.HardFork
+    Cardano.Ledger.Conway.Rules.Ledger
+    Cardano.Ledger.Conway.Rules.Ledgers
+    Cardano.Ledger.Conway.Rules.Mempool
+    Cardano.Ledger.Conway.Rules.NewEpoch
+    Cardano.Ledger.Conway.Rules.Pool
+    Cardano.Ledger.Conway.Rules.Ratify
+    Cardano.Ledger.Conway.Rules.Tickf
+    Cardano.Ledger.Conway.Rules.Utxo
+    Cardano.Ledger.Conway.Rules.Utxos
+    Cardano.Ledger.Conway.Rules.Utxow
+    Cardano.Ledger.Conway.TxAuxData
+    Cardano.Ledger.Conway.TxOut
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
-        -Wunused-packages
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
 
-    build-depends:
-        base >=4.14 && <5,
-        aeson >=2.2,
-        data-default,
-        cardano-crypto-class,
-        cardano-data >=1.2.3,
-        cardano-ledger-binary ^>=1.5,
-        cardano-ledger-allegra ^>=1.6.1,
-        cardano-ledger-alonzo ^>=1.12,
-        cardano-ledger-babbage ^>=1.10.1,
-        cardano-ledger-core ^>=1.16,
-        cardano-ledger-mary ^>=1.7,
-        cardano-ledger-shelley ^>=1.15,
-        cardano-slotting,
-        cardano-strict-containers,
-        containers,
-        deepseq,
-        microlens,
-        nothunks,
-        plutus-ledger-api >=1.37,
-        set-algebra,
-        small-steps >=1.1,
-        text,
-        transformers,
-        validation-selective
+  build-depends:
+    aeson >=2.2,
+    base >=4.14 && <5,
+    cardano-crypto-class,
+    cardano-data >=1.2.3,
+    cardano-ledger-allegra ^>=1.6.1,
+    cardano-ledger-alonzo ^>=1.12,
+    cardano-ledger-babbage ^>=1.10.1,
+    cardano-ledger-binary ^>=1.5,
+    cardano-ledger-core ^>=1.16,
+    cardano-ledger-mary ^>=1.7,
+    cardano-ledger-shelley ^>=1.15,
+    cardano-slotting,
+    cardano-strict-containers,
+    containers,
+    data-default,
+    deepseq,
+    microlens,
+    nothunks,
+    plutus-ledger-api >=1.37,
+    set-algebra,
+    small-steps >=1.1,
+    text,
+    transformers,
+    validation-selective,
 
-    if flag(asserts)
-        ghc-options: -fno-ignore-asserts
+  if flag(asserts)
+    ghc-options: -fno-ignore-asserts
 
 library testlib
-    exposed-modules:
-        Test.Cardano.Ledger.Conway.Arbitrary
-        Test.Cardano.Ledger.Conway.Binary.Cddl
-        Test.Cardano.Ledger.Conway.Binary.RoundTrip
-        Test.Cardano.Ledger.Conway.Binary.Regression
-        Test.Cardano.Ledger.Conway.CDDL
-        Test.Cardano.Ledger.Conway.ImpTest
-        Test.Cardano.Ledger.Conway.Imp
-        Test.Cardano.Ledger.Conway.Imp.BbodySpec
-        Test.Cardano.Ledger.Conway.Imp.CertsSpec
-        Test.Cardano.Ledger.Conway.Imp.DelegSpec
-        Test.Cardano.Ledger.Conway.Imp.EpochSpec
-        Test.Cardano.Ledger.Conway.Imp.EnactSpec
-        Test.Cardano.Ledger.Conway.Imp.GovSpec
-        Test.Cardano.Ledger.Conway.Imp.GovCertSpec
-        Test.Cardano.Ledger.Conway.Imp.LedgerSpec
-        Test.Cardano.Ledger.Conway.Imp.RatifySpec
-        Test.Cardano.Ledger.Conway.Imp.UtxoSpec
-        Test.Cardano.Ledger.Conway.Imp.UtxosSpec
-        Test.Cardano.Ledger.Conway.Proposals
-        Test.Cardano.Ledger.Conway.TreeDiff
-        Test.Cardano.Ledger.Conway.Genesis
-        Test.Cardano.Ledger.Conway.Translation.TranslatableGen
+  exposed-modules:
+    Test.Cardano.Ledger.Conway.Arbitrary
+    Test.Cardano.Ledger.Conway.Binary.Cddl
+    Test.Cardano.Ledger.Conway.Binary.Regression
+    Test.Cardano.Ledger.Conway.Binary.RoundTrip
+    Test.Cardano.Ledger.Conway.CDDL
+    Test.Cardano.Ledger.Conway.Genesis
+    Test.Cardano.Ledger.Conway.Imp
+    Test.Cardano.Ledger.Conway.Imp.BbodySpec
+    Test.Cardano.Ledger.Conway.Imp.CertsSpec
+    Test.Cardano.Ledger.Conway.Imp.DelegSpec
+    Test.Cardano.Ledger.Conway.Imp.EnactSpec
+    Test.Cardano.Ledger.Conway.Imp.EpochSpec
+    Test.Cardano.Ledger.Conway.Imp.GovCertSpec
+    Test.Cardano.Ledger.Conway.Imp.GovSpec
+    Test.Cardano.Ledger.Conway.Imp.LedgerSpec
+    Test.Cardano.Ledger.Conway.Imp.RatifySpec
+    Test.Cardano.Ledger.Conway.Imp.UtxoSpec
+    Test.Cardano.Ledger.Conway.Imp.UtxosSpec
+    Test.Cardano.Ledger.Conway.ImpTest
+    Test.Cardano.Ledger.Conway.Proposals
+    Test.Cardano.Ledger.Conway.Translation.TranslatableGen
+    Test.Cardano.Ledger.Conway.TreeDiff
 
-    visibility:       public
-    hs-source-dirs:   testlib
-    other-modules:    Paths_cardano_ledger_conway
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
-        -Wunused-packages
+  visibility: public
+  hs-source-dirs: testlib
+  other-modules: Paths_cardano_ledger_conway
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
 
-    build-depends:
-        base,
-        bytestring,
-        cardano-data:{cardano-data, testlib},
-        containers,
-        cuddle >=0.3.1.0,
-        plutus-ledger-api,
-        deepseq,
-        here,
-        microlens,
-        cardano-crypto-class,
-        cardano-data:{cardano-data, testlib},
-        cardano-ledger-allegra,
-        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
-        cardano-ledger-binary:{cardano-ledger-binary, testlib},
-        cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
-        cardano-ledger-conway,
-        cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-        cardano-strict-containers,
-        containers,
-        cuddle >=0.3.2,
-        data-default,
-        deepseq,
-        FailT,
-        generic-random,
-        here,
-        microlens,
-        microlens-mtl,
-        mtl,
-        plutus-ledger-api,
-        prettyprinter,
-        small-steps >=1.1
+  build-depends:
+    FailT,
+    base,
+    bytestring,
+    cardano-crypto-class,
+    cardano-data:{cardano-data, testlib},
+    cardano-ledger-allegra,
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
+    cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-conway,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-strict-containers,
+    containers,
+    cuddle >=0.3.1.0,
+    cuddle >=0.3.2,
+    data-default,
+    deepseq,
+    generic-random,
+    here,
+    microlens,
+    microlens-mtl,
+    mtl,
+    plutus-ledger-api,
+    prettyprinter,
+    small-steps >=1.1,
 
 executable huddle-cddl
-    main-is:          Main.hs
-    hs-source-dirs:   huddle-cddl
-    other-modules:    Paths_cardano_ledger_conway
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+  main-is: Main.hs
+  hs-source-dirs: huddle-cddl
+  other-modules: Paths_cardano_ledger_conway
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
 
-    build-depends:
-        base,
-        testlib,
-        cardano-ledger-binary:testlib >=1.5
+  build-depends:
+    base,
+    cardano-ledger-binary:testlib >=1.5,
+    testlib,
 
 executable gen-golden
-    main-is:          GenerateGoldenFileMain.hs
-    hs-source-dirs:   test
-    other-modules:    Paths_cardano_ledger_conway
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
-        -Wunused-packages
+  main-is: GenerateGoldenFileMain.hs
+  hs-source-dirs: test
+  other-modules: Paths_cardano_ledger_conway
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wpartial-fields
+    -Wredundant-constraints
+    -Wunused-packages
 
-    build-depends:
-        base,
-        cardano-ledger-conway,
-        testlib,
-        cardano-ledger-alonzo:testlib
+  build-depends:
+    base,
+    cardano-ledger-alonzo:testlib,
+    cardano-ledger-conway,
+    testlib,
 
 test-suite tests
-    type:             exitcode-stdio-1.0
-    main-is:          Main.hs
-    hs-source-dirs:   test
-    other-modules:
-        Test.Cardano.Ledger.Conway.Spec
-        Test.Cardano.Ledger.Conway.BinarySpec
-        Test.Cardano.Ledger.Conway.Binary.CddlSpec
-        Test.Cardano.Ledger.Conway.DRepRatifySpec
-        Test.Cardano.Ledger.Conway.CommitteeRatifySpec
-        Test.Cardano.Ledger.Conway.GenesisSpec
-        Test.Cardano.Ledger.Conway.GovActionReorderSpec
-        Test.Cardano.Ledger.Conway.Plutus.PlutusSpec
-        Test.Cardano.Ledger.Conway.SPORatifySpec
-        Test.Cardano.Ledger.Conway.TxInfoSpec
-        Test.Cardano.Ledger.Conway.GoldenTranslation
-        Paths_cardano_ledger_conway
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: test
+  other-modules:
+    Paths_cardano_ledger_conway
+    Test.Cardano.Ledger.Conway.Binary.CddlSpec
+    Test.Cardano.Ledger.Conway.BinarySpec
+    Test.Cardano.Ledger.Conway.CommitteeRatifySpec
+    Test.Cardano.Ledger.Conway.DRepRatifySpec
+    Test.Cardano.Ledger.Conway.GenesisSpec
+    Test.Cardano.Ledger.Conway.GoldenTranslation
+    Test.Cardano.Ledger.Conway.GovActionReorderSpec
+    Test.Cardano.Ledger.Conway.Plutus.PlutusSpec
+    Test.Cardano.Ledger.Conway.SPORatifySpec
+    Test.Cardano.Ledger.Conway.Spec
+    Test.Cardano.Ledger.Conway.TxInfoSpec
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
 
-    build-depends:
-        aeson,
-        base,
-        cardano-data,
-        cardano-ledger-core:testlib,
-        cardano-ledger-allegra,
-        cardano-ledger-alonzo:testlib,
-        cardano-ledger-alonzo,
-        cardano-ledger-babbage,
-        cardano-ledger-binary,
-        cardano-ledger-conway,
-        cardano-ledger-core,
-        cardano-ledger-binary:testlib,
-        cardano-ledger-shelley,
-        cardano-slotting:testlib,
-        cardano-strict-containers,
-        containers,
-        data-default,
-        microlens,
-        plutus-ledger-api,
-        testlib,
-        HUnit
+  build-depends:
+    HUnit,
+    aeson,
+    base,
+    cardano-data,
+    cardano-ledger-allegra,
+    cardano-ledger-alonzo,
+    cardano-ledger-alonzo:testlib,
+    cardano-ledger-babbage,
+    cardano-ledger-binary,
+    cardano-ledger-binary:testlib,
+    cardano-ledger-conway,
+    cardano-ledger-core,
+    cardano-ledger-core:testlib,
+    cardano-ledger-shelley,
+    cardano-slotting:testlib,
+    cardano-strict-containers,
+    containers,
+    data-default,
+    microlens,
+    plutus-ledger-api,
+    testlib,
