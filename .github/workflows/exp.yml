@@ -22,4 +22,4 @@ jobs:
         - name: Chek where we are!
           run: pwd && ls
         - name: Format all cabal files
-          run: cabal-gild -i vector-map.cabal -m check
+          run: ./scripts/cabal-format.sh
