@@ -403,8 +403,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: tfausak/cabal-gild-setup-action@v2
-        # with:
-          # version: 1.5.0.1
+        with:
+          version: 1.5.0.1
       - name: Format all cabal files
         run: ./scripts/cabal-format.sh check
 
