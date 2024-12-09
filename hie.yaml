@@ -258,13 +258,13 @@ cradle:
     - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/Serialisation/Generators.hs"
       component: "cardano-ledger-test:bench:bench"
 
+    - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/StakeDistr.hs"
+      component: "cardano-ledger-test:bench:bench"
+
     - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/SumStake.hs"
       component: "cardano-ledger-test:bench:bench"
 
     - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/TxOut.hs"
-      component: "cardano-ledger-test:bench:bench"
-
-    - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/StakeDistr.hs"
       component: "cardano-ledger-test:bench:bench"
 
     - path: "libs/cardano-ledger-test/bench/Bench/Constrained/STS.hs"

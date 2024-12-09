@@ -1,164 +1,186 @@
-cabal-version:      3.0
-name:               cardano-ledger-mary
-version:            1.7.0.2
-license:            Apache-2.0
-maintainer:         operations@iohk.io
-author:             IOHK
-bug-reports:        https://github.com/intersectmbo/cardano-ledger/issues
-synopsis:           Cardano ledger with multiasset support.
+cabal-version: 3.0
+name: cardano-ledger-mary
+version: 1.7.0.2
+license: Apache-2.0
+maintainer: operations@iohk.io
+author: IOHK
+bug-reports: https://github.com/intersectmbo/cardano-ledger/issues
+synopsis: Cardano ledger with multiasset support.
 description:
-    This package extends the Allegra ledger with support for
-    native tokens.
+  This package extends the Allegra ledger with support for
+  native tokens.
 
-category:           Network
-build-type:         Simple
-data-files:         cddl-files/mary.cddl
+category: Network
+build-type: Simple
+data-files: cddl-files/mary.cddl
 extra-source-files: CHANGELOG.md
 
 source-repository head
-    type:     git
-    location: https://github.com/intersectmbo/cardano-ledger
-    subdir:   eras/mary/impl
+  type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  subdir: eras/mary/impl
 
 flag asserts
-    description: Enable assertions
-    default:     False
+  description: Enable assertions
+  default: False
 
 library
-    exposed-modules:
-        Cardano.Ledger.Mary
-        Cardano.Ledger.Mary.Core
-        Cardano.Ledger.Mary.Transition
-        Cardano.Ledger.Mary.Translation
-        Cardano.Ledger.Mary.TxBody
-        Cardano.Ledger.Mary.TxBody.Internal
-        Cardano.Ledger.Mary.TxOut
-        Cardano.Ledger.Mary.UTxO
-        Cardano.Ledger.Mary.Value
+  exposed-modules:
+    Cardano.Ledger.Mary
+    Cardano.Ledger.Mary.Core
+    Cardano.Ledger.Mary.Transition
+    Cardano.Ledger.Mary.Translation
+    Cardano.Ledger.Mary.TxBody
+    Cardano.Ledger.Mary.TxBody.Internal
+    Cardano.Ledger.Mary.TxOut
+    Cardano.Ledger.Mary.UTxO
+    Cardano.Ledger.Mary.Value
 
-    hs-source-dirs:   src
-    other-modules:
-        Cardano.Ledger.Mary.Era
-        Cardano.Ledger.Mary.PParams
-        Cardano.Ledger.Mary.Scripts
-        Cardano.Ledger.Mary.Tx
-        Cardano.Ledger.Mary.TxAuxData
-        Cardano.Ledger.Mary.TxCert
-        Cardano.Ledger.Mary.TxSeq
-        Cardano.Ledger.Mary.TxWits
-        Cardano.Ledger.Mary.Rules
-        Cardano.Ledger.Mary.Rules.Bbody
-        Cardano.Ledger.Mary.Rules.Deleg
-        Cardano.Ledger.Mary.Rules.Delegs
-        Cardano.Ledger.Mary.Rules.Delpl
-        Cardano.Ledger.Mary.Rules.Pool
-        Cardano.Ledger.Mary.Rules.Ppup
-        Cardano.Ledger.Mary.Rules.Ledger
-        Cardano.Ledger.Mary.Rules.Ledgers
-        Cardano.Ledger.Mary.Rules.Utxo
-        Cardano.Ledger.Mary.Rules.Utxow
+  hs-source-dirs: src
+  other-modules:
+    Cardano.Ledger.Mary.Era
+    Cardano.Ledger.Mary.PParams
+    Cardano.Ledger.Mary.Rules
+    Cardano.Ledger.Mary.Rules.Bbody
+    Cardano.Ledger.Mary.Rules.Deleg
+    Cardano.Ledger.Mary.Rules.Delegs
+    Cardano.Ledger.Mary.Rules.Delpl
+    Cardano.Ledger.Mary.Rules.Ledger
+    Cardano.Ledger.Mary.Rules.Ledgers
+    Cardano.Ledger.Mary.Rules.Pool
+    Cardano.Ledger.Mary.Rules.Ppup
+    Cardano.Ledger.Mary.Rules.Utxo
+    Cardano.Ledger.Mary.Rules.Utxow
+    Cardano.Ledger.Mary.Scripts
+    Cardano.Ledger.Mary.Tx
+    Cardano.Ledger.Mary.TxAuxData
+    Cardano.Ledger.Mary.TxCert
+    Cardano.Ledger.Mary.TxSeq
+    Cardano.Ledger.Mary.TxWits
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
 
-    build-depends:
-        base >=4.14 && <5,
-        bytestring,
-        base16-bytestring,
-        aeson >=2.2,
-        cardano-crypto-class,
-        cardano-data ^>=1.2,
-        cardano-ledger-allegra ^>=1.6.1,
-        cardano-ledger-binary >=1.4,
-        cardano-ledger-core >=1.16 && <1.17,
-        cardano-ledger-shelley ^>=1.15,
-        containers,
-        deepseq,
-        groups,
-        microlens,
-        nothunks,
-        primitive,
-        cardano-strict-containers,
-        text
+  build-depends:
+    aeson >=2.2,
+    base >=4.14 && <5,
+    base16-bytestring,
+    bytestring,
+    cardano-crypto-class,
+    cardano-data ^>=1.2,
+    cardano-ledger-allegra ^>=1.6.1,
+    cardano-ledger-binary >=1.4,
+    cardano-ledger-core >=1.16 && <1.17,
+    cardano-ledger-shelley ^>=1.15,
+    cardano-strict-containers,
+    containers,
+    deepseq,
+    groups,
+    microlens,
+    nothunks,
+    primitive,
+    text,
 
-    if flag(asserts)
-        ghc-options: -fno-ignore-asserts
+  if flag(asserts)
+    ghc-options: -fno-ignore-asserts
 
 library testlib
-    exposed-modules:
-        Test.Cardano.Ledger.Mary.Arbitrary
-        Test.Cardano.Ledger.Mary.Binary.Cddl
-        Test.Cardano.Ledger.Mary.CDDL
-        Test.Cardano.Ledger.Mary.Imp
-        Test.Cardano.Ledger.Mary.ImpTest
-        Test.Cardano.Ledger.Mary.Imp.UtxoSpec
-        Test.Cardano.Ledger.Mary.TreeDiff
+  exposed-modules:
+    Test.Cardano.Ledger.Mary.Arbitrary
+    Test.Cardano.Ledger.Mary.Binary.Cddl
+    Test.Cardano.Ledger.Mary.CDDL
+    Test.Cardano.Ledger.Mary.Imp
+    Test.Cardano.Ledger.Mary.Imp.UtxoSpec
+    Test.Cardano.Ledger.Mary.ImpTest
+    Test.Cardano.Ledger.Mary.TreeDiff
 
-    visibility:       public
-    hs-source-dirs:   testlib
-    other-modules:    Paths_cardano_ledger_mary
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages
+  visibility: public
+  hs-source-dirs: testlib
+  other-modules: Paths_cardano_ledger_mary
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
 
-    build-depends:
-        base,
-        bytestring,
-        containers,
-        cardano-data:testlib,
-        cardano-crypto-class,
-        cardano-ledger-binary:testlib,
-        cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-ledger-mary,
-        cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
-        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-        cardano-strict-containers,
-        cuddle,
-        microlens
+  build-depends:
+    base,
+    bytestring,
+    cardano-crypto-class,
+    cardano-data:testlib,
+    cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
+    cardano-ledger-binary:testlib,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-mary,
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-strict-containers,
+    containers,
+    cuddle,
+    microlens,
 
 executable huddle-cddl
-    main-is:          Main.hs
-    hs-source-dirs:   huddle-cddl
-    other-modules:    Paths_cardano_ledger_mary
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+  main-is: Main.hs
+  hs-source-dirs: huddle-cddl
+  other-modules: Paths_cardano_ledger_mary
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
 
-    build-depends:
-        base,
-        testlib,
-        cardano-ledger-binary:testlib >=1.3.4.0
+  build-depends:
+    base,
+    cardano-ledger-binary:testlib >=1.3.4.0,
+    testlib,
 
 test-suite tests
-    type:             exitcode-stdio-1.0
-    main-is:          Main.hs
-    hs-source-dirs:   test
-    other-modules:
-        Test.Cardano.Ledger.Mary.BinarySpec
-        Test.Cardano.Ledger.Mary.Binary.CddlSpec
-        Test.Cardano.Ledger.Mary.ValueSpec
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: test
+  other-modules:
+    Test.Cardano.Ledger.Mary.Binary.CddlSpec
+    Test.Cardano.Ledger.Mary.BinarySpec
+    Test.Cardano.Ledger.Mary.ValueSpec
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
 
-    build-depends:
-        base,
-        base16-bytestring,
-        bytestring,
-        cardano-data:{cardano-data, testlib},
-        cardano-ledger-binary:testlib,
-        cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-ledger-mary,
-        cardano-ledger-shelley:testlib,
-        data-default,
-        testlib
+  build-depends:
+    base,
+    base16-bytestring,
+    bytestring,
+    cardano-data:{cardano-data, testlib},
+    cardano-ledger-binary:testlib,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-mary,
+    cardano-ledger-shelley:testlib,
+    data-default,
+    testlib,
