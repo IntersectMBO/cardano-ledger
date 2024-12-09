@@ -9,7 +9,7 @@ if [[ "$mode" != "format" && "$mode" != "check" ]]; then
   exit 1
 fi
 
-git ls-files -- '*.cabal' | while IFS= read -r f; do
+git ls-files -- '*.cabal' 'cabal.project' | while IFS= read -r f; do
   cmd=(cabal-gild -i "$f" -m "$mode")
 
   if [[ "$mode" == "format" ]]; then
