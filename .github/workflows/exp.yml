@@ -1,0 +1,25 @@
+name: Exp
+
+on:
+  workflow_dispatch
+
+jobs:
+    cabal-format:
+      runs-on: ubuntu-latest
+
+      defaults:
+        run:
+          shell: bash
+
+      strategy:
+        fail-fast: false
+
+      steps:
+        - uses: actions/checkout@v4
+        - uses: tfausak/cabal-gild-setup-action@v2
+          # with:
+            # version: 1.5.0.1
+        - name: Chek where we are!
+          run: pwd && ls
+        - name: Format all cabal files
+          run: cabal-gild -i vector-map.cabal -m check
