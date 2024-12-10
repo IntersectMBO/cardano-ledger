@@ -9,7 +9,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.TxOut () where
+module Cardano.Ledger.Conway.TxOut (
+  BabbageTxOut (..),
+) where
 
 import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Babbage.Core

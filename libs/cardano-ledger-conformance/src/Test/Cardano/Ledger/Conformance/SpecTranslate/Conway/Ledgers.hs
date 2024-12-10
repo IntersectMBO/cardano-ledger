@@ -19,9 +19,14 @@ import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.Rules (Identity, ShelleyLedgersEnv (..), ShelleyLedgersPredFailure)
 import Control.State.Transition.Extended (STS (..))
 import qualified Lib as Agda
-import Test.Cardano.Ledger.Conformance (OpaqueErrorString (..), SpecTranslate (..), askCtx)
+import Test.Cardano.Ledger.Conformance (
+  OpaqueErrorString (..),
+  SpecTranslate (..),
+  askCtx,
+  showOpaqueErrorString,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
-import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr, showExpr)
+import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
 
 instance
   ( EraPParams era
@@ -50,4 +55,4 @@ instance
   where
   type SpecRep (ShelleyLedgersPredFailure era) = OpaqueErrorString
 
-  toSpecRep = pure . OpaqueErrorString . showExpr
+  toSpecRep = pure . showOpaqueErrorString

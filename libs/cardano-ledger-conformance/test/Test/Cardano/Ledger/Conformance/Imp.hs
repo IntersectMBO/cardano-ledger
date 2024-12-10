@@ -2,7 +2,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -12,16 +14,27 @@ module Test.Cardano.Ledger.Conformance.Imp (spec) where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway.Core (
+  BabbageEraTxBody (..),
+ )
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus (Datum (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (LedgerEnv, UtxoEnv (..), ledgerSlotNoL)
+import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
+import Cardano.Ledger.TxIn (mkTxInPartial)
 import Control.State.Transition
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
+import Data.Either (isLeft)
 import Data.List.NonEmpty
+import Data.Sequence.Strict qualified as SSeq
+import Data.Set qualified as Set
 import Lens.Micro
 import Lib qualified as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayLedgerExecContext (..))
@@ -44,9 +57,6 @@ testImpConformance ::
   , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (ExecState ConwayFn "LEDGER" era)
   , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (ExecEnvironment ConwayFn "LEDGER" era)
   , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (TxWits era)
-  , NFData (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
-  , Eq (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
-  , FixupSpecRep (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
   , HasCallStack
   , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecRep (TxBody era) ~ Agda.TxBody
@@ -88,7 +98,7 @@ testImpConformance _ impRuleResult env state signal = do
       <*> expectRight (runSpecTransM ctx $ toSpecRep signal)
   -- get agda response
   agdaResponse <-
-    fmap (bimap (fixup <$>) fixup) $
+    fmap (second fixup) $
       evaluateDeep $
         runAgdaRule @ConwayFn @"LEDGER" @era specEnv specState specSignal
   -- translate imp response
@@ -96,7 +106,7 @@ testImpConformance _ impRuleResult env state signal = do
     expectRightExpr $
       runSpecTransM ctx $
         bimapM
-          (traverse toTestRep)
+          (pure . showOpaqueErrorString)
           (toTestRep . inject @_ @(ExecState ConwayFn "LEDGER" era) . fst)
           impRuleResult
 
@@ -108,8 +118,30 @@ spec =
   withImpInit @(LedgerSpec Conway) $
     modifyImpInitProtVer @Conway (natVersion @10) $
       modifyImpInitExpectLedgerRuleConformance testImpConformance $ do
-        describe "Basic imp conformance" $
+        describe "Basic imp conformance" $ do
           it "Submit constitution" $ do
             _ <- submitConstitution @Conway SNothing
             passNEpochs 2
+          xit "P1 reference scripts must be witnessed" $ do
+            kh <- freshKeyHash
+            (_, addr) <- freshKeyAddr
+            let
+              timelock = fromNativeScript $ RequireSignature @Conway kh
+              txOut =
+                BabbageTxOut
+                  addr
+                  (inject $ Coin 15_000_000)
+                  NoDatum
+                  (SJust timelock)
+            tx0 <-
+              submitTx $
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . outputsTxBodyL .~ SSeq.singleton txOut
+            let
+              txIn = mkTxInPartial (txIdTx tx0) 0
+              tx1 =
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . referenceInputsTxBodyL .~ Set.singleton txIn
+            res <- trySubmitTx tx1
+            res `shouldSatisfyExpr` isLeft
         xdescribe "Conway Imp conformance" $ ConwayImp.conwaySpec @Conway

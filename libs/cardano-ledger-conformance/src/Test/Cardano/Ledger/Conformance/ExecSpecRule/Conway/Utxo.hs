@@ -19,8 +19,6 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Core (EraPParams (..), ppMaxTxSizeL, sizeTxF)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
-import Data.Bifunctor (Bifunctor (..))
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Lens.Micro ((&), (.~), (^.))
 import qualified Lib as Agda
@@ -29,10 +27,9 @@ import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Common (Arbitrary (..), Gen, showExpr)
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
-  OpaqueErrorString (..),
   SpecTranslate (..),
-  computationResultToEither,
   runSpecTransM,
+  unComputationResult,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
@@ -99,9 +96,8 @@ instance
   signalSpec ctx _ _ = utxoTxSpec ctx
 
   runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.utxoStep externalFunctions env st sig
+    unComputationResult $
+      Agda.utxoStep externalFunctions env st sig
 
   extraInfo _ ctx env@UtxoEnv {..} st@UTxOState {..} sig st' =
     PP.vcat

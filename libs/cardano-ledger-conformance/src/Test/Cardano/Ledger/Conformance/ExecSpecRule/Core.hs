@@ -38,10 +38,11 @@ import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
 import Data.Functor (($>))
+import Data.List.NonEmpty (NonEmpty)
 import Data.String (fromString)
 import qualified Data.Text as T
 import Data.Typeable (Proxy (..), Typeable, typeRep)
-import GHC.Base (Constraint, NonEmpty, Symbol, Type)
+import GHC.Base (Constraint, Symbol, Type)
 import GHC.TypeLits (KnownSymbol)
 import Lens.Micro.Mtl (use)
 import Prettyprinter
@@ -51,8 +52,10 @@ import Test.Cardano.Ledger.Api.DebugTools (writeCBOR)
 import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   FixupSpecRep (..),
+  OpaqueErrorString (..),
   SpecTranslate (..),
   runSpecTransM,
+  showOpaqueErrorString,
   toTestRep,
  )
 import Test.Cardano.Ledger.Imp.Common
@@ -138,9 +141,7 @@ class
     SpecRep (ExecEnvironment fn rule era) ->
     SpecRep (ExecState fn rule era) ->
     SpecRep (ExecSignal fn rule era) ->
-    Either
-      (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
-      (SpecRep (ExecState fn rule era))
+    Either OpaqueErrorString (SpecRep (ExecState fn rule era))
 
   translateInputs ::
     HasCallStack =>
@@ -203,6 +204,8 @@ class
     , EncCBOR (State (EraRule rule era))
     , EncCBOR (Signal (EraRule rule era))
     , ToExpr (ExecContext fn rule era)
+    , ToExpr (PredicateFailure (EraRule rule era))
+    , NFData (PredicateFailure (EraRule rule era))
     , HasCallStack
     ) =>
     ExecContext fn rule era ->
@@ -219,9 +222,7 @@ class
     Environment (EraRule rule era) ->
     State (EraRule rule era) ->
     Signal (EraRule rule era) ->
-    Either
-      (NonEmpty (PredicateFailure (EraRule rule era)))
-      (State (EraRule rule era), [Event (EraRule rule era)]) ->
+    Either OpaqueErrorString (State (EraRule rule era), [Event (EraRule rule era)]) ->
     Doc AnsiStyle
   extraInfo _ _ _ _ _ = mempty
 
@@ -253,9 +254,7 @@ diffConformance implRes agdaRes =
 checkConformance ::
   forall rule era fn.
   ( Era era
-  , ToExpr (SpecRep (PredicateFailure (EraRule rule era)))
   , ToExpr (SpecRep (ExecState fn rule era))
-  , Eq (SpecRep (PredicateFailure (EraRule rule era)))
   , Eq (SpecRep (ExecState fn rule era))
   , EncCBOR (ExecContext fn rule era)
   , EncCBOR (Environment (EraRule rule era))
@@ -267,12 +266,8 @@ checkConformance ::
   Environment (EraRule rule era) ->
   State (EraRule rule era) ->
   Signal (EraRule rule era) ->
-  Either
-    (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
-    (SpecRep (ExecState fn rule era)) ->
-  Either
-    (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
-    (SpecRep (ExecState fn rule era)) ->
+  Either OpaqueErrorString (SpecRep (ExecState fn rule era)) ->
+  Either OpaqueErrorString (SpecRep (ExecState fn rule era)) ->
   ImpTestM era ()
 checkConformance ctx env st sig implResTest agdaResTest = do
   let
@@ -300,24 +295,22 @@ checkConformance ctx env st sig implResTest agdaResTest = do
 
 defaultTestConformance ::
   forall fn era rule.
-  ( ShelleyEraImp era
+  ( HasCallStack
+  , ShelleyEraImp era
   , ExecSpecRule fn rule era
   , ForAllExecSpecRep NFData fn rule era
   , ForAllExecSpecRep ToExpr fn rule era
-  , NFData (SpecRep (PredicateFailure (EraRule rule era)))
-  , ToExpr (SpecRep (PredicateFailure (EraRule rule era)))
-  , Eq (SpecRep (PredicateFailure (EraRule rule era)))
+  , NFData (PredicateFailure (EraRule rule era))
   , Eq (SpecRep (ExecState fn rule era))
   , Inject (State (EraRule rule era)) (ExecState fn rule era)
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
-  , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
   , FixupSpecRep (SpecRep (ExecState fn rule era))
   , EncCBOR (ExecContext fn rule era)
   , EncCBOR (Environment (EraRule rule era))
   , EncCBOR (State (EraRule rule era))
   , EncCBOR (Signal (EraRule rule era))
   , ToExpr (ExecContext fn rule era)
-  , HasCallStack
+  , ToExpr (PredicateFailure (EraRule rule era))
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -327,22 +320,35 @@ defaultTestConformance ::
 defaultTestConformance ctx env st sig = property $ do
   (implResTest, agdaResTest, implRes) <- runConformance @rule @fn @era ctx env st sig
   globals <- use impGlobalsL
-  let extra = extraInfo @fn @rule @era globals ctx (inject env) (inject st) (inject sig) implRes
+  let
+    extra =
+      extraInfo @fn @rule @era
+        globals
+        ctx
+        (inject env)
+        (inject st)
+        (inject sig)
+        (first showOpaqueErrorString implRes)
   logDoc extra
-  checkConformance @rule @_ @fn ctx (inject env) (inject st) (inject sig) implResTest agdaResTest
+  checkConformance @rule @_ @fn
+    ctx
+    (inject env)
+    (inject st)
+    (inject sig)
+    (first showOpaqueErrorString implResTest)
+    agdaResTest
 
 runConformance ::
   forall (rule :: Symbol) (fn :: [Type] -> Type -> Type) era.
   ( ExecSpecRule fn rule era
-  , NFData (SpecRep (PredicateFailure (EraRule rule era)))
   , ForAllExecSpecRep NFData fn rule era
   , ForAllExecSpecRep ToExpr fn rule era
-  , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
   , FixupSpecRep (SpecRep (ExecState fn rule era))
   , Inject (State (EraRule rule era)) (ExecState fn rule era)
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
   , ToExpr (ExecContext fn rule era)
   , HasCallStack
+  , NFData (PredicateFailure (EraRule rule era))
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -351,11 +357,9 @@ runConformance ::
   ImpTestM
     era
     ( Either
-        (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
+        (NonEmpty (PredicateFailure (EraRule rule era)))
         (SpecRep (ExecState fn rule era))
-    , Either
-        (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
-        (SpecRep (ExecState fn rule era))
+    , Either OpaqueErrorString (SpecRep (ExecState fn rule era))
     , Either
         (NonEmpty (PredicateFailure (EraRule rule era)))
         (State (EraRule rule era), [Event (EraRule rule era)])
@@ -372,7 +376,7 @@ runConformance execContext env st sig = do
   logDoc $ "specSt:\n" <> ansiExpr specSt
   logDoc $ "specSig:\n" <> ansiExpr specSig
   agdaResTest <-
-    fmap (bimap (fixup <$>) fixup) $
+    fmap (second fixup) $
       impAnn "Deep evaluating Agda output" $
         evaluateDeep $
           runAgdaRule @fn @rule @era specEnv specSt specSig
@@ -381,7 +385,7 @@ runConformance execContext env st sig = do
     impAnn "Translating implementation values to SpecRep" $
       expectRightExpr $
         runSpecTransM execContext $
-          bimapM (traverse toTestRep) (toTestRep . inject @_ @(ExecState fn rule era) . fst) implRes
+          bimapM pure (toTestRep . inject @_ @(ExecState fn rule era) . fst) implRes
   pure (implResTest, agdaResTest, implRes)
 
 conformsToImpl ::
@@ -406,6 +410,8 @@ conformsToImpl ::
   , EncCBOR (State (EraRule rule era))
   , EncCBOR (Signal (EraRule rule era))
   , HasCallStack
+  , NFData (PredicateFailure (EraRule rule era))
+  , ToExpr (PredicateFailure (EraRule rule era))
   ) =>
   Property
 conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do

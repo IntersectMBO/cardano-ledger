@@ -9,7 +9,9 @@ module Test.Cardano.Ledger.Conformance.Orphans where
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default (Default)
 import Data.List (nub, sortOn)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Set as Set
+import Data.Text (Text)
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lib
@@ -249,6 +251,11 @@ instance ToExpr LEnv
 instance Default (HSMap k v)
 
 instance FixupSpecRep Void
+
+instance FixupSpecRep a => FixupSpecRep (NonEmpty a)
+
+instance FixupSpecRep Text where
+  fixup = id
 
 instance FixupSpecRep OpaqueErrorString
 

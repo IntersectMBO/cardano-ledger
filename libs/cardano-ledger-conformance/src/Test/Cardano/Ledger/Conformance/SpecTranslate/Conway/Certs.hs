@@ -28,7 +28,7 @@ import Test.Cardano.Ledger.Conway.TreeDiff
 
 instance ToExpr (PredicateFailure (EraRule "CERT" era)) => SpecTranslate ctx (ConwayCertsPredFailure era) where
   type SpecRep (ConwayCertsPredFailure era) = OpaqueErrorString
-  toSpecRep = pure . OpaqueErrorString . show . toExpr
+  toSpecRep = pure . showOpaqueErrorString
 
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)

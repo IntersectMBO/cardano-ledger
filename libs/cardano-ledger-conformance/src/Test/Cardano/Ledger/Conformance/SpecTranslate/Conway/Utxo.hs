@@ -18,7 +18,7 @@ import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity (Identity)
 import qualified Lib as Agda
-import Test.Cardano.Ledger.Conformance (OpaqueErrorString (..))
+import Test.Cardano.Ledger.Conformance (OpaqueErrorString (..), showOpaqueErrorString)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (SpecTranslate (..))
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..))
@@ -46,4 +46,4 @@ instance
   where
   type SpecRep (ConwayUtxoPredFailure era) = OpaqueErrorString
 
-  toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
+  toSpecRep = pure . showOpaqueErrorString

@@ -45,6 +45,7 @@ library
     Cardano.Ledger.Conway.TxBody.Internal
     Cardano.Ledger.Conway.TxCert
     Cardano.Ledger.Conway.TxInfo
+    Cardano.Ledger.Conway.TxOut
     Cardano.Ledger.Conway.TxWits
     Cardano.Ledger.Conway.UTxO
 
@@ -74,7 +75,6 @@ library
     Cardano.Ledger.Conway.Rules.Utxos
     Cardano.Ledger.Conway.Rules.Utxow
     Cardano.Ledger.Conway.TxAuxData
-    Cardano.Ledger.Conway.TxOut
 
   default-language: Haskell2010
   ghc-options:
