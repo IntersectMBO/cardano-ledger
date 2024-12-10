@@ -191,7 +191,7 @@ bodyspec ::
   Specification
     fn
     ( ShelleyTxBody era
-    , Map (TxIn) (TxOut era)
+    , Map TxIn (TxOut era)
     , TxIn
     )
 bodyspec certsenv certstate =

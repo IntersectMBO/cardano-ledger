@@ -253,7 +253,7 @@ data Rep era t where
   MapR :: Ord a => Rep era a -> Rep era b -> Rep era (Map a b)
   SetR :: Ord a => Rep era a -> Rep era (Set a)
   ListR :: Rep era a -> Rep era [a]
-  AddrR :: Era era => Rep era (Addr)
+  AddrR :: Era era => Rep era Addr
   CredR :: Era era => Rep era (Credential 'Staking)
   VCredR :: Era era => Rep era (Credential 'DRepRole)
   PoolHashR :: Era era => Rep era (KeyHash 'StakePool)
@@ -263,14 +263,14 @@ data Rep era t where
   VHashR :: Era era => Rep era (KeyHash 'DRepRole)
   CommColdCredR :: Era era => Rep era (Credential 'ColdCommitteeRole)
   CommHotCredR :: Era era => Rep era (Credential 'HotCommitteeRole)
-  PoolParamsR :: Era era => Rep era (PoolParams)
+  PoolParamsR :: Era era => Rep era PoolParams
   NewEpochStateR :: Era era => Rep era (NewEpochState era)
   IntR :: Rep era Int
   FloatR :: Rep era Float
   NaturalR :: Rep era Natural
   Word64R :: Rep era Word64
-  TxInR :: Era era => Rep era (TxIn)
-  TxIdR :: Era era => Rep era (TxId)
+  TxInR :: Era era => Rep era TxIn
+  TxIdR :: Era era => Rep era TxId
   CharR :: Rep era Char
   UnitR :: Rep era ()
   PairR :: Rep era a -> Rep era b -> Rep era (a, b)
@@ -284,33 +284,33 @@ data Rep era t where
   PParamsUpdateR :: Era era => Proof era -> Rep era (PParamsUpdateF era)
   --
   DeltaCoinR :: Rep era DeltaCoin
-  GenDelegPairR :: Era era => Rep era (GenDelegPair)
-  FutureGenDelegR :: Era era => Rep era (FutureGenDeleg)
+  GenDelegPairR :: Era era => Rep era GenDelegPair
+  FutureGenDelegR :: Era era => Rep era FutureGenDeleg
   PPUPStateR :: Era era => Proof era -> Rep era (ShelleyGovState era)
   PtrR :: Rep era Ptr
-  IPoolStakeR :: Era era => Rep era (IndividualPoolStake)
-  SnapShotsR :: Era era => Rep era (SnapShots)
-  RewardR :: Era era => Rep era (Reward)
+  IPoolStakeR :: Era era => Rep era IndividualPoolStake
+  SnapShotsR :: Era era => Rep era SnapShots
+  RewardR :: Era era => Rep era Reward
   MaybeR :: Rep era t -> Rep era (Maybe t)
   SlotNoR :: Rep era SlotNo
   SizeR :: Rep era Size
-  MultiAssetR :: Era era => Rep era (MultiAsset)
-  PolicyIDR :: Era era => Rep era (PolicyID)
+  MultiAssetR :: Era era => Rep era MultiAsset
+  PolicyIDR :: Era era => Rep era PolicyID
   WitnessesFieldR :: Era era => Proof era -> Rep era (WitnessesField era)
   AssetNameR :: Rep era AssetName
   TxCertR :: Era era => Proof era -> Rep era (TxCertF era)
-  RewardAccountR :: Era era => Rep era (RewardAccount)
+  RewardAccountR :: Era era => Rep era RewardAccount
   ValidityIntervalR :: Era era => Rep era ValidityInterval
   KeyPairR :: Era era => Rep era (KeyPair 'Witness)
   GenR :: Rep era x -> Rep era (Gen x)
   ScriptR :: Era era => Proof era -> Rep era (ScriptF era)
-  ScriptHashR :: Era era => Rep era (ScriptHash)
+  ScriptHashR :: Era era => Rep era ScriptHash
   NetworkR :: Rep era Network
   RdmrPtrR :: Era era => Proof era -> Rep era (PlutusPointerF era)
   DataR :: Era era => Rep era (Data era)
   DatumR :: Era era => Rep era (Datum era)
   ExUnitsR :: Rep era ExUnits
-  DataHashR :: Era era => Rep era (DataHash)
+  DataHashR :: Era era => Rep era DataHash
   PCredR :: Era era => Rep era (Credential 'Payment)
   ShelleyTxCertR :: Era era => Rep era (ShelleyTxCert era)
   ConwayTxCertR :: Era era => Rep era (ConwayTxCert era)
@@ -320,13 +320,13 @@ data Rep era t where
   ScriptsNeededR :: Era era => Proof era -> Rep era (ScriptsNeededF era)
   ScriptPurposeR :: Era era => Proof era -> Rep era (PlutusPurposeF era)
   TxBodyR :: Era era => Proof era -> Rep era (TxBodyF era)
-  BootstrapWitnessR :: Era era => Rep era (BootstrapWitness)
+  BootstrapWitnessR :: Era era => Rep era BootstrapWitness
   SigningKeyR :: Rep era SigningKey
   TxWitsR :: Era era => Proof era -> Rep era (TxWitsF era)
   PayHashR :: Era era => Rep era (KeyHash 'Payment)
   TxR :: Era era => Proof era -> Rep era (TxF era)
   ScriptIntegrityHashR :: Era era => Rep era (SafeHash EraIndependentScriptIntegrity)
-  AuxiliaryDataHashR :: Era era => Rep era (AuxiliaryDataHash)
+  AuxiliaryDataHashR :: Era era => Rep era AuxiliaryDataHash
   GovActionR :: Era era => Rep era (GovAction era)
   WitVKeyR :: Era era => Proof era -> Rep era (WitVKey 'Witness)
   TxAuxDataR :: Era era => Proof era -> Rep era (TxAuxDataF era)
@@ -334,11 +334,11 @@ data Rep era t where
   LedgerStateR :: Era era => Proof era -> Rep era (LedgerState era)
   StakeHashR :: Era era => Rep era (KeyHash 'Staking)
   BoolR :: Rep era Bool
-  DRepR :: Era era => Rep era (DRep)
+  DRepR :: Era era => Rep era DRep
   PoolMetadataR :: Era era => Proof era -> Rep era PoolMetadata
-  DRepStateR :: Era era => Rep era (DRepState)
+  DRepStateR :: Era era => Rep era DRepState
   DStateR :: Era era => Rep era (DState era)
-  GovActionIdR :: Era era => Rep era (GovActionId)
+  GovActionIdR :: Era era => Rep era GovActionId
   GovActionIxR :: Rep era GovActionIx
   GovActionStateR :: Era era => Rep era (GovActionState era)
   ProposalsR :: Era era => Proof era -> Rep era (Proposals era)
@@ -353,14 +353,14 @@ data Rep era t where
   RatifyStateR :: Reflect era => Rep era (RatifyState era)
   NumDormantEpochsR :: Era era => Rep era EpochNo
   DRepHashR :: Era era => Rep era (KeyHash 'DRepRole)
-  AnchorR :: Era era => Rep era (Anchor)
+  AnchorR :: Era era => Rep era Anchor
   CommitteeStateR :: Era era => Rep era (CommitteeState era)
-  CommitteeAuthorizationR :: Era era => Rep era (CommitteeAuthorization)
+  CommitteeAuthorizationR :: Era era => Rep era CommitteeAuthorization
   VStateR :: Era era => Rep era (VState era)
   EnactStateR :: Reflect era => Rep era (EnactState era)
   DRepPulserR ::
     (RunConwayRatify era, Reflect era) => Rep era (DRepPulser era Identity (RatifyState era))
-  DelegateeR :: Era era => Rep era (Delegatee)
+  DelegateeR :: Era era => Rep era Delegatee
   VoteR :: Rep era Vote
 
 stringR :: Rep era String

@@ -224,11 +224,11 @@ bootWitness hash bootaddrs byronuniv = List.foldl' accum Set.empty bootaddrs
 
 -- | The universe of non-empty Datums. i.e. There are no NoDatum Datums in this list
 genDatums ::
-  Era era => UnivSize -> Int -> Map (DataHash) (Data era) -> Gen [Datum era]
+  Era era => UnivSize -> Int -> Map DataHash (Data era) -> Gen [Datum era]
 genDatums sizes n datauniv = vectorOf n (genDatum sizes datauniv)
 
 -- | Only generate non-empty Datums. I.e. There are no NoDatum Datums generated.
-genDatum :: Era era => UnivSize -> Map (DataHash) (Data era) -> Gen (Datum era)
+genDatum :: Era era => UnivSize -> Map DataHash (Data era) -> Gen (Datum era)
 genDatum UnivSize {usDatumFreq} datauniv =
   frequency
     [ (1, DatumHash . fst <$> genFromMap ["from genDatums DatumHash case"] datauniv)
@@ -246,13 +246,13 @@ genDatum UnivSize {usDatumFreq} datauniv =
 genTxOut ::
   Reflect era =>
   UnivSize ->
-  (Coin -> Map (ScriptHash) (ScriptF era) -> Gen (Value era)) ->
+  (Coin -> Map ScriptHash (ScriptF era) -> Gen (Value era)) ->
   Proof era ->
   Coin ->
-  Set (Addr) ->
-  Map (ScriptHash) (ScriptF era) ->
-  Map (ScriptHash) (ScriptF era) ->
-  Map (DataHash) (Data era) ->
+  Set Addr ->
+  Map ScriptHash (ScriptF era) ->
+  Map ScriptHash (ScriptF era) ->
+  Map DataHash (Data era) ->
   Gen (TxOut era)
 genTxOut sizes genvalue p c addruniv scriptuniv spendscriptuniv datauniv =
   case whichTxOut p of
@@ -284,7 +284,7 @@ genTxOut sizes genvalue p c addruniv scriptuniv spendscriptuniv datauniv =
 needsDatum ::
   EraScript era =>
   Credential 'Payment ->
-  Map (ScriptHash) (ScriptF era) ->
+  Map ScriptHash (ScriptF era) ->
   Bool
 needsDatum (ScriptHashObj hash) spendScriptUniv = case Map.lookup hash spendScriptUniv of
   Nothing -> False
@@ -294,13 +294,13 @@ needsDatum _ _ = False
 genTxOuts ::
   Reflect era =>
   UnivSize ->
-  (Coin -> Map (ScriptHash) (ScriptF era) -> Gen (Value era)) ->
+  (Coin -> Map ScriptHash (ScriptF era) -> Gen (Value era)) ->
   Proof era ->
   Int ->
-  Set (Addr) ->
-  Map (ScriptHash) (ScriptF era) ->
-  Map (ScriptHash) (ScriptF era) ->
-  Map (DataHash) (Data era) ->
+  Set Addr ->
+  Map ScriptHash (ScriptF era) ->
+  Map ScriptHash (ScriptF era) ->
+  Map DataHash (Data era) ->
   Gen [TxOutF era]
 genTxOuts sizes genvalue p ntxouts addruniv scriptuniv spendscriptuniv datauniv = do
   let genOne = do
@@ -312,7 +312,7 @@ genTxOuts sizes genvalue p ntxouts addruniv scriptuniv spendscriptuniv datauniv 
 -- MultiAssets
 
 genMultiAssetTriple ::
-  Map.Map (ScriptHash) (ScriptF era) ->
+  Map.Map ScriptHash (ScriptF era) ->
   Set AssetName ->
   Gen Integer ->
   Gen (PolicyID, AssetName, Integer)
@@ -335,7 +335,7 @@ makeHashScriptMap ::
   PlutusPurposeTag ->
   Map (KeyHash 'Witness) (KeyPair 'Witness) ->
   ValidityInterval ->
-  Gen (Map (ScriptHash) (ScriptF era))
+  Gen (Map ScriptHash (ScriptF era))
 makeHashScriptMap p size tag m vi = do
   let genOne Spending =
         -- Make an effort to get as many plutus scripts as possible (in Eras that support plutus)
@@ -355,7 +355,7 @@ genDataWits ::
   Era era =>
   Proof era ->
   Int ->
-  Gen (Map (DataHash) (Data era))
+  Gen (Map DataHash (Data era))
 genDataWits _p size = do
   scs <- vectorOf size arbitrary
   pure $ Map.fromList $ map (\x -> (hashData x, x)) scs
@@ -369,7 +369,7 @@ genAddrWith ::
   Set Ptr ->
   Set (Credential 'Staking) ->
   Map (KeyHash 'Payment) (Addr, Byron.SigningKey) -> -- The Byron Addresss Universe
-  Gen (Addr)
+  Gen Addr
 genAddrWith proof net ps ptrss cs byronMap =
   case whichTxOut proof of
     TxOutBabbageToConway -> Addr net <$> pick1 ["from genPayCred ScriptHashObj"] ps <*> genStakeRefWith proof ptrss cs
@@ -391,7 +391,7 @@ genStakeRefWith ::
   Proof era ->
   Set Ptr ->
   Set (Credential 'Staking) ->
-  Gen (StakeReference)
+  Gen StakeReference
 genStakeRefWith proof ps cs =
   frequency
     [ (80, StakeRefBase <$> pick1 ["from genStakeRefWith StakeRefBase"] cs)
@@ -419,7 +419,7 @@ genDReps creds =
 genDRepsT ::
   UnivSize ->
   Term era (Set (Credential 'Staking)) ->
-  Target era (Gen (Set (DRep)))
+  Target era (Gen (Set DRep))
 genDRepsT sizes creds = Constr "listToSet" (\cs -> (Set.fromList . take (usNumDReps sizes)) <$> genDReps cs) ^$ creds
 
 -- ======================================================================
@@ -435,21 +435,21 @@ txOutT p x c = TxOutF p (mkBasicTxOut x (inject c))
 
 -- | The collateral consists only of VKey addresses
 --   and the collateral outputs in the UTxO do not contain any non-ADA part
-colTxOutT :: EraTxOut era => Proof era -> Set (Addr) -> Gen (TxOutF era)
+colTxOutT :: EraTxOut era => Proof era -> Set Addr -> Gen (TxOutF era)
 colTxOutT p noScriptAddr =
   TxOutF p
     <$> (mkBasicTxOut <$> pick1 ["from colTxOutT noScriptAddr"] noScriptAddr <*> (inject <$> noZeroCoin))
 
 -- | The collateral consists only of VKey addresses
 --   and the collateral outputs in the UTxO do not contain any non-ADA part
-colTxOutSetT :: EraTxOut era => Proof era -> Set (Addr) -> Gen (Set (TxOutF era))
+colTxOutSetT :: EraTxOut era => Proof era -> Set Addr -> Gen (Set (TxOutF era))
 colTxOutSetT p noScriptAddr = Set.foldl' accum (pure Set.empty) noScriptAddr
   where
     accum ansM addr = do
       c <- noZeroCoin
       Set.insert (TxOutF p (mkBasicTxOut addr (inject c))) <$> ansM
 
-scriptHashObjT :: Term era (ScriptHash) -> Target era (Credential k)
+scriptHashObjT :: Term era ScriptHash -> Target era (Credential k)
 scriptHashObjT x = Constr "ScriptHashObj" ScriptHashObj ^$ x
 
 keyHashObjT ::
@@ -477,7 +477,7 @@ addrUnivT ::
   Term era (Set Ptr) ->
   Term era (Set (Credential 'Staking)) ->
   Term era (Map (KeyHash 'Payment) (Addr, Byron.SigningKey)) ->
-  Target era (Gen (Set (Addr)))
+  Target era (Gen (Set Addr))
 addrUnivT p naddr net ps pts cs byronAddrUnivT =
   Constr "" (setSized ["From addrUnivT"] naddr)
     :$ (Constr "genAddrWith" (genAddrWith p) ^$ net ^$ ps ^$ pts ^$ cs ^$ byronAddrUnivT)
@@ -488,7 +488,7 @@ makeHashScriptMapT ::
   PlutusPurposeTag ->
   Term era (Map (KeyHash 'Witness) (KeyPair 'Witness)) ->
   Term era ValidityInterval ->
-  Target era (Gen (Map (ScriptHash) (ScriptF era)))
+  Target era (Gen (Map ScriptHash (ScriptF era)))
 makeHashScriptMapT p size tag m vi =
   Constr
     "makeHashScriptMap"
@@ -633,8 +633,7 @@ universePreds size p =
     preGenesisDom = Var (V "preGenesisDom" (SetR GenHashR) No)
     preVoteUniv = Var (V "preVoteUniv" (SetR WitHashR) No)
 
-multiAsset ::
-  UnivSize -> Map.Map (ScriptHash) (ScriptF era) -> Gen (MultiAsset)
+multiAsset :: UnivSize -> Map.Map ScriptHash (ScriptF era) -> Gen MultiAsset
 multiAsset size scripts = do
   let assets =
         Set.fromList [AssetName (fromString (show (n :: Int) ++ "Asset")) | n <- [0 .. (usMaxAssets size)]]
@@ -646,8 +645,7 @@ multiAsset size scripts = do
       xs <- vectorOf n (genMultiAssetTriple scripts assets (choose (1, 100)))
       pure $ multiAssetFromList xs
 
-genValueF ::
-  UnivSize -> Proof era -> Coin -> Map (ScriptHash) (ScriptF era) -> Gen (Value era)
+genValueF :: UnivSize -> Proof era -> Coin -> Map ScriptHash (ScriptF era) -> Gen (Value era)
 genValueF size proof c scripts = case whichValue proof of
   ValueShelleyToAllegra -> pure c
   ValueMaryToConway -> MaryValue c <$> multiAsset size scripts

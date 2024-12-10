@@ -74,7 +74,7 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) (CertState vs _ps ds) =
         case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
           Just d | d > 0 -> SJust d
           _ -> SNothing
-      delegateeInPools :: Term fn (Delegatee) -> Pred fn
+      delegateeInPools :: Term fn Delegatee -> Pred fn
       delegateeInPools delegatee =
         (caseOn delegatee)
           (branch $ \kh -> isInPools kh)
@@ -83,7 +83,7 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) (CertState vs _ps ds) =
         where
           isInPools = (`member_` lit (Map.keysSet pools))
           drepsSet f drepsMap = Set.fromList [k' | k <- Map.keys drepsMap, Just k' <- [f k]]
-          isInDReps :: Term fn (DRep) -> Pred fn
+          isInDReps :: Term fn DRep -> Pred fn
           isInDReps drep =
             (caseOn drep)
               ( branch $ \drepKeyHash ->

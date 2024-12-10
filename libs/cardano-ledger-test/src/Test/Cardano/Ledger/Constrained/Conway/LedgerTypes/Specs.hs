@@ -214,7 +214,7 @@ aggregateDRep m = Map.foldlWithKey accum Map.empty m
 dstateSpec ::
   forall era fn.
   EraSpecLedger era fn =>
-  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
+  Term fn (Set (Credential 'DRepRole)) ->
   Term fn AccountState ->
   Term fn (Map (KeyHash 'StakePool) PoolParams) ->
   Specification fn (DState era)
@@ -446,7 +446,7 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
     markDelegations ::
       VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
     markDelegations = VMap.fromMap (UMap.sPoolMap (dsUnified (certDState (lsCertState ls))))
-    markPoolParams :: VMap VB VB (KeyHash 'StakePool) (PoolParams)
+    markPoolParams :: VMap VB VB (KeyHash 'StakePool) PoolParams
     markPoolParams = VMap.fromMap (psStakePoolParams (certPState (lsCertState ls)))
 
 -- ====================================================================

@@ -110,7 +110,6 @@ spec =
       modifyImpInitExpectLedgerRuleConformance testImpConformance $ do
         describe "Basic imp conformance" $
           it "Submit constitution" $ do
-            _ <- submitConstitution @Conway SNothing
             _ <- submitConstitution @ConwayEra SNothing
             passNEpochs 2
         xdescribe "Conway Imp conformance" $ ConwayImp.conwaySpec @ConwayEra

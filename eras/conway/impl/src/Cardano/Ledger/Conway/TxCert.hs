@@ -719,7 +719,7 @@ getScriptWitnessConwayTxCert = \case
   ConwayTxCertPool {} -> Nothing
   ConwayTxCertGov govCert -> govWitness govCert
   where
-    govWitness :: ConwayGovCert -> Maybe (ScriptHash)
+    govWitness :: ConwayGovCert -> Maybe ScriptHash
     govWitness = \case
       ConwayAuthCommitteeHotKey coldCred _hotCred -> credScriptHash coldCred
       ConwayResignCommitteeColdKey coldCred _ -> credScriptHash coldCred

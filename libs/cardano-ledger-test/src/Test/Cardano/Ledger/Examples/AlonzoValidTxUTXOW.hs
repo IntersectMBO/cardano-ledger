@@ -963,7 +963,7 @@ expectedUTxO initUtxo ex idx = UTxO utxo
         Map.insert (TxIn (txIdTxBody txb) minBound) newOut (filteredUTxO (mkTxIxPartial idx))
       ExpectSuccessInvalid -> filteredUTxO (mkTxIxPartial idx)
       ExpectFailure -> filteredUTxO (mkTxIxPartial (10 + idx))
-    filteredUTxO :: TxIx -> Map.Map (TxIn) (TxOut era)
+    filteredUTxO :: TxIx -> Map.Map TxIn (TxOut era)
     filteredUTxO x = Map.filterWithKey (\(TxIn _ i) _ -> i /= x) $ unUTxO initUtxo
 
 expectedUTxO' ::

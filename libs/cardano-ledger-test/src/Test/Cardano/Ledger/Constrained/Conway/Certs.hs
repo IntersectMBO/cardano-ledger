@@ -94,7 +94,7 @@ bootstrapDStateSpec delegatees withdrawals =
 coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n
 
-type CertsContext era = Map (RewardAccount) Coin
+type CertsContext era = Map RewardAccount Coin
 
 txZero :: EraTx era => Tx era
 txZero = mkBasicTx mkBasicTxBody

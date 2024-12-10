@@ -31,8 +31,6 @@ instance EraScript MaryEra where
   fromNativeScript = id
 
 instance ShelleyEraScript MaryEra where
-  {-# SPECIALIZE instance ShelleyEraScript MaryEra #-}
-
   mkRequireSignature = mkRequireSignatureTimelock
   getRequireSignature = getRequireSignatureTimelock
 
@@ -46,8 +44,6 @@ instance ShelleyEraScript MaryEra where
   getRequireMOf = getRequireMOfTimelock
 
 instance AllegraEraScript MaryEra where
-  {-# SPECIALIZE instance AllegraEraScript MaryEra #-}
-
   mkTimeStart = mkTimeStartTimelock
   getTimeStart = getTimeStartTimelock
 

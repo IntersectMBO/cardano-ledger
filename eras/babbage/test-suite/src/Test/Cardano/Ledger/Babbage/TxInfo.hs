@@ -127,7 +127,7 @@ txb ::
   forall era.
   BabbageEraTxBody era =>
   TxIn ->
-  Maybe (TxIn) ->
+  Maybe TxIn ->
   TxOut era ->
   TxBody era
 txb i mRefInp o =

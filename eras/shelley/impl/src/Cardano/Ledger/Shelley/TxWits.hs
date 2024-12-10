@@ -86,7 +86,7 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyTxWitsRaw era = ShelleyTxWitsRaw
   { addrWits' :: !(Set (WitVKey 'Witness))
-  , scriptWits' :: !(Map (ScriptHash) (Script era))
+  , scriptWits' :: !(Map ScriptHash (Script era))
   , bootWits' :: !(Set BootstrapWitness)
   }
   deriving (Generic)
@@ -151,7 +151,7 @@ bootAddrShelleyTxWitsL =
 -- setter does update memoized binary representation.
 scriptShelleyTxWitsL ::
   EraScript era =>
-  Lens' (ShelleyTxWits era) (Map (ScriptHash) (Script era))
+  Lens' (ShelleyTxWits era) (Map ScriptHash (Script era))
 scriptShelleyTxWitsL =
   lensMemoRawType scriptWits' $ \witsRaw sw -> witsRaw {scriptWits' = sw}
 {-# INLINEABLE scriptShelleyTxWitsL #-}

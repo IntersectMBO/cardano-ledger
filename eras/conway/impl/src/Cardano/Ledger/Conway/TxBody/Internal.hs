@@ -347,8 +347,6 @@ data ConwayTxBodyUpgradeError
   deriving (Eq, Show)
 
 instance EraTxBody ConwayEra where
-  {-# SPECIALIZE instance EraTxBody ConwayEra #-}
-
   type TxBody ConwayEra = ConwayTxBody ConwayEra
   type TxBodyUpgradeError ConwayEra = ConwayTxBodyUpgradeError
 
@@ -457,14 +455,10 @@ conwayProposalsDeposits pp txBody = numProposals <×> depositPerProposal
     depositPerProposal = pp ^. ppGovActionDepositL
 
 instance AllegraEraTxBody ConwayEra where
-  {-# SPECIALIZE instance AllegraEraTxBody ConwayEra #-}
-
   vldtTxBodyL = lensMemoRawType ctbrVldt (\txb x -> txb {ctbrVldt = x})
   {-# INLINE vldtTxBodyL #-}
 
 instance MaryEraTxBody ConwayEra where
-  {-# SPECIALIZE instance MaryEraTxBody ConwayEra #-}
-
   mintTxBodyL = lensMemoRawType ctbrMint (\txb x -> txb {ctbrMint = x})
   {-# INLINE mintTxBodyL #-}
 
@@ -475,8 +469,6 @@ instance MaryEraTxBody ConwayEra where
   {-# INLINE mintedTxBodyF #-}
 
 instance AlonzoEraTxBody ConwayEra where
-  {-# SPECIALIZE instance AlonzoEraTxBody ConwayEra #-}
-
   collateralInputsTxBodyL =
     lensMemoRawType ctbrCollateralInputs (\txb x -> txb {ctbrCollateralInputs = x})
   {-# INLINE collateralInputsTxBodyL #-}
@@ -497,8 +489,6 @@ instance AlonzoEraTxBody ConwayEra where
   redeemerPointerInverse = conwayRedeemerPointerInverse
 
 instance BabbageEraTxBody ConwayEra where
-  {-# SPECIALIZE instance BabbageEraTxBody ConwayEra #-}
-
   sizedOutputsTxBodyL = lensMemoRawType ctbrOutputs (\txb x -> txb {ctbrOutputs = x})
   {-# INLINE sizedOutputsTxBodyL #-}
 
@@ -524,7 +514,6 @@ instance BabbageEraTxBody ConwayEra where
   {-# INLINE allSizedOutputsTxBodyF #-}
 
 instance ConwayEraTxBody ConwayEra where
-  {-# SPECIALIZE instance ConwayEraTxBody ConwayEra #-}
   votingProceduresTxBodyL =
     lensMemoRawType ctbrVotingProcedures (\txb x -> txb {ctbrVotingProcedures = x})
   {-# INLINE votingProceduresTxBodyL #-}

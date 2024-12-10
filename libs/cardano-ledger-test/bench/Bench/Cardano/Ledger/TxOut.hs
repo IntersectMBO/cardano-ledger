@@ -78,7 +78,7 @@ constructTxOutAlonzoBench ::
   String ->
   (Int -> Addr) ->
   MaryValue ->
-  StrictMaybe (DataHash) ->
+  StrictMaybe DataHash ->
   Benchmark
 constructTxOutAlonzoBench count name mkAddr value !mdh =
   cvalue `seq`
@@ -92,7 +92,7 @@ constructTxOutAlonzoBench count name mkAddr value !mdh =
   where
     cvalue = maybe (error "Uncompactible") id $ toCompact value
     mkTxOutCompact ::
-      CompactAddr -> CompactForm (MaryValue) -> TxOut AlonzoEra
+      CompactAddr -> CompactForm MaryValue -> TxOut AlonzoEra
     mkTxOutCompact =
       case mdh of
         SNothing -> TxOutCompact

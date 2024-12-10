@@ -296,7 +296,7 @@ isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e)) =
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
 -- =====================================================
-newtype TxDatsRaw era = TxDatsRaw {unTxDatsRaw :: Map (DataHash) (Data era)}
+newtype TxDatsRaw era = TxDatsRaw {unTxDatsRaw :: Map DataHash (Data era)}
   deriving (Generic, Typeable, Eq)
   deriving newtype (NoThunks, NFData)
 
@@ -459,8 +459,6 @@ rdmrsAlonzoTxWitsL =
 {-# INLINEABLE rdmrsAlonzoTxWitsL #-}
 
 instance EraScript AlonzoEra => EraTxWits AlonzoEra where
-  {-# SPECIALIZE instance EraTxWits AlonzoEra #-}
-
   type TxWits AlonzoEra = AlonzoTxWits AlonzoEra
 
   mkBasicTxWits = mempty
@@ -483,8 +481,6 @@ class (EraTxWits era, AlonzoEraScript era) => AlonzoEraTxWits era where
   rdmrsTxWitsL :: Lens' (TxWits era) (Redeemers era)
 
 instance EraScript AlonzoEra => AlonzoEraTxWits AlonzoEra where
-  {-# SPECIALIZE instance AlonzoEraTxWits AlonzoEra #-}
-
   datsTxWitsL = datsAlonzoTxWitsL
   {-# INLINE datsTxWitsL #-}
 

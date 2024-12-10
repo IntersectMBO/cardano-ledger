@@ -519,7 +519,7 @@ wfPParamsUpdateSpec =
           , poolDeposit /=. lit (SJust mempty)
           , govActionDeposit /=. lit (SJust mempty)
           , dRepDeposit /=. lit (SJust mempty)
-          , costModels ==. lit (SNothing) -- NOTE: this is because the cost
+          , costModels ==. lit SNothing -- NOTE: this is because the cost
           , coinsPerUTxOByte /=. lit (SJust mempty)
           -- model generator is way too slow
           ]

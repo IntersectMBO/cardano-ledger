@@ -231,7 +231,7 @@ disjointRefInputs ::
   Test (BabbageUtxoPredFailure era)
 disjointRefInputs pp inputs refInputs =
   when
-    (pvMajor (pp ^. ppProtocolVersionL) > eraProtVerHigh @(BabbageEra))
+    (pvMajor (pp ^. ppProtocolVersionL) > eraProtVerHigh @BabbageEra)
     (failureOnNonEmpty common BabbageNonDisjointRefInputs)
   where
     common = inputs `Set.intersection` refInputs

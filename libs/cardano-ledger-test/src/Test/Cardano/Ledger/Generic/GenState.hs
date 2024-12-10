@@ -224,21 +224,21 @@ data GenEnv era = GenEnv
 data GenState era = GenState
   { gsValidityInterval :: !ValidityInterval
   , gsKeys :: !(Map (KeyHash 'Witness) (KeyPair 'Witness))
-  , gsScripts :: !(Map (ScriptHash) (Script era))
+  , gsScripts :: !(Map ScriptHash (Script era))
   , gsPlutusScripts :: !(Map (ScriptHash, PlutusPurposeTag) (IsValid, Script era))
-  , gsDatums :: !(Map (DataHash) (Data era))
-  , gsVI :: !(Map ValidityInterval (Set (ScriptHash)))
+  , gsDatums :: !(Map DataHash (Data era))
+  , gsVI :: !(Map ValidityInterval (Set ScriptHash))
   , gsModel :: !(ModelNewEpochState era)
-  , gsInitialUtxo :: !(Map (TxIn) (TxOut era))
+  , gsInitialUtxo :: !(Map TxIn (TxOut era))
   , gsInitialRewards :: !(Map (Credential 'Staking) Coin)
   , gsInitialDelegations ::
       !(Map (Credential 'Staking) (KeyHash 'StakePool))
-  , gsInitialPoolParams :: !(Map (KeyHash 'StakePool) (PoolParams))
+  , gsInitialPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
   , gsInitialPoolDistr ::
-      !(Map (KeyHash 'StakePool) (IndividualPoolStake))
+      !(Map (KeyHash 'StakePool) IndividualPoolStake)
   , -- Stable fields are stable from initialization to the end of the generation process
     gsStablePools :: !(Set (KeyHash 'StakePool))
-  , gsStableDelegators :: !(Set (StakeCredential))
+  , gsStableDelegators :: !(Set StakeCredential)
   , gsAvoidCred :: !(Set (Credential 'Staking))
   , gsAvoidKey :: !(Set (KeyHash 'StakePool))
   , gsProof :: !(Proof era)
@@ -454,13 +454,13 @@ modifyGenStateKeys ::
 modifyGenStateKeys f = modify (\x -> x {gsKeys = f (gsKeys x)})
 
 modifyGenStateDatums ::
-  (Map.Map (DataHash) (Data era) -> Map.Map (DataHash) (Data era)) ->
+  (Map.Map DataHash (Data era) -> Map.Map DataHash (Data era)) ->
   GenRS era ()
 modifyGenStateDatums f = modify (\x -> x {gsDatums = f (gsDatums x)})
 
 modifyGenStateVI ::
-  ( Map ValidityInterval (Set (ScriptHash)) ->
-    Map ValidityInterval (Set (ScriptHash))
+  ( Map ValidityInterval (Set ScriptHash) ->
+    Map ValidityInterval (Set ScriptHash)
   ) ->
   GenRS era ()
 modifyGenStateVI f = modify (\x -> x {gsVI = f (gsVI x)})
@@ -473,8 +473,8 @@ modifyGenStateInitialRewards ::
 modifyGenStateInitialRewards f = modify $ \st -> st {gsInitialRewards = f (gsInitialRewards st)}
 
 modifyGenStateInitialUtxo ::
-  ( Map (TxIn) (TxOut era) ->
-    Map (TxIn) (TxOut era)
+  ( Map TxIn (TxOut era) ->
+    Map TxIn (TxOut era)
   ) ->
   GenRS era ()
 modifyGenStateInitialUtxo f = modify $ \st -> st {gsInitialUtxo = f (gsInitialUtxo st)}
@@ -497,21 +497,21 @@ modifyGenStateStablePools ::
 modifyGenStateStablePools f = modify (\gs -> gs {gsStablePools = f (gsStablePools gs)})
 
 modifyGenStateInitialPoolParams ::
-  ( Map.Map (KeyHash 'StakePool) (PoolParams) ->
-    Map.Map (KeyHash 'StakePool) (PoolParams)
+  ( Map.Map (KeyHash 'StakePool) PoolParams ->
+    Map.Map (KeyHash 'StakePool) PoolParams
   ) ->
   GenRS era ()
 modifyGenStateInitialPoolParams f = modify (\gs -> gs {gsInitialPoolParams = f (gsInitialPoolParams gs)})
 
 modifyGenStateInitialPoolDistr ::
-  ( Map.Map (KeyHash 'StakePool) (IndividualPoolStake) ->
-    Map.Map (KeyHash 'StakePool) (IndividualPoolStake)
+  ( Map.Map (KeyHash 'StakePool) IndividualPoolStake ->
+    Map.Map (KeyHash 'StakePool) IndividualPoolStake
   ) ->
   GenRS era ()
 modifyGenStateInitialPoolDistr f = modify (\gs -> gs {gsInitialPoolDistr = f (gsInitialPoolDistr gs)})
 
 modifyGenStateStableDelegators ::
-  (Set (StakeCredential) -> Set (StakeCredential)) ->
+  (Set StakeCredential -> Set StakeCredential) ->
   GenRS era ()
 modifyGenStateStableDelegators f = modify (\gs -> gs {gsStableDelegators = f (gsStableDelegators gs)})
 
@@ -523,8 +523,8 @@ modifyGenStateInitialDelegations ::
 modifyGenStateInitialDelegations f = modify (\gs -> gs {gsInitialDelegations = f (gsInitialDelegations gs)})
 
 modifyGenStateScripts ::
-  ( Map.Map (ScriptHash) (Script era) ->
-    Map.Map (ScriptHash) (Script era)
+  ( Map.Map ScriptHash (Script era) ->
+    Map.Map ScriptHash (Script era)
   ) ->
   GenRS era ()
 modifyGenStateScripts f =
@@ -565,15 +565,15 @@ modifyKeyDeposits cred c =
   modifyModel (\ms -> ms {mKeyDeposits = Map.insert cred c (mKeyDeposits ms)})
 
 modifyModelPoolParams ::
-  ( Map.Map (KeyHash 'StakePool) (PoolParams) ->
-    Map.Map (KeyHash 'StakePool) (PoolParams)
+  ( Map.Map (KeyHash 'StakePool) PoolParams ->
+    Map.Map (KeyHash 'StakePool) PoolParams
   ) ->
   GenRS era ()
 modifyModelPoolParams f = modifyModel (\ms -> ms {mPoolParams = f (mPoolParams ms)})
 
 modifyModelPoolDistr ::
-  ( Map (KeyHash 'StakePool) (IndividualPoolStake) ->
-    Map (KeyHash 'StakePool) (IndividualPoolStake)
+  ( Map (KeyHash 'StakePool) IndividualPoolStake ->
+    Map (KeyHash 'StakePool) IndividualPoolStake
   ) ->
   GenRS era ()
 modifyModelPoolDistr f = modifyModel (\ms -> ms {mPoolDistr = f (mPoolDistr ms)})
@@ -586,18 +586,18 @@ modifyModelCount :: (Int -> Int) -> GenRS era ()
 modifyModelCount f = modifyModel (\ms -> ms {mCount = f (mCount ms)})
 
 modifyModelIndex ::
-  (Map Int (TxId) -> Map Int (TxId)) ->
+  (Map Int TxId -> Map Int TxId) ->
   GenRS era ()
 modifyModelIndex f = modifyModel (\ms -> ms {mIndex = f (mIndex ms)})
 
 modifyModelUTxO ::
-  (Map (TxIn) (TxOut era) -> Map (TxIn) (TxOut era)) ->
+  (Map TxIn (TxOut era) -> Map TxIn (TxOut era)) ->
   GenRS era ()
 modifyModelUTxO f = modifyModel (\ms -> ms {mUTxO = f (mUTxO ms)})
 
 modifyModelMutFee ::
-  ( Map (TxIn) (TxOut era) ->
-    Map (TxIn) (TxOut era)
+  ( Map TxIn (TxOut era) ->
+    Map TxIn (TxOut era)
   ) ->
   GenRS era ()
 modifyModelMutFee f = modifyModel (\m -> m {mMutFee = f (mMutFee m)})
@@ -677,7 +677,7 @@ genRewardVal = frequency [(3, pure mempty), (97, genPositiveVal)]
 --   only (Key or Plutus or MutiSig) locking. Disallowing all Timelock scripts
 validTxOut ::
   Proof era ->
-  Map (ScriptHash) (Script era) ->
+  Map ScriptHash (Script era) ->
   TxIn ->
   TxOut era ->
   Bool
@@ -883,7 +883,7 @@ genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash col
 -- Generate Era agnostic Scripts
 
 -- Adds to gsScripts and gsPlutusScripts
-genScript :: Reflect era => Proof era -> PlutusPurposeTag -> GenRS era (ScriptHash)
+genScript :: Reflect era => Proof era -> PlutusPurposeTag -> GenRS era ScriptHash
 genScript proof tag = case proof of
   Conway -> elementsT [genTimelockScript, genPlutusScript proof tag]
   Babbage -> elementsT [genTimelockScript, genPlutusScript proof tag]
@@ -896,7 +896,7 @@ genScript proof tag = case proof of
 genTimelockScript ::
   forall era.
   (AllegraEraScript era, Reflect era, NativeScript era ~ Timelock era) =>
-  GenRS era (ScriptHash)
+  GenRS era ScriptHash
 genTimelockScript = do
   vi@(ValidityInterval mBefore mAfter) <- gets gsValidityInterval
   -- We need to limit how deep these timelocks can go, otherwise this generator will
@@ -1202,7 +1202,7 @@ initStableFields = do
 
 -- Adds to the rewards of the ModelNewEpochState. This used exclusively to generate Withdrawals, so
 -- we mark these as ones to avoid in the future. Especialy when generating DeRegKey.
-genRewards :: Reflect era => GenRS era (RewardAccounts)
+genRewards :: Reflect era => GenRS era RewardAccounts
 genRewards = do
   wmax <- gets (withdrawalMax . geSize . gsGenEnv)
   n <- lift $ choose (1, wmax)

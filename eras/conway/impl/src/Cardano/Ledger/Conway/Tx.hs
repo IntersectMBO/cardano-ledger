@@ -47,8 +47,6 @@ import GHC.Stack
 import Lens.Micro ((^.))
 
 instance EraTx ConwayEra where
-  {-# SPECIALIZE instance EraTx ConwayEra #-}
-
   type Tx ConwayEra = AlonzoTx ConwayEra
   type TxUpgradeError ConwayEra = TxBodyUpgradeError ConwayEra
 
@@ -133,8 +131,6 @@ tierRefScriptFee multiplier sizeIncrement
     sizeIncrementRational = toInteger sizeIncrement % 1
 
 instance AlonzoEraTx ConwayEra where
-  {-# SPECIALIZE instance AlonzoEraTx ConwayEra #-}
-
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 

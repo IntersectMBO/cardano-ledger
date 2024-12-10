@@ -203,7 +203,7 @@ testAlonzoBlock ::
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
-  Block (BHeaderView) era
+  Block BHeaderView era
 testAlonzoBlock pf =
   makeNaiveBlock
     [ trustMeP pf True $ validatingTx pf
@@ -709,7 +709,7 @@ coldKeys = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 1 2 3 2 1)
 
 makeNaiveBlock ::
-  forall era. EraSegWits era => [Tx era] -> Block (BHeaderView) era
+  forall era. EraSegWits era => [Tx era] -> Block BHeaderView era
 makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txSeq
   where
     bhView =

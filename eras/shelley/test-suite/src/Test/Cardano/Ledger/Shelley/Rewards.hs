@@ -460,7 +460,7 @@ rewardOld ::
   BlocksMade ->
   Coin ->
   Set.Set (Credential 'Staking) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) (PoolParams) ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams ->
   Stake ->
   VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Coin ->
@@ -752,7 +752,7 @@ reward ::
   BlocksMade ->
   Coin ->
   Set (Credential 'Staking) ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) (PoolParams) ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams ->
   Stake ->
   VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Coin ->

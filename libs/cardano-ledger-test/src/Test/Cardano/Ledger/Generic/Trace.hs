@@ -294,10 +294,10 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
           , ppString ("Protocol Parameters\n" ++ show (epochstate ^. curPParamsEpochStateL))
           ]
 
-badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash)
+badScripts :: Proof era -> [MockChainFailure era] -> Set.Set ScriptHash
 badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.empty xs
   where
-    getw :: Proof era -> MockChainFailure era -> Set.Set (ScriptHash)
+    getw :: Proof era -> MockChainFailure era -> Set.Set ScriptHash
     getw
       Babbage
       ( MockChainFromLedgersFailure

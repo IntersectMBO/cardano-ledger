@@ -1057,7 +1057,7 @@ gasProposalProcedure_ = sel @4
 --  toSimpleRep and fromSimpleRep methods to make the HasSimpleRep instance.
 
 type GAS era = GovActionState era
-type ProposalTree era = (StrictMaybe (GovActionId), [Tree (GAS era)])
+type ProposalTree era = (StrictMaybe GovActionId, [Tree (GAS era)])
 type ProposalsType era =
   '[ ProposalTree era -- PParamUpdate
    , ProposalTree era -- HardFork
@@ -1093,15 +1093,15 @@ instance EraPParams era => HasSimpleRep (Proposals era) where
           , coerce grConstitution
           ]
 
-      buildProposalTree :: TreeMaybe (GovActionId) -> ProposalTree era
+      buildProposalTree :: TreeMaybe GovActionId -> ProposalTree era
       buildProposalTree (TreeMaybe (Node mId cs)) = (mId, map buildTree cs)
 
-      buildTree :: Tree (StrictMaybe (GovActionId)) -> Tree (GAS era)
+      buildTree :: Tree (StrictMaybe GovActionId) -> Tree (GAS era)
       buildTree (Node (SJust gid) cs) | Just gas <- Map.lookup gid idMap = Node gas (map buildTree cs)
       buildTree _ =
         error "toSimpleRep @Proposals: toGovRelationTree returned trees with Nothing nodes below the root"
 
-      keys :: TreeMaybe (GovActionId) -> Set (GovActionId)
+      keys :: TreeMaybe GovActionId -> Set GovActionId
       keys (TreeMaybe t) = foldMap (strictMaybe mempty Set.singleton) t
 
   fromSimpleRep rep =
@@ -1592,11 +1592,11 @@ instance
 instance HasSimpleRep FreeVars
 instance IsConwayUniv fn => HasSpec fn FreeVars
 
-instance HasSimpleRep (PoolRewardInfo)
-instance IsConwayUniv fn => HasSpec fn (PoolRewardInfo)
+instance HasSimpleRep PoolRewardInfo
+instance IsConwayUniv fn => HasSpec fn PoolRewardInfo
 
-instance HasSimpleRep (LeaderOnlyReward)
-instance IsConwayUniv fn => HasSpec fn (LeaderOnlyReward)
+instance HasSimpleRep LeaderOnlyReward
+instance IsConwayUniv fn => HasSpec fn LeaderOnlyReward
 
 instance HasSimpleRep StakeShare
 instance IsConwayUniv fn => HasSpec fn StakeShare
@@ -1631,8 +1631,8 @@ instance
 instance HasSimpleRep Reward
 instance IsConwayUniv fn => HasSpec fn Reward
 
-instance HasSimpleRep (RewardSnapShot)
-instance IsConwayUniv fn => HasSpec fn (RewardSnapShot)
+instance HasSimpleRep RewardSnapShot
+instance IsConwayUniv fn => HasSpec fn RewardSnapShot
 
 instance HasSimpleRep RewardUpdate
 instance IsConwayUniv fn => HasSpec fn RewardUpdate
@@ -1656,7 +1656,7 @@ instance HasSimpleRep Pulser where
       rep
       RSLP
 
-instance IsConwayUniv fn => HasSpec fn (Pulser)
+instance IsConwayUniv fn => HasSpec fn Pulser
 
 instance HasSimpleRep (CertsEnv era)
 instance (IsConwayUniv fn, EraSpecPParams era, HasSpec fn (Tx era)) => HasSpec fn (CertsEnv era)

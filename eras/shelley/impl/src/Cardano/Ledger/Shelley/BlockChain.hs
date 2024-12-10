@@ -144,11 +144,11 @@ pattern ShelleyTxSeq xs <-
               encodePair metadata = encCBOR index <> encodePreEncoded metadata
        in TxSeq'
             { txSeqTxns' = txns
-            , -- bytes encoding Seq(TxBody era)
+            , -- bytes encoding "Seq (TxBody era)"
               txSeqBodyBytes = serializeFoldable $ coreBodyBytes @era <$> txns
-            , -- bytes encoding Seq(TxWits era)
+            , -- bytes encoding "Seq (TxWits era)"
               txSeqWitsBytes = serializeFoldable $ coreWitnessBytes @era <$> txns
-            , -- bytes encoding a (Map Int (TxAuxData))
+            , -- bytes encoding a "Map Int TxAuxData"
               txSeqMetadataBytes =
                 serialize version . encodeFoldableMapEncoder metaChunk $
                   coreAuxDataBytes @era <$> txns

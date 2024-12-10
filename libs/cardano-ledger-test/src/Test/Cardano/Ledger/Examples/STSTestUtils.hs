@@ -247,7 +247,7 @@ testBBODY ::
   (Reflect era, HasCallStack) =>
   WitRule "BBODY" era ->
   ShelleyBbodyState era ->
-  Block (BHeaderView) era ->
+  Block BHeaderView era ->
   Either (NonEmpty (PredicateFailure (EraRule "BBODY" era))) (ShelleyBbodyState era) ->
   PParams era ->
   Assertion

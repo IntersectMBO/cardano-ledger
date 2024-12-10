@@ -233,8 +233,6 @@ lensMaryTxBodyRaw getter setter =
 {-# INLINEABLE lensMaryTxBodyRaw #-}
 
 instance EraTxBody MaryEra where
-  {-# SPECIALIZE instance EraTxBody MaryEra #-}
-
   type TxBody MaryEra = MaryTxBody MaryEra
 
   mkBasicTxBody = mkMemoized $ MaryTxBodyRaw emptyAllegraTxBodyRaw
@@ -288,8 +286,6 @@ instance EraTxBody MaryEra where
         }
 
 instance ShelleyEraTxBody MaryEra where
-  {-# SPECIALIZE instance ShelleyEraTxBody MaryEra #-}
-
   ttlTxBodyL = notSupportedInThisEraL
   {-# INLINEABLE ttlTxBodyL #-}
 
@@ -298,16 +294,12 @@ instance ShelleyEraTxBody MaryEra where
   {-# INLINEABLE updateTxBodyL #-}
 
 instance AllegraEraTxBody MaryEra where
-  {-# SPECIALIZE instance AllegraEraTxBody MaryEra #-}
-
   vldtTxBodyL =
     lensMaryTxBodyRaw atbrValidityInterval $
       \txBodyRaw vldt -> txBodyRaw {atbrValidityInterval = vldt}
   {-# INLINEABLE vldtTxBodyL #-}
 
 instance MaryEraTxBody MaryEra where
-  {-# SPECIALIZE instance MaryEraTxBody MaryEra #-}
-
   mintTxBodyL =
     lensMaryTxBodyRaw atbrMint (\txBodyRaw mint -> txBodyRaw {atbrMint = mint})
   {-# INLINEABLE mintTxBodyL #-}

@@ -172,7 +172,7 @@ computeFinalFee ::
   EraUTxO era =>
   PParamsF era ->
   TxF era ->
-  Map (TxIn) (TxOutF era) ->
+  Map TxIn (TxOutF era) ->
   Coin
 computeFinalFee (PParamsF _ ppV) (TxF _ txV) ut = newtx ^. (bodyTxL . feeTxBodyL)
   where
@@ -201,28 +201,28 @@ needT ::
   Target
     era
     ( TxBodyF era ->
-      Map (TxIn) (TxOutF era) ->
+      Map TxIn (TxOutF era) ->
       ScriptsNeededF era
     )
 needT proof = Constr "neededScripts" needed
   where
-    needed :: TxBodyF era -> Map (TxIn) (TxOutF era) -> ScriptsNeededF era
+    needed :: TxBodyF era -> Map TxIn (TxOutF era) -> ScriptsNeededF era
     needed (TxBodyF _ txbodyV) ut = ScriptsNeededF proof (getScriptsNeeded (liftUTxO ut) txbodyV)
 
 rdmrPtrsT ::
   AlonzoEraScript era =>
   Target
     era
-    ( [((PlutusPurposeF era), (ScriptHash))] ->
-      Map (ScriptHash) any ->
+    ( [((PlutusPurposeF era), ScriptHash)] ->
+      Map ScriptHash any ->
       Set (PlutusPointerF era)
     )
 rdmrPtrsT = Constr "getRdmrPtrs" getRdmrPtrs
 
 getRdmrPtrs ::
   AlonzoEraScript era =>
-  [((PlutusPurposeF era), (ScriptHash))] ->
-  Map (ScriptHash) any ->
+  [((PlutusPurposeF era), ScriptHash)] ->
+  Map ScriptHash any ->
   Set (PlutusPointerF era)
 getRdmrPtrs xs allplutus = List.foldl' accum Set.empty xs
   where
@@ -234,9 +234,9 @@ getRdmrPtrs xs allplutus = List.foldl' accum Set.empty xs
 
 getPlutusDataHashes ::
   (AlonzoEraTxOut era, EraTxBody era, AlonzoEraScript era) =>
-  Map (TxIn) (TxOutF era) ->
+  Map TxIn (TxOutF era) ->
   TxBodyF era ->
-  Map (ScriptHash) (ScriptF era) ->
+  Map ScriptHash (ScriptF era) ->
   Set (DataHash)
 getPlutusDataHashes ut (TxBodyF _ txbodyV) m =
   fst $ getInputDataHashesTxBody (liftUTxO ut) txbodyV (ScriptsProvided (Map.map unScriptF m))
@@ -245,7 +245,7 @@ bootWitsT ::
   forall era.
   Reflect era =>
   Proof era ->
-  Map (TxIn) (TxOutF era) ->
+  Map TxIn (TxOutF era) ->
   TxBodyF era ->
   Map (KeyHash 'Payment) (Addr, SigningKey) ->
   Set (BootstrapWitness)
@@ -278,7 +278,7 @@ sufficientTxCert ::
   forall era.
   Reflect era =>
   [TxCertF era] ->
-  Map (KeyHash 'Genesis) (GenDelegPair) ->
+  Map (KeyHash 'Genesis) GenDelegPair ->
   Set (KeyHash 'Witness)
 sufficientTxCert cs gendel = case whichTxCert (reify @era) of
   TxCertShelleyToBabbage -> List.foldl' accum Set.empty cs
@@ -299,7 +299,7 @@ sufficientTxCert cs gendel = case whichTxCert (reify @era) of
 --   but all needed scripts will need to have their KeyHashes added.
 sufficientScriptKeys ::
   Proof era ->
-  Map (ScriptHash) (ScriptF era) ->
+  Map ScriptHash (ScriptF era) ->
   Set (KeyHash 'Witness)
 sufficientScriptKeys proof scriptmap = Map.foldl' accum Set.empty scriptmap
   where
@@ -308,9 +308,9 @@ sufficientScriptKeys proof scriptmap = Map.foldl' accum Set.empty scriptmap
 sufficientKeyHashes ::
   Reflect era =>
   Proof era ->
-  Map (ScriptHash) (ScriptF era) ->
+  Map ScriptHash (ScriptF era) ->
   [TxCertF era] ->
-  Map (KeyHash 'Genesis) (GenDelegPair) ->
+  Map (KeyHash 'Genesis) GenDelegPair ->
   Set (KeyHash 'Witness)
 sufficientKeyHashes p scriptmap cs gendel =
   Set.union
@@ -319,10 +319,10 @@ sufficientKeyHashes p scriptmap cs gendel =
 
 -- =======================================
 
-pcUtxo :: Reflect era => Map (TxIn) (TxOutF era) -> String
+pcUtxo :: Reflect era => Map TxIn (TxOutF era) -> String
 pcUtxo m = show (pcUtxoDoc m)
 
-pcUtxoDoc :: Reflect era => Map (TxIn) (TxOutF era) -> PDoc
+pcUtxoDoc :: Reflect era => Map TxIn (TxOutF era) -> PDoc
 pcUtxoDoc m = ppMap pcTxIn (\(TxOutF p o) -> pcTxOut p o) m
 
 necessaryKeyHashTarget ::
@@ -359,8 +359,8 @@ necessaryKeyHashes ::
   forall era.
   Reflect era =>
   TxBodyF era ->
-  Map (TxIn) (TxOutF era) ->
-  Map (KeyHash 'Genesis) (GenDelegPair) ->
+  Map TxIn (TxOutF era) ->
+  Map (KeyHash 'Genesis) GenDelegPair ->
   Set (KeyHash 'Witness) -> -- Only in Eras Alonzo To Conway,
   Set (KeyHash 'Witness)
 necessaryKeyHashes (TxBodyF _ txb) u gd reqsigners =
@@ -382,8 +382,8 @@ makeKeyWitnessTarget ::
   Term era (TxBodyF era) ->
   Term era (Set (KeyHash 'Witness)) ->
   Term era (Set (KeyHash 'Witness)) ->
-  Term era (Map (ScriptHash) (ScriptF era)) ->
-  Term era (Map (KeyHash 'Payment) ((Addr), SigningKey)) ->
+  Term era (Map ScriptHash (ScriptF era)) ->
+  Term era (Map (KeyHash 'Payment) (Addr, SigningKey)) ->
   Target era (Set (WitVKey 'Witness))
 makeKeyWitnessTarget txbparam necessary sufficient scripts byAdUniv =
   Constr "makeKeyWitness" makeKeyWitness
@@ -402,9 +402,9 @@ makeKeyWitness ::
   Set (KeyHash 'Witness) ->
   Set (KeyHash 'Witness) ->
   Map (KeyHash 'Witness) (KeyPair 'Witness) ->
-  Map (ScriptHash) (ScriptF era) ->
-  Map (KeyHash 'Genesis) (GenDelegPair) ->
-  Map (KeyHash 'Payment) ((Addr), SigningKey) ->
+  Map ScriptHash (ScriptF era) ->
+  Map (KeyHash 'Genesis) GenDelegPair ->
+  Map (KeyHash 'Payment) (Addr, SigningKey) ->
   Set (WitVKey 'Witness)
 makeKeyWitness (TxBodyF proof txb) necessary sufficient keyUniv scripts gendel byronAdUniv = keywits
   where
@@ -456,11 +456,11 @@ scriptWitsLangs m = Map.foldl' accum Set.empty m
 --   This function computes the exact set of hashes that must appear in the witnesses.
 adjustNeededByRefScripts ::
   Proof era ->
-  (Set (TxIn)) ->
-  (Set (TxIn)) ->
-  (Map (TxIn) (TxOutF era)) ->
-  (Set (ScriptHash)) ->
-  (Set (ScriptHash))
+  Set TxIn ->
+  Set TxIn ->
+  (Map TxIn (TxOutF era)) ->
+  Set ScriptHash ->
+  Set ScriptHash
 adjustNeededByRefScripts proof inps refinps ut neededhashes = case whichTxOut proof of
   TxOutShelleyToMary -> neededhashes
   TxOutAlonzoToAlonzo -> neededhashes
@@ -477,8 +477,8 @@ adjustNeededByRefScripts proof inps refinps ut neededhashes = case whichTxOut pr
 
 getUtxoCoinT ::
   Reflect era =>
-  Term era (TxIn) ->
-  Term era (Map (TxIn) (TxOutF era)) ->
+  Term era TxIn ->
+  Term era (Map TxIn (TxOutF era)) ->
   Target era Coin
 getUtxoCoinT feeinput spending = Constr "getUtxoCoin" getUtxoCoin ^$ feeinput ^$ spending
   where
@@ -507,7 +507,7 @@ minusMultiValue ::
   Proof era ->
   Value era ->
   Value era ->
-  Map (ScriptHash) (Map AssetName Integer)
+  Map ScriptHash (Map AssetName Integer)
 minusMultiValue p v1 v2 = case whichValue p of
   ValueMaryToConway -> case v1 <-> v2 of MaryValue _ (MultiAsset m) -> Map.mapKeys (\(PolicyID x) -> x) m
   ValueShelleyToAllegra -> mempty
@@ -937,7 +937,7 @@ go n = sequence_ [print i >> test (Just i) | i <- [n .. 113], not (elem i bad)]
 pgenTxBodyField ::
   Reflect era =>
   Proof era ->
-  Map (TxIn) (TxOutF era) ->
+  Map TxIn (TxOutF era) ->
   TxBodyField era ->
   [(Text, PDoc)]
 pgenTxBodyField proof ut x = case x of
@@ -947,7 +947,7 @@ pgenTxBodyField proof ut x = case x of
   other -> pcTxBodyField proof other
 
 pgenTxBody ::
-  Reflect era => Proof era -> TxBody era -> Map (TxIn) (TxOutF era) -> PDoc
+  Reflect era => Proof era -> TxBody era -> Map TxIn (TxOutF era) -> PDoc
 pgenTxBody proof txBody ut = ppRecord (pack "TxBody " <> pack (show proof)) pairs
   where
     fields = abstractTxBody proof txBody
@@ -957,7 +957,7 @@ pgenTxField ::
   forall era.
   Reflect era =>
   Proof era ->
-  Map (TxIn) (TxOutF era) ->
+  Map TxIn (TxOutF era) ->
   TxField era ->
   [(Text, PDoc)]
 pgenTxField proof ut x = case x of
@@ -965,7 +965,7 @@ pgenTxField proof ut x = case x of
   BodyI xs -> [(pack "body", ppRecord (pack "TxBody") (concat (map (pgenTxBodyField proof ut) xs)))]
   _other -> pcTxField proof x
 
-pgenTx :: Reflect era => Proof era -> Map (TxIn) (TxOutF era) -> Tx era -> PDoc
+pgenTx :: Reflect era => Proof era -> Map TxIn (TxOutF era) -> Tx era -> PDoc
 pgenTx proof ut tx = ppRecord (pack "Tx") pairs
   where
     fields = abstractTx proof tx

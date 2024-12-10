@@ -29,8 +29,6 @@ import Cardano.Ledger.Shelley.Tx (
 -- ========================================
 
 instance EraTx MaryEra where
-  {-# SPECIALIZE instance EraTx MaryEra #-}
-
   type Tx MaryEra = ShelleyTx MaryEra
 
   mkBasicTx = mkBasicShelleyTx

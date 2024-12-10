@@ -2882,8 +2882,8 @@ instance
 -- | GovState is a type family, No PrettyA instance
 pcGovState :: Proof era -> GovState era -> PDoc
 pcGovState p x = case whichGovState p of
-  (GovStateShelleyToBabbage) -> pcShelleyGovState p x
-  (GovStateConwayToConway) -> unReflect pcConwayGovState p x
+  GovStateShelleyToBabbage -> pcShelleyGovState p x
+  GovStateConwayToConway -> unReflect pcConwayGovState p x
 
 pcShelleyGovState :: Proof era -> ShelleyGovState era -> PDoc
 pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp futurepp) =

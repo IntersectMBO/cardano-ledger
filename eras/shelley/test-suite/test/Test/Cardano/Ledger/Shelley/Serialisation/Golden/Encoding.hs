@@ -882,7 +882,7 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "tx_full"
-            (ShelleyTx @(ShelleyEra) txb txwits (SJust md))
+            (ShelleyTx @ShelleyEra txb txwits (SJust md))
             ( T (TkListLen 3)
                 <> S txb
                 <> T (TkMapLen 2)

@@ -226,7 +226,7 @@ bruteForceDRepDistr ::
   forall era.
   ConwayEraGov era =>
   NewEpochState era ->
-  Map.Map (DRep) (CompactForm Coin)
+  Map.Map DRep (CompactForm Coin)
 bruteForceDRepDistr nes =
   fst $ computeDRepDistr incstk dreps propDeps poolD Map.empty $ UMap.umElems umap
   where
@@ -241,7 +241,7 @@ bruteForceDRepDistr nes =
 extractPulsingDRepDistr ::
   ConwayEraGov era =>
   NewEpochState era ->
-  Map.Map (DRep) (CompactForm Coin)
+  Map.Map DRep (CompactForm Coin)
 extractPulsingDRepDistr nes =
   (psDRepDistr . fst . finishDRepPulser) (nes ^. newEpochStateDRepPulsingStateL)
 

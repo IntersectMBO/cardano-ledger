@@ -483,7 +483,7 @@ transTxBodyId txBody = PV3.TxId (transSafeHash (hashAnnotated txBody))
 transTxIn :: TxIn -> PV3.TxOutRef
 transTxIn (TxIn txid txIx) = PV3.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
 
-transMintValue :: MultiAsset c -> PV3.MintValue
+transMintValue :: MultiAsset -> PV3.MintValue
 transMintValue = PV3.UnsafeMintValue . PV1.getValue . Alonzo.transMultiAsset
 
 -- | Translate all `Withdrawal`s from within a `TxBody`

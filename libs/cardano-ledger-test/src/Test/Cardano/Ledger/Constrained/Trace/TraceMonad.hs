@@ -229,7 +229,7 @@ setVar term _ = failTrace ["Non Var term in call to 'setVar'", show term]
 -- ============================================================================
 -- A few helper functions that need to do different things in different Eras.
 
-refInputs :: Proof era -> TxBody era -> Set (TxIn)
+refInputs :: Proof era -> TxBody era -> Set TxIn
 refInputs Shelley _ = Set.empty
 refInputs Allegra _ = Set.empty
 refInputs Mary _ = Set.empty

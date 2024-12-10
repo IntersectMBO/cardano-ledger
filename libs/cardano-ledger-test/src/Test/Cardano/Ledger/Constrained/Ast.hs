@@ -115,8 +115,8 @@ data Term era t where
   Delta :: Term era Coin -> Term era DeltaCoin
   Negate :: Term era DeltaCoin -> Term era DeltaCoin
   Restrict :: Ord a => Term era (Set a) -> Term era (Map a b) -> Term era (Map a b)
-  HashD :: Era era => Term era (Data era) -> Term era (DataHash)
-  HashS :: Reflect era => Term era (ScriptF era) -> Term era (ScriptHash)
+  HashD :: Era era => Term era (Data era) -> Term era DataHash
+  HashS :: Reflect era => Term era (ScriptF era) -> Term era ScriptHash
   Pair :: Term era a -> Term era b -> Term era (a, b)
 
 infix 4 :=:

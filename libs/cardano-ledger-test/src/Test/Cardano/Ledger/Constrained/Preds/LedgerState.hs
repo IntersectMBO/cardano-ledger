@@ -234,7 +234,7 @@ go = generate (genTree [1, 2, 3, 4, 5, 6, 7 :: Int])
 -- | Tie together GovActionState and GovAction using the (parent,child) links
 --   that describe the shape of the Tree
 useTriples ::
-  [(Maybe (GovActionId), GovActionId)] ->
+  [(Maybe GovActionId, GovActionId)] ->
   [GovAction era] ->
   [GovActionState era] ->
   [GovActionState era]
@@ -316,7 +316,7 @@ govStatePreds p =
     pairs = Var (pV p "pairs" (ListR (PairR (MaybeR GovActionIdR) GovActionIdR)) No)
     numActions = Var (pV p "numActions" SizeR No)
     preGovstates = Var (V "preGovstates" (ListR GovActionStateR) No)
-    govActionStates = Var (pV p "govActionStates" (ListR (GovActionStateR)) No)
+    govActionStates = Var (pV p "govActionStates" (ListR GovActionStateR) No)
     govAction = Var (pV p "govAction" GovActionR No)
     govActions = Var (pV p "govActions" (ListR GovActionR) No)
     govActionMap = Var (pV p "govActionMap" (MapR GovActionIdR GovActionStateR) No)

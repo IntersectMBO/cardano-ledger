@@ -258,7 +258,7 @@ genAlonzoTxBody ::
   UTxO AlonzoEra ->
   PParams AlonzoEra ->
   SlotNo ->
-  Set.Set (TxIn) ->
+  Set.Set TxIn ->
   StrictSeq (TxOut AlonzoEra) ->
   StrictSeq (TxCert AlonzoEra) ->
   Withdrawals ->
@@ -603,7 +603,7 @@ someLeaf _proxy keyHash =
 -- | given the "txscripts" field of the TxWits, compute the set of languages used in a transaction
 langsUsed ::
   AlonzoEraScript era =>
-  Map.Map (ScriptHash) (Script era) ->
+  Map.Map ScriptHash (Script era) ->
   Set Language
 langsUsed hashScriptMap =
   Set.fromList

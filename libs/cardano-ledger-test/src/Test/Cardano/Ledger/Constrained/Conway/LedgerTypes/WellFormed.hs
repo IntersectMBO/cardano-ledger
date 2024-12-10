@@ -78,7 +78,7 @@ dsX = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   drepRoleSet <- genFromSpec @ConwayFn TrueSpec
   pools <-
-    genFromSpec @ConwayFn @(Map (KeyHash 'StakePool) (PoolParams))
+    genFromSpec @ConwayFn @(Map (KeyHash 'StakePool) PoolParams)
       (hasSize (rangeSize 8 8))
   genFromSpec @ConwayFn @(DState era) (dstateSpec @era (lit drepRoleSet) (lit acct) (lit pools))
 
@@ -88,7 +88,7 @@ vsX = do
   delegatees <-
     aggregateDRep
       <$> genFromSpec @ConwayFn -- ensures that each credential delegates to exactly one DRep
-        @(Map (Credential 'Staking) (DRep))
+        @(Map (Credential 'Staking) DRep)
         TrueSpec
   genFromSpec @ConwayFn @(VState era) (vstateSpec (lit epoch) (lit delegatees))
 
@@ -136,16 +136,16 @@ nesX :: forall era. EraSpecLedger era ConwayFn => PParams era -> Gen (NewEpochSt
 nesX pp = genFromSpec @ConwayFn @(NewEpochState era) (newEpochStateSpec pp)
 
 snapX :: Gen SnapShot
-snapX = genFromSpec @ConwayFn @(SnapShot) snapShotSpec
+snapX = genFromSpec @ConwayFn @SnapShot snapShotSpec
 
-snapsX :: forall era. EraSpecLedger era ConwayFn => PParams era -> Gen (SnapShots)
+snapsX :: forall era. EraSpecLedger era ConwayFn => PParams era -> Gen SnapShots
 snapsX pp = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
   ls <- genFromSpec @ConwayFn @(LedgerState era) (ledgerStateSpec pp (lit acct) (lit epoch))
-  genFromSpec @ConwayFn @(SnapShots) (snapShotsSpec (lit (getMarkSnapShot ls)))
+  genFromSpec @ConwayFn @SnapShots (snapShotsSpec (lit (getMarkSnapShot ls)))
 
-instanRewX :: forall era. EraSpecTxOut era ConwayFn => Gen (InstantaneousRewards)
+instanRewX :: forall era. EraSpecTxOut era ConwayFn => Gen InstantaneousRewards
 instanRewX = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   genFromSpec @ConwayFn @(InstantaneousRewards)

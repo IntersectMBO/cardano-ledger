@@ -207,7 +207,7 @@ pairL xy ab = lens getter setter
 --   The mode uses the type family abstraction TxOutF, and does not wrap the map
 --   with the UtxO constructor. Note the getter is 'liftUTxO' from Test.Cardano.Ledger.Constrained.Classes
 --   liftUTxO :: Map (TxIn ) (TxOutF era) -> UTxO era
-utxoFL :: Proof era -> Lens' (Map (TxIn) (TxOutF era)) (UTxO era)
+utxoFL :: Proof era -> Lens' (Map TxIn (TxOutF era)) (UTxO era)
 utxoFL p = lens liftUTxO (\_ (UTxO new) -> (Map.map (TxOutF p) new))
 
 -- ======================================================================

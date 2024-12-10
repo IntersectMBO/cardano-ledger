@@ -67,8 +67,8 @@ instance
             <$> toSpecRep env
             <*> toSpecRep st
             <*> toSpecRep sig
-      stFinal = runSTS @"UTXO" @Conway globals env st sig
-      utxoInfo = extraInfo @fn @"UTXO" @Conway globals ctx env st sig stFinal
+      stFinal = runSTS @"UTXO" @ConwayEra globals env st sig
+      utxoInfo = extraInfo @fn @"UTXO" @ConwayEra globals ctx env st sig stFinal
      in
       PP.vcat
         [ "UTXOW"

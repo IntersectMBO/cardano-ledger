@@ -507,7 +507,7 @@ applyDelta ::
   ScriptInfo era ->
   PParams era ->
   [KeyPair 'Witness] ->
-  Map (ScriptHash) (Script era) ->
+  Map ScriptHash (Script era) ->
   KeySpace era ->
   Tx era ->
   Delta era ->
@@ -562,7 +562,7 @@ converge ::
   ScriptInfo era ->
   Coin ->
   [KeyPair 'Witness] ->
-  Map (ScriptHash) (Script era) ->
+  Map ScriptHash (Script era) ->
   KeyPairs ->
   [(Script era, Script era)] ->
   UTxO era ->
@@ -636,7 +636,7 @@ mkScriptWits ::
   EraGen era =>
   [(Script era, Script era)] ->
   [(Script era, Script era)] ->
-  Map (ScriptHash) (Script era)
+  Map ScriptHash (Script era)
 mkScriptWits payScripts stakeScripts =
   Map.fromList $
     (hashPayScript <$> payScripts)
@@ -661,7 +661,7 @@ mkTxWits ::
   Map (KeyHash 'Payment) (KeyPair 'Payment) ->
   Map (KeyHash 'Staking) (KeyPair 'Staking) ->
   [KeyPair 'Witness] ->
-  Map (ScriptHash) (Script era) ->
+  Map ScriptHash (Script era) ->
   SafeHash EraIndependentTxBody ->
   TxWits era
 mkTxWits
@@ -738,7 +738,7 @@ genInputs ::
   EraTxOut era =>
   (Int, Int) ->
   Map (KeyHash 'Payment) (KeyPair 'Payment) ->
-  Map (ScriptHash) (Script era, Script era) ->
+  Map ScriptHash (Script era, Script era) ->
   UTxO era ->
   Gen
     ( [TxIn]
@@ -814,7 +814,7 @@ genWithdrawals
 -- | Collect witnesses needed for reward withdrawals.
 mkWithdrawalsWits ::
   forall era.
-  Map (ScriptHash) (Script era, Script era) ->
+  Map ScriptHash (Script era, Script era) ->
   Map (KeyHash 'Staking) (KeyPair 'Staking) ->
   Credential 'Staking ->
   Either (KeyPair 'Witness) (Script era, Script era)

@@ -255,11 +255,11 @@ addWitnesses ::
   forall era.
   Reflect era =>
   Proof era ->
-  Map (ScriptHash) (Script era) ->
-  Map (ScriptHash) (IsValid, ScriptF era) ->
+  Map ScriptHash (Script era) ->
+  Map ScriptHash (IsValid, ScriptF era) ->
   Map (KeyHash 'Payment) (Addr, SigningKey) ->
   Map (KeyHash 'Witness) (KeyPair 'Witness) ->
-  Map (DataHash) (Data era) ->
+  Map DataHash (Data era) ->
   TxBody era ->
   UTxO era ->
   GenDelegs ->
@@ -267,10 +267,10 @@ addWitnesses ::
 addWitnesses proof scriptUniv plutusuniv byronuniv keymapuniv datauniv txb ut gd = tx
   where
     needed = getScriptsNeeded ut txb
-    neededWits, scriptwits :: Map (ScriptHash) (Script era)
+    neededWits, scriptwits :: Map ScriptHash (Script era)
     plutusValids :: [IsValid]
     rptrs :: Set (PlutusPointerF era)
-    dataw :: Map (DataHash) (Data era)
+    dataw :: Map DataHash (Data era)
     (scriptwits, neededWits, plutusValids, rptrs, dataw) = case whichUTxO proof of
       UTxOShelleyToMary -> (witss, witss, [], Set.empty, Map.empty)
         where

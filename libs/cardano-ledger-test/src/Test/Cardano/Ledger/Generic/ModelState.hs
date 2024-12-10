@@ -118,7 +118,7 @@ pcMUtxo proof m = ppMap pcTxIn (pcTxOut proof) m
 
 data ModelNewEpochState era = ModelNewEpochState
   { -- PState fields
-    mPoolParams :: !(Map (KeyHash 'StakePool) (PoolParams))
+    mPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
   , mPoolDeposits :: !(Map (KeyHash 'StakePool) Coin)
   , -- DState state fields
     mRewards :: !(Map (Credential 'Staking) Coin)

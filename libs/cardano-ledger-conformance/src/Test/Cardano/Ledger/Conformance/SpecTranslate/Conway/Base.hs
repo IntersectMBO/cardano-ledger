@@ -68,6 +68,7 @@ import Cardano.Ledger.Conway.Tx (refScriptCostMultiplier, refScriptCostStride)
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), VKey (..))
@@ -280,7 +281,7 @@ instance
   ) =>
   SpecTranslate ctx (UTxO era)
   where
-  type SpecRep (UTxO era) = SpecRep (Map (TxIn) (TxOut era))
+  type SpecRep (UTxO era) = SpecRep (Map TxIn (TxOut era))
   toSpecRep (UTxO m) = toSpecRep m
 
 deriving instance SpecTranslate ctx SlotNo
@@ -451,7 +452,7 @@ instance SpecTranslate ctx (VKey k) where
 
   toSpecRep x = do
     let hvkVKey = vkeyToInteger x
-    hvkStoredHash <- toSpecRep (hashVerKeyDSIGN @_ @(ADDRHASH c) $ unVKey x)
+    hvkStoredHash <- toSpecRep (hashVerKeyDSIGN @_ @ADDRHASH $ unVKey x)
     pure Agda.MkHSVKey {..}
 
 instance DSIGNAlgorithm v => SpecTranslate ctx (SignedDSIGN v a) where
@@ -936,7 +937,7 @@ instance
           ParameterChange _ _ sh -> sh
           _ -> SNothing
 
-prevGovActionId :: GovAction era -> StrictMaybe (GovActionId)
+prevGovActionId :: GovAction era -> StrictMaybe GovActionId
 prevGovActionId action =
   case action of
     ParameterChange x _ _ -> unGovPurposeId <$> x
@@ -1019,8 +1020,8 @@ instance
   toSpecRep = toSpecRep . prioritySort . view pPropsL
     where
       prioritySort ::
-        OMap (GovActionId) (GovActionState era) ->
-        OMap (GovActionId) (GovActionState era)
+        OMap GovActionId (GovActionState era) ->
+        OMap GovActionId (GovActionState era)
       prioritySort = Exts.fromList . sortOn (actionPriority . gasAction) . Exts.toList
 
 instance SpecTranslate ctx MaryValue where
@@ -1182,7 +1183,7 @@ instance SpecTranslate ctx (EpochExecEnv era) where
 
 -- | This type is used as the Env only in the Agda Spec
 data ConwayExecEnactEnv era = ConwayExecEnactEnv
-  { ceeeGid :: !(GovActionId)
+  { ceeeGid :: !GovActionId
   , ceeeTreasury :: !Coin
   , ceeeEpoch :: !EpochNo
   }

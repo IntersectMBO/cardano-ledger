@@ -53,7 +53,7 @@ type ShelleyTxBodyTypes era =
   '[ Set (TxIn)
    , [TxOut era]
    , [TxCert era]
-   , Map (RewardAccount) Coin
+   , Map RewardAccount Coin
    , Coin
    , SlotNo
    , Maybe (Update era)
@@ -122,7 +122,7 @@ type AllegraTxBodyTypes era =
   '[ Set (TxIn)
    , [TxOut era]
    , [TxCert era]
-   , Map (RewardAccount) Coin
+   , Map RewardAccount Coin
    , Coin
    , ValidityInterval
    , Maybe (Update era)
@@ -191,7 +191,7 @@ type MaryTxBodyTypes era =
   '[ Set (TxIn)
    , [TxOut era]
    , [TxCert era]
-   , Map (RewardAccount) Coin
+   , Map RewardAccount Coin
    , Coin
    , ValidityInterval
    , Maybe (Update era)
@@ -265,7 +265,7 @@ type AlonzoTxBodyTypes era =
    , Set (TxIn)
    , [TxOut era]
    , [TxCert era]
-   , Map (RewardAccount) Coin
+   , Map RewardAccount Coin
    , Coin
    , ValidityInterval
    , Maybe (Update era)
@@ -359,14 +359,14 @@ type BabbageTxBodyTypes era =
    , Maybe (Sized (TxOut era))
    , Maybe Coin
    , [TxCert era]
-   , Map (RewardAccount) Coin -- Withdrawals without the newtype
+   , Map RewardAccount Coin -- Withdrawals without the newtype
    , Coin
    , ValidityInterval
    , Maybe (Update era)
    , Set (KeyHash 'Witness)
    , MultiAsset
-   , Maybe (ScriptIntegrityHash)
-   , Maybe (AuxiliaryDataHash)
+   , Maybe ScriptIntegrityHash
+   , Maybe AuxiliaryDataHash
    , Maybe Network
    ]
 

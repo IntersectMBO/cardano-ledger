@@ -9,8 +9,6 @@ import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Shelley.TxCert
 
 instance EraTxCert AlonzoEra where
-  {-# SPECIALIZE instance EraTxCert AlonzoEra #-}
-
   type TxCert AlonzoEra = ShelleyTxCert AlonzoEra
 
   upgradeTxCert = Right . upgradeShelleyTxCert

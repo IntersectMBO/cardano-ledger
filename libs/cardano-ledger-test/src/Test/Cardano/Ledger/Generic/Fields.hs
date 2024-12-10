@@ -119,22 +119,22 @@ pattern Valid' :: Bool -> TxField era
 
 -- =================
 data TxBodyField era
-  = Inputs (Set (TxIn))
-  | Collateral (Set (TxIn))
-  | RefInputs (Set (TxIn))
+  = Inputs (Set TxIn)
+  | Collateral (Set TxIn)
+  | RefInputs (Set TxIn)
   | Outputs (StrictSeq (TxOut era))
   | CollateralReturn (StrictMaybe (TxOut era))
   | TotalCol (StrictMaybe Coin)
   | Certs (StrictSeq (TxCert era))
-  | Withdrawals' (Withdrawals)
+  | Withdrawals' Withdrawals
   | Txfee Coin
   | Vldt ValidityInterval
   | TTL SlotNo
   | Update (StrictMaybe (PP.Update era))
   | ReqSignerHashes (Set (KeyHash 'Witness))
-  | Mint (MultiAsset)
-  | WppHash (StrictMaybe (ScriptIntegrityHash))
-  | AdHash (StrictMaybe (AuxiliaryDataHash))
+  | Mint MultiAsset
+  | WppHash (StrictMaybe ScriptIntegrityHash)
+  | AdHash (StrictMaybe AuxiliaryDataHash)
   | Txnetworkid (StrictMaybe Network)
   | ProposalProc (OSet.OSet (ProposalProcedure era))
   | VotingProc (VotingProcedures era)
@@ -166,8 +166,8 @@ pattern Txnetworkid' :: [Network] -> TxBodyField era -- 0 or 1 element
 -- ====================
 data WitnessesField era
   = AddrWits (Set (WitVKey 'Witness))
-  | BootWits (Set (BootstrapWitness))
-  | ScriptWits (Map (ScriptHash) (Script era))
+  | BootWits (Set BootstrapWitness)
+  | ScriptWits (Map ScriptHash (Script era))
   | DataWits (TxDats era)
   | RdmrWits (Redeemers era)
 
@@ -183,7 +183,7 @@ pattern DataWits' :: Era era => [Data era] -> WitnessesField era -- Map
 data TxOutField era
   = Address (Addr)
   | Amount (Value era)
-  | DHash (StrictMaybe (DataHash))
+  | DHash (StrictMaybe DataHash)
   | FDatum (Datum era)
   | RefScript (StrictMaybe (Script era))
 
@@ -565,11 +565,11 @@ fromStrictMaybe (SJust x) = [x]
 toMapDat :: Era era => [Data era] -> TxDats era
 toMapDat ds = TxDats (Map.fromList (map (\d -> (hashData d, d)) ds))
 
-fromMapScript :: forall era. Map (ScriptHash) (Script era) -> [Script era]
+fromMapScript :: forall era. Map ScriptHash (Script era) -> [Script era]
 fromMapScript m = Map.elems m
 
 toMapScript ::
-  forall era. EraScript era => [Script era] -> Map (ScriptHash) (Script era)
+  forall era. EraScript era => [Script era] -> Map ScriptHash (Script era)
 toMapScript scripts = Map.fromList (map (\s -> (hashScript @era s, s)) scripts)
 
 -- =============================================================================

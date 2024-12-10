@@ -18,8 +18,6 @@ import Data.Coerce (coerce)
 import Lens.Micro ((^.))
 
 instance EraTxOut MaryEra where
-  {-# SPECIALIZE instance EraTxOut MaryEra #-}
-
   type TxOut MaryEra = ShelleyTxOut MaryEra
 
   mkBasicTxOut = ShelleyTxOut

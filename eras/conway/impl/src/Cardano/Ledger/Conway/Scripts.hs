@@ -142,8 +142,6 @@ instance AlonzoEraScript ConwayEra where
     AlonzoRewarding (AsIx ix) -> ConwayRewarding (AsIx ix)
 
 instance ConwayEraScript ConwayEra where
-  {-# SPECIALIZE instance ConwayEraScript ConwayEra #-}
-
   mkVotingPurpose = ConwayVoting
 
   toVotingPurpose (ConwayVoting i) = Just i
@@ -155,8 +153,6 @@ instance ConwayEraScript ConwayEra where
   toProposingPurpose _ = Nothing
 
 instance ShelleyEraScript ConwayEra where
-  {-# SPECIALIZE instance ShelleyEraScript ConwayEra #-}
-
   mkRequireSignature = mkRequireSignatureTimelock
   getRequireSignature = getRequireSignatureTimelock
 
@@ -170,8 +166,6 @@ instance ShelleyEraScript ConwayEra where
   getRequireMOf = getRequireMOfTimelock
 
 instance AllegraEraScript ConwayEra where
-  {-# SPECIALIZE instance AllegraEraScript ConwayEra #-}
-
   mkTimeStart = mkTimeStartTimelock
   getTimeStart = getTimeStartTimelock
 

@@ -796,7 +796,7 @@ putPPUP Babbage x = x
 putPPUP Conway _ = Gov.emptyGovState @era
 
 -- ================
-liftUTxO :: Map (TxIn) (TxOutF era) -> UTxO era
+liftUTxO :: Map TxIn (TxOutF era) -> UTxO era
 liftUTxO m = UTxO (Map.map unTxOut m)
 
 instance Show (TxOutF era) where

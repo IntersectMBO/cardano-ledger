@@ -260,8 +260,8 @@ tickfRuleBench =
                 ]
             ]
 
-getSnap :: NewEpochState (AlonzoEra) -> SnapShot
-getSnap nes = (ssStakeSet . esSnapshots . nesEs) nes
+getSnap :: NewEpochState AlonzoEra -> SnapShot
+getSnap nes = ssStakeSet $ esSnapshots $ nesEs nes
 
 getRewardUpdate :: NewEpochState era -> RewardUpdate
 getRewardUpdate nes =

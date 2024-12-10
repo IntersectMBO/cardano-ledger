@@ -32,8 +32,6 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Lens.Micro
 
 instance EraTxOut ConwayEra where
-  {-# SPECIALIZE instance EraTxOut ConwayEra #-}
-
   type TxOut ConwayEra = BabbageTxOut ConwayEra
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
@@ -50,8 +48,6 @@ instance EraTxOut ConwayEra where
   getMinCoinSizedTxOut = babbageMinUTxOValue
 
 instance AlonzoEraTxOut ConwayEra where
-  {-# SPECIALIZE instance AlonzoEraTxOut ConwayEra #-}
-
   dataHashTxOutL = dataHashBabbageTxOutL
   {-# INLINE dataHashTxOutL #-}
 
@@ -59,8 +55,6 @@ instance AlonzoEraTxOut ConwayEra where
   {-# INLINE datumTxOutF #-}
 
 instance BabbageEraTxOut ConwayEra where
-  {-# SPECIALIZE instance BabbageEraTxOut ConwayEra #-}
-
   dataTxOutL = dataBabbageTxOutL
   {-# INLINE dataTxOutL #-}
 

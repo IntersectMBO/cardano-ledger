@@ -77,7 +77,7 @@ class
   getVKeyWitnessTxCert :: TxCert era -> Maybe (KeyHash 'Witness)
 
   -- | Return a ScriptHash for certificate types that require a witness
-  getScriptWitnessTxCert :: TxCert era -> Maybe (ScriptHash)
+  getScriptWitnessTxCert :: TxCert era -> Maybe ScriptHash
 
   mkRegPoolTxCert :: PoolParams -> TxCert era
   getRegPoolTxCert :: TxCert era -> Maybe PoolParams

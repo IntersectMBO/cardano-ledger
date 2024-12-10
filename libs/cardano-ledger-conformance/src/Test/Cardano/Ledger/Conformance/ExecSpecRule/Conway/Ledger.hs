@@ -157,7 +157,7 @@ instance
     LedgerState {..}
     sig
     _ =
-      extraInfo @fn @"UTXOW" @Conway
+      extraInfo @fn @"UTXOW" @ConwayEra
         globals
         clecUtxoExecContext
         utxoEnv
@@ -166,7 +166,7 @@ instance
         stFinal
       where
         utxoEnv = UtxoEnv ledgerSlotNo ledgerPp lsCertState
-        stFinal = runSTS @"UTXOW" @Conway globals utxoEnv lsUTxOState sig
+        stFinal = runSTS @"UTXOW" @ConwayEra globals utxoEnv lsUTxOState sig
 
   testConformance ctx env st sig = property $ do
     (specEnv, specSt, specSig) <-

@@ -226,8 +226,8 @@ applyShelleyCert model dcert = case dcert of
 data CollInfo era = CollInfo
   { ciBal :: Coin -- Balance of all the collateral inputs
   , ciRet :: Coin -- Coin amount of the collateral return output
-  , ciDelset :: Set (TxIn) -- The set of inputs to delete from the UTxO
-  , ciAddmap :: Map (TxIn) (TxOut era) -- Things to Add to the UTxO
+  , ciDelset :: Set TxIn -- The set of inputs to delete from the UTxO
+  , ciAddmap :: Map TxIn (TxOut era) -- Things to Add to the UTxO
   }
 
 emptyCollInfo :: CollInfo era
@@ -287,7 +287,7 @@ additions ::
   SafeHash EraIndependentTxBody ->
   TxIx ->
   [TxOut era] ->
-  Map (TxIn) (TxOut era)
+  Map TxIn (TxOut era)
 additions bodyhash firstTxIx outputs =
   Map.fromList
     [ (TxIn (TxId bodyhash) idx, out)
@@ -319,9 +319,9 @@ go = do
 filterRewards ::
   EraPParams era =>
   PParams era ->
-  Map (Credential 'Staking) (Set (Reward)) ->
-  ( Map (Credential 'Staking) (Set (Reward))
-  , Map (Credential 'Staking) (Set (Reward))
+  Map (Credential 'Staking) (Set Reward) ->
+  ( Map (Credential 'Staking) (Set Reward)
+  , Map (Credential 'Staking) (Set Reward)
   )
 filterRewards pp rewards =
   if pvMajor (pp ^. ppProtocolVersionL) > natVersion @2
@@ -332,10 +332,10 @@ filterRewards pp rewards =
 
 filterAllRewards ::
   EraPParams era =>
-  Map (Credential 'Staking) (Set (Reward)) ->
+  Map (Credential 'Staking) (Set Reward) ->
   Model era ->
-  ( Map (Credential 'Staking) (Set (Reward))
-  , Map (Credential 'Staking) (Set (Reward))
+  ( Map (Credential 'Staking) (Set Reward)
+  , Map (Credential 'Staking) (Set Reward)
   , Set (Credential 'Staking)
   , Coin
   )

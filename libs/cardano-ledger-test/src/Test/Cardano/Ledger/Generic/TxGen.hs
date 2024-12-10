@@ -400,14 +400,14 @@ redeemerWitnessMaker proof tag listWithCred =
 
 -- | Collaterals can't have scripts, this is where this generator is needed.
 --   As we generate this we add to the gsKeys field of the GenState.
-genNoScriptRecipient :: GenRS era (Addr)
+genNoScriptRecipient :: GenRS era Addr
 genNoScriptRecipient = do
   paymentCred <- KeyHashObj <$> genKeyHash
   stakeCred <- StakeRefBase . KeyHashObj <$> genKeyHash
   pure (Addr Testnet paymentCred stakeCred)
 
 -- | Sometimes generates new Credentials, and some times reuses old ones
-genRecipient :: Reflect era => GenRS era (Addr)
+genRecipient :: Reflect era => GenRS era Addr
 genRecipient = do
   paymentCred <- genCredential Spending
   stakeCred <- genCredential Certifying
@@ -472,7 +472,7 @@ genTxOut proof val = do
 -- ================================================================================
 
 -- | Generate a TxIn whose TxIx will never clash with an Input created from a TxOut
-genTxIn :: forall era. Proof era -> Int -> Gen (TxIn)
+genTxIn :: forall era. Proof era -> Int -> Gen TxIn
 genTxIn _proof numChoices = do
   txId <- resize 40 arbitrary
   -- The TxIx for Inputs created from outputs of a TxBody, will only range from (1..numChoices)
@@ -522,13 +522,13 @@ genUTxO = do
 -- | Generate both the spending and reference inputs and a key from the spending
 --   inputs we can use to pay the fee. That key is never from the oldUTxO
 genSpendReferenceInputs ::
-  Map (TxIn) (TxOut era) ->
+  Map TxIn (TxOut era) ->
   GenRS
     era
     ( UtxoEntry era -- The fee key, used to pay the fee.
-    , Map (TxIn) (TxOut era)
-    , Map (TxIn) (TxOut era)
-    , Map (TxIn) (TxOut era)
+    , Map TxIn (TxOut era)
+    , Map TxIn (TxOut era)
+    , Map TxIn (TxOut era)
     )
 genSpendReferenceInputs newUTxO = do
   let pairs = Map.toList newUTxO
@@ -726,7 +726,7 @@ genCollateralUTxO ::
   [Addr] ->
   Coin ->
   MUtxo era ->
-  GenRS era (MUtxo era, Map.Map (TxIn) (TxOut era), Coin)
+  GenRS era (MUtxo era, Map.Map TxIn (TxOut era), Coin)
 genCollateralUTxO collateralAddresses (Coin fee) utxo = do
   GenEnv {gePParams} <- gets gsGenEnv
   let collPerc = collateralPercentage' reify gePParams
@@ -737,7 +737,7 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
         -- that is really bad, because if the happens we get the same TxIn every time, and 'coll' never grows,
         -- so this function doesn't terminate. We want many choices of TxIn, so resize just this arbitrary by 30.
         entriesInUse <- gets gsInitialUtxo
-        txIn <- lift (resize 30 (arbitrary :: Gen (TxIn)))
+        txIn <- lift (resize 30 (arbitrary :: Gen TxIn))
         if Map.member txIn utxo || Map.member txIn coll || txIn `Map.member` entriesInUse
           then genNewCollateral addr coll um c
           else pure (um, Map.insert txIn (coreTxOut reify [Address addr, Amount (inject c)]) coll, c)
@@ -752,10 +752,10 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
       -- will be later added to the UTxO map
       go ::
         [Addr] ->
-        Map (TxIn) (TxOut era) ->
+        Map TxIn (TxOut era) ->
         Coin ->
-        Map (TxIn) (TxOut era) ->
-        GenRS era (Map (TxIn) (TxOut era), Coin)
+        Map TxIn (TxOut era) ->
+        GenRS era (Map TxIn (TxOut era), Coin)
       go ecs !coll !curCollTotal !um
         | curCollTotal >= minCollTotal = pure (coll, curCollTotal <-> minCollTotal)
         | [] <- ecs = error "Impossible: supplied less addresses than `maxCollateralInputs`"
@@ -963,7 +963,7 @@ genAlonzoTxAndInfo proof slot = do
   -- 5. Estimate inputs that will be used as collateral
   maxCollateralCount <-
     lift $ chooseInt (1, fromIntegral (maxCollateralInputs' proof gePParams))
-  bogusCollateralTxId <- lift (arbitrary :: Gen (TxId))
+  bogusCollateralTxId <- lift (arbitrary :: Gen TxId)
   let bogusCollateralTxIns =
         Set.fromList
           [ TxIn bogusCollateralTxId (mkTxIxPartial (fromIntegral i))
@@ -1105,7 +1105,7 @@ genAlonzoTxAndInfo proof slot = do
 
 -- | Keep only Script witnesses that are neccessary in 'era',
 onlyNecessaryScripts ::
-  Proof era -> Set (ScriptHash) -> [WitnessesField era] -> [WitnessesField era]
+  Proof era -> Set ScriptHash -> [WitnessesField era] -> [WitnessesField era]
 onlyNecessaryScripts _ _ [] = []
 onlyNecessaryScripts proof hashes (ScriptWits m : xs) =
   ScriptWits (Map.restrictKeys m hashes) : onlyNecessaryScripts proof hashes xs

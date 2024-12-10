@@ -150,12 +150,12 @@ cDelegateeStake ::
     era
     (Delegatee)
     (KeyHash 'StakePool -> Delegatee)
-cDelegateeStake = Invert "cDelegateeStake" (typeRep @(Delegatee)) DelegStake
+cDelegateeStake = Invert "cDelegateeStake" (typeRep @Delegatee) DelegStake
 
 cDelegateeVote ::
   forall era.
-  RootTarget era (Delegatee) (DRep -> Delegatee)
-cDelegateeVote = Invert "cDelegateeVote" (typeRep @(Delegatee)) DelegVote
+  RootTarget era Delegatee (DRep -> Delegatee)
+cDelegateeVote = Invert "cDelegateeVote" (typeRep @Delegatee) DelegVote
 
 cDelegateeStakeVote ::
   forall era.
@@ -163,7 +163,7 @@ cDelegateeStakeVote ::
     era
     (Delegatee)
     (KeyHash 'StakePool -> DRep -> Delegatee)
-cDelegateeStakeVote = Invert "cDelegateeVote" (typeRep @(Delegatee)) DelegStakeVote
+cDelegateeStakeVote = Invert "cDelegateeVote" (typeRep @Delegatee) DelegStakeVote
 
 cRegPool :: Target era (PoolParams -> ConwayTxCert era)
 cRegPool = Constr "cRegPool" (\x -> ConwayTxCertPool (RegPool x))
@@ -193,7 +193,7 @@ partBfromPartA p mp = Map.fromList (fixer (Map.toList mp))
 makeDRepPred ::
   forall era.
   Era era =>
-  Term era (DRep) ->
+  Term era DRep ->
   Term era (Credential 'DRepRole) ->
   Pred era
 makeDRepPred drep vote =
@@ -203,7 +203,7 @@ makeDRepPred drep vote =
     , (1, constRootTarget DRepAlwaysNoConfidence, [Random vote])
     ,
       ( 5
-      , Invert "" (typeRep @(DRep)) DRepCredential
+      , Invert "" (typeRep @DRep) DRepCredential
           :$ Partial vote (\case DRepCredential x -> Just x; _ -> Nothing)
       , [Member (Left vote) voteUniv]
       )

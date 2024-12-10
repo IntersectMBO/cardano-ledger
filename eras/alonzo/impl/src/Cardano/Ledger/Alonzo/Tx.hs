@@ -158,8 +158,6 @@ newtype AlonzoTxUpgradeError = ATUEBodyUpgradeError AlonzoTxBodyUpgradeError
   deriving (Show)
 
 instance EraTx AlonzoEra where
-  {-# SPECIALIZE instance EraTx AlonzoEra #-}
-
   type Tx AlonzoEra = AlonzoTx AlonzoEra
   type TxUpgradeError AlonzoEra = AlonzoTxUpgradeError
 
@@ -203,8 +201,6 @@ class
   isValidTxL :: Lens' (Tx era) IsValid
 
 instance AlonzoEraTx AlonzoEra where
-  {-# SPECIALIZE instance AlonzoEraTx AlonzoEra #-}
-
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 

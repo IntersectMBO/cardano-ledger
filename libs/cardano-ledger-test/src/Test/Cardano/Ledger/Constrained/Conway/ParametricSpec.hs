@@ -80,7 +80,7 @@ class
   ) =>
   EraSpecTxOut era fn
   where
-  irewardSpec :: Term fn AccountState -> Specification fn (InstantaneousRewards)
+  irewardSpec :: Term fn AccountState -> Specification fn InstantaneousRewards
   hasPtrs :: proxy era -> Term fn Bool
   correctTxOut ::
     Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->

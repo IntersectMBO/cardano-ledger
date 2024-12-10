@@ -20,8 +20,6 @@ import Cardano.Ledger.Shelley.TxWits (
  )
 
 instance EraTxWits MaryEra where
-  {-# SPECIALIZE instance EraTxWits MaryEra #-}
-
   type TxWits MaryEra = ShelleyTxWits MaryEra
 
   mkBasicTxWits = mempty

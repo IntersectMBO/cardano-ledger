@@ -117,7 +117,7 @@ deriving instance Ord CommitteeMemberState
 instance EncCBOR CommitteeMemberState where
   encCBOR (CommitteeMemberState cStatus mStatus ex nec) =
     encode $
-      Rec (CommitteeMemberState)
+      Rec CommitteeMemberState
         !> To cStatus
         !> To mStatus
         !> To ex
@@ -159,7 +159,7 @@ instance EncCBOR CommitteeMembersState where
   encCBOR c@(CommitteeMembersState _ _ _) =
     let CommitteeMembersState {..} = c
      in encode $
-          Rec (CommitteeMembersState)
+          Rec CommitteeMembersState
             !> To csCommittee
             !> To csThreshold
             !> To csEpochNo

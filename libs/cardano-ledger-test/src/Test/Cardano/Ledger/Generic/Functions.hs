@@ -127,7 +127,7 @@ depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) cert
 
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
 --  Era and later, where inline Scripts are allowed, they should not appear in this set.
-scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash)
+scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set ScriptHash
 scriptWitsNeeded' Conway utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
@@ -150,7 +150,7 @@ scriptWitsNeeded' Shelley utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptWitsNeeded' #-}
 
-scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash)
+scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set ScriptHash
 scriptsNeeded' Conway utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 scriptsNeeded' Babbage utxo txBody =
@@ -168,7 +168,7 @@ scriptsNeeded' Shelley utxo txBody =
 txInBalance ::
   forall era.
   EraTxOut era =>
-  Set (TxIn) ->
+  Set TxIn ->
   MUtxo era ->
   Coin
 txInBalance txinSet m = coinBalance (UTxO (restrictKeys m txinSet))
@@ -219,7 +219,7 @@ txoutEvidence ::
   forall era.
   Proof era ->
   TxOut era ->
-  ([Credential 'Payment], Maybe (DataHash))
+  ([Credential 'Payment], Maybe DataHash)
 txoutEvidence Alonzo (AlonzoTxOut addr _ (SJust dh)) =
   (addrCredentials addr, Just dh)
 txoutEvidence Alonzo (AlonzoTxOut addr _ SNothing) =

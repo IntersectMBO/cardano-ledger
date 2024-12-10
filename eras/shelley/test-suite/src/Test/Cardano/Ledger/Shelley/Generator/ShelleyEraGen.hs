@@ -111,7 +111,7 @@ genTxBody ::
   Withdrawals ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash) ->
+  StrictMaybe AuxiliaryDataHash ->
   Gen (ShelleyTxBody era, [MultiSig era])
 genTxBody _pparams slot inputs outputs certs withdrawals fee update adHash = do
   ttl <- genTimeToLive slot

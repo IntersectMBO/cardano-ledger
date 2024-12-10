@@ -208,7 +208,7 @@ data FreeVars = FreeVars
   , fvAddrsRew :: !(Set (Credential 'Staking))
   , fvTotalStake :: !Coin
   , fvProtVer :: !ProtVer
-  , fvPoolRewardInfo :: !(Map (KeyHash 'StakePool) (PoolRewardInfo))
+  , fvPoolRewardInfo :: !(Map (KeyHash 'StakePool) PoolRewardInfo)
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)

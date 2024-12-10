@@ -139,7 +139,7 @@ getReferenceScripts ::
   BabbageEraTxOut era =>
   UTxO era ->
   Set TxIn ->
-  Map.Map (ScriptHash) (Script era)
+  Map.Map ScriptHash (Script era)
 getReferenceScripts utxo ins = Map.fromList (getReferenceScriptsNonDistinct utxo ins)
 
 getReferenceScriptsNonDistinct ::

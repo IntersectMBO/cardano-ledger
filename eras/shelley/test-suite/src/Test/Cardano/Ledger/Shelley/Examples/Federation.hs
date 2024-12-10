@@ -134,7 +134,7 @@ coreNodeKeysBySchedule pp slot =
 -- | === Genesis Delegation Mapping
 -- The map from genesis/core node (verification) key hashes
 -- to their delegate's (verification) key hash.
-genDelegs :: Map (KeyHash 'Genesis) (GenDelegPair)
+genDelegs :: Map (KeyHash 'Genesis) GenDelegPair
 genDelegs =
   Map.fromList
     [ ( hashKey $ snd gkey

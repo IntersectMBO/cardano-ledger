@@ -717,7 +717,7 @@ help19 ::
   forall era.
   Era era =>
   Proof era ->
-  Gen (Map (FutureGenDeleg) (GenDelegPair))
+  Gen (Map FutureGenDeleg GenDelegPair)
 help19 _proof = do
   setA <- genRep @era (SetR GenHashR)
   ans <- projOnDom @era setA (fGenDelegGenKeyHashL) FutureGenDelegR GenDelegPairR

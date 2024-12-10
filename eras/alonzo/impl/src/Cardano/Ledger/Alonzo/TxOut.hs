@@ -171,7 +171,7 @@ decodeDataHash32 (DataHash32 a b c d) = do
 viewCompactTxOut ::
   Val (Value era) =>
   AlonzoTxOut era ->
-  (CompactAddr, CompactForm (Value era), StrictMaybe (DataHash))
+  (CompactAddr, CompactForm (Value era), StrictMaybe DataHash)
 viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
@@ -433,7 +433,7 @@ mkTxOutCompact ::
   Addr ->
   CompactAddr ->
   CompactForm (Value era) ->
-  StrictMaybe (DataHash) ->
+  StrictMaybe DataHash ->
   AlonzoTxOut era
 mkTxOutCompact addr cAddr cVal mdh
   | isAdaOnlyCompact cVal = AlonzoTxOut addr (fromCompact cVal) mdh

@@ -16,7 +16,6 @@ import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash, txSeqTxns)
 
 instance EraSegWits MaryEra where
-  {-# SPECIALIZE instance EraSegWits MaryEra #-}
   type TxSeq MaryEra = ShelleyTxSeq MaryEra
   fromTxSeq = txSeqTxns
   toTxSeq = ShelleyTxSeq

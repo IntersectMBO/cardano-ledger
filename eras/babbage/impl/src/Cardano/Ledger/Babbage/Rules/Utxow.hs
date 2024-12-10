@@ -317,7 +317,6 @@ babbageUtxowTransition ::
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
-  , Signable (DSIGN) (Hash (HASH) EraIndependentTxBody)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , State (EraRule "UTXOW" era) ~ UTxOState era

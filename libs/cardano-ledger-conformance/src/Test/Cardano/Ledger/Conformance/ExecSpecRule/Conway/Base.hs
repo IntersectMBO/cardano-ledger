@@ -130,8 +130,8 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
 
 data ConwayCertExecContext era = ConwayCertExecContext
-  { ccecWithdrawals :: !(Map (RewardAccount) Coin)
-  , ccecDeposits :: !(Map (DepositPurpose) Coin)
+  { ccecWithdrawals :: !(Map RewardAccount Coin)
+  , ccecDeposits :: !(Map DepositPurpose Coin)
   , ccecVotes :: !(VotingProcedures era)
   , ccecDelegatees :: !(Set (Credential 'DRepRole))
   }

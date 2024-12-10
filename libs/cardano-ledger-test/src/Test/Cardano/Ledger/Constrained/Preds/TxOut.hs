@@ -104,7 +104,7 @@ txoutDatum :: (Reflect era, BabbageEraTxOut era) => Term era (Datum era)
 txoutDatum = fieldToTerm txoutDatumF
 
 txoutDataHashF ::
-  (Reflect era, AlonzoEraTxOut era) => Field era (TxOutF era) (Maybe (DataHash))
+  (Reflect era, AlonzoEraTxOut era) => Field era (TxOutF era) (Maybe DataHash)
 txoutDataHashF =
   Field
     "txoutDataHashF"
@@ -112,7 +112,7 @@ txoutDataHashF =
     (TxOutR reify)
     (txOutFL . dataHashTxOutL . strictMaybeMaybeL)
 
-txoutDataHash :: (Reflect era, AlonzoEraTxOut era) => Term era (Maybe (DataHash))
+txoutDataHash :: (Reflect era, AlonzoEraTxOut era) => Term era (Maybe DataHash)
 txoutDataHash = fieldToTerm txoutDataHashF
 
 isBootstrapAddr :: Addr -> Bool

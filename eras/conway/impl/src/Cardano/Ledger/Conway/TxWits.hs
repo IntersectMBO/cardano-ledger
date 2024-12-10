@@ -25,8 +25,6 @@ import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Core
 
 instance EraTxWits ConwayEra where
-  {-# SPECIALIZE instance EraTxWits ConwayEra #-}
-
   type TxWits ConwayEra = AlonzoTxWits ConwayEra
 
   mkBasicTxWits = mempty
@@ -50,8 +48,6 @@ instance EraTxWits ConwayEra where
       }
 
 instance AlonzoEraTxWits ConwayEra where
-  {-# SPECIALIZE instance AlonzoEraTxWits ConwayEra #-}
-
   datsTxWitsL = datsAlonzoTxWitsL
   {-# INLINE datsTxWitsL #-}
 
