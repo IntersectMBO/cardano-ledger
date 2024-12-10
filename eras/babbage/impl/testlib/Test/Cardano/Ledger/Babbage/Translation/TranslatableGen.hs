@@ -16,12 +16,11 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits
-import Cardano.Ledger.Babbage (Babbage, BabbageEra)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Credential (StakeReference (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -50,14 +49,14 @@ import Test.QuickCheck (
   vectorOf,
  )
 
-instance TranslatableGen Babbage where
+instance TranslatableGen BabbageEra where
   tgRedeemers = genRedeemers
-  tgTx l = genTx @Babbage (genTxBody l)
-  tgUtxo = utxoWithTx @Babbage
+  tgTx l = genTx @BabbageEra (genTxBody l)
+  tgUtxo = utxoWithTx @BabbageEra
   mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
   mkTxInfoLanguage PlutusV2 = TxInfoLanguage SPlutusV2
   mkTxInfoLanguage lang =
-    error $ "Language " ++ show lang ++ " is not supported in " ++ eraName @Babbage
+    error $ "Language " ++ show lang ++ " is not supported in " ++ eraName @BabbageEra
 
 utxoWithTx ::
   forall era.
@@ -100,20 +99,20 @@ genTxOut ::
   Language ->
   Gen (BabbageTxOut era)
 genTxOut l = do
-  addr <- genNonByronAddr @(EraCrypto era)
+  addr <- genNonByronAddr
   value <- scale (`div` 15) arbitrary
   script <- case l of
     PlutusV1 -> pure SNothing
     _ -> arbitrary
   datum <- case l of
-    PlutusV1 -> oneof [pure NoDatum, DatumHash <$> (arbitrary :: Gen (DataHash (EraCrypto era)))]
+    PlutusV1 -> oneof [pure NoDatum, DatumHash <$> (arbitrary :: Gen DataHash)]
     _ -> arbitrary
   pure $ BabbageTxOut addr value datum script
 
-genTxBody :: forall c. Crypto c => Language -> Gen (BabbageTxBody (BabbageEra c))
+genTxBody :: Language -> Gen (BabbageTxBody BabbageEra)
 genTxBody l = do
-  let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @Babbage) <$> genTxOut @(BabbageEra c) l)
-  let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen (TxIn c))
+  let genTxOuts = fromList <$> listOf1 (mkSized (eraProtVerLow @BabbageEra) <$> genTxOut @BabbageEra l)
+  let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen TxIn)
   BabbageTxBody
     <$> genTxIns
     <*> arbitrary
@@ -135,7 +134,7 @@ genTxBody l = do
     <*> arbitrary
     <*> arbitrary
 
-genNonByronAddr :: forall c. Crypto c => Gen (Addr c)
+genNonByronAddr :: Gen Addr
 genNonByronAddr =
   Addr
     <$> arbitrary

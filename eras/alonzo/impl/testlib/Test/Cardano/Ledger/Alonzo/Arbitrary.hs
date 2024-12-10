@@ -159,7 +159,7 @@ genScripts ::
   ( EraScript era
   , Arbitrary (Script era)
   ) =>
-  Gen (Map.Map (ScriptHash (EraCrypto era)) (Script era))
+  Gen (Map.Map ScriptHash (Script era))
 genScripts = Map.fromElems (hashScript @era) <$> (arbitrary :: Gen [Script era])
 
 instance Era era => Arbitrary (TxDats era) where

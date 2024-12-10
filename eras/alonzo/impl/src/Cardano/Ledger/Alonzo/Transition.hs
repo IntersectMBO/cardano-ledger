@@ -1,8 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -14,7 +12,6 @@ module Cardano.Ledger.Alonzo.Transition (
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis, toAlonzoGenesisPairs)
 import Cardano.Ledger.Alonzo.Translation ()
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary
 import Cardano.Ledger.Mary.Transition (TransitionConfig (MaryTransitionConfig))
 import Cardano.Ledger.Shelley.Transition
@@ -32,10 +29,10 @@ import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
-instance Crypto c => EraTransition (AlonzoEra c) where
-  data TransitionConfig (AlonzoEra c) = AlonzoTransitionConfig
+instance EraTransition AlonzoEra where
+  data TransitionConfig AlonzoEra = AlonzoTransitionConfig
     { atcAlonzoGenesis :: !AlonzoGenesis
-    , atcMaryTransitionConfig :: !(TransitionConfig (MaryEra c))
+    , atcMaryTransitionConfig :: !(TransitionConfig MaryEra)
     }
     deriving (Show, Eq, Generic)
 
@@ -49,13 +46,13 @@ instance Crypto c => EraTransition (AlonzoEra c) where
   tcTranslationContextL =
     lens atcAlonzoGenesis (\atc ag -> atc {atcAlonzoGenesis = ag})
 
-instance Crypto c => NoThunks (TransitionConfig (AlonzoEra c))
+instance NoThunks (TransitionConfig AlonzoEra)
 
-instance Crypto c => ToJSON (TransitionConfig (AlonzoEra c)) where
+instance ToJSON (TransitionConfig AlonzoEra) where
   toJSON = object . toAlonzoTransitionConfigPairs
   toEncoding = pairs . mconcat . toAlonzoTransitionConfigPairs
 
-toAlonzoTransitionConfigPairs :: (KeyValue e a, Crypto c) => TransitionConfig (AlonzoEra c) -> [a]
+toAlonzoTransitionConfigPairs :: KeyValue e a => TransitionConfig AlonzoEra -> [a]
 toAlonzoTransitionConfigPairs alonzoConfig =
   toShelleyTransitionConfigPairs shelleyConfig
     ++ ["alonzo" .= object (toAlonzoGenesisPairs (alonzoConfig ^. tcTranslationContextL))]
@@ -64,7 +61,7 @@ toAlonzoTransitionConfigPairs alonzoConfig =
     allegraConfig = maryConfig ^. tcPreviousEraConfigL
     shelleyConfig = allegraConfig ^. tcPreviousEraConfigL
 
-instance Crypto c => FromJSON (TransitionConfig (AlonzoEra c)) where
+instance FromJSON (TransitionConfig AlonzoEra) where
   parseJSON = withObject "AlonzoTransitionConfig" $ \o -> do
     pc <- parseJSON (Object o)
     ag <- o .: "alonzo"

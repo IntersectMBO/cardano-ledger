@@ -14,7 +14,7 @@ import Cardano.Crypto.Hash.Class qualified as Hash
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
+import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Slotting.EpochInfo qualified as EI
 import Constrained
@@ -59,7 +59,7 @@ poolCertSpec ::
   (EraSpecPParams era, IsConwayUniv fn) =>
   PoolEnv era ->
   PState era ->
-  Specification fn (PoolCert (EraCrypto era))
+  Specification fn PoolCert
 poolCertSpec (PoolEnv e pp) ps =
   constrained $ \pc ->
     (caseOn pc)
@@ -84,4 +84,4 @@ poolCertSpec (PoolEnv e pp) ps =
     EpochInterval maxEp = pp ^. ppEMaxL
     maxEpochNo = EpochNo (fromIntegral maxEp)
     rpools = Map.keys $ psStakePoolParams ps
-    maxMetaLen = fromIntegral (Hash.sizeHash ([] @(HASH StandardCrypto)))
+    maxMetaLen = fromIntegral (Hash.sizeHash ([] @HASH))

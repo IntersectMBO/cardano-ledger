@@ -46,7 +46,6 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.EpochBoundary (Stake (..), maxPool')
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -92,7 +91,7 @@ mkApparentPerformance d_ sigma blocksN blocksTotal
 -- | Calculate pool leader reward
 leaderRew ::
   Coin ->
-  PoolParams c ->
+  PoolParams ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -110,7 +109,7 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
 -- | Calculate pool member reward
 memberRew ::
   Coin ->
-  PoolParams c ->
+  PoolParams ->
   StakeShare ->
   StakeShare ->
   Coin
@@ -125,9 +124,8 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
     m' = unboundRational m
 
 sumRewards ::
-  forall c.
   ProtVer ->
-  Map (Credential 'Staking c) (Set (Reward c)) ->
+  Map (Credential 'Staking) (Set Reward) ->
   Coin
 sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 
@@ -137,11 +135,10 @@ sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 -- because of this backward compatibility issue in early protocolVersions. Note that
 -- both of the domains of the returned maps are a subset of the the domain of the input map 'rewards'
 filterRewards ::
-  forall c.
   ProtVer ->
-  Map (Credential 'Staking c) (Set (Reward c)) ->
-  ( Map (Credential 'Staking c) (Set (Reward c)) -- delivered
-  , Map (Credential 'Staking c) (Set (Reward c)) -- ignored in Shelley Era
+  Map (Credential 'Staking) (Set Reward) ->
+  ( Map (Credential 'Staking) (Set Reward) -- delivered
+  , Map (Credential 'Staking) (Set Reward) -- ignored in Shelley Era
   )
 filterRewards pv rewards =
   if HardForks.aggregatedRewards pv
@@ -154,10 +151,9 @@ filterRewards pv rewards =
 --   some of the coins are ignored (because of backward compatibility) see 'filterRewards'
 --   Note that domain of the returned map is a subset of the input map 'rewards'
 aggregateRewards ::
-  forall c.
   ProtVer ->
-  Map (Credential 'Staking c) (Set (Reward c)) ->
-  Map (Credential 'Staking c) Coin
+  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential 'Staking) Coin
 aggregateRewards pv rewards =
   Map.map (foldMap' rewardAmount) $ fst $ filterRewards pv rewards
 
@@ -166,7 +162,7 @@ aggregateRewards pv rewards =
 
 sumCompactRewards ::
   ProtVer ->
-  Map (Credential 'Staking c) (Set (Reward c)) ->
+  Map (Credential 'Staking) (Set Reward) ->
   CompactForm Coin
 sumCompactRewards protocolVersion rs = fold $ aggregateCompactRewards protocolVersion rs
 
@@ -175,8 +171,8 @@ sumCompactRewards protocolVersion rs = fold $ aggregateCompactRewards protocolVe
 --   Note that the domain of the output map is a subset of the domain of the input rewards.
 aggregateCompactRewards ::
   ProtVer ->
-  Map (Credential 'Staking c) (Set (Reward c)) ->
-  Map (Credential 'Staking c) (CompactForm Coin)
+  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential 'Staking) (CompactForm Coin)
 aggregateCompactRewards pv rewards =
   Map.map (foldMap' (compactCoinOrError . rewardAmount)) $ fst $ filterRewards pv rewards
 
@@ -189,46 +185,46 @@ aggregateCompactRewards pv rewards =
 
 -- =====================================================
 
-data LeaderOnlyReward c = LeaderOnlyReward
-  { lRewardPool :: !(KeyHash 'StakePool c)
+data LeaderOnlyReward = LeaderOnlyReward
+  { lRewardPool :: !(KeyHash 'StakePool)
   , lRewardAmount :: !Coin
   }
   deriving (Eq, Ord, Show, Generic)
 
-instance NoThunks (LeaderOnlyReward c)
+instance NoThunks LeaderOnlyReward
 
-instance NFData (LeaderOnlyReward c)
+instance NFData LeaderOnlyReward
 
-instance CC.Crypto c => EncCBOR (LeaderOnlyReward c) where
+instance EncCBOR LeaderOnlyReward where
   encCBOR (LeaderOnlyReward pool c) = encode $ Rec LeaderOnlyReward !> To pool !> To c
 
-instance CC.Crypto c => DecCBOR (LeaderOnlyReward c) where
+instance DecCBOR LeaderOnlyReward where
   decCBOR = decode $ RecD LeaderOnlyReward <! From <! From
 
-leaderRewardToGeneral :: LeaderOnlyReward c -> Reward c
+leaderRewardToGeneral :: LeaderOnlyReward -> Reward
 leaderRewardToGeneral (LeaderOnlyReward poolId r) = Reward LeaderReward poolId r
 
 -- | Stake Pool specific information needed to compute the rewards
 -- for its members.
-data PoolRewardInfo c = PoolRewardInfo
+data PoolRewardInfo = PoolRewardInfo
   { poolRelativeStake :: !StakeShare
   -- ^ The stake pool's stake divided by the total stake
   , poolPot :: !Coin
   -- ^ The maximum rewards available for the entire pool
-  , poolPs :: !(PoolParams c)
+  , poolPs :: !PoolParams
   -- ^ The stake pool parameters
   , poolBlocks :: !Natural
   -- ^ The number of blocks the stake pool produced
-  , poolLeaderReward :: !(LeaderOnlyReward c)
+  , poolLeaderReward :: !LeaderOnlyReward
   -- ^ The leader reward
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoThunks (PoolRewardInfo c)
+instance NoThunks PoolRewardInfo
 
-instance NFData (PoolRewardInfo c)
+instance NFData PoolRewardInfo
 
-instance CC.Crypto c => EncCBOR (PoolRewardInfo c) where
+instance EncCBOR PoolRewardInfo where
   encCBOR
     (PoolRewardInfo a b c d e) =
       encode $
@@ -239,7 +235,7 @@ instance CC.Crypto c => EncCBOR (PoolRewardInfo c) where
           !> To d
           !> To e
 
-instance CC.Crypto c => DecCBOR (PoolRewardInfo c) where
+instance DecCBOR PoolRewardInfo where
   decCBOR =
     decode
       ( RecD PoolRewardInfo
@@ -251,8 +247,8 @@ instance CC.Crypto c => DecCBOR (PoolRewardInfo c) where
       )
 
 notPoolOwner ::
-  PoolParams c ->
-  Credential 'Staking c ->
+  PoolParams ->
+  Credential 'Staking ->
   Bool
 notPoolOwner pps = \case
   KeyHashObj hk -> hk `Set.notMember` ppOwners pps
@@ -265,12 +261,12 @@ rewardOnePoolMember ::
   -- | The total amount of stake in the system
   Coin ->
   -- | The set of registered stake credentials
-  Set (Credential 'Staking c) ->
+  Set (Credential 'Staking) ->
   -- | Stake pool specific intermediate values needed
   -- to compute member rewards.
-  PoolRewardInfo c ->
+  PoolRewardInfo ->
   -- | The stake credential whose reward is being calculated.
-  Credential 'Staking c ->
+  Credential 'Staking ->
   -- | The stake controlled by the stake credential
   -- in the previous parameter above.
   Coin ->
@@ -307,15 +303,15 @@ mkPoolRewardInfo ::
   EraPParams era =>
   PParams era ->
   Coin ->
-  BlocksMade (EraCrypto era) ->
+  BlocksMade ->
   Natural ->
-  Stake (EraCrypto era) ->
-  VMap.VMap VMap.VB VMap.VB (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)) ->
-  Map (KeyHash 'StakePool (EraCrypto era)) Coin ->
+  Stake ->
+  VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
+  Map (KeyHash 'StakePool) Coin ->
   Coin ->
   Coin ->
-  PoolParams (EraCrypto era) ->
-  Either StakeShare (PoolRewardInfo (EraCrypto era))
+  PoolParams ->
+  Either StakeShare PoolRewardInfo
 mkPoolRewardInfo
   pp
   r

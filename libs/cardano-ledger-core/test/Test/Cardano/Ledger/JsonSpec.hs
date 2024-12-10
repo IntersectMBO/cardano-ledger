@@ -7,7 +7,6 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Plutus.CostModels (CostModels)
@@ -31,10 +30,10 @@ spec = do
     roundTripJsonSpec @CostModels
     roundTripJsonSpec @PoolMetadata
     roundTripJsonSpec @StakePoolRelay
-    roundTripJsonSpec @(PoolParams StandardCrypto)
-    roundTripJsonSpec @(Addr StandardCrypto)
-    roundTripJsonSpec @(RewardAccount StandardCrypto)
-    roundTripJsonSpec @(Credential 'Witness StandardCrypto)
-    roundTripJsonSpec @(DRep StandardCrypto)
-    roundTripJsonSpec @(Anchor StandardCrypto)
-    roundTripJsonSpec @(TxId StandardCrypto)
+    roundTripJsonSpec @PoolParams
+    roundTripJsonSpec @Addr
+    roundTripJsonSpec @RewardAccount
+    roundTripJsonSpec @(Credential 'Witness)
+    roundTripJsonSpec @DRep
+    roundTripJsonSpec @Anchor
+    roundTripJsonSpec @TxId

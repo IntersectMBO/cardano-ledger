@@ -143,11 +143,11 @@ data ConwayEpochEvent era
       -- | Actions that were removed due to expiration together with their dependees
       (Set (GovActionState era))
       -- | Map of removed governance action ids that had an unregistered reward account to their unclaimed deposits so they can be transferred to the treasury.
-      (Map.Map (GovActionId (EraCrypto era)) Coin)
+      (Map.Map GovActionId Coin)
   | HardForkEvent (Event (EraRule "HARDFORK" era))
   deriving (Generic)
 
-type instance EraRuleEvent "EPOCH" (ConwayEra c) = ConwayEpochEvent (ConwayEra c)
+type instance EraRuleEvent "EPOCH" ConwayEra = ConwayEpochEvent ConwayEra
 
 deriving instance
   ( EraPParams era
@@ -171,7 +171,7 @@ instance
   , ConwayEraGov era
   , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
-  , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)
+  , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
@@ -204,8 +204,8 @@ instance
 returnProposalDeposits ::
   Foldable f =>
   f (GovActionState era) ->
-  UMap (EraCrypto era) ->
-  (UMap (EraCrypto era), Map.Map (GovActionId (EraCrypto era)) Coin)
+  UMap ->
+  (UMap, Map.Map GovActionId Coin)
 returnProposalDeposits removedProposals oldUMap =
   foldr' processProposal (oldUMap, mempty) removedProposals
   where
@@ -277,7 +277,7 @@ epochTransition ::
   , Eq (UpecPredFailure era)
   , Show (UpecPredFailure era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
-  , State (EraRule "SNAP" era) ~ SnapShots (EraCrypto era)
+  , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era

@@ -15,10 +15,9 @@ import Cardano.Ledger.Alonzo.TxAuxData (
  )
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Crypto
 
-instance Crypto c => EraTxAuxData (ConwayEra c) where
-  type TxAuxData (ConwayEra c) = AlonzoTxAuxData (ConwayEra c)
+instance EraTxAuxData ConwayEra where
+  type TxAuxData ConwayEra = AlonzoTxAuxData ConwayEra
 
   mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
 
@@ -30,8 +29,8 @@ instance Crypto c => EraTxAuxData (ConwayEra c) where
 
   validateTxAuxData = validateAlonzoTxAuxData
 
-instance Crypto c => AllegraEraTxAuxData (ConwayEra c) where
+instance AllegraEraTxAuxData ConwayEra where
   timelockScriptsTxAuxDataL = timelockScriptsAlonzoTxAuxDataL
 
-instance Crypto c => AlonzoEraTxAuxData (ConwayEra c) where
+instance AlonzoEraTxAuxData ConwayEra where
   plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL

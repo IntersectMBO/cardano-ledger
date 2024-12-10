@@ -48,9 +48,7 @@ import Cardano.Ledger.Credential (
  )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
-  DSignable,
   HasKeyRole,
-  Hash,
   KeyHash (..),
   KeyRole (..),
   VKey (..),
@@ -61,7 +59,6 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Control.DeepSeq (NFData)
-import Control.Exception (assert)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
@@ -78,85 +75,61 @@ import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)
 
-data KeyPair (kd :: KeyRole) c = KeyPair
-  { vKey :: !(VKey kd c)
-  , sKey :: !(DSIGN.SignKeyDSIGN (DSIGN c))
+data KeyPair (kd :: KeyRole) = KeyPair
+  { vKey :: !(VKey kd)
+  , sKey :: !(DSIGN.SignKeyDSIGN DSIGN)
   }
   deriving (Generic, Show)
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
-type KeyPairs c = [(KeyPair 'Payment c, KeyPair 'Staking c)]
+type KeyPairs = [(KeyPair 'Payment, KeyPair 'Staking)]
 
-instance
-  ( Crypto c
-  , NFData (DSIGN.VerKeyDSIGN (DSIGN c))
-  , NFData (DSIGN.SignKeyDSIGN (DSIGN c))
-  ) =>
-  NFData (KeyPair kd c)
+instance NFData (KeyPair kd)
 
-instance Crypto c => NoThunks (KeyPair kd c)
+instance NoThunks (KeyPair kd)
 
 instance HasKeyRole KeyPair
 
-instance Crypto c => Arbitrary (KeyPair kd c) where
+instance Arbitrary (KeyPair kd) where
   arbitrary = uniformM QC
 
-instance Crypto c => Uniform (KeyPair kd c) where
+instance Uniform (KeyPair kd) where
   uniformM g =
     mkKeyPairWithSeed
-      <$> uniformByteStringM (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @(DSIGN c)))) g
+      <$> uniformByteStringM (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @DSIGN))) g
 
-mkAddr ::
-  Crypto c =>
-  (KeyPair 'Payment c, KeyPair 'Staking c) ->
-  Addr c
+mkAddr :: (KeyPair 'Payment, KeyPair 'Staking) -> Addr
 mkAddr (payKey, stakeKey) = Addr Testnet (mkCred payKey) (StakeRefBase $ mkCred stakeKey)
 
-mkScriptAddr ::
-  Crypto c =>
-  ScriptHash c ->
-  KeyPair 'Staking c ->
-  Addr c
+mkScriptAddr :: ScriptHash -> KeyPair 'Staking -> Addr
 mkScriptAddr scriptHash stakeKey =
   Addr Testnet (ScriptHashObj scriptHash) (StakeRefBase $ mkCred stakeKey)
 
-mkCred ::
-  Crypto c =>
-  KeyPair kr c ->
-  Credential kr c
+mkCred :: KeyPair kr -> Credential kr
 mkCred k = KeyHashObj . hashKey $ vKey k
 
 -- | Create a witness for transaction
 mkWitnessVKey ::
-  forall c kr.
-  ( Crypto c
-  , DSignable c (Hash.Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  SafeHash c EraIndependentTxBody ->
-  KeyPair kr c ->
-  WitVKey 'Witness c
+  SafeHash EraIndependentTxBody ->
+  KeyPair kr ->
+  WitVKey 'Witness
 mkWitnessVKey safe keys =
-  WitVKey (asWitness $ vKey keys) (coerce $ signedDSIGN @c (sKey keys) (extractHash safe))
+  WitVKey (asWitness $ vKey keys) (coerce $ signedDSIGN (sKey keys) (extractHash safe))
 
 -- | Create witnesses for transaction
 mkWitnessesVKey ::
-  forall c kr.
-  ( Crypto c
-  , DSignable c (Hash.Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  SafeHash c EraIndependentTxBody ->
-  [KeyPair kr c] ->
-  Set (WitVKey 'Witness c)
+  SafeHash EraIndependentTxBody ->
+  [KeyPair kr] ->
+  Set (WitVKey 'Witness)
 mkWitnessesVKey safe xs = Set.fromList (fmap (mkWitnessVKey safe) xs)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
 -- scripts, return the set of required keys.
 makeWitnessesFromScriptKeys ::
-  (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
-  SafeHash c EraIndependentTxBody ->
-  Map (KeyHash kr c) (KeyPair kr c) ->
-  Set (KeyHash kr c) ->
-  Set (WitVKey 'Witness c)
+  SafeHash EraIndependentTxBody ->
+  Map (KeyHash kr) (KeyPair kr) ->
+  Set (KeyHash kr) ->
+  Set (WitVKey 'Witness)
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in mkWitnessesVKey txbodyHash (Map.elems witKeys)
@@ -171,31 +144,26 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 --          tx = ... txbody ... (witfun safehash) ...
 mkKeyHashWitFunPair ::
   forall kr.
-  Gen
-    ( KeyHash kr StandardCrypto
-    , SafeHash StandardCrypto EraIndependentTxBody -> WitVKey 'Witness StandardCrypto
-    )
+  Gen (KeyHash kr, SafeHash EraIndependentTxBody -> WitVKey 'Witness)
 mkKeyHashWitFunPair = do
-  keyPair@(KeyPair vk _) <- arbitrary @(KeyPair kr StandardCrypto)
-  pure (hashKey vk, \safehash -> mkWitnessVKey safehash keyPair)
+  keyPair@(KeyPair vk _) <- arbitrary @(KeyPair kr)
+  pure (hashKey vk, \safeHash -> mkWitnessVKey safeHash keyPair)
 
 mkVKeyRewardAccount ::
-  Crypto c =>
   Network ->
-  KeyPair 'Staking c ->
-  RewardAccount c
+  KeyPair 'Staking ->
+  RewardAccount
 mkVKeyRewardAccount network keys = RewardAccount network $ KeyHashObj (hashKey $ vKey keys)
 
-mkKeyHash :: Crypto c => Int -> KeyHash kd c
+mkKeyHash :: Int -> KeyHash kd
 mkKeyHash = hashKey . vKey . mkKeyPair
 
-mkKeyPair :: Crypto c => Int -> KeyPair r c
+mkKeyPair :: Int -> KeyPair r
 mkKeyPair = mkKeyPairWithSeed . Plain.serialize'
 
-mkKeyPairWithSeed :: forall r c. Crypto c => BS.ByteString -> KeyPair r c
-mkKeyPairWithSeed inputSeed = assert (seedSize == 32) $ KeyPair vk sk
+mkKeyPairWithSeed :: BS.ByteString -> KeyPair r
+mkKeyPairWithSeed inputSeed = KeyPair vk sk
   where
-    seedSize = DSIGN.seedSizeDSIGN (Proxy @(DSIGN c))
     vk = VKey (DSIGN.deriveVerKeyDSIGN sk)
     sk = DSIGN.genKeyDSIGN $ mkSeedFromBytes $ ensure32ByteSeed inputSeed
 

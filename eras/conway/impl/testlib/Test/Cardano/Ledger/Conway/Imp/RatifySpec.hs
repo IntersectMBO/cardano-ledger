@@ -279,9 +279,9 @@ paramChangeAffectsProposalsSpec =
   -- so we can only run them post-bootstrap
   describe "ParameterChange affects existing proposals" $ do
     let submitTwoExampleProposalsAndVoteOnTheChild ::
-          [(KeyHash 'StakePool (EraCrypto era), Vote)] ->
-          [(Credential 'DRepRole (EraCrypto era), Vote)] ->
-          ImpTestM era (GovActionId (EraCrypto era), GovActionId (EraCrypto era))
+          [(KeyHash 'StakePool, Vote)] ->
+          [(Credential 'DRepRole, Vote)] ->
+          ImpTestM era (GovActionId, GovActionId)
         submitTwoExampleProposalsAndVoteOnTheChild spos dreps = do
           committeeC <- KeyHashObj <$> freshKeyHash
           gaiParent <- submitUpdateCommittee Nothing mempty [(committeeC, EpochInterval 5)] (75 %! 100)
@@ -326,7 +326,7 @@ paramChangeAffectsProposalsSpec =
         isDRepAccepted gaiChild `shouldReturn` True
         enactCommitteeUpdateThreshold
           (65 %! 100)
-          ([drepC, drep] :: [Credential 'DRepRole (EraCrypto era)])
+          ([drepC, drep] :: [Credential 'DRepRole])
           hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` False
       it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ whenPostBootstrap $ do
@@ -341,7 +341,7 @@ paramChangeAffectsProposalsSpec =
         isDRepAccepted gaiChild `shouldReturn` False
         enactCommitteeUpdateThreshold
           (65 %! 100)
-          ([drepC, drep] :: [Credential 'DRepRole (EraCrypto era)])
+          ([drepC, drep] :: [Credential 'DRepRole])
           hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` True
         -- Not vote on the parent too to make sure both get enacted
@@ -1678,9 +1678,9 @@ committeeMaxTermLengthSpec =
   describe "Committee members can serve full `CommitteeMaxTermLength`" $ do
     let
       electMembersWithMaxTermLength ::
-        KeyHash 'StakePool (EraCrypto era) ->
-        Credential 'DRepRole (EraCrypto era) ->
-        ImpTestM era [Credential 'ColdCommitteeRole (EraCrypto era)]
+        KeyHash 'StakePool ->
+        Credential 'DRepRole ->
+        ImpTestM era [Credential 'ColdCommitteeRole]
       electMembersWithMaxTermLength spoC drep = do
         m1 <- KeyHashObj <$> freshKeyHash
         m2 <- KeyHashObj <$> freshKeyHash

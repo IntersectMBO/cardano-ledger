@@ -23,7 +23,6 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (sizedValue)
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
@@ -37,9 +36,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
 
-instance Crypto c => EraUTxO (BabbageEra c) where
-  {-# SPECIALIZE instance EraUTxO (BabbageEra StandardCrypto) #-}
-  type ScriptsNeeded (BabbageEra c) = AlonzoScriptsNeeded (BabbageEra c)
+instance EraUTxO BabbageEra where
+  type ScriptsNeeded BabbageEra = AlonzoScriptsNeeded BabbageEra
 
   getConsumedValue = getConsumedMaryValue
 
@@ -56,7 +54,7 @@ instance Crypto c => EraUTxO (BabbageEra c) where
 
   getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
-instance Crypto c => AlonzoEraUTxO (BabbageEra c) where
+instance AlonzoEraUTxO BabbageEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
 
   getSpendingDatum = getBabbageSpendingDatum
@@ -65,7 +63,7 @@ getBabbageSupplementalDataHashes ::
   BabbageEraTxBody era =>
   UTxO era ->
   TxBody era ->
-  Set.Set (DataHash (EraCrypto era))
+  Set.Set DataHash
 getBabbageSupplementalDataHashes (UTxO utxo) txBody =
   Set.fromList [dh | txOut <- outs, SJust dh <- [txOut ^. dataHashTxOutL]]
   where
@@ -140,15 +138,15 @@ getBabbageScriptsProvided utxo tx = ScriptsProvided ans
 getReferenceScripts ::
   BabbageEraTxOut era =>
   UTxO era ->
-  Set (TxIn (EraCrypto era)) ->
-  Map.Map (ScriptHash (EraCrypto era)) (Script era)
+  Set TxIn ->
+  Map.Map ScriptHash (Script era)
 getReferenceScripts utxo ins = Map.fromList (getReferenceScriptsNonDistinct utxo ins)
 
 getReferenceScriptsNonDistinct ::
   BabbageEraTxOut era =>
   UTxO era ->
-  Set (TxIn (EraCrypto era)) ->
-  [(ScriptHash (EraCrypto era), Script era)]
+  Set TxIn ->
+  [(ScriptHash, Script era)]
 getReferenceScriptsNonDistinct (UTxO mp) inputs =
   [ (hashScript script, script)
   | txOut <- Map.elems (eval (inputs ◁ mp))

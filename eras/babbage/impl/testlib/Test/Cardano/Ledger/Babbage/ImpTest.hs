@@ -4,7 +4,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 #if __GLASGOW_HASKELL__ < 900
 {-# LANGUAGE IncoherentInstances #-}
@@ -17,13 +16,9 @@ module Test.Cardano.Ledger.Babbage.ImpTest (
   produceRefScripts,
 ) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
-import Cardano.Crypto.Hash (Hash)
-import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Cardano.Ledger.Tools (setMinCoinTxOut)
@@ -35,34 +30,24 @@ import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro ((&), (.~), (<>~))
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
-import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Plutus (testingCostModels)
 
-instance
-  ( Crypto c
-  , NFData (SigDSIGN (DSIGN c))
-  , NFData (VerKeyDSIGN (DSIGN c))
-  , ADDRHASH c ~ Blake2b_224
-  , DSIGN c ~ Ed25519DSIGN
-  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  ShelleyEraImp (BabbageEra c)
-  where
+instance ShelleyEraImp BabbageEra where
   initNewEpochState =
     defaultInitNewEpochState
       (nesEsL . curPParamsEpochStateL . ppCostModelsL <>~ testingCostModels [PlutusV2])
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = alonzoFixupTx
 
-instance ShelleyEraImp (BabbageEra c) => MaryEraImp (BabbageEra c)
+instance ShelleyEraImp BabbageEra => MaryEraImp BabbageEra
 
-instance ShelleyEraImp (BabbageEra c) => AlonzoEraImp (BabbageEra c) where
+instance ShelleyEraImp BabbageEra => AlonzoEraImp BabbageEra where
   scriptTestContexts = plutusTestScripts SPlutusV1 <> plutusTestScripts SPlutusV2
 
 produceRefScript ::
   (ShelleyEraImp era, BabbageEraTxOut era) =>
   Script era ->
-  ImpTestM era (TxIn (EraCrypto era))
+  ImpTestM era TxIn
 produceRefScript script = do
   txIn :| [] <- produceRefScripts $ script :| []
   pure txIn
@@ -70,7 +55,7 @@ produceRefScript script = do
 produceRefScripts ::
   (ShelleyEraImp era, BabbageEraTxOut era) =>
   NonEmpty (Script era) ->
-  ImpTestM era (NonEmpty (TxIn (EraCrypto era)))
+  ImpTestM era (NonEmpty TxIn)
 produceRefScripts scripts = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   txOuts <- forM scripts $ \script -> do

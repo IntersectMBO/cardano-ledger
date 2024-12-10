@@ -19,9 +19,9 @@ import Data.Set (Set)
 
 -- | This is an old implementation for @GetFilteredDelegationsAndRewardAccounts@ query
 getFilteredDelegationsAndRewardAccounts ::
-  UMap c ->
-  Set (Credential 'Staking c) ->
-  (Map (Credential 'Staking c) (KeyHash 'StakePool c), Map (Credential 'Staking c) Coin)
+  UMap ->
+  Set (Credential 'Staking) ->
+  (Map (Credential 'Staking) (KeyHash 'StakePool), Map (Credential 'Staking) Coin)
 getFilteredDelegationsAndRewardAccounts umap creds =
   (filteredDelegations, filteredRwdAcnts)
   where

@@ -62,47 +62,47 @@ import Data.Sequence (Seq)
 
 -- ==================================================
 
-type instance EraRuleFailure "LEDGER" (BabbageEra c) = ShelleyLedgerPredFailure (BabbageEra c)
+type instance EraRuleFailure "LEDGER" BabbageEra = ShelleyLedgerPredFailure BabbageEra
 
-instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (BabbageEra c)
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure BabbageEra
 
-instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure BabbageEra where
   injectFailure = UtxowFailure
 
-instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure BabbageEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure BabbageEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" BabbageUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" BabbageUtxoPredFailure BabbageEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure BabbageEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure BabbageEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure BabbageEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure BabbageEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" AllegraUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" AllegraUtxoPredFailure BabbageEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure BabbageEra where
   injectFailure = DelegsFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure BabbageEra where
   injectFailure = DelegsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure BabbageEra where
   injectFailure = DelegsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure (BabbageEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure BabbageEra where
   injectFailure = DelegsFailure . injectFailure
 
 instance

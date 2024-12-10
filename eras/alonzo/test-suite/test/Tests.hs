@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -18,13 +17,12 @@ import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
 import qualified Test.Cardano.Ledger.Alonzo.TxInfo as TxInfo
-import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
 import qualified Test.Cardano.Ledger.Shelley.Rules.IncrementalStake as IncrementalStake
 import Test.Tasty
 
-type A = AlonzoEra TestCrypto
+type A = AlonzoEra
 
 main :: IO ()
 main = do

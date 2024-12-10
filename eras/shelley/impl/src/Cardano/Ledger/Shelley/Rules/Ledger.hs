@@ -141,32 +141,32 @@ ledgerAccountL = lens ledgerAccount $ \x y -> x {ledgerAccount = y}
 ledgerMempoolL :: Lens' (LedgerEnv era) Bool
 ledgerMempoolL = lens ledgerMempool $ \x y -> x {ledgerMempool = y}
 
-type instance EraRuleFailure "LEDGER" (ShelleyEra c) = ShelleyLedgerPredFailure (ShelleyEra c)
+type instance EraRuleFailure "LEDGER" ShelleyEra = ShelleyLedgerPredFailure ShelleyEra
 
-instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (ShelleyEra c)
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure ShelleyEra
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure ShelleyEra where
   injectFailure = UtxowFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure ShelleyEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure ShelleyEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure ShelleyEra where
   injectFailure = DelegsFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure ShelleyEra where
   injectFailure = DelegsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure ShelleyEra where
   injectFailure = DelegsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure ShelleyEra where
   injectFailure = DelegsFailure . injectFailure
 
-type instance EraRuleEvent "LEDGER" (ShelleyEra c) = ShelleyLedgerEvent (ShelleyEra c)
+type instance EraRuleEvent "LEDGER" ShelleyEra = ShelleyLedgerEvent ShelleyEra
 
 data ShelleyLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))
@@ -256,7 +256,7 @@ shelleyLedgerAssertions =
   ]
 
 instance
-  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  ( DSignable (Hash EraIndependentTxBody)
   , EraTx era
   , EraGov era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)

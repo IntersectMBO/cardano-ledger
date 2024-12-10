@@ -12,4 +12,4 @@ import Test.Cardano.Ledger.Shelley.Binary.Golden (goldenNewEpochStateExpectation
 spec :: Spec
 spec =
   describe "Golden" $ do
-    prop "NewEpochState" $ goldenNewEpochStateExpectation @Shelley
+    prop "NewEpochState" $ goldenNewEpochStateExpectation @ShelleyEra

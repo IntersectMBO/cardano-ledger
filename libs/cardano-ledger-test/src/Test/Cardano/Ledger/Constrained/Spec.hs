@@ -77,12 +77,12 @@ import Test.Cardano.Ledger.Constrained.TypeRep (
   synopsis,
  )
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Cardano.Ledger.Generic.Proof (BabbageEra, Standard)
+import Test.Cardano.Ledger.Generic.Proof (BabbageEra)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (total)
 
-type TestEra = BabbageEra Standard
+type TestEra = BabbageEra
 
 data SomeLens era t where
   SomeLens :: Adds c => (Lens' t c) -> SomeLens era t
@@ -98,7 +98,7 @@ data SomeLens era t where
 -- =========================================================
 
 -- | used when we run tests, and we have to pick some concrete Era
-type TT = BabbageEra Standard
+type TT = BabbageEra
 
 -- ============================================================
 -- Operators for Size (Defined in TypeRep.hs)
@@ -1908,7 +1908,7 @@ condReverse = do
   let msgs = ["condFlip", show predicate, show addsSpec]
   n <- genFromAddsSpec msgs addsSpec
   let env = storeVar testV (fromI (show n : msgs) n) emptyEnv
-  case runTyped (runPred @(BabbageEra Standard) env predicate) of
+  case runTyped (runPred @BabbageEra env predicate) of
     Right x -> pure (counterexample (unlines (show n : msgs)) x)
     Left xs -> errorMess "runTyped in condFlip fails" (xs ++ (show n : msgs))
 

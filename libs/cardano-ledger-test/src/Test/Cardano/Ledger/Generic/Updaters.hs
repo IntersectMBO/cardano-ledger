@@ -96,7 +96,7 @@ instance Era era => Merge (TxDats era) where
 instance AlonzoEraScript era => Merge (Redeemers era) where
   merge (Redeemers x) (Redeemers y) = Redeemers (Map.union x y)
 
-instance Merge (Map (ScriptHash c) v) where
+instance Merge (Map ScriptHash v) where
   merge = Map.union
 
 -- ====================================================================
@@ -272,7 +272,7 @@ updateWitnesses p Conway w dw = case dw of
   (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
 {-# NOINLINE updateWitnesses #-}
 
-newWitnesses :: Era era => Policy -> Proof era -> [WitnessesField era] -> TxWits era
+newWitnesses :: Policy -> Proof era -> [WitnessesField era] -> TxWits era
 newWitnesses p era = List.foldl' (updateWitnesses p era) (initialWitnesses era)
 
 --------------------------------------------------------------------
@@ -317,7 +317,7 @@ updateTxOut Conway (BabbageTxOut a v h refscript) txoutd = case txoutd of
   RefScript s -> BabbageTxOut a v h s
 {-# NOINLINE updateTxOut #-}
 
-newTxOut :: Era era => Proof era -> [TxOutField era] -> TxOut era
+newTxOut :: Proof era -> [TxOutField era] -> TxOut era
 newTxOut _ dts | all notAddress dts = error ("A call to newTxOut must have an (Address x) field.")
 -- This is because we don't have a good story about an initial Address, so the user MUST supply one
 newTxOut era dts = List.foldl' (updateTxOut era) (initialTxOut era) dts
@@ -419,7 +419,7 @@ newScriptIntegrityHash ::
   [Language] ->
   Redeemers era ->
   TxDats era ->
-  StrictMaybe (Alonzo.ScriptIntegrityHash (EraCrypto era))
+  StrictMaybe Alonzo.ScriptIntegrityHash
 newScriptIntegrityHash Conway pp ls rds dats =
   hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
 newScriptIntegrityHash Babbage pp ls rds dats =

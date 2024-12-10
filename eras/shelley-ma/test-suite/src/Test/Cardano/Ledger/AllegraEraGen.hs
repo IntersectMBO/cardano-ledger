@@ -33,7 +33,6 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (encCBOR, serialize')
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -70,23 +69,23 @@ import Test.QuickCheck (Arbitrary, Gen, arbitrary, frequency)
 
 {------------------------------------------------------------------------------
  EraGen instance for AllegraEra - This instance makes it possible to run the
- Shelley property tests for (AllegraEra c)
+ Shelley property tests for AllegraEra
 
  This instance is layered on top of the ShelleyMA instances
  in Cardano.Ledger.ShelleyMA.Scripts:
 
- `type instance Script (AllegraEra c) = Timelock (AllegraEra c)`
+ `type instance Script AllegraEra = Timelock AllegraEra`
  `instance ValidateScript (ShelleyMAEra ma c) where ...`
 ------------------------------------------------------------------------------}
 
-instance CryptoClass.Crypto c => ScriptClass (AllegraEra c) where
+instance ScriptClass AllegraEra where
   isKey _ (RequireSignature hk) = Just hk
   isKey _ _ = Nothing
-  basescript _proxy = someLeaf @(AllegraEra c)
+  basescript _proxy = someLeaf @AllegraEra
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
 
-instance CryptoClass.Crypto c => EraGen (AllegraEra c) where
+instance EraGen AllegraEra where
   genGenesisValue (GenEnv _keySpace _scriptspace Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     genCoin minGenesisOutputVal maxGenesisOutputVal
   genEraTxBody _ge _utxo _pparams = genTxBody
@@ -104,13 +103,13 @@ instance CryptoClass.Crypto c => EraGen (AllegraEra c) where
 genTxBody ::
   AllegraEraTxBody era =>
   SlotNo ->
-  Set.Set (TxIn (EraCrypto era)) ->
+  Set.Set TxIn ->
   StrictSeq (TxOut era) ->
   StrictSeq (TxCert era) ->
-  Withdrawals (EraCrypto era) ->
+  Withdrawals ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+  StrictMaybe AuxiliaryDataHash ->
   Gen (AllegraTxBody era, [Timelock era])
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
@@ -127,7 +126,7 @@ genTxBody slot ins outs cert wdrl fee upd ad = do
     , [] -- Allegra does not need any additional script witnesses
     )
 
-instance CryptoClass.Crypto c => MinGenTxout (AllegraEra c) where
+instance MinGenTxout AllegraEra where
   calcEraMinUTxO _txout pp = pp ^. ppMinUTxOValueL
   addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
@@ -196,7 +195,7 @@ genValidityInterval cs@(SlotNo currentSlot) =
 someLeaf ::
   forall era.
   (AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  KeyHash 'Witness (EraCrypto era) ->
+  KeyHash 'Witness ->
   NativeScript era
 someLeaf x =
   let n = mod (hash (serialize' (eraProtVerLow @era) (encCBOR x))) 200

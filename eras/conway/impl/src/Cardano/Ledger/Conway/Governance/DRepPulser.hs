@@ -92,26 +92,26 @@ import NoThunks.Class (NoThunks (..), allNoThunks)
 --   To access these "previous" values, both during and after pulsing.
 data PulsingSnapshot era = PulsingSnapshot
   { psProposals :: !(StrictSeq (GovActionState era))
-  , psDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
-  , psDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-  , psPoolDistr :: Map (KeyHash 'StakePool (EraCrypto era)) (CompactForm Coin)
+  , psDRepDistr :: !(Map DRep (CompactForm Coin))
+  , psDRepState :: !(Map (Credential 'DRepRole) DRepState)
+  , psPoolDistr :: Map (KeyHash 'StakePool) (CompactForm Coin)
   }
   deriving (Generic)
 
 psProposalsL :: Lens' (PulsingSnapshot era) (StrictSeq (GovActionState era))
 psProposalsL = lens psProposals (\x y -> x {psProposals = y})
 
-psDRepDistrL :: Lens' (PulsingSnapshot era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+psDRepDistrL :: Lens' (PulsingSnapshot era) (Map DRep (CompactForm Coin))
 psDRepDistrL = lens psDRepDistr (\x y -> x {psDRepDistr = y})
 
 psDRepStateL ::
-  Lens' (PulsingSnapshot era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+  Lens' (PulsingSnapshot era) (Map (Credential 'DRepRole) DRepState)
 psDRepStateL = lens psDRepState (\x y -> x {psDRepState = y})
 
 psPoolDistrL ::
   Lens'
     (PulsingSnapshot era)
-    (Map (KeyHash 'StakePool (EraCrypto era)) (CompactForm Coin))
+    (Map (KeyHash 'StakePool) (CompactForm Coin))
 psPoolDistrL = lens psPoolDistr (\x y -> x {psPoolDistr = y})
 
 deriving instance EraPParams era => Eq (PulsingSnapshot era)
@@ -198,14 +198,13 @@ instance EraPParams era => FromCBOR (PulsingSnapshot era) where
 --   (e) is the size of the registered DReps, lookup
 --   (f) is the size of the PoolDistr, insert
 computeDRepDistr ::
-  forall c.
-  Map (Credential 'Staking c) (CompactForm Coin) ->
-  Map (Credential 'DRepRole c) (DRepState c) ->
-  Map (Credential 'Staking c) (CompactForm Coin) ->
-  PoolDistr c ->
-  Map (DRep c) (CompactForm Coin) ->
-  Map (Credential 'Staking c) (UMElem c) ->
-  (Map (DRep c) (CompactForm Coin), PoolDistr c)
+  Map (Credential 'Staking) (CompactForm Coin) ->
+  Map (Credential 'DRepRole) DRepState ->
+  Map (Credential 'Staking) (CompactForm Coin) ->
+  PoolDistr ->
+  Map DRep (CompactForm Coin) ->
+  Map (Credential 'Staking) UMElem ->
+  (Map DRep (CompactForm Coin), PoolDistr)
 computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapChunk =
   Map.foldlWithKey' go (dRepDistr, poolDistr) uMapChunk
   where
@@ -255,18 +254,18 @@ data DRepPulser era (m :: Type -> Type) ans where
     (ans ~ RatifyState era, m ~ Identity, RunConwayRatify era) =>
     { dpPulseSize :: !Int
     -- ^ How many elements of 'dpUMap' to consume each pulse.
-    , dpUMap :: !(UMap (EraCrypto era))
+    , dpUMap :: !UMap
     -- ^ Snapshot containing the mapping of stake credentials to DReps, Pools and Rewards.
     , dpIndex :: !Int
     -- ^ The index of the iterator over `dpUMap`. Grows with each pulse.
-    , dpStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+    , dpStakeDistr :: !(Map (Credential 'Staking) (CompactForm Coin))
     -- ^ Snapshot of the stake distr (comes from the IncrementalStake)
-    , dpStakePoolDistr :: PoolDistr (EraCrypto era)
+    , dpStakePoolDistr :: PoolDistr
     -- ^ Snapshot of the pool distr. Lazy on purpose: See `ssStakeMarkPoolDistr` and ADR-7
     -- for explanation.
-    , dpDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
+    , dpDRepDistr :: !(Map DRep (CompactForm Coin))
     -- ^ The partial result that grows with each pulse. The purpose of the pulsing.
-    , dpDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+    , dpDRepState :: !(Map (Credential 'DRepRole) DRepState)
     -- ^ Snapshot of registered DRep credentials
     , dpCurrentEpoch :: !EpochNo
     -- ^ Snapshot of the EpochNo this pulser will complete in.
@@ -276,10 +275,10 @@ data DRepPulser era (m :: Type -> Type) ans where
     -- ^ Snapshot of the EnactState, Used to build the Env of the RATIFY rule
     , dpProposals :: !(StrictSeq (GovActionState era))
     -- ^ Snapshot of the proposals. This is the Signal for the RATIFY rule
-    , dpProposalDeposits :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+    , dpProposalDeposits :: !(Map (Credential 'Staking) (CompactForm Coin))
     -- ^ Snapshot of the proposal-deposits per reward-account-staking-credential
     , dpGlobals :: !Globals
-    , dpPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+    , dpPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
     -- ^ Snapshot of the parameters of stake pools -
     --   this is needed to get the reward account for SPO vote calculation
     } ->
@@ -419,7 +418,7 @@ data DRepPulsingState era
 -- | This is potentially an expensive getter. Make sure not to use it in the first 80% of
 -- the epoch.
 psDRepDistrG ::
-  SimpleGetter (DRepPulsingState era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+  SimpleGetter (DRepPulsingState era) (Map DRep (CompactForm Coin))
 psDRepDistrG = to get
   where
     get (DRComplete x _) = psDRepDistr x

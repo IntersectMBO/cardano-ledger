@@ -1,7 +1,6 @@
 module Cardano.Ledger.Api.Era (
   -- * Eras
   Era (
-    EraCrypto,
     PreviousEra,
     ProtVerLow,
     ProtVerHigh
@@ -84,4 +83,4 @@ import Cardano.Ledger.Shelley (Shelley, ShelleyEra)
 
 -- | Sometimes it is useful to specify that a type corresponds to a latest era that is
 -- currently implemented
-type LatestKnownEra c = ConwayEra c
+type LatestKnownEra = ConwayEra

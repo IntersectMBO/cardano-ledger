@@ -150,7 +150,7 @@ deriving instance Eq (PParams era) => Eq (UtxoEnv era)
 instance (Era era, NFData (PParams era)) => NFData (UtxoEnv era)
 
 data UtxoEvent era
-  = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
+  = TotalDeposits (SafeHash EraIndependentTxBody) Coin
   | UpdateEvent (Event (EraRule "PPUP" era))
   | -- | The UTxOs consumed and created by a signal tx
     TxUTxODiff
@@ -171,7 +171,7 @@ instance (Era era, NFData (Event (EraRule "PPUP" era)), NFData (TxOut era)) => N
 
 data ShelleyUtxoPredFailure era
   = BadInputsUTxO
-      !(Set (TxIn (EraCrypto era))) -- The bad transaction inputs
+      !(Set TxIn) -- The bad transaction inputs
   | ExpiredUTxO
       !(Mismatch 'RelLTEQ SlotNo)
   | MaxTxSizeUTxO
@@ -183,10 +183,10 @@ data ShelleyUtxoPredFailure era
       !(Mismatch 'RelEQ (Value era))
   | WrongNetwork
       !Network -- the expected network id
-      !(Set (Addr (EraCrypto era))) -- the set of addresses with incorrect network IDs
+      !(Set Addr) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       !Network -- the expected network id
-      !(Set (RewardAccount (EraCrypto era))) -- the set of reward addresses with incorrect network IDs
+      !(Set RewardAccount) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
@@ -194,11 +194,11 @@ data ShelleyUtxoPredFailure era
       ![TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
-type instance EraRuleFailure "UTXO" (ShelleyEra c) = ShelleyUtxoPredFailure (ShelleyEra c)
+type instance EraRuleFailure "UTXO" ShelleyEra = ShelleyUtxoPredFailure ShelleyEra
 
-instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure (ShelleyEra c)
+instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure ShelleyEra
 
-instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure ShelleyEra where
   injectFailure = UpdateFailure
 
 deriving stock instance
@@ -464,7 +464,7 @@ validateFeeTooSmallUTxO pp tx utxo =
 -- > inputs ⊆ dom utxo
 validateBadInputsUTxO ::
   UTxO era ->
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
   Test (ShelleyUtxoPredFailure era)
 validateBadInputsUTxO utxo txins =
   failureUnless (Set.null badInputs) $ BadInputsUTxO badInputs

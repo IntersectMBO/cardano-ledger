@@ -65,7 +65,7 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyBbodyState era
-  = BbodyState !(State (EraRule "LEDGERS" era)) !(BlocksMade (EraCrypto era))
+  = BbodyState !(State (EraRule "LEDGERS" era)) !BlocksMade
 
 deriving stock instance Show (State (EraRule "LEDGERS" era)) => Show (ShelleyBbodyState era)
 
@@ -82,39 +82,39 @@ data ShelleyBbodyPredFailure era
     WrongBlockBodySizeBBODY (Mismatch 'RelEQ Int)
   | -- | `mismatchSupplied` ~ Actual hash.
     --   `mismatchExpected` ~ Claimed hash in the header.
-    InvalidBodyHashBBODY (Mismatch 'RelEQ (Hash (EraCrypto era) EraIndependentBlockBody))
+    InvalidBodyHashBBODY (Mismatch 'RelEQ (Hash EraIndependentBlockBody))
   | LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 
-type instance EraRuleFailure "BBODY" (ShelleyEra c) = ShelleyBbodyPredFailure (ShelleyEra c)
+type instance EraRuleFailure "BBODY" ShelleyEra = ShelleyBbodyPredFailure ShelleyEra
 
-instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure (ShelleyEra c)
+instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure ShelleyEra
 
-instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure ShelleyEra where
   injectFailure = LedgersFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure ShelleyEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure ShelleyEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure ShelleyEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure ShelleyEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure ShelleyEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure ShelleyEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure ShelleyEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure (ShelleyEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure ShelleyEra where
   injectFailure = LedgersFailure . injectFailure
 
 newtype ShelleyBbodyEvent era
@@ -140,7 +140,7 @@ instance
 
 instance
   ( EraSegWits era
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , DSignable (Hash EraIndependentTxBody)
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
@@ -153,7 +153,7 @@ instance
 
   type
     Signal (ShelleyBBODY era) =
-      Block (BHeaderView (EraCrypto era)) era
+      Block BHeaderView era
 
   type Environment (ShelleyBBODY era) = BbodyEnv era
 
@@ -227,7 +227,7 @@ instance
   , BaseM ledgers ~ ShelleyBase
   , ledgers ~ EraRule "LEDGERS" era
   , STS ledgers
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , DSignable (Hash EraIndependentTxBody)
   , Era era
   ) =>
   Embed ledgers (ShelleyBBODY era)

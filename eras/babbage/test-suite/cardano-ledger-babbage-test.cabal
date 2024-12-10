@@ -34,7 +34,7 @@ library
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.12,
         cardano-ledger-alonzo-test >=1.1,
         cardano-ledger-babbage >=1.10.1 && <1.11,
-        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.11,
+        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
         cardano-ledger-shelley-ma-test >=1.1,
         cardano-ledger-mary >=1.4,
         cardano-ledger-shelley-test >=1.1,
@@ -71,7 +71,6 @@ test-suite cardano-ledger-babbage-test
         cardano-ledger-babbage-test,
         cardano-ledger-core,
         cardano-ledger-shelley-ma-test,
-        cardano-ledger-shelley-test,
         cardano-protocol-tpraos >=1.0,
         tasty-quickcheck,
         tasty

@@ -433,7 +433,7 @@ rewritePred m0 (ForEach (Lit SizeR sz) (Var v) tar ps) = do
   (expandedPred, m3) <- removeExpandablePred ([], m2) (concat renamedPred)
   pure $
     ( expandedPred
-        ++ zipWith (Component) (map Right xs) (map (patToAnyF . fst) ps3)
+        ++ zipWith Component (map Right xs) (map (patToAnyF . fst) ps3)
         ++ [List (Var v) xs]
         ++ extendSums subb sumstoPred
     , m3

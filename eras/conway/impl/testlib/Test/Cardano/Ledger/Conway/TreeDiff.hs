@@ -22,7 +22,6 @@ import Cardano.Ledger.Conway.Scripts
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD
 import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity
@@ -35,7 +34,7 @@ instance ToExpr PoolVotingThresholds
 instance ToExpr DRepVotingThresholds
 
 -- Scripts
-instance ToExpr (PlutusScript (ConwayEra c))
+instance ToExpr (PlutusScript ConwayEra)
 
 instance ToExpr (ConwayPlutusPurpose AsIx era)
 
@@ -59,11 +58,11 @@ instance
 -- Governance/Procedure
 instance ToExpr GovActionIx
 
-instance ToExpr (GovActionId c)
+instance ToExpr GovActionId
 
 instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (GovActionState era)
 
-instance Crypto c => ToExpr (Voter c)
+instance ToExpr Voter
 
 instance ToExpr Vote
 
@@ -143,13 +142,13 @@ instance ToExpr (RatifyEnv era) where
 instance (EraPParams era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (ConwayGovPredFailure era)
 
 -- TxCert
-instance ToExpr (Delegatee c)
+instance ToExpr Delegatee
 
-instance ToExpr (ConwayDelegCert c)
+instance ToExpr ConwayDelegCert
 
-instance ToExpr (ConwayGovCert c)
+instance ToExpr ConwayGovCert
 
-instance ToExpr (ConwayTxCert c)
+instance ToExpr (ConwayTxCert era)
 
 -- Rules
 instance ToExpr (ConwayGovCertPredFailure era)

@@ -16,12 +16,11 @@ import Cardano.Ledger.BaseTypes (
   mkActiveSlotCoeff,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import Data.Data (Proxy)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Common
@@ -43,10 +42,10 @@ testGlobals =
     , systemStart = SystemStart $ posixSecondsToUTCTime 0
     }
 
-mkDummySafeHash :: forall c a. Crypto c => Proxy c -> Int -> SafeHash c a
-mkDummySafeHash _ = unsafeMakeSafeHash . mkDummyHash @(HASH c)
+mkDummySafeHash :: forall a. Int -> SafeHash a
+mkDummySafeHash = unsafeMakeSafeHash . mkDummyHash @HASH
 
-txInAt :: (HasCallStack, Integral i, EraTx era) => i -> Tx era -> TxIn (EraCrypto era)
+txInAt :: (HasCallStack, Integral i, EraTx era) => i -> Tx era -> TxIn
 txInAt index tx =
   let txId = txIdTx tx
    in mkTxInPartial txId (toInteger index)

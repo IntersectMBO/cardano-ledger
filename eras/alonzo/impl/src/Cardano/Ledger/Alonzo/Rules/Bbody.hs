@@ -87,50 +87,50 @@ data AlonzoBbodyPredFailure era
 newtype AlonzoBbodyEvent era
   = ShelleyInAlonzoEvent (ShelleyBbodyEvent era)
 
-type instance EraRuleFailure "BBODY" (AlonzoEra c) = AlonzoBbodyPredFailure (AlonzoEra c)
+type instance EraRuleFailure "BBODY" AlonzoEra = AlonzoBbodyPredFailure AlonzoEra
 
-instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure (AlonzoEra c)
+instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure AlonzoEra
 
-instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxowPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" AlonzoUtxowPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" AlonzoUtxoPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AlonzoUtxosPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" AlonzoUtxosPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" AllegraUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" AllegraUtxoPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
 deriving instance
@@ -172,7 +172,7 @@ instance
 alonzoBbodyTransition ::
   forall era.
   ( STS (EraRule "BBODY" era)
-  , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
@@ -260,7 +260,7 @@ alonzoBbodyTransition =
             )
 
 instance
-  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  ( DSignable (Hash EraIndependentTxBody)
   , EraRule "BBODY" era ~ AlonzoBBODY era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
@@ -282,7 +282,7 @@ instance
 
   type
     Signal (AlonzoBBODY era) =
-      (Block (BHeaderView (EraCrypto era)) era)
+      (Block BHeaderView era)
 
   type Environment (AlonzoBBODY era) = BbodyEnv era
 
@@ -299,7 +299,7 @@ instance
   , BaseM ledgers ~ ShelleyBase
   , ledgers ~ EraRule "LEDGERS" era
   , STS ledgers
-  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , DSignable (Hash EraIndependentTxBody)
   , Era era
   ) =>
   Embed ledgers (AlonzoBBODY era)

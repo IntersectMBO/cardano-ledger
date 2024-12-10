@@ -10,7 +10,6 @@ where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Core (EraTx (..), upgradeTxAuxData, upgradeTxBody, upgradeTxWits)
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.TxAuxData ()
@@ -29,10 +28,8 @@ import Cardano.Ledger.Shelley.Tx (
 
 -- ========================================
 
-instance Crypto c => EraTx (MaryEra c) where
-  {-# SPECIALIZE instance EraTx (MaryEra StandardCrypto) #-}
-
-  type Tx (MaryEra c) = ShelleyTx (MaryEra c)
+instance EraTx MaryEra where
+  type Tx MaryEra = ShelleyTx MaryEra
 
   mkBasicTx = mkBasicShelleyTx
 

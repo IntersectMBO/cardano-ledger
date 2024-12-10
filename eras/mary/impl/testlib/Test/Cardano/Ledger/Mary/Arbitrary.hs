@@ -22,7 +22,6 @@ import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -75,10 +74,10 @@ instance
 -- | Variant on @multiAssetFromList@ that makes sure that generated values stay
 -- bounded within the range of a given integral type.
 multiAssetFromListBounded ::
-  forall i c.
+  forall i.
   (Bounded i, Integral i) =>
-  [(PolicyID c, AssetName, i)] ->
-  MultiAsset c
+  [(PolicyID, AssetName, i)] ->
+  MultiAsset
 multiAssetFromListBounded =
   foldr
     (\(p, n, fromIntegral -> i) ans -> ConcreteValue.insertMultiAsset comb p n i ans)
@@ -90,7 +89,7 @@ multiAssetFromListBounded =
         (fromIntegral $ minBound @i)
         (min (fromIntegral $ maxBound @i) (a + b))
 
-instance Crypto c => Arbitrary (PolicyID c) where
+instance Arbitrary PolicyID where
   arbitrary =
     PolicyID . ScriptHash
       <$> oneof
@@ -98,7 +97,7 @@ instance Crypto c => Arbitrary (PolicyID c) where
         , elements hashOfDigitByteStrings
         ]
 
-genMultiAssetTriple :: Crypto c => Gen Int64 -> Gen (PolicyID c, AssetName, Int64)
+genMultiAssetTriple :: Gen Int64 -> Gen (PolicyID, AssetName, Int64)
 genMultiAssetTriple genAmount = (,,) <$> arbitrary <*> arbitrary <*> genAmount
 
 -- When we generate a number of MultiAssets all at once, that number happens to have
@@ -127,7 +126,7 @@ genMultiAssetTriple genAmount = (,,) <$> arbitrary <*> arbitrary <*> genAmount
 --   1. The asset names and policy ids are deduplicated
 --   2. Not all generated asset names are 32-bytes long
 -- But, exceeding this number does make the probability of causing overflow > 0.
-genMultiAsset :: forall c. Crypto c => Gen Integer -> Gen (MultiAsset c)
+genMultiAsset :: Gen Integer -> Gen MultiAsset
 genMultiAsset genAmount = do
   ma <-
     oneof
@@ -139,13 +138,13 @@ genMultiAsset genAmount = do
     else scale (`div` 2) $ genMultiAsset genAmount
 
 -- | For tests, because `insertMultiAsset` called through `genMultiAsset` filters out zero values
-genMultiAssetZero :: Crypto c => Gen (MultiAsset c)
+genMultiAssetZero :: Gen MultiAsset
 genMultiAssetZero = MultiAsset <$> genNonEmptyMap arbitrary (genNonEmptyMap arbitrary (pure 0))
 
 -- For negative tests, we need a definite generator that will produce just large-enough MultiAssets
 -- that will fail decoding, but not large-enough to consume too much resource.
 -- The first Bool argument indicates whether the generation is for use in a MaryValue (MaryValue MultiAssets have Positive values)
-genMultiAssetToFail :: forall c. Crypto c => Bool -> Gen (MultiAsset c)
+genMultiAssetToFail :: Bool -> Gen MultiAsset
 genMultiAssetToFail isForMaryValue = do
   let genAssetNameToFail = AssetName <$> genShortByteString 32
       genPolicyIDToFail = PolicyID . ScriptHash . castHash . hashWith id <$> genByteString 28
@@ -182,7 +181,7 @@ genMultiAssetToFail isForMaryValue = do
     then pure $ MultiAsset ma
     else genMultiAssetToFail isForMaryValue
 
-instance Crypto c => Arbitrary (MultiAsset c) where
+instance Arbitrary MultiAsset where
   arbitrary =
     genMultiAsset $
       toInteger
@@ -191,7 +190,7 @@ instance Crypto c => Arbitrary (MultiAsset c) where
           , choose (minBound :: Int, -1)
           ]
 
-genEmptyMultiAsset :: Crypto c => Gen (MultiAsset c)
+genEmptyMultiAsset :: Gen MultiAsset
 genEmptyMultiAsset =
   MultiAsset <$> genNonEmptyMap arbitrary (pure Map.empty)
 
@@ -219,17 +218,17 @@ genNegativeInt =
     , negate . getPositive <$> arbitrary
     ]
 
-genMaryValue :: Gen (MultiAsset c) -> Gen (MaryValue c)
+genMaryValue :: Gen MultiAsset -> Gen MaryValue
 genMaryValue genMA = do
   i <- toInteger <$> genNonNegativeInt
   ma <- genMA
   pure $ MaryValue (Coin i) ma
 
-instance Crypto c => Arbitrary (MaryValue c) where
+instance Arbitrary MaryValue where
   arbitrary =
     genMaryValue $ genMultiAsset $ toInteger <$> genPositiveInt
 
-instance Crypto c => Arbitrary (CompactForm (MaryValue c)) where
+instance Arbitrary (CompactForm MaryValue) where
   arbitrary = toCompactMaryValue <$> arbitrary
     where
       toCompactMaryValue v =

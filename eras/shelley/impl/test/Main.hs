@@ -2,7 +2,7 @@
 
 module Main where
 
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import qualified Test.Cardano.Ledger.Shelley.Binary.CddlSpec as Cddl
@@ -15,5 +15,5 @@ main =
     describe "Shelley" $ do
       Binary.spec
       Cddl.spec
-      Imp.spec @Shelley
-      roundTripJsonEraSpec @Shelley
+      Imp.spec @ShelleyEra
+      roundTripJsonEraSpec @ShelleyEra

@@ -29,7 +29,6 @@ module Cardano.Ledger.Allegra.TxAuxData (
 )
 where
 
-import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
@@ -45,7 +44,6 @@ import Cardano.Ledger.Core (
   Era (..),
   EraTxAuxData (..),
  )
-import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
@@ -96,8 +94,8 @@ data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
 class EraTxAuxData era => AllegraEraTxAuxData era where
   timelockScriptsTxAuxDataL :: Lens' (TxAuxData era) (StrictSeq (Timelock era))
 
-instance Crypto c => EraTxAuxData (AllegraEra c) where
-  type TxAuxData (AllegraEra c) = AllegraTxAuxData (AllegraEra c)
+instance EraTxAuxData AllegraEra where
+  type TxAuxData AllegraEra = AllegraTxAuxData AllegraEra
 
   mkBasicTxAuxData = AllegraTxAuxData mempty mempty
 
@@ -113,7 +111,7 @@ metadataAllegraTxAuxDataL :: Era era => Lens' (AllegraTxAuxData era) (Map Word64
 metadataAllegraTxAuxDataL =
   lensMemoRawType atadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
 
-instance Crypto c => AllegraEraTxAuxData (AllegraEra c) where
+instance AllegraEraTxAuxData AllegraEra where
   timelockScriptsTxAuxDataL = timelockScriptsAllegraTxAuxDataL
 
 timelockScriptsAllegraTxAuxDataL ::
@@ -121,7 +119,7 @@ timelockScriptsAllegraTxAuxDataL ::
 timelockScriptsAllegraTxAuxDataL =
   lensMemoRawType atadrTimelock $ \txAuxDataRaw ts -> txAuxDataRaw {atadrTimelock = ts}
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (AllegraTxAuxDataRaw era)
+deriving instance Show (AllegraTxAuxDataRaw era)
 
 deriving instance Era era => NoThunks (AllegraTxAuxDataRaw era)
 
@@ -136,12 +134,10 @@ instance Memoized AllegraTxAuxData where
 
 type instance MemoHashIndex AllegraTxAuxDataRaw = EraIndependentTxAuxData
 
-instance c ~ EraCrypto era => HashAnnotated (AllegraTxAuxData era) EraIndependentTxAuxData c where
+instance HashAnnotated (AllegraTxAuxData era) EraIndependentTxAuxData where
   hashAnnotated = getMemoSafeHash
 
-deriving newtype instance
-  HashAlgorithm (HASH (EraCrypto era)) =>
-  Show (AllegraTxAuxData era)
+deriving newtype instance Show (AllegraTxAuxData era)
 
 deriving newtype instance Era era => NoThunks (AllegraTxAuxData era)
 

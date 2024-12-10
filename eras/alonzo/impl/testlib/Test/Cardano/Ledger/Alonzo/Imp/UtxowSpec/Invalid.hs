@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (
@@ -238,7 +238,7 @@ spec = describe "Invalid transactions" $ do
               [injectFailure $ MissingVKeyWitnessesUTXOW [asWitness collateralHash]]
 
         -- Post-Alonzo eras produce additional post-Alonzo predicate failures that we can't include here
-        unless (lang > eraMaxLanguage @Alonzo) $ do
+        unless (lang > eraMaxLanguage @AlonzoEra) $ do
           describe "Extra Redeemer" $ do
             let
               testPurpose purpose = do

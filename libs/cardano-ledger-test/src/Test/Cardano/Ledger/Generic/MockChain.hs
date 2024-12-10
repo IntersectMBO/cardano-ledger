@@ -86,7 +86,7 @@ data MockChainEvent era
   | MockChainFromLedgersEvent !(ShelleyLedgersEvent era)
 
 data MockBlock era = MockBlock
-  { mbIssuer :: !(KeyHash 'StakePool (EraCrypto era))
+  { mbIssuer :: !(KeyHash 'StakePool)
   , mbSlot :: !SlotNo
   , mbTrans :: !(StrictSeq (Tx era))
   }
@@ -176,7 +176,7 @@ instance
 instance
   ( STS (ShelleyTICK era)
   , Signal (EraRule "RUPD" era) ~ SlotNo
-  , State (EraRule "RUPD" era) ~ StrictMaybe (PulsingRewUpdate (EraCrypto era))
+  , State (EraRule "RUPD" era) ~ StrictMaybe PulsingRewUpdate
   , Environment (EraRule "RUPD" era) ~ RupdEnv era
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo

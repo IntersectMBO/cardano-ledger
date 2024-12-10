@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -113,7 +112,7 @@ depositsAndRefunds ::
   (EraPParams era, ShelleyEraTxCert era) =>
   PParams era ->
   [TxCert era] ->
-  Map (Credential 'Staking (EraCrypto era)) Coin ->
+  Map (Credential 'Staking) Coin ->
   Coin
 depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) certificates
   where
@@ -128,7 +127,7 @@ depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) cert
 
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
 --  Era and later, where inline Scripts are allowed, they should not appear in this set.
-scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (EraCrypto era))
+scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set ScriptHash
 scriptWitsNeeded' Conway utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
@@ -151,7 +150,7 @@ scriptWitsNeeded' Shelley utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptWitsNeeded' #-}
 
-scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (EraCrypto era))
+scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set ScriptHash
 scriptsNeeded' Conway utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 scriptsNeeded' Babbage utxo txBody =
@@ -169,13 +168,13 @@ scriptsNeeded' Shelley utxo txBody =
 txInBalance ::
   forall era.
   EraTxOut era =>
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
   MUtxo era ->
   Coin
 txInBalance txinSet m = coinBalance (UTxO (restrictKeys m txinSet))
 
 -- | Break a TxOut into its mandatory and optional parts
-txoutFields :: Proof era -> TxOut era -> (Addr (EraCrypto era), Value era, [TxOutField era])
+txoutFields :: Proof era -> TxOut era -> (Addr, Value era, [TxOutField era])
 txoutFields Conway (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
 txoutFields Babbage (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
 txoutFields Alonzo (AlonzoTxOut addr val dh) = (addr, val, [DHash dh])
@@ -220,7 +219,7 @@ txoutEvidence ::
   forall era.
   Proof era ->
   TxOut era ->
-  ([Credential 'Payment (EraCrypto era)], Maybe (DataHash (EraCrypto era)))
+  ([Credential 'Payment], Maybe DataHash)
 txoutEvidence Alonzo (AlonzoTxOut addr _ (SJust dh)) =
   (addrCredentials addr, Just dh)
 txoutEvidence Alonzo (AlonzoTxOut addr _ SNothing) =
@@ -245,21 +244,21 @@ txoutEvidence Shelley (ShelleyTxOut addr _) =
   (addrCredentials addr, Nothing)
 {-# NOINLINE txoutEvidence #-}
 
-addrCredentials :: Addr c -> [Credential 'Payment c]
+addrCredentials :: Addr -> [Credential 'Payment]
 addrCredentials addr = maybe [] (: []) (paymentCredAddr addr)
 
-paymentCredAddr :: Addr c -> Maybe (Credential 'Payment c)
+paymentCredAddr :: Addr -> Maybe (Credential 'Payment)
 paymentCredAddr (Addr _ cred _) = Just cred
 paymentCredAddr _ = Nothing
 
-stakeCredAddr :: Addr c -> Maybe (Credential 'Staking c)
+stakeCredAddr :: Addr -> Maybe (Credential 'Staking)
 stakeCredAddr (Addr _ _ (StakeRefBase cred)) = Just cred
 stakeCredAddr _ = Nothing
 
 getBody :: EraTx era => Proof era -> Tx era -> TxBody era
 getBody _ tx = tx ^. bodyTxL
 
-getCollateralInputs :: Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
+getCollateralInputs :: Proof era -> TxBody era -> Set TxIn
 getCollateralInputs Conway tx = tx ^. collateralInputsTxBodyL
 getCollateralInputs Babbage tx = collateralInputs' tx
 getCollateralInputs Alonzo tx = collateral' tx
@@ -277,17 +276,17 @@ getCollateralOutputs Allegra _ = []
 getCollateralOutputs Shelley _ = []
 {-# NOINLINE getCollateralOutputs #-}
 
-getInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
+getInputs :: EraTxBody era => Proof era -> TxBody era -> Set TxIn
 getInputs _ tx = tx ^. inputsTxBodyL
 
 getOutputs :: EraTxBody era => Proof era -> TxBody era -> StrictSeq (TxOut era)
 getOutputs _ tx = tx ^. outputsTxBodyL
 
 getScriptWits ::
-  EraTxWits era => Proof era -> TxWits era -> Map (ScriptHash (EraCrypto era)) (Script era)
+  EraTxWits era => Proof era -> TxWits era -> Map ScriptHash (Script era)
 getScriptWits _ tx = tx ^. scriptTxWitsL
 
-allInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
+allInputs :: EraTxBody era => Proof era -> TxBody era -> Set TxIn
 allInputs _ txb = txb ^. allInputsTxBodyF
 
 getWitnesses :: EraTx era => Proof era -> Tx era -> TxWits era
@@ -332,7 +331,7 @@ createRUpdNonPulsing' ::
   forall era.
   Proof era ->
   Model era ->
-  RewardUpdateOld (EraCrypto era)
+  RewardUpdateOld
 createRUpdNonPulsing' proof model =
   let bm = BlocksMade $ mBcur model -- TODO or should this be mBprev?
       ss = mSnapshots model
@@ -361,7 +360,7 @@ languagesUsed ::
   Proof era ->
   Tx era ->
   UTxO era ->
-  Set (ScriptHash (EraCrypto era)) ->
+  Set ScriptHash ->
   Set Language
 languagesUsed proof tx utxo sNeeded = case proof of
   Shelley -> Set.empty
@@ -378,7 +377,7 @@ languages ::
   (EraUTxO era, AlonzoEraScript era) =>
   Tx era ->
   UTxO era ->
-  Set (ScriptHash (EraCrypto era)) ->
+  Set ScriptHash ->
   Set Language
 languages tx utxo sNeeded = Map.foldl' accum Set.empty allScripts
   where

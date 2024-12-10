@@ -20,7 +20,6 @@ import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..), PState (..), VState (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -50,9 +49,9 @@ import Lens.Micro ((^.))
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-type instance TranslationContext (AlonzoEra c) = AlonzoGenesis
+type instance TranslationContext AlonzoEra = AlonzoGenesis
 
-instance Crypto c => TranslateEra (AlonzoEra c) NewEpochState where
+instance TranslateEra AlonzoEra NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
@@ -65,10 +64,10 @@ instance Crypto c => TranslateEra (AlonzoEra c) NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) PParams where
+instance TranslateEra AlonzoEra PParams where
   translateEra (AlonzoGenesisWrapper upgradeArgs) = pure . upgradePParams upgradeArgs
 
-instance Crypto c => TranslateEra (AlonzoEra c) FuturePParams where
+instance TranslateEra AlonzoEra FuturePParams where
   translateEra ctxt = \case
     NoPParamsUpdate -> pure NoPParamsUpdate
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
@@ -76,8 +75,8 @@ instance Crypto c => TranslateEra (AlonzoEra c) FuturePParams where
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
 
-instance Crypto c => TranslateEra (AlonzoEra c) Tx where
-  type TranslationError (AlonzoEra c) Tx = DecoderError
+instance TranslateEra AlonzoEra Tx where
+  type TranslationError AlonzoEra Tx = DecoderError
   translateEra _ctxt (Tx tx) = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
@@ -93,7 +92,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) Tx where
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
+instance TranslateEra AlonzoEra EpochState where
   translateEra ctxt es =
     return
       EpochState
@@ -103,21 +102,21 @@ instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
         , esNonMyopic = esNonMyopic es
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) DState where
+instance TranslateEra AlonzoEra DState where
   translateEra _ DState {..} = pure DState {..}
 
-instance Crypto c => TranslateEra (AlonzoEra c) CommitteeState where
+instance TranslateEra AlonzoEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance Crypto c => TranslateEra (AlonzoEra c) VState where
+instance TranslateEra AlonzoEra VState where
   translateEra ctx VState {..} = do
     committeeState <- translateEra ctx vsCommitteeState
     pure VState {vsCommitteeState = committeeState, ..}
 
-instance Crypto c => TranslateEra (AlonzoEra c) PState where
+instance TranslateEra AlonzoEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance Crypto c => TranslateEra (AlonzoEra c) CertState where
+instance TranslateEra AlonzoEra CertState where
   translateEra ctxt ls =
     pure
       CertState
@@ -126,7 +125,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) CertState where
         , certVState = translateEra' ctxt $ certVState ls
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) LedgerState where
+instance TranslateEra AlonzoEra LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
@@ -134,7 +133,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) LedgerState where
         , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) UTxOState where
+instance TranslateEra AlonzoEra UTxOState where
   translateEra ctxt us =
     return
       UTxOState
@@ -146,11 +145,11 @@ instance Crypto c => TranslateEra (AlonzoEra c) UTxOState where
         , utxosDonation = utxosDonation us
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) UTxO where
+instance TranslateEra AlonzoEra UTxO where
   translateEra _ctxt utxo =
     return $ UTxO $ upgradeTxOut `Map.map` unUTxO utxo
 
-instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGovState where
+instance TranslateEra AlonzoEra ShelleyGovState where
   translateEra ctxt ps =
     return
       ShelleyGovState
@@ -161,6 +160,6 @@ instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGovState where
         , sgsFuturePParams = translateEra' ctxt $ sgsFuturePParams ps
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) ProposedPPUpdates where
+instance TranslateEra AlonzoEra ProposedPPUpdates where
   translateEra _ctxt (ProposedPPUpdates ppup) =
     return $ ProposedPPUpdates $ fmap (upgradePParamsUpdate def) ppup

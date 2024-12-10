@@ -8,8 +8,6 @@
 
 module Test.Cardano.Ledger.Alonzo.Tools (tests) where
 
-import Cardano.Crypto.DSIGN
-import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
@@ -18,7 +16,6 @@ import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Api.Tx (RedeemerReport, TransactionScriptFailure (..), evalTxExUnits)
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, inject)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus (
   Data (..),
   ExUnits (..),
@@ -133,7 +130,6 @@ exampleExUnitCalc ::
   ( BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , Signable (DSIGN (EraCrypto era)) (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , STS (EraRule "UTXOS" era)
   , AlonzoEraTx era
@@ -162,9 +158,6 @@ exampleInvalidExUnitCalc ::
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
-  , Signable
-      (DSIGN (EraCrypto era))
-      (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , EraPlutusContext era
   ) =>
   Proof era ->
@@ -192,7 +185,6 @@ exampleTx ::
   ( Scriptic era
   , AlonzoEraTx era
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
-  , Signable (DSIGN (EraCrypto era)) (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   PlutusPurpose AsIx era ->

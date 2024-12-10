@@ -1,11 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
-
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.UMap (UMap)
 import qualified Cardano.Ledger.UMap as UMap
 
@@ -24,13 +16,13 @@ main = do
   defaultMain $
     map (\c -> env (generateUMap c) umapSizeBench) (map (* 10000) [1 .. 2])
   where
-    umapSizeBench :: UMap StandardCrypto -> Benchmark
+    umapSizeBench :: UMap -> Benchmark
     umapSizeBench umap =
       bench ("compositeSize (" ++ show (compositeSize umap) ++ ")") (nf compositeSize umap)
 
 -- -------------------------------------------------------------------------------------------------
 
-compositeSize :: UMap StandardCrypto -> Int
+compositeSize :: UMap -> Int
 compositeSize umap =
   sum
     [ UMap.size (UMap.RewDepUView umap)
@@ -40,7 +32,7 @@ compositeSize umap =
     ]
 
 -- Generate a UView of exactly the size specified.
-generateUMap :: Int -> IO (UMap StandardCrypto)
+generateUMap :: Int -> IO UMap
 generateUMap size =
   generate $ do
     ptrs <- replicateM size arbitrary
