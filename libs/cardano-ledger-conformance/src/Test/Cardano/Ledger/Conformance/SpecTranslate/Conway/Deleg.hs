@@ -36,7 +36,6 @@ import Test.Cardano.Ledger.Conformance (
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
-import Test.Cardano.Ledger.Conway.TreeDiff
 
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
@@ -81,7 +80,7 @@ instance SpecTranslate ctx (ConwayDelegCert c) where
 instance SpecTranslate ctx (ConwayDelegPredFailure era) where
   type SpecRep (ConwayDelegPredFailure era) = OpaqueErrorString
 
-  toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
+  toSpecRep = pure . showOpaqueErrorString
 
 instance SpecTranslate ctx (DState era) where
   type SpecRep (DState era) = Agda.DState

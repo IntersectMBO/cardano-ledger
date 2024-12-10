@@ -19,7 +19,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (LedgerEnv, UtxoEnv (..), ledgerSlotNoL)
 import Control.State.Transition
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
 import Data.List.NonEmpty
 import Lens.Micro
@@ -44,9 +44,6 @@ testImpConformance ::
   , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (ExecState ConwayFn "LEDGER" era)
   , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (ExecEnvironment ConwayFn "LEDGER" era)
   , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (TxWits era)
-  , NFData (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
-  , Eq (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
-  , FixupSpecRep (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
   , HasCallStack
   , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecRep (TxBody era) ~ Agda.TxBody
@@ -88,7 +85,7 @@ testImpConformance _ impRuleResult env state signal = do
       <*> expectRight (runSpecTransM ctx $ toSpecRep signal)
   -- get agda response
   agdaResponse <-
-    fmap (bimap (fixup <$>) fixup) $
+    fmap (second fixup) $
       evaluateDeep $
         runAgdaRule @ConwayFn @"LEDGER" @era specEnv specState specSignal
   -- translate imp response
@@ -96,7 +93,7 @@ testImpConformance _ impRuleResult env state signal = do
     expectRightExpr $
       runSpecTransM ctx $
         bimapM
-          (traverse toTestRep)
+          (pure . showOpaqueErrorString)
           (toTestRep . inject @_ @(ExecState ConwayFn "LEDGER" era) . fst)
           impRuleResult
 
@@ -108,7 +105,7 @@ spec =
   withImpInit @(LedgerSpec Conway) $
     modifyImpInitProtVer @Conway (natVersion @10) $
       modifyImpInitExpectLedgerRuleConformance testImpConformance $ do
-        describe "Basic imp conformance" $
+        describe "Basic imp conformance" $ do
           it "Submit constitution" $ do
             _ <- submitConstitution @Conway SNothing
             passNEpochs 2

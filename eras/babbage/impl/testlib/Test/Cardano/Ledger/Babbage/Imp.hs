@@ -27,7 +27,7 @@ spec ::
   forall era.
   ( Arbitrary (TxAuxData era)
   , AlonzoEraImp era
-  , BabbageEraTxOut era
+  , BabbageEraTxBody era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era

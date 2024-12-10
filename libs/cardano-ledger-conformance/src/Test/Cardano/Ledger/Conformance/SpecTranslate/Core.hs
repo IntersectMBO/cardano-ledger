@@ -17,12 +17,15 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   SpecTranslationError,
   SpecTranslate (..),
   FixupSpecRep (..),
+  OpaqueErrorString (..),
   SpecTransM,
   runSpecTransM,
   askCtx,
   withCtx,
   toTestRep,
-  OpaqueErrorString (..),
+  showOpaqueErrorString,
+  unComputationResult,
+  unComputationResult_,
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
@@ -30,26 +33,15 @@ import Constrained.Base ()
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (ExceptT, MonadError (..), runExceptT)
 import Control.Monad.Reader (MonadReader (..), Reader, asks, runReader)
+import Data.Foldable (Foldable (..))
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Void (Void)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), V1, (:*:) (..), (:+:) (..))
-import Test.Cardano.Ledger.TreeDiff (Expr (..), ToExpr (..))
-
--- | OpaqueErrorString behaves like unit in comparisons, but contains an
--- error string that can be displayed.
-newtype OpaqueErrorString = OpaqueErrorString String
-  deriving (Generic, Show)
-
-instance Eq OpaqueErrorString where
-  _ == _ = True
-
-instance ToExpr OpaqueErrorString where
-  -- Using `toExpr` on a `String` displays escape codes in place of unicode
-  -- characters (e.g. "≡" becomes "\8802")
-  -- TODO figure out a less hacky way to solve this problem
-  toExpr (OpaqueErrorString x) = App x []
-
-instance NFData OpaqueErrorString
+import qualified Lib as Agda
+import Test.Cardano.Ledger.TreeDiff (Expr (..), ToExpr (..), showExpr)
 
 type SpecTranslationError = Text
 
@@ -103,3 +95,29 @@ withCtx ctx m = do
   case runSpecTransM ctx m of
     Right x -> pure x
     Left e -> throwError e
+
+-- | OpaqueErrorString behaves like unit in comparisons, but contains an
+-- error string that can be displayed.
+newtype OpaqueErrorString = OpaqueErrorString (NonEmpty Text)
+  deriving (Generic, Show, Semigroup)
+
+-- | This implementation violates referential transparency. Do not rely on it
+-- unless you know what you're doing.
+instance Eq OpaqueErrorString where
+  _ == _ = True
+
+instance ToExpr OpaqueErrorString where
+  toExpr (OpaqueErrorString x) = App (T.unpack . T.unlines $ toList x) []
+
+instance NFData OpaqueErrorString
+
+showOpaqueErrorString :: ToExpr a => a -> OpaqueErrorString
+showOpaqueErrorString = OpaqueErrorString . pure . T.pack . showExpr
+
+unComputationResult :: Agda.ComputationResult Text a -> Either OpaqueErrorString a
+unComputationResult (Agda.Success x) = Right x
+unComputationResult (Agda.Failure e) = Left (OpaqueErrorString $ pure e)
+
+unComputationResult_ :: Agda.ComputationResult Void a -> Either e a
+unComputationResult_ (Agda.Success x) = Right x
+unComputationResult_ (Agda.Failure x) = case x of {}

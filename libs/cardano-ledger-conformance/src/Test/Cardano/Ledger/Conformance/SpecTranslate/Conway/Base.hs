@@ -124,6 +124,7 @@ import Test.Cardano.Ledger.Conformance (
   SpecTranslationError,
   askCtx,
   hashToInteger,
+  showOpaqueErrorString,
   withCtx,
  )
 import Test.Cardano.Ledger.Constrained.Conway (DepositPurpose (..), IsConwayUniv)
@@ -719,7 +720,7 @@ instance
   where
   type SpecRep (ConwayGovPredFailure era) = OpaqueErrorString
 
-  toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
+  toSpecRep = pure . showOpaqueErrorString
 
 instance SpecTranslate ctx (GovPurposeId r c) where
   type SpecRep (GovPurposeId r c) = (Agda.TxId, Integer)
@@ -1038,7 +1039,7 @@ instance
   where
   type SpecRep (ConwayCertPredFailure era) = OpaqueErrorString
 
-  toSpecRep = pure . OpaqueErrorString . showExpr
+  toSpecRep = pure . showOpaqueErrorString
 
 instance (SpecTranslate ctx a, Compactible a) => SpecTranslate ctx (CompactForm a) where
   type SpecRep (CompactForm a) = SpecRep a

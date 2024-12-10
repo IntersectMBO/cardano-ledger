@@ -16,17 +16,16 @@ import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Data.Bifunctor (Bifunctor (..))
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Lib as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
-  OpaqueErrorString (..),
   SpecTranslate,
-  computationResultToEither,
   runSpecTransM,
+  showOpaqueErrorString,
   toSpecRep,
+  unComputationResult,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctions)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo (genUtxoExecContext)
@@ -57,9 +56,7 @@ instance
   stateSpec = utxoStateSpec
   signalSpec ctx _ _ = utxoTxSpec ctx
   runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.utxowStep externalFunctions env st sig
+    unComputationResult $ Agda.utxowStep externalFunctions env st sig
   extraInfo globals ctx env st sig _ =
     let
       result =
@@ -68,7 +65,7 @@ instance
             <$> toSpecRep env
             <*> toSpecRep st
             <*> toSpecRep sig
-      stFinal = runSTS @"UTXO" @Conway globals env st sig
+      stFinal = first showOpaqueErrorString $ runSTS @"UTXO" @Conway globals env st sig
       utxoInfo = extraInfo @fn @"UTXO" @Conway globals ctx env st sig stFinal
      in
       PP.vcat

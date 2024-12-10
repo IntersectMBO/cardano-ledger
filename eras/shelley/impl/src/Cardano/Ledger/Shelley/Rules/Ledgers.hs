@@ -94,6 +94,10 @@ newtype ShelleyLedgersPredFailure era
   = LedgerFailure (PredicateFailure (EraRule "LEDGER" era)) -- Subtransition Failures
   deriving (Generic)
 
+instance
+  NFData (PredicateFailure (EraRule "LEDGER" era)) =>
+  NFData (ShelleyLedgersPredFailure era)
+
 type instance EraRuleFailure "LEDGERS" (ShelleyEra c) = ShelleyLedgersPredFailure (ShelleyEra c)
 
 type instance EraRuleEvent "LEDGERS" (ShelleyEra c) = ShelleyLedgersEvent (ShelleyEra c)

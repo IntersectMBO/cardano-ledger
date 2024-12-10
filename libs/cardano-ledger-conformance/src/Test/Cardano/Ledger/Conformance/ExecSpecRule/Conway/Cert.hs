@@ -19,10 +19,7 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Constrained (lit)
-import Data.Bifunctor (first)
-import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
-import qualified Data.Text as T
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
@@ -41,10 +38,7 @@ instance
   environmentSpec _ = certEnvSpec
   stateSpec ctx _ = certStateSpec (lit $ ccecDelegatees ctx)
   signalSpec _ = txCertSpec
-  runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.certStep env st sig
+  runAgdaRule env st sig = unComputationResult $ Agda.certStep env st sig
 
   classOf = Just . nameTxCert
 

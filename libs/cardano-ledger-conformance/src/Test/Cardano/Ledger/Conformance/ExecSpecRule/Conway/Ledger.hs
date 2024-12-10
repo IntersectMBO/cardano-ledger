@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledger (ConwayLedgerE
 
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Identity (Identity)
-import qualified Data.List.NonEmpty as NE
 
 import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe)
 import Cardano.Ledger.Conway.Core (
@@ -35,11 +34,11 @@ import Cardano.Ledger.Conway.Rules (EnactState)
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   FixupSpecRep (..),
-  OpaqueErrorString (..),
   checkConformance,
-  computationResultToEither,
   runSpecTransM,
+  showOpaqueErrorString,
   toTestRep,
+  unComputationResult,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (IsConwayUniv, UtxoExecContext (..), utxoStateSpec)
@@ -62,7 +61,6 @@ import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
 import Data.Bitraversable (bimapM)
-import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Lens.Micro.Mtl (use)
 import qualified Lib as Agda
@@ -150,10 +148,7 @@ instance
     let UtxoExecContext {..} = clecUtxoExecContext
      in constrained (==. lit uecTx)
 
-  runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.ledgerStep env st sig
+  runAgdaRule env st sig = unComputationResult $ Agda.ledgerStep env st sig
 
   extraInfo
     globals
@@ -171,7 +166,9 @@ instance
         stFinal
       where
         utxoEnv = UtxoEnv ledgerSlotNo ledgerPp lsCertState
-        stFinal = runSTS @"UTXOW" @Conway globals utxoEnv lsUTxOState sig
+        stFinal =
+          first showOpaqueErrorString $
+            runSTS @"UTXOW" @Conway globals utxoEnv lsUTxOState sig
 
   testConformance ctx env st sig = property $ do
     (specEnv, specSt, specSig) <-
@@ -185,7 +182,7 @@ instance
     logDoc $ "specSt:\n" <> ansiExpr specSt
     logDoc $ "specSig:\n" <> ansiExpr specSig
     agdaResTest <-
-      fmap (bimap (fixup <$>) fixup) $
+      fmap (second fixup) $
         impAnn "Deep evaluating Agda output" $
           evaluateDeep $
             runAgdaRule @fn @"LEDGER" @Conway specEnv specSt specSig
@@ -196,9 +193,19 @@ instance
       impAnn "Translating implementation values to SpecRep" $
         expectRightExpr $
           runSpecTransM ctx $
-            bimapM (traverse toTestRep) (toTestRep . inject @_ @(ExecState fn "LEDGER" Conway) . fst) implRes
+            bimapM
+              (fmap showOpaqueErrorString . traverse toTestRep)
+              (toTestRep . inject @_ @(ExecState fn "LEDGER" Conway) . fst)
+              implRes
     globals <- use impGlobalsL
-    let extra = extraInfo @fn @"LEDGER" @Conway globals ctx (inject env) (inject st) (inject sig) implRes
+    let extra =
+          extraInfo @fn @"LEDGER" @Conway
+            globals
+            ctx
+            (inject env)
+            (inject st)
+            (inject sig)
+            (first showOpaqueErrorString implRes)
     logDoc extra
     checkConformance @"LEDGER" @Conway @fn
       ctx

@@ -10,8 +10,12 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxow () where
 
 import Cardano.Ledger.Conway.Core (AlonzoEraScript (..), AsItem, AsIx, Era, EraRule, EraTxCert (..))
 import Cardano.Ledger.Conway.Rules (ConwayUtxowPredFailure, PredicateFailure)
-import Test.Cardano.Ledger.Conformance (OpaqueErrorString (..), SpecTranslate (..))
-import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr, showExpr)
+import Test.Cardano.Ledger.Conformance (
+  OpaqueErrorString (..),
+  SpecTranslate (..),
+  showOpaqueErrorString,
+ )
+import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
 
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo ()
 
@@ -26,4 +30,4 @@ instance
   where
   type SpecRep (ConwayUtxowPredFailure era) = OpaqueErrorString
 
-  toSpecRep = pure . OpaqueErrorString . showExpr
+  toSpecRep = pure . showOpaqueErrorString
