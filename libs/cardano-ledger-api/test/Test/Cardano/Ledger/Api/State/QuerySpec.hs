@@ -68,7 +68,6 @@ spec = do
 committeeMembersStateSpec ::
   forall era.
   ( ConwayEraGov era
-  , EraTxOut era
   , Default (EpochState era)
   , Default (StashedAVVMAddresses era)
   , GovState era ~ ConwayGovState era
