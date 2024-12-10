@@ -1,154 +1,175 @@
-cabal-version:      3.0
-name:               cardano-ledger-allegra
-version:            1.6.1.0
-license:            Apache-2.0
-maintainer:         operations@iohk.io
-author:             IOHK
-bug-reports:        https://github.com/intersectmbo/cardano-ledger/issues
-synopsis:           Allegra ledger era that introduces time lock support.
+cabal-version: 3.0
+name: cardano-ledger-allegra
+version: 1.6.1.0
+license: Apache-2.0
+maintainer: operations@iohk.io
+author: IOHK
+bug-reports: https://github.com/intersectmbo/cardano-ledger/issues
+synopsis: Allegra ledger era that introduces time lock support.
 description:
-    This package builds upon Shelley era with support for timelocks.
+  This package builds upon Shelley era with support for timelocks.
 
-category:           Network
-build-type:         Simple
-data-files:         cddl-files/allegra.cddl
+category: Network
+build-type: Simple
+data-files: cddl-files/allegra.cddl
 extra-source-files: CHANGELOG.md
 
 source-repository head
-    type:     git
-    location: https://github.com/intersectmbo/cardano-ledger
-    subdir:   eras/allegra/impl
+  type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  subdir: eras/allegra/impl
 
 library
-    exposed-modules:
-        Cardano.Ledger.Allegra
-        Cardano.Ledger.Allegra.Core
-        Cardano.Ledger.Allegra.Rules
-        Cardano.Ledger.Allegra.Scripts
-        Cardano.Ledger.Allegra.Transition
-        Cardano.Ledger.Allegra.Translation
-        Cardano.Ledger.Allegra.Tx
-        Cardano.Ledger.Allegra.TxAuxData
-        Cardano.Ledger.Allegra.TxBody
-        Cardano.Ledger.Allegra.TxBody.Internal
+  exposed-modules:
+    Cardano.Ledger.Allegra
+    Cardano.Ledger.Allegra.Core
+    Cardano.Ledger.Allegra.Rules
+    Cardano.Ledger.Allegra.Scripts
+    Cardano.Ledger.Allegra.Transition
+    Cardano.Ledger.Allegra.Translation
+    Cardano.Ledger.Allegra.Tx
+    Cardano.Ledger.Allegra.TxAuxData
+    Cardano.Ledger.Allegra.TxBody
+    Cardano.Ledger.Allegra.TxBody.Internal
 
-    hs-source-dirs:   src
-    other-modules:
-        Cardano.Ledger.Allegra.TxCert
-        Cardano.Ledger.Allegra.Era
-        Cardano.Ledger.Allegra.PParams
-        Cardano.Ledger.Allegra.TxOut
-        Cardano.Ledger.Allegra.TxSeq
-        Cardano.Ledger.Allegra.TxWits
-        Cardano.Ledger.Allegra.Rules.Bbody
-        Cardano.Ledger.Allegra.Rules.Deleg
-        Cardano.Ledger.Allegra.Rules.Delegs
-        Cardano.Ledger.Allegra.Rules.Delpl
-        Cardano.Ledger.Allegra.Rules.Pool
-        Cardano.Ledger.Allegra.Rules.Ppup
-        Cardano.Ledger.Allegra.Rules.Ledger
-        Cardano.Ledger.Allegra.Rules.Ledgers
-        Cardano.Ledger.Allegra.Rules.Utxo
-        Cardano.Ledger.Allegra.Rules.Utxow
-        Cardano.Ledger.Allegra.UTxO
+  hs-source-dirs: src
+  other-modules:
+    Cardano.Ledger.Allegra.Era
+    Cardano.Ledger.Allegra.PParams
+    Cardano.Ledger.Allegra.Rules.Bbody
+    Cardano.Ledger.Allegra.Rules.Deleg
+    Cardano.Ledger.Allegra.Rules.Delegs
+    Cardano.Ledger.Allegra.Rules.Delpl
+    Cardano.Ledger.Allegra.Rules.Ledger
+    Cardano.Ledger.Allegra.Rules.Ledgers
+    Cardano.Ledger.Allegra.Rules.Pool
+    Cardano.Ledger.Allegra.Rules.Ppup
+    Cardano.Ledger.Allegra.Rules.Utxo
+    Cardano.Ledger.Allegra.Rules.Utxow
+    Cardano.Ledger.Allegra.TxCert
+    Cardano.Ledger.Allegra.TxOut
+    Cardano.Ledger.Allegra.TxSeq
+    Cardano.Ledger.Allegra.TxWits
+    Cardano.Ledger.Allegra.UTxO
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
 
-    build-depends:
-        base >=4.14 && <5,
-        aeson,
-        bytestring,
-        cardano-crypto-class,
-        cardano-ledger-binary >=1.4,
-        cardano-ledger-core >=1.16 && <1.17,
-        cardano-ledger-shelley ^>=1.15,
-        cardano-strict-containers,
-        cardano-slotting,
-        cborg,
-        containers,
-        deepseq,
-        microlens,
-        nothunks,
-        small-steps >=1.1,
-        transformers,
-        validation-selective
+  build-depends:
+    aeson,
+    base >=4.14 && <5,
+    bytestring,
+    cardano-crypto-class,
+    cardano-ledger-binary >=1.4,
+    cardano-ledger-core >=1.16 && <1.17,
+    cardano-ledger-shelley ^>=1.15,
+    cardano-slotting,
+    cardano-strict-containers,
+    cborg,
+    containers,
+    deepseq,
+    microlens,
+    nothunks,
+    small-steps >=1.1,
+    transformers,
+    validation-selective,
 
 library testlib
-    exposed-modules:
-        Test.Cardano.Ledger.Allegra.Arbitrary
-        Test.Cardano.Ledger.Allegra.Binary.Cddl
-        Test.Cardano.Ledger.Allegra.CDDL
-        Test.Cardano.Ledger.Allegra.Imp
-        Test.Cardano.Ledger.Allegra.Imp.UtxowSpec
-        Test.Cardano.Ledger.Allegra.ImpTest
-        Test.Cardano.Ledger.Allegra.TreeDiff
+  exposed-modules:
+    Test.Cardano.Ledger.Allegra.Arbitrary
+    Test.Cardano.Ledger.Allegra.Binary.Cddl
+    Test.Cardano.Ledger.Allegra.CDDL
+    Test.Cardano.Ledger.Allegra.Imp
+    Test.Cardano.Ledger.Allegra.Imp.UtxowSpec
+    Test.Cardano.Ledger.Allegra.ImpTest
+    Test.Cardano.Ledger.Allegra.TreeDiff
 
-    visibility:       public
-    hs-source-dirs:   testlib
-    other-modules:    Paths_cardano_ledger_allegra
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages
+  visibility: public
+  hs-source-dirs: testlib
+  other-modules: Paths_cardano_ledger_allegra
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
 
-    build-depends:
-        base,
-        bytestring,
-        cardano-ledger-allegra,
-        cardano-crypto-class,
-        cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-        cardano-strict-containers,
-        containers,
-        cuddle,
-        generic-random,
-        heredoc,
-        microlens,
-        mtl,
-        small-steps,
-        text,
-        QuickCheck
+  build-depends:
+    QuickCheck,
+    base,
+    bytestring,
+    cardano-crypto-class,
+    cardano-ledger-allegra,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-strict-containers,
+    containers,
+    cuddle,
+    generic-random,
+    heredoc,
+    microlens,
+    mtl,
+    small-steps,
+    text,
 
 executable huddle-cddl
-    main-is:          Main.hs
-    hs-source-dirs:   huddle-cddl
-    other-modules:    Paths_cardano_ledger_allegra
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+  main-is: Main.hs
+  hs-source-dirs: huddle-cddl
+  other-modules: Paths_cardano_ledger_allegra
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
 
-    build-depends:
-        base,
-        testlib,
-        cardano-ledger-binary:testlib >=1.3.4.0
+  build-depends:
+    base,
+    cardano-ledger-binary:testlib >=1.3.4.0,
+    testlib,
 
 test-suite tests
-    type:             exitcode-stdio-1.0
-    main-is:          Main.hs
-    hs-source-dirs:   test
-    other-modules:
-        Test.Cardano.Ledger.Allegra.BinarySpec
-        Test.Cardano.Ledger.Allegra.Binary.CddlSpec
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: test
+  other-modules:
+    Test.Cardano.Ledger.Allegra.Binary.CddlSpec
+    Test.Cardano.Ledger.Allegra.BinarySpec
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
 
-    build-depends:
-        base,
-        cardano-ledger-allegra,
-        cardano-ledger-binary:testlib,
-        cardano-ledger-core:{cardano-ledger-core, testlib},
-        testlib,
-        cardano-ledger-shelley:testlib,
-        data-default,
-        testlib
+  build-depends:
+    base,
+    cardano-ledger-allegra,
+    cardano-ledger-binary:testlib,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-shelley:testlib,
+    data-default,
+    testlib,
