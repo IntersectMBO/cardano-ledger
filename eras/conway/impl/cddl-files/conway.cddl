@@ -71,6 +71,10 @@ anchor = [anchor_url : url, anchor_data_hash : $hash32]
 
 asset_name = bytes .size (0 .. 32)
 
+;               metadata: shelley
+;   transaction_metadata: shelley-ma
+; #6.259(0 ==> metadata): alonzo onwards
+; 
 auxiliary_data = metadata
                   / [transaction_metadata : metadata
                     , auxiliary_scripts : [* native_script]]
@@ -82,6 +86,11 @@ auxiliary_data = metadata
 
 auxiliary_data_hash = $hash32
 
+babbage_transaction_output = {0 : address
+                             , 1 : value
+                             , ? 2 : datum_option
+                             , ? 3 : script_ref}
+
 big_int = int / big_uint / big_nint
 
 big_nint = #6.3(bounded_bytes)
@@ -89,10 +98,11 @@ big_nint = #6.3(bounded_bytes)
 big_uint = #6.2(bounded_bytes)
 
 ; Valid blocks must also satisfy the following two constraints:
-;     1) the length of transaction_bodies and transaction_witness_sets
-;        must be the same
-;     2) every transaction_index must be strictly smaller than the
-;        length of transaction_bodies
+; 1. the length of transaction_bodies and transaction_witness_sets
+;    must be the same
+; 2. every transaction_index must be strictly smaller than the
+;    length of transaction_bodies
+; 
 block = [header
         , transaction_bodies : [* transaction_body]
         , transaction_witness_sets : [* transaction_witness_set]
@@ -145,20 +155,25 @@ committee_cold_credential = credential
 
 committee_hot_credential = credential
 
-constitution = [anchor, scripthash / nil]
+constitution = [anchor, script_hash / nil]
 
-; The format for costmdls is flexible enough to allow adding Plutus
-;  built-ins and language versions in the future.
-costmdls = {? 0 : [* int64]
-           , ? 1 : [* int64]
-           , ? 2 : [* int64]
-           , * 3 .. 255 => [* int64]}
+; The format for cost_models is flexible enough to allow adding
+; Plutus built-ins and language versions in the future.
+; 
+; Plutus v1: only 166 integers are used, but more are accepted (and ignored)
+; Plutus v2: only 175 integers are used, but more are accepted (and ignored)
+; Plutus v3: only 223 integers are used, but more are accepted (and ignored)
+; 
+; Any 8-bit unsigned number can be used as a key.
+; 
+cost_models = {? 0 : [* int64]
+              , ? 1 : [* int64]
+              , ? 2 : [* int64]
+              , * 3 .. 255 => [* int64]}
 
-credential = [0, addr_keyhash // 1, scripthash]
+credential = [0, addr_keyhash // 1, script_hash]
 
 data = #6.24(bytes .cbor plutus_data)
-
-datum_hash = $hash32
 
 datum_option = [0, $hash32 // 1, data]
 
@@ -174,7 +189,7 @@ distinct_VBytes = bytes .size 8
 
 dns_name = text .size (0 .. 128)
 
-drep = [0, addr_keyhash // 1, scripthash // 2 // 3]
+drep = [0, addr_keyhash // 1, script_hash // 2 // 3]
 
 drep_credential = credential
 
@@ -235,6 +250,8 @@ major_protocol_version = 1 .. 10
 
 metadata = {* transaction_metadatum_label => transaction_metadatum}
 
+metadata_hash = $hash32
+
 mint = multiasset<nonZeroInt64>
 
 native_script = [script_pubkey
@@ -263,10 +280,12 @@ plutus_data = constr<plutus_data>
                / big_int
                / bounded_bytes
 
-; The real type of  plutus_v1_script, plutus_v2_script and plutus_v3_script is bytes.
-; However, because we enforce uniqueness when many scripts are supplied,
-; we need to hack around for tests in order to avoid generating duplicates,
-; since the cddl tool we use for roundtrip testing doesn't generate distinct collections.
+; The real type of plutus_v1_script, plutus_v2_script and
+; plutus_v3_script is bytes. However, because we enforce
+; uniqueness when many scripts are supplied, we need to hack
+; around for tests in order to avoid generating duplicates, since
+; the cddl tool we use for roundtrip testing doesn't generate
+; distinct collections.
 ; 
 plutus_v1_script = distinct_VBytes
 
@@ -274,15 +293,13 @@ plutus_v2_script = distinct_VBytes
 
 plutus_v3_script = distinct_VBytes
 
-policy_hash = scripthash
+policy_hash = script_hash
 
-policy_id = scripthash
+policy_id = script_hash
 
 pool_keyhash = $hash28
 
-pool_metadata = [url, pool_metadata_hash]
-
-pool_metadata_hash = $hash32
+pool_metadata = [url, metadata_hash]
 
 pool_voting_thresholds = [unit_interval
                          , unit_interval
@@ -298,21 +315,43 @@ positive_coin = 1 .. 18446744073709551615
 
 positive_int = 1 .. 18446744073709551615
 
-post_alonzo_transaction_output = {0 : address
-                                 , 1 : value
-                                 , ? 2 : datum_option
-                                 , ? 3 : script_ref}
-
 potential_languages = 0 .. 255
-
-pre_babbage_transaction_output = [address
-                                 , amount : value
-                                 , ? datum_hash : datum_hash]
 
 proposal_procedure = [deposit : coin, reward_account, gov_action, anchor]
 
 proposal_procedures = nonempty_set<proposal_procedure>
 
+;  0: minfee A
+;  1: minfee B
+;  2: max block body size
+;  3: max transaction size
+;  4: max block header size
+;  5: key deposit
+;  6: pool deposit
+;  7: maximum epoch
+;  8: n_opt: desired number of stake pools
+;  9: pool pledge influence
+; 10: expansion rate
+; 11: treasury growth rate
+; 16: min pool cost
+; 17: ada per utxo byte
+; 18: cost models for script languages
+; 19: execution costs
+; 20: max tx ex units
+; 21: max block ex units
+; 22: max value size
+; 23: collateral percentage
+; 24: max collateral inputs
+; 25: pool voting thresholds
+; 26: drep voting thresholds
+; 27: min committee size
+; 28: committee term limit
+; 29: governance action validity period
+; 30: governance action deposit
+; 31: drep deposit
+; 32: drep inactivity period
+; 33: minfee refscriptcoinsperbyte
+; 
 protocol_param_update = {? 0 : coin
                         , ? 1 : coin
                         , ? 2 : uint .size 4
@@ -327,7 +366,7 @@ protocol_param_update = {? 0 : coin
                         , ? 11 : unit_interval
                         , ? 16 : coin
                         , ? 17 : coin
-                        , ? 18 : costmdls
+                        , ? 18 : cost_models
                         , ? 19 : ex_unit_prices
                         , ? 20 : ex_units
                         , ? 21 : ex_units
@@ -346,10 +385,19 @@ protocol_param_update = {? 0 : coin
 
 protocol_version = [major_protocol_version, uint]
 
+; 0: spend
+; 1: mint
+; 2: cert
+; 3: reward
+; 4: voting
+; 5: proposing
+; 
 redeemer_tag = 0 / 1 / 2 / 3 / 4 / 5
 
-; Flat Array support is included for backwards compatibility and will be removed in the next era.
-; It is recommended for tools to adopt using a Map instead of Array going forward.
+; Flat Array support is included for backwards compatibility and
+; will be removed in the next era. It is recommended for tools to
+; adopt using a Map instead of Array going forward.
+; 
 redeemers = [+ [tag : redeemer_tag
                , index : uint .size 4
                , data : plutus_data
@@ -373,85 +421,90 @@ script = [0, native_script
           // 3, plutus_v3_script]
 
 ; This is a hash of data which may affect evaluation of a script.
-;     This data consists of:
-;       - The redeemers from the transaction_witness_set (the value of field 5).
-;       - The datums from the transaction_witness_set (the value of field 4).
-;       - The value in the costmdls map corresponding to the script's language
-;         (in field 18 of protocol_param_update.)
-;     (In the future it may contain additional protocol parameters.)
+; This data consists of:
+;   - The redeemers from the transaction_witness_set (the value of field 5).
+;   - The datums from the transaction_witness_set (the value of field 4).
+;   - The value in the cost_models map corresponding to the script's language
+;     (in field 18 of protocol_param_update.)
+; (In the future it may contain additional protocol parameters.)
 ; 
-;     Since this data does not exist in contiguous form inside a transaction, it needs
-;     to be independently constructed by each recipient.
+; Since this data does not exist in contiguous form inside a transaction, it needs
+; to be independently constructed by each recipient.
 ; 
-;     The bytestring which is hashed is the concatenation of three things:
-;       redeemers || datums || language views
-;     The redeemers are exactly the data present in the transaction witness set.
-;     Similarly for the datums, if present. If no datums are provided, the middle
-;     field is omitted (i.e. it is the empty/null bytestring).
+; The bytestring which is hashed is the concatenation of three things:
+;   redeemers || datums || language views
+; The redeemers are exactly the data present in the transaction witness set.
+; Similarly for the datums, if present. If no datums are provided, the middle
+; field is omitted (i.e. it is the empty/null bytestring).
 ; 
-;     language views CDDL:
-;     { * language => script_integrity_data }
+; language views CDDL:
+; { * language => script_integrity_data }
 ; 
-;     This must be encoded canonically, using the same scheme as in
-;     RFC7049 section 3.9:
-;      - Maps, strings, and bytestrings must use a definite-length encoding
-;      - Integers must be as small as possible.
-;      - The expressions for map length, string length, and bytestring length
-;        must be as short as possible.
-;      - The keys in the map must be sorted as follows:
-;         -  If two keys have different lengths, the shorter one sorts earlier.
-;         -  If two keys have the same length, the one with the lower value
-;            in (byte-wise) lexical order sorts earlier.
+; This must be encoded canonically, using the same scheme as in
+; RFC7049 section 3.9:
+;  - Maps, strings, and bytestrings must use a definite-length encoding
+;  - Integers must be as small as possible.
+;  - The expressions for map length, string length, and bytestring length
+;    must be as short as possible.
+;  - The keys in the map must be sorted as follows:
+;     -  If two keys have different lengths, the shorter one sorts earlier.
+;     -  If two keys have the same length, the one with the lower value
+;        in (byte-wise) lexical order sorts earlier.
 ; 
-;     For PlutusV1 (language id 0), the language view is the following:
-;       - the value of costmdls map at key 0 (in other words, the script_integrity_data)
-;         is encoded as an indefinite length list and the result is encoded as a bytestring.
-;         (our apologies)
-;         For example, the script_integrity_data corresponding to the all zero costmodel for V1
-;         would be encoded as (in hex):
-;         58a89f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff
-;       - the language ID tag is also encoded twice. first as a uint then as
-;         a bytestring. (our apologies)
-;         Concretely, this means that the language version for V1 is encoded as
-;         4100 in hex.
-;     For PlutusV2 (language id 1), the language view is the following:
-;       - the value of costmdls map at key 1 is encoded as an definite length list.
-;         For example, the script_integrity_data corresponding to the all zero costmodel for V2
-;         would be encoded as (in hex):
-;         98af0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-;       - the language ID tag is encoded as expected.
-;         Concretely, this means that the language version for V2 is encoded as
-;         01 in hex.
-;     For PlutusV3 (language id 2), the language view is the following:
-;       - the value of costmdls map at key 2 is encoded as a definite length list.
+; For PlutusV1 (language id 0), the language view is the following:
+;   - the value of cost_models map at key 0 (in other words, the script_integrity_data)
+;     is encoded as an indefinite length list and the result is encoded as a bytestring.
+;     (our apologies)
+;     For example, the script_integrity_data corresponding to the all zero costmodel for V1
+;     would be encoded as (in hex):
+;     58a89f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff
+;   - the language ID tag is also encoded twice. first as a uint then as
+;     a bytestring. (our apologies)
+;     Concretely, this means that the language version for V1 is encoded as
+;     4100 in hex.
+; For PlutusV2 (language id 1), the language view is the following:
+;   - the value of cost_models map at key 1 is encoded as an definite length list.
+;     For example, the script_integrity_data corresponding to the all zero costmodel for V2
+;     would be encoded as (in hex):
+;     98af0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+;   - the language ID tag is encoded as expected.
+;     Concretely, this means that the language version for V2 is encoded as
+;     01 in hex.
+; For PlutusV3 (language id 2), the language view is the following:
+;   - the value of cost_models map at key 2 is encoded as a definite length list.
 ; 
-;     Note that each Plutus language represented inside a transaction must have
-;     a cost model in the costmdls protocol parameter in order to execute,
-;     regardless of what the script integrity data is.
+; Note that each Plutus language represented inside a transaction must have
+; a cost model in the cost_models protocol parameter in order to execute,
+; regardless of what the script integrity data is.
 ; 
-;     Finally, note that in the case that a transaction includes datums but does not
-;     include the redeemers field, the script data format becomes (in hex):
-;     [ A0 | datums | A0 ]
-;     corresponding to a CBOR empty map and an empty map for language view.
-;     This empty redeeemer case has changed from the previous eras, since default
-;     representation for redeemers has been changed to a map. Also whenever redeemers are
-;     supplied either as a map or as an array they must contain at least one element,
-;     therefore there is no way to override this behavior by providing a custom
-;     representation for empty redeemers.
+; Finally, note that in the case that a transaction includes datums but does not
+; include the redeemers field, the script data format becomes (in hex):
+; [ A0 | datums | A0 ]
+; corresponding to a CBOR empty map and an empty map for language view.
+; This empty redeeemer case has changed from the previous eras, since default
+; representation for redeemers has been changed to a map. Also whenever redeemers are
+; supplied either as a map or as an array they must contain at least one element,
+; therefore there is no way to override this behavior by providing a custom
+; representation for empty redeemers.
+; 
 script_data_hash = $hash32
-
-script_ref = #6.24(bytes .cbor script)
 
 ; To compute a script hash, note that you must prepend
 ; a tag to the bytes of the script before hashing.
 ; The tag is determined by the language.
 ; The tags in the Conway era are:
-; "\x00" for multisig scripts
-; "\x01" for Plutus V1 scripts
-; "\x02" for Plutus V2 scripts
-; "\x03" for Plutus V3 scripts
+;   "\x00" for multisig scripts
+;   "\x01" for Plutus V1 scripts
+;   "\x02" for Plutus V2 scripts
+;   "\x03" for Plutus V3 scripts   
 ; 
-scripthash = $hash28
+script_hash = $hash28
+
+script_ref = #6.24(bytes .cbor script)
+
+; hash32: datum_hash
+; 
+shelley_transaction_output = [address, amount : value, ? $hash32]
 
 signkeyKES = bytes .size 64
 
@@ -498,9 +551,9 @@ transaction_metadatum = {* transaction_metadatum => transaction_metadatum}
 transaction_metadatum_label = uint .size 8
 
 ; Both of the Alonzo and Babbage style TxOut formats are equally valid
-;     and can be used interchangeably
-transaction_output = pre_babbage_transaction_output
-                      / post_alonzo_transaction_output
+; and can be used interchangeably
+; 
+transaction_output = shelley_transaction_output / babbage_transaction_output
 
 transaction_witness_set = {? 0 : nonempty_set<vkeywitness>
                           , ? 1 : nonempty_set<native_script>
@@ -536,15 +589,16 @@ vkeywitness = [$vkey, $signature]
 
 vote = 0 .. 2
 
-; Constitutional Committee Hot KeyHash: 0
-;     Constitutional Committee Hot ScriptHash: 1
-;     DRep KeyHash: 2
-;     DRep ScriptHash: 3
-;     StakingPool KeyHash: 4
+; 0: constitutional committee hot keyhash
+; 1: constitutional committee hot script_hash
+; 2: drep keyhash
+; 3: drep script_hash
+; 4: stakingpool keyhash
+; 
 voter = [0, addr_keyhash
-         // 1, scripthash
+         // 1, script_hash
          // 2, addr_keyhash
-         // 3, scripthash
+         // 3, script_hash
          // 4, addr_keyhash]
 
 voting_procedure = [vote, anchor / nil]
@@ -565,6 +619,8 @@ invalid_before = (4, slot_no)
 
 invalid_hereafter = (5, slot_no)
 
+; dns_name: An SRV DNS record
+; 
 multi_host_name = (2, dns_name)
 
 new_constitution = (5, gov_action_id / nil, constitution)
@@ -576,6 +632,12 @@ parameter_change_action = (0
                           , protocol_param_update
                           , policy_hash / nil)
 
+;         pool_keyhash: operator       
+;                 coin: pledge         
+;                 coin: cost           
+;        unit_interval: margin         
+;    set<addr_keyhash>: pool_owners    
+; 
 pool_params = (pool_keyhash
               , vrf_keyhash
               , coin
@@ -606,6 +668,8 @@ script_pubkey = (0, addr_keyhash)
 
 single_host_addr = (0, port / nil, ipv4 / nil, ipv6 / nil)
 
+; dns_name: An A or AAAA DNS record
+; 
 single_host_name = (1, port / nil, dns_name)
 
 stake_delegation = (2, stake_credential, pool_keyhash)
