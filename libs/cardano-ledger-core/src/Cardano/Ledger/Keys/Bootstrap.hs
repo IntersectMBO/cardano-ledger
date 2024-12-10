@@ -180,7 +180,6 @@ unpackByronVKey
     Just vk -> (VKey vk, ChainCode chainCodeBytes)
 
 verifyBootstrapWit ::
-  forall.
   Hash EraIndependentTxBody ->
   BootstrapWitness ->
   Bool

@@ -73,25 +73,11 @@ import NoThunks.Class (NoThunks (..))
 --     or for some other reason store their original bytes.
 --
 --     We do NOT export the constructor 'SafeHash', but instead export other functions
---     such as 'hashWithCrypto, 'hashAnnotated' and 'extractHash' which have constraints
+--     such as 'hashAnnotated' and 'extractHash' which have constraints
 --     that limit their application to types which preserve their original serialization
 --     bytes.
 newtype SafeHash i = SafeHash (Hash.Hash HASH i)
-  deriving (Show, Eq, Ord, NoThunks, NFData)
-
-deriving newtype instance
-  Hash.HashAlgorithm HASH =>
-  SafeToHash (SafeHash i)
-
-deriving newtype instance HeapWords (SafeHash i)
-
-deriving instance Typeable i => ToCBOR (SafeHash i)
-
-deriving instance Typeable i => FromCBOR (SafeHash i)
-
-deriving instance Typeable i => EncCBOR (SafeHash i)
-
-deriving instance Typeable i => DecCBOR (SafeHash i)
+  deriving (Show, Eq, Ord, NoThunks, NFData, SafeToHash, HeapWords, ToCBOR, FromCBOR, EncCBOR, DecCBOR)
 
 deriving instance ToJSON (SafeHash i)
 
@@ -122,7 +108,7 @@ unsafeMakeSafeHash = SafeHash
 --   The only exceptions are the legacy Shelley types: @Metadata@ and @ShelleyTx@, that
 --   preserve their serialization bytes
 --   using a different mechanism than the use of 'MemoBytes'.  'SafeToHash' is a superclass
---   requirement of the classes 'HashAnnotated' and 'HashWithCrypto' (below) which
+--   requirement of the classes 'HashAnnotated' which
 --   provide more convenient ways to construct SafeHashes than using 'makeHashWithExplicitProxys'.
 class SafeToHash t where
   -- | Extract the original bytes from 't'
@@ -133,7 +119,7 @@ class SafeToHash t where
 
   makeHashWithExplicitProxys :: Proxy i -> t -> SafeHash i
 
-  -- | Build a @(SafeHashrypto index)@ value given to proxies (determining @i@ and @crypto@), and the
+  -- | Build a @(SafeHash index)@ value given a proxy determining @i@, and the
   --   value to be hashed.
   makeHashWithExplicitProxys _ x = SafeHash $ Hash.castHash (Hash.hashWith originalBytes x)
 
@@ -163,15 +149,15 @@ instance Hash.HashAlgorithm h => SafeToHash (Hash.Hash h i) where
 --   The 'SafeToHash' and the 'HashAnnotated' classes are designed so that their
 --   instances can be easily derived (because their methods have default methods
 --   when the type is a newtype around a type that is 'SafeToHash'). For example,
-class SafeToHash x => HashAnnotated x index | x -> index where
-  indexProxy :: x -> Proxy index
-  indexProxy _ = Proxy @index
+class SafeToHash x => HashAnnotated x i | x -> i where
+  indexProxy :: x -> Proxy i
+  indexProxy _ = Proxy @i
 
   -- | Create a @('SafeHash' i crypto)@,
   -- given @(Hash.HashAlgorithm (HASH crypto))@
   -- and  @(HashAnnotated x i crypto)@ instances.
-  hashAnnotated :: x -> SafeHash index
-  hashAnnotated = makeHashWithExplicitProxys (Proxy @index)
+  hashAnnotated :: x -> SafeHash i
+  hashAnnotated = makeHashWithExplicitProxys (Proxy @i)
   {-# INLINE hashAnnotated #-}
 
 -- OTHER

@@ -13,7 +13,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Benchmarks for transaction application
-module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks, ShelleyBench) where
+module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks) where
 
 import Bench.Cardano.Ledger.ApplyTx.Gen (ApplyTxEnv (..), generateApplyTxEnvForEra)
 import Cardano.Ledger.Allegra (AllegraEra)
@@ -41,14 +41,6 @@ import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
-
-type ShelleyBench = ShelleyEra
-
-type AllegraBench = AllegraEra
-
-type MaryBench = MaryEra
-
-type AlonzoBench = AlonzoEra
 
 --------------------------------------------------------------------------------
 -- Applying a Shelley transaction in multiple eras.
@@ -138,16 +130,16 @@ applyTxBenchmarks =
     "applyTxBenchmarks"
     [ bgroup
         "ApplyTxInEra"
-        [ benchApplyTx (Proxy @ShelleyBench)
-        , benchApplyTx (Proxy @AllegraBench)
-        , benchApplyTx (Proxy @MaryBench)
-        , benchApplyTx (Proxy @AlonzoBench)
+        [ benchApplyTx (Proxy @ShelleyEra)
+        , benchApplyTx (Proxy @AllegraEra)
+        , benchApplyTx (Proxy @MaryEra)
+        , benchApplyTx (Proxy @AlonzoEra)
         ]
     , bgroup
         "Deserialise Shelley Tx"
-        [ deserialiseTxEra (Proxy @ShelleyBench)
-        , deserialiseTxEra (Proxy @AllegraBench)
-        , deserialiseTxEra (Proxy @MaryBench)
-        , deserialiseTxEra (Proxy @AlonzoBench)
+        [ deserialiseTxEra (Proxy @ShelleyEra)
+        , deserialiseTxEra (Proxy @AllegraEra)
+        , deserialiseTxEra (Proxy @MaryEra)
+        , deserialiseTxEra (Proxy @AlonzoEra)
         ]
     ]

@@ -328,8 +328,5 @@ newtype GenesisCredential = GenesisCredential
   { unGenesisCredential :: KeyHash 'Genesis
   }
   deriving (Generic)
-  deriving newtype (Eq, ToCBOR, EncCBOR)
+  deriving newtype (Eq, Ord, ToCBOR, EncCBOR)
   deriving (Show) via Quiet GenesisCredential
-
-instance Ord GenesisCredential where
-  compare (GenesisCredential gh) (GenesisCredential gh') = compare gh gh'
