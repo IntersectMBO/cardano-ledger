@@ -83,7 +83,7 @@ You can update these by running:
 - `nix flake update haskellNix/hackage` for Hackage
 - `nix flake update CHaP` for CHaP (Cardano Haskell Packages)
 
-or these if you are on an older `nix flake`:
+or this, if you are on an older `nix flake`:
 
 - `nix flake lock --update-input haskellNix/hackage` for Hackage
 - `nix flake lock --update-input CHaP` for CHaP (Cardano Haskell Packages)
