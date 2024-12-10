@@ -2,7 +2,7 @@
 
 ## 1.17.0.0
 
-
+* Change superclass of `Crypto` from `KESAlgorithm` to `UnsoundPureKESAlgorithm`
 
 ## 1.16.0.0
 
