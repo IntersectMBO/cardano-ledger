@@ -77,11 +77,6 @@ That typically just means that we need to fix the breakage (and add a lower-boun
 
 Note that `cabal` itself keeps track of what index states it knows about, so when you bump the pinned index state you may need call `cabal update` in order for `cabal` to be happy.
 
-If you fail to do this you may get an error like this from Nix:
-```
-error: Unknown index-state 2021-08-08T00:00:00Z, the latest index-state I know about is 2021-08-06T00:00:00Z. You may need to update to a newer hackage.nix.
-```
-
 The Nix code which builds our packages also cares about the index state.
 This is represented by inputs managed by `nix flake`:
 You can update these by running:
@@ -92,6 +87,11 @@ or these if you are on an older `nix flake`:
 
 - `nix flake lock --update-input haskellNix/hackage` for Hackage
 - `nix flake lock --update-input CHaP` for CHaP (Cardano Haskell Packages)
+
+If you fail to do this you may get an error like this from Nix:
+```
+error: Unknown index-state 2021-08-08T00:00:00Z, the latest index-state I know about is 2021-08-06T00:00:00Z. You may need to update to a newer hackage.nix.
+```
 
 ### Use of `source-repository-package`s
 
