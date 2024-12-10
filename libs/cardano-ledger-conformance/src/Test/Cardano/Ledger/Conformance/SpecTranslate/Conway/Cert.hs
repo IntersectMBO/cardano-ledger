@@ -215,4 +215,4 @@ instance
 
 instance SpecTranslate ctx (ConwayNewEpochPredFailure era) where
   type SpecRep (ConwayNewEpochPredFailure era) = OpaqueErrorString
-  toSpecRep = pure . OpaqueErrorString . show . toExpr
+  toSpecRep = pure . showOpaqueErrorString

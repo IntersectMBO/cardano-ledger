@@ -402,6 +402,8 @@ instance Reflect era => TotalAda (UTxOState era) where
 -- we don't add in the _deposits, because it is invariant that this
 -- is equal to the sum of the key deposit map and the pool deposit map
 -- So these are accounted for in the instance (TotalAda (CertState era))
+-- TODO I'm not sure this is true ^
+-- Imp conformance tests show in logs that totalAda is off by the deposit amount
 
 instance Reflect era => TotalAda (UTxO era) where
   totalAda (UTxO m) = foldl accum mempty m

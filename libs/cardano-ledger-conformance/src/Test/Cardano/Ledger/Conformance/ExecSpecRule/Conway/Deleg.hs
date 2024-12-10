@@ -14,10 +14,8 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained (lit)
-import Data.Bifunctor (bimap)
-import qualified Data.List.NonEmpty as NE
+import Data.Bifunctor (Bifunctor (..))
 import Data.Set (Set)
-import qualified Data.Text as T
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core ()
@@ -36,10 +34,9 @@ instance IsConwayUniv fn => ExecSpecRule fn "DELEG" Conway where
   signalSpec _ = conwayDelegCertSpec
 
   runAgdaRule env (Agda.MkCertState dState pState vState) sig =
-    bimap
-      (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
+    second
       (\dState' -> Agda.MkCertState dState' pState vState)
-      . computationResultToEither
+      . unComputationResult
       $ Agda.delegStep env dState sig
 
   classOf = Just . nameDelegCert
