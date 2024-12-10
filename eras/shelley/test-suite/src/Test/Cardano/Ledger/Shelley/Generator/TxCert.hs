@@ -377,12 +377,12 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
     getAnyStakeKey :: KeyPairs -> Gen (VKey 'Staking)
     getAnyStakeKey keys = vKey . snd <$> QC.elements keys
     mkPoolParams ::
-      AllIssuerKeys MockCrypto StakePool ->
+      AllIssuerKeys MockCrypto 'StakePool ->
       Coin ->
       Coin ->
       Natural ->
-      VKey Staking ->
-      (PoolParams, KeyPair StakePool)
+      VKey 'Staking ->
+      (PoolParams, KeyPair 'StakePool)
     mkPoolParams allPoolKeys pledge cost marginPercent acntKey =
       let interval = unsafeBoundRational $ fromIntegral marginPercent % 100
           pps =

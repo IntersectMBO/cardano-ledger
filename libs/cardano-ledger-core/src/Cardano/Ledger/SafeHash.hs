@@ -77,7 +77,8 @@ import NoThunks.Class (NoThunks (..))
 --     that limit their application to types which preserve their original serialization
 --     bytes.
 newtype SafeHash i = SafeHash (Hash.Hash HASH i)
-  deriving (Show, Eq, Ord, NoThunks, NFData, SafeToHash, HeapWords, ToCBOR, FromCBOR, EncCBOR, DecCBOR)
+  deriving
+    (Show, Eq, Ord, NoThunks, NFData, SafeToHash, HeapWords, ToCBOR, FromCBOR, EncCBOR, DecCBOR)
 
 deriving instance ToJSON (SafeHash i)
 
