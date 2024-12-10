@@ -1,127 +1,141 @@
-cabal-version:      3.0
-name:               cardano-ledger-api
-version:            1.10.0.0
-license:            Apache-2.0
-maintainer:         operations@iohk.io
-author:             IOHK
-bug-reports:        https://github.com/intersectmbo/cardano-ledger/issues
-synopsis:           Public API for the cardano ledger codebase
+cabal-version: 3.0
+name: cardano-ledger-api
+version: 1.10.0.0
+license: Apache-2.0
+maintainer: operations@iohk.io
+author: IOHK
+bug-reports: https://github.com/intersectmbo/cardano-ledger/issues
+synopsis: Public API for the cardano ledger codebase
 description:
-    This package a public interface into the cardano ledger codebase. It also
-    provides functionality that works for all eras and is useful for downstream
-    packages.
+  This package a public interface into the cardano ledger codebase. It also
+  provides functionality that works for all eras and is useful for downstream
+  packages.
 
-build-type:         Simple
+build-type: Simple
 extra-source-files: CHANGELOG.md
 
 source-repository head
-    type:     git
-    location: https://github.com/intersectmbo/cardano-ledger
-    subdir:   libs/cardano-ledger-api
+  type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  subdir: libs/cardano-ledger-api
 
 library
-    exposed-modules:
-        Cardano.Ledger.Api
-        Cardano.Ledger.Api.Era
-        Cardano.Ledger.Api.Governance
-        Cardano.Ledger.Api.PParams
-        Cardano.Ledger.Api.Scripts
-        Cardano.Ledger.Api.Scripts.Data
-        Cardano.Ledger.Api.Transition
-        Cardano.Ledger.Api.Tx
-        Cardano.Ledger.Api.Tx.Address
-        Cardano.Ledger.Api.Tx.AuxData
-        Cardano.Ledger.Api.Tx.Body
-        Cardano.Ledger.Api.Tx.Cert
-        Cardano.Ledger.Api.Tx.In
-        Cardano.Ledger.Api.Tx.Out
-        Cardano.Ledger.Api.Tx.Wits
-        Cardano.Ledger.Api.State.Query
-        Cardano.Ledger.Api.UTxO
+  exposed-modules:
+    Cardano.Ledger.Api
+    Cardano.Ledger.Api.Era
+    Cardano.Ledger.Api.Governance
+    Cardano.Ledger.Api.PParams
+    Cardano.Ledger.Api.Scripts
+    Cardano.Ledger.Api.Scripts.Data
+    Cardano.Ledger.Api.State.Query
+    Cardano.Ledger.Api.Transition
+    Cardano.Ledger.Api.Tx
+    Cardano.Ledger.Api.Tx.Address
+    Cardano.Ledger.Api.Tx.AuxData
+    Cardano.Ledger.Api.Tx.Body
+    Cardano.Ledger.Api.Tx.Cert
+    Cardano.Ledger.Api.Tx.In
+    Cardano.Ledger.Api.Tx.Out
+    Cardano.Ledger.Api.Tx.Wits
+    Cardano.Ledger.Api.UTxO
 
-    hs-source-dirs:   src
-    other-modules:
-        Cardano.Ledger.Api.Scripts.ExUnits
-        Cardano.Ledger.Api.State.Query.CommitteeMembersState
+  hs-source-dirs: src
+  other-modules:
+    Cardano.Ledger.Api.Scripts.ExUnits
+    Cardano.Ledger.Api.State.Query.CommitteeMembersState
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
 
-    build-depends:
-        base >=4.14 && <5,
-        aeson >=2.2,
-        bytestring,
-        cardano-ledger-allegra ^>=1.6.1,
-        cardano-ledger-alonzo >=1.12,
-        cardano-ledger-babbage >=1.10.1 && <=1.11,
-        cardano-ledger-binary >=1.4,
-        cardano-ledger-conway >=1.13 && <1.19,
-        cardano-ledger-core >=1.16 && <1.17,
-        cardano-ledger-mary ^>=1.7,
-        cardano-ledger-shelley ^>=1.15,
-        cardano-strict-containers,
-        containers,
-        FailT,
-        microlens,
-        transformers
+  build-depends:
+    FailT,
+    aeson >=2.2,
+    base >=4.14 && <5,
+    bytestring,
+    cardano-ledger-allegra ^>=1.6.1,
+    cardano-ledger-alonzo >=1.12,
+    cardano-ledger-babbage >=1.10.1 && <=1.11,
+    cardano-ledger-binary >=1.4,
+    cardano-ledger-conway >=1.13 && <1.19,
+    cardano-ledger-core >=1.16 && <1.17,
+    cardano-ledger-mary ^>=1.7,
+    cardano-ledger-shelley ^>=1.15,
+    cardano-strict-containers,
+    containers,
+    microlens,
+    transformers,
 
 library testlib
-    exposed-modules:
-        Test.Cardano.Ledger.Api.State.Query
-        Test.Cardano.Ledger.Api.Arbitrary
-        Test.Cardano.Ledger.Api.DebugTools
+  exposed-modules:
+    Test.Cardano.Ledger.Api.Arbitrary
+    Test.Cardano.Ledger.Api.DebugTools
+    Test.Cardano.Ledger.Api.State.Query
 
-    visibility:       public
-    hs-source-dirs:   testlib
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages
+  visibility: public
+  hs-source-dirs: testlib
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
 
-    build-depends:
-        base,
-        bytestring,
-        containers,
-        cardano-ledger-api,
-        cardano-ledger-binary,
-        cardano-ledger-core:{cardano-ledger-core, testlib}
+  build-depends:
+    base,
+    bytestring,
+    cardano-ledger-api,
+    cardano-ledger-binary,
+    cardano-ledger-core:{cardano-ledger-core, testlib},
+    containers,
 
 test-suite cardano-ledger-api-test
-    type:             exitcode-stdio-1.0
-    main-is:          Tests.hs
-    hs-source-dirs:   test
-    other-modules:
-        Test.Cardano.Ledger.Api.Tx
-        Test.Cardano.Ledger.Api.Tx.Out
-        Test.Cardano.Ledger.Api.Tx.Body
-        Test.Cardano.Ledger.Api.State.Imp.QuerySpec
-        Test.Cardano.Ledger.Api.State.QuerySpec
+  type: exitcode-stdio-1.0
+  main-is: Tests.hs
+  hs-source-dirs: test
+  other-modules:
+    Test.Cardano.Ledger.Api.State.Imp.QuerySpec
+    Test.Cardano.Ledger.Api.State.QuerySpec
+    Test.Cardano.Ledger.Api.Tx
+    Test.Cardano.Ledger.Api.Tx.Body
+    Test.Cardano.Ledger.Api.Tx.Out
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages -rtsopts -threaded
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+    -rtsopts
+    -threaded
 
-    build-depends:
-        base,
-        bytestring,
-        cardano-ledger-api,
-        cardano-ledger-byron,
-        data-default,
-        testlib,
-        cardano-crypto-class,
-        cardano-ledger-binary,
-        cardano-ledger-babbage:testlib,
-        cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-ledger-conway:{cardano-ledger-conway, testlib},
-        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-        cardano-slotting:testlib,
-        cardano-strict-containers,
-        containers,
-        microlens,
-        microlens-mtl
+  build-depends:
+    base,
+    bytestring,
+    cardano-crypto-class,
+    cardano-ledger-api,
+    cardano-ledger-babbage:testlib,
+    cardano-ledger-binary,
+    cardano-ledger-byron,
+    cardano-ledger-conway:{cardano-ledger-conway, testlib},
+    cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+    cardano-slotting:testlib,
+    cardano-strict-containers,
+    containers,
+    data-default,
+    microlens,
+    microlens-mtl,
+    testlib,

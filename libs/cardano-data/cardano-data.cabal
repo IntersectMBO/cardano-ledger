@@ -1,96 +1,108 @@
-cabal-version:      3.0
-name:               cardano-data
-version:            1.2.3.1
-license:            Apache-2.0
-maintainer:         operations@iohk.io
-author:             IOHK
-homepage:           https://github.com/intersectmbo/cardano-ledger
-synopsis:           Specialized data for Cardano project
-category:           Control
-build-type:         Simple
+cabal-version: 3.0
+name: cardano-data
+version: 1.2.3.1
+license: Apache-2.0
+maintainer: operations@iohk.io
+author: IOHK
+homepage: https://github.com/intersectmbo/cardano-ledger
+synopsis: Specialized data for Cardano project
+category: Control
+build-type: Simple
 extra-source-files: CHANGELOG.md
 
 source-repository head
-    type:     git
-    location: https://github.com/intersectmbo/cardano-ledger
-    subdir:   libs/cardano-data
+  type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  subdir: libs/cardano-data
 
 library
-    exposed-modules:
-        Data.CanonicalMaps
-        Data.Pulse
-        Data.MapExtras
-        Data.ListMap
-        Data.Universe
-        Data.OSet.Strict
-        Data.OMap.Strict
-        Data.MonoTuple
+  exposed-modules:
+    Data.CanonicalMaps
+    Data.ListMap
+    Data.MapExtras
+    Data.MonoTuple
+    Data.OMap.Strict
+    Data.OSet.Strict
+    Data.Pulse
+    Data.Universe
 
-    hs-source-dirs:   src
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+  hs-source-dirs: src
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wunused-packages
 
-    build-depends:
-        base >=4.14 && <5,
-        aeson >=2.2,
-        cardano-ledger-binary >=1.4,
-        cardano-strict-containers >=0.1.2.1,
-        containers,
-        data-default,
-        deepseq,
-        mtl,
-        nothunks,
-        vector,
-        microlens
+  build-depends:
+    aeson >=2.2,
+    base >=4.14 && <5,
+    cardano-ledger-binary >=1.4,
+    cardano-strict-containers >=0.1.2.1,
+    containers,
+    data-default,
+    deepseq,
+    microlens,
+    mtl,
+    nothunks,
+    vector,
 
 library testlib
-    exposed-modules:
-        Test.Cardano.Data
-        Test.Cardano.Data.Arbitrary
-        Test.Cardano.Data.TreeDiff
+  exposed-modules:
+    Test.Cardano.Data
+    Test.Cardano.Data.Arbitrary
+    Test.Cardano.Data.TreeDiff
 
-    visibility:       public
-    hs-source-dirs:   testlib
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+  visibility: public
+  hs-source-dirs: testlib
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wunused-packages
 
-    build-depends:
-        base,
-        cardano-data,
-        cardano-ledger-binary:testlib,
-        containers,
-        hspec,
-        QuickCheck,
-        cardano-data,
-        microlens
+  build-depends:
+    QuickCheck,
+    base,
+    cardano-data,
+    cardano-ledger-binary:testlib,
+    containers,
+    hspec,
+    microlens,
 
 test-suite cardano-data-tests
-    type:             exitcode-stdio-1.0
-    main-is:          Main.hs
-    hs-source-dirs:   test
-    other-modules:
-        Test.Cardano.Data.MapExtrasSpec
-        Test.Cardano.Data.OSet.StrictSpec
-        Test.Cardano.Data.OMap.StrictSpec
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  hs-source-dirs: test
+  other-modules:
+    Test.Cardano.Data.MapExtrasSpec
+    Test.Cardano.Data.OMap.StrictSpec
+    Test.Cardano.Data.OSet.StrictSpec
 
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
-        -threaded -rtsopts
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wunused-packages
+    -threaded
+    -rtsopts
 
-    build-depends:
-        base,
-        cardano-strict-containers,
-        containers,
-        hspec,
-        cardano-data,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib},
-        testlib,
-        QuickCheck,
-        quickcheck-classes,
-        microlens
+  build-depends:
+    QuickCheck,
+    base,
+    cardano-data,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-strict-containers,
+    containers,
+    hspec,
+    microlens,
+    quickcheck-classes,
+    testlib,
