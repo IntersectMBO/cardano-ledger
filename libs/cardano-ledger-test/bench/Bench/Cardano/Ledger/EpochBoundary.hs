@@ -41,21 +41,13 @@ import Data.Maybe (fromJust)
 import Data.Proxy
 import qualified Data.Text as T
 import Data.Word (Word64)
+import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (aggregateUtxoCoinByCredential)
 
 type TestEra = MaryEra
 
 payCred :: PaymentCredential
-payCred = KeyHashObj $ payAddr28 0
-  where
-    payAddr28 :: Int -> KeyHash 'Payment
-    payAddr28 n =
-      let i = n `mod` 10
-          prefix = T.pack (take 6 (cycle (show i)))
-       in KeyHash $
-            fromJust $
-              hashFromTextAsHex
-                (prefix <> "0405060708090a0b0c0d0e0f12131415161718191a1b1c1d1e")
+payCred = KeyHashObj $ KeyHash $ mkDummyHash 2024
 
 -- | Infinite list of transaction inputs
 txIns :: [TxIn]
@@ -97,13 +89,7 @@ txOutsFromPtrs ptrs =
 
 -- | Generate n stake credentials
 stakeCreds :: Word64 -> [StakeCredential]
-stakeCreds n = replicate (fromIntegral n) $ KeyHashObj stakeAddr28
-  where
-    stakeAddr28 :: KeyHash 'Staking
-    stakeAddr28 =
-      KeyHash $
-        fromJust $
-          hashFromTextAsHex "2122232425262728292a2b2c2d2e2f32333435363738393a3b3c3d3e"
+stakeCreds n = [KeyHashObj (KeyHash (mkDummyHash (123456 + i))) | i <- [1 .. fromIntegral n]]
 
 -- | Generate pointers to a list of stake credentials
 stakePtrs :: [StakeCredential] -> Map Ptr StakeCredential
