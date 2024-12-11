@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -40,7 +39,6 @@ import qualified Data.Map.Strict as Map
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
-import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
 
 instance Crypto c => SpecTranslate ctx (ConwayGovCert c) where
   type SpecRep (ConwayGovCert c) = Agda.DCert
@@ -90,7 +88,7 @@ instance
 instance SpecTranslate ctx (ConwayGovCertPredFailure era) where
   type SpecRep (ConwayGovCertPredFailure era) = OpaqueErrorString
 
-  toSpecRep = pure . OpaqueErrorString . showExpr
+  toSpecRep = pure . showOpaqueErrorString
 
 instance SpecTranslate ctx (VState era) where
   type SpecRep (VState era) = Agda.GState

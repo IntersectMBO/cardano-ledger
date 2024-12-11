@@ -18,7 +18,6 @@ import Data.Map.Strict (mapKeys)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
-import Test.Cardano.Ledger.Conway.TreeDiff
 
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
@@ -33,7 +32,7 @@ instance
 instance SpecTranslate ctx (ShelleyPoolPredFailure era) where
   type SpecRep (ShelleyPoolPredFailure era) = OpaqueErrorString
 
-  toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
+  toSpecRep = pure . showOpaqueErrorString
 
 instance SpecTranslate ctx (PState era) where
   type SpecRep (PState era) = Agda.PState

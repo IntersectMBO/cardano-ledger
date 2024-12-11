@@ -9,7 +9,6 @@ import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
 import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import qualified Data.ByteString.Base16 as B16
 import Data.Data (Proxy (..))
-import qualified Lib as Agda
 import Test.Cardano.Ledger.TreeDiff (Expr, ToExpr (..))
 
 standardHashSize :: Int
@@ -26,7 +25,3 @@ hashToInteger = toInteger . bytesToNatural . hashToBytes
 
 integerToHash :: forall h a. HashAlgorithm h => Integer -> Maybe (Hash h a)
 integerToHash = hashFromBytes . naturalToBytes (fromIntegral . sizeHash $ Proxy @h) . fromInteger
-
-computationResultToEither :: Agda.ComputationResult e a -> Either e a
-computationResultToEither (Agda.Success x) = Right x
-computationResultToEither (Agda.Failure e) = Left e

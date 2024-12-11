@@ -30,12 +30,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesELL,
   nesEsL,
  )
+import Data.Bifunctor (Bifunctor (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro ((&), (.~))
 import Lens.Micro.Mtl (use)
-import Test.Cardano.Ledger.Conformance ()
+import Test.Cardano.Ledger.Conformance (showOpaqueErrorString)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   ConwayRatifyExecContext (..),
  )
@@ -161,5 +162,6 @@ spec = withImpInit @(LedgerSpec Conway) $ describe "RATIFY" $ modifyImpInitProtV
         ratEnv
         ratSt
         ratSig
-        implRes'
-    impAnn "Conformance failed" $ implRes `shouldBeExpr` agdaRes
+        (first showOpaqueErrorString implRes')
+    impAnn "Conformance failed" $
+      first showOpaqueErrorString implRes `shouldBeExpr` agdaRes

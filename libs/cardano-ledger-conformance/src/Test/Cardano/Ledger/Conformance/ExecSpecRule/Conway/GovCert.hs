@@ -22,9 +22,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Constrained (lit)
 import Data.Bifunctor (Bifunctor (..))
-import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
-import qualified Data.Text as T
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
@@ -47,11 +45,8 @@ instance
   classOf = Just . nameGovCert
 
   runAgdaRule env (Agda.MkCertState dState pState vState) sig =
-    bimap
-      (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      (Agda.MkCertState dState pState)
-      . computationResultToEither
-      $ Agda.govCertStep env vState sig
+    second (Agda.MkCertState dState pState) . unComputationResult $
+      Agda.govCertStep env vState sig
 
 nameGovCert :: ConwayGovCert c -> String
 nameGovCert (ConwayRegDRep {}) = "ConwayRegDRep"

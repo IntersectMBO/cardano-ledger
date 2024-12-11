@@ -1,15 +1,10 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -22,9 +17,6 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.TxIn (TxId)
-import Data.Bifunctor (first)
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
 import Lens.Micro
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
@@ -66,10 +58,7 @@ instance
       , enactState
       )
 
-  runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.govStep env st sig
+  runAgdaRule env st sig = unComputationResult $ Agda.govStep env st sig
 
   translateInputs env@GovEnv {gePParams} st sig (txId, _proposalsSplit, enactState) = do
     agdaEnv <- expectRight $ runSpecTransM ctx $ toSpecRep env

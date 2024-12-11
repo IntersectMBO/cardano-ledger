@@ -21,7 +21,7 @@ import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe)
 import qualified Lib as Agda
-import Test.Cardano.Ledger.Conformance (OpaqueErrorString (..), askCtx)
+import Test.Cardano.Ledger.Conformance (OpaqueErrorString (..), askCtx, showOpaqueErrorString)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (SpecTranslate (..))
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..))
 
@@ -55,4 +55,4 @@ instance
   where
   type SpecRep (ConwayLedgerPredFailure era) = OpaqueErrorString
 
-  toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
+  toSpecRep = pure . showOpaqueErrorString

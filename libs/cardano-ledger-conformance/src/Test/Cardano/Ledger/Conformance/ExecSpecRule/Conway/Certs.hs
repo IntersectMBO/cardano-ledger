@@ -15,11 +15,9 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert
 import Constrained
 import Data.Bifunctor (first)
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Set as Set
-import qualified Data.Text as T
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
@@ -45,10 +43,7 @@ instance
 
   signalSpec _ = txCertsSpec
 
-  runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.certsStep env st sig
+  runAgdaRule env st sig = unComputationResult $ Agda.certsStep env st sig
   classOf = Just . nameCerts
 
   testConformance ctx env st sig = property $ do
@@ -74,7 +69,14 @@ instance
               credsSet = Set.fromList creds
               zeroRewards (Agda.MkHSMap pairs) =
                 Agda.MkHSMap (map (\(c, r) -> if c `Set.member` credsSet then (c, 0) else (c, r)) pairs)
-      _ -> checkConformance @"CERTS" @Conway @fn ctx env st sig implResTest agdaResTest
+      _ ->
+        checkConformance @"CERTS" @Conway @fn
+          ctx
+          env
+          st
+          sig
+          (first showOpaqueErrorString implResTest)
+          agdaResTest
 
 nameCerts :: Seq (ConwayTxCert Conway) -> String
 nameCerts x = "Certs length " ++ show (length x)

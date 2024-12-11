@@ -76,7 +76,6 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Constrained hiding (inject)
-import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -92,9 +91,10 @@ import Test.Cardano.Ledger.Common (Arbitrary (..))
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   SpecTranslate (..),
-  computationResultToEither,
   integerToHash,
   runSpecTransM,
+  unComputationResult,
+  unComputationResult_,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (defaultTestConformance)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (vkeyFromInteger)
@@ -403,10 +403,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
 
   signalSpec ctx _env _st = ratifySignalSpec ctx
 
-  runAgdaRule env st sig =
-    first (\case {})
-      . computationResultToEither
-      $ Agda.ratifyStep env st sig
+  runAgdaRule env st sig = unComputationResult_ $ Agda.ratifyStep env st sig
 
   extraInfo _ ctx env@RatifyEnv {..} st sig@(RatifySignal actions) _ =
     PP.vsep $ specExtraInfo : (actionAcceptedRatio <$> toList actions)
@@ -563,10 +560,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "ENACT" Conway where
   environmentSpec _ = TrueSpec
   stateSpec = enactStateSpec
   signalSpec = enactSignalSpec
-  runAgdaRule env st sig =
-    first (\e -> error $ "ENACT failed with:\n" <> show e)
-      . computationResultToEither
-      $ Agda.enactStep env st sig
+  runAgdaRule env st sig = unComputationResult $ Agda.enactStep env st sig
 
   classOf = Just . nameEnact
 
@@ -595,10 +589,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "EPOCH" Conway where
 
   signalSpec _ _ _ = epochSignalSpec
 
-  runAgdaRule env st sig =
-    first (\case {})
-      . computationResultToEither
-      $ Agda.epochStep env st sig
+  runAgdaRule env st sig = unComputationResult_ $ Agda.epochStep env st sig
 
   classOf = Just . nameEpoch
 
@@ -615,10 +606,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "NEWEPOCH" Conway where
 
   signalSpec _ _ _ = epochSignalSpec
 
-  runAgdaRule env st sig =
-    first (\case {})
-      . computationResultToEither
-      $ Agda.newEpochStep env st sig
+  runAgdaRule env st sig = unComputationResult_ $ Agda.newEpochStep env st sig
 
 externalFunctions :: Agda.ExternalFunctions
 externalFunctions = Agda.MkExternalFunctions {..}
