@@ -895,7 +895,7 @@ genScript proof tag = case proof of
 -- Adds to gsScripts
 genTimelockScript ::
   forall era.
-  (AllegraEraScript era, Reflect era, NativeScript era ~ Timelock era) =>
+  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
   GenRS era ScriptHash
 genTimelockScript = do
   vi@(ValidityInterval mBefore mAfter) <- gets gsValidityInterval
