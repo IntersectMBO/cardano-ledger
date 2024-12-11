@@ -23,6 +23,7 @@ import Constrained
 
 import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
+import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Instances
@@ -68,6 +69,33 @@ stsPropertyV2 ::
   (env -> st -> sig -> st -> p) ->
   Property
 stsPropertyV2 specEnv specState specSig prop =
+  stsPropertyV2' @r specEnv specState specSig (\env _ _ -> specState env) prop
+
+stsPropertyV2' ::
+  forall r fn era env st sig fail p.
+  ( era ~ ConwayEra StandardCrypto
+  , Environment (EraRule r era) ~ env
+  , State (EraRule r era) ~ st
+  , Signal (EraRule r era) ~ sig
+  , PredicateFailure (EraRule r era) ~ fail
+  , STS (EraRule r era)
+  , BaseM (EraRule r era) ~ ReaderT Globals Identity
+  , PrettyA st
+  , PrettyA sig
+  , PrettyA env
+  , PrettyA fail
+  , Testable p
+  , HasSpec fn env
+  , HasSpec fn st
+  , HasSpec fn sig
+  ) =>
+  Specification fn env ->
+  (env -> Specification fn st) ->
+  (env -> st -> Specification fn sig) ->
+  (env -> st -> sig -> Specification fn st) ->
+  (env -> st -> sig -> st -> p) ->
+  Property
+stsPropertyV2' specEnv specState specSig specPostState prop =
   uncurry forAllShrinkBlind (genShrinkFromSpec specEnv) $ \env ->
     counterexample (show $ ppString "env = " <> prettyA env) $
       uncurry forAllShrinkBlind (genShrinkFromSpec $ specState env) $ \st ->
@@ -85,7 +113,7 @@ stsPropertyV2 specEnv specState specSig prop =
                             <> prettyA st'
                             <> ppString ("\nspec = \n" ++ show (specState env))
                       )
-                      $ conformsToSpec @fn st' (specState env) .&&. prop env st sig st'
+                      $ conformsToSpecProp @fn st' (specPostState env st sig) .&&. prop env st sig st'
 
 -- STS properties ---------------------------------------------------------
 
@@ -106,12 +134,14 @@ prop_GOV =
 --     (\_env _st -> TrueSpec)
 --     $ \_env _st _sig _st' -> True
 
-prop_EPOCH :: Property
-prop_EPOCH =
-  stsPropertyV2 @"EPOCH" @ConwayFn
+prop_EPOCH :: EpochNo -> Property
+prop_EPOCH epochNo =
+  stsPropertyV2' @"EPOCH" @ConwayFn
     TrueSpec
-    (\_env -> TrueSpec)
-    (\_env _st -> TrueSpec)
+    (\_env -> epochStateSpec (lit epochNo))
+    (\_env _st -> epochSignalSpec epochNo)
+    (\_env _st _newEpoch -> TrueSpec)
+    -- (\_env _st newEpoch -> epochStateSpec (lit newEpoch))
     $ \_env _st _sig _st' -> True
 
 prop_ENACT :: Property
@@ -267,12 +297,12 @@ tests_STS =
   testGroup
     "STS property tests"
     [ govTests
-    -- , utxoTests
-    -- TODO: this is probably one of the last things we want to
-    -- get passing as it depends on being able to generate a complete
-    -- `EpochState era`
-    -- , testProperty "prop_EPOCH" prop_EPOCH
-    -- , testProperty "prop_LEDGER" prop_LEDGER
+    , -- , utxoTests
+      -- TODO: this is probably one of the last things we want to
+      -- get passing as it depends on being able to generate a complete
+      -- `EpochState era`
+      testProperty "prop_EPOCH" prop_EPOCH
+      -- , testProperty "prop_LEDGER" prop_LEDGER
     ]
 
 govTests :: TestTree
