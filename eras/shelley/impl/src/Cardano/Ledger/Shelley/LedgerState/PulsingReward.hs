@@ -225,7 +225,8 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
         RSLP
           pulseSize
           free
-          (unStake stake)
+          (unStake stake) -- The initial valuse
+          (unStake stake) -- is the same as the working value, when the pulser is created.
           (RewardAns Map.empty Map.empty)
    in Pulsing rewsnap pulser
 
@@ -239,7 +240,7 @@ pulseStep (Complete r_) = pure (Complete r_, mempty)
 pulseStep p@(Pulsing _ pulser) | done pulser = completeStep p
 pulseStep (Pulsing rewsnap pulser) = do
   -- The pulser might compute provenance, but using pulseM here does not compute it
-  p2@(RSLP _ _ _ (RewardAns _ event)) <- pulseM pulser
+  p2@(RSLP _ _ _ _ (RewardAns _ event)) <- pulseM pulser
   pure (Pulsing rewsnap p2, event)
 
 -- Phase 3
@@ -273,7 +274,7 @@ completeRupd
         , rewLeaders = lrewards
         , rewProtocolVersion = protVer
         }
-      pulser@(RSLP _size _free _source (RewardAns prev _now)) -- If prev is Map.empty, we have never pulsed.
+      pulser@(RSLP _size _free _init _source (RewardAns prev _now)) -- If prev is Map.empty, we have never pulsed.
     ) = do
     RewardAns rs_ events <- completeM pulser
     let rs' = Map.map Set.singleton rs_
