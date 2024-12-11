@@ -2,7 +2,10 @@
 
 ## 1.11.0.0
 
-* Removal of crypto parametrization.
+* Removal of crypto parametrization:
+  * `LatestKnownEra`
+  * `HotCredAuthStatus` and `CommitteeMemberState`
+  * `DecAddr`
 
 ## 1.10.0.0
 
