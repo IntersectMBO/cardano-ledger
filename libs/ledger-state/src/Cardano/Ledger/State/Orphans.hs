@@ -51,7 +51,7 @@ instance PersistField ShortByteString where
 instance PersistFieldSql ShortByteString where
   sqlType _ = SqlBlob
 
-instance PersistField (TxId C) where
+instance PersistField TxId where
   toPersistValue = PersistByteString . hashToBytes . extractHash . unTxId
   fromPersistValue (PersistByteString bs) =
     case hashFromBytes bs of
@@ -59,7 +59,7 @@ instance PersistField (TxId C) where
       Just h -> Right $ TxId $ unsafeMakeSafeHash h
   fromPersistValue _ = Left "Unexpected type"
 
-instance PersistFieldSql (TxId C) where
+instance PersistFieldSql TxId where
   sqlType _ = SqlBlob
 
 deriving instance PersistField (CompactForm Coin)
@@ -102,13 +102,13 @@ decodePersistValue (PersistByteString bs) =
     Right v -> Right v
 decodePersistValue _ = Left "Unexpected type"
 
-deriving via Enc (KeyHash r C) instance Typeable r => PersistField (KeyHash r C)
+deriving via Enc (KeyHash r) instance Typeable r => PersistField (KeyHash r)
 
-deriving via Enc (KeyHash r C) instance Typeable r => PersistFieldSql (KeyHash r C)
+deriving via Enc (KeyHash r) instance Typeable r => PersistFieldSql (KeyHash r)
 
-deriving via Enc (Credential r C) instance Typeable r => PersistField (Credential r C)
+deriving via Enc (Credential r) instance Typeable r => PersistField (Credential r)
 
-deriving via Enc (Credential r C) instance Typeable r => PersistFieldSql (Credential r C)
+deriving via Enc (Credential r) instance Typeable r => PersistFieldSql (Credential r)
 
 deriving via Enc Ptr instance PersistField Ptr
 
@@ -137,20 +137,20 @@ deriving via Enc (PState CurrentEra) instance PersistField (PState CurrentEra)
 
 deriving via Enc (PState CurrentEra) instance PersistFieldSql (PState CurrentEra)
 
-deriving via Enc (GenDelegs C) instance PersistField (GenDelegs C)
+deriving via Enc GenDelegs instance PersistField GenDelegs
 
-deriving via Enc (GenDelegs C) instance PersistFieldSql (GenDelegs C)
+deriving via Enc GenDelegs instance PersistFieldSql GenDelegs
 
-deriving via Enc (PoolParams C) instance PersistField (PoolParams C)
+deriving via Enc PoolParams instance PersistField PoolParams
 
-deriving via Enc (PoolParams C) instance PersistFieldSql (PoolParams C)
+deriving via Enc PoolParams instance PersistFieldSql PoolParams
 
-instance DecCBOR (NonMyopic C) where
+instance DecCBOR NonMyopic where
   decCBOR = decNoShareCBOR
 
-deriving via Enc (NonMyopic C) instance PersistField (NonMyopic C)
+deriving via Enc NonMyopic instance PersistField NonMyopic
 
-deriving via Enc (NonMyopic C) instance PersistFieldSql (NonMyopic C)
+deriving via Enc NonMyopic instance PersistFieldSql NonMyopic
 
 deriving via Enc (PParams CurrentEra) instance PersistField (PParams CurrentEra)
 

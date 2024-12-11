@@ -19,7 +19,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
@@ -43,9 +42,7 @@ import Lens.Micro
 import Prettyprinter
 import Text.Printf
 
-type C = StandardCrypto
-
-type CurrentEra = Babbage
+type CurrentEra = BabbageEra
 
 --- Loading
 readNewEpochState ::
@@ -75,45 +72,45 @@ loadLedgerState fp = esLState . nesEs <$> readNewEpochState fp
 runConduitFold :: Monad m => ConduitT () a m () -> Fold a b -> m b
 runConduitFold source (Fold f e g) = (g <$> runConduit (source .| foldlC f e))
 
-type UTxOFold b = Fold (TxIn C, TxOut CurrentEra) b
+type UTxOFold b = Fold (TxIn, TxOut CurrentEra) b
 
-noSharing :: Fold (TxIn C, a) (Map.Map (TxIn C) a)
+noSharing :: Fold (TxIn, a) (Map.Map TxIn a)
 noSharing = Fold (\ !m !(!k, !v) -> Map.insert k v m) mempty id
 
-noSharing_ :: UTxOFold (Map.Map (TxIn C) ())
+noSharing_ :: UTxOFold (Map.Map TxIn ())
 noSharing_ = Fold (\ !m !(!k, _) -> Map.insert k () m) mempty id
 
-noSharingMap :: Fold (TxIn C, a) (Map.Map (TxIn C) a)
+noSharingMap :: Fold (TxIn, a) (Map.Map TxIn a)
 noSharingMap = Fold (\ !m !(!k, !v) -> Map.insert k v m) mempty id
 
-noSharingMap_ :: UTxOFold (Map.Map (TxIn C) ())
+noSharingMap_ :: UTxOFold (Map.Map TxIn ())
 noSharingMap_ = Fold (\ !m !(!k, _) -> Map.insert k () m) mempty id
 
 txIdSharing ::
-  UTxOFold (Map.Map (TxId C) (IntMap.IntMap (TxOut CurrentEra)))
+  UTxOFold (Map.Map TxId (IntMap.IntMap (TxOut CurrentEra)))
 txIdSharing = Fold txIdNestedInsert mempty id
 
-txIdSharing_ :: UTxOFold (Map.Map (TxId C) (IntMap.IntMap ()))
+txIdSharing_ :: UTxOFold (Map.Map TxId (IntMap.IntMap ()))
 txIdSharing_ = Fold (\a v -> txIdNestedInsert a (() <$ v)) mempty id
 
 txIdNestedInsert ::
-  Map.Map (TxId C) (IntMap.IntMap a) ->
-  (TxIn C, a) ->
-  Map.Map (TxId C) (IntMap.IntMap a)
+  Map.Map TxId (IntMap.IntMap a) ->
+  (TxIn, a) ->
+  Map.Map TxId (IntMap.IntMap a)
 txIdNestedInsert !m (TxIn !txId !txIx, !v) =
   let !e = IntMap.singleton (txIxToInt txIx) v
    in Map.insertWith (<>) txId e m
 
-txIxSharing :: Fold (TxIn C, a) (IntMap.IntMap (Map.Map (TxId C) a))
+txIxSharing :: Fold (TxIn, a) (IntMap.IntMap (Map.Map TxId a))
 txIxSharing = Fold txIxNestedInsert mempty id
 
-txIxSharing_ :: UTxOFold (IntMap.IntMap (Map.Map (TxId C) ()))
+txIxSharing_ :: UTxOFold (IntMap.IntMap (Map.Map TxId ()))
 txIxSharing_ = Fold (\a v -> txIxNestedInsert a (() <$ v)) mempty id
 
 txIxNestedInsert ::
-  IntMap.IntMap (Map.Map (TxId C) a) ->
-  (TxIn C, a) ->
-  IntMap.IntMap (Map.Map (TxId C) a)
+  IntMap.IntMap (Map.Map TxId a) ->
+  (TxIn, a) ->
+  IntMap.IntMap (Map.Map TxId a)
 txIxNestedInsert !im (TxIn !txId !txIx, !v) =
   let f =
         \case
@@ -121,7 +118,7 @@ txIxNestedInsert !im (TxIn !txId !txIx, !v) =
           Just !m -> Just $! Map.insert txId v m
    in IntMap.alter f (txIxToInt txIx) im
 
-totalADA :: Map.Map (TxIn C) (TxOut CurrentEra) -> MaryValue C
+totalADA :: Map.Map TxIn (TxOut CurrentEra) -> MaryValue
 totalADA = foldMap (^. valueTxOutL)
 
 readBinUTxO ::
@@ -191,10 +188,10 @@ prettyRecord h content = h <> ":" <+> line <> indent 2 (vsep content)
 infixr 6 <:>
 
 data SnapShotStats = SnapShotStats
-  { sssStake :: !(Stat (Credential 'Staking C))
-  , sssDelegationCredential :: !(Stat (Credential 'Staking C))
-  , sssDelegationStakePool :: !(Stat (KeyHash 'StakePool C))
-  , sssPoolParams :: !(Stat (KeyHash 'StakePool C))
+  { sssStake :: !(Stat (Credential 'Staking))
+  , sssDelegationCredential :: !(Stat (Credential 'Staking))
+  , sssDelegationStakePool :: !(Stat (KeyHash 'StakePool))
+  , sssPoolParams :: !(Stat (KeyHash 'StakePool))
   , sssPoolParamsStats :: !PoolParamsStats
   }
 
@@ -228,7 +225,7 @@ instance AggregateStat SnapShotStats where
       , gsKeyHashStakePool = sssDelegationStakePool <> sssPoolParams
       }
 
-countSnapShotStat :: SnapShot C -> SnapShotStats
+countSnapShotStat :: SnapShot -> SnapShotStats
 countSnapShotStat SnapShot {..} =
   SnapShotStats
     { sssStake = statMapKeys (VMap.toMap (unStake ssStake))
@@ -239,9 +236,9 @@ countSnapShotStat SnapShot {..} =
     }
 
 data PoolParamsStats = PoolParamsStats
-  { ppsPoolId :: !(Stat (KeyHash 'StakePool C))
-  , ppsRewardAccount :: !(Stat (Credential 'Staking C))
-  , ppsOwners :: !(Stat (KeyHash 'Staking C))
+  { ppsPoolId :: !(Stat (KeyHash 'StakePool))
+  , ppsRewardAccount :: !(Stat (Credential 'Staking))
+  , ppsOwners :: !(Stat (KeyHash 'Staking))
   }
 
 instance Semigroup PoolParamsStats where
@@ -267,7 +264,7 @@ instance AggregateStat PoolParamsStats where
   aggregateStat PoolParamsStats {..} =
     mempty {gsCredentialStaking = ppsRewardAccount, gsKeyHashStakePool = ppsPoolId}
 
-countPoolParamsStats :: PoolParams C -> PoolParamsStats
+countPoolParamsStats :: PoolParams -> PoolParamsStats
 countPoolParamsStats PoolParams {..} =
   PoolParamsStats
     { ppsPoolId = statSingleton ppId
@@ -285,8 +282,8 @@ instance AggregateStat RewardUpdateStats where
   aggregateStat RewardUpdateStats = mempty
 
 data PoolDistrStats = PoolDistrStats
-  { pdsStakePoolKeyHash :: !(Stat (KeyHash 'StakePool C))
-  , pdsStakePoolStakeVrf :: !(Stat (VRFVerKeyHash 'StakePoolVRF C))
+  { pdsStakePoolKeyHash :: !(Stat (KeyHash 'StakePool))
+  , pdsStakePoolStakeVrf :: !(Stat (VRFVerKeyHash 'StakePoolVRF))
   }
 
 instance Pretty PoolDistrStats where
@@ -304,7 +301,7 @@ instance AggregateStat PoolDistrStats where
       , gsVerKeyVRF = mapStat unVRFVerKeyHash pdsStakePoolStakeVrf
       }
 
-calcPoolDistrStats :: PoolDistr C -> PoolDistrStats
+calcPoolDistrStats :: PoolDistr -> PoolDistrStats
 calcPoolDistrStats (PoolDistr pd _tot) =
   PoolDistrStats
     { pdsStakePoolKeyHash = statMapKeys pd
@@ -312,9 +309,9 @@ calcPoolDistrStats (PoolDistr pd _tot) =
     }
 
 data NewEpochStateStats = NewEpochStateStats
-  { nessPrevBlocksMade :: !(Stat (KeyHash 'StakePool C))
-  , nessCurBlocksMade :: !(Stat (KeyHash 'StakePool C))
-  , nessBlocksMade :: !(Stat (KeyHash 'StakePool C))
+  { nessPrevBlocksMade :: !(Stat (KeyHash 'StakePool))
+  , nessCurBlocksMade :: !(Stat (KeyHash 'StakePool))
+  , nessBlocksMade :: !(Stat (KeyHash 'StakePool))
   , nessEpochStateStats :: !EpochStateStats
   , nessRewardUpdate :: !RewardUpdateStats
   , nessPoolDistrStats :: !PoolDistrStats
@@ -367,7 +364,7 @@ data EpochStateStats = EpochStateStats
   , essGoSnapShotStats :: !SnapShotStats
   , essSnapShotsStats :: !SnapShotStats
   , essLedgerStateStats :: !LedgerStateStats
-  , essNonMyopic :: !(Stat (KeyHash 'StakePool C))
+  , essNonMyopic :: !(Stat (KeyHash 'StakePool))
   , essAggregateStats :: !AggregateStats
   }
 
@@ -409,11 +406,11 @@ countEpochStateStats EpochState {..} =
         }
 
 data DStateStats = DStateStats
-  { dssCredentialStaking :: !(Stat (Credential 'Staking C))
-  , dssDelegations :: !(Stat (KeyHash 'StakePool C))
-  , dssKeyHashGenesis :: !(Stat (KeyHash 'Genesis C))
-  , dssKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C))
-  , dssHashVerKeyVRF :: !(Stat (VRFVerKeyHash 'GenDelegVRF C))
+  { dssCredentialStaking :: !(Stat (Credential 'Staking))
+  , dssDelegations :: !(Stat (KeyHash 'StakePool))
+  , dssKeyHashGenesis :: !(Stat (KeyHash 'Genesis))
+  , dssKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate))
+  , dssHashVerKeyVRF :: !(Stat (VRFVerKeyHash 'GenDelegVRF))
   }
 
 instance Pretty DStateStats where
@@ -459,7 +456,7 @@ countDStateStats DState {..} =
     }
 
 data PStateStats = PStateStats
-  { pssKeyHashStakePool :: !(Stat (KeyHash 'StakePool C))
+  { pssKeyHashStakePool :: !(Stat (KeyHash 'StakePool))
   , pssPoolParamsStats :: !PoolParamsStats
   }
 
@@ -519,7 +516,7 @@ countLedgerStateStats LedgerState {..} =
     }
 
 data TxInStats = TxInStats
-  { tisTxId :: !(Stat (TxId C))
+  { tisTxId :: !(Stat TxId)
   , tisTxIx :: !(Stat TxIx)
   }
 
@@ -527,7 +524,7 @@ instance Pretty TxInStats where
   pretty TxInStats {..} =
     prettyRecord "TxInStats" ["TxId" <:> tisTxId, "TxIx" <:> tisTxIx]
 
-countTxInStats :: [TxIn C] -> TxInStats
+countTxInStats :: [TxIn] -> TxInStats
 countTxInStats txIns =
   case unzip (fmap (\(TxIn txId txIx) -> (txId, txIx)) txIns) of
     (txIds, txIxs) ->
@@ -537,16 +534,16 @@ countTxInStats txIns =
         }
 
 data TxOutStats = TxOutStats
-  { tosBootstrap :: !(Stat (BootstrapAddress C))
-  , tosPaymentCredential :: !(Stat (Credential 'Payment C))
-  , tosStakingCredential :: !(Stat (Credential 'Staking C))
+  { tosBootstrap :: !(Stat BootstrapAddress)
+  , tosPaymentCredential :: !(Stat (Credential 'Payment))
+  , tosStakingCredential :: !(Stat (Credential 'Staking))
   , tosStakingPtr :: !(Stat Ptr)
   , tosNetwork :: !(Stat Network)
   , tosValue :: !(Stat Integer)
-  , tosPolicyId :: !(Stat (PolicyID C))
+  , tosPolicyId :: !(Stat PolicyID)
   , tosAssetName :: !(Stat AssetName)
   , tosAssetValue :: !(Stat Integer)
-  , tosDataHash :: !(Stat (DataHash C))
+  , tosDataHash :: !(Stat DataHash)
   }
 
 instance Semigroup TxOutStats where
@@ -641,12 +638,12 @@ countUTxOStats (UTxO m) =
     }
 
 data AggregateStats = AggregateStats
-  { gsCredentialStaking :: !(Stat (Credential 'Staking C))
-  , gsKeyHashStakePool :: !(Stat (KeyHash 'StakePool C))
-  , gsKeyHashGenesis :: !(Stat (KeyHash 'Genesis C))
-  , gsKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate C))
-  , gsVerKeyVRF :: !(Stat (Hash C KeyRoleVRF))
-  , gsScriptHash :: !(Stat (ScriptHash C))
+  { gsCredentialStaking :: !(Stat (Credential 'Staking))
+  , gsKeyHashStakePool :: !(Stat (KeyHash 'StakePool))
+  , gsKeyHashGenesis :: !(Stat (KeyHash 'Genesis))
+  , gsKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate))
+  , gsVerKeyVRF :: !(Stat (Hash KeyRoleVRF))
+  , gsScriptHash :: !(Stat ScriptHash)
   }
 
 instance Semigroup AggregateStats where
@@ -674,26 +671,26 @@ instance Pretty AggregateStats where
 class AggregateStat s where
   aggregateStat :: s -> AggregateStats
 
-instance AggregateStat (Stat (Credential 'Staking C)) where
+instance AggregateStat (Stat (Credential 'Staking)) where
   aggregateStat s = mempty {gsCredentialStaking = s}
 
-instance AggregateStat (Stat (KeyHash 'StakePool C)) where
+instance AggregateStat (Stat (KeyHash 'StakePool)) where
   aggregateStat s = mempty {gsKeyHashStakePool = s}
 
-instance AggregateStat (Stat (ScriptHash C)) where
+instance AggregateStat (Stat ScriptHash) where
   aggregateStat s = mempty {gsScriptHash = s}
 
 -- Initial attempt at UTxO stats, which was mostly superseded by the above
 -- approach that works for the whole state
 
 data UTxOUniques = UTxOUniques
-  { paymentKeys :: !(Set.Set (KeyHash 'Payment C))
-  , paymentScripts :: !(Set.Set (ScriptHash C))
-  , stakeKeys :: !(Set.Set (KeyHash 'Staking C))
-  , stakeScripts :: !(Set.Set (ScriptHash C))
+  { paymentKeys :: !(Set.Set (KeyHash 'Payment))
+  , paymentScripts :: !(Set.Set ScriptHash)
+  , stakeKeys :: !(Set.Set (KeyHash 'Staking))
+  , stakeScripts :: !(Set.Set ScriptHash)
   , stakePtrs :: !(Set.Set Ptr)
-  , scripts :: !(Set.Set (ScriptHash C))
-  , txIds :: !(Set.Set (TxId C))
+  , scripts :: !(Set.Set ScriptHash)
+  , txIds :: !(Set.Set TxId)
   , txIxs :: !(Set.Set TxIx)
   }
 
@@ -715,14 +712,14 @@ data UTxOStats' = UTxOStats'
 initStats :: UTxOStats'
 initStats = UTxOStats' 0 0 0 0 0 0 0 0
 
-collectStats :: ConduitT (TxIn C, TxOut CurrentEra) Void IO ()
+collectStats :: ConduitT (TxIn, TxOut CurrentEra) Void IO ()
 collectStats = do
   (uniques, stats) <- foldlC collect (emptyUniques, initStats)
   lift $ reportStats uniques stats
   where
     collect ::
       (UTxOUniques, UTxOStats') ->
-      (TxIn C, TxOut CurrentEra) ->
+      (TxIn, TxOut CurrentEra) ->
       (UTxOUniques, UTxOStats')
     collect (u@UTxOUniques {..}, s@UTxOStats' {..}) (TxIn txId txIx, txOut) =
       let u' = u {txIds = Set.insert txId txIds, txIxs = Set.insert txIx txIxs}

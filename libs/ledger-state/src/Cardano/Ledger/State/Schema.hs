@@ -30,11 +30,11 @@ import qualified Data.Map.Strict as Map
 import Database.Persist.Sqlite
 import Database.Persist.TH
 
-type FGenDelegs = (Enc (Map.Map (Shelley.FutureGenDeleg C) (Keys.GenDelegPair C)))
+type FGenDelegs = (Enc (Map.Map Shelley.FutureGenDeleg Keys.GenDelegPair))
 
-type CredentialWitness = Credential.Credential 'Keys.Witness C
+type CredentialWitness = Credential.Credential 'Keys.Witness
 
-type KeyHashWitness = Keys.KeyHash 'Keys.Witness C
+type KeyHashWitness = Keys.KeyHash 'Keys.Witness
 
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
@@ -44,7 +44,7 @@ EpochState
   reserves Coin
   prevPp (PParams CurrentEra)
   pp (PParams CurrentEra)
-  nonMyopic (Shelley.NonMyopic C)
+  nonMyopic Shelley.NonMyopic
   snapShotsFee Coin
 
 SnapShot
@@ -64,7 +64,7 @@ SnapShotDelegation
 SnapShotPool
   snapShotId SnapShotId
   keyHashId KeyHashId
-  params (Shelley.PoolParams C)
+  params Shelley.PoolParams
   UniqueSnapShotPool snapShotId keyHashId
 
 LedgerState
@@ -82,7 +82,7 @@ UtxoState
   donation Coin
 DState
   fGenDelegs FGenDelegs
-  genDelegs (Keys.GenDelegs C)
+  genDelegs Keys.GenDelegs
   irDeltaReserves DeltaCoin
   irDeltaTreasury DeltaCoin
 
@@ -94,12 +94,12 @@ KeyHash
   UniqueKeyHash witness
 Tx
   inIx TxIx
-  inId (TxIn.TxId C)
+  inId TxIn.TxId
   out (BabbageTxOut CurrentEra)
   UniqueTx inIx inId
 Txs
   inIx TxIx
-  inId (TxIn.TxId C)
+  inId TxIn.TxId
   out (BabbageTxOut CurrentEra)
   stakeCredential CredentialId Maybe
   UniqueTxs inIx inId
