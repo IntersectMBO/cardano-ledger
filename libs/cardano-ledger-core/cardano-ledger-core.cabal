@@ -97,7 +97,7 @@ library
     binary,
     bytestring,
     cardano-crypto,
-    cardano-crypto-class,
+    cardano-crypto-class ^>=2.1,
     cardano-crypto-praos,
     cardano-crypto-wrapper,
     cardano-data ^>=1.2,
