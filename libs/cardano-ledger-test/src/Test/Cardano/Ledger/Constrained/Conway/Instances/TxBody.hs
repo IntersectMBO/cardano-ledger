@@ -352,9 +352,9 @@ fromAlonzoBody (AlonzoTxBody colinputs inputs outputs certs withdrawals coin vi 
 --   real types in the toSimpleRep and fromSimpleRep methods. This makes it much easier to
 --   write Specifications, because the Constrained packaage knows about Lists and Maybe.
 type BabbageTxBodyTypes era =
-  '[ Set (TxIn)
-   , Set (TxIn)
-   , Set (TxIn)
+  '[ Set TxIn
+   , Set TxIn
+   , Set TxIn
    , [Sized (TxOut era)]
    , Maybe (Sized (TxOut era))
    , Maybe Coin
