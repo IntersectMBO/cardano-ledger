@@ -22,8 +22,6 @@ import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreserv
 import qualified Test.Cardano.Ledger.Shelley.Rules.IncrementalStake as IncrementalStake
 import Test.Tasty
 
-type A = AlonzoEra
-
 main :: IO ()
 main = do
   nightly <- lookupEnv "NIGHTLY"
@@ -35,7 +33,7 @@ defaultTests :: TestTree
 defaultTests =
   testGroup
     "Alonzo tests"
-    [ AdaPreservation.tests @A @(AlonzoLEDGER A) 50
+    [ AdaPreservation.tests @AlonzoEra @(AlonzoLEDGER AlonzoEra) 50
     , Tripping.tests
     , Translation.tests
     , Canonical.tests
@@ -47,7 +45,7 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Alonzo tests - nightly"
-    $ Shelley.commonTests @A @(AlonzoLEDGER A)
-      ++ [ IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy A)
+    $ Shelley.commonTests @AlonzoEra @(AlonzoLEDGER AlonzoEra)
+      ++ [ IncrementalStake.incrStakeComparisonTest (Proxy :: Proxy AlonzoEra)
          , ChainTrace.tests
          ]
