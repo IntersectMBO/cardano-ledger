@@ -39,6 +39,7 @@ library
         Cardano.Ledger.CertState
         Cardano.Ledger.DRep
         Cardano.Ledger.EpochBoundary
+        Cardano.Ledger.Era
         Cardano.Ledger.Genesis
         Cardano.Ledger.Hashes
         Cardano.Ledger.HKD
