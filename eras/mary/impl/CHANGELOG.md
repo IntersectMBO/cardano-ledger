@@ -2,8 +2,6 @@
 
 ## 1.7.1.0
 
-*
-
 ### `testlib`
 
 * Add `mkTokenMintingTx`
