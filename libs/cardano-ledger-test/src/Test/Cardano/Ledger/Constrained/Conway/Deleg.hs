@@ -64,7 +64,7 @@ conwayDelegCertSpec ::
   (EraPParams era, IsConwayUniv fn) =>
   ConwayDelegEnv era ->
   CertState era ->
-  Specification fn (ConwayDelegCert)
+  Specification fn ConwayDelegCert
 conwayDelegCertSpec (ConwayDelegEnv pp pools) (CertState vs _ps ds) =
   let rewardMap = unUnify $ rewards ds
       dReps = vsDReps vs
@@ -143,7 +143,7 @@ shelleyDelegCertSpec ::
   IsConwayUniv fn =>
   ConwayDelegEnv era ->
   DState era ->
-  Specification fn (ShelleyDelegCert)
+  Specification fn ShelleyDelegCert
 shelleyDelegCertSpec (ConwayDelegEnv _pp pools) ds =
   let rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds

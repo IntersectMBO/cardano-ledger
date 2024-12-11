@@ -6,7 +6,6 @@
 -- | Benchmarks for things which happen on an epoch boundary.
 module Bench.Cardano.Ledger.EpochBoundary where
 
-import Cardano.Crypto.Hash (hashFromTextAsHex)
 import Cardano.Ledger.Address (Addr (Addr), compactAddr)
 import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (Coin))
@@ -19,7 +18,7 @@ import Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
  )
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.SafeHash (
   SafeToHash (makeHashWithExplicitProxys),
@@ -39,7 +38,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy
-import qualified Data.Text as T
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (aggregateUtxoCoinByCredential)
@@ -47,7 +45,7 @@ import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (aggregateUtxoCoinByCr
 type TestEra = MaryEra
 
 payCred :: PaymentCredential
-payCred = KeyHashObj $ KeyHash $ mkDummyHash 2024
+payCred = KeyHashObj $ KeyHash $ mkDummyHash (2024 :: Int)
 
 -- | Infinite list of transaction inputs
 txIns :: [TxIn]
@@ -89,7 +87,7 @@ txOutsFromPtrs ptrs =
 
 -- | Generate n stake credentials
 stakeCreds :: Word64 -> [StakeCredential]
-stakeCreds n = [KeyHashObj (KeyHash (mkDummyHash (123456 + i))) | i <- [1 .. fromIntegral n]]
+stakeCreds n = [KeyHashObj (KeyHash (mkDummyHash (123456 + i))) | i <- [1 .. n]]
 
 -- | Generate pointers to a list of stake credentials
 stakePtrs :: [StakeCredential] -> Map Ptr StakeCredential
