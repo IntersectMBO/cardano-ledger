@@ -29,7 +29,7 @@ import NoThunks.Class (NoThunks (..))
 
 data OCERT c
 
-data OcertPredicateFailure c
+data OcertPredicateFailure
   = KESBeforeStartOCERT
       !KESPeriod -- OCert Start KES Period
       !KESPeriod -- Current KES Period
@@ -52,7 +52,7 @@ data OcertPredicateFailure c
       !(KeyHash 'BlockIssuer) -- stake pool key hash
   deriving (Show, Eq, Generic)
 
-instance NoThunks (OcertPredicateFailure c)
+instance NoThunks OcertPredicateFailure
 
 instance
   ( Crypto c
@@ -64,7 +64,7 @@ instance
   type Signal (OCERT c) = BHeader c
   type Environment (OCERT c) = OCertEnv
   type BaseM (OCERT c) = ShelleyBase
-  type PredicateFailure (OCERT c) = OcertPredicateFailure c
+  type PredicateFailure (OCERT c) = OcertPredicateFailure
 
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]
