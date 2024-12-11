@@ -1,12 +1,15 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Test.Cardano.Ledger.Conformance.Imp (spec) where
 
@@ -34,6 +37,8 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
 
+-- TODO remove this once we get rid of the CPP directives
+{- FOURMOLU_DISABLE -}
 testImpConformance ::
   forall era.
   ( ConwayEraImp era
@@ -50,6 +55,7 @@ testImpConformance ::
   , ExecEnvironment ConwayFn "LEDGER" era ~ LedgerEnv era
   , Tx era ~ AlonzoTx era
   , SpecTranslate ConwayTxBodyTransContext (TxBody era)
+  , ToExpr (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
   ) =>
   Globals ->
   Either
@@ -58,8 +64,8 @@ testImpConformance ::
   ExecEnvironment ConwayFn "LEDGER" era ->
   ExecState ConwayFn "LEDGER" era ->
   ExecSignal ConwayFn "LEDGER" era ->
-  Expectation
-testImpConformance _ impRuleResult env state signal = do
+  BaseImpM ()
+testImpConformance _globals impRuleResult env state signal = do
   let ctx =
         ConwayLedgerExecContext
           { clecPolicyHash =
@@ -97,8 +103,33 @@ testImpConformance _ impRuleResult env state signal = do
           (toTestRep . inject @_ @(ExecState ConwayFn "LEDGER" era) . fst)
           impRuleResult
 
-  when (impResponse /= agdaResponse) $ do
+#if __GLASGOW_HASKELL__ >= 906
+  logString "implEnv"
+  logToExpr env
+  logString "implState"
+  logToExpr state
+  logString "implSignal"
+  logToExpr signal
+  logString "specEnv"
+  logToExpr specEnv
+  logString "specState"
+  logToExpr specState
+  logString "specSignal"
+  logToExpr specSignal
+  logString "Extra info:"
+  logDoc $
+    extraInfo @ConwayFn @"LEDGER" @era
+      _globals
+      ctx
+      env
+      state
+      signal
+      (first showOpaqueErrorString impRuleResult)
+  logDoc $ diffConformance impResponse agdaResponse
+#endif
+  when (impResponse /= agdaResponse) $
     assertFailure "Conformance failure"
+{- FOURMOLU_ENABLE -}
 
 spec :: Spec
 spec =

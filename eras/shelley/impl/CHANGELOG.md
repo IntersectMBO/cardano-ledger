@@ -64,6 +64,7 @@
 
 ### `testlib`
 
+* Changed the return type of `iteExpectLedgerRuleConformance`
 * Add `runSTS`
 * Add `iteExpectLedgerRuleConformance` to `ImpTestEnv` for additionally checking conformance with ImpTests. #4748
   * Add lens `iteExpectLedgerRuleConformanceL`.
