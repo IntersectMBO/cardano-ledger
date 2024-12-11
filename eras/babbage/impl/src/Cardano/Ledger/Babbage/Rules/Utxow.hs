@@ -24,8 +24,6 @@ module Cardano.Ledger.Babbage.Rules.Utxow (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
-import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
@@ -54,7 +52,6 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
-import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
@@ -200,7 +197,6 @@ instance
   ( AlonzoEraScript era
   , NFData (TxCert era)
   , NFData (PredicateFailure (EraRule "UTXO" era))
-  , NFData (VerKeyDSIGN DSIGN)
   ) =>
   NFData (BabbageUtxowPredFailure era)
 
@@ -402,7 +398,6 @@ instance
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
-  , Signable DSIGN (Hash HASH EraIndependentTxBody)
   , EraRule "UTXOW" era ~ BabbageUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
