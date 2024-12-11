@@ -1,3 +1,0 @@
-#! /usr/bin/env -S nix develop --accept-flake-config -c bash
-
-haskell-language-server "$@"
