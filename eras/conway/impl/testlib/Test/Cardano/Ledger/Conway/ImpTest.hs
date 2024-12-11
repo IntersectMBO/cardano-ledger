@@ -593,12 +593,7 @@ trySubmitVote ::
   Vote ->
   Voter ->
   GovActionId ->
-  ImpTestM
-    era
-    ( Either
-        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
-        TxId
-    )
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) TxId)
 trySubmitVote vote voter gaId =
   fmap (bimap fst txIdTx) $
     trySubmitTx $
@@ -660,12 +655,7 @@ trySubmitProposal ::
   , ConwayEraTxBody era
   ) =>
   ProposalProcedure era ->
-  ImpTestM
-    era
-    ( Either
-        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
-        GovActionId
-    )
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitProposal proposal = do
   res <- trySubmitProposals (pure proposal)
   pure $ case res of
@@ -706,12 +696,7 @@ trySubmitGovAction ::
   , ConwayEraTxBody era
   ) =>
   GovAction era ->
-  ImpTestM
-    era
-    ( Either
-        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
-        GovActionId
-    )
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitGovAction ga = do
   let mkGovActionId tx = GovActionId (txIdTx tx) (GovActionIx 0)
   bimap fst mkGovActionId <$> trySubmitGovActions (pure ga)
