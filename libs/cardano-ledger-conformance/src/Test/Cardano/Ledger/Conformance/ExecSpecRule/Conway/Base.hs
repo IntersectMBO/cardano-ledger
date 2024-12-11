@@ -31,6 +31,9 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   externalFunctions,
 ) where
 
+import Cardano.Crypto.DSIGN (SignedDSIGN (..), verifySignedDSIGN)
+import Cardano.Crypto.Hash (ByteString, Hash)
+import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -73,15 +76,21 @@ import Cardano.Ledger.Conway.Rules (
   spoAccepted,
   spoAcceptedRatio,
  )
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import Cardano.Ledger.DRep (DRep (..))
+import Cardano.Ledger.Keys (KeyRole (..), VKey (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Constrained hiding (inject)
 import Data.Bifunctor (Bifunctor (..))
+import Data.Either (isRight)
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Data.Ratio (denominator, numerator, (%))
 import qualified Data.Sequence.Strict as SSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
@@ -104,29 +113,15 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   signatureFromInteger,
  )
 import Test.Cardano.Ledger.Constrained.Conway (
-  EpochExecEnv,
-  IsConwayUniv,
-  coerce_,
-  epochEnvSpec,
-  epochSignalSpec,
-  epochStateSpec,
   newEpochStateSpec,
  )
+import Test.Cardano.Ledger.Constrained.Conway.Epoch
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   committeeMaxTermLength_,
   committeeMinSize_,
   protocolVersion_,
  )
-
-import Cardano.Crypto.DSIGN (SignedDSIGN (..), verifySignedDSIGN)
-import Cardano.Crypto.Hash (ByteString, Hash)
-import Cardano.Ledger.Address (RewardAccount)
-import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
-import Cardano.Ledger.Keys (KeyRole (..), VKey (..))
-import Data.Either (isRight)
-import Data.Maybe (fromMaybe)
-import Data.Set (Set)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
 
@@ -585,15 +580,15 @@ nameGovAction UpdateCommittee {} = "UpdateCommittee"
 nameGovAction NewConstitution {} = "NewConstitution"
 nameGovAction InfoAction {} = "InfoAction"
 
-instance IsConwayUniv fn => ExecSpecRule fn "EPOCH" Conway where
+instance fn ~ ConwayFn => ExecSpecRule fn "EPOCH" Conway where
   type ExecContext fn "EPOCH" Conway = [GovActionState Conway]
   type ExecEnvironment fn "EPOCH" Conway = EpochExecEnv Conway
 
   environmentSpec _ = epochEnvSpec
 
-  stateSpec _ _ = epochStateSpec
+  stateSpec _ = epochStateSpec . lit . eeeEpochNo
 
-  signalSpec _ _ _ = epochSignalSpec
+  signalSpec _ env _ = epochSignalSpec (eeeEpochNo env)
 
   runAgdaRule env st sig =
     first (\case {})
@@ -605,7 +600,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "EPOCH" Conway where
 nameEpoch :: EpochNo -> String
 nameEpoch x = show x
 
-instance IsConwayUniv fn => ExecSpecRule fn "NEWEPOCH" Conway where
+instance fn ~ ConwayFn => ExecSpecRule fn "NEWEPOCH" Conway where
   type ExecContext fn "NEWEPOCH" Conway = [GovActionState Conway]
   type ExecEnvironment fn "NEWEPOCH" Conway = EpochExecEnv Conway
 
@@ -613,7 +608,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "NEWEPOCH" Conway where
 
   stateSpec _ _ = newEpochStateSpec
 
-  signalSpec _ _ _ = epochSignalSpec
+  signalSpec _ env _ = epochSignalSpec (eeeEpochNo env)
 
   runAgdaRule env st sig =
     first (\case {})
