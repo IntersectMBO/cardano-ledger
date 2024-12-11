@@ -1,12 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-
-module Test.Cardano.Ledger.Shelley.WitVKeys (
-  tests,
-)
-where
+module Test.Cardano.Ledger.Shelley.WitVKeys (tests) where
 
 import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash)
@@ -21,7 +13,7 @@ import Test.Tasty.QuickCheck (testProperty)
 import qualified Test.Tasty.QuickCheck as TQC
 
 tests :: TestTree
-tests = testProperty "WitVKey does not brake containers due to invalid Ord" $ witVKeysProp
+tests = testProperty "WitVKey does not brake containers due to invalid Ord" witVKeysProp
 
 witVKeysProp ::
   RawSeed ->

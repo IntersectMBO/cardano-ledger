@@ -25,8 +25,6 @@ import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
-type ShelleyTest = ShelleyEra
-
 shelleyPV :: ProtVer
 shelleyPV = ProtVer (natVersion @2) 0
 
@@ -44,7 +42,7 @@ testPoolNetworkID ::
 testPoolNetworkID pv poolParams e = do
   let st =
         runShelleyBase $
-          applySTSTest @(ShelleyPOOL ShelleyTest)
+          applySTSTest @(ShelleyPOOL ShelleyEra)
             ( TRC
                 ( PoolEnv (EpochNo 0) $ emptyPParams & ppProtocolVersionL .~ pv
                 , def

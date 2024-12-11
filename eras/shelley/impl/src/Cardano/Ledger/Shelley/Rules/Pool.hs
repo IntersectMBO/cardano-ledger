@@ -45,7 +45,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..))
 import Cardano.Ledger.Shelley.Core
@@ -222,7 +222,7 @@ poolDelegationTransition = do
         forM_ ppMetadata $ \pmd ->
           let s = BS.length (pmHash pmd)
            in s
-                <= fromIntegral (sizeHash ([] @CC.HASH))
+                <= fromIntegral (sizeHash ([] @HASH))
                   ?! PoolMedataHashTooBig ppId s
 
       let minPoolCost = pp ^. ppMinPoolCostL

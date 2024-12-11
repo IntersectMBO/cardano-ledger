@@ -1476,7 +1476,7 @@ registerRewardAccount ::
   ( HasCallStack
   , ShelleyEraImp era
   ) =>
-  ImpTestM era (RewardAccount)
+  ImpTestM era RewardAccount
 registerRewardAccount = do
   khDelegator <- freshKeyHash
   registerStakeCredential (KeyHashObj khDelegator)

@@ -43,7 +43,6 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
-import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGER)
@@ -256,8 +255,7 @@ shelleyLedgerAssertions =
   ]
 
 instance
-  ( DSignable (Hash EraIndependentTxBody)
-  , EraTx era
+  ( EraTx era
   , EraGov era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)

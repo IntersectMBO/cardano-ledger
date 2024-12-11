@@ -127,7 +127,7 @@ class
      in liftEither
           . left ApplyTxError
           . right
-            (mapEventReturn @ep @(EraRule "LEDGER" era) @(MempoolState era) $ (,Validated tx))
+            (mapEventReturn @ep @(EraRule "LEDGER" era) @(MempoolState era) (,Validated tx))
           $ res
 
   -- | Reapply a previously validated 'Tx'.
@@ -157,9 +157,7 @@ class
           . left ApplyTxError
           $ res
 
-instance
-  EraPParams ShelleyEra =>
-  ApplyTx ShelleyEra
+instance ApplyTx ShelleyEra
 
 type MempoolEnv era = Ledger.LedgerEnv era
 

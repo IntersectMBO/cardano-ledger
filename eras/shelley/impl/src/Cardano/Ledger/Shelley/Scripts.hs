@@ -90,7 +90,7 @@ data MultiSigRaw era
     RequireAnyOf' !(StrictSeq (MultiSig era))
   | -- | Require M of the given sub-terms to be satisfied.
     RequireMOf' !Int !(StrictSeq (MultiSig era))
-  deriving (Eq, Generic)
+  deriving (Eq, Show, Generic)
   deriving anyclass (NoThunks)
 
 class EraScript era => ShelleyEraScript era where
@@ -106,18 +106,14 @@ class EraScript era => ShelleyEraScript era where
   mkRequireMOf :: Int -> StrictSeq (NativeScript era) -> NativeScript era
   getRequireMOf :: NativeScript era -> Maybe (Int, StrictSeq (NativeScript era))
 
-deriving instance Show (MultiSigRaw era)
-
 instance NFData (MultiSigRaw era)
 
 newtype MultiSig era = MultiSigConstr (MemoBytes MultiSigRaw era)
-  deriving (Eq, Generic)
+  deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
 
 instance Memoized MultiSig where
   type RawType MultiSig = MultiSigRaw
-
-deriving instance Show (MultiSig era)
 
 -- | Magic number "memorialized" in the ValidateScript class under the method:
 --   scriptPrefixTag:: Core.Script era -> Bs.ByteString, for the Shelley Era.

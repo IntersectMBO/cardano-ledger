@@ -536,8 +536,8 @@ mkVRFKeyPair _ byte = VRFKeyPair sk (VRF.deriveVerKeyVRF sk)
 examplePoolParams :: PoolParams
 examplePoolParams =
   PoolParams
-    { ppId = hashKey $ vKey $ aikCold poolKeys
-    , ppVrf = hashVerKeyVRF @StandardCrypto $ vrfVerKey $ aikVrf poolKeys
+    { ppId = hashKey $ vKey $ aikCold exampleKeys
+    , ppVrf = hashVerKeyVRF @StandardCrypto $ vrfVerKey $ aikVrf exampleKeys
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1
@@ -551,5 +551,3 @@ examplePoolParams =
             , pmHash = "{}"
             }
     }
-  where
-    poolKeys = exampleKeys

@@ -47,10 +47,8 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum, encod
 import Cardano.Ledger.CertState (CertState, certDState, dsGenDelegs)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
-  DSignable,
   GenDelegPair (..),
   GenDelegs (..),
-  Hash,
   KeyHash,
   KeyRole (..),
   VKey,
@@ -300,7 +298,6 @@ transitionRulesUTXOW ::
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , STS (EraRule "UTXOW" era)
-  , DSignable (Hash EraIndependentTxBody)
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 transitionRulesUTXOW = do
@@ -358,7 +355,6 @@ instance
   , EraUTxO era
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
-  , DSignable (Hash EraIndependentTxBody)
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ShelleyUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -366,7 +362,6 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , EraRule "UTXOW" era ~ ShelleyUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
-  , DSignable (Hash EraIndependentTxBody)
   , EraGov era
   ) =>
   STS (ShelleyUTXOW era)
@@ -409,12 +404,7 @@ validateMissingScripts (ShelleyScriptsNeeded sNeeded) scriptsprovided =
     sProvided = Map.keysSet $ unScriptsProvided scriptsprovided
 
 -- | Determine if the UTxO witnesses in a given transaction are correct.
-validateVerifiedWits ::
-  ( EraTx era
-  , DSignable (Hash EraIndependentTxBody)
-  ) =>
-  Tx era ->
-  Test (ShelleyUtxowPredFailure era)
+validateVerifiedWits :: EraTx era => Tx era -> Test (ShelleyUtxowPredFailure era)
 validateVerifiedWits tx =
   case failed <> failedBootstrap of
     [] -> pure ()

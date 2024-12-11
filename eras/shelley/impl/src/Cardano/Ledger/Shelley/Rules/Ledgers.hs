@@ -27,7 +27,6 @@ import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGERS)
 import Cardano.Ledger.Shelley.LedgerState (AccountState, LedgerState)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
@@ -167,7 +166,6 @@ instance
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Signal (EraRule "LEDGER" era) ~ Tx era
-  , DSignable (Hash EraIndependentTxBody)
   , Default (LedgerState era)
   ) =>
   STS (ShelleyLEDGERS era)
