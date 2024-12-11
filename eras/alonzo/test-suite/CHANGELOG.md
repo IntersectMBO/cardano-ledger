@@ -2,7 +2,7 @@
 
 ## 1.3.1.0
 
-* Remove crypto parametrization
+* Account for removal of crypto parametrization
 
 ## 1.3.0.0
 

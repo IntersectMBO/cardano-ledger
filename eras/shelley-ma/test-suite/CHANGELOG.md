@@ -3,6 +3,7 @@
 ## 1.3.0.0
 
 * Remove `TestCrypto`
+* Account for removal of crypto parametrization
 
 ## 1.2.2.4
 
