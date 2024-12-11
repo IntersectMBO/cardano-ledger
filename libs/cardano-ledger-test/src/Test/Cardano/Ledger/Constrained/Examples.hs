@@ -35,7 +35,6 @@ import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (genTxAndNewEpoch)
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Solver
-import Test.Cardano.Ledger.Constrained.Spec (TT)
 import Test.Cardano.Ledger.Constrained.Tests (prop_shrinking, prop_soundness)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (explainBad, testIO)
@@ -727,7 +726,7 @@ test19 :: IO ()
 test19 = do
   putStrLn "testing: Test 19. test of projOnDom function"
   ans <- generate (help19 Mary)
-  putStrLn (synopsis (MapR (FutureGenDelegR @TT) GenDelegPairR) ans) -- (ppMap pcFutureGenDeleg pcGenDelegPair ans))
+  putStrLn (synopsis (MapR (FutureGenDelegR @BabbageEra) GenDelegPairR) ans) -- (ppMap pcFutureGenDeleg pcGenDelegPair ans))
   putStrLn "+++ OK, passed 1 test"
 
 -- ===================================================

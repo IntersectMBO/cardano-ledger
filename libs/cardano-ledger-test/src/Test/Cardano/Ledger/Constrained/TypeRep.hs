@@ -88,7 +88,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..), Delegatee (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
-import qualified Cardano.Ledger.Crypto as CC (HASH)
+import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), KeyHash, KeyRole (..), WitVKey (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
@@ -238,8 +238,8 @@ import Test.QuickCheck hiding (Fixed, total)
 restrictHash :: Proof era -> Bool
 restrictHash p = SoftForks.restrictPoolMetadataHash $ protocolVersion p
 
-hashsize :: forall era. Proof era -> Int
-hashsize _p = fromIntegral $ sizeHash ([] @CC.HASH)
+hashsize :: Int
+hashsize = fromIntegral $ sizeHash ([] @HASH)
 
 -- =======================================================================
 infixr 0 :->
@@ -893,7 +893,7 @@ genSizedRep _ BoolR = arbitrary
 genSizedRep _ DRepR = arbitrary
 genSizedRep _ (PoolMetadataR p) =
   if restrictHash p
-    then PoolMetadata <$> arbitrary <*> (BS.take (hashsize p) <$> arbitrary)
+    then PoolMetadata <$> arbitrary <*> (BS.take hashsize <$> arbitrary)
     else PoolMetadata <$> arbitrary <*> arbitrary
 genSizedRep _ DRepStateR = arbitrary
 genSizedRep _ DStateR =

@@ -128,41 +128,23 @@ cDelegVote ::
 cDelegVote = Constr "cDelegVote" (\x y _ -> ConwayTxCertDeleg (ConwayDelegCert x (DelegVote y)))
 
 cDelegStakeVote ::
-  Target
-    era
-    ( StakeCredential ->
-      KeyHash 'StakePool ->
-      DRep ->
-      a ->
-      ConwayTxCert era
-    )
+  Target era (StakeCredential -> KeyHash 'StakePool -> DRep -> a -> ConwayTxCert era)
 cDelegStakeVote = Constr "cDelegStakeVote" (\x y z _ -> ConwayTxCertDeleg (ConwayDelegCert x (DelegStakeVote y z)))
 
 cRegDeleg ::
-  forall era.
   ConwayEraTxCert era =>
   Target era (StakeCredential -> Delegatee -> Coin -> TxCert era)
 cRegDeleg = Constr "cRegDeleg" RegDepositDelegTxCert
 
-cDelegateeStake ::
-  forall era.
-  RootTarget
-    era
-    (Delegatee)
-    (KeyHash 'StakePool -> Delegatee)
+cDelegateeStake :: RootTarget era (Delegatee) (KeyHash 'StakePool -> Delegatee)
 cDelegateeStake = Invert "cDelegateeStake" (typeRep @Delegatee) DelegStake
 
 cDelegateeVote ::
-  forall era.
   RootTarget era Delegatee (DRep -> Delegatee)
 cDelegateeVote = Invert "cDelegateeVote" (typeRep @Delegatee) DelegVote
 
 cDelegateeStakeVote ::
-  forall era.
-  RootTarget
-    era
-    (Delegatee)
-    (KeyHash 'StakePool -> DRep -> Delegatee)
+  RootTarget era (Delegatee) (KeyHash 'StakePool -> DRep -> Delegatee)
 cDelegateeStakeVote = Invert "cDelegateeVote" (typeRep @Delegatee) DelegStakeVote
 
 cRegPool :: Target era (PoolParams -> ConwayTxCert era)

@@ -51,11 +51,9 @@ tests :: TestTree
 tests =
   testGroup "Alonzo API" [testCase "estimateMinFee" testEstimateMinFee]
 
-type A = AlonzoEra
-
 testEstimateMinFee :: Assertion
 testEstimateMinFee =
-  estimateMinFeeTx @A
+  estimateMinFeeTx @AlonzoEra
     pparams
     validatingTxNoWits
     1

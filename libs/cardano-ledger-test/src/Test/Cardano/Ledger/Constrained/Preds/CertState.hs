@@ -197,12 +197,7 @@ mainP = defaultMain $ testIO "Testing PState Stage" (demoP Interactive)
 
 -- | A field that selects the 'genDelegKeyHash' field from a 'GenDelegPair'
 --   It also silently casts the 'KeyRole. from 'Genesis to 'Witness
-gdKeyHashField ::
-  Era era =>
-  Field
-    era
-    (GenDelegPair)
-    (KeyHash 'Witness)
+gdKeyHashField :: Era era => Field era GenDelegPair (KeyHash 'Witness)
 gdKeyHashField =
   Field
     "gdKeyHash1"

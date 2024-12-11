@@ -181,7 +181,7 @@ pattern DataWits' :: Era era => [Data era] -> WitnessesField era -- Map
 
 -- ================
 data TxOutField era
-  = Address (Addr)
+  = Address Addr
   | Amount (Value era)
   | DHash (StrictMaybe DataHash)
   | FDatum (Datum era)

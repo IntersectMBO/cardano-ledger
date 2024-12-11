@@ -237,18 +237,17 @@ getPlutusDataHashes ::
   Map TxIn (TxOutF era) ->
   TxBodyF era ->
   Map ScriptHash (ScriptF era) ->
-  Set (DataHash)
+  Set DataHash
 getPlutusDataHashes ut (TxBodyF _ txbodyV) m =
   fst $ getInputDataHashesTxBody (liftUTxO ut) txbodyV (ScriptsProvided (Map.map unScriptF m))
 
 bootWitsT ::
-  forall era.
   Reflect era =>
   Proof era ->
   Map TxIn (TxOutF era) ->
   TxBodyF era ->
   Map (KeyHash 'Payment) (Addr, SigningKey) ->
-  Set (BootstrapWitness)
+  Set BootstrapWitness
 bootWitsT proof spend (TxBodyF _ txb) byronUniv = bootWitness h boots byronUniv
   where
     boots :: [BootstrapAddress] -- Not every Addr has a BootStrapAddress
@@ -259,7 +258,7 @@ bootWitsT proof spend (TxBodyF _ txb) byronUniv = bootWitness h boots byronUniv
           _ -> ans
     h = hashBody proof txb
 
-hashBody :: forall era. Proof era -> TxBody era -> Hash EraIndependentTxBody
+hashBody :: Proof era -> TxBody era -> Hash EraIndependentTxBody
 hashBody Shelley txb = extractHash (hashAnnotated txb)
 hashBody Allegra txb = extractHash (hashAnnotated txb)
 hashBody Mary txb = extractHash (hashAnnotated txb)
@@ -458,7 +457,7 @@ adjustNeededByRefScripts ::
   Proof era ->
   Set TxIn ->
   Set TxIn ->
-  (Map TxIn (TxOutF era)) ->
+  Map TxIn (TxOutF era) ->
   Set ScriptHash ->
   Set ScriptHash
 adjustNeededByRefScripts proof inps refinps ut neededhashes = case whichTxOut proof of
