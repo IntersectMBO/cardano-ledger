@@ -2,7 +2,7 @@
 
 ## 1.7.0.0
 
-* Deprcate `Allegra`
+* Deprecate `Allegra` type synonym
 * Remove crypto parametrization from `AllegraEra`
 
 ## 1.6.1.0

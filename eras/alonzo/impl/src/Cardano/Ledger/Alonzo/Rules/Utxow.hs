@@ -175,7 +175,6 @@ instance
   ( AlonzoEraScript era
   , NFData (TxCert era)
   , NFData (PredicateFailure (EraRule "UTXO" era))
-  , NFData (VerKeyDSIGN DSIGN)
   ) =>
   NFData (AlonzoUtxowPredFailure era)
 
@@ -321,7 +320,6 @@ alonzoStyleWitness ::
   , ShelleyEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signable DSIGN (Hash HASH EraIndependentTxBody)
   , EraRule "UTXOW" era ~ AlonzoUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
@@ -414,7 +412,6 @@ instance
   , AlonzoEraUTxO era
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signable DSIGN (Hash HASH EraIndependentTxBody)
   , EraRule "UTXOW" era ~ AlonzoUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era

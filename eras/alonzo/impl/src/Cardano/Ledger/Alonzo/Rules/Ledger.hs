@@ -155,8 +155,7 @@ ledgerTransition = do
   pure $ LedgerState utxoSt' certState'
 
 instance
-  ( DSignable (Hash EraIndependentTxBody)
-  , AlonzoEraTx era
+  ( AlonzoEraTx era
   , EraGov era
   , Tx era ~ AlonzoTx era
   , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)
