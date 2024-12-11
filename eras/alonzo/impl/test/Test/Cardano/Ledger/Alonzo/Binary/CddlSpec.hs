@@ -38,7 +38,7 @@ spec =
       cddlRoundTripCborSpec @(PParamsUpdate AlonzoEra) v "protocol_param_update"
       cddlRoundTripAnnCborSpec @(Redeemers AlonzoEra) v "[* redeemer]"
       cddlRoundTripAnnCborSpec @(Tx AlonzoEra) v "transaction"
-      cddlRoundTripCborSpec @CostModels v "costmdls"
+      cddlRoundTripCborSpec @CostModels v "cost_models"
     describe "Huddle" $ specWithHuddle alonzoCDDL 100 $ do
       huddleRoundTripCborSpec @(Value AlonzoEra) v "coin"
       huddleRoundTripAnnCborSpec @(TxBody AlonzoEra) v "transaction_body"
