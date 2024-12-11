@@ -231,9 +231,7 @@ newtype KeyHash (r :: KeyRole) = KeyHash
 instance HasKeyRole KeyHash
 
 -- | Hash a given public key
-hashKey ::
-  VKey kd ->
-  KeyHash kd
+hashKey :: VKey kd -> KeyHash kd
 hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
 
 --------------------------------------------------------------------------------

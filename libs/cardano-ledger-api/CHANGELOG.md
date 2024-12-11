@@ -6,6 +6,7 @@
   * `LatestKnownEra`
   * `HotCredAuthStatus` and `CommitteeMemberState`
   * `DecAddr`
+  * Many other re-exported types. See individual packages for changelog
 
 ## 1.10.0.0
 

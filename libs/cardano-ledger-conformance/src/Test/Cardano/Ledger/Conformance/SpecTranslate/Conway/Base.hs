@@ -637,7 +637,7 @@ instance
   , TxCert era ~ ConwayTxCert era
   , Share (TxOut era) ~ Interns (Credential 'Staking)
   , Inject ctx Integer
-  , Inject ctx (TxId)
+  , Inject ctx TxId
   , SpecTranslate ctx (TxOut era)
   , SpecTranslate ctx (ConwayTxCert era)
   , SpecTranslate ctx (PParamsHKD StrictMaybe era)
@@ -648,7 +648,7 @@ instance
 
   toSpecRep txb = do
     sizeTx <- askCtx
-    txId <- askCtx @(TxId)
+    txId <- askCtx @TxId
     Agda.MkTxBody
       <$> toSpecRep (txb ^. inputsTxBodyL)
       <*> toSpecRep (txb ^. referenceInputsTxBodyL)
@@ -1058,11 +1058,7 @@ instance SpecTranslate ctx CommitteeAuthorization where
 instance SpecTranslate ctx (CommitteeState era) where
   type
     SpecRep (CommitteeState era) =
-      SpecRep
-        ( Map
-            (Credential 'ColdCommitteeRole)
-            (CommitteeAuthorization)
-        )
+      SpecRep (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
 
   toSpecRep = toSpecRep . csCommitteeCreds
 
