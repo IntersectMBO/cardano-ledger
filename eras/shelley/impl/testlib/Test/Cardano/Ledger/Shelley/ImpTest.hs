@@ -1,10 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -22,6 +24,7 @@
 
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
+  BaseImpM,
   LedgerSpec,
   SomeSTSEvent (..),
   ImpTestState,
@@ -282,6 +285,20 @@ import Type.Reflection (Typeable, typeOf)
 import UnliftIO (evaluateDeep)
 
 type ImpTestM era = ImpM (LedgerSpec era)
+
+-- TODO remove this once we get rid of the CPP directives
+{- FOURMOLU_DISABLE -}
+type BaseImpM a = -- TODO get rid of the CPP once we have deprecated GHC8
+#if __GLASGOW_HASKELL__ < 906
+  Expectation
+#else
+  forall t. ImpM t a
+  -- ^ Note the use of higher ranked types here. This prevents the hook from
+  -- accessing the state while still permitting the use of more general
+  -- functions that return some `ImpM t a` and that don't constrain the
+  -- state in any way (e.g. `logString`, `shouldBe` are still fine to use).
+#endif
+{- FOURMOLU_ENABLE -}
 
 data LedgerSpec era
 
@@ -622,7 +639,7 @@ modifyImpInitExpectLedgerRuleConformance ::
     LedgerEnv era ->
     LedgerState era ->
     Tx era ->
-    Expectation
+    BaseImpM ()
   ) ->
   SpecWith (ImpInit (LedgerSpec era)) ->
   SpecWith (ImpInit (LedgerSpec era))
@@ -775,11 +792,7 @@ data ImpTestEnv era = ImpTestEnv
       LedgerEnv era ->
       LedgerState era ->
       Tx era ->
-      Expectation
-  -- ^ Note the use of higher ranked types here. This prevents the hook from
-  -- accessing the state while still permitting the use of more general
-  -- functions that return some `ImpM t a` and that don't constrain the
-  -- state in any way (e.g. `logString`, `shouldBe` are still fine to use).
+      BaseImpM ()
   , iteCborRoundTripFailures :: !Bool
   -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
   }
@@ -798,7 +811,7 @@ iteExpectLedgerRuleConformanceL ::
       LedgerEnv era ->
       LedgerState era ->
       Tx era ->
-      Expectation
+      BaseImpM ()
     )
 iteExpectLedgerRuleConformanceL = lens iteExpectLedgerRuleConformance (\x y -> x {iteExpectLedgerRuleConformance = y})
 
@@ -1046,6 +1059,8 @@ submitTx_ = void . submitTx
 submitTx :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era (Tx era)
 submitTx tx = trySubmitTx tx >>= expectRightDeepExpr . first fst
 
+-- TODO remove this once we get rid of the CPP directives
+{- FOURMOLU_DISABLE -}
 trySubmitTx ::
   forall era.
   ( ShelleyEraImp era
@@ -1065,7 +1080,12 @@ trySubmitTx tx = do
 
   -- Check for conformance
   asks iteExpectLedgerRuleConformance
+  -- TODO get rid of the CPP once we have deprecated GHC8
+#if __GLASGOW_HASKELL__ < 906
     >>= (\f -> liftIO $ f globals res lEnv (st ^. nesEsL . esLStateL) txFixed)
+#else
+    >>= (\f -> f globals res lEnv (st ^. nesEsL . esLStateL) txFixed)
+#endif
 
   case res of
     Left predFailures -> do
@@ -1098,6 +1118,7 @@ trySubmitTx tx = do
             | otherwise = error "Root not found in UTxO"
       impRootTxInL .= newRoot
       pure $ Right txFixed
+{- FOURMOLU_ENABLE -}
 
 -- | Submit a transaction that is expected to be rejected with the given predicate failures.
 -- The inputs and outputs are automatically balanced.
