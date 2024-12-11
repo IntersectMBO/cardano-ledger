@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.11.0.0
+
+* Removal of crypto parametrization.
+
 ## 1.10.0.0
 
 * Added `queryRegisteredDRepStakeDistr` state query
