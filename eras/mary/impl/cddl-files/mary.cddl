@@ -299,6 +299,11 @@ move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
 ; 
 multi_host_name = (2, dns_name)
 
+;  kes_vkey: hot_vkey
+;      uint: sequence_number
+;      uint: key_period
+; signature: sigma
+; 
 operational_cert = ($kes_vkey, uint, uint, $signature)
 
 ;         pool_keyhash: operator       

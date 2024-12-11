@@ -48,6 +48,12 @@ cradle:
     - path: "eras/babbage/impl/testlib"
       component: "cardano-ledger-babbage:lib:testlib"
 
+    - path: "eras/babbage/impl/huddle-cddl/Main.hs"
+      component: "cardano-ledger-babbage:exe:huddle-cddl"
+
+    - path: "eras/babbage/impl/huddle-cddl/Paths_cardano_ledger_babbage.hs"
+      component: "cardano-ledger-babbage:exe:huddle-cddl"
+
     - path: "eras/babbage/impl/test/GenerateGoldenFileMain.hs"
       component: "cardano-ledger-babbage:exe:gen-golden"
 
