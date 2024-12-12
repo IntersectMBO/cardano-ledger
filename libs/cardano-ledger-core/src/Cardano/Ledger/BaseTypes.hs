@@ -120,10 +120,9 @@ import Cardano.Ledger.Binary.Plain (
   invalidKey,
  )
 import Cardano.Ledger.Binary.Version
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
-import Cardano.Ledger.SafeHash (HashWithCrypto (..), SafeHash, SafeToHash)
+import Cardano.Ledger.SafeHash (HashAnnotated (hashAnnotated), SafeHash, SafeToHash)
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import Cardano.Slotting.Slot as Slotting (
@@ -161,7 +160,6 @@ import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict
-import Data.Proxy
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (
   Scientific,
@@ -801,11 +799,11 @@ instance DecCBOR Network where
   {-# INLINE decCBOR #-}
 
 -- | Number of blocks which have been created by stake pools in the current epoch.
-newtype BlocksMade c = BlocksMade
-  { unBlocksMade :: Map (KeyHash 'StakePool c) Natural
+newtype BlocksMade = BlocksMade
+  { unBlocksMade :: Map (KeyHash 'StakePool) Natural
   }
   deriving (Eq, Generic)
-  deriving (Show) via Quiet (BlocksMade c)
+  deriving (Show) via Quiet BlocksMade
   deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR)
 
 -- TODO: It is unfeasable to have 65535 outputs in a transaction,
@@ -883,51 +881,52 @@ newtype AnchorData = AnchorData ByteString
   deriving (Eq)
   deriving newtype (SafeToHash)
 
-instance HashWithCrypto AnchorData AnchorData
+instance HashAnnotated AnchorData AnchorData
 
 -- | Hash `AnchorData`
-hashAnchorData :: forall c. Crypto c => AnchorData -> SafeHash c AnchorData
-hashAnchorData = hashWithCrypto (Proxy @c)
+hashAnchorData :: AnchorData -> SafeHash AnchorData
+hashAnchorData = hashAnnotated
+{-# DEPRECATED hashAnchorData "In favor of `hashAnnotated`" #-}
 
-data Anchor c = Anchor
+data Anchor = Anchor
   { anchorUrl :: !Url
-  , anchorDataHash :: !(SafeHash c AnchorData)
+  , anchorDataHash :: !(SafeHash AnchorData)
   }
   deriving (Eq, Ord, Show, Generic)
 
-instance NoThunks (Anchor c)
+instance NoThunks Anchor
 
-instance Crypto c => NFData (Anchor c) where
+instance NFData Anchor where
   rnf = rwhnf
 
-instance Crypto c => DecCBOR (Anchor c) where
+instance DecCBOR Anchor where
   decCBOR =
     decode $
       RecD Anchor
         <! From
         <! From
 
-instance Crypto c => EncCBOR (Anchor c) where
+instance EncCBOR Anchor where
   encCBOR Anchor {..} =
     encode $
       Rec Anchor
         !> To anchorUrl
         !> To anchorDataHash
 
-instance Crypto c => ToJSON (Anchor c) where
+instance ToJSON Anchor where
   toJSON = object . toAnchorPairs
   toEncoding = pairs . mconcat . toAnchorPairs
 
-instance Crypto c => FromJSON (Anchor c) where
+instance FromJSON Anchor where
   parseJSON = withObject "Anchor" $ \o -> do
     anchorUrl <- o .: "url"
     anchorDataHash <- o .: "dataHash"
     pure $ Anchor {..}
 
-instance Crypto c => Default (Anchor c) where
+instance Default Anchor where
   def = Anchor (Url "") def
 
-toAnchorPairs :: (KeyValue e a, Crypto c) => Anchor c -> [a]
+toAnchorPairs :: KeyValue e a => Anchor -> [a]
 toAnchorPairs vote@(Anchor _ _) =
   let Anchor {..} = vote
    in [ "url" .= anchorUrl

@@ -21,7 +21,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Presets (
 where
 
 import Cardano.Ledger.Core (EraScript, hashScript)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   KeyHash,
@@ -37,6 +36,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), allScripts, someKeyPairs)
@@ -97,9 +97,8 @@ keySpace c =
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
 coreNodeKeys ::
-  Crypto c =>
   Constants ->
-  [(KeyPair 'Genesis c, AllIssuerKeys c 'GenesisDelegate)]
+  [(KeyPair 'Genesis, AllIssuerKeys MockCrypto 'GenesisDelegate)]
 coreNodeKeys c@Constants {numCoreNodes} =
   [ ( (toKeyPair . mkGenKey) (RawSeed x 0 0 0 0)
     , issuerKeys c 0 x
@@ -110,14 +109,14 @@ coreNodeKeys c@Constants {numCoreNodes} =
     toKeyPair (sk, vk) = KeyPair vk sk
 
 -- Pre-generate a set of keys to use for genesis delegates.
-genesisDelegates :: Crypto c => Constants -> [AllIssuerKeys c 'GenesisDelegate]
+genesisDelegates :: Constants -> [AllIssuerKeys MockCrypto 'GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
   | x <- [0 .. 50]
   ]
 
 -- Pre-generate a set of keys to use for stake pools.
-stakePoolKeys :: Crypto c => Constants -> [AllIssuerKeys c 'StakePool]
+stakePoolKeys :: Constants -> [AllIssuerKeys MockCrypto 'StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
   | x <- [0 .. 50]
@@ -125,13 +124,12 @@ stakePoolKeys c =
 
 -- | Generate all keys for any entity which will be issuing blocks.
 issuerKeys ::
-  Crypto c =>
   Constants ->
   -- | Namespace parameter. Can be used to differentiate between different
   --   "types" of issuer.
   Word64 ->
   Word64 ->
-  AllIssuerKeys c r
+  AllIssuerKeys MockCrypto r
 issuerKeys Constants {maxSlotTrace} ns x =
   let (skCold, vkCold) = mkKeyPair (RawSeed x 0 0 0 (ns + 1))
       iters =
@@ -157,15 +155,14 @@ issuerKeys Constants {maxSlotTrace} ns x =
         }
 
 genesisDelegs0 ::
-  Crypto c =>
   Constants ->
-  Map (KeyHash 'Genesis c) (GenDelegPair c)
+  Map (KeyHash 'Genesis) GenDelegPair
 genesisDelegs0 c =
   Map.fromList
     [ ( hashVKey gkey
       , GenDelegPair
           (coerceKeyRole . hashVKey $ aikCold pkeys)
-          (hashVerKeyVRF . vrfVerKey $ aikVrf pkeys)
+          (hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf pkeys)
       )
     | (gkey, pkeys) <- coreNodeKeys c
     ]

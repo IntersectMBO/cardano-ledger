@@ -18,7 +18,6 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained
 import qualified Data.Map as Map
@@ -29,7 +28,7 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams
 
 vStateSpec ::
   (IsConwayUniv fn, Era era) =>
-  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
+  Term fn (Set (Credential 'DRepRole)) ->
   Specification fn (VState era)
 vStateSpec delegatees = constrained' $ \dreps _ _ -> dom_ dreps ==. delegatees
 
@@ -46,9 +45,9 @@ vStateSpec = constrained' $ \ [var|_dreps|] [var|_commstate|] [var|dormantepochs
 
 govCertSpec ::
   IsConwayUniv fn =>
-  ConwayGovCertEnv (ConwayEra StandardCrypto) ->
-  CertState (ConwayEra StandardCrypto) ->
-  Specification fn (ConwayGovCert StandardCrypto)
+  ConwayGovCertEnv ConwayEra ->
+  CertState ConwayEra ->
+  Specification fn ConwayGovCert
 govCertSpec ConwayGovCertEnv {..} certState =
   let vs = certVState certState
       reps = lit $ Map.keysSet $ vsDReps vs
@@ -95,7 +94,7 @@ govCertSpec ConwayGovCertEnv {..} certState =
 --   if that key has already resigned.
 notYetResigned ::
   (HasSpec fn x, Ord x, IsConwayUniv fn) =>
-  Map.Map x (CommitteeAuthorization StandardCrypto) ->
+  Map.Map x CommitteeAuthorization ->
   Term fn x ->
   Pred fn
 notYetResigned committeeStatus coldcred =
@@ -116,7 +115,7 @@ notYetResigned committeeStatus coldcred =
 
 govCertEnvSpec ::
   IsConwayUniv fn =>
-  Specification fn (ConwayGovCertEnv (ConwayEra StandardCrypto))
+  Specification fn (ConwayGovCertEnv ConwayEra)
 govCertEnvSpec =
   constrained $ \gce ->
     match gce $ \pp _ _ _ ->

@@ -26,8 +26,6 @@ module Cardano.Ledger.Alonzo.Rules.Utxow (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
-import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXOW)
@@ -59,7 +57,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
-import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
@@ -99,55 +96,55 @@ data AlonzoUtxowPredFailure era
   = ShelleyInAlonzoUtxowPredFailure !(ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
-      ![(PlutusPurpose AsItem era, ScriptHash (EraCrypto era))]
+      ![(PlutusPurpose AsItem era, ScriptHash)]
   | MissingRequiredDatums
       -- TODO: Make this NonEmpty #4066
 
       -- | Set of missing data hashes
-      !(Set (DataHash (EraCrypto era)))
+      !(Set DataHash)
       -- | Set of received data hashes
-      !(Set (DataHash (EraCrypto era)))
+      !(Set DataHash)
   | NotAllowedSupplementalDatums
       -- TODO: Make this NonEmpty #4066
 
       -- | Set of unallowed data hashes
-      !(Set (DataHash (EraCrypto era)))
+      !(Set DataHash)
       -- | Set of acceptable supplemental data hashes
-      !(Set (DataHash (EraCrypto era)))
+      !(Set DataHash)
   | PPViewHashesDontMatch
-      !(Mismatch 'RelEQ (StrictMaybe (ScriptIntegrityHash (EraCrypto era))))
+      !(Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
   | -- | Set of witnesses which were needed and not supplied
     MissingRequiredSigners -- TODO: remove once in Conway. It is now redundant. See #3972
-      (Set (KeyHash 'Witness (EraCrypto era)))
+      (Set (KeyHash 'Witness))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
       -- TODO: Make this NonEmpty #4066
-      (Set (TxIn (EraCrypto era)))
+      (Set TxIn)
   | -- | List of redeemers not needed
     ExtraRedeemers
       ![PlutusPurpose AsIx era]
   deriving (Generic)
 
-type instance EraRuleFailure "UTXOW" (AlonzoEra c) = AlonzoUtxowPredFailure (AlonzoEra c)
+type instance EraRuleFailure "UTXOW" AlonzoEra = AlonzoUtxowPredFailure AlonzoEra
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (AlonzoEra c)
+instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure AlonzoEra
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoUtxowPredFailure
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure
 
-instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
 
-instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure AlonzoEra where
   injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
 
 deriving instance
@@ -175,7 +172,6 @@ instance
   ( AlonzoEraScript era
   , NFData (TxCert era)
   , NFData (PredicateFailure (EraRule "UTXO" era))
-  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
   ) =>
   NFData (AlonzoUtxowPredFailure era)
 
@@ -296,7 +292,7 @@ ppViewHashesMatch ::
   Tx era ->
   PParams era ->
   ScriptsProvided era ->
-  Set (ScriptHash (EraCrypto era)) ->
+  Set ScriptHash ->
   Test (AlonzoUtxowPredFailure era)
 ppViewHashesMatch tx pp (ScriptsProvided scriptsProvided) scriptsNeeded = do
   let scriptsUsed = Map.elems $ Map.restrictKeys scriptsProvided scriptsNeeded
@@ -321,7 +317,6 @@ alonzoStyleWitness ::
   , ShelleyEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , EraRule "UTXOW" era ~ AlonzoUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
@@ -414,7 +409,6 @@ instance
   , AlonzoEraUTxO era
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , EraRule "UTXOW" era ~ AlonzoUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era

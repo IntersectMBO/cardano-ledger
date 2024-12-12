@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.11.0.0
+
+* Deprecate `Babbage` type synonym
+* Remove crypto parametrization from `BabbageEra`
+
 ## 1.10.1.0
 
 * Use `Mismatch` to clarify predicate failures. #4711

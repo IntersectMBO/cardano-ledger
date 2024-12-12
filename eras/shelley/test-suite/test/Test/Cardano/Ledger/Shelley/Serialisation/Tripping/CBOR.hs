@@ -14,7 +14,7 @@ where
 
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API as Ledger
 import qualified Cardano.Ledger.Shelley.Rules as STS
 import qualified Cardano.Protocol.TPraos.BHeader as TP
@@ -37,20 +37,20 @@ testCoreTypes =
     [ testProperty "Header" $
         roundTripAnnExpectation @(TP.BHeader StandardCrypto)
     , testProperty "Block Header Hash" $
-        roundTripExpectation @(TP.HashHeader StandardCrypto) cborTrip
+        roundTripExpectation @TP.HashHeader cborTrip
     , testProperty "Protocol State" $
-        roundTripExpectation @(STS.PrtclState StandardCrypto) cborTrip
+        roundTripExpectation @STS.PrtclState cborTrip
     ]
 
 tests :: TestTree
 tests =
   testGroup
     "Serialisation roundtrip Property Tests"
-    $ [ testProperty "Block" $
-          roundTripAnnRangeExpectation @(Block (TP.BHeader StandardCrypto) Shelley)
-            (eraProtVerLow @Shelley)
-            (eraProtVerHigh @Shelley)
-      , testProperty "LEDGER Predicate Failures" $
-          roundTripExpectation @([STS.PredicateFailure (STS.ShelleyLEDGERS Shelley)]) cborTrip
-      , testCoreTypes
-      ]
+    [ testProperty "Block" $
+        roundTripAnnRangeExpectation @(Block (TP.BHeader StandardCrypto) ShelleyEra)
+          (eraProtVerLow @ShelleyEra)
+          (eraProtVerHigh @ShelleyEra)
+    , testProperty "LEDGER Predicate Failures" $
+        roundTripExpectation @[STS.PredicateFailure (STS.ShelleyLEDGERS ShelleyEra)] cborTrip
+    , testCoreTypes
+    ]

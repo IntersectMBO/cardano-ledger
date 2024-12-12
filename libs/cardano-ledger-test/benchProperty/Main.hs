@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
--- Embed instances for (AlonzoEra TestCrypto)
+-- Embed instances for AlonzoEra
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 {-
@@ -45,7 +45,6 @@ import Cardano.Ledger.Shelley.Rules (
 import Control.State.Transition.Extended (Embed (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
-import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (
   CHAIN,
   ChainEvent (..),
@@ -56,18 +55,18 @@ import qualified Test.Tasty as T
 
 -- ===============================================================
 
-instance Embed (AlonzoBBODY (AlonzoEra TestCrypto)) (CHAIN (AlonzoEra TestCrypto)) where
+instance Embed (AlonzoBBODY AlonzoEra) (CHAIN AlonzoEra) where
   wrapFailed = BbodyFailure
   wrapEvent = BbodyEvent
 
-instance Embed (AlonzoUTXOW (AlonzoEra TestCrypto)) (ShelleyLEDGER (AlonzoEra TestCrypto)) where
+instance Embed (AlonzoUTXOW AlonzoEra) (ShelleyLEDGER AlonzoEra) where
   wrapFailed = UtxowFailure
   wrapEvent = UtxowEvent
 
 profileCover :: IO ()
 profileCover =
   T.defaultMain $
-    relevantCasesAreCovered @(AlonzoEra TestCrypto) 1
+    relevantCasesAreCovered @AlonzoEra 1
 
 main :: IO ()
 main = profileCover

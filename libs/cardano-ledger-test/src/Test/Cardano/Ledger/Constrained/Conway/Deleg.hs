@@ -1,13 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -15,17 +13,17 @@
 -- for the DELEG rule
 module Test.Cardano.Ledger.Constrained.Conway.Deleg where
 
-import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.CertState
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core (Era (..), EraPParams (..), ppKeyDepositL)
 import Cardano.Ledger.Credential (credKeyHash, credScriptHash)
-import Cardano.Ledger.Mary (Mary)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
 import Constrained
@@ -66,7 +64,7 @@ conwayDelegCertSpec ::
   (EraPParams era, IsConwayUniv fn) =>
   ConwayDelegEnv era ->
   CertState era ->
-  Specification fn (ConwayDelegCert (EraCrypto era))
+  Specification fn ConwayDelegCert
 conwayDelegCertSpec (ConwayDelegEnv pp pools) (CertState vs _ps ds) =
   let rewardMap = unUnify $ rewards ds
       dReps = vsDReps vs
@@ -76,7 +74,7 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) (CertState vs _ps ds) =
         case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
           Just d | d > 0 -> SJust d
           _ -> SNothing
-      delegateeInPools :: Term fn (Delegatee (EraCrypto era)) -> Pred fn
+      delegateeInPools :: Term fn Delegatee -> Pred fn
       delegateeInPools delegatee =
         (caseOn delegatee)
           (branch $ \kh -> isInPools kh)
@@ -85,7 +83,7 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) (CertState vs _ps ds) =
         where
           isInPools = (`member_` lit (Map.keysSet pools))
           drepsSet f drepsMap = Set.fromList [k' | k <- Map.keys drepsMap, Just k' <- [f k]]
-          isInDReps :: Term fn (DRep (EraCrypto era)) -> Pred fn
+          isInDReps :: Term fn DRep -> Pred fn
           isInDReps drep =
             (caseOn drep)
               ( branch $ \drepKeyHash ->
@@ -142,10 +140,10 @@ delegEnvSpec = constrained $ \env ->
 
 shelleyDelegCertSpec ::
   forall fn era.
-  (EraPParams era, IsConwayUniv fn) =>
+  IsConwayUniv fn =>
   ConwayDelegEnv era ->
   DState era ->
-  Specification fn (ShelleyDelegCert (EraCrypto era))
+  Specification fn ShelleyDelegCert
 shelleyDelegCertSpec (ConwayDelegEnv _pp pools) ds =
   let rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds
@@ -181,20 +179,20 @@ shelleyDelegCertSpec (ConwayDelegEnv _pp pools) ds =
 class (Era era, EraPParams era) => EraSpecDeleg era where
   hasGenDelegs :: proxy era -> Bool
 
-instance EraSpecDeleg Shelley where
+instance EraSpecDeleg ShelleyEra where
   hasGenDelegs _proxy = True
 
-instance EraSpecDeleg Allegra where
+instance EraSpecDeleg AllegraEra where
   hasGenDelegs _proxy = True
 
-instance EraSpecDeleg Mary where
+instance EraSpecDeleg MaryEra where
   hasGenDelegs _proxy = True
 
-instance EraSpecDeleg Alonzo where
+instance EraSpecDeleg AlonzoEra where
   hasGenDelegs _proxy = True
 
-instance EraSpecDeleg Babbage where
+instance EraSpecDeleg BabbageEra where
   hasGenDelegs _proxy = True
 
-instance EraSpecDeleg Conway where
+instance EraSpecDeleg ConwayEra where
   hasGenDelegs _proxy = False

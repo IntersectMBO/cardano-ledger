@@ -21,33 +21,33 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 
-type instance EraRuleFailure "BBODY" (AllegraEra c) = ShelleyBbodyPredFailure (AllegraEra c)
+type instance EraRuleFailure "BBODY" AllegraEra = ShelleyBbodyPredFailure AllegraEra
 
-instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure (AllegraEra c)
+instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure AllegraEra
 
-instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure (AllegraEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure AllegraEra where
   injectFailure = LedgersFailure
 
-instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure (AllegraEra c) where
+instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure AllegraEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure (AllegraEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure AllegraEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure (AllegraEra c) where
+instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure AllegraEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure (AllegraEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure AllegraEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure (AllegraEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure AllegraEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure (AllegraEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure AllegraEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure (AllegraEra c) where
+instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure AllegraEra where
   injectFailure = LedgersFailure . injectFailure
 
-instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure (AllegraEra c) where
+instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure AllegraEra where
   injectFailure = LedgersFailure . injectFailure

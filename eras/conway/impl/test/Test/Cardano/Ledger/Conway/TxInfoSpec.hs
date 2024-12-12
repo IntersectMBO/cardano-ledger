@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Conway.TxInfoSpec (spec) where
 import Cardano.Ledger.Alonzo.Plutus.Context (toPlutusTxCert)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (StakeCredential)
@@ -25,31 +25,27 @@ import Test.Cardano.Ledger.Conway.Genesis ()
 spec :: Spec
 spec = do
   describe "TxInfo" $ do
-    let trans pv cert = either (error . show) id (toPlutusTxCert @'PlutusV3 @Conway Proxy pv cert)
+    let trans pv cert = either (error . show) id (toPlutusTxCert @'PlutusV3 @ConwayEra Proxy pv cert)
         transV9 = trans (ProtVer (natVersion @9) 0)
         transV10 = trans (ProtVer (natVersion @10) 0)
 
-    prop "Deposit in registration certs" $
-      \(cred :: StakeCredential (EraCrypto Conway))
-       (coin :: Coin) -> do
-          expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayRegCert cred (SJust coin)
-          expectNoDeposit $ transV9 $ RegDepositTxCert cred coin
-          expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayRegCert cred SNothing
+    prop "Deposit in registration certs" $ \(cred :: StakeCredential) (coin :: Coin) -> do
+      expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayRegCert cred (SJust coin)
+      expectNoDeposit $ transV9 $ RegDepositTxCert cred coin
+      expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayRegCert cred SNothing
 
-          expectDeposit coin $ transV10 $ ConwayTxCertDeleg $ ConwayRegCert cred (SJust coin)
-          expectDeposit coin $ transV10 $ RegDepositTxCert cred coin
-          expectNoDeposit $ transV10 $ ConwayTxCertDeleg $ ConwayRegCert cred SNothing
+      expectDeposit coin $ transV10 $ ConwayTxCertDeleg $ ConwayRegCert cred (SJust coin)
+      expectDeposit coin $ transV10 $ RegDepositTxCert cred coin
+      expectNoDeposit $ transV10 $ ConwayTxCertDeleg $ ConwayRegCert cred SNothing
 
-    prop "Deposit in unregistration certs" $
-      \(cred :: StakeCredential (EraCrypto Conway))
-       (coin :: Coin) -> do
-          expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayUnRegCert cred (SJust coin)
-          expectNoDeposit $ transV9 $ UnRegDepositTxCert cred coin
-          expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayUnRegCert cred SNothing
+    prop "Deposit in unregistration certs" $ \(cred :: StakeCredential) (coin :: Coin) -> do
+      expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayUnRegCert cred (SJust coin)
+      expectNoDeposit $ transV9 $ UnRegDepositTxCert cred coin
+      expectNoDeposit $ transV9 $ ConwayTxCertDeleg $ ConwayUnRegCert cred SNothing
 
-          expectDeposit coin $ transV10 $ ConwayTxCertDeleg $ ConwayUnRegCert cred (SJust coin)
-          expectDeposit coin $ transV10 $ UnRegDepositTxCert cred coin
-          expectNoDeposit $ transV10 $ ConwayTxCertDeleg $ ConwayUnRegCert cred SNothing
+      expectDeposit coin $ transV10 $ ConwayTxCertDeleg $ ConwayUnRegCert cred (SJust coin)
+      expectDeposit coin $ transV10 $ UnRegDepositTxCert cred coin
+      expectNoDeposit $ transV10 $ ConwayTxCertDeleg $ ConwayUnRegCert cred SNothing
   where
     expectDeposit :: Coin -> PV3.TxCert -> IO ()
     expectDeposit (Coin c) =

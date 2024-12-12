@@ -23,18 +23,15 @@ import Cardano.Ledger.Babbage.TxBody (
  )
 import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Control.Arrow (left)
 
 newtype BabbageTxUpgradeError
   = BTUEBodyUpgradeError BabbageTxBodyUpgradeError
   deriving (Eq, Show)
 
-instance Crypto c => EraTx (BabbageEra c) where
-  {-# SPECIALIZE instance EraTx (BabbageEra StandardCrypto) #-}
-
-  type Tx (BabbageEra c) = AlonzoTx (BabbageEra c)
-  type TxUpgradeError (BabbageEra c) = BabbageTxUpgradeError
+instance EraTx BabbageEra where
+  type Tx BabbageEra = AlonzoTx BabbageEra
+  type TxUpgradeError BabbageEra = BabbageTxUpgradeError
 
   mkBasicTx = mkBasicAlonzoTx
 
@@ -65,14 +62,12 @@ instance Crypto c => EraTx (BabbageEra c) where
       <*> pure valid
       <*> pure (fmap upgradeTxAuxData aux)
 
-instance Crypto c => AlonzoEraTx (BabbageEra c) where
-  {-# SPECIALIZE instance AlonzoEraTx (BabbageEra StandardCrypto) #-}
-
+instance AlonzoEraTx BabbageEra where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance Crypto c => EraSegWits (BabbageEra c) where
-  type TxSeq (BabbageEra c) = AlonzoTxSeq (BabbageEra c)
+instance EraSegWits BabbageEra where
+  type TxSeq BabbageEra = AlonzoTxSeq BabbageEra
   fromTxSeq = txSeqTxns
   toTxSeq = AlonzoTxSeq
   hashTxSeq = hashAlonzoTxSeq

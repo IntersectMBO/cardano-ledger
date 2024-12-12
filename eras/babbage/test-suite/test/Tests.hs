@@ -3,7 +3,7 @@
 
 module Main where
 
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Data.Proxy (Proxy (..))
 import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.Tripping as Tripping
@@ -22,7 +22,7 @@ defaultTests =
   testGroup
     "Babbage tests"
     [ Tripping.tests
-    , txInfoTests (Proxy @Babbage)
+    , txInfoTests (Proxy @BabbageEra)
     ]
 
 nightlyTests :: TestTree

@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Constrained.Preds.CertState where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Core (Era, EraCrypto)
+import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
@@ -197,12 +197,7 @@ mainP = defaultMain $ testIO "Testing PState Stage" (demoP Interactive)
 
 -- | A field that selects the 'genDelegKeyHash' field from a 'GenDelegPair'
 --   It also silently casts the 'KeyRole. from 'Genesis to 'Witness
-gdKeyHashField ::
-  Era era =>
-  Field
-    era
-    (GenDelegPair (EraCrypto era))
-    (KeyHash 'Witness (EraCrypto era))
+gdKeyHashField :: Era era => Field era GenDelegPair (KeyHash 'Witness)
 gdKeyHashField =
   Field
     "gdKeyHash1"
@@ -214,10 +209,10 @@ gdKeyHashField =
     )
 
 -- | A Var Term that pairs the Field 'gdKeyHashField'
-gdKeyHash :: Era era => Term era (KeyHash 'Witness (EraCrypto era))
+gdKeyHash :: Era era => Term era (KeyHash 'Witness)
 gdKeyHash = fieldToTerm gdKeyHashField
 
-gdkeyL :: Lens' (GenDelegPair c) (KeyHash 'Witness c)
+gdkeyL :: Lens' GenDelegPair (KeyHash 'Witness)
 gdkeyL =
   ( lens
       (\(GenDelegPair x _) -> asWitness x)

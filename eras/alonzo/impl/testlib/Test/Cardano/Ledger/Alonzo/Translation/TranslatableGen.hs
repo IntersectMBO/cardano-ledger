@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   systemStart,
 ) where
 
-import Cardano.Ledger.Alonzo (Alonzo)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
   EraPlutusTxInfo,
@@ -54,16 +54,16 @@ class EraTx era => TranslatableGen era where
   tgUtxo :: Language -> Core.Tx era -> Gen (UTxO era)
   mkTxInfoLanguage :: HasCallStack => Language -> TxInfoLanguage era
 
-instance TranslatableGen Alonzo where
+instance TranslatableGen AlonzoEra where
   tgRedeemers = arbitrary
-  tgTx _ = arbitrary :: Gen (Tx Alonzo)
+  tgTx _ = arbitrary :: Gen (Tx AlonzoEra)
   tgUtxo _ tx = do
     let ins = tx ^. bodyTxL ^. inputsTxBodyL
-    outs <- vectorOf (length ins) (arbitrary :: Gen (TxOut Alonzo))
+    outs <- vectorOf (length ins) (arbitrary :: Gen (TxOut AlonzoEra))
     pure $ UTxO (Map.fromList $ Set.toList ins `zip` outs)
   mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
   mkTxInfoLanguage lang =
-    error $ "Language " ++ show lang ++ " is not supported in " ++ eraName @Alonzo
+    error $ "Language " ++ show lang ++ " is not supported in " ++ eraName @AlonzoEra
 
 translationInstances ::
   forall era.

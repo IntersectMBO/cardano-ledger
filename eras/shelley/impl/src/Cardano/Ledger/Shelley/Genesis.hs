@@ -74,7 +74,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, HASH, KES)
+import Cardano.Ledger.Crypto (HASH, KES, StandardCrypto)
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -119,14 +119,14 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 --
 -- For simplicity, pools defined in the genesis staking do not pay deposits for
 -- their registration.
-data ShelleyGenesisStaking c = ShelleyGenesisStaking
-  { sgsPools :: LM.ListMap (KeyHash 'StakePool c) (PoolParams c)
+data ShelleyGenesisStaking = ShelleyGenesisStaking
+  { sgsPools :: LM.ListMap (KeyHash 'StakePool) PoolParams
   -- ^ Pools to register
   --
   --   The key in this map is the hash of the public key of the _pool_. This
   --   need not correspond to any payment or staking key, but must correspond
   --   to the cold key held by 'TPraosIsCoreNode'.
-  , sgsStake :: LM.ListMap (KeyHash 'Staking c) (KeyHash 'StakePool c)
+  , sgsStake :: LM.ListMap (KeyHash 'Staking) (KeyHash 'StakePool)
   -- ^ Stake-holding key hash credentials and the pools to delegate that stake
   -- to. We require the raw staking key hash in order to:
   --
@@ -136,20 +136,20 @@ data ShelleyGenesisStaking c = ShelleyGenesisStaking
   }
   deriving stock (Eq, Show, Generic)
 
-instance NoThunks (ShelleyGenesisStaking c)
+instance NoThunks ShelleyGenesisStaking
 
-instance Semigroup (ShelleyGenesisStaking c) where
+instance Semigroup ShelleyGenesisStaking where
   (<>) (ShelleyGenesisStaking p1 s1) (ShelleyGenesisStaking p2 s2) =
     ShelleyGenesisStaking (p1 <> p2) (s1 <> s2)
 
-instance Monoid (ShelleyGenesisStaking c) where
+instance Monoid ShelleyGenesisStaking where
   mempty = ShelleyGenesisStaking mempty mempty
 
-instance Crypto c => EncCBOR (ShelleyGenesisStaking c) where
+instance EncCBOR ShelleyGenesisStaking where
   encCBOR (ShelleyGenesisStaking pools stake) =
     encodeListLen 2 <> encCBOR pools <> encCBOR stake
 
-instance Crypto c => DecCBOR (ShelleyGenesisStaking c) where
+instance DecCBOR ShelleyGenesisStaking where
   decCBOR = do
     decodeRecordNamed "ShelleyGenesisStaking" (const 2) $ do
       pools <- decCBOR
@@ -157,7 +157,7 @@ instance Crypto c => DecCBOR (ShelleyGenesisStaking c) where
       pure $ ShelleyGenesisStaking pools stake
 
 -- | Empty genesis staking
-emptyGenesisStaking :: ShelleyGenesisStaking c
+emptyGenesisStaking :: ShelleyGenesisStaking
 emptyGenesisStaking = mempty
 
 -- | Unlike @'NominalDiffTime'@ that supports @'Pico'@ precision, this type
@@ -205,7 +205,7 @@ nominalDiffTimeMicroToSeconds (NominalDiffTimeMicro microseconds) = microToPico 
 -- defined here rather than in its own module. In mainnet, Shelley will
 -- transition naturally from Byron, and thus will never have its own genesis
 -- information.
-data ShelleyGenesis c = ShelleyGenesis
+data ShelleyGenesis = ShelleyGenesis
   { sgSystemStart :: !UTCTime
   , sgNetworkMagic :: !Word32
   , sgNetworkId :: !Network
@@ -217,51 +217,47 @@ data ShelleyGenesis c = ShelleyGenesis
   , sgSlotLength :: !NominalDiffTimeMicro
   , sgUpdateQuorum :: !Word64
   , sgMaxLovelaceSupply :: !Word64
-  , sgProtocolParams :: !(PParams (ShelleyEra c))
-  , sgGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPair c))
-  , sgInitialFunds :: LM.ListMap (Addr c) Coin
+  , sgProtocolParams :: !(PParams ShelleyEra)
+  , sgGenDelegs :: !(Map (KeyHash 'Genesis) GenDelegPair)
+  , sgInitialFunds :: LM.ListMap Addr Coin
   -- ^ 'sgInitialFunds' is intentionally kept lazy, as it can otherwise cause
   --   out-of-memory problems in testing and benchmarking.
-  , sgStaking :: ShelleyGenesisStaking c
+  , sgStaking :: ShelleyGenesisStaking
   -- ^ 'sgStaking' is intentionally kept lazy, as it can otherwise cause
   --   out-of-memory problems in testing and benchmarking.
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show, Eq)
 
-sgInitialFundsL :: Lens' (ShelleyGenesis c) (LM.ListMap (Addr c) Coin)
+sgInitialFundsL :: Lens' ShelleyGenesis (LM.ListMap Addr Coin)
 sgInitialFundsL = lens sgInitialFunds (\sg x -> sg {sgInitialFunds = x})
 
-sgStakingL :: Lens' (ShelleyGenesis c) (ShelleyGenesisStaking c)
+sgStakingL :: Lens' ShelleyGenesis ShelleyGenesisStaking
 sgStakingL = lens sgStaking (\sg x -> sg {sgStaking = x})
 
-deriving instance Crypto c => Show (ShelleyGenesis c)
-
-deriving instance Crypto c => Eq (ShelleyGenesis c)
-
 deriving via
-  AllowThunksIn '["sgInitialFunds", "sgStaking"] (ShelleyGenesis c)
+  AllowThunksIn '["sgInitialFunds", "sgStaking"] ShelleyGenesis
   instance
-    Crypto c => NoThunks (ShelleyGenesis c)
+    NoThunks ShelleyGenesis
 
-sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
+sgActiveSlotCoeff :: ShelleyGenesis -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
 
-instance Crypto c => ToJSON (ShelleyGenesis c) where
+instance ToJSON ShelleyGenesis where
   toJSON = Aeson.object . toShelleyGenesisPairs
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
 
-instance Crypto c => EraGenesis (ShelleyEra c) where
-  type Genesis (ShelleyEra c) = ShelleyGenesis c
+instance EraGenesis ShelleyEra where
+  type Genesis ShelleyEra = ShelleyGenesis
 
 --------------------------------------------------
 -- Legacy JSON representation of ShelleyGenesis --
 --------------------------------------------------
-newtype LegacyJSONPParams c = LegacyJSONPParams (PParamsHKD Identity (ShelleyEra c))
+newtype LegacyJSONPParams = LegacyJSONPParams (PParamsHKD Identity ShelleyEra)
 
-legacyFromJSONPParams :: LegacyJSONPParams c -> PParams (ShelleyEra c)
+legacyFromJSONPParams :: LegacyJSONPParams -> PParams ShelleyEra
 legacyFromJSONPParams (LegacyJSONPParams x) = PParams x
 
-instance FromJSON (LegacyJSONPParams c) where
+instance FromJSON LegacyJSONPParams where
   parseJSON =
     Aeson.withObject "ShelleyPParams" $ \obj -> do
       LegacyJSONPParams
@@ -297,10 +293,10 @@ instance FromJSON (LegacyJSONPParams c) where
                 _ -> typeMismatch "Nonce" (Object obj)
           )
 
-legacyToJSONPParams :: PParams (ShelleyEra c) -> LegacyJSONPParams c
+legacyToJSONPParams :: PParams ShelleyEra -> LegacyJSONPParams
 legacyToJSONPParams (PParams x) = LegacyJSONPParams x
 
-instance ToJSON (LegacyJSONPParams c) where
+instance ToJSON LegacyJSONPParams where
   toJSON
     ( LegacyJSONPParams
         ( ShelleyPParams
@@ -352,7 +348,7 @@ instance ToJSON (LegacyJSONPParams c) where
         , "minPoolCost" .= sppMinPoolCost
         ]
 
-toShelleyGenesisPairs :: (Aeson.KeyValue e a, Crypto c) => ShelleyGenesis c -> [a]
+toShelleyGenesisPairs :: Aeson.KeyValue e a => ShelleyGenesis -> [a]
 toShelleyGenesisPairs
   ShelleyGenesis
     { sgSystemStart
@@ -390,7 +386,7 @@ toShelleyGenesisPairs
         , "staking" .= strictSgStaking
         ]
 
-instance Crypto c => FromJSON (ShelleyGenesis c) where
+instance FromJSON ShelleyGenesis where
   parseJSON =
     Aeson.withObject "ShelleyGenesis" $ \obj ->
       ShelleyGenesis
@@ -415,20 +411,20 @@ instance Crypto c => FromJSON (ShelleyGenesis c) where
             !time = utctDayTime date
          in UTCTime day time
 
-instance Crypto c => ToJSON (ShelleyGenesisStaking c) where
+instance ToJSON ShelleyGenesisStaking where
   toJSON = Aeson.object . toShelleyGenesisStakingPairs
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisStakingPairs
 
 toShelleyGenesisStakingPairs ::
-  (Aeson.KeyValue e a, Crypto c) =>
-  ShelleyGenesisStaking c ->
+  Aeson.KeyValue e a =>
+  ShelleyGenesisStaking ->
   [a]
 toShelleyGenesisStakingPairs ShelleyGenesisStaking {sgsPools, sgsStake} =
   [ "pools" .= sgsPools
   , "stake" .= sgsStake
   ]
 
-instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
+instance FromJSON ShelleyGenesisStaking where
   parseJSON =
     Aeson.withObject "ShelleyGenesisStaking" $ \obj ->
       ShelleyGenesisStaking
@@ -436,11 +432,11 @@ instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
         <*> (forceElemsToWHNF <$> obj .: "stake")
 
 -- | Genesis are always encoded with the version of era they are defined in.
-instance Crypto c => DecCBOR (ShelleyGenesis c)
+instance DecCBOR ShelleyGenesis
 
-instance Crypto c => EncCBOR (ShelleyGenesis c)
+instance EncCBOR ShelleyGenesis
 
-instance Crypto c => ToCBOR (ShelleyGenesis c) where
+instance ToCBOR ShelleyGenesis where
   toCBOR
     ShelleyGenesis
       { sgSystemStart
@@ -477,7 +473,7 @@ instance Crypto c => ToCBOR (ShelleyGenesis c) where
           <> encCBOR sgInitialFunds
           <> encCBOR sgStaking
 
-instance Crypto c => FromCBOR (ShelleyGenesis c) where
+instance FromCBOR ShelleyGenesis where
   fromCBOR = toPlainDecoder Nothing shelleyProtVer $ do
     decodeRecordNamed "ShelleyGenesis" (const 15) $ do
       sgSystemStart <- decCBOR
@@ -536,7 +532,7 @@ activeSlotsCoeffDecCBOR = do
 genesisUTxO ::
   forall era.
   EraTxOut era =>
-  ShelleyGenesis (EraCrypto era) ->
+  ShelleyGenesis ->
   UTxO era
 genesisUTxO genesis =
   UTxO $
@@ -556,7 +552,7 @@ genesisUTxO genesis =
 -- This gets turned into a UTxO by making a pseudo-transaction for each address,
 -- with the 0th output being the coin value. So to spend from the initial UTxO
 -- we need this same 'TxIn' to use as an input to the spending transaction.
-initialFundsPseudoTxIn :: forall c. Crypto c => Addr c -> TxIn c
+initialFundsPseudoTxIn :: Addr -> TxIn
 initialFundsPseudoTxIn addr =
   TxIn (pseudoTxId addr) minBound
   where
@@ -564,8 +560,8 @@ initialFundsPseudoTxIn addr =
       TxId
         . unsafeMakeSafeHash
         . ( Crypto.castHash ::
-              Crypto.Hash (HASH c) (Addr c) ->
-              Crypto.Hash (HASH c) EraIndependentTxBody
+              Crypto.Hash HASH Addr ->
+              Crypto.Hash HASH EraIndependentTxBody
           )
         . Crypto.hashWith serialiseAddr
 
@@ -614,11 +610,7 @@ describeValidationErr (QuorumTooSmall q maxTooSmal nodes) =
     ]
 
 -- | Do some basic sanity checking on the Shelley genesis file.
-validateGenesis ::
-  forall c.
-  Crypto c =>
-  ShelleyGenesis c ->
-  Either [ValidationErr] ()
+validateGenesis :: ShelleyGenesis -> Either [ValidationErr] ()
 validateGenesis
   ShelleyGenesis
     { sgEpochLength
@@ -652,15 +644,11 @@ validateGenesis
                     activeSlotsCoeff
                     minLength
               else Nothing
+      kesPeriods = totalPeriodsKES (Proxy @(KES StandardCrypto))
       checkKesEvolutions =
-        if sgMaxKESEvolutions
-          <= fromIntegral (totalPeriodsKES (Proxy @(KES c)))
+        if sgMaxKESEvolutions <= fromIntegral kesPeriods
           then Nothing
-          else
-            Just $
-              MaxKESEvolutionsUnsupported
-                sgMaxKESEvolutions
-                (totalPeriodsKES (Proxy @(KES c)))
+          else Just $ MaxKESEvolutionsUnsupported sgMaxKESEvolutions kesPeriods
       checkQuorumSize =
         let numGenesisNodes = fromIntegral $ length sgGenDelegs
             maxTooSmal = numGenesisNodes `div` 2
@@ -672,10 +660,7 @@ validateGenesis
   Construct 'Globals' using 'ShelleyGenesis'
 -------------------------------------------------------------------------------}
 
-mkShelleyGlobals ::
-  ShelleyGenesis c ->
-  EpochInfo (Either Text) ->
-  Globals
+mkShelleyGlobals :: ShelleyGenesis -> EpochInfo (Either Text) -> Globals
 mkShelleyGlobals genesis epochInfoAc =
   Globals
     { activeSlotCoeff = sgActiveSlotCoeff genesis

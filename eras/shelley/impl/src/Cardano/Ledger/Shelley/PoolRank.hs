@@ -47,8 +47,7 @@ import Cardano.Ledger.Binary (
   toMemptyLens,
  )
 import Cardano.Ledger.Coin (Coin (..), coinToRational)
-import Cardano.Ledger.Core (Era (..), EraPParams, PParams, ppA0L, ppNOptL)
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Core (EraPParams, PParams, ppA0L, ppNOptL)
 import Cardano.Ledger.EpochBoundary (maxPool)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -221,20 +220,20 @@ instance EncCBOR PerformanceEstimate where
 instance DecCBOR PerformanceEstimate where
   decCBOR = PerformanceEstimate <$> decodeDouble
 
-data NonMyopic c = NonMyopic
-  { likelihoodsNM :: !(Map (KeyHash 'StakePool c) Likelihood)
+data NonMyopic = NonMyopic
+  { likelihoodsNM :: !(Map (KeyHash 'StakePool) Likelihood)
   , rewardPotNM :: !Coin
   }
   deriving (Show, Eq, Generic)
 
-instance Default (NonMyopic c) where
+instance Default NonMyopic where
   def = NonMyopic Map.empty (Coin 0)
 
-instance NoThunks (NonMyopic c)
+instance NoThunks NonMyopic
 
-instance NFData (NonMyopic c)
+instance NFData NonMyopic
 
-instance Crypto c => EncCBOR (NonMyopic c) where
+instance EncCBOR NonMyopic where
   encCBOR
     NonMyopic
       { likelihoodsNM = aps
@@ -244,19 +243,19 @@ instance Crypto c => EncCBOR (NonMyopic c) where
         <> encCBOR aps
         <> encCBOR rp
 
-instance Crypto c => DecShareCBOR (NonMyopic c) where
-  type Share (NonMyopic c) = Interns (KeyHash 'StakePool c)
+instance DecShareCBOR NonMyopic where
+  type Share NonMyopic = Interns (KeyHash 'StakePool)
   decSharePlusCBOR = do
     decodeRecordNamedT "NonMyopic" (const 2) $ do
       likelihoodsNM <- decSharePlusLensCBOR (toMemptyLens _1 id)
       rewardPotNM <- lift decCBOR
       pure $ NonMyopic {likelihoodsNM, rewardPotNM}
 
-instance Crypto crypto => ToJSON (NonMyopic crypto) where
+instance ToJSON NonMyopic where
   toJSON = object . toNonMyopicPair
   toEncoding = pairs . mconcat . toNonMyopicPair
 
-toNonMyopicPair :: (KeyValue e a, Crypto crypto) => NonMyopic crypto -> [a]
+toNonMyopicPair :: KeyValue e a => NonMyopic -> [a]
 toNonMyopicPair nm@(NonMyopic _ _) =
   let NonMyopic {likelihoodsNM, rewardPotNM} = nm
    in [ "likelihoodsNM" .= likelihoodsNM
@@ -269,7 +268,7 @@ toNonMyopicPair nm@(NonMyopic _ _) =
 desirability ::
   (NonNegativeInterval, Word16) ->
   Coin ->
-  PoolParams c ->
+  PoolParams ->
   PerformanceEstimate ->
   Coin ->
   Double
@@ -296,9 +295,9 @@ getTopRankedPools ::
   Coin ->
   Coin ->
   PParams era ->
-  Map (KeyHash 'StakePool c) (PoolParams c) ->
-  Map (KeyHash 'StakePool c) PerformanceEstimate ->
-  Set (KeyHash 'StakePool c)
+  Map (KeyHash 'StakePool) PoolParams ->
+  Map (KeyHash 'StakePool) PerformanceEstimate ->
+  Set (KeyHash 'StakePool)
 getTopRankedPools rPot totalStake pp poolParams aps =
   let pdata = Map.toAscList $ Map.intersectionWith (,) poolParams aps
    in getTopRankedPoolsInternal rPot totalStake pp pdata
@@ -308,9 +307,9 @@ getTopRankedPoolsVMap ::
   Coin ->
   Coin ->
   PParams era ->
-  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
-  Map (KeyHash 'StakePool (EraCrypto era)) PerformanceEstimate ->
-  Set (KeyHash 'StakePool (EraCrypto era))
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams ->
+  Map (KeyHash 'StakePool) PerformanceEstimate ->
+  Set (KeyHash 'StakePool)
 getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
   let pdata = [(kh, (pps, a)) | (kh, a) <- Map.toAscList aps, Just pps <- [VMap.lookup kh poolParams]]
    in getTopRankedPoolsInternal rPot totalStake pp pdata
@@ -320,8 +319,8 @@ getTopRankedPoolsInternal ::
   Coin ->
   Coin ->
   PParams era ->
-  [(KeyHash 'StakePool c, (PoolParams c, PerformanceEstimate))] ->
-  Set (KeyHash 'StakePool c)
+  [(KeyHash 'StakePool, (PoolParams, PerformanceEstimate))] ->
+  Set (KeyHash 'StakePool)
 getTopRankedPoolsInternal rPot totalStake pp pdata =
   Set.fromList $
     fst
@@ -347,8 +346,8 @@ nonMyopicStake ::
   StakeShare ->
   StakeShare ->
   StakeShare ->
-  KeyHash 'StakePool c ->
-  Set (KeyHash 'StakePool c) ->
+  KeyHash 'StakePool ->
+  Set (KeyHash 'StakePool) ->
   StakeShare
 nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
   let z0 = 1 % max 1 (fromIntegral (pp ^. ppNOptL))
@@ -368,11 +367,11 @@ nonMyopicMemberRew ::
   EraPParams era =>
   PParams era ->
   Coin ->
-  PoolParams c ->
+  PoolParams ->
   StakeShare ->
   StakeShare ->
   StakeShare ->
-  Set (KeyHash 'StakePool c) ->
+  Set (KeyHash 'StakePool) ->
   PerformanceEstimate ->
   Coin
 nonMyopicMemberRew

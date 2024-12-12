@@ -134,9 +134,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   delegateSPORewardAddressToDRep_,
 ) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
-import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
-import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
@@ -150,7 +147,6 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
   addEpochInterval,
   binOpEpochNo,
-  hashAnchorData,
   inject,
   succVersion,
   textToUrl,
@@ -174,7 +170,6 @@ import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
 import Cardano.Ledger.Conway.Rules (
-  ConwayGovEvent,
   EnactSignal,
   committeeAccepted,
   committeeAcceptedRatio,
@@ -189,11 +184,11 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
@@ -266,27 +261,17 @@ conwayModifyPParams f = modifyNES $ \nes ->
         (snapshot, ratifyState) ->
           DRComplete snapshot (ratifyState & rsEnactStateL . ensCurPParamsL %~ f)
 
-instance
-  ( Crypto c
-  , NFData (SigDSIGN (DSIGN c))
-  , NFData (VerKeyDSIGN (DSIGN c))
-  , ADDRHASH c ~ Blake2b_224
-  , DSIGN c ~ Ed25519DSIGN
-  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
-  , Eq (ConwayGovEvent (ConwayEra c))
-  ) =>
-  ShelleyEraImp (ConwayEra c)
-  where
+instance ShelleyEraImp ConwayEra where
   initGenesis = do
     kh1 <- freshKeyHash
     kh2 <- freshKeyHash
     let
-      ccExpiryEpochNo = addEpochInterval (impEraStartEpochNo @(ConwayEra c)) (EpochInterval 15)
+      ccExpiryEpochNo = addEpochInterval (impEraStartEpochNo @ConwayEra) (EpochInterval 15)
       committee = Committee [(KeyHashObj kh1, ccExpiryEpochNo), (KeyHashObj kh2, ccExpiryEpochNo)] (1 %! 1)
       constitutionAnchor =
         Anchor
           { anchorUrl = errorFail $ textToUrl 128 "https://cardano-constitution.crypto"
-          , anchorDataHash = hashAnchorData (AnchorData "Cardano Constitution Content")
+          , anchorDataHash = hashAnnotated (AnchorData "Cardano Constitution Content")
           }
       guardrailScriptHash = hashPlutusScript guardrailScript
     pure
@@ -335,17 +320,9 @@ instance
 
   fixupTx = alonzoFixupTx
 
-instance
-  ( Crypto c
-  , NFData (SigDSIGN (DSIGN c))
-  , NFData (VerKeyDSIGN (DSIGN c))
-  , ADDRHASH c ~ Blake2b_224
-  , DSIGN c ~ Ed25519DSIGN
-  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  MaryEraImp (ConwayEra c)
+instance MaryEraImp ConwayEra
 
-instance ShelleyEraImp (ConwayEra c) => AlonzoEraImp (ConwayEra c) where
+instance AlonzoEraImp ConwayEra where
   scriptTestContexts =
     plutusTestScripts SPlutusV1
       <> plutusTestScripts SPlutusV2
@@ -368,19 +345,11 @@ class
   ) =>
   ConwayEraImp era
 
-instance
-  ( Crypto c
-  , NFData (SigDSIGN (DSIGN c))
-  , NFData (VerKeyDSIGN (DSIGN c))
-  , ADDRHASH c ~ Blake2b_224
-  , DSIGN c ~ Ed25519DSIGN
-  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  ConwayEraImp (ConwayEra c)
+instance ConwayEraImp ConwayEra
 
 registerInitialCommittee ::
   (HasCallStack, ConwayEraImp era) =>
-  ImpTestM era (NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)))
+  ImpTestM era (NonEmpty (Credential 'HotCommitteeRole))
 registerInitialCommittee = do
   committeeMembers <- Set.toList <$> getCommitteeMembers
   case committeeMembers of
@@ -389,7 +358,7 @@ registerInitialCommittee = do
 
 -- | Submit a transaction that registers a new DRep and return the keyhash
 -- belonging to that DRep
-registerDRep :: ConwayEraImp era => ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
+registerDRep :: ConwayEraImp era => ImpTestM era (KeyHash 'DRepRole)
 registerDRep = do
   -- Register a DRep
   khDRep <- freshKeyHash
@@ -413,7 +382,7 @@ unRegisterDRep ::
   ( ShelleyEraImp era
   , ConwayEraTxCert era
   ) =>
-  Credential 'DRepRole (EraCrypto era) ->
+  Credential 'DRepRole ->
   ImpTestM era ()
 unRegisterDRep drep = do
   drepState <- lookupDRepState drep
@@ -429,7 +398,7 @@ updateDRep ::
   ( ShelleyEraImp era
   , ConwayEraTxCert era
   ) =>
-  Credential 'DRepRole (EraCrypto era) ->
+  Credential 'DRepRole ->
   ImpTestM era ()
 updateDRep drep = do
   mAnchor <- arbitrary
@@ -442,11 +411,7 @@ updateDRep drep = do
 -- that could count as delegated stake to the DRep
 setupDRepWithoutStake ::
   ConwayEraImp era =>
-  ImpTestM
-    era
-    ( KeyHash 'DRepRole (EraCrypto era)
-    , KeyHash 'Staking (EraCrypto era)
-    )
+  ImpTestM era (KeyHash 'DRepRole, KeyHash 'Staking)
 setupDRepWithoutStake = do
   drepKH <- registerDRep
   delegatorKH <- freshKeyHash
@@ -466,12 +431,7 @@ setupDRepWithoutStake = do
 setupSingleDRep ::
   ConwayEraImp era =>
   Integer ->
-  ImpTestM
-    era
-    ( Credential 'DRepRole (EraCrypto era)
-    , Credential 'Staking (EraCrypto era)
-    , KeyPair 'Payment (EraCrypto era)
-    )
+  ImpTestM era (Credential 'DRepRole, Credential 'Staking, KeyPair 'Payment)
 setupSingleDRep stake = do
   drepKH <- registerDRep
   delegatorKH <- freshKeyHash
@@ -491,12 +451,10 @@ setupSingleDRep stake = do
 
 delegateToDRep ::
   ConwayEraImp era =>
-  Credential 'Staking (EraCrypto era) ->
+  Credential 'Staking ->
   Coin ->
-  DRep (EraCrypto era) ->
-  ImpTestM
-    era
-    (KeyPair 'Payment (EraCrypto era))
+  DRep ->
+  ImpTestM era (KeyPair 'Payment)
 delegateToDRep cred stake dRep = do
   (_, spendingKP) <- freshKeyPair
   let addr = Addr Testnet (mkCred spendingKP) (StakeRefBase cred)
@@ -518,8 +476,8 @@ delegateToDRep cred stake dRep = do
 
 lookupDRepState ::
   HasCallStack =>
-  Credential 'DRepRole (EraCrypto era) ->
-  ImpTestM era (DRepState (EraCrypto era))
+  Credential 'DRepRole ->
+  ImpTestM era DRepState
 lookupDRepState dRepCred = do
   drepsState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   case Map.lookup dRepCred drepsState of
@@ -537,12 +495,7 @@ getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
 setupPoolWithStake ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
   Coin ->
-  ImpTestM
-    era
-    ( KeyHash 'StakePool (EraCrypto era)
-    , Credential 'Payment (EraCrypto era)
-    , Credential 'Staking (EraCrypto era)
-    )
+  ImpTestM era (KeyHash 'StakePool, Credential 'Payment, Credential 'Staking)
 setupPoolWithStake delegCoin = do
   khPool <- freshKeyHash
   registerPool khPool
@@ -566,11 +519,7 @@ setupPoolWithStake delegCoin = do
 
 setupPoolWithoutStake ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
-  ImpTestM
-    era
-    ( KeyHash 'StakePool (EraCrypto era)
-    , Credential 'Staking (EraCrypto era)
-    )
+  ImpTestM era (KeyHash 'StakePool, Credential 'Staking)
 setupPoolWithoutStake = do
   khPool <- freshKeyHash
   registerPool khPool
@@ -595,9 +544,9 @@ submitVote ::
   , HasCallStack
   ) =>
   Vote ->
-  Voter (EraCrypto era) ->
-  GovActionId (EraCrypto era) ->
-  ImpTestM era (TxId (EraCrypto era))
+  Voter ->
+  GovActionId ->
+  ImpTestM era TxId
 submitVote vote voter gaId = trySubmitVote vote voter gaId >>= expectRightDeep
 
 -- | Submits a transaction that votes "Yes" for the given governance action as
@@ -607,8 +556,8 @@ submitYesVote_ ::
   , ConwayEraTxBody era
   , HasCallStack
   ) =>
-  Voter (EraCrypto era) ->
-  GovActionId (EraCrypto era) ->
+  Voter ->
+  GovActionId ->
   ImpTestM era ()
 submitYesVote_ voter gaId = void $ submitVote VoteYes voter gaId
 
@@ -618,8 +567,8 @@ submitVote_ ::
   , HasCallStack
   ) =>
   Vote ->
-  Voter (EraCrypto era) ->
-  GovActionId (EraCrypto era) ->
+  Voter ->
+  GovActionId ->
   ImpTestM era ()
 submitVote_ vote voter gaId = void $ submitVote vote voter gaId
 
@@ -628,8 +577,8 @@ submitFailingVote ::
   , ConwayEraTxBody era
   , HasCallStack
   ) =>
-  Voter (EraCrypto era) ->
-  GovActionId (EraCrypto era) ->
+  Voter ->
+  GovActionId ->
   NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingVote voter gaId expectedFailure =
@@ -642,14 +591,9 @@ trySubmitVote ::
   , ConwayEraTxBody era
   ) =>
   Vote ->
-  Voter (EraCrypto era) ->
-  GovActionId (EraCrypto era) ->
-  ImpTestM
-    era
-    ( Either
-        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
-        (TxId (EraCrypto era))
-    )
+  Voter ->
+  GovActionId ->
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) TxId)
 trySubmitVote vote voter gaId =
   fmap (bimap fst txIdTx) $
     trySubmitTx $
@@ -677,13 +621,13 @@ submitProposal_ = void . submitProposal
 submitProposal ::
   (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
   ProposalProcedure era ->
-  ImpTestM era (GovActionId (EraCrypto era))
+  ImpTestM era GovActionId
 submitProposal proposal = trySubmitProposal proposal >>= expectRightExpr
 
 submitProposals ::
   (ShelleyEraImp era, ConwayEraGov era, ConwayEraTxBody era, HasCallStack) =>
   NE.NonEmpty (ProposalProcedure era) ->
-  ImpTestM era (NE.NonEmpty (GovActionId (EraCrypto era)))
+  ImpTestM era (NE.NonEmpty GovActionId)
 submitProposals proposals = do
   curEpochNo <- getsNES nesELL
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -711,12 +655,7 @@ trySubmitProposal ::
   , ConwayEraTxBody era
   ) =>
   ProposalProcedure era ->
-  ImpTestM
-    era
-    ( Either
-        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
-        (GovActionId (EraCrypto era))
-    )
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitProposal proposal = do
   res <- trySubmitProposals (pure proposal)
   pure $ case res of
@@ -757,19 +696,14 @@ trySubmitGovAction ::
   , ConwayEraTxBody era
   ) =>
   GovAction era ->
-  ImpTestM
-    era
-    ( Either
-        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
-        (GovActionId (EraCrypto era))
-    )
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) GovActionId)
 trySubmitGovAction ga = do
   let mkGovActionId tx = GovActionId (txIdTx tx) (GovActionIx 0)
   bimap fst mkGovActionId <$> trySubmitGovActions (pure ga)
 
 submitAndExpireProposalToMakeReward ::
   ConwayEraImp era =>
-  Credential 'Staking (EraCrypto era) ->
+  Credential 'Staking ->
   ImpTestM era ()
 submitAndExpireProposalToMakeReward stakingC = do
   rewardAccount <- getRewardAccountFor stakingC
@@ -800,7 +734,7 @@ trySubmitGovActions gas = do
 mkProposalWithRewardAccount ::
   (ShelleyEraImp era, ConwayEraTxBody era) =>
   GovAction era ->
-  RewardAccount (EraCrypto era) ->
+  RewardAccount ->
   ImpTestM era (ProposalProcedure era)
 mkProposalWithRewardAccount ga rewardAccount = do
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
@@ -828,7 +762,7 @@ submitGovAction ::
   , HasCallStack
   ) =>
   GovAction era ->
-  ImpTestM era (GovActionId (EraCrypto era))
+  ImpTestM era GovActionId
 submitGovAction ga = do
   gaId NE.:| _ <- submitGovActions (pure ga)
   pure gaId
@@ -850,7 +784,7 @@ submitGovActions ::
   , HasCallStack
   ) =>
   NE.NonEmpty (GovAction era) ->
-  ImpTestM era (NE.NonEmpty (GovActionId (EraCrypto era)))
+  ImpTestM era (NE.NonEmpty GovActionId)
 submitGovActions gas = do
   tx <- trySubmitGovActions gas >>= expectRightExpr
   let txId = txIdTx tx
@@ -858,7 +792,7 @@ submitGovActions gas = do
 
 mkTreasuryWithdrawalsGovAction ::
   ConwayEraGov era =>
-  [(RewardAccount (EraCrypto era), Coin)] ->
+  [(RewardAccount, Coin)] ->
   ImpTestM era (GovAction era)
 mkTreasuryWithdrawalsGovAction wdrls =
   TreasuryWithdrawals (Map.fromList wdrls) <$> getGovPolicy
@@ -868,17 +802,17 @@ submitTreasuryWithdrawals ::
   , ConwayEraTxBody era
   , ConwayEraGov era
   ) =>
-  [(RewardAccount (EraCrypto era), Coin)] ->
-  ImpTestM era (GovActionId (EraCrypto era))
+  [(RewardAccount, Coin)] ->
+  ImpTestM era GovActionId
 submitTreasuryWithdrawals wdrls =
   mkTreasuryWithdrawalsGovAction wdrls >>= submitGovAction
 
 enactTreasuryWithdrawals ::
   ConwayEraImp era =>
-  [(RewardAccount (EraCrypto era), Coin)] ->
-  Credential 'DRepRole (EraCrypto era) ->
-  NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)) ->
-  ImpTestM era (GovActionId (EraCrypto era))
+  [(RewardAccount, Coin)] ->
+  Credential 'DRepRole ->
+  NonEmpty (Credential 'HotCommitteeRole) ->
+  ImpTestM era GovActionId
 enactTreasuryWithdrawals withdrawals dRep cms = do
   gaId <- submitTreasuryWithdrawals withdrawals
   submitYesVote_ (DRepVoter dRep) gaId
@@ -888,15 +822,15 @@ enactTreasuryWithdrawals withdrawals dRep cms = do
 
 submitParameterChange ::
   ConwayEraImp era =>
-  StrictMaybe (GovActionId (EraCrypto era)) ->
+  StrictMaybe GovActionId ->
   PParamsUpdate era ->
-  ImpTestM era (GovActionId (EraCrypto era))
+  ImpTestM era GovActionId
 submitParameterChange parent ppu =
   mkParameterChangeGovAction parent ppu >>= submitGovAction
 
 mkParameterChangeGovAction ::
   ConwayEraImp era =>
-  StrictMaybe (GovActionId (EraCrypto era)) ->
+  StrictMaybe GovActionId ->
   PParamsUpdate era ->
   ImpTestM era (GovAction era)
 mkParameterChangeGovAction parent ppu =
@@ -904,12 +838,12 @@ mkParameterChangeGovAction parent ppu =
 
 mkMinFeeUpdateGovAction ::
   ConwayEraImp era =>
-  StrictMaybe (GovActionId (EraCrypto era)) -> ImpTestM era (GovAction era)
+  StrictMaybe GovActionId -> ImpTestM era (GovAction era)
 mkMinFeeUpdateGovAction p = do
   minFeeValue <- uniformRM (30, 1000)
   mkParameterChangeGovAction p (def & ppuMinFeeAL .~ SJust (Coin minFeeValue))
 
-getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe (ScriptHash (EraCrypto era)))
+getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe ScriptHash)
 getGovPolicy =
   getsNES $
     nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionScriptL
@@ -938,7 +872,7 @@ logProposalsForest = do
 
 getCommitteeMembers ::
   ConwayEraImp era =>
-  ImpTestM era (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+  ImpTestM era (Set.Set (Credential 'ColdCommitteeRole))
 getCommitteeMembers = do
   committee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
   pure $ Map.keysSet $ foldMap' committeeMembers committee
@@ -1009,14 +943,14 @@ logProposalsForestDiff pf1 pf2 = logDoc $ vsep ["Proposals Forest Diff:", diffEx
 -- | Looks up the governance action state corresponding to the governance action id
 lookupGovActionState ::
   ConwayEraGov era =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era (Maybe (GovActionState era))
 lookupGovActionState aId = proposalsLookupId aId <$> getProposals
 
 -- | Looks up the governance action state corresponding to the governance action id
 getGovActionState ::
   (HasCallStack, ConwayEraGov era) =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era (GovActionState era)
 getGovActionState govActionId =
   impAnn "Expecting an action state" $ do
@@ -1027,13 +961,13 @@ getGovActionState govActionId =
 
 expectPresentGovActionId ::
   (HasCallStack, ConwayEraGov era) =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era ()
 expectPresentGovActionId govActionId = void $ getGovActionState govActionId
 
 expectMissingGovActionId ::
   (HasCallStack, ConwayEraGov era) =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era ()
 expectMissingGovActionId govActionId =
   impAnn "Expecting for gov action state to be missing" $ do
@@ -1067,7 +1001,7 @@ getRatifyEnv = do
 
 ccShouldNotBeExpired ::
   (HasCallStack, ConwayEraGov era) =>
-  Credential 'ColdCommitteeRole (EraCrypto era) ->
+  Credential 'ColdCommitteeRole ->
   ImpTestM era ()
 ccShouldNotBeExpired coldC = do
   curEpochNo <- getsNES nesELL
@@ -1076,7 +1010,7 @@ ccShouldNotBeExpired coldC = do
 
 ccShouldBeExpired ::
   (HasCallStack, ConwayEraGov era) =>
-  Credential 'ColdCommitteeRole (EraCrypto era) ->
+  Credential 'ColdCommitteeRole ->
   ImpTestM era ()
 ccShouldBeExpired coldC = do
   curEpochNo <- getsNES nesELL
@@ -1085,7 +1019,7 @@ ccShouldBeExpired coldC = do
 
 getCCExpiry ::
   (HasCallStack, ConwayEraGov era) =>
-  Credential 'ColdCommitteeRole (EraCrypto era) ->
+  Credential 'ColdCommitteeRole ->
   ImpTestM era EpochNo
 getCCExpiry coldC = do
   committee <- getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
@@ -1098,7 +1032,7 @@ getCCExpiry coldC = do
 
 -- | Test the resignation status for a CC cold key to be resigned
 ccShouldBeResigned ::
-  HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+  HasCallStack => Credential 'ColdCommitteeRole -> ImpTestM era ()
 ccShouldBeResigned coldK = do
   committeeCreds <-
     getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
@@ -1106,13 +1040,13 @@ ccShouldBeResigned coldK = do
 
 -- | Test the resignation status for a CC cold key to not be resigned
 ccShouldNotBeResigned ::
-  HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+  HasCallStack => Credential 'ColdCommitteeRole -> ImpTestM era ()
 ccShouldNotBeResigned coldK = do
   committeeCreds <-
     getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
   (Map.lookup coldK committeeCreds >>= authHk) `shouldSatisfy` isJust
 
-authHk :: CommitteeAuthorization c -> Maybe (Credential 'HotCommitteeRole c)
+authHk :: CommitteeAuthorization -> Maybe (Credential 'HotCommitteeRole)
 authHk (CommitteeHotCredential hk) = Just hk
 authHk _ = Nothing
 
@@ -1120,7 +1054,7 @@ authHk _ = Nothing
 calculateDRepAcceptedRatio ::
   forall era.
   (HasCallStack, ConwayEraGov era) =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era Rational
 calculateDRepAcceptedRatio gaId = do
   ratEnv <- getRatifyEnv
@@ -1136,7 +1070,7 @@ calculateDRepAcceptedRatio gaId = do
 calculateCommitteeAcceptedRatio ::
   forall era.
   (HasCallStack, ConwayEraGov era) =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era Rational
 calculateCommitteeAcceptedRatio gaId = do
   eNo <- getsNES nesELL
@@ -1153,7 +1087,7 @@ calculateCommitteeAcceptedRatio gaId = do
       eNo
 
 calculatePoolAcceptedRatio ::
-  ConwayEraGov era => GovActionId (EraCrypto era) -> ImpTestM era Rational
+  ConwayEraGov era => GovActionId -> ImpTestM era Rational
 calculatePoolAcceptedRatio gaId = do
   ratEnv <- getRatifyEnv
   gas <- getGovActionState gaId
@@ -1162,7 +1096,7 @@ calculatePoolAcceptedRatio gaId = do
 
 -- | Logs the ratios of accepted votes per category
 logAcceptedRatio ::
-  (HasCallStack, ConwayEraGov era) => GovActionId (EraCrypto era) -> ImpTestM era ()
+  (HasCallStack, ConwayEraGov era) => GovActionId -> ImpTestM era ()
 logAcceptedRatio aId = do
   dRepRatio <- calculateDRepAcceptedRatio aId
   committeeRatio <- calculateCommitteeAcceptedRatio aId
@@ -1192,7 +1126,7 @@ getRatifyEnvAndState = do
 -- epoch. (Note that no other checks except DRep votes are used)
 isDRepAccepted ::
   (HasCallStack, ConwayEraGov era, ConwayEraPParams era) =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era Bool
 isDRepAccepted gaId = do
   (ratifyEnv, ratifyState) <- getRatifyEnvAndState
@@ -1201,7 +1135,7 @@ isDRepAccepted gaId = do
 
 isSpoAccepted ::
   (HasCallStack, ConwayEraGov era, ConwayEraPParams era) =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era Bool
 isSpoAccepted gaId = do
   (ratifyEnv, ratifyState) <- getRatifyEnvAndState
@@ -1210,7 +1144,7 @@ isSpoAccepted gaId = do
 
 isCommitteeAccepted ::
   (HasCallStack, ConwayEraGov era, ConwayEraPParams era) =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era Bool
 isCommitteeAccepted gaId = do
   (ratifyEnv, ratifyState) <- getRatifyEnvAndState
@@ -1220,7 +1154,7 @@ isCommitteeAccepted gaId = do
 -- | Logs the results of each check required to make the governance action pass
 logRatificationChecks ::
   (ConwayEraGov era, ConwayEraPParams era, HasCallStack) =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era ()
 logRatificationChecks gaId = do
   gas@GovActionState {gasCommitteeVotes, gasDRepVotes} <- getGovActionState gaId
@@ -1285,8 +1219,8 @@ logRatificationChecks gaId = do
 -- Returns the hot key hash.
 registerCommitteeHotKey ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
-  Credential 'ColdCommitteeRole (EraCrypto era) ->
-  ImpTestM era (Credential 'HotCommitteeRole (EraCrypto era))
+  Credential 'ColdCommitteeRole ->
+  ImpTestM era (Credential 'HotCommitteeRole)
 registerCommitteeHotKey coldKey = do
   hotKey NE.:| [] <- registerCommitteeHotKeys (KeyHashObj <$> freshKeyHash) $ pure coldKey
   pure hotKey
@@ -1294,9 +1228,9 @@ registerCommitteeHotKey coldKey = do
 registerCommitteeHotKeys ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
   -- | Hot Credential generator
-  ImpTestM era (Credential 'HotCommitteeRole (EraCrypto era)) ->
-  NonEmpty (Credential 'ColdCommitteeRole (EraCrypto era)) ->
-  ImpTestM era (NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)))
+  ImpTestM era (Credential 'HotCommitteeRole) ->
+  NonEmpty (Credential 'ColdCommitteeRole) ->
+  ImpTestM era (NonEmpty (Credential 'HotCommitteeRole))
 registerCommitteeHotKeys genHotCred coldKeys = do
   keys <- forM coldKeys (\coldKey -> (,) coldKey <$> genHotCred)
   submitTxAnn_ "Registering Committee Hot keys" $
@@ -1309,9 +1243,9 @@ registerCommitteeHotKeys genHotCred coldKeys = do
 -- hot credential authorization for this committee member it will be returned.
 resignCommitteeColdKey ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
-  Credential 'ColdCommitteeRole (EraCrypto era) ->
-  StrictMaybe (Anchor (EraCrypto era)) ->
-  ImpTestM era (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
+  Credential 'ColdCommitteeRole ->
+  StrictMaybe Anchor ->
+  ImpTestM era (Maybe (Credential 'HotCommitteeRole))
 resignCommitteeColdKey coldKey anchor = do
   committeAuthorizations <-
     getsNES $
@@ -1335,9 +1269,9 @@ electCommittee ::
   , ConwayEraImp era
   ) =>
   StrictMaybe (GovPurposeId 'CommitteePurpose era) ->
-  Credential 'DRepRole (EraCrypto era) ->
-  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
-  Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
+  Credential 'DRepRole ->
+  Set.Set (Credential 'ColdCommitteeRole) ->
+  Map.Map (Credential 'ColdCommitteeRole) EpochNo ->
   ImpTestM era (GovPurposeId 'CommitteePurpose era)
 electCommittee prevGovId drep toRemove toAdd = impAnn "Electing committee" $ do
   let
@@ -1358,8 +1292,8 @@ electBasicCommittee ::
   ) =>
   ImpTestM
     era
-    ( Credential 'DRepRole (EraCrypto era)
-    , Credential 'HotCommitteeRole (EraCrypto era)
+    ( Credential 'DRepRole
+    , Credential 'HotCommitteeRole
     , GovPurposeId 'CommitteePurpose era
     )
 electBasicCommittee = do
@@ -1446,7 +1380,7 @@ proposalsShowDebug ps showRoots =
 
 getProposalsForest ::
   ConwayEraGov era =>
-  ImpTestM era (Forest (StrictMaybe (GovActionId (EraCrypto era))))
+  ImpTestM era (Forest (StrictMaybe GovActionId))
 getProposalsForest = do
   ps <- getProposals
   pure
@@ -1459,12 +1393,12 @@ getProposalsForest = do
     mkRoot ::
       Lens' (GovRelation PRoot era) (PRoot (GovPurposeId p era)) ->
       Proposals era ->
-      StrictMaybe (GovActionId (EraCrypto era))
+      StrictMaybe GovActionId
     mkRoot rootL ps = fmap unGovPurposeId $ ps ^. pRootsL . rootL . prRootL
     mkForest ::
       (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
       Proposals era ->
-      Forest (StrictMaybe (GovActionId (EraCrypto era)))
+      Forest (StrictMaybe GovActionId)
     mkForest forestL ps =
       let h = ps ^. pGraphL . forestL . pGraphNodesL
           s = toList $ proposalsIds ps
@@ -1473,10 +1407,10 @@ getProposalsForest = do
        in unfoldForest go (getOrderedChildren $ ps ^. pRootsL . forestL . prChildrenL)
 
 submitGovActionTree ::
-  (StrictMaybe (GovActionId (EraCrypto era)) -> ImpTestM era (GovActionId (EraCrypto era))) ->
-  StrictMaybe (GovActionId (EraCrypto era)) ->
+  (StrictMaybe GovActionId -> ImpTestM era GovActionId) ->
+  StrictMaybe GovActionId ->
   Tree () ->
-  ImpTestM era (Tree (GovActionId (EraCrypto era)))
+  ImpTestM era (Tree GovActionId)
 submitGovActionTree submitAction p tree =
   unfoldTreeM go $ fmap (const p) tree
   where
@@ -1485,10 +1419,10 @@ submitGovActionTree submitAction p tree =
       pure (n, fmap (\(Node _child subtree) -> Node (SJust n) subtree) children)
 
 submitGovActionForest ::
-  (StrictMaybe (GovActionId (EraCrypto era)) -> ImpTestM era (GovActionId (EraCrypto era))) ->
-  StrictMaybe (GovActionId (EraCrypto era)) ->
+  (StrictMaybe GovActionId -> ImpTestM era GovActionId) ->
+  StrictMaybe GovActionId ->
   Forest () ->
-  ImpTestM era (Forest (GovActionId (EraCrypto era)))
+  ImpTestM era (Forest GovActionId)
 submitGovActionForest submitAction p forest =
   unfoldForestM go $ fmap (fmap $ const p) forest
   where
@@ -1503,9 +1437,9 @@ enactConstitution ::
   ) =>
   StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
   Constitution era ->
-  Credential 'DRepRole (EraCrypto era) ->
-  NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)) ->
-  ImpTestM era (GovActionId (EraCrypto era))
+  Credential 'DRepRole ->
+  NonEmpty (Credential 'HotCommitteeRole) ->
+  ImpTestM era GovActionId
 enactConstitution prevGovId constitution dRep committeeMembers = impAnn "Enacting constitution" $ do
   let action = NewConstitution prevGovId constitution
   govId <- submitGovAction action
@@ -1536,14 +1470,14 @@ submitConstitution ::
   forall era.
   ConwayEraImp era =>
   StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
-  ImpTestM era (GovActionId (EraCrypto era))
+  ImpTestM era GovActionId
 submitConstitution prevGovId = do
   (proposal, _) <- mkConstitutionProposal prevGovId
   submitProposal proposal
 
 expectDRepNotRegistered ::
   HasCallStack =>
-  Credential 'DRepRole (EraCrypto era) ->
+  Credential 'DRepRole ->
   ImpTestM era ()
 expectDRepNotRegistered drep = do
   dsMap <- getsNES (nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL)
@@ -1551,7 +1485,7 @@ expectDRepNotRegistered drep = do
 
 isDRepExpired ::
   HasCallStack =>
-  Credential 'DRepRole (EraCrypto era) ->
+  Credential 'DRepRole ->
   ImpTestM era Bool
 isDRepExpired drep = do
   vState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL
@@ -1565,7 +1499,7 @@ isDRepExpired drep = do
 
 expectDRepExpiry ::
   HasCallStack =>
-  Credential 'DRepRole (EraCrypto era) ->
+  Credential 'DRepRole ->
   EpochNo ->
   ImpTestM era ()
 expectDRepExpiry drep expected = do
@@ -1575,7 +1509,7 @@ expectDRepExpiry drep expected = do
 
 expectActualDRepExpiry ::
   HasCallStack =>
-  Credential 'DRepRole (EraCrypto era) ->
+  Credential 'DRepRole ->
   EpochNo ->
   ImpTestM era ()
 expectActualDRepExpiry drep expected = do
@@ -1587,7 +1521,7 @@ currentProposalsShouldContain ::
   ( HasCallStack
   , ConwayEraGov era
   ) =>
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ImpTestM era ()
 currentProposalsShouldContain gai =
   currentProposalIds >>= flip shouldContain [gai] . toList
@@ -1615,13 +1549,13 @@ expectNoPulserProposals = do
   assertBool "Expected no proposals in the pulser" (SSeq.null props)
 
 currentProposalIds ::
-  ConwayEraGov era => ImpTestM era (SSeq.StrictSeq (GovActionId (EraCrypto era)))
+  ConwayEraGov era => ImpTestM era (SSeq.StrictSeq GovActionId)
 currentProposalIds = proposalsIds <$> getsNES (newEpochStateGovStateL . proposalsGovStateL)
 
 lastEpochProposals ::
   forall era.
   ConwayEraGov era =>
-  ImpTestM era (SSeq.StrictSeq (GovActionId (EraCrypto era)))
+  ImpTestM era (SSeq.StrictSeq GovActionId)
 lastEpochProposals =
   fmap (gasId @era) . psProposals
     <$> getsNES
@@ -1673,8 +1607,8 @@ ifBootstrap inBootstrap outOfBootstrap = do
 submitYesVoteCCs_ ::
   forall era f.
   (ConwayEraImp era, Foldable f) =>
-  f (Credential 'HotCommitteeRole (EraCrypto era)) ->
-  GovActionId (EraCrypto era) ->
+  f (Credential 'HotCommitteeRole) ->
+  GovActionId ->
   ImpTestM era ()
 submitYesVoteCCs_ committeeMembers govId =
   mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) committeeMembers
@@ -1684,9 +1618,9 @@ mkUpdateCommitteeProposal ::
   -- | Set the parent. When Nothing is supplied latest parent will be used.
   Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose era)) ->
   -- | CC members to remove
-  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
+  Set.Set (Credential 'ColdCommitteeRole) ->
   -- | CC members to add
-  [(Credential 'ColdCommitteeRole (EraCrypto era), EpochInterval)] ->
+  [(Credential 'ColdCommitteeRole, EpochInterval)] ->
   UnitInterval ->
   ImpTestM era (ProposalProcedure era)
 mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold = do
@@ -1704,23 +1638,23 @@ submitUpdateCommittee ::
   -- | Set the parent. When Nothing is supplied latest parent will be used.
   Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose era)) ->
   -- | CC members to remove
-  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
+  Set.Set (Credential 'ColdCommitteeRole) ->
   -- | CC members to add
-  [(Credential 'ColdCommitteeRole (EraCrypto era), EpochInterval)] ->
+  [(Credential 'ColdCommitteeRole, EpochInterval)] ->
   UnitInterval ->
-  ImpTestM era (GovActionId (EraCrypto era))
+  ImpTestM era GovActionId
 submitUpdateCommittee mParent ccsToRemove ccsToAdd threshold =
   mkUpdateCommitteeProposal mParent ccsToRemove ccsToAdd threshold >>= submitProposal
 
 expectCommitteeMemberPresence ::
-  (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+  (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole -> ImpTestM era ()
 expectCommitteeMemberPresence cc = do
   SJust committee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
   assertBool ("Expected Committee Member: " ++ show cc ++ " to be present in the committee") $
     Map.member cc (committee ^. committeeMembersL)
 
 expectCommitteeMemberAbsence ::
-  (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+  (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole -> ImpTestM era ()
 expectCommitteeMemberAbsence cc = do
   SJust committee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
   assertBool ("Expected Committee Member: " ++ show cc ++ " to be absent from the committee") $
@@ -1740,7 +1674,7 @@ donateToTreasury amount =
 
 expectMembers ::
   (HasCallStack, ConwayEraGov era) =>
-  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
+  Set.Set (Credential 'ColdCommitteeRole) -> ImpTestM era ()
 expectMembers expKhs = do
   committee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
   let members = Map.keysSet $ foldMap' committeeMembers committee
@@ -1800,8 +1734,8 @@ logConwayTxBalance tx = do
 submitBootstrapAwareFailingVote ::
   ConwayEraImp era =>
   Vote ->
-  Voter (EraCrypto era) ->
-  GovActionId (EraCrypto era) ->
+  Voter ->
+  GovActionId ->
   SubmitFailureExpectation era ->
   ImpTestM era ()
 submitBootstrapAwareFailingVote vote voter gaId =
@@ -1813,7 +1747,7 @@ submitBootstrapAwareFailingProposal ::
   ConwayEraImp era =>
   ProposalProcedure era ->
   SubmitFailureExpectation era ->
-  ImpTestM era (Maybe (GovActionId (EraCrypto era)))
+  ImpTestM era (Maybe GovActionId)
 submitBootstrapAwareFailingProposal proposal =
   submitBootstrapAware
     (Just <$> submitProposal proposal)
@@ -1859,9 +1793,9 @@ submitBootstrapAware action failAction =
 
 delegateSPORewardAddressToDRep_ ::
   ConwayEraImp era =>
-  KeyHash 'StakePool (EraCrypto era) ->
+  KeyHash 'StakePool ->
   Coin ->
-  DRep (EraCrypto era) ->
+  DRep ->
   ImpTestM era ()
 delegateSPORewardAddressToDRep_ kh stake drep = do
   pp <- getRatifyEnv >>= expectJust . Map.lookup kh . rePoolParams

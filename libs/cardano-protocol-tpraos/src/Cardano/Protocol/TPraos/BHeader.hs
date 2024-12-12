@@ -113,22 +113,19 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | The hash of a Block Header
-newtype HashHeader c = HashHeader {unHashHeader :: Hash c EraIndependentBlockHeader}
+newtype HashHeader = HashHeader {unHashHeader :: Hash EraIndependentBlockHeader}
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 
-deriving newtype instance Crypto c => EncCBOR (HashHeader c)
+deriving newtype instance EncCBOR HashHeader
 
 -- | The previous hash of a block
-data PrevHash c = GenesisHash | BlockHash !(HashHeader c)
+data PrevHash = GenesisHash | BlockHash !HashHeader
   deriving (Show, Eq, Generic, Ord)
 
-instance Crypto c => NoThunks (PrevHash c)
+instance NoThunks PrevHash
 
-instance
-  Crypto c =>
-  EncCBOR (PrevHash c)
-  where
+instance EncCBOR PrevHash where
   encCBOR GenesisHash = encodeNull
   encCBOR (BlockHash h) = encCBOR h
   encodedSizeExpr size _ =
@@ -137,12 +134,9 @@ instance
       , Case "BlockHash" (encodedSizeExpr size p)
       ]
     where
-      p = Proxy :: Proxy (HashHeader c)
+      p = Proxy :: Proxy HashHeader
 
-instance
-  Crypto c =>
-  DecCBOR (PrevHash c)
-  where
+instance DecCBOR PrevHash where
   decCBOR = do
     peekTokenType >>= \case
       TypeNull -> do
@@ -150,16 +144,16 @@ instance
         pure GenesisHash
       _ -> BlockHash <$> decCBOR
 
-deriving newtype instance Crypto c => DecCBOR (HashHeader c)
+deriving newtype instance DecCBOR HashHeader
 
 data BHBody c = BHBody
   { bheaderBlockNo :: !BlockNo
   -- ^ block number
   , bheaderSlotNo :: !SlotNo
   -- ^ block slot
-  , bheaderPrev :: !(PrevHash c)
+  , bheaderPrev :: !PrevHash
   -- ^ Hash of the previous block header
-  , bheaderVk :: !(VKey 'BlockIssuer c)
+  , bheaderVk :: !(VKey 'BlockIssuer)
   -- ^ verification key of block issuer
   , bheaderVrfVk :: !(VerKeyVRF c)
   -- ^ VRF verification key for block issuer
@@ -169,7 +163,7 @@ data BHBody c = BHBody
   -- ^ leader election value
   , bsize :: !Word32
   -- ^ Size of the block body
-  , bhash :: !(Hash c EraIndependentBlockBody)
+  , bhash :: !(Hash EraIndependentBlockBody)
   -- ^ Hash of block body
   , bheaderOCert :: !(OCert c)
   -- ^ operational certificate
@@ -182,20 +176,12 @@ deriving instance Crypto c => Show (BHBody c)
 
 deriving instance Crypto c => Eq (BHBody c)
 
-instance
-  Crypto c =>
-  SignableRepresentation (BHBody c)
-  where
+instance Crypto c => SignableRepresentation (BHBody c) where
   getSignableRepresentation bh = serialize' (pvMajor (bprotver bh)) bh
 
-instance
-  Crypto c =>
-  NoThunks (BHBody c)
+instance Crypto c => NoThunks (BHBody c)
 
-instance
-  Crypto c =>
-  EncCBOR (BHBody c)
-  where
+instance Crypto c => EncCBOR (BHBody c) where
   encCBOR bhBody =
     encodeListLen (9 + listLen oc + listLen pv)
       <> encCBOR (bheaderBlockNo bhBody)
@@ -232,10 +218,7 @@ instance
       toWord64 :: Word32 -> Word64
       toWord64 = fromIntegral
 
-instance
-  Crypto c =>
-  DecCBOR (BHBody c)
-  where
+instance Crypto c => DecCBOR (BHBody c) where
   decCBOR = decodeRecordNamed "BHBody" bhBodySize $ do
     bheaderBlockNo <- decCBOR
     bheaderSlotNo <- decCBOR
@@ -316,30 +299,16 @@ instance Crypto c => DecCBOR (Annotator (BHeader c)) where
       pure $ pure $ BHeader' bhb sig . BSL.toStrict
 
 -- | Hash a given block header
-bhHash ::
-  Crypto c =>
-  BHeader c ->
-  HashHeader c
+bhHash :: Crypto c => BHeader c -> HashHeader
 bhHash bh = HashHeader . Hash.castHash . hashEncCBOR version $ bh
   where
     version = pvMajor (bprotver (bHeaderBody' bh))
 
 -- | HashHeader to Nonce
--- What is going on here?
--- This is here because the surrounding code is parametrized in the hash algorithm used,
--- but the nonce is hard-coded to Blake2b_256.
--- We require the nonce to have the right length (the size of a Blake2b_256 hash), so
--- if the hash size differs, we pad or remove bytes accordingly.
-hashHeaderToNonce :: HashHeader c -> Nonce
-hashHeaderToNonce (HashHeader h) = case Hash.hashFromBytes bytes of
-  Nothing -> Nonce (Hash.castHash (Hash.hashWith id bytes))
-  Just hash -> Nonce $! hash
-  where
-    bytes = Hash.hashToBytes h
+hashHeaderToNonce :: HashHeader -> Nonce
+hashHeaderToNonce (HashHeader h) = Nonce $ Hash.castHash h
 
-prevHashToNonce ::
-  PrevHash c ->
-  Nonce
+prevHashToNonce :: PrevHash -> Nonce
 prevHashToNonce = \case
   GenesisHash -> NeutralNonce -- This case can only happen when starting Shelley from genesis,
   -- setting the intial chain state to some epoch e,
@@ -351,7 +320,7 @@ prevHashToNonce = \case
 
 -- | Retrieve the issuer id (the hash of the cold key) from the body of the block header.
 -- This corresponds to either a genesis/core node or a stake pool.
-issuerIDfromBHBody :: Crypto c => BHBody c -> KeyHash 'BlockIssuer c
+issuerIDfromBHBody :: BHBody c -> KeyHash 'BlockIssuer
 issuerIDfromBHBody = hashKey . bheaderVk
 
 bHeaderSize :: forall c. BHeader c -> Int
@@ -481,22 +450,22 @@ mkSeed ucNonce (SlotNo slot) eNonce =
             Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
          )
 
-data LastAppliedBlock c = LastAppliedBlock
+data LastAppliedBlock = LastAppliedBlock
   { labBlockNo :: !BlockNo
   , labSlotNo :: !SlotNo
-  , labHash :: !(HashHeader c)
+  , labHash :: !HashHeader
   }
   deriving (Show, Eq, Generic)
 
-instance Crypto c => NoThunks (LastAppliedBlock c)
+instance NoThunks LastAppliedBlock
 
-instance NFData (LastAppliedBlock c)
+instance NFData LastAppliedBlock
 
-instance Crypto c => EncCBOR (LastAppliedBlock c) where
+instance EncCBOR LastAppliedBlock where
   encCBOR (LastAppliedBlock b s h) =
     encodeListLen 3 <> encCBOR b <> encCBOR s <> encCBOR h
 
-instance Crypto c => DecCBOR (LastAppliedBlock c) where
+instance DecCBOR LastAppliedBlock where
   decCBOR =
     decodeRecordNamed
       "lastAppliedBlock"
@@ -507,7 +476,7 @@ instance Crypto c => DecCBOR (LastAppliedBlock c) where
           <*> decCBOR
       )
 
-lastAppliedHash :: WithOrigin (LastAppliedBlock c) -> PrevHash c
+lastAppliedHash :: WithOrigin LastAppliedBlock -> PrevHash
 lastAppliedHash Origin = GenesisHash
 lastAppliedHash (At lab) = BlockHash $ labHash lab
 
@@ -515,7 +484,7 @@ lastAppliedHash (At lab) = BlockHash $ labHash lab
 bnonce :: BHBody c -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
-makeHeaderView :: Crypto c => BHeader c -> BHeaderView c
+makeHeaderView :: BHeader c -> BHeaderView
 makeHeaderView bh =
   BHeaderView
     (hashKey . bheaderVk $ bhb)

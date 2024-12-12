@@ -2,20 +2,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | The data types in this file constitute a Model of the NewEpochState
 --   sufficient for generating transactions that can run in the
@@ -111,7 +102,6 @@ import Test.Cardano.Ledger.Generic.Proof (
   BabbageEra,
   Proof (..),
   Reflect (..),
-  StandardCrypto,
  )
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 
@@ -119,7 +109,7 @@ import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 
 -- | MUtxo = Model UTxO. In the Model we represent the
 --   UTxO as a Map (not a newtype around a Map)
-type MUtxo era = Map (TxIn (EraCrypto era)) (TxOut era)
+type MUtxo era = Map TxIn (TxOut era)
 
 pcMUtxo :: Reflect era => Proof era -> MUtxo era -> PDoc
 pcMUtxo proof m = ppMap pcTxIn (pcTxOut proof) m
@@ -128,18 +118,18 @@ pcMUtxo proof m = ppMap pcTxIn (pcTxOut proof) m
 
 data ModelNewEpochState era = ModelNewEpochState
   { -- PState fields
-    mPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
-  , mPoolDeposits :: !(Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+    mPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  , mPoolDeposits :: !(Map (KeyHash 'StakePool) Coin)
   , -- DState state fields
-    mRewards :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
-  , mDelegations :: !(Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
-  , mKeyDeposits :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
+    mRewards :: !(Map (Credential 'Staking) Coin)
+  , mDelegations :: !(Map (Credential 'Staking) (KeyHash 'StakePool))
+  , mKeyDeposits :: !(Map (Credential 'Staking) Coin)
   , --  _fGenDelegs,  _genDelegs, and _irwd, are for
     --  changing the PParams and are abstracted away
 
     -- UTxO state fields (and extra stuff)
-    mUTxO :: !(Map (TxIn (EraCrypto era)) (TxOut era))
-  , mMutFee :: !(Map (TxIn (EraCrypto era)) (TxOut era))
+    mUTxO :: !(Map TxIn (TxOut era))
+  , mMutFee :: !(Map TxIn (TxOut era))
   -- ^ The current UTxO
   , -- _ppups is for changing PParams, and _stakeDistro is for efficiency
     -- and are abstracted away.
@@ -150,23 +140,23 @@ data ModelNewEpochState era = ModelNewEpochState
     -- esNonMyopic is for efficiency, and all are abstracted away
 
     -- Model NewEpochState fields
-    mPoolDistr :: !(Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+    mPoolDistr :: !(Map (KeyHash 'StakePool) IndividualPoolStake)
   , mPParams :: !(PParams era)
   , mDeposited :: !Coin
   , mFees :: !Coin
   , mCount :: !Int
-  , mIndex :: !(Map Int (TxId (EraCrypto era)))
+  , mIndex :: !(Map Int TxId)
   , -- below here NO EFFECT until we model EpochBoundary
-    mFPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
-  , mRetiring :: !(Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
-  , mSnapshots :: !(SnapShots (EraCrypto era))
+    mFPoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  , mRetiring :: !(Map (KeyHash 'StakePool) EpochNo)
+  , mSnapshots :: !SnapShots
   , mEL :: !EpochNo -- The current epoch,
-  , mBprev :: !(Map (KeyHash 'StakePool (EraCrypto era)) Natural) --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
-  , mBcur :: !(Map (KeyHash 'StakePool (EraCrypto era)) Natural)
-  , mRu :: !(StrictMaybe (RewardUpdate (EraCrypto era))) -- Possible reward update
+  , mBprev :: !(Map (KeyHash 'StakePool) Natural) --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
+  , mBcur :: !(Map (KeyHash 'StakePool) Natural)
+  , mRu :: !(StrictMaybe RewardUpdate) -- Possible reward update
   }
 
-type UtxoEntry era = (TxIn (EraCrypto era), TxOut era)
+type UtxoEntry era = (TxIn, TxOut era)
 
 type Model era = ModelNewEpochState era
 
@@ -174,10 +164,10 @@ type Model era = ModelNewEpochState era
 -- Empty or default values, these are usefull for many things, not the
 -- least of, for making Model instances.
 
-blocksMadeZero :: BlocksMade c
+blocksMadeZero :: BlocksMade
 blocksMadeZero = BlocksMade Map.empty
 
-poolDistrZero :: PoolDistr c
+poolDistrZero :: PoolDistr
 poolDistrZero = PoolDistr Map.empty $ CompactCoin 1
 
 accountStateZero :: AccountState
@@ -186,10 +176,10 @@ accountStateZero = AccountState (Coin 0) (Coin 0)
 utxoZero :: UTxO era
 utxoZero = UTxO Map.empty
 
-genDelegsZero :: GenDelegs c
+genDelegsZero :: GenDelegs
 genDelegsZero = GenDelegs Map.empty
 
-instantaneousRewardsZero :: InstantaneousRewards c
+instantaneousRewardsZero :: InstantaneousRewards
 instantaneousRewardsZero = InstantaneousRewards Map.empty Map.empty mempty mempty
 
 dStateZero :: DState c
@@ -213,10 +203,10 @@ pStateZero =
 dPStateZero :: CertState era
 dPStateZero = CertState def pStateZero dStateZero
 
-incrementalStakeZero :: IncrementalStake c
+incrementalStakeZero :: IncrementalStake
 incrementalStakeZero = IStake Map.empty Map.empty
 
-nonMyopicZero :: NonMyopic c
+nonMyopicZero :: NonMyopic
 nonMyopicZero = NonMyopic Map.empty mempty
 
 pParamsZeroByProof :: Proof era -> PParams era
@@ -299,10 +289,10 @@ mNewEpochStateZero =
     , mRu = SNothing
     }
 
-testNES :: NewEpochState (BabbageEra StandardCrypto)
+testNES :: NewEpochState BabbageEra
 testNES = newEpochStateZero
 
-testMNES :: ModelNewEpochState (BabbageEra StandardCrypto)
+testMNES :: ModelNewEpochState BabbageEra
 testMNES = mNewEpochStateZero
 
 -- ======================================================================
@@ -318,7 +308,7 @@ instance Extract (DState era) era where
       genDelegsZero
       instantaneousRewardsZero
 
-makeRewards :: ModelNewEpochState era -> Map.Map (Credential 'Staking (EraCrypto era)) UM.RDPair
+makeRewards :: ModelNewEpochState era -> Map.Map (Credential 'Staking) UM.RDPair
 makeRewards mnes = Map.mapWithKey f credRewMap
   where
     credRewMap = mRewards mnes
@@ -399,7 +389,7 @@ abstract x =
         SJust pru -> SJust (complete pru)
     }
 
-complete :: PulsingRewUpdate c -> RewardUpdate c
+complete :: PulsingRewUpdate -> RewardUpdate
 complete (Complete r) = r
 complete (Pulsing rewsnap pulser) = fst $ runShelleyBase (completeRupd (Pulsing rewsnap pulser))
 

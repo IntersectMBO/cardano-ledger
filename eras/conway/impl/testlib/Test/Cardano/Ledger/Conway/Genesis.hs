@@ -17,7 +17,6 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Slot (EpochNo (..))
 import Data.Default (Default (def))
@@ -30,17 +29,13 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModelV3)
 
-credMember :: Credential 'ColdCommitteeRole StandardCrypto
-credMember =
-  KeyHashObj
-    (KeyHash "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a")
+credMember :: Credential 'ColdCommitteeRole
+credMember = KeyHashObj (KeyHash "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a")
 
-scriptMember :: Credential 'ColdCommitteeRole StandardCrypto
-scriptMember =
-  ScriptHashObj
-    (ScriptHash "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a")
+scriptMember :: Credential 'ColdCommitteeRole
+scriptMember = ScriptHashObj (ScriptHash "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a")
 
-comm :: Committee Conway
+comm :: Committee ConwayEra
 comm =
   Committee
     ( Map.fromList
@@ -56,7 +51,7 @@ comm =
     )
     (unsafeBoundRational (1 % 2))
 
-expectedConwayGenesis :: ConwayGenesis StandardCrypto
+expectedConwayGenesis :: ConwayGenesis
 expectedConwayGenesis =
   ConwayGenesis
     { cgCommittee = comm

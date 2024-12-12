@@ -34,14 +34,14 @@ instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map (RewardAccount (EraCrypto era)) Coin)
+  , Inject ctx (Map RewardAccount Coin)
   ) =>
   SpecTranslate ctx (CertsEnv era)
   where
   type SpecRep (CertsEnv era) = Agda.CertEnv
   toSpecRep CertsEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map (RewardAccount (EraCrypto era)) Coin)
+    withdrawals <- askCtx @(Map RewardAccount Coin)
     Agda.MkCertEnv
       <$> toSpecRep certsCurrentEpoch
       <*> toSpecRep certsPParams

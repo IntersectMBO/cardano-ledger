@@ -24,7 +24,7 @@ spec :: Spec
 spec =
   describe "CDDL" $ do
     let n = 3
-    specForEra @Shelley readShelleyCddlFiles n
+    specForEra @ShelleyEra readShelleyCddlFiles n
 
 specForEra :: forall era. Era era => IO [BSL.ByteString] -> Int -> Spec
 specForEra readCddlFiles n = do

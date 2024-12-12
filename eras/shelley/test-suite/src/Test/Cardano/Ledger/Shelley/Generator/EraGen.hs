@@ -31,12 +31,10 @@ module Test.Cardano.Ledger.Shelley.Generator.EraGen (
 )
 where
 
-import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Keys (KeyRole (Witness), WitVKey)
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.API (
@@ -65,6 +63,7 @@ import Data.Set (Set)
 import Lens.Micro
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPairs, mkAddr)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   GenEnv (..),
@@ -132,7 +131,7 @@ type MinCHAIN_STS era =
   , BaseM (CHAIN era) ~ ShelleyBase
   , Environment (CHAIN era) ~ ()
   , State (CHAIN era) ~ ChainState era
-  , Signal (CHAIN era) ~ Block (BHeader (EraCrypto era)) era
+  , Signal (CHAIN era) ~ Block (BHeader MockCrypto) era
   )
 
 -- | Minimal requirements on the UTxO instances
@@ -150,7 +149,7 @@ type MinUTXO_STS era =
 class Show (TxOut era) => MinGenTxout era where
   calcEraMinUTxO :: TxOut era -> PParams era -> Coin
   addValToTxOut :: Value era -> TxOut era -> TxOut era
-  genEraTxOut :: GenEnv era -> Gen (Value era) -> [Addr (EraCrypto era)] -> Gen [TxOut era]
+  genEraTxOut :: GenEnv era -> Gen (Value era) -> [Addr] -> Gen [TxOut era]
 
 -- ======================================================================================
 -- The EraGen class. Generally one method for each type family in Cardano.Ledger.Core
@@ -186,13 +185,13 @@ class
     UTxO era ->
     PParams era ->
     SlotNo ->
-    Set (TxIn (EraCrypto era)) ->
+    Set TxIn ->
     StrictSeq (TxOut era) ->
     StrictSeq (TxCert era) ->
-    Withdrawals (EraCrypto era) ->
+    Withdrawals ->
     Coin ->
     StrictMaybe (Update era) ->
-    StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+    StrictMaybe AuxiliaryDataHash ->
     Gen (TxBody era, [Script era])
 
   -- | Generate era-specific auxiliary data
@@ -206,14 +205,14 @@ class
     TxBody era ->
     Coin ->
     -- | This overrides the existing TxFee
-    Set (TxIn (EraCrypto era)) ->
+    Set TxIn ->
     -- | This is to be Unioned with the existing TxIn
     TxOut era ->
     -- | This is to be Appended to the end of the existing TxOut
     TxBody era
 
   -- |  Union the TxIn with the existing TxIn in the TxBody
-  addInputs :: TxBody era -> Set (TxIn (EraCrypto era)) -> TxBody era
+  addInputs :: TxBody era -> Set TxIn -> TxBody era
   addInputs txb _ins = txb
 
   genEraPParamsUpdate :: Constants -> PParams era -> Gen (PParamsUpdate era)
@@ -226,8 +225,8 @@ class
 
   genEraTxWits ::
     (UTxO era, TxBody era, ScriptInfo era) ->
-    Set (WitVKey 'Witness (EraCrypto era)) ->
-    Map (ScriptHash (EraCrypto era)) (Script era) ->
+    Set (WitVKey 'Witness) ->
+    Map ScriptHash (Script era) ->
     TxWits era
 
   -- When choosing new recipients from the UTxO, choose only those whose Outputs meet this predicate.
@@ -268,7 +267,7 @@ class
  -----------------------------------------------------------------------------}
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: CC.Crypto c => Constants -> (Int, Int) -> Gen (KeyPairs c)
+someKeyPairs :: Constants -> (Int, Int) -> Gen KeyPairs
 someKeyPairs c range = take <$> choose range <*> shuffle (keyPairs c)
 
 genUtxo0 :: forall era. EraGen era => GenEnv era -> Gen (UTxO era)
@@ -282,17 +281,15 @@ genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = 
       (fmap mkAddr genesisKeys ++ fmap (scriptsmkAddr' Testnet) genesisScripts)
   return (genesisCoins genesisId outs)
   where
-    scriptsmkAddr' :: Network -> (Script era, Script era) -> Addr (EraCrypto era)
+    scriptsmkAddr' :: Network -> (Script era, Script era) -> Addr
     scriptsmkAddr' n (payScript, stakeScript) =
       Addr n (scriptToCred' payScript) (StakeRefBase $ scriptToCred' stakeScript)
 
-    scriptToCred' :: Script era -> Credential kr (EraCrypto era)
+    scriptToCred' :: Script era -> Credential kr
     scriptToCred' = ScriptHashObj . hashScript @era
 
 -- | We share this dummy TxId as genesis transaction id across eras
-genesisId ::
-  Hash.HashAlgorithm (CC.HASH c) =>
-  TxId c
+genesisId :: TxId
 genesisId = TxId (unsafeMakeSafeHash (mkDummyHash (0 :: Int)))
 
 -- ==========================================================

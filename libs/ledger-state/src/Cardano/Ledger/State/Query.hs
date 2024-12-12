@@ -136,7 +136,7 @@ insertSnapShot ::
   MonadIO m =>
   Key EpochState ->
   SnapShotType ->
-  EpochBoundary.SnapShot C ->
+  EpochBoundary.SnapShot ->
   ReaderT SqlBackend m ()
 insertSnapShot snapShotEpochStateId snapShotType EpochBoundary.SnapShot {..} = do
   snapShotId <- insert $ SnapShot {snapShotType, snapShotEpochStateId}
@@ -154,7 +154,7 @@ insertSnapShot snapShotEpochStateId snapShotType EpochBoundary.SnapShot {..} = d
 insertSnapShots ::
   MonadIO m =>
   Key EpochState ->
-  EpochBoundary.SnapShots C ->
+  EpochBoundary.SnapShots ->
   ReaderT SqlBackend m ()
 insertSnapShots epochStateKey EpochBoundary.SnapShots {..} = do
   mapM_
@@ -208,7 +208,7 @@ getSnapShotNoSharingM ::
   MonadResource m =>
   Key EpochState ->
   SnapShotType ->
-  ReaderT SqlBackend m (SnapShotM C)
+  ReaderT SqlBackend m SnapShotM
 getSnapShotNoSharingM epochStateId snapShotType = do
   snapShotId <-
     selectFirst
@@ -241,10 +241,10 @@ getSnapShotNoSharingM epochStateId snapShotType = do
 
 getSnapShotWithSharingM ::
   MonadResource m =>
-  [SnapShotM C] ->
+  [SnapShotM] ->
   Key EpochState ->
   SnapShotType ->
-  ReaderT SqlBackend m (SnapShotM C)
+  ReaderT SqlBackend m SnapShotM
 getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
   let internOtherStakes =
         interns
@@ -288,7 +288,7 @@ getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
 getSnapShotsWithSharingM ::
   MonadResource m =>
   Entity EpochState ->
-  ReaderT SqlBackend m (SnapShotsM C)
+  ReaderT SqlBackend m SnapShotsM
 getSnapShotsWithSharingM (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
   mark <- getSnapShotWithSharingM [] epochStateId SnapShotMark
   set <- getSnapShotWithSharingM [mark] epochStateId SnapShotSet
@@ -324,7 +324,7 @@ getSnapShotNoSharing ::
   MonadResource m =>
   Key EpochState ->
   SnapShotType ->
-  ReaderT SqlBackend m (EpochBoundary.SnapShot C)
+  ReaderT SqlBackend m EpochBoundary.SnapShot
 getSnapShotNoSharing epochStateId snapShotType = do
   snapShotId <-
     selectFirst
@@ -358,7 +358,7 @@ getSnapShotNoSharing epochStateId snapShotType = do
 getSnapShotsNoSharing ::
   MonadResource m =>
   Entity EpochState ->
-  ReaderT SqlBackend m (EpochBoundary.SnapShots C)
+  ReaderT SqlBackend m EpochBoundary.SnapShots
 getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
   mark <- getSnapShotNoSharing epochStateId SnapShotMark
   set <- getSnapShotNoSharing epochStateId SnapShotSet
@@ -376,7 +376,7 @@ getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) 
 getSnapShotsNoSharingM ::
   MonadResource m =>
   Entity EpochState ->
-  ReaderT SqlBackend m (SnapShotsM C)
+  ReaderT SqlBackend m SnapShotsM
 getSnapShotsNoSharingM (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
   mark <- getSnapShotNoSharingM epochStateId SnapShotMark
   set <- getSnapShotNoSharingM epochStateId SnapShotSet
@@ -392,10 +392,10 @@ getSnapShotsNoSharingM (Entity epochStateId EpochState {epochStateSnapShotsFee})
 
 getSnapShotWithSharing ::
   MonadResource m =>
-  [EpochBoundary.SnapShot C] ->
+  [EpochBoundary.SnapShot] ->
   Key EpochState ->
   SnapShotType ->
-  ReaderT SqlBackend m (EpochBoundary.SnapShot C)
+  ReaderT SqlBackend m EpochBoundary.SnapShot
 getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
   let internOtherStakes =
         interns
@@ -439,7 +439,7 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
 getSnapShotsWithSharing ::
   MonadResource m =>
   Entity EpochState ->
-  ReaderT SqlBackend m (EpochBoundary.SnapShots C)
+  ReaderT SqlBackend m EpochBoundary.SnapShots
 getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
   mark <- getSnapShotWithSharing [] epochStateId SnapShotMark
   set <- getSnapShotWithSharing [mark] epochStateId SnapShotSet
@@ -456,22 +456,22 @@ getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}
 
 sourceUTxO ::
   MonadResource m =>
-  ConduitM () (TxIn.TxIn C, TxOut CurrentEra) (ReaderT SqlBackend m) ()
+  ConduitM () (TxIn.TxIn, TxOut CurrentEra) (ReaderT SqlBackend m) ()
 sourceUTxO =
   selectSource [] []
     .| mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId txInIx, txOut))
 
 sourceWithSharingUTxO ::
   MonadResource m =>
-  Map.Map (Credential.StakeCredential C) a ->
-  ConduitM () (TxIn.TxIn C, TxOut CurrentEra) (ReaderT SqlBackend m) ()
+  Map.Map Credential.StakeCredential a ->
+  ConduitM () (TxIn.TxIn, TxOut CurrentEra) (ReaderT SqlBackend m) ()
 sourceWithSharingUTxO stakeCredentials =
   sourceUTxO .| mapC (fmap (internBabbageTxOut (`intern` stakeCredentials)))
 
 foldDbUTxO ::
   MonadUnliftIO m =>
   -- | Folding function
-  (a -> (TxIn.TxIn C, TxOut CurrentEra) -> a) ->
+  (a -> (TxIn.TxIn, TxOut CurrentEra) -> a) ->
   -- | Empty acc
   a ->
   -- | Path to Sqlite db
@@ -679,7 +679,7 @@ loadLedgerStateDStateTxIxSharing ::
   T.Text ->
   m
     ( Shelley.LedgerState CurrentEra
-    , IntMap.IntMap (Map.Map (TxIn.TxId C) (TxOut CurrentEra))
+    , IntMap.IntMap (Map.Map TxIn.TxId (TxOut CurrentEra))
     )
 loadLedgerStateDStateTxIxSharing fp =
   runSqlite fp $ do
@@ -768,19 +768,19 @@ loadEpochStateWithSharing fp = runSqlite fp $ do
       & curPParamsEpochStateL .~ epochStatePp
 
 loadSnapShotsNoSharing ::
-  MonadUnliftIO m => T.Text -> Entity EpochState -> m (EpochBoundary.SnapShots C)
+  MonadUnliftIO m => T.Text -> Entity EpochState -> m EpochBoundary.SnapShots
 loadSnapShotsNoSharing fp = runSqlite fp . getSnapShotsNoSharing
 {-# INLINEABLE loadSnapShotsNoSharing #-}
 
 loadSnapShotsWithSharing ::
-  MonadUnliftIO m => T.Text -> Entity EpochState -> m (EpochBoundary.SnapShots C)
+  MonadUnliftIO m => T.Text -> Entity EpochState -> m EpochBoundary.SnapShots
 loadSnapShotsWithSharing fp = runSqlite fp . getSnapShotsWithSharing
 {-# INLINEABLE loadSnapShotsWithSharing #-}
 
-loadSnapShotsNoSharingM :: T.Text -> Entity EpochState -> IO (SnapShotsM C)
+loadSnapShotsNoSharingM :: T.Text -> Entity EpochState -> IO SnapShotsM
 loadSnapShotsNoSharingM fp = runSqlite fp . getSnapShotsNoSharingM
 {-# INLINEABLE loadSnapShotsNoSharingM #-}
 
-loadSnapShotsWithSharingM :: T.Text -> Entity EpochState -> IO (SnapShotsM C)
+loadSnapShotsWithSharingM :: T.Text -> Entity EpochState -> IO SnapShotsM
 loadSnapShotsWithSharingM fp = runSqlite fp . getSnapShotsWithSharingM
 {-# INLINEABLE loadSnapShotsWithSharingM #-}

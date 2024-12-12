@@ -50,7 +50,6 @@ module Cardano.Ledger.Allegra.Scripts (
 )
 where
 
-import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary (
@@ -71,7 +70,6 @@ import Cardano.Ledger.Binary.Coders (
   (<*!),
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, HASH, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
@@ -137,7 +135,7 @@ instance ToJSON ValidityInterval where
 -- ==================================================================
 
 data TimelockRaw era
-  = Signature !(KeyHash 'Witness (EraCrypto era))
+  = Signature !(KeyHash 'Witness)
   | AllOf !(StrictSeq (Timelock era)) -- NOTE that Timelock and
   | AnyOf !(StrictSeq (Timelock era)) -- TimelockRaw are mutually recursive.
   | MOfN !Int !(StrictSeq (Timelock era))
@@ -155,7 +153,7 @@ class ShelleyEraScript era => AllegraEraScript era where
 
 deriving instance Era era => NoThunks (TimelockRaw era)
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TimelockRaw era)
+deriving instance Show (TimelockRaw era)
 
 -- | This function deconstructs and then reconstructs the timelock script
 -- to prove the compiler that we can arbirarily switch out the eras as long
@@ -164,7 +162,6 @@ translateTimelock ::
   forall era1 era2.
   ( Era era1
   , Era era2
-  , EraCrypto era1 ~ EraCrypto era2
   ) =>
   Timelock era1 ->
   Timelock era2
@@ -221,7 +218,7 @@ instance Era era => EncCBOR (Timelock era)
 instance Memoized Timelock where
   type RawType Timelock = TimelockRaw
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (Timelock era)
+deriving instance Show (Timelock era)
 
 instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
@@ -234,9 +231,9 @@ deriving via
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
 -- for the ValidateScript instance in MultiSig
-instance Crypto c => EraScript (AllegraEra c) where
-  type Script (AllegraEra c) = Timelock (AllegraEra c)
-  type NativeScript (AllegraEra c) = Timelock (AllegraEra c)
+instance EraScript AllegraEra where
+  type Script AllegraEra = Timelock AllegraEra
+  type NativeScript AllegraEra = Timelock AllegraEra
 
   upgradeScript = \case
     RequireSignature keyHash -> RequireSignature keyHash
@@ -251,9 +248,7 @@ instance Crypto c => EraScript (AllegraEra c) where
 
   fromNativeScript = id
 
-instance Crypto c => ShelleyEraScript (AllegraEra c) where
-  {-# SPECIALIZE instance ShelleyEraScript (AllegraEra StandardCrypto) #-}
-
+instance ShelleyEraScript AllegraEra where
   mkRequireSignature = mkRequireSignatureTimelock
   getRequireSignature = getRequireSignatureTimelock
 
@@ -266,9 +261,7 @@ instance Crypto c => ShelleyEraScript (AllegraEra c) where
   mkRequireMOf = mkRequireMOfTimelock
   getRequireMOf = getRequireMOfTimelock
 
-instance Crypto c => AllegraEraScript (AllegraEra c) where
-  {-# SPECIALIZE instance AllegraEraScript (AllegraEra StandardCrypto) #-}
-
+instance AllegraEraScript AllegraEra where
   mkTimeStart = mkTimeStartTimelock
   getTimeStart = getTimeStartTimelock
 
@@ -294,9 +287,9 @@ pattern RequireTimeStart mslot <- (getTimeStart -> Just mslot)
   , RequireTimeStart
   #-}
 
-mkRequireSignatureTimelock :: Era era => KeyHash 'Witness (EraCrypto era) -> Timelock era
+mkRequireSignatureTimelock :: Era era => KeyHash 'Witness -> Timelock era
 mkRequireSignatureTimelock = mkMemoized . Signature
-getRequireSignatureTimelock :: Era era => Timelock era -> Maybe (KeyHash 'Witness (EraCrypto era))
+getRequireSignatureTimelock :: Era era => Timelock era -> Maybe (KeyHash 'Witness)
 getRequireSignatureTimelock (TimelockConstr (Memo (Signature kh) _)) = Just kh
 getRequireSignatureTimelock _ = Nothing
 
@@ -345,7 +338,7 @@ ltePosInfty (SJust i) j = i <= j
 
 evalTimelock ::
   AllegraEraScript era =>
-  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
+  Set.Set (KeyHash 'Witness) ->
   ValidityInterval ->
   NativeScript era ->
   Bool

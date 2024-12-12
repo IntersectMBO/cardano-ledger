@@ -112,7 +112,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, PolicyID (..), policies)
 import Cardano.Ledger.MemoBytes (
@@ -149,7 +148,7 @@ import NoThunks.Class (NoThunks)
 class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
   sizedOutputsTxBodyL :: Lens' (TxBody era) (StrictSeq (Sized (TxOut era)))
 
-  referenceInputsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
+  referenceInputsTxBodyL :: Lens' (TxBody era) (Set TxIn)
 
   totalCollateralTxBodyL :: Lens' (TxBody era) (StrictMaybe Coin)
 
@@ -162,25 +161,25 @@ class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
 -- ======================================
 
 data BabbageTxBodyRaw era = BabbageTxBodyRaw
-  { btbrSpendInputs :: !(Set (TxIn (EraCrypto era)))
-  , btbrCollateralInputs :: !(Set (TxIn (EraCrypto era)))
-  , btbrReferenceInputs :: !(Set (TxIn (EraCrypto era)))
+  { btbrSpendInputs :: !(Set TxIn)
+  , btbrCollateralInputs :: !(Set TxIn)
+  , btbrReferenceInputs :: !(Set TxIn)
   , btbrOutputs :: !(StrictSeq (Sized (TxOut era)))
   , btbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
   , btbrTotalCollateral :: !(StrictMaybe Coin)
   , btbrCerts :: !(StrictSeq (TxCert era))
-  , btbrWithdrawals :: !(Withdrawals (EraCrypto era))
+  , btbrWithdrawals :: !Withdrawals
   , btbrTxFee :: !Coin
   , btbrValidityInterval :: !ValidityInterval
   , btbrUpdate :: !(StrictMaybe (Update era))
-  , btbrReqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era)))
-  , btbrMint :: !(MultiAsset (EraCrypto era))
+  , btbrReqSignerHashes :: !(Set (KeyHash 'Witness))
+  , btbrMint :: !MultiAsset
   , -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.MaryValue, not a Value.
     -- Operations on the TxBody in the BabbageEra depend upon this.
     -- We now store only the MultiAsset part of a Mary.Value.
-    btbrScriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
-  , btbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+    btbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
+  , btbrAuxDataHash :: !(StrictMaybe AuxiliaryDataHash)
   , btbrTxNetworkId :: !(StrictMaybe Network)
   }
   deriving (Generic, Typeable)
@@ -248,7 +247,7 @@ deriving newtype instance
   NFData (BabbageTxBody era)
 
 inputsBabbageTxBodyL ::
-  BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (TxIn (EraCrypto era)))
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set TxIn)
 inputsBabbageTxBodyL =
   lensMemoRawType btbrSpendInputs $ \txBodyRaw inputs -> txBodyRaw {btbrSpendInputs = inputs}
 {-# INLINEABLE inputsBabbageTxBodyL #-}
@@ -266,14 +265,14 @@ feeBabbageTxBodyL =
 {-# INLINEABLE feeBabbageTxBodyL #-}
 
 auxDataHashBabbageTxBodyL ::
-  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe AuxiliaryDataHash)
 auxDataHashBabbageTxBodyL =
   lensMemoRawType btbrAuxDataHash $
     \txBodyRaw auxDataHash -> txBodyRaw {btbrAuxDataHash = auxDataHash}
 {-# INLINEABLE auxDataHashBabbageTxBodyL #-}
 
 babbageSpendableInputsTxBodyF ::
-  BabbageEraTxBody era => SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
+  BabbageEraTxBody era => SimpleGetter (TxBody era) (Set TxIn)
 babbageSpendableInputsTxBodyF =
   to $ \txBody ->
     (txBody ^. inputsTxBodyL)
@@ -281,7 +280,7 @@ babbageSpendableInputsTxBodyF =
 {-# INLINEABLE babbageSpendableInputsTxBodyF #-}
 
 babbageAllInputsTxBodyF ::
-  BabbageEraTxBody era => SimpleGetter (TxBody era) (Set (TxIn (EraCrypto era)))
+  BabbageEraTxBody era => SimpleGetter (TxBody era) (Set TxIn)
 babbageAllInputsTxBodyF =
   to $ \txBody ->
     (txBody ^. inputsTxBodyL)
@@ -289,13 +288,13 @@ babbageAllInputsTxBodyF =
       `Set.union` (txBody ^. referenceInputsTxBodyL)
 {-# INLINEABLE babbageAllInputsTxBodyF #-}
 
-mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set (PolicyID (EraCrypto era)))
+mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set PolicyID)
 mintedBabbageTxBodyF = to (policies . btbrMint . getMemoRawType)
 {-# INLINEABLE mintedBabbageTxBodyF #-}
 
 withdrawalsBabbbageTxBodyL ::
   BabbageEraTxBody era =>
-  Lens' (BabbageTxBody era) (Withdrawals (EraCrypto era))
+  Lens' (BabbageTxBody era) Withdrawals
 withdrawalsBabbbageTxBodyL =
   lensMemoRawType btbrWithdrawals $
     \txBodyRaw withdrawals -> txBodyRaw {btbrWithdrawals = withdrawals}
@@ -319,26 +318,26 @@ vldtBabbageTxBodyL =
 {-# INLINEABLE vldtBabbageTxBodyL #-}
 
 mintBabbageTxBodyL ::
-  BabbageEraTxBody era => Lens' (BabbageTxBody era) (MultiAsset (EraCrypto era))
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) MultiAsset
 mintBabbageTxBodyL =
   lensMemoRawType btbrMint $ \txBodyRaw mint -> txBodyRaw {btbrMint = mint}
 {-# INLINEABLE mintBabbageTxBodyL #-}
 
 mintValueBabbageTxBodyF ::
-  (BabbageEraTxBody era, Value era ~ MaryValue (EraCrypto era)) =>
+  (BabbageEraTxBody era, Value era ~ MaryValue) =>
   SimpleGetter (BabbageTxBody era) (Value era)
 mintValueBabbageTxBodyF = mintBabbageTxBodyL . to (MaryValue mempty)
 {-# INLINEABLE mintValueBabbageTxBodyF #-}
 
 collateralInputsBabbageTxBodyL ::
-  BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (TxIn (EraCrypto era)))
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set TxIn)
 collateralInputsBabbageTxBodyL =
   lensMemoRawType btbrCollateralInputs $
     \txBodyRaw collateral -> txBodyRaw {btbrCollateralInputs = collateral}
 {-# INLINEABLE collateralInputsBabbageTxBodyL #-}
 
 reqSignerHashesBabbageTxBodyL ::
-  BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (KeyHash 'Witness (EraCrypto era)))
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (KeyHash 'Witness))
 reqSignerHashesBabbageTxBodyL =
   lensMemoRawType btbrReqSignerHashes $
     \txBodyRaw reqSignerHashes -> txBodyRaw {btbrReqSignerHashes = reqSignerHashes}
@@ -346,7 +345,7 @@ reqSignerHashesBabbageTxBodyL =
 
 scriptIntegrityHashBabbageTxBodyL ::
   BabbageEraTxBody era =>
-  Lens' (BabbageTxBody era) (StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+  Lens' (BabbageTxBody era) (StrictMaybe ScriptIntegrityHash)
 scriptIntegrityHashBabbageTxBodyL =
   lensMemoRawType btbrScriptIntegrityHash $
     \txBodyRaw scriptIntegrityHash -> txBodyRaw {btbrScriptIntegrityHash = scriptIntegrityHash}
@@ -366,7 +365,7 @@ sizedOutputsBabbageTxBodyL =
 
 referenceInputsBabbageTxBodyL ::
   BabbageEraTxBody era =>
-  Lens' (BabbageTxBody era) (Set (TxIn (EraCrypto era)))
+  Lens' (BabbageTxBody era) (Set TxIn)
 referenceInputsBabbageTxBodyL =
   lensMemoRawType btbrReferenceInputs $
     \txBodyRaw reference -> txBodyRaw {btbrReferenceInputs = reference}
@@ -417,11 +416,9 @@ data BabbageTxBodyUpgradeError
     BTBUEUpdatesExtraEntropy
   deriving (Eq, Show)
 
-instance Crypto c => EraTxBody (BabbageEra c) where
-  {-# SPECIALIZE instance EraTxBody (BabbageEra StandardCrypto) #-}
-
-  type TxBody (BabbageEra c) = BabbageTxBody (BabbageEra c)
-  type TxBodyUpgradeError (BabbageEra c) = BabbageTxBodyUpgradeError
+instance EraTxBody BabbageEra where
+  type TxBody BabbageEra = BabbageTxBody BabbageEra
+  type TxBodyUpgradeError BabbageEra = BabbageTxBodyUpgradeError
 
   mkBasicTxBody = mkMemoized basicBabbageTxBodyRaw
 
@@ -461,7 +458,7 @@ instance Crypto c => EraTxBody (BabbageEra c) where
       BabbageTxBody
         { btbInputs = txBody ^. inputsTxBodyL
         , btbOutputs =
-            mkSized (eraProtVerLow @(BabbageEra c)) . upgradeTxOut <$> (txBody ^. outputsTxBodyL)
+            mkSized (eraProtVerLow @BabbageEra) . upgradeTxOut <$> (txBody ^. outputsTxBodyL)
         , btbCerts = certs
         , btbWithdrawals = txBody ^. withdrawalsTxBodyL
         , btbTxFee = txBody ^. feeTxBodyL
@@ -479,8 +476,8 @@ instance Crypto c => EraTxBody (BabbageEra c) where
         }
     where
       upgradeUpdate ::
-        Update (AlonzoEra c) ->
-        Either BabbageTxBodyUpgradeError (Update (BabbageEra c))
+        Update AlonzoEra ->
+        Either BabbageTxBodyUpgradeError (Update BabbageEra)
       upgradeUpdate (Update pp epoch) =
         Update <$> upgradeProposedPPUpdates pp <*> pure epoch
 
@@ -489,8 +486,8 @@ instance Crypto c => EraTxBody (BabbageEra c) where
       -- semantically incorrect. Anything else will result in an invalid
       -- transaction.
       upgradeProposedPPUpdates ::
-        ProposedPPUpdates (AlonzoEra c) ->
-        Either BabbageTxBodyUpgradeError (ProposedPPUpdates (BabbageEra c))
+        ProposedPPUpdates AlonzoEra ->
+        Either BabbageTxBodyUpgradeError (ProposedPPUpdates BabbageEra)
       upgradeProposedPPUpdates (ProposedPPUpdates m) =
         ProposedPPUpdates
           <$> traverse
@@ -503,24 +500,18 @@ instance Crypto c => EraTxBody (BabbageEra c) where
             )
             m
 
-instance Crypto c => ShelleyEraTxBody (BabbageEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxBody (BabbageEra StandardCrypto) #-}
-
+instance ShelleyEraTxBody BabbageEra where
   ttlTxBodyL = notSupportedInThisEraL
   {-# INLINE ttlTxBodyL #-}
 
   updateTxBodyL = updateBabbageTxBodyL
   {-# INLINE updateTxBodyL #-}
 
-instance Crypto c => AllegraEraTxBody (BabbageEra c) where
-  {-# SPECIALIZE instance AllegraEraTxBody (BabbageEra StandardCrypto) #-}
-
+instance AllegraEraTxBody BabbageEra where
   vldtTxBodyL = vldtBabbageTxBodyL
   {-# INLINE vldtTxBodyL #-}
 
-instance Crypto c => MaryEraTxBody (BabbageEra c) where
-  {-# SPECIALIZE instance MaryEraTxBody (BabbageEra StandardCrypto) #-}
-
+instance MaryEraTxBody BabbageEra where
   mintTxBodyL = mintBabbageTxBodyL
   {-# INLINE mintTxBodyL #-}
 
@@ -530,9 +521,7 @@ instance Crypto c => MaryEraTxBody (BabbageEra c) where
   mintedTxBodyF = mintedBabbageTxBodyF
   {-# INLINE mintedTxBodyF #-}
 
-instance Crypto c => AlonzoEraTxBody (BabbageEra c) where
-  {-# SPECIALIZE instance AlonzoEraTxBody (BabbageEra StandardCrypto) #-}
-
+instance AlonzoEraTxBody BabbageEra where
   collateralInputsTxBodyL = collateralInputsBabbageTxBodyL
   {-# INLINE collateralInputsTxBodyL #-}
 
@@ -549,9 +538,7 @@ instance Crypto c => AlonzoEraTxBody (BabbageEra c) where
 
   redeemerPointerInverse = alonzoRedeemerPointerInverse
 
-instance Crypto c => BabbageEraTxBody (BabbageEra c) where
-  {-# SPECIALIZE instance BabbageEraTxBody (BabbageEra StandardCrypto) #-}
-
+instance BabbageEraTxBody BabbageEra where
   sizedOutputsTxBodyL = sizedOutputsBabbageTxBodyL
   {-# INLINE sizedOutputsTxBodyL #-}
 
@@ -602,21 +589,21 @@ instance
 
 pattern BabbageTxBody ::
   BabbageEraTxBody era =>
-  Set (TxIn (EraCrypto era)) ->
-  Set (TxIn (EraCrypto era)) ->
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
+  Set TxIn ->
+  Set TxIn ->
   StrictSeq (Sized (TxOut era)) ->
   StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
   StrictSeq (TxCert era) ->
-  Withdrawals (EraCrypto era) ->
+  Withdrawals ->
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  Set (KeyHash 'Witness (EraCrypto era)) ->
-  MultiAsset (EraCrypto era) ->
-  StrictMaybe (ScriptIntegrityHash (EraCrypto era)) ->
-  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+  Set (KeyHash 'Witness) ->
+  MultiAsset ->
+  StrictMaybe ScriptIntegrityHash ->
+  StrictMaybe AuxiliaryDataHash ->
   StrictMaybe Network ->
   BabbageTxBody era
 pattern BabbageTxBody
@@ -697,7 +684,7 @@ pattern BabbageTxBody
 
 {-# COMPLETE BabbageTxBody #-}
 
-instance c ~ EraCrypto era => HashAnnotated (BabbageTxBody era) EraIndependentTxBody c where
+instance HashAnnotated (BabbageTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- ==============================================================================
@@ -706,21 +693,21 @@ instance c ~ EraCrypto era => HashAnnotated (BabbageTxBody era) EraIndependentTx
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
-spendInputs' :: BabbageTxBody era -> Set (TxIn (EraCrypto era))
-collateralInputs' :: BabbageTxBody era -> Set (TxIn (EraCrypto era))
-referenceInputs' :: BabbageTxBody era -> Set (TxIn (EraCrypto era))
+spendInputs' :: BabbageTxBody era -> Set TxIn
+collateralInputs' :: BabbageTxBody era -> Set TxIn
+referenceInputs' :: BabbageTxBody era -> Set TxIn
 outputs' :: BabbageTxBody era -> StrictSeq (TxOut era)
 collateralReturn' :: BabbageTxBody era -> StrictMaybe (TxOut era)
 totalCollateral' :: BabbageTxBody era -> StrictMaybe Coin
 certs' :: BabbageTxBody era -> StrictSeq (TxCert era)
 txfee' :: BabbageTxBody era -> Coin
-withdrawals' :: BabbageTxBody era -> Withdrawals (EraCrypto era)
+withdrawals' :: BabbageTxBody era -> Withdrawals
 vldt' :: BabbageTxBody era -> ValidityInterval
 update' :: BabbageTxBody era -> StrictMaybe (Update era)
-reqSignerHashes' :: BabbageTxBody era -> Set (KeyHash 'Witness (EraCrypto era))
-adHash' :: BabbageTxBody era -> StrictMaybe (AuxiliaryDataHash (EraCrypto era))
-mint' :: BabbageTxBody era -> MultiAsset (EraCrypto era)
-scriptIntegrityHash' :: BabbageTxBody era -> StrictMaybe (ScriptIntegrityHash (EraCrypto era))
+reqSignerHashes' :: BabbageTxBody era -> Set (KeyHash 'Witness)
+adHash' :: BabbageTxBody era -> StrictMaybe AuxiliaryDataHash
+mint' :: BabbageTxBody era -> MultiAsset
+scriptIntegrityHash' :: BabbageTxBody era -> StrictMaybe ScriptIntegrityHash
 spendInputs' = btbrSpendInputs . getMemoRawType
 
 txnetworkid' :: BabbageTxBody era -> StrictMaybe Network

@@ -7,7 +7,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- FIXME: use better names for record names
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
@@ -134,7 +133,7 @@ getUTxO = utxosUtxo . lsUTxOState . esLState . nesEs
 getFilteredUTxO ::
   EraTxOut era =>
   NewEpochState era ->
-  Set (Addr (EraCrypto era)) ->
+  Set Addr ->
   UTxO era
 getFilteredUTxO ss addrSet =
   UTxO $ Map.filter checkAddr fullUTxO
@@ -149,7 +148,7 @@ getFilteredUTxO ss addrSet =
 
 getUTxOSubset ::
   NewEpochState era ->
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
   UTxO era
 getUTxOSubset nes = txInsFilter (getUTxO nes)
 
@@ -160,7 +159,7 @@ getUTxOSubset nes = txInsFilter (getUTxO nes)
 -- | Get the /current/ registered stake pools.
 getPools ::
   NewEpochState era ->
-  Set (KeyHash 'StakePool (EraCrypto era))
+  Set (KeyHash 'StakePool)
 getPools = Map.keysSet . f
   where
     f = psStakePoolParams . certPState . lsCertState . esLState . nesEs
@@ -170,8 +169,8 @@ getPools = Map.keysSet . f
 -- pools that are currently registered.
 getPoolParameters ::
   NewEpochState era ->
-  Set (KeyHash 'StakePool (EraCrypto era)) ->
-  Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
+  Set (KeyHash 'StakePool) ->
+  Map (KeyHash 'StakePool) PoolParams
 getPoolParameters = Map.restrictKeys . f
   where
     f = psStakePoolParams . certPState . lsCertState . esLState . nesEs
@@ -192,7 +191,7 @@ poolsByTotalStakeFraction ::
   EraGov era =>
   Globals ->
   NewEpochState era ->
-  PoolDistr (EraCrypto era)
+  PoolDistr
 poolsByTotalStakeFraction globals ss =
   PoolDistr poolsByTotalStake totalActiveStake
   where
@@ -202,8 +201,8 @@ poolsByTotalStakeFraction globals ss =
     PoolDistr poolsByActiveStake totalActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
     toTotalStakeFrac ::
-      IndividualPoolStake (EraCrypto era) ->
-      IndividualPoolStake (EraCrypto era)
+      IndividualPoolStake ->
+      IndividualPoolStake
     toTotalStakeFrac (IndividualPoolStake s c vrf) =
       IndividualPoolStake (s * stakeRatio) c vrf
 
@@ -224,10 +223,10 @@ getNonMyopicMemberRewards ::
   EraGov era =>
   Globals ->
   NewEpochState era ->
-  Set (Either Coin (Credential 'Staking (EraCrypto era))) ->
+  Set (Either Coin (Credential 'Staking)) ->
   Map
-    (Either Coin (Credential 'Staking (EraCrypto era)))
-    (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+    (Either Coin (Credential 'Staking))
+    (Map (KeyHash 'StakePool) Coin)
 getNonMyopicMemberRewards globals ss =
   Map.fromSet (\cred -> Map.map (mkNMMRewards $ memShare cred) poolData)
   where
@@ -270,7 +269,7 @@ getNonMyopicMemberRewards globals ss =
           let ostake = sumPoolOwnersStake pool stake
            in ppPledge poolp <= ostake
 
-sumPoolOwnersStake :: PoolParams c -> EB.Stake c -> Coin
+sumPoolOwnersStake :: PoolParams -> EB.Stake -> Coin
 sumPoolOwnersStake pool stake =
   let getStakeFor o =
         maybe mempty fromCompact $ VMap.lookup (KeyHashObj o) (EB.unStake stake)
@@ -281,7 +280,7 @@ sumPoolOwnersStake pool stake =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: forall era. EraGov era => NewEpochState era -> EB.SnapShot (EraCrypto era)
+currentSnapshot :: forall era. EraGov era => NewEpochState era -> EB.SnapShot
 currentSnapshot ss =
   incrementalStakeDistr pp incrementalStake dstate pstate
   where
@@ -352,7 +351,7 @@ getRewardInfoPools ::
   EraGov era =>
   Globals ->
   NewEpochState era ->
-  (RewardParams, Map (KeyHash 'StakePool (EraCrypto era)) RewardInfoPool)
+  (RewardParams, Map (KeyHash 'StakePool) RewardInfoPool)
 getRewardInfoPools globals ss =
   (mkRewardParams, VMap.toMap (VMap.mapWithKey mkRewardInfoPool poolParams))
   where
@@ -402,7 +401,7 @@ getRewardProvenance ::
   EraGov era =>
   Globals ->
   NewEpochState era ->
-  (RewardUpdate (EraCrypto era), RewardProvenance (EraCrypto era))
+  (RewardUpdate, RewardProvenance)
 getRewardProvenance globals newEpochState =
   ( runReader
       (createRUpd slotsPerEpoch blocksMade epochState maxSupply asc secparam)
@@ -423,7 +422,7 @@ getRewardProvenance globals newEpochState =
 -- Transaction helpers
 --------------------------------------------------------------------------------
 
-addKeyWitnesses :: EraTx era => Tx era -> Set (WitVKey 'Witness (EraCrypto era)) -> Tx era
+addKeyWitnesses :: EraTx era => Tx era -> Set (WitVKey 'Witness) -> Tx era
 addKeyWitnesses tx newWits = tx & witsTxL . addrTxWitsL %~ Set.union newWits
 
 --------------------------------------------------------------------------------

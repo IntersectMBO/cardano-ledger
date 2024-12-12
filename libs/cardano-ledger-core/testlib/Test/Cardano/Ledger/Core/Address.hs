@@ -34,7 +34,7 @@ import Cardano.Ledger.Credential (
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (ADDRHASH, Crypto)
+import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Hashes (ScriptHash (ScriptHash))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Control.Monad (ap)
@@ -59,7 +59,7 @@ import Data.Word (Word64, Word8)
 
 -- | Deserialise an address from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseAddrOld :: forall c m. (Crypto c, MonadFail m) => BS.ByteString -> m (Addr c)
+deserialiseAddrOld :: MonadFail m => BS.ByteString -> m Addr
 deserialiseAddrOld bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
   Left (_remaining, _offset, message) ->
     fail $ "Old Addr decoder failed: " <> fromString message
@@ -70,8 +70,7 @@ deserialiseAddrOld bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
 
 -- | Deserialise an reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseRewardAccountOld ::
-  forall c m. (Crypto c, MonadFail m) => BS.ByteString -> m (RewardAccount c)
+deserialiseRewardAccountOld :: MonadFail m => BS.ByteString -> m RewardAccount
 deserialiseRewardAccountOld bs = case B.runGetOrFail getRewardAccount (BSL.fromStrict bs) of
   Left (_remaining, _offset, message) ->
     fail $ "Old RewardAccount decoder failed: " <> fromString message
@@ -98,7 +97,7 @@ payCredIsScript = 4
 rewardCredIsScript :: Int
 rewardCredIsScript = 4
 
-getAddr :: Crypto c => Get (Addr c)
+getAddr :: Get Addr
 getAddr = do
   header <- B.lookAhead B.getWord8
   if testBit header byron
@@ -113,7 +112,7 @@ getAddr = do
             concat
               ["Address with unknown network Id. (", show addrNetId, ")"]
 
-getRewardAccount :: Crypto c => Get (RewardAccount c)
+getRewardAccount :: Get RewardAccount
 getRewardAccount = do
   header <- B.getWord8
   let rewardAccountPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
@@ -137,18 +136,18 @@ getHash = do
     Nothing -> fail "getHash: implausible hash length mismatch"
     Just !h -> pure h
 
-getPayCred :: Crypto c => Word8 -> Get (PaymentCredential c)
+getPayCred :: Word8 -> Get PaymentCredential
 getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash
 
-getScriptHash :: Crypto c => Get (Credential kr c)
+getScriptHash :: Get (Credential kr)
 getScriptHash = ScriptHashObj . ScriptHash <$> getHash
 
-getKeyHash :: Crypto c => Get (Credential kr c)
+getKeyHash :: Get (Credential kr)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
 
-getStakeReference :: Crypto c => Word8 -> Get (StakeReference c)
+getStakeReference :: Word8 -> Get StakeReference
 getStakeReference header = case testBit header notBaseAddr of
   True -> case testBit header isEnterpriseAddr of
     True -> pure StakeRefNull
@@ -157,7 +156,7 @@ getStakeReference header = case testBit header notBaseAddr of
     True -> StakeRefBase <$> getScriptHash
     False -> StakeRefBase <$> getKeyHash
 
-getByron :: Get (Addr c)
+getByron :: Get Addr
 getByron =
   decodeFull byronProtVer <$> B.getRemainingLazyByteString >>= \case
     Left e -> fail (show e)
@@ -209,7 +208,7 @@ instance Monad GetShort where
 instance Control.Monad.Fail.MonadFail GetShort where
   fail _ = GetShort $ \_ _ -> Nothing
 
-getShortBootstrapAddress :: GetShort (BootstrapAddress c)
+getShortBootstrapAddress :: GetShort BootstrapAddress
 getShortBootstrapAddress = do
   bs <- getShortRemainingAsByteString
   case decodeFull' byronProtVer bs of
@@ -271,13 +270,13 @@ getShortPtr =
     <*> (TxIx . fromIntegral <$> getShortVariableLengthWord64)
     <*> (CertIx . fromIntegral <$> getShortVariableLengthWord64)
 
-getShortKeyHash :: Crypto c => GetShort (Credential kr c)
+getShortKeyHash :: GetShort (Credential kr)
 getShortKeyHash = KeyHashObj . KeyHash <$> getShortHash
 
-getShortScriptHash :: Crypto c => GetShort (Credential kr c)
+getShortScriptHash :: GetShort (Credential kr)
 getShortScriptHash = ScriptHashObj . ScriptHash <$> getShortHash
 
-getShortStakeReference :: Crypto c => Word8 -> GetShort (StakeReference c)
+getShortStakeReference :: Word8 -> GetShort StakeReference
 getShortStakeReference header = case testBit header notBaseAddr of
   True -> case testBit header isEnterpriseAddr of
     True -> pure StakeRefNull
@@ -286,12 +285,12 @@ getShortStakeReference header = case testBit header notBaseAddr of
     True -> StakeRefBase <$> getShortScriptHash
     False -> StakeRefBase <$> getShortKeyHash
 
-getShortPayCred :: Crypto c => Word8 -> GetShort (PaymentCredential c)
+getShortPayCred :: Word8 -> GetShort PaymentCredential
 getShortPayCred header = case testBit header payCredIsScript of
   True -> getShortScriptHash
   False -> getShortKeyHash
 
-getShortShortAddr :: Crypto c => GetShort (Addr c)
+getShortShortAddr :: GetShort Addr
 getShortShortAddr = do
   header <- peekWord8
   if testBit header byron
@@ -310,7 +309,7 @@ getShortShortAddr = do
               ["Address with unknown network Id. (", show addrNetId, ")"]
 
 -- | This is an old decompacter that didn't guard against random junk at the end.
-decompactAddrOld :: Crypto c => CompactAddr c -> Addr c
+decompactAddrOld :: CompactAddr -> Addr
 decompactAddrOld cAddr =
   snd . unwrap "CompactAddr" $ runGetShort getShortShortAddr 0 (unCompactAddr cAddr)
   where
@@ -322,7 +321,7 @@ decompactAddrOld cAddr =
 
 -- | This lazy deserializer is kept around purely for benchmarking, so we can
 -- verify that new deserializer `decodeAddrStateT` is doing the work lazily.
-decompactAddrOldLazy :: forall c. Crypto c => CompactAddr c -> Addr c
+decompactAddrOldLazy :: CompactAddr -> Addr
 decompactAddrOldLazy cAddr =
   if testBit header byron
     then AddrBootstrap $ run "byron address" 0 bytes getShortBootstrapAddress
@@ -348,7 +347,7 @@ decompactAddrOldLazy cAddr =
           -- and the stake cred can vary
     paycred = run "payment credential" 1 bytes (getShortPayCred header)
     stakecred = run "staking credential" 1 bytes $ do
-      skipHash ([] @(ADDRHASH c))
+      skipHash ([] @ADDRHASH)
       getShortStakeReference header
     skipHash :: forall proxy h. Hash.HashAlgorithm h => proxy h -> GetShort ()
     skipHash p = skip . fromIntegral $ Hash.sizeHash p

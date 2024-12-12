@@ -121,29 +121,29 @@ data BabbageUtxoPredFailure era
       ![(TxOut era, Coin)]
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs
-      !(NonEmpty (TxIn (EraCrypto era)))
+      !(NonEmpty TxIn)
   deriving (Generic)
 
-type instance EraRuleFailure "UTXO" (BabbageEra c) = BabbageUtxoPredFailure (BabbageEra c)
+type instance EraRuleFailure "UTXO" BabbageEra = BabbageUtxoPredFailure BabbageEra
 
-instance InjectRuleFailure "UTXO" BabbageUtxoPredFailure (BabbageEra c)
+instance InjectRuleFailure "UTXO" BabbageUtxoPredFailure BabbageEra
 
-instance InjectRuleFailure "UTXO" AlonzoUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXO" AlonzoUtxoPredFailure BabbageEra where
   injectFailure = AlonzoInBabbageUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure BabbageEra where
   injectFailure = AlonzoInBabbageUtxoPredFailure . UtxosFailure . injectFailure
 
-instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure BabbageEra where
   injectFailure =
     AlonzoInBabbageUtxoPredFailure
       . allegraToAlonzoUtxoPredFailure
       . shelleyToAllegraUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure BabbageEra where
   injectFailure = AlonzoInBabbageUtxoPredFailure . allegraToAlonzoUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure (BabbageEra c) where
+instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure BabbageEra where
   injectFailure = AlonzoInBabbageUtxoPredFailure . UtxosFailure
 
 deriving instance
@@ -152,7 +152,7 @@ deriving instance
   , Show (PredicateFailure (EraRule "UTXO" era))
   , Show (TxOut era)
   , Show (Script era)
-  , Show (TxIn (EraCrypto era))
+  , Show TxIn
   ) =>
   Show (BabbageUtxoPredFailure era)
 
@@ -162,7 +162,7 @@ deriving instance
   , Eq (PredicateFailure (EraRule "UTXO" era))
   , Eq (TxOut era)
   , Eq (Script era)
-  , Eq (TxIn (EraCrypto era))
+  , Eq TxIn
   ) =>
   Eq (BabbageUtxoPredFailure era)
 
@@ -226,12 +226,12 @@ disjointRefInputs ::
   forall era.
   EraPParams era =>
   PParams era ->
-  Set (TxIn (EraCrypto era)) ->
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
+  Set TxIn ->
   Test (BabbageUtxoPredFailure era)
 disjointRefInputs pp inputs refInputs =
   when
-    (pvMajor (pp ^. ppProtocolVersionL) > eraProtVerHigh @(BabbageEra (EraCrypto era)))
+    (pvMajor (pp ^. ppProtocolVersionL) > eraProtVerHigh @BabbageEra)
     (failureOnNonEmpty common BabbageNonDisjointRefInputs)
   where
     common = inputs `Set.intersection` refInputs
@@ -244,7 +244,7 @@ validateTotalCollateral ::
   ) =>
   PParams era ->
   TxBody era ->
-  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
+  Map.Map TxIn (TxOut era) ->
   Test (EraRuleFailure rule era)
 validateTotalCollateral pp txBody utxoCollateral =
   sequenceA_
@@ -277,7 +277,7 @@ validateCollateralContainsNonADA ::
   forall era.
   BabbageEraTxBody era =>
   TxBody era ->
-  Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
+  Map.Map TxIn (TxOut era) ->
   Test (AlonzoUtxoPredFailure era)
 validateCollateralContainsNonADA txBody utxoCollateral =
   failureUnless onlyAdaInCollateral $ CollateralContainsNonADA valueWithNonAda
@@ -375,9 +375,9 @@ utxoTransition = do
   {-   txb := txbody tx   -}
   let txBody = body tx
       allInputs = txBody ^. allInputsTxBodyF
-      refInputs :: Set (TxIn (EraCrypto era))
+      refInputs :: Set TxIn
       refInputs = txBody ^. referenceInputsTxBodyL
-      inputs :: Set (TxIn (EraCrypto era))
+      inputs :: Set TxIn
       inputs = txBody ^. inputsTxBodyL
 
   {- inputs ∩ refInputs = ∅ -}
@@ -496,7 +496,7 @@ instance
   , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   , EncCBOR (Script era)
-  , EncCBOR (TxIn (EraCrypto era))
+  , EncCBOR TxIn
   , Typeable (TxAuxData era)
   ) =>
   EncCBOR (BabbageUtxoPredFailure era)

@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.7.0.0
+
+* Deprecate `Allegra` type synonym
+* Remove crypto parametrization from `AllegraEra`
+
 ## 1.6.1.0
 
 * Use `Mismatch` to clarify predicate failures. #4711

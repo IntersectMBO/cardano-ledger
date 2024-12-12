@@ -21,7 +21,6 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential (..), credToText, parseCredential)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Control.DeepSeq (NFData (..))
@@ -50,14 +49,14 @@ import NoThunks.Class (NoThunks (..))
 -- =======================================
 -- DRep and DRepState
 
-data DRep c
-  = DRepKeyHash !(KeyHash 'DRepRole c)
-  | DRepScriptHash !(ScriptHash c)
+data DRep
+  = DRepKeyHash !(KeyHash 'DRepRole)
+  | DRepScriptHash !ScriptHash
   | DRepAlwaysAbstain
   | DRepAlwaysNoConfidence
   deriving (Show, Eq, Ord, Generic, NoThunks, NFData)
 
-instance Crypto c => EncCBOR (DRep c) where
+instance EncCBOR DRep where
   encCBOR (DRepKeyHash kh) =
     encode $
       Sum DRepKeyHash 0
@@ -73,7 +72,7 @@ instance Crypto c => EncCBOR (DRep c) where
     encode $
       Sum DRepAlwaysNoConfidence 3
 
-instance Crypto c => DecCBOR (DRep c) where
+instance DecCBOR DRep where
   decCBOR = decode $
     Summands "DRep" $ \case
       0 -> SumD DRepKeyHash <! From
@@ -82,30 +81,30 @@ instance Crypto c => DecCBOR (DRep c) where
       3 -> SumD DRepAlwaysNoConfidence
       k -> Invalid k
 
-dRepToCred :: DRep c -> Maybe (Credential 'DRepRole c)
+dRepToCred :: DRep -> Maybe (Credential 'DRepRole)
 dRepToCred (DRepKeyHash kh) = Just $ KeyHashObj kh
 dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
 dRepToCred _ = Nothing
 
-instance Crypto c => ToJSON (DRep c) where
+instance ToJSON DRep where
   toJSON = String . dRepToText
 
-instance Crypto c => ToJSONKey (DRep c) where
+instance ToJSONKey DRep where
   toJSONKey = toJSONKeyText dRepToText
 
-dRepToText :: DRep c -> T.Text
+dRepToText :: DRep -> T.Text
 dRepToText = \case
   DRepAlwaysAbstain -> "drep-alwaysAbstain"
   DRepAlwaysNoConfidence -> "drep-alwaysNoConfidence"
   DRepCredential cred -> "drep-" <> credToText cred
 
-instance Crypto c => FromJSON (DRep c) where
+instance FromJSON DRep where
   parseJSON = withText "DRep" parseDRep
 
-instance Crypto c => FromJSONKey (DRep c) where
+instance FromJSONKey DRep where
   fromJSONKey = FromJSONKeyTextParser parseDRep
 
-parseDRep :: (MonadFail f, Crypto c) => T.Text -> f (DRep c)
+parseDRep :: MonadFail f => T.Text -> f DRep
 parseDRep t = case T.span (/= '-') t of
   ("drep", restWithDash)
     | restWithDash == "-alwaysAbstain" -> pure DRepAlwaysAbstain
@@ -114,7 +113,7 @@ parseDRep t = case T.span (/= '-') t of
         DRepCredential <$> parseCredential rest
   _ -> fail $ "Invalid DRep: " <> show t
 
-pattern DRepCredential :: Credential 'DRepRole c -> DRep c
+pattern DRepCredential :: Credential 'DRepRole -> DRep
 pattern DRepCredential c <- (dRepToCred -> Just c)
   where
     DRepCredential c = case c of
@@ -123,19 +122,19 @@ pattern DRepCredential c <- (dRepToCred -> Just c)
 
 {-# COMPLETE DRepCredential, DRepAlwaysAbstain, DRepAlwaysNoConfidence :: DRep #-}
 
-data DRepState c = DRepState
+data DRepState = DRepState
   { drepExpiry :: !EpochNo
-  , drepAnchor :: !(StrictMaybe (Anchor c))
+  , drepAnchor :: !(StrictMaybe Anchor)
   , drepDeposit :: !Coin
-  , drepDelegs :: !(Set (Credential 'Staking c))
+  , drepDelegs :: !(Set (Credential 'Staking))
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoThunks (DRepState era)
+instance NoThunks DRepState
 
-instance Crypto c => NFData (DRepState c)
+instance NFData DRepState
 
-instance Crypto c => DecCBOR (DRepState c) where
+instance DecCBOR DRepState where
   decCBOR = do
     decode $
       RecD DRepState
@@ -144,7 +143,7 @@ instance Crypto c => DecCBOR (DRepState c) where
         <! From
         <! From
 
-instance Crypto c => EncCBOR (DRepState c) where
+instance EncCBOR DRepState where
   encCBOR DRepState {..} =
     encode $
       Rec DRepState
@@ -153,7 +152,7 @@ instance Crypto c => EncCBOR (DRepState c) where
         !> To drepDeposit
         !> To drepDelegs
 
-instance Crypto c => ToJSON (DRepState c) where
+instance ToJSON DRepState where
   toJSON x@(DRepState _ _ _ _) =
     let DRepState {..} = x
      in toJSON $
@@ -164,7 +163,7 @@ instance Crypto c => ToJSON (DRepState c) where
             ]
               ++ ["anchor" .= toJSON anchor | SJust anchor <- [drepAnchor]]
 
-instance Crypto c => FromJSON (DRepState c) where
+instance FromJSON DRepState where
   parseJSON = withObject "DRepState" $ \o ->
     DRepState
       <$> o .: "expiry"
@@ -174,14 +173,14 @@ instance Crypto c => FromJSON (DRepState c) where
       -- there is a requirement to retain the invariant of delegations in the UMap
       <*> pure mempty
 
-drepExpiryL :: Lens' (DRepState c) EpochNo
+drepExpiryL :: Lens' DRepState EpochNo
 drepExpiryL = lens drepExpiry (\x y -> x {drepExpiry = y})
 
-drepAnchorL :: Lens' (DRepState c) (StrictMaybe (Anchor c))
+drepAnchorL :: Lens' DRepState (StrictMaybe Anchor)
 drepAnchorL = lens drepAnchor (\x y -> x {drepAnchor = y})
 
-drepDepositL :: Lens' (DRepState c) Coin
+drepDepositL :: Lens' DRepState Coin
 drepDepositL = lens drepDeposit (\x y -> x {drepDeposit = y})
 
-drepDelegsL :: Lens' (DRepState c) (Set (Credential 'Staking c))
+drepDelegsL :: Lens' DRepState (Set (Credential 'Staking))
 drepDelegsL = lens drepDelegs (\x y -> x {drepDelegs = y})

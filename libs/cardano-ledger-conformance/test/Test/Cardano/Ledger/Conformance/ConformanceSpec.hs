@@ -7,7 +7,7 @@
 
 module Test.Cardano.Ledger.Conformance.ConformanceSpec (spec) where
 
-import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
+import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.TxIn (TxId)
 import Data.List (isInfixOf)
 import Data.Typeable (Proxy (..), Typeable, typeRep)
@@ -51,9 +51,9 @@ spec :: Spec
 spec =
   describe "Translation" $ do
     describe "Hashes are displayed in the same way in the implementation and in the spec" $ do
-      hashDisplayProp @(TxId StandardCrypto)
+      hashDisplayProp @TxId
     describe "Utility properties" $ do
       prop "vkeyToInteger and vkeyFromInteger are inverses" $
-        \vk -> vkeyFromInteger (vkeyToInteger @StandardCrypto vk) === Just vk
+        \vk -> vkeyFromInteger (vkeyToInteger vk) === Just vk
       prop "hashToInteger and integerToHash are inverses" $
-        \h -> integerToHash (hashToInteger @(ADDRHASH StandardCrypto) h) === Just h
+        \h -> integerToHash (hashToInteger @ADDRHASH h) === Just h

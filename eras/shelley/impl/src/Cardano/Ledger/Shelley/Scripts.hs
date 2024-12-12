@@ -34,7 +34,6 @@ module Cardano.Ledger.Shelley.Scripts (
 )
 where
 
-import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -45,7 +44,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), (!>))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, HASH, StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (
@@ -85,19 +83,19 @@ import NoThunks.Class (NoThunks (..))
 data MultiSigRaw era
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
-    RequireSignature' !(KeyHash 'Witness (EraCrypto era))
+    RequireSignature' !(KeyHash 'Witness)
   | -- | Require all the sub-terms to be satisfied.
     RequireAllOf' !(StrictSeq (MultiSig era))
   | -- | Require any one of the sub-terms to be satisfied.
     RequireAnyOf' !(StrictSeq (MultiSig era))
   | -- | Require M of the given sub-terms to be satisfied.
     RequireMOf' !Int !(StrictSeq (MultiSig era))
-  deriving (Eq, Generic)
+  deriving (Eq, Show, Generic)
   deriving anyclass (NoThunks)
 
 class EraScript era => ShelleyEraScript era where
-  mkRequireSignature :: KeyHash 'Witness (EraCrypto era) -> NativeScript era
-  getRequireSignature :: NativeScript era -> Maybe (KeyHash 'Witness (EraCrypto era))
+  mkRequireSignature :: KeyHash 'Witness -> NativeScript era
+  getRequireSignature :: NativeScript era -> Maybe (KeyHash 'Witness)
 
   mkRequireAllOf :: StrictSeq (NativeScript era) -> NativeScript era
   getRequireAllOf :: NativeScript era -> Maybe (StrictSeq (NativeScript era))
@@ -108,27 +106,23 @@ class EraScript era => ShelleyEraScript era where
   mkRequireMOf :: Int -> StrictSeq (NativeScript era) -> NativeScript era
   getRequireMOf :: NativeScript era -> Maybe (Int, StrictSeq (NativeScript era))
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (MultiSigRaw era)
-
 instance NFData (MultiSigRaw era)
 
 newtype MultiSig era = MultiSigConstr (MemoBytes MultiSigRaw era)
-  deriving (Eq, Generic)
+  deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
 
 instance Memoized MultiSig where
   type RawType MultiSig = MultiSigRaw
-
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (MultiSig era)
 
 -- | Magic number "memorialized" in the ValidateScript class under the method:
 --   scriptPrefixTag:: Core.Script era -> Bs.ByteString, for the Shelley Era.
 nativeMultiSigTag :: BS.ByteString
 nativeMultiSigTag = "\00"
 
-instance Crypto c => EraScript (ShelleyEra c) where
-  type Script (ShelleyEra c) = MultiSig (ShelleyEra c)
-  type NativeScript (ShelleyEra c) = MultiSig (ShelleyEra c)
+instance EraScript ShelleyEra where
+  type Script ShelleyEra = MultiSig ShelleyEra
+  type NativeScript ShelleyEra = MultiSig ShelleyEra
 
   -- Calling this partial function will result in compilation error, since ByronEra has
   -- no instance for EraScript type class.
@@ -141,9 +135,7 @@ instance Crypto c => EraScript (ShelleyEra c) where
   -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
   scriptPrefixTag _script = nativeMultiSigTag
 
-instance Crypto c => ShelleyEraScript (ShelleyEra c) where
-  {-# SPECIALIZE instance ShelleyEraScript (ShelleyEra StandardCrypto) #-}
-
+instance ShelleyEraScript ShelleyEra where
   mkRequireSignature kh =
     MultiSigConstr $ memoBytes (Sum RequireSignature' 0 !> To kh)
   getRequireSignature (MultiSigConstr (Memo (RequireSignature' kh) _)) = Just kh
@@ -174,8 +166,7 @@ deriving via
 instance EqRaw (MultiSig era) where
   eqRaw = eqMultiSigRaw
 
-pattern RequireSignature ::
-  ShelleyEraScript era => KeyHash 'Witness (EraCrypto era) -> NativeScript era
+pattern RequireSignature :: ShelleyEraScript era => KeyHash 'Witness -> NativeScript era
 pattern RequireSignature akh <- (getRequireSignature -> Just akh)
   where
     RequireSignature akh = mkRequireSignature akh
@@ -233,7 +224,7 @@ eqMultiSigRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
 -- key hashes that signed the transaction to be validated.
 evalMultiSig ::
   (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
-  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
+  Set.Set (KeyHash 'Witness) ->
   NativeScript era ->
   Bool
 evalMultiSig vhks = go

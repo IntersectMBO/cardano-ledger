@@ -77,12 +77,10 @@ import Test.Cardano.Ledger.Constrained.TypeRep (
   synopsis,
  )
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Cardano.Ledger.Generic.Proof (BabbageEra, Standard)
+import Test.Cardano.Ledger.Generic.Proof (BabbageEra)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (total)
-
-type TestEra = BabbageEra Standard
 
 data SomeLens era t where
   SomeLens :: Adds c => (Lens' t c) -> SomeLens era t
@@ -96,9 +94,6 @@ data SomeLens era t where
 -}
 
 -- =========================================================
-
--- | used when we run tests, and we have to pick some concrete Era
-type TT = BabbageEra Standard
 
 -- ============================================================
 -- Operators for Size (Defined in TypeRep.hs)
@@ -589,7 +584,7 @@ testSoundRelSpec :: Gen Property
 testSoundRelSpec = do
   n <- chooseInt (3, 10)
   s1 <- genRelSpec ["from testSoundRelSpec " ++ show n] (choose (1, 10000)) Word64R n
-  ans <- genFromRelSpec @TT ["from testSoundRelSpec " ++ show n] (choose (1, 100000)) n s1
+  ans <- genFromRelSpec @BabbageEra ["from testSoundRelSpec " ++ show n] (choose (1, 100000)) n s1
   pure $ counterexample ("spec=" ++ show s1 ++ "\nans=" ++ show ans) (runRelSpec ans s1)
 
 testMergeRelSpec :: Gen Property
@@ -603,7 +598,12 @@ testMergeRelSpec = do
     s4 -> do
       let size = sizeForRel s4
       m <- genFromSize size
-      ans <- genFromRelSpec @TT ["testMergeRelSpec " ++ show s1 ++ " " ++ show s2] (choose (1, 1000)) m s4
+      ans <-
+        genFromRelSpec @BabbageEra
+          ["testMergeRelSpec " ++ show s1 ++ " " ++ show s2]
+          (choose (1, 1000))
+          m
+          s4
       pure $
         counterexample
           ( "s1="
@@ -647,7 +647,7 @@ manyMergeRelSpec = do
               , "s1 = " ++ show y
               , "GenFromRelSpec " ++ show i ++ " n=" ++ show n
               ]
-        z <- genFromRelSpec @TT wordsX (choose (1, 100)) i m
+        z <- genFromRelSpec @BabbageEra wordsX (choose (1, 100)) i m
         pure (x, runRelSpec z x, y, runRelSpec z y, z, runRelSpec z m, m)
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
@@ -867,7 +867,8 @@ word64CoinL = lens (Coin . fromIntegral) (\_w (Coin n) -> fromIntegral n)
 testConsistentRng :: Gen Property
 testConsistentRng = do
   n <- chooseInt (3, 10)
-  (s1, s2) <- genConsistentRngSpec @TestEra n (choose (1, 1000)) Word64R CoinR (SomeLens word64CoinL)
+  (s1, s2) <-
+    genConsistentRngSpec @BabbageEra n (choose (1, 1000)) Word64R CoinR (SomeLens word64CoinL)
   case s1 <> s2 of
     RngNever ms -> pure $ counterexample (unlines (["genConsistentRng fails", show s1, show s2] ++ ms)) False
     _ -> pure $ counterexample "" True
@@ -877,7 +878,7 @@ testSoundRngSpec = do
   n <- choose (2, 8)
   spec <- genRngSpec (choose (1, 1000)) Word64R (SomeLens word64CoinL) n
   let msgs = ["testSoundRngSpec " ++ show n ++ " " ++ show spec]
-  list <- genFromRngSpec @TT msgs (choose (1, 1000)) n spec
+  list <- genFromRngSpec @BabbageEra msgs (choose (1, 1000)) n spec
   pure $
     counterexample
       ("spec=" ++ show spec ++ "\nlist=" ++ show list)
@@ -900,7 +901,7 @@ testMergeRngSpec = do
             , "n=" ++ show n
             , "testMergeRngSpec"
             ]
-      list <- genFromRngSpec @TT wordsX (choose (1, 1000)) n s3
+      list <- genFromRngSpec @BabbageEra wordsX (choose (1, 1000)) n s3
       pure $
         counterexample
           ( "s1="
@@ -942,7 +943,7 @@ manyMergeRngSpec = do
               , "s1 = " ++ show y
               , "GenFromRngSpec " ++ show i ++ " n=" ++ show n
               ]
-        z <- genFromRngSpec @TT wordsX (choose (1, 100)) i m
+        z <- genFromRngSpec @BabbageEra wordsX (choose (1, 100)) i m
         pure (x, runRngSpec z x, y, runRngSpec z y, z, runRngSpec z m, m)
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
@@ -1272,7 +1273,7 @@ genMapSpecIsSound :: Gen Property
 genMapSpecIsSound = do
   n <- chooseInt (1, 15)
   spec <- genMapSpec (chooseInt (1, 10000)) IntR Word64R (SomeLens word64CoinL) n
-  mp <- genFromMapSpec @TT "mapSpecIsSound" [] (choose (1, 10000)) (choose (1, 10000)) spec
+  mp <- genFromMapSpec @BabbageEra "mapSpecIsSound" [] (choose (1, 10000)) (choose (1, 10000)) spec
   pure $ counterexample ("spec = " ++ show spec ++ "\nmp = " ++ show mp) (runMapSpec mp spec)
 
 manyMergeMapSpec :: Gen (Int, Int, [String])
@@ -1292,7 +1293,7 @@ manyMergeMapSpec = do
               , "s1 = " ++ show y
               , "GenFromMapSpec " ++ show i ++ " n=" ++ show n
               ]
-        z <- genFromMapSpec @TT "manyMergeMap" wordsX (choose (1, 100)) (choose (1, 100)) m
+        z <- genFromMapSpec @BabbageEra "manyMergeMap" wordsX (choose (1, 100)) (choose (1, 100)) m
         pure (x, runMapSpec z x, y, runMapSpec z y, z, runMapSpec z m, m)
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
@@ -1393,7 +1394,7 @@ genSetSpecIsSound :: Gen Property
 genSetSpecIsSound = do
   size <- chooseInt (0, 10)
   spec <- genSetSpec msgs (chooseInt (1, 1000)) IntR size
-  mp <- genFromSetSpec @TT msgs (choose (1, 10000)) spec
+  mp <- genFromSetSpec @BabbageEra msgs (choose (1, 10000)) spec
   pure $ counterexample ("spec = " ++ show spec ++ "\nmp = " ++ show mp) (runSetSpec mp spec)
   where
     msgs = ["genSetSpecIsSound"]
@@ -1415,7 +1416,7 @@ manyMergeSetSpec = do
               , "s1 = " ++ show y
               , "GenFromSetSpec " ++ show i ++ " n=" ++ show n
               ]
-        z <- genFromSetSpec @TT wordsX (choose (1, 100)) m
+        z <- genFromSetSpec @BabbageEra wordsX (choose (1, 100)) m
         pure (x, runSetSpec z x, y, runSetSpec z y, z, runSetSpec z m, m)
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
@@ -1633,7 +1634,7 @@ manyMergeElemSpec = do
               , "s1 = " ++ show y
               , "GenFromElemSpec " ++ show i ++ " size=" ++ show size
               ]
-        z <- genFromElemSpec @TT wordsX (choose (1, 100)) i m
+        z <- genFromElemSpec @BabbageEra wordsX (choose (1, 100)) i m
         pure (x, runElemSpec z x, y, runElemSpec z y, z, runElemSpec z m, m)
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
@@ -1752,7 +1753,11 @@ testSoundElemSpec = do
   spec <- genElemSpec Word64R (SomeLens word64CoinL) size
   n <- genFromSize size
   list <-
-    genFromElemSpec @TT ["testSoundElemSpec " ++ show spec ++ " " ++ show n] (choose (1, 1000)) n spec
+    genFromElemSpec @BabbageEra
+      ["testSoundElemSpec " ++ show spec ++ " " ++ show n]
+      (choose (1, 1000))
+      n
+      spec
   pure $
     counterexample
       ("size=" ++ show size ++ "\nspec=" ++ show spec ++ "\nlist=" ++ synopsis (ListR Word64R) list)
@@ -1762,7 +1767,7 @@ testSoundListSpec :: Gen Property
 testSoundListSpec = do
   size <- genSize
   spec <- genListSpec Word64R (SomeLens word64CoinL) size
-  list <- genFromListSpec @TT ["testSoundListSpec"] (choose (1, 1000)) spec
+  list <- genFromListSpec @BabbageEra ["testSoundListSpec"] (choose (1, 1000)) spec
   pure $
     counterexample
       ("spec=" ++ show spec ++ "\nlist=" ++ synopsis (ListR Word64R) list)
@@ -1785,7 +1790,7 @@ manyMergeListSpec = do
               , "s1 = " ++ show y
               , "GenFromListSpec " ++ show i ++ " size=" ++ show size
               ]
-        z <- genFromListSpec @TT wordsX (choose (1, 100)) m
+        z <- genFromListSpec @BabbageEra wordsX (choose (1, 100)) m
         pure (x, runListSpec z x, y, runListSpec z y, z, runListSpec z m, m)
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines
@@ -1864,18 +1869,18 @@ someMap r = do
 aMap :: Era era => Gen (MapSpec era Int Word64)
 aMap = genMapSpec (chooseInt (1, 1000)) IntR Word64R (SomeLens word64CoinL) 4
 
-testm :: Gen (MapSpec TT Int Word64)
+testm :: Gen (MapSpec BabbageEra Int Word64)
 testm = do
-  a <- aMap @TT
+  a <- aMap @BabbageEra
   b <- aMap
   monadTyped (liftT (a <> b))
 
 aList :: Gen (ListSpec era Word64)
 aList = genSize >>= genListSpec Word64R (SomeLens word64CoinL)
 
-testl :: Gen (ListSpec TT Word64)
+testl :: Gen (ListSpec BabbageEra Word64)
 testl = do
-  a <- aList @TT
+  a <- aList @BabbageEra
   b <- aList
   monadTyped (liftT (a <> b))
 
@@ -1908,7 +1913,7 @@ condReverse = do
   let msgs = ["condFlip", show predicate, show addsSpec]
   n <- genFromAddsSpec msgs addsSpec
   let env = storeVar testV (fromI (show n : msgs) n) emptyEnv
-  case runTyped (runPred @(BabbageEra Standard) env predicate) of
+  case runTyped (runPred @BabbageEra env predicate) of
     Right x -> pure (counterexample (unlines (show n : msgs)) x)
     Left xs -> errorMess "runTyped in condFlip fails" (xs ++ (show n : msgs))
 
@@ -2268,7 +2273,7 @@ genFromPairSpec msgs (PairSpec _domr _rngr VarOnLeft mp) = do
 
 testConsistentPair :: Gen Property
 testConsistentPair = do
-  s1 <- genPairSpec @TT IntR IntR
+  s1 <- genPairSpec @BabbageEra IntR IntR
   s2 <- genConsistentPairSpec IntR IntR s1
   case s1 <> s2 of
     PairNever ms ->
@@ -2278,7 +2283,7 @@ testConsistentPair = do
 testSoundPairSpec :: Gen Property
 testSoundPairSpec = do
   s1 <- genPairSpec IntR Word64R
-  ans <- genFromPairSpec @TT ["testSoundPairSpec"] s1
+  ans <- genFromPairSpec @BabbageEra ["testSoundPairSpec"] s1
   pure $ counterexample ("spec=" ++ show s1 ++ "\nans=" ++ show ans) (runPairSpec ans s1)
 
 testMergePairSpec :: Gen Property
@@ -2289,7 +2294,7 @@ testMergePairSpec = do
   case s1 <> s2 of
     PairNever _ -> pure (property True) -- This test is an implication (consistent (s1 <> s2) => ...)
     s4 -> do
-      ans <- genFromPairSpec @TT ["testMergePairSpec " ++ show s1 ++ " " ++ show s2] s4
+      ans <- genFromPairSpec @BabbageEra ["testMergePairSpec " ++ show s1 ++ " " ++ show s2] s4
       pure $
         counterexample
           ( "s1="
@@ -2327,7 +2332,7 @@ manyMergePairSpec = do
               , "s1 = " ++ show y
               , "GenFromPairSpec " ++ show i
               ]
-        z <- genFromPairSpec @TT wordsX m
+        z <- genFromPairSpec @BabbageEra wordsX m
         pure (x, runPairSpec z x, y, runPairSpec z y, z, runPairSpec z m, m)
       showAns (s1, run1, s2, run2, v, run3, s3) =
         unlines

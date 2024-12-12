@@ -45,7 +45,6 @@ module Cardano.Ledger.Alonzo.TxAuxData (
 )
 where
 
-import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..), AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Era
@@ -70,7 +69,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -251,8 +249,8 @@ instance Memoized AlonzoTxAuxData where
 
 instance EqRaw (AlonzoTxAuxData era)
 
-instance Crypto c => EraTxAuxData (AlonzoEra c) where
-  type TxAuxData (AlonzoEra c) = AlonzoTxAuxData (AlonzoEra c)
+instance EraTxAuxData AlonzoEra where
+  type TxAuxData AlonzoEra = AlonzoTxAuxData AlonzoEra
 
   mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
 
@@ -275,9 +273,9 @@ metadataAlonzoTxAuxDataL =
   lensMemoRawType atadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
 
 hashAlonzoTxAuxData ::
-  (HashAlgorithm (HASH c), HashAnnotated x EraIndependentTxAuxData c) =>
+  HashAnnotated x EraIndependentTxAuxData =>
   x ->
-  AuxiliaryDataHash c
+  AuxiliaryDataHash
 hashAlonzoTxAuxData x = AuxiliaryDataHash (hashAnnotated x)
 
 validateAlonzoTxAuxData ::
@@ -289,7 +287,7 @@ validateAlonzoTxAuxData pv auxData@AlonzoTxAuxData {atadMetadata = metadata} =
   all validMetadatum metadata
     && all (validScript pv) (getAlonzoTxAuxDataScripts auxData)
 
-instance Crypto c => AllegraEraTxAuxData (AlonzoEra c) where
+instance AllegraEraTxAuxData AlonzoEra where
   timelockScriptsTxAuxDataL = timelockScriptsAlonzoTxAuxDataL
 
 timelockScriptsAlonzoTxAuxDataL ::
@@ -297,7 +295,7 @@ timelockScriptsAlonzoTxAuxDataL ::
 timelockScriptsAlonzoTxAuxDataL =
   lensMemoRawType atadrTimelock $ \txAuxDataRaw ts -> txAuxDataRaw {atadrTimelock = ts}
 
-instance Crypto c => AlonzoEraTxAuxData (AlonzoEra c) where
+instance AlonzoEraTxAuxData AlonzoEra where
   plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL
 
 plutusScriptsAllegraTxAuxDataL ::
@@ -305,14 +303,14 @@ plutusScriptsAllegraTxAuxDataL ::
 plutusScriptsAllegraTxAuxDataL =
   lensMemoRawType atadrPlutus $ \txAuxDataRaw ts -> txAuxDataRaw {atadrPlutus = ts}
 
-instance EraCrypto era ~ c => HashAnnotated (AlonzoTxAuxData era) EraIndependentTxAuxData c where
+instance HashAnnotated (AlonzoTxAuxData era) EraIndependentTxAuxData where
   hashAnnotated = getMemoSafeHash
 
 deriving newtype instance NFData (AlonzoTxAuxData era)
 
 deriving instance Eq (AlonzoTxAuxData era)
 
-deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (AlonzoTxAuxData era)
+deriving instance Show (AlonzoTxAuxData era)
 
 type instance MemoHashIndex AlonzoTxAuxDataRaw = EraIndependentTxAuxData
 
@@ -361,7 +359,7 @@ pattern AlonzoTxAuxData' {atadMetadata', atadTimelock', atadPlutus'} <-
   (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata' atadTimelock' atadPlutus')
 
 translateAlonzoTxAuxData ::
-  (AlonzoEraScript era1, AlonzoEraScript era2, EraCrypto era1 ~ EraCrypto era2) =>
+  (AlonzoEraScript era1, AlonzoEraScript era2) =>
   AlonzoTxAuxData era1 ->
   AlonzoTxAuxData era2
 translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} =

@@ -46,7 +46,6 @@ import Cardano.Ledger.Binary (
   natVersion,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
@@ -128,7 +127,7 @@ class
      in liftEither
           . left ApplyTxError
           . right
-            (mapEventReturn @ep @(EraRule "LEDGER" era) @(MempoolState era) $ (,Validated tx))
+            (mapEventReturn @ep @(EraRule "LEDGER" era) @(MempoolState era) (,Validated tx))
           $ res
 
   -- | Reapply a previously validated 'Tx'.
@@ -158,11 +157,7 @@ class
           . left ApplyTxError
           $ res
 
-instance
-  ( EraPParams (ShelleyEra c)
-  , DSignable c (Hash c EraIndependentTxBody)
-  ) =>
-  ApplyTx (ShelleyEra c)
+instance ApplyTx ShelleyEra
 
 type MempoolEnv era = Ledger.LedgerEnv era
 

@@ -1,5 +1,17 @@
 # Version history for `cardano-ledger-shelley-test`
 
+## 1.6.0.0
+
+* Account for removal of crypto parametrization
+* Remove crypto parametrization from `PoolSetUpArgs`, `PoolInfo`, `RewardUpdateOld`
+* Add `MockCrypto`
+* Remove `TestCrypto`, `C_Crypto` in favor of `MockCrypto`
+* Remove `B` and `B_Crypto`
+* Remove useless synonyms `Mock` and `ExMock`
+* Remove deprecated `mkBlockHeader` and `unitIntervalToNatural`
+* Remove `KeyPairWits`
+* Remove `ShelleyBasedEra'`
+
 ## 1.5.1.0
 
 * Update `ShelleyPoolPredFailure` arbitrary instance

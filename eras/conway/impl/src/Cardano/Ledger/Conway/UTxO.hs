@@ -41,7 +41,6 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   unVotingProcedures,
  )
 import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue)
@@ -101,17 +100,17 @@ getConwayScriptsNeeded utxo txBody =
             _ -> Nothing
 
 conwayProducedValue ::
-  (ConwayEraTxBody era, Value era ~ MaryValue (EraCrypto era)) =>
+  (ConwayEraTxBody era, Value era ~ MaryValue) =>
   PParams era ->
-  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  (KeyHash 'StakePool -> Bool) ->
   TxBody era ->
   Value era
 conwayProducedValue pp isStakePool txBody =
   getProducedMaryValue pp isStakePool txBody
     <+> inject (txBody ^. treasuryDonationTxBodyL)
 
-instance Crypto c => EraUTxO (ConwayEra c) where
-  type ScriptsNeeded (ConwayEra c) = AlonzoScriptsNeeded (ConwayEra c)
+instance EraUTxO ConwayEra where
+  type ScriptsNeeded ConwayEra = AlonzoScriptsNeeded ConwayEra
 
   getConsumedValue = getConsumedMaryValue
 
@@ -127,7 +126,7 @@ instance Crypto c => EraUTxO (ConwayEra c) where
 
   getMinFeeTxUtxo = getConwayMinFeeTxUtxo
 
-instance Crypto c => AlonzoEraUTxO (ConwayEra c) where
+instance AlonzoEraUTxO ConwayEra where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
 
   getSpendingDatum = getBabbageSpendingDatum
@@ -159,7 +158,7 @@ getConwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
   UTxO era ->
   TxBody era ->
-  Set.Set (KeyHash 'Witness (EraCrypto era))
+  Set.Set (KeyHash 'Witness)
 getConwayWitsVKeyNeeded utxo txBody =
   getShelleyWitsVKeyNeededNoGov utxo txBody
     `Set.union` (txBody ^. reqSignerHashesTxBodyL)
@@ -168,7 +167,7 @@ getConwayWitsVKeyNeeded utxo txBody =
 voterWitnesses ::
   ConwayEraTxBody era =>
   TxBody era ->
-  Set.Set (KeyHash 'Witness (EraCrypto era))
+  Set.Set (KeyHash 'Witness)
 voterWitnesses txb =
   Map.foldrWithKey' accum mempty (unVotingProcedures (txb ^. votingProceduresTxBodyL))
   where

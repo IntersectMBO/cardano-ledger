@@ -113,27 +113,27 @@ instance (EraPParams era, NFData (Tx era)) => NFData (CertsEnv era)
 data ConwayCertsPredFailure era
   = -- | Withdrawals that are missing or do not withdrawal the entire amount
     WithdrawalsNotInRewardsCERTS
-      !(Map.Map (RewardAccount (EraCrypto era)) Coin)
+      !(Map.Map RewardAccount Coin)
   | -- | CERT rule subtransition Failures
     CertFailure !(PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
 
-type instance EraRuleFailure "CERTS" (ConwayEra c) = ConwayCertsPredFailure (ConwayEra c)
+type instance EraRuleFailure "CERTS" ConwayEra = ConwayCertsPredFailure ConwayEra
 
-type instance EraRuleEvent "CERTS" (ConwayEra c) = ConwayCertsEvent (ConwayEra c)
+type instance EraRuleEvent "CERTS" ConwayEra = ConwayCertsEvent ConwayEra
 
-instance InjectRuleFailure "CERTS" ConwayCertsPredFailure (ConwayEra c)
+instance InjectRuleFailure "CERTS" ConwayCertsPredFailure ConwayEra
 
-instance InjectRuleFailure "CERTS" ConwayCertPredFailure (ConwayEra c) where
+instance InjectRuleFailure "CERTS" ConwayCertPredFailure ConwayEra where
   injectFailure = CertFailure
 
-instance InjectRuleFailure "CERTS" ConwayDelegPredFailure (ConwayEra c) where
+instance InjectRuleFailure "CERTS" ConwayDelegPredFailure ConwayEra where
   injectFailure = CertFailure . injectFailure
 
-instance InjectRuleFailure "CERTS" ShelleyPoolPredFailure (ConwayEra c) where
+instance InjectRuleFailure "CERTS" ShelleyPoolPredFailure ConwayEra where
   injectFailure = CertFailure . injectFailure
 
-instance InjectRuleFailure "CERTS" ConwayGovCertPredFailure (ConwayEra c) where
+instance InjectRuleFailure "CERTS" ConwayGovCertPredFailure ConwayEra where
   injectFailure = CertFailure . injectFailure
 
 deriving stock instance

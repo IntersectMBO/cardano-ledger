@@ -20,30 +20,30 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
  )
 
-type instance EraRuleFailure "LEDGERS" (AllegraEra c) = ShelleyLedgersPredFailure (AllegraEra c)
+type instance EraRuleFailure "LEDGERS" AllegraEra = ShelleyLedgersPredFailure AllegraEra
 
-instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure (AllegraEra c)
+instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure AllegraEra
 
-instance InjectRuleFailure "LEDGERS" ShelleyLedgerPredFailure (AllegraEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyLedgerPredFailure AllegraEra where
   injectFailure = LedgerFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure (AllegraEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyUtxowPredFailure AllegraEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyUtxoPredFailure (AllegraEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyUtxoPredFailure AllegraEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyPpupPredFailure (AllegraEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyPpupPredFailure AllegraEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelegsPredFailure (AllegraEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelegsPredFailure AllegraEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelplPredFailure (AllegraEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelplPredFailure AllegraEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure (AllegraEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyPoolPredFailure AllegraEra where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" ShelleyDelegPredFailure (AllegraEra c) where
+instance InjectRuleFailure "LEDGERS" ShelleyDelegPredFailure AllegraEra where
   injectFailure = LedgerFailure . injectFailure

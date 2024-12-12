@@ -12,77 +12,75 @@ module Cardano.Ledger.Allegra.Era (
 ) where
 
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
 
 -- | The Allegra era
-data AllegraEra c
+data AllegraEra
 
-instance Crypto c => Era (AllegraEra c) where
-  type PreviousEra (AllegraEra c) = ShelleyEra c
-  type EraCrypto (AllegraEra c) = c
-  type ProtVerLow (AllegraEra c) = 3
+instance Era AllegraEra where
+  type PreviousEra AllegraEra = ShelleyEra
+  type ProtVerLow AllegraEra = 3
 
   eraName = "Allegra"
 
-instance Crypto c => EraGenesis (AllegraEra c)
+instance EraGenesis AllegraEra
 
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
 
 -- | No context is needed to translate from Shelley to Allegra.
-type instance TranslationContext (AllegraEra c) = NoGenesis (AllegraEra c)
+type instance TranslationContext AllegraEra = NoGenesis AllegraEra
 
-type instance Value (AllegraEra _) = Coin
+type instance Value AllegraEra = Coin
 
 -- These rules are all inherited from Shelley
 
-type instance EraRule "BBODY" (AllegraEra c) = ShelleyBBODY (AllegraEra c)
+type instance EraRule "BBODY" AllegraEra = ShelleyBBODY AllegraEra
 
-type instance EraRule "DELEG" (AllegraEra c) = ShelleyDELEG (AllegraEra c)
+type instance EraRule "DELEG" AllegraEra = ShelleyDELEG AllegraEra
 
-type instance EraRule "DELEGS" (AllegraEra c) = ShelleyDELEGS (AllegraEra c)
+type instance EraRule "DELEGS" AllegraEra = ShelleyDELEGS AllegraEra
 
-type instance EraRule "DELPL" (AllegraEra c) = ShelleyDELPL (AllegraEra c)
+type instance EraRule "DELPL" AllegraEra = ShelleyDELPL AllegraEra
 
-type instance EraRule "EPOCH" (AllegraEra c) = ShelleyEPOCH (AllegraEra c)
+type instance EraRule "EPOCH" AllegraEra = ShelleyEPOCH AllegraEra
 
-type instance EraRule "LEDGER" (AllegraEra c) = ShelleyLEDGER (AllegraEra c)
+type instance EraRule "LEDGER" AllegraEra = ShelleyLEDGER AllegraEra
 
-type instance EraRule "LEDGERS" (AllegraEra c) = ShelleyLEDGERS (AllegraEra c)
+type instance EraRule "LEDGERS" AllegraEra = ShelleyLEDGERS AllegraEra
 
-type instance EraRule "MIR" (AllegraEra c) = ShelleyMIR (AllegraEra c)
+type instance EraRule "MIR" AllegraEra = ShelleyMIR AllegraEra
 
-type instance EraRule "NEWEPOCH" (AllegraEra c) = ShelleyNEWEPOCH (AllegraEra c)
+type instance EraRule "NEWEPOCH" AllegraEra = ShelleyNEWEPOCH AllegraEra
 
-type instance EraRule "NEWPP" (AllegraEra c) = ShelleyNEWPP (AllegraEra c)
+type instance EraRule "NEWPP" AllegraEra = ShelleyNEWPP AllegraEra
 
-type instance EraRule "POOL" (AllegraEra c) = ShelleyPOOL (AllegraEra c)
+type instance EraRule "POOL" AllegraEra = ShelleyPOOL AllegraEra
 
-type instance EraRule "POOLREAP" (AllegraEra c) = ShelleyPOOLREAP (AllegraEra c)
+type instance EraRule "POOLREAP" AllegraEra = ShelleyPOOLREAP AllegraEra
 
-type instance EraRule "PPUP" (AllegraEra c) = ShelleyPPUP (AllegraEra c)
+type instance EraRule "PPUP" AllegraEra = ShelleyPPUP AllegraEra
 
-type instance EraRule "RUPD" (AllegraEra c) = ShelleyRUPD (AllegraEra c)
+type instance EraRule "RUPD" AllegraEra = ShelleyRUPD AllegraEra
 
-type instance EraRule "SNAP" (AllegraEra c) = ShelleySNAP (AllegraEra c)
+type instance EraRule "SNAP" AllegraEra = ShelleySNAP AllegraEra
 
-type instance EraRule "TICK" (AllegraEra c) = ShelleyTICK (AllegraEra c)
+type instance EraRule "TICK" AllegraEra = ShelleyTICK AllegraEra
 
-type instance EraRule "TICKF" (AllegraEra c) = ShelleyTICKF (AllegraEra c)
+type instance EraRule "TICKF" AllegraEra = ShelleyTICKF AllegraEra
 
-type instance EraRule "UPEC" (AllegraEra c) = ShelleyUPEC (AllegraEra c)
+type instance EraRule "UPEC" AllegraEra = ShelleyUPEC AllegraEra
 
 -- These rules are defined anew in the Allegra era
 
 data AllegraUTXO era
 
-type instance EraRule "UTXO" (AllegraEra c) = AllegraUTXO (AllegraEra c)
+type instance EraRule "UTXO" AllegraEra = AllegraUTXO AllegraEra
 
 data AllegraUTXOW era
 
-type instance EraRule "UTXOW" (AllegraEra c) = AllegraUTXOW (AllegraEra c)
+type instance EraRule "UTXOW" AllegraEra = AllegraUTXOW AllegraEra

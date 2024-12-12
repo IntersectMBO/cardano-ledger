@@ -24,7 +24,6 @@ import Cardano.Ledger.Core (
   NativeScript,
   upgradeTxBody,
  )
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
@@ -41,10 +40,8 @@ import Lens.Micro ((^.))
 
 -- ========================================
 
-instance Crypto c => EraTx (AllegraEra c) where
-  {-# SPECIALIZE instance EraTx (AllegraEra StandardCrypto) #-}
-
-  type Tx (AllegraEra c) = ShelleyTx (AllegraEra c)
+instance EraTx AllegraEra where
+  type Tx AllegraEra = ShelleyTx AllegraEra
 
   mkBasicTx = mkBasicShelleyTx
 

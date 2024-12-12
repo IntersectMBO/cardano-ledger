@@ -115,7 +115,6 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential (..), credToText)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.RewardProvenance ()
@@ -164,72 +163,72 @@ newtype GovActionIx = GovActionIx {unGovActionIx :: Word16}
     , ToJSON
     )
 
-data GovActionId c = GovActionId
-  { gaidTxId :: !(TxId c)
+data GovActionId = GovActionId
+  { gaidTxId :: !TxId
   , gaidGovActionIx :: !GovActionIx
   }
   deriving (Generic, Show, Eq, Ord)
 
-instance Crypto c => DecCBOR (GovActionId c) where
+instance DecCBOR GovActionId where
   decCBOR =
     decode $
       RecD GovActionId
         <! From
         <! From
 
-instance Crypto c => EncCBOR (GovActionId c) where
+instance EncCBOR GovActionId where
   encCBOR GovActionId {..} =
     encode $
       Rec GovActionId
         !> To gaidTxId
         !> To gaidGovActionIx
 
-instance NoThunks (GovActionId c)
+instance NoThunks GovActionId
 
-instance Crypto c => NFData (GovActionId c)
+instance NFData GovActionId
 
-instance Crypto c => ToJSON (GovActionId c) where
+instance ToJSON GovActionId where
   toJSON = object . toGovActionIdPairs
   toEncoding = pairs . mconcat . toGovActionIdPairs
 
-toGovActionIdPairs :: (KeyValue e a, Crypto c) => GovActionId c -> [a]
+toGovActionIdPairs :: KeyValue e a => GovActionId -> [a]
 toGovActionIdPairs gaid@(GovActionId _ _) =
   let GovActionId {..} = gaid
    in [ "txId" .= gaidTxId
       , "govActionIx" .= gaidGovActionIx
       ]
 
-instance Crypto c => ToJSONKey (GovActionId c) where
+instance ToJSONKey GovActionId where
   toJSONKey = toJSONKeyText govActionIdToText
 
-govActionIdToText :: GovActionId c -> Text.Text
+govActionIdToText :: GovActionId -> Text.Text
 govActionIdToText (GovActionId (TxId txidHash) (GovActionIx ix)) =
   hashToTextAsHex (extractHash txidHash)
     <> Text.pack "#"
     <> Text.pack (show ix)
 
 data GovActionState era = GovActionState
-  { gasId :: !(GovActionId (EraCrypto era))
-  , gasCommitteeVotes :: !(Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
-  , gasDRepVotes :: !(Map (Credential 'DRepRole (EraCrypto era)) Vote)
-  , gasStakePoolVotes :: !(Map (KeyHash 'StakePool (EraCrypto era)) Vote)
+  { gasId :: !GovActionId
+  , gasCommitteeVotes :: !(Map (Credential 'HotCommitteeRole) Vote)
+  , gasDRepVotes :: !(Map (Credential 'DRepRole) Vote)
+  , gasStakePoolVotes :: !(Map (KeyHash 'StakePool) Vote)
   , gasProposalProcedure :: !(ProposalProcedure era)
   , gasProposedIn :: !EpochNo
   , gasExpiresAfter :: !EpochNo
   }
   deriving (Ord, Generic)
 
-gasIdL :: Lens' (GovActionState era) (GovActionId (EraCrypto era))
+gasIdL :: Lens' (GovActionState era) GovActionId
 gasIdL = lens gasId $ \x y -> x {gasId = y}
 
 gasCommitteeVotesL ::
-  Lens' (GovActionState era) (Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
+  Lens' (GovActionState era) (Map (Credential 'HotCommitteeRole) Vote)
 gasCommitteeVotesL = lens gasCommitteeVotes (\x y -> x {gasCommitteeVotes = y})
 
-gasDRepVotesL :: Lens' (GovActionState era) (Map (Credential 'DRepRole (EraCrypto era)) Vote)
+gasDRepVotesL :: Lens' (GovActionState era) (Map (Credential 'DRepRole) Vote)
 gasDRepVotesL = lens gasDRepVotes (\x y -> x {gasDRepVotes = y})
 
-gasStakePoolVotesL :: Lens' (GovActionState era) (Map (KeyHash 'StakePool (EraCrypto era)) Vote)
+gasStakePoolVotesL :: Lens' (GovActionState era) (Map (KeyHash 'StakePool) Vote)
 gasStakePoolVotesL = lens gasStakePoolVotes (\x y -> x {gasStakePoolVotes = y})
 
 gasProposalProcedureL :: Lens' (GovActionState era) (ProposalProcedure era)
@@ -241,10 +240,10 @@ gasDepositL = gasProposalProcedureL . pProcDepositL
 gasDeposit :: GovActionState era -> Coin
 gasDeposit = pProcDeposit . gasProposalProcedure
 
-gasReturnAddrL :: Lens' (GovActionState era) (RewardAccount (EraCrypto era))
+gasReturnAddrL :: Lens' (GovActionState era) RewardAccount
 gasReturnAddrL = gasProposalProcedureL . pProcReturnAddrL
 
-gasReturnAddr :: GovActionState era -> RewardAccount (EraCrypto era)
+gasReturnAddr :: GovActionState era -> RewardAccount
 gasReturnAddr = pProcReturnAddr . gasProposalProcedure
 
 gasActionL :: Lens' (GovActionState era) (GovAction era)
@@ -312,21 +311,18 @@ instance EraPParams era => EncCBOR (GovActionState era) where
         !> To gasExpiresAfter
 
 -- Ref: https://gitlab.haskell.org/ghc/ghc/-/issues/14046
-instance
-  c ~ EraCrypto era =>
-  OMap.HasOKey (GovActionId c) (GovActionState era)
-  where
+instance OMap.HasOKey GovActionId (GovActionState era) where
   okeyL = lens gasId $ \gas gi -> gas {gasId = gi}
 
-data Voter c
-  = CommitteeVoter !(Credential 'HotCommitteeRole c)
-  | DRepVoter !(Credential 'DRepRole c)
-  | StakePoolVoter !(KeyHash 'StakePool c)
+data Voter
+  = CommitteeVoter !(Credential 'HotCommitteeRole)
+  | DRepVoter !(Credential 'DRepRole)
+  | StakePoolVoter !(KeyHash 'StakePool)
   deriving (Generic, Eq, Ord, Show)
 
-instance Crypto c => ToJSON (Voter c)
+instance ToJSON Voter
 
-instance Crypto c => ToJSONKey (Voter c) where
+instance ToJSONKey Voter where
   toJSONKey = toJSONKeyText $ \case
     CommitteeVoter cred ->
       "committee-" <> credToText cred
@@ -335,7 +331,7 @@ instance Crypto c => ToJSONKey (Voter c) where
     StakePoolVoter kh ->
       "stakepool-" <> credToText (KeyHashObj kh)
 
-instance Crypto c => DecCBOR (Voter c) where
+instance DecCBOR Voter where
   decCBOR = decodeRecordSum "Voter" $ \case
     0 -> (2,) . CommitteeVoter . KeyHashObj <$> decCBOR
     1 -> (2,) . CommitteeVoter . ScriptHashObj <$> decCBOR
@@ -345,7 +341,7 @@ instance Crypto c => DecCBOR (Voter c) where
     5 -> fail "Script objects are not allowed for StakePool votes"
     t -> invalidKey t
 
-instance Crypto c => EncCBOR (Voter c) where
+instance EncCBOR Voter where
   encCBOR = \case
     CommitteeVoter (KeyHashObj keyHash) ->
       encodeListLen 2 <> encodeWord8 0 <> encCBOR keyHash
@@ -358,9 +354,9 @@ instance Crypto c => EncCBOR (Voter c) where
     StakePoolVoter keyHash ->
       encodeListLen 2 <> encodeWord8 4 <> encCBOR keyHash
 
-instance NoThunks (Voter c)
+instance NoThunks Voter
 
-instance NFData (Voter c)
+instance NFData Voter
 
 data Vote
   = VoteNo
@@ -381,8 +377,7 @@ instance EncCBOR Vote where
   encCBOR = encodeEnum
 
 newtype VotingProcedures era = VotingProcedures
-  { unVotingProcedures ::
-      Map (Voter (EraCrypto era)) (Map (GovActionId (EraCrypto era)) (VotingProcedure era))
+  { unVotingProcedures :: Map Voter (Map GovActionId (VotingProcedure era))
   }
   deriving stock (Generic, Eq, Show)
   deriving newtype (NoThunks, EncCBOR, ToJSON)
@@ -401,7 +396,7 @@ instance Era era => DecCBOR (VotingProcedures era) where
 
 foldlVotingProcedures ::
   -- | Accumulating function
-  (c -> Voter (EraCrypto era) -> GovActionId (EraCrypto era) -> VotingProcedure era -> c) ->
+  (c -> Voter -> GovActionId -> VotingProcedure era -> c) ->
   -- | Initial accumulator
   c ->
   -- | Procedures to fold over
@@ -414,7 +409,7 @@ foldlVotingProcedures f initAcc =
 
 foldrVotingProcedures ::
   -- | Accumulating function
-  (Voter (EraCrypto era) -> GovActionId (EraCrypto era) -> VotingProcedure era -> c -> c) ->
+  (Voter -> GovActionId -> VotingProcedure era -> c -> c) ->
   -- | Initial accumulator
   c ->
   -- | Procedures to fold over
@@ -425,17 +420,17 @@ foldrVotingProcedures f initAcc =
         Map.foldrWithKey' (f voter) acc votes
    in Map.foldrWithKey' fVotes initAcc . unVotingProcedures
 
-deriving instance c ~ EraCrypto era => Indexable (Voter c) (VotingProcedures era)
+deriving instance Indexable Voter (VotingProcedures era)
 
 data VotingProcedure era = VotingProcedure
   { vProcVote :: !Vote
-  , vProcAnchor :: !(StrictMaybe (Anchor (EraCrypto era)))
+  , vProcAnchor :: !(StrictMaybe Anchor)
   }
   deriving (Generic, Eq, Show)
 
 instance NoThunks (VotingProcedure era)
 
-instance Crypto (EraCrypto era) => NFData (VotingProcedure era)
+instance NFData (VotingProcedure era)
 
 instance Era era => DecCBOR (VotingProcedure era) where
   decCBOR =
@@ -456,7 +451,7 @@ instance EraPParams era => ToJSON (VotingProcedure era) where
   toJSON = object . toVotingProcedurePairs
   toEncoding = pairs . mconcat . toVotingProcedurePairs
 
-toVotingProcedurePairs :: (KeyValue e a, EraPParams era) => VotingProcedure era -> [a]
+toVotingProcedurePairs :: KeyValue e a => VotingProcedure era -> [a]
 toVotingProcedurePairs vProc@(VotingProcedure _ _) =
   let VotingProcedure {..} = vProc
    in [ "anchor" .= vProcAnchor
@@ -475,22 +470,22 @@ indexedGovProps = enumerateProps 0
 
 data ProposalProcedure era = ProposalProcedure
   { pProcDeposit :: !Coin
-  , pProcReturnAddr :: !(RewardAccount (EraCrypto era))
+  , pProcReturnAddr :: !RewardAccount
   , pProcGovAction :: !(GovAction era)
-  , pProcAnchor :: !(Anchor (EraCrypto era))
+  , pProcAnchor :: !Anchor
   }
   deriving (Generic, Eq, Show, Ord)
 
 pProcDepositL :: Lens' (ProposalProcedure era) Coin
 pProcDepositL = lens pProcDeposit (\p x -> p {pProcDeposit = x})
 
-pProcReturnAddrL :: Lens' (ProposalProcedure era) (RewardAccount (EraCrypto era))
+pProcReturnAddrL :: Lens' (ProposalProcedure era) RewardAccount
 pProcReturnAddrL = lens pProcReturnAddr (\p x -> p {pProcReturnAddr = x})
 
 pProcGovActionL :: Lens' (ProposalProcedure era) (GovAction era)
 pProcGovActionL = lens pProcGovAction $ \x y -> x {pProcGovAction = y}
 
-pProcAnchorL :: Lens' (ProposalProcedure era) (Anchor (EraCrypto era))
+pProcAnchorL :: Lens' (ProposalProcedure era) Anchor
 pProcAnchorL = lens pProcAnchor $ \x y -> x {pProcAnchor = y}
 
 instance EraPParams era => NoThunks (ProposalProcedure era)
@@ -530,7 +525,7 @@ toProposalProcedurePairs proposalProcedure@(ProposalProcedure _ _ _ _) =
       ]
 
 data Committee era = Committee
-  { committeeMembers :: !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+  { committeeMembers :: !(Map (Credential 'ColdCommitteeRole) EpochNo)
   -- ^ Committee members with epoch number when each of them expires
   , committeeThreshold :: !UnitInterval
   -- ^ Threshold of the committee that is necessary for a successful vote
@@ -545,7 +540,7 @@ instance Default (Committee era) where
   def = Committee mempty minBound
 
 committeeMembersL ::
-  Lens' (Committee era) (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+  Lens' (Committee era) (Map (Credential 'ColdCommitteeRole) EpochNo)
 committeeMembersL = lens committeeMembers (\c m -> c {committeeMembers = m})
 
 committeeThresholdL :: Lens' (Committee era) UnitInterval
@@ -578,7 +573,7 @@ instance Era era => FromJSON (Committee era) where
           <$> (forceElemsToWHNF <$> o .: "members")
           <*> o .: "threshold"
 
-toCommitteePairs :: (KeyValue e a, EraPParams era) => Committee era -> [a]
+toCommitteePairs :: KeyValue e a => Committee era -> [a]
 toCommitteePairs committee@(Committee _ _) =
   let Committee {..} = committee
    in [ "members" .= committeeMembers
@@ -616,7 +611,7 @@ isGovActionWithPurpose govAction =
     InfoAction -> False
 
 newtype GovPurposeId (p :: GovActionPurpose) era = GovPurposeId
-  { unGovPurposeId :: GovActionId (EraCrypto era)
+  { unGovPurposeId :: GovActionId
   }
   deriving (Eq, Ord, Generic)
 
@@ -790,7 +785,7 @@ data GovAction era
       -- | Proposed changes to PParams
       !(PParamsUpdate era)
       -- | Policy hash protection
-      !(StrictMaybe (ScriptHash (EraCrypto era)))
+      !(StrictMaybe ScriptHash)
   | HardForkInitiation
       -- | Previous governance action id of `HardForkInitiation` type, which corresponds
       -- to `HardForkPurpose`
@@ -799,9 +794,9 @@ data GovAction era
       !ProtVer
   | TreasuryWithdrawals
       -- | Proposed treasury withdrawals
-      !(Map (RewardAccount (EraCrypto era)) Coin)
+      !(Map RewardAccount Coin)
       -- | Policy hash protection
-      !(StrictMaybe (ScriptHash (EraCrypto era)))
+      !(StrictMaybe ScriptHash)
   | NoConfidence
       -- | Previous governance action id of `NoConfidence` or `UpdateCommittee` type, which
       -- corresponds to `CommitteePurpose`
@@ -811,9 +806,9 @@ data GovAction era
       -- corresponds to `CommitteePurpose`
       !(StrictMaybe (GovPurposeId 'CommitteePurpose era))
       -- | Constitutional Committe members to be removed
-      !(Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+      !(Set (Credential 'ColdCommitteeRole))
       -- | Constitutional committee members to be added
-      !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+      !(Map (Credential 'ColdCommitteeRole) EpochNo)
       -- | New Threshold
       !UnitInterval
   | NewConstitution
@@ -882,15 +877,15 @@ instance EraPParams era => EncCBOR (GovAction era) where
         Sum InfoAction 6
 
 data Constitution era = Constitution
-  { constitutionAnchor :: !(Anchor (EraCrypto era))
-  , constitutionScript :: !(StrictMaybe (ScriptHash (EraCrypto era)))
+  { constitutionAnchor :: !Anchor
+  , constitutionScript :: !(StrictMaybe ScriptHash)
   }
   deriving (Generic, Ord)
 
-constitutionAnchorL :: Lens' (Constitution era) (Anchor (EraCrypto era))
+constitutionAnchorL :: Lens' (Constitution era) Anchor
 constitutionAnchorL = lens constitutionAnchor (\x y -> x {constitutionAnchor = y})
 
-constitutionScriptL :: Lens' (Constitution era) (StrictMaybe (ScriptHash (EraCrypto era)))
+constitutionScriptL :: Lens' (Constitution era) (StrictMaybe ScriptHash)
 constitutionScriptL = lens constitutionScript (\x y -> x {constitutionScript = y})
 
 instance Era era => ToJSON (Constitution era) where
@@ -903,7 +898,7 @@ instance Era era => FromJSON (Constitution era) where
       <$> o .: "anchor"
       <*> (maybeToStrictMaybe <$> (o .:? "script"))
 
-toConstitutionPairs :: (KeyValue e a, Era era) => Constitution era -> [a]
+toConstitutionPairs :: KeyValue e a => Constitution era -> [a]
 toConstitutionPairs c@(Constitution _ _) =
   let Constitution {..} = c
    in ["anchor" .= constitutionAnchor]

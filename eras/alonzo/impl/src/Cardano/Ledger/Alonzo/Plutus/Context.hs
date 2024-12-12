@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -7,7 +6,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Alonzo.Plutus.Context (
@@ -113,23 +111,23 @@ class
 
   mkPlutusWithContext ::
     PlutusScript era ->
-    ScriptHash (EraCrypto era) ->
+    ScriptHash ->
     PlutusPurpose AsIxItem era ->
     LedgerTxInfo era ->
     (Data era, ExUnits) ->
     CostModel ->
-    Either (ContextError era) (PlutusWithContext (EraCrypto era))
+    Either (ContextError era) PlutusWithContext
 
 toPlutusWithContext ::
   forall l era.
   (EraPlutusTxInfo l era, AlonzoEraUTxO era) =>
   Either (Plutus l) (PlutusRunnable l) ->
-  ScriptHash (EraCrypto era) ->
+  ScriptHash ->
   PlutusPurpose AsIxItem era ->
   LedgerTxInfo era ->
   (Data era, ExUnits) ->
   CostModel ->
-  Either (ContextError era) (PlutusWithContext (EraCrypto era))
+  Either (ContextError era) PlutusWithContext
 toPlutusWithContext script scriptHash plutusPurpose lti (redeemerData, exUnits) costModel = do
   let proxy = Proxy @l
       maybeSpendingDatum =

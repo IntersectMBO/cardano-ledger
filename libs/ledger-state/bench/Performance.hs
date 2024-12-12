@@ -238,7 +238,7 @@ validatedTx3 =
       \7120c2d3482751b14f06dd41d7ff023eeae6e63933b097c023c1ed19df6a061173c45aa\
       \54cceb568ff1886e2716e84e6260df5f6"
 
-mkGlobals :: ShelleyGenesis StandardCrypto -> Globals
+mkGlobals :: ShelleyGenesis -> Globals
 mkGlobals genesis =
   mkShelleyGlobals genesis epochInfoE
   where
@@ -250,7 +250,7 @@ mkGlobals genesis =
 getFilteredOldUTxO ::
   EraTxOut era =>
   NewEpochState era ->
-  Set (Addr (EraCrypto era)) ->
+  Set Addr ->
   UTxO era
 getFilteredOldUTxO ss addrs =
   UTxO $

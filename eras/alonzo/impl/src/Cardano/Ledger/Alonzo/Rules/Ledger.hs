@@ -2,9 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -25,7 +23,6 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
@@ -70,41 +67,41 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
 
-type instance EraRuleFailure "LEDGER" (AlonzoEra c) = ShelleyLedgerPredFailure (AlonzoEra c)
+type instance EraRuleFailure "LEDGER" AlonzoEra = ShelleyLedgerPredFailure AlonzoEra
 
-instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (AlonzoEra c)
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure AlonzoEra
 
-instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure AlonzoEra where
   injectFailure = UtxowFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure AlonzoEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure AlonzoEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure AlonzoEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure AlonzoEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure AlonzoEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" AllegraUtxoPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" AllegraUtxoPredFailure AlonzoEra where
   injectFailure = UtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure AlonzoEra where
   injectFailure = DelegsFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure AlonzoEra where
   injectFailure = DelegsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure AlonzoEra where
   injectFailure = DelegsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure AlonzoEra where
   injectFailure = DelegsFailure . injectFailure
 
 -- =======================================
@@ -157,8 +154,7 @@ ledgerTransition = do
   pure $ LedgerState utxoSt' certState'
 
 instance
-  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-  , AlonzoEraTx era
+  ( AlonzoEraTx era
   , EraGov era
   , Tx era ~ AlonzoTx era
   , Embed (EraRule "DELEGS" era) (AlonzoLEDGER era)

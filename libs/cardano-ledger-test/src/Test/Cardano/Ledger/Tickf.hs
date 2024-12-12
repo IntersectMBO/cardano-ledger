@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 -- | Test that modifications to the calculatePoolDistr function
 --   made when building the Tickf benchmarks behave the same as
@@ -10,7 +9,6 @@ module Test.Cardano.Ledger.Tickf (oldCalculatePoolDistr, calcPoolDistOldEqualsNe
 
 import Cardano.Ledger.Coin (Coin (Coin), CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..), sumAllStake)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
@@ -37,13 +35,13 @@ calcPoolDistOldEqualsNew =
             ( \snap ->
                 counterexample
                   "BAD"
-                  (oldCalculatePoolDistr @StandardCrypto (const True) snap === calculatePoolDistr snap)
+                  (oldCalculatePoolDistr (const True) snap === calculatePoolDistr snap)
             )
         )
     ]
 
 -- | The original version of calculatePoolDistr
-oldCalculatePoolDistr :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c -> PoolDistr c
+oldCalculatePoolDistr :: (KeyHash 'StakePool -> Bool) -> SnapShot -> PoolDistr
 oldCalculatePoolDistr includeHash (SnapShot stake delegs poolParams) =
   let Coin totalc = sumAllStake stake
       -- totalc could be zero (in particular when shrinking)

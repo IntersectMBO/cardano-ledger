@@ -22,7 +22,7 @@ import Cardano.Ledger.Api.State.Query (
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
@@ -34,7 +34,6 @@ import Cardano.Ledger.Conway.Governance (
   rsEnactStateL,
  )
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.Core
@@ -59,17 +58,16 @@ spec :: Spec
 spec = do
   describe "GetFilteredDelegationsAndRewardAccounts" $ do
     prop "filterStakePoolDelegsAndRewards same as getFilteredDelegationsAndRewardAccounts" $
-      forAll genValidUMapWithCreds $ \(umap :: UMap StandardCrypto, creds) ->
+      forAll genValidUMapWithCreds $ \(umap :: UMap, creds) ->
         filterStakePoolDelegsAndRewards umap creds
           `shouldBe` getFilteredDelegationsAndRewardAccounts umap creds
 
   describe "GetCommitteeMembersState" $ do
-    committeeMembersStateSpec @Conway
+    committeeMembersStateSpec @ConwayEra
 
 committeeMembersStateSpec ::
   forall era.
   ( ConwayEraGov era
-  , EraTxOut era
   , Default (EpochState era)
   , Default (StashedAVVMAddresses era)
   , GovState era ~ ConwayGovState era
@@ -256,8 +254,8 @@ propActiveAuthorized nes = do
 propFilters ::
   forall era.
   ConwayEraGov era =>
-  Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
-  Set (Credential 'HotCommitteeRole (EraCrypto era)) ->
+  Set (Credential 'ColdCommitteeRole) ->
+  Set (Credential 'HotCommitteeRole) ->
   Set MemberStatus ->
   NewEpochState era ->
   Expectation
@@ -350,13 +348,11 @@ propNoExpiration nes =
 
 genCommittee ::
   forall era.
-  Era era =>
   Gen (Maybe (Committee era))
 genCommittee = frequency [(1, pure Nothing), (9, Just <$> genCommittee' arbitrary)]
 
 genRelevantCommitteeState ::
   forall era.
-  EraTxOut era =>
   Maybe (Committee era) ->
   Maybe (Committee era) ->
   Gen (CommitteeState era)
@@ -370,13 +366,12 @@ genRelevantCommitteeState maybeCm maybeNextCm = do
 
 genNextCommittee ::
   forall era.
-  EraTxOut era =>
   Maybe (Committee era) ->
   Gen (Maybe (Committee era))
 genNextCommittee maybeCm =
   oneof [pure Nothing, Just <$> genCommittee' (genMembersRetaining maybeCm)]
 
-genCommittee' :: Gen [Credential 'ColdCommitteeRole (EraCrypto era)] -> Gen (Committee era)
+genCommittee' :: Gen [Credential 'ColdCommitteeRole] -> Gen (Committee era)
 genCommittee' genCreds = do
   creds <- genCreds
   m <- zip creds <$> listOf (EpochNo <$> chooseBoundedIntegral (0, 20))
@@ -384,10 +379,9 @@ genCommittee' genCreds = do
 
 genRelevantColdCredsFilter ::
   forall era.
-  EraTxOut era =>
   Maybe (Committee era) ->
   CommitteeState era ->
-  Gen (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+  Gen (Set.Set (Credential 'ColdCommitteeRole))
 genRelevantColdCredsFilter maybeCm (CommitteeState comStateMembers) = do
   creds <-
     (++)
@@ -397,9 +391,8 @@ genRelevantColdCredsFilter maybeCm (CommitteeState comStateMembers) = do
 
 genRelevantHotCredsFilter ::
   forall era.
-  EraTxOut era =>
   CommitteeState era ->
-  Gen (Set.Set (Credential 'HotCommitteeRole (EraCrypto era)))
+  Gen (Set.Set (Credential 'HotCommitteeRole))
 genRelevantHotCredsFilter (CommitteeState comStateMembers) =
   Set.fromList
     <$> genRetaining
@@ -407,9 +400,8 @@ genRelevantHotCredsFilter (CommitteeState comStateMembers) =
 
 genMembersRetaining ::
   forall era.
-  EraTxOut era =>
   Maybe (Committee era) ->
-  Gen [Credential 'ColdCommitteeRole (EraCrypto era)]
+  Gen [Credential 'ColdCommitteeRole]
 genMembersRetaining maybeCm =
   genRetaining $ Map.keys $ foldMap' committeeMembers maybeCm
 
@@ -422,10 +414,10 @@ genRetaining ret = do
 withCommitteeInfo ::
   ConwayEraGov era =>
   NewEpochState era ->
-  ( Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo -> -- current committee members
+  ( Map.Map (Credential 'ColdCommitteeRole) EpochNo -> -- current committee members
     CommitteeState era ->
-    Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo -> -- next epoch committee members
-    CommitteeMembersState (EraCrypto era) ->
+    Map.Map (Credential 'ColdCommitteeRole) EpochNo -> -- next epoch committee members
+    CommitteeMembersState ->
     Expectation
   ) ->
   Expectation
@@ -438,9 +430,9 @@ committeeInfo ::
   forall era.
   ConwayEraGov era =>
   NewEpochState era ->
-  ( Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
+  ( Map.Map (Credential 'ColdCommitteeRole) EpochNo
   , CommitteeState era
-  , Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
+  , Map.Map (Credential 'ColdCommitteeRole) EpochNo
   )
 committeeInfo nes =
   let ledgerState = nes ^. nesEpochStateL . esLStateL
@@ -456,7 +448,7 @@ queryCommitteeMembersStateNoFilters ::
   forall era.
   ConwayEraGov era =>
   NewEpochState era ->
-  CommitteeMembersState (EraCrypto era)
+  CommitteeMembersState
 queryCommitteeMembersStateNoFilters =
   queryCommitteeMembersState @era
     Set.empty

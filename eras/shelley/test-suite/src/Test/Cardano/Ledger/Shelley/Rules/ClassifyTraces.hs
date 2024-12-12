@@ -61,6 +61,7 @@ import Data.Semigroup (Sum (..))
 import Data.Sequence.Strict (StrictSeq)
 import Lens.Micro
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
@@ -129,7 +130,7 @@ relevantCasesAreCoveredForTrace ::
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs :: Block (BHeader (EraCrypto era)) era -> [Tx era]
+  let blockTxs :: Block (BHeader MockCrypto) era -> [Tx era]
       blockTxs (UnserialisedBlock _ txSeq) = toList (fromTxSeq @era txSeq)
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
@@ -403,7 +404,7 @@ onlyValidChainSignalsAreGenerated =
     genesisChainSt = Just (mkGenesisChainState (genEnv p defaultConstants))
 
 -- | Counts the epochs spanned by this trace
-epochsInTrace :: forall era. Era era => [Block (BHeader (EraCrypto era)) era] -> Int
+epochsInTrace :: forall era. [Block (BHeader MockCrypto) era] -> Int
 epochsInTrace bs'
   | Just bs <- nonEmpty bs' =
       let

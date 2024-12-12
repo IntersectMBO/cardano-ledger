@@ -9,6 +9,6 @@ import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
 
-type instance EraRuleFailure "POOL" (BabbageEra c) = ShelleyPoolPredFailure (BabbageEra c)
+type instance EraRuleFailure "POOL" BabbageEra = ShelleyPoolPredFailure BabbageEra
 
-instance InjectRuleFailure "POOL" ShelleyPoolPredFailure (BabbageEra c)
+instance InjectRuleFailure "POOL" ShelleyPoolPredFailure BabbageEra

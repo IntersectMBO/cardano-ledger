@@ -21,8 +21,6 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   maxRefScriptSizePerTx,
 ) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
-import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (
@@ -89,7 +87,6 @@ import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
-import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -145,9 +142,9 @@ data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
   | ConwayCertsFailure (PredicateFailure (EraRule "CERTS" era))
   | ConwayGovFailure (PredicateFailure (EraRule "GOV" era))
-  | ConwayWdrlNotDelegatedToDRep (NonEmpty (KeyHash 'Staking (EraCrypto era)))
-  | ConwayTreasuryValueMismatch !(Mismatch 'RelEQ Coin) -- The serialisation order is in reverse
-  | ConwayTxRefScriptsSizeTooBig !(Mismatch 'RelLTEQ Int)
+  | ConwayWdrlNotDelegatedToDRep (NonEmpty (KeyHash 'Staking))
+  | ConwayTreasuryValueMismatch (Mismatch 'RelEQ Coin) -- The serialisation order is in reverse
+  | ConwayTxRefScriptsSizeTooBig (Mismatch 'RelLTEQ Int)
   | ConwayMempoolFailure Text
   deriving (Generic)
 
@@ -157,64 +154,64 @@ data ConwayLedgerPredFailure era
 maxRefScriptSizePerTx :: Int
 maxRefScriptSizePerTx = 200 * 1024 -- 200KiB
 
-type instance EraRuleFailure "LEDGER" (ConwayEra c) = ConwayLedgerPredFailure (ConwayEra c)
+type instance EraRuleFailure "LEDGER" ConwayEra = ConwayLedgerPredFailure ConwayEra
 
-type instance EraRuleEvent "LEDGER" (ConwayEra c) = ConwayLedgerEvent (ConwayEra c)
+type instance EraRuleEvent "LEDGER" ConwayEra = ConwayLedgerEvent ConwayEra
 
-instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure (ConwayEra c)
+instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure ConwayEra
 
-instance InjectRuleFailure "LEDGER" ConwayUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ConwayUtxowPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure
 
-instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ConwayUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ConwayUtxoPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" BabbageUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" BabbageUtxoPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ConwayUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ConwayUtxosPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" AllegraUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" AllegraUtxoPredFailure ConwayEra where
   injectFailure = ConwayUtxowFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ConwayCertsPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ConwayCertsPredFailure ConwayEra where
   injectFailure = ConwayCertsFailure
 
-instance InjectRuleFailure "LEDGER" ConwayCertPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ConwayCertPredFailure ConwayEra where
   injectFailure = ConwayCertsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ConwayDelegPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ConwayDelegPredFailure ConwayEra where
   injectFailure = ConwayCertsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure ConwayEra where
   injectFailure = ConwayCertsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ConwayGovCertPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ConwayGovCertPredFailure ConwayEra where
   injectFailure = ConwayCertsFailure . injectFailure
 
-instance InjectRuleFailure "LEDGER" ConwayGovPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ConwayGovPredFailure ConwayEra where
   injectFailure = ConwayGovFailure
 
-instance InjectRuleFailure "LEDGER" ConwayMempoolPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ConwayMempoolPredFailure ConwayEra where
   injectFailure (ConwayMempoolPredFailure t) = ConwayMempoolFailure t
 
 deriving instance
@@ -491,8 +488,7 @@ ledgerTransition = do
   pure $ LedgerState utxoState'' certStateAfterCERTS
 
 instance
-  ( Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , BaseM (ConwayUTXOW era) ~ ShelleyBase
+  ( BaseM (ConwayUTXOW era) ~ ShelleyBase
   , AlonzoEraTx era
   , EraUTxO era
   , BabbageEraTxBody era

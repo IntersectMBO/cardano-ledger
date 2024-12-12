@@ -6,7 +6,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (EraIndependentData, ScriptHash)
 import Cardano.Ledger.Keys
@@ -33,16 +32,16 @@ spec = do
     roundTripCborSpec @Port
     roundTripCborSpec @ActiveSlotCoeff
     roundTripCborSpec @Network
-    roundTripCborSpec @(BlocksMade StandardCrypto)
+    roundTripCborSpec @BlocksMade
     roundTripCborSpec @TxIx
     roundTripCborSpec @CertIx
-    roundTripCborSpec @(Anchor StandardCrypto)
-    roundTripAnnCborSpec @(BootstrapWitness StandardCrypto)
-    roundTripCborSpec @(TxId StandardCrypto)
-    roundTripCborSpec @(GenDelegPair StandardCrypto)
-    roundTripCborSpec @(GenDelegs StandardCrypto)
-    roundTripCborSpec @(DRepState StandardCrypto)
-    roundTripCborSpec @(DRep StandardCrypto)
+    roundTripCborSpec @Anchor
+    roundTripAnnCborSpec @BootstrapWitness
+    roundTripCborSpec @TxId
+    roundTripCborSpec @GenDelegPair
+    roundTripCborSpec @GenDelegs
+    roundTripCborSpec @DRepState
+    roundTripCborSpec @DRep
     roundTripCborSpec @RDPair
-    roundTripCborSpec @(ScriptHash StandardCrypto)
-    roundTripCborSpec @(SafeHash StandardCrypto EraIndependentData)
+    roundTripCborSpec @ScriptHash
+    roundTripCborSpec @(SafeHash EraIndependentData)

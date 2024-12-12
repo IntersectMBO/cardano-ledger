@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-conway
-version: 1.18.0.0
+version: 1.19.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -91,12 +91,12 @@ library
     base >=4.14 && <5,
     cardano-crypto-class,
     cardano-data >=1.2.3,
-    cardano-ledger-allegra ^>=1.6.1,
-    cardano-ledger-alonzo ^>=1.12,
-    cardano-ledger-babbage ^>=1.10.1,
+    cardano-ledger-allegra ^>=1.7,
+    cardano-ledger-alonzo ^>=1.13,
+    cardano-ledger-babbage ^>=1.11,
     cardano-ledger-binary ^>=1.6,
     cardano-ledger-core ^>=1.17,
-    cardano-ledger-mary ^>=1.7,
+    cardano-ledger-mary ^>=1.8,
     cardano-ledger-shelley ^>=1.15,
     cardano-slotting,
     cardano-strict-containers,
@@ -157,7 +157,6 @@ library testlib
     FailT,
     base,
     bytestring,
-    cardano-crypto-class,
     cardano-data:{cardano-data, testlib},
     cardano-ledger-allegra,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},

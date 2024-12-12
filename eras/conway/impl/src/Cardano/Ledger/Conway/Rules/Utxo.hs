@@ -85,7 +85,7 @@ data ConwayUtxoPredFailure era
     UtxosFailure (PredicateFailure (EraRule "UTXOS" era))
   | -- | The bad transaction inputs
     BadInputsUTxO
-      !(Set (TxIn (EraCrypto era)))
+      !(Set TxIn)
   | OutsideValidityIntervalUTxO
       -- | transaction's validity interval
       !ValidityInterval
@@ -103,12 +103,12 @@ data ConwayUtxoPredFailure era
       -- | the expected network id
       !Network
       -- | the set of addresses with incorrect network IDs
-      !(Set (Addr (EraCrypto era)))
+      !(Set Addr)
   | WrongNetworkWithdrawal
       -- | the expected network id
       !Network
       -- | the set of reward addresses with incorrect network IDs
-      !(Set (RewardAccount (EraCrypto era)))
+      !(Set RewardAccount)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
       ![TxOut era]
@@ -152,33 +152,33 @@ data ConwayUtxoPredFailure era
       ![(TxOut era, Coin)]
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs
-      !(NonEmpty (TxIn (EraCrypto era)))
+      !(NonEmpty TxIn)
   deriving (Generic)
 
-type instance EraRuleFailure "UTXO" (ConwayEra c) = ConwayUtxoPredFailure (ConwayEra c)
+type instance EraRuleFailure "UTXO" ConwayEra = ConwayUtxoPredFailure ConwayEra
 
-type instance EraRuleEvent "UTXO" (ConwayEra c) = AlonzoUtxoEvent (ConwayEra c)
+type instance EraRuleEvent "UTXO" ConwayEra = AlonzoUtxoEvent ConwayEra
 
-instance InjectRuleFailure "UTXO" ConwayUtxoPredFailure (ConwayEra c)
+instance InjectRuleFailure "UTXO" ConwayUtxoPredFailure ConwayEra
 
-instance InjectRuleFailure "UTXO" BabbageUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXO" BabbageUtxoPredFailure ConwayEra where
   injectFailure = babbageToConwayUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" AlonzoUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXO" AlonzoUtxoPredFailure ConwayEra where
   injectFailure = alonzoToConwayUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure ConwayEra where
   injectFailure =
     allegraToConwayUtxoPredFailure
       . shelleyToAllegraUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure ConwayEra where
   injectFailure = allegraToConwayUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure ConwayEra where
   injectFailure = UtxosFailure
 
-instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure ConwayEra where
   injectFailure =
     alonzoToConwayUtxoPredFailure
       . Alonzo.UtxosFailure
@@ -190,7 +190,7 @@ deriving instance
   , Show (PredicateFailure (EraRule "UTXOS" era))
   , Show (TxOut era)
   , Show (Script era)
-  , Show (TxIn (EraCrypto era))
+  , Show TxIn
   ) =>
   Show (ConwayUtxoPredFailure era)
 
@@ -200,7 +200,7 @@ deriving instance
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Eq (TxOut era)
   , Eq (Script era)
-  , Eq (TxIn (EraCrypto era))
+  , Eq TxIn
   ) =>
   Eq (ConwayUtxoPredFailure era)
 

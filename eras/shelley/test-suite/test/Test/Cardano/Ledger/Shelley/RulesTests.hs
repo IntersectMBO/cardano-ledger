@@ -18,7 +18,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashScript)
 import Cardano.Ledger.Credential (pattern ScriptHashObj)
 import Cardano.Ledger.Keys (asWitness, hashKey)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -40,7 +40,6 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Examples (testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Examples.EmptyBlock (exEmptyBlock)
@@ -125,7 +124,6 @@ testAliceSignsAlone =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         (Withdrawals Map.empty)
@@ -139,13 +137,12 @@ testAliceDoesntSign =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay, asWitness Cast.dariaPay]
-    wits = Set.singleton $ hashScript @C aliceOnly
+    wits = Set.singleton $ hashScript @ShelleyEra aliceOnly
 
 testEverybodySigns :: Assertion
 testEverybodySigns =
@@ -153,7 +150,6 @@ testEverybodySigns =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         (Withdrawals Map.empty)
@@ -171,7 +167,6 @@ testAliceOrBob =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOrBob, Coin 11000)]
         [aliceOrBob]
         (Withdrawals Map.empty)
@@ -185,7 +180,6 @@ testAliceOrBob' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOrBob, Coin 11000)]
         [aliceOrBob]
         (Withdrawals Map.empty)
@@ -199,7 +193,6 @@ testAliceAndBob =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
         (Withdrawals Map.empty)
@@ -213,13 +206,12 @@ testAliceAndBob' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay]
-    wits = Set.singleton $ hashScript @C aliceAndBob
+    wits = Set.singleton $ hashScript @ShelleyEra aliceAndBob
 
 testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
@@ -227,13 +219,12 @@ testAliceAndBob'' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBob, Coin 11000)]
         [aliceAndBob]
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay]
-    wits = Set.singleton $ hashScript @C aliceAndBob
+    wits = Set.singleton $ hashScript @ShelleyEra aliceAndBob
 
 testAliceAndBobOrCarl :: Assertion
 testAliceAndBobOrCarl =
@@ -241,7 +232,6 @@ testAliceAndBobOrCarl =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBobOrCarl, Coin 11000)]
         [aliceAndBobOrCarl]
         (Withdrawals Map.empty)
@@ -255,7 +245,6 @@ testAliceAndBobOrCarl' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBobOrCarl, Coin 11000)]
         [aliceAndBobOrCarl]
         (Withdrawals Map.empty)
@@ -269,7 +258,6 @@ testAliceAndBobOrCarlAndDaria =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBobOrCarlAndDaria, Coin 11000)]
         [aliceAndBobOrCarlAndDaria]
         (Withdrawals Map.empty)
@@ -283,7 +271,6 @@ testAliceAndBobOrCarlAndDaria' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBobOrCarlAndDaria, Coin 11000)]
         [aliceAndBobOrCarlAndDaria]
         (Withdrawals Map.empty)
@@ -297,7 +284,6 @@ testAliceAndBobOrCarlOrDaria =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
         (Withdrawals Map.empty)
@@ -311,7 +297,6 @@ testAliceAndBobOrCarlOrDaria' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
         (Withdrawals Map.empty)
@@ -325,7 +310,6 @@ testAliceAndBobOrCarlOrDaria'' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBobOrCarlOrDaria, Coin 11000)]
         [aliceAndBobOrCarlOrDaria]
         (Withdrawals Map.empty)
@@ -341,7 +325,6 @@ testTwoScripts =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [ (aliceOrBob, Coin 10000)
         , (aliceAndBobOrCarl, Coin 1000)
         ]
@@ -359,7 +342,6 @@ testTwoScripts' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [ (aliceAndBob, Coin 10000)
         , (aliceAndBobOrCarl, Coin 1000)
         ]
@@ -369,7 +351,7 @@ testTwoScripts' =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay]
-    wits = Set.singleton $ hashScript @C aliceAndBob
+    wits = Set.singleton $ hashScript @ShelleyEra aliceAndBob
 
 -- script and skey locked
 
@@ -379,7 +361,6 @@ testScriptAndSKey =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBob, Coin 10000)]
         [aliceAndBob]
         (Withdrawals Map.empty)
@@ -393,7 +374,6 @@ testScriptAndSKey' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOrBob, Coin 10000)]
         [aliceOrBob]
         (Withdrawals Map.empty)
@@ -407,7 +387,6 @@ testScriptAndSKey'' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOrBob, Coin 10000)]
         [aliceOrBob]
         (Withdrawals Map.empty)
@@ -421,7 +400,6 @@ testScriptAndSKey''' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceAndBobOrCarl, Coin 10000)]
         [aliceAndBobOrCarl]
         (Withdrawals Map.empty)
@@ -437,14 +415,13 @@ testRwdAliceSignsAlone =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         ( Withdrawals $
             Map.singleton
               ( RewardAccount
                   Testnet
-                  (ScriptHashObj $ hashScript @C aliceOnly)
+                  (ScriptHashObj $ hashScript @ShelleyEra aliceOnly)
               )
               (Coin 1000)
         )
@@ -458,7 +435,6 @@ testRwdAliceSignsAlone' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly, bobOnly]
         ( Withdrawals $
@@ -466,14 +442,14 @@ testRwdAliceSignsAlone' =
               ( RewardAccount
                   Testnet
                   ( ScriptHashObj $
-                      hashScript @C bobOnly
+                      hashScript @ShelleyEra bobOnly
                   )
               )
               (Coin 1000)
         )
         (Coin 0)
         [asWitness Cast.alicePay]
-    wits = Set.singleton $ hashScript @C bobOnly
+    wits = Set.singleton $ hashScript @ShelleyEra bobOnly
 
 testRwdAliceSignsAlone'' :: Assertion
 testRwdAliceSignsAlone'' =
@@ -481,7 +457,6 @@ testRwdAliceSignsAlone'' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly, bobOnly]
         ( Withdrawals $
@@ -489,7 +464,7 @@ testRwdAliceSignsAlone'' =
               ( RewardAccount
                   Testnet
                   ( ScriptHashObj $
-                      hashScript @C bobOnly
+                      hashScript @ShelleyEra bobOnly
                   )
               )
               (Coin 1000)
@@ -504,17 +479,16 @@ testRwdAliceSignsAlone''' =
   where
     utxoSt' =
       applyTxWithScript
-        @C_Crypto
         [(aliceOnly, Coin 11000)]
         [aliceOnly]
         ( Withdrawals $
             Map.singleton
-              (RewardAccount Testnet (ScriptHashObj $ hashScript @C bobOnly))
+              (RewardAccount Testnet (ScriptHashObj $ hashScript @ShelleyEra bobOnly))
               (Coin 1000)
         )
         (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
-    wits = Set.singleton $ hashScript @C bobOnly
+    wits = Set.singleton $ hashScript @ShelleyEra bobOnly
 
 -- | The reward aggregation bug described in the Shelley ledger spec in
 -- section 17.4 (in the Errata) resulted in needing to use 'aggregatedRewards' to change
@@ -524,7 +498,7 @@ testRwdAliceSignsAlone''' =
 -- property is not enforced in the types. For this reason, the property test
 -- 'propTickfPerservesLedgerView' removes these empty sets from an otherwise arbitrary
 -- 'NewEpochState'.
-filterEmptyRewards :: NewEpochState Shelley -> NewEpochState Shelley
+filterEmptyRewards :: NewEpochState ShelleyEra -> NewEpochState ShelleyEra
 filterEmptyRewards (NewEpochState el bprev bcur es ru pd stash) =
   NewEpochState el bprev bcur es ru' pd stash
   where
@@ -535,7 +509,7 @@ filterEmptyRewards (NewEpochState el bprev bcur es ru pd stash) =
       SJust (Complete rewardUpdate) ->
         SJust . Complete $ rewardUpdate {rs = removeEmptyRewards (rs rewardUpdate)}
 
-setDepositsToObligation :: NewEpochState Shelley -> NewEpochState Shelley
+setDepositsToObligation :: NewEpochState ShelleyEra -> NewEpochState ShelleyEra
 setDepositsToObligation nes = nes {nesEs = es {esLState = ls {lsUTxOState = utxoState}}}
   where
     es = nesEs nes
@@ -552,13 +526,13 @@ setDepositsToObligation nes = nes {nesEs = es {esLState = ls {lsUTxOState = utxo
 -- TICKF is used by the consensus layer to get a ledger view in a computationally
 -- cheaper way than using the TICK rule.
 -- Therefore TICKF and TICK need to compute the same ledger view.
-propTickfPerservesLedgerView :: NewEpochState Shelley -> Property
+propTickfPerservesLedgerView :: NewEpochState ShelleyEra -> Property
 propTickfPerservesLedgerView nes =
   let (EpochNo e) = nesEL nes
       slot = slotFromEpoch (EpochNo $ e + 1)
       nes' = setDepositsToObligation (filterEmptyRewards nes)
-      tickNes = runShelleyBase $ applySTSTest @(ShelleyTICK Shelley) (TRC ((), nes', slot))
-      tickFNes = runShelleyBase $ applySTSTest @(ShelleyTICKF Shelley) (TRC ((), nes', slot))
+      tickNes = runShelleyBase $ applySTSTest @(ShelleyTICK ShelleyEra) (TRC ((), nes', slot))
+      tickFNes = runShelleyBase $ applySTSTest @(ShelleyTICKF ShelleyEra) (TRC ((), nes', slot))
    in fromMaybe discard $ do
         Right tickNes' <- pure tickNes
         Right tickFNes' <- pure tickFNes

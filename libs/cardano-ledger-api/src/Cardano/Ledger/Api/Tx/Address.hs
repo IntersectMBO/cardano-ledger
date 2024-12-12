@@ -31,7 +31,6 @@ module Cardano.Ledger.Api.Tx.Address (
 where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Crypto
 import Control.Applicative ((<|>))
 import Control.Monad.Trans.Fail (runFail, runFailLast)
 import Control.Monad.Trans.State.Strict (evalStateT, get)
@@ -40,29 +39,28 @@ import Data.ByteString.Short (ShortByteString)
 
 -- | Same as `decodeAddrShort`, but produces an `Either` result
 decodeAddrShortEither ::
-  Crypto c =>
   ShortByteString ->
-  Either String (Addr c)
+  Either String Addr
 decodeAddrShortEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
 {-# INLINE decodeAddrShortEither #-}
 
 -- | Same as `decodeAddr`, but works on `ShortByteString`
 decodeAddrShort ::
-  (Crypto c, MonadFail m) =>
+  MonadFail m =>
   ShortByteString ->
-  m (Addr c)
+  m Addr
 decodeAddrShort sbs = evalStateT (decodeAddrStateT sbs) 0
 {-# INLINE decodeAddrShort #-}
 
 -- | Decoded Address.
-data DecAddr c
+data DecAddr
   = -- | Address was decoded with no problems
-    DecAddr (Addr c)
+    DecAddr Addr
   | -- | Address was decoded, but it contains an invalid `Cardano.Ledger.Credential.Ptr`
-    DecAddrBadPtr (Addr c)
+    DecAddrBadPtr Addr
   | -- | Address was decoded, but not all of input was consumed
     DecAddrUnconsumed
-      (Addr c)
+      Addr
       -- | Left over bytes after consuming the input
       BS.ByteString
   deriving (Eq, Show)
@@ -75,9 +73,9 @@ data DecAddr c
 --
 -- @since 1.8.0
 decodeAddrLenient ::
-  (Crypto c, MonadFail m) =>
+  MonadFail m =>
   BS.ByteString ->
-  m (Addr c)
+  m Addr
 decodeAddrLenient bs = evalStateT (decodeAddrStateLenientT True True bs) 0
 
 -- | Decode an address and fail only for addresses that could have never been placed on
@@ -87,9 +85,8 @@ decodeAddrLenient bs = evalStateT (decodeAddrStateLenientT True True bs) 0
 --
 -- @since 1.8.0
 decodeAddrLenientEither ::
-  Crypto c =>
   BS.ByteString ->
-  Either String (DecAddr c)
+  Either String DecAddr
 decodeAddrLenientEither bs =
   runFailLast $
     (DecAddr <$> decodeAddr bs)

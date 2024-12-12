@@ -1,16 +1,6 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-
-module Test.Cardano.Ledger.Shelley.WitVKeys (
-  tests,
-)
-where
+module Test.Cardano.Ledger.Shelley.WitVKeys (tests) where
 
 import Cardano.Ledger.Core (EraIndependentTxBody)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Data.List (nub, sort)
 import Data.Set as Set (fromList, singleton)
@@ -22,18 +12,13 @@ import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
 import qualified Test.Tasty.QuickCheck as TQC
 
-tests ::
-  forall c.
-  (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
-  TestTree
-tests = testProperty "WitVKey does not brake containers due to invalid Ord" $ witVKeysProp @c
+tests :: TestTree
+tests = testProperty "WitVKey does not brake containers due to invalid Ord" witVKeysProp
 
 witVKeysProp ::
-  forall c.
-  (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
   RawSeed ->
-  SafeHash c EraIndependentTxBody ->
-  SafeHash c EraIndependentTxBody ->
+  SafeHash EraIndependentTxBody ->
+  SafeHash EraIndependentTxBody ->
   TQC.Property
 witVKeysProp seed h1 h2 =
   let kp = mkKeyPair' seed

@@ -37,11 +37,11 @@ import Lens.Micro ((^.))
 -- ===============================================
 -- Reporting Certificates
 
-showCred :: Credential x c -> String
+showCred :: Credential x -> String
 showCred (ScriptHashObj (ScriptHash x)) = show x
 showCred (KeyHashObj (KeyHash x)) = show x
 
-showKeyHash :: KeyHash c x -> String
+showKeyHash :: KeyHash x -> String
 showKeyHash (KeyHash hash) = take 10 (show hash)
 
 showCerts :: Show (TxCert era) => [TxCert era] -> String
@@ -86,14 +86,14 @@ showMap showKey showVal m = unlines (map showpair (Map.toList m))
 showListy :: Foldable t => (a -> String) -> t a -> String
 showListy showElem list = unlines (map showElem (toList list))
 
-showRewardAcct :: RewardAccount c -> [Char]
+showRewardAcct :: RewardAccount -> [Char]
 showRewardAcct (RewardAccount {raNetwork = network, raCredential = cred}) =
   show network ++ " " ++ showCred cred
 
-showWithdrawal :: Withdrawals c -> String
+showWithdrawal :: Withdrawals -> String
 showWithdrawal (Withdrawals m) = showMap (("   " ++) . showRewardAcct) show m
 
-showIR :: InstantaneousRewards c -> String
+showIR :: InstantaneousRewards -> String
 showIR (InstantaneousRewards m n x y) =
   unlines
     [ "IRReseves " ++ showMap (("   " ++) . take 10 . showCred) show m
@@ -102,5 +102,5 @@ showIR (InstantaneousRewards m n x y) =
     , "DeltaTreasury " ++ show y
     ]
 
-showSafeHash :: SafeHash c i -> String
+showSafeHash :: SafeHash i -> String
 showSafeHash x = take 12 (show (extractHash x))
