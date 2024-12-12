@@ -3,7 +3,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
@@ -26,30 +29,38 @@ import Data.Set (Set)
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
+import Test.Cardano.Ledger.Generic.PrettyCore
+import Test.QuickCheck hiding (forAll, witness)
 
+-- | There are no hard constraints on VState, other than witnessing, and delegatee conformance
+--   which must align with the conwayCertExecContextSpec
 vStateSpec ::
+  forall fn era.
   (IsConwayUniv fn, Era era) =>
-  Term fn (Set (Credential 'DRepRole (EraCrypto era))) ->
+  WitUniv era ->
+  Set (Credential 'DRepRole (EraCrypto era)) ->
   Specification fn (VState era)
-vStateSpec delegatees = constrained' $ \dreps _ _ -> dom_ dreps ==. delegatees
-
-{- There are no hard constraints on VState, but sometimes when something fails we want to
--- limit how big some of the fields of VState are. In that case one might use something
--- like this. Note that genHint limits the size, but does not require an exact size.
-vStateSpec :: IsConwayUniv fn => Specification fn (VState (ConwayEra StandardCrypto))
-vStateSpec = constrained' $ \ [var|_dreps|] [var|_commstate|] [var|dormantepochs|] ->
-  [ genHint 5 dreps -- assert $ sizeOf_ dreps >=. 1
-  , match commstate $ \ [var|committeestate|] -> genHint 5 committeestate
-  , assert $ dormantepochs >=. lit (EpochNo 4)
-  ]
--}
+vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
+  match vstate $ \ [var|dreps|] [var|committeestate|] [var|_numdormant|] ->
+    [ match committeestate $ \ [var|committeemap|] -> witness univ (dom_ committeemap)
+    , assert $ dom_ dreps ==. (lit delegatees)
+    , forAll dreps $ \ [var|pair|] ->
+        match pair $ \ [var|drep|] [var|drepstate|] ->
+          [ dependsOn drepstate drep
+          , witness univ drep
+          , match drepstate $
+              \_expiry _anchor _deposit [var|delegs|] -> witness univ delegs
+          ]
+    ]
 
 govCertSpec ::
-  IsConwayUniv fn =>
+  (IsConwayUniv fn, Era era, EraCrypto era ~ StandardCrypto) =>
+  WitUniv era ->
   ConwayGovCertEnv (ConwayEra StandardCrypto) ->
   CertState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayGovCert StandardCrypto)
-govCertSpec ConwayGovCertEnv {..} certState =
+govCertSpec univ ConwayGovCertEnv {..} certState =
   let vs = certVState certState
       reps = lit $ Map.keysSet $ vsDReps vs
       deposits = Map.map drepDeposit (vsDReps vs)
@@ -68,10 +79,10 @@ govCertSpec ConwayGovCertEnv {..} certState =
           -- The weights on each 'branchW' case try to make it likely
           -- that each branch is choosen with similar frequency
           -- ConwayRegDRep
-
           ( branchW 1 $ \ [var|keyreg|] [var|coinreg|] _ ->
               [ assert $ not_ $ member_ keyreg (dom_ (lit deposits))
               , assert $ coinreg ==. lit (cgcePParams ^. ppDRepDepositL)
+              , witness univ keyreg
               ]
           )
           -- ConwayUnRegDRep -- Commented out on purpose, to make conformance tests pass.
@@ -82,13 +93,22 @@ govCertSpec ConwayGovCertEnv {..} certState =
           (branchW 3 $ \_credUnreg _coinUnreg -> False)
           -- ConwayUpdateDRep
           ( branchW 1 $ \ [var|keyupdate|] _ ->
-              member_ keyupdate reps
+              [witness univ keyupdate, assert $ member_ keyupdate reps]
           )
           -- ConwayAuthCommitteeHotKey
-          ( branchW 1 $ \ [var|coldCredAuth|] _ -> [ccCertSpec coldCredAuth, notYetResigned commiteeStatus coldCredAuth]
+          ( branchW 1 $ \ [var|coldCredAuth|] [var|hotcred|] ->
+              [ ccCertSpec coldCredAuth
+              , notYetResigned commiteeStatus coldCredAuth
+              , witness univ coldCredAuth
+              , witness univ hotcred
+              ]
           )
           -- ConwayResignCommitteeColdKey
-          ( branchW 1 $ \ [var|coldCredResign|] _ -> [ccCertSpec coldCredResign, notYetResigned commiteeStatus coldCredResign]
+          ( branchW 1 $ \ [var|coldCredResign|] _ ->
+              [ witness univ coldCredResign
+              , ccCertSpec coldCredResign
+              , notYetResigned commiteeStatus coldCredResign
+              ]
           )
 
 -- | Operations for authenticating a HotKey, or resigning a ColdKey are illegal
@@ -115,9 +135,23 @@ notYetResigned committeeStatus coldcred =
   )
 
 govCertEnvSpec ::
+  forall fn.
   IsConwayUniv fn =>
+  WitUniv (ConwayEra StandardCrypto) ->
   Specification fn (ConwayGovCertEnv (ConwayEra StandardCrypto))
-govCertEnvSpec =
-  constrained $ \gce ->
-    match gce $ \pp _ _ _ ->
-      satisfies pp pparamsSpec
+govCertEnvSpec univ =
+  constrained $ \ [var|gce|] ->
+    match gce $ \ [var|pp|] _ [var|committee|] [var|proposalmap|] ->
+      [ satisfies pp pparamsSpec
+      , unsafeExists (\x -> [satisfies x (committeeWitness univ), assert $ committee ==. cSJust_ x])
+      , assert $ sizeOf_ (dom_ proposalmap) <=. lit 5
+      , assert $ sizeOf_ (dom_ proposalmap) >=. lit 1
+      , forAll (rng_ proposalmap) $ \x -> satisfies x (govActionStateWitness univ)
+      ]
+
+go10 :: IO ()
+go10 = do
+  univ <- generate $ genWitUniv @(ConwayEra StandardCrypto) 5
+  ans <- generate $ genFromSpec (govCertEnvSpec @ConwayFn univ)
+  putStrLn (show (prettyA ans))
+  putStrLn (show (prettyA univ))
