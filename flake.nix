@@ -81,7 +81,7 @@
 
           shell = {
             # Due to plutus-tx-plugin being a bit special, we need to augment the default package selection.
-            packages = ps: builtins.attrValues (nixpkgs.haskell-nix.haskellLib.selectLocalPackages ps) ++ [ps.plutus-tx-plugin];
+            packages = ps: builtins.attrValues (nixpkgs.haskell-nix.haskellLib.selectLocalPackages ps) ++ lib.optional (ps ? plutus-tx-plugin) ps.plutus-tx-plugin;
 
             # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
             shellHook = ''
