@@ -77,7 +77,7 @@ library
     cardano-data ^>=1.2,
     cardano-ledger-allegra ^>=1.6.1,
     cardano-ledger-binary >=1.4,
-    cardano-ledger-core >=1.16 && <1.17,
+    cardano-ledger-core >=1.17 && <1.18,
     cardano-ledger-shelley ^>=1.15,
     cardano-strict-containers,
     containers,

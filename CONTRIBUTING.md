@@ -3,10 +3,10 @@
 ## Roles and responsibilities
 
 The
-[@cardano-ledger](https://github.com/orgs/input-output-hk/teams/cardano-ledger)
+[@cardano-ledger](https://github.com/orgs/IntersectMBO/teams/cardano-ledger?query=membership%3Achild-team)
 group is responsible for
 helping with reviewing and merging pull requests, adjudicating technical (or other) disputes,
-releasing the ledger packages on [CHaP](https://github.com/input-output-hk/cardano-haskell-packages).
+releasing the ledger packages on [CHaP](https://github.com/IntersectMBO/cardano-haskell-packages).
 
 @hamishmack can help with issues regarding this repository's continuous integration and nix infrastructure.
 
@@ -43,21 +43,21 @@ See documentation on the adopted [release and versioning processes](./RELEASING.
 
 ### Releasing the ledger packages to CHaP
 
-Ledger packages are released to [CHaP](https://github.com/input-output-hk/cardano-haskell-packages).
+Ledger packages are released to [CHaP](https://github.com/IntersectMBO/cardano-haskell-packages).
 
-Also see the CHaP README for [instructions](https://github.com/input-output-hk/cardano-haskell-packages#-from-github).
+Also see the CHaP README for [instructions](https://github.com/IntersectMBO/cardano-haskell-packages#-from-github).
 
 ## Building
 
-See the [Readme](https://github.com/intersectmbo/cardano-ledger#building) for instructions on building.
+See the [Readme](https://github.com/IntersectMBO/cardano-ledger#building) for instructions on building.
 
-### GHC 9.2 transition
+### GHC 9.x transition
 
-We are transitioning to use GHC 9.2 rather than GHC 8.10.
-We need to retain 8.10 compatibility until we are sure that the Cardano node can switch over to 9.2 without any problems.
+We are transitioning to use GHC 9.x rather than GHC 8.10.
+We need to retain 8.10 compatibility until we are sure that the Cardano node can switch over to 9.8 without any problems.
 At that point we can drop it.
 
-The main `nix develop` shell will now give you a GHC 9.2 compiler, but you can get a GHC 8.10 shell by calling
+The main `nix develop` shell will now give you a GHC 9.8 compiler, but you can get a GHC 8.10 shell by calling
 ```
 nix develop .#ghc8107
 ```
@@ -67,7 +67,7 @@ nix develop .#ghc8107
 
 Our Haskell packages come from two package repositories:
 - Hackage
-- [CHaP](https://github.com/input-output-hk/cardano-haskell-packages) (which is essentially another Hackage)
+- [CHaP](https://github.com/IntersectMBO/cardano-haskell-packages) (which is essentially another Hackage)
 
 The "index state" of each repository is pinned to a particular time in `cabal.project`.
 This tells Cabal to treat the repository "as if" it was the specified time, ensuring reproducibility.
@@ -80,6 +80,11 @@ Note that `cabal` itself keeps track of what index states it knows about, so whe
 The Nix code which builds our packages also cares about the index state.
 This is represented by inputs managed by `nix flake`:
 You can update these by running:
+- `nix flake update haskellNix/hackage` for Hackage
+- `nix flake update CHaP` for CHaP (Cardano Haskell Packages)
+
+or this, if you are on an older `nix flake`:
+
 - `nix flake lock --update-input haskellNix/hackage` for Hackage
 - `nix flake lock --update-input CHaP` for CHaP (Cardano Haskell Packages)
 
@@ -91,10 +96,10 @@ error: Unknown index-state 2021-08-08T00:00:00Z, the latest index-state I know a
 ### Use of `source-repository-package`s
 
 We *can* use Cabal's `source-repository-package` mechanism to pull in un-released package versions.
-However, we should try and avoid this.
+However, we must avoid this for dependencies of packages that are subject to release process.
 In particular, we should not release our packages to CHaP while we depend on a `source-repository-package`.
 
-If we are stuck in a situation where we need a long-running fork of a package, we should release it to CHaP instead (see the [CHaP README](https://github.com/input-output-hk/cardano-haskell-packages) for more).
+If we are stuck in a situation where we need a long-running fork of a package, we should release it to CHaP instead (see the [CHaP README](https://github.com/IntersectMBO/cardano-haskell-packages) for more).
 
 If you do add a `source-repository-package`, you need to provide a `--sha256` comment in `cabal.project` so that Nix knows the hash of the content.
 
