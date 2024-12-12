@@ -1060,12 +1060,7 @@ vstateT =
     :$ Lensed numDormantEpochs vsNumDormantEpochsL
 
 committeeL ::
-  Lens'
-    ( Map
-        (Credential 'ColdCommitteeRole)
-        (CommitteeAuthorization)
-    )
-    (CommitteeState era)
+  Lens' (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization) (CommitteeState era)
 committeeL = lens CommitteeState (\_ (CommitteeState x) -> x)
 
 -- | Target for PState
