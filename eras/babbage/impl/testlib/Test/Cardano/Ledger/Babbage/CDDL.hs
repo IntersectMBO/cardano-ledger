@@ -144,7 +144,7 @@ transaction_body =
         ]
 
 -- TODO: Allow for adding to the comments of a Rule in order to not have to
--- redifine them in the subsequent eras.
+-- redefine them in the subsequent eras.
 script_data_hash :: Rule
 script_data_hash =
   comment
