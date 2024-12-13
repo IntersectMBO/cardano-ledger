@@ -226,7 +226,7 @@ data Language
   = PlutusV1
   | PlutusV2
   | PlutusV3
-  deriving (Eq, Generic, Show, Ord, Enum, Bounded, Ix)
+  deriving (Eq, Generic, Show, Ord, Enum, Bounded, Ix, Read)
 
 instance NoThunks Language
 

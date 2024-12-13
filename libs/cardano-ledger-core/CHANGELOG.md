@@ -2,6 +2,9 @@
 
 ## 1.16.0.0
 
+* Add `PlutusDebugOverrides` argument to `debugPlutus`
+* Add `PlutusDebugOverrides` data type
+* Add `Read` instance for `Language`
 * Add `toVRFVerKeyHash` and `fromVRFVerKeyHash`
 * Change lens type of `hkdNOptL`, `ppNOptL`, and `ppuNOptL` to `Word16`
 * Add `epochFromSlot`

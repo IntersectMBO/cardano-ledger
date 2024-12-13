@@ -231,6 +231,9 @@ cradle:
     - path: "libs/cardano-ledger-core/app/PlutusDebug.hs"
       component: "cardano-ledger-core:exe:plutus-debug"
 
+    - path: "libs/cardano-ledger-core/app/CLI.hs"
+      component: "cardano-ledger-core:exe:plutus-debug"
+
     - path: "libs/cardano-ledger-core/test"
       component: "cardano-ledger-core:test:tests"
 
