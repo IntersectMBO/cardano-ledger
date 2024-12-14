@@ -343,7 +343,7 @@ genBadPtr = Ptr <$> arbitrary <*> arbitrary <*> arbitrary
 instance Arbitrary (Credential r) where
   arbitrary =
     oneof
-      [ ScriptHashObj . ScriptHash <$> arbitrary
+      [ ScriptHashObj <$> arbitrary
       , KeyHashObj <$> arbitrary
       ]
 
