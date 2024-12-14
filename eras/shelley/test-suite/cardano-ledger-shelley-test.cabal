@@ -150,7 +150,7 @@ test-suite cardano-ledger-shelley-test
     -threaded
     -rtsopts
     -with-rtsopts=-N
-    "-with-rtsopts=-K4m -M250m"
+    "-with-rtsopts=-K4m -M300m"
 
   build-depends:
     QuickCheck,
