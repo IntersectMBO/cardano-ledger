@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.6.0.0
+
+* Remove `encodeSignKeyKES` and `decodeSignKeyKES`
+* Remove `EncCBOR` and `DecCBOR` instances for `SignKeyKES`
+
 ## 1.5.0.0
 
 * Remove deprecated `decodeAnnotator`, `decCBORMaybe`, `encCBORMaybe`, `sizedDecoder`, `encodePair`

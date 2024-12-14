@@ -17,7 +17,7 @@ class
   ( HashAlgorithm (HASH c)
   , HashAlgorithm (ADDRHASH c)
   , DSIGNAlgorithm (DSIGN c)
-  , KESAlgorithm (KES c)
+  , UnsoundPureKESAlgorithm (KES c)
   , VRFAlgorithm (VRF c)
   , ContextDSIGN (DSIGN c) ~ ()
   , ContextKES (KES c) ~ ()

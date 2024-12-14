@@ -17,7 +17,7 @@ import Cardano.Crypto.Hash.Keccak256 (Keccak256)
 import Cardano.Crypto.Hash.SHA256 (SHA256)
 import Cardano.Crypto.Hash.SHA3_256 (SHA3_256)
 import Cardano.Crypto.Hash.Short (ShortHash)
-import Cardano.Crypto.KES.Class (SigKES, SignKeyKES, VerKeyKES)
+import Cardano.Crypto.KES.Class (SigKES, VerKeyKES)
 import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
 import Cardano.Crypto.KES.CompactSum (
   CompactSum0KES,
@@ -173,73 +173,44 @@ spec = do
           roundTripSpec @(CertVRF MockVRF) cborTrip
       describe "KES" $ do
         describe "CompactSingle" $ do
-          roundTripSpec @(SignKeyKES (CompactSingleKES Ed25519DSIGN)) cborTrip
           roundTripSpec @(VerKeyKES (CompactSingleKES Ed25519DSIGN)) cborTrip
           roundTripSpec @(SigKES (CompactSingleKES Ed25519DSIGN)) cborTrip
         describe "CompactSum" $ do
-          roundTripSpec @(SignKeyKES (CompactSum0KES Ed25519DSIGN)) cborTrip
           roundTripSpec @(VerKeyKES (CompactSum0KES Ed25519DSIGN)) cborTrip
           roundTripSpec @(SigKES (CompactSum0KES Ed25519DSIGN)) cborTrip
-          roundTripSpec @(SignKeyKES (CompactSum1KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (CompactSum1KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (CompactSum1KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (CompactSum2KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (CompactSum2KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (CompactSum2KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (CompactSum3KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (CompactSum3KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (CompactSum3KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (CompactSum4KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (CompactSum4KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (CompactSum4KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (CompactSum5KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (CompactSum5KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (CompactSum5KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (CompactSum6KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (CompactSum6KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (CompactSum6KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (CompactSum7KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (CompactSum7KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (CompactSum7KES Ed25519DSIGN Blake2b_256)) cborTrip
         describe "Sum" $ do
-          roundTripSpec @(SignKeyKES (Sum0KES Ed25519DSIGN)) cborTrip
           roundTripSpec @(VerKeyKES (Sum0KES Ed25519DSIGN)) cborTrip
           roundTripSpec @(SigKES (Sum0KES Ed25519DSIGN)) cborTrip
-          roundTripSpec @(SignKeyKES (Sum1KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (Sum1KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (Sum1KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (Sum2KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (Sum2KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (Sum2KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (Sum3KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (Sum3KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (Sum3KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (Sum4KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (Sum4KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (Sum4KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (Sum5KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (Sum5KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (Sum5KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (Sum6KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (Sum6KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (Sum6KES Ed25519DSIGN Blake2b_256)) cborTrip
-          roundTripSpec @(SignKeyKES (Sum7KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(VerKeyKES (Sum7KES Ed25519DSIGN Blake2b_256)) cborTrip
           roundTripSpec @(SigKES (Sum7KES Ed25519DSIGN Blake2b_256)) cborTrip
         -- below we also test some tuple roundtripping as well as KES
         describe "Simple" $ do
-          roundTripSpec
-            @( SignKeyKES (SimpleKES Ed25519DSIGN 1)
-             , SignKeyKES (SimpleKES Ed25519DSIGN 2)
-             , SignKeyKES (SimpleKES Ed25519DSIGN 3)
-             , SignKeyKES (SimpleKES Ed25519DSIGN 4)
-             , SignKeyKES (SimpleKES Ed25519DSIGN 5)
-             , SignKeyKES (SimpleKES Ed25519DSIGN 6)
-             )
-            cborTrip
-          roundTripSpec
-            @(SignKeyKES (SimpleKES Ed25519DSIGN 7))
-            cborTrip
           roundTripSpec
             @( VerKeyKES (SimpleKES Ed25519DSIGN 1)
              , VerKeyKES (SimpleKES Ed25519DSIGN 2)
@@ -264,19 +235,18 @@ spec = do
              )
             cborTrip
           describe "Mock" $ do
-            roundTripSpec @(SignKeyKES (MockKES 7)) cborTrip
             roundTripSpec @(VerKeyKES (MockKES 7)) cborTrip
             roundTripSpec @(SigKES (MockKES 7)) cborTrip
-        describe "Hash" $ do
-          roundTripSpec
-            @( Hash Blake2b_224 ()
-             , Hash Blake2b_256 ()
-             , Hash SHA256 ()
-             , Hash SHA3_256 ()
-             , Hash Keccak256 ()
-             , Hash ShortHash ()
-             )
-            cborTrip
+      describe "Hash" $ do
+        roundTripSpec
+          @( Hash Blake2b_224 ()
+           , Hash Blake2b_256 ()
+           , Hash SHA256 ()
+           , Hash SHA3_256 ()
+           , Hash Keccak256 ()
+           , Hash ShortHash ()
+           )
+          cborTrip
   describe "EmbedTrip" $ do
     forM_ [shelleyProtVer .. maxBound] $ \v ->
       describe (show v) $ do

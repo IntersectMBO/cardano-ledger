@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Consensus where
 
 import Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash as Hash
+import Cardano.Crypto.KES as KES
 import Cardano.Crypto.Seed as Seed
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.AuxiliaryData
@@ -181,7 +182,7 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
     KeyPair vKeyCold _ = aikCold keys
 
     blockHeader :: BHeader (EraCrypto era)
-    blockHeader = BHeader blockHeaderBody (signedKES () 0 blockHeaderBody hotKey)
+    blockHeader = BHeader blockHeaderBody (unsoundPureSignedKES () 0 blockHeaderBody hotKey)
 
     blockHeaderBody :: BHBody (EraCrypto era)
     blockHeaderBody =
