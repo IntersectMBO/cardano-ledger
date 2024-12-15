@@ -60,12 +60,12 @@ instance
   ToExpr (ShelleyGovState era)
 
 -- TxCert
-instance ToExpr (GenesisDelegCert c)
+instance ToExpr GenesisDelegCert
 instance ToExpr MIRPot
-instance ToExpr (MIRTarget c)
-instance ToExpr (MIRCert c)
+instance ToExpr MIRTarget
+instance ToExpr MIRCert
 instance ToExpr (ShelleyTxCert era)
-instance ToExpr (ShelleyDelegCert c)
+instance ToExpr ShelleyDelegCert
 
 -- TxWits
 instance (Era era, ToExpr (Script era)) => ToExpr (ShelleyTxWits era)
@@ -101,7 +101,7 @@ instance ToExpr Likelihood
 
 instance ToExpr LogWeight
 
-instance ToExpr (NonMyopic c)
+instance ToExpr NonMyopic
 
 -- Tx
 instance
@@ -121,10 +121,10 @@ instance
 -- RewardUpdate
 
 -- | You really don't want to see what is inside this.
-instance ToExpr (PulsingRewUpdate c) where
+instance ToExpr PulsingRewUpdate where
   toExpr _ = App "PulsingRewUpdate..." []
 
-instance ToExpr (RewardUpdate c)
+instance ToExpr RewardUpdate
 
 -- LedgerState/Types
 instance ToExpr AccountState
@@ -156,7 +156,7 @@ instance
   ) =>
   ToExpr (UTxOState era)
 
-instance ToExpr (IncrementalStake c)
+instance ToExpr IncrementalStake
 
 -- Rules/Utxo
 instance
@@ -176,7 +176,7 @@ instance ToExpr (ShelleyDelegPredFailure era)
 instance
   ( Era era
   , ToExpr (PredicateFailure (EraRule "UTXO" era))
-  , ToExpr (AuxiliaryDataHash (EraCrypto era))
+  , ToExpr AuxiliaryDataHash
   ) =>
   ToExpr (ShelleyUtxowPredFailure era)
 
@@ -244,7 +244,7 @@ instance
 
 instance ToExpr RewardType
 
-instance ToExpr (Reward c)
+instance ToExpr Reward
 
 instance
   ( ToExpr (Event (EraRule "EPOCH" era))
@@ -266,7 +266,7 @@ instance ToExpr (SnapEvent era)
 
 instance ToExpr (ShelleyMirEvent era)
 
-instance ToExpr (RupdEvent era)
+instance ToExpr RupdEvent
 
 instance ToExpr (PParamsHKD Identity era) => ToExpr (UtxoEnv era)
 

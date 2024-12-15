@@ -26,10 +26,10 @@ import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
 
 -- | ShelleyLedgerExamples for Allegra era
-ledgerExamplesAllegra :: ShelleyLedgerExamples Allegra
+ledgerExamplesAllegra :: ShelleyLedgerExamples AllegraEra
 ledgerExamplesAllegra =
   defaultShelleyLedgerExamples
-    (mkWitnessesPreAlonzo (Proxy @Allegra))
+    (mkWitnessesPreAlonzo (Proxy @AllegraEra))
     id
     exampleCoin
     (exampleAllegraTxBody exampleCoin)
@@ -56,9 +56,9 @@ exampleAllegraTxBody value =
     & auxDataHashTxBodyL .~ SJust auxiliaryDataHash
   where
     -- Dummy hash to decouple from the auxiliary data in 'exampleTx'.
-    auxiliaryDataHash :: AuxiliaryDataHash (EraCrypto era)
+    auxiliaryDataHash :: AuxiliaryDataHash
     auxiliaryDataHash =
-      AuxiliaryDataHash $ mkDummySafeHash (Proxy @(EraCrypto era)) 30
+      AuxiliaryDataHash $ mkDummySafeHash 30
 
 exampleTimelock :: AllegraEraScript era => NativeScript era
 exampleTimelock =

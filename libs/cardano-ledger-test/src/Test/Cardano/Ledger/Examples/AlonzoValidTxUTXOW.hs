@@ -6,7 +6,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -104,7 +103,7 @@ alonzoUTXOWTests ::
   , HasTokens era
   , Reflect era
   , PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto,
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   Proof era ->
   TestTree
@@ -187,7 +186,6 @@ validatingTx ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -248,7 +246,6 @@ datumExample2 = Data (PV1.I 0)
 notValidatingTx ::
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -292,7 +289,6 @@ validatingWithCertTx ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
@@ -347,7 +343,6 @@ notValidatingWithCertTx ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
@@ -399,7 +394,6 @@ validatingWithWithdrawalTx ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -471,7 +465,6 @@ notValidatingTxWithWithdrawal ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -525,8 +518,7 @@ validatingWithMintTx ::
   ( Scriptic era
   , HasTokens era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   Proof era ->
   Tx era
@@ -542,7 +534,7 @@ validatingWithMintTx pf =
     ]
 
 validatingWithMintBody ::
-  (HasTokens era, EraTxBody era, Scriptic era, Value era ~ MaryValue (EraCrypto era)) =>
+  (HasTokens era, EraTxBody era, Scriptic era, Value era ~ MaryValue) =>
   Proof era ->
   TxBody era
 validatingWithMintBody pf =
@@ -559,14 +551,13 @@ validatingWithMintBody pf =
 validatingWithMintRedeemers :: Era era => Proof era -> Redeemers era
 validatingWithMintRedeemers pf = mkSingleRedeemer pf Minting (Data (PV1.I 42))
 
-multiAsset :: forall era. (Scriptic era, HasTokens era) => Proof era -> MultiAsset (EraCrypto era)
+multiAsset :: forall era. (Scriptic era, HasTokens era) => Proof era -> MultiAsset
 multiAsset pf = forge @era 1 (always 2 pf)
 
 validatingWithMintTxOut ::
   ( HasTokens era
-  , EraTxOut era
   , Scriptic era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   Proof era ->
   TxOut era
@@ -575,7 +566,7 @@ validatingWithMintTxOut pf =
 
 validatingWithMintState ::
   forall era.
-  (PostShelley era, EraTxBody era, HasTokens era, Value era ~ MaryValue (EraCrypto era), EraGov era) =>
+  (PostShelley era, EraTxBody era, HasTokens era, Value era ~ MaryValue, EraGov era) =>
   Proof era ->
   UTxOState era
 validatingWithMintState pf =
@@ -598,8 +589,7 @@ notValidatingWithMintTx ::
   ( Scriptic era
   , HasTokens era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   ) =>
   Proof era ->
   Tx era
@@ -645,8 +635,7 @@ validatingManyScriptsTx ::
   ( PostShelley era
   , HasTokens era
   , EraTxBody era
-  , GoodCrypto (EraCrypto era)
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
@@ -676,7 +665,7 @@ validatingManyScriptsBody ::
   ( HasTokens era
   , EraTxBody era
   , PostShelley era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
@@ -722,11 +711,11 @@ validatingManyScriptsRedeemers proof =
     ]
 
 validatingManyScriptsMint ::
-  forall era. (PostShelley era, HasTokens era) => Proof era -> MultiAsset (EraCrypto era)
+  forall era. (PostShelley era, HasTokens era) => Proof era -> MultiAsset
 validatingManyScriptsMint pf = forge @era 1 (always 2 pf) <> forge @era 1 (timelockScript 1 pf)
 
 validatingManyScriptsTxOut ::
-  (HasTokens era, EraTxOut era, PostShelley era, Value era ~ MaryValue (EraCrypto era)) =>
+  (HasTokens era, PostShelley era, Value era ~ MaryValue) =>
   Proof era ->
   TxOut era
 validatingManyScriptsTxOut pf =
@@ -741,7 +730,7 @@ validatingManyScriptsState ::
   ( EraTxBody era
   , PostShelley era
   , HasTokens era
-  , Value era ~ MaryValue (EraCrypto era)
+  , Value era ~ MaryValue
   , EraGov era
   , ShelleyEraTxCert era
   ) =>
@@ -772,7 +761,6 @@ validatingSupplimentaryDatumTx ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -831,7 +819,6 @@ validatingMultipleEqualCertsTx ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
@@ -901,7 +888,6 @@ validatingNonScriptOutWithDatumTx ::
   forall era.
   ( Scriptic era
   , EraTx era
-  , GoodCrypto (EraCrypto era)
   ) =>
   Proof era ->
   Tx era
@@ -977,7 +963,7 @@ expectedUTxO initUtxo ex idx = UTxO utxo
         Map.insert (TxIn (txIdTxBody txb) minBound) newOut (filteredUTxO (mkTxIxPartial idx))
       ExpectSuccessInvalid -> filteredUTxO (mkTxIxPartial idx)
       ExpectFailure -> filteredUTxO (mkTxIxPartial (10 + idx))
-    filteredUTxO :: TxIx -> Map.Map (TxIn (EraCrypto era)) (TxOut era)
+    filteredUTxO :: TxIx -> Map.Map TxIn (TxOut era)
     filteredUTxO x = Map.filterWithKey (\(TxIn _ i) _ -> i /= x) $ unUTxO initUtxo
 
 expectedUTxO' ::
@@ -1000,10 +986,10 @@ testU ::
   Assertion
 testU pf = testUTXOW (UTXOW pf) (initUTxO pf) (pp pf)
 
-scriptStakeCredFail :: Scriptic era => Proof era -> StakeCredential (EraCrypto era)
+scriptStakeCredFail :: Scriptic era => Proof era -> StakeCredential
 scriptStakeCredFail pf = ScriptHashObj (alwaysFailsHash 1 pf)
 
-scriptStakeCredSuceed :: Scriptic era => Proof era -> StakeCredential (EraCrypto era)
+scriptStakeCredSuceed :: Scriptic era => Proof era -> StakeCredential
 scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 
 -- ============================== PPARAMS ===============================

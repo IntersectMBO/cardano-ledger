@@ -8,7 +8,7 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledgers () where
 
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (EnactState)
 import Constrained (Specification (..))
 import qualified Lib as Agda
@@ -19,8 +19,8 @@ import Test.Cardano.Ledger.Conformance (
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (IsConwayUniv)
 
-instance IsConwayUniv fn => ExecSpecRule fn "LEDGERS" Conway where
-  type ExecContext fn "LEDGERS" Conway = EnactState Conway
+instance IsConwayUniv fn => ExecSpecRule fn "LEDGERS" ConwayEra where
+  type ExecContext fn "LEDGERS" ConwayEra = EnactState ConwayEra
 
   environmentSpec _ = TrueSpec
   stateSpec _ _ = TrueSpec

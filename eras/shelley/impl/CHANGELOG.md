@@ -1,5 +1,21 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.16.0.0
+
+* Deprecate `Shelley` type synonym
+* Deprecate `PPUpdateEnv`
+* Remove crypto parametrization from:
+  * `ShelleyEra`
+  * `ShelleyGenesisStaking`
+  * `ShelleyGenesis`
+  * `IncrementalStake`
+  * `NonMyopic`
+  * `RewardProvenancePool`, `RewardProvenance`
+  * `RewardAns`, `RewardUpdate`, `RewardSnapShot`, `FreeVars`, `RewardPulser`, `PulsingRewUpdate`
+  * `PulsingRewUpdate`, `PoolRewardInfo`
+  * `FromByronTranslationContext`
+  * `GenesisDelegCert`, `MIRTarget`, `MIRCert`, `ShelleyDelegCert`
+
 ## 1.15.0.0
 
 * Change param of `PoolRank.desirability` to `Word16`

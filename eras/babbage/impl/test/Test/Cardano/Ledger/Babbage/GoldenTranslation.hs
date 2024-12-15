@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Babbage.GoldenTranslation (
 )
 where
 
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Paths_cardano_ledger_babbage (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
 import Test.Cardano.Ledger.Babbage.Translation.TranslatableGen ()
@@ -33,4 +33,4 @@ spec =
       check "golden/translations.cbor"
 
 check :: String -> Assertion
-check file = assertTranslationResultsMatchGolden @Babbage (getDataFileName file)
+check file = assertTranslationResultsMatchGolden @BabbageEra (getDataFileName file)

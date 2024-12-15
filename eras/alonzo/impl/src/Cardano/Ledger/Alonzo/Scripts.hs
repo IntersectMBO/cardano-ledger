@@ -8,7 +8,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
@@ -90,7 +89,6 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.CostModels
@@ -189,21 +187,21 @@ class
     PlutusPurpose g era ->
     PlutusPurpose f era
 
-  mkSpendingPurpose :: f Word32 (TxIn (EraCrypto era)) -> PlutusPurpose f era
+  mkSpendingPurpose :: f Word32 TxIn -> PlutusPurpose f era
 
-  toSpendingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (TxIn (EraCrypto era)))
+  toSpendingPurpose :: PlutusPurpose f era -> Maybe (f Word32 TxIn)
 
-  mkMintingPurpose :: f Word32 (PolicyID (EraCrypto era)) -> PlutusPurpose f era
+  mkMintingPurpose :: f Word32 PolicyID -> PlutusPurpose f era
 
-  toMintingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (PolicyID (EraCrypto era)))
+  toMintingPurpose :: PlutusPurpose f era -> Maybe (f Word32 PolicyID)
 
   mkCertifyingPurpose :: f Word32 (TxCert era) -> PlutusPurpose f era
 
   toCertifyingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (TxCert era))
 
-  mkRewardingPurpose :: f Word32 (RewardAccount (EraCrypto era)) -> PlutusPurpose f era
+  mkRewardingPurpose :: f Word32 RewardAccount -> PlutusPurpose f era
 
-  toRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (RewardAccount (EraCrypto era)))
+  toRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 RewardAccount)
 
   upgradePlutusPurposeAsIx ::
     AlonzoEraScript (PreviousEra era) =>
@@ -290,10 +288,10 @@ toAsIx :: AsIxItem ix it -> AsIx ix it
 toAsIx (AsIxItem ix _) = AsIx ix
 
 data AlonzoPlutusPurpose f era
-  = AlonzoSpending !(f Word32 (TxIn (EraCrypto era)))
-  | AlonzoMinting !(f Word32 (PolicyID (EraCrypto era)))
+  = AlonzoSpending !(f Word32 TxIn)
+  | AlonzoMinting !(f Word32 PolicyID)
   | AlonzoCertifying !(f Word32 (TxCert era))
-  | AlonzoRewarding !(f Word32 (RewardAccount (EraCrypto era)))
+  | AlonzoRewarding !(f Word32 RewardAccount)
   deriving (Generic)
 
 deriving instance Eq (AlonzoPlutusPurpose AsIx era)
@@ -389,13 +387,13 @@ instance (Era era, DecCBOR (TxCert era)) => DecCBOR (AlonzoPlutusPurpose AsItem 
       dec n = Invalid n
 
 pattern SpendingPurpose ::
-  AlonzoEraScript era => f Word32 (TxIn (EraCrypto era)) -> PlutusPurpose f era
+  AlonzoEraScript era => f Word32 TxIn -> PlutusPurpose f era
 pattern SpendingPurpose c <- (toSpendingPurpose -> Just c)
   where
     SpendingPurpose c = mkSpendingPurpose c
 
 pattern MintingPurpose ::
-  AlonzoEraScript era => f Word32 (PolicyID (EraCrypto era)) -> PlutusPurpose f era
+  AlonzoEraScript era => f Word32 PolicyID -> PlutusPurpose f era
 pattern MintingPurpose c <- (toMintingPurpose -> Just c)
   where
     MintingPurpose c = mkMintingPurpose c
@@ -407,7 +405,7 @@ pattern CertifyingPurpose c <- (toCertifyingPurpose -> Just c)
     CertifyingPurpose c = mkCertifyingPurpose c
 
 pattern RewardingPurpose ::
-  AlonzoEraScript era => f Word32 (RewardAccount (EraCrypto era)) -> PlutusPurpose f era
+  AlonzoEraScript era => f Word32 RewardAccount -> PlutusPurpose f era
 pattern RewardingPurpose c <- (toRewardingPurpose -> Just c)
   where
     RewardingPurpose c = mkRewardingPurpose c
@@ -442,9 +440,9 @@ instance SafeToHash (PlutusScript era) => SafeToHash (AlonzoScript era) where
 isPlutusScript :: AlonzoEraScript era => Script era -> Bool
 isPlutusScript = isJust . toPlutusScript
 
-instance Crypto c => EraScript (AlonzoEra c) where
-  type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
-  type NativeScript (AlonzoEra c) = Timelock (AlonzoEra c)
+instance EraScript AlonzoEra where
+  type Script AlonzoEra = AlonzoScript AlonzoEra
+  type NativeScript AlonzoEra = Timelock AlonzoEra
 
   upgradeScript = TimelockScript . translateTimelock
 
@@ -464,9 +462,7 @@ alonzoScriptPrefixTag = \case
   TimelockScript _ -> nativeMultiSigTag -- "\x00"
   PlutusScript plutusScript -> BS.singleton (withPlutusScript plutusScript plutusLanguageTag)
 
-instance Crypto c => ShelleyEraScript (AlonzoEra c) where
-  {-# SPECIALIZE instance ShelleyEraScript (AlonzoEra StandardCrypto) #-}
-
+instance ShelleyEraScript AlonzoEra where
   mkRequireSignature = mkRequireSignatureTimelock
   getRequireSignature = getRequireSignatureTimelock
 
@@ -479,22 +475,18 @@ instance Crypto c => ShelleyEraScript (AlonzoEra c) where
   mkRequireMOf = mkRequireMOfTimelock
   getRequireMOf = getRequireMOfTimelock
 
-instance Crypto c => AllegraEraScript (AlonzoEra c) where
-  {-# SPECIALIZE instance AllegraEraScript (AlonzoEra StandardCrypto) #-}
-
+instance AllegraEraScript AlonzoEra where
   mkTimeStart = mkTimeStartTimelock
   getTimeStart = getTimeStartTimelock
 
   mkTimeExpire = mkTimeExpireTimelock
   getTimeExpire = getTimeExpireTimelock
 
-instance Crypto c => AlonzoEraScript (AlonzoEra c) where
-  {-# SPECIALIZE instance AlonzoEraScript (AlonzoEra StandardCrypto) #-}
-
-  newtype PlutusScript (AlonzoEra c) = AlonzoPlutusV1 (Plutus 'PlutusV1)
+instance AlonzoEraScript AlonzoEra where
+  newtype PlutusScript AlonzoEra = AlonzoPlutusV1 (Plutus 'PlutusV1)
     deriving newtype (Eq, Ord, Show, NFData, NoThunks, SafeToHash, Generic)
 
-  type PlutusPurpose f (AlonzoEra c) = AlonzoPlutusPurpose f (AlonzoEra c)
+  type PlutusPurpose f AlonzoEra = AlonzoPlutusPurpose f AlonzoEra
 
   eraMaxLanguage = PlutusV1
 
@@ -612,7 +604,7 @@ eraLanguages = [minBound .. eraMaxLanguage @era]
 -- Nothing when script is missing or it is not a PlutusScript
 lookupPlutusScript ::
   AlonzoEraScript era =>
-  ScriptHash (EraCrypto era) ->
-  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
+  ScriptHash ->
+  Map.Map ScriptHash (Script era) ->
   Maybe (PlutusScript era)
 lookupPlutusScript scriptHash = Map.lookup scriptHash >=> toPlutusScript

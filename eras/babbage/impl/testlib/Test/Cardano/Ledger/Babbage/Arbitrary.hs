@@ -19,7 +19,6 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (Sized)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Plutus
 import Control.State.Transition (STS (PredicateFailure))
 import Data.Functor.Identity (Identity)
@@ -82,7 +81,7 @@ instance Arbitrary (BabbagePParams StrictMaybe era) where
       <*> arbitrary
       <*> arbitrary
 
-instance Crypto crypto => Arbitrary (TxOutSource crypto) where
+instance Arbitrary TxOutSource where
   arbitrary = genericArbitraryU
 
 instance

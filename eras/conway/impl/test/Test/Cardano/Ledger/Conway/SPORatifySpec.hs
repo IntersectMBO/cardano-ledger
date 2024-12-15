@@ -53,12 +53,12 @@ import Test.Cardano.Ledger.Core.Arbitrary ()
 spec :: Spec
 spec = do
   describe "SPO Ratification" $ do
-    acceptedRatioProp @Conway
-    noStakeProp @Conway
-    allAbstainProp @Conway
-    noVotesProp @Conway
-    allYesProp @Conway
-    noConfidenceProp @Conway
+    acceptedRatioProp @ConwayEra
+    noStakeProp @ConwayEra
+    allAbstainProp @ConwayEra
+    noVotesProp @ConwayEra
+    allYesProp @ConwayEra
+    noConfidenceProp @ConwayEra
 
 acceptedRatioProp ::
   forall era.
@@ -209,8 +209,8 @@ noConfidenceProp =
           `shouldBe` 0
 
 data TestData era = TestData
-  { distr :: PoolDistr (EraCrypto era)
-  , votes :: Map (KeyHash 'StakePool (EraCrypto era)) Vote
+  { distr :: PoolDistr
+  , votes :: Map (KeyHash 'StakePool) Vote
   , totalStake :: CompactForm Coin
   , stakeYes :: Coin
   , stakeNo :: Coin
@@ -218,8 +218,8 @@ data TestData era = TestData
   , stakeAlwaysAbstain :: Coin
   , stakeNoConfidence :: Coin
   , stakeNotVoted :: Coin
-  , delegatees :: Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era))
-  , poolParams :: Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
+  , delegatees :: Map (Credential 'Staking) DRep
+  , poolParams :: Map (KeyHash 'StakePool) PoolParams
   }
   deriving (Show)
 
@@ -235,12 +235,10 @@ data Ratios = Ratios
 -- Prepare the pool distribution, votes, map of pool parameters and map of reward account delegatees
 -- according to the given ratios.
 genTestData ::
-  forall era.
-  Era era =>
   Ratios ->
   Gen (TestData era)
 genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
-  pools <- listOf (arbitrary @(KeyHash 'StakePool (EraCrypto era)))
+  pools <- listOf (arbitrary @(KeyHash 'StakePool))
   let (poolsYes, poolsNo, poolsAbstain, poolsAlwaysAbstain, poolsNoConfidence, rest) =
         splitByPct yes no abstain alwaysAbstain noConfidence pools
       totalStake = length pools
@@ -310,17 +308,17 @@ genTestData Ratios {yes, no, abstain, alwaysAbstain, noConfidence} = do
     -- Given a delegatee and a map of stake pool params,
     -- create a map of reward account delegatees.
     mkDelegatees ::
-      DRep (EraCrypto era) ->
-      Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
-      Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era))
+      DRep ->
+      Map (KeyHash 'StakePool) PoolParams ->
+      Map (Credential 'Staking) DRep
     mkDelegatees drep =
       fromKeys (const drep) . map (raCredential . ppRewardAccount) . Map.elems
 
     -- Create a map from each pool with the given value, where the key is the pool credential
     -- and take the union of all these maps.
     unionAllFromLists ::
-      [([KeyHash 'StakePool (EraCrypto era)], a)] ->
-      Map (KeyHash 'StakePool (EraCrypto era)) a
+      [([KeyHash 'StakePool], a)] ->
+      Map (KeyHash 'StakePool) a
     unionAllFromLists = foldMap (\(ks, v) -> fromKeys (const v) ks)
 
 genRatios :: Gen Ratios

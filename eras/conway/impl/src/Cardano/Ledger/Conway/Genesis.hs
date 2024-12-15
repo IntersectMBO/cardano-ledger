@@ -23,7 +23,6 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams, toUpgradeConwayPParamsUpdatePairs)
 import Cardano.Ledger.Conway.TxCert (Delegatee)
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -45,42 +44,42 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 
-data ConwayGenesis c = ConwayGenesis
+data ConwayGenesis = ConwayGenesis
   { cgUpgradePParams :: !(UpgradeConwayPParams Identity)
-  , cgConstitution :: !(Constitution (ConwayEra c))
-  , cgCommittee :: !(Committee (ConwayEra c))
-  , cgDelegs :: ListMap (Credential 'Staking c) (Delegatee c)
-  , cgInitialDReps :: ListMap (Credential 'DRepRole c) (DRepState c)
+  , cgConstitution :: !(Constitution ConwayEra)
+  , cgCommittee :: !(Committee ConwayEra)
+  , cgDelegs :: ListMap (Credential 'Staking) Delegatee
+  , cgInitialDReps :: ListMap (Credential 'DRepRole) DRepState
   }
   deriving (Eq, Generic, Show)
 
-cgDelegsL :: Lens' (ConwayGenesis c) (ListMap (Credential 'Staking c) (Delegatee c))
+cgDelegsL :: Lens' ConwayGenesis (ListMap (Credential 'Staking) Delegatee)
 cgDelegsL = lens cgDelegs (\x y -> x {cgDelegs = y})
 
-instance Crypto c => EraGenesis (ConwayEra c) where
-  type Genesis (ConwayEra c) = ConwayGenesis c
+instance EraGenesis ConwayEra where
+  type Genesis ConwayEra = ConwayGenesis
 
-instance Crypto c => NoThunks (ConwayGenesis c)
+instance NoThunks ConwayGenesis
 
 -- | Genesis are always encoded with the version of era they are defined in.
-instance Crypto c => DecCBOR (ConwayGenesis c) where
+instance DecCBOR ConwayGenesis where
   decCBOR = decode $ RecD ConwayGenesis <! From <! From <! From <! From <! From
 
-instance Crypto c => EncCBOR (ConwayGenesis c) where
+instance EncCBOR ConwayGenesis where
   encCBOR (ConwayGenesis pparams constitution committee delegs initialDReps) =
     encode $
-      Rec (ConwayGenesis @c)
+      Rec ConwayGenesis
         !> To pparams
         !> To constitution
         !> To committee
         !> To delegs
         !> To initialDReps
 
-instance Crypto c => ToJSON (ConwayGenesis c) where
+instance ToJSON ConwayGenesis where
   toJSON = object . toConwayGenesisPairs
   toEncoding = pairs . mconcat . toConwayGenesisPairs
 
-instance Crypto c => FromJSON (ConwayGenesis c) where
+instance FromJSON ConwayGenesis where
   parseJSON =
     withObject "ConwayGenesis" $ \obj -> do
       upgradeProtocolPParams <- parseJSON (Object obj)
@@ -91,7 +90,7 @@ instance Crypto c => FromJSON (ConwayGenesis c) where
         <*> obj .:? "delegs" .!= mempty
         <*> obj .:? "initialDReps" .!= mempty
 
-toConwayGenesisPairs :: (Crypto c, KeyValue e a) => ConwayGenesis c -> [a]
+toConwayGenesisPairs :: KeyValue e a => ConwayGenesis -> [a]
 toConwayGenesisPairs cg@(ConwayGenesis _ _ _ _ _) =
   let ConwayGenesis {..} = cg
    in [ "constitution" .= cgConstitution

@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo (
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (EraPParams (..), ppMaxTxSizeL, sizeTxF)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
@@ -55,9 +55,9 @@ import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 
-genUtxoExecContext :: Gen (UtxoExecContext Conway)
+genUtxoExecContext :: Gen (UtxoExecContext ConwayEra)
 genUtxoExecContext = do
-  let proof = Proof.reify @Conway
+  let proof = Proof.reify @ConwayEra
   ueSlot <- arbitrary
   let
     genSize =
@@ -83,9 +83,9 @@ genUtxoExecContext = do
 instance
   forall fn.
   IsConwayUniv fn =>
-  ExecSpecRule fn "UTXO" Conway
+  ExecSpecRule fn "UTXO" ConwayEra
   where
-  type ExecContext fn "UTXO" Conway = UtxoExecContext Conway
+  type ExecContext fn "UTXO" ConwayEra = UtxoExecContext ConwayEra
 
   genExecContext = genUtxoExecContext
 

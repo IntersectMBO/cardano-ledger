@@ -42,7 +42,7 @@ import Data.Universe (Shape (..), Shaped (..))
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Monad (Typed (..), failT)
 import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.Cardano.Ledger.Generic.Proof (BabbageEra, ConwayEra, StandardCrypto)
+import Test.Cardano.Ledger.Generic.Proof (BabbageEra, ConwayEra)
 
 -- ================================================================
 -- V
@@ -95,8 +95,8 @@ instance Eq (Name era) where
   {-# INLINE (==) #-}
 
 instance Ord (Name era) where
-  {-# SPECIALIZE instance Ord (Name (BabbageEra StandardCrypto)) #-}
-  {-# SPECIALIZE instance Ord (Name (ConwayEra StandardCrypto)) #-}
+  {-# SPECIALIZE instance Ord (Name BabbageEra) #-}
+  {-# SPECIALIZE instance Ord (Name ConwayEra) #-}
   compare (Name (V n1 rep1 _)) (Name (V n2 rep2 _)) =
     case compare n1 n2 of
       EQ -> cmpIndex rep1 rep2

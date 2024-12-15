@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,7 +24,7 @@ import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
@@ -59,8 +58,6 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessesVKey)
 import Test.Cardano.Ledger.Shelley.Generator.Core
 import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
-type KeyPairWits era = [KeyPair 'Witness (EraCrypto era)]
-
 {-------------------------------------------------------------------------------
   ShelleyLedgerExamples
 -------------------------------------------------------------------------------}
@@ -68,12 +65,12 @@ type KeyPairWits era = [KeyPair 'Witness (EraCrypto era)]
 data ShelleyResultExamples era = ShelleyResultExamples
   { srePParams :: PParams era
   , sreProposedPPUpdates :: ProposedPPUpdates era
-  , srePoolDistr :: PoolDistr (EraCrypto era)
+  , srePoolDistr :: PoolDistr
   , sreNonMyopicRewards ::
       Map
-        (Either Coin (Credential 'Staking (EraCrypto era)))
-        (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
-  , sreShelleyGenesis :: ShelleyGenesis (EraCrypto era)
+        (Either Coin (Credential 'Staking))
+        (Map (KeyHash 'StakePool) Coin)
+  , sreShelleyGenesis :: ShelleyGenesis
   }
 
 deriving instance
@@ -84,14 +81,14 @@ deriving instance
   Eq (ShelleyResultExamples era)
 
 data ShelleyLedgerExamples era = ShelleyLedgerExamples
-  { sleBlock :: Block (BHeader (EraCrypto era)) era
-  , sleHashHeader :: HashHeader (EraCrypto era)
+  { sleBlock :: Block (BHeader StandardCrypto) era
+  , sleHashHeader :: HashHeader
   , sleTx :: Tx era
   , sleApplyTxError :: ApplyTxError era
-  , sleRewardsCredentials :: Set (Either Coin (Credential 'Staking (EraCrypto era)))
+  , sleRewardsCredentials :: Set (Either Coin (Credential 'Staking))
   , sleResultExamples :: ShelleyResultExamples era
   , sleNewEpochState :: NewEpochState era
-  , sleChainDepState :: ChainDepState (EraCrypto era)
+  , sleChainDepState :: ChainDepState
   , sleTranslationContext :: TranslationContext era
   }
 
@@ -109,20 +106,16 @@ deriving instance
   Default constructor
 -------------------------------------------------------------------------------}
 
-type ShelleyBasedEra' era =
-  (PraosCrypto (EraCrypto era))
-
 defaultShelleyLedgerExamples ::
   forall era.
-  ( ShelleyBasedEra' era
-  , EraSegWits era
+  ( EraSegWits era
   , EraGov era
   , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
   , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
   , Default (StashedAVVMAddresses era)
   , ProtVerAtMost era 4
   ) =>
-  (TxBody era -> KeyPairWits era -> TxWits era) ->
+  (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
   (ShelleyTx era -> Tx era) ->
   Value era ->
   TxBody era ->
@@ -132,7 +125,7 @@ defaultShelleyLedgerExamples ::
 defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData translationContext =
   ShelleyLedgerExamples
     { sleBlock = exampleShelleyLedgerBlock (mkAlonzoTx tx)
-    , sleHashHeader = exampleHashHeader (Proxy @era)
+    , sleHashHeader = exampleHashHeader
     , sleTx = mkAlonzoTx tx
     , sleApplyTxError =
         ApplyTxError . pure . DelegsFailure $
@@ -170,21 +163,21 @@ defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData transla
 
 exampleShelleyLedgerBlock ::
   forall era.
-  (EraSegWits era, PraosCrypto (EraCrypto era)) =>
+  EraSegWits era =>
   Tx era ->
-  Block (BHeader (EraCrypto era)) era
+  Block (BHeader StandardCrypto) era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody
   where
-    keys :: AllIssuerKeys (EraCrypto era) 'StakePool
+    keys :: AllIssuerKeys StandardCrypto 'StakePool
     keys = exampleKeys
 
     hotKey = kesSignKey $ snd $ NE.head $ aikHot keys
     KeyPair vKeyCold _ = aikCold keys
 
-    blockHeader :: BHeader (EraCrypto era)
+    blockHeader :: BHeader StandardCrypto
     blockHeader = BHeader blockHeaderBody (unsoundPureSignedKES () 0 blockHeaderBody hotKey)
 
-    blockHeaderBody :: BHBody (EraCrypto era)
+    blockHeaderBody :: BHBody StandardCrypto
     blockHeaderBody =
       BHBody
         { bheaderBlockNo = BlockNo 3
@@ -205,36 +198,31 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
     mkBytes = Seed . mkDummyHash @Blake2b_256
 
-exampleHashHeader ::
-  forall era.
-  ShelleyBasedEra' era =>
-  Proxy era ->
-  HashHeader (EraCrypto era)
-exampleHashHeader _ = coerce $ mkDummyHash @(HASH (EraCrypto era)) (0 :: Int)
+exampleHashHeader :: HashHeader
+exampleHashHeader = coerce $ mkDummyHash @HASH (0 :: Int)
 
-mkKeyHash :: forall c discriminator. Crypto c => Int -> KeyHash discriminator c
-mkKeyHash = KeyHash . mkDummyHash @(ADDRHASH c)
+mkKeyHash :: forall discriminator. Int -> KeyHash discriminator
+mkKeyHash = KeyHash . mkDummyHash @ADDRHASH
 
-mkScriptHash :: forall c. Crypto c => Int -> ScriptHash c
-mkScriptHash = ScriptHash . mkDummyHash @(ADDRHASH c)
+mkScriptHash :: Int -> ScriptHash
+mkScriptHash = ScriptHash . mkDummyHash @ADDRHASH
 
 -- | This is not a valid transaction. We don't care, we are only interested in
 -- serialisation, not validation.
 exampleTx ::
   forall era.
   EraTx era =>
-  (TxBody era -> KeyPairWits era -> TxWits era) ->
+  (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
   TxBody era ->
   TxAuxData era ->
   ShelleyTx era
 exampleTx mkWitnesses txBody auxData =
   ShelleyTx txBody (mkWitnesses txBody keyPairWits) (SJust auxData)
   where
-    keyPairWits :: KeyPairWits era
     keyPairWits =
       [ asWitness examplePayKey
       , asWitness exampleStakeKey
-      , asWitness $ aikCold (exampleKeys @(EraCrypto era) @'StakePool)
+      , asWitness $ aikCold exampleKeys
       ]
 
 exampleProposedPParamsUpdates ::
@@ -246,7 +234,7 @@ exampleProposedPParamsUpdates =
       (mkKeyHash 0)
       (emptyPParamsUpdate & ppuKeyDepositL .~ SJust (Coin 100))
 
-examplePoolDistr :: forall c. PraosCrypto c => PoolDistr c
+examplePoolDistr :: PoolDistr
 examplePoolDistr =
   PoolDistr
     ( Map.fromList
@@ -255,18 +243,16 @@ examplePoolDistr =
           , IndividualPoolStake
               1
               (CompactCoin 1)
-              (hashVerKeyVRF (vrfVerKey (aikVrf (exampleKeys @c))))
+              (hashVerKeyVRF @StandardCrypto (vrfVerKey (aikVrf exampleKeys)))
           )
         ]
     )
     (CompactCoin 1)
 
 exampleNonMyopicRewards ::
-  forall c.
-  Crypto c =>
   Map
-    (Either Coin (Credential 'Staking c))
-    (Map (KeyHash 'StakePool c) Coin)
+    (Either Coin (Credential 'Staking))
+    (Map (KeyHash 'StakePool) Coin)
 exampleNonMyopicRewards =
   Map.fromList
     [ (Left (Coin 100), Map.singleton (mkKeyHash 2) (Coin 3))
@@ -275,7 +261,7 @@ exampleNonMyopicRewards =
     ]
 
 -- | These are dummy values.
-testShelleyGenesis :: Crypto c => ShelleyGenesis c
+testShelleyGenesis :: ShelleyGenesis
 testShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = UTCTime (fromGregorian 2020 5 14) 0
@@ -303,7 +289,6 @@ exampleNewEpochState ::
   forall era.
   ( EraTxOut era
   , EraGov era
-  , ShelleyBasedEra' era
   , Default (StashedAVVMAddresses era)
   ) =>
   Value era ->
@@ -338,7 +323,7 @@ exampleNewEpochState value ppp pp =
                         UTxO $
                           Map.fromList
                             [
-                              ( TxIn (TxId (mkDummySafeHash Proxy 1)) minBound
+                              ( TxIn (TxId (mkDummySafeHash @EraIndependentTxBody 1)) minBound
                               , mkBasicTxOut addr value
                               )
                             ]
@@ -355,14 +340,14 @@ exampleNewEpochState value ppp pp =
         & prevPParamsEpochStateL .~ ppp
         & curPParamsEpochStateL .~ pp
       where
-        addr :: Addr (EraCrypto era)
+        addr :: Addr
         addr =
           Addr
             Testnet
             (keyToCredential examplePayKey)
             (StakeRefBase (keyToCredential exampleStakeKey))
 
-    rewardUpdate :: PulsingRewUpdate (EraCrypto era)
+    rewardUpdate :: PulsingRewUpdate
     rewardUpdate =
       startStep @era
         (EpochSize 432000)
@@ -372,7 +357,7 @@ exampleNewEpochState value ppp pp =
         (activeSlotCoeff testGlobals)
         10
 
-exampleLedgerChainDepState :: forall c. Crypto c => Word64 -> ChainDepState c
+exampleLedgerChainDepState :: Word64 -> ChainDepState
 exampleLedgerChainDepState seed =
   ChainDepState
     { csProtocol =
@@ -395,11 +380,11 @@ exampleLedgerChainDepState seed =
 testEpochInfo :: EpochInfo Identity
 testEpochInfo = epochInfoPure testGlobals
 
-mkDummyAnchor :: Crypto c => Int -> Anchor c
+mkDummyAnchor :: Int -> Anchor
 mkDummyAnchor n =
   Anchor
     { anchorUrl = fromJust . textToUrl 64 $ "dummy@" <> pack (show n)
-    , anchorDataHash = mkDummySafeHash Proxy n
+    , anchorDataHash = mkDummySafeHash @AnchorData n
     }
 
 {-------------------------------------------------------------------------------
@@ -407,10 +392,10 @@ mkDummyAnchor n =
 -------------------------------------------------------------------------------}
 
 -- | ShelleyLedgerExamples for Shelley era
-ledgerExamplesShelley :: ShelleyLedgerExamples Shelley
+ledgerExamplesShelley :: ShelleyLedgerExamples ShelleyEra
 ledgerExamplesShelley =
   defaultShelleyLedgerExamples
-    (mkWitnessesPreAlonzo (Proxy @Shelley))
+    (mkWitnessesPreAlonzo (Proxy @ShelleyEra))
     id
     exampleCoin
     exampleTxBodyShelley
@@ -418,14 +403,10 @@ ledgerExamplesShelley =
     emptyFromByronTranslationContext
 
 mkWitnessesPreAlonzo ::
-  ( EraTx era
-  , DSIGN.Signable
-      (DSIGN (EraCrypto era))
-      (Hash.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  ) =>
+  EraTx era =>
   Proxy era ->
   TxBody era ->
-  KeyPairWits era ->
+  [KeyPair 'Witness] ->
   ShelleyTxWits era
 mkWitnessesPreAlonzo _ txBody keyPairWits =
   mempty
@@ -436,7 +417,7 @@ mkWitnessesPreAlonzo _ txBody keyPairWits =
 exampleCoin :: Coin
 exampleCoin = Coin 10
 
-exampleTxBodyShelley :: ShelleyTxBody Shelley
+exampleTxBodyShelley :: ShelleyTxBody ShelleyEra
 exampleTxBodyShelley =
   ShelleyTxBody
     exampleTxIns
@@ -452,9 +433,9 @@ exampleTxBodyShelley =
     (SJust auxiliaryDataHash)
   where
     -- Dummy hash to decouple from the auxiliaryData in 'exampleTx'.
-    auxiliaryDataHash :: AuxiliaryDataHash StandardCrypto
+    auxiliaryDataHash :: AuxiliaryDataHash
     auxiliaryDataHash =
-      AuxiliaryDataHash $ mkDummySafeHash (Proxy @StandardCrypto) 30
+      AuxiliaryDataHash $ mkDummySafeHash @EraIndependentTxAuxData 30
 
 exampleAuxDataMap :: Map Word64 Metadatum
 exampleAuxDataMap =
@@ -465,13 +446,13 @@ exampleAuxDataMap =
     , (4, Map [(I 3, B "b")])
     ]
 
-exampleAuxiliaryDataShelley :: TxAuxData Shelley
+exampleAuxiliaryDataShelley :: TxAuxData ShelleyEra
 exampleAuxiliaryDataShelley = ShelleyTxAuxData exampleAuxDataMap
 
-exampleTxIns :: Crypto c => Set (TxIn c)
+exampleTxIns :: Set TxIn
 exampleTxIns =
   Set.fromList
-    [ TxIn (TxId (mkDummySafeHash Proxy 1)) minBound
+    [ TxIn (TxId (mkDummySafeHash @EraIndependentTxBody 1)) minBound
     ]
 
 exampleCerts :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => StrictSeq (TxCert era)
@@ -487,7 +468,7 @@ exampleCerts =
               ]
     ]
 
-exampleWithdrawals :: Crypto c => Withdrawals c
+exampleWithdrawals :: Withdrawals
 exampleWithdrawals =
   Withdrawals $
     Map.fromList
@@ -503,39 +484,35 @@ exampleProposedPPUpdates =
       (mkKeyHash 1)
       (emptyPParamsUpdate & ppuMaxBHSizeL .~ SJust 4000)
 
-examplePayKey :: Crypto c => KeyPair 'Payment c
+examplePayKey :: KeyPair 'Payment
 examplePayKey = mkDSIGNKeyPair 0
 
-exampleStakeKey :: Crypto c => KeyPair 'Staking c
+exampleStakeKey :: KeyPair 'Staking
 exampleStakeKey = mkDSIGNKeyPair 1
 
-exampleKeys :: forall c r. Crypto c => AllIssuerKeys c r
+exampleKeys :: AllIssuerKeys StandardCrypto r
 exampleKeys =
   AllIssuerKeys
     coldKey
-    (mkVRFKeyPair (Proxy @c) 1)
+    (mkVRFKeyPair (Proxy @StandardCrypto) 1)
     ((KESPeriod 0, mkKESKeyPair (RawSeed 1 0 0 0 3)) NE.:| [])
     (hashKey (vKey coldKey))
   where
     coldKey = mkDSIGNKeyPair 1
 
-keyToCredential :: Crypto c => KeyPair r c -> Credential r c
+keyToCredential :: KeyPair r -> Credential r
 keyToCredential = KeyHashObj . hashKey . vKey
 
 -- | @mkKeyPair'@ from @Test.Cardano.Ledger.Shelley.Utils@ doesn't work for real
 -- crypto:
 -- <https://github.com/intersectmbo/cardano-ledger/issues/1770>
-mkDSIGNKeyPair ::
-  forall c kd.
-  DSIGNAlgorithm (DSIGN c) =>
-  Word8 ->
-  KeyPair kd c
+mkDSIGNKeyPair :: forall kd. Word8 -> KeyPair kd
 mkDSIGNKeyPair byte = KeyPair (VKey $ DSIGN.deriveVerKeyDSIGN sk) sk
   where
     seed =
       Seed.mkSeedFromBytes $
         Strict.replicate
-          (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @(DSIGN c))))
+          (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @DSIGN)))
           byte
 
     sk = DSIGN.genKeyDSIGN seed
@@ -556,11 +533,11 @@ mkVRFKeyPair _ byte = VRFKeyPair sk (VRF.deriveVerKeyVRF sk)
 
     sk = VRF.genKeyVRF seed
 
-examplePoolParams :: forall c. Crypto c => PoolParams c
+examplePoolParams :: PoolParams
 examplePoolParams =
   PoolParams
-    { ppId = hashKey $ vKey $ aikCold poolKeys
-    , ppVrf = hashVerKeyVRF $ vrfVerKey $ aikVrf poolKeys
+    { ppId = hashKey $ vKey $ aikCold exampleKeys
+    , ppVrf = hashVerKeyVRF @StandardCrypto $ vrfVerKey $ aikVrf exampleKeys
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1
@@ -574,5 +551,3 @@ examplePoolParams =
             , pmHash = "{}"
             }
     }
-  where
-    poolKeys = exampleKeys @c @'StakePool

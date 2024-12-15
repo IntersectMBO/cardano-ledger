@@ -28,7 +28,6 @@ where
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
@@ -50,22 +49,22 @@ import NoThunks.Class (NoThunks (..))
 -- The stake is relative to the total amount of active stake
 -- in the network. Stake is active if it is both registered and
 -- delegated to a registered stake pool.
-data IndividualPoolStake c = IndividualPoolStake
+data IndividualPoolStake = IndividualPoolStake
   { individualPoolStake :: !Rational
   -- ^ Pool stake distribution. This is a ratio of `individualTotalPoolStake`/`pdTotalActiveStake`
   , individualTotalPoolStake :: !(CompactForm Coin)
   -- ^ Total stake delegated to this pool. In addition to all the stake  that
   -- is part of `individualPoolStake` we also add proposal-deposits to this
   -- field.
-  , individualPoolStakeVrf :: !(VRFVerKeyHash 'StakePoolVRF c)
+  , individualPoolStakeVrf :: !(VRFVerKeyHash 'StakePoolVRF)
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
 
-individualTotalPoolStakeL :: Lens' (IndividualPoolStake c) (CompactForm Coin)
+individualTotalPoolStakeL :: Lens' IndividualPoolStake (CompactForm Coin)
 individualTotalPoolStakeL = lens individualTotalPoolStake $ \x y -> x {individualTotalPoolStake = y}
 
-instance Crypto c => EncCBOR (IndividualPoolStake c) where
+instance EncCBOR IndividualPoolStake where
   encCBOR (IndividualPoolStake stake stakeCoin vrf) =
     mconcat
       [ encodeListLen 3
@@ -74,7 +73,7 @@ instance Crypto c => EncCBOR (IndividualPoolStake c) where
       , encCBOR vrf
       ]
 
-instance Crypto c => DecCBOR (IndividualPoolStake c) where
+instance DecCBOR IndividualPoolStake where
   decCBOR =
     decodeRecordNamed "IndividualPoolStake" (const 3) $
       IndividualPoolStake
@@ -82,11 +81,11 @@ instance Crypto c => DecCBOR (IndividualPoolStake c) where
         <*> decCBOR
         <*> decCBOR
 
-instance Crypto c => ToJSON (IndividualPoolStake c) where
+instance ToJSON IndividualPoolStake where
   toJSON = object . toIndividualPoolStakePair
   toEncoding = pairs . mconcat . toIndividualPoolStakePair
 
-toIndividualPoolStakePair :: (KeyValue e a, Crypto c) => IndividualPoolStake c -> [a]
+toIndividualPoolStakePair :: KeyValue e a => IndividualPoolStake -> [a]
 toIndividualPoolStakePair indivPoolStake@(IndividualPoolStake _ _ _) =
   let IndividualPoolStake {..} = indivPoolStake
    in [ "individualPoolStake" .= individualPoolStake
@@ -97,8 +96,8 @@ toIndividualPoolStakePair indivPoolStake@(IndividualPoolStake _ _ _) =
 -- | A map of stake pool IDs (the hash of the stake pool operator's
 -- verification key) to 'IndividualPoolStake'. Also holds absolute values
 -- necessary for the calculations in the `computeDRepDistr`.
-data PoolDistr c = PoolDistr
-  { unPoolDistr :: !(Map (KeyHash 'StakePool c) (IndividualPoolStake c))
+data PoolDistr = PoolDistr
+  { unPoolDistr :: !(Map (KeyHash 'StakePool) IndividualPoolStake)
   , pdTotalActiveStake :: !(CompactForm Coin)
   -- ^ Total stake delegated to registered stake pools. In addition to
   -- the stake considered for the `individualPoolStake` Rational, we add
@@ -107,20 +106,20 @@ data PoolDistr c = PoolDistr
   deriving stock (Show, Eq, Generic)
   deriving (NFData, NoThunks, ToJSON)
 
-poolDistrDistrL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
+poolDistrDistrL :: Lens' PoolDistr (Map (KeyHash 'StakePool) IndividualPoolStake)
 poolDistrDistrL = lens unPoolDistr $ \x y -> x {unPoolDistr = y}
 
-poolDistrTotalL :: Lens' (PoolDistr c) (CompactForm Coin)
+poolDistrTotalL :: Lens' PoolDistr (CompactForm Coin)
 poolDistrTotalL = lens pdTotalActiveStake $ \x y -> x {pdTotalActiveStake = y}
 
-instance Crypto c => EncCBOR (PoolDistr c) where
+instance EncCBOR PoolDistr where
   encCBOR (PoolDistr distr total) =
     encode $
       Rec PoolDistr
         !> To distr
         !> To total
 
-instance Crypto c => DecCBOR (PoolDistr c) where
+instance DecCBOR PoolDistr where
   decCBOR =
     decode $
       RecD PoolDistr

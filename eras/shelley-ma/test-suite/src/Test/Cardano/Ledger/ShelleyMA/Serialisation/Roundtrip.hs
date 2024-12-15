@@ -7,11 +7,11 @@
 
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 
-import Cardano.Ledger.Allegra (Allegra)
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Mary (Mary)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (ApplyTx, ApplyTxError)
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Proxy (Proxy (Proxy))
@@ -45,7 +45,7 @@ allEraRoundtripTests :: TestTree
 allEraRoundtripTests =
   testGroup
     "All Era Roundtrip Tests"
-    [ eraRoundTripProps @Shelley
-    , eraRoundTripProps @Allegra
-    , eraRoundTripProps @Mary
+    [ eraRoundTripProps @ShelleyEra
+    , eraRoundTripProps @AllegraEra
+    , eraRoundTripProps @MaryEra
     ]

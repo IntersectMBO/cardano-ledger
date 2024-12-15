@@ -7,7 +7,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -25,7 +24,6 @@ module Test.Cardano.Ledger.Examples.BabbageFeatures (
   babbageFeatures,
 ) where
 
-import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (BadTranslation))
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
@@ -58,7 +56,6 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (ConwayUtxoPredFailure (..))
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
@@ -119,23 +116,23 @@ import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase)
 
-someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (EraCrypto era)
+someKeys :: forall era. Proof era -> KeyPair 'Payment
 someKeys _pf = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @(EraCrypto era) (RawSeed 1 1 1 1 1)
+    (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
-someKeysPaymentKeyRole :: forall era. Era era => Proof era -> KeyPairRole era
+someKeysPaymentKeyRole :: forall era. Proof era -> KeyPairRole era
 someKeysPaymentKeyRole pf = KeyPairPayment (someKeys pf)
 
-keysForMultisig :: forall era. Era era => Proof era -> KeyPair 'Witness (EraCrypto era)
+keysForMultisig :: forall era. Proof era -> KeyPair 'Witness
 keysForMultisig _pf = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 99)
+    (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 99)
 
-keysForMultisigWitnessKeyRole :: forall era. Era era => Proof era -> KeyPairRole era
+keysForMultisigWitnessKeyRole :: forall era. Proof era -> KeyPairRole era
 keysForMultisigWitnessKeyRole pf = KeyPairWitness (keysForMultisig pf)
 
-keyHashForMultisig :: forall era. Era era => Proof era -> KeyHash 'Witness (EraCrypto era)
+keyHashForMultisig :: forall era. Proof era -> KeyHash 'Witness
 keyHashForMultisig pf = hashKey . vKey $ keysForMultisig pf
 
 simpleScript :: forall era. Scriptic era => Proof era -> Script era
@@ -163,21 +160,21 @@ evenData3ArgsScript proof =
           , [128, 8, 72, 128, 4, 128, 5]
           ]
 
-plainAddr :: forall era. Era era => Proof era -> Addr (EraCrypto era)
+plainAddr :: forall era. Proof era -> Addr
 plainAddr pf = Addr Testnet pCred sCred
   where
-    (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 2)
+    (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 2)
     pCred = KeyHashObj . hashKey . vKey $ someKeys pf
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-scriptAddr :: forall era. Reflect era => Proof era -> Script era -> Addr (EraCrypto era)
+scriptAddr :: forall era. Reflect era => Proof era -> Script era -> Addr
 scriptAddr _pf s = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ s
-    (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 0)
+    (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 0)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-simpleScriptAddr :: forall era. (Reflect era, Scriptic era) => Proof era -> Addr (EraCrypto era)
+simpleScriptAddr :: forall era. (Reflect era, Scriptic era) => Proof era -> Addr
 simpleScriptAddr pf = scriptAddr pf (simpleScript pf)
 
 datumExampleEven :: Era era => Data era
@@ -204,16 +201,16 @@ datumExampleSixtyFiveBytes = Data (PV1.B sixtyFiveBytes)
 txDats :: Era era => TxDats era
 txDats = mkTxDats datumExampleSixtyFiveBytes
 
-someTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => TxIn c
+someTxIn :: HasCallStack => TxIn
 someTxIn = mkGenesisTxIn 1
 
-anotherTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => TxIn c
+anotherTxIn :: HasCallStack => TxIn
 anotherTxIn = mkGenesisTxIn 2
 
-yetAnotherTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => TxIn c
+yetAnotherTxIn :: HasCallStack => TxIn
 yetAnotherTxIn = mkGenesisTxIn 3
 
-commonTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => TxIn c
+commonTxIn :: HasCallStack => TxIn
 commonTxIn = mkGenesisTxIn 4
 
 defaultPPs :: Proof era -> [PParamsField era]
@@ -1007,7 +1004,7 @@ noSuchThingAsReferenceDatum pf =
 
 -- ====================================================================================
 
-type InOut era = (TxIn (EraCrypto era), TxOut era)
+type InOut era = (TxIn, TxOut era)
 
 data TestCaseData era = TestCaseData
   { txBody :: TxBody era
@@ -1029,11 +1026,11 @@ data InitUtxo era = InitUtxo
   }
 
 data KeyPairRole era
-  = KeyPairPayment (KeyPair 'Payment (EraCrypto era))
-  | KeyPairWitness (KeyPair 'Witness (EraCrypto era))
-  | KeyPairStakePool (KeyPair 'StakePool (EraCrypto era))
-  | KeyPairDRep (KeyPair 'DRepRole (EraCrypto era))
-  | KeyPairCommittee (KeyPair 'HotCommitteeRole (EraCrypto era))
+  = KeyPairPayment (KeyPair 'Payment)
+  | KeyPairWitness (KeyPair 'Witness)
+  | KeyPairStakePool (KeyPair 'StakePool)
+  | KeyPairDRep (KeyPair 'DRepRole)
+  | KeyPairCommittee (KeyPair 'HotCommitteeRole)
 
 initUtxoFromTestCaseData ::
   BabbageEraTxBody era =>
@@ -1067,7 +1064,7 @@ utxoFromTestCaseData pf (TestCaseData txBody' (InitOutputs ofInputs' ofRefInputs
       refInputs' = Set.toList refInputsIns `zip` ofRefInputs'
       collateral' = Set.toList collateralIns `zip` ofCollateral'
 
-      newTxIns = fmap (TxIn (txIdTxBody txBody') . mkTxIx) [0 ..] :: [TxIn (EraCrypto era)]
+      newTxIns = fmap (TxIn (txIdTxBody txBody') . mkTxIx) [0 ..] :: [TxIn]
       newTxInOuts = newTxIns `zip` toList (getOutputs pf txBody')
 
       initUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ collateral')
@@ -1077,7 +1074,6 @@ utxoFromTestCaseData pf (TestCaseData txBody' (InitOutputs ofInputs' ofRefInputs
 txFromTestCaseData ::
   forall era.
   ( Scriptic era
-  , GoodCrypto (EraCrypto era)
   , BabbageEraTxBody era
   ) =>
   Proof era ->

@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.13.0.0
+
+* Deprecate `Alonzo` type synonym
+* Remove crypto parametrization from `AlonzoEra`
+
 ## 1.12.0.0
 
 * Remove deprecated `lookupPlutusScript`

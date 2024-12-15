@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.19.0.0
+
+* Deprecate `Conway` type synonym
+* Remove crypto parametrization from `ConwayEra`
+
 ## 1.18.0.0
 
 * Remove `SlotNo` from `CertEnv` and `CertsEnv`

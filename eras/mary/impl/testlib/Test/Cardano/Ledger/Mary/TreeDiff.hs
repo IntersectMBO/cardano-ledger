@@ -18,18 +18,18 @@ import Cardano.Ledger.Shelley.PParams
 import Test.Cardano.Ledger.Allegra.TreeDiff
 
 -- Value
-instance ToExpr (CompactValue c)
+instance ToExpr CompactValue
 
-instance ToExpr (MaryValue c)
+instance ToExpr MaryValue
 
-instance ToExpr (MultiAsset c)
+instance ToExpr MultiAsset
 
-instance ToExpr (PolicyID c)
+instance ToExpr PolicyID
 
 instance ToExpr AssetName where
   toExpr an = App "AssetName" [toExpr (assetNameToTextAsHex an)]
 
-deriving newtype instance ToExpr (CompactForm (MaryValue c))
+deriving newtype instance ToExpr (CompactForm MaryValue)
 
 -- TxBody
 instance

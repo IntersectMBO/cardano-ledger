@@ -42,8 +42,8 @@ instance SpecTranslate ctx (PState era) where
       <$> toSpecRep (mapKeys (hashToInteger . unKeyHash) psStakePoolParams)
       <*> toSpecRep (mapKeys (hashToInteger . unKeyHash) psRetiring)
 
-instance SpecTranslate ctx (PoolCert c) where
-  type SpecRep (PoolCert c) = Agda.DCert
+instance SpecTranslate ctx PoolCert where
+  type SpecRep PoolCert = Agda.DCert
 
   toSpecRep (RegPool p@PoolParams {ppId = KeyHash ppHash}) =
     Agda.Regpool

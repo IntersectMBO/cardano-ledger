@@ -217,7 +217,7 @@ pGraphNodesL = lens unPGraph $ \x y -> x {unPGraph = y}
 -- NOTE: At the end of an epoch boundary, we expect @`pRoots`@ to be the same
 -- as the @`PrevGovActionIds`@ from the @`EnactState`@
 data Proposals era = Proposals
-  { pProps :: !(OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era))
+  { pProps :: !(OMap.OMap GovActionId (GovActionState era))
   , pRoots :: !(GovRelation PRoot era)
   , pGraph :: !(GovRelation PGraph era)
   }
@@ -228,7 +228,7 @@ data Proposals era = Proposals
 mapProposals :: (GovActionState era -> GovActionState era) -> Proposals era -> Proposals era
 mapProposals f props = props {pProps = OMap.mapUnsafe f (pProps props)}
 
-pPropsL :: Lens' (Proposals era) (OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era))
+pPropsL :: Lens' (Proposals era) (OMap.OMap GovActionId (GovActionState era))
 pPropsL = lens pProps $ \x y -> x {pProps = y}
 
 pRootsL :: Lens' (Proposals era) (GovRelation PRoot era)
@@ -308,7 +308,7 @@ runProposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
 mkProposals ::
   (EraPParams era, MonadFail m) =>
   GovRelation StrictMaybe era ->
-  OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era) ->
+  OMap.OMap GovActionId (GovActionState era) ->
   m (Proposals era)
 mkProposals pgais omap = do
   ps@(Proposals omap' _roots _hierarchy) <-
@@ -334,7 +334,7 @@ mkProposals pgais omap = do
 unsafeMkProposals ::
   (HasCallStack, EraPParams era) =>
   GovRelation StrictMaybe era ->
-  OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era) ->
+  OMap.OMap GovActionId (GovActionState era) ->
   Proposals era
 unsafeMkProposals pgais omap = F.foldl' unsafeProposalsAddAction initialProposals omap
   where
@@ -367,9 +367,9 @@ instance EraPParams era => DecShareCBOR (Proposals era) where
 -- | Add a vote to an existing `GovActionState`. This is a no-op if the
 -- provided `GovActionId` does not already exist
 proposalsAddVote ::
-  Voter (EraCrypto era) ->
+  Voter ->
   Vote ->
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   Proposals era ->
   Proposals era
 proposalsAddVote voter vote gai (Proposals omap roots hierarchy) =
@@ -394,9 +394,9 @@ proposalsAddVote voter vote gai (Proposals omap roots hierarchy) =
 proposalsRemoveIds ::
   forall era.
   EraPParams era =>
-  Set (GovActionId (EraCrypto era)) ->
+  Set GovActionId ->
   Proposals era ->
-  (Proposals era, Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
+  (Proposals era, Map.Map GovActionId (GovActionState era))
 proposalsRemoveIds gais ps =
   let (retainedOMap, removedFromOMap) = OMap.extractKeys gais $ ps ^. pPropsL
       (roots, hierarchy) = F.foldl' removeEach (ps ^. pRootsL, ps ^. pGraphL) removedFromOMap
@@ -423,9 +423,9 @@ proposalsRemoveIds gais ps =
 -- @`Proposals`@ forest. Cannot be used for removing enacted GovActionIds (i.e. roots)
 proposalsRemoveWithDescendants ::
   EraPParams era =>
-  Set (GovActionId (EraCrypto era)) ->
+  Set GovActionId ->
   Proposals era ->
-  (Proposals era, Map (GovActionId (EraCrypto era)) (GovActionState era))
+  (Proposals era, Map GovActionId (GovActionState era))
 proposalsRemoveWithDescendants gais ps@(Proposals omap _roots graph) =
   proposalsRemoveIds (gais <> foldMap getAllDescendants gais) ps
   where
@@ -452,12 +452,12 @@ proposalsApplyEnactment ::
   forall era.
   EraPParams era =>
   Seq (GovActionState era) ->
-  Set (GovActionId (EraCrypto era)) ->
+  Set GovActionId ->
   Proposals era ->
   ( Proposals era
-  , Map (GovActionId (EraCrypto era)) (GovActionState era) -- Enacted actions
-  , Map (GovActionId (EraCrypto era)) (GovActionState era) -- Removed due to enactment
-  , Map (GovActionId (EraCrypto era)) (GovActionState era) -- Removed due to expiry
+  , Map GovActionId (GovActionState era) -- Enacted actions
+  , Map GovActionId (GovActionState era) -- Removed due to enactment
+  , Map GovActionId (GovActionState era) -- Removed due to expiry
   )
 proposalsApplyEnactment enactedGass expiredGais props =
   let (unexpiredProposals, expiredRemoved) = proposalsRemoveWithDescendants expiredGais props
@@ -470,8 +470,8 @@ proposalsApplyEnactment enactedGass expiredGais props =
         gai = gas ^. gasIdL
         enactWithoutRoot ::
           ( Proposals era
-          , Map (GovActionId (EraCrypto era)) (GovActionState era)
-          , Map (GovActionId (EraCrypto era)) (GovActionState era)
+          , Map GovActionId (GovActionState era)
+          , Map GovActionId (GovActionState era)
           )
         enactWithoutRoot =
           let (newOMap, enactedAction) = OMap.extractKeys (Set.singleton gai) $ ps ^. pPropsL
@@ -486,8 +486,8 @@ proposalsApplyEnactment enactedGass expiredGais props =
           StrictMaybe (GovPurposeId p era) ->
           GovPurposeId p era ->
           ( Proposals era
-          , Map (GovActionId (EraCrypto era)) (GovActionState era)
-          , Map (GovActionId (EraCrypto era)) (GovActionState era)
+          , Map GovActionId (GovActionState era)
+          , Map GovActionId (GovActionState era)
           )
         enactFromRoot govRelationL parent gpi =
           let siblings =
@@ -524,7 +524,7 @@ proposalsActions (Proposals omap _ _) = OMap.toStrictSeq omap
 -- all proposals.
 proposalsDeposits ::
   Proposals era ->
-  Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
+  Map (Credential 'Staking) (CompactForm Coin)
 proposalsDeposits =
   F.foldl'
     ( \gasMap gas ->
@@ -540,20 +540,20 @@ proposalsDeposits =
 -- | Get the sequence of `GovActionId`s
 proposalsIds ::
   Proposals era ->
-  StrictSeq (GovActionId (EraCrypto era))
+  StrictSeq GovActionId
 proposalsIds (Proposals omap _ _) = OMap.toStrictSeqOKeys omap
 
 -- | Get the unordered map of `GovActionId`s and `GovActionState`s
 proposalsActionsMap ::
   Proposals era ->
-  Map (GovActionId (EraCrypto era)) (GovActionState era)
+  Map GovActionId (GovActionState era)
 proposalsActionsMap (Proposals omap _ _) = OMap.toMap omap
 
 proposalsSize :: Proposals era -> Int
 proposalsSize (Proposals omap _ _) = OMap.size omap
 
 proposalsLookupId ::
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   Proposals era ->
   Maybe (GovActionState era)
 proposalsLookupId gai (Proposals omap _ _) = OMap.lookup gai omap
@@ -727,7 +727,7 @@ checkInvariantAfterAddition gas psPre ps = assert check ps
 checkInvariantAfterDeletion ::
   (EraPParams era, HasCallStack) =>
   -- | GovAction that was added
-  Set (GovActionId (EraCrypto era)) ->
+  Set GovActionId ->
   -- | Proposals before adding the GovActionState
   Proposals era ->
   -- | Proposals after adding the GovActionState

@@ -46,7 +46,6 @@ module Test.Cardano.Ledger.Core.Arbitrary (
 where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm)
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Address
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
@@ -93,7 +92,6 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD (NoUpdate (..))
@@ -183,7 +181,7 @@ instance Validity ActiveSlotCoeff where
 instance GenValid ActiveSlotCoeff where
   genValid = mkActiveSlotCoeff <$> genValid
 
-instance Crypto c => Arbitrary (BlocksMade c) where
+instance Arbitrary BlocksMade where
   arbitrary = BlocksMade <$> arbitrary
 
 instance Arbitrary Network where
@@ -317,10 +315,10 @@ instance Arbitrary EpochInterval where
 -- Cardano.Ledger.TxIn -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (TxId c) where
+instance Arbitrary TxId where
   arbitrary = TxId <$> arbitrary
 
-instance Crypto c => Arbitrary (TxIn c) where
+instance Arbitrary TxIn where
   arbitrary = TxIn <$> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
@@ -342,10 +340,10 @@ genValidPtr =
 genBadPtr :: Gen Ptr
 genBadPtr = Ptr <$> arbitrary <*> arbitrary <*> arbitrary
 
-instance Crypto c => Arbitrary (Credential r c) where
+instance Arbitrary (Credential r) where
   arbitrary =
     oneof
-      [ ScriptHashObj . ScriptHash <$> arbitrary
+      [ ScriptHashObj <$> arbitrary
       , KeyHashObj <$> arbitrary
       ]
 
@@ -356,39 +354,39 @@ instance Crypto c => Arbitrary (Credential r c) where
 genHash :: forall h a. HashAlgorithm h => Gen (Hash h a)
 genHash = UnsafeHash <$> genShortByteString (fromIntegral (sizeHash (Proxy @h)))
 
-instance Crypto c => Arbitrary (SafeHash c i) where
+instance Arbitrary (SafeHash i) where
   arbitrary = unsafeMakeSafeHash <$> genHash
 
-instance Crypto c => Arbitrary (ScriptHash c) where
+instance Arbitrary ScriptHash where
   arbitrary = ScriptHash <$> genHash
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.AuxiliaryDataHash ------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (AuxiliaryDataHash c) where
+instance Arbitrary AuxiliaryDataHash where
   arbitrary = AuxiliaryDataHash <$> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Keys -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (KeyHash r c) where
+instance Arbitrary (KeyHash r) where
   arbitrary = KeyHash <$> genHash
 
-instance Crypto c => Arbitrary (VRFVerKeyHash r c) where
+instance Arbitrary (VRFVerKeyHash r) where
   arbitrary = VRFVerKeyHash <$> genHash
 
-instance DSIGNAlgorithm (DSIGN c) => Arbitrary (VKey kd c) where
+instance Arbitrary (VKey kd) where
   arbitrary = VKey <$> arbitrary
 
-instance (Typeable kr, Crypto c) => Arbitrary (WitVKey kr c) where
+instance Typeable kr => Arbitrary (WitVKey kr) where
   arbitrary = WitVKey <$> arbitrary <*> arbitrary
 
 instance Arbitrary ChainCode where
   arbitrary = ChainCode <$> arbitrary
 
-instance Crypto c => Arbitrary (BootstrapWitness c) where
+instance Arbitrary BootstrapWitness where
   arbitrary = do
     bwKey <- arbitrary
     bwSig <- arbitrary
@@ -396,10 +394,10 @@ instance Crypto c => Arbitrary (BootstrapWitness c) where
     bwAttributes <- arbitrary
     pure $ BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes}
 
-instance Crypto c => Arbitrary (GenDelegPair c) where
+instance Arbitrary GenDelegPair where
   arbitrary = GenDelegPair <$> arbitrary <*> arbitrary
 
-deriving instance Crypto c => Arbitrary (GenDelegs c)
+deriving instance Arbitrary GenDelegs
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Coin -------------------------------------------------------------------
@@ -419,7 +417,7 @@ instance Arbitrary DeltaCoin where
 -- Cardano.Ledger.Address ----------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Arbitrary (BootstrapAddress c) where
+instance Arbitrary BootstrapAddress where
   arbitrary = BootstrapAddress <$> hedgehog Byron.genAddress
 
 instance Arbitrary Byron.Address where
@@ -431,31 +429,31 @@ instance Arbitrary Byron.AddrAttributes where
 instance Arbitrary (Byron.Attributes Byron.AddrAttributes) where
   arbitrary = hedgehog $ Byron.genAttributes Byron.genAddrAttributes
 
-instance Crypto c => Arbitrary (Addr c) where
+instance Arbitrary Addr where
   arbitrary = genAddrWith arbitrary
   shrink = genericShrink
 
-genAddrWith :: Crypto c => Gen Ptr -> Gen (Addr c)
+genAddrWith :: Gen Ptr -> Gen Addr
 genAddrWith genPtr =
   frequency
     [ (8, Addr <$> arbitrary <*> arbitrary <*> genStakeRefWith genPtr)
     , (2, AddrBootstrap <$> arbitrary)
     ]
 
-genAddrBadPtr :: Crypto c => Gen (Addr c)
+genAddrBadPtr :: Gen Addr
 genAddrBadPtr = genAddrWith genBadPtr
 
-genCompactAddrBadPtr :: Crypto c => Gen (CompactAddr c)
+genCompactAddrBadPtr :: Gen CompactAddr
 genCompactAddrBadPtr = compactAddr <$> genAddrBadPtr
 
-instance Crypto c => Arbitrary (CompactAddr c) where
+instance Arbitrary CompactAddr where
   arbitrary = compactAddr <$> arbitrary
 
-instance Crypto c => Arbitrary (StakeReference c) where
+instance Arbitrary StakeReference where
   arbitrary = genStakeRefWith arbitrary
   shrink = genericShrink
 
-genStakeRefWith :: Crypto c => Gen Ptr -> Gen (StakeReference c)
+genStakeRefWith :: Gen Ptr -> Gen StakeReference
 genStakeRefWith genPtr =
   frequency
     [ (80, StakeRefBase <$> arbitrary)
@@ -463,11 +461,11 @@ genStakeRefWith genPtr =
     , (15, pure StakeRefNull)
     ]
 
-instance Crypto c => Arbitrary (RewardAccount c) where
+instance Arbitrary RewardAccount where
   arbitrary = RewardAccount <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (Withdrawals c) where
+instance Arbitrary Withdrawals where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -479,7 +477,7 @@ instance Arbitrary RewardType where
   arbitrary = arbitraryBoundedEnum
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (Reward c) where
+instance Arbitrary Reward where
   arbitrary = Reward <$> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
@@ -487,7 +485,7 @@ instance Crypto c => Arbitrary (Reward c) where
 -- Cardano.Ledger.PoolParams -------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (PoolParams c) where
+instance Arbitrary PoolParams where
   arbitrary =
     PoolParams
       <$> arbitrary
@@ -517,19 +515,19 @@ instance Arbitrary SizeOfPoolOwners where
 -- Cardano.Ledger.PoolDistr --------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (PoolDistr c) where
+instance Arbitrary PoolDistr where
   arbitrary = do
     Positive denominator <- arbitrary
     PoolDistr <$> arbitrary <*> pure (CompactCoin denominator)
 
-instance Crypto c => Arbitrary (IndividualPoolStake c) where
+instance Arbitrary IndividualPoolStake where
   arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.DRepDistr --------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (DRepState c) where
+instance Arbitrary DRepState where
   arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
@@ -554,14 +552,14 @@ instance Arbitrary RDPair where
   arbitrary = RDPair <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (UMElem c) where
+instance Arbitrary UMElem where
   arbitrary = UMElem <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (UMap c) where
+instance Arbitrary UMap where
   arbitrary = UMap <$> arbitrary <*> arbitrary
 
-instance Crypto c => Arbitrary (DRep c) where
+instance Arbitrary DRep where
   arbitrary =
     oneof
       [ DRepCredential <$> arbitrary
@@ -572,18 +570,18 @@ instance Crypto c => Arbitrary (DRep c) where
 -- | Used for testing UMap operations
 genValidTuples ::
   Gen
-    ( Map (Credential 'Staking StandardCrypto) RDPair
-    , Map Ptr (Credential 'Staking StandardCrypto)
-    , Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
-    , Map (Credential 'Staking StandardCrypto) (DRep StandardCrypto)
+    ( Map (Credential 'Staking) RDPair
+    , Map Ptr (Credential 'Staking)
+    , Map (Credential 'Staking) (KeyHash 'StakePool)
+    , Map (Credential 'Staking) DRep
     )
 genValidTuples = scale (* 2) $ do
-  creds :: [Credential 'Staking StandardCrypto] <- arbitrary
+  creds :: [Credential 'Staking] <- arbitrary
   let nCreds = length creds
   rdPairs :: [RDPair] <- vectorOf nCreds arbitrary
   ptrs :: [Ptr] <- arbitrary
-  sPools :: [KeyHash 'StakePool StandardCrypto] <- vectorOf nCreds arbitrary
-  dReps :: [DRep StandardCrypto] <- vectorOf nCreds arbitrary
+  sPools :: [KeyHash 'StakePool] <- vectorOf nCreds arbitrary
+  dReps :: [DRep] <- vectorOf nCreds arbitrary
   pure
     ( Map.fromList $ zip creds rdPairs
     , Map.fromList $ zip ptrs creds
@@ -593,19 +591,19 @@ genValidTuples = scale (* 2) $ do
 
 genValidTuplesNonEmpty ::
   Gen
-    ( Map (Credential 'Staking StandardCrypto) RDPair
-    , Map Ptr (Credential 'Staking StandardCrypto)
-    , Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
-    , Map (Credential 'Staking StandardCrypto) (DRep StandardCrypto)
+    ( Map (Credential 'Staking) RDPair
+    , Map Ptr (Credential 'Staking)
+    , Map (Credential 'Staking) (KeyHash 'StakePool)
+    , Map (Credential 'Staking) DRep
     )
 genValidTuplesNonEmpty = scale (* 2) $ do
   Positive nCreds <- arbitrary
   nPtrs <- chooseInt (1, nCreds)
-  creds :: [Credential 'Staking StandardCrypto] <- vectorOf nCreds arbitrary
+  creds :: [Credential 'Staking] <- vectorOf nCreds arbitrary
   rdPairs :: [RDPair] <- vectorOf nCreds arbitrary
   ptrs :: [Ptr] <- vectorOf nPtrs arbitrary
-  sPools :: [KeyHash 'StakePool StandardCrypto] <- vectorOf nCreds arbitrary
-  dReps :: [DRep StandardCrypto] <- vectorOf nCreds arbitrary
+  sPools :: [KeyHash 'StakePool] <- vectorOf nCreds arbitrary
+  dReps :: [DRep] <- vectorOf nCreds arbitrary
   pure
     ( Map.fromList $ zip creds rdPairs
     , Map.fromList $ zip ptrs creds
@@ -613,12 +611,12 @@ genValidTuplesNonEmpty = scale (* 2) $ do
     , Map.fromList $ zip creds dReps
     )
 
-genValidUMap :: Gen (UMap StandardCrypto)
+genValidUMap :: Gen UMap
 genValidUMap = do
   (rdPairs, ptrs, sPools, dReps) <- genValidTuples
   pure $ unify rdPairs ptrs sPools dReps
 
-genValidUMapNonEmpty :: Gen (UMap StandardCrypto)
+genValidUMapNonEmpty :: Gen UMap
 genValidUMapNonEmpty = do
   (rdPairs, ptrs, sPools, dReps) <- genValidTuplesNonEmpty
   pure $ unify rdPairs ptrs sPools dReps
@@ -711,7 +709,7 @@ uniformSubMapElems insert mSubMapSize inputMap gen = do
           let (k, v) = Map.elemAt ix s
           go (Map.deleteAt ix s) (insert k v acc) (i - 1)
 
-genValidUMapWithCreds :: Gen (UMap StandardCrypto, Set (Credential 'Staking StandardCrypto))
+genValidUMapWithCreds :: Gen (UMap, Set (Credential 'Staking))
 genValidUMapWithCreds = do
   umap <- genValidUMap
   creds <- uniformSubSet Nothing (Map.keysSet $ umElems umap) QC
@@ -725,45 +723,35 @@ genExcludingKey ks = do
     else pure k
 
 genInsertDeleteRoundtripRDPair ::
-  Gen (UMap StandardCrypto, Credential 'Staking StandardCrypto, RDPair)
+  Gen (UMap, Credential 'Staking, RDPair)
 genInsertDeleteRoundtripRDPair = do
   umap@UMap {umElems} <- genValidUMap
   k <- genExcludingKey umElems
   v <- arbitrary
   pure (umap, k, v)
 
-genInsertDeleteRoundtripPtr :: Gen (UMap StandardCrypto, Ptr, Credential 'Staking StandardCrypto)
+genInsertDeleteRoundtripPtr :: Gen (UMap, Ptr, Credential 'Staking)
 genInsertDeleteRoundtripPtr = do
   umap@UMap {umPtrs} <- genValidUMap
   k <- genExcludingKey umPtrs
   v <- arbitrary
   pure (umap, k, v)
 
-genInsertDeleteRoundtripSPool ::
-  Gen
-    ( UMap StandardCrypto
-    , Credential 'Staking StandardCrypto
-    , KeyHash 'StakePool StandardCrypto
-    )
+genInsertDeleteRoundtripSPool :: Gen (UMap, Credential 'Staking, KeyHash 'StakePool)
 genInsertDeleteRoundtripSPool = do
   umap@UMap {umElems} <- genValidUMap
   k <- genExcludingKey umElems
   v <- arbitrary
   pure (umap, k, v)
 
-genInsertDeleteRoundtripDRep ::
-  Gen
-    ( UMap StandardCrypto
-    , Credential 'Staking StandardCrypto
-    , DRep StandardCrypto
-    )
+genInsertDeleteRoundtripDRep :: Gen (UMap, Credential 'Staking, DRep)
 genInsertDeleteRoundtripDRep = do
   umap@UMap {umElems} <- genValidUMap
   k <- genExcludingKey umElems
   v <- arbitrary
   pure (umap, k, v)
 
-genInvariantNonEmpty :: Gen (Credential 'Staking StandardCrypto, Ptr, UMap StandardCrypto)
+genInvariantNonEmpty :: Gen (Credential 'Staking, Ptr, UMap)
 genInvariantNonEmpty = do
   umap@(UMap tripmap ptrmap) <- genValidUMapNonEmpty
   cred <-
@@ -778,7 +766,7 @@ genInvariantNonEmpty = do
       ]
   pure (cred, ptr, umap)
 
-genRightPreferenceUMap :: Gen (UMap StandardCrypto, Map (Credential 'Staking StandardCrypto) RDPair)
+genRightPreferenceUMap :: Gen (UMap, Map (Credential 'Staking) RDPair)
 genRightPreferenceUMap = do
   umap <- genValidUMap
   let rdMap = unUnify $ RewDepUView umap
@@ -800,40 +788,40 @@ instance Era era => Arbitrary (DState era) where
       then DState <$> genConwayUMap <*> arbitrary <*> arbitrary <*> arbitrary
       else DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
-genConwayUMap :: forall c. Crypto c => Gen (UMap c)
+genConwayUMap :: Gen UMap
 genConwayUMap = UMap <$> genElems <*> pure mempty
   where
-    genElems :: Gen (Map (Credential 'Staking c) (UMElem c))
+    genElems :: Gen (Map (Credential 'Staking) UMElem)
     genElems = Map.fromList <$> listOf ((,) <$> arbitrary <*> genElem)
-    genElem :: Gen (UMElem c)
+    genElem :: Gen UMElem
     genElem = UMElem <$> arbitrary <*> pure mempty <*> arbitrary <*> arbitrary
 
-instance Era era => Arbitrary (PState era) where
+instance Arbitrary (PState era) where
   arbitrary = PState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
-instance Crypto c => Arbitrary (Anchor c) where
+instance Arbitrary Anchor where
   arbitrary = Anchor <$> arbitrary <*> arbitrary
 
 instance Arbitrary a => Arbitrary (Mismatch r a) where
   arbitrary = Mismatch <$> arbitrary <*> arbitrary
 
-instance Crypto c => Arbitrary (CommitteeAuthorization c) where
+instance Arbitrary CommitteeAuthorization where
   arbitrary =
     oneof
       [ CommitteeHotCredential <$> arbitrary
       , CommitteeMemberResigned <$> arbitrary
       ]
 
-deriving instance Era era => Arbitrary (CommitteeState era)
+deriving instance Arbitrary (CommitteeState era)
 
-instance Era era => Arbitrary (VState era) where
+instance Arbitrary (VState era) where
   arbitrary = VState <$> arbitrary <*> arbitrary <*> arbitrary
 
-instance Crypto c => Arbitrary (InstantaneousRewards c) where
+instance Arbitrary InstantaneousRewards where
   arbitrary = InstantaneousRewards <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (FutureGenDeleg c) where
+instance Arbitrary FutureGenDeleg where
   arbitrary = FutureGenDeleg <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
@@ -841,14 +829,14 @@ instance Crypto c => Arbitrary (FutureGenDeleg c) where
 -- Cardano.Ledger.EpochBoundary ----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (SnapShot c) where
+instance Arbitrary SnapShot where
   arbitrary =
     SnapShot
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
 
-instance Crypto c => Arbitrary (SnapShots c) where
+instance Arbitrary SnapShots where
   arbitrary = do
     ssStakeMark <- arbitrary
     ssStakeSet <- arbitrary
@@ -862,7 +850,7 @@ instance Crypto c => Arbitrary (SnapShots c) where
 -- be careful that we never generate Stake where the sum of all the coins exceeds (maxBound :: Word64)
 -- There will never be a real Stake in the system with that many Ada, because total Ada is constant.
 -- So using a restricted Arbitrary Generator is OK.
-instance Crypto c => Arbitrary (Stake c) where
+instance Arbitrary Stake where
   arbitrary = Stake <$> (VMap.fromMap <$> theMap)
     where
       genWord64 :: Int -> Gen Word64
@@ -882,7 +870,7 @@ instance Crypto c => Arbitrary (Stake c) where
 -- Cardano.Ledger.Core.TxCert ----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Crypto c => Arbitrary (PoolCert c) where
+instance Arbitrary PoolCert where
   arbitrary =
     oneof
       [ RegPool <$> arbitrary

@@ -122,7 +122,6 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), compactCoinOrError)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Control.DeepSeq (NFData (..))
@@ -202,30 +201,30 @@ instance DecCBOR RDPair where
 -- TEEEF means only the voting delegatee id is present, and
 --
 -- The pattern 'UMElem' will correctly use the optimal constructor.
-data UMElem c
+data UMElem
   = TEEEE
-  | TEEEF !(DRep c)
-  | TEEFE !(KeyHash 'StakePool c)
-  | TEEFF !(KeyHash 'StakePool c) !(DRep c)
+  | TEEEF !DRep
+  | TEEFE !(KeyHash 'StakePool)
+  | TEEFF !(KeyHash 'StakePool) !DRep
   | TEFEE !(Set Ptr)
-  | TEFEF !(Set Ptr) !(DRep c)
-  | TEFFE !(Set Ptr) !(KeyHash 'StakePool c)
-  | TEFFF !(Set Ptr) !(KeyHash 'StakePool c) !(DRep c)
+  | TEFEF !(Set Ptr) !DRep
+  | TEFFE !(Set Ptr) !(KeyHash 'StakePool)
+  | TEFFF !(Set Ptr) !(KeyHash 'StakePool) !DRep
   | TFEEE {-# UNPACK #-} !RDPair
-  | TFEEF {-# UNPACK #-} !RDPair !(DRep c)
-  | TFEFE {-# UNPACK #-} !RDPair !(KeyHash 'StakePool c)
-  | TFEFF {-# UNPACK #-} !RDPair !(KeyHash 'StakePool c) !(DRep c)
+  | TFEEF {-# UNPACK #-} !RDPair !DRep
+  | TFEFE {-# UNPACK #-} !RDPair !(KeyHash 'StakePool)
+  | TFEFF {-# UNPACK #-} !RDPair !(KeyHash 'StakePool) !DRep
   | TFFEE {-# UNPACK #-} !RDPair !(Set Ptr)
-  | TFFEF {-# UNPACK #-} !RDPair !(Set Ptr) !(DRep c)
-  | TFFFE {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c)
-  | TFFFF {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c) !(DRep c)
+  | TFFEF {-# UNPACK #-} !RDPair !(Set Ptr) !DRep
+  | TFFFE {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool)
+  | TFFFF {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool) !DRep
   deriving (Eq, Ord, Show, Generic, NoThunks, NFData)
 
-instance Crypto c => ToJSON (UMElem c) where
+instance ToJSON UMElem where
   toJSON = object . toUMElemair
   toEncoding = Aeson.pairs . mconcat . toUMElemair
 
-toUMElemair :: (Aeson.KeyValue e a, Crypto c) => UMElem c -> [a]
+toUMElemair :: Aeson.KeyValue e a => UMElem -> [a]
 toUMElemair (UMElem !rd !ptr !spool !drep) =
   [ "reward" .= fmap rdReward rd
   , "deposit" .= fmap rdDeposit rd
@@ -234,12 +233,12 @@ toUMElemair (UMElem !rd !ptr !spool !drep) =
   , "drep" .= drep
   ]
 
-instance Crypto c => EncCBOR (UMElem c) where
+instance EncCBOR UMElem where
   encCBOR (UMElem rd ptrSet sPool dRep) =
     encodeListLen 4 <> encCBOR rd <> encCBOR ptrSet <> encCBOR sPool <> encCBOR dRep
 
-instance Crypto c => DecShareCBOR (UMElem c) where
-  type Share (UMElem c) = Interns (KeyHash 'StakePool c)
+instance DecShareCBOR UMElem where
+  type Share UMElem = Interns (KeyHash 'StakePool)
   decShareCBOR is =
     decodeRecordNamed "UMElem" (const 4) $
       UMElem
@@ -251,8 +250,8 @@ instance Crypto c => DecShareCBOR (UMElem c) where
 -- | A n-Tuple view of the `UMElem`.
 -- We can view all of the constructors as an `UMElem`.
 umElemAsTuple ::
-  UMElem c ->
-  (StrictMaybe RDPair, Set Ptr, StrictMaybe (KeyHash 'StakePool c), StrictMaybe (DRep c))
+  UMElem ->
+  (StrictMaybe RDPair, Set Ptr, StrictMaybe (KeyHash 'StakePool), StrictMaybe DRep)
 umElemAsTuple = \case
   TEEEE -> (SNothing, Set.empty, SNothing, SNothing)
   TEEEF v -> (SNothing, Set.empty, SNothing, SJust v)
@@ -277,7 +276,7 @@ umElemAsTuple = \case
 -- an F in the 1st position (present) and 4rd position (DRep delegated).
 --
 -- This is equivalent to the pattern (UMElem (SJust r) _ _ (SJust d)) -> Just (r, d)
-umElemDRepDelegatedReward :: UMElem c -> Maybe (CompactForm Coin, DRep c)
+umElemDRepDelegatedReward :: UMElem -> Maybe (CompactForm Coin, DRep)
 umElemDRepDelegatedReward = \case
   TFEEF RDPair {rdReward} dRep -> Just (rdReward, dRep)
   TFEFF RDPair {rdReward} _ dRep -> Just (rdReward, dRep)
@@ -291,7 +290,7 @@ umElemDRepDelegatedReward = \case
 -- an F in the 1st position (present) and 3rd position (delegated).
 --
 -- This is equivalent to the pattern (UMElem (SJust r) _ (SJust _) _) -> Just r
-umElemRDActive :: UMElem c -> Maybe RDPair
+umElemRDActive :: UMElem -> Maybe RDPair
 umElemRDActive = \case
   TFEFE rdA _ -> Just rdA
   TFEFF rdA _ _ -> Just rdA
@@ -300,16 +299,16 @@ umElemRDActive = \case
   _ -> Nothing
 {-# INLINE umElemRDActive #-}
 
-data RewardDelegation c
-  = RewardDelegationSPO !(KeyHash 'StakePool c) !(CompactForm Coin)
-  | RewardDelegationDRep !(DRep c) !(CompactForm Coin)
-  | RewardDelegationBoth !(KeyHash 'StakePool c) !(DRep c) !(CompactForm Coin)
+data RewardDelegation
+  = RewardDelegationSPO !(KeyHash 'StakePool) !(CompactForm Coin)
+  | RewardDelegationDRep !DRep !(CompactForm Coin)
+  | RewardDelegationBoth !(KeyHash 'StakePool) !DRep !(CompactForm Coin)
 
 -- | Extract rewards that are either delegated to a DRep or an SPO (or both).
 -- We can tell that the pair is present and active when Txxxx has F's in the 1st
 -- and either 3rd or 4th or both positions. If there are no rewards or deposits
 -- but the delegations still exist, then we return zero coin as reward.
-umElemDelegations :: UMElem c -> Maybe (RewardDelegation c)
+umElemDelegations :: UMElem -> Maybe RewardDelegation
 umElemDelegations (UMElem r _p s d) =
   let reward = strictMaybe mempty rdReward r
    in case (s, d) of
@@ -323,7 +322,7 @@ umElemDelegations (UMElem r _p s d) =
 -- We can tell that the reward is present when Txxxx has an F in the first position
 --
 -- This is equivalent to the pattern (UMElem (SJust r) _ _ _) -> Just r
-umElemRDPair :: UMElem c -> Maybe RDPair
+umElemRDPair :: UMElem -> Maybe RDPair
 umElemRDPair = \case
   TFEEE r -> Just r
   TFEEF r _ -> Just r
@@ -340,7 +339,7 @@ umElemRDPair = \case
 -- We can tell that the reward is present when Txxxx has an F in the second position
 --
 -- This is equivalent to the pattern (UMElem _ p _ _) -> Just p
-umElemPtrs :: UMElem c -> Maybe (Set.Set Ptr)
+umElemPtrs :: UMElem -> Maybe (Set.Set Ptr)
 umElemPtrs = \case
   TEFEE p | not (Set.null p) -> Just p
   TEFEF p _ | not (Set.null p) -> Just p
@@ -357,7 +356,7 @@ umElemPtrs = \case
 -- We can tell that the pool id is present when Txxxx has an F in the third position
 --
 -- This is equivalent to the pattern (UMElem _ _ (SJust s) _) -> Just s
-umElemSPool :: UMElem c -> Maybe (KeyHash 'StakePool c)
+umElemSPool :: UMElem -> Maybe (KeyHash 'StakePool)
 umElemSPool = \case
   TEEFE s -> Just s
   TEEFF s _ -> Just s
@@ -374,7 +373,7 @@ umElemSPool = \case
 -- We can tell that the delegatee is present when Txxxx has an F in the fourth position
 --
 -- This is equivalent to the pattern (UMElem _ _ _ (SJust d)) -> Just d
-umElemDRep :: UMElem c -> Maybe (DRep c)
+umElemDRep :: UMElem -> Maybe DRep
 umElemDRep = \case
   TEEEF d -> Just d
   TEEFF _ d -> Just d
@@ -391,9 +390,9 @@ umElemDRep = \case
 pattern UMElem ::
   StrictMaybe RDPair ->
   Set Ptr ->
-  StrictMaybe (KeyHash 'StakePool c) ->
-  StrictMaybe (DRep c) ->
-  UMElem c
+  StrictMaybe (KeyHash 'StakePool) ->
+  StrictMaybe DRep ->
+  UMElem
 pattern UMElem i j k l <- (umElemAsTuple -> (i, j, k, l))
   where
     UMElem i j k l = case (i, j, k, l) of
@@ -423,45 +422,45 @@ pattern UMElem i j k l <- (umElemAsTuple -> (i, j, k, l))
 -- 3) Map (Credential 'Staking c) (StrictMaybe (KeyHash 'StakePool c))
 -- 4) Map (Credential 'Staking c) (StrictMaybe (DRep c))
 -- and one more map in the inverse direction with @Ptr@ for keys and @(Credential 'Staking c)@ for values.
-data UMap c = UMap
-  { umElems :: !(Map (Credential 'Staking c) (UMElem c))
-  , umPtrs :: !(Map Ptr (Credential 'Staking c))
+data UMap = UMap
+  { umElems :: !(Map (Credential 'Staking) UMElem)
+  , umPtrs :: !(Map Ptr (Credential 'Staking))
   }
   deriving (Show, Eq, Generic, NoThunks, NFData)
 
-umElemsL :: Lens' (UMap c) (Map (Credential 'Staking c) (UMElem c))
+umElemsL :: Lens' UMap (Map (Credential 'Staking) UMElem)
 umElemsL = lens umElems (\x y -> x {umElems = y})
 
 -- | All maps unrolled. It is important to note that all fields are lazy, because
 -- conversion from UMap can be expensive, thus only fields that are forced will incur that
 -- conversion overhead.
-data StakeCredentials c = StakeCredentials
-  { scRewards :: Map (Credential 'Staking c) Coin
-  , scDeposits :: Map (Credential 'Staking c) Coin
-  , scSPools :: Map (Credential 'Staking c) (KeyHash 'StakePool c)
-  , scDReps :: Map (Credential 'Staking c) (DRep c)
-  , scPtrs :: Map Ptr (Credential 'Staking c)
-  , scPtrsInverse :: Map (Credential 'Staking c) (Set Ptr)
+data StakeCredentials = StakeCredentials
+  { scRewards :: Map (Credential 'Staking) Coin
+  , scDeposits :: Map (Credential 'Staking) Coin
+  , scSPools :: Map (Credential 'Staking) (KeyHash 'StakePool)
+  , scDReps :: Map (Credential 'Staking) DRep
+  , scPtrs :: Map Ptr (Credential 'Staking)
+  , scPtrsInverse :: Map (Credential 'Staking) (Set Ptr)
   -- ^ There will be no empty sets in the range
   }
   deriving (Show, Eq, Generic, NoThunks, NFData)
 
-instance Crypto c => ToJSON (UMap c) where
+instance ToJSON UMap where
   toJSON = object . toUMapPair
   toEncoding = Aeson.pairs . mconcat . toUMapPair
 
-toUMapPair :: (Aeson.KeyValue e a, Crypto c) => UMap c -> [a]
+toUMapPair :: Aeson.KeyValue e a => UMap -> [a]
 toUMapPair (UMap !m1 !m2) =
   [ "credentials" .= m1
   , "pointers" .= m2
   ]
 
-instance Crypto c => EncCBOR (UMap c) where
+instance EncCBOR UMap where
   encCBOR UMap {umElems, umPtrs} =
     encodeListLen 2 <> encodeMap encCBOR encCBOR umElems <> encodeMap encCBOR encCBOR umPtrs
 
-instance Crypto c => DecShareCBOR (UMap c) where
-  type Share (UMap c) = (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))
+instance DecShareCBOR UMap where
+  type Share UMap = (Interns (Credential 'Staking), Interns (KeyHash 'StakePool))
   decSharePlusCBOR =
     StateT
       ( \(a, b) ->
@@ -471,14 +470,14 @@ instance Crypto c => DecShareCBOR (UMap c) where
             umPtrs <-
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                (mempty <$ dropCBOR (Proxy @(Map (Credential 'Staking c) (Set Ptr))))
+                (mempty <$ dropCBOR (Proxy @(Map (Credential 'Staking) (Set Ptr))))
                 $ decodeMap decCBOR (interns a' <$> decCBOR)
             pure (UMap {umElems, umPtrs}, (a', b))
       )
 
 -- | It is worthwhile stating the invariant that holds on a Unified Map.
 -- The `umPtrs` and the `ptrT` field of the `umElems` are inverses.
-umInvariant :: Credential 'Staking c -> Ptr -> UMap c -> Bool
+umInvariant :: Credential 'Staking -> Ptr -> UMap -> Bool
 umInvariant cred ptr UMap {umElems, umPtrs} = forwards && backwards
   where
     forwards =
@@ -502,50 +501,50 @@ umInvariant cred ptr UMap {umElems, umPtrs} = forwards && backwards
 -- one for each of the elements in a Unified Element `UMElem` @(4)@
 -- A @(UView c key value)@ can be used like a @(Map key value)@.
 -- It acts like a map, supporting efficient insert, delete, and lookup operations.
-data UView c k v where
+data UView k v where
   RewDepUView ::
-    !(UMap c) ->
-    UView c (Credential 'Staking c) RDPair
+    !UMap ->
+    UView (Credential 'Staking) RDPair
   PtrUView ::
-    !(UMap c) ->
-    UView c Ptr (Credential 'Staking c)
+    !UMap ->
+    UView Ptr (Credential 'Staking)
   SPoolUView ::
-    !(UMap c) ->
-    UView c (Credential 'Staking c) (KeyHash 'StakePool c)
+    !UMap ->
+    UView (Credential 'Staking) (KeyHash 'StakePool)
   DRepUView ::
-    !(UMap c) ->
-    UView c (Credential 'Staking c) (DRep c)
+    !UMap ->
+    UView (Credential 'Staking) DRep
 
 -- | Construct a `RewDepUView` from the two maps that make up a `UMap`
 rewDepUView ::
-  Map (Credential 'Staking c) (UMElem c) ->
-  Map Ptr (Credential 'Staking c) ->
-  UView c (Credential 'Staking c) RDPair
+  Map (Credential 'Staking) UMElem ->
+  Map Ptr (Credential 'Staking) ->
+  UView (Credential 'Staking) RDPair
 rewDepUView a b = RewDepUView (UMap a b)
 
 -- | Construct a `PtrUView` from the two maps that make up a `UMap`
 ptrUView ::
-  Map (Credential 'Staking c) (UMElem c) ->
-  Map Ptr (Credential 'Staking c) ->
-  UView c Ptr (Credential 'Staking c)
+  Map (Credential 'Staking) UMElem ->
+  Map Ptr (Credential 'Staking) ->
+  UView Ptr (Credential 'Staking)
 ptrUView a b = PtrUView (UMap a b)
 
 -- | Construct a `SPoolUView` from the two maps that make up a `UMap`
 sPoolUView ::
-  Map (Credential 'Staking c) (UMElem c) ->
-  Map Ptr (Credential 'Staking c) ->
-  UView c (Credential 'Staking c) (KeyHash 'StakePool c)
+  Map (Credential 'Staking) UMElem ->
+  Map Ptr (Credential 'Staking) ->
+  UView (Credential 'Staking) (KeyHash 'StakePool)
 sPoolUView a b = SPoolUView (UMap a b)
 
 -- | Construct a `DRepUView` from the two maps that make up a `UMap`
 dRepUView ::
-  Map (Credential 'Staking c) (UMElem c) ->
-  Map Ptr (Credential 'Staking c) ->
-  UView c (Credential 'Staking c) (DRep c)
+  Map (Credential 'Staking) UMElem ->
+  Map Ptr (Credential 'Staking) ->
+  UView (Credential 'Staking) DRep
 dRepUView a b = DRepUView (UMap a b)
 
 -- | Extract the underlying `UMap` from a `UView`
-unUView :: UView c k v -> UMap c
+unUView :: UView k v -> UMap
 unUView = \case
   RewDepUView um -> um
   PtrUView um -> um
@@ -555,7 +554,7 @@ unUView = \case
 -- | Materialize a real `Map` from a `View`
 -- This is expensive, use it wisely (like maybe once per epoch boundary to make a `SnapShot`)
 -- See also domRestrictedMap, which domain-restricts before computing a view.
-unUnify :: UView c k v -> Map k v
+unUnify :: UView k v -> Map k v
 unUnify = \case
   RewDepUView UMap {umElems} -> Map.mapMaybe umElemRDPair umElems
   PtrUView UMap {umPtrs} -> umPtrs
@@ -564,7 +563,7 @@ unUnify = \case
 
 -- | Materialize a real `VMap` (Vector Map) from a `UView`
 -- This is expensive, use it wisely (like maybe once per epoch boundary to make a `SnapShot`)
-unUnifyToVMap :: UView c k v -> VMap.VMap VMap.VB VMap.VB k v
+unUnifyToVMap :: UView k v -> VMap.VMap VMap.VB VMap.VB k v
 unUnifyToVMap uview = case uview of
   RewDepUView UMap {umElems} ->
     VMap.fromListN (size uview) . Maybe.mapMaybe toRDPair . Map.toList $ umElems
@@ -579,27 +578,27 @@ unUnifyToVMap uview = case uview of
     toDRep (key, t) = (,) key <$> umElemDRep t
 
 -- | Extract a reward-deposit pairs `Map` from a 'UMap'
-rdPairMap :: UMap c -> Map (Credential 'Staking c) RDPair
+rdPairMap :: UMap -> Map (Credential 'Staking) RDPair
 rdPairMap x = unUnify $ RewDepUView x
 
 -- | Extract a rewards `Map` from a 'UMap'
-rewardMap :: UMap c -> Map (Credential 'Staking c) Coin
+rewardMap :: UMap -> Map (Credential 'Staking) Coin
 rewardMap x = Map.map (fromCompact . rdReward) $ unUnify $ RewDepUView x
 
 -- | Extract a compact rewards `Map` from a 'UMap'
-compactRewardMap :: UMap c -> Map (Credential 'Staking c) (CompactForm Coin)
+compactRewardMap :: UMap -> Map (Credential 'Staking) (CompactForm Coin)
 compactRewardMap x = Map.map rdReward $ unUnify $ RewDepUView x
 
 -- | Extract a deposits `Map` from a 'UMap'
-depositMap :: UMap c -> Map (Credential 'Staking c) Coin
+depositMap :: UMap -> Map (Credential 'Staking) Coin
 depositMap x = Map.map (fromCompact . rdDeposit) $ unUnify $ RewDepUView x
 
 -- | Extract a pointers `Map` from a 'UMap'
-ptrMap :: UMap c -> Map Ptr (Credential 'Staking c)
+ptrMap :: UMap -> Map Ptr (Credential 'Staking)
 ptrMap x = unUnify $ PtrUView x
 
 -- | Extract a pointers `Map` from a 'UMap'
-invPtrMap :: UMap c -> Map (Credential 'Staking c) (Set Ptr)
+invPtrMap :: UMap -> Map (Credential 'Staking) (Set Ptr)
 invPtrMap UMap {umElems} =
   Map.foldlWithKey'
     (\ans k (UMElem _ ptrSet _ _) -> if Set.null ptrSet then ans else Map.insert k ptrSet ans)
@@ -607,23 +606,23 @@ invPtrMap UMap {umElems} =
     umElems
 
 -- | Extract a stake pool delegations `Map` from a 'UMap'
-sPoolMap :: UMap c -> Map (Credential 'Staking c) (KeyHash 'StakePool c)
+sPoolMap :: UMap -> Map (Credential 'Staking) (KeyHash 'StakePool)
 sPoolMap x = unUnify $ SPoolUView x
 
 -- | Extract a delegated-representatives `Map` from a 'UMap'
-dRepMap :: UMap c -> Map (Credential 'Staking c) (DRep c)
+dRepMap :: UMap -> Map (Credential 'Staking) DRep
 dRepMap x = unUnify $ DRepUView x
 
 -- | Extract a domain-restricted `Map` of a `UMap`.
 -- If `Set k` is small this should be efficient.
-domRestrictedMap :: Set k -> UView c k v -> Map k v
+domRestrictedMap :: Set k -> UView k v -> Map k v
 domRestrictedMap setk = \case
   RewDepUView UMap {umElems} -> Map.mapMaybe umElemRDPair (Map.restrictKeys umElems setk)
   PtrUView UMap {umPtrs} -> Map.restrictKeys umPtrs setk
   SPoolUView UMap {umElems} -> Map.mapMaybe umElemSPool (Map.restrictKeys umElems setk)
   DRepUView UMap {umElems} -> Map.mapMaybe umElemDRep (Map.restrictKeys umElems setk)
 
-toStakeCredentials :: UMap c -> StakeCredentials c
+toStakeCredentials :: UMap -> StakeCredentials
 toStakeCredentials umap =
   StakeCredentials
     { scRewards = rewardMap umap
@@ -634,7 +633,7 @@ toStakeCredentials umap =
     , scPtrsInverse = invPtrMap umap
     }
 
-domRestrictedStakeCredentials :: Set (Credential 'Staking c) -> UMap c -> StakeCredentials c
+domRestrictedStakeCredentials :: Set (Credential 'Staking) -> UMap -> StakeCredentials
 domRestrictedStakeCredentials setk UMap {umElems, umPtrs} =
   let umElems' = Map.restrictKeys umElems setk
       ptrs = Map.mapMaybe umElemPtrs umElems'
@@ -648,7 +647,7 @@ domRestrictedStakeCredentials setk UMap {umElems, umPtrs} =
         }
 
 -- | All `View`s are `Foldable`
-instance Foldable (UView c k) where
+instance Foldable (UView k) where
   foldMap f = \case
     RewDepUView UMap {umElems} -> Map.foldlWithKey accum mempty umElems
       where
@@ -697,26 +696,26 @@ instance Foldable (UView c k) where
   length = size
 
 -- | `null` for an `UMElem`
-nullUMElem :: UMElem c -> Bool
+nullUMElem :: UMElem -> Bool
 nullUMElem = \case
   UMElem SNothing ptrSet SNothing SNothing | Set.null ptrSet -> True
   _ -> False
 
 -- | `null` `Maybe` for an `UMElem`
-nullUMElemMaybe :: UMElem c -> Maybe (UMElem c)
+nullUMElemMaybe :: UMElem -> Maybe UMElem
 nullUMElemMaybe = \case
   e | nullUMElem e -> Nothing
   e -> Just e
 
 -- | Construct an empty `UMap`
-empty :: UMap c
+empty :: UMap
 empty = UMap Map.empty Map.empty
 
 -- | Delete a key and its value from the map-like `UView`, returning a version of the same `UView`.
 --
 -- In the case of a `PtrUView` we maintain the `umInvariant` and delete the pairs from both
 -- `umElems` as well as `umPtrs` of the `UMap`.
-delete' :: k -> UView c k v -> UView c k v
+delete' :: k -> UView k v -> UView k v
 delete' key = \case
   RewDepUView UMap {umElems, umPtrs} -> rewDepUView (Map.update go key umElems) umPtrs
     where
@@ -733,7 +732,7 @@ delete' key = \case
     where
       go (UMElem rd ptrSet sPool _) = nullUMElemMaybe $ UMElem rd ptrSet sPool SNothing
 
-delete :: k -> UView c k v -> UMap c
+delete :: k -> UView k v -> UMap
 delete k m = unUView $ delete' k m
 
 -- | Insert with combination
@@ -753,7 +752,7 @@ delete k m = unUView $ delete' k m
 --   the combining function is ignored, and
 --   the key `k` and the value `v` are inserted into the map-like `UView`
 --   > insertWith' ignoredCombiningFunction k v view
-insertWith' :: (v -> v -> v) -> k -> v -> UView c k v -> UView c k v
+insertWith' :: (v -> v -> v) -> k -> v -> UView k v -> UView k v
 insertWith' combine key val = \case
   RewDepUView UMap {umElems, umPtrs} -> rewDepUView (Map.alter go key umElems) umPtrs
     where
@@ -797,25 +796,25 @@ insertWith' combine key val = \case
         Just (UMElem rd ptrSet sPool SNothing) -> Just $ UMElem rd ptrSet sPool $ SJust val
         Just (UMElem rd ptrSet sPool (SJust old)) -> Just $ UMElem rd ptrSet sPool $ SJust $ combine old val
 
-insertWith :: (v -> v -> v) -> k -> v -> UView c k v -> UMap c
+insertWith :: (v -> v -> v) -> k -> v -> UView k v -> UMap
 insertWith combine k v uview = unUView $ insertWith' combine k v uview
 
-insert' :: k -> v -> UView c k v -> UView c k v
+insert' :: k -> v -> UView k v -> UView k v
 insert' = insertWith' $ \_old new -> new
 
-insert :: k -> v -> UView c k v -> UMap c
+insert :: k -> v -> UView k v -> UMap
 insert k v uview = unUView $ insert' k v uview
 
 -- | Adjust a `UView`, just like `Map.adjust`.
 -- This is implemented only for reward-deposit pairs.
-adjust :: (RDPair -> RDPair) -> k -> UView c k RDPair -> UMap c
+adjust :: (RDPair -> RDPair) -> k -> UView k RDPair -> UMap
 adjust f k (RewDepUView UMap {umElems, umPtrs}) = UMap (Map.adjust go k umElems) umPtrs
   where
     go (UMElem (SJust rd) ptrSet sPool dRep) = UMElem (SJust (f rd)) ptrSet sPool dRep
     go (UMElem SNothing ptrSet sPool dRep) = UMElem SNothing ptrSet sPool dRep
 
 -- | Lookup a `UView`, just like `Map.lookup`.
-lookup :: k -> UView c k v -> Maybe v
+lookup :: k -> UView k v -> Maybe v
 lookup key = \case
   RewDepUView UMap {umElems} -> Map.lookup key umElems >>= umElemRDPair
   PtrUView UMap {umPtrs} -> Map.lookup key umPtrs
@@ -823,7 +822,7 @@ lookup key = \case
   DRepUView UMap {umElems} -> Map.lookup key umElems >>= umElemDRep
 
 -- | `null` for a `UView`, just like `Map.null`
-nullUView :: UView c k v -> Bool
+nullUView :: UView k v -> Bool
 nullUView = \case
   RewDepUView UMap {umElems} -> all (isNothing . umElemRDPair) umElems
   PtrUView UMap {umPtrs} -> Map.null umPtrs
@@ -831,7 +830,7 @@ nullUView = \case
   DRepUView UMap {umElems} -> all (isNothing . umElemDRep) umElems
 
 -- | Get the domain of the `Map`-like `UView`
-domain :: UView c k v -> Set k
+domain :: UView k v -> Set k
 domain = \case
   RewDepUView UMap {umElems} -> Map.foldlWithKey' accum Set.empty umElems
     where
@@ -848,7 +847,7 @@ domain = \case
       accum ans _ _ = ans
 
 -- | Get the range of the `Map`-like `UView`
-range :: UView c k v -> Set v
+range :: UView k v -> Set v
 range = \case
   RewDepUView UMap {umElems} -> Map.foldl' accum Set.empty umElems
     where
@@ -870,7 +869,7 @@ range = \case
 -- Spec:
 -- evalUnified (RewDepUView u1 ∪ singleton hk mempty)
 -- evalUnified (Ptrs u2 ∪ singleton ptr hk)
-unionL, (∪) :: UView c k v -> (k, v) -> UMap c
+unionL, (∪) :: UView k v -> (k, v) -> UMap
 view ∪ (k, v) = insertWith const k v view
 unionL = (∪)
 
@@ -888,7 +887,7 @@ unionL = (∪)
 -- Spec:
 -- evalUnified (delegations ds ⨃ singleton hk dpool)
 -- evalUnified (rewards' ⨃ wdrls_')
-unionR, (⨃) :: UView c k v -> Map k v -> UMap c
+unionR, (⨃) :: UView k v -> Map k v -> UMap
 (RewDepUView UMap {umElems, umPtrs}) ⨃ rightUmap = UMap (Map.foldlWithKey' accum umElems rightUmap) umPtrs
   where
     accum !ans k (RDPair r _) = Map.adjust overwrite k ans
@@ -911,9 +910,9 @@ unionR = (⨃)
 -- evalUnified (RewDepUView u0 ∪+ refunds)
 unionRewAgg
   , (∪+) ::
-    UView c (Credential 'Staking c) RDPair ->
-    Map (Credential 'Staking c) (CompactForm Coin) ->
-    UMap c
+    UView (Credential 'Staking) RDPair ->
+    Map (Credential 'Staking) (CompactForm Coin) ->
+    UMap
 unionRewAgg view m = Map.foldlWithKey' accum (unUView view) m
   where
     accum umap key ccoin = adjust combine key (RewDepUView umap)
@@ -923,7 +922,7 @@ unionRewAgg view m = Map.foldlWithKey' accum (unUView view) m
 
 -- | Add the deposit from the `Map` on the right side to the deposit in the `UView` on the left.
 -- This is only implemented and is applicable to `RewDepUView`s.
-unionKeyDeposits :: UView c k RDPair -> Map k (CompactForm Coin) -> UMap c
+unionKeyDeposits :: UView k RDPair -> Map k (CompactForm Coin) -> UMap
 unionKeyDeposits view m = unUView $ Map.foldlWithKey' accum view m
   where
     accum vw key ccoin = insertWith' combine key (RDPair (CompactCoin 0) ccoin) vw
@@ -936,22 +935,22 @@ unionKeyDeposits view m = unUView $ Map.foldlWithKey' accum view m
 -- Spec:
 -- evalUnified (setSingleton hk ⋪ RewDepUView u0)
 -- evalUnified (setSingleton hk ⋪ SPoolUView u1)
-domDelete, (⋪) :: Set k -> UView c k v -> UMap c
+domDelete, (⋪) :: Set k -> UView k v -> UMap
 set ⋪ view = unUView (Set.foldl' (flip delete') view set)
 domDelete = (⋪)
 
 -- | Delete the stake credentials in the domain and all associated ranges from the `UMap`
 -- This can be expensive when there are many pointers associated with the credential.
-domDeleteAll :: Set (Credential 'Staking c) -> UMap c -> UMap c
+domDeleteAll :: Set (Credential 'Staking) -> UMap -> UMap
 domDeleteAll ks umap = Set.foldr' deleteStakingCredential umap ks
 
 -- | Completely remove the staking credential from the UMap, including all associated
 -- pointers.
-deleteStakingCredential :: Credential 'Staking c -> UMap c -> UMap c
+deleteStakingCredential :: Credential 'Staking -> UMap -> UMap
 deleteStakingCredential cred = snd . extractStakingCredential cred
 
 -- | Just like `deleteStakingCredential`, but also returned the removed element.
-extractStakingCredential :: Credential 'Staking c -> UMap c -> (Maybe (UMElem c), UMap c)
+extractStakingCredential :: Credential 'Staking -> UMap -> (Maybe UMElem, UMap)
 extractStakingCredential cred umap@UMap {umElems, umPtrs} =
   case MapExtras.extract cred umElems of
     (Nothing, _) -> (Nothing, umap)
@@ -969,7 +968,7 @@ extractStakingCredential cred umap@UMap {umElems, umPtrs} =
 -- Spec:
 -- evalUnified (Ptrs u2 ⋫ setSingleton hk)
 -- evalUnified (SPoolUView u1 ⋫ retired)
-rngDelete, (⋫) :: UView c k v -> Set v -> UMap c
+rngDelete, (⋫) :: UView k v -> Set v -> UMap
 RewDepUView UMap {umElems, umPtrs} ⋫ rdSet = UMap (Map.foldlWithKey' accum umElems umElems) umPtrs
   where
     accum ans key = \case
@@ -1004,7 +1003,7 @@ DRepUView UMap {umElems, umPtrs} ⋫ dRepSet = UMap (Map.foldlWithKey' accum umE
 rngDelete = (⋫)
 
 -- | Checks for membership directly against `umElems` instead of a `UView`.
-member' :: Credential 'Staking c -> UMap c -> Bool
+member' :: Credential 'Staking -> UMap -> Bool
 member' k = Map.member k . umElems
 
 -- | Membership check for a `UView`, just like `Map.member`
@@ -1014,7 +1013,7 @@ member' k = Map.member k . umElems
 -- eval (k ∈ dom (rewards ds)))
 -- eval (hk ∈ dom (rewards ds))
 -- eval (hk ∉ dom (rewards ds))
-member, notMember :: k -> UView c k v -> Bool
+member, notMember :: k -> UView k v -> Bool
 member k = \case
   RewDepUView UMap {umElems} -> case Map.lookup k umElems of
     Just (UMElem (SJust _) _ _ _) -> True
@@ -1033,7 +1032,7 @@ notMember k um = not $ member k um
 -- Spec:
 -- eval (dom rewards' ◁ iRReserves (_irwd ds) :: RewardAccounts (Crypto era))
 -- eval (dom rewards' ◁ iRTreasury (_irwd ds) :: RewardAccounts (Crypto era))
-(◁), domRestrict :: UView c k v -> Map k u -> Map k u
+(◁), domRestrict :: UView k v -> Map k u -> Map k u
 RewDepUView UMap {umElems} ◁ m = intersectDomPLeft p m umElems
   where
     p _ (UMElem (SJust _) _ _ _) = True
@@ -1050,23 +1049,23 @@ DRepUView UMap {umElems} ◁ m = intersectDomPLeft p m umElems
 domRestrict = (◁)
 
 -- | Find the value associated with a key from a `UView`, return the default if the key is not there.
-findWithDefault :: v -> k -> UView c k v -> v
+findWithDefault :: v -> k -> UView k v -> v
 findWithDefault def k = fromMaybe def . lookup k
 
 -- | A `UView` is a view, so the size of the view is NOT the same as the size of
 -- the underlying `UMElem` map.
-size :: UView c k v -> Int
+size :: UView k v -> Int
 size = \case
   PtrUView UMap {umPtrs} -> Map.size umPtrs
   x -> foldl' (\count _v -> count + 1) 0 x
 
 -- | Create a UMap from 4 separate maps. NOTE: For use in tests only.
 unify ::
-  Map (Credential 'Staking c) RDPair ->
-  Map Ptr (Credential 'Staking c) ->
-  Map (Credential 'Staking c) (KeyHash 'StakePool c) ->
-  Map (Credential 'Staking c) (DRep c) ->
-  UMap c
+  Map (Credential 'Staking) RDPair ->
+  Map Ptr (Credential 'Staking) ->
+  Map (Credential 'Staking) (KeyHash 'StakePool) ->
+  Map (Credential 'Staking) DRep ->
+  UMap
 unify rd ptr sPool dRep = um4
   where
     um1 = unUView $ Map.foldlWithKey' (\um k v -> insert' k v um) (RewDepUView empty) rd
@@ -1080,12 +1079,12 @@ addCompact (CompactCoin x) (CompactCoin y) = CompactCoin (x + y)
 sumCompactCoin :: Foldable t => t (CompactForm Coin) -> CompactForm Coin
 sumCompactCoin = foldl' addCompact (CompactCoin 0)
 
-sumRewardsUView :: UView c k RDPair -> CompactForm Coin
+sumRewardsUView :: UView k RDPair -> CompactForm Coin
 sumRewardsUView = foldl' accum (CompactCoin 0)
   where
     accum ans (RDPair r _) = addCompact ans r
 
-sumDepositUView :: UView c k RDPair -> CompactForm Coin
+sumDepositUView :: UView k RDPair -> CompactForm Coin
 sumDepositUView = foldl' accum (CompactCoin 0)
   where
     accum ans (RDPair _ d) = addCompact ans d

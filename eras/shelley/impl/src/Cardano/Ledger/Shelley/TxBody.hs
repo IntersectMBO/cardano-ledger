@@ -63,7 +63,6 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
@@ -102,14 +101,14 @@ class (ShelleyEraTxCert era, EraTxBody era, ProtVerAtMost era 8) => ShelleyEraTx
 -- The underlying type for TxBody
 
 data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
-  { stbrInputs :: !(Set (TxIn (EraCrypto era)))
+  { stbrInputs :: !(Set TxIn)
   , stbrOutputs :: !(StrictSeq (TxOut era))
   , stbrCerts :: !(StrictSeq (TxCert era))
-  , stbrWithdrawals :: !(Withdrawals (EraCrypto era))
+  , stbrWithdrawals :: !Withdrawals
   , stbrTxFee :: !Coin
   , stbrTTL :: !SlotNo
   , stbrUpdate :: !(StrictMaybe (Update era))
-  , stbrMDHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  , stbrMDHash :: !(StrictMaybe AuxiliaryDataHash)
   }
   deriving (Generic, Typeable)
 
@@ -228,7 +227,7 @@ instance
 -- Introduce ShelleyTxBody as a newtype around a MemoBytes
 
 newtype ShelleyTxBody era = TxBodyConstr (MemoBytes ShelleyTxBodyRaw era)
-  deriving (Generic, Typeable)
+  deriving (Generic)
   deriving newtype (SafeToHash, ToCBOR)
 
 instance Memoized ShelleyTxBody where
@@ -238,10 +237,8 @@ instance
   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
   EqRaw (ShelleyTxBody era)
 
-instance Crypto c => EraTxBody (ShelleyEra c) where
-  {-# SPECIALIZE instance EraTxBody (ShelleyEra StandardCrypto) #-}
-
-  type TxBody (ShelleyEra c) = ShelleyTxBody (ShelleyEra c)
+instance EraTxBody ShelleyEra where
+  type TxBody ShelleyEra = ShelleyTxBody ShelleyEra
 
   mkBasicTxBody = mkMemoized basicShelleyTxBodyRaw
 
@@ -282,9 +279,7 @@ instance Crypto c => EraTxBody (ShelleyEra c) where
       "Calling this function will cause a compilation error, "
         ++ "since there is no TxBody instance for ByronEra"
 
-instance Crypto c => ShelleyEraTxBody (ShelleyEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxBody (ShelleyEra StandardCrypto) #-}
-
+instance ShelleyEraTxBody ShelleyEra where
   ttlTxBodyL =
     lensMemoRawType stbrTTL $ \txBodyRaw ttl -> txBodyRaw {stbrTTL = ttl}
   {-# INLINEABLE ttlTxBodyL #-}
@@ -313,14 +308,14 @@ deriving via
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
   (EraTxOut era, EncCBOR (TxCert era)) =>
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
   StrictSeq (TxOut era) ->
   StrictSeq (TxCert era) ->
-  Withdrawals (EraCrypto era) ->
+  Withdrawals ->
   Coin ->
   SlotNo ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+  StrictMaybe AuxiliaryDataHash ->
   ShelleyTxBody era
 pattern ShelleyTxBody
   { stbInputs
@@ -372,10 +367,7 @@ pattern ShelleyTxBody
 
 type instance MemoHashIndex ShelleyTxBodyRaw = EraIndependentTxBody
 
-instance
-  (Era era, c ~ EraCrypto era) =>
-  HashAnnotated (ShelleyTxBody era) EraIndependentTxBody c
-  where
+instance Era era => HashAnnotated (ShelleyTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- ===============================================================

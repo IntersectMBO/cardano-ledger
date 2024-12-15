@@ -22,7 +22,6 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.Core as Core (Tx)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -53,10 +52,7 @@ import Lens.Micro
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-instance
-  Crypto c =>
-  TranslateEra (BabbageEra c) NewEpochState
-  where
+instance TranslateEra BabbageEra NewEpochState where
   translateEra ctxt nes =
     pure $
       NewEpochState
@@ -71,8 +67,8 @@ instance
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
 
-instance Crypto c => TranslateEra (BabbageEra c) Tx where
-  type TranslationError (BabbageEra c) Tx = DecoderError
+instance TranslateEra BabbageEra Tx where
+  type TranslationError BabbageEra Tx = DecoderError
   translateEra _ctxt (Tx tx) = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
@@ -89,16 +85,16 @@ instance Crypto c => TranslateEra (BabbageEra c) Tx where
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance Crypto c => TranslateEra (BabbageEra c) PParams where
+instance TranslateEra BabbageEra PParams where
   translateEra _ = pure . upgradePParams ()
 
-instance Crypto c => TranslateEra (BabbageEra c) FuturePParams where
+instance TranslateEra BabbageEra FuturePParams where
   translateEra ctxt = \case
     NoPParamsUpdate -> pure NoPParamsUpdate
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
-instance Crypto c => TranslateEra (BabbageEra c) EpochState where
+instance TranslateEra BabbageEra EpochState where
   translateEra ctxt es =
     pure
       EpochState
@@ -108,21 +104,21 @@ instance Crypto c => TranslateEra (BabbageEra c) EpochState where
         , esNonMyopic = esNonMyopic es
         }
 
-instance Crypto c => TranslateEra (BabbageEra c) DState where
+instance TranslateEra BabbageEra DState where
   translateEra _ DState {..} = pure DState {..}
 
-instance Crypto c => TranslateEra (BabbageEra c) CommitteeState where
+instance TranslateEra BabbageEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance Crypto c => TranslateEra (BabbageEra c) VState where
+instance TranslateEra BabbageEra VState where
   translateEra ctx VState {..} = do
     committeeState <- translateEra ctx vsCommitteeState
     pure VState {vsCommitteeState = committeeState, ..}
 
-instance Crypto c => TranslateEra (BabbageEra c) PState where
+instance TranslateEra BabbageEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance Crypto c => TranslateEra (BabbageEra c) CertState where
+instance TranslateEra BabbageEra CertState where
   translateEra ctxt ls =
     pure
       CertState
@@ -131,7 +127,7 @@ instance Crypto c => TranslateEra (BabbageEra c) CertState where
         , certVState = translateEra' ctxt $ certVState ls
         }
 
-instance Crypto c => TranslateEra (BabbageEra c) LedgerState where
+instance TranslateEra BabbageEra LedgerState where
   translateEra ctxt ls =
     pure
       LedgerState
@@ -139,7 +135,7 @@ instance Crypto c => TranslateEra (BabbageEra c) LedgerState where
         , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
-instance Crypto c => TranslateEra (BabbageEra c) UTxOState where
+instance TranslateEra BabbageEra UTxOState where
   translateEra ctxt us =
     pure
       UTxOState
@@ -151,11 +147,11 @@ instance Crypto c => TranslateEra (BabbageEra c) UTxOState where
         , utxosDonation = utxosDonation us
         }
 
-instance Crypto c => TranslateEra (BabbageEra c) UTxO where
+instance TranslateEra BabbageEra UTxO where
   translateEra _ctxt utxo =
     pure $ UTxO $ translateTxOut `Map.map` unUTxO utxo
 
-instance Crypto c => TranslateEra (BabbageEra c) ShelleyGovState where
+instance TranslateEra BabbageEra ShelleyGovState where
   translateEra ctxt ps =
     pure
       ShelleyGovState
@@ -166,13 +162,12 @@ instance Crypto c => TranslateEra (BabbageEra c) ShelleyGovState where
         , sgsFuturePParams = translateEra' ctxt $ sgsFuturePParams ps
         }
 
-instance Crypto c => TranslateEra (BabbageEra c) ProposedPPUpdates where
+instance TranslateEra BabbageEra ProposedPPUpdates where
   translateEra _ctxt (ProposedPPUpdates ppup) =
     pure $ ProposedPPUpdates $ fmap (upgradePParamsUpdate ()) ppup
 
 translateTxOut ::
-  Crypto c =>
-  TxOut (AlonzoEra c) ->
-  TxOut (BabbageEra c)
+  TxOut AlonzoEra ->
+  TxOut BabbageEra
 translateTxOut = upgradeTxOut
 {-# DEPRECATED translateTxOut "Use `upgradeTxOut` instead" #-}

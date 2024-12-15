@@ -12,8 +12,6 @@ module Test.Cardano.Ledger.Mary.Value (valTests) where
 import Cardano.Crypto.Hash.Class (castHash, hashFromStringAsHex)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact, toCompact)
-import Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -58,20 +56,20 @@ pickOld o _n = o
 
 insertValue ::
   (Integer -> Integer -> Integer) ->
-  PolicyID c ->
+  PolicyID ->
   AssetName ->
   Integer ->
-  MaryValue c ->
-  MaryValue c
+  MaryValue ->
+  MaryValue
 insertValue combine pid aid new (MaryValue c m) = MaryValue c $ insertMultiAsset combine pid aid new m
 
 insert3 ::
   (Integer -> Integer -> Integer) ->
-  PolicyID c ->
+  PolicyID ->
   AssetName ->
   Integer ->
-  MaryValue c ->
-  MaryValue c
+  MaryValue ->
+  MaryValue
 insert3 combine pid aid new (MaryValue c (MultiAsset m1)) =
   case Map.lookup pid m1 of
     Nothing ->
@@ -89,7 +87,7 @@ insert3 combine pid aid new (MaryValue c (MultiAsset m1)) =
             canonicalInsert pickNew pid (canonicalInsert pickNew aid (combine old new) m2) m1
 
 -- | Make a Value with no coin, and just one token.
-unit :: PolicyID c -> AssetName -> Integer -> MaryValue c
+unit :: PolicyID -> AssetName -> Integer -> MaryValue
 unit pid aid n =
   MaryValue mempty $
     MultiAsset (canonicalInsert pickNew pid (canonicalInsert pickNew aid n empty) empty)
@@ -97,13 +95,12 @@ unit pid aid n =
 -- Use <+> and <->
 
 insert2 ::
-  CC.Crypto c =>
   (Integer -> Integer -> Integer) ->
-  PolicyID c ->
+  PolicyID ->
   AssetName ->
   Integer ->
-  MaryValue c ->
-  MaryValue c
+  MaryValue ->
+  MaryValue
 insert2 combine pid aid new m1 =
   -- The trick is to correctly not store a zero. Several ways to get a zero
   case (lookupMultiAsset pid aid m1, new == 0) of
@@ -119,19 +116,19 @@ insert2 combine pid aid new m1 =
 -- 3 functions that build Values from Policy Asset triples.
 
 valueFromList ::
-  [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
+  [(PolicyID, AssetName, Integer)] -> Integer -> MaryValue
 valueFromList list c = MaryValue (Coin c) $ foldr acc mempty list
   where
     acc (policy, asset, count) m = insertMultiAsset (+) policy asset count m
 
 valueFromList3 ::
-  [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
+  [(PolicyID, AssetName, Integer)] -> Integer -> MaryValue
 valueFromList3 list c = foldr acc (MaryValue (Coin c) mempty) list
   where
     acc (policy, asset, count) m = insert3 (+) policy asset count m
 
 valueFromList2 ::
-  [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
+  [(PolicyID, AssetName, Integer)] -> Integer -> MaryValue
 valueFromList2 list c = foldr acc (MaryValue (Coin c) mempty) list
   where
     acc (policy, asset, count) m = insert2 (+) policy asset count m
@@ -156,7 +153,7 @@ genB = resize 4 arbitrary
 genAssetName :: Gen AssetName
 genAssetName = AssetName <$> genB
 
-genPolicyID :: Gen (PolicyID StandardCrypto)
+genPolicyID :: Gen PolicyID
 genPolicyID = PolicyID <$> arbitrary
 
 -- ===========================================================================
@@ -178,7 +175,7 @@ albelianTests =
     [ testGroup "albelian Coin" $
         map (\(prop, name) -> testProperty name prop) (albelianlist @Coin)
     , testGroup "albelian Value" $
-        map (\(prop, name) -> testProperty name prop) (albelianlist @(MaryValue StandardCrypto))
+        map (\(prop, name) -> testProperty name prop) (albelianlist @MaryValue)
     ]
 
 -- ===================================================================
@@ -226,7 +223,7 @@ polyCoinTests = testGroup "polyCoinTests" (map f (proplist @Coin))
     f (fun, name) = testProperty name fun
 
 polyValueTests :: TestTree
-polyValueTests = testGroup "polyValueTests" (map f (proplist @(MaryValue StandardCrypto)))
+polyValueTests = testGroup "polyValueTests" (map f (proplist @MaryValue))
   where
     f (fun, name) = testProperty name fun
 
@@ -235,7 +232,7 @@ polyValueTests = testGroup "polyValueTests" (map f (proplist @(MaryValue Standar
 -- Testing that insert, lookup, and coin interact properly
 
 valuePropList ::
-  [ ( Integer -> Integer -> MaryValue StandardCrypto -> PolicyID StandardCrypto -> AssetName -> Bool
+  [ ( Integer -> Integer -> MaryValue -> PolicyID -> AssetName -> Bool
     , String
     )
   ]
@@ -305,9 +302,9 @@ monoValueTests = testGroup "Value specific tests" (map (\(f, n) -> testProperty 
 
 valueGroup ::
   [ ( Integer ->
-      MaryValue StandardCrypto ->
-      MaryValue StandardCrypto ->
-      PolicyID StandardCrypto ->
+      MaryValue ->
+      MaryValue ->
+      PolicyID ->
       AssetName ->
       Property
     , String
@@ -357,7 +354,7 @@ compactTest = testProperty "fromCompact . toCompact == id" compactRoundTrip
 
 -- | Create a script hash of length 28 with 27 leading zeros followed by one hex-encoded byte
 -- supplied by the caller.
-makeScriptHash :: String -> ScriptHash StandardCrypto
+makeScriptHash :: String -> ScriptHash
 makeScriptHash str =
   ScriptHash $ castHash (fromMaybe (error "Impossible") $ hashFromStringAsHex (pad <> str))
   where
@@ -366,10 +363,10 @@ makeScriptHash str =
 oneNonameAsset :: Map.Map AssetName Integer
 oneNonameAsset = Map.fromList [(AssetName "", 1)]
 
-makeMultiAsset :: ScriptHash StandardCrypto -> MultiAsset StandardCrypto
+makeMultiAsset :: ScriptHash -> MultiAsset
 makeMultiAsset sh = MultiAsset (Map.singleton (PolicyID sh) oneNonameAsset)
 
-s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12 :: MultiAsset StandardCrypto
+s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12 :: MultiAsset
 s0 = makeMultiAsset $ makeScriptHash "00"
 s1 = makeMultiAsset $ makeScriptHash "01"
 s2 = makeMultiAsset $ makeScriptHash "02"
@@ -384,7 +381,7 @@ s10 = makeMultiAsset $ makeScriptHash "10"
 s11 = makeMultiAsset $ makeScriptHash "11"
 s12 = makeMultiAsset $ makeScriptHash "12"
 
-exampleMultiAssets :: [MultiAsset StandardCrypto]
+exampleMultiAssets :: [MultiAsset]
 exampleMultiAssets = [s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12]
 
 -- | Test that the subtraction of Multi-assets (and the underlying 'CanonicalMaps')

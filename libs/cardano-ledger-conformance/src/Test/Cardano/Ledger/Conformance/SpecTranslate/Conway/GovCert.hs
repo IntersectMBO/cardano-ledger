@@ -30,7 +30,6 @@ import Cardano.Ledger.Conway.TxCert (
   ConwayGovCert (..),
  )
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity)
@@ -40,8 +39,8 @@ import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 
-instance Crypto c => SpecTranslate ctx (ConwayGovCert c) where
-  type SpecRep (ConwayGovCert c) = Agda.DCert
+instance SpecTranslate ctx ConwayGovCert where
+  type SpecRep ConwayGovCert = Agda.DCert
 
   toSpecRep (ConwayRegDRep c d a) =
     Agda.Regdrep
@@ -64,13 +63,13 @@ instance Crypto c => SpecTranslate ctx (ConwayGovCert c) where
   toSpecRep (ConwayResignCommitteeColdKey c _) =
     Agda.Ccreghot
       <$> toSpecRep c
-      <*> toSpecRep (SNothing @(Credential _ _))
+      <*> toSpecRep (SNothing @(Credential _))
 
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map (RewardAccount (EraCrypto era)) Coin)
+  , Inject ctx (Map RewardAccount Coin)
   ) =>
   SpecTranslate ctx (ConwayGovCertEnv era)
   where
@@ -78,7 +77,7 @@ instance
 
   toSpecRep ConwayGovCertEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map (RewardAccount (EraCrypto era)) Coin)
+    withdrawals <- askCtx @(Map RewardAccount Coin)
     Agda.MkCertEnv
       <$> toSpecRep cgceCurrentEpoch
       <*> toSpecRep cgcePParams

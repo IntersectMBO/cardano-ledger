@@ -48,7 +48,7 @@ newtype ConwayHardForkEvent era = ConwayHardForkEvent ProtVer
   deriving (Generic, Eq)
   deriving newtype (NFData)
 
-type instance EraRuleEvent "HARDFORK" (ConwayEra c) = ConwayHardForkEvent (ConwayEra c)
+type instance EraRuleEvent "HARDFORK" ConwayEra = ConwayHardForkEvent ConwayEra
 
 instance
   EraGov era =>

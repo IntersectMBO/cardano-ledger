@@ -45,7 +45,6 @@ import Data.Functor.Identity (runIdentity)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import GHC.Stack
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genCoin)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (
@@ -77,7 +76,6 @@ instance
   ( EraGen era
   , EraGov era
   , EraUTxO era
-  , Mock (EraCrypto era)
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -114,7 +112,6 @@ instance
   ( EraGen era
   , EraGov era
   , EraUTxO era
-  , Mock (EraCrypto era)
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era

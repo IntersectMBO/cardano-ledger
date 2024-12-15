@@ -60,7 +60,6 @@ import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext,
   ScriptFailure (..),
@@ -140,9 +139,9 @@ instance
 
 data AlonzoUtxosEvent era
   = AlonzoPpupToUtxosEvent (EraRuleEvent "PPUP" era)
-  | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
-  | SuccessfulPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
-  | FailedPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
+  | TotalDeposits (SafeHash EraIndependentTxBody) Coin
+  | SuccessfulPlutusScriptsEvent (NonEmpty PlutusWithContext)
+  | FailedPlutusScriptsEvent (NonEmpty PlutusWithContext)
   | -- | The UTxOs consumed and created by a signal tx
     TxUTxODiff
       -- | UTxO consumed
@@ -219,7 +218,7 @@ scriptsTransition ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  (ScriptResult (EraCrypto era) -> Rule sts ctx ()) ->
+  (ScriptResult -> Rule sts ctx ()) ->
   Rule sts ctx ()
 scriptsTransition slot pp tx utxo action = do
   sysSt <- liftSTS $ asks systemStart
@@ -360,7 +359,7 @@ instance ToJSON FailureDescription where
       -- "reconstructionDetail" .= bs
       ]
 
-scriptFailureToFailureDescription :: Crypto c => ScriptFailure c -> FailureDescription
+scriptFailureToFailureDescription :: ScriptFailure -> FailureDescription
 scriptFailureToFailureDescription (ScriptFailure msg pwc) =
   PlutusFailure msg (B64.encode $ Plain.serialize' pwc)
 
@@ -410,11 +409,11 @@ data AlonzoUtxosPredFailure era
   deriving
     (Generic)
 
-type instance EraRuleFailure "UTXOS" (AlonzoEra c) = AlonzoUtxosPredFailure (AlonzoEra c)
+type instance EraRuleFailure "UTXOS" AlonzoEra = AlonzoUtxosPredFailure AlonzoEra
 
-instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (AlonzoEra c)
+instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure AlonzoEra
 
-instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure (AlonzoEra c) where
+instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure AlonzoEra where
   injectFailure = UpdateFailure
 
 instance

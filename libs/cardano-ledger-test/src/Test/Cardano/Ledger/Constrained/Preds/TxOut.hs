@@ -3,7 +3,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Test.Cardano.Ledger.Constrained.Preds.TxOut where
@@ -14,7 +13,7 @@ import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..), AlonzoTxOut (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..), BabbageTxOut (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (
-  Era (EraCrypto),
+  Era,
   EraScript (..),
   EraTxOut (..),
   Script,
@@ -105,7 +104,7 @@ txoutDatum :: (Reflect era, BabbageEraTxOut era) => Term era (Datum era)
 txoutDatum = fieldToTerm txoutDatumF
 
 txoutDataHashF ::
-  (Reflect era, AlonzoEraTxOut era) => Field era (TxOutF era) (Maybe (DataHash (EraCrypto era)))
+  (Reflect era, AlonzoEraTxOut era) => Field era (TxOutF era) (Maybe DataHash)
 txoutDataHashF =
   Field
     "txoutDataHashF"
@@ -113,10 +112,10 @@ txoutDataHashF =
     (TxOutR reify)
     (txOutFL . dataHashTxOutL . strictMaybeMaybeL)
 
-txoutDataHash :: (Reflect era, AlonzoEraTxOut era) => Term era (Maybe (DataHash (EraCrypto era)))
+txoutDataHash :: (Reflect era, AlonzoEraTxOut era) => Term era (Maybe DataHash)
 txoutDataHash = fieldToTerm txoutDataHashF
 
-isBootstrapAddr :: Addr c -> Bool
+isBootstrapAddr :: Addr -> Bool
 isBootstrapAddr (AddrBootstrap _) = True
 isBootstrapAddr (Addr _ _ _) = False
 

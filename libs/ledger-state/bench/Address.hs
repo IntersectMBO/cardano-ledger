@@ -16,7 +16,6 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
 import Control.DeepSeq (NFData, deepseq)
 import Criterion.Main
@@ -28,11 +27,11 @@ import Test.Cardano.Ledger.Core.Address (decompactAddrOldLazy)
 
 main :: IO ()
 main = do
-  let mkPayment :: Int -> Credential 'Payment StandardCrypto
+  let mkPayment :: Int -> Credential 'Payment
       mkPayment = KeyHashObj . payAddr28
-      stakeRefBase :: Int -> StakeReference StandardCrypto
+      stakeRefBase :: Int -> StakeReference
       stakeRefBase = StakeRefBase . KeyHashObj . stakeAddr28
-      mkAddr :: (Int -> StakeReference StandardCrypto) -> Int -> Addr StandardCrypto
+      mkAddr :: (Int -> StakeReference) -> Int -> Addr
       mkAddr mkStake n = Addr Mainnet (mkPayment n) (mkStake n)
       mkPtr n =
         let ni = toInteger n
@@ -41,17 +40,17 @@ main = do
       count = 10000
       seqUnit :: a -> StrictUnit
       seqUnit x = x `seq` mempty
-      forcePaymentCred :: Addr StandardCrypto -> StrictUnit
+      forcePaymentCred :: Addr -> StrictUnit
       forcePaymentCred = \case
         Addr _ p _ -> p `seq` mempty
         _ -> mempty
-      forceStakingCred :: Addr StandardCrypto -> StrictUnit
+      forceStakingCred :: Addr -> StrictUnit
       forceStakingCred = \case
         Addr _ _ s -> s `deepseq` mempty
         _ -> mempty
-      addrs :: (Int -> StakeReference StandardCrypto) -> [Addr StandardCrypto]
+      addrs :: (Int -> StakeReference) -> [Addr]
       addrs mkStake = mkAddr mkStake <$> [1 .. count]
-      partialDeserializeAddr :: ByteString -> Addr StandardCrypto
+      partialDeserializeAddr :: ByteString -> Addr
       partialDeserializeAddr =
         either (error . show) id . decodeFullDecoder' version "Addr" fromCborAddr
       version = maxBound :: Version
@@ -184,14 +183,14 @@ deepseqUnit x = x `deepseq` mempty
 textDigits :: Int -> T.Text
 textDigits n = let i = n `mod` 10 in T.pack (take 6 (cycle (show i)))
 
-payAddr28 :: Int -> KeyHash 'Payment StandardCrypto
+payAddr28 :: Int -> KeyHash 'Payment
 payAddr28 n =
   KeyHash $
     fromMaybe "Unexpected PayAddr28" $
       hashFromTextAsHex $
         textDigits n <> "0405060708090a0b0c0d0e0f12131415161718191a1b1c1d1e"
 
-stakeAddr28 :: Int -> KeyHash 'Staking StandardCrypto
+stakeAddr28 :: Int -> KeyHash 'Staking
 stakeAddr28 n =
   KeyHash $
     fromMaybe "Unexpected StakeAddr28" $

@@ -66,7 +66,6 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Plutus.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
@@ -92,30 +91,30 @@ import qualified PlutusLedgerApi.V3 as PV3
 
 -- | A transaction output can be translated because it is a newly created output,
 -- or because it is the output which is connected to a transaction input being spent.
-data TxOutSource c
-  = TxOutFromInput !(TxIn c)
+data TxOutSource
+  = TxOutFromInput !TxIn
   | TxOutFromOutput !TxIx
   deriving (Eq, Show, Generic, NoThunks)
 
-instance NFData (TxOutSource era) where
+instance NFData TxOutSource where
   rnf = rwhnf
 
-instance Crypto c => EncCBOR (TxOutSource c) where
+instance EncCBOR TxOutSource where
   encCBOR = \case
     TxOutFromInput txIn -> encode $ Sum TxOutFromInput 0 !> To txIn
     TxOutFromOutput txIx -> encode $ Sum TxOutFromOutput 1 !> To txIx
 
-instance Crypto c => DecCBOR (TxOutSource c) where
+instance DecCBOR TxOutSource where
   decCBOR = decode (Summands "TxOutSource" dec)
     where
       dec 0 = SumD TxOutFromInput <! From
       dec 1 = SumD TxOutFromOutput <! From
       dec n = Invalid n
 
-instance ToJSON (TxOutSource c) where
+instance ToJSON TxOutSource where
   toJSON = String . txOutSourceToText
 
-txOutSourceToText :: TxOutSource c -> Text
+txOutSourceToText :: TxOutSource -> Text
 txOutSourceToText = \case
   TxOutFromInput txIn -> "Input: " <> txInToText txIn
   TxOutFromOutput txIx -> "Output: " <> T.pack (show txIx)
@@ -123,19 +122,19 @@ txOutSourceToText = \case
 transBoundedRational :: BoundedRational r => r -> PV3.Rational
 transBoundedRational = PV3.fromGHC . unboundRational
 
-transDataHash :: DataHash c -> PV1.DatumHash
+transDataHash :: DataHash -> PV1.DatumHash
 transDataHash safe = PV1.DatumHash (transSafeHash safe)
 
-transKeyHash :: KeyHash d c -> PV1.PubKeyHash
+transKeyHash :: KeyHash d -> PV1.PubKeyHash
 transKeyHash (KeyHash h) = PV1.PubKeyHash (PV1.toBuiltin (hashToBytes h))
 
-transSafeHash :: SafeHash c i -> PV1.BuiltinByteString
+transSafeHash :: SafeHash i -> PV1.BuiltinByteString
 transSafeHash = PV1.toBuiltin . hashToBytes . extractHash
 
-transScriptHash :: ScriptHash c -> PV1.ScriptHash
+transScriptHash :: ScriptHash -> PV1.ScriptHash
 transScriptHash (ScriptHash h) = PV1.ScriptHash (PV1.toBuiltin (hashToBytes h))
 
-transStakeReference :: StakeReference c -> Maybe PV1.StakingCredential
+transStakeReference :: StakeReference -> Maybe PV1.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transCred cred))
 transStakeReference (StakeRefPtr (Ptr (SlotNo slot) txIx certIx)) =
   let !txIxInteger = toInteger (txIxToInt txIx)
@@ -143,7 +142,7 @@ transStakeReference (StakeRefPtr (Ptr (SlotNo slot) txIx certIx)) =
    in Just (PV1.StakingPtr (fromIntegral slot) txIxInteger certIxInteger)
 transStakeReference StakeRefNull = Nothing
 
-transCred :: Credential kr c -> PV1.Credential
+transCred :: Credential kr -> PV1.Credential
 transCred (KeyHashObj (KeyHash kh)) =
   PV1.PubKeyCredential (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes kh)))
 transCred (ScriptHashObj (ScriptHash sh)) =
@@ -151,7 +150,7 @@ transCred (ScriptHashObj (ScriptHash sh)) =
 
 -- | Translate an address. `Cardano.Ledger.BaseTypes.NetworkId` is discarded and Byron
 -- Addresses will result in Nothing.
-transAddr :: Addr c -> Maybe PV1.Address
+transAddr :: Addr -> Maybe PV1.Address
 transAddr = \case
   AddrBootstrap {} -> Nothing
   Addr _networkId paymentCred stakeReference ->
@@ -161,7 +160,7 @@ transAddr = \case
 --
 -- /Note/ - This function is the right one to use starting with PlutusV3, prior to that an
 -- extra `PV1.StakingHash` wrapper is needed.
-transRewardAccount :: RewardAccount c -> PV1.Credential
+transRewardAccount :: RewardAccount -> PV1.Credential
 transRewardAccount (RewardAccount _networkId cred) = transCred cred
 
 slotToPOSIXTime ::
@@ -176,16 +175,16 @@ slotToPOSIXTime ei sysS s = do
 -- ========================================
 -- translate TxIn and TxOut
 
-transTxId :: TxId c -> PV1.TxId
+transTxId :: TxId -> PV1.TxId
 transTxId (TxId safe) = PV1.TxId (transSafeHash safe)
 
-transTxIn :: TxIn c -> PV1.TxOutRef
+transTxIn :: TxIn -> PV1.TxOutRef
 transTxIn (TxIn txid txIx) = PV1.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
 
 transCoinToValue :: Coin -> PV1.Value
 transCoinToValue (Coin c) = PV1.singleton PV1.adaSymbol PV1.adaToken c
 
-transDataPair :: (DataHash c, Data era) -> (PV1.DatumHash, PV1.Datum)
+transDataPair :: (DataHash, Data era) -> (PV1.DatumHash, PV1.Datum)
 transDataPair (x, y) = (transDataHash x, PV1.Datum (PV1.dataToBuiltinData (getPlutusData y)))
 
 transExUnits :: ExUnits -> PV1.ExBudget

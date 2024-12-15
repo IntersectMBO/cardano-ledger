@@ -9,7 +9,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -20,7 +19,6 @@ import Data.Functor.Identity (Identity)
 
 import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe)
 import Cardano.Ledger.Conway.Core (
-  Era (..),
   EraPParams (..),
   EraTx,
   EraTxAuxData (..),
@@ -44,7 +42,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (IsConwayUniv, UtxoExecContext (..), utxoStateSpec)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Constrained (
   Specification (..),
   assert,
@@ -75,19 +73,16 @@ import UnliftIO (evaluateDeep)
 
 data ConwayLedgerExecContext era
   = ConwayLedgerExecContext
-  { clecPolicyHash :: StrictMaybe (ScriptHash (EraCrypto era))
+  { clecPolicyHash :: StrictMaybe ScriptHash
   , clecEnactState :: EnactState era
   , clecUtxoExecContext :: UtxoExecContext era
   }
   deriving (Generic)
 
-instance
-  c ~ EraCrypto era =>
-  Inject (ConwayLedgerExecContext era) (StrictMaybe (ScriptHash c))
-  where
+instance Inject (ConwayLedgerExecContext era) (StrictMaybe ScriptHash) where
   inject = clecPolicyHash
 
-instance Inject (ConwayLedgerExecContext Conway) (EnactState Conway) where
+instance Inject (ConwayLedgerExecContext ConwayEra) (EnactState ConwayEra) where
   inject = clecEnactState
 
 instance
@@ -118,9 +113,9 @@ instance EraPParams era => EncCBOR (ConwayLedgerExecContext era) where
 instance
   forall fn.
   IsConwayUniv fn =>
-  ExecSpecRule fn "LEDGER" Conway
+  ExecSpecRule fn "LEDGER" ConwayEra
   where
-  type ExecContext fn "LEDGER" Conway = ConwayLedgerExecContext Conway
+  type ExecContext fn "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
 
   genExecContext = do
     ctx <- arbitrary
@@ -157,7 +152,7 @@ instance
     LedgerState {..}
     sig
     _ =
-      extraInfo @fn @"UTXOW" @Conway
+      extraInfo @fn @"UTXOW" @ConwayEra
         globals
         clecUtxoExecContext
         utxoEnv
@@ -168,12 +163,12 @@ instance
         utxoEnv = UtxoEnv ledgerSlotNo ledgerPp lsCertState
         stFinal =
           first showOpaqueErrorString $
-            runSTS @"UTXOW" @Conway globals utxoEnv lsUTxOState sig
+            runSTS @"UTXOW" @ConwayEra globals utxoEnv lsUTxOState sig
 
   testConformance ctx env st sig = property $ do
     (specEnv, specSt, specSig) <-
       impAnn "Translating the inputs" $
-        translateInputs @fn @"LEDGER" @Conway env st sig ctx
+        translateInputs @fn @"LEDGER" @ConwayEra env st sig ctx
     logDoc $ "ctx:\n" <> ansiExpr ctx
     logDoc $ "implEnv:\n" <> ansiExpr env
     logDoc $ "implSt:\n" <> ansiExpr st
@@ -185,21 +180,21 @@ instance
       fmap (second fixup) $
         impAnn "Deep evaluating Agda output" $
           evaluateDeep $
-            runAgdaRule @fn @"LEDGER" @Conway specEnv specSt specSig
+            runAgdaRule @fn @"LEDGER" @ConwayEra specEnv specSt specSig
     -- TODO figure out why assertions are failing and then we can remove this
     -- whole method
-    implRes <- tryRunImpRuleNoAssertions @"LEDGER" @Conway (inject env) (inject st) (inject sig)
+    implRes <- tryRunImpRuleNoAssertions @"LEDGER" @ConwayEra (inject env) (inject st) (inject sig)
     implResTest <-
       impAnn "Translating implementation values to SpecRep" $
         expectRightExpr $
           runSpecTransM ctx $
             bimapM
               (fmap showOpaqueErrorString . traverse toTestRep)
-              (toTestRep . inject @_ @(ExecState fn "LEDGER" Conway) . fst)
+              (toTestRep . inject @_ @(ExecState fn "LEDGER" ConwayEra) . fst)
               implRes
     globals <- use impGlobalsL
     let extra =
-          extraInfo @fn @"LEDGER" @Conway
+          extraInfo @fn @"LEDGER" @ConwayEra
             globals
             ctx
             (inject env)
@@ -207,7 +202,7 @@ instance
             (inject sig)
             (first showOpaqueErrorString implRes)
     logDoc extra
-    checkConformance @"LEDGER" @Conway @fn
+    checkConformance @"LEDGER" @ConwayEra @fn
       ctx
       (inject env)
       (inject st)

@@ -12,9 +12,6 @@ module Test.Cardano.Ledger.Allegra.ImpTest (
   module Test.Cardano.Ledger.Shelley.ImpTest,
 ) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
-import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
-import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (
@@ -23,7 +20,6 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -38,19 +34,9 @@ import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
-import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-instance
-  ( Crypto c
-  , NFData (SigDSIGN (DSIGN c))
-  , NFData (VerKeyDSIGN (DSIGN c))
-  , ADDRHASH c ~ Blake2b_224
-  , DSIGN c ~ Ed25519DSIGN
-  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
-  ) =>
-  ShelleyEraImp (AllegraEra c)
-  where
+instance ShelleyEraImp AllegraEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
   fixupTx = shelleyFixupTx
@@ -59,10 +45,10 @@ impAllegraSatisfyNativeScript ::
   ( AllegraEraScript era
   , AllegraEraTxBody era
   ) =>
-  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
+  Set.Set (KeyHash 'Witness) ->
   TxBody era ->
   NativeScript era ->
-  ImpTestM era (Maybe (Map.Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))))
+  ImpTestM era (Maybe (Map.Map (KeyHash 'Witness) (KeyPair 'Witness)))
 impAllegraSatisfyNativeScript providedVKeyHashes txBody script = do
   impState <- get
   let

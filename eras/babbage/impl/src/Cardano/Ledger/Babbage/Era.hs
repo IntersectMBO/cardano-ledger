@@ -13,7 +13,6 @@ where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
@@ -31,21 +30,20 @@ import Cardano.Ledger.Shelley.Rules (
 -- =====================================================
 
 -- | The Babbage era
-data BabbageEra c
+data BabbageEra
 
-instance Crypto c => Era (BabbageEra c) where
-  type PreviousEra (BabbageEra c) = AlonzoEra c
-  type EraCrypto (BabbageEra c) = c
-  type ProtVerLow (BabbageEra c) = 7
-  type ProtVerHigh (BabbageEra c) = 8
+instance Era BabbageEra where
+  type PreviousEra BabbageEra = AlonzoEra
+  type ProtVerLow BabbageEra = 7
+  type ProtVerHigh BabbageEra = 8
 
   eraName = "Babbage"
 
-instance Crypto c => EraGenesis (BabbageEra c)
+instance EraGenesis BabbageEra
 
-type instance TranslationContext (BabbageEra c) = NoGenesis (BabbageEra c)
+type instance TranslationContext BabbageEra = NoGenesis BabbageEra
 
-type instance Value (BabbageEra c) = MaryValue c
+type instance Value BabbageEra = MaryValue
 
 -------------------------------------------------------------------------------
 -- Era Mapping
@@ -53,56 +51,56 @@ type instance Value (BabbageEra c) = MaryValue c
 
 data BabbageUTXOS era
 
-type instance EraRule "UTXOS" (BabbageEra c) = BabbageUTXOS (BabbageEra c)
+type instance EraRule "UTXOS" BabbageEra = BabbageUTXOS BabbageEra
 
 data BabbageUTXO era
 
-type instance EraRule "UTXO" (BabbageEra c) = BabbageUTXO (BabbageEra c)
+type instance EraRule "UTXO" BabbageEra = BabbageUTXO BabbageEra
 
 data BabbageUTXOW era
 
-type instance EraRule "UTXOW" (BabbageEra c) = BabbageUTXOW (BabbageEra c)
+type instance EraRule "UTXOW" BabbageEra = BabbageUTXOW BabbageEra
 
 data BabbageLEDGER c
 
-type instance EraRule "LEDGER" (BabbageEra c) = BabbageLEDGER (BabbageEra c)
+type instance EraRule "LEDGER" BabbageEra = BabbageLEDGER BabbageEra
 
 -- Rules inherited from Alonzo
 
-type instance EraRule "BBODY" (BabbageEra c) = AlonzoBBODY (BabbageEra c)
+type instance EraRule "BBODY" BabbageEra = AlonzoBBODY BabbageEra
 
 -- Rules inherited from Shelley
 
-type instance EraRule "DELEG" (BabbageEra c) = API.ShelleyDELEG (BabbageEra c)
+type instance EraRule "DELEG" BabbageEra = API.ShelleyDELEG BabbageEra
 
-type instance EraRule "DELEGS" (BabbageEra c) = API.ShelleyDELEGS (BabbageEra c)
+type instance EraRule "DELEGS" BabbageEra = API.ShelleyDELEGS BabbageEra
 
-type instance EraRule "DELPL" (BabbageEra c) = API.ShelleyDELPL (BabbageEra c)
+type instance EraRule "DELPL" BabbageEra = API.ShelleyDELPL BabbageEra
 
-type instance EraRule "EPOCH" (BabbageEra c) = ShelleyEPOCH (BabbageEra c)
+type instance EraRule "EPOCH" BabbageEra = ShelleyEPOCH BabbageEra
 
-type instance EraRule "LEDGERS" (BabbageEra c) = API.ShelleyLEDGERS (BabbageEra c)
+type instance EraRule "LEDGERS" BabbageEra = API.ShelleyLEDGERS BabbageEra
 
-type instance EraRule "MIR" (BabbageEra c) = ShelleyMIR (BabbageEra c)
+type instance EraRule "MIR" BabbageEra = ShelleyMIR BabbageEra
 
-type instance EraRule "NEWEPOCH" (BabbageEra c) = API.ShelleyNEWEPOCH (BabbageEra c)
+type instance EraRule "NEWEPOCH" BabbageEra = API.ShelleyNEWEPOCH BabbageEra
 
-type instance EraRule "NEWPP" (BabbageEra c) = ShelleyNEWPP (BabbageEra c)
+type instance EraRule "NEWPP" BabbageEra = ShelleyNEWPP BabbageEra
 
-type instance EraRule "POOL" (BabbageEra c) = API.ShelleyPOOL (BabbageEra c)
+type instance EraRule "POOL" BabbageEra = API.ShelleyPOOL BabbageEra
 
-type instance EraRule "POOLREAP" (BabbageEra c) = API.ShelleyPOOLREAP (BabbageEra c)
+type instance EraRule "POOLREAP" BabbageEra = API.ShelleyPOOLREAP BabbageEra
 
-type instance EraRule "PPUP" (BabbageEra c) = API.ShelleyPPUP (BabbageEra c)
+type instance EraRule "PPUP" BabbageEra = API.ShelleyPPUP BabbageEra
 
-type instance EraRule "RUPD" (BabbageEra c) = ShelleyRUPD (BabbageEra c)
+type instance EraRule "RUPD" BabbageEra = ShelleyRUPD BabbageEra
 
-type instance EraRule "SNAP" (BabbageEra c) = ShelleySNAP (BabbageEra c)
+type instance EraRule "SNAP" BabbageEra = ShelleySNAP BabbageEra
 
-type instance EraRule "TICK" (BabbageEra c) = ShelleyTICK (BabbageEra c)
+type instance EraRule "TICK" BabbageEra = ShelleyTICK BabbageEra
 
-type instance EraRule "TICKF" (BabbageEra c) = ShelleyTICKF (BabbageEra c)
+type instance EraRule "TICKF" BabbageEra = ShelleyTICKF BabbageEra
 
-type instance EraRule "UPEC" (BabbageEra c) = ShelleyUPEC (BabbageEra c)
+type instance EraRule "UPEC" BabbageEra = ShelleyUPEC BabbageEra
 
 -- =================================================

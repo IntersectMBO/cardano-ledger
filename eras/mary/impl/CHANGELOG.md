@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.8.0.0
+
+* Deprecate `Mary` type synonym
+* Remove crypto parametrization from `MaryEra`
+
 ## 1.7.1.0
 
 ### `testlib`

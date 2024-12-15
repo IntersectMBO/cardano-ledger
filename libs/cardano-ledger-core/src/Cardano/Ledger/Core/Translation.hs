@@ -46,7 +46,7 @@ type family TranslationContext era :: Type
 --
 -- > newtype Foo era = Foo Int
 -- >
--- > instance TranslateEra (Allegra c) Foo
+-- > instance TranslateEra AllegraEra Foo
 --
 -- Note that one could use @DerivingAnyClass@ (@deriving (TranslateEra (Allegra
 -- c))@), but this would introduce an undesired coupling between the
@@ -58,11 +58,11 @@ type family TranslationContext era :: Type
 --
 -- > newtype Bar era = Bar (TxBody era)
 -- >
--- > instance CC.Crypto c => TranslateEra (Allegra c) Bar where
+-- > instance TranslateEra AllegraEra Bar where
 -- >     translateEra ctxt = Bar <$> translateEra ctxt
 -- >
 -- > -- With the following instance being in scope:
--- > instance CC.Crypto c => TranslatEra (Allegra c) TxBody
+-- > instance TranslatEra AllegraEra TxBody
 --
 -- Note: we use 'PreviousEra' instead of @NextEra@ as an era definitely knows
 -- its predecessor, but not necessarily its successor. Moreover, one could argue

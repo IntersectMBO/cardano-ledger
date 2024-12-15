@@ -46,7 +46,7 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 bootstrapDStateSpec ::
   forall fn era.
   EraSpecTxOut era fn =>
-  Set (Credential 'DRepRole (EraCrypto era)) ->
+  Set (Credential 'DRepRole) ->
   CertsContext era ->
   Specification fn (DState era)
 bootstrapDStateSpec delegatees withdrawals =
@@ -94,7 +94,7 @@ bootstrapDStateSpec delegatees withdrawals =
 coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n
 
-type CertsContext era = Map (RewardAccount (EraCrypto era)) Coin
+type CertsContext era = Map RewardAccount Coin
 
 txZero :: EraTx era => Tx era
 txZero = mkBasicTx mkBasicTxBody

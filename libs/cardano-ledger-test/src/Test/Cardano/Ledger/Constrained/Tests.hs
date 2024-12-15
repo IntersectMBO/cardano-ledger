@@ -46,7 +46,6 @@ import Test.Cardano.Ledger.Constrained.Shrink
 import Test.Cardano.Ledger.Constrained.Size (Size (SzRng))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.Cardano.Ledger.Generic.Proof (Standard)
 import Test.QuickCheck hiding (getSize, total)
 
 {-
@@ -583,12 +582,10 @@ shrinkPreds (preds, env) =
 
 -- Tests ---
 
-type TestEra = ShelleyEra Standard
-
-testProof :: Proof TestEra
+testProof :: Proof ShelleyEra
 testProof = Shelley
 
-testEnv :: Env TestEra
+testEnv :: Env ShelleyEra
 testEnv = Env $ Map.fromList [("A", Payload CoinR (Coin 5) No)]
 
 ensureRight :: Testable prop => Either [String] a -> (a -> prop) -> Property
@@ -605,7 +602,7 @@ ensureTyped = ensureRight . runTyped
 ifTyped :: Testable prop => Typed a -> (a -> prop) -> Property
 ifTyped = ifRight . runTyped
 
-initEnv :: OrderInfo -> GenEnv TestEra
+initEnv :: OrderInfo -> GenEnv ShelleyEra
 initEnv info =
   GenEnv
     { gOrder = info
@@ -666,7 +663,7 @@ constraintProperty ::
   Bool ->
   [String] ->
   OrderInfo ->
-  ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) ->
+  ([Pred ShelleyEra] -> DependGraph ShelleyEra -> Env ShelleyEra -> Property) ->
   Property
 constraintProperty strict whitelist info prop =
   forAllShrink (genPreds $ initEnv info) shrinkPreds $ \(preds, genenv) ->
@@ -706,7 +703,7 @@ checkPredicates preds env =
   where
     checkPred pr = counterexample ("Failed: " ++ showPred pr) $ ensureTyped (runPred env pr) id
 
-runPreds :: [Pred TestEra] -> IO ()
+runPreds :: [Pred ShelleyEra] -> IO ()
 runPreds ps = do
   let info = standardOrderInfo
   Right g <- pure $ runTyped $ compile info ps

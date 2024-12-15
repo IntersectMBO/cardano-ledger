@@ -1,15 +1,9 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -19,7 +13,6 @@ import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Constrained (lit)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Map.Strict (Map)
@@ -30,11 +23,11 @@ import Test.Cardano.Ledger.Constrained.Conway
 
 instance
   ( IsConwayUniv fn
-  , Inject (ConwayCertExecContext Conway) (Map (DepositPurpose StandardCrypto) Coin)
+  , Inject (ConwayCertExecContext ConwayEra) (Map DepositPurpose Coin)
   ) =>
-  ExecSpecRule fn "GOVCERT" Conway
+  ExecSpecRule fn "GOVCERT" ConwayEra
   where
-  type ExecContext fn "GOVCERT" Conway = ConwayCertExecContext Conway
+  type ExecContext fn "GOVCERT" ConwayEra = ConwayCertExecContext ConwayEra
 
   environmentSpec _ctx = govCertEnvSpec
 
@@ -48,7 +41,7 @@ instance
     second (Agda.MkCertState dState pState) . unComputationResult $
       Agda.govCertStep env vState sig
 
-nameGovCert :: ConwayGovCert c -> String
+nameGovCert :: ConwayGovCert -> String
 nameGovCert (ConwayRegDRep {}) = "ConwayRegDRep"
 nameGovCert (ConwayUnRegDRep {}) = "ConwayUnRegDRep"
 nameGovCert (ConwayUpdateDRep {}) = "ConwayUpdateDRep"

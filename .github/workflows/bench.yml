@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - master
-      - nc/bench-tx
+      - lehins/bench
 
 permissions:
   contents: write
@@ -43,4 +43,4 @@ jobs:
           alert-threshold: '200%'
           comment-on-alert: true
           fail-on-alert: true
-          alert-comment-cc-users: '@nc6'
+          alert-comment-cc-users: '@lehins'

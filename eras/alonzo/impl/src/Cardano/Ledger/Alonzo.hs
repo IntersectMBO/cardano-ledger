@@ -31,7 +31,6 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data ()
@@ -42,7 +41,9 @@ import Control.Monad.Except (MonadError, liftEither)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
 
-type Alonzo = AlonzoEra StandardCrypto
+type Alonzo = AlonzoEra
+
+{-# DEPRECATED Alonzo "In favor of `AlonzoEra`" #-}
 
 -- =====================================================
 
@@ -62,7 +63,7 @@ reapplyAlonzoTx globals env state vtx =
           $ TRC (env, state, extractTx vtx)
    in liftEither . left ApplyTxError $ res
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => ApplyTx (AlonzoEra c) where
+instance DSignable (Hash EraIndependentTxBody) => ApplyTx AlonzoEra where
   reapplyTx = reapplyAlonzoTx
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => ApplyBlock (AlonzoEra c)
+instance DSignable (Hash EraIndependentTxBody) => ApplyBlock AlonzoEra

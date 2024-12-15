@@ -83,7 +83,7 @@ import NoThunks.Class (NoThunks)
 
 data ConwayDelegEnv era = ConwayDelegEnv
   { cdePParams :: PParams era
-  , cdePools :: Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
+  , cdePools :: Map (KeyHash 'StakePool) PoolParams
   }
   deriving (Generic)
 
@@ -103,18 +103,18 @@ deriving instance Show (PParams era) => Show (ConwayDelegEnv era)
 
 data ConwayDelegPredFailure era
   = IncorrectDepositDELEG Coin
-  | StakeKeyRegisteredDELEG (Credential 'Staking (EraCrypto era))
-  | StakeKeyNotRegisteredDELEG (Credential 'Staking (EraCrypto era))
+  | StakeKeyRegisteredDELEG (Credential 'Staking)
+  | StakeKeyNotRegisteredDELEG (Credential 'Staking)
   | StakeKeyHasNonZeroRewardAccountBalanceDELEG Coin
-  | DelegateeDRepNotRegisteredDELEG (Credential 'DRepRole (EraCrypto era))
-  | DelegateeStakePoolNotRegisteredDELEG (KeyHash 'StakePool (EraCrypto era))
+  | DelegateeDRepNotRegisteredDELEG (Credential 'DRepRole)
+  | DelegateeStakePoolNotRegisteredDELEG (KeyHash 'StakePool)
   deriving (Show, Eq, Generic)
 
-type instance EraRuleFailure "DELEG" (ConwayEra c) = ConwayDelegPredFailure (ConwayEra c)
+type instance EraRuleFailure "DELEG" ConwayEra = ConwayDelegPredFailure ConwayEra
 
-type instance EraRuleEvent "DELEG" (ConwayEra c) = VoidEraRule "DELEG" (ConwayEra c)
+type instance EraRuleEvent "DELEG" ConwayEra = VoidEraRule "DELEG" ConwayEra
 
-instance InjectRuleFailure "DELEG" ConwayDelegPredFailure (ConwayEra c)
+instance InjectRuleFailure "DELEG" ConwayDelegPredFailure ConwayEra
 
 instance NoThunks (ConwayDelegPredFailure era)
 
@@ -149,14 +149,14 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
 instance
   ( EraPParams era
   , State (EraRule "DELEG" era) ~ CertState era
-  , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
+  , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , EraRule "DELEG" era ~ ConwayDELEG era
   ) =>
   STS (ConwayDELEG era)
   where
   type State (ConwayDELEG era) = CertState era
-  type Signal (ConwayDELEG era) = ConwayDelegCert (EraCrypto era)
+  type Signal (ConwayDELEG era) = ConwayDelegCert
   type Environment (ConwayDELEG era) = ConwayDelegEnv era
   type BaseM (ConwayDELEG era) = ShelleyBase
   type PredicateFailure (ConwayDELEG era) = ConwayDelegPredFailure era
@@ -164,7 +164,7 @@ instance
 
   transitionRules = [conwayDelegTransition @era]
 
-conwayDelegTransition :: forall era. EraPParams era => TransitionRule (ConwayDELEG era)
+conwayDelegTransition :: EraPParams era => TransitionRule (ConwayDELEG era)
 conwayDelegTransition = do
   TRC
     ( ConwayDelegEnv pp pools
@@ -243,9 +243,9 @@ conwayDelegTransition = do
 -- does not enforce that delegatee is registered, that has to be handled by the caller.
 processDelegation ::
   -- | Delegator
-  Credential 'Staking (EraCrypto era) ->
+  Credential 'Staking ->
   -- | New delegatee
-  Delegatee (EraCrypto era) ->
+  Delegatee ->
   CertState era ->
   CertState era
 processDelegation stakeCred newDelegatee !certState = certState'
@@ -260,11 +260,11 @@ processDelegationInternal ::
   -- | Preserve the buggy behavior where DRep delegations are not updated correctly (See #4772)
   Bool ->
   -- | Delegator
-  Credential 'Staking (EraCrypto era) ->
+  Credential 'Staking ->
   -- | Current delegatee for the above stake credential that needs to be cleaned up.
-  Maybe (Delegatee (EraCrypto era)) ->
+  Maybe Delegatee ->
   -- | New delegatee
-  Delegatee (EraCrypto era) ->
+  Delegatee ->
   CertState era ->
   CertState era
 processDelegationInternal preserveIncorrectDelegation stakeCred mCurDelegatee newDelegatee =
@@ -292,7 +292,7 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mCurDelegatee ne
                    in cState' & certVStateL . vsDRepsL .~ Map.insert targetDRep dRepState' dReps
             _ -> cState'
 
-umElemToDelegatee :: UM.UMElem c -> Maybe (Delegatee c)
+umElemToDelegatee :: UM.UMElem -> Maybe Delegatee
 umElemToDelegatee (UM.UMElem _ _ mPool mDRep) =
   case (mPool, mDRep) of
     (SNothing, SNothing) -> Nothing
@@ -301,8 +301,8 @@ umElemToDelegatee (UM.UMElem _ _ mPool mDRep) =
     (SJust pool, SJust dRep) -> Just $ DelegStakeVote pool dRep
 
 processDRepUnDelegation ::
-  Credential 'Staking (EraCrypto era) ->
-  Maybe (Delegatee (EraCrypto era)) ->
+  Credential 'Staking ->
+  Maybe Delegatee ->
   CertState era ->
   CertState era
 processDRepUnDelegation _ Nothing cState = cState

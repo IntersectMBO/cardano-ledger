@@ -2,6 +2,13 @@
 
 ## 1.4.0.0
 
+* Remove crypto parametrization from types:
+  * `LedgerView`, `ChainDepState`
+  * `HashHeader` `PrevHash`, `LastAppliedBlock`
+  * `OCertEnv`, `OcertPredicateFailure`
+  * `OverlayEnv`, `OBftSlot`
+  * `PrtclState`, `PrtclEnv`, `PrtlSeqFailure`
+
 ### `testlib`
 
 * Change type of `kesSignKey` in `KESKeyPair` and result of `evolveKESUntil` from `SignKeyKES` to `UnsoundPureSignKeyKES`

@@ -50,14 +50,14 @@ instance (EraSpecPParams era, IsConwayUniv fn) => HasSpec fn (Update era)
 --   and fromSimpleRep methods. This makes it much easier to write Specifications, because
 --   the Constrained packaage knows about Lists and Maybe.
 type ShelleyTxBodyTypes era =
-  '[ Set (TxIn (EraCrypto era))
+  '[ Set TxIn
    , [TxOut era]
    , [TxCert era]
-   , Map (RewardAccount (EraCrypto era)) Coin
+   , Map RewardAccount Coin
    , Coin
    , SlotNo
    , Maybe (Update era)
-   , Maybe (AuxiliaryDataHash (EraCrypto era))
+   , Maybe AuxiliaryDataHash
    ]
 
 instance
@@ -119,14 +119,14 @@ fromShelleyBody (ShelleyTxBody inputs outputs certs withdrawals coin _slot _up a
 --   and fromSimpleRep methods. This makes it much easier to write Specifications, because
 --   the Constrained packaage knows about Lists and Maybe.
 type AllegraTxBodyTypes era =
-  '[ Set (TxIn (EraCrypto era))
+  '[ Set TxIn
    , [TxOut era]
    , [TxCert era]
-   , Map (RewardAccount (EraCrypto era)) Coin
+   , Map RewardAccount Coin
    , Coin
    , ValidityInterval
    , Maybe (Update era)
-   , Maybe (AuxiliaryDataHash (EraCrypto era))
+   , Maybe AuxiliaryDataHash
    ]
 
 instance
@@ -188,15 +188,15 @@ fromAllegraBody (AllegraTxBody inputs outputs certs withdrawals coin vi _up aux)
 --   real types in the toSimpleRep and fromSimpleRep methods. This makes it much easier to
 --   write Specifications, because the Constrained packaage knows about Lists and Maybe.
 type MaryTxBodyTypes era =
-  '[ Set (TxIn (EraCrypto era))
+  '[ Set TxIn
    , [TxOut era]
    , [TxCert era]
-   , Map (RewardAccount (EraCrypto era)) Coin
+   , Map RewardAccount Coin
    , Coin
    , ValidityInterval
    , Maybe (Update era)
-   , Maybe (AuxiliaryDataHash (EraCrypto era))
-   , MultiAsset (EraCrypto era)
+   , Maybe AuxiliaryDataHash
+   , MultiAsset
    ]
 
 instance
@@ -261,18 +261,18 @@ fromMaryBody (MaryTxBody inputs outputs certs withdrawals coin vi _up aux ma) =
 --   real types in the toSimpleRep and fromSimpleRep methods. This makes it much easier to
 --   write Specifications, because the Constrained packaage knows about Lists and Maybe.
 type AlonzoTxBodyTypes era =
-  '[ Set (TxIn (EraCrypto era))
-   , Set (TxIn (EraCrypto era))
+  '[ Set TxIn
+   , Set TxIn
    , [TxOut era]
    , [TxCert era]
-   , Map (RewardAccount (EraCrypto era)) Coin
+   , Map RewardAccount Coin
    , Coin
    , ValidityInterval
    , Maybe (Update era)
-   , Set (KeyHash 'Witness (EraCrypto era))
-   , MultiAsset (EraCrypto era)
-   , Maybe (ScriptIntegrityHash (EraCrypto era))
-   , Maybe (AuxiliaryDataHash (EraCrypto era))
+   , Set (KeyHash 'Witness)
+   , MultiAsset
+   , Maybe ScriptIntegrityHash
+   , Maybe AuxiliaryDataHash
    , Maybe Network
    ]
 
@@ -352,21 +352,21 @@ fromAlonzoBody (AlonzoTxBody colinputs inputs outputs certs withdrawals coin vi 
 --   real types in the toSimpleRep and fromSimpleRep methods. This makes it much easier to
 --   write Specifications, because the Constrained packaage knows about Lists and Maybe.
 type BabbageTxBodyTypes era =
-  '[ Set (TxIn (EraCrypto era))
-   , Set (TxIn (EraCrypto era))
-   , Set (TxIn (EraCrypto era))
+  '[ Set TxIn
+   , Set TxIn
+   , Set TxIn
    , [Sized (TxOut era)]
    , Maybe (Sized (TxOut era))
    , Maybe Coin
    , [TxCert era]
-   , Map (RewardAccount (EraCrypto era)) Coin -- Withdrawals without the newtype
+   , Map RewardAccount Coin -- Withdrawals without the newtype
    , Coin
    , ValidityInterval
    , Maybe (Update era)
-   , Set (KeyHash 'Witness (EraCrypto era))
-   , MultiAsset (EraCrypto era)
-   , Maybe (ScriptIntegrityHash (EraCrypto era))
-   , Maybe (AuxiliaryDataHash (EraCrypto era))
+   , Set (KeyHash 'Witness)
+   , MultiAsset
+   , Maybe ScriptIntegrityHash
+   , Maybe AuxiliaryDataHash
    , Maybe Network
    ]
 

@@ -14,6 +14,7 @@
 --   Eventually this will repace the most of the tests in Spec.hs
 module Test.Cardano.Ledger.Constrained.SpecClass where
 
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
 import Cardano.Ledger.Core (Era)
 import Data.Kind
@@ -33,7 +34,6 @@ import Test.Cardano.Ledger.Constrained.Spec (
   RngSpec,
   SetSpec,
   SomeLens (SomeLens),
-  TT,
   genElemSpec,
   genFromElemSpec,
   genFromListSpec,
@@ -261,14 +261,18 @@ main =
           "Generic testSound"
           [ testProperty "Size" $ testSound @Size @Int ()
           , testProperty "MapSpec" $
-              testSound @(MapSpec TT Int Word64) (SomeLens word64CoinL) (IntR, Word64R) 10 (arbitrary, arbitrary)
-          , testProperty "PairSpec" $ testSound @(PairSpec TT Int Word64) () () 10
-          , testProperty "RelSpec" $ testSound @(RelSpec TT Int) () () 10 arbitrary
+              testSound @(MapSpec BabbageEra Int Word64)
+                (SomeLens word64CoinL)
+                (IntR, Word64R)
+                10
+                (arbitrary, arbitrary)
+          , testProperty "PairSpec" $ testSound @(PairSpec BabbageEra Int Word64) () () 10
+          , testProperty "RelSpec" $ testSound @(RelSpec BabbageEra Int) () () 10 arbitrary
           , testProperty "RngSpec" $
-              testSound @(RngSpec TT Int) (SomeLens intDeltaCoinL) IntR 10 arbitrary
+              testSound @(RngSpec BabbageEra Int) (SomeLens intDeltaCoinL) IntR 10 arbitrary
           , testProperty "ListSpec" $
-              testSound @(ListSpec TT Int) (SomeLens intDeltaCoinL) () SzAny arbitrary
+              testSound @(ListSpec BabbageEra Int) (SomeLens intDeltaCoinL) () SzAny arbitrary
           , testProperty "ElemSpec" $
-              testSound @(ElemSpec TT Int) (SomeLens intDeltaCoinL) () SzAny arbitrary
+              testSound @(ElemSpec BabbageEra Int) (SomeLens intDeltaCoinL) () SzAny arbitrary
           ]
       ]

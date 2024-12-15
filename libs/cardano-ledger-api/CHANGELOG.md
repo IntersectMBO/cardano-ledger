@@ -1,5 +1,13 @@
 # Version history for `cardano-ledger-api`
 
+## 1.11.0.0
+
+* Removal of crypto parametrization:
+  * `LatestKnownEra`
+  * `HotCredAuthStatus` and `CommitteeMemberState`
+  * `DecAddr`
+  * Many other re-exported types. See individual packages for changelog
+
 ## 1.10.0.0
 
 * Added `queryRegisteredDRepStakeDistr` state query

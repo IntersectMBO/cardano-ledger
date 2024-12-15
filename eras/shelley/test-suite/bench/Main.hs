@@ -16,12 +16,7 @@ import BenchValidation (
   updateChain,
   validateInput,
  )
-import Cardano.Crypto.DSIGN
-import Cardano.Crypto.Hash
-import Cardano.Crypto.KES
-import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Crypto as CryptoClass
 import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Bench.Gen (
@@ -41,7 +36,6 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
 import Cardano.Ledger.UTxO (UTxO)
-import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (compile, compute, run)
@@ -77,7 +71,6 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
   ledgerStateWithNregisteredPools,
  )
 
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (arbitrary)
@@ -105,23 +98,7 @@ genVl = arbitrary
 
 -- ==========================================================
 
-data BenchCrypto
-
-instance CryptoClass.Crypto BenchCrypto where
-  type DSIGN BenchCrypto = Ed25519DSIGN
-  type KES BenchCrypto = Sum6KES Ed25519DSIGN Blake2b_256
-  type VRF BenchCrypto = PraosVRF
-  type HASH BenchCrypto = Blake2b_256
-  type ADDRHASH BenchCrypto = Blake2b_224
-
-instance PraosCrypto BenchCrypto
-
-type BenchEra = ShelleyEra BenchCrypto
-
 -- ============================================================
-
--- TODO set this in one place (where?)
-type FixedValType = Coin
 
 eqf :: String -> (Map.Map Int Int -> Map.Map Int Int -> Bool) -> Int -> Benchmark
 eqf name f n = bgroup (name ++ " " ++ show n) (map runat [n, n * 10, n * 100, n * 1000])
@@ -227,7 +204,7 @@ epochAt x =
       , bench "incrementalStakeDistr" (nf action2im arg)
       , env (pure (updateStakeDistribution emptyPParams mempty mempty utxo)) $ \incStake ->
           bench "incrementalStakeDistr (no update)" $
-            nf (incrementalStakeDistr (emptyPParams @(ShelleyEra StandardCrypto)) incStake dstate) pstate
+            nf (incrementalStakeDistr (emptyPParams @ShelleyEra) incStake dstate) pstate
       ]
   where
     n = 10000 :: Int
@@ -235,14 +212,14 @@ epochAt x =
 action2m ::
   EraTxOut era =>
   (DState era, PState era, UTxO era) ->
-  EB.SnapShot (EraCrypto era)
+  EB.SnapShot
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 action2im ::
   forall era.
   EraTxOut era =>
   (DState era, PState era, UTxO era) ->
-  EB.SnapShot (EraCrypto era)
+  EB.SnapShot
 action2im (dstate, pstate, utxo) =
   let pp = emptyPParams @era
       incStake = updateStakeDistribution pp mempty mempty utxo
@@ -263,13 +240,13 @@ validGroup =
     runAtUTxOSize n =
       bgroup
         (show n)
-        [ env (validateInput @BenchEra n) $ \arg ->
+        [ env (validateInput @ShelleyEra n) $ \arg ->
             bgroup
               "block"
               [ bench "applyBlockTransition" (nfIO $ benchValidate arg)
               , bench "reapplyBlockTransition" (nf benchreValidate arg)
               ]
-        , env (genUpdateInputs @BenchEra n) $ \arg ->
+        , env (genUpdateInputs @ShelleyEra n) $ \arg ->
             bgroup
               "protocol"
               [ bench "updateChainDepState" (nf updateChain arg)
@@ -281,8 +258,8 @@ validGroup =
 
 profileValid :: IO ()
 profileValid = do
-  state <- validateInput @BenchEra 10000
-  let ans = sum [applyBlock @BenchEra state n | n <- [1 .. 10000 :: Int]]
+  state <- validateInput @ShelleyEra 10000
+  let ans = sum [applyBlock @ShelleyEra state n | n <- [1 .. 10000 :: Int]]
   print ans
 
 -- ========================================================
@@ -380,7 +357,7 @@ varyDelegState tag fixed changes initstate action =
 
 main :: IO ()
 main = do
-  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy BenchEra) 1000
+  (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy ShelleyEra) 1000
   defaultMain
     [ bgroup
         "vary input size"

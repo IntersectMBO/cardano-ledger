@@ -45,7 +45,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
-  DSignable,
   GenDelegPair (..),
   GenDelegs (..),
   KESignable,
@@ -71,7 +70,6 @@ import Cardano.Protocol.TPraos.BHeader (
   seedEta,
   seedL,
  )
-import Cardano.Protocol.TPraos.OCert (OCertSignable)
 import Cardano.Protocol.TPraos.Rules.OCert (OCERT, OCertEnv (..))
 import Cardano.Slotting.Slot
 import Control.DeepSeq (NFData)
@@ -91,23 +89,23 @@ import NoThunks.Class (NoThunks (..))
 
 data OVERLAY c
 
-data OverlayEnv c
+data OverlayEnv
   = OverlayEnv
       UnitInterval -- the decentralization paramater @d@ from the protocal parameters
-      (PoolDistr c)
-      (GenDelegs c)
+      PoolDistr
+      GenDelegs
       Nonce
   deriving (Generic)
 
-instance NoThunks (OverlayEnv c)
+instance NoThunks OverlayEnv
 
 data OverlayPredicateFailure c
   = VRFKeyUnknown
-      !(KeyHash 'StakePool c) -- unknown VRF keyhash (not registered)
+      !(KeyHash 'StakePool) -- unknown VRF keyhash (not registered)
   | VRFKeyWrongVRFKey
-      !(KeyHash 'StakePool c) -- KeyHash of block issuer
-      !(VRFVerKeyHash 'StakePoolVRF c) -- VRF KeyHash registered with stake pool
-      !(VRFVerKeyHash 'BlockIssuerVRF c) -- VRF KeyHash from Header
+      !(KeyHash 'StakePool) -- KeyHash of block issuer
+      !(VRFVerKeyHash 'StakePoolVRF) -- VRF KeyHash registered with stake pool
+      !(VRFVerKeyHash 'BlockIssuerVRF) -- VRF KeyHash from Header
   | VRFKeyBadNonce
       !Nonce -- Nonce constant to distinguish VRF nonce values
       !SlotNo -- Slot used for VRF calculation
@@ -125,34 +123,27 @@ data OverlayPredicateFailure c
   | NotActiveSlotOVERLAY
       !SlotNo -- Slot which is supposed to be silent
   | WrongGenesisColdKeyOVERLAY
-      !(KeyHash 'BlockIssuer c) -- KeyHash of block issuer
-      !(KeyHash 'GenesisDelegate c) -- KeyHash genesis delegate keyhash assigned to this slot
+      !(KeyHash 'BlockIssuer) -- KeyHash of block issuer
+      !(KeyHash 'GenesisDelegate) -- KeyHash genesis delegate keyhash assigned to this slot
   | WrongGenesisVRFKeyOVERLAY
-      !(KeyHash 'BlockIssuer c) -- KeyHash of block issuer
-      !(VRFVerKeyHash 'GenDelegVRF c) -- VRF KeyHash registered with genesis delegation
-      !(VRFVerKeyHash 'BlockIssuerVRF c) -- VRF KeyHash from Header
+      !(KeyHash 'BlockIssuer) -- KeyHash of block issuer
+      !(VRFVerKeyHash 'GenDelegVRF) -- VRF KeyHash registered with genesis delegation
+      !(VRFVerKeyHash 'BlockIssuerVRF) -- VRF KeyHash from Header
   | UnknownGenesisKeyOVERLAY
-      !(KeyHash 'Genesis c) -- KeyHash which does not correspond to o genesis node
+      !(KeyHash 'Genesis) -- KeyHash which does not correspond to o genesis node
   | OcertFailure (PredicateFailure (OCERT c)) -- Subtransition Failures
   deriving (Generic)
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   , VRF.Signable (VRF c) Seed
   ) =>
   STS (OVERLAY c)
   where
-  type
-    State (OVERLAY c) =
-      Map (KeyHash 'BlockIssuer c) Word64
-
-  type
-    Signal (OVERLAY c) =
-      BHeader c
-
-  type Environment (OVERLAY c) = OverlayEnv c
+  type State (OVERLAY c) = Map (KeyHash 'BlockIssuer) Word64
+  type Signal (OVERLAY c) = BHeader c
+  type Environment (OVERLAY c) = OverlayEnv
   type BaseM (OVERLAY c) = ShelleyBase
   type PredicateFailure (OVERLAY c) = OverlayPredicateFailure c
 
@@ -203,7 +194,7 @@ praosVrfChecks ::
   , VRF.Signable (VRF c) Seed
   ) =>
   Nonce ->
-  PoolDistr c ->
+  PoolDistr ->
   ActiveSlotCoeff ->
   BHBody c ->
   Either (PredicateFailure (OVERLAY c)) ()
@@ -221,14 +212,14 @@ praosVrfChecks eta0 (PoolDistr pd _tot) f bhb = do
         (throwError $ VRFLeaderValueTooBig (VRF.certifiedOutput $ bheaderL bhb) sigma f)
   where
     hk = coerceKeyRole . issuerIDfromBHBody $ bhb
-    blockIssuerVRFVerKeyHash = hashVerKeyVRF (bheaderVrfVk bhb)
+    blockIssuerVRFVerKeyHash = hashVerKeyVRF @c (bheaderVrfVk bhb)
 
 pbftVrfChecks ::
   forall c.
   ( Crypto c
   , VRF.Signable (VRF c) Seed
   ) =>
-  VRFVerKeyHash 'GenDelegVRF c ->
+  VRFVerKeyHash 'GenDelegVRF ->
   Nonce ->
   BHBody c ->
   Either (PredicateFailure (OVERLAY c)) ()
@@ -240,12 +231,11 @@ pbftVrfChecks genDelegVRFVerKeyHash eta0 bhb = do
   pure ()
   where
     hk = issuerIDfromBHBody bhb
-    blockIssuerVRFVerKeyHash = hashVerKeyVRF (bheaderVrfVk bhb)
+    blockIssuerVRFVerKeyHash = hashVerKeyVRF @c (bheaderVrfVk bhb)
 
 overlayTransition ::
   forall c.
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   , VRF.Signable (VRF c) Seed
   ) =>
@@ -268,7 +258,7 @@ overlayTransition =
           ei <- asks epochInfoPure
           pure $ epochInfoFirst ei $ epochInfoEpoch ei slot
 
-        case (lookupInOverlaySchedule firstSlotNo gkeys dval asc slot :: Maybe (OBftSlot c)) of
+        case lookupInOverlaySchedule firstSlotNo gkeys dval asc slot :: Maybe OBftSlot of
           Nothing ->
             praosVrfChecks eta0 pd asc bhb ?!: id
           Just NonActiveSlot ->
@@ -295,7 +285,6 @@ instance
 
 instance
   ( Crypto c
-  , DSignable c (OCertSignable c)
   , KESignable c (BHBody c)
   , VRF.Signable (VRF c) Seed
   ) =>
@@ -303,22 +292,16 @@ instance
   where
   wrapFailed = OcertFailure
 
-data OBftSlot c
+data OBftSlot
   = NonActiveSlot
-  | ActiveSlot !(KeyHash 'Genesis c)
+  | ActiveSlot !(KeyHash 'Genesis)
   deriving (Show, Eq, Ord, Generic)
 
-instance
-  Crypto c =>
-  EncCBOR (OBftSlot c)
-  where
+instance EncCBOR OBftSlot where
   encCBOR NonActiveSlot = encodeNull
   encCBOR (ActiveSlot k) = encCBOR k
 
-instance
-  Crypto c =>
-  DecCBOR (OBftSlot c)
-  where
+instance DecCBOR OBftSlot where
   decCBOR = do
     peekTokenType >>= \case
       TypeNull -> do
@@ -326,17 +309,17 @@ instance
         pure NonActiveSlot
       _ -> ActiveSlot <$> decCBOR
 
-instance NoThunks (OBftSlot c)
+instance NoThunks OBftSlot
 
-instance NFData (OBftSlot c)
+instance NFData OBftSlot
 
 classifyOverlaySlot ::
   SlotNo -> -- first slot of the epoch
-  Set (KeyHash 'Genesis c) -> -- genesis Nodes
+  Set (KeyHash 'Genesis) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   SlotNo -> -- overlay slot to classify
-  OBftSlot c
+  OBftSlot
 classifyOverlaySlot firstSlotNo gkeys dval ascValue slot =
   if isActive
     then
@@ -352,11 +335,11 @@ classifyOverlaySlot firstSlotNo gkeys dval ascValue slot =
 
 lookupInOverlaySchedule ::
   SlotNo -> -- first slot of the epoch
-  Set (KeyHash 'Genesis c) -> -- genesis Nodes
+  Set (KeyHash 'Genesis) -> -- genesis Nodes
   UnitInterval -> -- decentralization parameter
   ActiveSlotCoeff -> -- active slot coefficent
   SlotNo -> -- slot to lookup
-  Maybe (OBftSlot c)
+  Maybe OBftSlot
 lookupInOverlaySchedule firstSlotNo gkeys dval ascValue slot =
   if isOverlaySlot firstSlotNo dval slot
     then Just $ classifyOverlaySlot firstSlotNo gkeys dval ascValue slot

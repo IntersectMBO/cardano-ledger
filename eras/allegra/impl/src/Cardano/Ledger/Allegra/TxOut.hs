@@ -7,7 +7,6 @@ module Cardano.Ledger.Allegra.TxOut () where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Shelley.TxOut (
   ShelleyTxOut (..),
   addrEitherShelleyTxOutL,
@@ -16,10 +15,8 @@ import Cardano.Ledger.Shelley.TxOut (
 import Data.Coerce (coerce)
 import Lens.Micro ((^.))
 
-instance Crypto c => EraTxOut (AllegraEra c) where
-  {-# SPECIALIZE instance EraTxOut (AllegraEra StandardCrypto) #-}
-
-  type TxOut (AllegraEra c) = ShelleyTxOut (AllegraEra c)
+instance EraTxOut AllegraEra where
+  type TxOut AllegraEra = ShelleyTxOut AllegraEra
 
   mkBasicTxOut = ShelleyTxOut
 

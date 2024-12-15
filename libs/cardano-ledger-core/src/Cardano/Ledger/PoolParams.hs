@@ -43,7 +43,6 @@ import Cardano.Ledger.Binary (
   szCases,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), KeyRoleVRF (StakePoolVRF), VRFVerKeyHash)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData ())
@@ -193,29 +192,29 @@ instance DecCBOR StakePoolRelay where
       k -> invalidKey k
 
 -- | A stake pool.
-data PoolParams c = PoolParams
-  { ppId :: !(KeyHash 'StakePool c)
-  , ppVrf :: !(VRFVerKeyHash 'StakePoolVRF c)
+data PoolParams = PoolParams
+  { ppId :: !(KeyHash 'StakePool)
+  , ppVrf :: !(VRFVerKeyHash 'StakePoolVRF)
   , ppPledge :: !Coin
   , ppCost :: !Coin
   , ppMargin :: !UnitInterval
-  , ppRewardAccount :: !(RewardAccount c)
-  , ppOwners :: !(Set (KeyHash 'Staking c))
+  , ppRewardAccount :: !RewardAccount
+  , ppOwners :: !(Set (KeyHash 'Staking))
   , ppRelays :: !(StrictSeq StakePoolRelay)
   , ppMetadata :: !(StrictMaybe PoolMetadata)
   }
   deriving (Show, Generic, Eq, Ord)
-  deriving (EncCBOR) via CBORGroup (PoolParams c)
-  deriving (DecCBOR) via CBORGroup (PoolParams c)
+  deriving (EncCBOR) via CBORGroup PoolParams
+  deriving (DecCBOR) via CBORGroup PoolParams
 
-instance Crypto c => Default (PoolParams c) where
+instance Default PoolParams where
   def = PoolParams def def (Coin 0) (Coin 0) def def def def def
 
-instance NoThunks (PoolParams c)
+instance NoThunks PoolParams
 
-deriving instance NFData (PoolParams c)
+deriving instance NFData PoolParams
 
-instance Crypto c => ToJSON (PoolParams c) where
+instance ToJSON PoolParams where
   toJSON pp =
     Aeson.object
       [ "publicKey" .= ppId pp -- TODO publicKey is an unfortunate name, should be poolId
@@ -229,7 +228,7 @@ instance Crypto c => ToJSON (PoolParams c) where
       , "metadata" .= ppMetadata pp
       ]
 
-instance Crypto c => FromJSON (PoolParams c) where
+instance FromJSON PoolParams where
   parseJSON =
     Aeson.withObject "PoolParams" $ \obj ->
       PoolParams
@@ -267,7 +266,7 @@ data SizeOfPoolRelays = SizeOfPoolRelays
 instance EncCBOR SizeOfPoolRelays where
   encCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
-instance Crypto c => EncCBORGroup (PoolParams c) where
+instance EncCBORGroup PoolParams where
   encCBORGroup poolParams =
     encCBOR (ppId poolParams)
       <> encCBOR (ppVrf poolParams)
@@ -304,7 +303,7 @@ instance Crypto c => EncCBORGroup (PoolParams c) where
   listLen _ = 9
   listLenBound _ = 9
 
-instance Crypto c => DecCBORGroup (PoolParams c) where
+instance DecCBORGroup PoolParams where
   decCBORGroup = do
     hk <- decCBOR
     vrf <- decCBOR

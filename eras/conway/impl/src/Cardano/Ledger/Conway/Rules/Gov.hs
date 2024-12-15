@@ -138,10 +138,10 @@ import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
 data GovEnv era = GovEnv
-  { geTxId :: !(TxId (EraCrypto era))
+  { geTxId :: !TxId
   , geEpoch :: !EpochNo
   , gePParams :: !(PParams era)
-  , gePPolicy :: !(StrictMaybe (ScriptHash (EraCrypto era)))
+  , gePPolicy :: !(StrictMaybe ScriptHash)
   , geCertState :: !(CertState era)
   }
   deriving (Generic)
@@ -162,23 +162,23 @@ deriving instance (Show (PParams era), Era era) => Show (GovEnv era)
 deriving instance Eq (PParams era) => Eq (GovEnv era)
 
 data ConwayGovPredFailure era
-  = GovActionsDoNotExist (NonEmpty (GovActionId (EraCrypto era)))
+  = GovActionsDoNotExist (NonEmpty GovActionId)
   | MalformedProposal (GovAction era)
-  | ProposalProcedureNetworkIdMismatch (RewardAccount (EraCrypto era)) Network
-  | TreasuryWithdrawalsNetworkIdMismatch (Set.Set (RewardAccount (EraCrypto era))) Network
+  | ProposalProcedureNetworkIdMismatch RewardAccount Network
+  | TreasuryWithdrawalsNetworkIdMismatch (Set.Set RewardAccount) Network
   | ProposalDepositIncorrect !(Mismatch 'RelEQ Coin)
   | -- | Some governance actions are not allowed to be voted on by certain types of
     -- Voters. This failure lists all governance action ids with their respective voters
     -- that are not allowed to vote on those governance actions.
-    DisallowedVoters !(NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)))
+    DisallowedVoters !(NonEmpty (Voter, GovActionId))
   | ConflictingCommitteeUpdate
       -- | Credentials that are mentioned as members to be both removed and added
-      (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+      (Set.Set (Credential 'ColdCommitteeRole))
   | ExpirationEpochTooSmall
       -- | Members for which the expiration epoch has already been reached
-      (Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+      (Map.Map (Credential 'ColdCommitteeRole) EpochNo)
   | InvalidPrevGovActionId (ProposalProcedure era)
-  | VotingOnExpiredGovAction (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)))
+  | VotingOnExpiredGovAction (NonEmpty (Voter, GovActionId))
   | ProposalCantFollow
       -- | The PrevGovActionId of the HardForkInitiation that fails
       (StrictMaybe (GovPurposeId 'HardForkPurpose era))
@@ -186,27 +186,27 @@ data ConwayGovPredFailure era
       !(Mismatch 'RelGT ProtVer)
   | InvalidPolicyHash
       -- | The policy script hash in the proposal
-      (StrictMaybe (ScriptHash (EraCrypto era)))
+      (StrictMaybe ScriptHash)
       -- | The policy script hash of the current constitution
-      (StrictMaybe (ScriptHash (EraCrypto era)))
+      (StrictMaybe ScriptHash)
   | DisallowedProposalDuringBootstrap (ProposalProcedure era)
   | DisallowedVotesDuringBootstrap
-      (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)))
+      (NonEmpty (Voter, GovActionId))
   | -- | Predicate failure for votes by entities that are not present in the ledger state
-    VotersDoNotExist (NonEmpty (Voter (EraCrypto era)))
+    VotersDoNotExist (NonEmpty Voter)
   | -- | Treasury withdrawals that sum up to zero are not allowed
     ZeroTreasuryWithdrawals (GovAction era)
   | -- | Proposals that have an invalid reward account for returns of the deposit
-    ProposalReturnAccountDoesNotExist (RewardAccount (EraCrypto era))
+    ProposalReturnAccountDoesNotExist RewardAccount
   | -- | Treasury withdrawal proposals to an invalid reward account
-    TreasuryWithdrawalReturnAccountsDoNotExist (NonEmpty (RewardAccount (EraCrypto era)))
+    TreasuryWithdrawalReturnAccountsDoNotExist (NonEmpty RewardAccount)
   deriving (Eq, Show, Generic)
 
-type instance EraRuleFailure "GOV" (ConwayEra c) = ConwayGovPredFailure (ConwayEra c)
+type instance EraRuleFailure "GOV" ConwayEra = ConwayGovPredFailure ConwayEra
 
-type instance EraRuleEvent "GOV" (ConwayEra c) = ConwayGovEvent (ConwayEra c)
+type instance EraRuleEvent "GOV" ConwayEra = ConwayGovEvent ConwayEra
 
-instance InjectRuleFailure "GOV" ConwayGovPredFailure (ConwayEra c)
+instance InjectRuleFailure "GOV" ConwayGovPredFailure ConwayEra
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
 
@@ -281,13 +281,13 @@ instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
   fromCBOR = fromEraCBOR @era
 
 data ConwayGovEvent era
-  = GovNewProposals !(TxId (EraCrypto era)) !(Proposals era)
+  = GovNewProposals !TxId !(Proposals era)
   | GovRemovedVotes
-      !(TxId (EraCrypto era))
+      !TxId
       -- | Votes that were replaced in this tx.
-      !(Set (Voter (EraCrypto era), GovActionId (EraCrypto era)))
+      !(Set (Voter, GovActionId))
       -- | Any votes from these DReps in this or in previous txs are removed
-      !(Set (Credential 'DRepRole (EraCrypto era)))
+      !(Set (Credential 'DRepRole))
   deriving (Generic, Eq)
 
 instance EraPParams era => NFData (ConwayGovEvent era)
@@ -333,7 +333,7 @@ instance
 
 checkVotesAreNotForExpiredActions ::
   EpochNo ->
-  [(Voter (EraCrypto era), GovActionState era)] ->
+  [(Voter, GovActionState era)] ->
   Test (ConwayGovPredFailure era)
 checkVotesAreNotForExpiredActions curEpoch votes =
   checkDisallowedVotes votes VotingOnExpiredGovAction $ \GovActionState {gasExpiresAfter} _ ->
@@ -344,7 +344,7 @@ checkVotersAreValid ::
   ConwayEraPParams era =>
   EpochNo ->
   CommitteeState era ->
-  [(Voter (EraCrypto era), GovActionState era)] ->
+  [(Voter, GovActionState era)] ->
   Test (ConwayGovPredFailure era)
 checkVotersAreValid currentEpoch committeeState votes =
   checkDisallowedVotes votes DisallowedVoters $ \gas ->
@@ -357,7 +357,7 @@ checkBootstrapVotes ::
   forall era.
   EraPParams era =>
   PParams era ->
-  [(Voter (EraCrypto era), GovActionState era)] ->
+  [(Voter, GovActionState era)] ->
   Test (ConwayGovPredFailure era)
 checkBootstrapVotes pp votes
   | HF.bootstrapPhase (pp ^. ppProtocolVersionL) =
@@ -377,7 +377,7 @@ actionWellFormed pv ga = failureUnless isWellFormed $ MalformedProposal ga
       _ -> True
 
 mkGovActionState ::
-  GovActionId (EraCrypto era) ->
+  GovActionId ->
   ProposalProcedure era ->
   -- | The number of epochs to expiry from protocol parameters
   EpochInterval ->
@@ -396,8 +396,8 @@ mkGovActionState actionId proposal expiryInterval curEpoch =
     }
 
 checkPolicy ::
-  StrictMaybe (ScriptHash (EraCrypto era)) ->
-  StrictMaybe (ScriptHash (EraCrypto era)) ->
+  StrictMaybe ScriptHash ->
+  StrictMaybe ScriptHash ->
   Test (ConwayGovPredFailure era)
 checkPolicy expectedPolicyHash actualPolicyHash =
   failureUnless (actualPolicyHash == expectedPolicyHash) $
@@ -608,9 +608,9 @@ isBootstrapAction =
     _ -> False
 
 checkDisallowedVotes ::
-  [(Voter (EraCrypto era), GovActionState era)] ->
-  (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)) -> ConwayGovPredFailure era) ->
-  (GovActionState era -> Voter (EraCrypto era) -> Bool) ->
+  [(Voter, GovActionState era)] ->
+  (NonEmpty (Voter, GovActionId) -> ConwayGovPredFailure era) ->
+  (GovActionState era -> Voter -> Bool) ->
   Test (ConwayGovPredFailure era)
 checkDisallowedVotes votes failure canBeVotedOnBy =
   failureOnNonEmpty disallowedVotes failure

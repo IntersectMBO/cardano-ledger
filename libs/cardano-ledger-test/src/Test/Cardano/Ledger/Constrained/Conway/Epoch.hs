@@ -10,23 +10,21 @@ module Test.Cardano.Ledger.Constrained.Conway.Epoch where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Conway (Conway, ConwayEra)
-import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Shelley.API.Types
 import Constrained
 import Data.Map.Strict
 import GHC.Generics (Generic)
 
 newtype EpochExecEnv era = EpochExecEnv
-  { eeeStakeDistr :: Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
+  { eeeStakeDistr :: Map (Credential 'Staking) (CompactForm Coin)
   }
   deriving (Generic, Eq, Show)
 
-epochEnvSpec :: Specification fn (EpochExecEnv Conway)
+epochEnvSpec :: Specification fn (EpochExecEnv ConwayEra)
 epochEnvSpec = TrueSpec
 
-epochStateSpec :: Specification fn (EpochState (ConwayEra StandardCrypto))
+epochStateSpec :: Specification fn (EpochState ConwayEra)
 epochStateSpec = TrueSpec
 
 epochSignalSpec :: Specification fn EpochNo

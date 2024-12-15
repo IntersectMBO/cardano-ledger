@@ -15,9 +15,6 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.Generic.Proof (
-  Mock,
-  Standard,
-  GoodCrypto,
   Proof (..),
   Reflect (..),
   Some (..),
@@ -43,8 +40,6 @@ module Test.Cardano.Ledger.Generic.Proof (
   AlonzoEra,
   BabbageEra,
   ConwayEra,
-  StandardCrypto,
-  C_Crypto,
   specialize,
   unReflect,
   runSTS',
@@ -84,7 +79,6 @@ import Cardano.Ledger.Conway.Governance (ConwayGovState, RunConwayRatify (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ConwayPParams (..))
 import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert (..))
 import Cardano.Ledger.Core (
-  Era (EraCrypto),
   EraPParams,
   EraRule,
   EraScript,
@@ -99,7 +93,6 @@ import Cardano.Ledger.Core (
   TxWits,
   Value,
  )
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -118,33 +111,18 @@ import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Universe (Shape (..), Shaped (..), Singleton (..), Some (..), (:~:) (Refl))
 import GHC.TypeLits (Symbol)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
-
-import Cardano.Crypto.DSIGN.Class (Signable)
-import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Core (EraIndependentTxBody)
-import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH)
-
--- =================================================
--- GADTs for witnessing Crypto and Era
-
-type Mock = C_Crypto
-
-type Standard = StandardCrypto
-
-type GoodCrypto c = (Crypto c, Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody))
 
 -- ===================================================
 
 -- | Proof of a valid (predefined) era
 data Proof era where
-  Shelley :: Proof (ShelleyEra StandardCrypto)
-  Mary :: Proof (MaryEra StandardCrypto)
-  Allegra :: Proof (AllegraEra StandardCrypto)
-  Alonzo :: Proof (AlonzoEra StandardCrypto)
-  Babbage :: Proof (BabbageEra StandardCrypto)
-  Conway :: Proof (ConwayEra StandardCrypto)
+  Shelley :: Proof ShelleyEra
+  Mary :: Proof MaryEra
+  Allegra :: Proof AllegraEra
+  Alonzo :: Proof AlonzoEra
+  Babbage :: Proof BabbageEra
+  Conway :: Proof ConwayEra
 
 instance Show (Proof e) where
   show Shelley = "Shelley"
@@ -163,8 +141,6 @@ class
   , EraUTxO era
   , EraTxAuxData era
   , ShelleyEraTxCert era
-  , --  , GoodCrypto (EraCrypto era)
-    EraCrypto era ~ StandardCrypto
   ) =>
   Reflect era
   where
@@ -172,22 +148,22 @@ class
   lift :: forall a. (Proof era -> a) -> a
   lift f = f (reify @era)
 
-instance Reflect (ConwayEra StandardCrypto) where
+instance Reflect ConwayEra where
   reify = Conway
 
-instance Reflect (BabbageEra StandardCrypto) where
+instance Reflect BabbageEra where
   reify = Babbage
 
-instance Reflect (AlonzoEra StandardCrypto) where
+instance Reflect AlonzoEra where
   reify = Alonzo
 
-instance Reflect (MaryEra StandardCrypto) where
+instance Reflect MaryEra where
   reify = Mary
 
-instance Reflect (AllegraEra StandardCrypto) where
+instance Reflect AllegraEra where
   reify = Allegra
 
-instance Reflect (ShelleyEra StandardCrypto) where
+instance Reflect ShelleyEra where
   reify = Shelley
 
 -- ===================================================
@@ -295,12 +271,12 @@ runSTS' _ x = runShelleyBase (applySTSTest x)
 -- @@@
 --   :t goSTS (UTXOW Babbage)
 --   goSTS (LEDGER Babbage)
---     :: LedgerEnv (BabbageEra StandardCrypto)
---        -> (UTxOState (BabbageEra StandardCrypto), CertState StandardCrypto)
---        -> Cardano.Ledger.Alonzo.Tx.AlonzoTx (BabbageEra StandardCrypto)
+--     :: LedgerEnv (BabbageEra )
+--        -> (UTxOState (BabbageEra ), CertState )
+--        -> Cardano.Ledger.Alonzo.Tx.AlonzoTx (BabbageEra )
 --        -> (Either
---              [LedgerPredicateFailure (BabbageEra StandardCrypto)]
---              (UTxOState (BabbageEra StandardCrypto), CertState StandardCrypto)
+--              [LedgerPredicateFailure (BabbageEra )]
+--              (UTxOState (BabbageEra ), CertState )
 --        -> ans)
 --        -> ans
 -- @@@
@@ -389,12 +365,12 @@ postConway = [Some Conway]
 -- not percolate upwards, past the call site of 'action'
 specialize ::
   forall constraint era t.
-  ( constraint (ShelleyEra (EraCrypto era))
-  , constraint (AllegraEra (EraCrypto era))
-  , constraint (MaryEra (EraCrypto era))
-  , constraint (AlonzoEra (EraCrypto era))
-  , constraint (BabbageEra (EraCrypto era))
-  , constraint (ConwayEra (EraCrypto era))
+  ( constraint ShelleyEra
+  , constraint AllegraEra
+  , constraint MaryEra
+  , constraint AlonzoEra
+  , constraint BabbageEra
+  , constraint ConwayEra
   ) =>
   Proof era ->
   (constraint era => t) ->
@@ -480,7 +456,7 @@ whichTxCert Conway = TxCertConwayToConway
 
 data ValueWit era where
   ValueShelleyToAllegra :: Value era ~ Coin => ValueWit era
-  ValueMaryToConway :: Value era ~ MaryValue (EraCrypto era) => ValueWit era
+  ValueMaryToConway :: Value era ~ MaryValue => ValueWit era
 
 whichValue :: Proof era -> ValueWit era
 whichValue Shelley = ValueShelleyToAllegra

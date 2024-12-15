@@ -71,7 +71,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Encode, encode, runE)
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Core.Era (Era (EraCrypto), eraProtVerLow)
+import Cardano.Ledger.Core.Era (Era, eraProtVerLow)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.SafeHash (SafeHash, SafeToHash (..))
 import Control.DeepSeq (NFData (..))
@@ -98,7 +98,7 @@ import Prelude hiding (span)
 data MemoBytes t era = Memo'
   { mbRawType :: !(t era)
   , mbBytes :: ShortByteString
-  , mbHash :: SafeHash (EraCrypto era) (MemoHashIndex t)
+  , mbHash :: SafeHash (MemoHashIndex t)
   }
   deriving (Generic)
   deriving (NoThunks) via AllowThunksIn '["mbBytes", "mbHash"] (MemoBytes t era)
@@ -133,11 +133,11 @@ instance (Typeable t, DecCBOR (t era), Era era) => DecCBOR (MemoBytes t era) whe
 instance Eq (t era) => Eq (MemoBytes t era) where
   x == y = mbBytes x == mbBytes y && mbRawType x == mbRawType y
 
-instance (Show (t era), HashAlgorithm (HASH (EraCrypto era))) => Show (MemoBytes t era) where
+instance Show (t era) => Show (MemoBytes t era) where
   show (Memo' y _ h) =
     show y
       <> " ("
-      <> hashAlgorithmName (Proxy :: Proxy (HASH (EraCrypto era)))
+      <> hashAlgorithmName (Proxy :: Proxy HASH)
       <> ": "
       <> show h
       <> ")"
@@ -155,12 +155,12 @@ shorten x = toShort (toStrict x)
 type Mem t era = Annotator (MemoBytes t era)
 
 -- | Smart constructor
-mkMemoBytes :: forall era t. Era era => t era -> BSL.ByteString -> MemoBytes t era
+mkMemoBytes :: forall era t. t era -> BSL.ByteString -> MemoBytes t era
 mkMemoBytes t bsl =
   Memo'
     t
     (toShort bs)
-    (makeHashWithExplicitProxys (Proxy @(EraCrypto era)) (Proxy @(MemoHashIndex t)) bs)
+    (makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) bs)
   where
     bs = toStrict bsl
 
@@ -189,7 +189,7 @@ getMemoBytesType :: MemoBytes t era -> t era
 getMemoBytesType = mbRawType
 
 -- | Extract the hash value of the binary representation of the MemoBytes
-getMemoBytesHash :: MemoBytes t era -> SafeHash (EraCrypto era) (MemoHashIndex t)
+getMemoBytesHash :: MemoBytes t era -> SafeHash (MemoHashIndex t)
 getMemoBytesHash = mbHash
 
 -- | Class that relates the actual type with its raw and byte representations
@@ -220,13 +220,13 @@ class Memoized t where
 mkMemoized :: forall era t. (Era era, EncCBOR (RawType t era), Memoized t) => RawType t era -> t era
 mkMemoized rawType = wrapMemoBytes (mkMemoBytes rawType (serialize (eraProtVerLow @era) rawType))
 
-decodeMemoized :: Era era => Decoder s (t era) -> Decoder s (MemoBytes t era)
+decodeMemoized :: Decoder s (t era) -> Decoder s (MemoBytes t era)
 decodeMemoized rawTypeDecoder = do
   Annotated rawType lazyBytes <- decodeAnnotated rawTypeDecoder
   pure $ mkMemoBytes rawType lazyBytes
 
 -- | Extract memoized SafeHash
-getMemoSafeHash :: Memoized t => t era -> SafeHash (EraCrypto era) (MemoHashIndex (RawType t))
+getMemoSafeHash :: Memoized t => t era -> SafeHash (MemoHashIndex (RawType t))
 getMemoSafeHash t = mbHash (getMemoBytes t)
 
 -- | Extract the raw type from the memoized version

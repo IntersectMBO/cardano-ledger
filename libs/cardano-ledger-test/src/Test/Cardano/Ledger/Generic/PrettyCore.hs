@@ -154,7 +154,6 @@ import Cardano.Ledger.Credential (
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
@@ -591,7 +590,7 @@ ppVMap pk pv = ppAssocList (text "VMap") pk pv . VMap.toList
 -- Pretty printers Cardano.Ledger types
 -- =====================================================================================================
 
-ppPolicyID :: PolicyID c -> PDoc
+ppPolicyID :: PolicyID -> PDoc
 ppPolicyID (PolicyID sh) = pcScriptHash sh
 
 ppLogWeight :: LogWeight -> PDoc
@@ -618,7 +617,7 @@ ppRewardType LeaderReward = text "LeaderReward"
 ppLikelihood :: Likelihood -> PDoc
 ppLikelihood (Likelihood ns) = ppSexp "Likelihood" [ppStrictSeq ppLogWeight ns]
 
-ppNonMyopic :: NonMyopic c -> PDoc
+ppNonMyopic :: NonMyopic -> PDoc
 ppNonMyopic (NonMyopic m c) =
   ppRecord
     "NonMyopic"
@@ -626,7 +625,7 @@ ppNonMyopic (NonMyopic m c) =
     , ("rewardPot", pcCoin c)
     ]
 
-ppRewardUpdate :: RewardUpdate c -> PDoc
+ppRewardUpdate :: RewardUpdate -> PDoc
 ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
   ppRecord
     "RewardUpdate"
@@ -637,7 +636,7 @@ ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
     , ("nonMyopic", ppNonMyopic nonmyop)
     ]
 
-instance PrettyA (RewardUpdate c) where
+instance PrettyA RewardUpdate where
   prettyA = ppRewardUpdate
 
 ppLanguage :: Language -> PDoc
@@ -683,16 +682,16 @@ ppValidityInterval (ValidityInterval b a) =
 instance PrettyA ValidityInterval where
   prettyA = ppValidityInterval
 
-ppAuxiliaryDataHash :: AuxiliaryDataHash c -> PDoc
+ppAuxiliaryDataHash :: AuxiliaryDataHash -> PDoc
 ppAuxiliaryDataHash (AuxiliaryDataHash h) = ppSexp "AuxiliaryDataHash" [ppSafeHash h]
 
-instance PrettyA (AuxiliaryDataHash c) where
+instance PrettyA AuxiliaryDataHash where
   prettyA = ppAuxiliaryDataHash
 
-ppSafeHash :: SafeHash c index -> PDoc
+ppSafeHash :: SafeHash index -> PDoc
 ppSafeHash x = ppHash (extractHash x)
 
-instance PrettyA (SafeHash x y) where
+instance PrettyA (SafeHash x) where
   prettyA = ppSafeHash
 
 ppEpochNo :: EpochNo -> Doc ann
@@ -710,7 +709,7 @@ instance PrettyA EpochInterval where
 ppHash :: Hash.Hash a b -> PDoc
 ppHash x = text "#" <> reAnnotate (Width 5 :) (viaShow x)
 
-ppVRFHash :: VRFVerKeyHash r c -> PDoc
+ppVRFHash :: VRFVerKeyHash r -> PDoc
 ppVRFHash = ppHash . unVRFVerKeyHash
 
 ppUnitInterval :: UnitInterval -> PDoc
@@ -736,13 +735,13 @@ ppProtVer (ProtVer maj mi) = ppRecord "ProtVer" [("major", ppVersion maj), ("min
 instance PrettyA ProtVer where
   prettyA = ppProtVer
 
-ppVKey :: Crypto c => VKey r c -> PDoc
+ppVKey :: VKey r -> PDoc
 ppVKey vk@(VKey x) = vsep [reAnnotate (Width 5 :) (viaShow x), "hash = " <+> pcKeyHash (hashKey vk)]
 
-instance Crypto c => PrettyA (VKey r c) where
+instance PrettyA (VKey r) where
   prettyA = ppVKey
 
-ppBootstrapWitness :: Crypto c => BootstrapWitness c -> PDoc
+ppBootstrapWitness :: BootstrapWitness -> PDoc
 ppBootstrapWitness (BootstrapWitness key sig (ChainCode code) attr) =
   ppRecord
     "BootstrapWitness"
@@ -752,7 +751,7 @@ ppBootstrapWitness (BootstrapWitness key sig (ChainCode code) attr) =
     , ("attributes", ppLong attr)
     ]
 
-instance Crypto c => PrettyA (BootstrapWitness c) where
+instance PrettyA BootstrapWitness where
   prettyA = ppBootstrapWitness
 
 ppWitnessSetHKD :: forall era. Reflect era => ShelleyTxWits era -> PDoc
@@ -866,13 +865,13 @@ pcAuxData Alonzo x = ppAlonzoTxAuxData x
 pcAuxData Babbage x = ppAlonzoTxAuxData x
 pcAuxData Conway x = ppAlonzoTxAuxData x
 
-ppWithdrawals :: Withdrawals c -> PDoc
+ppWithdrawals :: Withdrawals -> PDoc
 ppWithdrawals (Withdrawals m) = ppSexp "Withdrawals" [ppMap' (text "Wdr") pcRewardAccount pcCoin m]
 
-instance PrettyA (Withdrawals c) where
+instance PrettyA Withdrawals where
   prettyA = ppWithdrawals
 
-ppWitHashes :: Set (KeyHash 'Witness c) -> PDoc
+ppWitHashes :: Set (KeyHash 'Witness) -> PDoc
 ppWitHashes hs = ppSexp "WitHashes" [ppSet pcKeyHash hs]
 
 -- ================================================
@@ -2273,7 +2272,7 @@ instance Reflect era => PrettyA (ShelleyBbodyState era) where
 -- Summaries. A Summary prints just some information
 -- For examplle, just the size of a Map or List.
 
-txBodyFieldSummary :: EraTxBody era => TxBodyField era -> [(Text, PDoc)]
+txBodyFieldSummary :: TxBodyField era -> [(Text, PDoc)]
 txBodyFieldSummary txb = case txb of
   (Inputs s) -> [("Inputs", ppInt (Set.size s))]
   (Collateral s) -> [("Collateral", ppInt (Set.size s))]
@@ -2293,7 +2292,7 @@ txBodyFieldSummary txb = case txb of
   (Txnetworkid (SJust x)) -> [("Network id", ppNetwork x)]
   _ -> []
 
-bodySummary :: EraTxBody era => Proof era -> TxBody era -> PDoc
+bodySummary :: Proof era -> TxBody era -> PDoc
 bodySummary proof txbody =
   ppRecord
     "TxBody"
@@ -2313,7 +2312,7 @@ witnessSummary proof txwits =
     "Witnesses"
     (map witnessFieldSummary (abstractWitnesses proof txwits))
 
-txFieldSummary :: EraTxBody era => Proof era -> TxField era -> [PDoc]
+txFieldSummary :: Proof era -> TxField era -> [PDoc]
 txFieldSummary proof tx = case tx of
   (Body b) -> [bodySummary proof b]
   (BodyI xs) -> [ppRecord "TxBody" (concat (map txBodyFieldSummary xs))]
@@ -2323,14 +2322,14 @@ txFieldSummary proof tx = case tx of
   (Valid (IsValid b)) -> [ppSexp "IsValid" [ppBool b]]
   _ -> []
 
-txSummary :: EraTx era => Proof era -> Tx era -> PDoc
+txSummary :: Proof era -> Tx era -> PDoc
 txSummary proof tx =
   ppSexp "Tx" (concat (map (txFieldSummary proof) (abstractTx proof tx)))
 
 -- =================================
 -- Summary version of UTxO
 
-txInSummary :: TxIn era -> PDoc
+txInSummary :: TxIn -> PDoc
 txInSummary (TxIn (TxId h) n) = ppSexp "TxIn" [trim (ppSafeHash h), ppInt (txIxToInt n)]
 
 txOutSummary :: Proof era -> TxOut era -> PDoc
@@ -2363,10 +2362,10 @@ plutusDataSummary (PV1.List xs) = ppList plutusDataSummary xs
 plutusDataSummary (PV1.I n) = ppInteger n
 plutusDataSummary (PV1.B bs) = trim (ppLong bs)
 
-multiAssetSummary :: MultiAsset c -> PDoc
+multiAssetSummary :: MultiAsset -> PDoc
 multiAssetSummary (MultiAsset m) = ppString ("num tokens = " ++ show (Map.size m))
 
-vSummary :: MaryValue c -> PDoc
+vSummary :: MaryValue -> PDoc
 vSummary (MaryValue n ma) =
   ppSexp "Value" [pcCoin n, multiAssetSummary ma]
 
@@ -2382,16 +2381,16 @@ networkSummary :: Network -> PDoc
 networkSummary Testnet = ppString "Test"
 networkSummary Mainnet = ppString "Main"
 
-addrSummary :: Addr c -> PDoc
+addrSummary :: Addr -> PDoc
 addrSummary (Addr nw pay stk) =
   ppSexp "Addr" [networkSummary nw, credSummary pay, stakeSummary stk]
 addrSummary (AddrBootstrap _) = ppString "Bootstrap"
 
-credSummary :: Credential keyrole c -> PDoc
+credSummary :: Credential keyrole -> PDoc
 credSummary (ScriptHashObj (ScriptHash h)) = ppSexp "Script" [trim (ppHash h)]
 credSummary (KeyHashObj (KeyHash kh)) = ppSexp "Key" [trim (ppHash kh)]
 
-stakeSummary :: StakeReference c -> PDoc
+stakeSummary :: StakeReference -> PDoc
 stakeSummary StakeRefNull = ppString "Null"
 stakeSummary (StakeRefPtr _) = ppString "Ptr"
 stakeSummary (StakeRefBase x) = ppSexp "Stake" [credSummary (coerceKeyRole x)]
@@ -2402,20 +2401,20 @@ utxoSummary proof = ppMap txInSummary (txOutSummary proof) . unUTxO
 utxoString :: Proof era -> UTxO era -> String
 utxoString proof = show . ppMap txInSummary (txOutSummary proof) . unUTxO
 
-scriptHashSummary :: ScriptHash c -> PDoc
+scriptHashSummary :: ScriptHash -> PDoc
 scriptHashSummary (ScriptHash h) = trim (ppHash h)
 
-keyHashSummary :: KeyHash keyrole c -> PDoc
+keyHashSummary :: KeyHash keyrole -> PDoc
 keyHashSummary (KeyHash h) = trim (ppHash h)
 
-dataHashSummary :: DataHash era -> PDoc
+dataHashSummary :: DataHash -> PDoc
 dataHashSummary dh = trim (ppSafeHash dh)
 
-keyPairSummary :: Crypto c => KeyPair r c -> PDoc
+keyPairSummary :: KeyPair r -> PDoc
 keyPairSummary (KeyPair x y) =
   ppRecord "KeyPair" [("vKey", vKeySummary x), ("sKey", viaShow y)]
 
-vKeySummary :: Crypto c => VKey r c -> PDoc
+vKeySummary :: VKey r -> PDoc
 vKeySummary vk@(VKey x) = viaShow x <> " (hash " <> keyHashSummary (hashKey vk) <> ")"
 
 timelockSummary :: (AllegraEraScript era, NativeScript era ~ Timelock era) => Timelock era -> PDoc
@@ -2462,7 +2461,7 @@ dStateSummary (DState umap future (GenDelegs current) irwd) =
     , ("Instantaneous Rewards", instantSummary irwd)
     ]
 
-instantSummary :: InstantaneousRewards c -> PDoc
+instantSummary :: InstantaneousRewards -> PDoc
 instantSummary (InstantaneousRewards reserves treasury dreserves dtreasury) =
   ppRecord
     "InstantaneousRewards"
@@ -2472,7 +2471,7 @@ instantSummary (InstantaneousRewards reserves treasury dreserves dtreasury) =
     , ("Reserves to treasury", pcDeltaCoin dtreasury)
     ]
 
-uMapSummary :: UM.UMap c -> PDoc
+uMapSummary :: UM.UMap -> PDoc
 uMapSummary umap =
   ppRecord
     "UMap"
@@ -2498,15 +2497,15 @@ dpStateSummary (CertState v p d) = vsep [pcVState v, pStateSummary p, dStateSumm
 -- =============================================
 -- Pretty printers for more Ledger specific types
 
-pcTxId :: TxId c -> PDoc
+pcTxId :: TxId -> PDoc
 pcTxId (TxId safehash) = trim (ppSafeHash safehash)
 
-instance PrettyA (TxId c) where prettyA = pcTxId
+instance PrettyA TxId where prettyA = pcTxId
 
-pcTxIn :: TxIn c -> PDoc
+pcTxIn :: TxIn -> PDoc
 pcTxIn (TxIn (TxId h) (TxIx i)) = parens (hsep [ppString "TxIn", trim (ppSafeHash h), ppWord64 i])
 
-instance PrettyA (TxIn c) where prettyA = pcTxIn
+instance PrettyA TxIn where prettyA = pcTxIn
 
 pcNetwork :: Network -> PDoc
 pcNetwork Testnet = ppString "TestNet"
@@ -2514,25 +2513,25 @@ pcNetwork Mainnet = ppString "Mainnet"
 
 instance PrettyA Network where prettyA = pcNetwork
 
-pcKeyHash :: KeyHash discriminator c -> PDoc
+pcKeyHash :: KeyHash discriminator -> PDoc
 pcKeyHash (KeyHash h) = trim (ppHash h)
 
-instance PrettyA (KeyHash d c) where prettyA = pcKeyHash
+instance PrettyA (KeyHash d) where prettyA = pcKeyHash
 
-pcCredential :: Credential keyrole c -> PDoc
+pcCredential :: Credential keyrole -> PDoc
 pcCredential (ScriptHashObj (ScriptHash h)) = hsep [ppString "(Script", trim (ppHash h) <> ppString ")"]
 pcCredential (KeyHashObj (KeyHash h)) = hsep [ppString "(Key", trim (ppHash h) <> ppString ")"]
 
-instance PrettyA (Credential keyrole c) where prettyA = pcCredential
+instance PrettyA (Credential keyrole) where prettyA = pcCredential
 
-pcStakeReference :: StakeReference c -> PDoc
+pcStakeReference :: StakeReference -> PDoc
 pcStakeReference StakeRefNull = ppString "Null"
 pcStakeReference (StakeRefBase cred) = pcCredential cred
 pcStakeReference (StakeRefPtr _) = ppString "Ptr"
 
-instance PrettyA (StakeReference c) where prettyA = pcStakeReference
+instance PrettyA StakeReference where prettyA = pcStakeReference
 
-pcAddr :: Addr c -> PDoc
+pcAddr :: Addr -> PDoc
 pcAddr (Addr nw pay stk) =
   parens $
     hsep
@@ -2543,7 +2542,7 @@ pcAddr (Addr nw pay stk) =
       ]
 pcAddr (AddrBootstrap _) = ppString "Bootstrap"
 
-instance PrettyA (Addr c) where prettyA = pcAddr
+instance PrettyA Addr where prettyA = pcAddr
 
 -- | Value is a type family, so it has no PrettyA instance.
 pcCoreValue :: Proof era -> Value era -> PDoc
@@ -2559,7 +2558,7 @@ pcCoin (Coin n) = hsep [ppString "₳", ppInteger n]
 
 instance PrettyA Coin where prettyA = pcCoin
 
-pcValue :: MaryValue c -> PDoc
+pcValue :: MaryValue -> PDoc
 pcValue (MaryValue n (MultiAsset m)) =
   ppSexp
     "Value"
@@ -2568,7 +2567,7 @@ pcValue (MaryValue n (MultiAsset m)) =
       ppSet pcPolicyID (Map.keysSet m)
     ]
 
-instance PrettyA (MaryValue c) where
+instance PrettyA MaryValue where
   prettyA = pcValue
 
 pcVal :: Proof era -> Value era -> PDoc
@@ -2622,7 +2621,7 @@ instance
   prettyA = pcTimelock
 
 pcMultiSig ::
-  (ShelleyEraScript era, Reflect era, NativeScript era ~ MultiSig era) =>
+  (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
   PDoc ->
   MultiSig era ->
   PDoc
@@ -2641,10 +2640,10 @@ instance
   where
   prettyA = pcMultiSig mempty
 
-pcScriptHash :: ScriptHash era -> PDoc
+pcScriptHash :: ScriptHash -> PDoc
 pcScriptHash (ScriptHash h) = trim (ppHash h)
 
-instance PrettyA (ScriptHash era) where
+instance PrettyA ScriptHash where
   prettyA = pcScriptHash
 
 pcHashScript :: forall era. Reflect era => Proof era -> Script era -> PDoc
@@ -2658,10 +2657,10 @@ pcHashScript Shelley s = ppString "Hash " <> pcScriptHash (hashScript @era s)
 instance (Script era ~ AlonzoScript era, Reflect era) => PrettyA (AlonzoScript era) where
   prettyA = pcScript reify
 
-pcDataHash :: DataHash era -> PDoc
+pcDataHash :: DataHash -> PDoc
 pcDataHash dh = trim (ppSafeHash dh)
 
-instance PrettyA (DataHash era) where
+instance PrettyA DataHash where
   prettyA = pcDataHash
 
 pcUTxO :: Proof era -> UTxO era -> PDoc
@@ -2669,7 +2668,7 @@ pcUTxO proof = ppMap pcTxIn (unReflect pcTxOut proof) . unUTxO
 
 instance Reflect era => PrettyA (UTxO era) where prettyA = pcUTxO reify
 
-pcPoolParams :: PoolParams era -> PDoc
+pcPoolParams :: PoolParams -> PDoc
 pcPoolParams x =
   ppRecord
     "PoolParams"
@@ -2677,23 +2676,23 @@ pcPoolParams x =
     , ("reward accnt", pcCredential (raCredential (ppRewardAccount x)))
     ]
 
-instance PrettyA (PoolParams era) where prettyA = pcPoolParams
+instance PrettyA PoolParams where prettyA = pcPoolParams
 
-pcDelegCert :: ShelleyDelegCert c -> PDoc
+pcDelegCert :: ShelleyDelegCert -> PDoc
 pcDelegCert (ShelleyRegCert cred) = ppSexp "ShelleyRegCert" [pcCredential cred]
 pcDelegCert (ShelleyUnRegCert cred) = ppSexp "ShelleyUnRegCert" [pcCredential cred]
 pcDelegCert (ShelleyDelegCert x y) = ppSexp "ShelleyDelegCert" [pcCredential x, pcKeyHash y]
 
-instance PrettyA (ShelleyDelegCert c) where prettyA = pcDelegCert
+instance PrettyA ShelleyDelegCert where prettyA = pcDelegCert
 
-pcPoolCert :: PoolCert c -> PDoc
+pcPoolCert :: PoolCert -> PDoc
 pcPoolCert (RegPool poolp) = ppSexp "RegPool" [pcPoolParams poolp]
 pcPoolCert (RetirePool keyhash epoch) = ppSexp "RetirePool" [pcKeyHash keyhash, ppEpochNo epoch]
 
-instance PrettyA (PoolCert c) where
+instance PrettyA PoolCert where
   prettyA = pcPoolCert
 
-pcGenesisDelegCert :: GenesisDelegCert c -> PDoc
+pcGenesisDelegCert :: GenesisDelegCert -> PDoc
 pcGenesisDelegCert (GenesisDelegCert a b c) =
   ppRecord
     "GenesisDelegCert"
@@ -2702,7 +2701,7 @@ pcGenesisDelegCert (GenesisDelegCert a b c) =
     , ("VerKeyVRF", trim (ppVRFHash c))
     ]
 
-instance PrettyA (GenesisDelegCert c) where
+instance PrettyA GenesisDelegCert where
   prettyA = pcGenesisDelegCert
 
 pcShelleyTxCert :: ShelleyTxCert c -> PDoc
@@ -2733,7 +2732,7 @@ pcConwayTxCert (ConwayTxCertGov x) = pcConwayGovCert x
 instance PrettyA (ConwayTxCert c) where
   prettyA = pcConwayTxCert
 
-pcConwayGovCert :: ConwayGovCert c -> PDoc
+pcConwayGovCert :: ConwayGovCert -> PDoc
 pcConwayGovCert (ConwayRegDRep cred c smA) =
   ppSexp "ConwayRegDRep" [pcCredential cred, pcCoin c, ppStrictMaybe pcAnchor smA]
 pcConwayGovCert (ConwayUnRegDRep cred c) =
@@ -2747,10 +2746,10 @@ pcConwayGovCert (ConwayResignCommitteeColdKey cred anch) =
     "ConwayResignCommitteeColdKey"
     [("cred", pcCredential cred), ("anchor", ppStrictMaybe pcAnchor anch)]
 
-instance PrettyA (ConwayGovCert c) where
+instance PrettyA ConwayGovCert where
   prettyA = pcConwayGovCert
 
-pcConwayDelegCert :: ConwayDelegCert c -> PDoc
+pcConwayDelegCert :: ConwayDelegCert -> PDoc
 pcConwayDelegCert (ConwayRegCert cred mcoin) =
   ppSexp "RegCert" [pcCredential cred, ppStrictMaybe pcCoin mcoin]
 pcConwayDelegCert (ConwayUnRegCert cred mcoin) =
@@ -2760,7 +2759,7 @@ pcConwayDelegCert (ConwayDelegCert cred d) =
 pcConwayDelegCert (ConwayRegDelegCert cred d c) =
   ppSexp "RegDelegCert" [pcCredential cred, pcDelegatee d, pcCoin c]
 
-instance PrettyA (ConwayDelegCert c) where
+instance PrettyA ConwayDelegCert where
   prettyA = pcConwayDelegCert
 
 instance Reflect era => PrettyA (ConwayDelegEnv era) where
@@ -2771,12 +2770,12 @@ instance Reflect era => PrettyA (ConwayDelegEnv era) where
       , ("cdePools", prettyA cdePools)
       ]
 
-pcDelegatee :: Delegatee c -> PDoc
+pcDelegatee :: Delegatee -> PDoc
 pcDelegatee (DelegStake kh) = ppSexp "DelegStake" [pcKeyHash kh]
 pcDelegatee (DelegVote cred) = ppSexp "DelegVote" [pcDRep cred]
 pcDelegatee (DelegStakeVote kh cred) = ppSexp "DelegStakeVote" [pcKeyHash kh, pcDRep cred]
 
-instance PrettyA (Delegatee c) where
+instance PrettyA Delegatee where
   prettyA = pcDelegatee
 
 pcTxCert :: Proof era -> TxCert era -> PDoc
@@ -2819,12 +2818,12 @@ pcProposalProcedure (ProposalProcedure c rewacnt govact anch) =
 instance PrettyA (ProposalProcedure era) where
   prettyA = pcProposalProcedure
 
-pcVoter :: Voter c -> PDoc
+pcVoter :: Voter -> PDoc
 pcVoter (CommitteeVoter cred) = ppSexp "CommitteeVoter" [pcCredential cred]
 pcVoter (DRepVoter cred) = ppSexp "DRepVoter" [pcCredential cred]
 pcVoter (StakePoolVoter keyhash) = ppSexp "StakePoolVoter" [pcKeyHash keyhash]
 
-instance PrettyA (Voter c) where
+instance PrettyA Voter where
   prettyA = pcVoter
 
 pcVotingProcedure :: VotingProcedure era -> PDoc
@@ -2836,10 +2835,10 @@ instance PrettyA (VotingProcedure era) where
 
 -- ============================================================
 
-pcRewardAccount :: RewardAccount c -> PDoc
+pcRewardAccount :: RewardAccount -> PDoc
 pcRewardAccount (RewardAccount net cred) = ppSexp "RewardAccount" [pcNetwork net, pcCredential cred]
 
-instance PrettyA (RewardAccount c) where prettyA = pcRewardAccount
+instance PrettyA RewardAccount where prettyA = pcRewardAccount
 
 pcExUnits :: ExUnits -> PDoc
 pcExUnits (ExUnits mem step) =
@@ -2852,9 +2851,9 @@ pcPair pp1 pp2 (x, y) = parens (hsep [pp1 x, ppString ",", pp2 y])
 
 pcWitVKey ::
   forall era keyrole.
-  (Reflect era, Typeable keyrole) =>
+  Typeable keyrole =>
   Proof era ->
-  WitVKey keyrole (EraCrypto era) ->
+  WitVKey keyrole ->
   PDoc
 pcWitVKey _p (WitVKey vk@(VKey x) sig) =
   ppSexp
@@ -2869,12 +2868,11 @@ pcWitVKey _p (WitVKey vk@(VKey x) sig) =
     sigstring = show sig
 
 instance
-  forall era c keyrole.
+  forall era keyrole.
   ( Reflect era
-  , c ~ EraCrypto era
   , Typeable keyrole
   ) =>
-  PrettyA (WitVKey keyrole c)
+  PrettyA (WitVKey keyrole)
   where
   prettyA = pcWitVKey @era reify
 
@@ -2884,8 +2882,8 @@ instance
 -- | GovState is a type family, No PrettyA instance
 pcGovState :: Proof era -> GovState era -> PDoc
 pcGovState p x = case whichGovState p of
-  (GovStateShelleyToBabbage) -> pcShelleyGovState p x
-  (GovStateConwayToConway) -> unReflect pcConwayGovState p x
+  GovStateShelleyToBabbage -> pcShelleyGovState p x
+  GovStateConwayToConway -> unReflect pcConwayGovState p x
 
 pcShelleyGovState :: Proof era -> ShelleyGovState era -> PDoc
 pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp futurepp) =
@@ -2924,10 +2922,10 @@ pcEnactState p ens@(EnactState _ _ _ _ _ _ _) =
 instance Reflect era => PrettyA (EnactState era) where
   prettyA = pcEnactState reify
 
-pcGovActionId :: GovActionId c -> PDoc
+pcGovActionId :: GovActionId -> PDoc
 pcGovActionId (GovActionId txid (GovActionIx a)) = ppSexp "GovActId" [pcTxId txid, ppWord16 a]
 
-instance PrettyA (GovActionId c) where
+instance PrettyA GovActionId where
   prettyA = pcGovActionId
 
 pcGovPurposeId :: GovPurposeId p era -> PDoc
@@ -3115,13 +3113,13 @@ pcConstitution (Constitution x y) =
 instance PrettyA (Constitution c) where
   prettyA = pcConstitution
 
-ppCommitteeAuthorization :: CommitteeAuthorization c -> PDoc
+ppCommitteeAuthorization :: CommitteeAuthorization -> PDoc
 ppCommitteeAuthorization =
   \case
     CommitteeHotCredential hk -> ppSexp "CommitteeHotCredential" [pcCredential hk]
     CommitteeMemberResigned anchor -> ppSexp "CommitteeMemberResigned" [ppStrictMaybe pcAnchor anchor]
 
-instance PrettyA (CommitteeAuthorization c) where
+instance PrettyA CommitteeAuthorization where
   prettyA = ppCommitteeAuthorization
 
 pcCommitteeState :: CommitteeState era -> PDoc
@@ -3132,7 +3130,7 @@ instance (PrettyA (CommitteeState era)) where
 
 -- ===================================================
 
-pcReward :: Reward c -> PDoc
+pcReward :: Reward -> PDoc
 pcReward (Reward ty pl c) =
   ppRecord
     "Reward"
@@ -3141,10 +3139,10 @@ pcReward (Reward ty pl c) =
     , ("amount", pcCoin c)
     ]
 
-instance PrettyA (Reward c) where
+instance PrettyA Reward where
   prettyA = pcReward
 
-pcFutureGenDeleg :: FutureGenDeleg c -> PDoc
+pcFutureGenDeleg :: FutureGenDeleg -> PDoc
 pcFutureGenDeleg (FutureGenDeleg (SlotNo x) y) =
   ppRecord
     "FutGenDeleg"
@@ -3152,10 +3150,10 @@ pcFutureGenDeleg (FutureGenDeleg (SlotNo x) y) =
     , ("keyHash", pcKeyHash y)
     ]
 
-instance PrettyA (FutureGenDeleg c) where
+instance PrettyA FutureGenDeleg where
   prettyA = pcFutureGenDeleg
 
-instance PrettyA (GenDelegPair c) where
+instance PrettyA GenDelegPair where
   prettyA = pcGenDelegPair
 
 pcCertState :: CertState era -> PDoc
@@ -3179,7 +3177,7 @@ pcVState (VState dreps committeeState numDormantEpochs) =
 instance PrettyA (VState era) where
   prettyA st = pcVState st
 
-pcAnchor :: Anchor c -> PDoc
+pcAnchor :: Anchor -> PDoc
 pcAnchor (Anchor u h) =
   ppRecord
     "Anchor"
@@ -3187,10 +3185,10 @@ pcAnchor (Anchor u h) =
     , ("datahash", trim $ ppSafeHash h)
     ]
 
-instance PrettyA (Anchor c) where
+instance PrettyA Anchor where
   prettyA = pcAnchor
 
-pcDRepState :: DRepState c -> PDoc
+pcDRepState :: DRepState -> PDoc
 pcDRepState (DRepState expire anchor deposit delegs) =
   ppRecord
     "DRepState"
@@ -3200,25 +3198,25 @@ pcDRepState (DRepState expire anchor deposit delegs) =
     , ("delegations", ppSet pcCredential delegs)
     ]
 
-instance PrettyA (DRepState c) where
+instance PrettyA DRepState where
   prettyA = pcDRepState
 
-pcDRep :: DRep c -> PDoc
+pcDRep :: DRep -> PDoc
 pcDRep (DRepCredential cred) = ppSexp "DRepCred" [pcCredential cred]
 pcDRep DRepAlwaysAbstain = ppSexp "DRep" [ppString "Abstain"]
 pcDRep DRepAlwaysNoConfidence = ppSexp "DRep" [ppString "NoConfidence"]
 
-instance PrettyA (DRep c) where
+instance PrettyA DRep where
   prettyA = pcDRep
 
-pcSnapShotL :: Text -> SnapShot c -> [(Text, PDoc)]
+pcSnapShotL :: Text -> SnapShot -> [(Text, PDoc)]
 pcSnapShotL prefix ss =
   [ (prefix <> "Stake", ppMap pcCredential (pcCoin . fromCompact) (VMap.toMap (unStake (ssStake ss))))
   , (prefix <> "Delegs", ppMap pcCredential pcKeyHash (VMap.toMap (ssDelegations ss)))
   , (prefix <> "Pools", ppMap pcKeyHash pcPoolParams (VMap.toMap (ssPoolParams ss)))
   ]
 
-pcIndividualPoolStake :: IndividualPoolStake c -> PDoc
+pcIndividualPoolStake :: IndividualPoolStake -> PDoc
 pcIndividualPoolStake x =
   ppRecord
     "IPS"
@@ -3226,9 +3224,9 @@ pcIndividualPoolStake x =
     , ("vrf", trim (ppVRFHash (individualPoolStakeVrf x)))
     ]
 
-instance PrettyA (IndividualPoolStake c) where prettyA = pcIndividualPoolStake
+instance PrettyA IndividualPoolStake where prettyA = pcIndividualPoolStake
 
-pcSnapShots :: SnapShots c -> PDoc
+pcSnapShots :: SnapShots -> PDoc
 pcSnapShots sss =
   ppRecord' "" $
     pcSnapShotL "mark" (ssStakeMark sss)
@@ -3237,9 +3235,9 @@ pcSnapShots sss =
       ++ pcSnapShotL "go" (ssStakeGo sss)
       ++ [("fee", pcCoin (ssFee sss))]
 
-instance PrettyA (SnapShots c) where prettyA = pcSnapShots
+instance PrettyA SnapShots where prettyA = pcSnapShots
 
-pcPoolDistr :: PoolDistr c -> PDoc
+pcPoolDistr :: PoolDistr -> PDoc
 pcPoolDistr (PoolDistr pdistr tot) =
   ppMap pcKeyHash pcIndividualPoolStake pdistr
     <> ppString " total = "
@@ -3247,7 +3245,7 @@ pcPoolDistr (PoolDistr pdistr tot) =
     <> ppString " actualTotal = "
     <> pcCoin (fromCompact tot)
 
-instance PrettyA (PoolDistr c) where prettyA = pcPoolDistr
+instance PrettyA PoolDistr where prettyA = pcPoolDistr
 
 withEraPParams :: forall era a. Proof era -> (Core.EraPParams era => a) -> a
 withEraPParams Shelley x = x
@@ -3410,7 +3408,7 @@ pcDState ds =
 instance PrettyA (DState era) where
   prettyA = pcDState
 
-pcGenDelegPair :: GenDelegPair c -> PDoc
+pcGenDelegPair :: GenDelegPair -> PDoc
 pcGenDelegPair x =
   ppRecord
     "GDPair"
@@ -3418,7 +3416,7 @@ pcGenDelegPair x =
     , ("vrfhash", trim (ppVRFHash (genDelegVrfHash x)))
     ]
 
-pcIRewards :: InstantaneousRewards c -> PDoc
+pcIRewards :: InstantaneousRewards -> PDoc
 pcIRewards xs =
   ppRecord
     "IReward"
@@ -3428,7 +3426,7 @@ pcIRewards xs =
     , ("deltaT", pcDeltaCoin (DP.deltaTreasury xs))
     ]
 
-instance PrettyA (InstantaneousRewards c) where
+instance PrettyA InstantaneousRewards where
   prettyA = pcIRewards
 
 pcDeltaCoin :: DeltaCoin -> PDoc
@@ -3466,10 +3464,10 @@ pcAdaPot es =
 
 -- ========================
 
-pcPolicyID :: PolicyID c -> PDoc
+pcPolicyID :: PolicyID -> PDoc
 pcPolicyID (PolicyID sh) = pcScriptHash sh
 
-instance PrettyA (PolicyID c) where
+instance PrettyA PolicyID where
   prettyA = pcPolicyID
 
 pcAssetName :: AssetName -> PDoc
@@ -3478,12 +3476,12 @@ pcAssetName x = trim (viaShow x)
 instance PrettyA AssetName where
   prettyA = pcAssetName
 
-pcMultiAsset :: MultiAsset c -> PDoc
+pcMultiAsset :: MultiAsset -> PDoc
 pcMultiAsset m = ppList pptriple (flattenMultiAsset m)
   where
     pptriple (i, asset, num) = hsep ["(", pcPolicyID i, pcAssetName asset, ppInteger num, ")"]
 
-instance PrettyA (MultiAsset c) where
+instance PrettyA MultiAsset where
   prettyA = pcMultiAsset
 
 instance PrettyA ix => PrettyA (AsIx ix it) where
@@ -3677,16 +3675,16 @@ instance PrettyA (ConwayRules.CertsEnv era) where
 instance PrettyA RDPair where
   prettyA (RDPair x y) = prettyA (fromCompact x, fromCompact y)
 
-pcStake :: Stake c -> PDoc
+pcStake :: Stake -> PDoc
 pcStake (Stake m) = ppMap pcCredential (pcCoin . fromCompact) (VMap.toMap m)
 
-instance PrettyA (Stake c) where
+instance PrettyA Stake where
   prettyA s = pcStake s
 
-pcSnapShot :: SnapShot c -> PDoc
+pcSnapShot :: SnapShot -> PDoc
 pcSnapShot x = ppRecord "SnapShot" (pcSnapShotL "" x)
 
-instance PrettyA (SnapShot c) where
+instance PrettyA SnapShot where
   prettyA s = pcSnapShot s
 
 -- | pretty print a TxBody, summarizing the coin in the inputs and outputs.

@@ -3,7 +3,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Mary.Imp.UtxoSpec (spec) where
@@ -24,14 +23,14 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.ImpTest
 
 mintBasicToken ::
-  forall era. (HasCallStack, AllegraEraScript era, MaryEraImp era) => ImpTestM era (Tx era)
+  (HasCallStack, AllegraEraScript era, MaryEraImp era) => ImpTestM era (Tx era)
 mintBasicToken = do
   addr <- freshKeyAddr_
   keyHash <- freshKeyHash
   scriptHash <- impAddNativeScript $ RequireSignature keyHash
   Positive amount <- arbitrary
   let txAsset = MultiAsset $ Map.singleton (PolicyID scriptHash) $ Map.singleton (AssetName "testAsset") amount
-      txValue :: MaryValue (EraCrypto era)
+      txValue :: MaryValue
       txValue = MaryValue mempty txAsset
       txBody =
         mkBasicTxBody

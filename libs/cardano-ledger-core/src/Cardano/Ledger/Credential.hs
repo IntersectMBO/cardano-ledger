@@ -40,7 +40,6 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
@@ -79,21 +78,21 @@ import Quiet (Quiet (Quiet))
 -- era, since they reference the hash of a script, which can change. This
 -- parameter is a phantom, however, so in actuality the instances will remain
 -- the same.
-data Credential (kr :: KeyRole) c
-  = ScriptHashObj !(ScriptHash c)
-  | KeyHashObj !(KeyHash kr c)
+data Credential (kr :: KeyRole)
+  = ScriptHashObj !ScriptHash
+  | KeyHashObj !(KeyHash kr)
   deriving (Show, Eq, Generic, NFData, Ord)
 
-instance Crypto e => Default (Credential r e) where
+instance Default (Credential r) where
   def = KeyHashObj def
 
 instance HasKeyRole Credential where
   coerceKeyRole (ScriptHashObj x) = ScriptHashObj x
   coerceKeyRole (KeyHashObj x) = KeyHashObj $ coerceKeyRole x
 
-instance NoThunks (Credential kr c)
+instance NoThunks (Credential kr)
 
-instance Crypto c => ToJSON (Credential kr c) where
+instance ToJSON (Credential kr) where
   toJSON (ScriptHashObj hash) =
     Aeson.object
       [ "scriptHash" .= hash
@@ -103,7 +102,7 @@ instance Crypto c => ToJSON (Credential kr c) where
       [ "keyHash" .= hash
       ]
 
-instance Crypto c => FromJSON (Credential kr c) where
+instance FromJSON (Credential kr) where
   parseJSON =
     Aeson.withObject "Credential" $ \obj ->
       asum [parser1 obj, parser2 obj]
@@ -111,16 +110,16 @@ instance Crypto c => FromJSON (Credential kr c) where
       parser1 obj = ScriptHashObj <$> (obj .: "scriptHash" <|> obj .: "script hash")
       parser2 obj = KeyHashObj <$> (obj .: "keyHash" <|> obj .: "key hash")
 
-instance Crypto c => ToJSONKey (Credential kr c) where
+instance ToJSONKey (Credential kr) where
   toJSONKey = toJSONKeyText credToText
 
-instance Crypto c => FromJSONKey (Credential kr c) where
+instance FromJSONKey (Credential kr) where
   fromJSONKey = FromJSONKeyTextParser parseCredential
 
 parseCredential ::
-  (MonadFail m, Crypto c) =>
+  MonadFail m =>
   T.Text ->
-  m (Credential kr c)
+  m (Credential kr)
 parseCredential t = case T.splitOn "-" t of
   ["scriptHash", hash] ->
     maybe
@@ -136,38 +135,36 @@ parseCredential t = case T.splitOn "-" t of
   where
     badHash h = fail $ "Invalid hash: " <> show h
 
-credToText :: Credential kr c -> T.Text
+credToText :: Credential kr -> T.Text
 credToText (ScriptHashObj (ScriptHash hash)) = "scriptHash-" <> hashToTextAsHex hash
 credToText (KeyHashObj (KeyHash has)) = "keyHash-" <> hashToTextAsHex has
 
-type PaymentCredential c = Credential 'Payment c
+type PaymentCredential = Credential 'Payment
 
-type StakeCredential c = Credential 'Staking c
+type StakeCredential = Credential 'Staking
 
-credKeyHash :: Credential r c -> Maybe (KeyHash r c)
+credKeyHash :: Credential r -> Maybe (KeyHash r)
 credKeyHash = \case
   KeyHashObj hk -> Just hk
   ScriptHashObj _ -> Nothing
 
 -- | Convert a KeyHash into a Witness KeyHash. Does nothing for Script credentials.
-credKeyHashWitness :: Credential r c -> Maybe (KeyHash 'Witness c)
+credKeyHashWitness :: Credential r -> Maybe (KeyHash 'Witness)
 credKeyHashWitness = credKeyHash . asWitness
 
 -- | Extract ScriptHash from a Credential. Returns Nothing for KeyHashes
-credScriptHash :: Credential kr c -> Maybe (ScriptHash c)
+credScriptHash :: Credential kr -> Maybe ScriptHash
 credScriptHash = \case
   ScriptHashObj hs -> Just hs
   KeyHashObj _ -> Nothing
 
-data StakeReference c
-  = StakeRefBase !(StakeCredential c)
+data StakeReference
+  = StakeRefBase !StakeCredential
   | StakeRefPtr !Ptr
   | StakeRefNull
-  deriving (Show, Eq, Generic, NFData, Ord)
+  deriving (Show, Eq, Generic, NFData, Ord, ToJSON)
 
-instance NoThunks (StakeReference c)
-
-deriving instance Crypto c => ToJSON (StakeReference c)
+instance NoThunks StakeReference
 
 -- TODO: implement this optimization:
 -- We expect that `SlotNo` will fit into `Word32` for a very long time,
@@ -283,16 +280,16 @@ ptrCertIx (Ptr _ _ cIx) = cIx
 -- NOTE: Credential serialization is unversioned, because it is needed for node-to-client
 -- communication. It would be ok to change it in the future, but that will require change
 -- in consensus
-instance (Typeable kr, Crypto c) => EncCBOR (Credential kr c)
+instance Typeable kr => EncCBOR (Credential kr)
 
-instance (Typeable kr, Crypto c) => DecCBOR (Credential kr c)
+instance Typeable kr => DecCBOR (Credential kr)
 
-instance (Typeable kr, Crypto c) => ToCBOR (Credential kr c) where
+instance Typeable kr => ToCBOR (Credential kr) where
   toCBOR = \case
     KeyHashObj kh -> Plain.encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
     ScriptHashObj hs -> Plain.encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
 
-instance (Typeable kr, Crypto c) => FromCBOR (Credential kr c) where
+instance Typeable kr => FromCBOR (Credential kr) where
   fromCBOR = Plain.decodeRecordSum "Credential" $
     \case
       0 -> do
@@ -327,15 +324,9 @@ instance DecCBORGroup Ptr where
 --   Nothing -> fail $ "SlotNo is too far into the future: " ++ show slotNo
 --   Just ptr -> pure ptr
 
-newtype GenesisCredential c = GenesisCredential
-  { unGenesisCredential :: KeyHash 'Genesis c
+newtype GenesisCredential = GenesisCredential
+  { unGenesisCredential :: KeyHash 'Genesis
   }
   deriving (Generic)
-  deriving newtype (ToCBOR, EncCBOR)
-  deriving (Show) via Quiet (GenesisCredential c)
-
-instance Ord (GenesisCredential c) where
-  compare (GenesisCredential gh) (GenesisCredential gh') = compare gh gh'
-
-instance Eq (GenesisCredential c) where
-  (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
+  deriving newtype (Eq, Ord, ToCBOR, EncCBOR)
+  deriving (Show) via Quiet GenesisCredential

@@ -75,7 +75,7 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 data RupdEnv era
-  = RupdEnv !(BlocksMade (EraCrypto era)) !(EpochState era)
+  = RupdEnv !BlocksMade !(EpochState era)
 
 data ShelleyRupdPredFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
@@ -90,26 +90,26 @@ instance
   ) =>
   STS (ShelleyRUPD era)
   where
-  type State (ShelleyRUPD era) = StrictMaybe (PulsingRewUpdate (EraCrypto era))
+  type State (ShelleyRUPD era) = StrictMaybe PulsingRewUpdate
   type Signal (ShelleyRUPD era) = SlotNo
   type Environment (ShelleyRUPD era) = RupdEnv era
   type BaseM (ShelleyRUPD era) = ShelleyBase
   type PredicateFailure (ShelleyRUPD era) = ShelleyRupdPredFailure era
-  type Event (ShelleyRUPD era) = RupdEvent (EraCrypto era)
+  type Event (ShelleyRUPD era) = RupdEvent
 
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
 
-data RupdEvent c
+data RupdEvent
   = RupdEvent
       !EpochNo
-      !(Map.Map (Credential 'Staking c) (Set (Reward c)))
+      !(Map.Map (Credential 'Staking) (Set Reward))
   deriving (Generic, Eq)
 
-instance NFData (RupdEvent c)
+instance NFData RupdEvent
 
 -- | tell a RupdEvent only if the map is non-empty
-tellRupd :: String -> RupdEvent (EraCrypto era) -> Rule (ShelleyRUPD era) rtype ()
+tellRupd :: String -> RupdEvent -> Rule (ShelleyRUPD era) rtype ()
 tellRupd _ (RupdEvent _ m) | Map.null m = pure ()
 tellRupd _message x = tellEvent x
 

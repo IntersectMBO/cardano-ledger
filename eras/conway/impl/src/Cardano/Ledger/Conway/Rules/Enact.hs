@@ -53,10 +53,10 @@ import Data.Void (Void)
 import GHC.Generics
 import Lens.Micro
 
-type instance EraRuleEvent "ENACT" (ConwayEra c) = VoidEraRule "ENACT" (ConwayEra c)
+type instance EraRuleEvent "ENACT" ConwayEra = VoidEraRule "ENACT" ConwayEra
 
 data EnactSignal era = EnactSignal
-  { esGovActionId :: !(GovActionId (EraCrypto era))
+  { esGovActionId :: !GovActionId
   , esGovAction :: !(GovAction era)
   }
   deriving (Eq, Show, Generic)
@@ -117,8 +117,8 @@ enactmentTransition = do
       InfoAction -> st
 
 updatedCommittee ::
-  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
-  Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
+  Set.Set (Credential 'ColdCommitteeRole) ->
+  Map.Map (Credential 'ColdCommitteeRole) EpochNo ->
   UnitInterval ->
   StrictMaybe (Committee era) ->
   Committee era

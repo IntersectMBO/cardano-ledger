@@ -40,21 +40,21 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecTranslate ctx (PParamsHKD Identity era)
-  , Inject ctx (Set (Credential 'DRepRole (EraCrypto era)))
+  , Inject ctx (Set (Credential 'DRepRole))
   ) =>
   SpecTranslate ctx (ConwayDelegEnv era)
   where
   type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
 
   toSpecRep ConwayDelegEnv {..} = do
-    delegatees <- askCtx @(Set (Credential 'DRepRole (EraCrypto era)))
+    delegatees <- askCtx @(Set (Credential 'DRepRole))
     Agda.MkDelegEnv
       <$> toSpecRep cdePParams
       <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
       <*> toSpecRep delegatees
 
-instance SpecTranslate ctx (ConwayDelegCert c) where
-  type SpecRep (ConwayDelegCert c) = Agda.DCert
+instance SpecTranslate ctx ConwayDelegCert where
+  type SpecRep ConwayDelegCert = Agda.DCert
 
   toSpecRep (ConwayRegCert c d) =
     Agda.Reg

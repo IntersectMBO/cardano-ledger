@@ -92,7 +92,6 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraPParams (..))
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.PParams (shelleyCommonPParamsHKDPairsV8)
@@ -209,10 +208,10 @@ data DowngradeBabbagePParams f = DowngradeBabbagePParams
   , dbppExtraEntropy :: !(HKD f Nonce)
   }
 
-instance Crypto c => EraPParams (BabbageEra c) where
-  type PParamsHKD f (BabbageEra c) = BabbagePParams f (BabbageEra c)
-  type UpgradePParams f (BabbageEra c) = ()
-  type DowngradePParams f (BabbageEra c) = DowngradeBabbagePParams f
+instance EraPParams BabbageEra where
+  type PParamsHKD f BabbageEra = BabbagePParams f BabbageEra
+  type UpgradePParams f BabbageEra = ()
+  type DowngradePParams f BabbageEra = DowngradeBabbagePParams f
 
   emptyPParamsIdentity = emptyBabbagePParams
   emptyPParamsStrictMaybe = emptyBabbagePParamsUpdate
@@ -240,15 +239,15 @@ instance Crypto c => EraPParams (BabbageEra c) where
   hkdExtraEntropyL = notSupportedInThisEraL
   hkdMinUTxOValueL = notSupportedInThisEraL
 
-instance Crypto c => AlonzoEraPParams (BabbageEra c) where
+instance AlonzoEraPParams BabbageEra where
   hkdCoinsPerUTxOWordL = notSupportedInThisEraL
   hkdCostModelsL = lens bppCostModels $ \pp x -> pp {bppCostModels = x}
   hkdPricesL = lens bppPrices $ \pp x -> pp {bppPrices = x}
-  hkdMaxTxExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (BabbageEra c)) (HKD f ExUnits)
+  hkdMaxTxExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f BabbageEra) (HKD f ExUnits)
   hkdMaxTxExUnitsL =
     lens (hkdMap (Proxy @f) unOrdExUnits . bppMaxTxExUnits) $ \pp x ->
       pp {bppMaxTxExUnits = hkdMap (Proxy @f) OrdExUnits x}
-  hkdMaxBlockExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (BabbageEra c)) (HKD f ExUnits)
+  hkdMaxBlockExUnitsL :: forall f. HKDFunctor f => Lens' (PParamsHKD f BabbageEra) (HKD f ExUnits)
   hkdMaxBlockExUnitsL =
     lens (hkdMap (Proxy @f) unOrdExUnits . bppMaxBlockExUnits) $ \pp x ->
       pp {bppMaxBlockExUnits = hkdMap (Proxy @f) OrdExUnits x}
@@ -258,11 +257,11 @@ instance Crypto c => AlonzoEraPParams (BabbageEra c) where
   hkdMaxCollateralInputsL =
     lens bppMaxCollateralInputs $ \pp x -> pp {bppMaxCollateralInputs = x}
 
-instance Crypto c => BabbageEraPParams (BabbageEra c) where
+instance BabbageEraPParams BabbageEra where
   hkdCoinsPerUTxOByteL = lens bppCoinsPerUTxOByte (\pp x -> pp {bppCoinsPerUTxOByte = x})
 
-instance Crypto c => EraGov (BabbageEra c) where
-  type GovState (BabbageEra c) = ShelleyGovState (BabbageEra c)
+instance EraGov BabbageEra where
+  type GovState BabbageEra = ShelleyGovState BabbageEra
   emptyGovState = emptyShelleyGovState
 
   getProposedPPUpdates = Just . sgsCurProposals
@@ -553,11 +552,11 @@ babbageCommonPParamsHKDPairs px pp =
     <> [("utxoCostPerByte", hkdMap px (toJSON @CoinPerByte) (pp ^. hkdCoinsPerUTxOByteL @_ @f))]
 
 upgradeBabbagePParams ::
-  forall f c.
+  forall f.
   HKDFunctor f =>
   Bool ->
-  PParamsHKD f (AlonzoEra c) ->
-  BabbagePParams f (BabbageEra c)
+  PParamsHKD f AlonzoEra ->
+  BabbagePParams f BabbageEra
 upgradeBabbagePParams updateCoinsPerUTxOWord AlonzoPParams {..} =
   BabbagePParams
     { bppMinFeeA = appMinFeeA
@@ -592,11 +591,11 @@ upgradeBabbagePParams updateCoinsPerUTxOWord AlonzoPParams {..} =
     }
 
 downgradeBabbagePParams ::
-  forall f c.
+  forall f.
   HKDFunctor f =>
   DowngradeBabbagePParams f ->
-  BabbagePParams f (BabbageEra c) ->
-  PParamsHKD f (AlonzoEra c)
+  BabbagePParams f BabbageEra ->
+  PParamsHKD f AlonzoEra
 downgradeBabbagePParams DowngradeBabbagePParams {..} BabbagePParams {..} =
   AlonzoPParams
     { appMinFeeA = bppMinFeeA

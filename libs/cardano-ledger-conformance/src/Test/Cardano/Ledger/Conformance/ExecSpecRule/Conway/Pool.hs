@@ -16,7 +16,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
 import Test.Cardano.Ledger.Constrained.Conway
 
-instance IsConwayUniv fn => ExecSpecRule fn "POOL" Conway where
+instance IsConwayUniv fn => ExecSpecRule fn "POOL" ConwayEra where
   environmentSpec _ = poolEnvSpec
 
   stateSpec _ _ = pStateSpec
@@ -27,6 +27,6 @@ instance IsConwayUniv fn => ExecSpecRule fn "POOL" Conway where
 
   classOf = Just . namePoolCert
 
-namePoolCert :: PoolCert c -> String
+namePoolCert :: PoolCert -> String
 namePoolCert RegPool {} = "RegPool"
 namePoolCert RetirePool {} = "RetirePool"

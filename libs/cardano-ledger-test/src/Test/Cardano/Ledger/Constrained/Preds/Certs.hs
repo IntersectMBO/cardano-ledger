@@ -23,7 +23,7 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
   pattern RegDepositDelegTxCert,
  )
-import Cardano.Ledger.Core (Era (EraCrypto))
+import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -69,13 +69,13 @@ import Type.Reflection (Typeable, typeRep)
 sRegKey ::
   forall era.
   Typeable era =>
-  RootTarget era (ShelleyTxCert era) (StakeCredential (EraCrypto era) -> ShelleyTxCert era)
+  RootTarget era (ShelleyTxCert era) (StakeCredential -> ShelleyTxCert era)
 sRegKey = Invert "sRegKey" (typeRep @(ShelleyTxCert era)) (\x -> ShelleyTxCertDelegCert (ShelleyRegCert x))
 
 sUnRegKey ::
   forall era.
   Typeable era =>
-  RootTarget era (ShelleyTxCert era) (StakeCredential (EraCrypto era) -> ShelleyTxCert era)
+  RootTarget era (ShelleyTxCert era) (StakeCredential -> ShelleyTxCert era)
 sUnRegKey =
   Invert "UnRegKey" (typeRep @(ShelleyTxCert era)) (\x -> ShelleyTxCertDelegCert (ShelleyUnRegCert x))
 
@@ -85,17 +85,17 @@ sDelegStake ::
   RootTarget
     era
     (ShelleyTxCert era)
-    (StakeCredential (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> ShelleyTxCert era)
+    (StakeCredential -> KeyHash 'StakePool -> ShelleyTxCert era)
 sDelegStake =
   Invert
     "sDelegStake"
     (typeRep @(ShelleyTxCert era))
     (\x y -> ShelleyTxCertDelegCert (ShelleyDelegCert x y))
 
-sRegPool :: Target era (PoolParams (EraCrypto era) -> ShelleyTxCert era)
+sRegPool :: Target era (PoolParams -> ShelleyTxCert era)
 sRegPool = Constr "sRegPool" (\x -> ShelleyTxCertPool (RegPool x))
 
-sRetirePool :: Target era (KeyHash 'StakePool (EraCrypto era) -> EpochNo -> ShelleyTxCert era)
+sRetirePool :: Target era (KeyHash 'StakePool -> EpochNo -> ShelleyTxCert era)
 sRetirePool = Constr "sRetirePool" (\x e -> ShelleyTxCertPool (RetirePool x e))
 
 sMirShift ::
@@ -111,67 +111,46 @@ sMirShift =
 -- ==========================================
 -- Conway Cert Targets
 
-cRegKey :: Target era (StakeCredential (EraCrypto era) -> Maybe Coin -> ConwayTxCert era)
+cRegKey :: Target era (StakeCredential -> Maybe Coin -> ConwayTxCert era)
 cRegKey = Constr "cRegKey" (\x y -> ConwayTxCertDeleg (ConwayRegCert x (maybeToStrictMaybe y)))
 
-cUnRegKey :: Target era (StakeCredential (EraCrypto era) -> Maybe Coin -> ConwayTxCert era)
+cUnRegKey :: Target era (StakeCredential -> Maybe Coin -> ConwayTxCert era)
 cUnRegKey = Constr "cUnRegKey" (\x y -> ConwayTxCertDeleg (ConwayUnRegCert x (maybeToStrictMaybe y)))
 
 cDelegStake ::
   Target
     era
-    (StakeCredential (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> ConwayTxCert era)
+    (StakeCredential -> KeyHash 'StakePool -> ConwayTxCert era)
 cDelegStake = Constr "cDelegStake" (\x y -> ConwayTxCertDeleg (ConwayDelegCert x (DelegStake y)))
 
 cDelegVote ::
-  Target era (StakeCredential (EraCrypto era) -> DRep (EraCrypto era) -> a -> ConwayTxCert era)
+  Target era (StakeCredential -> DRep -> a -> ConwayTxCert era)
 cDelegVote = Constr "cDelegVote" (\x y _ -> ConwayTxCertDeleg (ConwayDelegCert x (DelegVote y)))
 
 cDelegStakeVote ::
-  Target
-    era
-    ( StakeCredential (EraCrypto era) ->
-      KeyHash 'StakePool (EraCrypto era) ->
-      DRep (EraCrypto era) ->
-      a ->
-      ConwayTxCert era
-    )
+  Target era (StakeCredential -> KeyHash 'StakePool -> DRep -> a -> ConwayTxCert era)
 cDelegStakeVote = Constr "cDelegStakeVote" (\x y z _ -> ConwayTxCertDeleg (ConwayDelegCert x (DelegStakeVote y z)))
 
 cRegDeleg ::
-  forall era.
   ConwayEraTxCert era =>
-  Target era (StakeCredential (EraCrypto era) -> Delegatee (EraCrypto era) -> Coin -> TxCert era)
+  Target era (StakeCredential -> Delegatee -> Coin -> TxCert era)
 cRegDeleg = Constr "cRegDeleg" RegDepositDelegTxCert
 
-cDelegateeStake ::
-  forall era.
-  Era era =>
-  RootTarget
-    era
-    (Delegatee (EraCrypto era))
-    (KeyHash 'StakePool (EraCrypto era) -> Delegatee (EraCrypto era))
-cDelegateeStake = Invert "cDelegateeStake" (typeRep @(Delegatee (EraCrypto era))) DelegStake
+cDelegateeStake :: RootTarget era (Delegatee) (KeyHash 'StakePool -> Delegatee)
+cDelegateeStake = Invert "cDelegateeStake" (typeRep @Delegatee) DelegStake
 
 cDelegateeVote ::
-  forall era.
-  Era era =>
-  RootTarget era (Delegatee (EraCrypto era)) (DRep (EraCrypto era) -> Delegatee (EraCrypto era))
-cDelegateeVote = Invert "cDelegateeVote" (typeRep @(Delegatee (EraCrypto era))) DelegVote
+  RootTarget era Delegatee (DRep -> Delegatee)
+cDelegateeVote = Invert "cDelegateeVote" (typeRep @Delegatee) DelegVote
 
 cDelegateeStakeVote ::
-  forall era.
-  Era era =>
-  RootTarget
-    era
-    (Delegatee (EraCrypto era))
-    (KeyHash 'StakePool (EraCrypto era) -> DRep (EraCrypto era) -> Delegatee (EraCrypto era))
-cDelegateeStakeVote = Invert "cDelegateeVote" (typeRep @(Delegatee (EraCrypto era))) DelegStakeVote
+  RootTarget era (Delegatee) (KeyHash 'StakePool -> DRep -> Delegatee)
+cDelegateeStakeVote = Invert "cDelegateeVote" (typeRep @Delegatee) DelegStakeVote
 
-cRegPool :: Target era (PoolParams (EraCrypto era) -> ConwayTxCert era)
+cRegPool :: Target era (PoolParams -> ConwayTxCert era)
 cRegPool = Constr "cRegPool" (\x -> ConwayTxCertPool (RegPool x))
 
-cRetirePool :: Target era (KeyHash 'StakePool (EraCrypto era) -> EpochNo -> ConwayTxCert era)
+cRetirePool :: Target era (KeyHash 'StakePool -> EpochNo -> ConwayTxCert era)
 cRetirePool = Constr "cRetirePool" (\x e -> ConwayTxCertPool (RetirePool x e))
 
 -- | Transform some SubMap of  instanReserves (or instanTreasury) into a partB map
@@ -196,8 +175,8 @@ partBfromPartA p mp = Map.fromList (fixer (Map.toList mp))
 makeDRepPred ::
   forall era.
   Era era =>
-  Term era (DRep (EraCrypto era)) ->
-  Term era (Credential 'DRepRole (EraCrypto era)) ->
+  Term era DRep ->
+  Term era (Credential 'DRepRole) ->
   Pred era
 makeDRepPred drep vote =
   Oneof
@@ -206,7 +185,7 @@ makeDRepPred drep vote =
     , (1, constRootTarget DRepAlwaysNoConfidence, [Random vote])
     ,
       ( 5
-      , Invert "" (typeRep @(DRep (EraCrypto era))) DRepCredential
+      , Invert "" (typeRep @DRep) DRepCredential
           :$ Partial vote (\case DRepCredential x -> Just x; _ -> Nothing)
       , [Member (Left vote) voteUniv]
       )
@@ -217,7 +196,7 @@ makeDRepPred drep vote =
 minusCoinDeltaCoin :: Coin -> DeltaCoin -> DeltaCoin
 minusCoinDeltaCoin (Coin n) (DeltaCoin m) = DeltaCoin (n - m)
 
-availableForDistrC :: DeltaCoin -> MIRPot -> AccountState -> InstantaneousRewards c -> DeltaCoin
+availableForDistrC :: DeltaCoin -> MIRPot -> AccountState -> InstantaneousRewards -> DeltaCoin
 availableForDistrC sumb p act irew = minusCoinDeltaCoin (availableAfterMIR p act irew) sumb
 
 txCertMir ::
@@ -226,7 +205,7 @@ txCertMir ::
   RootTarget
     era
     (ShelleyTxCert era)
-    (MIRPot -> Map (Credential 'Staking (EraCrypto era)) DeltaCoin -> any -> ShelleyTxCert era)
+    (MIRPot -> Map (Credential 'Staking) DeltaCoin -> any -> ShelleyTxCert era)
 txCertMir =
   Invert
     "txCertMir"
@@ -641,7 +620,7 @@ maybeSL = lens getter setter
     setter _ SNothing = Nothing
     setter _ (SJust x) = Just x
 
-poolMetaL :: Lens' (PoolParams era) (StrictMaybe PoolMetadata)
+poolMetaL :: Lens' PoolParams (StrictMaybe PoolMetadata)
 poolMetaL = lens ppMetadata (\x r -> x {ppMetadata = r})
 
 poolMetadata :: Era era => Proof era -> Term era (Maybe PoolMetadata)

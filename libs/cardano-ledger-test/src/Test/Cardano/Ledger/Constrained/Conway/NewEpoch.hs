@@ -2,9 +2,8 @@
 module Test.Cardano.Ledger.Constrained.Conway.NewEpoch where
 
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API.Types
 import Constrained
 
-newEpochStateSpec :: Specification fn (NewEpochState (ConwayEra StandardCrypto))
+newEpochStateSpec :: Specification fn (NewEpochState ConwayEra)
 newEpochStateSpec = TrueSpec

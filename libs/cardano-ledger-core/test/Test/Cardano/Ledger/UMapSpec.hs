@@ -10,7 +10,6 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential, Ptr)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.UMap (
@@ -73,14 +72,14 @@ import Test.Cardano.Ledger.Core.Arbitrary (
  )
 
 data Action
-  = InsertRDPair (Credential 'Staking StandardCrypto) RDPair
-  | InsertPtr Ptr (Credential 'Staking StandardCrypto)
-  | InsertSPool (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
-  | InsertDRep (Credential 'Staking StandardCrypto) (DRep StandardCrypto)
-  | DeleteRDPair (Credential 'Staking StandardCrypto)
+  = InsertRDPair (Credential 'Staking) RDPair
+  | InsertPtr Ptr (Credential 'Staking)
+  | InsertSPool (Credential 'Staking) (KeyHash 'StakePool)
+  | InsertDRep (Credential 'Staking) DRep
+  | DeleteRDPair (Credential 'Staking)
   | DeletePtr Ptr
-  | DeleteSPool (Credential 'Staking StandardCrypto)
-  | DeleteDRep (Credential 'Staking StandardCrypto)
+  | DeleteSPool (Credential 'Staking)
+  | DeleteDRep (Credential 'Staking)
   deriving (Show)
 
 instance Arbitrary Action where
@@ -107,7 +106,7 @@ genSPool = InsertSPool <$> arbitrary <*> arbitrary
 genDRep :: Gen Action
 genDRep = InsertDRep <$> arbitrary <*> arbitrary
 
-reify :: Action -> UMap StandardCrypto -> UMap StandardCrypto
+reify :: Action -> UMap -> UMap
 reify = \case
   InsertRDPair k v -> insert k v . RewDepUView
   InsertPtr k v -> insert k v . PtrUView
@@ -118,50 +117,50 @@ reify = \case
   DeleteSPool k -> delete k . SPoolUView
   DeleteDRep k -> delete k . DRepUView
 
-reifyRDPair :: Action -> UMap StandardCrypto -> UMap StandardCrypto
+reifyRDPair :: Action -> UMap -> UMap
 reifyRDPair = \case
   InsertRDPair k v -> insert k v . RewDepUView
   DeleteRDPair k -> delete k . RewDepUView
   _ -> id
 
-reifyPtr :: Action -> UMap StandardCrypto -> UMap StandardCrypto
+reifyPtr :: Action -> UMap -> UMap
 reifyPtr = \case
   InsertPtr k v -> insert k v . PtrUView
   DeletePtr k -> delete k . PtrUView
   _ -> id
 
-reifySPool :: Action -> UMap StandardCrypto -> UMap StandardCrypto
+reifySPool :: Action -> UMap -> UMap
 reifySPool = \case
   InsertSPool k v -> insert k v . SPoolUView
   DeleteSPool k -> delete k . SPoolUView
   _ -> id
 
-reifyDRep :: Action -> UMap StandardCrypto -> UMap StandardCrypto
+reifyDRep :: Action -> UMap -> UMap
 reifyDRep = \case
   InsertDRep k v -> insert k v . DRepUView
   DeleteDRep k -> delete k . DRepUView
   _ -> id
 
-runActions :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
+runActions :: [Action] -> UMap -> UMap
 runActions actions umap = foldr reify umap actions
 
-runRDPairs :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
+runRDPairs :: [Action] -> UMap -> UMap
 runRDPairs actions umap = foldr reifyRDPair umap actions
 
-runPtrs :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
+runPtrs :: [Action] -> UMap -> UMap
 runPtrs actions umap = foldr reifyPtr umap actions
 
-runSPools :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
+runSPools :: [Action] -> UMap -> UMap
 runSPools actions umap = foldr reifySPool umap actions
 
-runDReps :: [Action] -> UMap StandardCrypto -> UMap StandardCrypto
+runDReps :: [Action] -> UMap -> UMap
 runDReps actions umap = foldr reifyDRep umap actions
 
 sizeTest ::
-  ( Map.Map (Credential 'Staking StandardCrypto) RDPair
-  , Map.Map Ptr (Credential 'Staking StandardCrypto)
-  , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
-  , Map.Map (Credential 'Staking StandardCrypto) (DRep StandardCrypto)
+  ( Map.Map (Credential 'Staking) RDPair
+  , Map.Map Ptr (Credential 'Staking)
+  , Map.Map (Credential 'Staking) (KeyHash 'StakePool)
+  , Map.Map (Credential 'Staking) DRep
   ) ->
   IO ()
 sizeTest (rdPairs, ptrs, sPools, dReps) = do
@@ -177,10 +176,10 @@ sizeTest (rdPairs, ptrs, sPools, dReps) = do
   Map.size dReps `shouldBe` dRepSize
 
 unifyRoundTripTo ::
-  ( Map.Map (Credential 'Staking StandardCrypto) RDPair
-  , Map.Map Ptr (Credential 'Staking StandardCrypto)
-  , Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
-  , Map.Map (Credential 'Staking StandardCrypto) (DRep StandardCrypto)
+  ( Map.Map (Credential 'Staking) RDPair
+  , Map.Map Ptr (Credential 'Staking)
+  , Map.Map (Credential 'Staking) (KeyHash 'StakePool)
+  , Map.Map (Credential 'Staking) DRep
   ) ->
   IO ()
 unifyRoundTripTo (rdPairs, ptrs, sPools, dReps) = do
@@ -202,9 +201,9 @@ unifyRoundTripFrom actions =
     umap === unify rdPairs ptrs sPools dReps
 
 oldUnionRewAgg ::
-  UView c (Credential 'Staking c) RDPair ->
-  Map (Credential 'Staking c) (CompactForm Coin) ->
-  UMap c
+  UView (Credential 'Staking) RDPair ->
+  Map (Credential 'Staking) (CompactForm Coin) ->
+  UMap
 (RewDepUView UMap {umElems, umPtrs}) `oldUnionRewAgg` aggRewMap = UMap newUmElem umPtrs
   where
     newUmElem =
@@ -223,7 +222,7 @@ spec :: Spec
 spec = do
   describe "UMap" $ do
     describe "Invariant" $ do
-      prop "Empty" (\(cred :: Credential 'Staking StandardCrypto) ptr -> umInvariant cred ptr empty)
+      prop "Empty" (\(cred :: Credential 'Staking) ptr -> umInvariant cred ptr empty)
       prop "Non-empty" $
         forAll
           genInvariantNonEmpty
@@ -256,22 +255,22 @@ spec = do
     describe "Membership" $ do
       prop
         "RewDepUView"
-        ( \(umap :: UMap StandardCrypto, cred) ->
+        ( \(umap :: UMap, cred) ->
             member cred (RewDepUView umap) === Map.member cred (rdPairMap umap)
         )
       prop
         "PtrUViews"
-        ( \(umap :: UMap StandardCrypto, ptr) ->
+        ( \(umap :: UMap, ptr) ->
             member ptr (PtrUView umap) === Map.member ptr (ptrMap umap)
         )
       prop
         "SPoolUView"
-        ( \(umap :: UMap StandardCrypto, cred) ->
+        ( \(umap :: UMap, cred) ->
             member cred (SPoolUView umap) === Map.member cred (sPoolMap umap)
         )
       prop
         "DRepUView"
-        ( \(umap :: UMap StandardCrypto, cred) ->
+        ( \(umap :: UMap, cred) ->
             member cred (DRepUView umap) === Map.member cred (dRepMap umap)
         )
     describe "Bisimulation" $ do
@@ -515,25 +514,25 @@ spec = do
     describe "Domain restriction" $ do
       prop
         "RewDepUView"
-        ( \actions (m :: Map.Map (Credential 'Staking StandardCrypto) RDPair) ->
+        ( \actions (m :: Map.Map (Credential 'Staking) RDPair) ->
             Map.intersection m (rdPairMap (runRDPairs actions empty))
               === domRestrict (RewDepUView (runActions actions empty)) m
         )
       prop
         "PtrUView"
-        ( \actions (m :: Map.Map Ptr (Credential 'Staking StandardCrypto)) ->
+        ( \actions (m :: Map.Map Ptr (Credential 'Staking)) ->
             Map.intersection m (ptrMap (runPtrs actions empty))
               === domRestrict (PtrUView (runActions actions empty)) m
         )
       prop
         "SPoolUView"
-        ( \actions (m :: Map.Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)) ->
+        ( \actions (m :: Map.Map (Credential 'Staking) (KeyHash 'StakePool)) ->
             Map.intersection m (sPoolMap (runSPools actions empty))
               === domRestrict (SPoolUView (runActions actions empty)) m
         )
       prop
         "DRepUView"
-        ( \actions (m :: Map.Map (Credential 'Staking StandardCrypto) (DRep StandardCrypto)) ->
+        ( \actions (m :: Map.Map (Credential 'Staking) DRep) ->
             Map.intersection m (dRepMap (runDReps actions empty))
               === domRestrict (DRepUView (runActions actions empty)) m
         )

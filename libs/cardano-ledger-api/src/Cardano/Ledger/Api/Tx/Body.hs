@@ -77,7 +77,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.Core (Era (EraCrypto), EraTxBody (..), PParams, Value, txIdTxBody)
+import Cardano.Ledger.Core (EraTxBody (..), PParams, Value, txIdTxBody)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))
@@ -104,17 +104,17 @@ evalBalanceTxBody ::
   -- the `DeRegKey` delegation certificates in the supplied `TxBody`. In other words,
   -- there is no requirement to know about all of the delegation certificates in the
   -- ledger state, just the ones this transaction cares about.
-  (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+  (Credential 'Staking -> Maybe Coin) ->
   -- | Lookup current deposit amount for a registered DRep credential. This
   -- function must produce valid answer for all of the DRep credentials present in any of
   -- the `UnRegDRep` certificates in the supplied `TxBody`. In other words,
   -- there is no requirement to know about all of the DRep registrations in the
   -- ledger state, just the ones this transaction cares about.
-  (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
+  (Credential 'DRepRole -> Maybe Coin) ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered. There is no
   -- requirement to answer this question for all stake pool credentials, just for the ones
   -- that have the registration certificates included in the supplied `TxBody`
-  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  (KeyHash 'StakePool -> Bool) ->
   -- | The UTxO relevant to the transaction.
   UTxO era ->
   -- | The transaction being evaluated for balance.

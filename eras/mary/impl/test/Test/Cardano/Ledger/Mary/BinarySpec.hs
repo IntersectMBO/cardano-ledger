@@ -5,7 +5,6 @@
 
 module Test.Cardano.Ledger.Mary.BinarySpec (spec) where
 
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary
 import Data.Default (def)
 import Test.Cardano.Ledger.Common
@@ -17,13 +16,13 @@ import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)
 
 spec :: Spec
 spec = do
-  specUpgrade @Mary def
+  specUpgrade @MaryEra def
   describe "RoundTrip" $ do
-    roundTripShelleyCommonSpec @Mary
+    roundTripShelleyCommonSpec @MaryEra
 
-instance Crypto c => RuleListEra (MaryEra c) where
+instance RuleListEra MaryEra where
   type
-    EraRules (MaryEra c) =
+    EraRules MaryEra =
       '[ "DELEG"
        , "DELEGS"
        , "DELPL"

@@ -19,7 +19,6 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data (..))
@@ -45,34 +44,34 @@ instance Twiddle SlotNo where
 instance Era era => Twiddle (ShelleyTxCert era) where
   twiddle v = twiddle v . toTerm v
 
-instance Crypto c => Twiddle (Withdrawals c) where
+instance Twiddle Withdrawals where
   twiddle v = twiddle v . toTerm v
 
-instance Crypto c => Twiddle (AuxiliaryDataHash c) where
+instance Twiddle AuxiliaryDataHash where
   twiddle v = twiddle v . toTerm v
 
-instance Crypto c => Twiddle (Update (AlonzoEra c)) where
+instance Twiddle (Update AlonzoEra) where
   twiddle v = twiddle v . toTerm v
 
-instance Crypto c => Twiddle (MultiAsset c) where
+instance Twiddle MultiAsset where
   twiddle v = twiddle v . encodingToTerm v . encCBOR
 
-instance Crypto c => Twiddle (ScriptIntegrityHash c) where
+instance Twiddle ScriptIntegrityHash where
   twiddle v = twiddle v . toTerm v
 
-instance (Crypto c, Typeable t) => Twiddle (KeyHash t c) where
+instance Typeable t => Twiddle (KeyHash t) where
   twiddle v = twiddle v . toTerm v
 
 instance Twiddle Network where
   twiddle v = twiddle v . toTerm v
 
-instance Crypto c => Twiddle (TxIn c) where
+instance Twiddle TxIn where
   twiddle v = twiddle v . toTerm v
 
 instance Twiddle Coin where
   twiddle v = twiddle v . toTerm v
 
-instance Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
+instance Twiddle (AlonzoTxBody AlonzoEra) where
   twiddle v txBody = do
     inputs' <- twiddle v $ atbInputs txBody
     outputs' <- twiddle v $ atbOutputs txBody
@@ -112,11 +111,11 @@ instance Crypto c => Twiddle (AlonzoTxBody (AlonzoEra c)) where
     fields' <- shuffle fields
     pure $ mp fields'
 
-instance Crypto c => Twiddle (AlonzoScript (AlonzoEra c)) where
+instance Twiddle (AlonzoScript AlonzoEra) where
   twiddle v = twiddle v . toTerm v
 
-instance Typeable c => Twiddle (Data (AlonzoEra c)) where
+instance Twiddle (Data AlonzoEra) where
   twiddle v = twiddle v . toTerm v
 
-instance Crypto c => Twiddle (BinaryData (AlonzoEra c)) where
+instance Twiddle (BinaryData AlonzoEra) where
   twiddle v = twiddle v . toTerm v

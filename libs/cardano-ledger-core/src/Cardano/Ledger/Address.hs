@@ -87,7 +87,6 @@ import Cardano.Ledger.Credential (
   StakeReference (..),
   normalizePtr,
  )
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Prelude (unsafeShortByteStringIndex)
@@ -127,37 +126,37 @@ import Numeric (showIntAtBase)
 import Quiet (Quiet (Quiet))
 
 -- | Serialise an address to the external format.
-serialiseAddr :: Addr c -> ByteString
+serialiseAddr :: Addr -> ByteString
 serialiseAddr = BSL.toStrict . B.runPut . putAddr
 {-# INLINE serialiseAddr #-}
 
 -- | Serialise a reward account to the external format.
-serialiseRewardAccount :: RewardAccount c -> ByteString
+serialiseRewardAccount :: RewardAccount -> ByteString
 serialiseRewardAccount = BSL.toStrict . B.runPut . putRewardAccount
 
 -- | Deserialise a reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseRewardAccount :: Crypto c => ByteString -> Maybe (RewardAccount c)
+deserialiseRewardAccount :: ByteString -> Maybe RewardAccount
 deserialiseRewardAccount = decodeRewardAccount
 
 -- | An address for UTxO.
 --
 -- Contents of Addr data type are intentionally left as lazy, otherwise
 -- operating on compact form of an address will result in redundant work.
-data Addr c
-  = Addr Network (PaymentCredential c) (StakeReference c)
-  | AddrBootstrap (BootstrapAddress c)
+data Addr
+  = Addr Network PaymentCredential StakeReference
+  | AddrBootstrap BootstrapAddress
   deriving (Show, Eq, Generic, NFData, Ord)
 
 -- | Lookup a Network Id for an Address
-getNetwork :: Addr c -> Network
+getNetwork :: Addr -> Network
 getNetwork (Addr n _ _) = n
 getNetwork (AddrBootstrap (BootstrapAddress byronAddr)) =
   case Byron.aaNetworkMagic . Byron.attrData . Byron.addrAttributes $ byronAddr of
     Byron.NetworkMainOrStage -> Mainnet
     Byron.NetworkTestnet _ -> Testnet
 
-instance NoThunks (Addr c)
+instance NoThunks Addr
 
 -- | This function is implemented solely for the purpose of translating garbage pointers
 -- into knowingly invalid ones. Any pointer that contains a SlotNo, TxIx or CertIx that
@@ -173,35 +172,35 @@ instance NoThunks (Addr c)
 -- Once the transition is complete and we are officially in Conway era, this translation
 -- logic can be removed in favor of a fixed deserializer that does the same thing for all
 -- eras prior to Babbage.
-addrPtrNormalize :: Addr c -> Addr c
+addrPtrNormalize :: Addr -> Addr
 addrPtrNormalize = \case
   Addr n cred (StakeRefPtr ptr) -> Addr n cred (StakeRefPtr (normalizePtr ptr))
   addr -> addr
 
 -- | An account based address for rewards
-data RewardAccount c = RewardAccount
+data RewardAccount = RewardAccount
   { raNetwork :: !Network
-  , raCredential :: !(Credential 'Staking c)
+  , raCredential :: !(Credential 'Staking)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
-rewardAccountCredentialL :: Lens' (RewardAccount c) (Credential 'Staking c)
+rewardAccountCredentialL :: Lens' RewardAccount (Credential 'Staking)
 rewardAccountCredentialL = lens raCredential $ \x y -> x {raCredential = y}
 
-rewardAccountNetworkL :: Lens' (RewardAccount c) Network
+rewardAccountNetworkL :: Lens' RewardAccount Network
 rewardAccountNetworkL = lens raNetwork $ \x y -> x {raNetwork = y}
 
-instance Crypto c => Default (RewardAccount c) where
+instance Default RewardAccount where
   def = RewardAccount def def
 
-instance Crypto c => ToJSON (RewardAccount c) where
+instance ToJSON RewardAccount where
   toJSON ra =
     Aeson.object
       [ "network" .= raNetwork ra
       , "credential" .= raCredential ra
       ]
 
-instance Crypto c => FromJSON (RewardAccount c) where
+instance FromJSON RewardAccount where
   parseJSON =
     Aeson.withObject "RewardAccount" $ \obj ->
       RewardAccount
@@ -210,24 +209,24 @@ instance Crypto c => FromJSON (RewardAccount c) where
         <*> obj
           .: "credential"
 
-instance NoThunks (RewardAccount c)
+instance NoThunks RewardAccount
 
-instance ToJSONKey (Addr c) where
+instance ToJSONKey Addr where
   toJSONKey = Aeson.ToJSONKeyText (Aeson.fromText . addrToText) (Aeson.text . addrToText)
 
-instance Crypto c => FromJSONKey (Addr c) where
+instance FromJSONKey Addr where
   fromJSONKey = Aeson.FromJSONKeyTextParser parseAddr
 
-instance ToJSON (Addr c) where
+instance ToJSON Addr where
   toJSON = toJSON . addrToText
 
-instance Crypto c => FromJSON (Addr c) where
+instance FromJSON Addr where
   parseJSON = Aeson.withText "address" parseAddr
 
-addrToText :: Addr c -> Text
+addrToText :: Addr -> Text
 addrToText = Text.decodeLatin1 . B16.encode . serialiseAddr
 
-parseAddr :: Crypto c => Text -> Aeson.Parser (Addr c)
+parseAddr :: Text -> Aeson.Parser Addr
 parseAddr t = do
   bytes <- either badHex return (B16.decode (Text.encodeUtf8 t))
   decodeAddr bytes
@@ -249,7 +248,7 @@ stakeCredIsScript = 5
 payCredIsScript :: Int
 payCredIsScript = 4
 
-putAddr :: Addr c -> Put
+putAddr :: Addr -> Put
 putAddr (AddrBootstrap (BootstrapAddress byronAddr)) =
   B.putLazyByteString (serialize byronProtVer byronAddr)
 putAddr (Addr network pc sr) =
@@ -277,7 +276,7 @@ putAddr (Addr network pc sr) =
           putCredential pc
 {-# INLINE putAddr #-}
 
-putRewardAccount :: RewardAccount c -> Put
+putRewardAccount :: RewardAccount -> Put
 putRewardAccount (RewardAccount network cred) = do
   let setPayCredBit = case cred of
         ScriptHashObj _ -> flip setBit payCredIsScript
@@ -293,14 +292,14 @@ putHash :: Hash.Hash h a -> Put
 putHash = B.putByteString . Hash.hashToBytes
 {-# INLINE putHash #-}
 
-putCredential :: Credential kr c -> Put
+putCredential :: Credential kr -> Put
 putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
 {-# INLINE putCredential #-}
 
 -- | The size of the extra attributes in a bootstrap (ie Byron) address. Used
 -- to help enforce that people do not post huge ones on the chain.
-bootstrapAddressAttrsSize :: BootstrapAddress c -> Int
+bootstrapAddressAttrsSize :: BootstrapAddress -> Int
 bootstrapAddressAttrsSize (BootstrapAddress addr) =
   maybe 0 payloadLen derivationPath + Byron.unknownAttributesLength attrs
   where
@@ -309,7 +308,7 @@ bootstrapAddressAttrsSize (BootstrapAddress addr) =
     attrs = Byron.addrAttributes addr
 
 -- | Return True if a given address is a redeemer address from the Byron Era
-isBootstrapRedeemer :: BootstrapAddress c -> Bool
+isBootstrapRedeemer :: BootstrapAddress -> Bool
 isBootstrapRedeemer (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem)) = True
 isBootstrapRedeemer _ = False
 
@@ -341,38 +340,34 @@ word64ToWord7s = reverse . go
 putVariableLengthWord64 :: Word64 -> Put
 putVariableLengthWord64 = putWord7s . word64ToWord7s
 
-instance Crypto c => EncCBOR (Addr c) where
+instance EncCBOR Addr where
   encCBOR = encCBOR . B.runPut . putAddr
   {-# INLINE encCBOR #-}
 
-instance Crypto c => DecCBOR (Addr c) where
+instance DecCBOR Addr where
   decCBOR = fromCborAddr
   {-# INLINE decCBOR #-}
 
-instance Crypto c => EncCBOR (RewardAccount c) where
+instance EncCBOR RewardAccount where
   encCBOR = encCBOR . B.runPut . putRewardAccount
   {-# INLINE encCBOR #-}
 
-instance Crypto c => DecCBOR (RewardAccount c) where
+instance DecCBOR RewardAccount where
   decCBOR = fromCborRewardAccount
   {-# INLINE decCBOR #-}
 
-newtype BootstrapAddress c = BootstrapAddress
+newtype BootstrapAddress = BootstrapAddress
   { unBootstrapAddress :: Byron.Address
   }
   deriving (Eq, Generic)
   deriving newtype (NFData, Ord)
-  deriving (Show) via Quiet (BootstrapAddress c)
+  deriving (Show) via Quiet BootstrapAddress
 
-instance NoThunks (BootstrapAddress c)
+instance NoThunks BootstrapAddress
 
 bootstrapKeyHash ::
-  forall c.
-  Crypto c =>
-  -- TODO: enforce this constraint
-  -- (HASH era ~ Hash.Blake2b_224) =>
-  BootstrapAddress c ->
-  KeyHash 'Payment c
+  BootstrapAddress ->
+  KeyHash 'Payment
 bootstrapKeyHash (BootstrapAddress byronAddress) =
   let root = Byron.addrRoot byronAddress
       bytes = Byron.abstractHashToBytes root
@@ -385,23 +380,23 @@ bootstrapKeyHash (BootstrapAddress byronAddress) =
 -- Compact Address -----------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-newtype CompactAddr c = UnsafeCompactAddr ShortByteString
+newtype CompactAddr = UnsafeCompactAddr ShortByteString
   deriving stock (Eq, Generic, Ord)
   deriving newtype (NoThunks, NFData)
 
-instance Crypto c => Show (CompactAddr c) where
+instance Show CompactAddr where
   show c = show (decompactAddr c)
 
 -- | Unwrap the compact address and get to the address' binary representation.
-unCompactAddr :: CompactAddr c -> ShortByteString
+unCompactAddr :: CompactAddr -> ShortByteString
 unCompactAddr (UnsafeCompactAddr sbs) = sbs
 {-# INLINE unCompactAddr #-}
 
-compactAddr :: Addr c -> CompactAddr c
+compactAddr :: Addr -> CompactAddr
 compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
 {-# INLINE compactAddr #-}
 
-decompactAddr :: forall c. (HasCallStack, Crypto c) => CompactAddr c -> Addr c
+decompactAddr :: HasCallStack => CompactAddr -> Addr
 decompactAddr (UnsafeCompactAddr sbs) =
   case runFail $ evalStateT (decodeAddrStateLenientT True True sbs) 0 of
     Right addr -> addr
@@ -417,19 +412,19 @@ decompactAddr (UnsafeCompactAddr sbs) =
 ------------------------------------------------------------------------------------------
 
 -- | Decoder for an `Addr`. Works in all eras
-fromCborAddr :: forall c s. Crypto c => Decoder s (Addr c)
+fromCborAddr :: Decoder s Addr
 fromCborAddr = fst <$> fromCborBothAddr
 {-# INLINE fromCborAddr #-}
 
 -- | Returns the actual bytes that represent an addres, while ensuring that they can
 -- be decoded in any era as an `Addr` when need be.
-fromCborCompactAddr :: forall c s. Crypto c => Decoder s (CompactAddr c)
+fromCborCompactAddr :: Decoder s CompactAddr
 fromCborCompactAddr = snd <$> fromCborBothAddr
 {-# INLINE fromCborCompactAddr #-}
 
 -- | This is the decoder for an address that returns both the actual `Addr` and the bytes,
 -- that it was encoded as.
-fromCborBothAddr :: forall c s. Crypto c => Decoder s (Addr c, CompactAddr c)
+fromCborBothAddr :: Decoder s (Addr, CompactAddr)
 fromCborBothAddr = do
   ifDecoderVersionAtLeast (natVersion @7) decodeAddrRigorous fromCborBackwardsBothAddr
   where
@@ -447,7 +442,7 @@ fromCborBothAddr = do
 -- need to preserve the unconsumed bytes in memory, therefore we can to drop the
 -- garbage after we successfully decoded the malformed address. We also need to allow
 -- bogus pointer address to be deserializeable prior to Babbage era.
-fromCborBackwardsBothAddr :: forall c s. Crypto c => Decoder s (Addr c, CompactAddr c)
+fromCborBackwardsBothAddr :: Decoder s (Addr, CompactAddr)
 fromCborBackwardsBothAddr = do
   sbs <- decCBOR
   flip evalStateT 0 $ do
@@ -532,10 +527,8 @@ headerIsBaseAddress = not . (`testBit` 6)
 
 -- | Same as `decodeAddr`, but produces an `Either` result
 decodeAddrEither ::
-  forall c.
-  Crypto c =>
   BS.ByteString ->
-  Either String (Addr c)
+  Either String Addr
 decodeAddrEither bs = runFail $ evalStateT (decodeAddrStateT bs) 0
 {-# INLINE decodeAddrEither #-}
 
@@ -543,18 +536,18 @@ decodeAddrEither bs = runFail $ evalStateT (decodeAddrStateT bs) 0
 -- of the buggy addresses that have been placed on chain. This decoder is intended for
 -- addresses that are to be placed on chian today.
 decodeAddr ::
-  forall c m.
-  (Crypto c, MonadFail m) =>
+  forall m.
+  MonadFail m =>
   BS.ByteString ->
-  m (Addr c)
+  m Addr
 decodeAddr bs = evalStateT (decodeAddrStateT bs) 0
 {-# INLINE decodeAddr #-}
 
 -- | Just like `decodeAddrStateLenientT`, but enforces the address to be well-formed.
 decodeAddrStateT ::
-  (Crypto c, MonadFail m, AddressBuffer b) =>
+  (MonadFail m, AddressBuffer b) =>
   b ->
-  StateT Int m (Addr c)
+  StateT Int m Addr
 decodeAddrStateT = decodeAddrStateLenientT False False
 {-# INLINE decodeAddrStateT #-}
 
@@ -596,7 +589,7 @@ decodeAddrStateT = decodeAddrStateLenientT False False
 --                          `Not a Base Address
 -- @@@
 decodeAddrStateLenientT ::
-  (Crypto c, MonadFail m, AddressBuffer b) =>
+  (MonadFail m, AddressBuffer b) =>
   -- | Enable lenient decoding for Ptrs, i.e. indicate whether junk can follow a Ptr. This
   -- is necessary for backwards compatibility only.  Setting this argument to True is only
   -- needed for backwards compatibility.
@@ -606,7 +599,7 @@ decodeAddrStateLenientT ::
   -- for backwards compatibility.
   Bool ->
   b ->
-  StateT Int m (Addr c)
+  StateT Int m Addr
 decodeAddrStateLenientT isPtrLenient isLenient buf = do
   guardLength "Header" 1 buf
   let header = Header $ bufUnsafeIndex buf 0
@@ -648,10 +641,10 @@ ensureBufIsConsumed name buf = do
 
 -- | This decoder assumes the whole `ShortByteString` is occupied by the `BootstrapAddress`
 decodeBootstrapAddress ::
-  forall c m b.
+  forall m b.
   (MonadFail m, AddressBuffer b) =>
   b ->
-  StateT Int m (BootstrapAddress c)
+  StateT Int m BootstrapAddress
 decodeBootstrapAddress buf =
   case decodeFull' byronProtVer $ bufToByteString buf of
     Left e -> fail $ show e
@@ -659,21 +652,21 @@ decodeBootstrapAddress buf =
 {-# INLINE decodeBootstrapAddress #-}
 
 decodePaymentCredential ::
-  (Crypto c, MonadFail m, AddressBuffer b) =>
+  (MonadFail m, AddressBuffer b) =>
   Header ->
   b ->
-  StateT Int m (PaymentCredential c)
+  StateT Int m PaymentCredential
 decodePaymentCredential header buf
   | headerIsPaymentScript header = ScriptHashObj <$> decodeScriptHash buf
   | otherwise = KeyHashObj <$> decodeKeyHash buf
 {-# INLINE decodePaymentCredential #-}
 
 decodeStakeReference ::
-  (Crypto c, MonadFail m, AddressBuffer b) =>
+  (MonadFail m, AddressBuffer b) =>
   Bool ->
   Header ->
   b ->
-  StateT Int m (StakeReference c)
+  StateT Int m StakeReference
 decodeStakeReference isLenientPtrDecoder header buf
   | headerIsBaseAddress header =
       if headerIsStakingScript header
@@ -686,16 +679,16 @@ decodeStakeReference isLenientPtrDecoder header buf
 {-# INLINE decodeStakeReference #-}
 
 decodeKeyHash ::
-  (Crypto c, MonadFail m, AddressBuffer b) =>
+  (MonadFail m, AddressBuffer b) =>
   b ->
-  StateT Int m (KeyHash kr c)
+  StateT Int m (KeyHash kr)
 decodeKeyHash buf = KeyHash <$> decodeHash buf
 {-# INLINE decodeKeyHash #-}
 
 decodeScriptHash ::
-  (Crypto c, MonadFail m, AddressBuffer b) =>
+  (MonadFail m, AddressBuffer b) =>
   b ->
-  StateT Int m (ScriptHash c)
+  StateT Int m ScriptHash
 decodeScriptHash buf = ScriptHash <$> decodeHash buf
 {-# INLINE decodeScriptHash #-}
 
@@ -842,16 +835,16 @@ decodeVariableLengthWord64 name buf = fix (decode7BitVarLength name buf) 0
 ------------------------------------------------------------------------------------------
 
 decodeRewardAccount ::
-  forall c b m.
-  (Crypto c, AddressBuffer b, MonadFail m) =>
+  forall b m.
+  (AddressBuffer b, MonadFail m) =>
   b ->
-  m (RewardAccount c)
+  m RewardAccount
 decodeRewardAccount buf = evalStateT (decodeRewardAccountT buf) 0
 
-fromCborRewardAccount :: forall c s. Crypto c => Decoder s (RewardAccount c)
+fromCborRewardAccount :: Decoder s RewardAccount
 fromCborRewardAccount = do
   sbs :: ShortByteString <- decCBOR
-  decodeRewardAccount @c sbs
+  decodeRewardAccount sbs
 
 headerIsRewardAccount :: Header -> Bool
 headerIsRewardAccount header = header .&. 0b11101110 == 0b11100000
@@ -878,9 +871,9 @@ headerRewardAccountIsScript = (`testBit` 4)
 --                            `Account Credential is a Script
 -- @@@
 decodeRewardAccountT ::
-  (MonadFail m, Crypto c, AddressBuffer b) =>
+  (MonadFail m, AddressBuffer b) =>
   b ->
-  StateT Int m (RewardAccount c)
+  StateT Int m RewardAccount
 decodeRewardAccountT buf = do
   guardLength "Header" 1 buf
   modify' (+ 1)
@@ -896,29 +889,29 @@ decodeRewardAccountT buf = do
   pure $! RewardAccount (headerNetworkId header) account
 {-# INLINE decodeRewardAccountT #-}
 
-instance Crypto c => EncCBOR (CompactAddr c) where
+instance EncCBOR CompactAddr where
   encCBOR (UnsafeCompactAddr bytes) = encCBOR bytes
   {-# INLINE encCBOR #-}
 
-instance Crypto c => DecCBOR (CompactAddr c) where
+instance DecCBOR CompactAddr where
   decCBOR = fromCborCompactAddr
   {-# INLINE decCBOR #-}
 
 -- | Efficiently check whether compacted adddress is an address with a credential
 -- that is a payment script.
-isPayCredScriptCompactAddr :: CompactAddr c -> Bool
+isPayCredScriptCompactAddr :: CompactAddr -> Bool
 isPayCredScriptCompactAddr (UnsafeCompactAddr bytes) =
   testBit (SBS.index bytes 0) payCredIsScript
 
 -- | Efficiently check whether compated adddress is a Byron address.
-isBootstrapCompactAddr :: CompactAddr c -> Bool
+isBootstrapCompactAddr :: CompactAddr -> Bool
 isBootstrapCompactAddr (UnsafeCompactAddr bytes) = testBit (SBS.index bytes 0) byron
 
 -- | Convert Byron's comapct address into `CompactAddr`. This is just an efficient type cast.
-fromBoostrapCompactAddress :: Byron.CompactAddress -> CompactAddr c
+fromBoostrapCompactAddress :: Byron.CompactAddress -> CompactAddr
 fromBoostrapCompactAddress = UnsafeCompactAddr . Byron.unsafeGetCompactAddress
 
 -- | This is called @wdrl@ in the spec.
-newtype Withdrawals c = Withdrawals {unWithdrawals :: Map (RewardAccount c) Coin}
+newtype Withdrawals = Withdrawals {unWithdrawals :: Map RewardAccount Coin}
   deriving (Show, Eq, Generic)
   deriving newtype (NoThunks, NFData, EncCBOR, DecCBOR)

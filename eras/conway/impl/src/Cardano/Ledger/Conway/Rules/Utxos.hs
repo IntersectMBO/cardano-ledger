@@ -86,9 +86,9 @@ data ConwayUtxosPredFailure era
     (Generic)
 
 data ConwayUtxosEvent era
-  = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
-  | SuccessfulPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
-  | FailedPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
+  = TotalDeposits (SafeHash EraIndependentTxBody) Coin
+  | SuccessfulPlutusScriptsEvent (NonEmpty PlutusWithContext)
+  | FailedPlutusScriptsEvent (NonEmpty PlutusWithContext)
   | -- | The UTxOs consumed and created by a signal tx
     TxUTxODiff
       -- | UTxO consumed
@@ -101,18 +101,18 @@ deriving instance (Era era, Eq (TxOut era)) => Eq (ConwayUtxosEvent era)
 
 instance (Era era, NFData (TxOut era)) => NFData (ConwayUtxosEvent era)
 
-type instance EraRuleFailure "UTXOS" (ConwayEra c) = ConwayUtxosPredFailure (ConwayEra c)
+type instance EraRuleFailure "UTXOS" ConwayEra = ConwayUtxosPredFailure ConwayEra
 
-type instance EraRuleEvent "UTXOS" (ConwayEra c) = ConwayUtxosEvent (ConwayEra c)
+type instance EraRuleEvent "UTXOS" ConwayEra = ConwayUtxosEvent ConwayEra
 
-instance InjectRuleFailure "UTXOS" ConwayUtxosPredFailure (ConwayEra c)
+instance InjectRuleFailure "UTXOS" ConwayUtxosPredFailure ConwayEra
 
-instance InjectRuleEvent "UTXOS" ConwayUtxosEvent (ConwayEra c)
+instance InjectRuleEvent "UTXOS" ConwayUtxosEvent ConwayEra
 
-instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure ConwayEra where
   injectFailure = alonzoToConwayUtxosPredFailure
 
-instance InjectRuleEvent "UTXOS" AlonzoUtxosEvent (ConwayEra c) where
+instance InjectRuleEvent "UTXOS" AlonzoUtxosEvent ConwayEra where
   injectEvent = alonzoToConwayUtxosEvent
 
 alonzoToConwayUtxosPredFailure ::

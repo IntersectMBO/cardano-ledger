@@ -70,7 +70,6 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -101,14 +100,14 @@ class EraTxBody era => AllegraEraTxBody era where
 -- =======================================================
 
 data AllegraTxBodyRaw ma era = AllegraTxBodyRaw
-  { atbrInputs :: !(Set (TxIn (EraCrypto era)))
+  { atbrInputs :: !(Set TxIn)
   , atbrOutputs :: !(StrictSeq (TxOut era))
   , atbrCerts :: !(StrictSeq (TxCert era))
-  , atbrWithdrawals :: !(Withdrawals (EraCrypto era))
+  , atbrWithdrawals :: !Withdrawals
   , atbrTxFee :: !Coin
   , atbrValidityInterval :: !ValidityInterval
   , atbrUpdate :: !(StrictMaybe (Update era))
-  , atbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
+  , atbrAuxDataHash :: !(StrictMaybe AuxiliaryDataHash)
   , atbrMint :: !ma
   }
 
@@ -250,20 +249,20 @@ deriving via
 
 type instance MemoHashIndex (AllegraTxBodyRaw c) = EraIndependentTxBody
 
-instance (c ~ EraCrypto era, Era era) => HashAnnotated (AllegraTxBody era) EraIndependentTxBody c where
+instance Era era => HashAnnotated (AllegraTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern AllegraTxBody ::
   (EraTxOut era, EraTxCert era) =>
-  Set (TxIn (EraCrypto era)) ->
+  Set TxIn ->
   StrictSeq (TxOut era) ->
   StrictSeq (TxCert era) ->
-  Withdrawals (EraCrypto era) ->
+  Withdrawals ->
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
+  StrictMaybe AuxiliaryDataHash ->
   AllegraTxBody era
 pattern AllegraTxBody
   { atbInputs
@@ -312,10 +311,8 @@ pattern AllegraTxBody
 
 {-# COMPLETE AllegraTxBody #-}
 
-instance Crypto c => EraTxBody (AllegraEra c) where
-  {-# SPECIALIZE instance EraTxBody (AllegraEra StandardCrypto) #-}
-
-  type TxBody (AllegraEra c) = AllegraTxBody (AllegraEra c)
+instance EraTxBody AllegraEra where
+  type TxBody AllegraEra = AllegraTxBody AllegraEra
 
   mkBasicTxBody = mkMemoized emptyAllegraTxBodyRaw
 
@@ -370,9 +367,7 @@ instance Crypto c => EraTxBody (AllegraEra c) where
       ttlToValidityInterval :: SlotNo -> ValidityInterval
       ttlToValidityInterval ttl = ValidityInterval SNothing (SJust ttl)
 
-instance Crypto c => ShelleyEraTxBody (AllegraEra c) where
-  {-# SPECIALIZE instance ShelleyEraTxBody (AllegraEra StandardCrypto) #-}
-
+instance ShelleyEraTxBody AllegraEra where
   ttlTxBodyL = notSupportedInThisEraL
   {-# INLINEABLE ttlTxBodyL #-}
 
@@ -380,9 +375,7 @@ instance Crypto c => ShelleyEraTxBody (AllegraEra c) where
     lensMemoRawType atbrUpdate $ \txBodyRaw update -> txBodyRaw {atbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
 
-instance Crypto c => AllegraEraTxBody (AllegraEra c) where
-  {-# SPECIALIZE instance AllegraEraTxBody (AllegraEra StandardCrypto) #-}
-
+instance AllegraEraTxBody AllegraEra where
   vldtTxBodyL =
     lensMemoRawType atbrValidityInterval $
       \txBodyRaw vldt -> txBodyRaw {atbrValidityInterval = vldt}

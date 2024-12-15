@@ -7,7 +7,7 @@ module Test.Cardano.Ledger.Conformance.Imp.Ratify (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
@@ -47,7 +47,7 @@ import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
-spec = withImpInit @(LedgerSpec Conway) $ describe "RATIFY" $ modifyImpInitProtVer (eraProtVerHigh @Conway) $ do
+spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitProtVer (eraProtVerHigh @ConwayEra) $ do
   it "NoConfidence accepted conforms" $ do
     modifyPParams $ \pp ->
       pp
@@ -70,7 +70,7 @@ spec = withImpInit @(LedgerSpec Conway) $ describe "RATIFY" $ modifyImpInitProtV
     passNEpochs 2
     getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId noConfidence)
     pure $
-      testConformance @ConwayFn @"RATIFY" @Conway
+      testConformance @ConwayFn @"RATIFY" @ConwayEra
         execCtx
         ratEnv
         ratSt
@@ -136,7 +136,7 @@ spec = withImpInit @(LedgerSpec Conway) $ describe "RATIFY" $ modifyImpInitProtV
       ratSt = getRatifyState govSt
       ratSig = RatifySignal (constitutionGAS SSeq.:<| mempty)
     (implRes, agdaRes, implRes') <-
-      runConformance @"RATIFY" @ConwayFn @Conway
+      runConformance @"RATIFY" @ConwayFn @ConwayEra
         execCtx
         ratEnv
         ratSt
@@ -156,7 +156,7 @@ spec = withImpInit @(LedgerSpec Conway) $ describe "RATIFY" $ modifyImpInitProtV
     logString "Extra information:"
     globals <- use impGlobalsL
     logDoc $
-      extraInfo @ConwayFn @"RATIFY" @Conway
+      extraInfo @ConwayFn @"RATIFY" @ConwayEra
         globals
         execCtx
         ratEnv
