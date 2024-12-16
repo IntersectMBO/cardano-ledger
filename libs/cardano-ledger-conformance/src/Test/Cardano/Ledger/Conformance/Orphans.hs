@@ -149,8 +149,18 @@ instance NFData LEnv
 instance ToExpr a => ToExpr (HSSet a)
 
 instance ToExpr Credential where
-  toExpr (KeyHashObj h) = App "KeyHashObj" [agdaHashToExpr 28 h, toExpr h]
-  toExpr (ScriptObj h) = App "ScriptObj" [agdaHashToExpr 28 h, toExpr h]
+  toExpr (KeyHashObj h) =
+    App
+      "KeyHashObj"
+      [ agdaHashToExpr standardAddrHashSize h
+      , toExpr h
+      ]
+  toExpr (ScriptObj h) =
+    App
+      "ScriptObj"
+      [ agdaHashToExpr standardAddrHashSize h
+      , toExpr h
+      ]
 
 instance (ToExpr k, ToExpr v) => ToExpr (HSMap k v)
 
