@@ -245,7 +245,7 @@ instance
   type SpecRep (AlonzoScript era) = Agda.Script
 
   toSpecRep (TimelockScript s) = Left <$> toSpecRep s
-  toSpecRep (PlutusScript _) = pure $ Right ()
+  toSpecRep (PlutusScript s) = Right . (,()) <$> toSpecRep s
 
 instance
   ( EraTxOut era
