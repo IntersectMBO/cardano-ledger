@@ -201,12 +201,13 @@ instance
   ) =>
   SpecTranslate ctx (Timelock era)
   where
-  type SpecRep (Timelock era) = Agda.HashedTimelock
+  type SpecRep (Timelock era) = Agda.HSTimelock
 
   toSpecRep tl =
-    Agda.HashedTimelock
+    Agda.HSTimelock
       <$> timelockToSpecRep tl
       <*> toSpecRep (hashScript @era $ TimelockScript tl)
+      <*> pure (fromIntegral $ originalBytesSize tl)
     where
       timelockToSpecRep x =
         case x of
@@ -231,9 +232,12 @@ instance
   ) =>
   SpecTranslate ctx (PlutusScript era)
   where
-  type SpecRep (PlutusScript era) = Agda.ScriptHash
+  type SpecRep (PlutusScript era) = Agda.HSPlutusScript
 
-  toSpecRep ps = toSpecRep . hashScript $ PlutusScript @era ps
+  toSpecRep ps =
+    Agda.MkHSPlutusScript
+      <$> toSpecRep (hashScript $ PlutusScript ps)
+      <*> pure (fromIntegral $ originalBytesSize ps)
 
 instance
   ( AlonzoEraScript era
@@ -245,7 +249,7 @@ instance
   type SpecRep (AlonzoScript era) = Agda.Script
 
   toSpecRep (TimelockScript s) = Left <$> toSpecRep s
-  toSpecRep (PlutusScript s) = Right . (,()) <$> toSpecRep s
+  toSpecRep (PlutusScript s) = Right <$> toSpecRep s
 
 instance
   ( EraTxOut era
