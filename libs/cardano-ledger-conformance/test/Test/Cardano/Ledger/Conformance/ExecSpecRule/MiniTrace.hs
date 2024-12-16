@@ -149,7 +149,7 @@ classifyFirst' f (x : _) p = maybe p (\s -> classify True s p) (f x)
 nameRatify :: RatifySignal era -> String
 nameRatify (RatifySignal xs) = show (length xs) ++ " GovActionStates"
 
-nameGovSignal :: GovSignal Conway -> String
+nameGovSignal :: GovSignal Proof.ConwayEra -> String
 nameGovSignal (GovSignal (VotingProcedures m) os cs) = show (Map.size m) ++ " " ++ show (OSet.size os) ++ " " ++ show (length cs)
 
 nameAlonzoTx :: AlonzoTx era -> String

@@ -28,7 +28,6 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Constrained hiding (Value)
 import Data.Kind (Type)
 import Data.Map (Map)
-import qualified Data.Set as Set
 import Data.Typeable
 import Test.Cardano.Ledger.Constrained.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway.Cert (
@@ -48,13 +47,9 @@ import Test.QuickCheck (
   Gen,
   Property,
   counterexample,
-  generate,
   property,
   withMaxSuccess,
  )
-
-import System.IO.Unsafe
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (certStateSpec, dstateSpec)
 
 -- ====================================================================================
 -- Some Specifications are constrained by types (say 'x') that do not appear in the type being
@@ -185,8 +180,8 @@ spec = do
     soundSpecWith @(ProtVer, ProtVer) 100 (pure protVersCanfollow)
     soundSpecWith @InstantaneousRewards
       20
-      (irewardSpec @Shelley (eraWitUniv @Shelley 50) !$! accountStateSpec)
-    soundSpecWith @(SnapShots StandardCrypto)
+      (irewardSpec @ShelleyEra (eraWitUniv @ShelleyEra 50) !$! accountStateSpec)
+    soundSpecWith @SnapShots
       10
       (snapShotsSpec <$> ((lit . getMarkSnapShot) <$> (wff @(LedgerState ConwayEra) @ConwayEra)))
   specSuite @ShelleyEra 10

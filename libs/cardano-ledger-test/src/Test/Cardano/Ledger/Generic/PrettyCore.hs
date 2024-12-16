@@ -692,10 +692,10 @@ instance PrettyA AuxiliaryDataHash where
 ppSafeHash :: SafeHash index -> PDoc
 ppSafeHash x = ppHash (extractHash x)
 
-pcDataHash :: DataHash era -> PDoc
+pcDataHash :: DataHash -> PDoc
 pcDataHash dh = trim (ppSafeHash dh)
 
-instance PrettyA (SafeHash x y) where
+instance PrettyA (SafeHash x) where
   prettyA = ppSafeHash
 
 ppEpochNo :: EpochNo -> Doc ann
@@ -2548,10 +2548,10 @@ pcAddr (AddrBootstrap x) = "BootAddr" <+> pcByronAddress x
 
 instance PrettyA Addr where prettyA = pcAddr
 
-pcByronAddress :: BootstrapAddress c -> PDoc
+pcByronAddress :: BootstrapAddress -> PDoc
 pcByronAddress (BootstrapAddress (Byron.Address x _ _)) = ppString (take 10 (show x))
 
-instance PrettyA (BootstrapAddress c) where prettyA = pcByronAddress
+instance PrettyA BootstrapAddress where prettyA = pcByronAddress
 
 -- | Value is a type family, so it has no PrettyA instance.
 pcCoreValue :: Proof era -> Value era -> PDoc
@@ -2665,9 +2665,6 @@ pcHashScript Shelley s = ppString "Hash " <> pcScriptHash (hashScript @era s)
 
 instance (Script era ~ AlonzoScript era, Reflect era) => PrettyA (AlonzoScript era) where
   prettyA = pcScript reify
-
-pcDataHash :: DataHash -> PDoc
-pcDataHash dh = trim (ppSafeHash dh)
 
 instance PrettyA DataHash where
   prettyA = pcDataHash

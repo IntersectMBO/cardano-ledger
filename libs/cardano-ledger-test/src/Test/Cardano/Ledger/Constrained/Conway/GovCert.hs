@@ -36,7 +36,7 @@ vStateSpec ::
   forall fn era.
   (IsConwayUniv fn, Era era) =>
   WitUniv era ->
-  Set (Credential 'DRepRole (EraCrypto era)) ->
+  Set (Credential 'DRepRole) ->
   Specification fn (VState era)
 vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
   match vstate $ \ [var|dreps|] [var|committeestate|] [var|_numdormant|] ->
@@ -52,11 +52,11 @@ vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
     ]
 
 govCertSpec ::
-  (IsConwayUniv fn, Era era, EraCrypto era ~ StandardCrypto) =>
+  (IsConwayUniv fn, Era era) =>
   WitUniv era ->
-  ConwayGovCertEnv (ConwayEra StandardCrypto) ->
-  CertState (ConwayEra StandardCrypto) ->
-  Specification fn (ConwayGovCert StandardCrypto)
+  ConwayGovCertEnv ConwayEra ->
+  CertState ConwayEra ->
+  Specification fn ConwayGovCert
 govCertSpec univ ConwayGovCertEnv {..} certState =
   let vs = certVState certState
       reps = lit $ Map.keysSet $ vsDReps vs
@@ -134,8 +134,8 @@ notYetResigned committeeStatus coldcred =
 govCertEnvSpec ::
   forall fn.
   IsConwayUniv fn =>
-  WitUniv (ConwayEra StandardCrypto) ->
-  Specification fn (ConwayGovCertEnv (ConwayEra StandardCrypto))
+  WitUniv ConwayEra ->
+  Specification fn (ConwayGovCertEnv ConwayEra)
 govCertEnvSpec univ =
   constrained $ \ [var|gce|] ->
     match gce $ \ [var|pp|] _ [var|committee|] [var|proposalmap|] ->

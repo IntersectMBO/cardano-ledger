@@ -69,7 +69,7 @@ poolCertSpec ::
   WitUniv era ->
   PoolEnv era ->
   PState era ->
-  Specification fn (PoolCert (EraCrypto era))
+  Specification fn PoolCert
 poolCertSpec univ (PoolEnv e pp) ps =
   constrained $ \pc ->
     (caseOn pc)

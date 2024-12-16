@@ -176,13 +176,12 @@ protVersCanfollow =
 
 goodDrep ::
   forall era.
-  Era era =>
   WitUniv era ->
   Specification
     ConwayFn
     ( Map
-        (Credential 'DRepRole (EraCrypto era))
-        (Set.Set (Credential 'Staking (EraCrypto era)))
+        (Credential 'DRepRole)
+        (Set.Set (Credential 'Staking))
     )
 goodDrep univ =
   constrained $ \dRepMap ->
@@ -382,7 +381,7 @@ utxoSpecWit ::
   -- EraSpecLedger era fn =>
   EraSpecTxOut era fn =>
   WitUniv era ->
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
+  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
   Specification fn (UTxO era)
 utxoSpecWit univ delegs = constrained $ \ [var|utxo|] ->
   match utxo $ \ [var|utxomap|] ->
@@ -589,7 +588,7 @@ dRepToCred (DRepKeyHash kh) = Just $ KeyHashObj kh
 dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
 dRepToCred _ = Nothing
 
-credToDrep :: Credential 'DRepRole c -> DRep c
+credToDrep :: Credential 'DRepRole -> DRep
 credToDrep (KeyHashObj kh) = DRepKeyHash kh
 credToDrep (ScriptHashObj sh) = DRepScriptHash sh
 

@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Constrained.Conway.TxBodySpec where
 
 import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (CertsEnv (..))
 import Cardano.Ledger.Core
 
@@ -56,12 +56,12 @@ import Test.QuickCheck hiding (forAll, witness)
 import Prelude hiding (seq)
 
 import Cardano.Ledger.Address (Withdrawals (..))
-import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.CertState (lookupDepositDState, lookupDepositVState)
-import Cardano.Ledger.Mary (Mary)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (Consumed (..), Produced (..), consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (CertState (..), PState (..))
 import Data.Text (pack)
@@ -287,19 +287,19 @@ go2 = do
 
 go :: IO ()
 go = do
-  univ <- generate $ genWitUniv @Allegra 5
+  univ <- generate $ genWitUniv @AllegraEra 5
   wdrls <- generate $ genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
   delegatees <- generate $ genFromSpec @ConwayFn (delegateeSpec univ)
-  certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv Allegra) certsEnvSpec
+  certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv AllegraEra) certsEnvSpec
   certState <-
     generate $
-      genFromSpec @ConwayFn @(CertState Allegra)
-        (certStateSpec @ConwayFn @Allegra univ delegatees wdrls)
+      genFromSpec @ConwayFn @(CertState AllegraEra)
+        (certStateSpec @ConwayFn @AllegraEra univ delegatees wdrls)
 
   cert <-
     generate $
-      genFromSpec @ConwayFn @(TxCert Allegra) $
-        (shelleyTxCertSpec @ConwayFn @Allegra univ (projectEnv certsEnv) certState)
+      genFromSpec @ConwayFn @(TxCert AllegraEra) $
+        (shelleyTxCertSpec @ConwayFn @AllegraEra univ (projectEnv certsEnv) certState)
           <> (witShelleyTxCert univ)
   -- The problem with this is that the CertState does not have any
   -- thing from the universe, so any Cert that requires a member_ of someting

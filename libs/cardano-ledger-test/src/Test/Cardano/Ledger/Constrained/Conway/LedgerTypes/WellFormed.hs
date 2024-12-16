@@ -154,13 +154,13 @@ snapsX pp = do
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
   ls <- genFromSpec @ConwayFn @(LedgerState era) (ledgerStateSpec pp univ (lit acct) (lit epoch))
-  genFromSpec @ConwayFn @(SnapShots (EraCrypto era)) (snapShotsSpec (lit (getMarkSnapShot ls)))
+  genFromSpec @ConwayFn @SnapShots (snapShotsSpec (lit (getMarkSnapShot ls)))
 
 instanRewX :: forall era. EraSpecTxOut era ConwayFn => Gen InstantaneousRewards
 instanRewX = do
   univ <- genWitUniv @era 50
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
-  genFromSpec @ConwayFn @(InstantaneousRewards (EraCrypto era))
+  genFromSpec @ConwayFn @InstantaneousRewards
     (irewardSpec @era @ConwayFn univ (lit acct))
 
 -- ==============================================================

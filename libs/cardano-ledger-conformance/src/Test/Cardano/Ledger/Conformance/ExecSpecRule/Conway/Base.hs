@@ -136,19 +136,21 @@ import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var, witn
 
 -- ================================================================
 
-data ConwayCertExecContext era = ConwayCertExecContext
-  { ccecWithdrawals :: !(Map RewardAccount Coin)
-  , ccecDeposits :: !(Map DepositPurpose Coin)
-  , ccecVotes :: !(VotingProcedures era)
-  , ccecDelegatees :: !(Set (Credential 'DRepRole))
-  -- ^ The UMap of the DState has a field with type: Map (Credential 'Staking) DRep
-  --   The VState field vsDReps has type: Map (Credential DRepRole) DRepState
-  --   The DRepState field drepDelegs has type: Set (Credential Staking)
-  --   Every (Credential 'DRepRole c) corresponds to a unique (DRep)
-  -- the ccecDelegatees field helps maintain that correspondance, It is used in
-  -- vstateSpec and bootstrapDStateSpec. Also see
-  -- getDelegatees :: DState era -> Map (Credential 'DRepRole) (Set (Credential 'Staking))
-  -- in Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs, which defines the exact correspondance.  }
+data ConwayCertExecContext era
+  = -- | The UMap of the DState has a field with type: Map (Credential 'Staking) DRep
+    --   The VState field vsDReps has type: Map (Credential DRepRole) DRepState
+    --   The DRepState field drepDelegs has type: Set (Credential Staking)
+    --   Every (Credential 'DRepRole c) corresponds to a unique (DRep)
+    -- the ccecDelegatees field helps maintain that correspondance, It is used in
+    -- vstateSpec and bootstrapDStateSpec. Also see
+    -- getDelegatees :: DState era -> Map (Credential 'DRepRole) (Set (Credential 'Staking))
+    -- in Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs, which defines the exact correspondance.  }
+    ConwayCertExecContext
+    { ccecWithdrawals :: !(Map RewardAccount Coin)
+    , ccecDeposits :: !(Map DepositPurpose Coin)
+    , ccecVotes :: !(VotingProcedures era)
+    , ccecDelegatees :: !(Set (Credential 'DRepRole))
+    }
   deriving (Generic, Eq, Show)
 
 instance HasSimpleRep (ConwayCertExecContext era)

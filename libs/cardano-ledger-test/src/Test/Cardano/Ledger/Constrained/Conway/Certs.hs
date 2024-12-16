@@ -50,8 +50,8 @@ bootstrapDStateSpec ::
   WitUniv era ->
   -- Set of credentials, each uniquely identifying a DRep,
   -- Every delegation of a stake credential to a DRep should be in this set.
-  Set (Credential 'DRepRole (EraCrypto era)) ->
-  Map (RewardAccount (EraCrypto era)) Coin ->
+  Set (Credential 'DRepRole) ->
+  Map RewardAccount Coin ->
   Specification fn (DState era)
 bootstrapDStateSpec univ delegatees withdrawals =
   constrained $ \ [var| dstate |] ->

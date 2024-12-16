@@ -47,12 +47,12 @@ import Test.Tasty.QuickCheck hiding (witness)
 -- | Several tests need some semi-randomcontext, this supplies that context
 genContext ::
   Gen
-    ( WitUniv (ConwayEra StandardCrypto)
-    , Set (Credential 'DRepRole StandardCrypto)
-    , Map (RewardAccount StandardCrypto) Coin
+    ( WitUniv ConwayEra
+    , Set (Credential 'DRepRole)
+    , Map RewardAccount Coin
     )
 genContext = do
-  univ <- genWitUniv @(ConwayEra StandardCrypto) 200
+  univ <- genWitUniv @ConwayEra 200
   delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
   wdrls <- genFromSpec @ConwayFn (constrained $ \x -> (witness univ x))
   pure (univ, delegatees, wdrls)
@@ -229,7 +229,7 @@ prop_POOL =
         stsPropertyV2 @"POOL" @ConwayFn
           (poolEnvSpec conwayWitUniv)
           (\_env -> pStateSpec conwayWitUniv)
-          (\env st -> poolCertSpec @ConwayFn @(ConwayEra StandardCrypto) conwayWitUniv env st)
+          (\env st -> poolCertSpec @ConwayFn @ConwayEra conwayWitUniv env st)
           $ \_env _st _sig _st' -> True
     )
 

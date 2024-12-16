@@ -38,6 +38,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
+  Era (..),
   EraPParams (..),
   EraTx,
   EraTxAuxData (..),
@@ -64,13 +65,13 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
 
-instance HasSimpleRep (DepositPurpose c)
-instance (Crypto c, IsConwayUniv fn) => HasSpec fn (DepositPurpose c)
+instance HasSimpleRep DepositPurpose
+instance IsConwayUniv fn => HasSpec fn DepositPurpose
 
 witnessDepositPurpose ::
   forall fn era.
   (Era era, IsConwayUniv fn) =>
-  WitUniv era -> Specification fn (DepositPurpose (EraCrypto era))
+  WitUniv era -> Specification fn DepositPurpose
 witnessDepositPurpose univ = constrained $ \ [var|depPurpose|] ->
   (caseOn depPurpose)
     -- CredentialDeposit !(Credential 'Staking c)
@@ -82,11 +83,11 @@ witnessDepositPurpose univ = constrained $ \ [var|depPurpose|] ->
     -- GovActionDeposit
     (branch $ \_ -> True)
 
-data DepositPurpose c
-  = CredentialDeposit !(Credential 'Staking c)
-  | PoolDeposit !(KeyHash 'StakePool c)
-  | DRepDeposit !(Credential 'DRepRole c)
-  | GovActionDeposit !(GovActionId c)
+data DepositPurpose
+  = CredentialDeposit !(Credential 'Staking)
+  | PoolDeposit !(KeyHash 'StakePool)
+  | DRepDeposit !(Credential 'DRepRole)
+  | GovActionDeposit !GovActionId
   deriving (Generic, Eq, Show, Ord)
 
 instance Arbitrary DepositPurpose where

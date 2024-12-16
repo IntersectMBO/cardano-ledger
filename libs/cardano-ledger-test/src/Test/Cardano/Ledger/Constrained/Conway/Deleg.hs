@@ -54,8 +54,8 @@ someZeros = constrained $ \ [var| someRdpair |] ->
 rewDepMapSpec ::
   (Era era, IsConwayUniv fn) =>
   WitUniv era ->
-  Map (RewardAccount (EraCrypto era)) Coin ->
-  Specification fn (Map (Credential 'Staking (EraCrypto era)) RDPair)
+  Map RewardAccount Coin ->
+  Specification fn (Map (Credential 'Staking) RDPair)
 rewDepMapSpec univ wdrl =
   let n = wvSize univ
       m = Map.size wdrl
@@ -75,15 +75,15 @@ rewDepMapSpec2 ::
   forall fn era.
   (Era era, IsConwayUniv fn) =>
   WitUniv era ->
-  Map (RewardAccount (EraCrypto era)) Coin ->
-  Specification fn (Map (Credential 'Staking (EraCrypto era)) RDPair)
+  Map RewardAccount Coin ->
+  Specification fn (Map (Credential 'Staking) RDPair)
 rewDepMapSpec2 univ wdrl =
   let n = wvSize univ
       m = Map.size wdrl
       maxRewDepSize = fromIntegral (n - (m + 2)) -- (2 * n - (m + 2))
-      withdrawalPairs :: [(Credential 'Staking (EraCrypto era), Word64)]
+      withdrawalPairs :: [(Credential 'Staking, Word64)]
       withdrawalPairs = Map.toList (Map.mapKeys raCredential (Map.map coinToWord64 wdrl))
-      withdrawalKeys :: Set (Credential 'Staking (EraCrypto era))
+      withdrawalKeys :: Set (Credential 'Staking)
       withdrawalKeys = Map.keysSet (Map.mapKeys raCredential wdrl)
    in constrained $ \ [var|rdmap|] ->
         [ -- size of rdmap, can't be bigger than the witness set (n keys + n scripts)
@@ -109,10 +109,10 @@ rewDepMapSpec2 univ wdrl =
 coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n
 
-wdrlCredentials :: Map (RewardAccount c) Coin -> Set (Credential 'Staking c)
+wdrlCredentials :: Map RewardAccount Coin -> Set (Credential 'Staking)
 wdrlCredentials m = Set.map raCredential (Map.keysSet m)
 
-keyHashWdrl :: Map (RewardAccount c) Coin -> Set (Credential 'Staking c)
+keyHashWdrl :: Map RewardAccount Coin -> Set (Credential 'Staking)
 keyHashWdrl m = Set.filter isKeyHash (wdrlCredentials m)
   where
     isKeyHash (KeyHashObj _) = True
@@ -122,7 +122,7 @@ dStateSpec ::
   forall fn era.
   (IsConwayUniv fn, EraSpecDeleg era) =>
   WitUniv era ->
-  Map (RewardAccount (EraCrypto era)) Coin ->
+  Map (RewardAccount) Coin ->
   Specification fn (DState era)
 dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
   match dstate $ \ [var| uMap |] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
@@ -240,7 +240,7 @@ shelleyDelegCertSpec ::
   WitUniv era ->
   ConwayDelegEnv era ->
   DState era ->
-  Specification fn (ShelleyDelegCert (EraCrypto era))
+  Specification fn (ShelleyDelegCert)
 shelleyDelegCertSpec univ (ConwayDelegEnv _pp pools) ds =
   let rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds

@@ -34,12 +34,10 @@ module Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (
   CertKey (..),
 ) where
 
-import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..), AlonzoTxOut (..))
-import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Babbage (Babbage)
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
@@ -47,8 +45,8 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Mary (Mary)
-import Cardano.Ledger.Shelley (Shelley)
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..), StashedAVVMAddresses)
 import Constrained hiding (Value)
 import Constrained.Base (Pred (..))
@@ -90,7 +88,7 @@ class
   EraSpecTxOut era fn
   where
   irewardSpec ::
-    WitUniv era -> Term fn AccountState -> Specification fn (InstantaneousRewards (EraCrypto era))
+    WitUniv era -> Term fn AccountState -> Specification fn InstantaneousRewards
   hasPtrs :: proxy era -> Term fn Bool
 
   -- | Extract a Value from a TxOut
@@ -100,9 +98,9 @@ class
   txOutCoin_ :: Term fn (TxOut era) -> Term fn Coin
 
   -- | Extract an Addr from a TxOut
-  txOutAddr_ :: Term fn (TxOut era) -> Term fn (Addr (EraCrypto era))
+  txOutAddr_ :: Term fn (TxOut era) -> Term fn Addr
 
-instance IsConwayUniv fn => EraSpecTxOut Shelley fn where
+instance IsConwayUniv fn => EraSpecTxOut ShelleyEra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
 
@@ -112,7 +110,7 @@ instance IsConwayUniv fn => EraSpecTxOut Shelley fn where
   txOutCoin_ x = sel @1 x
   txOutAddr_ x = sel @0 x
 
-instance IsConwayUniv fn => EraSpecTxOut Allegra fn where
+instance IsConwayUniv fn => EraSpecTxOut AllegraEra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
 
@@ -121,7 +119,7 @@ instance IsConwayUniv fn => EraSpecTxOut Allegra fn where
   txOutCoin_ x = sel @1 x
   txOutAddr_ x = sel @0 x
 
-instance IsConwayUniv fn => EraSpecTxOut Mary fn where
+instance IsConwayUniv fn => EraSpecTxOut MaryEra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
 
@@ -130,7 +128,7 @@ instance IsConwayUniv fn => EraSpecTxOut Mary fn where
   txOutCoin_ x = maryValueCoin_ (sel @1 x)
   txOutAddr_ x = sel @0 x
 
-instance IsConwayUniv fn => EraSpecTxOut Alonzo fn where
+instance IsConwayUniv fn => EraSpecTxOut AlonzoEra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
 
@@ -139,7 +137,7 @@ instance IsConwayUniv fn => EraSpecTxOut Alonzo fn where
   txOutCoin_ x = maryValueCoin_ (sel @1 x)
   txOutAddr_ x = sel @0 x
 
-instance IsConwayUniv fn => EraSpecTxOut Babbage fn where
+instance IsConwayUniv fn => EraSpecTxOut BabbageEra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
 
@@ -148,7 +146,7 @@ instance IsConwayUniv fn => EraSpecTxOut Babbage fn where
   txOutCoin_ x = maryValueCoin_ (sel @1 x)
   txOutAddr_ x = sel @0 x
 
-instance IsConwayUniv fn => EraSpecTxOut Conway fn where
+instance IsConwayUniv fn => EraSpecTxOut ConwayEra fn where
   irewardSpec _ _ = constrained $ \ [var|irewards|] ->
     match irewards $ \ [var|reserves|] [var|treasury|] [var|deltaRes|] [var|deltaTreas|] ->
       [ reserves ==. lit Map.empty
@@ -170,7 +168,7 @@ txOutSpec ::
   forall fn era.
   EraSpecTxOut era fn =>
   WitUniv era ->
-  Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
+  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
   Term fn (TxOut era) ->
   Pred fn
 txOutSpec univ delegs txOut =
@@ -207,7 +205,7 @@ instantaneousRewardsSpec ::
   (IsConwayUniv fn, Era era) =>
   WitUniv era ->
   Term fn AccountState ->
-  Specification fn (InstantaneousRewards (EraCrypto era))
+  Specification fn InstantaneousRewards
 instantaneousRewardsSpec univ acct = constrained $ \ [var| irewards |] ->
   match acct $ \ [var| acctRes |] [var| acctTreas |] ->
     match irewards $ \ [var| reserves |] [var| treasury |] [var| deltaRes |] [var| deltaTreas |] ->
@@ -223,4 +221,3 @@ instantaneousRewardsSpec univ acct = constrained $ \ [var| irewards |] ->
       , assert $ (toDelta_ (foldMap_ id (rng_ reserves))) - deltaRes <=. toDelta_ acctRes
       , assert $ (toDelta_ (foldMap_ id (rng_ treasury))) - deltaTreas <=. toDelta_ acctTreas
       ]
-
