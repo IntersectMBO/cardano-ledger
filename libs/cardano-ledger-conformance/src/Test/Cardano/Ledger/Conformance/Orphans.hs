@@ -62,7 +62,9 @@ instance NFData BootstrapAddr
 
 instance NFData Timelock
 
-instance NFData HashedTimelock
+instance NFData HSTimelock
+
+instance NFData HSPlutusScript
 
 instance NFData UTxOState
 
@@ -204,7 +206,9 @@ instance ToExpr BootstrapAddr
 
 instance ToExpr Timelock
 
-instance ToExpr HashedTimelock
+instance ToExpr HSTimelock
+
+instance ToExpr HSPlutusScript
 
 instance ToExpr TxBody
 
@@ -306,7 +310,9 @@ instance FixupSpecRep BootstrapAddr
 
 instance FixupSpecRep Timelock
 
-instance FixupSpecRep HashedTimelock
+instance FixupSpecRep HSTimelock
+
+instance FixupSpecRep HSPlutusScript
 
 instance FixupSpecRep UTxOState
 
