@@ -6,13 +6,16 @@ module Test.Cardano.Ledger.Conformance.Utils where
 
 import Cardano.Crypto.Hash (ByteString, Hash, HashAlgorithm, hashFromBytes, hashToBytes, sizeHash)
 import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
-import Cardano.Ledger.Crypto (HASH)
+import Cardano.Ledger.Crypto (ADDRHASH, HASH)
 import qualified Data.ByteString.Base16 as B16
 import Data.Data (Proxy (..))
 import Test.Cardano.Ledger.TreeDiff (Expr, ToExpr (..))
 
 standardHashSize :: Int
 standardHashSize = fromIntegral . sizeHash $ Proxy @HASH
+
+standardAddrHashSize :: Int
+standardAddrHashSize = fromIntegral . sizeHash $ Proxy @ADDRHASH
 
 agdaHashToBytes :: Int -> Integer -> ByteString
 agdaHashToBytes hs = B16.encode . naturalToBytes hs . fromInteger
