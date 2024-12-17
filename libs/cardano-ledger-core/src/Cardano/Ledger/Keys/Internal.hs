@@ -1,50 +1,31 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Keys.Internal (
-  KeyRole (..),
-  HasKeyRole (..),
-  asWitness,
-
   -- * DSIGN
+  DSIGN,
   DSignable,
   VKey (..),
   signedDSIGN,
   verifySignedDSIGN,
   hashSignature,
 
-  -- * Key hashes
-  KeyHash (..),
-  hashKey,
-
-  -- * VRF Key Hashes
-  KeyRoleVRF (..),
-  VRFVerKeyHash (..),
-  toVRFVerKeyHash,
-  fromVRFVerKeyHash,
-
-  -- * Genesis delegations
-  GenDelegPair (..),
-  GenDelegs (..),
+  -- * Key roles
+  KeyRole (..),
+  HasKeyRole (..),
+  asWitness,
 
   -- * Re-exports from cardano-crypto-class
   decodeSignedDSIGN,
   encodeSignedDSIGN,
-  Hash.hashWithSerialiser,
 
   -- * Concrete crypto algorithms
   Hash,
@@ -55,29 +36,24 @@ where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
-import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
-  decodeRecordNamed,
-  encodeListLen,
  )
 import Cardano.Ledger.Binary.Crypto
-import Cardano.Ledger.Crypto (ADDRHASH, DSIGN, HASH)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
-import qualified Data.Aeson as Aeson
 import Data.Coerce (Coercible, coerce)
-import Data.Default (Default (..))
 import Data.Kind (Type)
-import Data.Map.Strict (Map)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
+
+-- | Cryptographic saigning algorithm used on Cardano blockchain.
+type DSIGN = DSIGN.Ed25519DSIGN
 
 -- | The role of a key.
 --
@@ -181,83 +157,6 @@ hashSignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith DSIGN
 {-# INLINE hashSignature #-}
 
 --------------------------------------------------------------------------------
--- Key Hashes
---------------------------------------------------------------------------------
-
--- | Discriminated hash of public Key
-newtype KeyHash (r :: KeyRole) = KeyHash
-  {unKeyHash :: Hash.Hash ADDRHASH (DSIGN.VerKeyDSIGN DSIGN)}
-  deriving (Show, Eq, Ord)
-  deriving newtype
-    ( NFData
-    , NoThunks
-    , Generic
-    , ToCBOR
-    , FromCBOR
-    , EncCBOR
-    , DecCBOR
-    , ToJSONKey
-    , FromJSONKey
-    , ToJSON
-    , FromJSON
-    , Default
-    )
-
-instance HasKeyRole KeyHash
-
--- | Hash a given public key
-hashKey :: VKey kd -> KeyHash kd
-hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
-
---------------------------------------------------------------------------------
--- Genesis delegation
---
--- TODO should this really live in here?
---------------------------------------------------------------------------------
-
-data GenDelegPair = GenDelegPair
-  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate)
-  , genDelegVrfHash :: !(VRFVerKeyHash 'GenDelegVRF)
-  }
-  deriving (Show, Eq, Ord, Generic)
-
-instance NoThunks GenDelegPair
-
-instance NFData GenDelegPair
-
-instance EncCBOR GenDelegPair where
-  encCBOR (GenDelegPair hk vrf) =
-    encodeListLen 2 <> encCBOR hk <> encCBOR vrf
-
-instance DecCBOR GenDelegPair where
-  decCBOR = do
-    decodeRecordNamed
-      "GenDelegPair"
-      (const 2)
-      (GenDelegPair <$> decCBOR <*> decCBOR)
-  {-# INLINE decCBOR #-}
-
-instance ToJSON GenDelegPair where
-  toJSON (GenDelegPair d v) =
-    Aeson.object
-      [ "delegate" .= d
-      , "vrf" .= v
-      ]
-
-instance FromJSON GenDelegPair where
-  parseJSON =
-    Aeson.withObject "GenDelegPair" $ \obj ->
-      GenDelegPair
-        <$> obj .: "delegate"
-        <*> obj .: "vrf"
-
-newtype GenDelegs = GenDelegs
-  { unGenDelegs :: Map (KeyHash 'Genesis) GenDelegPair
-  }
-  deriving (Eq, EncCBOR, DecCBOR, NoThunks, NFData, Generic, FromJSON, ToJSON)
-  deriving (Show) via Quiet GenDelegs
-
---------------------------------------------------------------------------------
 -- crypto-parametrised types
 --
 -- Within `cardano-ledger`, we parametrise everything on our `crypto` type
@@ -266,38 +165,9 @@ newtype GenDelegs = GenDelegs
 -- provide some type aliases which unwrap the crypto parameters.
 --------------------------------------------------------------------------------
 
-type Hash = Hash.Hash HASH
+-- TODO deprecate
+type Hash = Hash.Hash Hash.Blake2b_256
 
 type SignedDSIGN = DSIGN.SignedDSIGN DSIGN
 
 type SignKeyDSIGN = DSIGN.SignKeyDSIGN DSIGN
-
-data KeyRoleVRF
-  = StakePoolVRF
-  | GenDelegVRF
-  | BlockIssuerVRF
-
--- | Discriminated hash of VRF Verification Key
-newtype VRFVerKeyHash (r :: KeyRoleVRF) = VRFVerKeyHash
-  {unVRFVerKeyHash :: Hash.Hash HASH KeyRoleVRF}
-  deriving (Show, Eq, Ord)
-  deriving newtype
-    ( NFData
-    , NoThunks
-    , Generic
-    , ToCBOR
-    , FromCBOR
-    , EncCBOR
-    , DecCBOR
-    , ToJSONKey
-    , FromJSONKey
-    , ToJSON
-    , FromJSON
-    , Default
-    )
-
-toVRFVerKeyHash :: Hash.Hash HASH (VRF.VerKeyVRF v) -> VRFVerKeyHash (r :: KeyRoleVRF)
-toVRFVerKeyHash = VRFVerKeyHash . Hash.castHash
-
-fromVRFVerKeyHash :: VRFVerKeyHash (r :: KeyRoleVRF) -> Hash.Hash HASH (VRF.VerKeyVRF v)
-fromVRFVerKeyHash = Hash.castHash . unVRFVerKeyHash

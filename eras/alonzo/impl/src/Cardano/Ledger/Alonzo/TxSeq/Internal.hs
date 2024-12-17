@@ -45,7 +45,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (Hash)
-import Cardano.Ledger.SafeHash (SafeToHash, originalBytes)
 import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)

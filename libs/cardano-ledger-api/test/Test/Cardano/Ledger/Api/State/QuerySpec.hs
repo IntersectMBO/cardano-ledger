@@ -34,7 +34,6 @@ import Cardano.Ledger.Conway.Governance (
   rsEnactStateL,
  )
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState

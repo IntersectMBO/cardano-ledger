@@ -30,15 +30,13 @@ import Cardano.Ledger.Binary (
   fromPlainDecoder,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Hashes (EraIndependentTxBody, KeyHash (..), hashKey)
 import Cardano.Ledger.Keys.Internal (
   Hash,
-  KeyHash (..),
   KeyRole (..),
   SignedDSIGN,
   VKey,
   asWitness,
-  hashKey,
   hashSignature,
  )
 import Cardano.Ledger.MemoBytes (EqRaw (..))

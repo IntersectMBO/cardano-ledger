@@ -18,7 +18,7 @@ import Cardano.Ledger.Address (Addr (..), raCredential, pattern RewardAccount)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (KeyRole (..), asWitness, hashKey)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
   PoolParams (..),
@@ -34,7 +34,6 @@ import Cardano.Ledger.PoolParams (
   ppRewardAccount,
   ppVrf,
  )
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   LedgerEnv (..),
   ShelleyLEDGER,
@@ -62,10 +61,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (
-  ShelleyTxWits,
-  addrWits,
- )
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))

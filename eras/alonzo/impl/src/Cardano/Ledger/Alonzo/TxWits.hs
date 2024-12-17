@@ -96,8 +96,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyRole (Witness), WitVKey)
-import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
+import Cardano.Ledger.Keys (BootstrapWitness, WitVKey)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
@@ -118,7 +117,6 @@ import Cardano.Ledger.Plutus.Language (
   plutusBinary,
   plutusLanguage,
  )
-import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxWits (
   ShelleyTxWits (..),
   mapTraverseableDecoderA,

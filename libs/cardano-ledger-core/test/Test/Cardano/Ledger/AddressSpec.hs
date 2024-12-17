@@ -14,7 +14,7 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
 import Cardano.Ledger.Binary (Version, byronProtVer, decodeFull', natVersion, serialize')
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto (ADDRHASH)
+import Cardano.Ledger.Hashes (ADDRHASH)
 import Cardano.Ledger.Keys (
   BootstrapWitness (..),
   bootstrapWitKeyHash,

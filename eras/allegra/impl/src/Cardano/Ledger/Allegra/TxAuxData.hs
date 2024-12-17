@@ -40,11 +40,6 @@ import Cardano.Ledger.Binary (
   peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Core (
-  Era (..),
-  EraTxAuxData (..),
- )
-import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -56,7 +51,7 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoized,
  )
-import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, ShelleyTxAuxData (..), validMetadatum)
 import Codec.CBOR.Decoding (
   TokenType (

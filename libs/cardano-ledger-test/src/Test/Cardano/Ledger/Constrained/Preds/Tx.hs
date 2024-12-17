@@ -25,21 +25,12 @@ import Cardano.Ledger.Binary.Encoding (EncCBOR)
 import Cardano.Ledger.CertState (CertState, certDStateL, dsGenDelegsL)
 import Cardano.Ledger.Coin (Coin (..), rationalToCoinViaCeiling)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Keys (
-  GenDelegPair (..),
-  GenDelegs (..),
-  Hash,
-  KeyHash,
-  KeyRole (..),
-  WitVKey (..),
-  asWitness,
-  coerceKeyRole,
- )
+import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
+import Cardano.Ledger.Keys (Hash, WitVKey (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))

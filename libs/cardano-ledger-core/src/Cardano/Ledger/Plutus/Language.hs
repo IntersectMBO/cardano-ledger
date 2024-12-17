@@ -72,8 +72,7 @@ import Cardano.Ledger.Binary (
   unlessDecoderVersionAtLeast,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Hashes (ScriptHash (..))
-import Cardano.Ledger.SafeHash (SafeToHash (..))
+import Cardano.Ledger.Hashes (SafeToHash (..), ScriptHash (..))
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (when)
 import Data.Aeson (

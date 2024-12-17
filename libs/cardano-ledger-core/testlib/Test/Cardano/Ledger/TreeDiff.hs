@@ -33,7 +33,6 @@ import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
-import Cardano.Ledger.SafeHash
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO

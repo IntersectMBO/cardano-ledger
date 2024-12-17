@@ -36,14 +36,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys (
-  KeyHash,
-  KeyRole (..),
-  KeyRoleVRF (StakePoolVRF),
-  VRFVerKeyHash,
-  asWitness,
-  hashKey,
- )
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (
   PoolParams (..),
   ppCost,
@@ -56,7 +49,6 @@ import Cardano.Ledger.PoolParams (
   ppRewardAccount,
   ppVrf,
  )
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (

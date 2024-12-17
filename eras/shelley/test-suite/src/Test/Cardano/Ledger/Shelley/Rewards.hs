@@ -56,12 +56,7 @@ import Cardano.Ledger.EpochBoundary (
   sumAllStake,
   sumStakePerPool,
  )
-import Cardano.Ledger.Keys (
-  KeyHash,
-  KeyRole (..),
-  VKey (..),
-  hashKey,
- )
+import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
 import Cardano.Ledger.Shelley.Core

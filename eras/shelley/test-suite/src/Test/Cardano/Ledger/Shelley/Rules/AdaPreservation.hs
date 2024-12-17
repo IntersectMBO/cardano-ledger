@@ -34,9 +34,6 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Internal (compareAdaPots)
 import Cardano.Ledger.Shelley.LedgerState (

@@ -52,11 +52,9 @@ import Cardano.Ledger.Binary.Crypto (
   encodeSignedDSIGN,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto (ADDRHASH)
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Hashes (ADDRHASH, EraIndependentTxBody, KeyHash (..))
 import Cardano.Ledger.Keys.Internal (
   Hash,
-  KeyHash (..),
   KeyRole (..),
   SignedDSIGN,
   VKey (..),
