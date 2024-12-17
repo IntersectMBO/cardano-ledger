@@ -106,7 +106,6 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)

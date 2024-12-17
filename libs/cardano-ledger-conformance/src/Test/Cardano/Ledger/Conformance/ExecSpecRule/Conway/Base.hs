@@ -51,7 +51,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParams)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
@@ -123,8 +123,8 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
  )
 
 import Cardano.Crypto.Hash (ByteString, Hash)
-import Cardano.Ledger.Crypto (DSIGN, HASH)
-import Cardano.Ledger.Keys (KeyRole (..), VKey (..))
+import Cardano.Ledger.Core
+import Cardano.Ledger.Keys (DSIGN, VKey (..))
 import Test.Cardano.Ledger.Constrained.Conway.Utxo (witnessDepositPurpose)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv (..), witness)
 import Test.Cardano.Ledger.Conway.Arbitrary ()

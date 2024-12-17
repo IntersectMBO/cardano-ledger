@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Stop re-exporting `ScriptHash` from `Cardano.Ledger.Shelley.Scripts`. Import it instead from `Cardano.Ledger.Hashes`.
 * Deprecate `Shelley` type synonym
 * Deprecate `PPUpdateEnv`
 * Remove crypto parametrization from:

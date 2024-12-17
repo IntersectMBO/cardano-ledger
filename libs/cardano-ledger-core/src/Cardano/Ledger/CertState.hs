@@ -78,25 +78,14 @@ import Cardano.Ledger.Binary (
   toMemptyLens,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Coin (
-  Coin (..),
-  DeltaCoin (..),
- )
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.Keys (
-  GenDelegPair (..),
-  GenDelegs (..),
-  KeyHash (..),
-  KeyRole (..),
- )
+import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Slot (
-  EpochNo (..),
-  SlotNo (..),
- )
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), UView (RewDepUView, SPoolUView))
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))

@@ -23,7 +23,6 @@ import Cardano.Ledger.Plutus (
   exBudgetToExUnits,
   transExUnits,
  )
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))

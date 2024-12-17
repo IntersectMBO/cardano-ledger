@@ -64,15 +64,10 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (
   Hash,
-  KeyHash (..),
-  KeyRole (..),
-  KeyRoleVRF (..),
   SignedDSIGN,
   VKey (..),
-  VRFVerKeyHash,
   WitVKey (..),
   asWitness,
-  hashKey,
   signedDSIGN,
  )
 import Cardano.Ledger.PoolParams (
@@ -80,7 +75,6 @@ import Cardano.Ledger.PoolParams (
   PoolParams (..),
   StakePoolRelay (..),
  )
-import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash)

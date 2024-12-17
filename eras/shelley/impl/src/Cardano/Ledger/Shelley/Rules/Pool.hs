@@ -45,8 +45,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Crypto (HASH)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOL)

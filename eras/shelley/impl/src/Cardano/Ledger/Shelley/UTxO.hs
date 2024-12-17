@@ -45,8 +45,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Keys (
   GenDelegs (..),
-  KeyHash (..),
-  KeyRole (..),
   asWitness,
   genDelegKeyHash,
  )

@@ -27,7 +27,6 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))

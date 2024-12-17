@@ -105,7 +105,6 @@ import Cardano.Ledger.Plutus.Language (
   plutusSLanguage,
   withSLanguage,
  )
-import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..), nativeMultiSigTag)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), deepseq)

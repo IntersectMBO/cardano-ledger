@@ -96,12 +96,7 @@ import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (Testnet), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
-import Cardano.Ledger.Keys (
-  KeyHash (..),
-  KeyRole (..),
-  coerceKeyRole,
-  hashKey,
- )
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))

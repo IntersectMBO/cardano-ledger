@@ -32,7 +32,6 @@ import Cardano.Ledger.Plutus (
   PlutusWithContext (..),
   hashPlutusScript,
  )
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)

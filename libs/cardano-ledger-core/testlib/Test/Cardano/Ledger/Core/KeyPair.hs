@@ -50,18 +50,14 @@ import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
+  DSIGN,
   HasKeyRole,
-  KeyHash (..),
-  KeyRole (..),
   VKey (..),
   asWitness,
-  hashKey,
   signedDSIGN,
  )
 import Cardano.Ledger.Keys.WitVKey
-import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)

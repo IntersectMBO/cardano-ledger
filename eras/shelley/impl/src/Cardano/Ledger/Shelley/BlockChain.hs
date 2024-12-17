@@ -51,8 +51,7 @@ import Cardano.Ledger.Binary (
   withSlice,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
-import Cardano.Ledger.SafeHash (SafeToHash (..))
+import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx, segwitTx)
 import Cardano.Ledger.Slot (SlotNo (..))

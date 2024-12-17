@@ -21,7 +21,6 @@ import Cardano.Ledger.Conway.Governance (
   PulsingSnapshot (..),
   newEpochStateDRepPulsingStateL,
  )
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState (..))
 import Cardano.Ledger.Shelley.Rules (runIdentity)
 import Cardano.Ledger.TxIn (TxIn)

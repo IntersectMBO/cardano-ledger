@@ -62,7 +62,6 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Keys (unVRFVerKeyHash)
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -74,7 +73,6 @@ import Cardano.Ledger.Plutus.Language (Language (..), LegacyPlutusArgs (..), Plu
 import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Cardano.Ledger.UTxO (UTxO (..))

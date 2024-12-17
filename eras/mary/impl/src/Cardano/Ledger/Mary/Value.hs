@@ -67,8 +67,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Coin (Coin (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Crypto (ADDRHASH)
-import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Exception (assert)

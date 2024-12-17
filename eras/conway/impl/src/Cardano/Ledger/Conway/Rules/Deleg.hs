@@ -51,7 +51,6 @@ import Cardano.Ledger.Conway.TxCert (
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.Shelley.HardForks as HF
 import qualified Cardano.Ledger.UMap as UM

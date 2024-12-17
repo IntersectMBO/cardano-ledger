@@ -16,7 +16,6 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Scripts (

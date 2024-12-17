@@ -19,7 +19,6 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data (..))
 import Cardano.Ledger.Shelley.PParams (Update)

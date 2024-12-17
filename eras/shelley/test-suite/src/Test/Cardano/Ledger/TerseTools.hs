@@ -13,8 +13,6 @@ import Cardano.Ledger.Credential (
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Keys (KeyHash (..))
-import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))

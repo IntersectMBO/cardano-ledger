@@ -27,7 +27,6 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyRoleVRF (GenDelegVRF), VRFVerKeyHash)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types

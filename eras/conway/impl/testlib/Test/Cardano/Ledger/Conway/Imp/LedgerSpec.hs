@@ -21,7 +21,6 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.SafeHash (originalBytesSize)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), mkMempoolEnv)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState

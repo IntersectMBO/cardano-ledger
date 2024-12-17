@@ -1,7 +1,6 @@
 module Test.Cardano.Ledger.Shelley.WitVKeys (tests) where
 
-import Cardano.Ledger.Core (EraIndependentTxBody)
-import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.Core
 import Data.List (nub, sort)
 import Data.Set as Set (fromList, singleton)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)

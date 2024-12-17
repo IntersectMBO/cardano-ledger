@@ -17,7 +17,6 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Keys
 import Cardano.Ledger.Slot (EpochNo (..))
 import Data.Default (Default (def))
 import qualified Data.ListMap as ListMap

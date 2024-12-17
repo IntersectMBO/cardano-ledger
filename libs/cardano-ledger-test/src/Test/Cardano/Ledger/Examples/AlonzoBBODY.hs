@@ -39,17 +39,11 @@ import Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (
-  KeyRole (..),
-  coerceKeyRole,
-  hashKey,
- )
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState (..),

@@ -32,7 +32,6 @@ import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Cardano.Ledger.Shelley.API (
   AccountState,
   DelplEnv (..),
-  KeyRole (..),
   Ptr (..),
   ShelleyDELPL,
  )

@@ -32,12 +32,10 @@ import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (byronProtVer, decodeFull', serialize')
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   BootstrapWitness (..),
   ChainCode (..),
-  KeyHash,
-  KeyRole (Witness),
+  DSIGN,
   VKey,
   WitVKey (..),
   asWitness,
