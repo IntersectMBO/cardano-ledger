@@ -55,13 +55,13 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Crypto (
   encodeSignedDSIGN,
+  encodeSignedKES,
   encodeVerKeyDSIGN,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   Hash,
   KeyHash (..),
@@ -72,9 +72,7 @@ import Cardano.Ledger.Keys (
   VRFVerKeyHash,
   WitVKey (..),
   asWitness,
-  encodeSignedKES,
   hashKey,
-  hashVerKeyVRF,
   signedDSIGN,
  )
 import Cardano.Ledger.PoolParams (
@@ -101,6 +99,7 @@ import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
+import Cardano.Protocol.Crypto hiding (CertifiedVRF, SignedKES)
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),

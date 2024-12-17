@@ -40,25 +40,17 @@ import Cardano.Ledger.EpochBoundary as X (
   Stake (..),
  )
 import Cardano.Ledger.Keys as X (
-  CertifiedVRF,
   GenDelegPair (..),
   GenDelegs (..),
   Hash,
-  KESignable,
   KeyHash (..),
   KeyRole (..),
   SignKeyDSIGN,
-  SignKeyKES,
-  SignKeyVRF,
   SignedDSIGN,
-  SignedKES,
   VKey (..),
-  VerKeyKES,
-  VerKeyVRF,
   WitVKey (..),
   coerceKeyRole,
   hashKey,
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.Keys.Bootstrap as X (
   BootstrapWitness (..),

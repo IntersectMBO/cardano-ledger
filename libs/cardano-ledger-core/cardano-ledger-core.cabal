@@ -98,7 +98,6 @@ library
     bytestring,
     cardano-crypto,
     cardano-crypto-class ^>=2.2,
-    cardano-crypto-praos,
     cardano-crypto-wrapper,
     cardano-data ^>=1.2,
     cardano-ledger-binary ^>=1.6,

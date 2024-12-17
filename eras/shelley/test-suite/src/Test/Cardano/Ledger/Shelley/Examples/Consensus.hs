@@ -31,6 +31,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
 import Cardano.Ledger.Shelley.TxWits
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert

@@ -24,7 +24,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness, hashKey)
 import Cardano.Ledger.PoolParams (PoolMetadata (..), StakePoolRelay (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -37,7 +36,6 @@ import Cardano.Ledger.Shelley.API (
   ShelleyTxBody (..),
   ShelleyTxOut (..),
   TxIn (..),
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
@@ -61,6 +59,7 @@ import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Tools (estimateMinFeeTx)
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.Crypto (StandardCrypto, hashVerKeyVRF)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL

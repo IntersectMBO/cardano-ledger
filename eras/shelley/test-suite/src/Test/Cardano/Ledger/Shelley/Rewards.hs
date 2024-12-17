@@ -49,7 +49,6 @@ import Cardano.Ledger.Binary (encCBOR, hashWithEncoder, natVersion, shelleyProtV
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.EpochBoundary (
   Stake (..),
   maxPool,
@@ -62,7 +61,6 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   VKey (..),
   hashKey,
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
@@ -111,6 +109,7 @@ import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
+import Cardano.Protocol.Crypto (VRF, hashVerKeyVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)

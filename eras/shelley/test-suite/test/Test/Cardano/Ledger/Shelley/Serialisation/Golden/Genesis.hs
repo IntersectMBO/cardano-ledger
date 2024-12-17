@@ -18,11 +18,11 @@ import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Binary (Tokens (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core (emptyPParams, ppDL, ppMaxBBSizeL, ppMaxBHSizeL)
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys (KeyRoleVRF (..), VRFVerKeyHash (..), hashKey, hashVerKeyVRF)
+import Cardano.Ledger.Keys (KeyRoleVRF (..), VRFVerKeyHash (..), hashKey)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
+import Cardano.Protocol.Crypto (StandardCrypto, hashVerKeyVRF)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad
 import Data.Aeson hiding (Encoding)

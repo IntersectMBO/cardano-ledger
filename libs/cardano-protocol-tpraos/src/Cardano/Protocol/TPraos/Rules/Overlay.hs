@@ -43,24 +43,22 @@ import Cardano.Ledger.Binary (
   encodeNull,
   peekTokenType,
  )
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
-  KESignable,
   KeyHash (..),
   KeyRole (..),
   KeyRoleVRF (..),
   VRFVerKeyHash (..),
   coerceKeyRole,
   hashKey,
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),
  )
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst, (-*))
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (BHeader),

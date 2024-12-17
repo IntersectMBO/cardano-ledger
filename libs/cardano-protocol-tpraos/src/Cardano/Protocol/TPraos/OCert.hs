@@ -39,14 +39,13 @@ import Cardano.Ledger.Binary (
   runByteBuilder,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto (Crypto, KES)
 import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
   SignedDSIGN,
-  VerKeyKES,
   coerceKeyRole,
  )
+import Cardano.Protocol.Crypto (Crypto, KES, VerKeyKES)
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS

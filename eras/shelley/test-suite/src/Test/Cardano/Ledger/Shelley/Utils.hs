@@ -73,10 +73,11 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto, DSIGN)
+import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Shelley.API (ApplyBlock, KeyRole (..), VKey (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
+import Cardano.Protocol.Crypto (Crypto)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
 import Cardano.Slotting.EpochInfo (

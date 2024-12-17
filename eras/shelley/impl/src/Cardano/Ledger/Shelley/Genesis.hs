@@ -41,8 +41,10 @@ module Cardano.Ledger.Shelley.Genesis (
 )
 where
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import Cardano.Crypto.KES.Class (totalPeriodsKES)
+import Cardano.Crypto.DSIGN (Ed25519DSIGN)
+import Cardano.Crypto.Hash (Blake2b_256)
+import qualified Cardano.Crypto.Hash.Class as H
+import Cardano.Crypto.KES (Sum6KES, totalPeriodsKES)
 import Cardano.Ledger.Address (Addr, serialiseAddr)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
@@ -74,7 +76,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (HASH, KES, StandardCrypto)
+import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Genesis (EraGenesis (..))
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -559,11 +561,11 @@ initialFundsPseudoTxIn addr =
     pseudoTxId =
       TxId
         . unsafeMakeSafeHash
-        . ( Crypto.castHash ::
-              Crypto.Hash HASH Addr ->
-              Crypto.Hash HASH EraIndependentTxBody
+        . ( H.castHash ::
+              H.Hash HASH Addr ->
+              H.Hash HASH EraIndependentTxBody
           )
-        . Crypto.hashWith serialiseAddr
+        . H.hashWith serialiseAddr
 
 {-------------------------------------------------------------------------------
   Genesis validation
@@ -644,7 +646,7 @@ validateGenesis
                     activeSlotsCoeff
                     minLength
               else Nothing
-      kesPeriods = totalPeriodsKES (Proxy @(KES StandardCrypto))
+      kesPeriods = totalPeriodsKES (Proxy @(Sum6KES Ed25519DSIGN Blake2b_256))
       checkKesEvolutions =
         if sgMaxKESEvolutions <= fromIntegral kesPeriods
           then Nothing
