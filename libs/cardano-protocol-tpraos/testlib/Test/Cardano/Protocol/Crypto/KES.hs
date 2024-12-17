@@ -8,8 +8,7 @@ module Test.Cardano.Protocol.Crypto.KES (
 ) where
 
 import qualified Cardano.Crypto.KES.Class as KES
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (VerKeyKES)
+import Cardano.Protocol.Crypto
 
 data KESKeyPair c = KESKeyPair
   { kesSignKey :: !(KES.UnsoundPureSignKeyKES (KES c))

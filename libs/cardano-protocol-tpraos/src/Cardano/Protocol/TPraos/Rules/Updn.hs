@@ -13,8 +13,8 @@ module Cardano.Protocol.TPraos.Rules.Updn (
 where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Slot
+import Cardano.Protocol.Crypto
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import GHC.Generics (Generic)

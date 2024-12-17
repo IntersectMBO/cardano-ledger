@@ -161,7 +161,6 @@ library testlib
     ImpSpec,
     base,
     bytestring,
-    cardano-crypto-class,
     cardano-data,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron,

@@ -36,16 +36,10 @@ import Cardano.Ledger.Binary.Plain (
   decodeRecordNamed,
   encodeListLen,
  )
-import Cardano.Ledger.Crypto (Crypto, VRF)
-import Cardano.Ledger.Keys (
-  GenDelegs (..),
-  KESignable,
-  KeyHash,
-  KeyRole (..),
-  VRFSignable,
- )
+import Cardano.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),

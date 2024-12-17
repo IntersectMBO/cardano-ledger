@@ -30,9 +30,9 @@ import Cardano.Ledger.Keys (
   VKey (..),
   coerceKeyRole,
   hashKey,
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Protocol.TPraos.Rules.Overlay (
   OBftSlot (..),

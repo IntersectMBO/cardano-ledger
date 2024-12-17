@@ -14,6 +14,7 @@ source-repository head
 
 library
   exposed-modules:
+    Cardano.Protocol.Crypto
     Cardano.Protocol.TPraos.API
     Cardano.Protocol.TPraos.BHeader
     Cardano.Protocol.TPraos.OCert
@@ -38,6 +39,7 @@ library
     base >=4.14 && <5,
     bytestring,
     cardano-crypto-class ^>=2.2,
+    cardano-crypto-praos ^>=2.2,
     cardano-ledger-allegra >=1.1,
     cardano-ledger-alonzo >=1.2,
     cardano-ledger-babbage >=1.1,

@@ -18,11 +18,7 @@ where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
-import Cardano.Ledger.Keys (
-  coerceKeyRole,
-  hashKey,
-  hashVerKeyVRF,
- )
+import Cardano.Ledger.Keys (coerceKeyRole, hashKey)
 import Cardano.Ledger.Shelley.API (
   AccountState (..),
   CertState (..),
@@ -44,6 +40,7 @@ import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import qualified Cardano.Ledger.UMap as UM
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈))
 import Data.Foldable (fold)
