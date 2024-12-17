@@ -48,7 +48,7 @@ import Test.QuickCheck (Arbitrary (..), frequency, genericShrink, shrinkList)
 -- HasSpec
 ------------------------------------------------------------------------
 
-instance Ord a => Sized (Map.Map a b) where
+instance Ord a => Sized fn (Map.Map a b) where
   sizeOf = toInteger . Map.size
   liftSizeSpec sz cant = typeSpec $ defaultMapSpec {mapSpecSize = TypeSpec sz cant}
   liftMemberSpec xs = case NE.nonEmpty (nubOrd xs) of

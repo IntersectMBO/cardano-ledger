@@ -389,7 +389,9 @@ cNothing_ = con @"Nothing" (lit ())
 sel ::
   forall n fn a c as.
   ( SimpleRep a ~ ProdOver as
-  , TheSop a ~ '[c ::: as]
+  , -- TODO: possibly investigate deriving this from the actual SOP of SimpleRep, as currently it's buggy if you define
+    -- your own custom SOP-like SimpleRep by defining SimpleRep rather than TheSop (it's stupid I know)
+    TheSop a ~ '[c ::: as]
   , TypeSpec fn a ~ TypeSpec fn (ProdOver as)
   , Select fn n as
   , HasSpec fn a

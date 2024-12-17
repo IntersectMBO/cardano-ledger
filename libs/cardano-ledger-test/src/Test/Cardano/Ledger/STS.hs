@@ -22,6 +22,7 @@ import Constrained
 
 import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
+import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Instances
@@ -67,6 +68,34 @@ stsPropertyV2 ::
   (env -> st -> sig -> st -> p) ->
   Property
 stsPropertyV2 specEnv specState specSig prop =
+  stsPropertyV2' @r specEnv specState specSig (\env _ _ -> specState env) prop
+
+stsPropertyV2' ::
+  forall r fn env st sig fail p.
+  ( Environment (EraRule r ConwayEra) ~ env
+  , State (EraRule r ConwayEra) ~ st
+  , Signal (EraRule r ConwayEra) ~ sig
+  , PredicateFailure (EraRule r ConwayEra) ~ fail
+  , STS (EraRule r ConwayEra)
+  , BaseM (EraRule r ConwayEra) ~ ReaderT Globals Identity
+  , PrettyA st
+  , PrettyA sig
+  , PrettyA env
+  , PrettyA fail
+  , Testable p
+  , HasSpec fn env
+  , HasSpec fn st
+  , HasSpec fn sig
+  ) =>
+  Specification fn env ->
+  (env -> Specification fn st) ->
+  (env -> st -> Specification fn sig) ->
+  -- This allows you to write a separate spec for the state after the transition
+  -- and thus e.g. loosening requirements set only for the sake of generation
+  (env -> st -> sig -> Specification fn st) ->
+  (env -> st -> sig -> st -> p) ->
+  Property
+stsPropertyV2' specEnv specState specSig specPostState prop =
   uncurry forAllShrinkBlind (genShrinkFromSpec specEnv) $ \env ->
     counterexample (show $ ppString "env = " <> prettyA env) $
       uncurry forAllShrinkBlind (genShrinkFromSpec $ specState env) $ \st ->
@@ -74,7 +103,7 @@ stsPropertyV2 specEnv specState specSig prop =
           uncurry forAllShrinkBlind (genShrinkFromSpec $ specSig env st) $ \sig ->
             counterexample (show $ ppString "sig = " <> prettyA sig) $
               runShelleyBase $ do
-                res <- applySTS @(EraRule r era) $ TRC (env, st, sig)
+                res <- applySTS @(EraRule r ConwayEra) $ TRC (env, st, sig)
                 pure $ case res of
                   Left pfailures -> counterexample (show $ prettyA pfailures) $ property False
                   Right st' ->
@@ -84,7 +113,7 @@ stsPropertyV2 specEnv specState specSig prop =
                             <> prettyA st'
                             <> ppString ("\nspec = \n" ++ show (specState env))
                       )
-                      $ conformsToSpec @fn st' (specState env) .&&. prop env st sig st'
+                      $ conformsToSpecProp @fn st' (specPostState env st sig) .&&. prop env st sig st'
 
 -- STS properties ---------------------------------------------------------
 
@@ -105,12 +134,14 @@ prop_GOV =
 --     (\_env _st -> TrueSpec)
 --     $ \_env _st _sig _st' -> True
 
-prop_EPOCH :: Property
-prop_EPOCH =
-  stsPropertyV2 @"EPOCH" @ConwayFn
+prop_EPOCH :: EpochNo -> Property
+prop_EPOCH epochNo =
+  stsPropertyV2' @"EPOCH" @ConwayFn
     TrueSpec
-    (\_env -> TrueSpec)
-    (\_env _st -> TrueSpec)
+    (\_env -> epochStateSpec (lit epochNo))
+    (\_env _st -> epochSignalSpec epochNo)
+    (\_env _st _newEpoch -> TrueSpec)
+    -- (\_env _st newEpoch -> epochStateSpec (lit newEpoch))
     $ \_env _st _sig _st' -> True
 
 prop_ENACT :: Property
@@ -266,12 +297,12 @@ tests_STS =
   testGroup
     "STS property tests"
     [ govTests
-    -- , utxoTests
-    -- TODO: this is probably one of the last things we want to
-    -- get passing as it depends on being able to generate a complete
-    -- `EpochState era`
-    -- , testProperty "prop_EPOCH" prop_EPOCH
-    -- , testProperty "prop_LEDGER" prop_LEDGER
+    , -- , utxoTests
+      -- TODO: this is probably one of the last things we want to
+      -- get passing as it depends on being able to generate a complete
+      -- `EpochState era`
+      testProperty "prop_EPOCH" prop_EPOCH
+      -- , testProperty "prop_LEDGER" prop_LEDGER
     ]
 
 govTests :: TestTree

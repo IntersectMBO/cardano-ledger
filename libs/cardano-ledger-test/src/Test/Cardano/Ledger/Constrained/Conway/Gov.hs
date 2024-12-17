@@ -47,13 +47,13 @@ govProposalsSpec ::
   GovEnv ConwayEra ->
   Specification fn (Proposals ConwayEra)
 govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
-  proposalsSpec (lit geEpoch) (lit gePPolicy) geCertState
+  proposalsSpec (lit geEpoch) (lit gePPolicy) (lit geCertState)
 
 proposalsSpec ::
   IsConwayUniv fn =>
   Term fn EpochNo ->
   Term fn (StrictMaybe ScriptHash) ->
-  CertState ConwayEra ->
+  Term fn (CertState ConwayEra) ->
   Specification fn (Proposals ConwayEra)
 proposalsSpec geEpoch gePPolicy geCertState =
   constrained $ \ [var|props|] ->
@@ -155,11 +155,14 @@ proposalsSpec geEpoch gePPolicy geCertState =
                 Explain (pure "TreasuryWithdrawal fails") $
                   Block
                     [ dependsOn gasOther withdrawMap
-                    , forAll (dom_ withdrawMap) $ \ [var|rewAcnt|] ->
-                        match rewAcnt $ \ [var|network|] [var|credential|] ->
-                          [ network ==. lit Testnet
-                          , credential `member_` lit registeredCredentials
-                          ]
+                    , match geCertState $ \_vState _pState [var|dState|] ->
+                        match dState $ \ [var|rewardMap|] _ _ _ ->
+                          reify rewardMap (Map.keysSet . umElems) $ \ [var|registeredCredentials|] ->
+                            forAll (dom_ withdrawMap) $ \ [var|rewAcnt|] ->
+                              match rewAcnt $ \ [var|network|] [var|credential|] ->
+                                [ network ==. lit Testnet
+                                , credential `member_` registeredCredentials
+                                ]
                     , assert $ policy ==. gePPolicy
                     ]
             )
@@ -173,7 +176,6 @@ proposalsSpec geEpoch gePPolicy geCertState =
   where
     treeGenHint = (Just 2, 10)
     listSizeHint = 5
-    registeredCredentials = Map.keysSet $ umElems $ dsUnified $ certDState geCertState
 
 allGASInTree ::
   (IsConwayUniv fn, IsPred p fn) =>
@@ -279,6 +281,7 @@ withPrevActId gas k =
         -- InfoAction
         (branch $ \_ -> True)
     ]
+
 onHardFork ::
   (IsConwayUniv fn, IsPred p fn) =>
   Term fn (GovActionState ConwayEra) ->

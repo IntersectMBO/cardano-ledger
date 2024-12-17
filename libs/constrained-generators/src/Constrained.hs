@@ -36,6 +36,7 @@ module Constrained (
   NumSpec (..),
   MapSpec (..),
   FoldSpec (..),
+  Sized (..),
   simplifySpec,
   addToErrorSpec,
   genFromSpecT,

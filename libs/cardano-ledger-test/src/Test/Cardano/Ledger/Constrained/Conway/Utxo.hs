@@ -123,7 +123,7 @@ utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, ueCertState} =
           [ assert $ utxosUtxo ==. lit uecUTxO
           , match utxosGovState $ \props _ constitution _ _ _ _ ->
               match constitution $ \_ policy ->
-                satisfies props $ proposalsSpec (lit curEpoch) policy ueCertState
+                satisfies props $ proposalsSpec (lit curEpoch) policy (lit ueCertState)
           ]
   where
     curEpoch = runReader (epochFromSlot ueSlot) testGlobals
