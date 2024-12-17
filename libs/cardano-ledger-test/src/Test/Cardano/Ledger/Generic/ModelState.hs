@@ -35,11 +35,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.EpochBoundary (SnapShots, emptySnapShots)
-import Cardano.Ledger.Keys (
-  GenDelegs (..),
-  KeyHash (..),
-  KeyRole (..),
- )
+import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core

@@ -25,8 +25,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.EpochBoundary as EB
-import Cardano.Ledger.Keys (asWitness, hashKey)
-import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)

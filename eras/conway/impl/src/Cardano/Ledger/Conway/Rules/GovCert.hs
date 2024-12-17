@@ -59,7 +59,6 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
-import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)

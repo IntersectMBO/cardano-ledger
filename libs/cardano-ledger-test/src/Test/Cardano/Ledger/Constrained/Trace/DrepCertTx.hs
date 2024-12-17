@@ -25,10 +25,9 @@ import Cardano.Ledger.Conway.Governance (
   proposalsGovStateL,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
-import Cardano.Ledger.Crypto (HASH)
+import Cardano.Ledger.Core
 import Cardano.Ledger.DRep hiding (drepDeposit)
 import Cardano.Ledger.EpochBoundary (ssStakeMarkPoolDistrL)
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -79,7 +78,6 @@ import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (
   stepProp,
  )
 import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.EraClass
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..))
 import Test.Cardano.Ledger.Generic.MockChain (MockBlock (..), MockChainState (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (pcNewEpochState, pcTxCert, ppList)

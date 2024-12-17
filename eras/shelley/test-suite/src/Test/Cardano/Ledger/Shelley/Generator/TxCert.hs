@@ -18,7 +18,7 @@ where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
-import Cardano.Ledger.Keys (coerceKeyRole, hashKey)
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.API (
   AccountState (..),
   CertState (..),
@@ -27,8 +27,6 @@ import Cardano.Ledger.Shelley.API (
   DState (..),
   GenDelegPair (..),
   GenDelegs (..),
-  KeyHash,
-  KeyRole (..),
   Network (..),
   PState (..),
   PoolParams (..),

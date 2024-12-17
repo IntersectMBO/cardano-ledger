@@ -19,10 +19,9 @@ import Cardano.Ledger.Allegra.TxAuxData (
   timelockScriptsAllegraTxAuxDataL,
  )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Core (EraTxAuxData (..), upgradeScript)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts ()
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.TxAuxData (validMetadatum)
 import Control.DeepSeq (deepseq)
 

@@ -76,11 +76,10 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Genesis (EraGenesis (..))
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.StabilityWindow

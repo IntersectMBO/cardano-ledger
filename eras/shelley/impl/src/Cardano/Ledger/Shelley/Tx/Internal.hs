@@ -60,7 +60,6 @@ import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (bootstrapWitKeyHash)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (
@@ -72,7 +71,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoBytes,
   pattern Memo,
  )
-import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts (validateMultiSig)
 import Cardano.Ledger.Shelley.TxAuxData ()

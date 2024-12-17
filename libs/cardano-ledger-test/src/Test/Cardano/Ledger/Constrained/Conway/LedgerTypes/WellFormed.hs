@@ -28,7 +28,6 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.SafeHash ()
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UTxO (UTxO (..))
 import Constrained hiding (Value)

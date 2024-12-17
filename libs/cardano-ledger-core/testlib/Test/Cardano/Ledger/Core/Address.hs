@@ -28,15 +28,13 @@ import Cardano.Ledger.Address (
  )
 import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), word8ToNetwork)
 import Cardano.Ledger.Binary (byronProtVer, decodeFull, decodeFull')
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
   PaymentCredential,
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (ADDRHASH)
-import Cardano.Ledger.Hashes (ScriptHash (ScriptHash))
-import Cardano.Ledger.Keys (KeyHash (..))
 import Control.Monad (ap)
 import qualified Control.Monad.Fail
 import Data.Binary (Get)

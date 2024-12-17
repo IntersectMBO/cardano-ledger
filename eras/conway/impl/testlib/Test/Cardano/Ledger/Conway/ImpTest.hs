@@ -185,10 +185,8 @@ import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),

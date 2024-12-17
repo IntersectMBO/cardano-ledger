@@ -24,9 +24,8 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness, hashKey)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (PoolMetadata (..), StakePoolRelay (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API (
   Addr,

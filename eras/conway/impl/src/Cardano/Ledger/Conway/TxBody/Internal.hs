@@ -103,7 +103,6 @@ import Cardano.Ledger.Conway.TxCert (
   ConwayTxCertUpgradeError,
  )
 import Cardano.Ledger.Conway.TxOut ()
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
@@ -116,7 +115,6 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoized,
  )
-import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Arrow (left)

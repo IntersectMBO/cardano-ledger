@@ -58,7 +58,6 @@ import Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (..),
  )
-import Cardano.Ledger.Keys (KeyRole (..), hashKey)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Shelley.API (
   Block (..),

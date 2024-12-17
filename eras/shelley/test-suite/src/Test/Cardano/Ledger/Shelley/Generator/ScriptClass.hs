@@ -34,7 +34,7 @@ module Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
 where
 
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness, hashKey)
+import Cardano.Ledger.Keys (asWitness)
 import Data.List (permutations)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map

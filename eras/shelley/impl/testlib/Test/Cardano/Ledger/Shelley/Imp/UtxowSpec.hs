@@ -16,7 +16,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Keys.Bootstrap
-import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,

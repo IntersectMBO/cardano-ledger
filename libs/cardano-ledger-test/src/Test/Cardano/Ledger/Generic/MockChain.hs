@@ -16,7 +16,6 @@
 module Test.Cardano.Ledger.Generic.MockChain where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),

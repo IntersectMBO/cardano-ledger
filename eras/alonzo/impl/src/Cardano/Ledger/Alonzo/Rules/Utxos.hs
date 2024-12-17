@@ -66,7 +66,6 @@ import Cardano.Ledger.Plutus.Evaluate (
   ScriptResult (..),
  )
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
-import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), updateStakeDistribution)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)

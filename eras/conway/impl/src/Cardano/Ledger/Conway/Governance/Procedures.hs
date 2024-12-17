@@ -115,8 +115,6 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential (..), credToText)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.RewardProvenance ()
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)

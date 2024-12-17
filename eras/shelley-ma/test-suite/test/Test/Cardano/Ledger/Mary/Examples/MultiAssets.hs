@@ -21,7 +21,7 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Keys (asWitness, hashKey)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value (
@@ -30,7 +30,6 @@ import Cardano.Ledger.Mary.Value (
   MultiAsset (..),
   PolicyID (..),
  )
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure (..), ShelleyUtxowPredFailure (..))

@@ -42,7 +42,6 @@ where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash (
-  Blake2b_256,
   Hash,
   HashAlgorithm,
   hashToBytes,
@@ -73,8 +72,8 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (DSIGN)
-import Cardano.Ledger.Shelley.API (ApplyBlock, KeyRole (..), VKey (..))
+import Cardano.Ledger.Keys (DSIGN, VKey (..))
+import Cardano.Ledger.Shelley.API (ApplyBlock)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Protocol.Crypto (Crypto)
@@ -155,7 +154,7 @@ mkSeedFromWords ::
   RawSeed ->
   Seed
 mkSeedFromWords stuff =
-  mkSeedFromBytes . hashToBytes $ hashWithEncoder @Blake2b_256 shelleyProtVer encCBOR stuff
+  mkSeedFromBytes . hashToBytes $ hashWithEncoder @HASH shelleyProtVer encCBOR stuff
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey ::

@@ -27,7 +27,6 @@ module Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   evalMultiSig,
   validateMultiSig,
-  ScriptHash (..),
   nativeMultiSigTag,
   eqMultiSigRaw,
   MultiSigRaw,
@@ -44,7 +43,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), (!>))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
@@ -55,7 +53,6 @@ import Cardano.Ledger.MemoBytes (
   memoBytes,
   pattern Memo,
  )
-import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS

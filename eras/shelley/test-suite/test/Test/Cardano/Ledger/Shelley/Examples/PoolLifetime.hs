@@ -43,13 +43,12 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.EpochBoundary as EB
-import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
+import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
 import Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),
  )
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (

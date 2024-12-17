@@ -16,7 +16,6 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.UMap as UM

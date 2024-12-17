@@ -41,10 +41,9 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   unVotingProcedures,
  )
 import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..), inject)

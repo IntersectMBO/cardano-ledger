@@ -98,8 +98,6 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), FuturePParams (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap (

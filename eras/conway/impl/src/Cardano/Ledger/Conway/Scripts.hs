@@ -50,7 +50,6 @@ import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Conway.TxCert ()
 import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.Plutus.Language
-import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)

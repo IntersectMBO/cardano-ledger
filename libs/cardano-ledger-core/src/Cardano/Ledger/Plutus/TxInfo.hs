@@ -66,10 +66,8 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
-import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Plutus.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
-import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), txInToText)
 import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (SlotNo (..))

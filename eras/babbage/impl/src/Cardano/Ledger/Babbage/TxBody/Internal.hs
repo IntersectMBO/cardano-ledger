@@ -112,7 +112,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, PolicyID (..), policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
@@ -127,7 +126,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
   zipMemoRawType,
  )
-import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))

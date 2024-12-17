@@ -151,18 +151,12 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToTe
 import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
-  KeyHash,
-  KeyRole (..),
-  KeyRoleVRF (..),
-  VRFVerKeyHash,
   asWitness,
   bootstrapWitKeyHash,
-  hashKey,
   makeBootstrapWitness,
   witVKeyHash,
  )
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, extractHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation (translateToShelleyLedgerStateFromUtxo)
 import Cardano.Ledger.Shelley.AdaPots (sumAdaPots, totalAdaPotsES)

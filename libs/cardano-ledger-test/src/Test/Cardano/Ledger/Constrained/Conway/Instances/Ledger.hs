@@ -100,23 +100,14 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD
-import Cardano.Ledger.Keys (
-  BootstrapWitness,
-  GenDelegPair (..),
-  GenDelegs (..),
-  KeyHash,
-  KeyRole (..),
-  VRFVerKeyHash (..),
-  WitVKey,
-  coerceKeyRole,
- )
+import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
+import Cardano.Ledger.Keys (BootstrapWitness, WitVKey, coerceKeyRole)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
-import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardPulser (RSLP))

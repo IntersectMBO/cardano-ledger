@@ -20,30 +20,24 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (
   Network (..),
+  ProtVer (..),
   StrictMaybe (..),
   TxIx,
   mkTxIxPartial,
   natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Credential (
-  Credential (..),
-  StakeCredential,
- )
+import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API (
-  ProtVer (..),
-  UTxO (..),
- )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   smartUTxOState,
  )
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..), inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)

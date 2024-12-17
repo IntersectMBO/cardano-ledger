@@ -19,8 +19,7 @@ module Test.Cardano.Ledger.Generic.Indexed where
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness), SignKeyDSIGN, VKey, WitVKey (..), hashKey)
-import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.Keys (SignKeyDSIGN, VKey, WitVKey (..))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.Proof (Proof (..))
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)

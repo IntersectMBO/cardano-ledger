@@ -30,7 +30,6 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Babbage.TxCert ()
 import Cardano.Ledger.Plutus.Language
-import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import GHC.Generics

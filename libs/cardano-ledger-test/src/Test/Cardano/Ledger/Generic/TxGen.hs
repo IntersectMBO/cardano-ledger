@@ -47,13 +47,8 @@ import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), mkTxIxPartial
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (
-  KeyHash,
-  KeyRole (..),
-  coerceKeyRole,
- )
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus.Data (Data, Datum (..), dataToBinaryData, hashData)
-import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   Addr (..),
   Credential (..),

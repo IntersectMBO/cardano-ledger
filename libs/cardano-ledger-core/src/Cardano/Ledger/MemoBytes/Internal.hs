@@ -72,8 +72,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Encode, encode, runE)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core.Era (Era, eraProtVerLow)
-import Cardano.Ledger.Crypto (HASH)
-import Cardano.Ledger.SafeHash (SafeHash, SafeToHash (..))
+import Cardano.Ledger.Hashes (HASH, SafeHash, SafeToHash (..))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy as BSL
