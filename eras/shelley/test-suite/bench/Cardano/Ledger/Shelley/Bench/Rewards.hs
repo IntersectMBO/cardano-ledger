@@ -22,13 +22,14 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking), hashVerKeyVRF)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Reader (runReader, runReaderT)

@@ -59,14 +59,11 @@ import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordName
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
-  KESignable,
   KeyHash,
   KeyRole (..),
-  VRFSignable,
   coerceKeyRole,
  )
 import Cardano.Ledger.Mary (MaryEra)
@@ -83,6 +80,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody,
   BHeader,

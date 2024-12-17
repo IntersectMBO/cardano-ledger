@@ -10,7 +10,7 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()

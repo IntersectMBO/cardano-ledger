@@ -29,7 +29,6 @@ module BenchValidation (
 
 import Cardano.Ledger.BaseTypes (Globals (..), unBlocksMade)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Crypto
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
 import Cardano.Ledger.Shelley.BlockChain (slotToNonce)
@@ -39,6 +38,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   nesBcur,
  )
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.API (
   ChainDepState (..),
   ChainTransitionError,

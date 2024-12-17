@@ -36,7 +36,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   HasKeyRole (coerceKeyRole),
   Hash,
@@ -44,6 +43,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   signedDSIGN,
  )
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),

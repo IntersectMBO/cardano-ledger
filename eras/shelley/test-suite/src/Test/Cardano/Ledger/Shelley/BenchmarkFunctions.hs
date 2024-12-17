@@ -43,7 +43,6 @@ import Cardano.Ledger.Keys (
   VRFVerKeyHash,
   asWitness,
   hashKey,
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.PoolParams (
   PoolParams (..),
@@ -72,6 +71,7 @@ import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Data.Default (def)
 import qualified Data.Map.Strict as Map

@@ -2,6 +2,8 @@
 
 ## 1.4.0.0
 
+* Move `Crypto` and `StandardCrypto` definitions from `cardano-ledger-core` into new
+  `Cardano.Protocol.Crypto` module.
 * Remove crypto parametrization from types:
   * `LedgerView`, `ChainDepState`
   * `HashHeader` `PrevHash`, `LastAppliedBlock`
@@ -11,6 +13,7 @@
 
 ### `testlib`
 
+* Move `VRFNatVal` from `cardano-ledger-shelley-test` in here.
 * Change type of `kesSignKey` in `KESKeyPair` and result of `evolveKESUntil` from `SignKeyKES` to `UnsoundPureSignKeyKES`
 
 ## 1.3.0.0

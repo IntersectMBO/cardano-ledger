@@ -76,28 +76,22 @@ import Cardano.Ledger.Binary (
   szCases,
   withWordSize,
  )
+import Cardano.Ledger.Binary.Crypto
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
  )
 import Cardano.Ledger.Keys (
-  CertifiedVRF,
   Hash,
   KeyHash,
   KeyRole (..),
-  SignedKES,
   VKey,
-  VerKeyVRF,
-  decodeSignedKES,
-  decodeVerKeyVRF,
-  encodeSignedKES,
-  encodeVerKeyVRF,
   hashKey,
  )
 import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)

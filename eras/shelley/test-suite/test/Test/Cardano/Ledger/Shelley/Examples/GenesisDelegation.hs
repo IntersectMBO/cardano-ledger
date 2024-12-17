@@ -26,7 +26,6 @@ import Cardano.Ledger.Keys (
   VRFVerKeyHash,
   asWitness,
   hashKey,
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -41,6 +40,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default (Default)

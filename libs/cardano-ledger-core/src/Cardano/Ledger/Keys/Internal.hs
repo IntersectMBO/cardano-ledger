@@ -34,7 +34,6 @@ module Cardano.Ledger.Keys.Internal (
   -- * VRF Key Hashes
   KeyRoleVRF (..),
   VRFVerKeyHash (..),
-  hashVerKeyVRF,
   toVRFVerKeyHash,
   fromVRFVerKeyHash,
 
@@ -42,44 +41,20 @@ module Cardano.Ledger.Keys.Internal (
   GenDelegPair (..),
   GenDelegs (..),
 
-  -- * KES
-  KESignable,
-
-  -- * VRF
-  VRFSignable,
-
   -- * Re-exports from cardano-crypto-class
   decodeSignedDSIGN,
   encodeSignedDSIGN,
   Hash.hashWithSerialiser,
-  decodeSignedKES,
-  decodeVerKeyKES,
-  encodeSignedKES,
-  encodeVerKeyKES,
-  KES.signedKES,
-  KES.updateKES,
-  KES.verifyKES,
-  KES.verifySignedKES,
-  decodeVerKeyVRF,
-  encodeVerKeyVRF,
-  VRF.verifyVRF,
 
-  -- * Re-parametrised types over `crypto`
-  CertifiedVRF,
+  -- * Concrete crypto algorithms
   Hash,
   SignedDSIGN,
   SignKeyDSIGN,
-  SignedKES,
-  SignKeyKES,
-  SignKeyVRF,
-  VerKeyKES,
-  VerKeyVRF,
 )
 where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
-import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -90,7 +65,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Crypto
-import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
+import Cardano.Ledger.Crypto (ADDRHASH, DSIGN, HASH)
 import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
@@ -235,18 +210,6 @@ hashKey :: VKey kd -> KeyHash kd
 hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
 
 --------------------------------------------------------------------------------
--- KES
---------------------------------------------------------------------------------
-
-type KESignable c = KES.Signable (KES c)
-
---------------------------------------------------------------------------------
--- VRF
---------------------------------------------------------------------------------
-
-type VRFSignable c = VRF.Signable (VRF c)
-
---------------------------------------------------------------------------------
 -- Genesis delegation
 --
 -- TODO should this really live in here?
@@ -309,18 +272,6 @@ type SignedDSIGN = DSIGN.SignedDSIGN DSIGN
 
 type SignKeyDSIGN = DSIGN.SignKeyDSIGN DSIGN
 
-type SignedKES c = KES.SignedKES (KES c)
-
-type SignKeyKES c = KES.SignKeyKES (KES c)
-
-type VerKeyKES c = KES.VerKeyKES (KES c)
-
-type CertifiedVRF c = VRF.CertifiedVRF (VRF c)
-
-type SignKeyVRF c = VRF.SignKeyVRF (VRF c)
-
-type VerKeyVRF c = VRF.VerKeyVRF (VRF c)
-
 data KeyRoleVRF
   = StakePoolVRF
   | GenDelegVRF
@@ -344,9 +295,6 @@ newtype VRFVerKeyHash (r :: KeyRoleVRF) = VRFVerKeyHash
     , FromJSON
     , Default
     )
-
-hashVerKeyVRF :: Crypto c => VerKeyVRF c -> VRFVerKeyHash (r :: KeyRoleVRF)
-hashVerKeyVRF = VRFVerKeyHash . Hash.castHash . VRF.hashVerKeyVRF
 
 toVRFVerKeyHash :: Hash.Hash HASH (VRF.VerKeyVRF v) -> VRFVerKeyHash (r :: KeyRoleVRF)
 toVRFVerKeyHash = VRFVerKeyHash . Hash.castHash
