@@ -20,13 +20,14 @@ module Test.Cardano.Ledger.Shelley.Examples.Federation (
 )
 where
 
+import Cardano.Crypto.DSIGN (SignKeyDSIGN)
 import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Core (EraPParams (..), PParams (..))
 import Cardano.Ledger.Keys (
+  DSIGN,
   GenDelegPair (..),
   KeyHash (..),
   KeyRole (..),
-  SignKeyDSIGN,
   VKey (..),
   coerceKeyRole,
   hashKey,
@@ -70,7 +71,7 @@ mkAllCoreNodeKeys w =
     (skCold, vkCold) = mkKeyPair (RawSeed w 0 0 0 1)
 
 coreNodes ::
-  [ ( (SignKeyDSIGN, VKey 'Genesis)
+  [ ( (SignKeyDSIGN DSIGN, VKey 'Genesis)
     , AllIssuerKeys MockCrypto 'GenesisDelegate
     )
   ]
@@ -82,7 +83,7 @@ coreNodes =
 -- === Signing (Secret) Keys
 -- Retrieve the signing key for a core node by providing
 -- a number in the range @[0, ... ('numCoreNodes'-1)]@.
-coreNodeSK :: Int -> SignKeyDSIGN
+coreNodeSK :: Int -> SignKeyDSIGN DSIGN
 coreNodeSK = fst . fst . (coreNodes !!)
 
 -- | === Verification (Public) Keys

@@ -33,7 +33,6 @@ import Test.Cardano.Ledger.Shelley.Utils
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained.Base (conformsToSpecE)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)

@@ -14,6 +14,8 @@
 
 module Cardano.Ledger.Hashes (
   -- * Hashing algorithms
+  Hash.Hash,
+  Hash.HashAlgorithm,
   HASH,
   ADDRHASH,
 
@@ -42,6 +44,7 @@ module Cardano.Ledger.Hashes (
   KeyHash (..),
   KeyRole (..),
   hashKey,
+  hashTxBodySignature,
 
   -- ** Script Hashes
   ScriptHash (..),
@@ -189,6 +192,13 @@ instance HasKeyRole KeyHash
 -- | Hash a given public key
 hashKey :: VKey kd -> KeyHash kd
 hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
+
+-- | Hash a given signature
+hashTxBodySignature ::
+  DSIGN.SignedDSIGN DSIGN (Hash.Hash HASH EraIndependentTxBody) ->
+  Hash.Hash HASH (DSIGN.SignedDSIGN DSIGN (Hash.Hash HASH EraIndependentTxBody))
+hashTxBodySignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith DSIGN.rawSerialiseSigDSIGN sigDSIGN
+{-# INLINE hashTxBodySignature #-}
 
 --------------------------------------------------------------------------------
 -- Script Hashes

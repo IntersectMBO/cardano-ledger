@@ -17,16 +17,20 @@ import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Keys
+import Cardano.Ledger.EpochBoundary
+import Cardano.Ledger.Keys hiding (Hash)
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
-import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.PoolDistr
+import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
+import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap (rewardMap, sPoolMap)
 import qualified Cardano.Ledger.UMap as UM (ptrMap)
+import Cardano.Ledger.UTxO
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
@@ -642,7 +646,7 @@ data AggregateStats = AggregateStats
   , gsKeyHashStakePool :: !(Stat (KeyHash 'StakePool))
   , gsKeyHashGenesis :: !(Stat (KeyHash 'Genesis))
   , gsKeyHashGenesisDelegate :: !(Stat (KeyHash 'GenesisDelegate))
-  , gsVerKeyVRF :: !(Stat (Hash KeyRoleVRF))
+  , gsVerKeyVRF :: !(Stat (Hash HASH KeyRoleVRF))
   , gsScriptHash :: !(Stat ScriptHash)
   }
 

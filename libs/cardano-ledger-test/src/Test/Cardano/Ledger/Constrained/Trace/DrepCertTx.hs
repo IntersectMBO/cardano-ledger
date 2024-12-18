@@ -8,7 +8,6 @@
 -- | Generate a Simple Tx with 1 inout, 1 output, and 1 DRep related Cert
 module Test.Cardano.Ledger.Constrained.Trace.DrepCertTx where
 
-import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,

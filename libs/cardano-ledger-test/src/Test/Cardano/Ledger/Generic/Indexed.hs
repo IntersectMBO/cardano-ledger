@@ -16,10 +16,10 @@
 --   Useful when writing unit tests
 module Test.Cardano.Ledger.Generic.Indexed where
 
-import Cardano.Crypto.DSIGN.Class ()
+import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (SignKeyDSIGN, VKey, WitVKey (..))
+import Cardano.Ledger.Keys (DSIGN, VKey, WitVKey (..))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.Proof (Proof (..))
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
@@ -28,7 +28,7 @@ import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 -- Keys and KeyHashes
 
 -- | A signing key
-newtype SKey (kr :: KeyRole) = SKey SignKeyDSIGN
+newtype SKey (kr :: KeyRole) = SKey (SignKeyDSIGN DSIGN)
 
 -- By changing the parameter 'n', we get a different keyPair
 theKeyPair :: Int -> KeyPair kr

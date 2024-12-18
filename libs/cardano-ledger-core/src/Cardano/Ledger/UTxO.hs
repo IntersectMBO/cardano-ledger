@@ -51,7 +51,7 @@ import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys (DSignable, Hash, verifySignedDSIGN)
+import Cardano.Ledger.Keys (verifySignedDSIGN)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
@@ -152,10 +152,8 @@ txInsFilter (UTxO utxo') txIns = UTxO (utxo' `Map.restrictKeys` txIns)
 
 -- | Verify a transaction body witness
 verifyWitVKey ::
-  ( Typeable kr
-  , DSignable (Hash EraIndependentTxBody)
-  ) =>
-  Hash EraIndependentTxBody ->
+  Typeable kr =>
+  Hash HASH EraIndependentTxBody ->
   WitVKey kr ->
   Bool
 verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash (coerce sig)

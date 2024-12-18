@@ -15,7 +15,8 @@
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding (tests) where
 
-import qualified Cardano.Crypto.Hash as Monomorphic
+import Cardano.Crypto.DSIGN (SignedDSIGN)
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.KES (SignedKES, unsoundPureSignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
@@ -63,8 +64,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (
-  Hash,
-  SignedDSIGN,
+  DSIGN,
   VKey (..),
   WitVKey (..),
   asWitness,
@@ -180,10 +180,10 @@ checkEncodingCBORCBORGroup name x t =
    in checkEncoding shelleyProtVer encCBORGroup d name x t
 
 getRawKeyHash :: KeyHash 'Payment -> ByteString
-getRawKeyHash (KeyHash hsh) = Monomorphic.hashToBytes hsh
+getRawKeyHash (KeyHash hsh) = Hash.hashToBytes hsh
 
 getRawNonce :: Nonce -> ByteString
-getRawNonce (Nonce hsh) = Monomorphic.hashToBytes hsh
+getRawNonce (Nonce hsh) = Hash.hashToBytes hsh
 getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
 
 testGKey :: GenesisKeyPair c
@@ -260,7 +260,7 @@ testKey1SigToken = e
       signedDSIGN
         (sKey testKey1)
         (extractHash (testTxbHash @era)) ::
-        SignedDSIGN (Hash EraIndependentTxBody)
+        SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
     CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedDSIGN s)
 
 testOpCertSigTokens ::
@@ -307,7 +307,7 @@ testScript2 = RequireSignature $ asWitness testKeyHash2
 
 testHeaderHash :: HashHeader
 testHeaderHash =
-  HashHeader $ coerce (hashWithEncoder shelleyProtVer encCBOR 0 :: Hash Int)
+  HashHeader $ coerce (hashWithEncoder shelleyProtVer encCBOR 0 :: Hash HASH Int)
 
 testBHB ::
   forall era.
