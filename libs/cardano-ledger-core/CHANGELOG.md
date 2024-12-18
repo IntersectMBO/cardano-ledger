@@ -32,6 +32,7 @@
 * Add `PlutusDebugOverrides` argument to `debugPlutus`
 * Add `PlutusDebugOverrides` data type
 * Add `Read` instance for `Language`
+* Export constructor for `Url`
 
 ### `testlib`
 

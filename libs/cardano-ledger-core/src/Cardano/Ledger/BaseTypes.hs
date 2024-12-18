@@ -41,7 +41,7 @@ module Cardano.Ledger.BaseTypes (
   invalidKey,
   mkNonceFromOutputVRF,
   mkNonceFromNumber,
-  Url,
+  Url (..),
   urlToText,
   textToUrl,
   DnsName,
