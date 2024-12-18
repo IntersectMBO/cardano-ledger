@@ -44,6 +44,7 @@ library
     Test.Cardano.Ledger.Constrained.Conway.Pool
     Test.Cardano.Ledger.Constrained.Conway.TxBodySpec
     Test.Cardano.Ledger.Constrained.Conway.Utxo
+    Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
     Test.Cardano.Ledger.Constrained.Env
     Test.Cardano.Ledger.Constrained.Examples
     Test.Cardano.Ledger.Constrained.Lenses
@@ -170,6 +171,7 @@ library
     text,
     time,
     transformers,
+    tree-diff,
     unordered-containers,
     vector,
     vector-map,

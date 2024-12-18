@@ -2,6 +2,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -15,13 +18,15 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
 import Test.Cardano.Ledger.Constrained.Conway
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
 instance IsConwayUniv fn => ExecSpecRule fn "POOL" ConwayEra where
-  environmentSpec _ = poolEnvSpec
+  type ExecContext fn "POOL" ConwayEra = WitUniv ConwayEra
+  environmentSpec ctx = poolEnvSpec ctx
 
-  stateSpec _ _ = pStateSpec
+  stateSpec ctx _ = pStateSpec ctx
 
-  signalSpec _ = poolCertSpec
+  signalSpec wituniv env st = poolCertSpec @fn @ConwayEra wituniv env st
 
   runAgdaRule env st sig = unComputationResult $ Agda.poolStep env st sig
 

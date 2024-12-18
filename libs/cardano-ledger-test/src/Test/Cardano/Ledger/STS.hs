@@ -18,7 +18,7 @@ import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
 import Control.Monad.Reader
 import Control.State.Transition.Extended
 
-import Constrained
+import Constrained hiding (forAll)
 
 import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
@@ -31,9 +31,32 @@ import Test.Cardano.Ledger.Constrained.Conway.Pool
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Shelley.Utils
 
-import Test.QuickCheck
+import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Keys (KeyRole (..))
+import Constrained.Base (conformsToSpecE)
+import qualified Data.List.NonEmpty as NE
+import Data.Map (Map)
+import Data.Set (Set)
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv, genWitUniv, witness)
+import Test.QuickCheck hiding (witness)
 import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Tasty.QuickCheck hiding (witness)
+
+-- ==================================================
+
+-- | Several tests need some semi-randomcontext, this supplies that context
+genContext ::
+  Gen
+    ( WitUniv ConwayEra
+    , Set (Credential 'DRepRole)
+    , Map RewardAccount Coin
+    )
+genContext = do
+  univ <- genWitUniv @ConwayEra 200
+  delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
+  wdrls <- genFromSpec @ConwayFn (constrained $ \x -> (witness univ x))
+  pure (univ, delegatees, wdrls)
 
 ------------------------------------------------------------------------
 -- Properties
@@ -107,13 +130,19 @@ stsPropertyV2' specEnv specState specSig specPostState prop =
                 pure $ case res of
                   Left pfailures -> counterexample (show $ prettyA pfailures) $ property False
                   Right st' ->
-                    counterexample
-                      ( show $
-                          ppString "st' = "
-                            <> prettyA st'
-                            <> ppString ("\nspec = \n" ++ show (specState env))
-                      )
-                      $ conformsToSpecProp @fn st' (specPostState env st sig) .&&. prop env st sig st'
+                    case conformsToSpecE @fn
+                      st
+                      (specPostState env st sig)
+                      (pure "conformsToSpecE fails in STS tests") of
+                      Just es -> counterexample (unlines (NE.toList es)) False
+                      Nothing ->
+                        counterexample
+                          ( show $
+                              ppString "st' = "
+                                <> prettyA st'
+                                <> ppString ("\nspec = \n" ++ show (specState env))
+                          )
+                          $ prop env st sig st'
 
 -- STS properties ---------------------------------------------------------
 
@@ -200,36 +229,52 @@ prop_RATIFY =
 
 prop_CERT :: Property
 prop_CERT =
-  stsPropertyV2 @"CERT" @ConwayFn
-    certEnvSpec
-    (\_env -> certStateSpecEx)
-    (\env st -> txCertSpec env st)
-    -- TODO: we should probably check more things here
-    $ \_env _st _sig _st' -> True
+  forAll
+    genContext
+    ( \(conwayWitUniv, conwayDelegatees, conwayWdrls) ->
+        stsPropertyV2 @"CERT" @ConwayFn
+          (certEnvSpec conwayWitUniv)
+          (\_env -> certStateSpec conwayWitUniv conwayDelegatees conwayWdrls)
+          (\env st -> conwayTxCertSpec conwayWitUniv env st)
+          -- TODO: we should probably check more things here
+          $ \_env _st _sig _st' -> True
+    )
 
 prop_DELEG :: Property
 prop_DELEG =
-  stsPropertyV2 @"DELEG" @ConwayFn
-    delegEnvSpec
-    (\_env -> certStateSpecEx)
-    conwayDelegCertSpec
-    $ \_env _st _sig _st' -> True
+  forAll
+    genContext
+    ( \(conwayWitUniv, conwayDelegatees, conwayWdrls) ->
+        stsPropertyV2 @"DELEG" @ConwayFn
+          delegEnvSpec
+          (\_env -> certStateSpec conwayWitUniv conwayDelegatees conwayWdrls)
+          conwayDelegCertSpec
+          $ \_env _st _sig _st' -> True
+    )
 
 prop_POOL :: Property
 prop_POOL =
-  stsPropertyV2 @"POOL" @ConwayFn
-    poolEnvSpec
-    (\_env -> pStateSpec)
-    (\env st -> poolCertSpec env st)
-    $ \_env _st _sig _st' -> True
+  forAll
+    genContext
+    ( \(conwayWitUniv, _, _) ->
+        stsPropertyV2 @"POOL" @ConwayFn
+          (poolEnvSpec conwayWitUniv)
+          (\_env -> pStateSpec conwayWitUniv)
+          (\env st -> poolCertSpec @ConwayFn @ConwayEra conwayWitUniv env st)
+          $ \_env _st _sig _st' -> True
+    )
 
 prop_GOVCERT :: Property
 prop_GOVCERT =
-  stsPropertyV2 @"GOVCERT" @ConwayFn
-    govCertEnvSpec
-    (\_env -> certStateSpecEx)
-    (\env st -> govCertSpec env st)
-    $ \_env _st _sig _st' -> True
+  forAll
+    genContext
+    ( \(conwayWitUniv, conwayDelegatees, conwayWdrls) ->
+        stsPropertyV2 @"GOVCERT" @ConwayFn
+          (govCertEnvSpec conwayWitUniv)
+          (\_env -> certStateSpec conwayWitUniv conwayDelegatees conwayWdrls)
+          (\env st -> govCertSpec conwayWitUniv env st)
+          $ \_env _st _sig _st' -> True
+    )
 
 prop_UTXOW :: Property
 prop_UTXOW =
