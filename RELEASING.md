@@ -317,6 +317,8 @@ list of such packages as of today:
 * `libs/cardano-ledger-test`
 * `libs/plutus-preprocessor`
 * `libs/ledger-state`
+* `libs/cardano-ledger-conformance`
+* `libs/cardano-ledger-repl-environment`
 
 Above list is likely to change in the future.
 
