@@ -1,0 +1,271 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | Various identifiers in the ledger are hashes of particular structures.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- While the structures may change from era to era, the hash will remain the</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- same, and we can refer to the hash of, say, a transaction, without knowing</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- the actual transaction type. As such, we define a number of these hashes</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- here.</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Hashes</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Era-independent hash type identifiers.</span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><span class="hs-comment">-- $eraIndep</span></span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier">EraIndependentTxBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentBlockHeader"><span class="hs-identifier">EraIndependentBlockHeader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentBlockBody"><span class="hs-identifier">EraIndependentBlockBody</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentMetadata"><span class="hs-identifier">EraIndependentMetadata</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentScript"><span class="hs-identifier">EraIndependentScript</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentData"><span class="hs-identifier">EraIndependentData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentScriptData"><span class="hs-identifier">EraIndependentScriptData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxAuxData"><span class="hs-identifier">EraIndependentTxAuxData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentPParamView"><span class="hs-identifier">EraIndependentPParamView</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentScriptIntegrity"><span class="hs-identifier">EraIndependentScriptIntegrity</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Script hashes</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier">ScriptHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#DataHash"><span class="hs-identifier">DataHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">Cardano.Crypto.Hash</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Hash</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary.Plain</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-identifier">FromCBOR</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-identifier">ToCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html"><span class="hs-identifier">Cardano.Ledger.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#ADDRHASH"><span class="hs-identifier">ADDRHASH</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.SafeHash.html"><span class="hs-identifier">Cardano.Ledger.SafeHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.SafeHash.html#SafeHash"><span class="hs-identifier">SafeHash</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">FromJSON</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">FromJSONKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">ToJSON</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">ToJSONKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">--   $eraIndep</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--   Hashes carry around a phantom type parameter to identify the sort of thing</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--   they are hashing. This is useful to allow us to distinguish, say, a place</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--   where we expect the hash for a block from the hash for a script. However,</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--   the exact structure that makes up a &quot;block&quot; will differ from era to era. We</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--   still want to share the same namespace for the identifiers. Consequently we</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--   define some era-independent indices here.</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">data</span><span> </span><span id="EraIndependentTxBody"><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxBody"><span class="hs-identifier hs-var">EraIndependentTxBody</span></a></span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">data</span><span> </span><span id="EraIndependentBlockHeader"><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentBlockHeader"><span class="hs-identifier hs-var">EraIndependentBlockHeader</span></a></span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">data</span><span> </span><span id="EraIndependentBlockBody"><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentBlockBody"><span class="hs-identifier hs-var">EraIndependentBlockBody</span></a></span></span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">data</span><span> </span><span id="EraIndependentMetadata"><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentMetadata"><span class="hs-identifier hs-var">EraIndependentMetadata</span></a></span></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">data</span><span> </span><span id="EraIndependentTxAuxData"><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentTxAuxData"><span class="hs-identifier hs-var">EraIndependentTxAuxData</span></a></span></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">data</span><span> </span><span id="EraIndependentScript"><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentScript"><span class="hs-identifier hs-var">EraIndependentScript</span></a></span></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">data</span><span> </span><span id="EraIndependentData"><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentData"><span class="hs-identifier hs-var">EraIndependentData</span></a></span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">type</span><span> </span><span id="DataHash"><span class="annot"><a href="Cardano.Ledger.Hashes.html#DataHash"><span class="hs-identifier hs-var">DataHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Cardano.Ledger.SafeHash.html#SafeHash"><span class="hs-identifier hs-type">SafeHash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentData"><span class="hs-identifier hs-type">EraIndependentData</span></a></span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">data</span><span> </span><span id="EraIndependentScriptData"><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentScriptData"><span class="hs-identifier hs-var">EraIndependentScriptData</span></a></span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">data</span><span> </span><span id="EraIndependentPParamView"><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentPParamView"><span class="hs-identifier hs-var">EraIndependentPParamView</span></a></span></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">data</span><span> </span><span id="EraIndependentScriptIntegrity"><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentScriptIntegrity"><span class="hs-identifier hs-var">EraIndependentScriptIntegrity</span></a></span></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span id="local-6989586621679425918"><span id="local-6989586621679425919"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="ScriptHash"><span class="annot"><a href="Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-var">ScriptHash</span></a></span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="ScriptHash"><span class="annot"><a href="Cardano.Ledger.Hashes.html#ScriptHash"><span class="hs-identifier hs-var">ScriptHash</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">Hash.Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#ADDRHASH"><span class="hs-identifier hs-type">ADDRHASH</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Hashes.html#EraIndependentScript"><span class="hs-identifier hs-type">EraIndependentScript</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679425907"><span id="local-6989586621679425909"><span id="local-6989586621679425915"><span class="annot"><span class="annottext">Int -&gt; ScriptHash -&gt; ShowS
+[ScriptHash] -&gt; ShowS
+ScriptHash -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [ScriptHash] -&gt; ShowS
+$cshowList :: [ScriptHash] -&gt; ShowS
+show :: ScriptHash -&gt; String
+$cshow :: ScriptHash -&gt; String
+showsPrec :: Int -&gt; ScriptHash -&gt; ShowS
+$cshowsPrec :: Int -&gt; ScriptHash -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425899"><span id="local-6989586621679425904"><span class="annot"><span class="annottext">ScriptHash -&gt; ScriptHash -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: ScriptHash -&gt; ScriptHash -&gt; Bool
+$c/= :: ScriptHash -&gt; ScriptHash -&gt; Bool
+== :: ScriptHash -&gt; ScriptHash -&gt; Bool
+$c== :: ScriptHash -&gt; ScriptHash -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425866"><span id="local-6989586621679425870"><span id="local-6989586621679425874"><span id="local-6989586621679425878"><span id="local-6989586621679425882"><span id="local-6989586621679425886"><span id="local-6989586621679425891"><span class="annot"><span class="annottext">Eq ScriptHash
+ScriptHash -&gt; ScriptHash -&gt; Bool
+ScriptHash -&gt; ScriptHash -&gt; Ordering
+ScriptHash -&gt; ScriptHash -&gt; ScriptHash
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: ScriptHash -&gt; ScriptHash -&gt; ScriptHash
+$cmin :: ScriptHash -&gt; ScriptHash -&gt; ScriptHash
+max :: ScriptHash -&gt; ScriptHash -&gt; ScriptHash
+$cmax :: ScriptHash -&gt; ScriptHash -&gt; ScriptHash
+&gt;= :: ScriptHash -&gt; ScriptHash -&gt; Bool
+$c&gt;= :: ScriptHash -&gt; ScriptHash -&gt; Bool
+&gt; :: ScriptHash -&gt; ScriptHash -&gt; Bool
+$c&gt; :: ScriptHash -&gt; ScriptHash -&gt; Bool
+&lt;= :: ScriptHash -&gt; ScriptHash -&gt; Bool
+$c&lt;= :: ScriptHash -&gt; ScriptHash -&gt; Bool
+&lt; :: ScriptHash -&gt; ScriptHash -&gt; Bool
+$c&lt; :: ScriptHash -&gt; ScriptHash -&gt; Bool
+compare :: ScriptHash -&gt; ScriptHash -&gt; Ordering
+$ccompare :: ScriptHash -&gt; ScriptHash -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep ScriptHash x -&gt; ScriptHash
+forall x. ScriptHash -&gt; Rep ScriptHash x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep ScriptHash x -&gt; ScriptHash
+$cfrom :: forall x. ScriptHash -&gt; Rep ScriptHash x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679425856"><span class="annot"><span class="annottext">ScriptHash -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: ScriptHash -&gt; ()
+$crnf :: ScriptHash -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425840"><span id="local-6989586621679425844"><span id="local-6989586621679425849"><span class="annot"><span class="annottext">Context -&gt; ScriptHash -&gt; IO (Maybe ThunkInfo)
+Proxy ScriptHash -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy ScriptHash -&gt; String
+$cshowTypeOf :: Proxy ScriptHash -&gt; String
+wNoThunks :: Context -&gt; ScriptHash -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; ScriptHash -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; ScriptHash -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; ScriptHash -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425815"><span id="local-6989586621679425823"><span id="local-6989586621679425832"><span class="annot"><span class="annottext">Typeable ScriptHash
+ScriptHash -&gt; Encoding
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ScriptHash] -&gt; Size
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy ScriptHash -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; ToCBOR a
+encodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ScriptHash] -&gt; Size
+$cencodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ScriptHash] -&gt; Size
+encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy ScriptHash -&gt; Size
+$cencodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy ScriptHash -&gt; Size
+toCBOR :: ScriptHash -&gt; Encoding
+$ctoCBOR :: ScriptHash -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToCBOR</span></a></span></span></span></span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425797"><span id="local-6989586621679425804"><span class="annot"><span class="annottext">Typeable ScriptHash
+Proxy ScriptHash -&gt; Text
+forall s. Decoder s ScriptHash
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a) -&gt; (Proxy a -&gt; Text) -&gt; FromCBOR a
+label :: Proxy ScriptHash -&gt; Text
+$clabel :: Proxy ScriptHash -&gt; Text
+fromCBOR :: forall s. Decoder s ScriptHash
+$cfromCBOR :: forall s. Decoder s ScriptHash
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromCBOR</span></a></span></span></span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425770"><span id="local-6989586621679425778"><span id="local-6989586621679425787"><span class="annot"><span class="annottext">Typeable ScriptHash
+ScriptHash -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ScriptHash] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy ScriptHash -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ScriptHash] -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [ScriptHash] -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy ScriptHash -&gt; Size
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy ScriptHash -&gt; Size
+encCBOR :: ScriptHash -&gt; Encoding
+$cencCBOR :: ScriptHash -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425747"><span id="local-6989586621679425753"><span id="local-6989586621679425760"><span class="annot"><span class="annottext">Typeable ScriptHash
+Proxy ScriptHash -&gt; Text
+forall s. Decoder s ScriptHash
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy ScriptHash -&gt; Decoder s ()
+label :: Proxy ScriptHash -&gt; Text
+$clabel :: Proxy ScriptHash -&gt; Text
+dropCBOR :: forall s. Proxy ScriptHash -&gt; Decoder s ()
+$cdropCBOR :: forall s. Proxy ScriptHash -&gt; Decoder s ()
+decCBOR :: forall s. Decoder s ScriptHash
+$cdecCBOR :: forall s. Decoder s ScriptHash
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425718"><span id="local-6989586621679425723"><span id="local-6989586621679425728"><span id="local-6989586621679425733"><span id="local-6989586621679425739"><span class="annot"><span class="annottext">[ScriptHash] -&gt; Encoding
+[ScriptHash] -&gt; Value
+ScriptHash -&gt; Bool
+ScriptHash -&gt; Encoding
+ScriptHash -&gt; Value
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+omitField :: ScriptHash -&gt; Bool
+$comitField :: ScriptHash -&gt; Bool
+toEncodingList :: [ScriptHash] -&gt; Encoding
+$ctoEncodingList :: [ScriptHash] -&gt; Encoding
+toJSONList :: [ScriptHash] -&gt; Value
+$ctoJSONList :: [ScriptHash] -&gt; Value
+toEncoding :: ScriptHash -&gt; Encoding
+$ctoEncoding :: ScriptHash -&gt; Encoding
+toJSON :: ScriptHash -&gt; Value
+$ctoJSON :: ScriptHash -&gt; Value
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425700"><span id="local-6989586621679425705"><span id="local-6989586621679425711"><span class="annot"><span class="annottext">Maybe ScriptHash
+Value -&gt; Parser [ScriptHash]
+Value -&gt; Parser ScriptHash
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+omittedField :: Maybe ScriptHash
+$comittedField :: Maybe ScriptHash
+parseJSONList :: Value -&gt; Parser [ScriptHash]
+$cparseJSONList :: Value -&gt; Parser [ScriptHash]
+parseJSON :: Value -&gt; Parser ScriptHash
+$cparseJSON :: Value -&gt; Parser ScriptHash
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span></span><span>
+</span><span id="line-83"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425687"><span id="local-6989586621679425693"><span class="annot"><span class="annottext">ToJSONKeyFunction [ScriptHash]
+ToJSONKeyFunction ScriptHash
+forall a.
+ToJSONKeyFunction a -&gt; ToJSONKeyFunction [a] -&gt; ToJSONKey a
+toJSONKeyList :: ToJSONKeyFunction [ScriptHash]
+$ctoJSONKeyList :: ToJSONKeyFunction [ScriptHash]
+toJSONKey :: ToJSONKeyFunction ScriptHash
+$ctoJSONKey :: ToJSONKeyFunction ScriptHash
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">ToJSONKey</span></a></span></span></span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679425674"><span id="local-6989586621679425680"><span class="annot"><span class="annottext">FromJSONKeyFunction [ScriptHash]
+FromJSONKeyFunction ScriptHash
+forall a.
+FromJSONKeyFunction a -&gt; FromJSONKeyFunction [a] -&gt; FromJSONKey a
+fromJSONKeyList :: FromJSONKeyFunction [ScriptHash]
+$cfromJSONKeyList :: FromJSONKeyFunction [ScriptHash]
+fromJSONKey :: FromJSONKeyFunction ScriptHash
+$cfromJSONKey :: FromJSONKeyFunction ScriptHash
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSONKey</span></a></span></span></span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-86"></span></pre></body></html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | &quot;Cardano.Ledger.Binary.Coders&quot; provides tools for writing 'EncCBOR' and 'DecCBOR'</span><span>
+</span><span id="line-2"></span><span class="hs-comment">--   instances (see module 'Cardano.Ledger.Binary') in an intuitive way that mirrors the way one</span><span>
+</span><span id="line-3"></span><span class="hs-comment">--   constructs values of a particular type. Advantages include:</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- 1. Book-keeping details neccesary to write correct instances are hidden from the user.</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- 2. Inverse 'EncCBOR' and 'DecCBOR' instances have visually similar definitions.</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- 3. Advanced instances involving sparse-encoding, compact-representation, and</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- 'Annotator' instances are also supported.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- A Guide to Visual inspection of Duality in Encode and Decode</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- 1. @(Sum c)@     and @(SumD c)@    are duals</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- 2. @(Rec c)@     and @(RecD c)@    are duals</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- 3. @(Keyed c)@   and @(KeyedD c)@  are duals</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- 4. @(OmitC x)@   and @(Emit x)@    are duals</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- 5. @(Omit p ..)@ and @(Emit x)@    are duals if (p x) is True</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- 6. @(To x)@      and @(From)@      are duals if (x::T) and (forall (y::T). isRight (roundTrip y))</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- 7. @(E enc x)@   and @(D dec)@     are duals if (forall x . isRight (roundTrip' enc dec x))</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- 8. @(f !&gt; x)@    and @(g &lt;! y)@    are duals if (f and g are duals) and (x and y are duals)</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- Duality properties of @(Summands name decodeT)@ and @(SparseKeyed name (init::T) pick</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- required)@ also exist but are harder to describe succinctly.</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Binary.Coders</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Encoding.Coders</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Decoding.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Decoding.Coders</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Decoding.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Decoding.Coders</span></a></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Binary.Encoding.Coders.html"><span class="hs-identifier">Cardano.Ledger.Binary.Encoding.Coders</span></a></span><span>
+</span><span id="line-31"></span></pre></body></html>
