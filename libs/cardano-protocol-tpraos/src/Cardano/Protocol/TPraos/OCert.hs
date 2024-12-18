@@ -40,9 +40,9 @@ import Cardano.Ledger.Binary (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Keys (
+  DSIGN,
   KeyHash,
   KeyRole (..),
-  SignedDSIGN,
   coerceKeyRole,
  )
 import Cardano.Protocol.Crypto (Crypto, KES, VerKeyKES)
@@ -89,7 +89,7 @@ data OCert c = OCert
   -- ^ counter
   , ocertKESPeriod :: !KESPeriod
   -- ^ Start of key evolving signature period
-  , ocertSigma :: !(SignedDSIGN (OCertSignable c))
+  , ocertSigma :: !(DSIGN.SignedDSIGN DSIGN (OCertSignable c))
   -- ^ Signature of block operational certificate content
   }
   deriving (Generic)

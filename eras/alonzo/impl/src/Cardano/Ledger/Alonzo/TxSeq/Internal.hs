@@ -44,7 +44,6 @@ import Cardano.Ledger.Binary (
   withSlice,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -163,7 +162,7 @@ instance Era era => EncCBORGroup (AlonzoTxSeq era) where
 hashAlonzoTxSeq ::
   forall era.
   AlonzoTxSeq era ->
-  Hash EraIndependentBlockBody
+  Hash HASH EraIndependentBlockBody
 hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
   coerce $
     hashStrict $
@@ -176,7 +175,7 @@ hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
             , hashPart vs
             ]
   where
-    hashStrict :: ByteString -> Hash ByteString
+    hashStrict :: ByteString -> Hash HASH ByteString
     hashStrict = Hash.hashWith id
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
 

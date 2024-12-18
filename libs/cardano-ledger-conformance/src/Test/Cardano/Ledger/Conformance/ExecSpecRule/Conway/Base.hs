@@ -122,9 +122,8 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   protocolVersion_,
  )
 
-import Cardano.Crypto.Hash (ByteString, Hash)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSIGN, VKey (..))
+import Data.ByteString (ByteString)
 import Test.Cardano.Ledger.Constrained.Conway.Utxo (witnessDepositPurpose)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv (..), witness)
 import Test.Cardano.Ledger.Conway.Arbitrary ()

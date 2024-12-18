@@ -32,6 +32,7 @@ module Cardano.Ledger.Keys.Bootstrap (
 where
 
 import qualified Cardano.Chain.Common as Byron
+import Cardano.Crypto.DSIGN (SignedDSIGN (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
@@ -52,11 +53,10 @@ import Cardano.Ledger.Binary.Crypto (
   encodeSignedDSIGN,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Hashes (ADDRHASH, EraIndependentTxBody, KeyHash (..))
+import Cardano.Ledger.Hashes (ADDRHASH, EraIndependentTxBody, HASH, Hash, KeyHash (..))
 import Cardano.Ledger.Keys.Internal (
-  Hash,
+  DSIGN,
   KeyRole (..),
-  SignedDSIGN,
   VKey (..),
   verifySignedDSIGN,
  )
@@ -79,7 +79,7 @@ newtype ChainCode = ChainCode {unChainCode :: ByteString}
 
 data BootstrapWitness = BootstrapWitness'
   { bwKey' :: !(VKey 'Witness)
-  , bwSig' :: !(SignedDSIGN (Hash EraIndependentTxBody))
+  , bwSig' :: !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
   , bwChainCode' :: !ChainCode
   , bwAttributes' :: !ByteString
   , bwBytes :: LBS.ByteString
@@ -95,7 +95,7 @@ deriving via
 
 pattern BootstrapWitness ::
   VKey 'Witness ->
-  SignedDSIGN (Hash EraIndependentTxBody) ->
+  SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody) ->
   ChainCode ->
   ByteString ->
   BootstrapWitness
@@ -178,7 +178,7 @@ unpackByronVKey
     Just vk -> (VKey vk, ChainCode chainCodeBytes)
 
 verifyBootstrapWit ::
-  Hash EraIndependentTxBody ->
+  Hash HASH EraIndependentTxBody ->
   BootstrapWitness ->
   Bool
 verifyBootstrapWit txbodyHash witness =
@@ -193,7 +193,7 @@ coerceSignature sig =
     DSIGN.rawDeserialiseSigDSIGN (WC.unXSignature sig)
 
 makeBootstrapWitness ::
-  Hash EraIndependentTxBody ->
+  Hash HASH EraIndependentTxBody ->
   Byron.SigningKey ->
   Byron.Attributes Byron.AddrAttributes ->
   BootstrapWitness
@@ -202,7 +202,7 @@ makeBootstrapWitness txBodyHash byronSigningKey addrAttributes =
   where
     (vk, cc) = unpackByronVKey $ Byron.toVerification byronSigningKey
     signature =
-      DSIGN.SignedDSIGN . coerceSignature $
+      SignedDSIGN . coerceSignature $
         WC.sign
           (mempty :: ByteString)
           (Byron.unSigningKey byronSigningKey)

@@ -154,7 +154,11 @@ hashSignature ::
   SignedDSIGN (Hash h) ->
   Hash (SignedDSIGN (Hash h))
 hashSignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith DSIGN.rawSerialiseSigDSIGN sigDSIGN
-{-# INLINE hashSignature #-}
+{-# DEPRECATED
+  hashSignature
+  "In favor of `Cardano.Ledger.Hashes.hasTxBodySignature`. \
+  \Fallback on `Hash.hashWith` if you need more general hashsing functionality"
+  #-}
 
 --------------------------------------------------------------------------------
 -- crypto-parametrised types
@@ -165,9 +169,11 @@ hashSignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith DSIGN
 -- provide some type aliases which unwrap the crypto parameters.
 --------------------------------------------------------------------------------
 
--- TODO deprecate
 type Hash = Hash.Hash Hash.Blake2b_256
+{-# DEPRECATED Hash "In favor of `Hash.Hash` `Cardano.Ledger.Hashes.HASH`" #-}
 
 type SignedDSIGN = DSIGN.SignedDSIGN DSIGN
+{-# DEPRECATED SignedDSIGN "In favor of `DSIGN.SignedDSIGN` `DSIGN`" #-}
 
 type SignKeyDSIGN = DSIGN.SignKeyDSIGN DSIGN
+{-# DEPRECATED SignKeyDSIGN "In favor of `DSIGN.SignKeyDSIGN` `DSIGN`" #-}

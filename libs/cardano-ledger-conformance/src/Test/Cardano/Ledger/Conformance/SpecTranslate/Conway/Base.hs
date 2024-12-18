@@ -33,7 +33,6 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
-import Cardano.Crypto.Hash (Hash)
 import Cardano.Crypto.Util (bytesToNatural, naturalToBytes)
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (
