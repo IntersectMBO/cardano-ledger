@@ -33,7 +33,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
 import Cardano.Ledger.Shelley.Era (ShelleyBBODY, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (AccountState)
@@ -82,7 +82,7 @@ data ShelleyBbodyPredFailure era
     WrongBlockBodySizeBBODY (Mismatch 'RelEQ Int)
   | -- | `mismatchSupplied` ~ Actual hash.
     --   `mismatchExpected` ~ Claimed hash in the header.
-    InvalidBodyHashBBODY (Mismatch 'RelEQ (Hash EraIndependentBlockBody))
+    InvalidBodyHashBBODY (Mismatch 'RelEQ (Hash HASH EraIndependentBlockBody))
   | LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 
@@ -140,7 +140,6 @@ instance
 
 instance
   ( EraSegWits era
-  , DSignable (Hash EraIndependentTxBody)
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
@@ -227,7 +226,6 @@ instance
   , BaseM ledgers ~ ShelleyBase
   , ledgers ~ EraRule "LEDGERS" era
   , STS ledgers
-  , DSignable (Hash EraIndependentTxBody)
   , Era era
   ) =>
   Embed ledgers (ShelleyBBODY era)

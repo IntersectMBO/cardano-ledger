@@ -38,7 +38,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules (
@@ -260,8 +260,7 @@ alonzoBbodyTransition =
             )
 
 instance
-  ( DSignable (Hash EraIndependentTxBody)
-  , EraRule "BBODY" era ~ AlonzoBBODY era
+  ( EraRule "BBODY" era ~ AlonzoBBODY era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
@@ -299,7 +298,6 @@ instance
   , BaseM ledgers ~ ShelleyBase
   , ledgers ~ EraRule "LEDGERS" era
   , STS ledgers
-  , DSignable (Hash EraIndependentTxBody)
   , Era era
   ) =>
   Embed ledgers (AlonzoBBODY era)

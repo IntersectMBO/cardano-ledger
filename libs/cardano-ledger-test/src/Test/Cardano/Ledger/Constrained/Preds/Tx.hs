@@ -26,7 +26,7 @@ import Cardano.Ledger.CertState (CertState, certDStateL, dsGenDelegsL)
 import Cardano.Ledger.Coin (Coin (..), rationalToCoinViaCeiling)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
-import Cardano.Ledger.Keys (Hash, WitVKey (..), asWitness, coerceKeyRole)
+import Cardano.Ledger.Keys (WitVKey (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
@@ -249,7 +249,7 @@ bootWitsT proof spend (TxBodyF _ txb) byronUniv = bootWitness h boots byronUniv
           _ -> ans
     h = hashBody proof txb
 
-hashBody :: Proof era -> TxBody era -> Hash EraIndependentTxBody
+hashBody :: Proof era -> TxBody era -> Hash HASH EraIndependentTxBody
 hashBody Shelley txb = extractHash (hashAnnotated txb)
 hashBody Allegra txb = extractHash (hashAnnotated txb)
 hashBody Mary txb = extractHash (hashAnnotated txb)

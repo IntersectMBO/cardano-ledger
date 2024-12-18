@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Mary.Arbitrary (
   genNonNegativeInt,
 ) where
 
-import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
+import Cardano.Crypto.Hash.Class (castHash, hashWith)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core

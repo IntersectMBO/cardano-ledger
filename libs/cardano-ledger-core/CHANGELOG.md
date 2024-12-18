@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Deprecate `Hash`, `SignedDSIGN` and `SignKeyDSIGN` type synonyms.
+* Deprecate `hashSignature` in favor of new `hashTxBodySignature`
 * Move into `Cardano.Ledger.Hashes`:
   * `HASH` and `ADDRHASH`
   * `KeyHash` and `HashKey`

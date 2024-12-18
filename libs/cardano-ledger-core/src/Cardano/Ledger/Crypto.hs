@@ -9,7 +9,7 @@ module Cardano.Ledger.Crypto
     \    * `HASH` and `ADDRHASH` type synonyms can be imported from `Cardano.Ledger.Hashes` module\
     \\
     \* `Crypto` type class has retained its `KES` and `VRF` type families, which are not used in Ledger, therefore\
-    \  this type class as well as `StandardCrypto` definition will be migrated to `Cardano.Protocol.Crypto`\
+    \  this type class as well as `StandardCrypto` definition will be migrated to `Cardano.Protocol.Crypto` module\
     \  and from now on should be imported from 'cardano-protocol-tpraos' package instead."
     #-} (
   HASH,

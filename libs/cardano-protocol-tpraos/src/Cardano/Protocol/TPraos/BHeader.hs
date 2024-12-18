@@ -81,14 +81,13 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
- )
-import Cardano.Ledger.Keys (
+  HASH,
   Hash,
   KeyHash,
   KeyRole (..),
-  VKey,
   hashKey,
  )
+import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.Crypto
@@ -107,7 +106,7 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | The hash of a Block Header
-newtype HashHeader = HashHeader {unHashHeader :: Hash EraIndependentBlockHeader}
+newtype HashHeader = HashHeader {unHashHeader :: Hash HASH EraIndependentBlockHeader}
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 
@@ -157,7 +156,7 @@ data BHBody c = BHBody
   -- ^ leader election value
   , bsize :: !Word32
   -- ^ Size of the block body
-  , bhash :: !(Hash EraIndependentBlockBody)
+  , bhash :: !(Hash HASH EraIndependentBlockBody)
   -- ^ Hash of block body
   , bheaderOCert :: !(OCert c)
   -- ^ operational certificate

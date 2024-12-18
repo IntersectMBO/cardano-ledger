@@ -41,11 +41,7 @@ module Test.Cardano.Ledger.Shelley.Utils (
 where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
-import Cardano.Crypto.Hash (
-  Hash,
-  HashAlgorithm,
-  hashToBytes,
- )
+import Cardano.Crypto.Hash (hashToBytes)
 import Cardano.Crypto.KES (
   UnsoundPureKESAlgorithm (..),
   unsoundPureDeriveVerKeyKES,
