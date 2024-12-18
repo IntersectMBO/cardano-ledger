@@ -119,6 +119,10 @@ data IsFailing
   | NotFailing
   deriving (Eq, Show)
 
+instance Semigroup IsFailing where
+  Failing <> _ = Failing
+  NotFailing <> f = f
+
 data RuleType
   = Initial
   | Transition
@@ -624,12 +628,9 @@ applyRuleInternal isAlreadyFailing ep vp goSTS jc r = do
     EPReturn -> pure ((s, fst er), snd er)
   where
     isFailing :: StateT ([PredicateFailure s], [Event s]) m IsFailing
-    isFailing =
-      case isAlreadyFailing of
-        Failing -> pure Failing
-        NotFailing -> do
-          isFailingNow <- null . fst <$> get
-          pure $ if isFailingNow then NotFailing else Failing
+    isFailing = do
+      failures <- get
+      pure $ isAlreadyFailing <> if null (fst failures) then NotFailing else Failing
     runClause :: Clause s rtype a -> StateT ([PredicateFailure s], [Event s]) m a
     runClause (Lift f next) = next <$> lift f
     runClause (GetCtx next) = pure $ next jc
