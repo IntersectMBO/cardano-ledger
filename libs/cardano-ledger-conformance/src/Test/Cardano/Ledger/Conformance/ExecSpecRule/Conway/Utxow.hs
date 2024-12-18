@@ -14,8 +14,12 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxow () where
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
+import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
+import Cardano.Ledger.Core (EraTx (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Data.Bifunctor (Bifunctor (..))
 import qualified Data.Text as T
+import Lens.Micro ((^.))
 import qualified Lib as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Conformance (
@@ -41,6 +45,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
  )
 import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
 import Test.Cardano.Ledger.Shelley.Utils (runSTS)
+import Test.Cardano.Ledger.TreeDiff (showExpr)
 
 instance
   ( IsConwayUniv fn
@@ -69,6 +74,12 @@ instance
      in
       PP.vcat
         [ "UTXOW"
+        , "Impl:"
+        , "witsVKeyNeeded"
+        , PP.ppString . showExpr $
+            getConwayWitsVKeyNeeded @ConwayEra (utxosUtxo st) (sig ^. bodyTxL)
+        , "witsVKeyHashes"
+        , "Spec:"
         , PP.ppString result
         , mempty
         , "UTXO"

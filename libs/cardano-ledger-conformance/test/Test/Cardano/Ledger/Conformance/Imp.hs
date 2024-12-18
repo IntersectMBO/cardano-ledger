@@ -140,4 +140,4 @@ spec =
           it "Submit constitution" $ do
             _ <- submitConstitution @ConwayEra SNothing
             passNEpochs 2
-        xdescribe "Conway Imp conformance" $ ConwayImp.conwaySpec @ConwayEra
+        describe "Conway Imp conformance" $ ConwayImp.conwaySpec @ConwayEra
