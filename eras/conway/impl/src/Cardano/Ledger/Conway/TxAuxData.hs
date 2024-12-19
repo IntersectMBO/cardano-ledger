@@ -6,7 +6,6 @@ module Cardano.Ledger.Conway.TxAuxData () where
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (..),
-  hashAlonzoTxAuxData,
   metadataAlonzoTxAuxDataL,
   plutusScriptsAllegraTxAuxDataL,
   timelockScriptsAlonzoTxAuxDataL,
@@ -24,8 +23,6 @@ instance EraTxAuxData ConwayEra where
   metadataTxAuxDataL = metadataAlonzoTxAuxDataL
 
   upgradeTxAuxData = translateAlonzoTxAuxData
-
-  hashTxAuxData = hashAlonzoTxAuxData
 
   validateTxAuxData = validateAlonzoTxAuxData
 

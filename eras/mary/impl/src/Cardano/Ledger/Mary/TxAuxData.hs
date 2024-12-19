@@ -37,7 +37,5 @@ instance EraTxAuxData MaryEra where
 
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
 
-  hashTxAuxData aux = TxAuxDataHash (hashAnnotated aux)
-
 instance AllegraEraTxAuxData MaryEra where
   timelockScriptsTxAuxDataL = timelockScriptsAllegraTxAuxDataL
