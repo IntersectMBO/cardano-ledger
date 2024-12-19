@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.TreeDiff (
 ) where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
@@ -155,7 +154,7 @@ instance ToExpr a => ToExpr (Mismatch r a)
 instance ToExpr EpochInterval
 
 -- AuxiliaryData
-instance ToExpr AuxiliaryDataHash
+instance ToExpr TxAuxDataHash
 
 -- Plutus/ExUnits
 instance ToExpr Prices

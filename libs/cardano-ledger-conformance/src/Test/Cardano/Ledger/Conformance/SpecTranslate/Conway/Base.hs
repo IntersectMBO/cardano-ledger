@@ -44,7 +44,6 @@ import Cardano.Ledger.Alonzo (AlonzoTxAuxData, MaryValue)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
@@ -621,10 +620,10 @@ instance SpecTranslate ctx Withdrawals where
 
   toSpecRep (Withdrawals w) = toSpecRep w
 
-instance SpecTranslate ctx AuxiliaryDataHash where
-  type SpecRep AuxiliaryDataHash = Agda.DataHash
+instance SpecTranslate ctx TxAuxDataHash where
+  type SpecRep TxAuxDataHash = Agda.DataHash
 
-  toSpecRep (AuxiliaryDataHash x) = toSpecRep x
+  toSpecRep (TxAuxDataHash x) = toSpecRep x
 
 instance
   ( ConwayEraTxBody era

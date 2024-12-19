@@ -16,7 +16,6 @@ import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppCollateralPercentageL,
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochNo,
@@ -64,7 +63,13 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
-import Cardano.Ledger.Hashes (DataHash, EraIndependentScriptIntegrity, SafeHash, ScriptHash (..))
+import Cardano.Ledger.Hashes (
+  DataHash,
+  EraIndependentScriptIntegrity,
+  SafeHash,
+  ScriptHash (..),
+  TxAuxDataHash (..),
+ )
 import Cardano.Ledger.Keys (GenDelegPair, GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
@@ -1338,8 +1343,8 @@ reqSignerHashes = Var $ V "reqSignerHashes" (SetR WitHashR) No
 networkID :: Era era => Term era (Maybe Network)
 networkID = Var $ V "networkID" (MaybeR NetworkR) No
 
-adHash :: Era era => Term era (Maybe AuxiliaryDataHash)
-adHash = Var $ V "adHash" (MaybeR AuxiliaryDataHashR) No
+adHash :: Era era => Term era (Maybe TxAuxDataHash)
+adHash = Var $ V "adHash" (MaybeR TxAuxDataHashR) No
 
 wppHash :: Era era => Term era (Maybe (SafeHash EraIndependentScriptIntegrity))
 wppHash = Var $ V "wppHash" (MaybeR ScriptIntegrityHashR) No

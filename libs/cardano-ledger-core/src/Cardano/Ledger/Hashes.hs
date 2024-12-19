@@ -50,6 +50,9 @@ module Cardano.Ledger.Hashes (
   ScriptHash (..),
   DataHash,
 
+  -- ** AuxiliaryData
+  TxAuxDataHash (..),
+
   -- ** @VRF@ Verification Key Hashes
   KeyRoleVRF (..),
   VRFVerKeyHash (..),
@@ -233,6 +236,15 @@ toVRFVerKeyHash = VRFVerKeyHash . Hash.castHash
 
 fromVRFVerKeyHash :: VRFVerKeyHash (r :: KeyRoleVRF) -> Hash.Hash HASH (VRF.VerKeyVRF v)
 fromVRFVerKeyHash = Hash.castHash . unVRFVerKeyHash
+
+--------------------------------------------------------------------------------
+-- Auxiliary Data Hashes
+--------------------------------------------------------------------------------
+
+newtype TxAuxDataHash = TxAuxDataHash
+  { unTxAuxDataHash :: SafeHash EraIndependentTxAuxData
+  }
+  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, EncCBOR, DecCBOR, ToJSON)
 
 --------------------------------------------------------------------------------
 -- Genesis Keys Hashes

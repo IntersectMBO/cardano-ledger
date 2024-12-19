@@ -29,17 +29,9 @@ module Cardano.Ledger.Shelley.TxAuxData (
 )
 where
 
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Binary (Annotator (..), DecCBOR (..), EncCBOR (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR)
-import Cardano.Ledger.Core (Era (..), EraTxAuxData (..))
-import Cardano.Ledger.Hashes (
-  EraIndependentTxAuxData,
-  HashAnnotated,
-  SafeHash,
-  SafeToHash (..),
-  hashAnnotated,
- )
+import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
@@ -110,8 +102,8 @@ instance EraTxAuxData ShelleyEra where
 
   validateTxAuxData _ (ShelleyTxAuxData m) = all validMetadatum m
 
-  hashTxAuxData metadata =
-    AuxiliaryDataHash (makeHashWithExplicitProxys index metadata)
+  hashTxAuxData txAuxData =
+    TxAuxDataHash (makeHashWithExplicitProxys index txAuxData)
     where
       index = Proxy @EraIndependentTxAuxData
 

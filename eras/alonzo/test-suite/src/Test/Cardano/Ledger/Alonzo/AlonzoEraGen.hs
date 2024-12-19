@@ -57,7 +57,6 @@ import Cardano.Ledger.Alonzo.TxWits (
   nullRedeemers,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Coin (Coin (..))
@@ -263,7 +262,7 @@ genAlonzoTxBody ::
   Withdrawals ->
   Coin ->
   StrictMaybe (Update AlonzoEra) ->
-  StrictMaybe AuxiliaryDataHash ->
+  StrictMaybe TxAuxDataHash ->
   Gen (TxBody AlonzoEra, [Script AlonzoEra])
 genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals fee updates auxDHash = do
   netid <- genM $ pure Testnet -- frequency [(2, pure Mainnet), (1, pure Testnet)]

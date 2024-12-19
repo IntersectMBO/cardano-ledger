@@ -16,7 +16,6 @@ import Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.KES as KES
 import Cardano.Crypto.Seed as Seed
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.EpochBoundary
@@ -432,9 +431,9 @@ exampleTxBodyShelley =
     (SJust auxiliaryDataHash)
   where
     -- Dummy hash to decouple from the auxiliaryData in 'exampleTx'.
-    auxiliaryDataHash :: AuxiliaryDataHash
+    auxiliaryDataHash :: TxAuxDataHash
     auxiliaryDataHash =
-      AuxiliaryDataHash $ mkDummySafeHash @EraIndependentTxAuxData 30
+      TxAuxDataHash $ mkDummySafeHash @EraIndependentTxAuxData 30
 
 exampleAuxDataMap :: Map Word64 Metadatum
 exampleAuxDataMap =

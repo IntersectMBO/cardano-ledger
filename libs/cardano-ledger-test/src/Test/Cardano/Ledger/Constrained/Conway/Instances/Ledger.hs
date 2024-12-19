@@ -79,7 +79,7 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx
-import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), AuxiliaryDataHash)
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
 import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
@@ -204,7 +204,7 @@ type ConwayTxBodyTypes =
    , Set (KeyHash 'Witness)
    , MultiAsset
    , StrictMaybe ScriptIntegrityHash
-   , StrictMaybe AuxiliaryDataHash
+   , StrictMaybe TxAuxDataHash
    , StrictMaybe Network
    , VotingProcedures ConwayEra
    , SOS.OSet (ProposalProcedure ConwayEra)
@@ -815,8 +815,8 @@ instance IsConwayUniv fn => HasSpec fn AssetName
 instance HasSimpleRep PolicyID
 instance IsConwayUniv fn => HasSpec fn PolicyID
 
-instance HasSimpleRep AuxiliaryDataHash
-instance IsConwayUniv fn => HasSpec fn AuxiliaryDataHash
+instance HasSimpleRep TxAuxDataHash
+instance IsConwayUniv fn => HasSpec fn TxAuxDataHash
 
 instance HasSimpleRep (VotingProcedures era)
 instance (IsConwayUniv fn, Typeable era) => HasSpec fn (VotingProcedures era)

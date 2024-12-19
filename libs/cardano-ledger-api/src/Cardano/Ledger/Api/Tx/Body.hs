@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Api.Tx.Body (
   -- | Building and inspecting transaction outputs
@@ -16,6 +17,7 @@ module Cardano.Ledger.Api.Tx.Body (
   withdrawalsTxBodyL,
   Withdrawals (..),
   auxDataHashTxBodyL,
+  TxAuxDataHash (..),
   AuxiliaryDataHash,
   spendableInputsTxBodyF,
   allInputsTxBodyF,
@@ -77,7 +79,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.Core (EraTxBody (..), PParams, Value, txIdTxBody)
+import Cardano.Ledger.Core (EraTxBody (..), PParams, TxAuxDataHash (..), Value, txIdTxBody)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))

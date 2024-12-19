@@ -69,7 +69,6 @@ import Cardano.Ledger.Address (
   decompactAddr,
   isBootstrapCompactAddr,
  )
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
   Annotator,
@@ -199,7 +198,7 @@ class
 
   withdrawalsTxBodyL :: Lens' (TxBody era) Withdrawals
 
-  auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe AuxiliaryDataHash)
+  auxDataHashTxBodyL :: Lens' (TxBody era) (StrictMaybe TxAuxDataHash)
 
   -- | This getter will produce all inputs from the UTxO map that this transaction might
   -- spend, which ones will depend on the validity of the transaction itself. Starting in
@@ -456,7 +455,7 @@ class
   -- preserved. If you need to retain underlying bytes you can use `translateEraThroughCBOR`
   upgradeTxAuxData :: EraTxAuxData (PreviousEra era) => TxAuxData (PreviousEra era) -> TxAuxData era
 
-  hashTxAuxData :: TxAuxData era -> AuxiliaryDataHash
+  hashTxAuxData :: TxAuxData era -> TxAuxDataHash
 
   validateTxAuxData :: ProtVer -> TxAuxData era -> Bool
 
