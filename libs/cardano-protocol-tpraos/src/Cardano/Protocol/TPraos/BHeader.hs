@@ -148,11 +148,11 @@ data BHBody c = BHBody
   -- ^ Hash of the previous block header
   , bheaderVk :: !(VKey 'BlockIssuer)
   -- ^ verification key of block issuer
-  , bheaderVrfVk :: !(VerKeyVRF c)
+  , bheaderVrfVk :: !(VRF.VerKeyVRF (VRF c))
   -- ^ VRF verification key for block issuer
-  , bheaderEta :: !(CertifiedVRF c Nonce)
+  , bheaderEta :: !(VRF.CertifiedVRF (VRF c) Nonce)
   -- ^ block nonce
-  , bheaderL :: !(CertifiedVRF c Natural)
+  , bheaderL :: !(VRF.CertifiedVRF (VRF c) Natural)
   -- ^ leader election value
   , bsize :: !Word32
   -- ^ Size of the block body
@@ -243,7 +243,7 @@ instance Crypto c => DecCBOR (BHBody c) where
 
 data BHeader c = BHeader'
   { bHeaderBody' :: !(BHBody c)
-  , bHeaderSig' :: !(SignedKES c (BHBody c))
+  , bHeaderSig' :: !(KES.SignedKES (KES c) (BHBody c))
   , bHeaderBytes :: BS.ByteString -- Lazy on purpose. Constructed on demand
   }
   deriving (Generic)
@@ -260,7 +260,7 @@ deriving instance Crypto c => Show (BHeader c)
 pattern BHeader ::
   Crypto c =>
   BHBody c ->
-  SignedKES c (BHBody c) ->
+  KES.SignedKES (KES c) (BHBody c) ->
   BHeader c
 pattern BHeader bHeaderBody' bHeaderSig' <-
   BHeader' {bHeaderBody', bHeaderSig'}

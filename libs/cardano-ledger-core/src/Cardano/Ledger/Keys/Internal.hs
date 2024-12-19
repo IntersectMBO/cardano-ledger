@@ -16,7 +16,6 @@ module Cardano.Ledger.Keys.Internal (
   VKey (..),
   signedDSIGN,
   verifySignedDSIGN,
-  hashSignature,
 
   -- * Key roles
   KeyRole (..),
@@ -26,16 +25,16 @@ module Cardano.Ledger.Keys.Internal (
   -- * Re-exports from cardano-crypto-class
   decodeSignedDSIGN,
   encodeSignedDSIGN,
-
-  -- * Concrete crypto algorithms
-  Hash,
-  SignedDSIGN,
-  SignKeyDSIGN,
 )
 where
 
+import Cardano.Crypto.DSIGN hiding (
+  decodeSignedDSIGN,
+  encodeSignedDSIGN,
+  signedDSIGN,
+  verifySignedDSIGN,
+ )
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -132,48 +131,19 @@ instance Typeable kd => ToCBOR (VKey kd) where
 
 -- | Produce a digital signature
 signedDSIGN ::
-  DSIGN.Signable DSIGN a =>
-  DSIGN.SignKeyDSIGN DSIGN ->
+  Signable DSIGN a =>
+  SignKeyDSIGN DSIGN ->
   a ->
-  SignedDSIGN a
+  SignedDSIGN DSIGN a
 signedDSIGN key a = DSIGN.signedDSIGN () a key
 
 -- | Verify a digital signature
 verifySignedDSIGN ::
-  DSIGN.Signable DSIGN a =>
+  Signable DSIGN a =>
   VKey kd ->
   a ->
-  SignedDSIGN a ->
+  SignedDSIGN DSIGN a ->
   Bool
 verifySignedDSIGN (VKey vk) vd sigDSIGN =
   either (const False) (const True) $ DSIGN.verifySignedDSIGN () vk vd sigDSIGN
 {-# INLINE verifySignedDSIGN #-}
-
--- | Hash a given signature
-hashSignature ::
-  SignedDSIGN (Hash h) ->
-  Hash (SignedDSIGN (Hash h))
-hashSignature (DSIGN.SignedDSIGN sigDSIGN) = Hash.castHash $ Hash.hashWith DSIGN.rawSerialiseSigDSIGN sigDSIGN
-{-# DEPRECATED
-  hashSignature
-  "In favor of `Cardano.Ledger.Hashes.hasTxBodySignature`. \
-  \Fallback on `Hash.hashWith` if you need more general hashsing functionality"
-  #-}
-
---------------------------------------------------------------------------------
--- crypto-parametrised types
---
--- Within `cardano-ledger`, we parametrise everything on our `crypto` type
--- "package". However, in `cardano-crypto-class`, things are parametrised on the
--- original algorithm. In order to make using types from that module easier, we
--- provide some type aliases which unwrap the crypto parameters.
---------------------------------------------------------------------------------
-
-type Hash = Hash.Hash Hash.Blake2b_256
-{-# DEPRECATED Hash "In favor of `Hash.Hash` `Cardano.Ledger.Hashes.HASH`" #-}
-
-type SignedDSIGN = DSIGN.SignedDSIGN DSIGN
-{-# DEPRECATED SignedDSIGN "In favor of `DSIGN.SignedDSIGN` `DSIGN`" #-}
-
-type SignKeyDSIGN = DSIGN.SignKeyDSIGN DSIGN
-{-# DEPRECATED SignKeyDSIGN "In favor of `DSIGN.SignKeyDSIGN` `DSIGN`" #-}

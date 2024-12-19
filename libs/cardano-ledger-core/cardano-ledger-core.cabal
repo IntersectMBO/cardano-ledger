@@ -37,6 +37,7 @@ library
     Cardano.Ledger.Core
     Cardano.Ledger.Credential
     Cardano.Ledger.Crypto
+    Cardano.Ledger.Crypto.Internal
     Cardano.Ledger.DRep
     Cardano.Ledger.EpochBoundary
     Cardano.Ledger.Genesis
@@ -98,6 +99,7 @@ library
     bytestring,
     cardano-crypto,
     cardano-crypto-class ^>=2.2,
+    cardano-crypto-praos ^>=2.2,
     cardano-crypto-wrapper,
     cardano-data ^>=1.2,
     cardano-ledger-binary ^>=1.6,

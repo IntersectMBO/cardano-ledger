@@ -41,6 +41,7 @@ module Cardano.Protocol.TPraos.API (
 )
 where
 
+import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -116,8 +117,8 @@ import NoThunks.Class (NoThunks (..))
 
 class
   ( Crypto c
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  , KES.Signable (KES c) (BHBody c)
+  , VRF.Signable (VRF c) Seed
   ) =>
   PraosCrypto c
 

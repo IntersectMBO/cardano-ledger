@@ -45,7 +45,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   coerceKeyRole,
  )
-import Cardano.Protocol.Crypto (Crypto, KES, VerKeyKES)
+import Cardano.Protocol.Crypto (Crypto, KES)
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
@@ -83,7 +83,7 @@ newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
   deriving (Show) via Quiet KESPeriod
 
 data OCert c = OCert
-  { ocertVkHot :: !(VerKeyKES c)
+  { ocertVkHot :: !(KES.VerKeyKES (KES c))
   -- ^ The operational hot key
   , ocertN :: !Word64
   -- ^ counter
@@ -153,7 +153,7 @@ kesPeriod (SlotNo s) =
 
 -- | Signable part of an operational certificate
 data OCertSignable c
-  = OCertSignable !(VerKeyKES c) !Word64 !KESPeriod
+  = OCertSignable !(KES.VerKeyKES (KES c)) !Word64 !KESPeriod
 
 instance Crypto c => SignableRepresentation (OCertSignable c) where
   getSignableRepresentation (OCertSignable vk counter period) =
