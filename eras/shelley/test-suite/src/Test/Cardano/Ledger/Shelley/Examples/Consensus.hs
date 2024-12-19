@@ -20,10 +20,10 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.EpochBoundary
-import Cardano.Ledger.Keys
+import Cardano.Ledger.Keys hiding (hashVerKeyVRF)
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.API hiding (hashVerKeyVRF)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules
