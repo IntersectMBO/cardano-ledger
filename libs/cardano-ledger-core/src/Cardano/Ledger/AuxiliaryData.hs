@@ -1,20 +1,19 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
 
-module Cardano.Ledger.AuxiliaryData (
-  AuxiliaryDataHash (..),
+module Cardano.Ledger.AuxiliaryData
+  {-# DEPRECATED "Use `Cardano.Ledger.Hashes.TxAuxDataHash` instead" #-} (
+  AuxiliaryDataHash,
+  pattern AuxiliaryDataHash,
+  unsafeAuxiliaryDataHash,
 )
 where
 
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Hashes (EraIndependentTxAuxData, SafeHash)
-import Control.DeepSeq (NFData (..))
-import Data.Aeson (ToJSON)
-import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
+import Cardano.Ledger.Hashes
 
-newtype AuxiliaryDataHash = AuxiliaryDataHash
-  { unsafeAuxiliaryDataHash :: SafeHash EraIndependentTxAuxData
-  }
-  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, EncCBOR, DecCBOR, ToJSON)
+type AuxiliaryDataHash = TxAuxDataHash
+
+pattern AuxiliaryDataHash :: SafeHash EraIndependentTxAuxData -> TxAuxDataHash
+pattern AuxiliaryDataHash {unsafeAuxiliaryDataHash} <- (unTxAuxDataHash -> unsafeAuxiliaryDataHash)
+  where
+    AuxiliaryDataHash h = TxAuxDataHash h

@@ -47,7 +47,6 @@ where
 
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.TxBody
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
@@ -163,7 +162,7 @@ pattern MaryTxBody ::
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  StrictMaybe AuxiliaryDataHash ->
+  StrictMaybe TxAuxDataHash ->
   MultiAsset ->
   MaryTxBody era
 pattern MaryTxBody

@@ -52,7 +52,6 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxCert ()
 import Cardano.Ledger.Allegra.TxOut ()
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR)
 import Cardano.Ledger.Binary.Coders (
@@ -106,7 +105,7 @@ data AllegraTxBodyRaw ma era = AllegraTxBodyRaw
   , atbrTxFee :: !Coin
   , atbrValidityInterval :: !ValidityInterval
   , atbrUpdate :: !(StrictMaybe (Update era))
-  , atbrAuxDataHash :: !(StrictMaybe AuxiliaryDataHash)
+  , atbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
   , atbrMint :: !ma
   }
 
@@ -261,7 +260,7 @@ pattern AllegraTxBody ::
   Coin ->
   ValidityInterval ->
   StrictMaybe (Update era) ->
-  StrictMaybe AuxiliaryDataHash ->
+  StrictMaybe TxAuxDataHash ->
   AllegraTxBody era
 pattern AllegraTxBody
   { atbInputs

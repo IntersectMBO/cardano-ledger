@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Remove deprecated `AuxiliaryData` type synnym
 * Deprecate `Allegra` type synonym
 * Remove crypto parametrization from `AllegraEra`
 

@@ -7,10 +7,7 @@ module Test.Cardano.Ledger.Babbage.Examples.Consensus where
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxAuxData (
-  AuxiliaryDataHash (..),
-  mkAlonzoTxAuxData,
- )
+import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
@@ -139,7 +136,7 @@ exampleTxBodyBabbage =
     (Set.singleton $ SLE.mkKeyHash 212) -- reqSignerHashes
     exampleMultiAsset -- mint
     (SJust $ SLE.mkDummySafeHash 42) -- scriptIntegrityHash
-    (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash 42) -- adHash
+    (SJust . TxAuxDataHash $ SLE.mkDummySafeHash 42) -- adHash
     (SJust Mainnet) -- txnetworkid
   where
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3

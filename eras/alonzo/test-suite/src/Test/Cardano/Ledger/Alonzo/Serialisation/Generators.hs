@@ -14,7 +14,6 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..))
-import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR (..))
@@ -46,7 +45,7 @@ instance Era era => Twiddle (ShelleyTxCert era) where
 instance Twiddle Withdrawals where
   twiddle v = twiddle v . toTerm v
 
-instance Twiddle AuxiliaryDataHash where
+instance Twiddle TxAuxDataHash where
   twiddle v = twiddle v . toTerm v
 
 instance Twiddle (Update AlonzoEra) where

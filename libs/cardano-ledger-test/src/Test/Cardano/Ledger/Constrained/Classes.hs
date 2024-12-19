@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Constrained.Classes where
 
 import Cardano.Ledger.Alonzo.Scripts (AsIx, AsIxItem, PlutusPurpose)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), SlotNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
@@ -496,7 +495,7 @@ instance Count SlotNo where
 data TxAuxDataF era where
   TxAuxDataF :: Proof era -> TxAuxData era -> TxAuxDataF era
 
-hashTxAuxDataF :: Reflect era => TxAuxDataF era -> AuxiliaryDataHash
+hashTxAuxDataF :: Reflect era => TxAuxDataF era -> TxAuxDataHash
 hashTxAuxDataF (TxAuxDataF _ x) = hashTxAuxData x
 
 unTxAuxData :: TxAuxDataF era -> TxAuxData era

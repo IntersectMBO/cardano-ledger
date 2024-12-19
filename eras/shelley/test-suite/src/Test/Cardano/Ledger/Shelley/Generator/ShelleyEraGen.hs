@@ -11,7 +11,6 @@
 
 module Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen (genCoin) where
 
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -111,7 +110,7 @@ genTxBody ::
   Withdrawals ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe AuxiliaryDataHash ->
+  StrictMaybe TxAuxDataHash ->
   Gen (ShelleyTxBody era, [MultiSig era])
 genTxBody _pparams slot inputs outputs certs withdrawals fee update adHash = do
   ttl <- genTimeToLive slot

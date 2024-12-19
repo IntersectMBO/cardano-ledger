@@ -64,7 +64,6 @@ import Cardano.Ledger.Alonzo.TxAuxData (
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), TxDats (..), unRedeemers, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.Core (CoinPerByte (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
@@ -678,11 +677,11 @@ ppValidityInterval (ValidityInterval b a) =
 instance PrettyA ValidityInterval where
   prettyA = ppValidityInterval
 
-ppAuxiliaryDataHash :: AuxiliaryDataHash -> PDoc
-ppAuxiliaryDataHash (AuxiliaryDataHash h) = ppSexp "AuxiliaryDataHash" [ppSafeHash h]
+ppTxAuxDataHash :: TxAuxDataHash -> PDoc
+ppTxAuxDataHash (TxAuxDataHash h) = ppSexp "TxAuxDataHash" [ppSafeHash h]
 
-instance PrettyA AuxiliaryDataHash where
-  prettyA = ppAuxiliaryDataHash
+instance PrettyA TxAuxDataHash where
+  prettyA = ppTxAuxDataHash
 
 ppSafeHash :: SafeHash index -> PDoc
 ppSafeHash x = ppHash (extractHash x)
@@ -929,7 +928,7 @@ ppShelleyTxBody (TxBodyConstr (Memo (ShelleyTxBodyRaw ins outs cs withdrawals fe
     , ("fee", pcCoin fee)
     , ("timetolive", pcSlotNo ttl)
     , ("update", ppStrictMaybe ppUpdate upd)
-    , ("metadatahash", ppStrictMaybe ppAuxiliaryDataHash mdh)
+    , ("metadatahash", ppStrictMaybe ppTxAuxDataHash mdh)
     ]
 
 instance
@@ -1079,7 +1078,7 @@ pcTxBodyField proof x = case x of
   WppHash SNothing -> []
   WppHash (SJust h) -> [("integrity hash", trim (ppSafeHash h))]
   AdHash SNothing -> []
-  AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
+  AdHash (SJust (TxAuxDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
   Txnetworkid SNothing -> [("network id", ppString "Nothing")]
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
   ProposalProc props -> [("proposing procedure", ppList pcProposalProcedure (toList props))]
@@ -1544,15 +1543,15 @@ ppConwayUtxowPredFailure proof = \case
   ConwayRules.ScriptWitnessNotValidatingUTXOW m ->
     ppSexp "ScriptWitnessNotValidatingUTXOW" [ppSet pcScriptHash m]
   ConwayRules.MissingTxBodyMetadataHash m ->
-    ppSexp " MissingTxMetadata" [ppAuxiliaryDataHash m]
+    ppSexp " MissingTxMetadata" [ppTxAuxDataHash m]
   ConwayRules.MissingTxMetadata m ->
-    ppSexp " MissingTxMetadata" [ppAuxiliaryDataHash m]
+    ppSexp " MissingTxMetadata" [ppTxAuxDataHash m]
   ConwayRules.ConflictingMetadataHash mm@(Mismatch _ _) ->
     let Mismatch {..} = mm
      in ppRecord
           "ConflictingMetadataHash"
-          [ ("Hash in the body", ppAuxiliaryDataHash mismatchSupplied)
-          , ("Hash of full metadata", ppAuxiliaryDataHash mismatchExpected)
+          [ ("Hash in the body", ppTxAuxDataHash mismatchSupplied)
+          , ("Hash of full metadata", ppTxAuxDataHash mismatchExpected)
           ]
   ConwayRules.InvalidMetadata ->
     ppSexp "InvalidMetadata" []
@@ -1787,14 +1786,14 @@ ppShelleyUtxowPredFailure (Shelley.UtxoFailure m) = ppSexp "UtxoFailure" [ppUTXO
 ppShelleyUtxowPredFailure (MIRInsufficientGenesisSigsUTXOW m) =
   ppSexp "MIRInsufficientGenesisSigsUTXOW" [ppSet pcKeyHash m]
 ppShelleyUtxowPredFailure (MissingTxBodyMetadataHash m) =
-  ppSexp " MissingTxMetadata" [ppAuxiliaryDataHash m]
+  ppSexp " MissingTxMetadata" [ppTxAuxDataHash m]
 ppShelleyUtxowPredFailure (MissingTxMetadata m) =
-  ppSexp " MissingTxMetadata" [ppAuxiliaryDataHash m]
+  ppSexp " MissingTxMetadata" [ppTxAuxDataHash m]
 ppShelleyUtxowPredFailure (ConflictingMetadataHash (Mismatch supplied expected)) =
   ppRecord
     "ConflictingMetadataHash"
-    [ ("Hash in the body", ppAuxiliaryDataHash supplied)
-    , ("Hash of full metadata", ppAuxiliaryDataHash expected)
+    [ ("Hash in the body", ppTxAuxDataHash supplied)
+    , ("Hash of full metadata", ppTxAuxDataHash expected)
     ]
 ppShelleyUtxowPredFailure InvalidMetadata =
   ppSexp "InvalidMetadata" []

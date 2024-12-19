@@ -18,7 +18,6 @@ import Cardano.Ledger.Allegra.TxAuxData (
   metadataAllegraTxAuxDataL,
   timelockScriptsAllegraTxAuxDataL,
  )
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts ()
@@ -37,8 +36,6 @@ instance EraTxAuxData MaryEra where
   upgradeTxAuxData (AllegraTxAuxData md scripts) = AllegraTxAuxData md $ upgradeScript <$> scripts
 
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
-
-  hashTxAuxData aux = AuxiliaryDataHash (hashAnnotated aux)
 
 instance AllegraEraTxAuxData MaryEra where
   timelockScriptsTxAuxDataL = timelockScriptsAllegraTxAuxDataL

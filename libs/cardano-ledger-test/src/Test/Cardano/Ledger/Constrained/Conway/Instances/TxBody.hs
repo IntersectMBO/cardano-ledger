@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody where
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Binary (EncCBOR (..), Sized (..))
@@ -54,7 +53,7 @@ type ShelleyTxBodyTypes era =
    , Coin
    , SlotNo
    , Maybe (Update era)
-   , Maybe AuxiliaryDataHash
+   , Maybe TxAuxDataHash
    ]
 
 instance
@@ -123,7 +122,7 @@ type AllegraTxBodyTypes era =
    , Coin
    , ValidityInterval
    , Maybe (Update era)
-   , Maybe AuxiliaryDataHash
+   , Maybe TxAuxDataHash
    ]
 
 instance
@@ -192,7 +191,7 @@ type MaryTxBodyTypes era =
    , Coin
    , ValidityInterval
    , Maybe (Update era)
-   , Maybe AuxiliaryDataHash
+   , Maybe TxAuxDataHash
    , MultiAsset
    ]
 
@@ -269,7 +268,7 @@ type AlonzoTxBodyTypes era =
    , Set (KeyHash 'Witness)
    , MultiAsset
    , Maybe ScriptIntegrityHash
-   , Maybe AuxiliaryDataHash
+   , Maybe TxAuxDataHash
    , Maybe Network
    ]
 
@@ -363,7 +362,7 @@ type BabbageTxBodyTypes era =
    , Set (KeyHash 'Witness)
    , MultiAsset
    , Maybe ScriptIntegrityHash
-   , Maybe AuxiliaryDataHash
+   , Maybe TxAuxDataHash
    , Maybe Network
    ]
 

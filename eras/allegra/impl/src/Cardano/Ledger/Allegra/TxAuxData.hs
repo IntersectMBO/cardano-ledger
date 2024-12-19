@@ -23,15 +23,11 @@ module Cardano.Ledger.Allegra.TxAuxData (
   metadataAllegraTxAuxDataL,
   AllegraEraTxAuxData (..),
   timelockScriptsAllegraTxAuxDataL,
-
-  -- * Deprecations
-  AuxiliaryData,
 )
 where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (Timelock)
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
@@ -100,8 +96,6 @@ instance EraTxAuxData AllegraEra where
 
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
 
-  hashTxAuxData aux = AuxiliaryDataHash (hashAnnotated aux)
-
 metadataAllegraTxAuxDataL :: Era era => Lens' (AllegraTxAuxData era) (Map Word64 Metadatum)
 metadataAllegraTxAuxDataL =
   lensMemoRawType atadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
@@ -150,10 +144,6 @@ pattern AllegraTxAuxData blob sp <- (getMemoRawType -> AllegraTxAuxDataRaw blob 
     AllegraTxAuxData blob sp = mkMemoized $ AllegraTxAuxDataRaw blob sp
 
 {-# COMPLETE AllegraTxAuxData #-}
-
-type AuxiliaryData = AllegraTxAuxData
-
-{-# DEPRECATED AuxiliaryData "Use `AllegraTxAuxData` instead" #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation

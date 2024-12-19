@@ -2,6 +2,8 @@
 
 ## 1.13.0.0
 
+* Deprecate `hashAlonzoTxAuxData`
+* Stop re-exporting deprecated `AuxiliaryDataHash` from `Cardano.Ledger.Alonzo.TxAuxData`
 * Deprecate `Alonzo` type synonym
 * Remove crypto parametrization from `AlonzoEra`
 

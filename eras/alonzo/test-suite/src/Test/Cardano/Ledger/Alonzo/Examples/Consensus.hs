@@ -15,7 +15,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   Prices (..),
  )
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..), mkAlonzoTxAuxData)
+import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (NonNegativeInterval, StrictMaybe (..), boundRational)
@@ -124,7 +124,7 @@ exampleTxBodyAlonzo =
     (Set.singleton $ SLE.mkKeyHash 212) -- reqSignerHashes
     exampleMultiAsset -- mint
     (SJust $ mkDummySafeHash 42) -- scriptIntegrityHash
-    (SJust . AuxiliaryDataHash $ mkDummySafeHash 42) -- adHash
+    (SJust . TxAuxDataHash $ mkDummySafeHash 42) -- adHash
     (SJust Mainnet) -- txnetworkid
   where
     MaryValue _ exampleMultiAsset = SLE.exampleMultiAssetValue 3
