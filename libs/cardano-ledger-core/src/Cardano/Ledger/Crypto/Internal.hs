@@ -2,6 +2,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
 -- Contents of this module will be moved to `Cardano.Protocol.Crypto` at some point later
 -- whenever we are ready to remove derpecations
