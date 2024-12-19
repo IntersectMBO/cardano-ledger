@@ -1,0 +1,1284 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE AllowAmbiguousTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE ConstraintKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DefaultSignatures #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-11"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-12"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-13"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-14"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-15"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-16"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Keys.Internal</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier">KeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HasKeyRole"><span class="hs-identifier">HasKeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier">asWitness</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><span class="hs-comment">-- * DSIGN</span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSignable"><span class="hs-identifier">DSignable</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier">VKey</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#signedDSIGN"><span class="hs-identifier">signedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-identifier">verifySignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#hashSignature"><span class="hs-identifier">hashSignature</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Key hashes</span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyHash"><span class="hs-identifier">KeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#hashKey"><span class="hs-identifier">hashKey</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="hs-comment">-- * VRF Key Hashes</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRoleVRF"><span class="hs-identifier">KeyRoleVRF</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VRFVerKeyHash"><span class="hs-identifier">VRFVerKeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#hashVerKeyVRF"><span class="hs-identifier">hashVerKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#toVRFVerKeyHash"><span class="hs-identifier">toVRFVerKeyHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#fromVRFVerKeyHash"><span class="hs-identifier">fromVRFVerKeyHash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Genesis delegations</span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier">GenDelegPair</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegs"><span class="hs-identifier">GenDelegs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><span class="hs-comment">-- * KES</span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KESignable"><span class="hs-identifier">KESignable</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="hs-comment">-- * VRF</span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VRFSignable"><span class="hs-identifier">VRFSignable</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Re-exports from cardano-crypto-class</span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeSignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encodeSignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">Hash.hashWithSerialiser</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeSignedKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeVerKeyKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encodeSignedKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encodeVerKeyKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">KES.signedKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">KES.updateKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">KES.verifyKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">KES.verifySignedKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeVerKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encodeVerKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">VRF.verifyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Re-parametrised types over `crypto`</span></span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#CertifiedVRF"><span class="hs-identifier">CertifiedVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Hash"><span class="hs-identifier">Hash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignedDSIGN"><span class="hs-identifier">SignedDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignKeyDSIGN"><span class="hs-identifier">SignKeyDSIGN</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignedKES"><span class="hs-identifier">SignedKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignKeyKES"><span class="hs-identifier">SignKeyKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignKeyVRF"><span class="hs-identifier">SignKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VerKeyKES"><span class="hs-identifier">VerKeyKES</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VerKeyVRF"><span class="hs-identifier">VerKeyVRF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-77"></span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">Cardano.Crypto.DSIGN</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">DSIGN</span></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">Cardano.Crypto.Hash</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Hash</span></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">Cardano.Crypto.KES</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">KES</span></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier">Cardano.Crypto.VRF</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">VRF</span></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-identifier">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-identifier">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeRecordNamed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encodeListLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-91"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary.Crypto</span></a></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html"><span class="hs-identifier">Cardano.Ledger.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#ADDRHASH"><span class="hs-identifier">ADDRHASH</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#Crypto"><span class="hs-identifier">Crypto</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#DSIGN"><span class="hs-identifier">DSIGN</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#HASH"><span class="hs-identifier">HASH</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#KES"><span class="hs-identifier">KES</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#VRF"><span class="hs-identifier">VRF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Orphans.html"><span class="hs-identifier">Cardano.Ledger.Orphans</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">FromJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">FromJSONKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">ToJSONKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-operator">(.:)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-operator">(.=)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Aeson</span></span><span>
+</span><span id="line-98"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Coerce</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier">Coercible</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier">coerce</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-99"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-0.8.0.0-5f8752817ef4cf8c2fb5f2350ad1630e38840f0c0c971504d8b26fc63b50de08/share/doc/html/src"><span class="hs-identifier">Data.Default</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-0.8.0.0-5f8752817ef4cf8c2fb5f2350ad1630e38840f0c0c971504d8b26fc63b50de08/share/doc/html/src"><span class="hs-identifier">Default</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Kind</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier">Type</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Typeable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Typeable</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/quiet-0.2-5ab684dfea28647dd21af2c1d5ea48eacda334f57d4e2ecf958b0f4bd26fe87e/share/doc/html/src"><span class="hs-identifier">Quiet</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- | The role of a key.</span><span>
+</span><span id="line-108"></span><span class="hs-comment">--</span><span>
+</span><span id="line-109"></span><span class="hs-comment">--   Note that a role is not _fixed_, nor is it unique. In particular, keys may</span><span>
+</span><span id="line-110"></span><span class="hs-comment">--   variously be used as witnesses, and so in many case we will change the role</span><span>
+</span><span id="line-111"></span><span class="hs-comment">--   of a key to the 'Witness' role.</span><span>
+</span><span id="line-112"></span><span class="hs-comment">--</span><span>
+</span><span id="line-113"></span><span class="hs-comment">--   It is also perfectly allowable for a key to be used in many roles; there is</span><span>
+</span><span id="line-114"></span><span class="hs-comment">--   nothing prohibiting somebody using the same underlying key as their payment</span><span>
+</span><span id="line-115"></span><span class="hs-comment">--   and staking key, as well as the key for their stake pool. So these roles</span><span>
+</span><span id="line-116"></span><span class="hs-comment">--   are more intended for two purposes:</span><span>
+</span><span id="line-117"></span><span class="hs-comment">--</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--   - To make explicit how we are using a key in the specifications</span><span>
+</span><span id="line-119"></span><span class="hs-comment">--   - To provide a guide to downstream implementors, for whom the profusion of</span><span>
+</span><span id="line-120"></span><span class="hs-comment">--     keys may be confusing.</span><span>
+</span><span id="line-121"></span><span class="hs-keyword">data</span><span> </span><span id="KeyRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier hs-var">KeyRole</span></a></span></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Genesis"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Genesis"><span class="hs-identifier hs-var">Genesis</span></a></span></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GenesisDelegate"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenesisDelegate"><span class="hs-identifier hs-var">GenesisDelegate</span></a></span></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Payment"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Payment"><span class="hs-identifier hs-var">Payment</span></a></span></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Staking"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Staking"><span class="hs-identifier hs-var">Staking</span></a></span></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="StakePool"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-var">StakePool</span></a></span></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BlockIssuer"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#BlockIssuer"><span class="hs-identifier hs-var">BlockIssuer</span></a></span></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Witness"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-var">Witness</span></a></span></span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="DRepRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DRepRole"><span class="hs-identifier hs-var">DRepRole</span></a></span></span><span>
+</span><span id="line-130"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="HotCommitteeRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HotCommitteeRole"><span class="hs-identifier hs-var">HotCommitteeRole</span></a></span></span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ColdCommitteeRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#ColdCommitteeRole"><span class="hs-identifier hs-var">ColdCommitteeRole</span></a></span></span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679423983"><span id="local-6989586621679423985"><span id="local-6989586621679423987"><span class="annot"><span class="annottext">Int -&gt; KeyRole -&gt; ShowS
+[KeyRole] -&gt; ShowS
+KeyRole -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [KeyRole] -&gt; ShowS
+$cshowList :: [KeyRole] -&gt; ShowS
+show :: KeyRole -&gt; String
+$cshow :: KeyRole -&gt; String
+showsPrec :: Int -&gt; KeyRole -&gt; ShowS
+$cshowsPrec :: Int -&gt; KeyRole -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-keyword">class</span><span> </span><span id="HasKeyRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HasKeyRole"><span class="hs-identifier hs-var">HasKeyRole</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679424454"><span class="annot"><a href="#local-6989586621679424454"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier hs-type">KeyRole</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Type</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-comment">-- | General coercion of key roles.</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-comment">--   The presence of this function is mostly to help the user realise where they</span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-comment">--   are converting key roles.</span><span>
+</span><span id="line-139"></span><span>  </span><span id="coerceKeyRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#coerceKeyRole"><span class="hs-identifier hs-type">coerceKeyRole</span></a></span></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-140"></span><span>    </span><span id="local-6989586621679424441"><span id="local-6989586621679424442"><span class="annot"><a href="#local-6989586621679424454"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424442"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-141"></span><span>    </span><span class="annot"><a href="#local-6989586621679424454"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424441"><span class="hs-identifier hs-type">r'</span></a></span></span></span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="coerceKeyRole"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#coerceKeyRole"><span class="hs-identifier hs-type">coerceKeyRole</span></a></span></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-143"></span><span>    </span><span id="local-6989586621679424452"><span id="local-6989586621679424453"><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Coercible</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679424454"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424453"><span class="hs-identifier hs-type">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679424454"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424452"><span class="hs-identifier hs-type">r'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-144"></span><span>    </span><span class="annot"><a href="#local-6989586621679424454"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424453"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-145"></span><span>    </span><span class="annot"><a href="#local-6989586621679424454"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424452"><span class="hs-identifier hs-type">r'</span></a></span></span></span><span>
+</span><span id="line-146"></span><span>  </span><span id="local-6989586621679423979"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#coerceKeyRole"><span class="hs-identifier hs-var hs-var">coerceKeyRole</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">coerce :: forall a b. Coercible a b =&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">coerce</span></a></span></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- | Use a key as a witness.</span><span>
+</span><span id="line-149"></span><span class="hs-comment">--</span><span>
+</span><span id="line-150"></span><span class="hs-comment">--   This is the most common coercion between key roles, because most keys can</span><span>
+</span><span id="line-151"></span><span class="hs-comment">--   be used as witnesses to some types of transaction. As such, we provide an</span><span>
+</span><span id="line-152"></span><span class="hs-comment">--   explicit coercion for it.</span><span>
+</span><span id="line-153"></span><span id="local-6989586621679424445"><span id="local-6989586621679424446"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier hs-type">asWitness</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-154"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HasKeyRole"><span class="hs-identifier hs-type">HasKeyRole</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424446"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-155"></span><span>  </span><span class="annot"><a href="#local-6989586621679424446"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424445"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><a href="#local-6989586621679424446"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Witness"><span class="hs-identifier hs-type">Witness</span></a></span></span></span><span>
+</span><span id="line-157"></span><span id="asWitness"><span class="annot"><span class="annottext">asWitness :: forall (a :: KeyRole -&gt; *) (r :: KeyRole).
+HasKeyRole a =&gt;
+a r -&gt; a 'Witness
+</span><a href="Cardano.Ledger.Keys.Internal.html#asWitness"><span class="hs-identifier hs-var hs-var">asWitness</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (a :: KeyRole -&gt; *) (r :: KeyRole) (r' :: KeyRole).
+HasKeyRole a =&gt;
+a r -&gt; a r'
+</span><a href="Cardano.Ledger.Keys.Internal.html#coerceKeyRole"><span class="hs-identifier hs-var">coerceKeyRole</span></a></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- Verification keys</span><span>
+</span><span id="line-161"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span class="hs-keyword">type</span><span> </span><span id="DSignable"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#DSignable"><span class="hs-identifier hs-var">DSignable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">DSIGN.Signable</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- | Discriminated verification key</span><span>
+</span><span id="line-166"></span><span class="hs-comment">--</span><span>
+</span><span id="line-167"></span><span class="hs-comment">--   We wrap the basic `VerKeyDSIGN` in order to add the key role.</span><span>
+</span><span id="line-168"></span><span id="local-6989586621679423973"><span id="local-6989586621679423974"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="VKey"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679424437"><span class="annot"><a href="#local-6989586621679424437"><span class="hs-identifier hs-type">kd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier hs-type">KeyRole</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VKey"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span></span><span> </span><span class="hs-special">{</span><span id="unVKey"><span class="annot"><span class="annottext">forall (kd :: KeyRole). VKey kd -&gt; VerKeyDSIGN DSIGN
+</span><a href="Cardano.Ledger.Keys.Internal.html#unVKey"><span class="hs-identifier hs-var hs-var">unVKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">DSIGN.VerKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall (kd :: KeyRole) x. Rep (VKey kd) x -&gt; VKey kd
+forall (kd :: KeyRole) x. VKey kd -&gt; Rep (VKey kd) x
+$cto :: forall (kd :: KeyRole) x. Rep (VKey kd) x -&gt; VKey kd
+$cfrom :: forall (kd :: KeyRole) x. VKey kd -&gt; Rep (VKey kd) x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423960"><span id="local-6989586621679423965"><span class="annot"><span class="annottext">VKey kd -&gt; VKey kd -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall (kd :: KeyRole). VKey kd -&gt; VKey kd -&gt; Bool
+/= :: VKey kd -&gt; VKey kd -&gt; Bool
+$c/= :: forall (kd :: KeyRole). VKey kd -&gt; VKey kd -&gt; Bool
+== :: VKey kd -&gt; VKey kd -&gt; Bool
+$c== :: forall (kd :: KeyRole). VKey kd -&gt; VKey kd -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423954"><span class="annot"><span class="annottext">VKey kd -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+forall (kd :: KeyRole). VKey kd -&gt; ()
+rnf :: VKey kd -&gt; ()
+$crnf :: forall (kd :: KeyRole). VKey kd -&gt; ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423938"><span id="local-6989586621679423942"><span id="local-6989586621679423947"><span class="annot"><span class="annottext">Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+Proxy (VKey kd) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+forall (kd :: KeyRole). Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+forall (kd :: KeyRole). Proxy (VKey kd) -&gt; String
+showTypeOf :: Proxy (VKey kd) -&gt; String
+$cshowTypeOf :: forall (kd :: KeyRole). Proxy (VKey kd) -&gt; String
+wNoThunks :: Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall (kd :: KeyRole). Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: forall (kd :: KeyRole). Context -&gt; VKey kd -&gt; IO (Maybe ThunkInfo)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423917"><span id="local-6989586621679423922"><span id="local-6989586621679423928"><span class="annot"><span class="annottext">Proxy (VKey kd) -&gt; Text
+forall s. Decoder s (VKey kd)
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy (VKey kd) -&gt; Decoder s ()
+forall {kd :: KeyRole}. Typeable kd =&gt; Typeable (VKey kd)
+forall (kd :: KeyRole). Typeable kd =&gt; Proxy (VKey kd) -&gt; Text
+forall (kd :: KeyRole) s. Typeable kd =&gt; Decoder s (VKey kd)
+forall (kd :: KeyRole) s.
+Typeable kd =&gt;
+Proxy (VKey kd) -&gt; Decoder s ()
+label :: Proxy (VKey kd) -&gt; Text
+$clabel :: forall (kd :: KeyRole). Typeable kd =&gt; Proxy (VKey kd) -&gt; Text
+dropCBOR :: forall s. Proxy (VKey kd) -&gt; Decoder s ()
+$cdropCBOR :: forall (kd :: KeyRole) s.
+Typeable kd =&gt;
+Proxy (VKey kd) -&gt; Decoder s ()
+decCBOR :: forall s. Decoder s (VKey kd)
+$cdecCBOR :: forall (kd :: KeyRole) s. Typeable kd =&gt; Decoder s (VKey kd)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423890"><span id="local-6989586621679423897"><span id="local-6989586621679423905"><span class="annot"><span class="annottext">VKey kd -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [VKey kd] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (VKey kd) -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+forall {kd :: KeyRole}. Typeable kd =&gt; Typeable (VKey kd)
+forall (kd :: KeyRole). Typeable kd =&gt; VKey kd -&gt; Encoding
+forall (kd :: KeyRole).
+Typeable kd =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [VKey kd] -&gt; Size
+forall (kd :: KeyRole).
+Typeable kd =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (VKey kd) -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [VKey kd] -&gt; Size
+$cencodedListSizeExpr :: forall (kd :: KeyRole).
+Typeable kd =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [VKey kd] -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (VKey kd) -&gt; Size
+$cencodedSizeExpr :: forall (kd :: KeyRole).
+Typeable kd =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy (VKey kd) -&gt; Size
+encCBOR :: VKey kd -&gt; Encoding
+$cencCBOR :: forall (kd :: KeyRole). Typeable kd =&gt; VKey kd -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>
+</span><span id="line-171"></span><span id="local-6989586621679423870"><span id="local-6989586621679423876"><span id="local-6989586621679423883"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">via</span><span> </span><span id="local-6989586621679424389"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/quiet-0.2-5ab684dfea28647dd21af2c1d5ea48eacda334f57d4e2ecf958b0f4bd26fe87e/share/doc/html/src"><span class="hs-identifier hs-type">Quiet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424389"><span class="hs-identifier hs-type">kd</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424389"><span class="hs-identifier hs-type">kd</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423828"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HasKeyRole"><span class="hs-identifier hs-type">HasKeyRole</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span></span><span>
+</span><span id="line-174"></span><span>
+</span><span id="line-175"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423821"><span id="local-6989586621679424385"><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424385"><span class="hs-identifier hs-type">kd</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-identifier hs-type">FromCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424385"><span class="hs-identifier hs-type">kd</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-176"></span><span>  </span><span id="local-6989586621679423816"><span class="annot"><span class="annottext">fromCBOR :: forall s. Decoder s (VKey kd)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (kd :: KeyRole). VerKeyDSIGN DSIGN -&gt; VKey kd
+</span><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall v s. DSIGNAlgorithm v =&gt; Decoder s (VerKeyDSIGN v)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">DSIGN.decodeVerKeyDSIGN</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-pragma hs-type">fromCBOR</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423805"><span id="local-6989586621679423807"><span id="local-6989586621679424373"><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Typeable</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424373"><span class="hs-identifier hs-type">kd</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-identifier hs-type">ToCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424373"><span class="hs-identifier hs-type">kd</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-180"></span><span>  </span><span id="local-6989586621679423802"><span class="annot"><span class="annottext">toCBOR :: VKey kd -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-binary-1.7.1.0-0b51c186de77e1b84e0bef5e936b41f5226661627eebc265caf0d10baa5c72a3/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall v. DSIGNAlgorithm v =&gt; VerKeyDSIGN v -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">DSIGN.encodeVerKeyDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall (kd :: KeyRole). VKey kd -&gt; VerKeyDSIGN DSIGN
+</span><a href="Cardano.Ledger.Keys.Internal.html#unVKey"><span class="hs-identifier hs-var">unVKey</span></a></span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- | Produce a digital signature</span><span>
+</span><span id="line-183"></span><span id="local-6989586621679424368"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#signedDSIGN"><span class="hs-identifier hs-type">signedDSIGN</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-184"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">DSIGN.Signable</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424368"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-185"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">DSIGN.SignKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-186"></span><span>  </span><span class="annot"><a href="#local-6989586621679424368"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-187"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignedDSIGN"><span class="hs-identifier hs-type">SignedDSIGN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424368"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-188"></span><span id="signedDSIGN"><span class="annot"><span class="annottext">signedDSIGN :: forall a.
+Signable DSIGN a =&gt;
+SignKeyDSIGN DSIGN -&gt; a -&gt; SignedDSIGN a
+</span><a href="Cardano.Ledger.Keys.Internal.html#signedDSIGN"><span class="hs-identifier hs-var hs-var">signedDSIGN</span></a></span></span><span> </span><span id="local-6989586621679423794"><span class="annot"><span class="annottext">SignKeyDSIGN DSIGN
+</span><a href="#local-6989586621679423794"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span id="local-6989586621679423793"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679423793"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall v a.
+(DSIGNAlgorithm v, Signable v a) =&gt;
+ContextDSIGN v -&gt; a -&gt; SignKeyDSIGN v -&gt; SignedDSIGN v a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">DSIGN.signedDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679423793"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">SignKeyDSIGN DSIGN
+</span><a href="#local-6989586621679423794"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span class="hs-comment">-- | Verify a digital signature</span><span>
+</span><span id="line-191"></span><span id="local-6989586621679424357"><span id="local-6989586621679424358"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-identifier hs-type">verifySignedDSIGN</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-192"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">DSIGN.Signable</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424358"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-193"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424357"><span class="hs-identifier hs-type">kd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-194"></span><span>  </span><span class="annot"><a href="#local-6989586621679424358"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-195"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignedDSIGN"><span class="hs-identifier hs-type">SignedDSIGN</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424358"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-196"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span></span></span><span>
+</span><span id="line-197"></span><span id="verifySignedDSIGN"><span class="annot"><span class="annottext">verifySignedDSIGN :: forall a (kd :: KeyRole).
+Signable DSIGN a =&gt;
+VKey kd -&gt; a -&gt; SignedDSIGN a -&gt; Bool
+</span><a href="Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-identifier hs-var hs-var">verifySignedDSIGN</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span id="local-6989586621679423785"><span class="annot"><span class="annottext">VerKeyDSIGN DSIGN
+</span><a href="#local-6989586621679423785"><span class="hs-identifier hs-var">vk</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679423784"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679423784"><span class="hs-identifier hs-var">vd</span></a></span></span><span> </span><span id="local-6989586621679423783"><span class="annot"><span class="annottext">SignedDSIGN a
+</span><a href="#local-6989586621679423783"><span class="hs-identifier hs-var">sigDSIGN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-198"></span><span>  </span><span class="annot"><span class="annottext">forall a c b. (a -&gt; c) -&gt; (b -&gt; c) -&gt; Either a b -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">either</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. a -&gt; b -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. a -&gt; b -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall v a.
+(DSIGNAlgorithm v, Signable v a, HasCallStack) =&gt;
+ContextDSIGN v
+-&gt; VerKeyDSIGN v -&gt; a -&gt; SignedDSIGN v a -&gt; Either String ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">DSIGN.verifySignedDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">VerKeyDSIGN DSIGN
+</span><a href="#local-6989586621679423785"><span class="hs-identifier hs-var">vk</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679423784"><span class="hs-identifier hs-var">vd</span></a></span><span> </span><span class="annot"><span class="annottext">SignedDSIGN a
+</span><a href="#local-6989586621679423783"><span class="hs-identifier hs-var">sigDSIGN</span></a></span><span>
+</span><span id="line-199"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#verifySignedDSIGN"><span class="hs-pragma hs-type">verifySignedDSIGN</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- | Hash a given signature</span><span>
+</span><span id="line-202"></span><span id="local-6989586621679424343"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#hashSignature"><span class="hs-identifier hs-type">hashSignature</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-203"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignedDSIGN"><span class="hs-identifier hs-type">SignedDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424343"><span class="hs-identifier hs-type">h</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-204"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignedDSIGN"><span class="hs-identifier hs-type">SignedDSIGN</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Hash"><span class="hs-identifier hs-type">Hash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424343"><span class="hs-identifier hs-type">h</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-205"></span><span id="hashSignature"><span class="annot"><span class="annottext">hashSignature :: forall h. SignedDSIGN (Hash h) -&gt; Hash (SignedDSIGN (Hash h))
+</span><a href="Cardano.Ledger.Keys.Internal.html#hashSignature"><span class="hs-identifier hs-var hs-var">hashSignature</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">DSIGN.SignedDSIGN</span></a></span><span> </span><span id="local-6989586621679423775"><span class="annot"><span class="annottext">SigDSIGN DSIGN
+</span><a href="#local-6989586621679423775"><span class="hs-identifier hs-var">sigDSIGN</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall h a b. Hash h a -&gt; Hash h b
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">Hash.castHash</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall h a. HashAlgorithm h =&gt; (a -&gt; ByteString) -&gt; a -&gt; Hash h a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">Hash.hashWith</span></a></span><span> </span><span class="annot"><span class="annottext">forall v. DSIGNAlgorithm v =&gt; SigDSIGN v -&gt; ByteString
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">DSIGN.rawSerialiseSigDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">SigDSIGN DSIGN
+</span><a href="#local-6989586621679423775"><span class="hs-identifier hs-var">sigDSIGN</span></a></span><span>
+</span><span id="line-206"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#hashSignature"><span class="hs-pragma hs-type">hashSignature</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-207"></span><span>
+</span><span id="line-208"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-209"></span><span class="hs-comment">-- Key Hashes</span><span>
+</span><span id="line-210"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-211"></span><span>
+</span><span id="line-212"></span><span class="hs-comment">-- | Discriminated hash of public Key</span><span>
+</span><span id="line-213"></span><span class="hs-keyword">newtype</span><span> </span><span id="KeyHash"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679424329"><span class="annot"><a href="#local-6989586621679424329"><span class="hs-identifier hs-type">r</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier hs-type">KeyRole</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="KeyHash"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span></span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-special">{</span><span id="unKeyHash"><span class="annot"><span class="annottext">forall (r :: KeyRole).
+KeyHash r -&gt; Hash ADDRHASH (VerKeyDSIGN DSIGN)
+</span><a href="Cardano.Ledger.Keys.Internal.html#unKeyHash"><span class="hs-identifier hs-var hs-var">unKeyHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">Hash.Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#ADDRHASH"><span class="hs-identifier hs-type">ADDRHASH</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">DSIGN.VerKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span class="hs-special">)</span><span class="hs-special">}</span><span>
+</span><span id="line-215"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679423760"><span id="local-6989586621679423762"><span id="local-6989586621679423768"><span class="annot"><span class="annottext">Int -&gt; KeyHash r -&gt; ShowS
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall (r :: KeyRole). Int -&gt; KeyHash r -&gt; ShowS
+forall (r :: KeyRole). [KeyHash r] -&gt; ShowS
+forall (r :: KeyRole). KeyHash r -&gt; String
+showList :: [KeyHash r] -&gt; ShowS
+$cshowList :: forall (r :: KeyRole). [KeyHash r] -&gt; ShowS
+show :: KeyHash r -&gt; String
+$cshow :: forall (r :: KeyRole). KeyHash r -&gt; String
+showsPrec :: Int -&gt; KeyHash r -&gt; ShowS
+$cshowsPrec :: forall (r :: KeyRole). Int -&gt; KeyHash r -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423753"><span id="local-6989586621679423758"><span class="annot"><span class="annottext">KeyHash r -&gt; KeyHash r -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; Bool
+/= :: KeyHash r -&gt; KeyHash r -&gt; Bool
+$c/= :: forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; Bool
+== :: KeyHash r -&gt; KeyHash r -&gt; Bool
+$c== :: forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423721"><span id="local-6989586621679423725"><span id="local-6989586621679423729"><span id="local-6989586621679423733"><span id="local-6989586621679423737"><span id="local-6989586621679423741"><span id="local-6989586621679423746"><span class="annot"><span class="annottext">KeyHash r -&gt; KeyHash r -&gt; Bool
+KeyHash r -&gt; KeyHash r -&gt; Ordering
+KeyHash r -&gt; KeyHash r -&gt; KeyHash r
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall (r :: KeyRole). Eq (KeyHash r)
+forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; Bool
+forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; Ordering
+forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; KeyHash r
+min :: KeyHash r -&gt; KeyHash r -&gt; KeyHash r
+$cmin :: forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; KeyHash r
+max :: KeyHash r -&gt; KeyHash r -&gt; KeyHash r
+$cmax :: forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; KeyHash r
+&gt;= :: KeyHash r -&gt; KeyHash r -&gt; Bool
+$c&gt;= :: forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; Bool
+&gt; :: KeyHash r -&gt; KeyHash r -&gt; Bool
+$c&gt; :: forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; Bool
+&lt;= :: KeyHash r -&gt; KeyHash r -&gt; Bool
+$c&lt;= :: forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; Bool
+&lt; :: KeyHash r -&gt; KeyHash r -&gt; Bool
+$c&lt; :: forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; Bool
+compare :: KeyHash r -&gt; KeyHash r -&gt; Ordering
+$ccompare :: forall (r :: KeyRole). KeyHash r -&gt; KeyHash r -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-216"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span>
+</span><span id="line-217"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679423715"><span class="annot"><span class="annottext">KeyHash r -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+forall (r :: KeyRole). KeyHash r -&gt; ()
+rnf :: KeyHash r -&gt; ()
+$crnf :: forall (r :: KeyRole). KeyHash r -&gt; ()
+</span><a href="#local-6989586621679423715"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span>
+</span><span id="line-218"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423701"><span id="local-6989586621679423705"><span id="local-6989586621679423710"><span class="annot"><span class="annottext">Context -&gt; KeyHash r -&gt; IO (Maybe ThunkInfo)
+Proxy (KeyHash r) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+forall (r :: KeyRole). Context -&gt; KeyHash r -&gt; IO (Maybe ThunkInfo)
+forall (r :: KeyRole). Proxy (KeyHash r) -&gt; String
+showTypeOf :: Proxy (KeyHash r) -&gt; String
+$cshowTypeOf :: forall (r :: KeyRole). Proxy (KeyHash r) -&gt; String
+wNoThunks :: Context -&gt; KeyHash r -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall (r :: KeyRole). Context -&gt; KeyHash r -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; KeyHash r -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: forall (r :: KeyRole). Context -&gt; KeyHash r -&gt; IO (Maybe ThunkInfo)
+</span><a href="#local-6989586621679423701"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span>
+</span><span id="line-219"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423691"><span id="local-6989586621679423697"><span class="annot"><span class="annottext">forall x. Rep (KeyHash r) x -&gt; KeyHash r
+forall x. KeyHash r -&gt; Rep (KeyHash r) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall (r :: KeyRole) x. Rep (KeyHash r) x -&gt; KeyHash r
+forall (r :: KeyRole) x. KeyHash r -&gt; Rep (KeyHash r) x
+to :: forall x. Rep (KeyHash r) x -&gt; KeyHash r
+$cto :: forall (r :: KeyRole) x. Rep (KeyHash r) x -&gt; KeyHash r
+from :: forall x. KeyHash r -&gt; Rep (KeyHash r) x
+$cfrom :: forall (r :: KeyRole) x. KeyHash r -&gt; Rep (KeyHash r) x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span>
+</span><span id="line-220"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423664"><span id="local-6989586621679423672"><span id="local-6989586621679423681"><span class="annot"><span class="annottext">KeyHash r -&gt; Encoding
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [KeyHash r] -&gt; Size
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (KeyHash r) -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; ToCBOR a
+forall {r :: KeyRole}. Typeable r =&gt; Typeable (KeyHash r)
+forall (r :: KeyRole). Typeable r =&gt; KeyHash r -&gt; Encoding
+forall (r :: KeyRole).
+Typeable r =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [KeyHash r] -&gt; Size
+forall (r :: KeyRole).
+Typeable r =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (KeyHash r) -&gt; Size
+encodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [KeyHash r] -&gt; Size
+$cencodedListSizeExpr :: forall (r :: KeyRole).
+Typeable r =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [KeyHash r] -&gt; Size
+encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (KeyHash r) -&gt; Size
+$cencodedSizeExpr :: forall (r :: KeyRole).
+Typeable r =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (KeyHash r) -&gt; Size
+toCBOR :: KeyHash r -&gt; Encoding
+$ctoCBOR :: forall (r :: KeyRole). Typeable r =&gt; KeyHash r -&gt; Encoding
+</span><a href="#local-6989586621679423664"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToCBOR</span></a></span></span></span></span><span>
+</span><span id="line-221"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423639"><span id="local-6989586621679423646"><span class="annot"><span class="annottext">Proxy (KeyHash r) -&gt; Text
+forall s. Decoder s (KeyHash r)
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a) -&gt; (Proxy a -&gt; Text) -&gt; FromCBOR a
+forall {r :: KeyRole}. Typeable r =&gt; Typeable (KeyHash r)
+forall (r :: KeyRole). Typeable r =&gt; Proxy (KeyHash r) -&gt; Text
+forall (r :: KeyRole) s. Typeable r =&gt; Decoder s (KeyHash r)
+label :: Proxy (KeyHash r) -&gt; Text
+$clabel :: forall (r :: KeyRole). Typeable r =&gt; Proxy (KeyHash r) -&gt; Text
+fromCBOR :: forall s. Decoder s (KeyHash r)
+$cfromCBOR :: forall (r :: KeyRole) s. Typeable r =&gt; Decoder s (KeyHash r)
+</span><a href="#local-6989586621679423639"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromCBOR</span></a></span></span></span><span>
+</span><span id="line-222"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423607"><span id="local-6989586621679423615"><span id="local-6989586621679423624"><span class="annot"><span class="annottext">KeyHash r -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [KeyHash r] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (KeyHash r) -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+forall {r :: KeyRole}. Typeable r =&gt; Typeable (KeyHash r)
+forall (r :: KeyRole). Typeable r =&gt; KeyHash r -&gt; Encoding
+forall (r :: KeyRole).
+Typeable r =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [KeyHash r] -&gt; Size
+forall (r :: KeyRole).
+Typeable r =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (KeyHash r) -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [KeyHash r] -&gt; Size
+$cencodedListSizeExpr :: forall (r :: KeyRole).
+Typeable r =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [KeyHash r] -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (KeyHash r) -&gt; Size
+$cencodedSizeExpr :: forall (r :: KeyRole).
+Typeable r =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (KeyHash r) -&gt; Size
+encCBOR :: KeyHash r -&gt; Encoding
+$cencCBOR :: forall (r :: KeyRole). Typeable r =&gt; KeyHash r -&gt; Encoding
+</span><a href="#local-6989586621679423607"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span>
+</span><span id="line-223"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423577"><span id="local-6989586621679423583"><span id="local-6989586621679423590"><span class="annot"><span class="annottext">Proxy (KeyHash r) -&gt; Text
+forall s. Decoder s (KeyHash r)
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy (KeyHash r) -&gt; Decoder s ()
+forall {r :: KeyRole}. Typeable r =&gt; Typeable (KeyHash r)
+forall (r :: KeyRole). Typeable r =&gt; Proxy (KeyHash r) -&gt; Text
+forall (r :: KeyRole) s. Typeable r =&gt; Decoder s (KeyHash r)
+forall (r :: KeyRole) s.
+Typeable r =&gt;
+Proxy (KeyHash r) -&gt; Decoder s ()
+label :: Proxy (KeyHash r) -&gt; Text
+$clabel :: forall (r :: KeyRole). Typeable r =&gt; Proxy (KeyHash r) -&gt; Text
+dropCBOR :: forall s. Proxy (KeyHash r) -&gt; Decoder s ()
+$cdropCBOR :: forall (r :: KeyRole) s.
+Typeable r =&gt;
+Proxy (KeyHash r) -&gt; Decoder s ()
+decCBOR :: forall s. Decoder s (KeyHash r)
+$cdecCBOR :: forall (r :: KeyRole) s. Typeable r =&gt; Decoder s (KeyHash r)
+</span><a href="#local-6989586621679423577"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span>
+</span><span id="line-224"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423558"><span id="local-6989586621679423564"><span class="annot"><span class="annottext">ToJSONKeyFunction [KeyHash r]
+ToJSONKeyFunction (KeyHash r)
+forall a.
+ToJSONKeyFunction a -&gt; ToJSONKeyFunction [a] -&gt; ToJSONKey a
+forall (r :: KeyRole). ToJSONKeyFunction [KeyHash r]
+forall (r :: KeyRole). ToJSONKeyFunction (KeyHash r)
+toJSONKeyList :: ToJSONKeyFunction [KeyHash r]
+$ctoJSONKeyList :: forall (r :: KeyRole). ToJSONKeyFunction [KeyHash r]
+toJSONKey :: ToJSONKeyFunction (KeyHash r)
+$ctoJSONKey :: forall (r :: KeyRole). ToJSONKeyFunction (KeyHash r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">ToJSONKey</span></a></span></span></span><span>
+</span><span id="line-225"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423545"><span id="local-6989586621679423551"><span class="annot"><span class="annottext">FromJSONKeyFunction [KeyHash r]
+FromJSONKeyFunction (KeyHash r)
+forall a.
+FromJSONKeyFunction a -&gt; FromJSONKeyFunction [a] -&gt; FromJSONKey a
+forall (r :: KeyRole). FromJSONKeyFunction [KeyHash r]
+forall (r :: KeyRole). FromJSONKeyFunction (KeyHash r)
+fromJSONKeyList :: FromJSONKeyFunction [KeyHash r]
+$cfromJSONKeyList :: forall (r :: KeyRole). FromJSONKeyFunction [KeyHash r]
+fromJSONKey :: FromJSONKeyFunction (KeyHash r)
+$cfromJSONKey :: forall (r :: KeyRole). FromJSONKeyFunction (KeyHash r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSONKey</span></a></span></span></span><span>
+</span><span id="line-226"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423517"><span id="local-6989586621679423522"><span id="local-6989586621679423527"><span id="local-6989586621679423532"><span id="local-6989586621679423538"><span class="annot"><span class="annottext">[KeyHash r] -&gt; Encoding
+[KeyHash r] -&gt; Value
+KeyHash r -&gt; Bool
+KeyHash r -&gt; Encoding
+KeyHash r -&gt; Value
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+forall (r :: KeyRole). [KeyHash r] -&gt; Encoding
+forall (r :: KeyRole). [KeyHash r] -&gt; Value
+forall (r :: KeyRole). KeyHash r -&gt; Bool
+forall (r :: KeyRole). KeyHash r -&gt; Encoding
+forall (r :: KeyRole). KeyHash r -&gt; Value
+omitField :: KeyHash r -&gt; Bool
+$comitField :: forall (r :: KeyRole). KeyHash r -&gt; Bool
+toEncodingList :: [KeyHash r] -&gt; Encoding
+$ctoEncodingList :: forall (r :: KeyRole). [KeyHash r] -&gt; Encoding
+toJSONList :: [KeyHash r] -&gt; Value
+$ctoJSONList :: forall (r :: KeyRole). [KeyHash r] -&gt; Value
+toEncoding :: KeyHash r -&gt; Encoding
+$ctoEncoding :: forall (r :: KeyRole). KeyHash r -&gt; Encoding
+toJSON :: KeyHash r -&gt; Value
+$ctoJSON :: forall (r :: KeyRole). KeyHash r -&gt; Value
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span>
+</span><span id="line-227"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423499"><span id="local-6989586621679423504"><span id="local-6989586621679423510"><span class="annot"><span class="annottext">Maybe (KeyHash r)
+Value -&gt; Parser [KeyHash r]
+Value -&gt; Parser (KeyHash r)
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+forall (r :: KeyRole). Maybe (KeyHash r)
+forall (r :: KeyRole). Value -&gt; Parser [KeyHash r]
+forall (r :: KeyRole). Value -&gt; Parser (KeyHash r)
+omittedField :: Maybe (KeyHash r)
+$comittedField :: forall (r :: KeyRole). Maybe (KeyHash r)
+parseJSONList :: Value -&gt; Parser [KeyHash r]
+$cparseJSONList :: forall (r :: KeyRole). Value -&gt; Parser [KeyHash r]
+parseJSON :: Value -&gt; Parser (KeyHash r)
+$cparseJSON :: forall (r :: KeyRole). Value -&gt; Parser (KeyHash r)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span></span><span>
+</span><span id="line-228"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423492"><span class="annot"><span class="annottext">KeyHash r
+forall a. a -&gt; Default a
+forall (r :: KeyRole). KeyHash r
+def :: KeyHash r
+$cdef :: forall (r :: KeyRole). KeyHash r
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-0.8.0.0-5f8752817ef4cf8c2fb5f2350ad1630e38840f0c0c971504d8b26fc63b50de08/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Default</span></a></span></span><span>
+</span><span id="line-229"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-230"></span><span>
+</span><span id="line-231"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423484"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#HasKeyRole"><span class="hs-identifier hs-type">HasKeyRole</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span></span><span>
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- | Hash a given public key</span><span>
+</span><span id="line-234"></span><span id="local-6989586621679424258"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#hashKey"><span class="hs-identifier hs-type">hashKey</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424258"><span class="hs-identifier hs-type">kd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424258"><span class="hs-identifier hs-type">kd</span></a></span></span><span>
+</span><span id="line-235"></span><span id="hashKey"><span class="annot"><span class="annottext">hashKey :: forall (kd :: KeyRole). VKey kd -&gt; KeyHash kd
+</span><a href="Cardano.Ledger.Keys.Internal.html#hashKey"><span class="hs-identifier hs-var hs-var">hashKey</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span id="local-6989586621679423481"><span class="annot"><span class="annottext">VerKeyDSIGN DSIGN
+</span><a href="#local-6989586621679423481"><span class="hs-identifier hs-var">vk</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (r :: KeyRole).
+Hash ADDRHASH (VerKeyDSIGN DSIGN) -&gt; KeyHash r
+</span><a href="Cardano.Ledger.Keys.Internal.html#KeyHash"><span class="hs-identifier hs-var">KeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall v h.
+(DSIGNAlgorithm v, HashAlgorithm h) =&gt;
+VerKeyDSIGN v -&gt; Hash h (VerKeyDSIGN v)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">DSIGN.hashVerKeyDSIGN</span></a></span><span> </span><span class="annot"><span class="annottext">VerKeyDSIGN DSIGN
+</span><a href="#local-6989586621679423481"><span class="hs-identifier hs-var">vk</span></a></span><span>
+</span><span id="line-236"></span><span>
+</span><span id="line-237"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- KES</span><span>
+</span><span id="line-239"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-240"></span><span>
+</span><span id="line-241"></span><span class="hs-keyword">type</span><span> </span><span id="KESignable"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KESignable"><span class="hs-identifier hs-var">KESignable</span></a></span></span><span> </span><span id="local-6989586621679423479"><span class="annot"><a href="#local-6989586621679423479"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">KES.Signable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#KES"><span class="hs-identifier hs-type">KES</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679423479"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-242"></span><span>
+</span><span id="line-243"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-244"></span><span class="hs-comment">-- VRF</span><span>
+</span><span id="line-245"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-246"></span><span>
+</span><span id="line-247"></span><span class="hs-keyword">type</span><span> </span><span id="VRFSignable"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VRFSignable"><span class="hs-identifier hs-var">VRFSignable</span></a></span></span><span> </span><span id="local-6989586621679423477"><span class="annot"><a href="#local-6989586621679423477"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">VRF.Signable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#VRF"><span class="hs-identifier hs-type">VRF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679423477"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-248"></span><span>
+</span><span id="line-249"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-250"></span><span class="hs-comment">-- Genesis delegation</span><span>
+</span><span id="line-251"></span><span class="hs-comment">--</span><span>
+</span><span id="line-252"></span><span class="hs-comment">-- TODO should this really live in here?</span><span>
+</span><span id="line-253"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-254"></span><span>
+</span><span id="line-255"></span><span id="local-6989586621679423474"><span id="local-6989586621679423475"></span></span><span class="hs-keyword">data</span><span> </span><span id="GenDelegPair"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-var">GenDelegPair</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="GenDelegPair"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-var">GenDelegPair</span></a></span></span><span>
+</span><span id="line-256"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="genDelegKeyHash"><span class="annot"><span class="annottext">GenDelegPair -&gt; KeyHash 'GenesisDelegate
+</span><a href="Cardano.Ledger.Keys.Internal.html#genDelegKeyHash"><span class="hs-identifier hs-var hs-var">genDelegKeyHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenesisDelegate"><span class="hs-identifier hs-type">GenesisDelegate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-257"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="genDelegVrfHash"><span class="annot"><span class="annottext">GenDelegPair -&gt; VRFVerKeyHash 'GenDelegVRF
+</span><a href="Cardano.Ledger.Keys.Internal.html#genDelegVrfHash"><span class="hs-identifier hs-var hs-var">genDelegVrfHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VRFVerKeyHash"><span class="hs-identifier hs-type">VRFVerKeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegVRF"><span class="hs-identifier hs-type">GenDelegVRF</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-258"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-259"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679423462"><span id="local-6989586621679423464"><span id="local-6989586621679423469"><span class="annot"><span class="annottext">Int -&gt; GenDelegPair -&gt; ShowS
+[GenDelegPair] -&gt; ShowS
+GenDelegPair -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [GenDelegPair] -&gt; ShowS
+$cshowList :: [GenDelegPair] -&gt; ShowS
+show :: GenDelegPair -&gt; String
+$cshow :: GenDelegPair -&gt; String
+showsPrec :: Int -&gt; GenDelegPair -&gt; ShowS
+$cshowsPrec :: Int -&gt; GenDelegPair -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423455"><span id="local-6989586621679423460"><span class="annot"><span class="annottext">GenDelegPair -&gt; GenDelegPair -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+$c/= :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+== :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+$c== :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423431"><span id="local-6989586621679423433"><span id="local-6989586621679423436"><span id="local-6989586621679423439"><span id="local-6989586621679423442"><span id="local-6989586621679423446"><span id="local-6989586621679423451"><span class="annot"><span class="annottext">Eq GenDelegPair
+GenDelegPair -&gt; GenDelegPair -&gt; Bool
+GenDelegPair -&gt; GenDelegPair -&gt; Ordering
+GenDelegPair -&gt; GenDelegPair -&gt; GenDelegPair
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: GenDelegPair -&gt; GenDelegPair -&gt; GenDelegPair
+$cmin :: GenDelegPair -&gt; GenDelegPair -&gt; GenDelegPair
+max :: GenDelegPair -&gt; GenDelegPair -&gt; GenDelegPair
+$cmax :: GenDelegPair -&gt; GenDelegPair -&gt; GenDelegPair
+&gt;= :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+$c&gt;= :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+&gt; :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+$c&gt; :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+&lt;= :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+$c&lt;= :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+&lt; :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+$c&lt; :: GenDelegPair -&gt; GenDelegPair -&gt; Bool
+compare :: GenDelegPair -&gt; GenDelegPair -&gt; Ordering
+$ccompare :: GenDelegPair -&gt; GenDelegPair -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep GenDelegPair x -&gt; GenDelegPair
+forall x. GenDelegPair -&gt; Rep GenDelegPair x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep GenDelegPair x -&gt; GenDelegPair
+$cfrom :: forall x. GenDelegPair -&gt; Rep GenDelegPair x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-260"></span><span>
+</span><span id="line-261"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423423"><span id="local-6989586621679423425"><span id="local-6989586621679423427"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span></span></span></span><span>
+</span><span id="line-262"></span><span>
+</span><span id="line-263"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423421"><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span></span><span>
+</span><span id="line-264"></span><span>
+</span><span id="line-265"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423414"><span id="local-6989586621679423416"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-266"></span><span>  </span><span id="local-6989586621679423405"><span class="annot"><span class="annottext">encCBOR :: GenDelegPair -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span><span> </span><span id="local-6989586621679423403"><span class="annot"><span class="annottext">KeyHash 'GenesisDelegate
+</span><a href="#local-6989586621679423403"><span class="hs-identifier hs-var">hk</span></a></span></span><span> </span><span id="local-6989586621679423402"><span class="annot"><span class="annottext">VRFVerKeyHash 'GenDelegVRF
+</span><a href="#local-6989586621679423402"><span class="hs-identifier hs-var">vrf</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-267"></span><span>    </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeListLen</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'GenesisDelegate
+</span><a href="#local-6989586621679423403"><span class="hs-identifier hs-var">hk</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. EncCBOR a =&gt; a -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">VRFVerKeyHash 'GenDelegVRF
+</span><a href="#local-6989586621679423402"><span class="hs-identifier hs-var">vrf</span></a></span><span>
+</span><span id="line-268"></span><span>
+</span><span id="line-269"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423395"><span id="local-6989586621679423397"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-270"></span><span>  </span><span id="local-6989586621679423381"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s GenDelegPair
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-271"></span><span>    </span><span class="annot"><span class="annottext">forall a s. Text -&gt; (a -&gt; Int) -&gt; Decoder s a -&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeRecordNamed</span></a></span><span>
+</span><span id="line-272"></span><span>      </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;GenDelegPair&quot;</span></span><span>
+</span><span id="line-273"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. a -&gt; b -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-274"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">KeyHash 'GenesisDelegate
+-&gt; VRFVerKeyHash 'GenDelegVRF -&gt; GenDelegPair
+</span><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-var">GenDelegPair</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall a s. DecCBOR a =&gt; Decoder s a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decCBOR</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-275"></span><span>  </span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-pragma hs-type">decCBOR</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-276"></span><span>
+</span><span id="line-277"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423371"><span id="local-6989586621679423373"><span id="local-6989586621679423375"><span id="local-6989586621679423377"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-278"></span><span>  </span><span id="local-6989586621679423359"><span class="annot"><span class="annottext">toJSON :: GenDelegPair -&gt; Value
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span><span> </span><span id="local-6989586621679423357"><span class="annot"><span class="annottext">KeyHash 'GenesisDelegate
+</span><a href="#local-6989586621679423357"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span id="local-6989586621679423356"><span class="annot"><span class="annottext">VRFVerKeyHash 'GenDelegVRF
+</span><a href="#local-6989586621679423356"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-279"></span><span>    </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var">Aeson.object</span></a></span><span>
+</span><span id="line-280"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;delegate&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'GenesisDelegate
+</span><a href="#local-6989586621679423357"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-281"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;vrf&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">VRFVerKeyHash 'GenDelegVRF
+</span><a href="#local-6989586621679423356"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-282"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-283"></span><span>
+</span><span id="line-284"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679423350"><span id="local-6989586621679423352"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-type">FromJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-285"></span><span>  </span><span id="local-6989586621679423340"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser GenDelegPair
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-286"></span><span>    </span><span class="annot"><span class="annottext">forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var">Aeson.withObject</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;GenDelegPair&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679423337"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679423337"><span class="hs-identifier hs-var">obj</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-287"></span><span>      </span><span class="annot"><span class="annottext">KeyHash 'GenesisDelegate
+-&gt; VRFVerKeyHash 'GenDelegVRF -&gt; GenDelegPair
+</span><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-var">GenDelegPair</span></a></span><span>
+</span><span id="line-288"></span><span>        </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679423337"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;delegate&quot;</span></span><span>
+</span><span id="line-289"></span><span>        </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621679423337"><span class="hs-identifier hs-var">obj</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-operator hs-var">.:</span></a></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;vrf&quot;</span></span><span>
+</span><span id="line-290"></span><span>
+</span><span id="line-291"></span><span id="local-6989586621679423335"><span id="local-6989586621679423336"></span></span><span class="hs-keyword">newtype</span><span> </span><span id="GenDelegs"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegs"><span class="hs-identifier hs-var">GenDelegs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="GenDelegs"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegs"><span class="hs-identifier hs-var">GenDelegs</span></a></span></span><span>
+</span><span id="line-292"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unGenDelegs"><span class="annot"><span class="annottext">GenDelegs -&gt; Map (KeyHash 'Genesis) GenDelegPair
+</span><a href="Cardano.Ledger.Keys.Internal.html#unGenDelegs"><span class="hs-identifier hs-var hs-var">unGenDelegs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Genesis"><span class="hs-identifier hs-type">Genesis</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegPair"><span class="hs-identifier hs-type">GenDelegPair</span></a></span><span>
+</span><span id="line-293"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-294"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679423324"><span id="local-6989586621679423331"><span class="annot"><span class="annottext">GenDelegs -&gt; GenDelegs -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: GenDelegs -&gt; GenDelegs -&gt; Bool
+$c/= :: GenDelegs -&gt; GenDelegs -&gt; Bool
+== :: GenDelegs -&gt; GenDelegs -&gt; Bool
+$c== :: GenDelegs -&gt; GenDelegs -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423296"><span id="local-6989586621679423305"><span id="local-6989586621679423315"><span class="annot"><span class="annottext">Typeable GenDelegs
+GenDelegs -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [GenDelegs] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy GenDelegs -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [GenDelegs] -&gt; Size
+$cencodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [GenDelegs] -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy GenDelegs -&gt; Size
+$cencodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy GenDelegs -&gt; Size
+encCBOR :: GenDelegs -&gt; Encoding
+$cencCBOR :: GenDelegs -&gt; Encoding
+</span><a href="#local-6989586621679423296"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423268"><span id="local-6989586621679423275"><span id="local-6989586621679423283"><span class="annot"><span class="annottext">Typeable GenDelegs
+Proxy GenDelegs -&gt; Text
+forall s. Decoder s GenDelegs
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy GenDelegs -&gt; Decoder s ()
+label :: Proxy GenDelegs -&gt; Text
+$clabel :: Proxy GenDelegs -&gt; Text
+dropCBOR :: forall s. Proxy GenDelegs -&gt; Decoder s ()
+$cdropCBOR :: forall s. Proxy GenDelegs -&gt; Decoder s ()
+decCBOR :: forall s. Decoder s GenDelegs
+$cdecCBOR :: forall s. Decoder s GenDelegs
+</span><a href="#local-6989586621679423268"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423244"><span id="local-6989586621679423250"><span id="local-6989586621679423257"><span class="annot"><span class="annottext">Context -&gt; GenDelegs -&gt; IO (Maybe ThunkInfo)
+Proxy GenDelegs -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+showTypeOf :: Proxy GenDelegs -&gt; String
+$cshowTypeOf :: Proxy GenDelegs -&gt; String
+wNoThunks :: Context -&gt; GenDelegs -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; GenDelegs -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; GenDelegs -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: Context -&gt; GenDelegs -&gt; IO (Maybe ThunkInfo)
+</span><a href="#local-6989586621679423244"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423237"><span class="annot"><span class="annottext">GenDelegs -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+rnf :: GenDelegs -&gt; ()
+$crnf :: GenDelegs -&gt; ()
+</span><a href="#local-6989586621679423237"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep GenDelegs x -&gt; GenDelegs
+forall x. GenDelegs -&gt; Rep GenDelegs x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep GenDelegs x -&gt; GenDelegs
+$cfrom :: forall x. GenDelegs -&gt; Rep GenDelegs x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423211"><span id="local-6989586621679423218"><span id="local-6989586621679423226"><span class="annot"><span class="annottext">Maybe GenDelegs
+Value -&gt; Parser [GenDelegs]
+Value -&gt; Parser GenDelegs
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+omittedField :: Maybe GenDelegs
+$comittedField :: Maybe GenDelegs
+parseJSONList :: Value -&gt; Parser [GenDelegs]
+$cparseJSONList :: Value -&gt; Parser [GenDelegs]
+parseJSON :: Value -&gt; Parser GenDelegs
+$cparseJSON :: Value -&gt; Parser GenDelegs
+</span><a href="#local-6989586621679423211"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423178"><span id="local-6989586621679423184"><span id="local-6989586621679423190"><span id="local-6989586621679423196"><span id="local-6989586621679423203"><span class="annot"><span class="annottext">[GenDelegs] -&gt; Encoding
+[GenDelegs] -&gt; Value
+GenDelegs -&gt; Bool
+GenDelegs -&gt; Encoding
+GenDelegs -&gt; Value
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+omitField :: GenDelegs -&gt; Bool
+$comitField :: GenDelegs -&gt; Bool
+toEncodingList :: [GenDelegs] -&gt; Encoding
+$ctoEncodingList :: [GenDelegs] -&gt; Encoding
+toJSONList :: [GenDelegs] -&gt; Value
+$ctoJSONList :: [GenDelegs] -&gt; Value
+toEncoding :: GenDelegs -&gt; Encoding
+$ctoEncoding :: GenDelegs -&gt; Encoding
+toJSON :: GenDelegs -&gt; Value
+$ctoJSON :: GenDelegs -&gt; Value
+</span><a href="#local-6989586621679423178"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-295"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679423159"><span id="local-6989586621679423165"><span id="local-6989586621679423171"><span class="annot"><span class="annottext">Int -&gt; GenDelegs -&gt; ShowS
+[GenDelegs] -&gt; ShowS
+GenDelegs -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [GenDelegs] -&gt; ShowS
+$cshowList :: [GenDelegs] -&gt; ShowS
+show :: GenDelegs -&gt; String
+$cshow :: GenDelegs -&gt; String
+showsPrec :: Int -&gt; GenDelegs -&gt; ShowS
+$cshowsPrec :: Int -&gt; GenDelegs -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">via</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/quiet-0.2-5ab684dfea28647dd21af2c1d5ea48eacda334f57d4e2ecf958b0f4bd26fe87e/share/doc/html/src"><span class="hs-identifier hs-type">Quiet</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegs"><span class="hs-identifier hs-type">GenDelegs</span></a></span><span>
+</span><span id="line-296"></span><span>
+</span><span id="line-297"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-298"></span><span class="hs-comment">-- crypto-parametrised types</span><span>
+</span><span id="line-299"></span><span class="hs-comment">--</span><span>
+</span><span id="line-300"></span><span class="hs-comment">-- Within `cardano-ledger`, we parametrise everything on our `crypto` type</span><span>
+</span><span id="line-301"></span><span class="hs-comment">-- &quot;package&quot;. However, in `cardano-crypto-class`, things are parametrised on the</span><span>
+</span><span id="line-302"></span><span class="hs-comment">-- original algorithm. In order to make using types from that module easier, we</span><span>
+</span><span id="line-303"></span><span class="hs-comment">-- provide some type aliases which unwrap the crypto parameters.</span><span>
+</span><span id="line-304"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-305"></span><span>
+</span><span id="line-306"></span><span class="hs-keyword">type</span><span> </span><span id="Hash"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#Hash"><span class="hs-identifier hs-var">Hash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">Hash.Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span>
+</span><span id="line-307"></span><span>
+</span><span id="line-308"></span><span class="hs-keyword">type</span><span> </span><span id="SignedDSIGN"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignedDSIGN"><span class="hs-identifier hs-var">SignedDSIGN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">DSIGN.SignedDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span>
+</span><span id="line-309"></span><span>
+</span><span id="line-310"></span><span class="hs-keyword">type</span><span> </span><span id="SignKeyDSIGN"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignKeyDSIGN"><span class="hs-identifier hs-var">SignKeyDSIGN</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">DSIGN.SignKeyDSIGN</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#DSIGN"><span class="hs-identifier hs-type">DSIGN</span></a></span><span>
+</span><span id="line-311"></span><span>
+</span><span id="line-312"></span><span class="hs-keyword">type</span><span> </span><span id="SignedKES"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignedKES"><span class="hs-identifier hs-var">SignedKES</span></a></span></span><span> </span><span id="local-6989586621679423119"><span class="annot"><a href="#local-6989586621679423119"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">KES.SignedKES</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#KES"><span class="hs-identifier hs-type">KES</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679423119"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-313"></span><span>
+</span><span id="line-314"></span><span class="hs-keyword">type</span><span> </span><span id="SignKeyKES"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignKeyKES"><span class="hs-identifier hs-var">SignKeyKES</span></a></span></span><span> </span><span id="local-6989586621679423117"><span class="annot"><a href="#local-6989586621679423117"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">KES.SignKeyKES</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#KES"><span class="hs-identifier hs-type">KES</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679423117"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-315"></span><span>
+</span><span id="line-316"></span><span class="hs-keyword">type</span><span> </span><span id="VerKeyKES"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VerKeyKES"><span class="hs-identifier hs-var">VerKeyKES</span></a></span></span><span> </span><span id="local-6989586621679423115"><span class="annot"><a href="#local-6989586621679423115"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">KES.VerKeyKES</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#KES"><span class="hs-identifier hs-type">KES</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679423115"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-317"></span><span>
+</span><span id="line-318"></span><span class="hs-keyword">type</span><span> </span><span id="CertifiedVRF"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#CertifiedVRF"><span class="hs-identifier hs-var">CertifiedVRF</span></a></span></span><span> </span><span id="local-6989586621679423113"><span class="annot"><a href="#local-6989586621679423113"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">VRF.CertifiedVRF</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#VRF"><span class="hs-identifier hs-type">VRF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679423113"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-319"></span><span>
+</span><span id="line-320"></span><span class="hs-keyword">type</span><span> </span><span id="SignKeyVRF"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#SignKeyVRF"><span class="hs-identifier hs-var">SignKeyVRF</span></a></span></span><span> </span><span id="local-6989586621679423111"><span class="annot"><a href="#local-6989586621679423111"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">VRF.SignKeyVRF</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#VRF"><span class="hs-identifier hs-type">VRF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679423111"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-321"></span><span>
+</span><span id="line-322"></span><span class="hs-keyword">type</span><span> </span><span id="VerKeyVRF"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VerKeyVRF"><span class="hs-identifier hs-var">VerKeyVRF</span></a></span></span><span> </span><span id="local-6989586621679423109"><span class="annot"><a href="#local-6989586621679423109"><span class="hs-identifier hs-type">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">VRF.VerKeyVRF</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Crypto.html#VRF"><span class="hs-identifier hs-type">VRF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679423109"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-323"></span><span>
+</span><span id="line-324"></span><span class="hs-keyword">data</span><span> </span><span id="KeyRoleVRF"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRoleVRF"><span class="hs-identifier hs-var">KeyRoleVRF</span></a></span></span><span>
+</span><span id="line-325"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="StakePoolVRF"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#StakePoolVRF"><span class="hs-identifier hs-var">StakePoolVRF</span></a></span></span><span>
+</span><span id="line-326"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GenDelegVRF"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#GenDelegVRF"><span class="hs-identifier hs-var">GenDelegVRF</span></a></span></span><span>
+</span><span id="line-327"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BlockIssuerVRF"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#BlockIssuerVRF"><span class="hs-identifier hs-var">BlockIssuerVRF</span></a></span></span><span>
+</span><span id="line-328"></span><span>
+</span><span id="line-329"></span><span class="hs-comment">-- | Discriminated hash of VRF Verification Key</span><span>
+</span><span id="line-330"></span><span class="hs-keyword">newtype</span><span> </span><span id="VRFVerKeyHash"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VRFVerKeyHash"><span class="hs-identifier hs-var">VRFVerKeyHash</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679424254"><span class="annot"><a href="#local-6989586621679424254"><span class="hs-identifier hs-type">r</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRoleVRF"><span class="hs-identifier hs-type">KeyRoleVRF</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="VRFVerKeyHash"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VRFVerKeyHash"><span class="hs-identifier hs-var">VRFVerKeyHash</span></a></span></span><span>
+</span><span id="line-331"></span><span>  </span><span class="hs-special">{</span><span id="unVRFVerKeyHash"><span class="annot"><span class="annottext">forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; Hash HASH KeyRoleVRF
+</span><a href="Cardano.Ledger.Keys.Internal.html#unVRFVerKeyHash"><span class="hs-identifier hs-var hs-var">unVRFVerKeyHash</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">Hash.Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRoleVRF"><span class="hs-identifier hs-type">KeyRoleVRF</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-332"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679423097"><span id="local-6989586621679423099"><span id="local-6989586621679423103"><span class="annot"><span class="annottext">Int -&gt; VRFVerKeyHash r -&gt; ShowS
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+forall (r :: KeyRoleVRF). Int -&gt; VRFVerKeyHash r -&gt; ShowS
+forall (r :: KeyRoleVRF). [VRFVerKeyHash r] -&gt; ShowS
+forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; String
+showList :: [VRFVerKeyHash r] -&gt; ShowS
+$cshowList :: forall (r :: KeyRoleVRF). [VRFVerKeyHash r] -&gt; ShowS
+show :: VRFVerKeyHash r -&gt; String
+$cshow :: forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; String
+showsPrec :: Int -&gt; VRFVerKeyHash r -&gt; ShowS
+$cshowsPrec :: forall (r :: KeyRoleVRF). Int -&gt; VRFVerKeyHash r -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423091"><span id="local-6989586621679423095"><span class="annot"><span class="annottext">VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+/= :: VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+$c/= :: forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+== :: VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+$c== :: forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423061"><span id="local-6989586621679423065"><span id="local-6989586621679423069"><span id="local-6989586621679423073"><span id="local-6989586621679423077"><span id="local-6989586621679423081"><span id="local-6989586621679423085"><span class="annot"><span class="annottext">VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Ordering
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; VRFVerKeyHash r
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall (r :: KeyRoleVRF). Eq (VRFVerKeyHash r)
+forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Ordering
+forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; VRFVerKeyHash r
+min :: VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; VRFVerKeyHash r
+$cmin :: forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; VRFVerKeyHash r
+max :: VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; VRFVerKeyHash r
+$cmax :: forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; VRFVerKeyHash r
+&gt;= :: VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+$c&gt;= :: forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+&gt; :: VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+$c&gt; :: forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+&lt;= :: VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+$c&lt;= :: forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+&lt; :: VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+$c&lt; :: forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Bool
+compare :: VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Ordering
+$ccompare :: forall (r :: KeyRoleVRF).
+VRFVerKeyHash r -&gt; VRFVerKeyHash r -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-333"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span>
+</span><span id="line-334"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679423057"><span class="annot"><span class="annottext">VRFVerKeyHash r -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; ()
+rnf :: VRFVerKeyHash r -&gt; ()
+$crnf :: forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; ()
+</span><a href="#local-6989586621679423057"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span>
+</span><span id="line-335"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423045"><span id="local-6989586621679423049"><span id="local-6989586621679423053"><span class="annot"><span class="annottext">Context -&gt; VRFVerKeyHash r -&gt; IO (Maybe ThunkInfo)
+Proxy (VRFVerKeyHash r) -&gt; String
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+forall (r :: KeyRoleVRF).
+Context -&gt; VRFVerKeyHash r -&gt; IO (Maybe ThunkInfo)
+forall (r :: KeyRoleVRF). Proxy (VRFVerKeyHash r) -&gt; String
+showTypeOf :: Proxy (VRFVerKeyHash r) -&gt; String
+$cshowTypeOf :: forall (r :: KeyRoleVRF). Proxy (VRFVerKeyHash r) -&gt; String
+wNoThunks :: Context -&gt; VRFVerKeyHash r -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: forall (r :: KeyRoleVRF).
+Context -&gt; VRFVerKeyHash r -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; VRFVerKeyHash r -&gt; IO (Maybe ThunkInfo)
+$cnoThunks :: forall (r :: KeyRoleVRF).
+Context -&gt; VRFVerKeyHash r -&gt; IO (Maybe ThunkInfo)
+</span><a href="#local-6989586621679423045"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></a></span></span></span></span><span>
+</span><span id="line-336"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423036"><span id="local-6989586621679423041"><span class="annot"><span class="annottext">forall x. Rep (VRFVerKeyHash r) x -&gt; VRFVerKeyHash r
+forall x. VRFVerKeyHash r -&gt; Rep (VRFVerKeyHash r) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall (r :: KeyRoleVRF) x.
+Rep (VRFVerKeyHash r) x -&gt; VRFVerKeyHash r
+forall (r :: KeyRoleVRF) x.
+VRFVerKeyHash r -&gt; Rep (VRFVerKeyHash r) x
+to :: forall x. Rep (VRFVerKeyHash r) x -&gt; VRFVerKeyHash r
+$cto :: forall (r :: KeyRoleVRF) x.
+Rep (VRFVerKeyHash r) x -&gt; VRFVerKeyHash r
+from :: forall x. VRFVerKeyHash r -&gt; Rep (VRFVerKeyHash r) x
+$cfrom :: forall (r :: KeyRoleVRF) x.
+VRFVerKeyHash r -&gt; Rep (VRFVerKeyHash r) x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span>
+</span><span id="line-337"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679423010"><span id="local-6989586621679423018"><span id="local-6989586621679423026"><span class="annot"><span class="annottext">VRFVerKeyHash r -&gt; Encoding
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [VRFVerKeyHash r] -&gt; Size
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (VRFVerKeyHash r) -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. ToCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; ToCBOR a
+forall {r :: KeyRoleVRF}. Typeable r =&gt; Typeable (VRFVerKeyHash r)
+forall (r :: KeyRoleVRF). Typeable r =&gt; VRFVerKeyHash r -&gt; Encoding
+forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [VRFVerKeyHash r] -&gt; Size
+forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (VRFVerKeyHash r) -&gt; Size
+encodedListSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [VRFVerKeyHash r] -&gt; Size
+$cencodedListSizeExpr :: forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [VRFVerKeyHash r] -&gt; Size
+encodedSizeExpr :: (forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (VRFVerKeyHash r) -&gt; Size
+$cencodedSizeExpr :: forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+(forall t. ToCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (VRFVerKeyHash r) -&gt; Size
+toCBOR :: VRFVerKeyHash r -&gt; Encoding
+$ctoCBOR :: forall (r :: KeyRoleVRF). Typeable r =&gt; VRFVerKeyHash r -&gt; Encoding
+</span><a href="#local-6989586621679423010"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToCBOR</span></a></span></span></span></span><span>
+</span><span id="line-338"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422993"><span id="local-6989586621679422999"><span class="annot"><span class="annottext">Proxy (VRFVerKeyHash r) -&gt; Text
+forall s. Decoder s (VRFVerKeyHash r)
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a) -&gt; (Proxy a -&gt; Text) -&gt; FromCBOR a
+forall {r :: KeyRoleVRF}. Typeable r =&gt; Typeable (VRFVerKeyHash r)
+forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+Proxy (VRFVerKeyHash r) -&gt; Text
+forall (r :: KeyRoleVRF) s.
+Typeable r =&gt;
+Decoder s (VRFVerKeyHash r)
+label :: Proxy (VRFVerKeyHash r) -&gt; Text
+$clabel :: forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+Proxy (VRFVerKeyHash r) -&gt; Text
+fromCBOR :: forall s. Decoder s (VRFVerKeyHash r)
+$cfromCBOR :: forall (r :: KeyRoleVRF) s.
+Typeable r =&gt;
+Decoder s (VRFVerKeyHash r)
+</span><a href="#local-6989586621679422993"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromCBOR</span></a></span></span></span><span>
+</span><span id="line-339"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422966"><span id="local-6989586621679422974"><span id="local-6989586621679422982"><span class="annot"><span class="annottext">VRFVerKeyHash r -&gt; Encoding
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [VRFVerKeyHash r] -&gt; Size
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (VRFVerKeyHash r) -&gt; Size
+forall a.
+Typeable a
+-&gt; (a -&gt; Encoding)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy a -&gt; Size)
+-&gt; ((forall t. EncCBOR t =&gt; Proxy t -&gt; Size) -&gt; Proxy [a] -&gt; Size)
+-&gt; EncCBOR a
+forall {r :: KeyRoleVRF}. Typeable r =&gt; Typeable (VRFVerKeyHash r)
+forall (r :: KeyRoleVRF). Typeable r =&gt; VRFVerKeyHash r -&gt; Encoding
+forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [VRFVerKeyHash r] -&gt; Size
+forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (VRFVerKeyHash r) -&gt; Size
+encodedListSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [VRFVerKeyHash r] -&gt; Size
+$cencodedListSizeExpr :: forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy [VRFVerKeyHash r] -&gt; Size
+encodedSizeExpr :: (forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (VRFVerKeyHash r) -&gt; Size
+$cencodedSizeExpr :: forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+(forall t. EncCBOR t =&gt; Proxy t -&gt; Size)
+-&gt; Proxy (VRFVerKeyHash r) -&gt; Size
+encCBOR :: VRFVerKeyHash r -&gt; Encoding
+$cencCBOR :: forall (r :: KeyRoleVRF). Typeable r =&gt; VRFVerKeyHash r -&gt; Encoding
+</span><a href="#local-6989586621679422966"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">EncCBOR</span></a></span></span></span></span><span>
+</span><span id="line-340"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422944"><span id="local-6989586621679422950"><span id="local-6989586621679422956"><span class="annot"><span class="annottext">Proxy (VRFVerKeyHash r) -&gt; Text
+forall s. Decoder s (VRFVerKeyHash r)
+forall a.
+Typeable a
+-&gt; (forall s. Decoder s a)
+-&gt; (forall s. Proxy a -&gt; Decoder s ())
+-&gt; (Proxy a -&gt; Text)
+-&gt; DecCBOR a
+forall s. Proxy (VRFVerKeyHash r) -&gt; Decoder s ()
+forall {r :: KeyRoleVRF}. Typeable r =&gt; Typeable (VRFVerKeyHash r)
+forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+Proxy (VRFVerKeyHash r) -&gt; Text
+forall (r :: KeyRoleVRF) s.
+Typeable r =&gt;
+Decoder s (VRFVerKeyHash r)
+forall (r :: KeyRoleVRF) s.
+Typeable r =&gt;
+Proxy (VRFVerKeyHash r) -&gt; Decoder s ()
+label :: Proxy (VRFVerKeyHash r) -&gt; Text
+$clabel :: forall (r :: KeyRoleVRF).
+Typeable r =&gt;
+Proxy (VRFVerKeyHash r) -&gt; Text
+dropCBOR :: forall s. Proxy (VRFVerKeyHash r) -&gt; Decoder s ()
+$cdropCBOR :: forall (r :: KeyRoleVRF) s.
+Typeable r =&gt;
+Proxy (VRFVerKeyHash r) -&gt; Decoder s ()
+decCBOR :: forall s. Decoder s (VRFVerKeyHash r)
+$cdecCBOR :: forall (r :: KeyRoleVRF) s.
+Typeable r =&gt;
+Decoder s (VRFVerKeyHash r)
+</span><a href="#local-6989586621679422944"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">DecCBOR</span></a></span></span></span></span><span>
+</span><span id="line-341"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422933"><span id="local-6989586621679422938"><span class="annot"><span class="annottext">ToJSONKeyFunction [VRFVerKeyHash r]
+ToJSONKeyFunction (VRFVerKeyHash r)
+forall a.
+ToJSONKeyFunction a -&gt; ToJSONKeyFunction [a] -&gt; ToJSONKey a
+forall (r :: KeyRoleVRF). ToJSONKeyFunction [VRFVerKeyHash r]
+forall (r :: KeyRoleVRF). ToJSONKeyFunction (VRFVerKeyHash r)
+toJSONKeyList :: ToJSONKeyFunction [VRFVerKeyHash r]
+$ctoJSONKeyList :: forall (r :: KeyRoleVRF). ToJSONKeyFunction [VRFVerKeyHash r]
+toJSONKey :: ToJSONKeyFunction (VRFVerKeyHash r)
+$ctoJSONKey :: forall (r :: KeyRoleVRF). ToJSONKeyFunction (VRFVerKeyHash r)
+</span><a href="#local-6989586621679422933"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">ToJSONKey</span></a></span></span></span><span>
+</span><span id="line-342"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422922"><span id="local-6989586621679422927"><span class="annot"><span class="annottext">FromJSONKeyFunction [VRFVerKeyHash r]
+FromJSONKeyFunction (VRFVerKeyHash r)
+forall a.
+FromJSONKeyFunction a -&gt; FromJSONKeyFunction [a] -&gt; FromJSONKey a
+forall (r :: KeyRoleVRF). FromJSONKeyFunction [VRFVerKeyHash r]
+forall (r :: KeyRoleVRF). FromJSONKeyFunction (VRFVerKeyHash r)
+fromJSONKeyList :: FromJSONKeyFunction [VRFVerKeyHash r]
+$cfromJSONKeyList :: forall (r :: KeyRoleVRF). FromJSONKeyFunction [VRFVerKeyHash r]
+fromJSONKey :: FromJSONKeyFunction (VRFVerKeyHash r)
+$cfromJSONKey :: forall (r :: KeyRoleVRF). FromJSONKeyFunction (VRFVerKeyHash r)
+</span><a href="#local-6989586621679422922"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">FromJSONKey</span></a></span></span></span><span>
+</span><span id="line-343"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422896"><span id="local-6989586621679422901"><span id="local-6989586621679422906"><span id="local-6989586621679422911"><span id="local-6989586621679422916"><span class="annot"><span class="annottext">[VRFVerKeyHash r] -&gt; Encoding
+[VRFVerKeyHash r] -&gt; Value
+VRFVerKeyHash r -&gt; Bool
+VRFVerKeyHash r -&gt; Encoding
+VRFVerKeyHash r -&gt; Value
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+forall (r :: KeyRoleVRF). [VRFVerKeyHash r] -&gt; Encoding
+forall (r :: KeyRoleVRF). [VRFVerKeyHash r] -&gt; Value
+forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; Bool
+forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; Encoding
+forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; Value
+omitField :: VRFVerKeyHash r -&gt; Bool
+$comitField :: forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; Bool
+toEncodingList :: [VRFVerKeyHash r] -&gt; Encoding
+$ctoEncodingList :: forall (r :: KeyRoleVRF). [VRFVerKeyHash r] -&gt; Encoding
+toJSONList :: [VRFVerKeyHash r] -&gt; Value
+$ctoJSONList :: forall (r :: KeyRoleVRF). [VRFVerKeyHash r] -&gt; Value
+toEncoding :: VRFVerKeyHash r -&gt; Encoding
+$ctoEncoding :: forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; Encoding
+toJSON :: VRFVerKeyHash r -&gt; Value
+$ctoJSON :: forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; Value
+</span><a href="#local-6989586621679422896"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></a></span></span></span></span></span></span><span>
+</span><span id="line-344"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422881"><span id="local-6989586621679422886"><span id="local-6989586621679422891"><span class="annot"><span class="annottext">Maybe (VRFVerKeyHash r)
+Value -&gt; Parser [VRFVerKeyHash r]
+Value -&gt; Parser (VRFVerKeyHash r)
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+forall (r :: KeyRoleVRF). Maybe (VRFVerKeyHash r)
+forall (r :: KeyRoleVRF). Value -&gt; Parser [VRFVerKeyHash r]
+forall (r :: KeyRoleVRF). Value -&gt; Parser (VRFVerKeyHash r)
+omittedField :: Maybe (VRFVerKeyHash r)
+$comittedField :: forall (r :: KeyRoleVRF). Maybe (VRFVerKeyHash r)
+parseJSONList :: Value -&gt; Parser [VRFVerKeyHash r]
+$cparseJSONList :: forall (r :: KeyRoleVRF). Value -&gt; Parser [VRFVerKeyHash r]
+parseJSON :: Value -&gt; Parser (VRFVerKeyHash r)
+$cparseJSON :: forall (r :: KeyRoleVRF). Value -&gt; Parser (VRFVerKeyHash r)
+</span><a href="#local-6989586621679422881"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></a></span></span></span></span><span>
+</span><span id="line-345"></span><span>    </span><span class="hs-special">,</span><span> </span><span id="local-6989586621679422876"><span class="annot"><span class="annottext">VRFVerKeyHash r
+forall a. a -&gt; Default a
+forall (r :: KeyRoleVRF). VRFVerKeyHash r
+def :: VRFVerKeyHash r
+$cdef :: forall (r :: KeyRoleVRF). VRFVerKeyHash r
+</span><a href="#local-6989586621679422876"><span class="hs-identifier hs-var hs-var hs-var hs-var">Default</span></a></span></span><span>
+</span><span id="line-346"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-347"></span><span>
+</span><span id="line-348"></span><span id="local-6989586621679424183"><span id="local-6989586621679424186"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#hashVerKeyVRF"><span class="hs-identifier hs-type">hashVerKeyVRF</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#Crypto"><span class="hs-identifier hs-type">Crypto</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424186"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VerKeyVRF"><span class="hs-identifier hs-type">VerKeyVRF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424186"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VRFVerKeyHash"><span class="hs-identifier hs-type">VRFVerKeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679424183"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRoleVRF"><span class="hs-identifier hs-type">KeyRoleVRF</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-349"></span><span id="hashVerKeyVRF"><span class="annot"><span class="annottext">hashVerKeyVRF :: forall c (r :: KeyRoleVRF).
+Crypto c =&gt;
+VerKeyVRF c -&gt; VRFVerKeyHash r
+</span><a href="Cardano.Ledger.Keys.Internal.html#hashVerKeyVRF"><span class="hs-identifier hs-var hs-var">hashVerKeyVRF</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (r :: KeyRoleVRF). Hash HASH KeyRoleVRF -&gt; VRFVerKeyHash r
+</span><a href="Cardano.Ledger.Keys.Internal.html#VRFVerKeyHash"><span class="hs-identifier hs-var">VRFVerKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall h a b. Hash h a -&gt; Hash h b
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">Hash.castHash</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall v h.
+(VRFAlgorithm v, HashAlgorithm h) =&gt;
+VerKeyVRF v -&gt; Hash h (VerKeyVRF v)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">VRF.hashVerKeyVRF</span></a></span><span>
+</span><span id="line-350"></span><span>
+</span><span id="line-351"></span><span id="local-6989586621679424173"><span id="local-6989586621679424174"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#toVRFVerKeyHash"><span class="hs-identifier hs-type">toVRFVerKeyHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">Hash.Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">VRF.VerKeyVRF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424174"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VRFVerKeyHash"><span class="hs-identifier hs-type">VRFVerKeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679424173"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRoleVRF"><span class="hs-identifier hs-type">KeyRoleVRF</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-352"></span><span id="toVRFVerKeyHash"><span class="annot"><span class="annottext">toVRFVerKeyHash :: forall v (r :: KeyRoleVRF).
+Hash HASH (VerKeyVRF v) -&gt; VRFVerKeyHash r
+</span><a href="Cardano.Ledger.Keys.Internal.html#toVRFVerKeyHash"><span class="hs-identifier hs-var hs-var">toVRFVerKeyHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (r :: KeyRoleVRF). Hash HASH KeyRoleVRF -&gt; VRFVerKeyHash r
+</span><a href="Cardano.Ledger.Keys.Internal.html#VRFVerKeyHash"><span class="hs-identifier hs-var">VRFVerKeyHash</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall h a b. Hash h a -&gt; Hash h b
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">Hash.castHash</span></a></span><span>
+</span><span id="line-353"></span><span>
+</span><span id="line-354"></span><span id="local-6989586621679424169"><span id="local-6989586621679424170"><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#fromVRFVerKeyHash"><span class="hs-identifier hs-type">fromVRFVerKeyHash</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#VRFVerKeyHash"><span class="hs-identifier hs-type">VRFVerKeyHash</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679424170"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRoleVRF"><span class="hs-identifier hs-type">KeyRoleVRF</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">Hash.Hash</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Crypto.html#HASH"><span class="hs-identifier hs-type">HASH</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-type">VRF.VerKeyVRF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679424169"><span class="hs-identifier hs-type">v</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-355"></span><span id="fromVRFVerKeyHash"><span class="annot"><span class="annottext">fromVRFVerKeyHash :: forall (r :: KeyRoleVRF) v.
+VRFVerKeyHash r -&gt; Hash HASH (VerKeyVRF v)
+</span><a href="Cardano.Ledger.Keys.Internal.html#fromVRFVerKeyHash"><span class="hs-identifier hs-var hs-var">fromVRFVerKeyHash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall h a b. Hash h a -&gt; Hash h b
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-crypto-class-2.2.0.0-26c5fd30d06a5d79fe778ccc9b3b70cb764a47cb3e1af3de4f34878e2972d13e/share/doc/html/src"><span class="hs-identifier hs-var">Hash.castHash</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall (r :: KeyRoleVRF). VRFVerKeyHash r -&gt; Hash HASH KeyRoleVRF
+</span><a href="Cardano.Ledger.Keys.Internal.html#unVRFVerKeyHash"><span class="hs-identifier hs-var">unVRFVerKeyHash</span></a></span><span>
+</span><span id="line-356"></span></pre></body></html>
