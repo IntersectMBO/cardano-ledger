@@ -48,7 +48,7 @@ module Test.Cardano.Ledger.EraClass (
   EraTxWits (TxWits, mkBasicTxWits, addrTxWitsL, bootAddrTxWitsL, scriptTxWitsL),
   AlonzoEraTxWits (datsTxWitsL, rdmrsTxWitsL),
   -- TxAuxData
-  EraTxAuxData (TxAuxData, hashTxAuxData, validateTxAuxData),
+  EraTxAuxData (TxAuxData, validateTxAuxData),
   -- TxCerts
   EraTxCert (
     TxCert,

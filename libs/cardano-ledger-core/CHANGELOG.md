@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Extract `hashTxAuxData` from `EraTxAuxData` into a standalone function.
 * Add `TxAuxDataHash` and deprecate `AuxiliaryDayaHash` in its favor.
 * Deprecate `Cardano.Ledger.Crypto` module in favor of `cardano-protocol-tpraos:Cardano.Protocol.Crypto`
 * Deprecate `KESignable`, `SignedKES`, `SignKeyKES`, `VerKeyKES`, `VRFSignable`,

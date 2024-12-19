@@ -261,8 +261,6 @@ instance EraTxAuxData AlonzoEra where
         , atadrPlutus = mempty
         }
 
-  hashTxAuxData = hashAlonzoTxAuxData
-
   validateTxAuxData = validateAlonzoTxAuxData
 
 metadataAlonzoTxAuxDataL :: Era era => Lens' (AlonzoTxAuxData era) (Map Word64 Metadatum)
@@ -274,6 +272,7 @@ hashAlonzoTxAuxData ::
   x ->
   TxAuxDataHash
 hashAlonzoTxAuxData x = TxAuxDataHash (hashAnnotated x)
+{-# DEPRECATED hashAlonzoTxAuxData "In favor of `hashTxAuxData`" #-}
 
 validateAlonzoTxAuxData ::
   (AlonzoEraScript era, Script era ~ AlonzoScript era) =>

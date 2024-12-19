@@ -47,7 +47,6 @@ import Cardano.Ledger.Metadata (Metadatum (..), validMetadatum)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Control.DeepSeq (NFData)
 import Data.Map.Strict (Map)
-import Data.Typeable (Proxy (..))
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
@@ -102,11 +101,6 @@ instance EraTxAuxData ShelleyEra where
 
   validateTxAuxData _ (ShelleyTxAuxData m) = all validMetadatum m
 
-  hashTxAuxData txAuxData =
-    TxAuxDataHash (makeHashWithExplicitProxys index txAuxData)
-    where
-      index = Proxy @EraIndependentTxAuxData
-
 instance EqRaw (ShelleyTxAuxData era)
 
 instance HashAnnotated (ShelleyTxAuxData era) EraIndependentTxAuxData where
@@ -116,6 +110,7 @@ hashShelleyTxAuxData ::
   ShelleyTxAuxData era ->
   SafeHash EraIndependentTxAuxData
 hashShelleyTxAuxData = hashAnnotated
+{-# DEPRECATED hashShelleyTxAuxData "In favor of `hashAnnotated`" #-}
 
 pattern ShelleyTxAuxData :: forall era. Era era => Map Word64 Metadatum -> ShelleyTxAuxData era
 pattern ShelleyTxAuxData m <-

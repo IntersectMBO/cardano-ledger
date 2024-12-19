@@ -96,8 +96,6 @@ instance EraTxAuxData AllegraEra where
 
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
 
-  hashTxAuxData aux = TxAuxDataHash (hashAnnotated aux)
-
 metadataAllegraTxAuxDataL :: Era era => Lens' (AllegraTxAuxData era) (Map Word64 Metadatum)
 metadataAllegraTxAuxDataL =
   lensMemoRawType atadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}

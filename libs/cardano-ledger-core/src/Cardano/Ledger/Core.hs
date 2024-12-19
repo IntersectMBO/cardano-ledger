@@ -32,6 +32,7 @@ module Cardano.Ledger.Core (
   EraTxBody (..),
   txIdTxBody,
   EraTxAuxData (..),
+  hashTxAuxData,
   EraTxWits (..),
   EraScript (..),
   hashScript,
@@ -455,9 +456,11 @@ class
   -- preserved. If you need to retain underlying bytes you can use `translateEraThroughCBOR`
   upgradeTxAuxData :: EraTxAuxData (PreviousEra era) => TxAuxData (PreviousEra era) -> TxAuxData era
 
-  hashTxAuxData :: TxAuxData era -> TxAuxDataHash
-
   validateTxAuxData :: ProtVer -> TxAuxData era -> Bool
+
+-- | Compute a hash of `TxAuxData`
+hashTxAuxData :: EraTxAuxData era => TxAuxData era -> TxAuxDataHash
+hashTxAuxData = TxAuxDataHash . hashAnnotated
 
 -- | A collection of witnesses in a Tx
 class
