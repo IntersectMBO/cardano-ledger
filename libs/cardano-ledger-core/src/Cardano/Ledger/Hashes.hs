@@ -56,41 +56,21 @@ module Cardano.Ledger.Hashes (
   toVRFVerKeyHash,
   fromVRFVerKeyHash,
 
-  -- ** Genesis @DSIGN@ and @VRF@ Verification Key hashes
+  -- ** Genesis @DSIGN@ and @VRF@ Verification Key Hashes
   GenDelegPair (..),
   GenDelegs (..),
 
   -- * SafeHash
-
-  -- In cardano-ledger, hashing a type @X@ is based upon the serialization of @X@. Serialization is
-  -- based upon the 'EncCBOR' and DecCBOR type classes, and the values produced by 'EncCBOR' instances for a
-  -- particular type, are not necessarily unique. For this reason, when an @X@ object comes
-  -- over the network in serialized form, we must preserve the original bytes that arrived over
-  -- the network, otherwise when the system hashes that object, the hash in the ledger, and the hash of
-  -- that object from the other side of the network may not agree. The module 'Cardano.Ledger.SafeHash'
-  -- introduces the 'SafeToHash' type class that ensures that types with a @(SafeToHash X)@ instance store the
-  -- original bytes that arrived over the network for the value of @X@. The recommended way to store the
-  -- original bytes is to use the type 'MemoBytes', although there are
-  -- a few types that store their original bytes in other ways. In order to encourage the use of 'MemoBytes'
-  -- newtypes defined as a 'MemoBytes' get the to derive 'SafeToHash' instances for free.
-
-  --
-  -- $SAFE
+  -- $SAFEHASH
   SafeHash,
   SafeToHash (..),
 
   -- ** Creating SafeHash
-
-  --
-  -- $MAKE
   HashAnnotated,
   hashAnnotated,
   unsafeMakeSafeHash,
 
   -- ** Other operations
-
-  --
-  -- $OTHER
   castSafeHash,
   extractHash,
   indexProxy,
@@ -305,6 +285,23 @@ newtype GenDelegs = GenDelegs
 -- Safe Hashes
 --------------------------------------------------------------------------------
 
+-- $SAFEHASH
+--
+-- In cardano-ledger, hashing a type @X@ is based upon the serialization of
+-- @X@. Serialization is based upon the 'EncCBOR' and 'DecCBOR' type classes, and the
+-- serialization that can be handled by 'DecCBOR' instances for a particular type, are not
+-- necessarily unique. For this reason, when an @X@ object comes over the network in
+-- serialized form, we must preserve the original bytes that arrived over the network,
+-- otherwise when the system hashes that object, the hash in the ledger, and the hash of
+-- that object from the other side of the network may not agree. In otherwords
+-- reserialization for the purpose of hash calculation is not an option. The 'SafeToHash'
+-- type class ensures that types with a @(SafeToHash X)@ instance store the original bytes
+-- that arrived over the network for the value of @X@. The recommended way to store the
+-- original bytes is to use the type 'MemoBytes', although there are a few types that
+-- store their original bytes in other ways. In order to encourage the use of newtype over
+-- 'Cardano.Ledger.MemoBytes.MemoBytes' newtype defined as a 'MemoBytes', which would get
+-- the functionality of retaining bytes and deriving of 'SafeToHash' instance for free.
+
 -- | A 'SafeHash' is a hash of something that is safe to hash. Such types store their own
 -- serialisation bytes. The prime example is @('MemoBytes' t)@, but other examples are
 -- things that consist of only ByteStrings (i.e. they are their own serialization) or for
@@ -328,10 +325,8 @@ instance Default (SafeHash i) where
 extractHash :: SafeHash i -> Hash.Hash HASH i
 extractHash (SafeHash h) = h
 
--- MAKE
-
--- | Don't use this except in Testing to make Arbitrary instances, etc.
---   Defined here, only because the Constructor is in scope here.
+-- | Don't use this except in Testing to make Arbitrary instances, etc. or in cases when
+-- it can be guaranteed that original bytes were used for computing the hash.
 unsafeMakeSafeHash :: Hash.Hash HASH i -> SafeHash i
 unsafeMakeSafeHash = SafeHash
 
@@ -361,9 +356,6 @@ class SafeToHash t where
   --   value to be hashed.
   makeHashWithExplicitProxys _ x = SafeHash $ Hash.castHash (Hash.hashWith originalBytes x)
 
--- There are a limited number of direct instances. Everything else should come
--- from newtype deriving.
-
 instance SafeToHash ShortByteString where
   originalBytes = fromShort
   originalBytesSize = SBS.length
@@ -371,30 +363,22 @@ instance SafeToHash ShortByteString where
 instance SafeToHash ByteString where
   originalBytes x = x
 
--- If one looks at the deriving clause in the definitions of SafeHash, we see that we
--- derive that it is SafeToHash. We can derive this instance because SafeHash is
--- a newtype around (Hash.Hash c i) which is a primitive SafeToHash type.
-
+-- | Hash of a hash. Hash is always safe to hash. Do you even hash?
 instance Hash.HashAlgorithm h => SafeToHash (Hash.Hash h i) where
   originalBytes = Hash.hashToBytes
 
--- | Types that are 'SafeToHash', AND have both of the following two invariants,
---   are made members of the HashAnnotated class. The preconditions are:
+-- | Types that are 'SafeToHash' AND have the type uniquely determines the 'index' type
+-- tag of @`SafeHash` index@
 --
---   1. The type uniquely determines the 'index' type tag of (SafeHashrypto index)
---   2. The type uniquely determines the 'crypto' type of (SafeHashrytop index)
---
---   The 'SafeToHash' and the 'HashAnnotated' classes are designed so that their
---   instances can be easily derived (because their methods have default methods
---   when the type is a newtype around a type that is 'SafeToHash'). For example,
+-- The 'SafeToHash' and the 'HashAnnotated' classes are designed so that their instances
+-- can be easily derived (because their methods have default methods when the type is a
+-- newtype around a type that is 'SafeToHash'). For example,
 class SafeToHash x => HashAnnotated x i | x -> i where
   -- TODO: move outside of type class
   indexProxy :: x -> Proxy i
   indexProxy _ = Proxy @i
 
-  -- | Create a @('SafeHash' i crypto)@,
-  -- given @(Hash.HashAlgorithm (HASH crypto))@
-  -- and  @(HashAnnotated x i crypto)@ instances.
+  -- | Create a @('SafeHash' i)@, given @(`HashAnnotated` x i)@ instance.
   hashAnnotated :: x -> SafeHash i
   hashAnnotated = makeHashWithExplicitProxys (Proxy @i)
   {-# INLINE hashAnnotated #-}

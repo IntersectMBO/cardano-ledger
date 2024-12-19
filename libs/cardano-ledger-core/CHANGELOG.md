@@ -13,8 +13,8 @@
   * `SafeHash`, `SafeToHash`, `HashAnnotated`, `castSafeHash` and `extractHash`.
   * `KeyRoleVRF`, `VRFVerKeyHash`, `toVRFVerKeyHash`, `fromVRFVerKeyHash`
   * `GenDelegPair` and `GenDelegs`
-* Re-export `KeyRole` from `Cardano.Ledger.Hashes`:
-* Re-export some of the new additions to `Cardano.Ledger.Hashes` from `Cardano.Ledger.Core.
+* Re-export `KeyRole` from `Cardano.Ledger.Hashes`.
+* Re-export some of the new additions to `Cardano.Ledger.Hashes` from `Cardano.Ledger.Core`.
 * Remove `GenesisCredential` as unused.
 * Remove `HASH`, `ADDRHASH` and `DSIGN` type families out of `Crypto` type class and turn
   them into type synonyms for the exact algorithms previously being used in

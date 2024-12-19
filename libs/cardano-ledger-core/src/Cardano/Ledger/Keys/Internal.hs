@@ -51,23 +51,20 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
 
--- | Cryptographic saigning algorithm used on Cardano blockchain.
+-- | Cryptographic signing algorithm used on Cardano blockchain.
 type DSIGN = DSIGN.Ed25519DSIGN
 
 -- | The role of a key.
 --
---   Note that a role is not _fixed_, nor is it unique. In particular, keys may
---   variously be used as witnesses, and so in many case we will change the role
---   of a key to the 'Witness' role.
+-- All key roles are __fixed__ and unique, except for the `Witness` role. In particular,
+-- keys can be cast to a `Witness` role with the help of `asWitness`, because same witness
+-- can be valid for many roles.
 --
---   It is also perfectly allowable for a key to be used in many roles; there is
---   nothing prohibiting somebody using the same underlying key as their payment
---   and staking key, as well as the key for their stake pool. So these roles
---   are more intended for two purposes:
---
---   - To make explicit how we are using a key in the specifications
---   - To provide a guide to downstream implementors, for whom the profusion of
---     keys may be confusing.
+-- In fact, it is perfectly allowable for a key to be used in many roles by the end user;
+-- there is nothing prohibiting somebody using the same underlying key or a script as
+-- their payment and staking credential, as well as the key for their stake pool. However,
+-- in the ledger code mixing up keys with different roles could be catastrophic, that is
+-- why we have this separation.
 data KeyRole
   = Genesis
   | GenesisDelegate
