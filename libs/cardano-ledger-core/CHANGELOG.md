@@ -2,6 +2,9 @@
 
 ## 1.17.0.0
 
+* Deprecate `Cardano.Ledger.Crypto` module in favor of `cardano-protocol-tpraos:Cardano.Protocol.Crypto`
+* Deprecate `KESignable`, `SignedKES`, `SignKeyKES`, `VerKeyKES`, `VRFSignable`,
+  `CertifiedVRF`, `SignKeyVRF` and `VerKeyVRF` type synonyms.
 * Deprecate `Hash`, `SignedDSIGN` and `SignKeyDSIGN` type synonyms.
 * Deprecate `hashSignature` in favor of new `hashTxBodySignature`
 * Move into `Cardano.Ledger.Hashes`:

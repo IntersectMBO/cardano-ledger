@@ -11,8 +11,8 @@ import qualified Cardano.Crypto.VRF.Class as VRF
 import Cardano.Protocol.Crypto
 
 data VRFKeyPair c = VRFKeyPair
-  { vrfSignKey :: !(SignKeyVRF c)
-  , vrfVerKey :: !(VerKeyVRF c)
+  { vrfSignKey :: !(VRF.SignKeyVRF (VRF c))
+  , vrfVerKey :: !(VRF.VerKeyVRF (VRF c))
   }
 
 deriving instance

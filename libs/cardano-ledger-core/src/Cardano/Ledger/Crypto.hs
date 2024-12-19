@@ -12,10 +12,11 @@ module Cardano.Ledger.Crypto
     \  this type class as well as `StandardCrypto` definition will be migrated to `Cardano.Protocol.Crypto` module\
     \  and from now on should be imported from 'cardano-protocol-tpraos' package instead."
     #-} (
+  Crypto (..),
+  StandardCrypto,
   HASH,
   ADDRHASH,
   DSIGN,
 ) where
 
-import Cardano.Ledger.Hashes (ADDRHASH, HASH)
-import Cardano.Ledger.Keys.Internal (DSIGN)
+import Cardano.Ledger.Crypto.Internal
