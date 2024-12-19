@@ -39,26 +39,21 @@ import Cardano.Ledger.EpochBoundary as X (
   SnapShots (..),
   Stake (..),
  )
+import Cardano.Ledger.Hashes as X (
+  ScriptHash (..),
+ )
 import Cardano.Ledger.Keys as X (
-  CertifiedVRF,
   GenDelegPair (..),
   GenDelegs (..),
   Hash,
-  KESignable,
   KeyHash (..),
   KeyRole (..),
   SignKeyDSIGN,
-  SignKeyKES,
-  SignKeyVRF,
   SignedDSIGN,
-  SignedKES,
   VKey (..),
-  VerKeyKES,
-  VerKeyVRF,
   WitVKey (..),
   coerceKeyRole,
   hashKey,
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.Keys.Bootstrap as X (
   BootstrapWitness (..),
@@ -116,10 +111,7 @@ import Cardano.Ledger.Shelley.Rules.Utxo as X (
   UtxoEnv (..),
  )
 import Cardano.Ledger.Shelley.Rules.Utxow as X (ShelleyUTXOW)
-import Cardano.Ledger.Shelley.Scripts as X (
-  MultiSig,
-  ScriptHash (..),
- )
+import Cardano.Ledger.Shelley.Scripts as X (MultiSig)
 import Cardano.Ledger.Shelley.StabilityWindow as X (
   computeRandomnessStabilisationWindow,
   computeStabilityWindow,

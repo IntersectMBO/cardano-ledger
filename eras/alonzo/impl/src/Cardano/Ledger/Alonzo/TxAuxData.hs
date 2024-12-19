@@ -81,7 +81,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.Plutus.Language (Language (..), PlutusBinary (..), guardPlutus)
-import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, validMetadatum)
 import Control.DeepSeq (NFData, deepseq)
 import Data.List (intercalate)

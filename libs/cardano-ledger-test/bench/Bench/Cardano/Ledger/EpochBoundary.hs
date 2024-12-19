@@ -18,12 +18,7 @@ import Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
  )
-import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.SafeHash (
-  SafeToHash (makeHashWithExplicitProxys),
-  castSafeHash,
- )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))

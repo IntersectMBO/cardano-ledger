@@ -49,8 +49,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
-  KeyHash,
-  KeyRole (..),
   VKey,
   WitVKey (..),
   asWitness,
@@ -62,7 +60,6 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXOW)
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))

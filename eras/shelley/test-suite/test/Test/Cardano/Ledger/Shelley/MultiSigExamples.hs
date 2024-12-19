@@ -31,12 +31,7 @@ import Cardano.Ledger.Credential (
   pattern ScriptHashObj,
   pattern StakeRefBase,
  )
-import Cardano.Ledger.Keys (
-  KeyHash (..),
-  KeyRole (..),
-  asWitness,
- )
-import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (

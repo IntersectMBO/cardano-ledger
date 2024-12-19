@@ -26,19 +26,10 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (
-  Era,
-  EraScript,
-  EraTxOut (..),
-  TxOut,
-  Value,
-  hashScript,
-  isNativeScript,
- )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.Hashes (DataHash, EraIndependentTxBody, ScriptHash)
-import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), coerceKeyRole, hashKey)
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness, makeBootstrapWitness)
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -208,7 +199,7 @@ genByronUniv netwrk = do
 -- | Given a list of Byron addresses, compute BootStrap witnesses of all of those addresses
 --   Can only be used with StandardCrypto
 bootWitness ::
-  Hash EraIndependentTxBody ->
+  Hash HASH EraIndependentTxBody ->
   [BootstrapAddress] ->
   Map (KeyHash 'Payment) (Addr, Byron.SigningKey) ->
   Set BootstrapWitness

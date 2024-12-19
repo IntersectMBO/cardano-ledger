@@ -19,16 +19,7 @@ where
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Keys (
-  GenDelegPair (..),
-  KeyRole (..),
-  KeyRoleVRF (..),
-  VRFVerKeyHash,
-  asWitness,
-  hashKey,
-  hashVerKeyVRF,
- )
-import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Keys (GenDelegPair (..), asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
@@ -41,6 +32,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default (Default)

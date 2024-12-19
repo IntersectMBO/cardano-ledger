@@ -11,7 +11,6 @@
 
 module Cardano.Ledger.Credential (
   Credential (KeyHashObj, ScriptHashObj),
-  GenesisCredential (..),
   PaymentCredential,
   credKeyHash,
   credKeyHashWitness,
@@ -70,7 +69,6 @@ import Data.Typeable (Typeable)
 import Data.Word
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Quiet (Quiet (Quiet))
 
 -- | Script hash or key hash for a payment or a staking object.
 --
@@ -323,10 +321,3 @@ instance DecCBORGroup Ptr where
 -- case mkPtr slotNo txIx certIx of
 --   Nothing -> fail $ "SlotNo is too far into the future: " ++ show slotNo
 --   Just ptr -> pure ptr
-
-newtype GenesisCredential = GenesisCredential
-  { unGenesisCredential :: KeyHash 'Genesis
-  }
-  deriving (Generic)
-  deriving newtype (Eq, Ord, ToCBOR, EncCBOR)
-  deriving (Show) via Quiet GenesisCredential

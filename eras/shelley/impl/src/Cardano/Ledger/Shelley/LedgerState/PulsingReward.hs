@@ -45,7 +45,6 @@ import Cardano.Ledger.EpochBoundary (
   sumAllStake,
   sumStakePerPool,
  )
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks

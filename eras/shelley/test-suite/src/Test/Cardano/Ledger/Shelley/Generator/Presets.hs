@@ -27,8 +27,8 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   coerceKeyRole,
   hashKey,
-  hashVerKeyVRF,
  )
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map.Strict (Map)

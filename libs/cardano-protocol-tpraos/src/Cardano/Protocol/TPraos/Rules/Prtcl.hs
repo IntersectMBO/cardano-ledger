@@ -22,6 +22,7 @@ module Cardano.Protocol.TPraos.Rules.Prtcl (
 )
 where
 
+import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (
   Nonce,
@@ -36,16 +37,10 @@ import Cardano.Ledger.Binary.Plain (
   decodeRecordNamed,
   encodeListLen,
  )
-import Cardano.Ledger.Crypto (Crypto, VRF)
-import Cardano.Ledger.Keys (
-  GenDelegs (..),
-  KESignable,
-  KeyHash,
-  KeyRole (..),
-  VRFSignable,
- )
+import Cardano.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),
@@ -134,8 +129,8 @@ deriving instance
 
 instance
   ( Crypto c
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  , KES.Signable (KES c) (BHBody c)
+  , VRF.Signable (VRF c) Seed
   ) =>
   STS (PRTCL c)
   where
@@ -156,8 +151,8 @@ instance
 prtclTransition ::
   forall c.
   ( Crypto c
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  , KES.Signable (KES c) (BHBody c)
+  , VRF.Signable (VRF c) Seed
   ) =>
   TransitionRule (PRTCL c)
 prtclTransition = do
@@ -192,8 +187,8 @@ instance Crypto c => NoThunks (PrtclPredicateFailure c)
 
 instance
   ( Crypto c
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  , KES.Signable (KES c) (BHBody c)
+  , VRF.Signable (VRF c) Seed
   ) =>
   Embed (OVERLAY c) (PRTCL c)
   where
@@ -202,8 +197,8 @@ instance
 
 instance
   ( Crypto c
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  , KES.Signable (KES c) (BHBody c)
+  , VRF.Signable (VRF c) Seed
   ) =>
   Embed (UPDN c) (PRTCL c)
   where

@@ -8,7 +8,7 @@
 
 module Test.Cardano.Ledger.Shelley.SafeHash (safeHashTest) where
 
-import Cardano.Ledger.SafeHash
+import Cardano.Ledger.Hashes
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, toShort)
 import Data.Proxy

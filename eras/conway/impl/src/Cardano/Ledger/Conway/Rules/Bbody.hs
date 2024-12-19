@@ -56,7 +56,6 @@ import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsUTxOState, utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
@@ -93,7 +92,7 @@ maxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
 
 data ConwayBbodyPredFailure era
   = WrongBlockBodySizeBBODY !(Mismatch 'RelEQ Int)
-  | InvalidBodyHashBBODY !(Mismatch 'RelEQ (Hash EraIndependentBlockBody))
+  | InvalidBodyHashBBODY !(Mismatch 'RelEQ (Hash HASH EraIndependentBlockBody))
   | -- | LEDGERS rule subtransition Failures
     LedgersFailure !(PredicateFailure (EraRule "LEDGERS" era))
   | TooManyExUnits !(Mismatch 'RelLTEQ ExUnits)

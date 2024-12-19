@@ -25,8 +25,6 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys (KeyHash (..))
-import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.UTxO (UTxO (..))

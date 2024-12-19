@@ -60,12 +60,7 @@ import Cardano.Ledger.Block (Block (..), bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.EpochBoundary (SnapShot, SnapShots (..), calculatePoolDistr)
-import Cardano.Ledger.Keys (
-  GenDelegPair,
-  GenDelegs (..),
-  KeyHash,
-  KeyRole (..),
- )
+import Cardano.Ledger.Hashes (GenDelegPair, GenDelegs (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core

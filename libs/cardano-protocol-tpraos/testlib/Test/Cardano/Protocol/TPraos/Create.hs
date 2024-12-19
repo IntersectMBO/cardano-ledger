@@ -36,14 +36,8 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (
-  HasKeyRole (coerceKeyRole),
-  Hash,
-  KeyHash,
-  KeyRole (..),
-  signedDSIGN,
- )
+import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), signedDSIGN)
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),
@@ -110,7 +104,7 @@ mkBHBody ::
   Nonce ->
   OCert c ->
   Word32 ->
-  Hash EraIndependentBlockBody ->
+  Hash HASH EraIndependentBlockBody ->
   BHBody c
 mkBHBody = mkBHBodyWithVRF (VRF.evalCertified ()) (VRF.evalCertified ())
 
@@ -129,7 +123,7 @@ mkBHBodyFakeVRF ::
   Nonce ->
   OCert c ->
   Word32 ->
-  Hash EraIndependentBlockBody ->
+  Hash HASH EraIndependentBlockBody ->
   BHBody c
 mkBHBodyFakeVRF (NatNonce bnonce) l =
   mkBHBodyWithVRF
@@ -159,7 +153,7 @@ mkBHBodyWithVRF ::
   Nonce ->
   OCert c ->
   Word32 ->
-  Hash EraIndependentBlockBody ->
+  Hash HASH EraIndependentBlockBody ->
   BHBody c
 mkBHBodyWithVRF mkVrfEta mkVrfL protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash =
   let nonceNonce = mkSeed seedEta slotNo enonce

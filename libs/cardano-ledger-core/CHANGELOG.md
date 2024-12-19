@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Remove `GenesisCredential` as unused.
 * Remove `HASH`, `ADDRHASH` and `DSIGN` type families out of `Crypto` type class and turn
   them into type synonyms for the exact algorithms previously being used in
   `StandardCrypto`

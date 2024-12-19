@@ -24,7 +24,6 @@ import Cardano.Ledger.Conway.TxCert (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (DState (..))
 import Cardano.Ledger.Shelley.Rules
 import qualified Cardano.Ledger.UMap as UMap

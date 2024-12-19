@@ -5,9 +5,8 @@ module Test.Cardano.Ledger.Constrained.Trace.Actions where
 import Cardano.Ledger.BaseTypes (addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
-import Cardano.Ledger.Core (Era (..), TxBody, TxCert)
+import Cardano.Ledger.Core
 import Cardano.Ledger.DRep (DRepState (DRepState))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad (forM_)

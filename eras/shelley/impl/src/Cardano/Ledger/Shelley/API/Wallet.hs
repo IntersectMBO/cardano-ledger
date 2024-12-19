@@ -64,7 +64,7 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.EpochBoundary as EB
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..), WitVKey (..))
+import Cardano.Ledger.Keys (WitVKey (..))
 import Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),

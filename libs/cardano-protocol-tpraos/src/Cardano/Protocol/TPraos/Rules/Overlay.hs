@@ -22,6 +22,7 @@ module Cardano.Protocol.TPraos.Rules.Overlay (
 )
 where
 
+import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.BaseTypes (
@@ -43,24 +44,20 @@ import Cardano.Ledger.Binary (
   encodeNull,
   peekTokenType,
  )
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
-  KESignable,
   KeyHash (..),
   KeyRole (..),
-  KeyRoleVRF (..),
-  VRFVerKeyHash (..),
   coerceKeyRole,
   hashKey,
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),
  )
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst, (-*))
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (BHeader),
@@ -136,7 +133,7 @@ data OverlayPredicateFailure c
 
 instance
   ( Crypto c
-  , KESignable c (BHBody c)
+  , KES.Signable (KES c) (BHBody c)
   , VRF.Signable (VRF c) Seed
   ) =>
   STS (OVERLAY c)
@@ -236,7 +233,7 @@ pbftVrfChecks genDelegVRFVerKeyHash eta0 bhb = do
 overlayTransition ::
   forall c.
   ( Crypto c
-  , KESignable c (BHBody c)
+  , KES.Signable (KES c) (BHBody c)
   , VRF.Signable (VRF c) Seed
   ) =>
   TransitionRule (OVERLAY c)
@@ -285,7 +282,7 @@ instance
 
 instance
   ( Crypto c
-  , KESignable c (BHBody c)
+  , KES.Signable (KES c) (BHBody c)
   , VRF.Signable (VRF c) Seed
   ) =>
   Embed (OCERT c) (OVERLAY c)

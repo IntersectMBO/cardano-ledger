@@ -21,12 +21,7 @@ import Cardano.Ledger.CertState (
   InstantaneousRewards (..),
  )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
-import Cardano.Ledger.Keys (
-  GenDelegPair (..),
-  GenDelegs (..),
-  KeyHash (..),
-  KeyRole (..),
- )
+import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
 import qualified Cardano.Ledger.UMap as UM

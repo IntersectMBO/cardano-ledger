@@ -24,15 +24,12 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
   RawSeed (..),
   ASC (..),
   StakeProportion (..),
-  VRFNatVal (..),
   sizedNativeScriptGens,
 ) where
 
 import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR)
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (ApplyTxError),
@@ -86,13 +83,11 @@ import Control.Monad.Identity (Identity)
 import qualified Data.ByteString.Char8 as BS (length, pack)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map (fromList)
-import Data.Proxy (Proxy (Proxy))
 import Data.Sequence.Strict (fromList)
 import qualified Data.Text as T (pack)
 import qualified Data.Text.Encoding as T (encodeUtf8)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
-import Numeric.Natural (Natural)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -466,22 +461,6 @@ instance Arbitrary MIRPot where
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (Update era) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
-
-newtype VRFNatVal = VRFNatVal Natural
-  deriving (Show)
-
-instance Arbitrary VRFNatVal where
-  arbitrary =
-    VRFNatVal . fromIntegral
-      <$> choose @Integer
-        ( 0
-        , 2
-            ^ ( 8
-                  * VRF.sizeOutputVRF
-                    (Proxy @(VRF StandardCrypto))
-              )
-        )
-  shrink (VRFNatVal v) = VRFNatVal <$> shrinkIntegral v
 
 instance Arbitrary Byron.CompactTxOut where
   arbitrary = hedgehog genCompactTxOut

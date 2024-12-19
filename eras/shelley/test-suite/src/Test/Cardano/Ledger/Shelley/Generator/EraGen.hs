@@ -35,8 +35,8 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyRole (Witness), WitVKey)
-import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
+import Cardano.Ledger.Keys (WitVKey)
 import Cardano.Ledger.Shelley.API (
   Addr (Addr),
   Block (..),

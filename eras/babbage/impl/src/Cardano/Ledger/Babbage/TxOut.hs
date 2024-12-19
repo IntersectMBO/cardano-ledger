@@ -100,7 +100,6 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Plutus.Data (
   BinaryData,
   Data,

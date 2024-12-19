@@ -95,16 +95,8 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD (NoUpdate (..))
-import Cardano.Ledger.Keys (
-  GenDelegPair (..),
-  GenDelegs (..),
-  KeyHash (..),
-  KeyRole (StakePool, Staking),
-  VKey (..),
-  VRFVerKeyHash (..),
- )
-import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
-import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
+import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..), unsafeMakeSafeHash)
+import Cardano.Ledger.Keys (BootstrapWitness (..), ChainCode (..), VKey (..), WitVKey (..))
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   CostModels,
@@ -115,10 +107,7 @@ import Cardano.Ledger.Plutus.CostModels (
   updateCostModels,
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
-import Cardano.Ledger.Plutus.Language (
-  Language (..),
-  nonNativeLanguages,
- )
+import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
@@ -127,7 +116,6 @@ import Cardano.Ledger.PoolParams (
   SizeOfPoolRelays (..),
   StakePoolRelay (..),
  )
-import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),

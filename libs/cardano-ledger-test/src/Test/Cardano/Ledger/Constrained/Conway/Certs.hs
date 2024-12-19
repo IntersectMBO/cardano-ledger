@@ -17,7 +17,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHash, credScriptHash)
-import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)

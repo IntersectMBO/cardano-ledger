@@ -7,9 +7,8 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.Hashes (EraIndependentData, ScriptHash)
+import Cardano.Ledger.Hashes (EraIndependentData, SafeHash, ScriptHash)
 import Cardano.Ledger.Keys
-import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap (RDPair)
 import Test.Cardano.Ledger.Binary.RoundTrip

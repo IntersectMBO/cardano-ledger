@@ -165,12 +165,8 @@ import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
   HasKeyRole (coerceKeyRole),
-  KeyHash (..),
-  KeyRole (..),
   VKey (..),
-  VRFVerKeyHash (..),
   WitVKey (..),
-  hashKey,
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
@@ -192,7 +188,6 @@ import qualified Cardano.Ledger.Plutus.ExUnits as ExUnits (Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
   totalAdaES,

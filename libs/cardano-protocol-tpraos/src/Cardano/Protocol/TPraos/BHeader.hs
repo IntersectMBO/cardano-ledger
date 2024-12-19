@@ -76,28 +76,21 @@ import Cardano.Ledger.Binary (
   szCases,
   withWordSize,
  )
+import Cardano.Ledger.Binary.Crypto
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (
   EraIndependentBlockBody,
   EraIndependentBlockHeader,
- )
-import Cardano.Ledger.Keys (
-  CertifiedVRF,
+  HASH,
   Hash,
   KeyHash,
   KeyRole (..),
-  SignedKES,
-  VKey,
-  VerKeyVRF,
-  decodeSignedKES,
-  decodeVerKeyVRF,
-  encodeSignedKES,
-  encodeVerKeyVRF,
   hashKey,
  )
+import Cardano.Ledger.Keys (VKey)
 import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
@@ -113,7 +106,7 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | The hash of a Block Header
-newtype HashHeader = HashHeader {unHashHeader :: Hash EraIndependentBlockHeader}
+newtype HashHeader = HashHeader {unHashHeader :: Hash HASH EraIndependentBlockHeader}
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 
@@ -155,15 +148,15 @@ data BHBody c = BHBody
   -- ^ Hash of the previous block header
   , bheaderVk :: !(VKey 'BlockIssuer)
   -- ^ verification key of block issuer
-  , bheaderVrfVk :: !(VerKeyVRF c)
+  , bheaderVrfVk :: !(VRF.VerKeyVRF (VRF c))
   -- ^ VRF verification key for block issuer
-  , bheaderEta :: !(CertifiedVRF c Nonce)
+  , bheaderEta :: !(VRF.CertifiedVRF (VRF c) Nonce)
   -- ^ block nonce
-  , bheaderL :: !(CertifiedVRF c Natural)
+  , bheaderL :: !(VRF.CertifiedVRF (VRF c) Natural)
   -- ^ leader election value
   , bsize :: !Word32
   -- ^ Size of the block body
-  , bhash :: !(Hash EraIndependentBlockBody)
+  , bhash :: !(Hash HASH EraIndependentBlockBody)
   -- ^ Hash of block body
   , bheaderOCert :: !(OCert c)
   -- ^ operational certificate
@@ -250,7 +243,7 @@ instance Crypto c => DecCBOR (BHBody c) where
 
 data BHeader c = BHeader'
   { bHeaderBody' :: !(BHBody c)
-  , bHeaderSig' :: !(SignedKES c (BHBody c))
+  , bHeaderSig' :: !(KES.SignedKES (KES c) (BHBody c))
   , bHeaderBytes :: BS.ByteString -- Lazy on purpose. Constructed on demand
   }
   deriving (Generic)
@@ -267,7 +260,7 @@ deriving instance Crypto c => Show (BHeader c)
 pattern BHeader ::
   Crypto c =>
   BHBody c ->
-  SignedKES c (BHBody c) ->
+  KES.SignedKES (KES c) (BHBody c) ->
   BHeader c
 pattern BHeader bHeaderBody' bHeaderSig' <-
   BHeader' {bHeaderBody', bHeaderSig'}
