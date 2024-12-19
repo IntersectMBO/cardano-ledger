@@ -56,11 +56,6 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (ConwayUtxoPredFailure (..))
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (
-  KeyHash,
-  KeyRole (..),
-  hashKey,
- )
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Plutus.Language (
   Language (..),
@@ -68,7 +63,6 @@ import Cardano.Ledger.Plutus.Language (
   PlutusBinary (..),
   PlutusLanguage,
  )
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley

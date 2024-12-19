@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Stop re-exporting `Crypto` and `StandardCrypto`, since they have been moved to `cardano-protocol-tpraos`
 * Removal of crypto parametrization:
   * `LatestKnownEra`
   * `HotCredAuthStatus` and `CommitteeMemberState`

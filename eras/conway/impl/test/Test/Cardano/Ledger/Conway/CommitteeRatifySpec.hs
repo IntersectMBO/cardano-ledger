@@ -31,7 +31,6 @@ import Cardano.Ledger.Conway.Rules (
   committeeAcceptedRatio,
  )
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys (KeyRole (..))
 import Data.Functor.Identity (Identity)
 import Data.List ((\\))
 import Data.Map.Strict (Map)

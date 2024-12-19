@@ -62,7 +62,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (
   AssetName (..),

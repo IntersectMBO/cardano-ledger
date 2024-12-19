@@ -21,7 +21,6 @@ import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), SlotNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))

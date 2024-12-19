@@ -46,7 +46,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, Ptr (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Test)
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (

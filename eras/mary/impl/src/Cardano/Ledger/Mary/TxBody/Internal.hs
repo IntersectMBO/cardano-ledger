@@ -65,7 +65,6 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoized,
  )
-import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (Update, upgradeUpdate)
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))

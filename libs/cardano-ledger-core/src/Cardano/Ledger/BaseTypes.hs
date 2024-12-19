@@ -120,9 +120,9 @@ import Cardano.Ledger.Binary.Plain (
   invalidKey,
  )
 import Cardano.Ledger.Binary.Version
+import Cardano.Ledger.Hashes (HashAnnotated (hashAnnotated), SafeHash, SafeToHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
-import Cardano.Ledger.SafeHash (HashAnnotated (hashAnnotated), SafeHash, SafeToHash)
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import Cardano.Slotting.Slot as Slotting (

@@ -27,7 +27,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.EpochBoundary (SnapShot (ssPoolParams), emptySnapShot)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)

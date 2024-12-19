@@ -41,6 +41,7 @@ module Cardano.Protocol.TPraos.API (
 )
 where
 
+import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -59,16 +60,7 @@ import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordName
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Keys (
-  GenDelegPair (..),
-  GenDelegs (..),
-  KESignable,
-  KeyHash,
-  KeyRole (..),
-  VRFSignable,
-  coerceKeyRole,
- )
+import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), coerceKeyRole)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -83,6 +75,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody,
   BHeader,
@@ -124,8 +117,8 @@ import NoThunks.Class (NoThunks (..))
 
 class
   ( Crypto c
-  , KESignable c (BHBody c)
-  , VRFSignable c Seed
+  , KES.Signable (KES c) (BHBody c)
+  , VRF.Signable (VRF c) Seed
   ) =>
   PraosCrypto c
 

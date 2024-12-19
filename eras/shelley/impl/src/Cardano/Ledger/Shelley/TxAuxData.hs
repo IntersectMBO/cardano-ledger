@@ -33,7 +33,13 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Binary (Annotator (..), DecCBOR (..), EncCBOR (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR)
 import Cardano.Ledger.Core (Era (..), EraTxAuxData (..))
-import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
+import Cardano.Ledger.Hashes (
+  EraIndependentTxAuxData,
+  HashAnnotated,
+  SafeHash,
+  SafeToHash (..),
+  hashAnnotated,
+ )
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
@@ -46,12 +52,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.Metadata (Metadatum (..), validMetadatum)
-import Cardano.Ledger.SafeHash (
-  HashAnnotated,
-  SafeHash,
-  SafeToHash (..),
-  hashAnnotated,
- )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Control.DeepSeq (NFData)
 import Data.Map.Strict (Map)

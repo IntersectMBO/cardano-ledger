@@ -17,17 +17,8 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..), raCredential, pattern RewardAccount)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Credential (
-  Credential (..),
-  StakeReference (..),
- )
-import Cardano.Ledger.Crypto (StandardCrypto, VRF)
-import Cardano.Ledger.Keys (
-  KeyRole (..),
-  asWitness,
-  hashKey,
-  hashVerKeyVRF,
- )
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
   PoolParams (..),
@@ -43,7 +34,6 @@ import Cardano.Ledger.PoolParams (
   ppRewardAccount,
   ppVrf,
  )
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   LedgerEnv (..),
   ShelleyLEDGER,
@@ -71,13 +61,11 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (
-  ShelleyTxWits,
-  addrWits,
- )
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
+import Cardano.Protocol.Crypto (StandardCrypto, VRF, hashVerKeyVRF)
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.DeepSeq (rnf)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
@@ -105,7 +93,6 @@ import Test.Cardano.Ledger.Core.KeyPair (
 import Test.Cardano.Ledger.Shelley.Arbitrary (
   ASC (ASC),
   StakeProportion (StakeProportion),
-  VRFNatVal (VRFNatVal),
  )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, MockCrypto)
 import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
@@ -113,6 +100,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..), genesisCoins
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Protocol.TPraos.Arbitrary (VRFNatVal (VRFNatVal))
 import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import qualified Test.QuickCheck.Gen as QC
 import qualified Test.QuickCheck.Random as QC

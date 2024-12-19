@@ -91,15 +91,12 @@ import Cardano.Ledger.Core.PParams
 import Cardano.Ledger.Core.Translation
 import Cardano.Ledger.Core.TxCert
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Hashes
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Hashes hiding (GenDelegPair (..), GenDelegs (..), unsafeMakeSafeHash)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Metadata
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
-import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.DeepSeq (NFData)

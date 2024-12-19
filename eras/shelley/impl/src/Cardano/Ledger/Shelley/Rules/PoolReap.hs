@@ -28,7 +28,6 @@ import Cardano.Ledger.CertState (VState)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.PoolParams (ppRewardAccount)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.Governance (EraGov)

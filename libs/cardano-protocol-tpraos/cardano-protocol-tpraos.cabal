@@ -14,6 +14,7 @@ source-repository head
 
 library
   exposed-modules:
+    Cardano.Protocol.Crypto
     Cardano.Protocol.TPraos.API
     Cardano.Protocol.TPraos.BHeader
     Cardano.Protocol.TPraos.OCert

@@ -13,9 +13,10 @@ module Cardano.Protocol.TPraos.Rules.OCert (
 )
 where
 
+import Cardano.Crypto.KES (Signable, verifySignedKES)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert
 import Control.Monad.Trans.Reader (asks)
@@ -56,7 +57,7 @@ instance NoThunks OcertPredicateFailure
 
 instance
   ( Crypto c
-  , KESignable c (BHBody c)
+  , Signable (KES c) (BHBody c)
   ) =>
   STS (OCERT c)
   where
@@ -71,7 +72,7 @@ instance
 
 ocertTransition ::
   ( Crypto c
-  , KESignable c (BHBody c)
+  , Signable (KES c) (BHBody c)
   ) =>
   TransitionRule (OCERT c)
 ocertTransition =

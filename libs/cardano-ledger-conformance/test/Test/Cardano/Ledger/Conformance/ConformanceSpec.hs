@@ -7,7 +7,7 @@
 
 module Test.Cardano.Ledger.Conformance.ConformanceSpec (spec) where
 
-import Cardano.Ledger.Crypto (ADDRHASH)
+import Cardano.Ledger.Hashes (ADDRHASH)
 import Cardano.Ledger.TxIn (TxId)
 import Data.List (isInfixOf)
 import Data.Typeable (Proxy (..), Typeable, typeRep)

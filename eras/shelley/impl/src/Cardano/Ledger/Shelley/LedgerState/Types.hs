@@ -59,7 +59,6 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.EpochBoundary (SnapShots (..), ssStakeDistrL, ssStakeMarkL)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core

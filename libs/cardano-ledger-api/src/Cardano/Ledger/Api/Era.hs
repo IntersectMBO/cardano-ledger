@@ -37,10 +37,6 @@ module Cardano.Ledger.Api.Era (
   -- ** Latest Known
   LatestKnownEra,
 
-  -- * Crypto
-  StandardCrypto,
-  Crypto (..),
-
   -- * Protocol version
 
   -- ** Value level
@@ -77,7 +73,6 @@ import Cardano.Ledger.Core (
   eraProtVerHigh,
   eraProtVerLow,
  )
-import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import Cardano.Ledger.Mary (Mary, MaryEra)
 import Cardano.Ledger.Shelley (Shelley, ShelleyEra)
 

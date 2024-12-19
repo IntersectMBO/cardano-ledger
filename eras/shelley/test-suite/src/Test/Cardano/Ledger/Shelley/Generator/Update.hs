@@ -37,7 +37,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),

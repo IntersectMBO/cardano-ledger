@@ -11,7 +11,6 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool where
 
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Rules
 import Data.Map.Strict (mapKeys)

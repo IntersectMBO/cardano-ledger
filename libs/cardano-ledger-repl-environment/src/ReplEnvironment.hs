@@ -22,7 +22,6 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley

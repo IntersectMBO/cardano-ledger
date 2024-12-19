@@ -55,9 +55,8 @@ import Cardano.Ledger.Core (
   ScriptHash,
   hashScript,
  )
-import Cardano.Ledger.Keys (KeyRole (Witness))
-import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
+import Cardano.Ledger.Hashes (SafeToHash (..))
+import Cardano.Ledger.Keys (BootstrapWitness, KeyRole (Witness), WitVKey (..), witVKeyHash)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
@@ -67,7 +66,6 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoized,
  )
-import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Ledger.Shelley.TxAuxData ()

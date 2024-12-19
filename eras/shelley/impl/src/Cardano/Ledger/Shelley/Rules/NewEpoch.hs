@@ -31,7 +31,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
-import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core

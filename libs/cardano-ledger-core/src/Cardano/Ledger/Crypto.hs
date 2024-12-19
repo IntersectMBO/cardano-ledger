@@ -1,39 +1,22 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
+module Cardano.Ledger.Crypto
+  {-# DEPRECATED
+    "@Cardano.Ledger.Crypto@ interface have been completely overhauled. In particular: \
+    \\
+    \1). `Crypto` type class no longer contains `DSIGN`, `HASH` and `ADDRHASH` type families, \
+    \  instead they have been extracted into type synonyms that point to exact algorithms that previously \
+    \  where specified in `StandardCrypto` for those type families: \
+    \    a). `DSIGN` type synonym can be imported from \"Cardano.Ledger.Keys\" module \
+    \    b). `HASH` and `ADDRHASH` type synonyms can be imported from \"Cardano.Ledger.Hashes\" module \
+    \\
+    \2). `Crypto` type class has retained its `KES` and `VRF` type families, which are not used in Ledger, therefore \
+    \  this type class as well as `StandardCrypto` definition will be migrated to \"Cardano.Protocol.Crypto\" module \
+    \  and from now on should be imported from 'cardano-protocol-tpraos' package instead."
+    #-} (
+  Crypto (..),
+  StandardCrypto,
+  HASH,
+  ADDRHASH,
+  DSIGN,
+) where
 
--- | Package all the crypto constraints into one place.
-module Cardano.Ledger.Crypto where
-
-import Cardano.Crypto.DSIGN
-import Cardano.Crypto.Hash
-import Cardano.Crypto.KES
-import Cardano.Crypto.VRF
-import Cardano.Crypto.VRF.Praos
-import Data.Kind (Type)
-import Data.Typeable (Typeable)
-
-class
-  ( UnsoundPureKESAlgorithm (KES c)
-  , VRFAlgorithm (VRF c)
-  , ContextKES (KES c) ~ ()
-  , ContextVRF (VRF c) ~ ()
-  , Typeable c
-  ) =>
-  Crypto c
-  where
-  type KES c :: Type
-  type VRF c :: Type
-
--- ================================
-
--- | The same crypto used on the net
-data StandardCrypto
-
-instance Crypto StandardCrypto where
-  type KES StandardCrypto = Sum6KES Ed25519DSIGN Blake2b_256
-  type VRF StandardCrypto = PraosVRF
-
-type HASH = Blake2b_256
-type ADDRHASH = Blake2b_224
-type DSIGN = Ed25519DSIGN
+import Cardano.Ledger.Crypto.Internal
