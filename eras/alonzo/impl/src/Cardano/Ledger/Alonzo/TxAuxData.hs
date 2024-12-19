@@ -34,7 +34,6 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoEraTxAuxData (..),
   AlonzoTxAuxDataRaw,
   mkAlonzoTxAuxData,
-  AuxiliaryDataHash (..),
   hashAlonzoTxAuxData,
   validateAlonzoTxAuxData,
   getAlonzoTxAuxDataScripts,
@@ -56,7 +55,6 @@ import Cardano.Ledger.Alonzo.Scripts (
   plutusScriptLanguage,
   validScript,
  )
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -274,8 +272,8 @@ metadataAlonzoTxAuxDataL =
 hashAlonzoTxAuxData ::
   HashAnnotated x EraIndependentTxAuxData =>
   x ->
-  AuxiliaryDataHash
-hashAlonzoTxAuxData x = AuxiliaryDataHash (hashAnnotated x)
+  TxAuxDataHash
+hashAlonzoTxAuxData x = TxAuxDataHash (hashAnnotated x)
 
 validateAlonzoTxAuxData ::
   (AlonzoEraScript era, Script era ~ AlonzoScript era) =>

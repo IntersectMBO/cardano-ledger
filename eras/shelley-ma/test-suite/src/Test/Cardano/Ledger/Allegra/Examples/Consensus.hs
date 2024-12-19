@@ -12,7 +12,6 @@ import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
-import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley.PParams (Update (..))
@@ -56,9 +55,9 @@ exampleAllegraTxBody value =
     & auxDataHashTxBodyL .~ SJust auxiliaryDataHash
   where
     -- Dummy hash to decouple from the auxiliary data in 'exampleTx'.
-    auxiliaryDataHash :: AuxiliaryDataHash
+    auxiliaryDataHash :: TxAuxDataHash
     auxiliaryDataHash =
-      AuxiliaryDataHash $ mkDummySafeHash 30
+      TxAuxDataHash $ mkDummySafeHash 30
 
 exampleTimelock :: AllegraEraScript era => NativeScript era
 exampleTimelock =

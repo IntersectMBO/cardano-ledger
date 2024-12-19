@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `TxAuxDataHash` and deprecate `AuxiliaryDayaHash` in its favor.
 * Deprecate `Cardano.Ledger.Crypto` module in favor of `cardano-protocol-tpraos:Cardano.Protocol.Crypto`
 * Deprecate `KESignable`, `SignedKES`, `SignKeyKES`, `VerKeyKES`, `VRFSignable`,
   `CertifiedVRF`, `SignKeyVRF` and `VerKeyVRF` type synonyms.

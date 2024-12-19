@@ -9,7 +9,6 @@ module Test.Cardano.Ledger.Shelley.TreeDiff (
   module Test.Cardano.Ledger.TreeDiff,
 ) where
 
-import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
@@ -176,7 +175,6 @@ instance ToExpr (ShelleyDelegPredFailure era)
 instance
   ( Era era
   , ToExpr (PredicateFailure (EraRule "UTXO" era))
-  , ToExpr AuxiliaryDataHash
   ) =>
   ToExpr (ShelleyUtxowPredFailure era)
 

@@ -33,7 +33,6 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
 )
 where
 
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Relation (..),
@@ -125,11 +124,11 @@ data ShelleyUtxowPredFailure era
   | UtxoFailure (PredicateFailure (EraRule "UTXO" era))
   | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness))
   | MissingTxBodyMetadataHash
-      !AuxiliaryDataHash -- hash of the full metadata
+      !TxAuxDataHash -- hash of the full metadata
   | MissingTxMetadata
-      !AuxiliaryDataHash -- hash of the metadata included in the transaction body
+      !TxAuxDataHash -- hash of the metadata included in the transaction body
   | ConflictingMetadataHash
-      !(Mismatch 'RelEQ AuxiliaryDataHash)
+      !(Mismatch 'RelEQ TxAuxDataHash)
   | -- Contains out of range values (strings too long)
     InvalidMetadata
   | ExtraneousScriptWitnessesUTXOW

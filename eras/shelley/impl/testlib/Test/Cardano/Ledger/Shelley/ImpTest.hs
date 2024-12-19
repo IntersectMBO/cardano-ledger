@@ -140,7 +140,6 @@ import Cardano.Ledger.Address (
   RewardAccount (..),
   bootstrapKeyHash,
  )
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
@@ -1020,7 +1019,7 @@ fixupAuxDataHash :: (EraTx era, Applicative m) => Tx era -> m (Tx era)
 fixupAuxDataHash tx
   | SNothing <- tx ^. bodyTxL . auxDataHashTxBodyL
   , SJust auxData <- tx ^. auxDataTxL =
-      pure (tx & bodyTxL . auxDataHashTxBodyL .~ SJust (AuxiliaryDataHash (hashAnnotated auxData)))
+      pure (tx & bodyTxL . auxDataHashTxBodyL .~ SJust (TxAuxDataHash (hashAnnotated auxData)))
   | otherwise = pure tx
 
 shelleyFixupTx ::

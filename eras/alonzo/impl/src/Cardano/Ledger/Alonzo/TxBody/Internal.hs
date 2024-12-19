@@ -98,7 +98,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AsIxItem (..),
   PlutusPurpose,
  )
-import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Alonzo.TxAuxData ()
 import Cardano.Ledger.Alonzo.TxCert ()
 import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.BaseTypes (
@@ -194,7 +194,7 @@ data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
   , atbrReqSignerHashes :: Set (KeyHash 'Witness)
   , atbrMint :: !MultiAsset
   , atbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
-  , atbrAuxDataHash :: !(StrictMaybe AuxiliaryDataHash)
+  , atbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
   , atbrTxNetworkId :: !(StrictMaybe Network)
   }
   deriving (Generic, Typeable)
@@ -409,7 +409,7 @@ pattern AlonzoTxBody ::
   Set (KeyHash 'Witness) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
-  StrictMaybe AuxiliaryDataHash ->
+  StrictMaybe TxAuxDataHash ->
   StrictMaybe Network ->
   AlonzoTxBody era
 pattern AlonzoTxBody
@@ -498,7 +498,7 @@ withdrawals' :: AlonzoTxBody era -> Withdrawals
 vldt' :: AlonzoTxBody era -> ValidityInterval
 update' :: AlonzoTxBody era -> StrictMaybe (Update era)
 reqSignerHashes' :: AlonzoTxBody era -> Set (KeyHash 'Witness)
-adHash' :: AlonzoTxBody era -> StrictMaybe AuxiliaryDataHash
+adHash' :: AlonzoTxBody era -> StrictMaybe TxAuxDataHash
 mint' :: AlonzoTxBody era -> MultiAsset
 scriptIntegrityHash' :: AlonzoTxBody era -> StrictMaybe ScriptIntegrityHash
 txnetworkid' :: AlonzoTxBody era -> StrictMaybe Network

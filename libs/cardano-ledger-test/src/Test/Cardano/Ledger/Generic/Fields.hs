@@ -48,7 +48,6 @@ import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..), unOrdExUnits)
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
@@ -134,7 +133,7 @@ data TxBodyField era
   | ReqSignerHashes (Set (KeyHash 'Witness))
   | Mint MultiAsset
   | WppHash (StrictMaybe ScriptIntegrityHash)
-  | AdHash (StrictMaybe AuxiliaryDataHash)
+  | AdHash (StrictMaybe TxAuxDataHash)
   | Txnetworkid (StrictMaybe Network)
   | ProposalProc (OSet.OSet (ProposalProcedure era))
   | VotingProc (VotingProcedures era)
@@ -159,7 +158,7 @@ pattern ReqSignerHashes' :: [KeyHash 'Witness] -> TxBodyField era -- A set
 
 pattern WppHash' :: [ScriptIntegrityHash] -> TxBodyField era -- 0 or 1 element
 
-pattern AdHash' :: [AuxiliaryDataHash] -> TxBodyField era -- 0 or 1 element
+pattern AdHash' :: [TxAuxDataHash] -> TxBodyField era -- 0 or 1 element
 
 pattern Txnetworkid' :: [Network] -> TxBodyField era -- 0 or 1 element
 
@@ -589,7 +588,7 @@ pattern Txnetworkid' x <-
   where
     Txnetworkid' x = Txnetworkid (toStrictMaybe x)
 
-adhashview :: TxBodyField era -> Maybe [AuxiliaryDataHash]
+adhashview :: TxBodyField era -> Maybe [TxAuxDataHash]
 adhashview (AdHash x) = Just (fromStrictMaybe x)
 adhashview _ = Nothing
 

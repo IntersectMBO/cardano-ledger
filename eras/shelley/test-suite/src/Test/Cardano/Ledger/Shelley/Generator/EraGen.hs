@@ -31,7 +31,6 @@ module Test.Cardano.Ledger.Shelley.Generator.EraGen (
 )
 where
 
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -191,7 +190,7 @@ class
     Withdrawals ->
     Coin ->
     StrictMaybe (Update era) ->
-    StrictMaybe AuxiliaryDataHash ->
+    StrictMaybe TxAuxDataHash ->
     Gen (TxBody era, [Script era])
 
   -- | Generate era-specific auxiliary data
