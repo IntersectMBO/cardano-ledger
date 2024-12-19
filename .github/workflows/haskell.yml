@@ -493,14 +493,19 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Check if provided formal-ledger-specifications SRP commit hash exists
+    - name: Check formal-ledger-specifications SRP commit hash
       run: |
         TAG=$(sed -ne \
-          '/ *location: *https:\/\/github.com\/IntersectMBO\/formal-ledger-specifications.git/,/--sha256/ p' \
+          '/ *location: *https:\/\/github.com\/IntersectMBO\/formal-ledger-specifications.git/,/tag:/ p' \
           cabal.project \
         | sed -ne 's/^ *tag: *//p')
+        if [ -z "$TAG" ]; then
+          echo "Error: IntersectMBO/formal-ledger-specifications SRP tag not found."
+          exit 1
+        fi
         git fetch https://github.com/intersectmbo/formal-ledger-specifications.git MAlonzo-code
-        git show -s $TAG || { \
+
+        git show -s "$TAG" || { \
           echo "Commit $TAG was not found on the MAlonzo-code branch of formal-ledger-specifications."
           exit 1
         }
