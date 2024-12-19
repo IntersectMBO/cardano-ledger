@@ -277,23 +277,19 @@ from [the Shelley ledger spec](./eras/shelley/formal-spec)).
 4. Add a link to the package near the bottom of [flake.nix](./flake.nix),
    following the existing examples.
 
-### To update the conformance test
+### To update the referenced Agda ledger spec
 
-To update the conformance test, do the following:
+To update the version of the Agda spec that the conformance tests are using:
 
-1. Clone the [Agda specification repo](https://github.com/IntersectMBO/formal-ledger-specifications)
-2. Run `nix-build -A ledger.hsSrc` in the cloned repo, take note of the output path
-   in the nix store
-3. Clone the [executable spec repo](https://github.com/input-output-hk/cardano-ledger-executable-spec)
-4. Replace the content of the repo cloned above with the files at `/nix/store/<output of the nix-build>/haskell/Ledger/*`
-   ```bash
-   rm -rf cardano-ledger-executable-spec/*
-   cp -r  /nix/store/<output of the nix-build>/haskell/Ledger/*  cardano-ledger-executable-spec
-   ```
-   Then make a commit and push it.
-5. In the `cardano-ledger` repo, edit `cabal.project`. Look for
-   `source-repository-package` that points to the executable spec repo, and
-   update the `tag` and `sha256` entries in that block.
+1. Locate the `MAlonzo-code` branch in the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications)
+2. Identify the SHA of the commit that you need, belonging to that branch
+3. In the `cardano-ledger` repository, update the `cabal.project` file by replacing the `tag` and `sha256` fields in the `source-repository-package` stanza with the appropriate values.
+
+You can determine the correct `sha256` like this:
+  * update the `tag` with the SHA of the chosen commit and run `cabal`. The resulting error message will include the expected `sha256` value.
+  * alternatively, use a tool like `nix-prefetch-git` to fetch and compute the `sha256`
+
+If the commit you need in `formal-ledger-specifications` is not on master, open a PR for your branch in the `formal-ledger-specifications` repository. This will create a branch with the updated generated code, which you can then use as described above. You will not be able to merge in `cardano-leder` master a reference to a commit not yet merged in `formal-ledger-specifications`.
 
 ### Additional documentation
 
