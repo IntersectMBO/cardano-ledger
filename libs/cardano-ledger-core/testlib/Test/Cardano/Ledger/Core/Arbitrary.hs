@@ -48,7 +48,6 @@ where
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Address
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),
@@ -352,8 +351,8 @@ instance Arbitrary ScriptHash where
 -- Cardano.Ledger.AuxiliaryDataHash ------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Arbitrary AuxiliaryDataHash where
-  arbitrary = AuxiliaryDataHash <$> arbitrary
+instance Arbitrary TxAuxDataHash where
+  arbitrary = TxAuxDataHash <$> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Keys -------------------------------------------------------------------

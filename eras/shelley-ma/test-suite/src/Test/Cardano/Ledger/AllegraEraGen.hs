@@ -29,7 +29,6 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (encCBOR, serialize')
 import Cardano.Ledger.Coin (Coin)
@@ -107,7 +106,7 @@ genTxBody ::
   Withdrawals ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe AuxiliaryDataHash ->
+  StrictMaybe TxAuxDataHash ->
   Gen (AllegraTxBody era, [Timelock era])
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot

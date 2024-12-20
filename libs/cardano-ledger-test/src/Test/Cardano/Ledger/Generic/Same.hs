@@ -21,7 +21,6 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
@@ -404,7 +403,7 @@ sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Withdrawals w1) f1 s1 pu1 d1) (
   , ("Fee", eqVia pcCoin f1 f2)
   , ("TimeToLive", eqVia pcSlotNo s1 s2)
   , ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2)
-  , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+  , ("TxAuxDataHash", eqVia (ppStrictMaybe (\(TxAuxDataHash h) -> trim (ppSafeHash h))) d1 d2)
   ]
 
 sameAllegraTxBody ::
@@ -421,7 +420,7 @@ sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1) (
   , ("Fee", eqVia pcCoin f1 f2)
   , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
   , ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2)
-  , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+  , ("TxAuxDataHash", eqVia (ppStrictMaybe (\(TxAuxDataHash h) -> trim (ppSafeHash h))) d1 d2)
   ]
 
 sameMaryTxBody ::
@@ -438,7 +437,7 @@ sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1 m1) (Mar
   , ("Fee", eqVia pcCoin f1 f2)
   , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
   , ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2)
-  , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+  , ("TxAuxDataHash", eqVia (ppStrictMaybe (\(TxAuxDataHash h) -> trim (ppSafeHash h))) d1 d2)
   , ("Mint", eqVia multiAssetSummary m1 m2)
   ]
 
@@ -463,7 +462,7 @@ sameAlonzoTxBody
     , ("ReqSignerHashes", eqVia (ppSet pcKeyHash) r1 r2)
     , ("Mint", eqVia multiAssetSummary m1 m2)
     , ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2)
-    , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+    , ("TxAuxDataHash", eqVia (ppStrictMaybe (\(TxAuxDataHash h) -> trim (ppSafeHash h))) d1 d2)
     , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
     ]
 
@@ -493,7 +492,7 @@ sameBabbageTxBody
     , ("ReqSignerHashes", eqVia (ppSet pcKeyHash) r1 r2)
     , ("Mint", eqVia multiAssetSummary m1 m2)
     , ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2)
-    , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+    , ("TxAuxDataHash", eqVia (ppStrictMaybe (\(TxAuxDataHash h) -> trim (ppSafeHash h))) d1 d2)
     , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
     ]
 
@@ -522,7 +521,7 @@ sameConwayTxBody
     , ("ReqSignerHashes", eqVia (ppSet pcKeyHash) r1 r2)
     , ("Mint", eqVia multiAssetSummary m1 m2)
     , ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2)
-    , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
+    , ("TxAuxDataHash", eqVia (ppStrictMaybe (\(TxAuxDataHash h) -> trim (ppSafeHash h))) d1 d2)
     , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
     ,
       ( "VotingProcedures"

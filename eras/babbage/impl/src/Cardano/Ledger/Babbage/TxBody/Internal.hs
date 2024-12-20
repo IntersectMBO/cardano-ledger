@@ -90,7 +90,6 @@ module Cardano.Ledger.Babbage.TxBody.Internal (
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (appExtraEntropy), appD)
-import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxBody (alonzoRedeemerPointer, alonzoRedeemerPointerInverse)
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (upgradeBabbagePParams)
@@ -177,7 +176,7 @@ data BabbageTxBodyRaw era = BabbageTxBodyRaw
     -- Operations on the TxBody in the BabbageEra depend upon this.
     -- We now store only the MultiAsset part of a Mary.Value.
     btbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
-  , btbrAuxDataHash :: !(StrictMaybe AuxiliaryDataHash)
+  , btbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
   , btbrTxNetworkId :: !(StrictMaybe Network)
   }
   deriving (Generic, Typeable)
@@ -263,7 +262,7 @@ feeBabbageTxBodyL =
 {-# INLINEABLE feeBabbageTxBodyL #-}
 
 auxDataHashBabbageTxBodyL ::
-  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe AuxiliaryDataHash)
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe TxAuxDataHash)
 auxDataHashBabbageTxBodyL =
   lensMemoRawType btbrAuxDataHash $
     \txBodyRaw auxDataHash -> txBodyRaw {btbrAuxDataHash = auxDataHash}
@@ -601,7 +600,7 @@ pattern BabbageTxBody ::
   Set (KeyHash 'Witness) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
-  StrictMaybe AuxiliaryDataHash ->
+  StrictMaybe TxAuxDataHash ->
   StrictMaybe Network ->
   BabbageTxBody era
 pattern BabbageTxBody
@@ -703,7 +702,7 @@ withdrawals' :: BabbageTxBody era -> Withdrawals
 vldt' :: BabbageTxBody era -> ValidityInterval
 update' :: BabbageTxBody era -> StrictMaybe (Update era)
 reqSignerHashes' :: BabbageTxBody era -> Set (KeyHash 'Witness)
-adHash' :: BabbageTxBody era -> StrictMaybe AuxiliaryDataHash
+adHash' :: BabbageTxBody era -> StrictMaybe TxAuxDataHash
 mint' :: BabbageTxBody era -> MultiAsset
 scriptIntegrityHash' :: BabbageTxBody era -> StrictMaybe ScriptIntegrityHash
 spendInputs' = btbrSpendInputs . getMemoRawType

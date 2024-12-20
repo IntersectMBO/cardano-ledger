@@ -11,10 +11,7 @@ module Test.Cardano.Ledger.Conway.Examples.Consensus where
 
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Alonzo.TxAuxData (
-  AuxiliaryDataHash (..),
-  mkAlonzoTxAuxData,
- )
+import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
@@ -152,7 +149,7 @@ exampleTxBodyConway =
     (Set.singleton $ SLE.mkKeyHash 212) -- reqSignerHashes
     exampleMultiAsset -- mint
     (SJust $ mkDummySafeHash 42) -- scriptIntegrityHash
-    (SJust . AuxiliaryDataHash $ mkDummySafeHash 42) -- adHash
+    (SJust . TxAuxDataHash $ mkDummySafeHash 42) -- adHash
     (SJust Mainnet) -- txnetworkid
     (VotingProcedures mempty)
     mempty

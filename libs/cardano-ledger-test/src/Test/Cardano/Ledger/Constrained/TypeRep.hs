@@ -50,7 +50,6 @@ import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -324,7 +323,7 @@ data Rep era t where
   PayHashR :: Era era => Rep era (KeyHash 'Payment)
   TxR :: Era era => Proof era -> Rep era (TxF era)
   ScriptIntegrityHashR :: Era era => Rep era (SafeHash EraIndependentScriptIntegrity)
-  AuxiliaryDataHashR :: Era era => Rep era AuxiliaryDataHash
+  TxAuxDataHashR :: Era era => Rep era TxAuxDataHash
   GovActionR :: Era era => Rep era (GovAction era)
   WitVKeyR :: Era era => Proof era -> Rep era (WitVKey 'Witness)
   TxAuxDataR :: Era era => Proof era -> Rep era (TxAuxDataF era)
@@ -415,7 +414,7 @@ repHasInstances r = case r of
   LedgerStateR {} -> IsTypeable
   TxR {} -> IsEq
   ScriptIntegrityHashR {} -> IsOrd
-  AuxiliaryDataHashR {} -> IsOrd
+  TxAuxDataHashR {} -> IsOrd
   BootstrapWitnessR {} -> IsOrd
   SigningKeyR {} -> IsEq
   TxWitsR {} -> IsEq
@@ -661,7 +660,7 @@ synopsis (TxWitsR p) (TxWitsF _ x) = show ((unReflect pcWitnesses p x) :: PDoc)
 synopsis PayHashR k = "(KeyHash 'Payment " ++ show (keyHashSummary k) ++ ")"
 synopsis (TxR p) x = show (pcTx p (unTxF x))
 synopsis ScriptIntegrityHashR x = show (trim (ppHash (extractHash x)))
-synopsis AuxiliaryDataHashR (AuxiliaryDataHash x) = show (trim (ppHash (extractHash x)))
+synopsis TxAuxDataHashR (TxAuxDataHash x) = show (trim (ppHash (extractHash x)))
 synopsis GovActionR x = show (pcGovAction x)
 synopsis (WitVKeyR p) x = show ((unReflect pcWitVKey p x) :: PDoc)
 synopsis (TxAuxDataR _) x = show x
@@ -872,7 +871,7 @@ genSizedRep _ (TxR p) =
     Babbage -> TxF p <$> arbitrary
     Conway -> TxF p <$> arbitrary
 genSizedRep _ ScriptIntegrityHashR = arbitrary
-genSizedRep _ AuxiliaryDataHashR = arbitrary
+genSizedRep _ TxAuxDataHashR = arbitrary
 genSizedRep _ GovActionR = NoConfidence <$> arbitrary
 genSizedRep _ (WitVKeyR _) = arbitrary
 genSizedRep _ (TxAuxDataR p) = genTxAuxDataF p
@@ -1093,7 +1092,7 @@ shrinkRep (TxWitsR _p) _ = []
 shrinkRep PayHashR t = shrink t
 shrinkRep (TxR _) _ = []
 shrinkRep ScriptIntegrityHashR x = shrink x
-shrinkRep AuxiliaryDataHashR x = shrink x
+shrinkRep TxAuxDataHashR x = shrink x
 shrinkRep GovActionR _ = []
 shrinkRep (WitVKeyR _) x = shrink x
 shrinkRep (TxAuxDataR _) _ = []

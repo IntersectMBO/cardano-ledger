@@ -34,7 +34,6 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
   BabbageUtxowPredFailure,
@@ -87,12 +86,12 @@ data ConwayUtxowPredFailure era
       !(Set ScriptHash)
   | -- | hash of the full metadata
     MissingTxBodyMetadataHash
-      !AuxiliaryDataHash
+      !TxAuxDataHash
   | -- | hash of the metadata included in the transaction body
     MissingTxMetadata
-      !AuxiliaryDataHash
+      !TxAuxDataHash
   | ConflictingMetadataHash
-      !(Mismatch 'RelEQ AuxiliaryDataHash)
+      !(Mismatch 'RelEQ TxAuxDataHash)
   | -- | Contains out of range values (string`s too long)
     InvalidMetadata
   | -- | extraneous scripts

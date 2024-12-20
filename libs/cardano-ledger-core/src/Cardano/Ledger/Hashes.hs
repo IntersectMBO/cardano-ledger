@@ -50,6 +50,9 @@ module Cardano.Ledger.Hashes (
   ScriptHash (..),
   DataHash,
 
+  -- ** AuxiliaryData
+  TxAuxDataHash (..),
+
   -- ** @VRF@ Verification Key Hashes
   KeyRoleVRF (..),
   VRFVerKeyHash (..),
@@ -73,7 +76,6 @@ module Cardano.Ledger.Hashes (
   -- ** Other operations
   castSafeHash,
   extractHash,
-  indexProxy,
 )
 where
 
@@ -235,6 +237,15 @@ fromVRFVerKeyHash :: VRFVerKeyHash (r :: KeyRoleVRF) -> Hash.Hash HASH (VRF.VerK
 fromVRFVerKeyHash = Hash.castHash . unVRFVerKeyHash
 
 --------------------------------------------------------------------------------
+-- Auxiliary Data Hashes
+--------------------------------------------------------------------------------
+
+newtype TxAuxDataHash = TxAuxDataHash
+  { unTxAuxDataHash :: SafeHash EraIndependentTxAuxData
+  }
+  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, EncCBOR, DecCBOR, ToJSON)
+
+--------------------------------------------------------------------------------
 -- Genesis Keys Hashes
 --------------------------------------------------------------------------------
 
@@ -374,10 +385,6 @@ instance Hash.HashAlgorithm h => SafeToHash (Hash.Hash h i) where
 -- can be easily derived (because their methods have default methods when the type is a
 -- newtype around a type that is 'SafeToHash'). For example,
 class SafeToHash x => HashAnnotated x i | x -> i where
-  -- TODO: move outside of type class
-  indexProxy :: x -> Proxy i
-  indexProxy _ = Proxy @i
-
   -- | Create a @('SafeHash' i)@, given @(`HashAnnotated` x i)@ instance.
   hashAnnotated :: x -> SafeHash i
   hashAnnotated = makeHashWithExplicitProxys (Proxy @i)

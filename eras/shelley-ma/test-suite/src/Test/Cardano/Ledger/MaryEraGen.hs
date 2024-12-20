@@ -20,7 +20,6 @@ module Test.Cardano.Ledger.MaryEraGen (
 ) where
 
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -290,7 +289,7 @@ genTxBody ::
   Withdrawals ->
   Coin ->
   StrictMaybe (Update era) ->
-  StrictMaybe AuxiliaryDataHash ->
+  StrictMaybe TxAuxDataHash ->
   Gen (MaryTxBody era, [NativeScript era])
 genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot

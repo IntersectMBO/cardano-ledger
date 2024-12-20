@@ -39,7 +39,6 @@ module Cardano.Ledger.Shelley.TxBody (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -107,7 +106,7 @@ data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
   , stbrTxFee :: !Coin
   , stbrTTL :: !SlotNo
   , stbrUpdate :: !(StrictMaybe (Update era))
-  , stbrMDHash :: !(StrictMaybe AuxiliaryDataHash)
+  , stbrMDHash :: !(StrictMaybe TxAuxDataHash)
   }
   deriving (Generic, Typeable)
 
@@ -314,7 +313,7 @@ pattern ShelleyTxBody ::
   Coin ->
   SlotNo ->
   StrictMaybe (Update era) ->
-  StrictMaybe AuxiliaryDataHash ->
+  StrictMaybe TxAuxDataHash ->
   ShelleyTxBody era
 pattern ShelleyTxBody
   { stbInputs

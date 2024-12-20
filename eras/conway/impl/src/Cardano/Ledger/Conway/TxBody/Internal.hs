@@ -60,7 +60,6 @@ module Cardano.Ledger.Conway.TxBody.Internal (
   conwayProposalsDeposits,
 ) where
 
-import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (
@@ -146,7 +145,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrReqSignerHashes :: !(Set (KeyHash 'Witness))
   , ctbrMint :: !MultiAsset
   , ctbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
-  , ctbrAuxDataHash :: !(StrictMaybe AuxiliaryDataHash)
+  , ctbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
   , ctbrTxNetworkId :: !(StrictMaybe Network)
   , ctbrVotingProcedures :: !(VotingProcedures era)
   , ctbrProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
@@ -544,7 +543,7 @@ pattern ConwayTxBody ::
   Set (KeyHash 'Witness) ->
   MultiAsset ->
   StrictMaybe ScriptIntegrityHash ->
-  StrictMaybe AuxiliaryDataHash ->
+  StrictMaybe TxAuxDataHash ->
   StrictMaybe Network ->
   VotingProcedures era ->
   OSet.OSet (ProposalProcedure era) ->
