@@ -32,7 +32,17 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (ConwayTxBodyTransContext)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 import Test.Cardano.Ledger.Constrained.Conway
-import Test.Cardano.Ledger.Conway.Imp qualified as ConwayImp (conwaySpec)
+import Test.Cardano.Ledger.Conway.Imp.BbodySpec qualified as Bbody
+import Test.Cardano.Ledger.Conway.Imp.CertsSpec qualified as Certs
+import Test.Cardano.Ledger.Conway.Imp.DelegSpec qualified as Deleg
+import Test.Cardano.Ledger.Conway.Imp.EnactSpec qualified as Enact
+import Test.Cardano.Ledger.Conway.Imp.EpochSpec qualified as Epoch
+import Test.Cardano.Ledger.Conway.Imp.GovCertSpec qualified as GovCert
+import Test.Cardano.Ledger.Conway.Imp.GovSpec qualified as Gov
+import Test.Cardano.Ledger.Conway.Imp.LedgerSpec qualified as Ledger
+import Test.Cardano.Ledger.Conway.Imp.RatifySpec qualified as Ratify
+import Test.Cardano.Ledger.Conway.Imp.UtxoSpec qualified as Utxo
+import Test.Cardano.Ledger.Conway.Imp.UtxosSpec qualified as Utxos
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common hiding (Args)
 import UnliftIO (evaluateDeep)
@@ -140,4 +150,20 @@ spec =
           it "Submit constitution" $ do
             _ <- submitConstitution @ConwayEra SNothing
             passNEpochs 2
-        xdescribe "Conway Imp conformance" $ ConwayImp.conwaySpec @ConwayEra
+        describe "Conway Imp conformance" $ do
+          describe "BBODY" Bbody.spec
+          describe "CERTS" Certs.spec
+          xdescribe "DELEG" Deleg.spec
+          xdescribe "ENACT" Enact.spec
+          xdescribe "EPOCH" Epoch.spec
+          xdescribe "GOV" Gov.spec
+          -- GOVCERT tests enabling pending on these two issues in spec:
+          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/634
+          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/633
+          xdescribe "GOVCERT" GovCert.spec
+          -- LEDGER tests enabling pending (at least) on the implementation of scriptSize in the spec:
+          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/620
+          xdescribe "LEDGER" Ledger.spec
+          xdescribe "RATIFY" Ratify.spec
+          xdescribe "UTXO" Utxo.spec
+          xdescribe "UTXOS" Utxos.spec
