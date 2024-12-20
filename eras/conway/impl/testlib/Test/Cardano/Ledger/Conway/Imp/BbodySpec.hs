@@ -22,7 +22,6 @@ import Cardano.Ledger.Conway.Rules (
   maxRefScriptSizePerTx,
  )
 import Cardano.Ledger.Plutus (SLanguage (..))
-import Cardano.Ledger.SafeHash (originalBytesSize)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),

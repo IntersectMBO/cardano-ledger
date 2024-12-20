@@ -67,11 +67,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
   shortToLazy,
  )
-import Cardano.Ledger.SafeHash (
-  HashAnnotated,
-  SafeToHash (..),
-  hashAnnotated,
- )
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value (Null))

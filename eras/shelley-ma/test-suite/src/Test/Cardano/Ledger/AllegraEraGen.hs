@@ -33,8 +33,6 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (encCBOR, serialize')
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Keys (KeyHash)
-import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,

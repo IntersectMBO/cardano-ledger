@@ -8,12 +8,11 @@ module Test.Cardano.Protocol.Crypto.KES (
 ) where
 
 import qualified Cardano.Crypto.KES.Class as KES
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (VerKeyKES)
+import Cardano.Protocol.Crypto
 
 data KESKeyPair c = KESKeyPair
   { kesSignKey :: !(KES.UnsoundPureSignKeyKES (KES c))
-  , kesVerKey :: !(VerKeyKES c)
+  , kesVerKey :: !(KES.VerKeyKES (KES c))
   }
 
 instance Show (KES.VerKeyKES (KES c)) => Show (KESKeyPair c) where

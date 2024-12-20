@@ -15,6 +15,7 @@ module Test.Cardano.Protocol.TPraos.Arbitrary (
   genBHeader,
   genBlock,
   genCoherentBlock,
+  VRFNatVal (..),
 ) where
 
 import qualified Cardano.Crypto.KES as KES
@@ -23,7 +24,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (BlockNo (..), Nonce, Seed, SlotNo (..))
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto (KES, VRF))
+import Cardano.Protocol.Crypto (Crypto (KES, VRF), StandardCrypto)
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (BHBody),
@@ -35,12 +36,30 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..))
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState)
+import Data.Proxy (Proxy (Proxy))
 import Generic.Random (genericArbitraryU)
+import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Protocol.TPraos.Create (AllIssuerKeys, mkBHBody, mkBHeader, mkBlock, mkOCert)
+
+newtype VRFNatVal = VRFNatVal Natural
+  deriving (Show)
+
+instance Arbitrary VRFNatVal where
+  arbitrary =
+    VRFNatVal . fromIntegral
+      <$> choose @Integer
+        ( 0
+        , 2
+            ^ ( 8
+                  * VRF.sizeOutputVRF
+                    (Proxy @(VRF StandardCrypto))
+              )
+        )
+  shrink (VRFNatVal v) = VRFNatVal <$> shrinkIntegral v
 
 instance Arbitrary HashHeader where
   arbitrary = HashHeader <$> arbitrary

@@ -20,11 +20,7 @@ import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Credential (Ptr (..))
 import Cardano.Ledger.EpochBoundary (emptySnapShot)
-import Cardano.Ledger.Keys (
-  KeyRole (..),
-  asWitness,
- )
-import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (

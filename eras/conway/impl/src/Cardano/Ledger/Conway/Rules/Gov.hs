@@ -100,7 +100,6 @@ import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (dsUnifiedL)

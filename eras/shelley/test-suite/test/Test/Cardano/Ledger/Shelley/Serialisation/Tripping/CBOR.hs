@@ -13,10 +13,10 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.CBOR (
 where
 
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API as Ledger
 import qualified Cardano.Ledger.Shelley.Rules as STS
+import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import Test.Cardano.Ledger.Binary.RoundTrip

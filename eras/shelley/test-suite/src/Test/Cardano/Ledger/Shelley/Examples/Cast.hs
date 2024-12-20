@@ -56,13 +56,13 @@ import Cardano.Ledger.Keys (
   KeyRoleVRF (StakePoolVRF),
   VRFVerKeyHash,
   hashKey,
-  hashVerKeyVRF,
  )
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
   PoolParams (..),
  )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.List.NonEmpty as NE

@@ -98,13 +98,7 @@ import Cardano.Ledger.Credential (
   credKeyHashWitness,
   credScriptHash,
  )
-import Cardano.Ledger.Keys (
-  KeyHash (..),
-  KeyRole (..),
-  KeyRoleVRF (..),
-  VRFVerKeyHash,
-  asWitness,
- )
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()

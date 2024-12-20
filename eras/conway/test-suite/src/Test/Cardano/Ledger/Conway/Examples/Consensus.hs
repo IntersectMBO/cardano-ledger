@@ -41,7 +41,6 @@ import Cardano.Ledger.Plutus.Data (
   hashData,
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (..),
   NewEpochState (..),

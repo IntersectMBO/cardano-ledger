@@ -44,7 +44,6 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..), StashedAVVMAddresses)

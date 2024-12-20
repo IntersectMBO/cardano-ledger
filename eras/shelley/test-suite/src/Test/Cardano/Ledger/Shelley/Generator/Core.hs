@@ -61,7 +61,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), epochInfoPure, stabilityWindow)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core hiding (DataHash)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
   pattern KeyHashObj,
@@ -69,14 +69,8 @@ import Cardano.Ledger.Credential (
   pattern StakeRefBase,
   pattern StakeRefPtr,
  )
-import Cardano.Ledger.Keys (
-  KeyHash,
-  KeyRole (..),
-  VKey,
-  asWitness,
-  hashKey,
- )
-import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
+import Cardano.Ledger.Keys (VKey, asWitness)
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.Slot (
@@ -137,8 +131,6 @@ type PreAlonzo era =
   (TxWits era ~ ShelleyTxWits era)
 
 -- =========================================
-
-type DataHash = SafeHash EraIndependentData
 
 type ScriptInfo era =
   ( Map ScriptHash (TwoPhase3ArgInfo era)

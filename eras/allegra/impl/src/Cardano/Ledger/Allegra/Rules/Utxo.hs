@@ -42,7 +42,6 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
-import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (

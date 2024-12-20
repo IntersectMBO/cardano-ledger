@@ -72,7 +72,6 @@ import Cardano.Ledger.Credential (
   credScriptHash,
  )
 import Cardano.Ledger.DRep (DRep)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.TxCert (
   ShelleyDelegCert (..),
   encodePoolCert,

@@ -16,8 +16,7 @@ import Cardano.Ledger.BaseTypes (
   mkActiveSlotCoeff,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (HASH)
-import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)

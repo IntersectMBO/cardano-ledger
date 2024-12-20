@@ -31,7 +31,6 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.Alonzo.UTxO ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data ()
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
@@ -63,7 +62,7 @@ reapplyAlonzoTx globals env state vtx =
           $ TRC (env, state, extractTx vtx)
    in liftEither . left ApplyTxError $ res
 
-instance DSignable (Hash EraIndependentTxBody) => ApplyTx AlonzoEra where
+instance ApplyTx AlonzoEra where
   reapplyTx = reapplyAlonzoTx
 
-instance DSignable (Hash EraIndependentTxBody) => ApplyBlock AlonzoEra
+instance ApplyBlock AlonzoEra

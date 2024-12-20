@@ -47,7 +47,6 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (
   BootstrapWitness,
@@ -64,7 +63,6 @@ import Cardano.Ledger.Mary.Value ()
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxCert

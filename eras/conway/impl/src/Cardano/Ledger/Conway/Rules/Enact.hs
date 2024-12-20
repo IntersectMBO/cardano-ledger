@@ -37,7 +37,6 @@ import Cardano.Ledger.Conway.Governance (
   ensProtVerL,
  )
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (

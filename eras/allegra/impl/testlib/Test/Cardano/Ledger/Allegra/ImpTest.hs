@@ -20,7 +20,6 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireAnyOf,

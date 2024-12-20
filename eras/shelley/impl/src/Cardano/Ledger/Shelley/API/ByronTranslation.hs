@@ -23,7 +23,7 @@ import Cardano.Ledger.Address (fromBoostrapCompactAddress, isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo, TxIx (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
-import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Core

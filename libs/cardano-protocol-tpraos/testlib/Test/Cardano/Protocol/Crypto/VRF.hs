@@ -8,15 +8,11 @@ module Test.Cardano.Protocol.Crypto.VRF (
 ) where
 
 import qualified Cardano.Crypto.VRF.Class as VRF
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (
-  SignKeyVRF,
-  VerKeyVRF,
- )
+import Cardano.Protocol.Crypto
 
 data VRFKeyPair c = VRFKeyPair
-  { vrfSignKey :: !(SignKeyVRF c)
-  , vrfVerKey :: !(VerKeyVRF c)
+  { vrfSignKey :: !(VRF.SignKeyVRF (VRF c))
+  , vrfVerKey :: !(VRF.VerKeyVRF (VRF c))
   }
 
 deriving instance

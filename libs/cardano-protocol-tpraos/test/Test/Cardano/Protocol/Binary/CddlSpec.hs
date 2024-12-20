@@ -7,8 +7,8 @@ module Test.Cardano.Protocol.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Binary.Group (CBORGroup)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (BHBody, BHeader)
 import Cardano.Protocol.TPraos.OCert (OCert)
 import qualified Data.ByteString.Lazy as BSL

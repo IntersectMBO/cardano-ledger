@@ -36,15 +36,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys (
-  KeyHash,
-  KeyRole (..),
-  KeyRoleVRF (StakePoolVRF),
-  VRFVerKeyHash,
-  asWitness,
-  hashKey,
-  hashVerKeyVRF,
- )
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (
   PoolParams (..),
   ppCost,
@@ -57,7 +49,6 @@ import Cardano.Ledger.PoolParams (
   ppRewardAccount,
   ppVrf,
  )
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -72,6 +63,7 @@ import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Data.Default (def)
 import qualified Data.Map.Strict as Map

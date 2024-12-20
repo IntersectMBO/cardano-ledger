@@ -39,18 +39,11 @@ import Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (
-  KeyRole (..),
-  coerceKeyRole,
-  hashKey,
-  hashVerKeyVRF,
- )
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState (..),
@@ -75,6 +68,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (UView (RewDepUView))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (inject, (<->))
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended (STS (..))
 import qualified Data.ByteString as BS (replicate)

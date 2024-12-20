@@ -38,14 +38,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Credential (Credential, Ptr)
-import Cardano.Ledger.Keys (
-  GenDelegPair (..),
-  GenDelegs (..),
-  KeyHash,
-  KeyRole (..),
-  KeyRoleVRF (..),
-  VRFVerKeyHash,
- )
+import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELEG, ShelleyEra)
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)

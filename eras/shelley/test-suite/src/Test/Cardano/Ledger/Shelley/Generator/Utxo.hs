@@ -31,12 +31,7 @@ import Cardano.Ledger.Binary (EncCBOR, serialize)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (
-  KeyHash,
-  KeyRole (..),
-  asWitness,
- )
-import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),

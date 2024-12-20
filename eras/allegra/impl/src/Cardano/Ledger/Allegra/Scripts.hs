@@ -70,7 +70,6 @@ import Cardano.Ledger.Binary.Coders (
   (<*!),
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
@@ -80,7 +79,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoBytes,
   mkMemoized,
  )
-import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
   nativeMultiSigTag,

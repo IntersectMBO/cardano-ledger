@@ -30,7 +30,6 @@ import Cardano.Ledger.EpochBoundary (
   calculatePoolDistr,
   emptySnapShots,
  )
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),

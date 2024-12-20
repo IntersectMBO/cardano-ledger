@@ -31,7 +31,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))

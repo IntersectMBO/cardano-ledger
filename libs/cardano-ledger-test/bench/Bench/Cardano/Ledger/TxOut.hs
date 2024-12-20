@@ -16,9 +16,8 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.Keys
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Val
 import Control.DeepSeq
 import Criterion.Main

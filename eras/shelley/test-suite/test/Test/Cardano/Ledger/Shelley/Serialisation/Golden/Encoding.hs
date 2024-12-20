@@ -15,7 +15,8 @@
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding (tests) where
 
-import qualified Cardano.Crypto.Hash as Monomorphic
+import Cardano.Crypto.DSIGN (SignedDSIGN)
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.KES (SignedKES, unsoundPureSignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
@@ -55,26 +56,18 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Crypto (
   encodeSignedDSIGN,
+  encodeSignedKES,
   encodeVerKeyDSIGN,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
-  Hash,
-  KeyHash (..),
-  KeyRole (..),
-  KeyRoleVRF (..),
-  SignedDSIGN,
+  DSIGN,
   VKey (..),
-  VRFVerKeyHash,
   WitVKey (..),
   asWitness,
-  encodeSignedKES,
-  hashKey,
-  hashVerKeyVRF,
   signedDSIGN,
  )
 import Cardano.Ledger.PoolParams (
@@ -82,7 +75,6 @@ import Cardano.Ledger.PoolParams (
   PoolParams (..),
   StakePoolRelay (..),
  )
-import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (MultiSig)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash)
@@ -101,6 +93,7 @@ import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
+import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
   BHeader (..),
@@ -187,10 +180,10 @@ checkEncodingCBORCBORGroup name x t =
    in checkEncoding shelleyProtVer encCBORGroup d name x t
 
 getRawKeyHash :: KeyHash 'Payment -> ByteString
-getRawKeyHash (KeyHash hsh) = Monomorphic.hashToBytes hsh
+getRawKeyHash (KeyHash hsh) = Hash.hashToBytes hsh
 
 getRawNonce :: Nonce -> ByteString
-getRawNonce (Nonce hsh) = Monomorphic.hashToBytes hsh
+getRawNonce (Nonce hsh) = Hash.hashToBytes hsh
 getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
 
 testGKey :: GenesisKeyPair c
@@ -267,7 +260,7 @@ testKey1SigToken = e
       signedDSIGN
         (sKey testKey1)
         (extractHash (testTxbHash @era)) ::
-        SignedDSIGN (Hash EraIndependentTxBody)
+        SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
     CBOR.Encoding e = toPlainEncoding shelleyProtVer (encodeSignedDSIGN s)
 
 testOpCertSigTokens ::
@@ -314,7 +307,7 @@ testScript2 = RequireSignature $ asWitness testKeyHash2
 
 testHeaderHash :: HashHeader
 testHeaderHash =
-  HashHeader $ coerce (hashWithEncoder shelleyProtVer encCBOR 0 :: Hash Int)
+  HashHeader $ coerce (hashWithEncoder shelleyProtVer encCBOR 0 :: Hash HASH Int)
 
 testBHB ::
   forall era.

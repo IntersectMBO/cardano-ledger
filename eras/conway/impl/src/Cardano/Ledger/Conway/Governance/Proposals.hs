@@ -130,7 +130,6 @@ import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.UMap (addCompact, toCompact)
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)

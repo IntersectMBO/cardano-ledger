@@ -18,6 +18,7 @@ module Cardano.Ledger.Keys.WitVKey (
 where
 
 import Cardano.Crypto.DSIGN.Class (
+  SignedDSIGN,
   decodeSignedDSIGN,
   encodeSignedDSIGN,
  )
@@ -30,17 +31,15 @@ import Cardano.Ledger.Binary (
   fromPlainDecoder,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Keys.Internal (
+import Cardano.Ledger.Hashes (
+  EraIndependentTxBody,
+  HASH,
   Hash,
   KeyHash (..),
-  KeyRole (..),
-  SignedDSIGN,
-  VKey,
-  asWitness,
   hashKey,
-  hashSignature,
+  hashTxBodySignature,
  )
+import Cardano.Ledger.Keys.Internal (DSIGN, KeyRole (..), VKey, asWitness)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Control.DeepSeq
 import qualified Data.ByteString.Lazy as BSL
@@ -52,7 +51,7 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 -- | Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey kr = WitVKeyInternal
   { wvkKey :: !(VKey kr)
-  , wvkSig :: !(SignedDSIGN (Hash EraIndependentTxBody))
+  , wvkSig :: !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
   , wvkKeyHash :: KeyHash 'Witness
   -- ^ Hash of the witness vkey. We store this here to avoid repeated hashing
   --   when used in ordering.
@@ -78,7 +77,7 @@ instance Typeable kr => Ord (WitVKey kr) where
     -- have two WitVKeys in a same Set for different transactions. Therefore
     -- comparison on signatures is unlikely to happen and is only needed for
     -- compliance with Ord laws.
-    comparing wvkKeyHash x y <> comparing (hashSignature . wvkSig) x y
+    comparing wvkKeyHash x y <> comparing (hashTxBodySignature . wvkSig) x y
 
 instance Typeable kr => Plain.ToCBOR (WitVKey kr) where
   toCBOR = Plain.encodePreEncoded . BSL.toStrict . wvkBytes
@@ -104,7 +103,7 @@ instance Typeable kr => EqRaw (WitVKey kr) where
 pattern WitVKey ::
   Typeable kr =>
   VKey kr ->
-  SignedDSIGN (Hash EraIndependentTxBody) ->
+  SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody) ->
   WitVKey kr
 pattern WitVKey k s <-
   WitVKeyInternal k s _ _

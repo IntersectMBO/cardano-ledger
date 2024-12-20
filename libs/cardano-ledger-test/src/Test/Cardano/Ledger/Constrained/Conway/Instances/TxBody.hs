@@ -12,18 +12,15 @@
 
 module Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody where
 
-import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
-import Cardano.Ledger.Allegra.Core (AllegraEraTxBody (..))
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..), ValidityInterval (..))
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxBody (..), ScriptIntegrityHash)
+import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..), BabbageTxBody (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Binary (EncCBOR (..), Sized (..))
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Shelley.PParams (Update (..))

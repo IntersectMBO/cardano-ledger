@@ -21,7 +21,6 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..))
 import Cardano.Ledger.Binary.Plain as Plain (FromCBOR (..), decodeFullDecoder)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin), DeltaCoin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto ()
 import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
   SnapShots (..),

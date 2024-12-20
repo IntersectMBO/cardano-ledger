@@ -39,14 +39,13 @@ import Cardano.Ledger.Binary (
   runByteBuilder,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.Crypto (Crypto, KES)
 import Cardano.Ledger.Keys (
+  DSIGN,
   KeyHash,
   KeyRole (..),
-  SignedDSIGN,
-  VerKeyKES,
   coerceKeyRole,
  )
+import Cardano.Protocol.Crypto (Crypto, KES)
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
@@ -84,13 +83,13 @@ newtype KESPeriod = KESPeriod {unKESPeriod :: Word}
   deriving (Show) via Quiet KESPeriod
 
 data OCert c = OCert
-  { ocertVkHot :: !(VerKeyKES c)
+  { ocertVkHot :: !(KES.VerKeyKES (KES c))
   -- ^ The operational hot key
   , ocertN :: !Word64
   -- ^ counter
   , ocertKESPeriod :: !KESPeriod
   -- ^ Start of key evolving signature period
-  , ocertSigma :: !(SignedDSIGN (OCertSignable c))
+  , ocertSigma :: !(DSIGN.SignedDSIGN DSIGN (OCertSignable c))
   -- ^ Signature of block operational certificate content
   }
   deriving (Generic)
@@ -154,7 +153,7 @@ kesPeriod (SlotNo s) =
 
 -- | Signable part of an operational certificate
 data OCertSignable c
-  = OCertSignable !(VerKeyKES c) !Word64 !KESPeriod
+  = OCertSignable !(KES.VerKeyKES (KES c)) !Word64 !KESPeriod
 
 instance Crypto c => SignableRepresentation (OCertSignable c) where
   getSignableRepresentation (OCertSignable vk counter period) =

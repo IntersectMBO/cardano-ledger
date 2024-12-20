@@ -47,7 +47,6 @@ import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))

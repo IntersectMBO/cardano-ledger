@@ -89,7 +89,6 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.Keys (KeyRole (..), unVRFVerKeyHash)
 import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Plutus.Data (Data)
@@ -109,7 +108,6 @@ import Cardano.Ledger.Plutus.TxInfo (
  )
 import qualified Cardano.Ledger.Plutus.TxInfo as TxInfo
 import Cardano.Ledger.PoolParams
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO)

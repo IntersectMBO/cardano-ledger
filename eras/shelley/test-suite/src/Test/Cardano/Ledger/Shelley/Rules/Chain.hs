@@ -44,13 +44,7 @@ import Cardano.Ledger.Chain (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
-import Cardano.Ledger.Keys (
-  GenDelegPair (..),
-  GenDelegs (..),
-  KeyHash,
-  KeyRole (..),
-  coerceKeyRole,
- )
+import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), coerceKeyRole)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (

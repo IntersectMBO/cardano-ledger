@@ -14,16 +14,8 @@ import Cardano.Crypto.Hash (HashAlgorithm (..), hashFromBytes, hashFromTextAsHex
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (..), mkCertIxPartial, mkTxIxPartial)
-import Cardano.Ledger.Credential (
-  Credential (..),
-  Ptr (..),
-  StakeReference (..),
- )
-import Cardano.Ledger.Keys (
-  KeyRole (..),
-  pattern KeyHash,
- )
-import Cardano.Ledger.Shelley.Scripts (pattern ScriptHash)
+import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Data.Binary as B
 import qualified Data.Binary.Put as B

@@ -71,10 +71,8 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))
-import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Plutus.Data (Datum (..), dataHashSize)
-import Cardano.Ledger.SafeHash (extractHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.TxOut as Shelley
 import Cardano.Ledger.Val (Val (..))

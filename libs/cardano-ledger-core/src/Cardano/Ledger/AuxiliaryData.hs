@@ -8,8 +8,7 @@ module Cardano.Ledger.AuxiliaryData (
 where
 
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
-import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.Hashes (EraIndependentTxAuxData, SafeHash)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON)
 import GHC.Generics (Generic)

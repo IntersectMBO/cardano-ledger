@@ -25,7 +25,6 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.CostModels (mkCostModels)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (..),
   Credential (..),

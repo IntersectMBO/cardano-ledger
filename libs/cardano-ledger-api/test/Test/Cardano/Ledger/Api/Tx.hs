@@ -12,8 +12,8 @@ import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.PParams
 import Cardano.Ledger.Api.Tx
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Keys (hashKey, makeBootstrapWitness)
-import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
+import Cardano.Ledger.Hashes (extractHash, hashAnnotated, hashKey)
+import Cardano.Ledger.Keys (makeBootstrapWitness)
 import Cardano.Ledger.Val (Val ((<×>)))
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map

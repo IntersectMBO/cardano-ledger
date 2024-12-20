@@ -74,7 +74,6 @@ import Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   mkMemoized,
  )
-import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert (..))

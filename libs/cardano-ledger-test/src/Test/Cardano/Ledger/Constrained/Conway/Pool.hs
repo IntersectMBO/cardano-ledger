@@ -14,7 +14,6 @@ import Cardano.Crypto.Hash.Class qualified as Hash
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Slotting.EpochInfo qualified as EI
 import Constrained

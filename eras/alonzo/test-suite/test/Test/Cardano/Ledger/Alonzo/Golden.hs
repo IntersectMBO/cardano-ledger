@@ -38,6 +38,7 @@ import Cardano.Ledger.Plutus.ExUnits (
   Prices (..),
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Protocol.Crypto (StandardCrypto)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Data.Aeson (eitherDecodeFileStrict)
 import qualified Data.Aeson as Aeson
@@ -55,7 +56,6 @@ import Lens.Micro
 import Paths_cardano_ledger_alonzo_test
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
-import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Mary.Golden (
   largestName,
   minUTxO,

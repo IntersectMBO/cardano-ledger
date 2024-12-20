@@ -28,9 +28,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
-import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..))
 import Cardano.Ledger.Shelley.LedgerState (

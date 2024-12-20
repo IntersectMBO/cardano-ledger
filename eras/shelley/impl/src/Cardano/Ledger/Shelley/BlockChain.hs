@@ -51,8 +51,6 @@ import Cardano.Ledger.Binary (
   withSlice,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
-import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx, segwitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
@@ -176,7 +174,7 @@ instance
   listLenBound _ = 3
 
 -- | Hash a given block body
-bbHash :: ShelleyTxSeq era -> Hash EraIndependentBlockBody
+bbHash :: ShelleyTxSeq era -> Hash HASH EraIndependentBlockBody
 bbHash (TxSeq' _ bodies wits md) =
   coerce $
     hashStrict
@@ -185,7 +183,7 @@ bbHash (TxSeq' _ bodies wits md) =
           <> hashPart md
       )
   where
-    hashStrict :: ByteString -> Hash ByteString
+    hashStrict :: ByteString -> Hash HASH ByteString
     hashStrict = Hash.hashWith id
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
