@@ -103,6 +103,7 @@ library
     containers,
     data-default,
     deepseq,
+    mempack,
     microlens,
     nothunks,
     plutus-ledger-api >=1.37,

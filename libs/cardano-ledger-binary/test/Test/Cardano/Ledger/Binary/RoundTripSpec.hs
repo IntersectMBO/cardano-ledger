@@ -49,7 +49,6 @@ import Cardano.Ledger.Binary
 import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (EpochNo, EpochSize, SlotNo, WithOrigin)
 import Cardano.Slotting.Time (SystemStart)
-import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
 import Control.Monad (when)
 import Data.Fixed (Nano, Pico)

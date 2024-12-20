@@ -26,7 +26,7 @@ module Cardano.Ledger.SafeHash (
 
   --
   -- $SAFE
-  SafeHash,
+  SafeHash (..),
   SafeToHash (..),
 
   -- * Creating SafeHash
@@ -60,6 +60,7 @@ import qualified Data.ByteString as BS (length)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Default (Default (..))
+import Data.MemPack
 import Data.Typeable
 import NoThunks.Class (NoThunks (..))
 
@@ -78,11 +79,21 @@ import NoThunks.Class (NoThunks (..))
 --     bytes.
 newtype SafeHash i = SafeHash (Hash.Hash HASH i)
   deriving
-    (Show, Eq, Ord, NoThunks, NFData, SafeToHash, HeapWords, ToCBOR, FromCBOR, EncCBOR, DecCBOR)
-
-deriving instance ToJSON (SafeHash i)
-
-deriving instance FromJSON (SafeHash i)
+    ( Show
+    , Eq
+    , Ord
+    , NoThunks
+    , NFData
+    , SafeToHash
+    , HeapWords
+    , ToCBOR
+    , FromCBOR
+    , EncCBOR
+    , DecCBOR
+    , ToJSON
+    , FromJSON
+    , MemPack
+    )
 
 instance Default (SafeHash i) where
   def = unsafeMakeSafeHash def
