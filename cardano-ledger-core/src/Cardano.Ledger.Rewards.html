@@ -1,0 +1,336 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679447178"><span id="local-6989586621679447179"></span></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DerivingVia #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Rewards</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-13"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#RewardType"><span class="hs-identifier">RewardType</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier">Reward</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.BaseTypes.html"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">invalidKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">DecCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">EncCBOR</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decodeWord</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encodeWord</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Cardano.Ledger.Binary.Coders</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Decode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">Encode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">decode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">encode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-operator">(!&gt;)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-operator">(&lt;!)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Coin.html"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier">Coin</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.html"><span class="hs-identifier">Cardano.Ledger.Keys</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier">KeyHash</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#KeyRole"><span class="hs-identifier">KeyRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">Data.Aeson</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">KeyValue</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">ToJSON</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">object</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier">pairs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-operator">(.=)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier">NoThunks.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier">NoThunks</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- | The staking rewards in Cardano are all either:</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- * member rewards - rewards given to a registered stake credential which has delegated</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- to a stake pool, or</span><span>
+</span><span id="line-37"></span><span class="hs-comment">--</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- * leader rewards - rewards given to a registered stake pool (in particular, given to the</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- stake credential in the stake pool registration certificate).</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- See Figure 47, &quot;Functions used in the Reward Splitting&quot;, of the</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- &lt;https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf formal specification&gt;</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- for more details.</span><span>
+</span><span id="line-44"></span><span id="local-6989586621679447166"><span id="local-6989586621679447167"></span></span><span class="hs-keyword">data</span><span> </span><span id="RewardType"><span class="annot"><a href="Cardano.Ledger.Rewards.html#RewardType"><span class="hs-identifier hs-var">RewardType</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MemberReward"><span class="annot"><a href="Cardano.Ledger.Rewards.html#MemberReward"><span class="hs-identifier hs-var">MemberReward</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="LeaderReward"><span class="annot"><a href="Cardano.Ledger.Rewards.html#LeaderReward"><span class="hs-identifier hs-var">LeaderReward</span></a></span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679447160"><span id="local-6989586621679447162"><span class="annot"><span class="annottext">RewardType -&gt; RewardType -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: RewardType -&gt; RewardType -&gt; Bool
+$c/= :: RewardType -&gt; RewardType -&gt; Bool
+== :: RewardType -&gt; RewardType -&gt; Bool
+$c== :: RewardType -&gt; RewardType -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679447153"><span id="local-6989586621679447155"><span id="local-6989586621679447157"><span class="annot"><span class="annottext">Int -&gt; RewardType -&gt; ShowS
+[RewardType] -&gt; ShowS
+RewardType -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [RewardType] -&gt; ShowS
+$cshowList :: [RewardType] -&gt; ShowS
+show :: RewardType -&gt; String
+$cshow :: RewardType -&gt; String
+showsPrec :: Int -&gt; RewardType -&gt; ShowS
+$cshowsPrec :: Int -&gt; RewardType -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679447133"><span id="local-6989586621679447135"><span id="local-6989586621679447138"><span id="local-6989586621679447141"><span id="local-6989586621679447144"><span id="local-6989586621679447146"><span id="local-6989586621679447148"><span class="annot"><span class="annottext">Eq RewardType
+RewardType -&gt; RewardType -&gt; Bool
+RewardType -&gt; RewardType -&gt; Ordering
+RewardType -&gt; RewardType -&gt; RewardType
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+min :: RewardType -&gt; RewardType -&gt; RewardType
+$cmin :: RewardType -&gt; RewardType -&gt; RewardType
+max :: RewardType -&gt; RewardType -&gt; RewardType
+$cmax :: RewardType -&gt; RewardType -&gt; RewardType
+&gt;= :: RewardType -&gt; RewardType -&gt; Bool
+$c&gt;= :: RewardType -&gt; RewardType -&gt; Bool
+&gt; :: RewardType -&gt; RewardType -&gt; Bool
+$c&gt; :: RewardType -&gt; RewardType -&gt; Bool
+&lt;= :: RewardType -&gt; RewardType -&gt; Bool
+$c&lt;= :: RewardType -&gt; RewardType -&gt; Bool
+&lt; :: RewardType -&gt; RewardType -&gt; Bool
+$c&lt; :: RewardType -&gt; RewardType -&gt; Bool
+compare :: RewardType -&gt; RewardType -&gt; Ordering
+$ccompare :: RewardType -&gt; RewardType -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679447128"><span id="local-6989586621679447130"><span class="annot"><span class="annottext">RewardType
+forall a. a -&gt; a -&gt; Bounded a
+maxBound :: RewardType
+$cmaxBound :: RewardType
+minBound :: RewardType
+$cminBound :: RewardType
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679447084"><span id="local-6989586621679447086"><span id="local-6989586621679447090"><span id="local-6989586621679447094"><span id="local-6989586621679447096"><span id="local-6989586621679447110"><span id="local-6989586621679447116"><span id="local-6989586621679447124"><span class="annot"><span class="annottext">Int -&gt; RewardType
+RewardType -&gt; Int
+RewardType -&gt; [RewardType]
+RewardType -&gt; RewardType
+RewardType -&gt; RewardType -&gt; [RewardType]
+RewardType -&gt; RewardType -&gt; RewardType -&gt; [RewardType]
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+enumFromThenTo :: RewardType -&gt; RewardType -&gt; RewardType -&gt; [RewardType]
+$cenumFromThenTo :: RewardType -&gt; RewardType -&gt; RewardType -&gt; [RewardType]
+enumFromTo :: RewardType -&gt; RewardType -&gt; [RewardType]
+$cenumFromTo :: RewardType -&gt; RewardType -&gt; [RewardType]
+enumFromThen :: RewardType -&gt; RewardType -&gt; [RewardType]
+$cenumFromThen :: RewardType -&gt; RewardType -&gt; [RewardType]
+enumFrom :: RewardType -&gt; [RewardType]
+$cenumFrom :: RewardType -&gt; [RewardType]
+fromEnum :: RewardType -&gt; Int
+$cfromEnum :: RewardType -&gt; Int
+toEnum :: Int -&gt; RewardType
+$ctoEnum :: Int -&gt; RewardType
+pred :: RewardType -&gt; RewardType
+$cpred :: RewardType -&gt; RewardType
+succ :: RewardType -&gt; RewardType
+$csucc :: RewardType -&gt; RewardType
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep RewardType x -&gt; RewardType
+forall x. RewardType -&gt; Rep RewardType x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep RewardType x -&gt; RewardType
+$cfrom :: forall x. RewardType -&gt; Rep RewardType x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679447074"><span id="local-6989586621679447076"><span id="local-6989586621679447078"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#RewardType"><span class="hs-identifier hs-type">RewardType</span></a></span></span></span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679447071"><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#RewardType"><span class="hs-identifier hs-type">RewardType</span></a></span></span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679447060"><span id="local-6989586621679447062"><span id="local-6989586621679447064"><span id="local-6989586621679447066"><span id="local-6989586621679447068"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#RewardType"><span class="hs-identifier hs-type">RewardType</span></a></span></span></span></span></span></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679447052"><span id="local-6989586621679447054"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#RewardType"><span class="hs-identifier hs-type">RewardType</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679447050"><span class="annot"><span class="annottext">encCBOR :: RewardType -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><a href="Cardano.Ledger.Rewards.html#MemberReward"><span class="hs-identifier hs-var">MemberReward</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeWord</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encCBOR</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><a href="Cardano.Ledger.Rewards.html#LeaderReward"><span class="hs-identifier hs-var">LeaderReward</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encodeWord</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679447042"><span id="local-6989586621679447044"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#RewardType"><span class="hs-identifier hs-type">RewardType</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-58"></span><span>  </span><span id="local-6989586621679447027"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s RewardType
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">forall s. Decoder s Word
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decodeWord</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><a href="Cardano.Ledger.Rewards.html#MemberReward"><span class="hs-identifier hs-var">MemberReward</span></a></span><span>
+</span><span id="line-61"></span><span>      </span><span class="annot"><span class="annottext">Word
+</span><span class="hs-number">1</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><a href="Cardano.Ledger.Rewards.html#LeaderReward"><span class="hs-identifier hs-var">LeaderReward</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span id="local-6989586621679447025"><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679447025"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a. MonadFail m =&gt; Word -&gt; m a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">invalidKey</span></a></span><span> </span><span class="annot"><span class="annottext">Word
+</span><a href="#local-6989586621679447025"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- | The 'Reward' type captures:</span><span>
+</span><span id="line-65"></span><span class="hs-comment">--</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- * if the reward is a member or leader reward</span><span>
+</span><span id="line-67"></span><span class="hs-comment">--</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- * the stake pool ID associated with the reward</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- * the number of Lovelace in the reward</span><span>
+</span><span id="line-71"></span><span id="local-6989586621679447023"><span id="local-6989586621679447024"></span></span><span class="hs-keyword">data</span><span> </span><span id="Reward"><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-var">Reward</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Reward"><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-var">Reward</span></a></span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="rewardType"><span class="annot"><span class="annottext">Reward -&gt; RewardType
+</span><a href="Cardano.Ledger.Rewards.html#rewardType"><span class="hs-identifier hs-var hs-var">rewardType</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Ledger.Rewards.html#RewardType"><span class="hs-identifier hs-type">RewardType</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="rewardPool"><span class="annot"><span class="annottext">Reward -&gt; KeyHash 'StakePool
+</span><a href="Cardano.Ledger.Rewards.html#rewardPool"><span class="hs-identifier hs-var hs-var">rewardPool</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Hashes.html#KeyHash"><span class="hs-identifier hs-type">KeyHash</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Cardano.Ledger.Keys.Internal.html#StakePool"><span class="hs-identifier hs-type">StakePool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="rewardAmount"><span class="annot"><span class="annottext">Reward -&gt; Coin
+</span><a href="Cardano.Ledger.Rewards.html#rewardAmount"><span class="hs-identifier hs-var hs-var">rewardAmount</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="Cardano.Ledger.Coin.html#Coin"><span class="hs-identifier hs-type">Coin</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679447010"><span id="local-6989586621679447017"><span class="annot"><span class="annottext">Reward -&gt; Reward -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+/= :: Reward -&gt; Reward -&gt; Bool
+$c/= :: Reward -&gt; Reward -&gt; Bool
+== :: Reward -&gt; Reward -&gt; Bool
+$c== :: Reward -&gt; Reward -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679446998"><span id="local-6989586621679447000"><span id="local-6989586621679447008"><span class="annot"><span class="annottext">Int -&gt; Reward -&gt; ShowS
+[Reward] -&gt; ShowS
+Reward -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+showList :: [Reward] -&gt; ShowS
+$cshowList :: [Reward] -&gt; ShowS
+show :: Reward -&gt; String
+$cshow :: Reward -&gt; String
+showsPrec :: Int -&gt; Reward -&gt; ShowS
+$cshowsPrec :: Int -&gt; Reward -&gt; ShowS
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall x. Rep Reward x -&gt; Reward
+forall x. Reward -&gt; Rep Reward x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cto :: forall x. Rep Reward x -&gt; Reward
+$cfrom :: forall x. Reward -&gt; Rep Reward x
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- | Note that this Ord instance is chosen to align precisely</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--  with the Allegra reward aggregation, as given by the</span><span>
+</span><span id="line-80"></span><span class="hs-comment">--  function 'aggregateRewards' so that 'Set.findMax' returns</span><span>
+</span><span id="line-81"></span><span class="hs-comment">--  the expected value.</span><span>
+</span><span id="line-82"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679446981"><span id="local-6989586621679446983"><span id="local-6989586621679446985"><span id="local-6989586621679446987"><span id="local-6989586621679446989"><span id="local-6989586621679446991"><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Ord</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span></span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679446978"><span class="annot"><span class="annottext">compare :: Reward -&gt; Reward -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">compare</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><a href="Cardano.Ledger.Rewards.html#MemberReward"><span class="hs-identifier hs-var">MemberReward</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><a href="Cardano.Ledger.Rewards.html#LeaderReward"><span class="hs-identifier hs-var">LeaderReward</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">GT</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">compare</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><a href="Cardano.Ledger.Rewards.html#LeaderReward"><span class="hs-identifier hs-var">LeaderReward</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><a href="Cardano.Ledger.Rewards.html#MemberReward"><span class="hs-identifier hs-var">MemberReward</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">LT</span></a></span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">compare</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679446976"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679446976"><span class="hs-identifier hs-var">pool1</span></a></span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679446975"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679446975"><span class="hs-identifier hs-var">pool2</span></a></span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">compare</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679446976"><span class="hs-identifier hs-var">pool1</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679446975"><span class="hs-identifier hs-var">pool2</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679446969"><span id="local-6989586621679446971"><span id="local-6989586621679446973"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/nothunks-0.2.1.1-f0fa46a29a7521a87ed6189ce28dec439c103deaf8ca92476e74332ef21daa5c/share/doc/html/src"><span class="hs-identifier hs-type">NoThunks</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span></span></span></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679446967"><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/deepseq-1.4.6.1/src"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679446960"><span id="local-6989586621679446962"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">EncCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-92"></span><span>  </span><span id="local-6989586621679446953"><span class="annot"><span class="annottext">encCBOR :: Reward -&gt; Encoding
+</span><a href="#local-6989586621679446953"><span class="hs-identifier hs-var hs-var hs-var hs-var">encCBOR</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span><span> </span><span id="local-6989586621679446952"><span class="annot"><span class="annottext">RewardType
+</span><a href="#local-6989586621679446952"><span class="hs-identifier hs-var">rt</span></a></span></span><span> </span><span id="local-6989586621679446951"><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679446951"><span class="hs-identifier hs-var">pool</span></a></span></span><span> </span><span id="local-6989586621679446950"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679446950"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">forall (w :: Wrapped) t. Encode w t -&gt; Encoding
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall t. t -&gt; Encode ('Closed 'Dense) t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">Rec</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType -&gt; KeyHash 'StakePool -&gt; Coin -&gt; Reward
+</span><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-var">Reward</span></a></span><span> </span><span class="annot"><span class="annottext">forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><a href="#local-6989586621679446952"><span class="hs-identifier hs-var">rt</span></a></span><span> </span><span class="annot"><span class="annottext">forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679446951"><span class="hs-identifier hs-var">pool</span></a></span><span> </span><span class="annot"><span class="annottext">forall (w :: Wrapped) a t (r :: Density).
+Encode w (a -&gt; t) -&gt; Encode ('Closed r) a -&gt; Encode w t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-operator hs-var">!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall t. EncCBOR t =&gt; t -&gt; Encode ('Closed 'Dense) t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">To</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679446950"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679446941"><span id="local-6989586621679446943"><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-type">DecCBOR</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-96"></span><span>  </span><span id="local-6989586621679446934"><span class="annot"><span class="annottext">decCBOR :: forall s. Decoder s Reward
+</span><a href="#local-6989586621679446934"><span class="hs-identifier hs-var hs-var hs-var hs-var">decCBOR</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><span class="annottext">forall (w :: Wrapped) t s. Decode w t -&gt; Decoder s t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall t. t -&gt; Decode ('Closed 'Dense) t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">RecD</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType -&gt; KeyHash 'StakePool -&gt; Coin -&gt; Reward
+</span><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-var">Reward</span></a></span><span> </span><span class="annot"><span class="annottext">forall (w1 :: Wrapped) a t (w :: Density).
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">From</span></a></span><span> </span><span class="annot"><span class="annottext">forall (w1 :: Wrapped) a t (w :: Density).
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">From</span></a></span><span> </span><span class="annot"><span class="annottext">forall (w1 :: Wrapped) a t (w :: Density).
+Decode w1 (a -&gt; t) -&gt; Decode ('Closed w) a -&gt; Decode w1 t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-operator hs-var">&lt;!</span></a></span><span> </span><span class="annot"><span class="annottext">forall t (w :: Wrapped). DecCBOR t =&gt; Decode w t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">From</span></a></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679446924"><span id="local-6989586621679446926"><span id="local-6989586621679446928"><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-type">ToJSON</span></a></span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-100"></span><span>  </span><span id="local-6989586621679446919"><span class="annot"><span class="annottext">toJSON :: Reward -&gt; Value
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var">object</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall e a. KeyValue e a =&gt; Reward -&gt; [a]
+</span><a href="Cardano.Ledger.Rewards.html#toRewardPair"><span class="hs-identifier hs-var">toRewardPair</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span id="local-6989586621679446911"><span class="annot"><span class="annottext">toEncoding :: Reward -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var hs-var hs-var hs-var">toEncoding</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Series -&gt; Encoding
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-var">pairs</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Monoid a =&gt; [a] -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">mconcat</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall e a. KeyValue e a =&gt; Reward -&gt; [a]
+</span><a href="Cardano.Ledger.Rewards.html#toRewardPair"><span class="hs-identifier hs-var">toRewardPair</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span id="local-6989586621679447421"><span id="local-6989586621679447422"><span class="annot"><a href="Cardano.Ledger.Rewards.html#toRewardPair"><span class="hs-identifier hs-type">toRewardPair</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-identifier hs-type">KeyValue</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447422"><span class="hs-identifier hs-type">e</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679447421"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679447421"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span></span><span>
+</span><span id="line-104"></span><span id="toRewardPair"><span class="annot"><span class="annottext">toRewardPair :: forall e a. KeyValue e a =&gt; Reward -&gt; [a]
+</span><a href="Cardano.Ledger.Rewards.html#toRewardPair"><span class="hs-identifier hs-var hs-var">toRewardPair</span></a></span></span><span> </span><span id="local-6989586621679446896"><span class="annot"><span class="annottext">r :: Reward
+</span><a href="#local-6989586621679446896"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Cardano.Ledger.Rewards.html#Reward"><span class="hs-identifier hs-type">Reward</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679446893"><span id="local-6989586621679446894"><span id="local-6989586621679446895"><span class="annot"><span class="annottext">KeyHash 'StakePool
+Coin
+RewardType
+rewardAmount :: Coin
+rewardPool :: KeyHash 'StakePool
+rewardType :: RewardType
+rewardAmount :: Reward -&gt; Coin
+rewardPool :: Reward -&gt; KeyHash 'StakePool
+rewardType :: Reward -&gt; RewardType
+</span><a href="#local-6989586621679446893"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Reward
+</span><a href="#local-6989586621679446896"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-106"></span><span>   </span><span class="hs-keyword">in</span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;rewardType&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">RewardType
+</span><a href="#local-6989586621679446895"><span class="hs-identifier hs-var">rewardType</span></a></span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;rewardPool&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'StakePool
+</span><a href="#local-6989586621679446894"><span class="hs-identifier hs-var">rewardPool</span></a></span><span>
+</span><span id="line-108"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;rewardAmount&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/aeson-2.2.3.0-3a93381eba7301bf617a7a3c0ed5adc025fc0caafb9c1e031a30ef9821b33da2/share/doc/html/src"><span class="hs-operator hs-var">.=</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621679446893"><span class="hs-identifier hs-var">rewardAmount</span></a></span><span>
+</span><span id="line-109"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-110"></span></pre></body></html>
