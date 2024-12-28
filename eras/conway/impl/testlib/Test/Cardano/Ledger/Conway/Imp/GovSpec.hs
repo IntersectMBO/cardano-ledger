@@ -762,15 +762,8 @@ votingSpec =
       submitFailingVote (StakePoolVoter poolId) gaId $
         [injectFailure $ VotersDoNotExist [StakePoolVoter poolId]]
       dRepCred <- KeyHashObj <$> freshKeyHash
-      let votersDoNotExistFailure = injectFailure $ VotersDoNotExist [DRepVoter dRepCred]
-      vote <- arbitrary
-      submitBootstrapAwareFailingVote vote (DRepVoter dRepCred) gaId $
-        FailBootstrapAndPostBootstrap $
-          FailBoth
-            { bootstrapFailures =
-                [votersDoNotExistFailure, disallowedVoteFailure [(DRepVoter dRepCred, gaId)]]
-            , postBootstrapFailures = [votersDoNotExistFailure]
-            }
+      submitFailingVote (DRepVoter dRepCred) gaId $
+        [injectFailure $ VotersDoNotExist [DRepVoter dRepCred]]
     it "DRep votes are removed" $ do
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       gaId <- submitGovAction InfoAction
@@ -876,8 +869,6 @@ votingSpec =
             . constitutionAnchorL
       expectNoCurrentProposals
       conAnchor `shouldNotBe` anchor
-  where
-    disallowedVoteFailure = injectFailure . DisallowedVotesDuringBootstrap
 
 constitutionSpec ::
   forall era.

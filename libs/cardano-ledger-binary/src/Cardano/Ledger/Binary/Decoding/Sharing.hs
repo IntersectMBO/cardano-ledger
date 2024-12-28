@@ -19,6 +19,8 @@ module Cardano.Ledger.Binary.Decoding.Sharing (
   interns,
   internsFromMap,
   internsFromVMap,
+  internMap,
+  internSet,
   toMemptyLens,
   decShareMonadCBOR,
 )
@@ -34,6 +36,7 @@ import Data.Kind
 import qualified Data.Map.Strict as Map (size)
 import Data.Map.Strict.Internal (Map (..))
 import Data.Primitive.Types (Prim)
+import qualified Data.Set.Internal as Set (Set (..))
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
 import Lens.Micro
@@ -72,18 +75,31 @@ interns (Interns is) !k = go is
         Nothing -> go xs
 {-# INLINE interns #-}
 
+internMap :: Ord k => k -> Map k a -> Maybe k
+internMap k = go
+  where
+    go Tip = Nothing
+    go (Bin _ kx _ l r) =
+      case compare k kx of
+        LT -> go l
+        GT -> go r
+        EQ -> Just kx
+
+internSet :: Ord a => a -> Set.Set a -> Maybe a
+internSet k = go
+  where
+    go Set.Tip = Nothing
+    go (Set.Bin _ kx l r) =
+      case compare k kx of
+        LT -> go l
+        GT -> go r
+        EQ -> Just kx
+
 internsFromMap :: Ord k => Map k a -> Interns k
 internsFromMap m =
   Interns
     [ Intern
-        { internMaybe = \k ->
-            let go Tip = Nothing
-                go (Bin _ kx _ l r) =
-                  case compare k kx of
-                    LT -> go l
-                    GT -> go r
-                    EQ -> Just kx
-             in go m
+        { internMaybe = (`internMap` m)
         , internWeight = Map.size m
         }
     ]
