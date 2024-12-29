@@ -587,8 +587,9 @@ instance
   wrapEvent = CertsEvent . CertEvent . DelegEvent
 
 instance
-  ( EraGov era
-  , EraTx era
+  ( EraTx era
+  , ConwayEraGov era
+  , ConwayEraTxBody era
   , EraRule "MEMPOOL" era ~ ConwayMEMPOOL era
   , PredicateFailure (EraRule "MEMPOOL" era) ~ ConwayMempoolPredFailure era
   , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
