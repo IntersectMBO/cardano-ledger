@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Conway.Imp.LedgerSpec (spec) where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
   ConwayLedgerEvent (..),
   ConwayLedgerPredFailure (..),
@@ -22,17 +23,19 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.SafeHash (originalBytesSize)
-import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), mkMempoolEnv)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), applyTx, mkMempoolEnv)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgersEnv (..), ShelleyLedgersEvent (..))
 import Control.State.Transition.Extended
 import Data.Default.Class (def)
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (
   alwaysFailsWithDatum,
@@ -249,3 +252,42 @@ spec = do
           assertFailure $ "Unexpected failure while applyingTx: " <> show tx <> ": " <> show e
         Right (_, evs) ->
           length [ev | ev@(MempoolEvent (ConwayMempoolEvent _)) <- evs] `shouldBe` 1
+
+    it "Unelected Committee voting" $ whenPostBootstrap $ do
+      globals <- use impGlobalsL
+      slotNo <- use impLastTickG
+      _ <- registerInitialCommittee
+      ccCold <- KeyHashObj <$> freshKeyHash
+      curEpochNo <- getsNES nesELL
+      let action =
+            UpdateCommittee
+              SNothing
+              mempty
+              (Map.singleton ccCold (addEpochInterval curEpochNo (EpochInterval 7)))
+              (1 %! 1)
+      proposal <- mkProposal action
+      submitTx_ $
+        mkBasicTx (mkBasicTxBody & proposalProceduresTxBodyL .~ [proposal])
+      ccHot <- registerCommitteeHotKey ccCold
+      govActionId <- do
+        rewardAccount <- registerRewardAccount
+        submitTreasuryWithdrawals [(rewardAccount, Coin 1)]
+
+      nes <- use impNESL
+      let ls = nes ^. nesEsL . esLStateL
+          mempoolEnv = mkMempoolEnv nes slotNo
+      tx <-
+        fixupTx $
+          mkBasicTx $
+            mkBasicTxBody
+              & votingProceduresTxBodyL
+                .~ VotingProcedures
+                  ( Map.singleton
+                      (CommitteeVoter ccHot)
+                      (Map.singleton govActionId (VotingProcedure VoteYes SNothing))
+                  )
+
+      case applyTx globals mempoolEnv ls tx of
+        Left _ -> pure ()
+        Right _ -> assertFailure $ "Expected failure due to an unallowed vote: " <> show tx
+      withNoFixup $ submitTx_ tx
