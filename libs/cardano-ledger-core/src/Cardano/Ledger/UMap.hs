@@ -238,14 +238,14 @@ instance EncCBOR UMElem where
     encodeListLen 4 <> encCBOR rd <> encCBOR ptrSet <> encCBOR sPool <> encCBOR dRep
 
 instance DecShareCBOR UMElem where
-  type Share UMElem = Interns (KeyHash 'StakePool)
-  decShareCBOR is =
+  type Share UMElem = (Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
+  decShareCBOR (ks, cd) =
     decodeRecordNamed "UMElem" (const 4) $
       UMElem
         <$> decCBOR
         <*> ifDecoderVersionAtLeast (natVersion @9) (mempty <$ dropCBOR (Proxy @(Set Ptr))) decCBOR
-        <*> decShareMonadCBOR is
-        <*> decCBOR
+        <*> decShareMonadCBOR ks
+        <*> decodeStrictMaybe (decShareCBOR cd)
 
 -- | A n-Tuple view of the `UMElem`.
 -- We can view all of the constructors as an `UMElem`.
@@ -460,19 +460,21 @@ instance EncCBOR UMap where
     encodeListLen 2 <> encodeMap encCBOR encCBOR umElems <> encodeMap encCBOR encCBOR umPtrs
 
 instance DecShareCBOR UMap where
-  type Share UMap = (Interns (Credential 'Staking), Interns (KeyHash 'StakePool))
+  type
+    Share UMap =
+      (Interns (Credential 'Staking), Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
   decSharePlusCBOR =
     StateT
-      ( \(a, b) ->
+      ( \(a, b, c) ->
           decodeRecordNamed "UMap" (const 2) $ do
-            umElems <- decodeMap (interns a <$> decCBOR) (decShareCBOR b)
+            umElems <- decodeMap (interns a <$> decCBOR) (decShareCBOR (b, c))
             let a' = internsFromMap umElems <> a
             umPtrs <-
               ifDecoderVersionAtLeast
                 (natVersion @9)
                 (mempty <$ dropCBOR (Proxy @(Map (Credential 'Staking) (Set Ptr))))
                 $ decodeMap decCBOR (interns a' <$> decCBOR)
-            pure (UMap {umElems, umPtrs}, (a', b))
+            pure (UMap {umElems, umPtrs}, (a', b, c))
       )
 
 -- | It is worthwhile stating the invariant that holds on a Unified Map.

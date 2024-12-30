@@ -33,8 +33,8 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   Interns,
   ToCBOR (..),
-  decNoShareCBOR,
   decShareLensCBOR,
+  decSharePlusLensCBOR,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
@@ -179,7 +179,9 @@ instance
       flip evalStateT mempty $ do
         esAccountState <- lift decCBOR
         esLState <- decSharePlusCBOR
-        esSnapshots <- decSharePlusCBOR
+        esSnapshots <-
+          decSharePlusLensCBOR $
+            lens (\(cs, ks, _, _) -> (cs, ks)) (\(_, _, cd, ch) (cs, ks) -> (cs, ks, cd, ch))
         esNonMyopic <- decShareLensCBOR _2
         pure EpochState {esAccountState, esSnapshots, esLState, esNonMyopic}
 
@@ -330,21 +332,21 @@ instance
         !> To sd
         !> To don
 
-instance
-  ( EraTxOut era
-  , EraGov era
-  ) =>
-  DecShareCBOR (UTxOState era)
-  where
-  type Share (UTxOState era) = Interns (Credential 'Staking)
-  decShareCBOR credInterns =
+instance (EraTxOut era, EraGov era) => DecShareCBOR (UTxOState era) where
+  type
+    Share (UTxOState era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
+  decShareCBOR is@(cs, _, _, _) =
     decodeRecordNamed "UTxOState" (const 6) $ do
-      utxosUtxo <- decShareCBOR credInterns
+      utxosUtxo <- decShareCBOR cs
       utxosDeposited <- decCBOR
       utxosFees <- decCBOR
-      -- TODO: implement proper sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
-      utxosGovState <- decNoShareCBOR
-      utxosStakeDistr <- decShareCBOR credInterns
+      utxosGovState <- decShareCBOR is
+      utxosStakeDistr <- decShareCBOR cs
       utxosDonation <- decCBOR
       pure UTxOState {..}
 
@@ -531,11 +533,15 @@ instance
   where
   type
     Share (LedgerState era) =
-      (Interns (Credential 'Staking), Interns (KeyHash 'StakePool))
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
   decSharePlusCBOR =
     decodeRecordNamedT "LedgerState" (const 2) $ do
       lsCertState <- decSharePlusCBOR
-      lsUTxOState <- decShareLensCBOR _1
+      lsUTxOState <- decSharePlusCBOR
       pure LedgerState {lsUTxOState, lsCertState}
 
 instance (EraTxOut era, EraGov era) => ToCBOR (LedgerState era) where

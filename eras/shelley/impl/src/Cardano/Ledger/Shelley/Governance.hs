@@ -10,6 +10,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
@@ -36,12 +37,14 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (encCBOR),
   FromCBOR (..),
+  Interns,
   ToCBOR (..),
   decNoShareCBOR,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Control.DeepSeq (NFData (..))
@@ -68,6 +71,12 @@ class
   , EncCBOR (GovState era)
   , DecCBOR (GovState era)
   , DecShareCBOR (GovState era)
+  , Share (GovState era)
+      ~ ( Interns (Credential 'Staking)
+        , Interns (KeyHash 'StakePool)
+        , Interns (Credential 'DRepRole)
+        , Interns (Credential 'HotCommitteeRole)
+        )
   , ToCBOR (GovState era)
   , FromCBOR (GovState era)
   , Default (GovState era)
@@ -265,6 +274,13 @@ instance
   ) =>
   DecShareCBOR (ShelleyGovState era)
   where
+  type
+    Share (ShelleyGovState era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
   decShareCBOR _ =
     decode $
       RecD ShelleyGovState
