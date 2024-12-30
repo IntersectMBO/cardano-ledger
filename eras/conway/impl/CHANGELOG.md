@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.18.1.0
+
+* Add a check to `MEMPOOL` rule that prevents unelected CC from voting.
+
 ## 1.18.0.0
 
 * Remove `SlotNo` from `CertEnv` and `CertsEnv`
