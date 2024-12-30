@@ -559,7 +559,7 @@ proposalsSpec = do
       unregisteredRewardAccount <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
       deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
       anchor <- arbitrary
-      let mkProposal rewardAccount =
+      let mkProposal' rewardAccount =
             ProposalProcedure
               { pProcDeposit = deposit
               , pProcReturnAddr = rewardAccount
@@ -568,12 +568,12 @@ proposalsSpec = do
               }
       if HF.bootstrapPhase protVer
         then do
-          submitProposal_ $ mkProposal registeredRewardAccount
-          submitProposal_ $ mkProposal unregisteredRewardAccount
+          submitProposal_ $ mkProposal' registeredRewardAccount
+          submitProposal_ $ mkProposal' unregisteredRewardAccount
         else do
-          submitProposal_ $ mkProposal registeredRewardAccount
+          submitProposal_ $ mkProposal' registeredRewardAccount
           submitFailingProposal
-            (mkProposal unregisteredRewardAccount)
+            (mkProposal' unregisteredRewardAccount)
             [ injectFailure $ ProposalReturnAccountDoesNotExist unregisteredRewardAccount
             ]
     describe "Consistency" $ do
