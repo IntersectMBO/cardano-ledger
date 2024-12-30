@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.17.4.0
+
+* Add a check to `MEMPOOL` rule that prevents unelected CC from voting.
+
 ## 1.17.3.0
 
 * Fix buggy behavior of DRep delegations: #4772
