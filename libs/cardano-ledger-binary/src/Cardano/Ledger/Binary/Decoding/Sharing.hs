@@ -17,6 +17,7 @@ module Cardano.Ledger.Binary.Decoding.Sharing (
   decSharePlusLensCBOR,
   decNoShareCBOR,
   interns,
+  internsFromSet,
   internsFromMap,
   internsFromVMap,
   internMap,
@@ -36,6 +37,7 @@ import Data.Kind
 import qualified Data.Map.Strict as Map (size)
 import Data.Map.Strict.Internal (Map (..))
 import Data.Primitive.Types (Prim)
+import qualified Data.Set as Set (size)
 import qualified Data.Set.Internal as Set (Set (..))
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
@@ -94,6 +96,15 @@ internSet k = go
         LT -> go l
         GT -> go r
         EQ -> Just kx
+
+internsFromSet :: Ord k => Set.Set k -> Interns k
+internsFromSet m =
+  Interns
+    [ Intern
+        { internMaybe = (`internSet` m)
+        , internWeight = Set.size m
+        }
+    ]
 
 internsFromMap :: Ord k => Map k a -> Interns k
 internsFromMap m =

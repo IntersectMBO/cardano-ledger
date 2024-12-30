@@ -44,11 +44,13 @@ module Data.OMap.Strict (
   extractKeys,
   adjust,
   filter,
+  decodeOMap,
 )
 where
 
 import Cardano.Ledger.Binary (
   DecCBOR,
+  Decoder,
   EncCBOR (encCBOR),
   decodeListLenOrIndef,
   decodeListLikeEnforceNoDuplicates,
@@ -419,12 +421,15 @@ instance (Typeable k, EncCBOR v, Ord k) => EncCBOR (OMap k v) where
   encCBOR omap = encodeStrictSeq encCBOR (toStrictSeq omap)
 
 instance (Typeable k, HasOKey k v, DecCBOR v, Eq v) => DecCBOR (OMap k v) where
-  decCBOR =
-    decodeListLikeEnforceNoDuplicates
-      decodeListLenOrIndef
-      (flip snoc)
-      (\omap -> (size omap, omap))
-      decCBOR
+  decCBOR = decodeOMap decCBOR
+
+decodeOMap :: HasOKey k v => Decoder s v -> Decoder s (OMap k v)
+decodeOMap decValue =
+  decodeListLikeEnforceNoDuplicates
+    decodeListLenOrIndef
+    (flip snoc)
+    (\omap -> (size omap, omap))
+    decValue
 
 -- | \( O(n \log n) \)
 filter :: Ord k => (v -> Bool) -> OMap k v -> OMap k v

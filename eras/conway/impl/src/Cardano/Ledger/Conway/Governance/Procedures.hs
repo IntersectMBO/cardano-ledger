@@ -19,7 +19,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Governance.Procedures (
@@ -92,6 +94,7 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   FromCBOR (fromCBOR),
+  Interns,
   ToCBOR (toCBOR),
   decNoShareCBOR,
   decodeEnumBounded,
@@ -280,8 +283,14 @@ instance EraPParams era => NoThunks (GovActionState era)
 
 instance EraPParams era => NFData (GovActionState era)
 
--- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (GovActionState era) where
+  type
+    Share (GovActionState era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
   decShareCBOR _ =
     decode $
       RecD GovActionState
