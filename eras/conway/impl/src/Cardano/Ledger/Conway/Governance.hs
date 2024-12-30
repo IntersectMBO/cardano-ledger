@@ -191,6 +191,7 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   FromCBOR (..),
+  Interns,
   ToCBOR (..),
   decNoShareCBOR,
  )
@@ -351,12 +352,18 @@ mkEnactState gs =
     , ensPrevGovActionIds = govStatePrevGovActionIds gs
     }
 
--- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (ConwayGovState era) where
-  decShareCBOR _ =
+  type
+    Share (ConwayGovState era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
+  decShareCBOR is =
     decode $
       RecD ConwayGovState
-        <! From
+        <! D (decShareCBOR is)
         <! From
         <! From
         <! From
