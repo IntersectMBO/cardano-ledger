@@ -47,6 +47,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   setupPoolWithStake,
   setupPoolWithoutStake,
   conwayModifyPParams,
+  mkProposal,
   getProposals,
   getEnactState,
   getGovActionState,
@@ -788,6 +789,30 @@ submitAndExpireProposalToMakeReward stakingC = do
         }
   passNEpochs $ 2 + fromIntegral lifetime
   expectMissingGovActionId gai
+
+mkProposalWithRewardAccount ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  GovAction era ->
+  RewardAccount (EraCrypto era) ->
+  ImpTestM era (ProposalProcedure era)
+mkProposalWithRewardAccount ga rewardAccount = do
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+  anchor <- arbitrary
+  pure
+    ProposalProcedure
+      { pProcDeposit = deposit
+      , pProcReturnAddr = rewardAccount
+      , pProcGovAction = ga
+      , pProcAnchor = anchor
+      }
+
+mkProposal ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  GovAction era ->
+  ImpTestM era (ProposalProcedure era)
+mkProposal ga = do
+  rewardAccount <- registerRewardAccount
+  mkProposalWithRewardAccount ga rewardAccount
 
 -- | Submits a transaction that proposes the given governance action
 trySubmitGovActions ::
