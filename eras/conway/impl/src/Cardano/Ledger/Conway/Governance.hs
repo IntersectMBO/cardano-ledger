@@ -1,6 +1,8 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -24,6 +26,7 @@ module Cardano.Ledger.Conway.Governance (
   Committee (..),
   committeeMembersL,
   committeeThresholdL,
+  authorizedElectedHotCommitteeCredentials,
   GovAction (..),
   GovActionState (..),
   GovActionIx (..),
@@ -195,7 +198,12 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (Obligations (..))
+import Cardano.Ledger.CertState (
+  CommitteeAuthorization (..),
+  Obligations (..),
+  certVStateL,
+  csCommitteeCreds,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.DRepPulser
@@ -212,6 +220,7 @@ import Cardano.Ledger.PoolParams (PoolParams (ppRewardAccount))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
+  LedgerState,
   NewEpochState (..),
   certDState,
   certVState,
@@ -222,10 +231,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   epochStateTreasuryL,
   esLStateL,
   lsCertState,
+  lsCertStateL,
   lsUTxOState,
+  lsUTxOStateL,
   newEpochStateGovStateL,
+  utxosGovStateL,
   utxosStakeDistr,
   vsCommitteeState,
+  vsCommitteeStateL,
   vsDReps,
  )
 import Cardano.Ledger.UMap
@@ -236,8 +249,10 @@ import Control.Monad.Trans.Reader (ReaderT, ask)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
+import qualified Data.Foldable as F (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -541,3 +556,21 @@ defaultStakePoolVote poolId poolParams dRepDelegations =
     toDefaultVote (Just DRepAlwaysAbstain) = DefaultAbstain
     toDefaultVote (Just DRepAlwaysNoConfidence) = DefaultNoConfidence
     toDefaultVote _ = DefaultNo
+
+authorizedElectedHotCommitteeCredentials ::
+  ConwayEraGov era =>
+  LedgerState era ->
+  Set.Set (Credential 'HotCommitteeRole (EraCrypto era))
+authorizedElectedHotCommitteeCredentials ledgerState =
+  case ledgerState ^. lsUTxOStateL . utxosGovStateL . committeeGovStateL of
+    SNothing -> Set.empty
+    SJust electedCommiteee ->
+      collectAuthorizedHotCreds $
+        csCommitteeCreds committeeState `Map.intersection` committeeMembers electedCommiteee
+  where
+    committeeState = ledgerState ^. lsCertStateL . certVStateL . vsCommitteeStateL
+    collectAuthorizedHotCreds =
+      let toHotCredSet !acc = \case
+            CommitteeHotCredential hotCred -> Set.insert hotCred acc
+            CommitteeMemberResigned {} -> acc
+       in F.foldl' toHotCredSet Set.empty
