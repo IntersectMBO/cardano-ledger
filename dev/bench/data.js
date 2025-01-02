@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734735549081,
+  "lastUpdate": 1735838382968,
   "repoUrl": "https://github.com/IntersectMBO/cardano-ledger",
   "entries": {
     "Haskell Benchmark": [
@@ -25128,6 +25128,78 @@ window.BENCHMARK_DATA = {
             "value": 0.000011122111656556591,
             "unit": "Nanoseconds",
             "range": 1.724915108333556e-7
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "neil.mayhew@iohk.io",
+            "name": "Neil Mayhew",
+            "username": "neilmayhew"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0d20d716fc15dc0b7648c448cbd735bebb7521b8",
+          "message": "Merge pull request #4813 from IntersectMBO/lehins/sanitize-non-elected-cc-votes\n\nAdd a check to `MEMPOOL` rule that prevents unelected CC from voting",
+          "timestamp": "2025-01-02T10:16:16-07:00",
+          "tree_id": "b979a2b47f3603b934b136c46a482c1b9eecf4c7",
+          "url": "https://github.com/IntersectMBO/cardano-ledger/commit/0d20d716fc15dc0b7648c448cbd735bebb7521b8"
+        },
+        "date": 1735838360259,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/ShelleyEra",
+            "value": 0.00014868715206788774,
+            "unit": "Nanoseconds",
+            "range": 0.00001888779120396938
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/AllegraEra",
+            "value": 0.00014617841161756602,
+            "unit": "Nanoseconds",
+            "range": 6.913671866776609e-7
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/MaryEra",
+            "value": 0.000145996500925399,
+            "unit": "Nanoseconds",
+            "range": 6.869352690493175e-7
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/AlonzoEra",
+            "value": 0.0002344475521270742,
+            "unit": "Nanoseconds",
+            "range": 0.000005124404737162357
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/ShelleyEra",
+            "value": 0.000010290078957125372,
+            "unit": "Nanoseconds",
+            "range": 7.469446760132651e-7
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/AllegraEra",
+            "value": 0.00001839996160779654,
+            "unit": "Nanoseconds",
+            "range": 2.628752122141316e-7
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/MaryEra",
+            "value": 0.000018688216306562185,
+            "unit": "Nanoseconds",
+            "range": 1.3943744366958277e-7
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/AlonzoEra",
+            "value": 0.000011065190899582317,
+            "unit": "Nanoseconds",
+            "range": 1.1571012901953392e-7
           }
         ]
       }
