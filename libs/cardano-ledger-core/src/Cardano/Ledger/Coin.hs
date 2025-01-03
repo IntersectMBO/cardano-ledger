@@ -45,6 +45,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Coerce (coerce)
 import Data.Group (Abelian, Group (..))
+import Data.MemPack
 import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
 import Data.Primitive.Types
@@ -116,8 +117,10 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin {unCompactCoin :: Word64}
-    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim, Ord, ToCBOR, ToJSON, FromJSON)
+    deriving
+      (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim, Ord, ToCBOR, ToJSON, FromJSON)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
+    deriving (MemPack) via VarLen Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
   fromCompact (CompactCoin c) = word64ToCoin c

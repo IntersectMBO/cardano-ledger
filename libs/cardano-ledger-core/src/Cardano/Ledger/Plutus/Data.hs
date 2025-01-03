@@ -73,6 +73,7 @@ import Data.Aeson (ToJSON (..), Value (Null))
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coerce (coerce)
+import Data.MemPack
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -140,7 +141,7 @@ getPlutusData (getMemoRawType -> PlutusData d) = d
 -- exported, in order to prevent invalid creation of data from arbitrary binary
 -- data. Use `makeBinaryData` for smart construction.
 newtype BinaryData era = BinaryData ShortByteString
-  deriving newtype (Eq, NoThunks, Ord, Show, SafeToHash)
+  deriving newtype (Eq, NoThunks, Ord, Show, SafeToHash, MemPack)
   deriving (Generic)
 
 instance HashAnnotated (BinaryData era) EraIndependentData

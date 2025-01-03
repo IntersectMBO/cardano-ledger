@@ -107,6 +107,7 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
 import Data.Maybe.Strict (StrictMaybe)
+import Data.MemPack
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Void (Void)
@@ -266,6 +267,7 @@ class
   , ToJSON (TxOut era)
   , DecCBOR (Value era)
   , DecCBOR (CompactForm (Value era))
+  , MemPack (CompactForm (Value era))
   , EncCBOR (Value era)
   , ToCBOR (TxOut era)
   , EncCBOR (TxOut era)
@@ -276,6 +278,7 @@ class
   , NFData (TxOut era)
   , Show (TxOut era)
   , Eq (TxOut era)
+  , MemPack (TxOut era)
   , EraPParams era
   ) =>
   EraTxOut era
