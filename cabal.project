@@ -20,12 +20,12 @@ repository cardano-haskell-packages
 -- $ nix-prefetch-git https://github.com/intersectmbo/formal-ledger-specifications --rev <GIT_SHA> | jq .hash
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/formal-ledger-specifications.git
+  location: https://github.com/Soupstraw/exec-spec-temporary.git
   -- !WARNING!:
   -- MAKE SURE THIS POINTS TO A COMMIT IN `MAlonzo-code` BEFORE MERGE!
-  subdir: generated
-  --sha256: sha256-/YE/qwup2ijMB7bo5eWyBIM+gXZ3Z1g0NZyNSfRwoPY=
-  tag: 93041ddbf659e0dbc1981d73fecb439b0209d484
+  --subdir: generated
+  --sha256: sha256-9LhP3nhYgDHs32jSs6o+wsp8JbO7bzxAZD/5rFL5Pj8=
+  tag: 97ceabf8527aaba4b4a48b28e04bc83f05385d52
 
 -- NOTE: If you would like to update the above, look for the `MAlonzo-code`
 -- branch in the `formal-ledger-specifications` repo and copy the SHA of
