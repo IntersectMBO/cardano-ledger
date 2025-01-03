@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1735838382968,
+  "lastUpdate": 1735906484544,
   "repoUrl": "https://github.com/IntersectMBO/cardano-ledger",
   "entries": {
     "Haskell Benchmark": [
@@ -25200,6 +25200,78 @@ window.BENCHMARK_DATA = {
             "value": 0.000011065190899582317,
             "unit": "Nanoseconds",
             "range": 1.1571012901953392e-7
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joosep.jaager@iohk.io",
+            "name": "Joosep Jääger",
+            "username": "Soupstraw"
+          },
+          "committer": {
+            "email": "joosep.jaager@gmail.com",
+            "name": "Joosep Jääger",
+            "username": "Soupstraw"
+          },
+          "distinct": true,
+          "id": "221eaa816cb28948ace7919e75fc29f29e22eb9a",
+          "message": "Included the hash in plutus script translation",
+          "timestamp": "2025-01-03T12:11:13Z",
+          "tree_id": "253f293325fa7b017a9420615c68adf6dcfd3f6c",
+          "url": "https://github.com/IntersectMBO/cardano-ledger/commit/221eaa816cb28948ace7919e75fc29f29e22eb9a"
+        },
+        "date": 1735906461750,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/ShelleyEra",
+            "value": 0.0001461587615997256,
+            "unit": "Nanoseconds",
+            "range": 0.00001210547552362397
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/AllegraEra",
+            "value": 0.00014676010723843207,
+            "unit": "Nanoseconds",
+            "range": 9.648192162575394e-7
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/MaryEra",
+            "value": 0.00014692496862267642,
+            "unit": "Nanoseconds",
+            "range": 0.000001857859782269322
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/AlonzoEra",
+            "value": 0.00023882823924690602,
+            "unit": "Nanoseconds",
+            "range": 0.000011793422207180896
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/ShelleyEra",
+            "value": 0.000010315975457847028,
+            "unit": "Nanoseconds",
+            "range": 3.1804062806549736e-7
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/AllegraEra",
+            "value": 0.000018374030166336616,
+            "unit": "Nanoseconds",
+            "range": 1.6080024695259255e-7
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/MaryEra",
+            "value": 0.000018697525578601288,
+            "unit": "Nanoseconds",
+            "range": 1.6884833441631063e-7
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/AlonzoEra",
+            "value": 0.000011117263870343514,
+            "unit": "Nanoseconds",
+            "range": 1.181278708967624e-7
           }
         ]
       }
