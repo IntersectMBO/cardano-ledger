@@ -5636,7 +5636,7 @@ showType :: forall t. Typeable t => String
 showType = show (typeRep (Proxy @t))
 
 prettyType :: forall t x. Typeable t => Doc x
-prettyType = fromString $ showType @t
+prettyType = fromString $ show (typeRep (Proxy @t))
 
 instance HasSpec fn a => Pretty (Term fn a) where
   pretty = prettyPrec 0
