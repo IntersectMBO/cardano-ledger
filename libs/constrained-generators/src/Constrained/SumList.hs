@@ -55,6 +55,7 @@ firstYesG nullSolution f xs c = go xs c
       ans <- f x (cost + 1)
       case ans of
         (cost1, No _) -> go more cost1
+        (cost2, Yes y) -> pure (cost2, Yes y)
         _ -> pure ans
 
 noChoices :: Show t => Cost -> String -> t -> t -> t -> Int -> [(t, t)] -> Solution t
@@ -73,6 +74,7 @@ noChoices cost p smallest largest total count samp =
 
 -- =====================================================
 
+
 -- | Given 'count', return a list if pairs, that add to 'count'
 --   splitsOf 6 --> [(1,5),(2,4),(3,3)].
 --   Note we don't return reflections like (5,1) and (4,2),
@@ -80,6 +82,7 @@ noChoices cost p smallest largest total count samp =
 splitsOf :: Integral b => b -> [(b, b)]
 splitsOf count = [(i, j) | i <- [1 .. div count 2], let j = count - i]
 {-# SPECIALIZE splitsOf :: Int -> [(Int, Int)] #-}
+
 
 -- | Given a Path, find a representative solution, 'ans', for that path, such that
 --   1) (length ans) == 'count',
@@ -186,6 +189,7 @@ pickAll smallest largest (pName, p) total count cost = do
     splits
     cost
 
+
 -- TODO run some tests to see if this is a better solution than firstYesG
 -- concatSolution smallest pName total count
 --  <$> mapM  (doSplit smallest total (pName, p) choices (pickAll (depth +1) smallest)) splits
@@ -249,6 +253,7 @@ doSplit smallest largest (pName, p) total sample (i, j) c = go sample c
                 , unlines (map show (take 10 sample))
                 ]
             )
+
 {-# INLINE doSplit #-}
 
 -- | If the sample is small enough, then enumerate all of it, otherwise take a fair sample.
@@ -260,6 +265,7 @@ smallSample smallest largest total bound size
       choices <- fair smallest largest size 5 True
       shuffle [(x, total - x) | x <- choices]
 {-# INLINE smallSample #-}
+
 
 -- | Generates a fair sample of numbers between 'smallest' and 'largest'.
 --   makes sure there are numbers of all sizes. Controls both the size of the sample
