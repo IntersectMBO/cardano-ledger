@@ -14,8 +14,25 @@
 
 module Constrained.Test where
 
+import Constrained.Examples
+import Constrained.Examples.Fold (
+  Outcome (..),
+  evenSpec,
+  listSumComplex,
+  logishProp,
+  oddSpec,
+  pickProp,
+  sum3,
+  sum3WithLength,
+  sumProp,
+  sumProp2,
+  testFoldSpec,
+ )
+import Constrained.Internals
+import Constrained.Properties
 import Control.Monad
 import Data.Int
+import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import Data.Set (Set)
 import Data.Typeable
@@ -24,11 +41,6 @@ import GHC.Natural
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck hiding (Args, Fun, forAll)
-
-import Constrained.Examples
-import Constrained.Internals
-import Constrained.Properties
-import qualified Data.List.NonEmpty as NE
 
 ------------------------------------------------------------------------
 -- Test suite
@@ -185,6 +197,7 @@ tests nightly =
     negativeTests
     prop "prop_noNarrowLoop" $ withMaxSuccess 1000 prop_noNarrowLoop
     conformsToSpecESpec
+    foldWithSizeTests
 
 negativeTests :: Spec
 negativeTests =
@@ -412,3 +425,46 @@ conformsToSpecESpec =
       prop "Set Integer" (conformsToSpecETest @(Set Integer))
       prop "Set[Int]" (conformsToSpecETest @(Set [Int]))
       prop "Map Int Int" (conformsToSpecETest @(Map Int Int))
+
+-- ======================================================================
+-- Test for use of Fold with size annotations
+
+foldWithSizeTests :: Spec
+foldWithSizeTests = do
+  describe "Summation tests with size. " $ do
+    prop "logish is sound" logishProp
+    prop "small odd/even tests" pickProp
+    prop "negative small" $ sumProp (-1000) 100 TrueSpec (-400 :: Int) 4 Succeed
+    prop "negative sum too small" $ sumProp (-1000) 0 TrueSpec (-8002 :: Int) 4 Fail
+    prop "negative large" $ sumProp (-60000 :: Int) 0 TrueSpec (-1000) 4 Succeed
+    prop "(between 50 60) small enough" $ sumProp 1 10 (between @BaseFn 50 60) (200 :: Int) 4 Succeed
+    prop "(between 50 60) too large" $ sumProp 1 10 (between @BaseFn 50 60) (400 :: Int) 4 Fail
+    prop "(count 2) large is fast" $ sumProp 1 5000000 TrueSpec (5000000 :: Int) 2 Succeed
+    prop "(count 5) large is fast" $ sumProp 1 5000000 TrueSpec (5000000 :: Int) 5 Succeed
+    prop "even succeeds on even" $ sumProp2 1 50000 ("even", even) (45876 :: Int) 5 Succeed
+    prop "even succeeds on even spec" $ sumProp 1 50000 evenSpec (45876 :: Int) 5 Succeed
+    prop "even fails on odd total, odd count" $ sumProp 1 50000 evenSpec (45875 :: Int) 3 Fail
+    prop "odd fails on odd total, even count" $ sumProp 1 50000 oddSpec (45878 :: Int) 3 Fail
+    prop "odd succeeds on odd total, odd count" $ sumProp 1 50000 oddSpec (45871 :: Int) 3 Succeed
+    xprop "succeeds with large count" $
+      withMaxSuccess 100 (sumProp 1 1500567 TrueSpec (1500567 :: Int) 20 Succeed)
+    prop "sum3 is sound" $ prop_constrained_satisfies_sound sum3
+    prop "(sum3WithLength 3) is sound" $ prop_constrained_satisfies_sound (sum3WithLength 3)
+    prop "(sum3WithLength 4) is sound" $ prop_constrained_satisfies_sound (sum3WithLength 4)
+    prop "(sum3WithLength 7) is sound" $ prop_constrained_satisfies_sound (sum3WithLength 7)
+    prop "listSum is sound" $ prop_constrained_satisfies_sound (listSum @Int)
+    prop "listSumPair is sound" $ prop_constrained_satisfies_sound (listSumPair @Word64)
+    -- This, by design, will fail for inputs greater than 7
+    prop "listSumComplex is sound" $ prop_constrained_satisfies_sound (listSumComplex @Integer 7)
+    prop "All sizes are negative" $
+      testFoldSpec @Int (between (-5) (-2)) evenSpec (MemberSpec (pure 100)) Fail
+    prop "Only some sizes are negative" $
+      testFoldSpec @Int (between (-5) 0) evenSpec (MemberSpec (pure 100)) Fail
+    prop "total and count can only be 0 in Word type" $
+      testFoldSpec @Word64 (between 0 0) evenSpec (MemberSpec (pure 0)) Succeed
+    prop "something of size 2, can add to 0" $
+      testFoldSpec @Int (between 2 2) evenSpec (MemberSpec (pure 0)) Succeed
+    prop "TEST listSum" $ prop_constrained_satisfies_sound (listSum @Int)
+
+-- TODO Needs to sample like this: OR [pick t c | t <- total, c <- count]
+-- prop "count =0, total is 0,1,2" $ testFoldSpec @Int (between 0 1) evenSpec (between 0 2) Succeed

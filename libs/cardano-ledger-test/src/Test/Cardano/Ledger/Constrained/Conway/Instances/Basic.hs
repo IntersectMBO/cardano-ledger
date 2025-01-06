@@ -51,6 +51,7 @@ import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Constrained hiding (Value)
+import Constrained.Base (genListWithSize)
 import Constrained.Univ ()
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Fail.String
@@ -95,6 +96,10 @@ instance BaseUniverse fn => Foldy fn Coin where
   genList s s' = map fromSimpleRep <$> genList @fn @Word64 (toSimpleRepSpec s) (toSimpleRepSpec s')
   theAddFn = addFn
   theZero = Coin 0
+  genSizedList sz elemSpec foldSpec =
+    map fromSimpleRep
+      <$> genListWithSize @fn @Word64 sz (toSimpleRepSpec elemSpec) (toSimpleRepSpec foldSpec)
+  noNegativeValues = True
 
 -- TODO: This is hack to get around the need for `Num` in `NumLike`. We should possibly split
 -- this up so that `NumLike` has its own addition etc. instead?
