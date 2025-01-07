@@ -42,7 +42,6 @@ import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Val (Val (..))
-import Data.Ratio ((%))
 import GHC.Stack
 import Lens.Micro ((^.))
 
@@ -125,10 +124,10 @@ tierRefScriptFee multiplier sizeIncrement
   where
     go !acc !curTierPrice !n
       | n < sizeIncrement =
-          Coin $ floor (acc + (toInteger n % 1) * curTierPrice)
+          Coin $ floor (acc + toRational n * curTierPrice)
       | otherwise =
           go (acc + sizeIncrementRational * curTierPrice) (multiplier * curTierPrice) (n - sizeIncrement)
-    sizeIncrementRational = toInteger sizeIncrement % 1
+    sizeIncrementRational = toRational sizeIncrement
 
 instance AlonzoEraTx ConwayEra where
   isValidTxL = isValidAlonzoTxL

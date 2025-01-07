@@ -25,6 +25,10 @@ import Cardano.Ledger.BaseTypes (
   SlotNo (..),
   StrictMaybe (..),
   UnitInterval,
+  knownNonZero,
+  mulNonZero,
+  toIntegerNonZero,
+  (%.),
  )
 import qualified Cardano.Ledger.BaseTypes as Base (EpochInterval (..), Globals (..))
 import Cardano.Ledger.CertState (
@@ -109,7 +113,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Data.OMap.Strict as OMap
-import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
 import qualified Data.VMap as VMap
@@ -1847,7 +1850,7 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
       pp = def & ppProtocolVersionL .~ protocolVersion proof
       IStake stakeDistr _ = updateStakeDistribution pp mempty mempty (utx ^. utxoFL proof)
    in DRepPulser
-        (max 1 (ceiling (toInteger umapSize % (8 * toInteger k))))
+        (max 1 (ceiling (toInteger umapSize %. (knownNonZero @8 `mulNonZero` toIntegerNonZero k))))
         umap
         0
         stakeDistr

@@ -174,7 +174,7 @@ import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.Cardano.Slotting.Numeric ()
-import Test.QuickCheck hiding (Args, Fun, forAll)
+import Test.QuickCheck hiding (Args, Fun, NonZero, forAll)
 
 -- ==========================================================
 

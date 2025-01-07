@@ -2,6 +2,13 @@
 
 ## 1.16.0.0
 
+* Changed the type of `sgSecurityParam` to `NonZero Word64`
+* Following functions now expect a `NonZero Word64` security parameter:
+  * `startStep`
+  * `createRUpd`
+  * `desirability`
+  * `getTopRankedPools`
+  * `getTopRankedPoolsVMap`
 * Remove `Era era` constraint from `sizeShelleyTxF` and `wireSizeShelleyTxF`
 * Add `MemPack` instance `ShelleyTxOut`
 * Deprecate `hashShelleyTxAuxData`

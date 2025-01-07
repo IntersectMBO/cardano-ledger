@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis (
 )
 where
 
-import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
+import Cardano.Ledger.BaseTypes (knownNonZeroBounded, textToDns, textToUrl)
 import Cardano.Ledger.Binary (Tokens (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core (emptyPParams, ppDL, ppMaxBBSizeL, ppMaxBHSizeL)
@@ -195,7 +195,7 @@ exampleShelleyGenesis =
     , sgNetworkMagic = 4036000900
     , sgNetworkId = L.Testnet
     , sgActiveSlotsCoeff = unsafeBoundRational 0.259
-    , sgSecurityParam = 120842
+    , sgSecurityParam = knownNonZeroBounded @120842
     , sgEpochLength = EpochSize 1215
     , sgSlotsPerKESPeriod = 8541
     , sgMaxKESEvolutions = 28899

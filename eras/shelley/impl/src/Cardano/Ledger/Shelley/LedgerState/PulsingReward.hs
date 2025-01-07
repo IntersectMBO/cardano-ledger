@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
   startStep,
@@ -24,8 +25,13 @@ import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),
   BoundedRational (..),
+  NonZero,
   ShelleyBase,
   activeSlotVal,
+  knownNonZero,
+  mulNonZero,
+  toIntegerNonZero,
+  (%.),
  )
 import Cardano.Ledger.CertState (
   CertState (..),
@@ -102,13 +108,12 @@ startStep ::
   EpochState era ->
   Coin ->
   ActiveSlotCoeff ->
-  Word64 ->
+  NonZero Word64 ->
   PulsingRewUpdate
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSupply asc secparam =
   let SnapShot stake delegs poolParams = ssStakeGo ss
-      numStakeCreds, k :: Rational
       numStakeCreds = fromIntegral (VMap.size $ unStake stake)
-      k = fromIntegral secparam
+      k = toIntegerNonZero secparam
       -- We expect approximately 10k-many blocks to be produced each epoch.
       -- The reward calculation begins (4k/f)-many slots into the epoch,
       -- and we guarantee that it ends (2k/f)-many slots before the end
@@ -120,7 +125,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       -- stake credential rewards we should calculate each block.
       -- If it does not finish in this amount of time, the calculation is
       -- forced to completion.
-      pulseSize = max 1 (ceiling (numStakeCreds / (4 * k)))
+      pulseSize = max 1 (ceiling (numStakeCreds %. (knownNonZero @4 `mulNonZero` k)))
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
       Coin reserves = asReserves acnt
@@ -140,8 +145,11 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       -- it would be nice to not have to compute expectedBlocks every epoch
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
       eta
-        | unboundRational (pr ^. ppDG) >= 0.8 = 1
-        | otherwise = blocksMade % expectedBlocks
+        | d >= 0.8 = 1
+        | otherwise =
+            -- We use unsafe division here, because any sane configuration
+            -- should never have expectedBlocks anywhere close to zero
+            blocksMade % expectedBlocks
       Coin rPot = ssFee ss <> deltaR1
       deltaT1 = floor $ unboundRational (pr ^. ppTauL) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
@@ -306,7 +314,7 @@ createRUpd ::
   EpochState era ->
   Coin ->
   ActiveSlotCoeff ->
-  Word64 ->
+  NonZero Word64 ->
   ShelleyBase RewardUpdate
 createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
   let step1 = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam

@@ -353,7 +353,7 @@ exampleNewEpochState value ppp pp =
         epochState
         (Coin 1000)
         (activeSlotCoeff testGlobals)
-        10
+        (knownNonZeroBounded @10)
 
 exampleLedgerChainDepState :: Word64 -> ChainDepState
 exampleLedgerChainDepState seed =

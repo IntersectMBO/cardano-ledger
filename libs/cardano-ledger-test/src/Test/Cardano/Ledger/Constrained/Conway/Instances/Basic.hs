@@ -66,7 +66,7 @@ import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
-import Test.QuickCheck hiding (Args, Fun, forAll)
+import Test.QuickCheck hiding (Args, Fun, NonZero, forAll)
 
 -- ============================================================================
 -- Making Intervals based on Ratios, These can fail, so be careful using them.

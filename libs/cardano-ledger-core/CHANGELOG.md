@@ -2,6 +2,15 @@
 
 ## 1.17.0.0
 
+* Added `ToPlutusData` instance for `NonZero`
+* `maxpool'` now expects `nOpt` to be a `NonZero Word16`
+* Add `HasZero` instance for `Coin` together with lifted conversion functions:
+  * `toCompactCoinNonZero`
+  * `fromCompactCoinNonZero`
+  * `unCoinNonZero`
+  * `toCoinNonZero`
+  * `compactCoinNonZero`
+* Add `Cardano.Ledger.BaseTypes.NonZero`
 * Remove `era` type parameter from `MemoBytes` type
 * Remove `Era era` constraint from:
   * `Memo` pattern
@@ -83,6 +92,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` and `ToExpr` instances for `NonZero`
 * Deprecate `genBadPtr`, `genAddrBadPtr` and `genCompactAddrBadPtr`
 * Remove crypto parametrization from types: `KeyPair` and `KeyPairs`
 
