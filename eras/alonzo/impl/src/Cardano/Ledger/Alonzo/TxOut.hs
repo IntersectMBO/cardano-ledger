@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -12,7 +13,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -86,11 +86,10 @@ import qualified Data.Aeson as Aeson (Value (Null, String))
 import Data.Bits
 import Data.Maybe (fromMaybe)
 import Data.MemPack
-import Data.Typeable (Proxy (..), (:~:) (Refl))
+import Data.Typeable (Proxy (..))
 import Data.Word
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
-import GHC.TypeLits
 import Lens.Micro
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 
@@ -132,9 +131,8 @@ instance MemPack DataHash32 where
 decodeAddress28 ::
   Credential 'Staking ->
   Addr28Extra ->
-  Maybe Addr
-decodeAddress28 stakeRef (Addr28Extra a b c d) = do
-  Refl <- sameNat (Proxy @(SizeHash ADDRHASH)) (Proxy @28)
+  Addr
+decodeAddress28 stakeRef (Addr28Extra a b c d) =
   let network = if d `testBit` 1 then Mainnet else Testnet
       paymentCred =
         if d `testBit` 0
@@ -144,7 +142,7 @@ decodeAddress28 stakeRef (Addr28Extra a b c d) = do
       addrHash =
         hashFromPackedBytes $
           PackedBytes28 a b c (fromIntegral (d `shiftR` 32))
-  pure $! Addr network paymentCred (StakeRefBase stakeRef)
+   in Addr network paymentCred (StakeRefBase stakeRef)
 {-# INLINE decodeAddress28 #-}
 
 data AlonzoTxOut era
@@ -209,16 +207,11 @@ deriving instance Generic (AlonzoTxOut era)
 instance NFData (AlonzoTxOut era) where
   rnf = rwhnf
 
-addressErrorMsg :: String
-addressErrorMsg = "Impossible: Compacted an address of non-standard size"
-{-# NOINLINE addressErrorMsg #-}
-
 decodeDataHash32 ::
   DataHash32 ->
-  Maybe DataHash
+  DataHash
 decodeDataHash32 (DataHash32 a b c d) = do
-  Refl <- sameNat (Proxy @(SizeHash HASH)) (Proxy @32)
-  Just $! unsafeMakeSafeHash $ hashFromPackedBytes $ PackedBytes32 a b c d
+  unsafeMakeSafeHash $ hashFromPackedBytes $ PackedBytes32 a b c d
 
 viewCompactTxOut ::
   Val (Value era) =>
@@ -227,15 +220,17 @@ viewCompactTxOut ::
 viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
-  TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
-    | Just addr <- decodeAddress28 stakeRef addr28Extra ->
-        (compactAddr addr, injectCompact adaVal, SNothing)
-    | otherwise -> error addressErrorMsg
-  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
-    | Just addr <- decodeAddress28 stakeRef addr28Extra
-    , Just dh <- decodeDataHash32 dataHash32 ->
-        (compactAddr addr, injectCompact adaVal, SJust dh)
-    | otherwise -> error addressErrorMsg
+  TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal ->
+    let
+      addr = decodeAddress28 stakeRef addr28Extra
+     in
+      (compactAddr addr, injectCompact adaVal, SNothing)
+  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32 ->
+    let
+      addr = decodeAddress28 stakeRef addr28Extra
+      dh = decodeDataHash32 dataHash32
+     in
+      (compactAddr addr, injectCompact adaVal, SJust dh)
 
 viewTxOut ::
   Val (Value era) =>
@@ -249,15 +244,15 @@ viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal)
-  | Just addr <- decodeAddress28 stakeRef addr28Extra =
-      (addr, inject (fromCompact adaVal), SNothing)
-viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32)
-  | Just addr <- decodeAddress28 stakeRef addr28Extra
-  , Just dh <- decodeDataHash32 dataHash32 =
-      (addr, inject (fromCompact adaVal), SJust dh)
-viewTxOut TxOut_AddrHash28_AdaOnly {} = error addressErrorMsg
-viewTxOut TxOut_AddrHash28_AdaOnly_DataHash32 {} = error addressErrorMsg
+viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal) =
+  let addr = decodeAddress28 stakeRef addr28Extra
+   in (addr, inject (fromCompact adaVal), SNothing)
+viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32) =
+  let
+    addr = decodeAddress28 stakeRef addr28Extra
+    dh = decodeDataHash32 dataHash32
+   in
+    (addr, inject (fromCompact adaVal), SJust dh)
 
 instance (Era era, Val (Value era)) => Show (AlonzoTxOut era) where
   show = show . viewTxOut -- FIXME: showing tuple is ugly
@@ -267,7 +262,7 @@ deriving via InspectHeapNamed "AlonzoTxOut" (AlonzoTxOut era) instance NoThunks 
 encodeAddress28 ::
   Network ->
   PaymentCredential ->
-  Maybe (SizeHash ADDRHASH :~: 28, Addr28Extra)
+  Addr28Extra
 encodeAddress28 network paymentCred = do
   let networkBit, payCredTypeBit :: Word64
       networkBit =
@@ -280,26 +275,24 @@ encodeAddress28 network paymentCred = do
           ScriptHashObj {} -> 0
       encodeAddr ::
         Hash ADDRHASH a ->
-        Maybe (SizeHash ADDRHASH :~: 28, Addr28Extra)
+        Addr28Extra
       encodeAddr h = do
-        refl@Refl <- sameNat (Proxy @(SizeHash ADDRHASH)) (Proxy @28)
         case hashToPackedBytes h of
           PackedBytes28 a b c d ->
             let d' = (fromIntegral d `shiftL` 32) .|. networkBit .|. payCredTypeBit
-             in Just (refl, Addr28Extra a b c d')
-          _ -> Nothing
+             in Addr28Extra a b c d'
+          _ -> error "Incorrectly constructed PackedBytes"
   case paymentCred of
     KeyHashObj (KeyHash addrHash) -> encodeAddr addrHash
     ScriptHashObj (ScriptHash addrHash) -> encodeAddr addrHash
 
 encodeDataHash32 ::
   DataHash ->
-  Maybe (SizeHash HASH :~: 32, DataHash32)
+  DataHash32
 encodeDataHash32 dataHash = do
-  refl@Refl <- sameNat (Proxy @(SizeHash HASH)) (Proxy @32)
   case hashToPackedBytes (extractHash dataHash) of
-    PackedBytes32 a b c d -> Just (refl, DataHash32 a b c d)
-    _ -> Nothing
+    PackedBytes32 a b c d -> DataHash32 a b c d
+    _ -> error "Incorrectly constructed PackedBytes"
 
 getAdaOnly ::
   forall era.
@@ -323,15 +316,17 @@ pattern AlonzoTxOut addr vl dh <-
   where
     AlonzoTxOut (Addr network paymentCred stakeRef) vl SNothing
       | StakeRefBase stakeCred <- stakeRef
-      , Just adaCompact <- getAdaOnly (Proxy @era) vl
-      , Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
-          TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
+      , Just adaCompact <- getAdaOnly (Proxy @era) vl =
+          let addr28Extra = encodeAddress28 network paymentCred
+           in TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
     AlonzoTxOut (Addr network paymentCred stakeRef) vl (SJust dh)
       | StakeRefBase stakeCred <- stakeRef
-      , Just adaCompact <- getAdaOnly (Proxy @era) vl
-      , Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred
-      , Just (Refl, dataHash32) <- encodeDataHash32 dh =
-          TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
+      , Just adaCompact <- getAdaOnly (Proxy @era) vl =
+          let
+            addr28Extra = encodeAddress28 network paymentCred
+            dataHash32 = encodeDataHash32 dh
+           in
+            TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
     AlonzoTxOut addr vl mdh =
       let v = fromMaybe (error $ "Illegal value in TxOut: " ++ show vl) $ toCompact vl
           a = compactAddr addr
@@ -499,15 +494,12 @@ mkTxOutCompact addr cAddr cVal mdh
 
 getAlonzoTxOutDataHash ::
   forall era.
-  HasCallStack =>
   AlonzoTxOut era ->
   StrictMaybe DataHash
 getAlonzoTxOutDataHash = \case
   TxOutCompactDH' _ _ dh -> SJust dh
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dh ->
-    case decodeDataHash32 dh of
-      Nothing -> error $ "Impossible: Compacted a DataHash of non-standard size: " ++ show dh
-      Just dataHash -> SJust dataHash
+    SJust $ decodeDataHash32 dh
   _ -> SNothing
 
 getAlonzoTxOutEitherAddr ::
@@ -516,12 +508,10 @@ getAlonzoTxOutEitherAddr ::
 getAlonzoTxOutEitherAddr = \case
   TxOutCompact' cAddr _ -> Right cAddr
   TxOutCompactDH' cAddr _ _ -> Right cAddr
-  TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _
-    | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
-    | otherwise -> error addressErrorMsg
-  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
-    | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
-    | otherwise -> error addressErrorMsg
+  TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _ ->
+    Left $ decodeAddress28 stakeRef addr28Extra
+  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _ ->
+    Left $ decodeAddress28 stakeRef addr28Extra
 
 -- | Compute an estimate of the size of storing one UTxO entry.
 -- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
