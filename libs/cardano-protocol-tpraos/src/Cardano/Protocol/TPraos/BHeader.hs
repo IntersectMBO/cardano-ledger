@@ -52,6 +52,8 @@ import Cardano.Ledger.BaseTypes (
   activeSlotVal,
   mkNonceFromNumber,
   mkNonceFromOutputVRF,
+  nonZero,
+  (%.),
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -98,7 +100,6 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
-import Data.Ratio ((%))
 import Data.Typeable
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
@@ -393,26 +394,29 @@ checkLeaderNatValue ::
   Rational ->
   ActiveSlotCoeff ->
   Bool
-checkLeaderNatValue bn σ f =
-  if activeSlotVal f == maxBound
-    then -- If the active slot coefficient is equal to one,
-    -- then nearly every stake pool can produce a block every slot.
-    -- In this degenerate case, where ln (1-f) is not defined,
-    -- we let the VRF leader check always succeed.
-    -- This is a testing convenience, the active slot coefficient should not
-    -- bet set above one half otherwise.
-      True
-    else case taylorExpCmp 3 recip_q x of
-      ABOVE _ _ -> False
-      BELOW _ _ -> True
-      MaxReached _ -> False
+checkLeaderNatValue bn σ f
+  -- If the active slot coefficient is equal to one,
+  -- then nearly every stake pool can produce a block every slot.
+  -- In this degenerate case, where ln (1-f) is not defined,
+  -- we let the VRF leader check always succeed.
+  -- This is a testing convenience, the active slot coefficient should not
+  -- bet set above one half otherwise.
+  | activeSlotVal f == maxBound = True
+  | Just d <- nonZero . toInteger $ certNatMax - certNat =
+      let
+        c, recip_q, x :: FixedPoint
+        c = activeSlotLog f
+        x = -(fromRational σ * c)
+        recip_q = fromRational (toInteger certNatMax %. d)
+       in
+        case taylorExpCmp 3 recip_q x of
+          ABOVE _ _ -> False
+          BELOW _ _ -> True
+          MaxReached _ -> False
+  | otherwise = False
   where
-    c, recip_q, x :: FixedPoint
-    c = activeSlotLog f
-    recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
-    x = -fromRational σ * c
-    certNatMax = bvMaxValue bn
     certNat = bvValue bn
+    certNatMax = bvMaxValue bn
 
 seedEta :: Nonce
 seedEta = mkNonceFromNumber 0

@@ -10,7 +10,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -46,7 +46,18 @@ module Cardano.Ledger.EpochBoundary (
 )
 where
 
-import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
+import Cardano.Ledger.BaseTypes (
+  BoundedRational (..),
+  NonNegativeInterval,
+  NonZero (..),
+  knownNonZeroBounded,
+  nonZeroOr,
+  recipNonZero,
+  toIntegerNonZero,
+  toRatioNonZero,
+  (%.),
+  (/.),
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   DecShareCBOR (..),
@@ -62,7 +73,10 @@ import Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (..),
   coinToRational,
+  compactCoinNonZero,
+  fromCompactCoinNonZero,
   rationalToCoinViaFloor,
+  unCoinNonZero,
  )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
@@ -76,7 +90,6 @@ import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
 import Data.VMap as VMap
 import Data.Word (Word16)
 import GHC.Generics (Generic)
@@ -127,20 +140,24 @@ sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
 -- | Calculate maximal pool reward
 maxPool' ::
   NonNegativeInterval ->
-  Word16 ->
+  NonZero Word16 ->
   Coin ->
   Rational ->
   Rational ->
   Coin
 maxPool' a0 nOpt r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
   where
-    z0 = 1 % fromIntegral nOpt
+    nonZeroZ0 = recipNonZero . toRatioNonZero $ toIntegerNonZero nOpt
+    z0 = unNonZero nonZeroZ0
     sigma' = min sigma z0
     p' = min pR z0
-    factor1 = coinToRational r / (1 + unboundRational a0)
+    factor1 =
+      -- This division is safe, because a0 is non-negative and we're adding one
+      -- to it
+      coinToRational r / (1 + unboundRational a0)
     factor2 = sigma' + p' * unboundRational a0 * factor3
-    factor3 = (sigma' - p' * factor4) / z0
-    factor4 = (z0 - sigma') / z0
+    factor3 = (sigma' - p' * factor4) /. nonZeroZ0
+    factor4 = (z0 - sigma') /. nonZeroZ0
 
 -- | Version of `maxPool'` that extracts `ppA0L` and `ppNOptL` from a `PParams`
 maxPool ::
@@ -153,7 +170,7 @@ maxPool ::
 maxPool pp r sigma pR = maxPool' a0 nOpt r sigma pR
   where
     a0 = pp ^. ppA0L
-    nOpt = pp ^. ppNOptL
+    nOpt = (pp ^. ppNOptL) `nonZeroOr` knownNonZeroBounded @1
 
 -- | Snapshot of the stake distribution.
 data SnapShot = SnapShot
@@ -281,23 +298,23 @@ calculatePoolDistr = calculatePoolDistr' (const True)
 
 calculatePoolDistr' :: (KeyHash 'StakePool -> Bool) -> SnapShot -> PoolDistr
 calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
-  let total = sumAllStakeCompact stake
+  let CompactCoin total = sumAllStakeCompact stake
       -- total could be zero (in particular when shrinking)
-      nonZeroTotalCompact = if total == mempty then CompactCoin 1 else total
-      nonZeroTotalInteger = unCoin $ fromCompact nonZeroTotalCompact
+      nonZeroTotalCompact = compactCoinNonZero $ total `nonZeroOr` knownNonZeroBounded @1
+      nonZeroTotalInteger = unCoinNonZero $ fromCompactCoinNonZero nonZeroTotalCompact
       poolStakeMap = calculatePoolStake includeHash delegs stake
    in PoolDistr
         ( Map.intersectionWith
             ( \word64 poolparam ->
                 IndividualPoolStake
-                  (toInteger word64 % nonZeroTotalInteger)
+                  (toInteger word64 %. nonZeroTotalInteger)
                   (CompactCoin word64)
                   (ppVrf poolparam)
             )
             poolStakeMap
             (VMap.toMap poolParams)
         )
-        nonZeroTotalCompact
+        (unNonZero nonZeroTotalCompact)
 
 -- ======================================================
 -- Lenses

@@ -29,8 +29,11 @@ where
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   BoundedRational (..),
+  NonZero,
   ProtVer,
   UnitInterval,
+  nonZeroOr,
+  (%.),
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -42,6 +45,7 @@ import Cardano.Ledger.Coin (
   CompactForm,
   coinToRational,
   rationalToCoinViaFloor,
+  unCoinNonZero,
  )
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -56,7 +60,6 @@ import Control.Monad (guard)
 import Data.Foldable (fold, foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
@@ -275,7 +278,7 @@ rewardOnePoolMember ::
   Maybe Coin
 rewardOnePoolMember
   pp
-  (Coin totalStake)
+  totalStake
   addrsRew
   rewardInfo
   hk
@@ -288,7 +291,11 @@ rewardOnePoolMember
       pool = poolPs rewardInfo
       sigma = poolRelativeStake rewardInfo
       poolR = poolPot rewardInfo
-      r = memberRew poolR pool (StakeShare (c % totalStake)) sigma
+      totalStakeI =
+        unCoinNonZero $
+          totalStake `nonZeroOr` error "Total stake is zero"
+      stakeShare = StakeShare $ c %. totalStakeI
+      r = memberRew poolR pool stakeShare sigma
 
 -- | Calculate single stake pool specific values for the reward computation.
 --
@@ -308,7 +315,7 @@ mkPoolRewardInfo ::
   VMap.VMap VMap.VB VMap.VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Map (KeyHash 'StakePool) Coin ->
   Coin ->
-  Coin ->
+  NonZero Coin ->
   PoolParams ->
   Either StakeShare PoolRewardInfo
 mkPoolRewardInfo
@@ -319,8 +326,8 @@ mkPoolRewardInfo
   stake
   delegs
   stakePerPool
-  (Coin totalStake)
-  (Coin activeStake)
+  totalStake
+  activeStake
   pool = case Map.lookup (ppId pool) (unBlocksMade blocks) of
     -- This pool made no blocks this epoch. For the purposes of stake pool
     -- ranking only, we return the relative stake of this pool so that we
@@ -330,8 +337,8 @@ mkPoolRewardInfo
     -- intermediate values needed for the individual reward calculations.
     Just blocksN ->
       let Coin pledge = ppPledge pool
-          pledgeRelative = pledge % totalStake
-          sigmaA = if activeStake == 0 then 0 else pstakeTot % activeStake
+          pledgeRelative = pledge %. totalStakeI
+          sigmaA = pstakeTot %. activeStakeI
           Coin maxP =
             if pledge <= ostake
               then maxPool' pp_a0 pp_nOpt r sigma pledgeRelative
@@ -342,7 +349,7 @@ mkPoolRewardInfo
             leaderRew
               poolR
               pool
-              (StakeShare $ if totalStake == 0 then 0 else ostake % totalStake)
+              (StakeShare $ ostake %. totalStakeI)
               (StakeShare sigma)
           rewardInfo =
             PoolRewardInfo
@@ -354,13 +361,17 @@ mkPoolRewardInfo
               }
        in Right $! rewardInfo
     where
+      totalStakeI =
+        unCoinNonZero $
+          totalStake `nonZeroOr` error "Total stake is non-zero"
+      activeStakeI = unCoinNonZero activeStake
       pp_d = pp ^. ppDG
       pp_a0 = pp ^. ppA0L
-      pp_nOpt = pp ^. ppNOptL
+      pp_nOpt = (pp ^. ppNOptL) `nonZeroOr` error "nOpt is zero"
       Coin pstakeTot = Map.findWithDefault mempty (ppId pool) stakePerPool
       accOwnerStake c o = maybe c (c <>) $ do
         hk <- VMap.lookup (KeyHashObj o) delegs
         guard (hk == ppId pool)
         fromCompact <$> VMap.lookup (KeyHashObj o) (unStake stake)
       Coin ostake = Set.foldl' accOwnerStake mempty (ppOwners pool)
-      sigma = if totalStake == 0 then 0 else fromIntegral pstakeTot % fromIntegral totalStake
+      sigma = fromIntegral pstakeTot %. totalStakeI

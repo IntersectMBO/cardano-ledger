@@ -833,7 +833,7 @@ instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
     ppuKeyDeposit <- toSpecRep cppKeyDeposit
     ppuPoolDeposit <- toSpecRep cppPoolDeposit
     ppuEmax <- toSpecRep cppEMax
-    ppuNopt <- toSpecRep (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppNOpt)
+    ppuNopt <- toSpecRep (fmap toInteger . strictMaybeToMaybe $ unTHKD cppNOpt)
     let
       ppuPv = Nothing
       ppuMinUTxOValue = Nothing -- minUTxOValue has been deprecated and is not supported in Conway

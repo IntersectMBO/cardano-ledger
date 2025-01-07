@@ -33,6 +33,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
   addEpochInterval,
+  (%?),
  )
 import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (csCommitteeCreds))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
@@ -81,7 +82,6 @@ import Control.State.Transition.Extended (
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -140,9 +140,8 @@ committeeAcceptedRatio ::
   CommitteeState era ->
   EpochNo ->
   Rational
-committeeAcceptedRatio members votes committeeState currentEpoch
-  | totalExcludingAbstain == 0 = 0
-  | otherwise = yesVotes % totalExcludingAbstain
+committeeAcceptedRatio members votes committeeState currentEpoch =
+  yesVotes %? totalExcludingAbstain
   where
     accumVotes ::
       (Integer, Integer) ->
@@ -200,10 +199,8 @@ spoAcceptedRatio
     { gasStakePoolVotes
     , gasProposalProcedure = ProposalProcedure {pProcGovAction}
     }
-  pv
-    | totalActiveStake == 0 = 0 -- guard against the degenerate case when active stake is zero.
-    | totalActiveStake == abstainStake = 0 -- guard against the degenerate case when all abstain.
-    | otherwise = toInteger yesStake % toInteger (totalActiveStake - abstainStake)
+  pv =
+    toInteger yesStake %? toInteger (totalActiveStake - abstainStake)
     where
       accumStake (!yes, !abstain) poolId distr =
         let CompactCoin stake = individualTotalPoolStake distr
@@ -253,9 +250,8 @@ dRepAcceptedRatio ::
   Map (Credential 'DRepRole) Vote ->
   GovAction era ->
   Rational
-dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVotes govAction
-  | totalExcludingAbstainStake == 0 = 0
-  | otherwise = toInteger yesStake % toInteger totalExcludingAbstainStake
+dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVotes govAction =
+  toInteger yesStake %? toInteger totalExcludingAbstainStake
   where
     accumStake (!yes, !tot) drep (CompactCoin stake) =
       case drep of

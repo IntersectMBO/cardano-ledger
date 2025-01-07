@@ -2,6 +2,15 @@
 
 ## 1.17.0.0
 
+* Added `ToPlutusData` instance for `NonZero`
+* `maxpool'` now expects `nOpt` to be a `NonZero Word16`
+* Add `HasZero` instance for `Coin` together with lifted conversion functions:
+  * `toCompactCoinNonZero`
+  * `fromCompactCoinNonZero`
+  * `unCoinNonZero`
+  * `toCoinNonZero`
+  * `compactCoinNonZero`
+* Add `Cardano.Ledger.BaseTypes.NonZero`
 * Require `MemPack` instance for `TxOut` and `CompactForm (Value era)` for `EraTxOut` type class.
 * Add `decodeMemoBytes`
 * Add `MemPack` instance for `CompactAddr`, `TxIx`, `TxId`, `TxIn`, `CompactForm Coin`,
@@ -63,6 +72,7 @@
 
 ### `testlib`
 
+* Added `Arbitrary` and `ToExpr` instances for `NonZero`
 * Deprecate `genBadPtr`, `genAddrBadPtr` and `genCompactAddrBadPtr`
 * Remove crypto parametrization from types: `KeyPair` and `KeyPairs`
 

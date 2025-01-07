@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Shelley.PoolRank (
@@ -31,8 +32,13 @@ import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BoundedRational (..),
   NonNegativeInterval,
+  NonZero (..),
   UnitInterval,
   activeSlotVal,
+  knownNonZeroBounded,
+  nonZeroOr,
+  toIntegerNonZero,
+  (%.),
  )
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
@@ -46,7 +52,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   toMemptyLens,
  )
-import Cardano.Ledger.Coin (Coin (..), coinToRational)
+import Cardano.Ledger.Coin (Coin (..), coinToRational, unCoinNonZero)
 import Cardano.Ledger.Core (EraPParams, PParams, ppA0L, ppNOptL)
 import Cardano.Ledger.EpochBoundary (maxPool)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -63,7 +69,6 @@ import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -266,26 +271,26 @@ toNonMyopicPair nm@(NonMyopic _ _) =
 -- corresponding to f^~ in section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 desirability ::
-  (NonNegativeInterval, Word16) ->
+  (NonNegativeInterval, NonZero Word16) ->
   Coin ->
   PoolParams ->
   PerformanceEstimate ->
-  Coin ->
+  NonZero Coin ->
   Double
-desirability (a0, nOpt) r pool (PerformanceEstimate p) (Coin totalStake) =
+desirability (a0, nOpt) r pool (PerformanceEstimate p) totalStake =
   if fTilde <= cost
     then 0
     else (fTilde - cost) * (1 - margin)
   where
+    -- This division is safe, because 1 <= fTildeDenom <= 2
     fTilde = fTildeNumer / fTildeDenom
     fTildeNumer = p * fromRational (coinToRational r * (z0 + min s z0 * unboundRational a0))
-    fTildeDenom = fromRational $ 1 + unboundRational a0
+    fTildeDenom = fromRational (1 + unboundRational a0)
     cost = (fromRational . coinToRational . ppCost) pool
     margin = (fromRational . unboundRational . ppMargin) pool
-    tot = max 1 (fromIntegral totalStake)
     Coin pledge = ppPledge pool
-    s = fromIntegral pledge % tot
-    z0 = 1 % max 1 (fromIntegral nOpt)
+    s = fromIntegral pledge %. unCoinNonZero totalStake
+    z0 = 1 %. toIntegerNonZero nOpt
 
 -- | Computes the top ranked stake pools
 -- corresponding to section 5.6.1 of
@@ -293,7 +298,7 @@ desirability (a0, nOpt) r pool (PerformanceEstimate p) (Coin totalStake) =
 getTopRankedPools ::
   EraPParams era =>
   Coin ->
-  Coin ->
+  NonZero Coin ->
   PParams era ->
   Map (KeyHash 'StakePool) PoolParams ->
   Map (KeyHash 'StakePool) PerformanceEstimate ->
@@ -305,7 +310,7 @@ getTopRankedPools rPot totalStake pp poolParams aps =
 getTopRankedPoolsVMap ::
   EraPParams era =>
   Coin ->
-  Coin ->
+  NonZero Coin ->
   PParams era ->
   VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool) PoolParams ->
   Map (KeyHash 'StakePool) PerformanceEstimate ->
@@ -317,7 +322,7 @@ getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
 getTopRankedPoolsInternal ::
   EraPParams era =>
   Coin ->
-  Coin ->
+  NonZero Coin ->
   PParams era ->
   [(KeyHash 'StakePool, (PoolParams, PerformanceEstimate))] ->
   Set (KeyHash 'StakePool)
@@ -328,7 +333,12 @@ getTopRankedPoolsInternal rPot totalStake pp pdata =
   where
     rankings =
       [ ( hk
-        , desirability (pp ^. ppA0L, pp ^. ppNOptL) rPot pool ap totalStake
+        , desirability
+            (pp ^. ppA0L, (pp ^. ppNOptL) `nonZeroOr` knownNonZeroBounded @1)
+            rPot
+            pool
+            ap
+            totalStake
         )
       | (hk, (pool, ap)) <- pdata
       ]
@@ -350,7 +360,7 @@ nonMyopicStake ::
   Set (KeyHash 'StakePool) ->
   StakeShare
 nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
-  let z0 = 1 % max 1 (fromIntegral (pp ^. ppNOptL))
+  let z0 = 1 %. toIntegerNonZero ((pp ^. ppNOptL) `nonZeroOr` knownNonZeroBounded @1)
    in if kh `Set.member` topPools
         then StakeShare (max (sigma + t) z0)
         else StakeShare (s + t)
