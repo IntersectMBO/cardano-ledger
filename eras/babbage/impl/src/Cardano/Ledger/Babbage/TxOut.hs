@@ -115,7 +115,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import Data.MemPack
 import qualified Data.Text as T
-import Data.Typeable (Proxy (..), (:~:) (Refl))
+import Data.Typeable (Proxy (..))
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', lens, to, (^.))
@@ -436,16 +436,20 @@ mkTxOut ::
 mkTxOut addr _cAddr vl NoDatum SNothing
   | Just adaCompact <- getAdaOnly (Proxy @era) vl
   , Addr network paymentCred stakeRef <- addr
-  , StakeRefBase stakeCred <- stakeRef
-  , Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
-      TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
+  , StakeRefBase stakeCred <- stakeRef =
+      let
+        addr28Extra = encodeAddress28 network paymentCred
+       in
+        TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
 mkTxOut addr _cAddr vl (DatumHash dh) SNothing
   | Just adaCompact <- getAdaOnly (Proxy @era) vl
   , Addr network paymentCred stakeRef <- addr
-  , StakeRefBase stakeCred <- stakeRef
-  , Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred
-  , Just (Refl, dataHash32) <- encodeDataHash32 dh =
-      TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
+  , StakeRefBase stakeCred <- stakeRef =
+      let
+        addr28Extra = encodeAddress28 network paymentCred
+        dataHash32 = encodeDataHash32 dh
+       in
+        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
 mkTxOut _addr cAddr vl d rs =
   let cVal = fromMaybe (error ("Illegal Value in TxOut: " ++ show vl)) $ toCompact vl
    in case rs of
@@ -677,7 +681,6 @@ babbageMinUTxOValue pp sizedTxOut =
 {-# INLINE babbageMinUTxOValue #-}
 
 getEitherAddrBabbageTxOut ::
-  HasCallStack =>
   BabbageTxOut era ->
   Either Addr CompactAddr
 getEitherAddrBabbageTxOut = \case
@@ -685,12 +688,10 @@ getEitherAddrBabbageTxOut = \case
   TxOutCompactDH' cAddr _ _ -> Right cAddr
   TxOutCompactRefScript cAddr _ _ _ -> Right cAddr
   TxOutCompactDatum cAddr _ _ -> Right cAddr
-  TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _
-    | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
-    | otherwise -> error "Impossible: Compacted an address of non-standard size"
-  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
-    | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
-    | otherwise -> error "Impossible: Compacted an address or a hash of non-standard size"
+  TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _ ->
+    Left $ decodeAddress28 stakeRef addr28Extra
+  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _ ->
+    Left $ decodeAddress28 stakeRef addr28Extra
 {-# INLINE getEitherAddrBabbageTxOut #-}
 
 -- TODO: Switch to using `getDatumBabbageTxOut`
@@ -712,7 +713,6 @@ getDataBabbageTxOut = \case
 --  Note that this function does *not* return the hash of an inline datum
 --  if one is present.
 getDataHashBabbageTxOut ::
-  HasCallStack =>
   BabbageTxOut era ->
   StrictMaybe DataHash
 getDataHashBabbageTxOut txOut =
@@ -732,16 +732,15 @@ getScriptBabbageTxOut = \case
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> SNothing
 {-# INLINE getScriptBabbageTxOut #-}
 
-getDatumBabbageTxOut :: HasCallStack => BabbageTxOut era -> Datum era
+getDatumBabbageTxOut :: BabbageTxOut era -> Datum era
 getDatumBabbageTxOut = \case
   TxOutCompact' {} -> NoDatum
   TxOutCompactDH' _ _ dh -> DatumHash dh
   TxOutCompactDatum _ _ binaryData -> Datum binaryData
   TxOutCompactRefScript _ _ datum _ -> datum
   TxOut_AddrHash28_AdaOnly {} -> NoDatum
-  TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32
-    | Just dh <- decodeDataHash32 dataHash32 -> DatumHash dh
-    | otherwise -> error $ "Impossible: Compacted a hash of non-standard size: " ++ show dataHash32
+  TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 ->
+    DatumHash $ decodeDataHash32 dataHash32
 {-# INLINEABLE getDatumBabbageTxOut #-}
 
 getCompactValueBabbageTxOut :: EraTxOut era => BabbageTxOut era -> CompactForm (Value era)
