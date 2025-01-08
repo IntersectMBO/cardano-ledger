@@ -153,7 +153,7 @@ spec =
         describe "Conway Imp conformance" $ do
           describe "BBODY" Bbody.spec
           describe "CERTS" Certs.spec
-          xdescribe "DELEG" Deleg.spec
+          describe "DELEG" Deleg.spec
           xdescribe "ENACT" Enact.spec
           xdescribe "EPOCH" Epoch.spec
           xdescribe "GOV" Gov.spec
