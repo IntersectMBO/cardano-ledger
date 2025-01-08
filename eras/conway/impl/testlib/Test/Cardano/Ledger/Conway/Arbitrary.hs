@@ -219,6 +219,17 @@ instance
   shrink = genericShrink
 
 instance
+  ( Era era
+  , Arbitrary (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  Arbitrary (ConwayBbodyPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance Arbitrary (ConwayMempoolPredFailure era) where
+  arbitrary = genericArbitraryU
+
+instance
   ( EraTxOut era
   , Arbitrary (Value era)
   , Arbitrary (TxOut era)

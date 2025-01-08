@@ -6,6 +6,10 @@
 * Deprecate `Conway` type synonym
 * Remove crypto parametrization from `ConwayEra`
 
+### `testlib`
+
+* Add `Arbitrary` instance for `ConwayBbodyPredFailure` and `ConwayMempoolPredFailure`
+
 ## 1.18.0.0
 
 * Remove `SlotNo` from `CertEnv` and `CertsEnv`
