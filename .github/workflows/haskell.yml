@@ -87,7 +87,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.12.1.0
+        cabal-version: 3.14
 
     - name: Configure to use libsodium
       run: |
@@ -266,7 +266,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.12.1.0
+        cabal-version: 3.14
 
     - name: Set up Ruby 2.7
       if: contains(fromJson(env.packages-with-ruby-cddl-tests), matrix.package)
@@ -432,7 +432,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: 9.10.1
-        cabal-version: 3.12.1.0
+        cabal-version: 3.14
 
     - name: Install gen-hie if not cached
       if: steps.cache-gen-hie.outputs.cache-hit != 'true'
