@@ -51,7 +51,6 @@ module Constrained.Base where
 
 import Control.Applicative
 import Control.Arrow (first)
-import Control.Exception (SomeException, catch)
 import Control.Monad
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, runWriter, tell)
@@ -76,7 +75,6 @@ import GHC.Real
 import GHC.Stack
 import GHC.TypeLits
 import Prettyprinter
-import System.IO.Unsafe
 import System.Random
 import System.Random.Stateful
 import Test.QuickCheck hiding (Args, Fun, forAll)
@@ -1285,12 +1283,8 @@ envFromPred env p = case p of
 -- | A version of `genFromSpecT` that simply errors if the generator fails
 genFromSpec :: forall fn a. (HasCallStack, HasSpec fn a) => Specification fn a -> Gen a
 genFromSpec spec = do
-  res <- strictGen $ explain1 "Calling genFromSpec" $ do
-    r <- genFromSpecT spec
-    unsafePerformIO $
-      r `seq`
-        pure (pure r) `catch` \(e :: SomeException) -> pure (fatalError (pure $ show e))
-  errorGE $ fmap pure res
+  res <- catchGen $ genFromSpecT @fn @a @GE spec
+  either (error . show . NE.toList) pure res
 
 -- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
 genFromSpecWithSeed ::
