@@ -138,7 +138,7 @@ tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
 registerInitialFundsThenStaking ::
-  EraTransition era =>
+  (EraTransition era, EraCertState era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
@@ -251,7 +251,8 @@ toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
 -- This function does not register any initial funds or delegates.
 createInitialState ::
   forall era.
-  (EraTransition era, HasCallStack) =>
+  -- TODO: consider making `EraCertState` part of `EraTransition`
+  (EraTransition era, HasCallStack, EraCertState era) =>
   TransitionConfig era ->
   NewEpochState era
 createInitialState tc =
@@ -271,12 +272,7 @@ createInitialState tc =
                 LedgerState
                   { lsUTxOState =
                       smartUTxOState pp initialUtxo zero zero govState zero
-                  , lsCertState =
-                      CertState
-                        { certDState = dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)}
-                        , certPState = def
-                        , certVState = def
-                        }
+                  , lsCertState = mkCertState def def (dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)})
                   }
             , esNonMyopic = def
             }
@@ -316,7 +312,7 @@ createInitialState tc =
 -- when NetworkId is set to Mainnet
 registerInitialStaking ::
   forall era.
-  (HasCallStack, EraTransition era) =>
+  (HasCallStack, EraTransition era, EraCertState era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
@@ -328,9 +324,8 @@ registerInitialStaking tc nes =
               ledgerState
                 { lsCertState =
                     dpState
-                      { certDState = dState'
-                      , certPState = pState'
-                      }
+                      & certDStateL .~ dState'
+                      & certPStateL .~ pState'
                 }
           , esSnapshots =
               (esSnapshots epochState)
@@ -355,7 +350,7 @@ registerInitialStaking tc nes =
     -- See STS DELEG for details
     dState' :: DState era
     dState' =
-      (certDState dpState)
+      (dpState ^. certDStateL)
         { dsUnified =
             UM.unify
               ( Map.map (const $ UM.RDPair (CompactCoin 0) (CompactCoin 0))
@@ -373,7 +368,7 @@ registerInitialStaking tc nes =
     -- See STS POOL for details
     pState' :: PState era
     pState' =
-      (certPState dpState)
+      (dpState ^. certPStateL)
         { psStakePoolParams = ListMap.toMap sgsPools
         }
 

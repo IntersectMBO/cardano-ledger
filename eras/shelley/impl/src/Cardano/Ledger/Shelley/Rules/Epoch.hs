@@ -22,6 +22,7 @@ module Cardano.Ledger.Shelley.Rules.Epoch (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -36,11 +37,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   esNonMyopic,
   esSnapshots,
   lsCertState,
+  lsCertStateL,
   lsUTxOState,
   lsUTxOStateL,
   totalObligation,
   utxosGovStateL,
-  pattern CertState,
   pattern EpochState,
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (prevPParamsEpochStateL)
@@ -140,6 +141,7 @@ instance
 instance
   ( EraTxOut era
   , EraGov era
+  , EraCertState era
   , GovState era ~ ShelleyGovState era
   , Embed (EraRule "SNAP" era) (ShelleyEPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
@@ -190,6 +192,7 @@ epochTransition ::
   , Signal (EraRule "UPEC" era) ~ ()
   , GovState era ~ ShelleyGovState era
   , EraGov era
+  , EraCertState era
   ) =>
   TransitionRule (ShelleyEPOCH era)
 epochTransition = do
@@ -206,7 +209,10 @@ epochTransition = do
     judgmentContext
   let pp = es ^. curPParamsEpochStateL
       utxoSt = lsUTxOState ls
-      CertState vstate pstate dstate = lsCertState ls
+      certState = ls ^. lsCertStateL
+      vstate = certState ^. certVStateL
+      pstate = certState ^. certPStateL
+      dstate = certState ^. certDStateL
   ss' <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, ())
 
@@ -221,7 +227,7 @@ epochTransition = do
     trans @(EraRule "POOLREAP" era) $
       TRC (ShelleyPoolreapEnv vstate, PoolreapState utxoSt acnt dstate pstate', e)
 
-  let adjustedCertState = CertState vstate pstate'' dstate'
+  let adjustedCertState = mkCertState vstate pstate'' dstate'
       ls' = ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState}
 
   UpecState pp' ppupSt' <-
@@ -247,6 +253,7 @@ instance
   ( EraTxOut era
   , PredicateFailure (EraRule "SNAP" era) ~ ShelleySnapPredFailure era
   , Event (EraRule "SNAP" era) ~ SnapEvent era
+  , EraCertState era
   ) =>
   Embed (ShelleySNAP era) (ShelleyEPOCH era)
   where

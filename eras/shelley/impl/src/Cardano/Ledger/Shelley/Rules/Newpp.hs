@@ -20,7 +20,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
+  CertState,
   UTxOState,
  )
 import Cardano.Ledger.Shelley.PParams (

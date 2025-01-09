@@ -34,12 +34,12 @@ module Cardano.Ledger.Shelley.Rules.Tick (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   FutureGenDeleg (..),
@@ -48,6 +48,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate,
   UTxOState (..),
   curPParamsEpochStateL,
+  lsCertStateL,
   newEpochStateGovStateL,
  )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (
@@ -125,6 +126,7 @@ instance
 
 instance
   ( EraGov era
+  , EraCertState era
   , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
   , Embed (EraRule "RUPD" era) (ShelleyTICK era)
   , State (ShelleyTICK era) ~ NewEpochState era
@@ -149,6 +151,7 @@ instance
   transitionRules = [bheadTransition]
 
 adoptGenesisDelegs ::
+  EraCertState era =>
   EpochState era ->
   SlotNo ->
   EpochState era
@@ -156,7 +159,7 @@ adoptGenesisDelegs es slot = es'
   where
     ls = esLState es
     dp = lsCertState ls
-    ds = certDState dp
+    ds = dp ^. certDStateL
     fGenDelegs = dsFutureGenDelegs ds
     GenDelegs genDelegs = dsGenDelegs ds
     (curr, fGenDelegs') = Map.partitionWithKey (\(FutureGenDeleg s _) _ -> s <= slot) fGenDelegs
@@ -173,8 +176,8 @@ adoptGenesisDelegs es slot = es'
         { dsFutureGenDelegs = fGenDelegs'
         , dsGenDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
         }
-    dp' = dp {certDState = ds'}
-    ls' = ls {lsCertState = dp'}
+    dp' = dp & certDStateL .~ ds'
+    ls' = ls & lsCertStateL .~ dp'
     es' = es {esLState = ls'}
 
 -- | This action ensures that once the current slot number is at the point of no return we
@@ -199,6 +202,7 @@ solidifyNextEpochPParams nes slot = do
 validatingTickTransition ::
   forall tick era.
   ( EraGov era
+  , EraCertState era
   , Embed (EraRule "NEWEPOCH" era) (tick era)
   , STS (tick era)
   , State (tick era) ~ NewEpochState era
@@ -231,6 +235,7 @@ validatingTickTransitionFORECAST ::
   , STS (tick era)
   , GovState era ~ ShelleyGovState era
   , EraGov era
+  , EraCertState era
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -281,6 +286,7 @@ validatingTickTransitionFORECAST nes0 slot = do
 bheadTransition ::
   forall era.
   ( EraGov era
+  , EraCertState era
   , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
   , Embed (EraRule "RUPD" era) (ShelleyTICK era)
   , STS (ShelleyTICK era)
@@ -368,6 +374,7 @@ newtype ShelleyTickfEvent era
 
 instance
   ( EraGov era
+  , EraCertState era
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "UPEC" era) ~ ()

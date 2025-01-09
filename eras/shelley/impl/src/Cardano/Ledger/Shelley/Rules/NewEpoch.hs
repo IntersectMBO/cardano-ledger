@@ -28,6 +28,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (SJust, SNothing),
  )
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
@@ -114,6 +115,7 @@ type instance EraRuleEvent "NEWEPOCH" ShelleyEra = ShelleyNewEpochEvent ShelleyE
 instance
   ( EraTxOut era
   , EraGov era
+  , EraCertState era
   , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
   , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
   , Environment (EraRule "MIR" era) ~ ()
@@ -158,6 +160,7 @@ newEpochTransition ::
   forall era.
   ( EraTxOut era
   , EraGov era
+  , EraCertState era
   , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
   , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
   , Environment (EraRule "MIR" era) ~ ()
@@ -241,6 +244,7 @@ instance
 
 instance
   ( EraGov era
+  , EraCertState era
   , Default (EpochState era)
   , PredicateFailure (EraRule "MIR" era) ~ ShelleyMirPredFailure era
   , Event (EraRule "MIR" era) ~ ShelleyMirEvent era
@@ -253,7 +257,7 @@ instance
 -- ===========================================
 
 updateRewards ::
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   EpochState era ->
   EpochNo ->
   RewardUpdate ->

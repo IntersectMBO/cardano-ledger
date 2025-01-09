@@ -16,9 +16,10 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
  )
 import Cardano.Ledger.CertState (
-  CertState (..),
   DState (..),
+  EraCertState (..),
   InstantaneousRewards (..),
+  dsGenDelegsL,
  )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
@@ -48,19 +49,19 @@ availableAfterMIR TreasuryMIR as ir =
 -- Virtual selectors, which get the appropriate view from a DState from the embedded UnifiedMap
 
 getGKeys ::
+  EraCertState era =>
   NewEpochState era ->
   Set (KeyHash 'Genesis)
-getGKeys nes = Map.keysSet genDelegs
+getGKeys nes = Map.keysSet $ unGenDelegs (ls ^. lsCertStateL . certDStateL . dsGenDelegsL)
   where
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ ls _ _ = es
-    LedgerState _ (CertState _ _ DState {dsGenDelegs = (GenDelegs genDelegs)}) = ls
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
   forall era.
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   Map (KeyHash 'Genesis) GenDelegPair ->
   UTxO era ->
   LedgerState era
@@ -74,7 +75,7 @@ genesisState genDelegs0 utxo0 =
         (IStake mempty Map.empty)
         mempty
     )
-    (CertState def def dState)
+    (mkCertState def def dState)
   where
     dState :: DState era
     dState =
