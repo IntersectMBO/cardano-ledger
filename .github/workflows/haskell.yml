@@ -427,6 +427,13 @@ jobs:
           ~/.cabal/bin/gen-hie
         key: ${{ runner.os }}-cache-gen-hie
 
+    - name: Install Haskell
+      id: install-haskell
+      uses: input-output-hk/actions/haskell@latest
+      with:
+        ghc-version: 9.10.1
+        cabal-version: 3.12.1.0
+
     - name: Install gen-hie if not cached
       if: steps.cache-gen-hie.outputs.cache-hit != 'true'
       run: cabal update && cabal install implicit-hie --install-method=copy --overwrite-policy=always
