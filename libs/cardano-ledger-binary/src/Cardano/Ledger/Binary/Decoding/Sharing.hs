@@ -206,6 +206,11 @@ decSharePlusLensCBOR l = do
 decNoShareCBOR :: DecShareCBOR a => Decoder s a
 decNoShareCBOR = decShareCBOR mempty
 
+instance (Ord k, DecCBOR k) => DecShareCBOR (Set.Set k) where
+  type Share (Set.Set k) = Interns k
+  decShareCBOR kis = decodeSet (interns kis <$> decCBOR)
+  getShare = internsFromSet
+
 instance (Ord k, DecCBOR k, DecCBOR v) => DecShareCBOR (Map k v) where
   type Share (Map k v) = (Interns k, Interns v)
   decShareCBOR (kis, vis) = do
