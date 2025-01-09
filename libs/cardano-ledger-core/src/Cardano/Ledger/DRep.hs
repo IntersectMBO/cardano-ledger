@@ -18,7 +18,15 @@ module Cardano.Ledger.DRep (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (DecCBOR (..), DecShareCBOR (..), EncCBOR (..), Interns, interns)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  DecShareCBOR (..),
+  EncCBOR (..),
+  Interns,
+  decNoShareCBOR,
+  interns,
+  internsFromSet,
+ )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential (..), credToText, parseCredential)
@@ -149,13 +157,18 @@ instance NoThunks DRepState
 instance NFData DRepState
 
 instance DecCBOR DRepState where
-  decCBOR = do
+  decCBOR = decNoShareCBOR
+
+instance DecShareCBOR DRepState where
+  type Share DRepState = Interns (Credential 'Staking)
+  getShare = internsFromSet . drepDelegs
+  decShareCBOR is = do
     decode $
       RecD DRepState
         <! From
         <! From
         <! From
-        <! From
+        <! D (decShareCBOR is)
 
 instance EncCBOR DRepState where
   encCBOR DRepState {..} =

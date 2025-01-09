@@ -159,12 +159,12 @@ instance EraPParams era => DecShareCBOR (PulsingSnapshot era) where
       , Interns (Credential 'DRepRole)
       , Interns (Credential 'HotCommitteeRole)
       )
-  decShareCBOR is@(_, ks, cd, _) =
+  decShareCBOR is@(cs, ks, cd, _) =
     decode $
       RecD PulsingSnapshot
         <! D (decodeStrictSeq (decShareCBOR is))
         <! D (decodeMap (decShareCBOR cd) decCBOR)
-        <! D (decodeMap (interns cd <$> decCBOR) decCBOR) --TODO: implement sharing for DRepState
+        <! D (decodeMap (interns cd <$> decCBOR) (decShareCBOR cs))
         <! D (decodeMap (interns ks <$> decCBOR) decCBOR)
 
 instance EraPParams era => DecCBOR (PulsingSnapshot era) where
@@ -452,7 +452,7 @@ instance EraPParams era => DecShareCBOR (DRepPulsingState era) where
   decShareCBOR is =
     decode $
       RecD DRComplete
-        <! From
+        <! D (decShareCBOR is)
         <! D (decShareCBOR is)
 
 instance EraPParams era => DecCBOR (DRepPulsingState era) where
