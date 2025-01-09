@@ -42,12 +42,12 @@ import Cardano.Ledger.Binary (
   encodeListLen,
  )
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
-  CertState (..),
   LedgerState (..),
   UTxOState (..),
   utxosDepositedL,
@@ -236,6 +236,7 @@ instance
 
 shelleyLedgerAssertions ::
   ( EraGov era
+  , EraCertState era
   , State (rule era) ~ LedgerState era
   ) =>
   [Assertion (rule era)]
@@ -250,6 +251,7 @@ shelleyLedgerAssertions =
 instance
   ( EraTx era
   , EraGov era
+  , EraCertState era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
@@ -337,6 +339,7 @@ instance
 renderDepositEqualsObligationViolation ::
   ( EraTx era
   , EraGov era
+  , EraCertState era
   , Environment t ~ LedgerEnv era
   , Signal t ~ Tx era
   , State t ~ LedgerState era

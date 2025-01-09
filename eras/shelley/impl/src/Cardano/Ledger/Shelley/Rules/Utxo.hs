@@ -57,6 +57,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (
+  EraCertState (..),
   certsTotalDepositsTxBody,
   certsTotalRefundsTxBody,
   dsGenDelegs,
@@ -66,7 +67,7 @@ import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
-import Cardano.Ledger.Shelley.LedgerState (CertState (..), UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (
@@ -117,7 +118,7 @@ data UtxoEnv era = UtxoEnv
   }
   deriving (Generic)
 
-instance EraPParams era => EncCBOR (UtxoEnv era) where
+instance (EraPParams era, EraCertState era) => EncCBOR (UtxoEnv era) where
   encCBOR x@(UtxoEnv _ _ _) =
     let UtxoEnv {..} = x
      in encode $
@@ -126,7 +127,7 @@ instance EraPParams era => EncCBOR (UtxoEnv era) where
             !> To uePParams
             !> To ueCertState
 
-instance EraPParams era => DecCBOR (UtxoEnv era) where
+instance (EraPParams era, EraCertState era) => DecCBOR (UtxoEnv era) where
   decCBOR =
     decode $
       RecD UtxoEnv
@@ -143,10 +144,10 @@ utxoEnvPParamsL = lens uePParams $ \x y -> x {uePParams = y}
 utxoEnvCertStateL :: Lens' (UtxoEnv era) (CertState era)
 utxoEnvCertStateL = lens ueCertState $ \x y -> x {ueCertState = y}
 
-deriving instance Show (PParams era) => Show (UtxoEnv era)
-deriving instance Eq (PParams era) => Eq (UtxoEnv era)
+deriving instance (Show (PParams era), Show (CertState era)) => Show (UtxoEnv era)
+deriving instance (Eq (PParams era), Eq (CertState era)) => Eq (UtxoEnv era)
 
-instance (Era era, NFData (PParams era)) => NFData (UtxoEnv era)
+instance (Era era, NFData (PParams era), NFData (CertState era)) => NFData (UtxoEnv era)
 
 data UtxoEvent era
   = TotalDeposits (SafeHash EraIndependentTxBody) Coin
@@ -286,6 +287,7 @@ instance
   , Show (EraRuleFailure "PPUP" era)
   , EraRule "UTXO" era ~ ShelleyUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , EraCertState era
   ) =>
   STS (ShelleyUTXO era)
   where
@@ -356,6 +358,7 @@ utxoInductive ::
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , GovState era ~ ShelleyGovState era
+  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoInductive = do
@@ -364,7 +367,7 @@ utxoInductive = do
       UTxOState _ _ _ ppup _ _ = utxos
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
-      genDelegs = dsGenDelegs (certDState certState)
+      genDelegs = dsGenDelegs (certState ^. certDStateL)
 
   {- txttl txb ≥ slot -}
   runTest $ validateTimeToLive txBody slot
@@ -509,7 +512,7 @@ validateWrongNetworkWithdrawal netId txb =
 --
 -- > consumed pp utxo txb = produced pp poolParams txb
 validateValueNotConservedUTxO ::
-  EraUTxO era =>
+  (EraUTxO era, EraCertState era) =>
   PParams era ->
   UTxO era ->
   CertState era ->
@@ -586,7 +589,7 @@ validateMaxTxSizeUTxO pp tx =
 -- be called on the @deposit - refund@ change, which is normally used to emit the
 -- `TotalDeposits` event.
 updateUTxOState ::
-  (EraTxBody era, Monad m) =>
+  (EraTxBody era, EraCertState era, Monad m) =>
   PParams era ->
   UTxOState era ->
   TxBody era ->

@@ -10,13 +10,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.CertState (
-  CertState (..),
+  EraCertState (..),
   CommitteeAuthorization (..),
   DState (..),
   PState (..),
@@ -36,15 +37,9 @@ module Cardano.Ledger.CertState (
   ptrsMap,
   payPoolDeposit,
   refundPoolDeposit,
-  obligationCertState,
   Obligations (..),
   sumObligation,
-  certsTotalDepositsTxBody,
-  certsTotalRefundsTxBody,
   -- Lenses
-  certDStateL,
-  certPStateL,
-  certVStateL,
   dsUnifiedL,
   dsGenDelegsL,
   dsIRewardsL,
@@ -96,11 +91,12 @@ import Control.Monad.Trans
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default (Default (def))
 import qualified Data.Foldable as F
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, (^.), _1, _2)
+import Lens.Micro (Lens', lens, (^.), _1)
 import NoThunks.Class (NoThunks (..))
 
 -- ======================================
@@ -388,16 +384,56 @@ instance Era era => EncCBOR (VState era) where
 
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.
-data CertState era = CertState
-  { certVState :: !(VState era)
-  , certPState :: !(PState era)
-  , certDState :: !(DState era)
-  }
-  deriving (Show, Eq, Generic)
+class
+  ( Era era
+  , ToJSON (CertState era)
+  , EncCBOR (CertState era)
+  , DecShareCBOR (CertState era)
+  , Share (CertState era)
+      ~ ( Interns (Credential 'Staking)
+        , Interns (KeyHash 'StakePool)
+        , Interns (Credential 'DRepRole)
+        , Interns (Credential 'HotCommitteeRole)
+        )
+  , Default (CertState era)
+  , NoThunks (CertState era)
+  , NFData (CertState era)
+  , Show (CertState era)
+  , Eq (CertState era)
+  , Generic (CertState era)
+  ) =>
+  EraCertState era
+  where
+  type CertState era = (r :: Type) | r -> era
 
-instance NoThunks (CertState era)
+  mkCertState :: VState era -> PState era -> DState era -> CertState era
 
-instance NFData (CertState era)
+  upgradeCertState :: EraCertState (PreviousEra era) => CertState (PreviousEra era) -> CertState era
+
+  certDStateL :: Lens' (CertState era) (DState era)
+
+  certPStateL :: Lens' (CertState era) (PState era)
+
+  certVStateL :: Lens' (CertState era) (VState era)
+
+  -- | Calculate total possible refunds in the system that are related to certificates
+  --
+  -- There is an invariant that the sum of all the fields should be the same as the
+  -- utxosDeposited field of the UTxOState. Note that this does not depend upon the current
+  -- values of the Key and Pool deposits of the PParams.
+  obligationCertState :: CertState era -> Obligations
+
+  -- | Compute the total deposits from the Certs of a TxBody.
+  --
+  -- This is the contribution of a TxBody towards the deposit pot (utxosDeposit field of
+  -- the UTxOState) of the system
+  certsTotalDepositsTxBody :: EraTxBody era => PParams era -> CertState era -> TxBody era -> Coin
+
+  -- | Compute the total refunds from the Certs of a TxBody.
+  --
+  -- This is the contribution of a TxBody towards the total 'Obligations' of the system
+  -- See `Obligations` and `obligationCertState` for more information.
+  certsTotalRefundsTxBody :: EraTxBody era => PParams era -> CertState era -> TxBody era -> Coin
 
 instance EncCBOR InstantaneousRewards where
   encCBOR (InstantaneousRewards irR irT dR dT) =
@@ -412,44 +448,6 @@ instance DecShareCBOR InstantaneousRewards where
       dR <- lift decCBOR
       dT <- lift decCBOR
       pure $ InstantaneousRewards irR irT dR dT
-
-instance Era era => EncCBOR (CertState era) where
-  encCBOR CertState {certPState, certDState, certVState} =
-    encodeListLen 3
-      <> encCBOR certVState
-      <> encCBOR certPState
-      <> encCBOR certDState
-
-instance Era era => DecShareCBOR (CertState era) where
-  type
-    Share (CertState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (KeyHash 'StakePool)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
-      )
-  decSharePlusCBOR = decodeRecordNamedT "CertState" (const 3) $ do
-    certVState <-
-      decSharePlusLensCBOR $
-        lens (\(cs, _, cd, ch) -> (cs, cd, ch)) (\(_, ks, _, _) (cs, cd, ch) -> (cs, ks, cd, ch))
-    certPState <- decSharePlusLensCBOR _2
-    certDState <-
-      decSharePlusLensCBOR $
-        lens (\(cs, ks, cd, _) -> (cs, ks, cd)) (\(_, _, _, ch) (cs, ks, cd) -> (cs, ks, cd, ch))
-    pure CertState {certPState, certDState, certVState}
-
-instance Default (CertState era) where
-  def = CertState def def def
-
-instance ToJSON (CertState era) where
-  toJSON = object . toCertStatePairs
-  toEncoding = pairs . mconcat . toCertStatePairs
-
-toCertStatePairs :: KeyValue e a => CertState era -> [a]
-toCertStatePairs CertState {..} =
-  [ "dstate" .= certDState
-  , "pstate" .= certPState
-  ]
 
 instance Default InstantaneousRewards where
   def = InstantaneousRewards Map.empty Map.empty mempty mempty
@@ -517,21 +515,6 @@ data Obligations = Obligations
 
 instance NFData Obligations
 
--- | Calculate total possible refunds in the system that are related to certificates
---
--- There is an invariant that the sum of all the fields should be the same as the
--- utxosDeposited field of the UTxOState. Note that this does not depend upon the current
--- values of the Key and Pool deposits of the PParams.
-obligationCertState :: CertState era -> Obligations
-obligationCertState (CertState VState {vsDReps} PState {psDeposits} DState {dsUnified}) =
-  let accum ans drepState = ans <> drepDeposit drepState
-   in Obligations
-        { oblStake = UM.fromCompact (UM.sumDepositUView (RewDepUView dsUnified))
-        , oblPool = F.foldl' (<>) (Coin 0) psDeposits
-        , oblDRep = F.foldl' accum (Coin 0) vsDReps
-        , oblProposal = Coin 0
-        }
-
 sumObligation :: Obligations -> Coin
 sumObligation x = oblStake x <> oblPool x <> oblDRep x <> oblProposal x
 
@@ -557,36 +540,8 @@ instance Show Obligations where
       , "   Proposal deposits = " ++ show (oblProposal x)
       ]
 
--- | Compute the total deposits from the Certs of a TxBody.
---
--- This is the contribution of a TxBody towards the deposit pot (utxosDeposit field of
--- the UTxOState) of the system
-certsTotalDepositsTxBody :: EraTxBody era => PParams era -> CertState era -> TxBody era -> Coin
-certsTotalDepositsTxBody pp CertState {certPState} =
-  getTotalDepositsTxBody pp (`Map.member` psStakePoolParams certPState)
-
--- | Compute the total refunds from the Certs of a TxBody.
---
--- This is the contribution of a TxBody towards the total 'Obligations' of the system
--- See `Obligations` and `obligationCertState` for more information.
-certsTotalRefundsTxBody :: EraTxBody era => PParams era -> CertState era -> TxBody era -> Coin
-certsTotalRefundsTxBody pp CertState {certDState, certVState} =
-  getTotalRefundsTxBody pp (lookupDepositDState certDState) (lookupDepositVState certVState)
-
 -- =======================================================
 -- Lenses for CertState and its subsidiary types
-
--- ========================================
--- CertState
-
-certDStateL :: Lens' (CertState era) (DState era)
-certDStateL = lens certDState (\ds u -> ds {certDState = u})
-
-certPStateL :: Lens' (CertState era) (PState era)
-certPStateL = lens certPState (\ds u -> ds {certPState = u})
-
-certVStateL :: Lens' (CertState era) (VState era)
-certVStateL = lens certVState (\ds u -> ds {certVState = u})
 
 -- ===================================
 -- DState
