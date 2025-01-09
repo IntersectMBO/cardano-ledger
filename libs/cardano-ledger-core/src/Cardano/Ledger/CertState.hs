@@ -72,9 +72,11 @@ import Cardano.Ledger.Binary (
   decNoShareCBOR,
   decSharePlusCBOR,
   decSharePlusLensCBOR,
+  decodeMap,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
+  interns,
   internsFromSet,
   toMemptyLens,
  )
@@ -366,10 +368,10 @@ instance Era era => DecShareCBOR (VState era) where
       )
   getShare VState {vsDReps, vsCommitteeState} =
     (internsFromSet (foldMap drepDelegs vsDReps), fst (getShare vsDReps), getShare vsCommitteeState)
-  decShareCBOR _ =
+  decShareCBOR (cs, cd, _) =
     decode $
       RecD VState
-        <! From
+        <! D (decodeMap (interns cd <$> decCBOR) (decShareCBOR cs))
         <! D decNoShareCBOR
         <! From
 
