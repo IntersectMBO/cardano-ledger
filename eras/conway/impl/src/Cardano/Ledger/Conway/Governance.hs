@@ -369,7 +369,7 @@ instance EraPParams era => DecShareCBOR (ConwayGovState era) where
         <! From
         <! From
         <! From
-        <! From
+        <! D (decShareCBOR is)
 
 instance EraPParams era => DecCBOR (ConwayGovState era) where
   decCBOR = decNoShareCBOR

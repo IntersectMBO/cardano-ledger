@@ -12,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -74,8 +75,12 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   FromCBOR (..),
+  Interns,
   ToCBOR (..),
   decNoShareCBOR,
+  decodeMap,
+  decodeSeq,
+  interns,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -219,9 +224,9 @@ instance EraPParams era => Default (EnactState era) where
 instance EraPParams era => DecCBOR (EnactState era) where
   decCBOR = decNoShareCBOR
 
--- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (EnactState era) where
-  decShareCBOR _ =
+  type Share (EnactState era) = Interns (Credential 'Staking)
+  decShareCBOR is =
     decode $
       RecD EnactState
         <! From
@@ -229,7 +234,7 @@ instance EraPParams era => DecShareCBOR (EnactState era) where
         <! From
         <! From
         <! From
-        <! From
+        <! D (decodeMap (interns is <$> decCBOR) decCBOR)
         <! From
 
 instance EraPParams era => EncCBOR (EnactState era) where
@@ -263,7 +268,9 @@ data RatifyState era = RatifyState
   -- ^ This is the currently active `EnactState`. It contains all the changes
   -- that were applied to it at the last epoch boundary by all the proposals
   -- that were enacted.
-  , rsEnacted :: !(Seq (GovActionState era))
+  , -- TODO: switch rsEnacted to StrictSeq for the sake of avoiding
+    -- space leaks during ledger state deserialization
+    rsEnacted :: !(Seq (GovActionState era))
   -- ^ Governance actions that are going to be enacted at the next epoch
   -- boundary.
   , rsExpired :: !(Set GovActionId)
@@ -678,12 +685,18 @@ instance EraPParams era => DecCBOR (RatifySignal era) where
 instance EraPParams era => DecCBOR (RatifyState era) where
   decCBOR = decode (RecD RatifyState <! From <! From <! From <! From)
 
--- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (RatifyState era) where
-  decShareCBOR _ =
+  type
+    Share (RatifyState era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
+  decShareCBOR is@(cs, _, _, _) =
     decode $
       RecD RatifyState
-        <! From
-        <! From
+        <! D (decShareCBOR cs)
+        <! D (decodeSeq (decShareCBOR is))
         <! From
         <! From
