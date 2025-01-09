@@ -24,7 +24,7 @@ where
 
 import Cardano.Ledger.Address (RewardAccount, raCredential)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (VState)
+import Cardano.Ledger.CertState (EraCertState (..), VState)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -33,7 +33,6 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  CertState (..),
   DState (..),
   PState (..),
   UTxOState (..),
@@ -113,6 +112,7 @@ instance
   ( Default (ShelleyPoolreapState era)
   , EraPParams era
   , EraGov era
+  , EraCertState era
   ) =>
   STS (ShelleyPOOLREAP era)
   where
@@ -130,7 +130,7 @@ instance
         "Deposit pot must equal obligation (PoolReap)"
         ( \(TRC (env, _, _)) st ->
             potEqualsObligation
-              (CertState (speVState env) (prPState st) (prDState st))
+              (mkCertState (speVState env) (prPState st) (prDState st))
               (prUTxOSt st)
         )
     , PostCondition
@@ -210,12 +210,13 @@ renderPoolReapViolation ::
   ( EraGov era
   , Environment t ~ ShelleyPoolreapEnv era
   , State t ~ ShelleyPoolreapState era
+  , EraCertState era
   ) =>
   AssertionViolation t ->
   String
 renderPoolReapViolation
   AssertionViolation {avSTS, avMsg, avCtx = TRC (ShelleyPoolreapEnv vs, poolreapst, _)} =
-    let certst = CertState vs (prPState poolreapst) (prDState poolreapst)
+    let certst = mkCertState vs (prPState poolreapst) (prDState poolreapst)
         obligations = allObligations certst (prUTxOSt poolreapst ^. utxosGovStateL)
      in "\n\nAssertionViolation ("
           <> avSTS

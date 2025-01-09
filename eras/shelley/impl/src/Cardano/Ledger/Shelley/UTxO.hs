@@ -32,9 +32,6 @@ import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.CertState (
   CertState (..),
-  certDStateL,
-  certPStateL,
-  certVStateL,
   dsGenDelegs,
   lookupDepositDState,
   lookupDepositVState,
@@ -49,6 +46,7 @@ import Cardano.Ledger.Keys (
   genDelegKeyHash,
  )
 import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.Shelley.CertState ()
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.Tx ()
@@ -105,7 +103,7 @@ getShelleyScriptsNeeded u txBody =
 
 -- | For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
 consumed ::
-  EraUTxO era =>
+  (EraUTxO era, EraCertState era) =>
   PParams era ->
   CertState era ->
   UTxO era ->
@@ -120,7 +118,7 @@ consumed pp certState =
 -- | Compute the lovelace which are created by the transaction
 -- For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
 produced ::
-  EraUTxO era =>
+  (EraUTxO era, EraCertState era) =>
   PParams era ->
   CertState era ->
   TxBody era ->
@@ -256,7 +254,7 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
 
 getShelleyWitsVKeyNeeded ::
   forall era.
-  (EraTx era, ShelleyEraTxBody era) =>
+  (EraTx era, ShelleyEraTxBody era, EraCertState era) =>
   CertState era ->
   UTxO era ->
   TxBody era ->

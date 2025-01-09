@@ -46,12 +46,9 @@ import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, e
 import Cardano.Ledger.CertState (
   CertState,
   DRepState,
+  EraCertState (..),
   Obligations (..),
-  certDStateL,
-  certPStateL,
-  certVStateL,
   dsUnifiedL,
-  obligationCertState,
   psStakePoolParamsL,
   sumObligation,
   vsDRepsL,
@@ -131,30 +128,35 @@ data EpochState era = EpochState
 deriving stock instance
   ( EraTxOut era
   , Show (GovState era)
+  , Show (CertState era)
   ) =>
   Show (EpochState era)
 
 deriving stock instance
   ( EraTxOut era
   , Eq (GovState era)
+  , Eq (CertState era)
   ) =>
   Eq (EpochState era)
 
 instance
   ( EraTxOut era
   , NoThunks (GovState era)
+  , NoThunks (CertState era)
   ) =>
   NoThunks (EpochState era)
 
 instance
   ( EraTxOut era
   , NFData (GovState era)
+  , NFData (CertState era)
   ) =>
   NFData (EpochState era)
 
 instance
   ( EraTxOut era
   , EncCBOR (GovState era)
+  , EncCBOR (CertState era)
   ) =>
   EncCBOR (EpochState era)
   where
@@ -169,6 +171,7 @@ instance
 instance
   ( EraTxOut era
   , EraGov era
+  , EraCertState era
   ) =>
   DecCBOR (EpochState era)
   where
@@ -181,13 +184,13 @@ instance
         esNonMyopic <- decShareLensCBOR _2
         pure EpochState {esAccountState, esSnapshots, esLState, esNonMyopic}
 
-instance (EraTxOut era, EraGov era) => ToCBOR (EpochState era) where
+instance (EraTxOut era, EraGov era, EraCertState era) => ToCBOR (EpochState era) where
   toCBOR = toEraCBOR @era
 
-instance (EraTxOut era, EraGov era) => FromCBOR (EpochState era) where
+instance (EraTxOut era, EraGov era, EraCertState era) => FromCBOR (EpochState era) where
   fromCBOR = fromEraCBOR @era
 
-instance (EraTxOut era, EraGov era) => ToJSON (EpochState era) where
+instance (EraTxOut era, EraGov era, EraCertState era) => ToJSON (EpochState era) where
   toJSON = object . toEpochStatePairs
   toEncoding = pairs . mconcat . toEpochStatePairs
 
@@ -195,6 +198,7 @@ toEpochStatePairs ::
   ( EraTxOut era
   , EraGov era
   , KeyValue e a
+  , EraCertState era
   ) =>
   EpochState era ->
   [a]
@@ -405,6 +409,7 @@ deriving stock instance
   ( EraTxOut era
   , Show (StashedAVVMAddresses era)
   , Show (GovState era)
+  , Show (CertState era)
   ) =>
   Show (NewEpochState era)
 
@@ -412,6 +417,7 @@ deriving stock instance
   ( EraTxOut era
   , Eq (StashedAVVMAddresses era)
   , Eq (GovState era)
+  , Eq (CertState era)
   ) =>
   Eq (NewEpochState era)
 
@@ -419,6 +425,7 @@ instance
   ( EraTxOut era
   , NFData (StashedAVVMAddresses era)
   , NFData (GovState era)
+  , NFData (CertState era)
   ) =>
   NFData (NewEpochState era)
 
@@ -426,6 +433,7 @@ instance
   ( EraTxOut era
   , EncCBOR (StashedAVVMAddresses era)
   , EncCBOR (GovState era)
+  , EncCBOR (CertState era)
   ) =>
   EncCBOR (NewEpochState era)
   where
@@ -443,6 +451,7 @@ instance
   ( EraTxOut era
   , EraGov era
   , DecCBOR (StashedAVVMAddresses era)
+  , EraCertState era
   ) =>
   DecCBOR (NewEpochState era)
   where
@@ -458,13 +467,13 @@ instance
         <! From
 
 instance
-  (EraTxOut era, EraGov era, EncCBOR (StashedAVVMAddresses era)) =>
+  (EraTxOut era, EraGov era, EncCBOR (StashedAVVMAddresses era), EraCertState era) =>
   ToCBOR (NewEpochState era)
   where
   toCBOR = toEraCBOR @era
 
 instance
-  (EraTxOut era, EraGov era, DecCBOR (StashedAVVMAddresses era)) =>
+  (EraTxOut era, EraGov era, DecCBOR (StashedAVVMAddresses era), EraCertState era) =>
   FromCBOR (NewEpochState era)
   where
   fromCBOR = fromEraCBOR @era
@@ -487,30 +496,35 @@ data LedgerState era = LedgerState
 deriving stock instance
   ( EraTxOut era
   , Show (GovState era)
+  , Show (CertState era)
   ) =>
   Show (LedgerState era)
 
 deriving stock instance
   ( EraTxOut era
   , Eq (GovState era)
+  , Eq (CertState era)
   ) =>
   Eq (LedgerState era)
 
 instance
   ( EraTxOut era
   , NoThunks (GovState era)
+  , NoThunks (CertState era)
   ) =>
   NoThunks (LedgerState era)
 
 instance
   ( EraTxOut era
   , NFData (GovState era)
+  , NFData (CertState era)
   ) =>
   NFData (LedgerState era)
 
 instance
   ( EraTxOut era
   , EncCBOR (GovState era)
+  , EncCBOR (CertState era)
   ) =>
   EncCBOR (LedgerState era)
   where
@@ -522,6 +536,7 @@ instance
 instance
   ( EraTxOut era
   , EraGov era
+  , EraCertState era
   ) =>
   DecShareCBOR (LedgerState era)
   where
@@ -534,18 +549,18 @@ instance
       lsUTxOState <- decShareLensCBOR _1
       pure LedgerState {lsUTxOState, lsCertState}
 
-instance (EraTxOut era, EraGov era) => ToCBOR (LedgerState era) where
+instance (EraTxOut era, EraGov era, EraCertState era) => ToCBOR (LedgerState era) where
   toCBOR = toEraCBOR @era
 
-instance (EraTxOut era, EraGov era) => FromCBOR (LedgerState era) where
+instance (EraTxOut era, EraGov era, EraCertState era) => FromCBOR (LedgerState era) where
   fromCBOR = fromEraShareCBOR @era
 
-instance (EraTxOut era, EraGov era) => ToJSON (LedgerState era) where
+instance (EraTxOut era, EraGov era, EraCertState era) => ToJSON (LedgerState era) where
   toJSON = object . toLedgerStatePairs
   toEncoding = pairs . mconcat . toLedgerStatePairs
 
 toLedgerStatePairs ::
-  (EraTxOut era, EraGov era, KeyValue e a) => LedgerState era -> [a]
+  (EraTxOut era, EraGov era, KeyValue e a, EraCertState era) => LedgerState era -> [a]
 toLedgerStatePairs ls@(LedgerState _ _) =
   let LedgerState {..} = ls
    in [ "utxoState" .= lsUTxOState
@@ -567,7 +582,7 @@ instance
   where
   def = EpochState def def def def
 
-instance Default (UTxOState era) => Default (LedgerState era) where
+instance (Default (UTxOState era), Default (CertState era)) => Default (LedgerState era) where
   def = LedgerState def def
 
 instance Default AccountState where
@@ -586,7 +601,7 @@ nesPdL = lens nesPd (\ds u -> ds {nesPd = u})
 nesEsL :: Lens' (NewEpochState era) (EpochState era)
 nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
 
-unifiedL :: Lens' (NewEpochState era) UMap
+unifiedL :: EraCertState era => Lens' (NewEpochState era) UMap
 unifiedL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
 
 nesELL :: Lens' (NewEpochState era) EpochNo
@@ -696,13 +711,15 @@ epochStateIncrStakeDistrL ::
   Lens' (EpochState era) (Map (Credential 'Staking) (CompactForm Coin))
 epochStateIncrStakeDistrL = esLStateL . lsUTxOStateL . utxosStakeDistrL . credMapL
 
-epochStateRegDrepL :: Lens' (EpochState era) (Map (Credential 'DRepRole) DRepState)
+epochStateRegDrepL ::
+  EraCertState era => Lens' (EpochState era) (Map (Credential 'DRepRole) DRepState)
 epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
-epochStatePoolParamsL :: Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
+epochStatePoolParamsL ::
+  EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
 epochStatePoolParamsL = esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
 
-epochStateUMapL :: Lens' (EpochState era) UMap
+epochStateUMapL :: EraCertState era => Lens' (EpochState era) UMap
 epochStateUMapL = esLStateL . lsCertStateL . certDStateL . dsUnifiedL
 
 epochStateStakeDistrL ::
@@ -710,7 +727,7 @@ epochStateStakeDistrL ::
 epochStateStakeDistrL = esSnapshotsL . ssStakeMarkL . ssStakeDistrL
 
 potEqualsObligation ::
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   CertState era ->
   UTxOState era ->
   Bool
@@ -719,9 +736,9 @@ potEqualsObligation certState utxoSt = obligations == pot
     obligations = totalObligation certState (utxoSt ^. utxosGovStateL)
     pot = utxoSt ^. utxosDepositedL
 
-allObligations :: EraGov era => CertState era -> GovState era -> Obligations
+allObligations :: (EraGov era, EraCertState era) => CertState era -> GovState era -> Obligations
 allObligations certState govState =
   obligationCertState certState <> obligationGovState govState
 
-totalObligation :: EraGov era => CertState era -> GovState era -> Coin
+totalObligation :: (EraGov era, EraCertState era) => CertState era -> GovState era -> Coin
 totalObligation certState govState = sumObligation (allObligations certState govState)

@@ -11,7 +11,7 @@
 -- as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 module Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  CertState (..),
+  CertState,
   DState (..),
   VState (..),
   rewards,

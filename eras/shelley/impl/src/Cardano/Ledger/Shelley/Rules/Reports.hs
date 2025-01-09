@@ -57,7 +57,7 @@ synopsisCoinMap Nothing = "SYNOPSIS NOTHING"
 -- Printing Produced == Consumed
 
 produceEqualsConsumed ::
-  EraTxBody era =>
+  (EraTxBody era, EraCertState era) =>
   PParams era ->
   CertState era ->
   UTxO era ->

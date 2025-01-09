@@ -30,10 +30,11 @@ where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.CertState (
-  CertState (..),
   DState (..),
+  EraCertState (..),
   PState (..),
   delegations,
+  dsUnifiedL,
   rewards,
  )
 import Cardano.Ledger.Coin (
@@ -260,7 +261,7 @@ aggregateActiveStake m1 m2 = assert (Map.valid m) m
 --   2) Adds to the Treasury of the AccountState for non-actively delegated stake
 --   3) Adds fees to the UTxOState
 applyRUpd ::
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   RewardUpdate ->
   EpochState era ->
   EpochState era
@@ -270,7 +271,7 @@ applyRUpd ru es =
 
 -- TO IncrementalStake
 applyRUpdFiltered ::
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   RewardUpdate ->
   EpochState era ->
   (EpochState era, FilteredRewards era)
@@ -282,9 +283,8 @@ applyRUpdFiltered
         EpochState as' ls' ss nm'
           & curPParamsEpochStateL .~ es ^. curPParamsEpochStateL
           & prevPParamsEpochStateL .~ es ^. prevPParamsEpochStateL
-      utxoState_ = lsUTxOState ls
       dpState = lsCertState ls
-      dState = certDState dpState
+      dState = dpState ^. certDStateL
       prevPParams = es ^. prevPParamsEpochStateL
       prevProVer = prevPParams ^. ppProtocolVersionL
       filteredRewards@FilteredRewards
@@ -301,16 +301,8 @@ applyRUpdFiltered
           }
       ls' =
         ls
-          { lsUTxOState =
-              utxoState_ {utxosFees = utxosFees utxoState_ `addDeltaCoin` deltaF ru}
-          , lsCertState =
-              dpState
-                { certDState =
-                    dState
-                      { dsUnified = rewards dState UM.∪+ registeredAggregated
-                      }
-                }
-          }
+          & lsUTxOStateL . utxosFeesL %~ (`addDeltaCoin` deltaF ru)
+          & lsCertStateL . certDStateL . dsUnifiedL .~ (rewards dState UM.∪+ registeredAggregated)
       nm' = nonMyopic ru
 
 data FilteredRewards era = FilteredRewards
@@ -353,11 +345,11 @@ filterAllRewards' rs protVer dState =
     (registered, shelleyIgnored) = filterRewards protVer regRU
 
 filterAllRewards ::
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   Map (Credential 'Staking) (Set Reward) ->
   EpochState era ->
   FilteredRewards era
 filterAllRewards mp epochstate = filterAllRewards' mp prevPP dState
   where
     prevPP = epochstate ^. prevPParamsEpochStateL . ppProtocolVersionL
-    dState = (certDState . lsCertState . esLState) epochstate
+    dState = epochstate ^. esLStateL . lsCertStateL . certDStateL

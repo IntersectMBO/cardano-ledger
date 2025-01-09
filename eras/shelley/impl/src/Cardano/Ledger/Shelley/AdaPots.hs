@@ -37,6 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
   EpochState (..),
   LedgerState (..),
   UTxOState (..),
+  lsCertStateL,
   lsUTxOStateL,
   utxosGovStateL,
  )
@@ -64,6 +65,7 @@ instance NFData AdaPots
 totalAdaPotsES ::
   ( EraTxOut era
   , EraGov era
+  , EraCertState era
   ) =>
   EpochState era ->
   AdaPots
@@ -78,8 +80,8 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) ls _ _) =
     }
   where
     UTxOState u _ fees_ _ _ _ = lsUTxOState ls
-    certState@(CertState _ _ dstate) = lsCertState ls
-    rewards_ = fromCompact $ sumRewardsUView (rewards dstate)
+    certState = ls ^. lsCertStateL
+    rewards_ = fromCompact $ sumRewardsUView (rewards $ certState ^. certDStateL)
     coins = coinBalance u
     govStateObligations = obligationGovState (ls ^. lsUTxOStateL . utxosGovStateL)
 
@@ -101,7 +103,7 @@ sumAdaPots
       <> sumObligation obligationsPot
 
 -- | Calculate the total ada in the epoch state
-totalAdaES :: (EraTxOut era, EraGov era) => EpochState era -> Coin
+totalAdaES :: (EraTxOut era, EraGov era, EraCertState era) => EpochState era -> Coin
 totalAdaES = sumAdaPots . totalAdaPotsES
 
 -- =============================================
@@ -145,7 +147,7 @@ instance Show Produced where
 
 -- | Compute the Coin part of what is consumed by a TxBody, itemized as a 'Consume'
 consumedTxBody ::
-  EraTxBody era =>
+  (EraTxBody era, EraCertState era) =>
   TxBody era ->
   PParams era ->
   CertState era ->
@@ -161,7 +163,7 @@ consumedTxBody txBody pp dpstate utxo =
 
 -- | Compute the Coin part of what is produced by a TxBody, itemized as a 'Produced'
 producedTxBody ::
-  EraTxBody era =>
+  (EraTxBody era, EraCertState era) =>
   TxBody era ->
   PParams era ->
   CertState era ->
