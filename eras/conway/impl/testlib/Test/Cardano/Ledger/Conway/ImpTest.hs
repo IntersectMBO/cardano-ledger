@@ -43,6 +43,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitYesVote_,
   submitFailingVote,
   trySubmitVote,
+  genRegTxCert,
+  genUnRegTxCert,
   registerDRep,
   unRegisterDRep,
   updateDRep,
@@ -215,6 +217,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.UMap (dRepMap)
+import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO, UTxO, balance, sumAllValue, txInsFilter)
 import Cardano.Ledger.Val (Val (..), (<->))
 import Control.Monad (forM)
@@ -389,6 +392,38 @@ unRegisterDRep drep = do
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.singleton (UnRegDRepTxCert drep refund)
+
+genUnRegTxCert ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxCert era
+  ) =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+genUnRegTxCert stakingCredential = do
+  umap <- getsNES unifiedL
+  let mumapDeposit = UMap.rdDepositCoin <$> UMap.lookup stakingCredential (UMap.RewDepUView umap)
+  case mumapDeposit of
+    Nothing -> pure $ UnRegTxCert stakingCredential
+    Just umapDeposit ->
+      elements
+        [ UnRegTxCert stakingCredential
+        , UnRegDepositTxCert stakingCredential umapDeposit
+        ]
+
+genRegTxCert ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxCert era
+  ) =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+genRegTxCert stakingCredential =
+  oneof
+    [ pure $ RegTxCert stakingCredential
+    , RegDepositTxCert stakingCredential
+        <$> getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
+    ]
 
 -- | Submit a transaction that updates a given DRep
 updateDRep ::

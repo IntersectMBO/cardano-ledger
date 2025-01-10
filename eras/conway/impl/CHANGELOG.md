@@ -9,6 +9,7 @@
 
 ### `testlib`
 
+* Add `genRegTxCert` and `genUnRegTxCert`. #4830
 * Add `Arbitrary` instance for `ConwayBbodyPredFailure` and `ConwayMempoolPredFailure`
 
 ## 1.18.0.0
