@@ -101,6 +101,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impSetSeed,
   modifyImpInitProtVer,
   modifyImpInitExpectLedgerRuleConformance,
+  disableImpInitExpectLedgerRuleConformance,
 
   -- * Logging
   Doc,
@@ -643,6 +644,12 @@ modifyImpInitExpectLedgerRuleConformance f =
           impInitEnv impInit
             & iteExpectLedgerRuleConformanceL .~ f
       }
+
+disableImpInitExpectLedgerRuleConformance ::
+  SpecWith (ImpInit (LedgerSpec era)) ->
+  SpecWith (ImpInit (LedgerSpec era))
+disableImpInitExpectLedgerRuleConformance =
+  modifyImpInitExpectLedgerRuleConformance $ \_ _ _ _ _ -> pure ()
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do

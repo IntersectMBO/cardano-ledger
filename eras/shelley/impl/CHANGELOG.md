@@ -18,6 +18,10 @@
   * `FromByronTranslationContext`
   * `GenesisDelegCert`, `MIRTarget`, `MIRCert`, `ShelleyDelegCert`
 
+### `testlib`
+
+* Add `disableImpInitExpectLedgerRuleConformance`. #4821
+
 ## 1.15.0.0
 
 * Change param of `PoolRank.desirability` to `Word16`

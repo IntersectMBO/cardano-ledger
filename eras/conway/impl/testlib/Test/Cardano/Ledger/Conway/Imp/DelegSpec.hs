@@ -211,7 +211,9 @@ spec = do
         mkBasicTxBody
           & certsTxBodyL
             .~ SSeq.fromList
-              [UnRegTxCert stakeCred]
+              -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/636
+              -- we use this inplace of UnRegTxCert to make conformance-spec happy
+              [UnRegDepositTxCert stakeCred keyDeposit]
           & withdrawalsTxBodyL
             .~ Withdrawals
               ( Map.fromList
@@ -476,6 +478,77 @@ spec = do
       expectNotRegistered cred
       expectNotDelegatedVote cred
 
+  describe "Delegate both stake and vote - separated out for conformance mismatch" $
+    -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/640
+    -- TODO: Re-enable after issue is resolved, by removing this override
+    disableImpInitExpectLedgerRuleConformance $ do
+      it "Delegate, retire and re-register pool" $ do
+        expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+        cred <- KeyHashObj <$> freshKeyHash
+        poolKh <- freshKeyHash
+        rewardAccount <- registerRewardAccount
+        registerPool poolKh
+        drepCred <- KeyHashObj <$> registerDRep
+
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ [ RegDepositDelegTxCert
+                    cred
+                    (DelegStakeVote poolKh (DRepCredential drepCred))
+                    expectedDeposit
+                 ]
+        expectDelegatedToPool cred poolKh
+        expectDelegatedVote cred (DRepCredential drepCred)
+
+        let poolLifetime = 2
+        let poolExpiry = getsNES nesELL <&> \n -> addEpochInterval n $ EpochInterval poolLifetime
+
+        poolExpiry >>= \pe ->
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh pe]
+
+        -- when pool is re-registered after its expiration, all delegations are cleared
+        passNEpochs $ fromIntegral poolLifetime
+        expectNotDelegatedToPool cred
+        registerPoolWithRewardAccount poolKh rewardAccount
+        expectNotDelegatedToPool cred
+        -- the vote delegation is kept
+        expectDelegatedVote cred (DRepCredential drepCred)
+
+        -- re-delegate
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ [ DelegTxCert
+                    cred
+                    (DelegStake poolKh)
+                 ]
+        expectDelegatedToPool cred poolKh
+
+        -- when pool is re-registered before its expiration, delegations are kept
+        poolExpiry >>= \pe ->
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh pe]
+        -- re-register the pool before the expiration time
+        passNEpochs $ fromIntegral poolLifetime - 1
+        registerPoolWithRewardAccount poolKh rewardAccount
+        expectDelegatedToPool cred poolKh
+        passNEpochs 2
+        expectDelegatedToPool cred poolKh
+
+        -- when pool is retired and re-registered in the same transaction, delegations are kept
+        pps <- poolParams poolKh rewardAccount
+        poolExpiry >>= \pe ->
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh pe, RegPoolTxCert pps]
+
+        expectDelegatedToPool cred poolKh
+        passNEpochs $ fromIntegral poolLifetime
+        expectDelegatedToPool cred poolKh
   describe "Delegate both stake and vote" $ do
     it "Delegate and unregister credentials" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -531,74 +604,6 @@ spec = do
             .~ [DelegTxCert cred (DelegStake poolKh')]
       expectDelegatedToPool cred poolKh'
       expectDelegatedVote cred (DRepCredential drepCred)
-
-    it "Delegate, retire and re-register pool" $ do
-      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
-      cred <- KeyHashObj <$> freshKeyHash
-      poolKh <- freshKeyHash
-      rewardAccount <- registerRewardAccount
-      registerPool poolKh
-      drepCred <- KeyHashObj <$> registerDRep
-
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [ RegDepositDelegTxCert
-                  cred
-                  (DelegStakeVote poolKh (DRepCredential drepCred))
-                  expectedDeposit
-               ]
-      expectDelegatedToPool cred poolKh
-      expectDelegatedVote cred (DRepCredential drepCred)
-
-      let poolLifetime = 2
-      let poolExpiry = getsNES nesELL <&> \n -> addEpochInterval n $ EpochInterval poolLifetime
-
-      poolExpiry >>= \pe ->
-        submitTx_ $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh pe]
-
-      -- when pool is re-registered after its expiration, all delegations are cleared
-      passNEpochs $ fromIntegral poolLifetime
-      expectNotDelegatedToPool cred
-      registerPoolWithRewardAccount poolKh rewardAccount
-      expectNotDelegatedToPool cred
-      -- the vote delegation is kept
-      expectDelegatedVote cred (DRepCredential drepCred)
-
-      -- re-delegate
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ [ DelegTxCert
-                  cred
-                  (DelegStake poolKh)
-               ]
-      expectDelegatedToPool cred poolKh
-
-      -- when pool is re-registered before its expiration, delegations are kept
-      poolExpiry >>= \pe ->
-        submitTx_ $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh pe]
-      -- re-register the pool before the expiration time
-      passNEpochs $ fromIntegral poolLifetime - 1
-      registerPoolWithRewardAccount poolKh rewardAccount
-      expectDelegatedToPool cred poolKh
-      passNEpochs 2
-      expectDelegatedToPool cred poolKh
-
-      -- when pool is retired and re-registered in the same transaction, delegations are kept
-      pps <- poolParams poolKh rewardAccount
-      poolExpiry >>= \pe ->
-        submitTx_ $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh pe, RegPoolTxCert pps]
-
-      expectDelegatedToPool cred poolKh
-      passNEpochs $ fromIntegral poolLifetime
-      expectDelegatedToPool cred poolKh
   where
     expectRegistered cred = do
       umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
