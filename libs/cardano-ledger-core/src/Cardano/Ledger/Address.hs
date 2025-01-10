@@ -316,8 +316,8 @@ isBootstrapRedeemer _ = False
 putPtr :: Ptr -> Put
 putPtr (Ptr (SlotNo slot) (TxIx txIx) (CertIx certIx)) = do
   putVariableLengthWord64 slot
-  putVariableLengthWord64 txIx
-  putVariableLengthWord64 certIx
+  putVariableLengthWord64 (fromIntegral txIx) -- TODO: switch to using MemPack for compacting Address at which point
+  putVariableLengthWord64 (fromIntegral certIx) --     this conversion from Word16 to Word64 will no longer be necessary
 
 newtype Word7 = Word7 Word8
   deriving (Eq, Show)
@@ -728,8 +728,8 @@ decodePtr ::
 decodePtr buf =
   Ptr
     <$> (SlotNo . (fromIntegral :: Word32 -> Word64) <$> decodeVariableLengthWord32 "SlotNo" buf)
-    <*> (TxIx . (fromIntegral :: Word16 -> Word64) <$> decodeVariableLengthWord16 "TxIx" buf)
-    <*> (CertIx . (fromIntegral :: Word16 -> Word64) <$> decodeVariableLengthWord16 "CertIx" buf)
+    <*> (TxIx <$> decodeVariableLengthWord16 "TxIx" buf)
+    <*> (CertIx <$> decodeVariableLengthWord16 "CertIx" buf)
 {-# INLINE decodePtr #-}
 
 decodePtrLenient ::
@@ -739,8 +739,8 @@ decodePtrLenient ::
 decodePtrLenient buf =
   Ptr
     <$> (SlotNo <$> decodeVariableLengthWord64 "SlotNo" buf)
-    <*> (TxIx <$> decodeVariableLengthWord64 "TxIx" buf)
-    <*> (CertIx <$> decodeVariableLengthWord64 "CertIx" buf)
+    <*> (TxIx <$> decodeVariableLengthWord16 "TxIx" buf)
+    <*> (CertIx <$> decodeVariableLengthWord16 "CertIx" buf)
 {-# INLINE decodePtrLenient #-}
 
 guardLength ::

@@ -596,8 +596,8 @@ instance IsConwayUniv fn => HasSpec fn Ptr
 
 instance HasSimpleRep CertIx where
   type SimpleRep CertIx = Word16
-  toSimpleRep (CertIx w) = fromIntegral w
-  fromSimpleRep = mkCertIx
+  toSimpleRep = unCertIx
+  fromSimpleRep = CertIx
 instance IsConwayUniv fn => HasSpec fn CertIx
 
 instance HasSimpleRep (Credential r c)

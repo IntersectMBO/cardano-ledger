@@ -38,7 +38,6 @@ import Cardano.Ledger.Val (zero, (<->))
 import qualified Data.ByteString.Short as SBS
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
-import Data.Word
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Extras (view)
@@ -77,7 +76,7 @@ translateCompactTxInByronToShelley ::
 translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
   TxIn
     (translateTxIdByronToShelley (Byron.fromCompactTxId compactTxId))
-    (TxIx ((fromIntegral :: Word16 -> Word64) idx))
+    (TxIx idx)
 
 translateUTxOByronToShelley ::
   forall c.

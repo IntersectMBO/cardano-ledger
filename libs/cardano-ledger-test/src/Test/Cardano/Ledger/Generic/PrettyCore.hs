@@ -2504,7 +2504,7 @@ pcTxId (TxId safehash) = trim (ppSafeHash safehash)
 instance PrettyA (TxId c) where prettyA = pcTxId
 
 pcTxIn :: TxIn c -> PDoc
-pcTxIn (TxIn (TxId h) (TxIx i)) = parens (hsep [ppString "TxIn", trim (ppSafeHash h), ppWord64 i])
+pcTxIn (TxIn (TxId h) (TxIx i)) = parens (hsep [ppString "TxIn", trim (ppSafeHash h), ppWord16 i])
 
 instance PrettyA (TxIn c) where prettyA = pcTxIn
 

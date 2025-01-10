@@ -808,28 +808,15 @@ newtype BlocksMade c = BlocksMade
   deriving (Show) via Quiet (BlocksMade c)
   deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR)
 
--- TODO: It is unfeasable to have 65535 outputs in a transaction,
--- but 255 is right on the border of a maximum TxIx on Mainnet at the moment,
--- that is why `Word16` was chosen as the smallest upper bound. Use
--- `txIxFromIntegral` in order to construct this index safely from anything
--- other than `Word16`. There is also `mkTxIxPartial` that can be used for
--- testing.
-
 -- | Transaction index.
-newtype TxIx = TxIx {unTxIx :: Word64}
+newtype TxIx = TxIx {unTxIx :: Word16}
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, ToJSON)
-
-instance DecCBOR TxIx where
-  decCBOR =
-    ifDecoderVersionAtLeast
-      (natVersion @9)
-      (TxIx . fromIntegral @Word16 @Word64 <$> decCBOR)
-      (TxIx <$> decCBOR)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, DecCBOR, ToJSON)
 
 -- | Construct a `TxIx` from a 16 bit unsigned integer
 mkTxIx :: Word16 -> TxIx
 mkTxIx = TxIx . fromIntegral
+{-# DEPRECATED mkTxIx "In favor of `TxIx`" #-}
 
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
@@ -845,23 +832,16 @@ mkTxIxPartial i =
   fromMaybe (error $ "Value for TxIx is out of a valid range: " ++ show i) $
     txIxFromIntegral i
 
--- | Certificate index. Use `certIxFromIntegral` in order to construct this
--- index safely from anything other than `Word16`. There is also
--- `mkCertIxPartial` that can be used for testing.
-newtype CertIx = CertIx {unCertIx :: Word64}
+-- | Certificate index. There is `mkCertIxPartial` that can be used for testing when constructing
+-- from other integral types that are larger than `Word16`
+newtype CertIx = CertIx {unCertIx :: Word16}
   deriving stock (Eq, Ord, Show)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, ToCBOR, FromCBOR, ToJSON)
-
-instance DecCBOR CertIx where
-  decCBOR =
-    ifDecoderVersionAtLeast
-      (natVersion @9)
-      (CertIx . fromIntegral @Word16 @Word64 <$> decCBOR)
-      (CertIx <$> decCBOR)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, ToJSON)
 
 -- | Construct a `CertIx` from a 16 bit unsigned integer
 mkCertIx :: Word16 -> CertIx
 mkCertIx = CertIx . fromIntegral
+{-# DEPRECATED mkCertIx "In favor of `CertIx`" #-}
 
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16
