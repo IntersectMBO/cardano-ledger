@@ -195,7 +195,7 @@ reward_account = h'E090000000000000000000000000000000000000000000000000000000'
 ;   "\x00" for multisig scripts
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
-;   "\x03" for Plutus V3 scripts   
+;   "\x03" for Plutus V3 scripts
 ; 
 script_hash = $hash28
 
@@ -249,7 +249,7 @@ transaction_witness_set = {? 0 : [* vkeywitness]
 ; which poses a problem for testing. We need to be able to
 ; generate random valid data for testing implementation of
 ; our encoders/decoders. Which means we cannot use the actual
-; definition here and we hard code the value to 1/2        
+; definition here and we hard code the value to 1/2
 ; 
 unit_interval = #6.30([1, 2])
 

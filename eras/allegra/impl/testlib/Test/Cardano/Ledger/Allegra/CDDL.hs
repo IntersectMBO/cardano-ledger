@@ -32,7 +32,7 @@ native_script =
         |
         |  invalid_before:
         |    specifies the left (included) endpoint a.
-        |  
+        |
         |  invalid_hereafter:
         |    specifies the right (excluded) endpoint b.
         |]

@@ -243,7 +243,7 @@ hard_fork_initiation_action =
 treasury_withdrawals_action :: Named Group
 treasury_withdrawals_action =
   "treasury_withdrawals_action"
-    =:~ grp [2, a (mp [asKey reward_account ==> coin]), policy_hash / VNil]
+    =:~ grp [2, a (mp [0 <+ asKey reward_account ==> coin]), policy_hash / VNil]
 
 no_confidence :: Named Group
 no_confidence = "no_confidence" =:~ grp [3, gov_action_id / VNil]
@@ -255,7 +255,7 @@ update_committee =
       [ 4
       , gov_action_id / VNil
       , a (set committee_cold_credential)
-      , a (mp [asKey committee_cold_credential ==> epoch_no])
+      , a (mp [0 <+ asKey committee_cold_credential ==> epoch_no])
       , a unit_interval
       ]
 
@@ -522,11 +522,11 @@ committee_hot_credential = "committee_hot_credential" =:= credential
 pool_params :: Named Group
 pool_params =
   comment
-    [str|        pool_keyhash: operator       
-        |                coin: pledge         
-        |                coin: cost           
-        |       unit_interval: margin         
-        |   set<addr_keyhash>: pool_owners    
+    [str|        pool_keyhash: operator
+        |                coin: pledge
+        |                coin: cost
+        |       unit_interval: margin
+        |   set<addr_keyhash>: pool_owners
         |]
     $ "pool_params"
       =:~ grp

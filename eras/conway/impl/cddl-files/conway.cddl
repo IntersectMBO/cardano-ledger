@@ -496,7 +496,7 @@ script_data_hash = $hash32
 ;   "\x00" for multisig scripts
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
-;   "\x03" for Plutus V3 scripts   
+;   "\x03" for Plutus V3 scripts
 ; 
 script_hash = $hash28
 
@@ -577,7 +577,7 @@ transaction_witness_set = {? 0 : nonempty_set<vkeywitness>
 ; which poses a problem for testing. We need to be able to
 ; generate random valid data for testing implementation of
 ; our encoders/decoders. Which means we cannot use the actual
-; definition here and we hard code the value to 1/2        
+; definition here and we hard code the value to 1/2
 ; 
 unit_interval = #6.30([1, 2])
 
@@ -632,11 +632,11 @@ parameter_change_action = (0
                           , protocol_param_update
                           , policy_hash / nil)
 
-;         pool_keyhash: operator       
-;                 coin: pledge         
-;                 coin: cost           
-;        unit_interval: margin         
-;    set<addr_keyhash>: pool_owners    
+;         pool_keyhash: operator
+;                 coin: pledge
+;                 coin: cost
+;        unit_interval: margin
+;    set<addr_keyhash>: pool_owners
 ; 
 pool_params = (pool_keyhash
               , vrf_keyhash
@@ -686,7 +686,7 @@ stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, drep)
 
 stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
 
-treasury_withdrawals_action = (2, {reward_account => coin}, policy_hash / nil)
+treasury_withdrawals_action = (2, {* reward_account => coin}, policy_hash / nil)
 
 unreg_cert = (8, stake_credential, coin)
 
@@ -695,7 +695,7 @@ unreg_drep_cert = (17, drep_credential, coin)
 update_committee = (4
                    , gov_action_id / nil
                    , set<committee_cold_credential>
-                   , {committee_cold_credential => epoch_no}
+                   , {* committee_cold_credential => epoch_no}
                    , unit_interval)
 
 update_drep_cert = (18, drep_credential, anchor / nil)

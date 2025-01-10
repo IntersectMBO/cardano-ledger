@@ -378,7 +378,7 @@ script_hash =
         |  "\x00" for multisig scripts
         |  "\x01" for Plutus V1 scripts
         |  "\x02" for Plutus V2 scripts
-        |  "\x03" for Plutus V3 scripts   
+        |  "\x03" for Plutus V3 scripts
         |]
     $ "script_hash" =:= hash28
 

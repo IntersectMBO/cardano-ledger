@@ -130,6 +130,18 @@ This will create a new release that will be available as [latest](https://github
 Make sure that the `YYYY-MM-DD` part in the tag name is alphabetically greater than the rest, otherwise the release won't be tagged as `latest`.
 Using the current date should ensure that this is the case.
 
+## CDDL files
+
+For each era, the serialization protocol is defined by a corresponding cddl file,
+located at: `eras/<era>/impl/cddl-files/<era>.cddl`.
+
+These files are generated using [cuddle](https://github.com/input-output-hk/cuddle),
+based on the Haskell definitions in: `eras/<era>/impl/testlib/Test/Cardano/Ledger/<era>/CDDL.hs`.
+
+To modify the cddl files for a given era:
+1. Edit the CDDL.hs file for the desired era to reflect your changes
+2. Regenerate the cddl files by running `./scripts/gen-cddl.sh`
+
 ## Testing the Haskell programs
 
 The tests can be run with cabal.
