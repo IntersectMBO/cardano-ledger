@@ -127,7 +127,9 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   Interns,
-  decodeListLenOf,
+  decodeListLenOrIndef,
+  decodeListLikeWithCountT,
+  decodeRecordNamedT,
  )
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Conway.Governance.Procedures
@@ -137,6 +139,7 @@ import Cardano.Ledger.UMap (addCompact, toCompact)
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Control.Monad (unless)
+import Control.Monad.Trans (lift)
 import Data.Aeson (ToJSON (..))
 import Data.Default (Default (..))
 import Data.Either (partitionEithers)
@@ -370,11 +373,12 @@ instance EraPParams era => DecShareCBOR (Proposals era) where
       , Interns (Credential 'DRepRole)
       , Interns (Credential 'HotCommitteeRole)
       )
-  decShareCBOR is = do
-    decodeListLenOf 2
-    gaid <- decCBOR
-    omap <- OMap.decodeOMap (decShareCBOR is)
-    mkProposals gaid omap
+  decSharePlusCBOR = do
+    decodeRecordNamedT "Proposals" (const 2) $ do
+      gaid <- lift decCBOR
+      (_, omap) <- decodeListLikeWithCountT (lift decodeListLenOrIndef) (flip (OMap.|>)) $ \_ ->
+        decSharePlusCBOR
+      mkProposals gaid omap
 
 -- | Add a vote to an existing `GovActionState`. This is a no-op if the
 -- provided `GovActionId` does not already exist

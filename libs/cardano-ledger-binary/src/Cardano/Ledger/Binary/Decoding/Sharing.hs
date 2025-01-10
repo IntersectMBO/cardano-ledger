@@ -66,6 +66,17 @@ data Intern a = Intern
 newtype Interns a = Interns [Intern a]
   deriving (Monoid)
 
+instance Semigroup (Interns a) where
+  (<>) is1 (Interns []) = is1
+  (<>) (Interns []) is2 = is2
+  (<>) (Interns is1) (Interns is2) =
+    Interns (F.foldr insertIntoSortedInterns is2 is1)
+    where
+      insertIntoSortedInterns i [] = [i]
+      insertIntoSortedInterns i (a : as)
+        | internWeight a > internWeight i = a : insertIntoSortedInterns i as
+        | otherwise = i : a : as
+
 interns :: Interns k -> k -> k
 interns (Interns []) !k = k -- optimize for common case when there are no interns
 interns (Interns is) !k = go is
@@ -98,42 +109,37 @@ internSet k = go
         EQ -> Just kx
 
 internsFromSet :: Ord k => Set.Set k -> Interns k
-internsFromSet m =
-  Interns
-    [ Intern
-        { internMaybe = (`internSet` m)
-        , internWeight = Set.size m
-        }
-    ]
+internsFromSet s
+  | Set.size s == 0 = mempty
+  | otherwise =
+      Interns
+        [ Intern
+            { internMaybe = (`internSet` s)
+            , internWeight = Set.size s
+            }
+        ]
 
 internsFromMap :: Ord k => Map k a -> Interns k
-internsFromMap m =
-  Interns
-    [ Intern
-        { internMaybe = (`internMap` m)
-        , internWeight = Map.size m
-        }
-    ]
+internsFromMap m
+  | Map.size m == 0 = mempty
+  | otherwise =
+      Interns
+        [ Intern
+            { internMaybe = (`internMap` m)
+            , internWeight = Map.size m
+            }
+        ]
 
 internsFromVMap :: Ord k => VMap VB kv k a -> Interns k
-internsFromVMap m =
-  Interns
-    [ Intern
-        { internMaybe = \k -> VMap.internMaybe k m
-        , internWeight = VMap.size m
-        }
-    ]
-
-instance Semigroup (Interns a) where
-  (<>) is1 (Interns []) = is1
-  (<>) (Interns []) is2 = is2
-  (<>) (Interns is1) (Interns is2) =
-    Interns (F.foldr insertIntoSortedInterns is2 is1)
-    where
-      insertIntoSortedInterns i [] = [i]
-      insertIntoSortedInterns i (a : as)
-        | internWeight a > internWeight i = a : insertIntoSortedInterns i as
-        | otherwise = i : a : as
+internsFromVMap m
+  | VMap.size m == 0 = mempty
+  | otherwise =
+      Interns
+        [ Intern
+            { internMaybe = \k -> VMap.internMaybe k m
+            , internWeight = VMap.size m
+            }
+        ]
 
 class Monoid (Share a) => DecShareCBOR a where
   {-# MINIMAL (decShareCBOR | decSharePlusCBOR) #-}

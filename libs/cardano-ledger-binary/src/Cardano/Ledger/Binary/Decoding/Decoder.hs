@@ -74,6 +74,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeStrictSeq,
   decodeSetTag,
   decodeListLikeWithCount,
+  decodeListLikeWithCountT,
   decodeSetLikeEnforceNoDuplicates,
   decodeListLikeEnforceNoDuplicates,
   decodeMapContents,
@@ -907,6 +908,10 @@ decodeListLikeWithCount ::
   -- | Decoder for the values. Current accumulator is supplied as an argument
   (b -> Decoder s a) ->
   Decoder s (Int, b)
+-- TODO: define as
+-- decodeListLikeWithCount decodeLenOrIndef insert decodeElement =
+--   runIndentityT $ decodeListLikeWithCountT (lift decodeLenOrIndef) insert (lift decodeElement)
+-- and add a SPECIALIZE pragma
 decodeListLikeWithCount decodeLenOrIndef insert decodeElement = do
   decodeLenOrIndef >>= \case
     Just len -> loop (\x -> pure (x >= len)) 0 mempty
@@ -924,6 +929,34 @@ decodeListLikeWithCount decodeLenOrIndef insert decodeElement = do
               go (count + 1) (insert element acc)
     {-# INLINE loop #-}
 {-# INLINE decodeListLikeWithCount #-}
+
+decodeListLikeWithCountT ::
+  forall t s a b.
+  (MonadTrans t, Monad (t (Decoder s)), Monoid b) =>
+  -- | Length decoder that produces the expected number of elements. When `Nothing` is
+  -- decoded the `decodeBreakOr` will be used as termination indicator.
+  t (Decoder s) (Maybe Int) ->
+  -- | Add an element into the decoded List like data structure
+  (a -> b -> b) ->
+  -- | Decoder for the values. Current accumulator is supplied as an argument
+  (b -> t (Decoder s) a) ->
+  t (Decoder s) (Int, b)
+decodeListLikeWithCountT decodeLenOrIndef insert decodeElement = do
+  decodeLenOrIndef >>= \case
+    Just len -> loop (\x -> pure (x >= len)) 0 mempty
+    Nothing -> loop (\_ -> lift decodeBreakOr) 0 mempty
+  where
+    loop condition = go
+      where
+        go !count !acc = do
+          shouldStop <- condition count
+          if shouldStop
+            then pure (count, acc)
+            else do
+              element <- decodeElement acc
+              go (count + 1) (insert element acc)
+    {-# INLINE loop #-}
+{-# INLINE decodeListLikeWithCountT #-}
 
 -- | Decode a collection of values with ability to supply length decoder. Duplicates are not
 -- allowed.
