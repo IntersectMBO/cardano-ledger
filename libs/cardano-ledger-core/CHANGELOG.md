@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Switch `TxIx` and `CertIx` to use `Word16` instead of `Word64`
+* Deprecate `mkTxIx` and `mkCertIx`
 * Extract `indexProxy` from `HashAnnotated` type class and deprecate it.
 * Extract `hashTxAuxData` from `EraTxAuxData` into a standalone function.
 * Add `TxAuxDataHash` and deprecate `AuxiliaryDayaHash` in its favor.
