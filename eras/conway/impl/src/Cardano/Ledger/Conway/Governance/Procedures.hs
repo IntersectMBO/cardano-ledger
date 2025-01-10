@@ -97,16 +97,16 @@ import Cardano.Ledger.Binary (
   Interns,
   ToCBOR (toCBOR),
   decNoShareCBOR,
+  decSharePlusLensCBOR,
   decodeEnumBounded,
-  decodeMap,
   decodeMapByKey,
   decodeNullStrictMaybe,
   decodeRecordNamed,
+  decodeRecordNamedT,
   encodeEnum,
   encodeListLen,
   encodeNullStrictMaybe,
   encodeWord8,
-  interns,
   invalidKey,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -125,6 +125,8 @@ import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (when)
+import Control.Monad.Trans (lift)
+import Control.Monad.Trans.State.Strict (get)
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
@@ -293,16 +295,25 @@ instance EraPParams era => DecShareCBOR (GovActionState era) where
       , Interns (Credential 'DRepRole)
       , Interns (Credential 'HotCommitteeRole)
       )
-  decShareCBOR (cs, ks, cd, ch) =
-    decode $
-      RecD GovActionState
-        <! From
-        <! D (decodeMap (interns ch <$> decCBOR) decCBOR)
-        <! D (decodeMap (interns cd <$> decCBOR) decCBOR)
-        <! D (decodeMap (interns ks <$> decCBOR) decCBOR)
-        <! From
-        <! From
-        <! From
+  decSharePlusCBOR =
+    decodeRecordNamedT "Proposals" (const 7) $ do
+      gasId <- lift decCBOR
+
+      gasCommitteeVotes <-
+        decSharePlusLensCBOR $
+          lens (\(_, _, _, ch) -> (ch, mempty)) (\(cs, ks, cd, ch) (ch', _) -> (cs, ks, cd, ch <> ch'))
+
+      -- DRep votes do not contain any new credentials:
+      (_, _, drepCredsInterns, _) <- get
+      gasDRepVotes <- lift $ decShareCBOR (drepCredsInterns, mempty)
+
+      gasStakePoolVotes <-
+        decSharePlusLensCBOR $
+          lens (\(_, ks, _, _) -> (ks, mempty)) (\(cs, ks, cd, ch) (ks', _) -> (cs, ks <> ks', cd, ch))
+      gasProposalProcedure <- lift decCBOR
+      gasProposedIn <- lift decCBOR
+      gasExpiresAfter <- lift decCBOR
+      pure GovActionState {..}
 
 instance EraPParams era => DecCBOR (GovActionState era) where
   decCBOR = decNoShareCBOR
