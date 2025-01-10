@@ -195,7 +195,7 @@ unit_interval =
         |which poses a problem for testing. We need to be able to
         |generate random valid data for testing implementation of
         |our encoders/decoders. Which means we cannot use the actual
-        |definition here and we hard code the value to 1/2        
+        |definition here and we hard code the value to 1/2
         |]
     $ "unit_interval" =:= tag 30 (arr [1, 2])
 

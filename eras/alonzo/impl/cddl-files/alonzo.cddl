@@ -91,7 +91,7 @@ big_uint = #6.2(bounded_bytes)
 ;      the same
 ;   2) every transaction_index must be strictly smaller than the length of
 ;      transaction_bodies
-; NEW: 
+; NEW:
 ;   invalid_transactions
 ; 
 block = [header
@@ -205,7 +205,7 @@ move_instantaneous_reward = [0 / 1, {* stake_credential => delta_coin} / coin]
 ; 
 ;   invalid_before:
 ;     specifies the left (included) endpoint a.
-;   
+; 
 ;   invalid_hereafter:
 ;     specifies the right (excluded) endpoint b.
 ; 
@@ -386,7 +386,7 @@ script_data_hash = $hash32
 ;   "\x00" for multisig scripts
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
-;   "\x03" for Plutus V3 scripts   
+;   "\x03" for Plutus V3 scripts
 ; 
 script_hash = $hash28
 
@@ -403,7 +403,7 @@ transaction = [transaction_body
 ;  3: time to live
 ;  8: validity interval start
 ; 13: collateral
-; NEW: 
+; NEW:
 ;   11: script_data_hash
 ;   13: set transaction_input
 ;   14: required_signers
@@ -442,7 +442,7 @@ transaction_metadatum_label = uint
 transaction_output = [address, amount : value, ? datum_hash : $hash32]
 
 ; 
-; NEW: 
+; NEW:
 ;   3: [* plutus_script ]
 ;   4: [* plutus_data ]
 ;   5: redeemers
@@ -467,7 +467,7 @@ transaction_witness_set = {? 0 : [* vkeywitness]
 ; which poses a problem for testing. We need to be able to
 ; generate random valid data for testing implementation of
 ; our encoders/decoders. Which means we cannot use the actual
-; definition here and we hard code the value to 1/2        
+; definition here and we hard code the value to 1/2
 ; 
 unit_interval = #6.30([1, 2])
 
@@ -502,11 +502,11 @@ multi_host_name = (2, dns_name)
 ; 
 operational_cert = ($kes_vkey, uint, uint, $signature)
 
-;         pool_keyhash: operator       
-;                 coin: pledge         
-;                 coin: cost           
-;        unit_interval: margin         
-;    set<addr_keyhash>: pool_owners    
+;         pool_keyhash: operator
+;                 coin: pledge
+;                 coin: cost
+;        unit_interval: margin
+;    set<addr_keyhash>: pool_owners
 ; 
 pool_params = (pool_keyhash
               , vrf_keyhash

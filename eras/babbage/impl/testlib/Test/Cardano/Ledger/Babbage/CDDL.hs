@@ -117,7 +117,7 @@ transaction_body =
         | 3: time to live
         | 8: validity interval start
         |13: collateral inputs
-        |NEW: 
+        |NEW:
         |  16: collateral return
         |  17: total collateral
         |  18: reference inputs
@@ -250,7 +250,7 @@ transaction_witness_set :: Rule
 transaction_witness_set =
   comment
     [str|
-        |NEW: 
+        |NEW:
         |  6: [* plutus_v2_script]
         |]
     $ "transaction_witness_set"

@@ -522,11 +522,11 @@ committee_hot_credential = "committee_hot_credential" =:= credential
 pool_params :: Named Group
 pool_params =
   comment
-    [str|        pool_keyhash: operator       
-        |                coin: pledge         
-        |                coin: cost           
-        |       unit_interval: margin         
-        |   set<addr_keyhash>: pool_owners    
+    [str|        pool_keyhash: operator
+        |                coin: pledge
+        |                coin: cost
+        |       unit_interval: margin
+        |   set<addr_keyhash>: pool_owners
         |]
     $ "pool_params"
       =:~ grp

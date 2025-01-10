@@ -51,7 +51,7 @@ block =
         |     the same
         |  2) every transaction_index must be strictly smaller than the length of
         |     transaction_bodies
-        |NEW: 
+        |NEW:
         |  invalid_transactions
         |]
     $ "block"
@@ -94,7 +94,7 @@ transaction_body =
         | 3: time to live
         | 8: validity interval start
         |13: collateral
-        |NEW: 
+        |NEW:
         |  11: script_data_hash
         |  13: set transaction_input
         |  14: required_signers
@@ -264,7 +264,7 @@ transaction_witness_set :: Rule
 transaction_witness_set =
   comment
     [str|
-        |NEW: 
+        |NEW:
         |  3: [* plutus_script ]
         |  4: [* plutus_data ]
         |  5: redeemers
@@ -419,7 +419,7 @@ native_script =
         |
         |  invalid_before:
         |    specifies the left (included) endpoint a.
-        |  
+        |
         |  invalid_hereafter:
         |    specifies the right (excluded) endpoint b.
         |]
