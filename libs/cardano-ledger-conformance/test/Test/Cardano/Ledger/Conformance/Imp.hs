@@ -154,7 +154,7 @@ spec =
           describe "BBODY" Bbody.spec
           describe "CERTS" Certs.spec
           describe "DELEG" Deleg.spec
-          xdescribe "ENACT" Enact.spec
+          describe "ENACT" Enact.spec
           xdescribe "EPOCH" Epoch.spec
           xdescribe "GOV" Gov.spec
           -- GOVCERT tests enabling pending on these two issues in spec:
