@@ -255,7 +255,7 @@ update_committee =
       [ 4
       , gov_action_id / VNil
       , a (set committee_cold_credential)
-      , a (mp [asKey committee_cold_credential ==> epoch_no])
+      , a (mp [0 <+ asKey committee_cold_credential ==> epoch_no])
       , a unit_interval
       ]
 

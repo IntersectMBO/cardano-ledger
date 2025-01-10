@@ -695,7 +695,7 @@ unreg_drep_cert = (17, drep_credential, coin)
 update_committee = (4
                    , gov_action_id / nil
                    , set<committee_cold_credential>
-                   , {committee_cold_credential => epoch_no}
+                   , {* committee_cold_credential => epoch_no}
                    , unit_interval)
 
 update_drep_cert = (18, drep_credential, anchor / nil)
