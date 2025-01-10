@@ -43,6 +43,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitYesVote_,
   submitFailingVote,
   trySubmitVote,
+  arbitraryRegTxCert,
+  arbitraryUnRegTxCert,
   registerDRep,
   unRegisterDRep,
   updateDRep,
@@ -389,6 +391,34 @@ unRegisterDRep drep = do
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.singleton (UnRegDRepTxCert drep refund)
+
+arbitraryUnRegTxCert ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxCert era
+  ) =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+arbitraryUnRegTxCert stakingCredential = do
+  keyDeposit <- getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
+  elements
+    [ UnRegTxCert stakingCredential
+    , UnRegDepositTxCert stakingCredential keyDeposit
+    ]
+
+arbitraryRegTxCert ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxCert era
+  ) =>
+  Credential 'Staking ->
+  ImpTestM era (TxCert era)
+arbitraryRegTxCert stakingCredential = do
+  keyDeposit <- getsNES (nesEsL . curPParamsEpochStateL . ppKeyDepositL)
+  elements
+    [ RegTxCert stakingCredential
+    , RegDepositTxCert stakingCredential keyDeposit
+    ]
 
 -- | Submit a transaction that updates a given DRep
 updateDRep ::
