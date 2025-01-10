@@ -173,6 +173,8 @@ cons' v (OMap sseq kv)
 
 infixr 5 <||
 
+-- TODO: export along with others that are hidden or remove them completely.
+
 -- | \(O(\log n)\). Checks membership before snoc'ing.
 snoc :: HasOKey k v => OMap k v -> v -> OMap k v
 snoc omap@(OMap sseq kv) v

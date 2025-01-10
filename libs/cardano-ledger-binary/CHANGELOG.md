@@ -2,6 +2,10 @@
 
 ## 1.6.0.0
 
+* Add `decodeListLikeWithCountT`
+* Add `internMap`, `internSet`, ` internsFromSet`
+* Add `DecShareCBOR` for  `Set`
+* Add `Semigroup` instance for  `Interns`
 * Add `encodeMemPack` and `decodeMemPack` helper functions.
 * Remove `encodeSignKeyKES` and `decodeSignKeyKES`
 * Remove `EncCBOR` and `DecCBOR` instances for `SignKeyKES`

@@ -98,15 +98,15 @@ import Cardano.Ledger.Binary (
   ToCBOR (toCBOR),
   decNoShareCBOR,
   decodeEnumBounded,
-  decodeMap,
   decodeMapByKey,
   decodeNullStrictMaybe,
   decodeRecordNamed,
+  decodeRecordNamedT,
   encodeEnum,
   encodeListLen,
   encodeNullStrictMaybe,
   encodeWord8,
-  interns,
+  internsFromMap,
   invalidKey,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -125,6 +125,8 @@ import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (when)
+import Control.Monad.Trans (lift)
+import Control.Monad.Trans.State.Strict (get, put)
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
@@ -293,16 +295,22 @@ instance EraPParams era => DecShareCBOR (GovActionState era) where
       , Interns (Credential 'DRepRole)
       , Interns (Credential 'HotCommitteeRole)
       )
-  decShareCBOR (cs, ks, cd, ch) =
-    decode $
-      RecD GovActionState
-        <! From
-        <! D (decodeMap (interns ch <$> decCBOR) decCBOR)
-        <! D (decodeMap (interns cd <$> decCBOR) decCBOR)
-        <! D (decodeMap (interns ks <$> decCBOR) decCBOR)
-        <! From
-        <! From
-        <! From
+  decSharePlusCBOR =
+    decodeRecordNamedT "GovActionState" (const 7) $ do
+      gasId <- lift decCBOR
+
+      (cs, ks, cd, ch) <- get
+      gasCommitteeVotes <- lift $ decShareCBOR (ch, mempty)
+      gasDRepVotes <- lift $ decShareCBOR (cd, mempty)
+      gasStakePoolVotes <- lift $ decShareCBOR (ks, mempty)
+
+      -- DRep votes do not contain any new credentials, thus only additon of interns for SPOs and CCs
+      put (cs, ks <> internsFromMap gasStakePoolVotes, cd, ch <> internsFromMap gasCommitteeVotes)
+
+      gasProposalProcedure <- lift decCBOR
+      gasProposedIn <- lift decCBOR
+      gasExpiresAfter <- lift decCBOR
+      pure GovActionState {..}
 
 instance EraPParams era => DecCBOR (GovActionState era) where
   decCBOR = decNoShareCBOR
@@ -319,7 +327,6 @@ instance EraPParams era => EncCBOR (GovActionState era) where
         !> To gasProposedIn
         !> To gasExpiresAfter
 
--- Ref: https://gitlab.haskell.org/ghc/ghc/-/issues/14046
 instance OMap.HasOKey GovActionId (GovActionState era) where
   okeyL = lens gasId $ \gas gi -> gas {gasId = gi}
 

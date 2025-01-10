@@ -14,10 +14,10 @@ module Cardano.Ledger.State.UTxO where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.TxBody
-import Cardano.Ledger.Conway
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.EpochBoundary
