@@ -14,7 +14,7 @@ module Cardano.Ledger.State.UTxO where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.TxBody
-import Cardano.Ledger.Babbage
+import Cardano.Ledger.Conway
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin
@@ -46,7 +46,7 @@ import Lens.Micro
 import Prettyprinter
 import Text.Printf
 
-type CurrentEra = BabbageEra
+type CurrentEra = ConwayEra
 
 --- Loading
 readNewEpochState ::
