@@ -98,6 +98,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (toCBOR),
   decNoShareCBOR,
   decodeEnumBounded,
+  decodeMap,
   decodeMapByKey,
   decodeNullStrictMaybe,
   decodeRecordNamed,
@@ -105,6 +106,7 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   encodeNullStrictMaybe,
   encodeWord8,
+  interns,
   invalidKey,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -291,13 +293,13 @@ instance EraPParams era => DecShareCBOR (GovActionState era) where
       , Interns (Credential 'DRepRole)
       , Interns (Credential 'HotCommitteeRole)
       )
-  decShareCBOR _ =
+  decShareCBOR (cs, ks, cd, ch) =
     decode $
       RecD GovActionState
         <! From
-        <! From
-        <! From
-        <! From
+        <! D (decodeMap (interns ch <$> decCBOR) decCBOR)
+        <! D (decodeMap (interns cd <$> decCBOR) decCBOR)
+        <! D (decodeMap (interns ks <$> decCBOR) decCBOR)
         <! From
         <! From
         <! From
