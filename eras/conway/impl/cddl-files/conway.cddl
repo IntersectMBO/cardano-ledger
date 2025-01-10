@@ -686,7 +686,7 @@ stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, drep)
 
 stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
 
-treasury_withdrawals_action = (2, {reward_account => coin}, policy_hash / nil)
+treasury_withdrawals_action = (2, {* reward_account => coin}, policy_hash / nil)
 
 unreg_cert = (8, stake_credential, coin)
 

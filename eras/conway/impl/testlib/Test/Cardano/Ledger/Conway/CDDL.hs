@@ -243,7 +243,7 @@ hard_fork_initiation_action =
 treasury_withdrawals_action :: Named Group
 treasury_withdrawals_action =
   "treasury_withdrawals_action"
-    =:~ grp [2, a (mp [asKey reward_account ==> coin]), policy_hash / VNil]
+    =:~ grp [2, a (mp [0 <+ asKey reward_account ==> coin]), policy_hash / VNil]
 
 no_confidence :: Named Group
 no_confidence = "no_confidence" =:~ grp [3, gov_action_id / VNil]
