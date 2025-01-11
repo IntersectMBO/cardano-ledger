@@ -152,6 +152,7 @@ import Cardano.Ledger.Credential (
     ScriptHashObj
   ),
   Ptr (..),
+  SlotNo32 (..),
   StakeReference (..),
  )
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -721,8 +722,8 @@ ppNonce (Nonce h) = text "Nonce" <+> ppHash h
 ppNonce NeutralNonce = text "NeutralNonce"
 
 ppPtr :: Ptr -> PDoc
-ppPtr (Ptr slot txIx certIx) =
-  ppSexp "Ptr" [pcSlotNo slot, pretty (txIxToInt txIx), pretty (certIxToInt certIx)]
+ppPtr (Ptr (SlotNo32 slot) txIx certIx) =
+  ppSexp "Ptr" [pretty slot, pretty (txIxToInt txIx), pretty (certIxToInt certIx)]
 
 instance PrettyA Ptr where
   prettyA = ppPtr

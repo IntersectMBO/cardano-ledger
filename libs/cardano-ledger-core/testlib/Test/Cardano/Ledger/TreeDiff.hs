@@ -167,6 +167,8 @@ instance ToExpr (Credential keyrole)
 
 instance ToExpr StakeReference
 
+deriving newtype instance ToExpr SlotNo32
+
 instance ToExpr Ptr
 
 deriving newtype instance

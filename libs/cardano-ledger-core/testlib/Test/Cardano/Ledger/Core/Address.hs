@@ -26,13 +26,14 @@ import Cardano.Ledger.Address (
   toWord7,
   unCompactAddr,
  )
-import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), word8ToNetwork)
+import Cardano.Ledger.BaseTypes (CertIx (..), TxIx (..), word8ToNetwork)
 import Cardano.Ledger.Binary (byronProtVer, decodeFull, decodeFull')
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
   PaymentCredential,
   Ptr (..),
+  SlotNo32 (..),
   StakeReference (..),
  )
 import Control.Monad (ap)
@@ -163,7 +164,7 @@ getByron =
 getPtr :: Get Ptr
 getPtr =
   Ptr
-    <$> (SlotNo <$> getVariableLengthWord64)
+    <$> (SlotNo32 . fromIntegral <$> getVariableLengthWord64)
     <*> (TxIx . fromIntegral <$> getVariableLengthWord64)
     <*> (CertIx . fromIntegral <$> getVariableLengthWord64)
 
@@ -264,7 +265,7 @@ getShortVariableLengthWord64 = word7sToWord64 <$> getShortWord7s
 getShortPtr :: GetShort Ptr
 getShortPtr =
   Ptr
-    <$> (SlotNo <$> getShortVariableLengthWord64)
+    <$> (SlotNo32 . fromIntegral <$> getShortVariableLengthWord64)
     <*> (TxIx . fromIntegral <$> getShortVariableLengthWord64)
     <*> (CertIx . fromIntegral <$> getShortVariableLengthWord64)
 

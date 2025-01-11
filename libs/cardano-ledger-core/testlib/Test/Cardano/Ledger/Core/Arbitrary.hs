@@ -62,15 +62,12 @@ import Cardano.Ledger.BaseTypes (
   PositiveInterval,
   PositiveUnitInterval,
   ProtVer (..),
-  SlotNo (..),
   StrictMaybe,
   TxIx (..),
   UnitInterval,
   Url,
   mkActiveSlotCoeff,
-  mkCertIxPartial,
   mkNonceFromNumber,
-  mkTxIxPartial,
   natVersion,
   promoteRatio,
   textToDns,
@@ -90,7 +87,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD (NoUpdate (..))
@@ -138,7 +135,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Typeable
 import qualified Data.VMap as VMap
-import Data.Word (Word16, Word32, Word64, Word8)
+import Data.Word (Word16, Word64, Word8)
 import GHC.Stack
 import Generic.Random (genericArbitraryU)
 import System.Random.Stateful (StatefulGen, uniformRM)
@@ -312,20 +309,15 @@ instance Arbitrary TxIn where
 -- Cardano.Ledger.Credential --------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Arbitrary Ptr where
-  arbitrary = genValidPtr
+deriving instance Arbitrary SlotNo32
 
--- | Generate a Ptr that contains values that are allowed on the wire
-genValidPtr :: Gen Ptr
-genValidPtr =
-  Ptr
-    <$> (SlotNo . (fromIntegral :: Word32 -> Word64) <$> arbitrary)
-    <*> (mkTxIxPartial . toInteger <$> (arbitrary :: Gen Word16))
-    <*> (mkCertIxPartial . toInteger <$> (arbitrary :: Gen Word16))
+instance Arbitrary Ptr where
+  arbitrary = Ptr <$> arbitrary <*> arbitrary <*> arbitrary
 
 -- | Generate a Ptr with full 64bit range for values. Not allowed starting in Babbage
 genBadPtr :: Gen Ptr
 genBadPtr = Ptr <$> arbitrary <*> arbitrary <*> arbitrary
+{-# DEPRECATED genBadPtr "Bad pointers are no longer possible" #-}
 
 instance Arbitrary (Credential r) where
   arbitrary =
@@ -429,9 +421,11 @@ genAddrWith genPtr =
 
 genAddrBadPtr :: Gen Addr
 genAddrBadPtr = genAddrWith genBadPtr
+{-# DEPRECATED genAddrBadPtr "Addresses with bad pointers are no longer possible" #-}
 
 genCompactAddrBadPtr :: Gen CompactAddr
 genCompactAddrBadPtr = compactAddr <$> genAddrBadPtr
+{-# DEPRECATED genCompactAddrBadPtr "Addresses with bad pointers are no longer possible" #-}
 
 instance Arbitrary CompactAddr where
   arbitrary = compactAddr <$> arbitrary

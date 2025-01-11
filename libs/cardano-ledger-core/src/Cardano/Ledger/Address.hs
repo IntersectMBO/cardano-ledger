@@ -65,7 +65,6 @@ import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Ledger.BaseTypes (
   CertIx (..),
   Network (..),
-  SlotNo (..),
   TxIx (..),
   byronProtVer,
   natVersion,
@@ -84,8 +83,9 @@ import Cardano.Ledger.Credential (
   Credential (..),
   PaymentCredential,
   Ptr (..),
+  SlotNo32 (..),
   StakeReference (..),
-  normalizePtr,
+  mkPtrNormalized,
  )
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -173,9 +173,8 @@ instance NoThunks Addr
 -- logic can be removed in favor of a fixed deserializer that does the same thing for all
 -- eras prior to Babbage.
 addrPtrNormalize :: Addr -> Addr
-addrPtrNormalize = \case
-  Addr n cred (StakeRefPtr ptr) -> Addr n cred (StakeRefPtr (normalizePtr ptr))
-  addr -> addr
+addrPtrNormalize = id
+{-# DEPRECATED addrPtrNormalize "Pointers are now all normalized and this logic has been moved to the decoder" #-}
 
 -- | An account based address for rewards
 data RewardAccount = RewardAccount
@@ -313,8 +312,8 @@ isBootstrapRedeemer (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem)) = True
 isBootstrapRedeemer _ = False
 
 putPtr :: Ptr -> Put
-putPtr (Ptr (SlotNo slot) (TxIx txIx) (CertIx certIx)) = do
-  putVariableLengthWord64 slot
+putPtr (Ptr (SlotNo32 slot) (TxIx txIx) (CertIx certIx)) = do
+  putVariableLengthWord64 (fromIntegral slot)
   putVariableLengthWord64 (fromIntegral txIx) -- TODO: switch to using MemPack for compacting Address at which point
   putVariableLengthWord64 (fromIntegral certIx) --     this conversion from Word16 to Word64 will no longer be necessary
 
@@ -720,7 +719,7 @@ decodePtr ::
   StateT Int m Ptr
 decodePtr buf =
   Ptr
-    <$> (SlotNo . (fromIntegral :: Word32 -> Word64) <$> decodeVariableLengthWord32 "SlotNo" buf)
+    <$> (SlotNo32 <$> decodeVariableLengthWord32 "SlotNo" buf)
     <*> (TxIx <$> decodeVariableLengthWord16 "TxIx" buf)
     <*> (CertIx <$> decodeVariableLengthWord16 "CertIx" buf)
 {-# INLINE decodePtr #-}
@@ -730,10 +729,10 @@ decodePtrLenient ::
   b ->
   StateT Int m Ptr
 decodePtrLenient buf =
-  Ptr
-    <$> (SlotNo <$> decodeVariableLengthWord64 "SlotNo" buf)
-    <*> (TxIx <$> decodeVariableLengthWord16 "TxIx" buf)
-    <*> (CertIx <$> decodeVariableLengthWord16 "CertIx" buf)
+  mkPtrNormalized
+    <$> decodeVariableLengthWord64 "SlotNo" buf
+    <*> decodeVariableLengthWord64 "TxIx" buf
+    <*> decodeVariableLengthWord64 "CertIx" buf
 {-# INLINE decodePtrLenient #-}
 
 guardLength ::
