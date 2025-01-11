@@ -591,6 +591,9 @@ instance (IsConwayUniv fn, Typeable b) => HasSpec fn (AbstractHash Blake2b_224 b
 instance HasSimpleRep (StakeReference c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (StakeReference c)
 
+instance HasSimpleRep SlotNo32
+instance IsConwayUniv fn => HasSpec fn SlotNo32
+
 instance HasSimpleRep Ptr
 instance IsConwayUniv fn => HasSpec fn Ptr
 

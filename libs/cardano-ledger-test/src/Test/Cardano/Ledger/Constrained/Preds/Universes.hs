@@ -27,17 +27,9 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (
-  Era (EraCrypto),
-  EraScript,
-  EraTxOut (..),
-  TxOut,
-  Value,
-  hashScript,
-  isNativeScript,
- )
-import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto, DSIGN)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Credential
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Hashes (DataHash, EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), coerceKeyRole, hashKey)
@@ -385,7 +377,7 @@ genAddrWith proof net ps ptrss cs byronMap =
 genPtr :: SlotNo -> Gen Ptr
 genPtr (SlotNo n) =
   Ptr
-    <$> (SlotNo <$> choose (0, n))
+    <$> (SlotNo32 <$> choose (0, fromIntegral n))
     <*> (TxIx <$> choose (0, 10))
     <*> (mkCertIxPartial <$> choose (1, 20))
 

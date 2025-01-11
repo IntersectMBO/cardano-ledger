@@ -48,11 +48,10 @@ import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (unboundRational),
+  CertIx (..),
   EpochInterval (..),
   EpochNo (..),
-  TxIx,
-  certIxToInt,
-  txIxToInt,
+  TxIx (..),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -68,6 +67,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..))
+import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
@@ -137,10 +137,8 @@ transScriptHash (ScriptHash h) = PV1.ScriptHash (PV1.toBuiltin (hashToBytes h))
 
 transStakeReference :: StakeReference c -> Maybe PV1.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transCred cred))
-transStakeReference (StakeRefPtr (Ptr (SlotNo slot) txIx certIx)) =
-  let !txIxInteger = toInteger (txIxToInt txIx)
-      !certIxInteger = toInteger (certIxToInt certIx)
-   in Just (PV1.StakingPtr (fromIntegral slot) txIxInteger certIxInteger)
+transStakeReference (StakeRefPtr (Ptr (SlotNo32 slot) (TxIx txIx) (CertIx certIx))) =
+  Just (PV1.StakingPtr (toInteger slot) (toInteger txIx) (toInteger certIx))
 transStakeReference StakeRefNull = Nothing
 
 transCred :: Credential kr c -> PV1.Credential
@@ -180,7 +178,7 @@ transTxId :: TxId c -> PV1.TxId
 transTxId (TxId safe) = PV1.TxId (transSafeHash safe)
 
 transTxIn :: TxIn c -> PV1.TxOutRef
-transTxIn (TxIn txid txIx) = PV1.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
+transTxIn (TxIn txid (TxIx txIx)) = PV1.TxOutRef (transTxId txid) (toInteger txIx)
 
 transCoinToValue :: Coin -> PV1.Value
 transCoinToValue (Coin c) = PV1.singleton PV1.adaSymbol PV1.adaToken c

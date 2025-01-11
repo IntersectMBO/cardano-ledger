@@ -36,7 +36,7 @@ main = do
       mkAddr mkStake n = Addr Mainnet (mkPayment n) (mkStake n)
       mkPtr n =
         let ni = toInteger n
-         in Ptr (SlotNo (fromIntegral n)) (mkTxIxPartial ni) (mkCertIxPartial (ni + 1))
+         in Ptr (SlotNo32 (fromIntegral n)) (mkTxIxPartial ni) (mkCertIxPartial (ni + 1))
       count :: Int
       count = 10000
       seqUnit :: a -> StrictUnit

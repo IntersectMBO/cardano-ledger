@@ -63,7 +63,7 @@ import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
   PoolParams (..),
  )
-import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.List.NonEmpty as NE
@@ -120,7 +120,7 @@ aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
 -- | Alice's base address
 alicePtrAddr :: Crypto c => Addr c
-alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) minBound minBound)
+alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr 10 minBound minBound)
 
 -- | Alice's stake pool parameters
 alicePoolParams :: forall c. Crypto c => PoolParams c

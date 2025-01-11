@@ -43,7 +43,7 @@ import Cardano.Ledger.Coin (
   rationalToCoinViaFloor,
   toDeltaCoin,
  )
-import Cardano.Ledger.Credential (Credential, Ptr (..))
+import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
@@ -243,9 +243,9 @@ expectedStEx1 =
       [Cast.aliceSHK, Cast.bobSHK, Cast.carlSHK]
       [alicePoolParams', bobPoolParams']
     . C.newUTxO txbodyEx1
-    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
-    . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
-    . C.newStakeCred Cast.carlSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 2))
+    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 0))
+    . C.newStakeCred Cast.bobSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 1))
+    . C.newStakeCred Cast.carlSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 2))
     . C.newPool alicePoolParams'
     . C.newPool bobPoolParams'
     . C.delegation Cast.aliceSHK (ppId alicePoolParams')

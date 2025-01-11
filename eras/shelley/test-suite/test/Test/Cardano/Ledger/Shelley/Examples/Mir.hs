@@ -18,7 +18,7 @@ where
 import Cardano.Ledger.BaseTypes (Mismatch (..), Nonce, StrictMaybe (..), mkCertIxPartial)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
-import Cardano.Ledger.Credential (Ptr (..))
+import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary (emptySnapShot)
 import Cardano.Ledger.Keys (
@@ -203,7 +203,7 @@ expectedStEx1' txwits pot =
     . C.newLab (blockEx1' txwits pot)
     . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK] []
     . C.newUTxO (txbodyEx1 pot)
-    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
+    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo32 10) minBound (mkCertIxPartial 1))
     . C.mir Cast.aliceSHK pot aliceMIRCoin
     $ initStMIR (Coin 1000)
 

@@ -19,7 +19,6 @@ import Cardano.Ledger.SafeHash (extractHash)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
-import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.Map.Strict as Map
 
 -- ====================================================
@@ -88,7 +87,7 @@ instance Terse (Credential keyrole c) where
   terse (KeyHashObj (KeyHash hash)) = "Key " ++ show hash
 
 instance Terse Ptr where
-  terse (Ptr (SlotNo n) i j) = "Ptr " ++ show n ++ " " ++ show i ++ " " ++ show j
+  terse (Ptr n i j) = "Ptr " ++ show n ++ " " ++ show i ++ " " ++ show j
 
 instance Terse (TxId era) where
   terse (TxId safehash) = show (extractHash safehash)

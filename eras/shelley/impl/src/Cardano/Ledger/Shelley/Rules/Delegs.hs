@@ -29,12 +29,12 @@ module Cardano.Ledger.Shelley.Rules.Delegs (
 where
 
 import Cardano.Ledger.BaseTypes (
+  CertIx (..),
   EpochNo,
   Network,
   ShelleyBase,
-  TxIx,
+  TxIx (..),
   invalidKey,
-  mkCertIxPartial,
   networkId,
  )
 import Cardano.Ledger.Binary (
@@ -45,8 +45,8 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential, Ptr (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Credential
+import Cardano.Ledger.Keys
 import Cardano.Ledger.Rules.ValidationMode (Test)
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -72,7 +72,7 @@ import Cardano.Ledger.Shelley.TxBody (
   Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert)
-import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.UMap (UMElem (..), UMap (..), UView (..), fromCompact)
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq
@@ -93,7 +93,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
-import Data.Word (Word8)
+import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -238,7 +238,8 @@ delegsTransition ::
   ) =>
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
-  TRC (env@(DelegsEnv slot epochNo txIx pp tx acnt), certState, certificates) <- judgmentContext
+  TRC (env@(DelegsEnv slot@(SlotNo slot64) epochNo txIx pp tx acnt), certState, certificates) <-
+    judgmentContext
   network <- liftSTS $ asks networkId
 
   case certificates of
@@ -256,9 +257,9 @@ delegsTransition = do
           DelegStakeTxCert _ targetPool ->
             validateStakePoolDelegateeRegistered (certPState certState') targetPool
           _ -> pure ()
-      -- It is impossible to have 65535 number of certificates in a
-      -- transaction, therefore partial function is justified.
-      let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
+      -- It is impossible to have 65535 number of certificates in a transaction.
+      let certIx = CertIx (fromIntegral @Int @Word16 $ length gamma)
+          ptr = Ptr (SlotNo32 (fromIntegral @Word64 @Word32 slot64)) txIx certIx
       trans @(EraRule "DELPL" era) $
         TRC (DelplEnv slot epochNo ptr pp acnt, certState', txCert)
 

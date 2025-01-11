@@ -8,11 +8,9 @@ where
 
 import Cardano.Ledger.BaseTypes (Mismatch (..), ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Keys (
-  GenDelegs (..),
-  KeyRole (..),
-  hashKey,
- )
+import Cardano.Ledger.Keys
+import Cardano.Ledger.Credential (SlotNo32 (..))
+import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   AccountState (..),
@@ -56,12 +54,13 @@ env pv acnt =
   DelegEnv
     { slotNo = slot
     , deCurEpochNo = epochFromSlotNo slot
-    , ptr_ = Ptr slot minBound minBound
+    , ptr_ = Ptr slot32 minBound minBound
     , acnt_ = acnt
     , ppDE = emptyPParams & ppProtocolVersionL .~ pv
     }
   where
     slot = SlotNo 50
+    slot32 = SlotNo32 50
 
 shelleyPV :: ProtVer
 shelleyPV = ProtVer (natVersion @2) 0

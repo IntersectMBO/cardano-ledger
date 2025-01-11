@@ -51,8 +51,7 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   SlotNo (..),
   StrictMaybe (..),
-  mkTxIx,
-  mkTxIxPartial,
+  TxIx (..),
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (ConwayUtxoPredFailure (..))
@@ -1067,7 +1066,7 @@ utxoFromTestCaseData pf (TestCaseData txBody' (InitOutputs ofInputs' ofRefInputs
       refInputs' = Set.toList refInputsIns `zip` ofRefInputs'
       collateral' = Set.toList collateralIns `zip` ofCollateral'
 
-      newTxIns = fmap (TxIn (txIdTxBody txBody') . mkTxIx) [0 ..] :: [TxIn (EraCrypto era)]
+      newTxIns = fmap (TxIn (txIdTxBody txBody') . TxIx) [0 ..] :: [TxIn (EraCrypto era)]
       newTxInOuts = newTxIns `zip` toList (getOutputs pf txBody')
 
       initUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ collateral')
@@ -1243,7 +1242,7 @@ plutusV1RefScriptFailures pf =
           (referenceScriptWithPlutusV1Script pf)
           ( injectFailure
               ( CollectErrors
-                  [badTranslation pf $ ReferenceScriptsNotSupported (TxOutFromOutput (mkTxIxPartial 0))]
+                  [badTranslation pf $ ReferenceScriptsNotSupported (TxOutFromOutput (TxIx 0))]
               )
           )
     , testCase "reference input with Plutus V1" $

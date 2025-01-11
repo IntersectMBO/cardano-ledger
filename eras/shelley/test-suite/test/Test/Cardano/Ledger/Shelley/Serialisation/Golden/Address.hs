@@ -14,18 +14,10 @@ import Cardano.Crypto.Hash (HashAlgorithm (..), hashFromBytes, hashFromTextAsHex
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (..), mkCertIxPartial, mkTxIxPartial)
-import Cardano.Ledger.Credential (
-  Credential (..),
-  Ptr (..),
-  StakeReference (..),
- )
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Keys (
-  KeyRole (..),
-  pattern KeyHash,
- )
-import Cardano.Ledger.Shelley.Scripts (pattern ScriptHash)
-import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Credential
+import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys
+import Cardano.Ledger.Shelley.Core
 import qualified Data.Binary as B
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
@@ -133,7 +125,7 @@ goldenTests_MockCrypto =
     ptrHex :: IsString s => s
     ptrHex = "81000203"
     ptr :: Ptr
-    ptr = Ptr (SlotNo 128) (mkTxIxPartial 2) (mkCertIxPartial 3)
+    ptr = Ptr (SlotNo32 128) (mkTxIxPartial 2) (mkCertIxPartial 3)
 
 goldenTests_ShelleyCrypto :: TestTree
 goldenTests_ShelleyCrypto =
@@ -200,7 +192,7 @@ goldenTests_ShelleyCrypto =
     stakeKey :: Credential 'Staking StandardCrypto
     stakeKey = keyBlake2b224 $ B16.encode "1c2c3c4c5c6c7c8c"
     ptr :: Ptr
-    ptr = Ptr (SlotNo 128) (mkTxIxPartial 2) (mkCertIxPartial 3)
+    ptr = Ptr (SlotNo32 128) (mkTxIxPartial 2) (mkCertIxPartial 3)
     -- 32-byte verification key is expected, vk, ie., public key without chain code.
     -- The verification key undergoes Blake2b_224 hashing
     -- and should be 28-byte in the aftermath
