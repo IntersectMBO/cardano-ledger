@@ -426,7 +426,7 @@ transaction_body = {0 : set<transaction_input>
 
 transaction_index = uint .size 2
 
-transaction_input = [transaction_id : $hash32, index : uint]
+transaction_input = [transaction_id : $hash32, index : uint .size 2]
 
 transaction_metadatum = {* transaction_metadatum => transaction_metadatum}
                          / [* transaction_metadatum]
