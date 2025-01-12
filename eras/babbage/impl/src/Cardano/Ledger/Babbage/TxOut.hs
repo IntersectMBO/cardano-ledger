@@ -46,8 +46,8 @@ import Cardano.Ledger.Address (
   CompactAddr,
   compactAddr,
   decompactAddr,
-  fromCborBackwardsBothAddr,
   fromCborBothAddr,
+  fromCborRigorousBothAddr,
  )
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.TxBody (
@@ -463,10 +463,7 @@ instance (EraScript era, Val (Value era)) => DecCBOR (BabbageTxOut era) where
 instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking)
   decShareCBOR credsInterns =
-    -- Even in Babbage the ledger state still contains garbage pointers that we need to
-    -- deal with. This will be taken care of upon entry to Conway era. After which this
-    -- backwards compatibility shim can be removed.
-    internBabbageTxOut (interns credsInterns) <$!> decodeBabbageTxOut fromCborBackwardsBothAddr
+    internBabbageTxOut (interns credsInterns) <$!> decodeBabbageTxOut fromCborRigorousBothAddr
   {-# INLINEABLE decShareCBOR #-}
 
 internBabbageTxOut ::

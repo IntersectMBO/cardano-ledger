@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `fromCborRigorousBothAddr`
 * Add `SlotNo32` and use it in `Ptr` definition
 * Add `mkPtrNormalized`
 * Deprecate `normalizePtr` and `addrPtrNormalize`
