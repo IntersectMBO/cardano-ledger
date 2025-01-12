@@ -52,6 +52,7 @@ module Cardano.Ledger.Address (
   fromCborAddr,
   fromCborBothAddr,
   fromCborCompactAddr,
+  fromCborRigorousBothAddr,
   fromCborBackwardsBothAddr,
   decodeRewardAccount,
   fromCborRewardAccount,
@@ -430,20 +431,21 @@ fromCborCompactAddr = snd <$> fromCborBothAddr
 -- that it was encoded as.
 fromCborBothAddr :: forall c s. Crypto c => Decoder s (Addr c, CompactAddr c)
 fromCborBothAddr = do
-  ifDecoderVersionAtLeast (natVersion @7) decodeAddrRigorous fromCborBackwardsBothAddr
-  where
-    -- Starting with Babbage we no longer allow addresses with garbage in them.
-    decodeAddrRigorous = do
-      sbs <- decCBOR
-      flip evalStateT 0 $ do
-        addr <- decodeAddrStateLenientT False False sbs
-        pure (addr, UnsafeCompactAddr sbs)
-    {-# INLINE decodeAddrRigorous #-}
+  ifDecoderVersionAtLeast (natVersion @7) fromCborRigorousBothAddr fromCborBackwardsBothAddr
 {-# INLINE fromCborBothAddr #-}
+
+-- | Starting with Babbage we no longer allow addresses with garbage in them.
+fromCborRigorousBothAddr :: Decoder s (Addr, CompactAddr)
+fromCborRigorousBothAddr = do
+  sbs <- decCBOR
+  flip evalStateT 0 $ do
+    addr <- decodeAddrStateLenientT False False sbs
+    pure (addr, UnsafeCompactAddr sbs)
+{-# INLINE fromCborRigorousBothAddr #-}
 
 -- | Prior to Babbage era we did not check if a binary blob representing an address was
 -- fully consumed, so unfortunately we must preserve this behavior. However, we do not
--- need to preserve the unconsumed bytes in memory, therefore we can to drop the
+-- need to preserve the unconsumed bytes in memory, therefore we can drop the
 -- garbage after we successfully decoded the malformed address. We also need to allow
 -- bogus pointer address to be deserializeable prior to Babbage era.
 fromCborBackwardsBothAddr :: forall c s. Crypto c => Decoder s (Addr c, CompactAddr c)
