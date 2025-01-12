@@ -8,4 +8,4 @@ import Test.Cardano.Ledger.Babbage.Translation.TranslatableGen ()
 
 -- | Generates golden translation file for Babbage era
 main :: IO ()
-main = generateGoldenFile @BabbageEra "eras/babbage/test-suite/golden/translations.cbor"
+main = generateGoldenFile @BabbageEra "eras/babbage/impl/golden/translations.cbor"
