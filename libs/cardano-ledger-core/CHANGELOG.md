@@ -2,6 +2,12 @@
 
 ## 1.17.0.0
 
+* Add `fromCborRigorousBothAddr`
+* Add `SlotNo32` and use it in `Ptr` definition
+* Add `mkPtrNormalized`
+* Deprecate `normalizePtr` and `addrPtrNormalize`
+* Switch `TxIx` and `CertIx` to use `Word16` instead of `Word64`
+* Deprecate `mkTxIx` and `mkCertIx`
 * Extract `indexProxy` from `HashAnnotated` type class and deprecate it.
 * Extract `hashTxAuxData` from `EraTxAuxData` into a standalone function.
 * Add `TxAuxDataHash` and deprecate `AuxiliaryDayaHash` in its favor.
@@ -52,6 +58,7 @@
 
 ### `testlib`
 
+* Deprecate `genBadPtr`, `genAddrBadPtr` and `genCompactAddrBadPtr`
 * Remove crypto parametrization from types: `KeyPair` and `KeyPairs`
 
 ## 1.16.0.0

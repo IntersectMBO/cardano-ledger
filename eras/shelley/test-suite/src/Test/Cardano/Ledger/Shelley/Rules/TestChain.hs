@@ -22,14 +22,14 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain (
   shortChainTrace,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.BaseTypes (Globals, SlotNo (..))
 import Cardano.Ledger.Block (
   Block (..),
   bheader,
   neededTxInsForBlock,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Ptr (..))
+import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Shelley.API (ApplyBlock, CertState (..), ShelleyDELEG)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -223,10 +223,10 @@ delegTraceFromBlock chainSt block =
     certs = concatMap (reverse . toList . view certsTxBodyL . view bodyTxL)
     blockCerts = filter delegCert (certs txs)
     delegEnv =
-      let (LedgerEnv s _ txIx pp reserves _) = ledgerEnv
+      let (LedgerEnv slot@(SlotNo slot64) _ txIx pp reserves _) = ledgerEnv
           dummyCertIx = minBound
-          ptr = Ptr s txIx dummyCertIx
-       in DelegEnv s (epochFromSlotNo s) ptr reserves pp
+          ptr = Ptr (SlotNo32 (fromIntegral slot64)) txIx dummyCertIx
+       in DelegEnv slot (epochFromSlotNo slot) ptr reserves pp
     delegSt0 =
       certDState (lsCertState ledgerSt0)
     delegCert (RegTxCert _) = True

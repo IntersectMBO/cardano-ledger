@@ -11,7 +11,6 @@
 
 module Cardano.Ledger.Conway.TxOut () where
 
-import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxOut (
   BabbageTxOut (..),
@@ -37,7 +36,7 @@ instance EraTxOut ConwayEra where
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
 
   upgradeTxOut (BabbageTxOut addr value d s) =
-    BabbageTxOut (addrPtrNormalize addr) value (translateDatum d) (upgradeScript <$> s)
+    BabbageTxOut addr value (translateDatum d) (upgradeScript <$> s)
 
   addrEitherTxOutL = addrEitherBabbageTxOutL
   {-# INLINE addrEitherTxOutL #-}

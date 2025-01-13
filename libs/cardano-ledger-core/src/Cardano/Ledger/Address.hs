@@ -52,6 +52,7 @@ module Cardano.Ledger.Address (
   fromCborAddr,
   fromCborBothAddr,
   fromCborCompactAddr,
+  fromCborRigorousBothAddr,
   fromCborBackwardsBothAddr,
   decodeRewardAccount,
   fromCborRewardAccount,
@@ -65,7 +66,6 @@ import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Ledger.BaseTypes (
   CertIx (..),
   Network (..),
-  SlotNo (..),
   TxIx (..),
   byronProtVer,
   natVersion,
@@ -84,8 +84,9 @@ import Cardano.Ledger.Credential (
   Credential (..),
   PaymentCredential,
   Ptr (..),
+  SlotNo32 (..),
   StakeReference (..),
-  normalizePtr,
+  mkPtrNormalized,
  )
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -173,9 +174,8 @@ instance NoThunks Addr
 -- logic can be removed in favor of a fixed deserializer that does the same thing for all
 -- eras prior to Babbage.
 addrPtrNormalize :: Addr -> Addr
-addrPtrNormalize = \case
-  Addr n cred (StakeRefPtr ptr) -> Addr n cred (StakeRefPtr (normalizePtr ptr))
-  addr -> addr
+addrPtrNormalize = id
+{-# DEPRECATED addrPtrNormalize "Pointers are now all normalized and this logic has been moved to the decoder" #-}
 
 -- | An account based address for rewards
 data RewardAccount = RewardAccount
@@ -313,10 +313,10 @@ isBootstrapRedeemer (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem)) = True
 isBootstrapRedeemer _ = False
 
 putPtr :: Ptr -> Put
-putPtr (Ptr (SlotNo slot) (TxIx txIx) (CertIx certIx)) = do
-  putVariableLengthWord64 slot
-  putVariableLengthWord64 txIx
-  putVariableLengthWord64 certIx
+putPtr (Ptr (SlotNo32 slot) (TxIx txIx) (CertIx certIx)) = do
+  putVariableLengthWord64 (fromIntegral slot)
+  putVariableLengthWord64 (fromIntegral txIx) -- TODO: switch to using MemPack for compacting Address at which point
+  putVariableLengthWord64 (fromIntegral certIx) --     this conversion from Word16 to Word64 will no longer be necessary
 
 newtype Word7 = Word7 Word8
   deriving (Eq, Show)
@@ -426,20 +426,21 @@ fromCborCompactAddr = snd <$> fromCborBothAddr
 -- that it was encoded as.
 fromCborBothAddr :: Decoder s (Addr, CompactAddr)
 fromCborBothAddr = do
-  ifDecoderVersionAtLeast (natVersion @7) decodeAddrRigorous fromCborBackwardsBothAddr
-  where
-    -- Starting with Babbage we no longer allow addresses with garbage in them.
-    decodeAddrRigorous = do
-      sbs <- decCBOR
-      flip evalStateT 0 $ do
-        addr <- decodeAddrStateLenientT False False sbs
-        pure (addr, UnsafeCompactAddr sbs)
-    {-# INLINE decodeAddrRigorous #-}
+  ifDecoderVersionAtLeast (natVersion @7) fromCborRigorousBothAddr fromCborBackwardsBothAddr
 {-# INLINE fromCborBothAddr #-}
+
+-- | Starting with Babbage we no longer allow addresses with garbage in them.
+fromCborRigorousBothAddr :: Decoder s (Addr, CompactAddr)
+fromCborRigorousBothAddr = do
+  sbs <- decCBOR
+  flip evalStateT 0 $ do
+    addr <- decodeAddrStateLenientT False False sbs
+    pure (addr, UnsafeCompactAddr sbs)
+{-# INLINE fromCborRigorousBothAddr #-}
 
 -- | Prior to Babbage era we did not check if a binary blob representing an address was
 -- fully consumed, so unfortunately we must preserve this behavior. However, we do not
--- need to preserve the unconsumed bytes in memory, therefore we can to drop the
+-- need to preserve the unconsumed bytes in memory, therefore we can drop the
 -- garbage after we successfully decoded the malformed address. We also need to allow
 -- bogus pointer address to be deserializeable prior to Babbage era.
 fromCborBackwardsBothAddr :: Decoder s (Addr, CompactAddr)
@@ -720,9 +721,9 @@ decodePtr ::
   StateT Int m Ptr
 decodePtr buf =
   Ptr
-    <$> (SlotNo . (fromIntegral :: Word32 -> Word64) <$> decodeVariableLengthWord32 "SlotNo" buf)
-    <*> (TxIx . (fromIntegral :: Word16 -> Word64) <$> decodeVariableLengthWord16 "TxIx" buf)
-    <*> (CertIx . (fromIntegral :: Word16 -> Word64) <$> decodeVariableLengthWord16 "CertIx" buf)
+    <$> (SlotNo32 <$> decodeVariableLengthWord32 "SlotNo" buf)
+    <*> (TxIx <$> decodeVariableLengthWord16 "TxIx" buf)
+    <*> (CertIx <$> decodeVariableLengthWord16 "CertIx" buf)
 {-# INLINE decodePtr #-}
 
 decodePtrLenient ::
@@ -730,10 +731,10 @@ decodePtrLenient ::
   b ->
   StateT Int m Ptr
 decodePtrLenient buf =
-  Ptr
-    <$> (SlotNo <$> decodeVariableLengthWord64 "SlotNo" buf)
-    <*> (TxIx <$> decodeVariableLengthWord64 "TxIx" buf)
-    <*> (CertIx <$> decodeVariableLengthWord64 "CertIx" buf)
+  mkPtrNormalized
+    <$> decodeVariableLengthWord64 "SlotNo" buf
+    <*> decodeVariableLengthWord64 "TxIx" buf
+    <*> decodeVariableLengthWord64 "CertIx" buf
 {-# INLINE decodePtrLenient #-}
 
 guardLength ::

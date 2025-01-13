@@ -15,12 +15,12 @@ import Cardano.Ledger.Credential (
   Credential (KeyHashObj),
   PaymentCredential,
   Ptr (..),
+  SlotNo32 (..),
   StakeCredential,
   StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
  )
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (UTxO))
 import qualified Cardano.Ledger.Val as Val
@@ -88,7 +88,7 @@ stakeCreds n = [KeyHashObj (KeyHash (mkDummyHash (123456 + i))) | i <- [1 .. n]]
 stakePtrs :: [StakeCredential] -> Map Ptr StakeCredential
 stakePtrs creds =
   Map.fromList
-    [ (Ptr (SlotNo i) minBound minBound, cred)
+    [ (Ptr (SlotNo32 i) minBound minBound, cred)
     | (i, cred) <- zip [0 ..] creds
     ]
 

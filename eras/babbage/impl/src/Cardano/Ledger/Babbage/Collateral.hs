@@ -22,7 +22,7 @@ import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<->))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Word (Word16, Word64)
+import Data.Word (Word16)
 import Lens.Micro
 
 -- ============================================================
@@ -54,4 +54,4 @@ collOuts txBody =
           -- In the impossible event that there are more transaction outputs
           -- in the transaction than will fit into a Word16 (which backs the TxIx),
           -- we give the collateral return output an index of maxBound.
-          Nothing -> TxIx ((fromIntegral :: Word16 -> Word64) (maxBound :: Word16))
+          Nothing -> TxIx (maxBound :: Word16)

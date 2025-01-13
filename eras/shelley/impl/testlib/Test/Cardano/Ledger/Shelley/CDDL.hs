@@ -109,7 +109,12 @@ transaction_body =
       ]
 
 transaction_input :: Rule
-transaction_input = "transaction_input" =:= arr ["transaction_id" ==> hash32, "index" ==> VUInt]
+transaction_input =
+  "transaction_input"
+    =:= arr
+      [ "transaction_id" ==> hash32
+      , "index" ==> VUInt `sized` (2 :: Word64)
+      ]
 
 transaction_output :: Rule
 transaction_output = "transaction_output" =:= arr [a address, "amount" ==> coin]

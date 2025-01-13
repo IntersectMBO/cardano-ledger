@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
 import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness, makeBootstrapWitness)
@@ -373,7 +373,7 @@ genAddrWith proof net ps ptrss cs byronMap =
 genPtr :: SlotNo -> Gen Ptr
 genPtr (SlotNo n) =
   Ptr
-    <$> (SlotNo <$> choose (0, n))
+    <$> (SlotNo32 <$> choose (0, fromIntegral n))
     <*> (TxIx <$> choose (0, 10))
     <*> (mkCertIxPartial <$> choose (1, 20))
 

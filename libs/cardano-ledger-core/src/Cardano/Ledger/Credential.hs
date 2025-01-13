@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -8,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Credential (
   Credential (KeyHashObj, ScriptHashObj),
@@ -18,9 +18,11 @@ module Cardano.Ledger.Credential (
   credToText,
   parseCredential,
   Ptr (Ptr),
+  mkPtrNormalized,
   ptrSlotNo,
   ptrTxIx,
   ptrCertIx,
+  SlotNo32 (..),
   StakeCredential,
   StakeReference (..),
   normalizePtr,
@@ -28,7 +30,7 @@ module Cardano.Ledger.Credential (
 where
 
 import Cardano.Crypto.Hash (hashFromTextAsHex, hashToTextAsHex)
-import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..))
+import Cardano.Ledger.BaseTypes (CertIx (..), SlotNo (..), TxIx (..), integralToBounded)
 import Cardano.Ledger.Binary (
   CBORGroup (..),
   DecCBOR (..),
@@ -37,6 +39,8 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   FromCBOR (..),
   ToCBOR (..),
+  ifDecoderVersionAtLeast,
+  natVersion,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Hashes (ScriptHash (..))
@@ -64,6 +68,7 @@ import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (toJSONKeyText)
 import Data.Default (Default (..))
 import Data.Foldable (asum)
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
@@ -79,7 +84,9 @@ import NoThunks.Class (NoThunks (..))
 data Credential (kr :: KeyRole)
   = ScriptHashObj !ScriptHash
   | KeyHashObj !(KeyHash kr)
-  deriving (Show, Eq, Generic, NFData, Ord)
+  deriving (Show, Eq, Generic, Ord)
+
+instance NFData (Credential r)
 
 instance Default (Credential r) where
   def = KeyHashObj def
@@ -160,34 +167,27 @@ data StakeReference
   = StakeRefBase !StakeCredential
   | StakeRefPtr !Ptr
   | StakeRefNull
-  deriving (Show, Eq, Generic, NFData, Ord, ToJSON)
+  deriving (Show, Eq, Generic, Ord)
 
+instance ToJSON StakeReference
+instance NFData StakeReference
 instance NoThunks StakeReference
 
--- TODO: implement this optimization:
--- We expect that `SlotNo` will fit into `Word32` for a very long time,
--- because we can assume that the rate at which it is incremented isn't going to
--- increase in the near future. Therefore with current rate we should be fine for
--- another 134 years. I suggest to remove this optimization in about a
--- hundred years or thereabouts, so around a year 2122 would be good.
---
--- Compaction works in a following manner. Total 8 bytes: first 4 bytes are for
--- SlotNo (s0-s3), followed by 2 bytes for CertIx (c0-c1) and 2 more bytes for TxIx (t0-t1).
---
--- @@@
---
--- ┏━━┯━━┯━━┯━━┯━━┯━━┯━━┯━━┓
--- ┃s3 s2 s1 s0┊c1 c0┊t1 t0┃
--- ┗━━┷━━┷━━┷━━┷━━┷━━┷━━┷━━┛
---
--- @@@
--- newtype Ptr = PtrCompact Word64
+-- | Pointers have been deprecated and aren't used anymore. For this reason we can safely use
+-- `Word32` for slots in pointers
+newtype SlotNo32 = SlotNo32 Word32
+  deriving stock (Show, Generic)
+  deriving newtype
+    (Eq, Ord, Num, Bounded, NFData, NoThunks, EncCBOR, DecCBOR, FromCBOR, ToCBOR, FromJSON, ToJSON)
 
 -- | Pointer to a slot number, transaction index and an index in certificate
 -- list.
-data Ptr = Ptr !SlotNo !TxIx !CertIx
-  deriving (Eq, Ord, Generic, NFData, NoThunks)
+data Ptr = Ptr {-# UNPACK #-} !SlotNo32 {-# UNPACK #-} !TxIx {-# UNPACK #-} !CertIx
+  deriving (Eq, Ord, Generic)
   deriving (EncCBOR, DecCBOR) via CBORGroup Ptr
+
+instance NFData Ptr
+instance NoThunks Ptr
 
 -- | Convert any invalid `Ptr` to a `Ptr` that contains all zeros for its fields. Any
 -- pointer that contains a `SlotNo`, `TxIx` or `CertIx` that is too large to fit into
@@ -197,12 +197,28 @@ data Ptr = Ptr !SlotNo !TxIx !CertIx
 -- /Note/ - This is in no way related to dangling pointers, with an exception that any
 -- invalid `Ptr` is guarateed to be a dangling `Ptr`.
 normalizePtr :: Ptr -> Ptr
-normalizePtr ptr@(Ptr (SlotNo slotNo) (TxIx txIx) (CertIx certIx))
-  | slotNo > fromIntegral (maxBound :: Word32)
-      || txIx > fromIntegral (maxBound :: Word16)
-      || certIx > fromIntegral (maxBound :: Word16) =
-      Ptr (SlotNo 0) (TxIx 0) (CertIx 0)
-  | otherwise = ptr
+normalizePtr ptr = ptr
+{-# DEPRECATED
+  normalizePtr
+  "Starting with Conway era all Pointers are now normalized and this logic has been moved into the decoder"
+  #-}
+
+-- | Construct a valid `Ptr`, while protecting against overflow. Constructs a `Ptr` with
+-- all zeros for its fields, whenever either one of them doesn't fit in without overflowing. Any
+-- pointer that contains a `SlotNo`, `TxIx` or `CertIx` that is too large to fit into `Word32`,
+-- `Word16` and `Word16` respectively is considered to be an invalid `Ptr` and result in all values
+-- to be clamped to zero. In case of all valid arguments the `Ptr`s will be constructed with values
+-- unmodified.
+--
+-- /Note/ - This functionality is in no way related to dangling pointers, with an exception that any
+-- invalid `Ptr` is guarateed to be a dangling `Ptr`.
+mkPtrNormalized :: Word64 -> Word64 -> Word64 -> Ptr
+mkPtrNormalized slotNo txIx certIx =
+  fromMaybe (Ptr (SlotNo32 0) (TxIx 0) (CertIx 0)) $ do
+    slotNo32 <- integralToBounded slotNo
+    txIx16 <- integralToBounded txIx
+    certIx16 <- integralToBounded certIx
+    pure $ Ptr (SlotNo32 slotNo32) (TxIx txIx16) (CertIx certIx16)
 
 instance ToCBOR Ptr where
   toCBOR (Ptr slotNo txIx certIx) = toCBOR (slotNo, txIx, certIx)
@@ -239,35 +255,8 @@ instance Show Ptr where
           . shows certIx
           . (')' :)
 
-{- TODO: Uncomment this once Mainnet is ready for Ptr optimization.
-
--- | With this pattern synonym we can recover actual values from compacted version of `Ptr`.
-pattern Ptr :: SlotNo -> TxIx -> CertIx -> Ptr
-pattern Ptr slotNo txIx certIx <-
-  (viewPtr -> (slotNo, txIx, certIx))
-
-{-# COMPLETE Ptr #-}
-
--- | `Ptr` relies on compact representation for memory efficiency and therefore
--- it will return `Nothing` if `SlotNo` takes up more than 32 bits, which is
--- totally fine for at least another 100 years.
-mkPtr :: SlotNo -> TxIx -> CertIx -> Maybe Ptr
-mkPtr (SlotNo slotNo) (TxIx txIx) (CertIx certIx)
-  | slotNo > fromIntegral (maxBound :: Word32) = Nothing
-  | otherwise =
-      Just
-        $! PtrCompact
-          ( (slotNo `shiftL` 32) .|. (fromIntegral txIx `shiftL` 16)
-              .|. fromIntegral certIx
-          )
-
-viewPtr :: Ptr -> (SlotNo, TxIx, CertIx)
-viewPtr (PtrCompact ptr) =
-  (SlotNo (ptr `shiftR` 32), TxIx (fromIntegral (ptr `shiftR` 16)), CertIx (fromIntegral ptr))
--}
-
 ptrSlotNo :: Ptr -> SlotNo
-ptrSlotNo (Ptr sn _ _) = sn
+ptrSlotNo (Ptr (SlotNo32 sn) _ _) = SlotNo (fromIntegral @Word32 @Word64 sn)
 
 ptrTxIx :: Ptr -> TxIx
 ptrTxIx (Ptr _ txIx _) = txIx
@@ -313,11 +302,6 @@ instance EncCBORGroup Ptr where
 
 instance DecCBORGroup Ptr where
   decCBORGroup = do
-    slotNo <- decCBOR
-    txIx <- decCBOR
-    certIx <- decCBOR
-    pure $ Ptr slotNo txIx certIx
-
--- case mkPtr slotNo txIx certIx of
---   Nothing -> fail $ "SlotNo is too far into the future: " ++ show slotNo
---   Just ptr -> pure ptr
+    let decPtrStrict = Ptr <$> decCBOR <*> decCBOR <*> decCBOR
+        decPtrNormalized = mkPtrNormalized <$> decCBOR <*> decCBOR <*> decCBOR
+    ifDecoderVersionAtLeast (natVersion @7) decPtrStrict decPtrNormalized

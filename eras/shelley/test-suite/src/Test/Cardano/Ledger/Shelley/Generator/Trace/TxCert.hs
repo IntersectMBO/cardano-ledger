@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (
 )
 where
 
-import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, TxIx)
+import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, SlotNo (..), TxIx)
 import Cardano.Ledger.CertState (
   CertState (..),
   lookupDepositDState,
@@ -28,6 +28,7 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (SlotNo32 (..))
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Cardano.Ledger.Shelley.API (
   AccountState,
@@ -36,7 +37,6 @@ import Cardano.Ledger.Shelley.API (
   ShelleyDELPL,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
-import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition (
   BaseM,
@@ -123,7 +123,7 @@ certsTransition ::
   TransitionRule (CERTS era)
 certsTransition = do
   TRC
-    ( (slot, txIx, pp, acnt)
+    ( (slot@(SlotNo slot64), txIx, pp, acnt)
       , (dpState, nextCertIx)
       , c
       ) <-
@@ -131,7 +131,7 @@ certsTransition = do
 
   case c of
     Just (cert, _wits) -> do
-      let ptr = Ptr slot txIx nextCertIx
+      let ptr = Ptr (SlotNo32 (fromIntegral slot64)) txIx nextCertIx
       let epoch = epochFromSlotNo slot
       dpState' <-
         trans @(Core.EraRule "DELPL" era) $

@@ -56,7 +56,8 @@ decodeAddrShort sbs = evalStateT (decodeAddrStateT sbs) 0
 data DecAddr
   = -- | Address was decoded with no problems
     DecAddr Addr
-  | -- | Address was decoded, but it contains an invalid `Cardano.Ledger.Credential.Ptr`
+  | -- | Address was decoded, but it contains an invalid `Cardano.Ledger.Credential.Ptr`, which
+    -- means that address will be decoded with Ptr that has all values clamped to zero.
     DecAddrBadPtr Addr
   | -- | Address was decoded, but not all of input was consumed
     DecAddrUnconsumed

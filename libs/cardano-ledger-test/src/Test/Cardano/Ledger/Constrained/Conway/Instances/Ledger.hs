@@ -583,13 +583,16 @@ instance (IsConwayUniv fn, Typeable b) => HasSpec fn (AbstractHash Blake2b_224 b
 instance HasSimpleRep StakeReference
 instance IsConwayUniv fn => HasSpec fn StakeReference
 
+instance HasSimpleRep SlotNo32
+instance IsConwayUniv fn => HasSpec fn SlotNo32
+
 instance HasSimpleRep Ptr
 instance IsConwayUniv fn => HasSpec fn Ptr
 
 instance HasSimpleRep CertIx where
   type SimpleRep CertIx = Word16
-  toSimpleRep (CertIx w) = fromIntegral w
-  fromSimpleRep = mkCertIx
+  toSimpleRep = unCertIx
+  fromSimpleRep = CertIx
 instance IsConwayUniv fn => HasSpec fn CertIx
 
 instance HasSimpleRep (Credential r)
