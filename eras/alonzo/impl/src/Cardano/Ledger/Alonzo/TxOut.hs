@@ -62,11 +62,14 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   Interns,
   ToCBOR (..),
+  TokenType (..),
   cborError,
   decodeBreakOr,
   decodeListLenOrIndef,
+  decodeMemPack,
   encodeListLen,
   interns,
+  peekTokenType,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
@@ -77,11 +80,12 @@ import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.TxOut as Shelley
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
-import Control.Monad (guard, (<$!>))
+import Control.Monad (guard)
 import Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson (Value (Null, String))
 import Data.Bits
 import Data.Maybe (fromMaybe)
+import Data.MemPack
 import Data.Typeable (Proxy (..), (:~:) (Refl))
 import Data.Word
 import GHC.Generics (Generic)
@@ -103,6 +107,13 @@ data Addr28Extra
       {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
   deriving (Eq, Show, Generic, NoThunks)
 
+instance MemPack Addr28Extra where
+  packedByteCount _ = 32
+  packM (Addr28Extra w0 w1 w2 w3) = packM w0 >> packM w1 >> packM w2 >> packM w3
+  {-# INLINE packM #-}
+  unpackM = Addr28Extra <$> unpackM <*> unpackM <*> unpackM <*> unpackM
+  {-# INLINE unpackM #-}
+
 data DataHash32
   = DataHash32
       {-# UNPACK #-} !Word64 -- DataHash
@@ -110,6 +121,13 @@ data DataHash32
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
   deriving (Eq, Show, Generic, NoThunks)
+
+instance MemPack DataHash32 where
+  packedByteCount _ = 32
+  packM (DataHash32 w0 w1 w2 w3) = packM w0 >> packM w1 >> packM w2 >> packM w3
+  {-# INLINE packM #-}
+  unpackM = DataHash32 <$> unpackM <*> unpackM <*> unpackM <*> unpackM
+  {-# INLINE unpackM #-}
 
 decodeAddress28 ::
   Credential 'Staking ->
@@ -146,6 +164,42 @@ data AlonzoTxOut era
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
+
+-- | This instance is backwards compatible in binary representation with TxOut instances for all
+-- previous era
+instance (Era era, MemPack (CompactForm (Value era))) => MemPack (AlonzoTxOut era) where
+  packedByteCount = \case
+    TxOutCompact' cAddr cValue ->
+      packedTagByteCount + packedByteCount cAddr + packedByteCount cValue
+    TxOutCompactDH' cAddr cValue dataHash ->
+      packedTagByteCount + packedByteCount cAddr + packedByteCount cValue + packedByteCount dataHash
+    TxOut_AddrHash28_AdaOnly cred addr28 cCoin ->
+      packedTagByteCount + packedByteCount cred + packedByteCount addr28 + packedByteCount cCoin
+    TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28 cCoin dataHash32 ->
+      packedTagByteCount
+        + packedByteCount cred
+        + packedByteCount addr28
+        + packedByteCount cCoin
+        + packedByteCount dataHash32
+  {-# INLINE packedByteCount #-}
+  packM = \case
+    TxOutCompact' cAddr cValue ->
+      packTagM 0 >> packM cAddr >> packM cValue
+    TxOutCompactDH' cAddr cValue dataHash ->
+      packTagM 1 >> packM cAddr >> packM cValue >> packM dataHash
+    TxOut_AddrHash28_AdaOnly cred addr28 cCoin ->
+      packTagM 2 >> packM cred >> packM addr28 >> packM cCoin
+    TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28 cCoin dataHash32 ->
+      packTagM 3 >> packM cred >> packM addr28 >> packM cCoin >> packM dataHash32
+  {-# INLINE packM #-}
+  unpackM =
+    unpackTagM >>= \case
+      0 -> TxOutCompact' <$> unpackM <*> unpackM
+      1 -> TxOutCompactDH' <$> unpackM <*> unpackM <*> unpackM
+      2 -> TxOut_AddrHash28_AdaOnly <$> unpackM <*> unpackM <*> unpackM
+      3 -> TxOut_AddrHash28_AdaOnly_DataHash32 <$> unpackM <*> unpackM <*> unpackM <*> unpackM
+      n -> unknownTagM @(AlonzoTxOut era) n
+  {-# INLINE unpackM #-}
 
 deriving stock instance (Eq (Value era), Compactible (Value era)) => Eq (AlonzoTxOut era)
 
@@ -365,10 +419,15 @@ instance (Era era, Val (Value era)) => DecCBOR (AlonzoTxOut era) where
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
   {-# INLINEABLE decCBOR #-}
 
-instance (Era era, Val (Value era)) => DecShareCBOR (AlonzoTxOut era) where
+instance (Era era, Val (Value era), MemPack (CompactForm (Value era))) => DecShareCBOR (AlonzoTxOut era) where
   type Share (AlonzoTxOut era) = Interns (Credential 'Staking)
   decShareCBOR credsInterns = do
-    internAlonzoTxOut (interns credsInterns) <$!> decCBOR
+    txOut <-
+      peekTokenType >>= \case
+        TypeBytes -> decodeMemPack
+        TypeBytesIndef -> decodeMemPack
+        _ -> decCBOR
+    pure $! internAlonzoTxOut (interns credsInterns) txOut
   {-# INLINEABLE decShareCBOR #-}
 
 internAlonzoTxOut ::

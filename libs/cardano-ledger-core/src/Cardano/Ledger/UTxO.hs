@@ -44,6 +44,7 @@ import Cardano.Ledger.Binary (
   FromCBOR (..),
   Interns,
   ToCBOR (..),
+  decNoShareCBOR,
   decodeMap,
  )
 import Cardano.Ledger.CertState (CertState)
@@ -102,7 +103,7 @@ instance
   where
   type Share (UTxO era) = Interns (Credential 'Staking)
   decShareCBOR credsInterns =
-    UTxO <$!> decodeMap decCBOR (decShareCBOR credsInterns)
+    UTxO <$!> decodeMap decNoShareCBOR (decShareCBOR credsInterns)
 
 deriving via
   Quiet (UTxO era)

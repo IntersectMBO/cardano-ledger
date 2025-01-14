@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -27,11 +28,21 @@ import Cardano.Crypto.Hash.Class (hashToTextAsHex)
 import Cardano.HeapWords (HeapWords (..))
 import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
-import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  DecShareCBOR (..),
+  EncCBOR (..),
+  TokenType (..),
+  decodeMemPack,
+  decodeRecordNamed,
+  encodeListLen,
+  peekTokenType,
+ )
 import Cardano.Ledger.Hashes (EraIndependentTxBody, SafeHash, extractHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON (..))
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import Data.MemPack
 import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.Generics (Generic)
@@ -51,7 +62,7 @@ import NoThunks.Class (NoThunks (..))
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId {unTxId :: SafeHash EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks, ToJSON, FromJSON, HeapWords, EncCBOR, DecCBOR, NFData)
+  deriving newtype (NoThunks, ToJSON, FromJSON, HeapWords, EncCBOR, DecCBOR, NFData, MemPack)
 
 instance HeapWords TxIn where
   heapWords (TxIn txId _) =
@@ -74,6 +85,14 @@ txInToText (TxIn (TxId txidHash) ix) =
 data TxIn = TxIn !TxId {-# UNPACK #-} !TxIx
   deriving (Generic, Eq, Ord, Show)
 
+instance MemPack TxIn where
+  packedByteCount (TxIn txId txIx) = packedByteCount txId + packedByteCount txIx
+  {-# INLINE packedByteCount #-}
+  packM (TxIn txId txIx) = packM txId >> packM txIx
+  {-# INLINE packM #-}
+  unpackM = TxIn <$> unpackM <*> unpackM
+  {-# INLINE unpackM #-}
+
 -- | Construct `TxIn` while throwing an error for an out of range `TxIx`. Make
 -- sure to use it only for testing.
 mkTxInPartial :: HasCallStack => TxId -> Integer -> TxIn
@@ -95,3 +114,10 @@ instance DecCBOR TxIn where
       "TxIn"
       (const 2)
       (TxIn <$> decCBOR <*> decCBOR)
+
+instance DecShareCBOR TxIn where
+  decShareCBOR _ =
+    peekTokenType >>= \case
+      TypeBytes -> decodeMemPack
+      TypeBytesIndef -> decodeMemPack
+      _ -> decCBOR

@@ -65,7 +65,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Binary.Version (natVersion)
-import Cardano.Ledger.Coin (Coin (..), integerToWord64)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Val (Val (..))
@@ -90,13 +90,11 @@ import Data.Group (Abelian, Group (..))
 import Data.Int (Int64)
 import Data.List (sortOn)
 import Data.Map (Map)
-import Data.Map.Internal (
-  link,
-  link2,
- )
+import Data.Map.Internal (link, link2)
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.MemPack
 import qualified Data.Monoid as M (Sum (Sum, getSum))
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
@@ -399,7 +397,7 @@ instance ToJSONKey AssetName where
 
 instance Compactible MaryValue where
   newtype CompactForm MaryValue = CompactValue CompactValue
-    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData)
+    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -422,6 +420,42 @@ data CompactValue
       {-# UNPACK #-} !Word32 -- number of ma's
       {-# UNPACK #-} !ShortByteString -- rep
   deriving (Generic, Show, Typeable)
+
+-- | We need to manually pack/unpack `CompactForm Coin` here because its MemPack instance can't be
+-- used due to the requirement of it being compatible with the first case of
+-- `CompactValueAdaOnly`. In other words `MemPack` instance for `CompactForm Coin` also prefixes a
+-- zero Tag for binary compatibility with `CompactValueAdaOnly` case.
+instance MemPack CompactValue where
+  packedByteCount = \case
+    CompactValueAdaOnly c ->
+      packedTagByteCount + compactCoinByteCount c
+    CompactValueMultiAsset c numMA rep -> do
+      packedTagByteCount
+        + compactCoinByteCount c
+        + packedByteCount (VarLen numMA)
+        + packedByteCount rep
+    where
+      compactCoinByteCount (CompactCoin c) = packedByteCount (VarLen c)
+  {-# INLINE packedByteCount #-}
+  packM = \case
+    CompactValueAdaOnly c ->
+      packTagM 0 >> packCompactCoinM c
+    CompactValueMultiAsset c numMA rep -> do
+      packTagM 1 >> packCompactCoinM c >> packM (VarLen numMA) >> packM rep
+    where
+      -- See note on the instance for why `MemPack` instance for `CompactForm Coin` can't be used.
+      packCompactCoinM (CompactCoin c) = packM (VarLen c)
+      {-# INLINE packCompactCoinM #-}
+  {-# INLINE packM #-}
+  unpackM = do
+    unpackTagM >>= \case
+      0 -> CompactValueAdaOnly <$> unpackCompactCoinM
+      1 -> CompactValueMultiAsset <$> unpackCompactCoinM <*> (unVarLen <$> unpackM) <*> unpackM
+      n -> unknownTagM @CompactValue n
+    where
+      unpackCompactCoinM = CompactCoin . unVarLen <$> unpackM
+      {-# INLINE unpackCompactCoinM #-}
+  {-# INLINE unpackM #-}
 
 instance NFData CompactValue where
   rnf = rwhnf

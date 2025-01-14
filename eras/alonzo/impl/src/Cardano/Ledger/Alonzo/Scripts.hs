@@ -114,6 +114,7 @@ import qualified Data.ByteString as BS
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
+import Data.MemPack
 import Data.Typeable
 import Data.Word (Word16, Word32, Word8)
 import GHC.Generics (Generic)
@@ -417,6 +418,21 @@ data AlonzoScript era
   | PlutusScript !(PlutusScript era)
   deriving (Generic)
 
+instance (Era era, MemPack (PlutusScript era)) => MemPack (AlonzoScript era) where
+  packedByteCount = \case
+    TimelockScript script -> packedTagByteCount + packedByteCount script
+    PlutusScript script -> packedTagByteCount + packedByteCount script
+  packM = \case
+    TimelockScript script -> packTagM 0 >> packM script
+    PlutusScript script -> packTagM 1 >> packM script
+  {-# INLINE packM #-}
+  unpackM =
+    unpackTagM >>= \case
+      0 -> TimelockScript <$> unpackM
+      1 -> PlutusScript <$> unpackM
+      n -> unknownTagM @(AlonzoScript era) n
+  {-# INLINE unpackM #-}
+
 deriving instance Eq (PlutusScript era) => Eq (AlonzoScript era)
 
 instance (Era era, NoThunks (PlutusScript era)) => NoThunks (AlonzoScript era)
@@ -530,6 +546,23 @@ instance Eq (PlutusScript era) => EqRaw (AlonzoScript era) where
 
 instance AlonzoEraScript era => ToJSON (AlonzoScript era) where
   toJSON = String . serializeAsHexText
+
+-- | It might seem that this instance unnecessarily utilizes a zero Tag, but it is needed for
+-- forward compatibility with plutus scripts from future eras.
+--
+-- That being said, currently this instance is not used at all, since reference scripts where
+-- introduced in Babbage era and `MemPack` for now is only used for `TxOut`s
+instance MemPack (PlutusScript AlonzoEra) where
+  packedByteCount = \case
+    AlonzoPlutusV1 script -> packedTagByteCount + packedByteCount script
+  packM = \case
+    AlonzoPlutusV1 script -> packTagM 0 >> packM script
+  {-# INLINE packM #-}
+  unpackM =
+    unpackTagM >>= \case
+      0 -> AlonzoPlutusV1 <$> unpackM
+      n -> unknownTagM @(PlutusScript AlonzoEra) n
+  {-# INLINE unpackM #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation

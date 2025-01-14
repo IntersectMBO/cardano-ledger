@@ -38,6 +38,8 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
+  encodeMap,
+  encodeMemPack,
   enforceDecoderVersion,
   ifDecoderVersionAtLeast,
   natVersion,
@@ -316,10 +318,12 @@ instance
   ) =>
   EncCBOR (UTxOState era)
   where
-  encCBOR (UTxOState ut dp fs us sd don) =
+  encCBOR (UTxOState utxo dp fs us sd don) =
     encode $
       Rec UTxOState
-        !> To ut
+        -- We need to define encoder with MemPack manually here instead of changing the `EncCBOR`
+        -- instance for `UTxO` in order to not affect some of the ledger state queries.
+        !> E (encodeMap encodeMemPack encodeMemPack . unUTxO) utxo
         !> To dp
         !> To fs
         !> To us

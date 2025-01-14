@@ -76,15 +76,17 @@ roundTripConwayEraTypesSpec = do
 instance RuleListEra ConwayEra where
   type
     EraRules ConwayEra =
-      '[ "GOV"
-       , "UTXOS"
-       , "LEDGER"
-       , "CERTS"
+      '[ "BBODY"
        , "CERT"
+       , "CERTS"
        , "DELEG"
        , "GOVCERT"
-       , "UTXOW"
-       , "UTXO"
+       , "GOV"
+       , "LEDGER"
        , "LEDGERS"
+       , "MEMPOOL"
        , "POOL"
+       , "UTXO"
+       , "UTXOS"
+       , "UTXOW"
        ]

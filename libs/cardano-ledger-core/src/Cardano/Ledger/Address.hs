@@ -93,8 +93,8 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Prelude (unsafeShortByteStringIndex)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard, unless, when)
-import Control.Monad.Trans.Fail (runFail)
-import Control.Monad.Trans.State.Strict (StateT, evalStateT, get, modify', state)
+import Control.Monad.Trans.Fail (FailT (..), runFail)
+import Control.Monad.Trans.State.Strict (StateT (..), evalStateT, get, modify', state)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
@@ -114,6 +114,7 @@ import Data.Default (Default (..))
 import Data.Function (fix)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
+import Data.MemPack (MemPack, Unpack (..))
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text
@@ -382,7 +383,7 @@ bootstrapKeyHash (BootstrapAddress byronAddress) =
 
 newtype CompactAddr = UnsafeCompactAddr ShortByteString
   deriving stock (Eq, Generic, Ord)
-  deriving newtype (NoThunks, NFData)
+  deriving newtype (NoThunks, NFData, MemPack)
 
 instance Show CompactAddr where
   show c = show (decompactAddr c)

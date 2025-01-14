@@ -160,6 +160,7 @@ import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict
+import Data.MemPack
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (
   Scientific,
@@ -809,7 +810,8 @@ newtype BlocksMade = BlocksMade
 -- | Transaction index.
 newtype TxIx = TxIx {unTxIx :: Word16}
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, DecCBOR, ToJSON)
+  deriving newtype
+    (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, DecCBOR, ToJSON, MemPack)
 
 -- | Construct a `TxIx` from a 16 bit unsigned integer
 mkTxIx :: Word16 -> TxIx

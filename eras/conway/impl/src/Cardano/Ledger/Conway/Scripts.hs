@@ -8,6 +8,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -54,6 +55,7 @@ import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
+import Data.MemPack
 import Data.Typeable
 import Data.Word (Word16, Word32, Word8)
 import GHC.Generics
@@ -176,6 +178,24 @@ instance NFData (PlutusScript ConwayEra) where
 instance NoThunks (PlutusScript ConwayEra)
 instance SafeToHash (PlutusScript ConwayEra) where
   originalBytes ps = withPlutusScript ps originalBytes
+
+instance MemPack (PlutusScript ConwayEra) where
+  packedByteCount = \case
+    ConwayPlutusV1 script -> packedTagByteCount + packedByteCount script
+    ConwayPlutusV2 script -> packedTagByteCount + packedByteCount script
+    ConwayPlutusV3 script -> packedTagByteCount + packedByteCount script
+  packM = \case
+    ConwayPlutusV1 script -> packTagM 0 >> packM script
+    ConwayPlutusV2 script -> packTagM 1 >> packM script
+    ConwayPlutusV3 script -> packTagM 2 >> packM script
+  {-# INLINE packM #-}
+  unpackM =
+    unpackTagM >>= \case
+      0 -> ConwayPlutusV1 <$> unpackM
+      1 -> ConwayPlutusV2 <$> unpackM
+      2 -> ConwayPlutusV3 <$> unpackM
+      n -> unknownTagM @(PlutusScript ConwayEra) n
+  {-# INLINE unpackM #-}
 
 data ConwayPlutusPurpose f era
   = ConwaySpending !(f Word32 TxIn)

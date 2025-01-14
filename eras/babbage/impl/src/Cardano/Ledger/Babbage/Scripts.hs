@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -32,6 +33,7 @@ import Cardano.Ledger.Babbage.TxCert ()
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.MemPack
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
 
@@ -126,3 +128,18 @@ instance NFData (PlutusScript BabbageEra) where
 instance NoThunks (PlutusScript BabbageEra)
 instance SafeToHash (PlutusScript BabbageEra) where
   originalBytes ps = withPlutusScript ps originalBytes
+
+instance MemPack (PlutusScript BabbageEra) where
+  packedByteCount = \case
+    BabbagePlutusV1 script -> packedTagByteCount + packedByteCount script
+    BabbagePlutusV2 script -> packedTagByteCount + packedByteCount script
+  packM = \case
+    BabbagePlutusV1 script -> packTagM 0 >> packM script
+    BabbagePlutusV2 script -> packTagM 1 >> packM script
+  {-# INLINE packM #-}
+  unpackM =
+    unpackTagM >>= \case
+      0 -> BabbagePlutusV1 <$> unpackM
+      1 -> BabbagePlutusV2 <$> unpackM
+      n -> unknownTagM @(PlutusScript BabbageEra) n
+  {-# INLINE unpackM #-}

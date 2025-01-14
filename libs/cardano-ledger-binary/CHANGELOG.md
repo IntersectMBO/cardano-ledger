@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Add `encodeMemPack` and `decodeMemPack` helper functions.
 * Remove `encodeSignKeyKES` and `decodeSignKeyKES`
 * Remove `EncCBOR` and `DecCBOR` instances for `SignKeyKES`
 

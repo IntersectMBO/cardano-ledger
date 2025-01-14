@@ -6,6 +6,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -69,6 +70,7 @@ import Data.Aeson.Types (toJSONKeyText)
 import Data.Default (Default (..))
 import Data.Foldable (asum)
 import Data.Maybe (fromMaybe)
+import Data.MemPack
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
@@ -87,6 +89,21 @@ data Credential (kr :: KeyRole)
   deriving (Show, Eq, Generic, Ord)
 
 instance NFData (Credential r)
+
+instance Typeable kr => MemPack (Credential kr) where
+  packedByteCount = \case
+    ScriptHashObj hash -> packedTagByteCount + packedByteCount hash
+    KeyHashObj hash -> packedTagByteCount + packedByteCount hash
+  packM = \case
+    ScriptHashObj hash -> packTagM 0 >> packM hash
+    KeyHashObj hash -> packTagM 1 >> packM hash
+  {-# INLINE packM #-}
+  unpackM =
+    unpackTagM >>= \case
+      0 -> ScriptHashObj <$> unpackM
+      1 -> KeyHashObj <$> unpackM
+      n -> unknownTagM @(Credential kr) n
+  {-# INLINE unpackM #-}
 
 instance Default (Credential r) where
   def = KeyHashObj def

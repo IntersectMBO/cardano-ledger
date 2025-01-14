@@ -102,6 +102,7 @@ import Data.ByteString.Short (ShortByteString, fromShort)
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Default (Default (..))
 import Data.Map.Strict (Map)
+import Data.MemPack
 import Data.Typeable
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -167,6 +168,7 @@ newtype KeyHash (r :: KeyRole) = KeyHash
     , ToJSON
     , FromJSON
     , Default
+    , MemPack
     )
 
 instance HasKeyRole KeyHash
@@ -200,6 +202,7 @@ newtype ScriptHash
     , FromJSON
     , ToJSONKey
     , FromJSONKey
+    , MemPack
     )
 
 --------------------------------------------------------------------------------
@@ -323,11 +326,21 @@ newtype GenDelegs = GenDelegs
 -- to types which preserve their original serialization bytes.
 newtype SafeHash i = SafeHash (Hash.Hash HASH i)
   deriving
-    (Show, Eq, Ord, NoThunks, NFData, SafeToHash, HeapWords, ToCBOR, FromCBOR, EncCBOR, DecCBOR)
-
-deriving instance ToJSON (SafeHash i)
-
-deriving instance FromJSON (SafeHash i)
+    ( Show
+    , Eq
+    , Ord
+    , NoThunks
+    , NFData
+    , SafeToHash
+    , HeapWords
+    , ToCBOR
+    , FromCBOR
+    , EncCBOR
+    , DecCBOR
+    , ToJSON
+    , FromJSON
+    , MemPack
+    )
 
 instance Default (SafeHash i) where
   def = unsafeMakeSafeHash def

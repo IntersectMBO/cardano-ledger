@@ -84,6 +84,7 @@ library
     cardano-strict-containers,
     containers,
     deepseq,
+    mempack,
     microlens,
     nothunks,
     plutus-ledger-api >=1.33,

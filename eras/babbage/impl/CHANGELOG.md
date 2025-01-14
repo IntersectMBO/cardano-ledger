@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Add `MemPack` instance for `BabbageTxOut` and `PlutusScript BabbageEra`
 * Deprecate `Babbage` type synonym
 * Remove crypto parametrization from `BabbageEra`
 
