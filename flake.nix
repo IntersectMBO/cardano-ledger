@@ -188,7 +188,7 @@
             }
           );
       in
-        lib.recursiveUpdate flake rec {
+        lib.recursiveUpdate (removeAttrs flake ["checks"]) rec {
           project = cabalProject;
           # add a required job, that's basically all hydraJobs.
           hydraJobs =
@@ -203,6 +203,28 @@
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
                 };
             };
+
+          checks = let
+            # https://github.com/numtide/flake-utils/issues/121#issuecomment-2589899217
+            recurseIntoDeepAttrs = attrs:
+              lib.recurseIntoAttrs (
+                lib.mapAttrs
+                (
+                  _: v:
+                    if builtins.typeOf v == "set" && !lib.isDerivation v
+                    then recurseIntoDeepAttrs v
+                    else v
+                )
+                attrs
+              );
+          in
+            inputs.flake-utils.lib.flattenTree (recurseIntoDeepAttrs (
+              flake.hydraJobs
+              // {inherit (legacyPackages) doc specs;}
+              # contains only the `required` and `nonrequired` jobs
+              // hydraJobs
+            ));
+
           legacyPackages = rec {
             inherit cabalProject nixpkgs;
             # also provide hydraJobs through legacyPackages to allow building without system prefix:
@@ -277,9 +299,11 @@
   nixConfig = {
     extra-substituters = [
       "https://cache.iog.io"
+      "https://cache.garnix.io"
     ];
     extra-trusted-public-keys = [
       "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+      "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
     ];
     allow-import-from-derivation = true;
   };
