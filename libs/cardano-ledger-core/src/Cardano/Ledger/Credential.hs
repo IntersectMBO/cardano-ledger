@@ -11,7 +11,6 @@
 
 module Cardano.Ledger.Credential (
   Credential (KeyHashObj, ScriptHashObj),
-  GenesisCredential (..),
   PaymentCredential,
   credKeyHash,
   credKeyHashWitness,
