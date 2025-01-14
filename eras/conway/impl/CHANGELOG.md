@@ -5,6 +5,12 @@
 * Deprecate `Conway` type synonym
 * Remove crypto parametrization from `ConwayEra`
 
+### testlib
+
+* Add arbitrary functions to choose registration and unregistration certs in imp-tests. #
+  * `arbitraryRegTxCert` to choose between `RegTxCert` and `RegDepositTxCert`
+  * `arbitraryUnRegTxCert` to choose between `UnRegTxCert` and `UnRegDepositTxCert`
+
 ## 1.18.0.0
 
 * Remove `SlotNo` from `CertEnv` and `CertsEnv`
