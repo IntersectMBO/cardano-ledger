@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
@@ -120,7 +121,6 @@ instance Compactible Coin where
     deriving
       (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim, Ord, ToCBOR, ToJSON, FromJSON)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
-    deriving (MemPack) via VarLen Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
   fromCompact (CompactCoin c) = word64ToCoin c
@@ -131,6 +131,18 @@ instance Compactible DeltaCoin where
 
   toCompact (DeltaCoin dc) = CompactDeltaCoin <$> integerToWord64 dc
   fromCompact (CompactDeltaCoin cdc) = DeltaCoin (unCoin (word64ToCoin cdc))
+
+instance MemPack (CompactForm Coin) where
+  packedByteCount (CompactCoin c) =
+    packedTagByteCount + packedByteCount (VarLen c)
+  {-# INLINE packedByteCount #-}
+  packM (CompactCoin c) = packTagM 0 >> packM (VarLen c)
+  {-# INLINE packM #-}
+  unpackM = do
+    unpackTagM >>= \case
+      0 -> CompactCoin . unVarLen <$> unpackM
+      n -> unknownTagM @(CompactForm Coin) n
+  {-# INLINE unpackM #-}
 
 -- It's odd for this to live here. Where should it go?
 integerToWord64 :: Integer -> Maybe Word64

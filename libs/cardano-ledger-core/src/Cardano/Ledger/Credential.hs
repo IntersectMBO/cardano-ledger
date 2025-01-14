@@ -76,7 +76,6 @@ import Data.Typeable (Typeable)
 import Data.Word
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Quiet (Quiet (Quiet))
 
 -- | Script hash or key hash for a payment or a staking object.
 --
@@ -89,7 +88,7 @@ data Credential (kr :: KeyRole) c
   | KeyHashObj !(KeyHash kr c)
   deriving (Show, Eq, Generic, Ord)
 
-instance Crypto c => NFData (Credential r c)
+instance NFData (Credential r c)
 
 instance (Crypto c, Typeable kr) => MemPack (Credential kr c) where
   packedByteCount = \case
@@ -187,13 +186,9 @@ data StakeReference c
   | StakeRefNull
   deriving (Show, Eq, Generic, Ord)
 
-instance NoThunks (StakeReference c)
-
-deriving instance Crypto c => ToJSON (StakeReference c)
-
 instance Crypto c => ToJSON (StakeReference c)
-instance Crypto c => NFData (StakeReference c)
-instance Crypto c => NoThunks (StakeReference c)
+instance NFData (StakeReference c)
+instance NoThunks (StakeReference c)
 
 -- | Pointers have been deprecated and aren't used anymore. For this reason we can safely use
 -- `Word32` for slots in pointers

@@ -423,17 +423,17 @@ data AlonzoScript era
 
 instance (Era era, MemPack (PlutusScript era)) => MemPack (AlonzoScript era) where
   packedByteCount = \case
-    TimelockScript script -> 1 + packedByteCount script
-    PlutusScript script -> 1 + packedByteCount script
+    TimelockScript script -> packedTagByteCount + packedByteCount script
+    PlutusScript script -> packedTagByteCount + packedByteCount script
   packM = \case
-    TimelockScript script -> packM (0 :: Word8) >> packM script
-    PlutusScript script -> packM (1 :: Word8) >> packM script
+    TimelockScript script -> packTagM 0 >> packM script
+    PlutusScript script -> packTagM 1 >> packM script
   {-# INLINE packM #-}
   unpackM =
-    unpackM >>= \case
+    unpackTagM >>= \case
       0 -> TimelockScript <$> unpackM
       1 -> PlutusScript <$> unpackM
-      n -> fail $ "Unrecognized Tag: " ++ show (n :: Word8)
+      n -> unknownTagM @(AlonzoScript era) n
   {-# INLINE unpackM #-}
 
 deriving instance Eq (PlutusScript era) => Eq (AlonzoScript era)
@@ -508,7 +508,7 @@ instance Crypto c => AlonzoEraScript (AlonzoEra c) where
   {-# SPECIALIZE instance AlonzoEraScript (AlonzoEra StandardCrypto) #-}
 
   newtype PlutusScript (AlonzoEra c) = AlonzoPlutusV1 (Plutus 'PlutusV1)
-    deriving newtype (Eq, Ord, Show, NFData, NoThunks, SafeToHash, Generic, MemPack)
+    deriving newtype (Eq, Ord, Show, NFData, NoThunks, SafeToHash, Generic)
 
   type PlutusPurpose f (AlonzoEra c) = AlonzoPlutusPurpose f (AlonzoEra c)
 
@@ -555,6 +555,23 @@ instance Eq (PlutusScript era) => EqRaw (AlonzoScript era) where
 
 instance AlonzoEraScript era => ToJSON (AlonzoScript era) where
   toJSON = String . serializeAsHexText
+
+-- | It might seem that this instance unnecessarily utilizes a zero Tag, but it is needed for
+-- forward compatibility with plutus scripts from future eras.
+--
+-- That being said, currently this instance is not used at all, since reference scripts where
+-- introduced in Babbage era and `MemPack` for now is only used for `TxOut`s
+instance Typeable c => MemPack (PlutusScript (AlonzoEra c)) where
+  packedByteCount = \case
+    AlonzoPlutusV1 script -> packedTagByteCount + packedByteCount script
+  packM = \case
+    AlonzoPlutusV1 script -> packTagM 0 >> packM script
+  {-# INLINE packM #-}
+  unpackM =
+    unpackTagM >>= \case
+      0 -> AlonzoPlutusV1 <$> unpackM
+      n -> unknownTagM @(PlutusScript (AlonzoEra c)) n
+  {-# INLINE unpackM #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation

@@ -55,7 +55,6 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
-  ByteArray (unBA),
   DecCBOR (decCBOR),
   DecShareCBOR (Share, decShareCBOR),
   DecoderError (DecoderErrorCustom),
@@ -66,8 +65,8 @@ import Cardano.Ledger.Binary (
   TokenType (..),
   cborError,
   decodeBreakOr,
-  decodeByteArray,
   decodeListLenOrIndef,
+  decodeMemPack,
   encodeListLen,
   interns,
   peekTokenType,
@@ -176,13 +175,13 @@ instance
   where
   packedByteCount = \case
     TxOutCompact' cAddr cValue ->
-      1 + packedByteCount cAddr + packedByteCount cValue
+      packedTagByteCount + packedByteCount cAddr + packedByteCount cValue
     TxOutCompactDH' cAddr cValue dataHash ->
-      1 + packedByteCount cAddr + packedByteCount cValue + packedByteCount dataHash
+      packedTagByteCount + packedByteCount cAddr + packedByteCount cValue + packedByteCount dataHash
     TxOut_AddrHash28_AdaOnly cred addr28 cCoin ->
-      1 + packedByteCount cred + packedByteCount addr28 + packedByteCount cCoin
+      packedTagByteCount + packedByteCount cred + packedByteCount addr28 + packedByteCount cCoin
     TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28 cCoin dataHash32 ->
-      1
+      packedTagByteCount
         + packedByteCount cred
         + packedByteCount addr28
         + packedByteCount cCoin
@@ -190,21 +189,21 @@ instance
   {-# INLINE packedByteCount #-}
   packM = \case
     TxOutCompact' cAddr cValue ->
-      packM (0 :: Word8) >> packM cAddr >> packM cValue
+      packTagM 0 >> packM cAddr >> packM cValue
     TxOutCompactDH' cAddr cValue dataHash ->
-      packM (1 :: Word8) >> packM cAddr >> packM cValue >> packM dataHash
+      packTagM 1 >> packM cAddr >> packM cValue >> packM dataHash
     TxOut_AddrHash28_AdaOnly cred addr28 cCoin ->
-      packM (2 :: Word8) >> packM cred >> packM addr28 >> packM cCoin
+      packTagM 2 >> packM cred >> packM addr28 >> packM cCoin
     TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28 cCoin dataHash32 ->
-      packM (3 :: Word8) >> packM cred >> packM addr28 >> packM cCoin >> packM dataHash32
+      packTagM 3 >> packM cred >> packM addr28 >> packM cCoin >> packM dataHash32
   {-# INLINE packM #-}
   unpackM =
-    unpackM >>= \case
+    unpackTagM >>= \case
       0 -> TxOutCompact' <$> unpackM <*> unpackM
       1 -> TxOutCompactDH' <$> unpackM <*> unpackM <*> unpackM
       2 -> TxOut_AddrHash28_AdaOnly <$> unpackM <*> unpackM <*> unpackM
       3 -> TxOut_AddrHash28_AdaOnly_DataHash32 <$> unpackM <*> unpackM <*> unpackM <*> unpackM
-      n -> fail $ "Unrecognized Tag: " ++ show (n :: Word8)
+      n -> unknownTagM @(AlonzoTxOut era) n
   {-# INLINE unpackM #-}
 
 deriving stock instance (Eq (Value era), Compactible (Value era)) => Eq (AlonzoTxOut era)
@@ -438,8 +437,8 @@ instance (Era era, Val (Value era), MemPack (CompactForm (Value era))) => DecSha
   decShareCBOR credsInterns = do
     txOut <-
       peekTokenType >>= \case
-        TypeBytes -> decodeByteArray >>= either (fail . show) pure . unpack . unBA
-        TypeBytesIndef -> decodeByteArray >>= either (fail . show) pure . unpack . unBA
+        TypeBytes -> decodeMemPack
+        TypeBytesIndef -> decodeMemPack
         _ -> decCBOR
     pure $! internAlonzoTxOut (interns credsInterns) txOut
   {-# INLINEABLE decShareCBOR #-}

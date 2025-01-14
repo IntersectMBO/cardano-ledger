@@ -65,7 +65,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Binary.Version (natVersion)
-import Cardano.Ledger.Coin (Coin (..), integerToWord64)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH))
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
@@ -108,7 +108,7 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Text.Encoding (decodeLatin1)
 import Data.Typeable (Typeable)
-import Data.Word (Word16, Word32, Word64, Word8)
+import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
 import Prelude hiding (lookup)
@@ -434,19 +434,34 @@ data CompactValue c
 instance Typeable c => MemPack (CompactValue c) where
   packedByteCount = \case
     CompactValueAdaOnly c ->
-      1 + packedByteCount c
+      packedTagByteCount + compactCoinByteCount c
     CompactValueMultiAsset c numMA rep -> do
-      1 + packedByteCount c + packedByteCount (VarLen numMA) + packedByteCount rep
+      packedTagByteCount
+        + compactCoinByteCount c
+        + packedByteCount (VarLen numMA)
+        + packedByteCount rep
+    where
+      compactCoinByteCount (CompactCoin c) = packedByteCount (VarLen c)
+  {-# INLINE packedByteCount #-}
   packM = \case
     CompactValueAdaOnly c ->
-      packM (0 :: Word8) >> packM c
+      packTagM 0 >> packCompactCoinM c
     CompactValueMultiAsset c numMA rep -> do
-      packM (1 :: Word8) >> packM c >> packM (VarLen numMA) >> packM rep
+      packTagM 1 >> packCompactCoinM c >> packM (VarLen numMA) >> packM rep
+    where
+      -- See note on the instance for why `MemPack` instance for `CompactForm Coin` can't be used.
+      packCompactCoinM (CompactCoin c) = packM (VarLen c)
+      {-# INLINE packCompactCoinM #-}
+  {-# INLINE packM #-}
   unpackM = do
-    unpackM >>= \case
-      0 -> CompactValueAdaOnly <$> unpackM
-      1 -> CompactValueMultiAsset <$> unpackM <*> (unVarLen <$> unpackM) <*> unpackM
-      t -> fail $ "Unrecognized tag used for CompactMultiAsset: " <> show (t :: Word8)
+    unpackTagM >>= \case
+      0 -> CompactValueAdaOnly <$> unpackCompactCoinM
+      1 -> CompactValueMultiAsset <$> unpackCompactCoinM <*> (unVarLen <$> unpackM) <*> unpackM
+      n -> unknownTagM @(CompactValue c) n
+    where
+      unpackCompactCoinM = CompactCoin . unVarLen <$> unpackM
+      {-# INLINE unpackCompactCoinM #-}
+  {-# INLINE unpackM #-}
 
 instance NFData (CompactValue c) where
   rnf = rwhnf

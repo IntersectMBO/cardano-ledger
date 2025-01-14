@@ -120,7 +120,6 @@ import Data.Maybe (fromMaybe)
 import Data.MemPack
 import qualified Data.Text as T
 import Data.Typeable (Proxy (..), (:~:) (Refl))
-import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', lens, to, (^.))
@@ -171,63 +170,49 @@ instance
   where
   packedByteCount = \case
     TxOutCompact' cAddr cValue ->
-      1 + packedByteCount cAddr + packedByteCount cValue
+      packedTagByteCount + packedByteCount cAddr + packedByteCount cValue
     TxOutCompactDH' cAddr cValue dataHash ->
-      1 + packedByteCount cAddr + packedByteCount cValue + packedByteCount dataHash
-    TxOutCompactDatum cAddr cValue datum ->
-      1 + packedByteCount cAddr + packedByteCount cValue + packedByteCount datum
-    TxOutCompactRefScript cAddr cValue NoDatum script ->
-      1 + packedByteCount cAddr + packedByteCount cValue + packedByteCount script
-    TxOutCompactRefScript cAddr cValue (DatumHash datumHash) script ->
-      1
-        + packedByteCount cAddr
-        + packedByteCount cValue
-        + packedByteCount datumHash
-        + packedByteCount script
-    TxOutCompactRefScript cAddr cValue (Datum datum) script ->
-      1
-        + packedByteCount cAddr
-        + packedByteCount cValue
-        + packedByteCount datum
-        + packedByteCount script
+      packedTagByteCount + packedByteCount cAddr + packedByteCount cValue + packedByteCount dataHash
     TxOut_AddrHash28_AdaOnly cred addr28 cCoin ->
-      1 + packedByteCount cred + packedByteCount addr28 + packedByteCount cCoin
+      packedTagByteCount + packedByteCount cred + packedByteCount addr28 + packedByteCount cCoin
     TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28 cCoin dataHash32 ->
-      1
+      packedTagByteCount
         + packedByteCount cred
         + packedByteCount addr28
         + packedByteCount cCoin
         + packedByteCount dataHash32
+    TxOutCompactDatum cAddr cValue datum ->
+      packedTagByteCount + packedByteCount cAddr + packedByteCount cValue + packedByteCount datum
+    TxOutCompactRefScript cAddr cValue datum script ->
+      packedTagByteCount
+        + packedByteCount cAddr
+        + packedByteCount cValue
+        + packedByteCount datum
+        + packedByteCount script
   {-# INLINE packedByteCount #-}
   packM = \case
     TxOutCompact' cAddr cValue ->
-      packM (0 :: Word8) >> packM cAddr >> packM cValue
+      packTagM 0 >> packM cAddr >> packM cValue
     TxOutCompactDH' cAddr cValue dataHash ->
-      packM (1 :: Word8) >> packM cAddr >> packM cValue >> packM dataHash
-    TxOutCompactDatum cAddr cValue datum ->
-      packM (2 :: Word8) >> packM cAddr >> packM cValue >> packM datum
-    TxOutCompactRefScript cAddr cValue NoDatum script ->
-      packM (3 :: Word8) >> packM cAddr >> packM cValue >> packM script
-    TxOutCompactRefScript cAddr cValue (DatumHash datumHash) script ->
-      packM (4 :: Word8) >> packM cAddr >> packM cValue >> packM datumHash >> packM script
-    TxOutCompactRefScript cAddr cValue (Datum datum) script ->
-      packM (5 :: Word8) >> packM cAddr >> packM cValue >> packM datum >> packM script
+      packTagM 1 >> packM cAddr >> packM cValue >> packM dataHash
     TxOut_AddrHash28_AdaOnly cred addr28 cCoin ->
-      packM (6 :: Word8) >> packM cred >> packM addr28 >> packM cCoin
+      packTagM 2 >> packM cred >> packM addr28 >> packM cCoin
     TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28 cCoin dataHash32 ->
-      packM (7 :: Word8) >> packM cred >> packM addr28 >> packM cCoin >> packM dataHash32
+      packTagM 3 >> packM cred >> packM addr28 >> packM cCoin >> packM dataHash32
+    TxOutCompactDatum cAddr cValue datum ->
+      packTagM 4 >> packM cAddr >> packM cValue >> packM datum
+    TxOutCompactRefScript cAddr cValue datum script ->
+      packTagM 5 >> packM cAddr >> packM cValue >> packM datum >> packM script
   {-# INLINE packM #-}
   unpackM =
     unpackM >>= \case
       0 -> TxOutCompact' <$> unpackM <*> unpackM
       1 -> TxOutCompactDH' <$> unpackM <*> unpackM <*> unpackM
-      2 -> TxOutCompactDatum <$> unpackM <*> unpackM <*> unpackM
-      3 -> TxOutCompactRefScript <$> unpackM <*> unpackM <*> pure NoDatum <*> unpackM
-      4 -> TxOutCompactRefScript <$> unpackM <*> unpackM <*> (DatumHash <$> unpackM) <*> unpackM
-      5 -> TxOutCompactRefScript <$> unpackM <*> unpackM <*> (Datum <$> unpackM) <*> unpackM
-      6 -> TxOut_AddrHash28_AdaOnly <$> unpackM <*> unpackM <*> unpackM
-      7 -> TxOut_AddrHash28_AdaOnly_DataHash32 <$> unpackM <*> unpackM <*> unpackM <*> unpackM
-      n -> fail $ "Unrecognized Tag: " ++ show (n :: Word8)
+      2 -> TxOut_AddrHash28_AdaOnly <$> unpackM <*> unpackM <*> unpackM
+      3 -> TxOut_AddrHash28_AdaOnly_DataHash32 <$> unpackM <*> unpackM <*> unpackM <*> unpackM
+      4 -> TxOutCompactDatum <$> unpackM <*> unpackM <*> unpackM
+      5 -> TxOutCompactRefScript <$> unpackM <*> unpackM <*> unpackM <*> unpackM
+      n -> unknownTagM @(BabbageTxOut era) n
   {-# INLINE unpackM #-}
 
 instance Crypto c => EraTxOut (BabbageEra c) where

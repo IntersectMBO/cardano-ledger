@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -28,7 +29,16 @@ import Cardano.Crypto.Hash.Class (hashToTextAsHex)
 import Cardano.HeapWords (HeapWords (..))
 import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
-import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary (
+  DecCBOR (decCBOR),
+  DecShareCBOR (..),
+  EncCBOR (..),
+  TokenType (..),
+  decodeMemPack,
+  decodeRecordNamed,
+  encodeListLen,
+  peekTokenType,
+ )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (SafeHash (..), extractHash)
@@ -129,3 +139,10 @@ instance Crypto c => DecCBOR (TxIn c) where
       "TxIn"
       (const 2)
       (TxIn <$> decCBOR <*> decCBOR)
+
+instance Crypto c => DecShareCBOR (TxIn c) where
+  decShareCBOR _ =
+    peekTokenType >>= \case
+      TypeBytes -> decodeMemPack
+      TypeBytesIndef -> decodeMemPack
+      _ -> decCBOR

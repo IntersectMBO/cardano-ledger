@@ -436,7 +436,7 @@ fromCborBothAddr = do
 {-# INLINE fromCborBothAddr #-}
 
 -- | Starting with Babbage we no longer allow addresses with garbage in them.
-fromCborRigorousBothAddr :: Decoder s (Addr, CompactAddr)
+fromCborRigorousBothAddr :: Crypto c => Decoder s (Addr c, CompactAddr c)
 fromCborRigorousBothAddr = do
   sbs <- decCBOR
   flip evalStateT 0 $ do

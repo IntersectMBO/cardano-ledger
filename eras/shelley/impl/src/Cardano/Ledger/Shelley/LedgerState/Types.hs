@@ -30,7 +30,6 @@ import Cardano.Ledger.Binary (
   DecCBOR (decCBOR, dropCBOR),
   DecShareCBOR (Share, decShareCBOR, decSharePlusCBOR),
   EncCBOR (encCBOR),
-  Encoding,
   FromCBOR (..),
   Interns,
   ToCBOR (..),
@@ -40,6 +39,7 @@ import Cardano.Ledger.Binary (
   decodeRecordNamedT,
   encodeListLen,
   encodeMap,
+  encodeMemPack,
   enforceDecoderVersion,
   ifDecoderVersionAtLeast,
   natVersion,
@@ -79,7 +79,6 @@ import Data.Default (Default, def)
 import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.MemPack
 import Data.Proxy
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
@@ -319,22 +318,18 @@ deriving via
 instance
   ( EraTxOut era
   , EncCBOR (GovState era)
-  , MemPack (TxOut era)
   ) =>
   EncCBOR (UTxOState era)
   where
   encCBOR (UTxOState utxo dp fs us sd don) =
     encode $
       Rec UTxOState
-        !> E (encodeMap encCBOR encMemPack . unUTxO) utxo
+        !> E (encodeMap encodeMemPack encodeMemPack . unUTxO) utxo
         !> To dp
         !> To fs
         !> To us
         !> To sd
         !> To don
-
-encMemPack :: MemPack a => a -> Encoding
-encMemPack = encCBOR . pack
 
 instance
   ( EraTxOut era

@@ -6,6 +6,7 @@ module Test.Cardano.Ledger.Conway.BinarySpec (spec) where
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Genesis
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Crypto
 import Data.Default (def)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
@@ -28,4 +29,4 @@ spec = do
     roundTripCborSpec @(Voter StandardCrypto)
     roundTripConwayCommonSpec @Conway
     -- ConwayGenesis only makes sense in Conway era
-    roundTripEraSpec @ConwayEra @ConwayGenesis
+    roundTripEraSpec @(ConwayEra StandardCrypto) @(ConwayGenesis StandardCrypto)

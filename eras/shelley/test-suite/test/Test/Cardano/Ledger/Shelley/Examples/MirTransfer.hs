@@ -8,9 +8,8 @@ where
 
 import Cardano.Ledger.BaseTypes (Mismatch (..), ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Keys
 import Cardano.Ledger.Credential (SlotNo32 (..))
-import Cardano.Ledger.Hashes (GenDelegs (..))
+import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   AccountState (..),

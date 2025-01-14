@@ -217,6 +217,11 @@ roundTripCoreEraTypesSpec = do
     roundTripAnnEraSpec @era @(TxWits era)
     roundTripAnnEraSpec @era @(TxBody era)
     roundTripAnnEraSpec @era @(Tx era)
+    prop ("MemPack/CBOR Roundtrip " <> show (typeRep $ Proxy @(TxOut era))) $
+      roundTripRangeExpectation @(TxOut era)
+        (mkTrip encodeMemPack decNoShareCBOR)
+        (eraProtVerLow @era)
+        (eraProtVerHigh @era)
   describe "Core State Types" $ do
     roundTripShareEraSpec @era @(SnapShots (EraCrypto era))
     roundTripShareEraTypeSpec @era @DState

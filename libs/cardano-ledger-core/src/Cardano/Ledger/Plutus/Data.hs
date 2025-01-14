@@ -240,6 +240,25 @@ instance Era era => ToJSON (Datum era) where
       SNothing -> toEncoding Null
       SJust dh -> toEncoding dh
 
+instance Era era => MemPack (Datum era) where
+  packedByteCount = \case
+    NoDatum -> packedTagByteCount
+    DatumHash dataHash -> packedTagByteCount + packedByteCount dataHash
+    Datum binaryData -> packedTagByteCount + packedByteCount binaryData
+  {-# INLINE packedByteCount #-}
+  packM = \case
+    NoDatum -> packTagM 0
+    DatumHash dataHash -> packTagM 1 >> packM dataHash
+    Datum binaryData -> packTagM 2 >> packM binaryData
+  {-# INLINE packM #-}
+  unpackM =
+    unpackM >>= \case
+      0 -> pure NoDatum
+      1 -> DatumHash <$> unpackM
+      2 -> Datum <$> unpackM
+      n -> unknownTagM @(Datum era) n
+  {-# INLINE unpackM #-}
+
 -- | Get the Hash of the datum.
 datumDataHash :: Era era => Datum era -> StrictMaybe (DataHash (EraCrypto era))
 datumDataHash = \case

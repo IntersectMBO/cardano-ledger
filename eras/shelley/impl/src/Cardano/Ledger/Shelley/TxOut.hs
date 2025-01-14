@@ -28,7 +28,6 @@ import qualified Cardano.Crypto.Hash as HS
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Binary (
-  ByteArray (unBA),
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
@@ -36,7 +35,7 @@ import Cardano.Ledger.Binary (
   Interns (..),
   ToCBOR (..),
   TokenType (..),
-  decodeByteArray,
+  decodeMemPack,
   decodeRecordNamed,
   encodeListLen,
   peekTokenType,
@@ -53,7 +52,7 @@ import Control.DeepSeq (NFData (rnf))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import qualified Data.ByteString.Short as SBS (ShortByteString, pack)
 import Data.Maybe (fromMaybe)
-import Data.MemPack (MemPack (..), unpack)
+import Data.MemPack
 import Data.Proxy (Proxy (..))
 import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
@@ -69,11 +68,19 @@ instance
   (Era era, MemPack (CompactForm (Value era)), MemPack (CompactAddr (EraCrypto era))) =>
   MemPack (ShelleyTxOut era)
   where
-  packedByteCount TxOutCompact {txOutCompactAddr, txOutCompactValue} =
-    packedByteCount txOutCompactAddr + packedByteCount txOutCompactValue
-  packM TxOutCompact {txOutCompactAddr, txOutCompactValue} =
-    packM txOutCompactAddr >> packM txOutCompactValue
-  unpackM = TxOutCompact <$> unpackM <*> unpackM
+  packedByteCount = \case
+    TxOutCompact cAddr cValue ->
+      packedTagByteCount + packedByteCount cAddr + packedByteCount cValue
+  {-# INLINE packedByteCount #-}
+  packM = \case
+    TxOutCompact cAddr cValue ->
+      packTagM 0 >> packM cAddr >> packM cValue
+  {-# INLINE packM #-}
+  unpackM =
+    unpackTagM >>= \case
+      0 -> TxOutCompact <$> unpackM <*> unpackM
+      n -> unknownTagM @(ShelleyTxOut era) n
+  {-# INLINE unpackM #-}
 
 instance Crypto crypto => EraTxOut (ShelleyEra crypto) where
   {-# SPECIALIZE instance EraTxOut (ShelleyEra StandardCrypto) #-}
@@ -179,8 +186,8 @@ instance
   type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
   decShareCBOR _ = do
     peekTokenType >>= \case
-      TypeBytes -> decodeByteArray >>= either (fail . show) pure . unpack . unBA
-      TypeBytesIndef -> decodeByteArray >>= either (fail . show) pure . unpack . unBA
+      TypeBytes -> decodeMemPack
+      TypeBytesIndef -> decodeMemPack
       _ -> decCBOR
 
 instance (Era era, EncCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut era) where
