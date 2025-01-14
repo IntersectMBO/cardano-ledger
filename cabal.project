@@ -115,3 +115,7 @@ tests: true
 benchmarks: true
 -- The only sensible test display option
 test-show-details: streaming
+
+
+with-compiler: /home/lehins/iohk/cardano-ledger/scripts/ghc-limited
+with-hc-pkg: ghc-pkg
