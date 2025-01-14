@@ -42,7 +42,7 @@ library
     bytestring,
     cardano-ledger-binary:testlib,
     cardano-ledger-core,
-    plutus-ledger-api ^>=1.37,
+    plutus-ledger-api ^>=1.38,
     plutus-tx,
     plutus-tx-plugin,
     template-haskell,
