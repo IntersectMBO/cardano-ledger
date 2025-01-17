@@ -53,12 +53,15 @@ mkShelleyCertState v p d =
 
 shelleyCertDStateL :: Lens' (ShelleyCertState era) (DState era)
 shelleyCertDStateL = lens shelleyCertDState (\ds u -> ds {shelleyCertDState = u})
+{-# INLINE shelleyCertDStateL #-}
 
 shelleyCertPStateL :: Lens' (ShelleyCertState era) (PState era)
 shelleyCertPStateL = lens shelleyCertPState (\ds u -> ds {shelleyCertPState = u})
+{-# INLINE shelleyCertPStateL #-}
 
 shelleyCertVStateL :: Lens' (ShelleyCertState era) (VState era)
 shelleyCertVStateL = lens shelleyCertVState (\ds u -> ds {shelleyCertVState = u})
+{-# INLINE shelleyCertVStateL #-}
 
 toCertStatePairs :: KeyValue e a => ShelleyCertState era -> [a]
 toCertStatePairs ShelleyCertState {..} =
@@ -75,6 +78,7 @@ shelleyObligationCertState (ShelleyCertState VState {vsDReps} PState {psDeposits
         , oblDRep = F.foldl' accum (Coin 0) vsDReps
         , oblProposal = Coin 0
         }
+
 shelleyCertsTotalDepositsTxBody ::
   EraTxBody era => PParams era -> ShelleyCertState era -> TxBody era -> Coin
 shelleyCertsTotalDepositsTxBody pp ShelleyCertState {shelleyCertPState} =
@@ -92,11 +96,20 @@ instance EraCertState ShelleyEra where
   type CertState ShelleyEra = ShelleyCertState ShelleyEra
 
   mkCertState = mkShelleyCertState
+
   certDStateL = shelleyCertDStateL
+  {-# INLINE certDStateL #-}
+
   certVStateL = shelleyCertVStateL
+  {-# INLINE certVStateL #-}
+
   certPStateL = shelleyCertPStateL
+  {-# INLINE certPStateL #-}
+
   obligationCertState = shelleyObligationCertState
+
   certsTotalDepositsTxBody = shelleyCertsTotalDepositsTxBody
+
   certsTotalRefundsTxBody = shelleyCertsTotalRefundsTxBody
 
 instance Era era => ToJSON (ShelleyCertState era) where
