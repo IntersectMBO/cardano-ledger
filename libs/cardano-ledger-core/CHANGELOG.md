@@ -2,6 +2,24 @@
 
 ## 1.17.0.0
 
+* Remove `era` type parameter from `MemoBytes` type
+* Remove `Era era` constraint from:
+  * `Memo` pattern
+  * `decodeMemoBytes`
+  * `DecCBOR (Annotator (MemoBytes t))` instance
+  * `DecCBOR (MemoBytes t))` instance
+  * `memoBytes`
+  * `mkMemoized`
+  * `lensMemoRawType`
+  * `Data` pattern
+  * `dataToBinaryData`
+* Add `Version` parameter to:
+  * `memoBytes`
+  * `mkMemoized`
+  * `lensMemoRawType`
+* Remove `era` type parameter from `Mem` type
+* Reduce the kind of `MemoHashIndex` type family parameter to a concrete type
+* Reduce the kind of `RawType` type to a concrete type
 * Add `mbpackedByteCount`, `mbpackM` and `mbunpackM` to `MemoBytes` module
 * Require `MemPack` instance for `TxOut` and `CompactForm (Value era)` for `EraTxOut` type class.
 * Add `decodeMemoBytes`

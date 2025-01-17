@@ -128,8 +128,8 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', to, (^.))
 import NoThunks.Class (NoThunks)
 
-instance Memoized ConwayTxBody where
-  type RawType ConwayTxBody = ConwayTxBodyRaw
+instance Memoized (ConwayTxBody era) where
+  type RawType (ConwayTxBody era) = ConwayTxBodyRaw era
 
 data ConwayTxBodyRaw era = ConwayTxBodyRaw
   { ctbrSpendInputs :: !(Set TxIn)
@@ -264,7 +264,7 @@ instance
       emptyFailure fieldName requirement =
         "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
 
-newtype ConwayTxBody era = TxBodyConstr (MemoBytes ConwayTxBodyRaw era)
+newtype ConwayTxBody era = TxBodyConstr (MemoBytes (ConwayTxBodyRaw era))
   deriving (Generic, SafeToHash, ToCBOR)
 
 deriving instance
@@ -283,7 +283,7 @@ deriving instance
   (EraPParams era, Show (TxOut era)) =>
   Show (ConwayTxBody era)
 
-type instance MemoHashIndex ConwayTxBodyRaw = EraIndependentTxBody
+type instance MemoHashIndex (ConwayTxBodyRaw era) = EraIndependentTxBody
 
 instance HashAnnotated (ConwayTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
@@ -299,7 +299,7 @@ instance
   decCBOR = pure <$> decCBOR
 
 deriving via
-  (Mem ConwayTxBodyRaw era)
+  Mem (ConwayTxBodyRaw era)
   instance
     ( DecCBOR (TxOut era)
     , EraPParams era
@@ -308,8 +308,8 @@ deriving via
     ) =>
     DecCBOR (Annotator (ConwayTxBody era))
 
-mkConwayTxBody :: ConwayEraTxBody era => ConwayTxBody era
-mkConwayTxBody = mkMemoized basicConwayTxBodyRaw
+mkConwayTxBody :: forall era. ConwayEraTxBody era => ConwayTxBody era
+mkConwayTxBody = mkMemoized (eraProtVerLow @era) basicConwayTxBodyRaw
 
 basicConwayTxBodyRaw :: ConwayTxBodyRaw era
 basicConwayTxBodyRaw =
@@ -349,19 +349,22 @@ instance EraTxBody ConwayEra where
 
   mkBasicTxBody = mkConwayTxBody
 
-  inputsTxBodyL = lensMemoRawType ctbrSpendInputs (\txb x -> txb {ctbrSpendInputs = x})
+  inputsTxBodyL = lensMemoRawType (eraProtVerLow @ConwayEra) ctbrSpendInputs $
+    \txb x -> txb {ctbrSpendInputs = x}
   {-# INLINE inputsTxBodyL #-}
 
   outputsTxBodyL =
     lensMemoRawType
+      (eraProtVerLow @ConwayEra)
       (fmap sizedValue . ctbrOutputs)
       (\txb x -> txb {ctbrOutputs = mkSized (eraProtVerLow @ConwayEra) <$> x})
   {-# INLINE outputsTxBodyL #-}
 
-  feeTxBodyL = lensMemoRawType ctbrTxfee (\txb x -> txb {ctbrTxfee = x})
+  feeTxBodyL = lensMemoRawType (eraProtVerLow @ConwayEra) ctbrTxfee (\txb x -> txb {ctbrTxfee = x})
   {-# INLINE feeTxBodyL #-}
 
-  auxDataHashTxBodyL = lensMemoRawType ctbrAuxDataHash (\txb x -> txb {ctbrAuxDataHash = x})
+  auxDataHashTxBodyL = lensMemoRawType (eraProtVerLow @ConwayEra) ctbrAuxDataHash $
+    \txb x -> txb {ctbrAuxDataHash = x}
   {-# INLINE auxDataHashTxBodyL #-}
 
   spendableInputsTxBodyF = babbageSpendableInputsTxBodyF
@@ -370,11 +373,13 @@ instance EraTxBody ConwayEra where
   allInputsTxBodyF = babbageAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}
 
-  withdrawalsTxBodyL = lensMemoRawType ctbrWithdrawals (\txb x -> txb {ctbrWithdrawals = x})
+  withdrawalsTxBodyL = lensMemoRawType (eraProtVerLow @ConwayEra) ctbrWithdrawals $
+    \txb x -> txb {ctbrWithdrawals = x}
   {-# INLINE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
-    lensMemoRawType (OSet.toStrictSeq . ctbrCerts) (\txb x -> txb {ctbrCerts = OSet.fromStrictSeq x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) (OSet.toStrictSeq . ctbrCerts) $
+      \txb x -> txb {ctbrCerts = OSet.fromStrictSeq x}
   {-# INLINE certsTxBodyL #-}
 
   getTotalDepositsTxBody = conwayTotalDepositsTxBody
@@ -452,11 +457,13 @@ conwayProposalsDeposits pp txBody = numProposals <×> depositPerProposal
     depositPerProposal = pp ^. ppGovActionDepositL
 
 instance AllegraEraTxBody ConwayEra where
-  vldtTxBodyL = lensMemoRawType ctbrVldt (\txb x -> txb {ctbrVldt = x})
+  vldtTxBodyL = lensMemoRawType (eraProtVerLow @ConwayEra) ctbrVldt $
+    \txb x -> txb {ctbrVldt = x}
   {-# INLINE vldtTxBodyL #-}
 
 instance MaryEraTxBody ConwayEra where
-  mintTxBodyL = lensMemoRawType ctbrMint (\txb x -> txb {ctbrMint = x})
+  mintTxBodyL = lensMemoRawType (eraProtVerLow @ConwayEra) ctbrMint $
+    \txb x -> txb {ctbrMint = x}
   {-# INLINE mintTxBodyL #-}
 
   mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
@@ -467,18 +474,22 @@ instance MaryEraTxBody ConwayEra where
 
 instance AlonzoEraTxBody ConwayEra where
   collateralInputsTxBodyL =
-    lensMemoRawType ctbrCollateralInputs (\txb x -> txb {ctbrCollateralInputs = x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) ctbrCollateralInputs $
+      \txb x -> txb {ctbrCollateralInputs = x}
   {-# INLINE collateralInputsTxBodyL #-}
 
   reqSignerHashesTxBodyL =
-    lensMemoRawType ctbrReqSignerHashes (\txb x -> txb {ctbrReqSignerHashes = x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) ctbrReqSignerHashes $
+      \txb x -> txb {ctbrReqSignerHashes = x}
   {-# INLINE reqSignerHashesTxBodyL #-}
 
   scriptIntegrityHashTxBodyL =
-    lensMemoRawType ctbrScriptIntegrityHash (\txb x -> txb {ctbrScriptIntegrityHash = x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) ctbrScriptIntegrityHash $
+      \txb x -> txb {ctbrScriptIntegrityHash = x}
   {-# INLINE scriptIntegrityHashTxBodyL #-}
 
-  networkIdTxBodyL = lensMemoRawType ctbrTxNetworkId (\txb x -> txb {ctbrTxNetworkId = x})
+  networkIdTxBodyL = lensMemoRawType (eraProtVerLow @ConwayEra) ctbrTxNetworkId $
+    \txb x -> txb {ctbrTxNetworkId = x}
   {-# INLINE networkIdTxBodyL #-}
 
   redeemerPointer = conwayRedeemerPointer
@@ -486,25 +497,30 @@ instance AlonzoEraTxBody ConwayEra where
   redeemerPointerInverse = conwayRedeemerPointerInverse
 
 instance BabbageEraTxBody ConwayEra where
-  sizedOutputsTxBodyL = lensMemoRawType ctbrOutputs (\txb x -> txb {ctbrOutputs = x})
+  sizedOutputsTxBodyL = lensMemoRawType (eraProtVerLow @ConwayEra) ctbrOutputs $
+    \txb x -> txb {ctbrOutputs = x}
   {-# INLINE sizedOutputsTxBodyL #-}
 
   referenceInputsTxBodyL =
-    lensMemoRawType ctbrReferenceInputs (\txb x -> txb {ctbrReferenceInputs = x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) ctbrReferenceInputs $
+      \txb x -> txb {ctbrReferenceInputs = x}
   {-# INLINE referenceInputsTxBodyL #-}
 
   totalCollateralTxBodyL =
-    lensMemoRawType ctbrTotalCollateral (\txb x -> txb {ctbrTotalCollateral = x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) ctbrTotalCollateral $
+      \txb x -> txb {ctbrTotalCollateral = x}
   {-# INLINE totalCollateralTxBodyL #-}
 
   collateralReturnTxBodyL =
     lensMemoRawType
+      (eraProtVerLow @ConwayEra)
       (fmap sizedValue . ctbrCollateralReturn)
       (\txb x -> txb {ctbrCollateralReturn = mkSized (eraProtVerLow @ConwayEra) <$> x})
   {-# INLINE collateralReturnTxBodyL #-}
 
   sizedCollateralReturnTxBodyL =
-    lensMemoRawType ctbrCollateralReturn (\txb x -> txb {ctbrCollateralReturn = x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) ctbrCollateralReturn $
+      \txb x -> txb {ctbrCollateralReturn = x}
   {-# INLINE sizedCollateralReturnTxBodyL #-}
 
   allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
@@ -512,16 +528,20 @@ instance BabbageEraTxBody ConwayEra where
 
 instance ConwayEraTxBody ConwayEra where
   votingProceduresTxBodyL =
-    lensMemoRawType ctbrVotingProcedures (\txb x -> txb {ctbrVotingProcedures = x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) ctbrVotingProcedures $
+      \txb x -> txb {ctbrVotingProcedures = x}
   {-# INLINE votingProceduresTxBodyL #-}
   proposalProceduresTxBodyL =
-    lensMemoRawType ctbrProposalProcedures (\txb x -> txb {ctbrProposalProcedures = x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) ctbrProposalProcedures $
+      \txb x -> txb {ctbrProposalProcedures = x}
   {-# INLINE proposalProceduresTxBodyL #-}
   currentTreasuryValueTxBodyL =
-    lensMemoRawType ctbrCurrentTreasuryValue (\txb x -> txb {ctbrCurrentTreasuryValue = x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) ctbrCurrentTreasuryValue $
+      \txb x -> txb {ctbrCurrentTreasuryValue = x}
   {-# INLINE currentTreasuryValueTxBodyL #-}
   treasuryDonationTxBodyL =
-    lensMemoRawType ctbrTreasuryDonation (\txb x -> txb {ctbrTreasuryDonation = x})
+    lensMemoRawType (eraProtVerLow @ConwayEra) ctbrTreasuryDonation $
+      \txb x -> txb {ctbrTreasuryDonation = x}
   {-# INLINE treasuryDonationTxBodyL #-}
 
 instance
@@ -529,6 +549,7 @@ instance
   EqRaw (ConwayTxBody era)
 
 pattern ConwayTxBody ::
+  forall era.
   ConwayEraTxBody era =>
   Set TxIn ->
   Set TxIn ->
@@ -615,7 +636,7 @@ pattern ConwayTxBody
       proposalProcedures
       currentTreasuryValue
       treasuryDonation =
-        mkMemoized $
+        mkMemoized (eraProtVerLow @era) $
           ConwayTxBodyRaw
             inputsX
             collateralX

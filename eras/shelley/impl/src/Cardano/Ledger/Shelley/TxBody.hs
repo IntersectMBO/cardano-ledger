@@ -10,6 +10,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -224,12 +225,12 @@ instance
 -- ====================================================
 -- Introduce ShelleyTxBody as a newtype around a MemoBytes
 
-newtype ShelleyTxBody era = TxBodyConstr (MemoBytes ShelleyTxBodyRaw era)
+newtype ShelleyTxBody era = TxBodyConstr (MemoBytes (ShelleyTxBodyRaw era))
   deriving (Generic)
   deriving newtype (SafeToHash, ToCBOR)
 
-instance Memoized ShelleyTxBody where
-  type RawType ShelleyTxBody = ShelleyTxBodyRaw
+instance Memoized (ShelleyTxBody era) where
+  type RawType (ShelleyTxBody era) = ShelleyTxBodyRaw era
 
 instance
   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
@@ -238,7 +239,7 @@ instance
 instance EraTxBody ShelleyEra where
   type TxBody ShelleyEra = ShelleyTxBody ShelleyEra
 
-  mkBasicTxBody = mkMemoized basicShelleyTxBodyRaw
+  mkBasicTxBody = mkMemoized (eraProtVerLow @ShelleyEra) basicShelleyTxBodyRaw
 
   spendableInputsTxBodyF = inputsTxBodyL
   {-# INLINE spendableInputsTxBodyF #-}
@@ -247,27 +248,33 @@ instance EraTxBody ShelleyEra where
   {-# INLINE allInputsTxBodyF #-}
 
   inputsTxBodyL =
-    lensMemoRawType stbrInputs $ \txBodyRaw inputs -> txBodyRaw {stbrInputs = inputs}
+    lensMemoRawType (eraProtVerLow @ShelleyEra) stbrInputs $
+      \txBodyRaw inputs -> txBodyRaw {stbrInputs = inputs}
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    lensMemoRawType stbrOutputs $ \txBodyRaw outputs -> txBodyRaw {stbrOutputs = outputs}
+    lensMemoRawType (eraProtVerLow @ShelleyEra) stbrOutputs $
+      \txBodyRaw outputs -> txBodyRaw {stbrOutputs = outputs}
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
-    lensMemoRawType stbrTxFee $ \txBodyRaw fee -> txBodyRaw {stbrTxFee = fee}
+    lensMemoRawType (eraProtVerLow @ShelleyEra) stbrTxFee $
+      \txBodyRaw fee -> txBodyRaw {stbrTxFee = fee}
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lensMemoRawType stbrMDHash $ \txBodyRaw auxDataHash -> txBodyRaw {stbrMDHash = auxDataHash}
+    lensMemoRawType (eraProtVerLow @ShelleyEra) stbrMDHash $
+      \txBodyRaw auxDataHash -> txBodyRaw {stbrMDHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
   withdrawalsTxBodyL =
-    lensMemoRawType stbrWithdrawals $ \txBodyRaw withdrawals -> txBodyRaw {stbrWithdrawals = withdrawals}
+    lensMemoRawType (eraProtVerLow @ShelleyEra) stbrWithdrawals $
+      \txBodyRaw withdrawals -> txBodyRaw {stbrWithdrawals = withdrawals}
   {-# INLINEABLE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
-    lensMemoRawType stbrCerts $ \txBodyRaw certs -> txBodyRaw {stbrCerts = certs}
+    lensMemoRawType (eraProtVerLow @ShelleyEra) stbrCerts $
+      \txBodyRaw certs -> txBodyRaw {stbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
@@ -279,11 +286,11 @@ instance EraTxBody ShelleyEra where
 
 instance ShelleyEraTxBody ShelleyEra where
   ttlTxBodyL =
-    lensMemoRawType stbrTTL $ \txBodyRaw ttl -> txBodyRaw {stbrTTL = ttl}
+    lensMemoRawType (eraProtVerLow @ShelleyEra) stbrTTL $ \txBodyRaw ttl -> txBodyRaw {stbrTTL = ttl}
   {-# INLINEABLE ttlTxBodyL #-}
 
   updateTxBodyL =
-    lensMemoRawType stbrUpdate $ \txBodyRaw update -> txBodyRaw {stbrUpdate = update}
+    lensMemoRawType (eraProtVerLow @ShelleyEra) stbrUpdate $ \txBodyRaw update -> txBodyRaw {stbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
 
 deriving newtype instance
@@ -299,7 +306,7 @@ deriving instance
   Eq (ShelleyTxBody era)
 
 deriving via
-  Mem ShelleyTxBodyRaw era
+  Mem (ShelleyTxBodyRaw era)
   instance
     EraTxBody era => DecCBOR (Annotator (ShelleyTxBody era))
 
@@ -347,7 +354,7 @@ pattern ShelleyTxBody
       ttl
       update
       mDHash =
-        mkMemoized $
+        mkMemoized (eraProtVerLow @ShelleyEra) $
           ShelleyTxBodyRaw
             { stbrInputs = inputs
             , stbrOutputs = outputs
@@ -363,7 +370,7 @@ pattern ShelleyTxBody
 
 -- =========================================
 
-type instance MemoHashIndex ShelleyTxBodyRaw = EraIndependentTxBody
+type instance MemoHashIndex (ShelleyTxBodyRaw era) = EraIndependentTxBody
 
 instance Era era => HashAnnotated (ShelleyTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash

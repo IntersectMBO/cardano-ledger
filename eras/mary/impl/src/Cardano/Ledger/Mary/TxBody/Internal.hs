@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -106,7 +107,7 @@ deriving newtype instance
 
 deriving newtype instance AllegraEraTxBody era => DecCBOR (MaryTxBodyRaw era)
 
-newtype MaryTxBody era = TxBodyConstr (MemoBytes MaryTxBodyRaw era)
+newtype MaryTxBody era = TxBodyConstr (MemoBytes (MaryTxBodyRaw era))
   deriving newtype (SafeToHash, ToCBOR)
 
 -- | Encodes memoized bytes created upon construction.
@@ -121,8 +122,8 @@ instance AllegraEraTxBody era => DecCBOR (Annotator (MaryTxBodyRaw era)) where
 
 deriving newtype instance (EraTxOut era, EraTxCert era) => EncCBOR (MaryTxBodyRaw era)
 
-instance Memoized MaryTxBody where
-  type RawType MaryTxBody = MaryTxBodyRaw
+instance Memoized (MaryTxBody era) where
+  type RawType (MaryTxBody era) = MaryTxBodyRaw era
 
 deriving newtype instance
   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
@@ -143,17 +144,18 @@ deriving newtype instance
   NFData (MaryTxBody era)
 
 deriving via
-  Mem MaryTxBodyRaw era
+  Mem (MaryTxBodyRaw era)
   instance
     MaryEraTxBody era => DecCBOR (Annotator (MaryTxBody era))
 
-type instance MemoHashIndex MaryTxBodyRaw = EraIndependentTxBody
+type instance MemoHashIndex (MaryTxBodyRaw era) = EraIndependentTxBody
 
 instance Era era => HashAnnotated (MaryTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern MaryTxBody ::
+  forall era.
   (EraTxOut era, EraTxCert era) =>
   Set TxIn ->
   StrictSeq (TxOut era) ->
@@ -202,7 +204,7 @@ pattern MaryTxBody
       update
       auxDataHash
       mint =
-        mkMemoized $
+        mkMemoized (eraProtVerLow @era) $
           MaryTxBodyRaw $
             AllegraTxBodyRaw
               { atbrInputs = inputs
@@ -220,12 +222,14 @@ pattern MaryTxBody
 
 -- | This is a helper Lens creator for any Memoized type.
 lensMaryTxBodyRaw ::
+  forall era a b.
   (EraTxOut era, EraTxCert era) =>
   (AllegraTxBodyRaw MultiAsset era -> a) ->
   (AllegraTxBodyRaw MultiAsset era -> b -> AllegraTxBodyRaw MultiAsset era) ->
   Lens (MaryTxBody era) (MaryTxBody era) a b
 lensMaryTxBodyRaw getter setter =
   lensMemoRawType
+    (eraProtVerLow @era)
     (\(MaryTxBodyRaw atbr) -> getter atbr)
     (\(MaryTxBodyRaw atbr) a -> MaryTxBodyRaw (setter atbr a))
 {-# INLINEABLE lensMaryTxBodyRaw #-}
@@ -233,7 +237,7 @@ lensMaryTxBodyRaw getter setter =
 instance EraTxBody MaryEra where
   type TxBody MaryEra = MaryTxBody MaryEra
 
-  mkBasicTxBody = mkMemoized $ MaryTxBodyRaw emptyAllegraTxBodyRaw
+  mkBasicTxBody = mkMemoized (eraProtVerLow @MaryEra) $ MaryTxBodyRaw emptyAllegraTxBodyRaw
 
   inputsTxBodyL =
     lensMaryTxBodyRaw atbrInputs $ \txBodyRaw inputs -> txBodyRaw {atbrInputs = inputs}
