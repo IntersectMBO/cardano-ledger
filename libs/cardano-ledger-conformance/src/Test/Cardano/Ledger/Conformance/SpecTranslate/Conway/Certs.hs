@@ -19,6 +19,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Data.Functor.Identity (Identity)
+import Data.Map (keysSet)
 import Data.Map.Strict (Map)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
@@ -42,8 +43,10 @@ instance
   toSpecRep CertsEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
     withdrawals <- askCtx @(Map RewardAccount Coin)
+    let ccColdCreds = foldMap (keysSet . committeeMembers) certsCurrentCommittee
     Agda.MkCertEnv
       <$> toSpecRep certsCurrentEpoch
       <*> toSpecRep certsPParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
+      <*> toSpecRep ccColdCreds

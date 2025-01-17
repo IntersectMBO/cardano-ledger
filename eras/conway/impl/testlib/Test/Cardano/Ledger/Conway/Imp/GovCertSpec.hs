@@ -159,3 +159,14 @@ spec = do
         submitFailingTx
           registerHotKeyTx
           (pure . injectFailure $ ConwayCommitteeHasPreviouslyResigned ccCred)
+    it "resigning a nonexistent CC member hotkey" $ do
+      void registerInitialCommittee
+      nonExistentColdKey <- KeyHashObj <$> freshKeyHash
+      let failingTx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ SSeq.singleton (ResignCommitteeColdTxCert nonExistentColdKey SNothing)
+      submitFailingTx
+        failingTx
+        [ injectFailure $ ConwayCommitteeIsUnknown nonExistentColdKey
+        ]

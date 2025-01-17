@@ -25,7 +25,7 @@ import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Data.Foldable as Set
 import Data.Functor.Identity (Identity)
-import Data.Map.Strict (Map)
+import Data.Map.Strict (Map, keysSet)
 import qualified Data.VMap as VMap
 import Lens.Micro
 import qualified Lib as Agda
@@ -49,11 +49,13 @@ instance
   toSpecRep CertEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
     withdrawals <- askCtx @(Map RewardAccount Coin)
+    let ccColdCreds = foldMap (keysSet . committeeMembers) ceCurrentCommittee
     Agda.MkCertEnv
       <$> toSpecRep ceCurrentEpoch
       <*> toSpecRep cePParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
+      <*> toSpecRep ccColdCreds
 
 instance SpecTranslate ctx (CertState era) where
   type SpecRep (CertState era) = Agda.CertState

@@ -62,7 +62,7 @@ instance SpecTranslate ctx ConwayDelegCert where
   toSpecRep (ConwayUnRegCert c d) =
     Agda.Dereg
       <$> toSpecRep c
-      <*> strictMaybe (pure 0) toSpecRep d
+      <*> toSpecRep d
   toSpecRep (ConwayDelegCert c d) =
     Agda.Delegate
       <$> toSpecRep c

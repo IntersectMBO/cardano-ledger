@@ -33,8 +33,9 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity)
-import Data.Map.Strict (Map)
+import Data.Map.Strict (Map, keysSet)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
@@ -78,11 +79,21 @@ instance
   toSpecRep ConwayGovCertEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
     withdrawals <- askCtx @(Map RewardAccount Coin)
+    let propGetCCMembers (UpdateCommittee _ _ x _) = Just $ keysSet x
+        propGetCCMembers _ = Nothing
+        potentialCCMembers =
+          mconcat
+            . mapMaybe (propGetCCMembers . pProcGovAction . gasProposalProcedure)
+            . Map.elems
+        ccColdCreds =
+          foldMap (keysSet . committeeMembers) cgceCurrentCommittee
+            <> potentialCCMembers cgceCommitteeProposals
     Agda.MkCertEnv
       <$> toSpecRep cgceCurrentEpoch
       <*> toSpecRep cgcePParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
+      <*> toSpecRep ccColdCreds
 
 instance SpecTranslate ctx (ConwayGovCertPredFailure era) where
   type SpecRep (ConwayGovCertPredFailure era) = OpaqueErrorString
