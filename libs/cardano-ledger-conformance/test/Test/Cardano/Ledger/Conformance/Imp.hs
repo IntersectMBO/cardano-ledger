@@ -160,7 +160,7 @@ spec =
           -- GOVCERT tests enabling pending on these two issues in spec:
           -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/634
           -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/633
-          xdescribe "GOVCERT" GovCert.spec
+          describe "GOVCERT" GovCert.spec
           -- LEDGER tests enabling pending (at least) on the implementation of scriptSize in the spec:
           -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/620
           xdescribe "LEDGER" Ledger.spec
