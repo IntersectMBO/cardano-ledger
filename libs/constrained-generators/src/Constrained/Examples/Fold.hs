@@ -14,7 +14,6 @@ import Constrained.Base (Pred (..), genListWithSize, predSpecPair)
 import Constrained.Examples.List (Numbery)
 import Constrained.SumList
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty as NE
 import Data.String (fromString)
 import Prettyprinter (fillSep, punctuate, space)
 import System.Random (Random)
@@ -141,14 +140,15 @@ testFoldSpec size elemSpec total outcome = do
   ans <- genFromGenT $ inspect $ genListWithSize size elemSpec total
   let callString = parensList ["GenListWithSize", show size, fst (predSpecPair elemSpec), show total]
       fails xs = unlines [callString, "Should fail, but it succeeds with", show xs]
-      succeeds xs = unlines (callString : "Should succeed, but it fails with" : NE.toList xs)
+      succeeds xs =
+        unlines [callString, "Should succeed, but it fails with", catMessages xs]
   case (ans, outcome) of
-    (Result _ _, Succeed) -> pure $ property True
-    (Result _ xs, Fail) -> pure $ counterexample (fails xs) False
-    (FatalError _ _, Fail) -> pure $ property True
-    (FatalError _ xs, Succeed) -> pure $ counterexample (succeeds xs) False
-    (GenError _ _, Fail) -> pure $ property True
-    (GenError _ xs, Succeed) -> pure $ counterexample (succeeds xs) False
+    (Result _, Succeed) -> pure $ property True
+    (Result xs, Fail) -> pure $ counterexample (fails xs) False
+    (FatalError _, Fail) -> pure $ property True
+    (FatalError xs, Succeed) -> pure $ counterexample (succeeds xs) False
+    (GenError _, Fail) -> pure $ property True
+    (GenError xs, Succeed) -> pure $ counterexample (succeeds xs) False
 
 -- | Generate a property from a call to 'pickAll'. We can test for success or failure using 'outcome'
 sumProp ::
