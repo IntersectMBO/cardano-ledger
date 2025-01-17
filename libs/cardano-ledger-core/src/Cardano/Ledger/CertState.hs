@@ -388,9 +388,9 @@ class
   where
   type CertState era = (r :: Type) | r -> era
 
-  -- TODO: add upgrade method
-
   mkCertState :: VState era -> PState era -> DState era -> CertState era
+
+  upgradeCertState :: EraCertState (PreviousEra era) => CertState (PreviousEra era) -> CertState era
 
   certDStateL :: Lens' (CertState era) (DState era)
 

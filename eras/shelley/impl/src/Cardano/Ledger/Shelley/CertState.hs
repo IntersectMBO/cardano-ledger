@@ -97,6 +97,8 @@ instance EraCertState ShelleyEra where
 
   mkCertState = mkShelleyCertState
 
+  upgradeCertState = error "It is not possible to translate Byron CertState with 'upgradeCertState'"
+
   certDStateL = shelleyCertDStateL
   {-# INLINE certDStateL #-}
 
