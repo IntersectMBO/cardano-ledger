@@ -78,7 +78,7 @@ import Cardano.Ledger.MemoBytes (
   getMemoRawType,
   getMemoSafeHash,
   lensMemoRawType,
-  mkMemoized,
+  mkMemoizedEra,
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (Update (..), upgradeUpdate)
@@ -209,11 +209,11 @@ emptyAllegraTxBodyRaw =
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern construtor.
 
-newtype AllegraTxBody e = TxBodyConstr (MemoBytes (AllegraTxBodyRaw ()) e)
+newtype AllegraTxBody e = TxBodyConstr (MemoBytes (AllegraTxBodyRaw () e))
   deriving newtype (SafeToHash, ToCBOR)
 
-instance Memoized AllegraTxBody where
-  type RawType AllegraTxBody = AllegraTxBodyRaw ()
+instance Memoized (AllegraTxBody era) where
+  type RawType (AllegraTxBody era) = AllegraTxBodyRaw () era
 
 deriving instance
   (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
@@ -241,17 +241,18 @@ deriving newtype instance
 instance Era era => EncCBOR (AllegraTxBody era)
 
 deriving via
-  Mem (AllegraTxBodyRaw ()) era
+  Mem (AllegraTxBodyRaw () era)
   instance
     AllegraEraTxBody era => DecCBOR (Annotator (AllegraTxBody era))
 
-type instance MemoHashIndex (AllegraTxBodyRaw c) = EraIndependentTxBody
+type instance MemoHashIndex (AllegraTxBodyRaw c era) = EraIndependentTxBody
 
 instance Era era => HashAnnotated (AllegraTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
 
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern AllegraTxBody ::
+  forall era.
   (EraTxOut era, EraTxCert era) =>
   Set TxIn ->
   StrictSeq (TxOut era) ->
@@ -294,7 +295,7 @@ pattern AllegraTxBody
       validityInterval
       update
       auxDataHash =
-        mkMemoized $
+        mkMemoizedEra @era $
           AllegraTxBodyRaw
             { atbrInputs = inputs
             , atbrOutputs = outputs
@@ -312,22 +313,25 @@ pattern AllegraTxBody
 instance EraTxBody AllegraEra where
   type TxBody AllegraEra = AllegraTxBody AllegraEra
 
-  mkBasicTxBody = mkMemoized emptyAllegraTxBodyRaw
+  mkBasicTxBody = mkMemoizedEra @AllegraEra emptyAllegraTxBodyRaw
 
   inputsTxBodyL =
-    lensMemoRawType atbrInputs $ \txBodyRaw inputs -> txBodyRaw {atbrInputs = inputs}
+    lensMemoRawType @AllegraEra atbrInputs $
+      \txBodyRaw inputs -> txBodyRaw {atbrInputs = inputs}
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    lensMemoRawType atbrOutputs $ \txBodyRaw outputs -> txBodyRaw {atbrOutputs = outputs}
+    lensMemoRawType @AllegraEra atbrOutputs $
+      \txBodyRaw outputs -> txBodyRaw {atbrOutputs = outputs}
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
-    lensMemoRawType atbrTxFee $ \txBodyRaw fee -> txBodyRaw {atbrTxFee = fee}
+    lensMemoRawType @AllegraEra atbrTxFee $
+      \txBodyRaw fee -> txBodyRaw {atbrTxFee = fee}
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lensMemoRawType atbrAuxDataHash $
+    lensMemoRawType @AllegraEra atbrAuxDataHash $
       \txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
@@ -338,12 +342,13 @@ instance EraTxBody AllegraEra where
   {-# INLINEABLE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL =
-    lensMemoRawType atbrWithdrawals $
+    lensMemoRawType @AllegraEra atbrWithdrawals $
       \txBodyRaw withdrawals -> txBodyRaw {atbrWithdrawals = withdrawals}
   {-# INLINEABLE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
-    lensMemoRawType atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
+    lensMemoRawType @AllegraEra atbrCerts $
+      \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
@@ -370,12 +375,13 @@ instance ShelleyEraTxBody AllegraEra where
   {-# INLINEABLE ttlTxBodyL #-}
 
   updateTxBodyL =
-    lensMemoRawType atbrUpdate $ \txBodyRaw update -> txBodyRaw {atbrUpdate = update}
+    lensMemoRawType @AllegraEra atbrUpdate $
+      \txBodyRaw update -> txBodyRaw {atbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
 
 instance AllegraEraTxBody AllegraEra where
   vldtTxBodyL =
-    lensMemoRawType atbrValidityInterval $
+    lensMemoRawType @AllegraEra atbrValidityInterval $
       \txBodyRaw vldt -> txBodyRaw {atbrValidityInterval = vldt}
   {-# INLINEABLE vldtTxBodyL #-}
 

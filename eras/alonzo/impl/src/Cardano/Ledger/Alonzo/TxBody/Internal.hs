@@ -131,7 +131,7 @@ import Cardano.Ledger.MemoBytes (
   getMemoRawType,
   getMemoSafeHash,
   lensMemoRawType,
-  mkMemoized,
+  mkMemoizedEra,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
@@ -215,12 +215,12 @@ deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (AlonzoTxBodyRaw era)
 
-newtype AlonzoTxBody era = TxBodyConstr (MemoBytes AlonzoTxBodyRaw era)
+newtype AlonzoTxBody era = TxBodyConstr (MemoBytes (AlonzoTxBodyRaw era))
   deriving (ToCBOR, Generic)
   deriving newtype (SafeToHash)
 
-instance Memoized AlonzoTxBody where
-  type RawType AlonzoTxBody = AlonzoTxBodyRaw
+instance Memoized (AlonzoTxBody era) where
+  type RawType (AlonzoTxBody era) = AlonzoTxBodyRaw era
 
 data AlonzoTxBodyUpgradeError
   = -- | The TxBody contains a protocol parameter update that attempts to update
@@ -233,24 +233,26 @@ instance EraTxBody AlonzoEra where
   type TxBody AlonzoEra = AlonzoTxBody AlonzoEra
   type TxBodyUpgradeError AlonzoEra = AlonzoTxBodyUpgradeError
 
-  mkBasicTxBody = mkMemoized emptyAlonzoTxBodyRaw
+  mkBasicTxBody = mkMemoizedEra @AlonzoEra emptyAlonzoTxBodyRaw
 
   inputsTxBodyL =
-    lensMemoRawType atbrInputs (\txBodyRaw inputs_ -> txBodyRaw {atbrInputs = inputs_})
+    lensMemoRawType @AlonzoEra atbrInputs $
+      \txBodyRaw inputs_ -> txBodyRaw {atbrInputs = inputs_}
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    lensMemoRawType atbrOutputs (\txBodyRaw outputs_ -> txBodyRaw {atbrOutputs = outputs_})
+    lensMemoRawType @AlonzoEra atbrOutputs $
+      \txBodyRaw outputs_ -> txBodyRaw {atbrOutputs = outputs_}
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
-    lensMemoRawType atbrTxFee (\txBodyRaw fee_ -> txBodyRaw {atbrTxFee = fee_})
+    lensMemoRawType @AlonzoEra atbrTxFee $
+      \txBodyRaw fee_ -> txBodyRaw {atbrTxFee = fee_}
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lensMemoRawType
-      atbrAuxDataHash
-      (\txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash})
+    lensMemoRawType @AlonzoEra atbrAuxDataHash $
+      \txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
   spendableInputsTxBodyF = allInputsTxBodyF
@@ -261,13 +263,13 @@ instance EraTxBody AlonzoEra where
   {-# INLINEABLE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL =
-    lensMemoRawType
-      atbrWithdrawals
-      (\txBodyRaw withdrawals_ -> txBodyRaw {atbrWithdrawals = withdrawals_})
+    lensMemoRawType @AlonzoEra atbrWithdrawals $
+      \txBodyRaw withdrawals_ -> txBodyRaw {atbrWithdrawals = withdrawals_}
   {-# INLINEABLE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
-    lensMemoRawType atbrCerts (\txBodyRaw certs_ -> txBodyRaw {atbrCerts = certs_})
+    lensMemoRawType @AlonzoEra atbrCerts $
+      \txBodyRaw certs_ -> txBodyRaw {atbrCerts = certs_}
   {-# INLINEABLE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
@@ -330,17 +332,20 @@ instance ShelleyEraTxBody AlonzoEra where
   ttlTxBodyL = notSupportedInThisEraL
 
   updateTxBodyL =
-    lensMemoRawType atbrUpdate (\txBodyRaw update_ -> txBodyRaw {atbrUpdate = update_})
+    lensMemoRawType @AlonzoEra atbrUpdate $
+      \txBodyRaw update_ -> txBodyRaw {atbrUpdate = update_}
   {-# INLINEABLE updateTxBodyL #-}
 
 instance AllegraEraTxBody AlonzoEra where
   vldtTxBodyL =
-    lensMemoRawType atbrValidityInterval (\txBodyRaw vldt_ -> txBodyRaw {atbrValidityInterval = vldt_})
+    lensMemoRawType @AlonzoEra atbrValidityInterval $
+      \txBodyRaw vldt_ -> txBodyRaw {atbrValidityInterval = vldt_}
   {-# INLINEABLE vldtTxBodyL #-}
 
 instance MaryEraTxBody AlonzoEra where
   mintTxBodyL =
-    lensMemoRawType atbrMint (\txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_})
+    lensMemoRawType @AlonzoEra atbrMint $
+      \txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_}
   {-# INLINEABLE mintTxBodyL #-}
 
   mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
@@ -351,23 +356,23 @@ instance MaryEraTxBody AlonzoEra where
 
 instance AlonzoEraTxBody AlonzoEra where
   collateralInputsTxBodyL =
-    lensMemoRawType atbrCollateral (\txBodyRaw collateral_ -> txBodyRaw {atbrCollateral = collateral_})
+    lensMemoRawType @AlonzoEra atbrCollateral $
+      \txBodyRaw collateral_ -> txBodyRaw {atbrCollateral = collateral_}
   {-# INLINEABLE collateralInputsTxBodyL #-}
 
   reqSignerHashesTxBodyL =
-    lensMemoRawType
-      atbrReqSignerHashes
-      (\txBodyRaw reqSignerHashes_ -> txBodyRaw {atbrReqSignerHashes = reqSignerHashes_})
+    lensMemoRawType @AlonzoEra atbrReqSignerHashes $
+      \txBodyRaw reqSignerHashes_ -> txBodyRaw {atbrReqSignerHashes = reqSignerHashes_}
   {-# INLINEABLE reqSignerHashesTxBodyL #-}
 
   scriptIntegrityHashTxBodyL =
-    lensMemoRawType
-      atbrScriptIntegrityHash
-      (\txBodyRaw scriptIntegrityHash_ -> txBodyRaw {atbrScriptIntegrityHash = scriptIntegrityHash_})
+    lensMemoRawType @AlonzoEra atbrScriptIntegrityHash $
+      \txBodyRaw scriptIntegrityHash_ -> txBodyRaw {atbrScriptIntegrityHash = scriptIntegrityHash_}
   {-# INLINEABLE scriptIntegrityHashTxBodyL #-}
 
   networkIdTxBodyL =
-    lensMemoRawType atbrTxNetworkId (\txBodyRaw networkId -> txBodyRaw {atbrTxNetworkId = networkId})
+    lensMemoRawType @AlonzoEra atbrTxNetworkId $
+      \txBodyRaw networkId -> txBodyRaw {atbrTxNetworkId = networkId}
   {-# INLINEABLE networkIdTxBodyL #-}
 
   redeemerPointer = alonzoRedeemerPointer
@@ -391,12 +396,13 @@ deriving instance
   Show (AlonzoTxBody era)
 
 deriving via
-  (Mem AlonzoTxBodyRaw era)
+  Mem (AlonzoTxBodyRaw era)
   instance
     (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
     DecCBOR (Annotator (AlonzoTxBody era))
 
 pattern AlonzoTxBody ::
+  forall era.
   (EraTxOut era, EraTxCert era) =>
   Set TxIn ->
   Set TxIn ->
@@ -459,7 +465,7 @@ pattern AlonzoTxBody
       scriptIntegrityHash
       auxDataHash
       txNetworkId =
-        mkMemoized $
+        mkMemoizedEra @era $
           AlonzoTxBodyRaw
             { atbrInputs = inputs
             , atbrCollateral = collateral
@@ -478,7 +484,7 @@ pattern AlonzoTxBody
 
 {-# COMPLETE AlonzoTxBody #-}
 
-type instance MemoHashIndex AlonzoTxBodyRaw = EraIndependentTxBody
+type instance MemoHashIndex (AlonzoTxBodyRaw era) = EraIndependentTxBody
 
 instance HashAnnotated (AlonzoTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash

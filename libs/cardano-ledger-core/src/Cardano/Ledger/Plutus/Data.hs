@@ -64,7 +64,7 @@ import Cardano.Ledger.MemoBytes (
   getMemoRawType,
   getMemoSafeHash,
   mkMemoBytes,
-  mkMemoized,
+  mkMemoizedEra,
   shortToLazy,
  )
 import qualified Codec.Serialise as Cborg (Serialise (..))
@@ -94,31 +94,31 @@ instance Typeable era => EncCBOR (PlutusData era) where
 instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
   decCBOR = pure <$> fromPlainDecoder Cborg.decode
 
-newtype Data era = DataConstr (MemoBytes PlutusData era)
+newtype Data era = DataConstr (MemoBytes (PlutusData era))
   deriving (Eq, Generic)
   deriving newtype (SafeToHash, ToCBOR, NFData)
 
 -- | Encodes memoized bytes created upon construction.
 instance Typeable era => EncCBOR (Data era)
 
-instance Memoized Data where
-  type RawType Data = PlutusData
+instance Memoized (Data era) where
+  type RawType (Data era) = PlutusData era
 
 deriving instance Show (Data era)
 
-deriving via Mem PlutusData era instance Era era => DecCBOR (Annotator (Data era))
+deriving via Mem (PlutusData era) instance Era era => DecCBOR (Annotator (Data era))
 
-type instance MemoHashIndex PlutusData = EraIndependentData
+type instance MemoHashIndex (PlutusData era) = EraIndependentData
 
 instance HashAnnotated (Data era) EraIndependentData where
   hashAnnotated = getMemoSafeHash
 
 instance Typeable era => NoThunks (Data era)
 
-pattern Data :: Era era => PV1.Data -> Data era
+pattern Data :: forall era. Era era => PV1.Data -> Data era
 pattern Data p <- (getMemoRawType -> PlutusData p)
   where
-    Data p = mkMemoized $ PlutusData p
+    Data p = mkMemoizedEra @era $ PlutusData p
 
 {-# COMPLETE Data #-}
 
@@ -179,7 +179,7 @@ binaryDataToData binaryData =
       error $ "Impossible: incorrectly encoded data: " ++ show errMsg
     Right d -> d
 
-dataToBinaryData :: Era era => Data era -> BinaryData era
+dataToBinaryData :: Data era -> BinaryData era
 dataToBinaryData (DataConstr (Memo _ sbs)) = BinaryData sbs
 
 hashBinaryData :: BinaryData era -> DataHash

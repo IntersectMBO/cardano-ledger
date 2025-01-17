@@ -12,6 +12,7 @@ module Cardano.Ledger.MemoBytes (
   getMemoBytesType,
   getMemoBytesHash,
   memoBytes,
+  memoBytesEra,
   shorten,
   showMemo,
   printMemo,
@@ -22,6 +23,7 @@ module Cardano.Ledger.MemoBytes (
   -- * Memoized
   Memoized (RawType),
   mkMemoized,
+  mkMemoizedEra,
   decodeMemoized,
   getMemoSafeHash,
   getMemoRawType,

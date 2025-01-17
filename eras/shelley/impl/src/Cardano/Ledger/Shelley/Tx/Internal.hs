@@ -67,7 +67,7 @@ import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
   Memoized (..),
-  memoBytes,
+  memoBytesEra,
   mkMemoBytes,
   pattern Memo,
  )
@@ -134,29 +134,29 @@ instance
   ) =>
   NoThunks (ShelleyTxRaw era)
 
-newtype ShelleyTx era = TxConstr (MemoBytes ShelleyTxRaw era)
+newtype ShelleyTx era = TxConstr (MemoBytes (ShelleyTxRaw era))
   deriving newtype (SafeToHash, ToCBOR)
   deriving (Generic)
 
-instance Memoized ShelleyTx where
-  type RawType ShelleyTx = ShelleyTxRaw
+instance Memoized (ShelleyTx era) where
+  type RawType (ShelleyTx era) = ShelleyTxRaw era
 
 -- | `TxBody` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
-bodyShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (TxBody era)
+bodyShelleyTxL :: forall era. EraTx era => Lens' (ShelleyTx era) (TxBody era)
 bodyShelleyTxL =
   lens (\(TxConstr (Memo tx _)) -> strBody tx) $
     \(TxConstr (Memo tx _)) txBody ->
-      TxConstr $ memoBytes $ encodeShelleyTxRaw $ tx {strBody = txBody}
+      TxConstr $ memoBytesEra @era $ encodeShelleyTxRaw $ tx {strBody = txBody}
 {-# INLINEABLE bodyShelleyTxL #-}
 
 -- | `TxWits` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
-witsShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (TxWits era)
+witsShelleyTxL :: forall era. EraTx era => Lens' (ShelleyTx era) (TxWits era)
 witsShelleyTxL =
   lens (\(TxConstr (Memo tx _)) -> strWits tx) $
     \(TxConstr (Memo tx _)) txWits ->
-      TxConstr $ memoBytes $ encodeShelleyTxRaw $ tx {strWits = txWits}
+      TxConstr $ memoBytesEra @era $ encodeShelleyTxRaw $ tx {strWits = txWits}
 {-# INLINEABLE witsShelleyTxL #-}
 
 -- | `TxAuxData` setter and getter for `ShelleyTx`. The setter does update
@@ -168,11 +168,11 @@ auxDataShelleyTxL =
 {-# INLINEABLE auxDataShelleyTxL #-}
 
 -- | Size getter for `ShelleyTx`.
-sizeShelleyTxF :: Era era => SimpleGetter (ShelleyTx era) Integer
+sizeShelleyTxF :: SimpleGetter (ShelleyTx era) Integer
 sizeShelleyTxF = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
 {-# INLINEABLE sizeShelleyTxF #-}
 
-wireSizeShelleyTxF :: Era era => SimpleGetter (ShelleyTx era) Word32
+wireSizeShelleyTxF :: SimpleGetter (ShelleyTx era) Word32
 wireSizeShelleyTxF = to $ \(TxConstr (Memo _ bytes)) ->
   let n = SBS.length bytes
    in if n <= fromIntegral (maxBound :: Word32)
@@ -180,8 +180,8 @@ wireSizeShelleyTxF = to $ \(TxConstr (Memo _ bytes)) ->
         else error $ "Impossible: Size of the transaction is too big: " ++ show n
 {-# INLINEABLE wireSizeShelleyTxF #-}
 
-mkShelleyTx :: EraTx era => ShelleyTxRaw era -> ShelleyTx era
-mkShelleyTx = TxConstr . memoBytes . encodeShelleyTxRaw
+mkShelleyTx :: forall era. EraTx era => ShelleyTxRaw era -> ShelleyTx era
+mkShelleyTx = TxConstr . memoBytesEra @era . encodeShelleyTxRaw
 {-# INLINEABLE mkShelleyTx #-}
 
 mkBasicShelleyTx :: EraTx era => TxBody era -> ShelleyTx era
@@ -324,7 +324,7 @@ instance
           )
 
 deriving via
-  Mem ShelleyTxRaw era
+  Mem (ShelleyTxRaw era)
   instance
     EraTx era => DecCBOR (Annotator (ShelleyTx era))
 
