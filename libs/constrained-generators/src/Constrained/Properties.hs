@@ -51,7 +51,7 @@ prop_sound ::
 prop_sound spec =
   QC.forAllBlind (strictGen $ genFromSpecT spec) $ \ma ->
     case ma of
-      Result _ a ->
+      Result a ->
         QC.cover 80 True "successful" $
           QC.counterexample (show a) $
             monitorSpec spec a $

@@ -428,13 +428,13 @@ conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do
     forAllSpec spec = do
       let
         simplifiedSpec = simplifySpec spec
-        generator = CV2.runGenT (CV2.genFromSpecT simplifiedSpec) Loose
-        shrinker (Result _ x) = pure <$> shrinkWithSpec simplifiedSpec x
+        generator = CV2.runGenT (CV2.genFromSpecT simplifiedSpec) Loose []
+        shrinker (Result x) = pure <$> shrinkWithSpec simplifiedSpec x
         shrinker _ = []
       res :: GE a <- ContT $ \c ->
         pure $ forAllShrinkBlind generator shrinker c
       case res of
-        Result _ x -> pure x
+        Result x -> pure x
         _ -> ContT . const . pure $ property Discard
   env <- forAllSpec $ environmentSpec @fn @rule @era ctx
   deepEval env "environment"

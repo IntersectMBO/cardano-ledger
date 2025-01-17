@@ -25,22 +25,23 @@ instance Show t => Show (Solution t) where
 --   The one wrinkle is if everything is No, then in that case return an arbitrary one of the No's.
 --   This can be done in linear time in the length of the list. Call that length n.
 --   Check for all No. This takes time proportional to n. If it is true return one of them.
---   If it is not true. Concat all the Yes, and skip all the No.
+--   If it is not all No, then concat all the Yes, and skip all the No.
 --   We find the first No (if it exist), and all the Yes by partitioning the list
 --   This is similar in spirit to Constrained.GenT.catGEs, but doesn't require a
 --   a Monad to escape on the first No.
-concatSolution :: Show t => t -> String -> t -> Int -> [Solution t] -> Solution t
-concatSolution smallest pName total count sols =
+concatSolution :: Show t => t -> t -> String -> t -> Int -> [Solution t] -> Solution t
+concatSolution smallest largest pName total count sols =
   case partitionEithers (map (\case Yes x -> Left x; No x -> Right x) sols) of
     ([], n : _) -> No n -- All No, arbitrarily return the first.
     (y : ys, _) -> Yes $ sconcat (y :| ys) -- At least one Yes, and all No's skipped ('ys')
     ([], []) ->
       No -- The list is empty
-        [ "The sample in pickAll was empty"
-        , "smallest = " ++ show smallest
-        , "pred = " ++ pName
-        , "total = " ++ show total
-        , "count = " ++ show count
+        [ "\nThe sample in pickAll was empty"
+        , "  smallest = " ++ show smallest
+        , "  largest = " ++ show largest
+        , "  pred = " ++ pName
+        , "  total = " ++ show total
+        , "  count = " ++ show count
         ]
 
 newtype Cost = Cost Int deriving (Eq, Show, Num, Ord)
@@ -55,13 +56,13 @@ firstYesG nullSolution f xs c = go xs c
       ans <- f x (cost + 1)
       case ans of
         (cost1, No _) -> go more cost1
-        (cost2, Yes y) -> pure (cost2, Yes y)
-        _ -> pure ans
+        (_, Yes _) -> pure ans
 
 noChoices :: Show t => Cost -> String -> t -> t -> t -> Int -> [(t, t)] -> Solution t
 noChoices cost p smallest largest total count samp =
   No
-    [ "No legal choice can be found, where"
+    [ "\nNo legal choice can be found, where for each sample (x,y)"
+    , "x+y = total && predicate x && predicate y"
     , "  predicate = " ++ p
     , "  smallest = " ++ show smallest
     , "  largest = " ++ show largest
@@ -74,7 +75,6 @@ noChoices cost p smallest largest total count samp =
 
 -- =====================================================
 
-
 -- | Given 'count', return a list if pairs, that add to 'count'
 --   splitsOf 6 --> [(1,5),(2,4),(3,3)].
 --   Note we don't return reflections like (5,1) and (4,2),
@@ -82,7 +82,6 @@ noChoices cost p smallest largest total count samp =
 splitsOf :: Integral b => b -> [(b, b)]
 splitsOf count = [(i, j) | i <- [1 .. div count 2], let j = count - i]
 {-# SPECIALIZE splitsOf :: Int -> [(Int, Int)] #-}
-
 
 -- | Given a Path, find a representative solution, 'ans', for that path, such that
 --   1) (length ans) == 'count',
@@ -131,7 +130,7 @@ pickAll smallest largest (pName, _) total count cost
       pure $
         ( cost
         , No
-            [ "pickAll exceeds cost limit " ++ show cost
+            [ "\nPickAll exceeds cost limit " ++ show cost
             , "  predicate = " ++ pName
             , "  smallest = " ++ show smallest
             , "  largest = " ++ show largest
@@ -148,7 +147,11 @@ pickAll smallest largest (pName, _) total count cost
       pure $
         ( cost
         , No
-            [ "The feasible range to pickAll [" ++ show smallest ++ " .. " ++ show (div total 2) ++ "] was empty"
+            [ "\nThe feasible range to pickAll ["
+                ++ show smallest
+                ++ " .. "
+                ++ show (div total 2)
+                ++ "] was empty"
             , "  predicate = " ++ pName
             , "  smallest = " ++ show smallest
             , "  largest = " ++ show largest
@@ -184,15 +187,14 @@ pickAll smallest largest (pName, p) total count cost = do
           else pure (splitsOf count)
 
   firstYesG
-    (No ["No split has a solution", "cost = " ++ show cost])
+    (No ["\nNo split has a solution", "cost = " ++ show cost])
     (doSplit smallest largest (pName, p) total choices)
     splits
     cost
 
-
 -- TODO run some tests to see if this is a better solution than firstYesG
 -- concatSolution smallest pName total count
---  <$> mapM  (doSplit smallest total (pName, p) choices (pickAll (depth +1) smallest)) splits
+--  <$> mapM  (doSplit smallest largest total (pName, p) choices (pickAll (depth +1) smallest)) splits
 
 -- {-# SPECIALIZE pickAll::Int -> (String, Int -> Bool) -> Int -> Int -> Cost -> Gen (Cost, Solution Int) #-}
 
@@ -228,9 +230,10 @@ doSplit smallest largest (pName, p) total sample (i, j) c = go sample c
           pure $
             ( cost
             , No
-                [ "The sample passed to doSplit [" ++ show smallest ++ " .. " ++ show (div total 2) ++ "] was empty"
+                [ "\nThe sample passed to doSplit [" ++ show smallest ++ " .. " ++ show (div total 2) ++ "] was empty"
                 , "  predicate = " ++ pName
                 , "  smallest = " ++ show smallest
+                , "  largest = " ++ show largest
                 , "  total " ++ show total
                 , "  count = " ++ show (i + j)
                 , "  split of count = " ++ show (i, j)
@@ -240,20 +243,20 @@ doSplit smallest largest (pName, p) total sample (i, j) c = go sample c
           pure $
             ( cost
             , No
-                [ "All choices in (genSizedList " ++ show (i + j) ++ " 'p' " ++ show total ++ ") have failed."
+                [ "\nAll choices in (genSizedList " ++ show (i + j) ++ " 'p' " ++ show total ++ ") have failed."
                 , "Here is 1 example failure."
                 , "  smallest = " ++ show smallest
+                , "  largest = " ++ show largest
                 , "  total " ++ show total ++ " = " ++ show left ++ " + " ++ show right
                 , "  count = " ++ show (i + j) ++ ", split of count = " ++ show (i, j)
                 , "We are trying to solve sub-problems like:"
                 , "  split " ++ show left ++ " into " ++ show i ++ " parts, where all parts meet 'p'"
                 , "  split " ++ show right ++ " into " ++ show j ++ " parts, where all parts meet 'p'"
-                , "predicate 'p' = " ++ pName
-                , "prefix of the sample"
-                , unlines (map show (take 10 sample))
+                , "Predicate 'p' = " ++ pName
+                , "A small prefix of the sample, elements (x,y) where x+y = " ++ show total
+                , unlines (map (("  " ++) . show) (take 10 sample))
                 ]
             )
-
 {-# INLINE doSplit #-}
 
 -- | If the sample is small enough, then enumerate all of it, otherwise take a fair sample.
@@ -265,7 +268,6 @@ smallSample smallest largest total bound size
       choices <- fair smallest largest size 5 True
       shuffle [(x, total - x) | x <- choices]
 {-# INLINE smallSample #-}
-
 
 -- | Generates a fair sample of numbers between 'smallest' and 'largest'.
 --   makes sure there are numbers of all sizes. Controls both the size of the sample
