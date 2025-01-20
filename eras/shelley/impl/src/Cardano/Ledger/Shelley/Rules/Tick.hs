@@ -38,7 +38,6 @@ import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
@@ -138,7 +137,6 @@ instance
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
-  , CertState era ~ ShelleyCertState era
   ) =>
   STS (ShelleyTICK era)
   where
@@ -153,7 +151,7 @@ instance
   transitionRules = [bheadTransition]
 
 adoptGenesisDelegs ::
-  (EraCertState era, CertState era ~ ShelleyCertState era) =>
+  EraCertState era =>
   EpochState era ->
   SlotNo ->
   EpochState era
@@ -212,7 +210,6 @@ validatingTickTransition ::
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
-  , CertState era ~ ShelleyCertState era
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -239,7 +236,6 @@ validatingTickTransitionFORECAST ::
   , GovState era ~ ShelleyGovState era
   , EraGov era
   , EraCertState era
-  , CertState era ~ ShelleyCertState era
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -302,7 +298,6 @@ bheadTransition ::
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
-  , CertState era ~ ShelleyCertState era
   ) =>
   TransitionRule (ShelleyTICK era)
 bheadTransition = do
@@ -386,7 +381,6 @@ instance
   , State (EraRule "UPEC" era) ~ UpecState era
   , Environment (EraRule "UPEC" era) ~ LedgerState era
   , Embed (EraRule "UPEC" era) (ShelleyTICKF era)
-  , CertState era ~ ShelleyCertState era
   ) =>
   STS (ShelleyTICKF era)
   where

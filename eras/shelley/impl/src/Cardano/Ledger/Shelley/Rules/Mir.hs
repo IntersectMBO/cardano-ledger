@@ -20,9 +20,8 @@ module Cardano.Ledger.Shelley.Rules.Mir (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState (..))
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -30,6 +29,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   InstantaneousRewards (..),
   RewardAccounts,
+  certDStateL,
   curPParamsEpochStateL,
   dsIRewards,
   dsIRewardsL,
@@ -87,7 +87,6 @@ instance
   ( Default (EpochState era)
   , EraGov era
   , EraCertState era
-  , CertState era ~ ShelleyCertState era
   ) =>
   STS (ShelleyMIR era)
   where
@@ -111,7 +110,7 @@ instance
 
 mirTransition ::
   forall era.
-  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  (EraGov era, EraCertState era) =>
   TransitionRule (ShelleyMIR era)
 mirTransition = do
   TRC

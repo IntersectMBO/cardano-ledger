@@ -46,7 +46,6 @@ import Cardano.Ledger.EpochBoundary (
   sumStakePerPool,
  )
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
@@ -97,7 +96,7 @@ import Lens.Micro ((^.))
 
 startStep ::
   forall era.
-  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  (EraGov era, EraCertState era) =>
   EpochSize ->
   BlocksMade ->
   EpochState era ->
@@ -301,7 +300,7 @@ completeRupd
 --   This function is not used in the rules, so it ignores RewardEvents
 createRUpd ::
   forall era.
-  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  (EraGov era, EraCertState era) =>
   EpochSize ->
   BlocksMade ->
   EpochState era ->

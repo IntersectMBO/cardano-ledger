@@ -34,7 +34,6 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyNEWEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
@@ -131,7 +130,6 @@ instance
   , Default (State (EraRule "PPUP" era))
   , Default (PParams era)
   , Default (StashedAVVMAddresses era)
-  , CertState era ~ ShelleyCertState era
   ) =>
   STS (ShelleyNEWEPOCH era)
   where
@@ -176,7 +174,6 @@ newEpochTransition ::
   , Default (StashedAVVMAddresses era)
   , Event (EraRule "RUPD" era) ~ RupdEvent
   , Default (State (EraRule "PPUP" era))
-  , CertState era ~ ShelleyCertState era
   ) =>
   TransitionRule (ShelleyNEWEPOCH era)
 newEpochTransition = do
@@ -252,7 +249,6 @@ instance
   , Default (EpochState era)
   , PredicateFailure (EraRule "MIR" era) ~ ShelleyMirPredFailure era
   , Event (EraRule "MIR" era) ~ ShelleyMirEvent era
-  , CertState era ~ ShelleyCertState era
   ) =>
   Embed (ShelleyMIR era) (ShelleyNEWEPOCH era)
   where
@@ -262,7 +258,7 @@ instance
 -- ===========================================
 
 updateRewards ::
-  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  (EraGov era, EraCertState era) =>
   EpochState era ->
   EpochNo ->
   RewardUpdate ->

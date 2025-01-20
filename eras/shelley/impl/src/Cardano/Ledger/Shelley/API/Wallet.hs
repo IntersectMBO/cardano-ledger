@@ -76,7 +76,6 @@ import Cardano.Ledger.Shelley.AdaPots (
   totalAdaES,
   totalAdaPotsES,
  )
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -162,7 +161,7 @@ getUTxOSubset nes = txInsFilter (getUTxO nes)
 
 -- | Get the /current/ registered stake pools.
 getPools ::
-  (EraCertState era, CertState era ~ ShelleyCertState era) =>
+  EraCertState era =>
   NewEpochState era ->
   Set (KeyHash 'StakePool)
 getPools = Map.keysSet . f
@@ -173,7 +172,7 @@ getPools = Map.keysSet . f
 -- stake pools. The result map will contain entries for all the given stake
 -- pools that are currently registered.
 getPoolParameters ::
-  (EraCertState era, CertState era ~ ShelleyCertState era) =>
+  EraCertState era =>
   NewEpochState era ->
   Set (KeyHash 'StakePool) ->
   Map (KeyHash 'StakePool) PoolParams
@@ -194,7 +193,7 @@ getPoolParameters = Map.restrictKeys . f
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
   forall era.
-  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  (EraGov era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
   PoolDistr
@@ -226,7 +225,7 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  (EraGov era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
   Set (Either Coin (Credential 'Staking)) ->
@@ -286,10 +285,7 @@ sumPoolOwnersStake pool stake =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot ::
-  forall era.
-  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
-  NewEpochState era -> EB.SnapShot
+currentSnapshot :: forall era. (EraGov era, EraCertState era) => NewEpochState era -> EB.SnapShot
 currentSnapshot ss =
   incrementalStakeDistr pp incrementalStake dstate pstate
   where
@@ -357,7 +353,7 @@ deriving instance ToJSON RewardParams
 -- Also included are global information such as
 -- the total stake or protocol parameters.
 getRewardInfoPools ::
-  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  (EraGov era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
   (RewardParams, Map (KeyHash 'StakePool) RewardInfoPool)
@@ -407,7 +403,7 @@ getRewardInfoPools globals ss =
 -- on stake pool rewards.
 getRewardProvenance ::
   forall era.
-  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  (EraGov era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
   (RewardUpdate, RewardProvenance)

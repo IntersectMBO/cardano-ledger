@@ -58,7 +58,6 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.EpochBoundary (SnapShots (..), ssStakeDistrL, ssStakeMarkL)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
@@ -490,7 +489,7 @@ instance
 data LedgerState era = LedgerState
   { lsUTxOState :: !(UTxOState era)
   -- ^ The current unspent transaction outputs.
-  , lsCertState :: !(ShelleyCertState era)
+  , lsCertState :: !(CertState era)
   }
   deriving (Generic)
 
@@ -561,7 +560,7 @@ instance (EraTxOut era, EraGov era, EraCertState era) => ToJSON (LedgerState era
   toEncoding = pairs . mconcat . toLedgerStatePairs
 
 toLedgerStatePairs ::
-  (EraTxOut era, EraGov era, KeyValue e a) => LedgerState era -> [a]
+  (EraTxOut era, EraGov era, KeyValue e a, EraCertState era) => LedgerState era -> [a]
 toLedgerStatePairs ls@(LedgerState _ _) =
   let LedgerState {..} = ls
    in [ "utxoState" .= lsUTxOState
@@ -583,7 +582,7 @@ instance
   where
   def = EpochState def def def def
 
-instance (Default (UTxOState era), Era era) => Default (LedgerState era) where
+instance (Default (UTxOState era), Default (CertState era)) => Default (LedgerState era) where
   def = LedgerState def def
 
 instance Default AccountState where
@@ -602,8 +601,7 @@ nesPdL = lens nesPd (\ds u -> ds {nesPd = u})
 nesEsL :: Lens' (NewEpochState era) (EpochState era)
 nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
 
-unifiedL ::
-  (EraCertState era, CertState era ~ ShelleyCertState era) => Lens' (NewEpochState era) UMap
+unifiedL :: EraCertState era => Lens' (NewEpochState era) UMap
 unifiedL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
 
 nesELL :: Lens' (NewEpochState era) EpochNo
@@ -664,7 +662,7 @@ asReservesL = lens asReserves (\ds u -> ds {asReserves = u})
 lsUTxOStateL :: Lens' (LedgerState era) (UTxOState era)
 lsUTxOStateL = lens lsUTxOState (\x y -> x {lsUTxOState = y})
 
-lsCertStateL :: Lens' (LedgerState era) (ShelleyCertState era)
+lsCertStateL :: Lens' (LedgerState era) (CertState era)
 lsCertStateL = lens lsCertState (\x y -> x {lsCertState = y})
 
 -- ================ UTxOState ===========================
@@ -714,17 +712,14 @@ epochStateIncrStakeDistrL ::
 epochStateIncrStakeDistrL = esLStateL . lsUTxOStateL . utxosStakeDistrL . credMapL
 
 epochStateRegDrepL ::
-  (EraCertState era, CertState era ~ ShelleyCertState era) =>
-  Lens' (EpochState era) (Map (Credential 'DRepRole) DRepState)
+  EraCertState era => Lens' (EpochState era) (Map (Credential 'DRepRole) DRepState)
 epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
 epochStatePoolParamsL ::
-  (EraCertState era, CertState era ~ ShelleyCertState era) =>
-  Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
+  EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
 epochStatePoolParamsL = esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
 
-epochStateUMapL ::
-  (EraCertState era, CertState era ~ ShelleyCertState era) => Lens' (EpochState era) UMap
+epochStateUMapL :: EraCertState era => Lens' (EpochState era) UMap
 epochStateUMapL = esLStateL . lsCertStateL . certDStateL . dsUnifiedL
 
 epochStateStakeDistrL ::
