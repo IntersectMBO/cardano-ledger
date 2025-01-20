@@ -19,7 +19,7 @@ jobs:
       id: setup-haskell
       with:
         ghc-version: "9.2.8"
-        cabal-version: latest
+        cabal-version: "3.12"
 
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
