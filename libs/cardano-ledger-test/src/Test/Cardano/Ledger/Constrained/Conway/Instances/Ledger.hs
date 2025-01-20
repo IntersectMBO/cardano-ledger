@@ -128,7 +128,14 @@ import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
 import Constrained hiding (Sized, Value)
 import Constrained qualified as C
-import Constrained.Base (Binder (..), HasGenHint (..), Pred (..), Term (..), explainSpecOpt)
+import Constrained.Base (
+  Binder (..),
+  HasGenHint (..),
+  Pred (..),
+  Term (..),
+  explainSpecOpt,
+  genListWithSize,
+ )
 import Constrained.Spec.Map
 import Control.DeepSeq (NFData)
 import Crypto.Hash (Blake2b_224)
@@ -250,6 +257,10 @@ instance IsConwayUniv fn => Foldy fn DeltaCoin where
   genList s s' = map fromSimpleRep <$> genList @fn @Integer (toSimpleRepSpec s) (toSimpleRepSpec s')
   theAddFn = addFn
   theZero = DeltaCoin 0
+  genSizedList sz elemSpec foldSpec =
+    map fromSimpleRep
+      <$> genListWithSize @fn @Integer sz (toSimpleRepSpec elemSpec) (toSimpleRepSpec foldSpec)
+  noNegativeValues = False
 
 deriving via Integer instance Num DeltaCoin
 

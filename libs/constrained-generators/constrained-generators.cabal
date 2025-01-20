@@ -26,6 +26,7 @@ library
     Constrained.Examples.Basic
     Constrained.Examples.CheatSheet
     Constrained.Examples.Either
+    Constrained.Examples.Fold
     Constrained.Examples.List
     Constrained.Examples.Map
     Constrained.Examples.Set
@@ -41,6 +42,7 @@ library
     Constrained.Spec.Map
     Constrained.Spec.Pairs
     Constrained.Spec.Tree
+    Constrained.SumList
     Constrained.Syntax
     Constrained.Univ
 
