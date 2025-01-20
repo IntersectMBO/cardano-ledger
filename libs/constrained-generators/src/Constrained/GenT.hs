@@ -110,7 +110,13 @@ fromGE _ (FatalError es e) =
   error . ("\n" ++) . unlines $ concat (map NE.toList es) ++ (NE.toList e)
 
 errorGE :: GE a -> a
-errorGE = fromGE (error . unlines . NE.toList)
+errorGE mge = case mge of
+  FatalError xs x -> error $ mkErrorMsg xs x
+  GenError xs x -> error $ mkErrorMsg xs x
+  Result _ x -> x
+  where
+    mkErrorMsg xs x = concatMap f (reverse (x : xs))
+    f x = unlines (NE.toList x) ++ "\n"
 
 isOk :: GE a -> Bool
 isOk GenError {} = False
