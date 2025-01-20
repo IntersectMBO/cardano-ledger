@@ -2,10 +2,11 @@
 
 ## 1.17.0.0
 
+* Add `byteCountMemoBytes`, `packMemoBytesM` and `unpackMemoBytesM` to `MemoBytes` module
 * Require `MemPack` instance for `TxOut` and `CompactForm (Value era)` for `EraTxOut` type class.
 * Add `decodeMemoBytes`
 * Add `MemPack` instance for `CompactAddr`, `TxIx`, `TxId`, `TxIn`, `CompactForm Coin`,
-  `KeyHash`, `ScriptHash`, `Credential`, `SafeHash`, `MemoBytes`, `Plutus`, `PlutusBinary`, `BinaryData` and `Datum`
+  `KeyHash`, `ScriptHash`, `Credential`, `SafeHash`, `Plutus`, `PlutusBinary`, `BinaryData` and `Datum`
 * Add `DecShareCBOR` instance for `TxIn`
 * Add `fromCborRigorousBothAddr`
 * Add `SlotNo32` and use it in `Ptr` definition

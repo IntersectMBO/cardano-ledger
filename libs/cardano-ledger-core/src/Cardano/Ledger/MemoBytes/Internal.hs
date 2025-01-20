@@ -54,6 +54,11 @@ module Cardano.Ledger.MemoBytes.Internal (
   lensMemoRawType,
   getterMemoRawType,
 
+  -- * MemoBytes MemPack instance definitions
+  byteCountMemoBytes,
+  packMemoBytesM,
+  unpackMemoBytesM,
+
   -- * Raw equality
   EqRaw (..),
 )
@@ -83,6 +88,7 @@ import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Coerce
 import Data.MemPack
+import Data.MemPack.Buffer (Buffer)
 import qualified Data.Text as T
 import Data.Typeable
 import GHC.Base (Type)
@@ -114,22 +120,28 @@ pattern Memo memoType memoBytes <-
 
 {-# COMPLETE Memo #-}
 
-instance (Typeable t, Era era, DecCBOR (Annotator (t era))) => MemPack (MemoBytes t era) where
-  packedByteCount = packedByteCount . mbBytes
-  {-# INLINE packedByteCount #-}
-  packM = packM . mbBytes
-  {-# INLINE packM #-}
-  unpackM = unpackM >>= decodeMemoBytes
-  {-# INLINE unpackM #-}
+byteCountMemoBytes :: MemoBytes t era -> Int
+byteCountMemoBytes = packedByteCount . mbBytes
+
+packMemoBytesM :: MemoBytes t era -> Pack s ()
+packMemoBytesM = packM . mbBytes
+
+unpackMemoBytesM ::
+  forall era t b.
+  (Era era, DecCBOR (Annotator (t era)), Typeable t, Buffer b) =>
+  Unpack b (MemoBytes t era)
+unpackMemoBytesM = unpackM >>= decodeMemoBytes
 
 decodeMemoBytes ::
   forall t era m.
-  (Typeable t, Era era, DecCBOR (Annotator (t era)), MonadFail m) => ByteString -> m (MemoBytes t era)
+  (Typeable t, Era era, DecCBOR (Annotator (t era)), MonadFail m) =>
+  ByteString ->
+  m (MemoBytes t era)
 decodeMemoBytes bs =
   either (fail . show) pure $
     decodeFullAnnotator
       (eraProtVerLow @era)
-      (T.pack (typeName @(MemoBytes t era)))
+      (T.pack (show (typeRep (Proxy @t))))
       decCBOR
       (BSL.fromStrict bs)
 

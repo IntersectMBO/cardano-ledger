@@ -31,6 +31,11 @@ module Cardano.Ledger.MemoBytes (
   lensMemoRawType,
   getterMemoRawType,
 
+  -- * MemoBytes MemPack definitions
+  byteCountMemoBytes,
+  packMemoBytesM,
+  unpackMemoBytesM,
+
   -- * Raw equality
   EqRaw (..),
 )
