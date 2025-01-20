@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
   availableAfterMIR,
@@ -23,6 +24,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
 import qualified Cardano.Ledger.UMap as UM
@@ -49,7 +51,7 @@ availableAfterMIR TreasuryMIR as ir =
 -- Virtual selectors, which get the appropriate view from a DState from the embedded UnifiedMap
 
 getGKeys ::
-  EraCertState era =>
+  (EraCertState era, CertState era ~ ShelleyCertState era) =>
   NewEpochState era ->
   Set (KeyHash 'Genesis)
 getGKeys nes = Map.keysSet $ unGenDelegs (ls ^. lsCertStateL . certDStateL . dsGenDelegsL)
@@ -61,7 +63,7 @@ getGKeys nes = Map.keysSet $ unGenDelegs (ls ^. lsCertStateL . certDStateL . dsG
 --  contains the specified transaction outputs.
 genesisState ::
   forall era.
-  (EraGov era, EraCertState era) =>
+  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
   Map (KeyHash 'Genesis) GenDelegPair ->
   UTxO era ->
   LedgerState era

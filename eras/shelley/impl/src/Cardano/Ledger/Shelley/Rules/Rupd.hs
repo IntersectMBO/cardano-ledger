@@ -33,10 +33,11 @@ import Cardano.Ledger.BaseTypes (
   randomnessStabilisationWindow,
   securityParameter,
  )
-import Cardano.Ledger.CertState (EraCertState)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Era (ShelleyRUPD)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -88,6 +89,7 @@ instance
   ( Era era
   , EraGov era
   , EraCertState era
+  , CertState era ~ ShelleyCertState era
   ) =>
   STS (ShelleyRUPD era)
   where
@@ -123,7 +125,9 @@ determineRewardTiming currentSlot startAfterSlot endSlot
   | currentSlot <= startAfterSlot = RewardsTooEarly
   | otherwise = RewardsJustRight
 
-rupdTransition :: (EraGov era, EraCertState era) => TransitionRule (ShelleyRUPD era)
+rupdTransition ::
+  (EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  TransitionRule (ShelleyRUPD era)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (slotsPerEpoch, slot, slotForce, maxLL, asc, k, e) <- liftSTS $ do

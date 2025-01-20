@@ -22,7 +22,9 @@ module Cardano.Ledger.Shelley.Rules.Upec (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
@@ -71,6 +73,7 @@ instance
   , Default (PParams era)
   , GovState era ~ ShelleyGovState era
   , ProtVerAtMost era 8
+  , CertState era ~ ShelleyCertState era
   ) =>
   STS (ShelleyUPEC era)
   where

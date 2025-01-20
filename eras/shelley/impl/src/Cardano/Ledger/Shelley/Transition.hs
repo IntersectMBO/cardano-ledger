@@ -40,6 +40,7 @@ import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Genesis (EraGenesis)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.Governance
@@ -140,7 +141,7 @@ tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
 registerInitialFundsThenStaking ::
-  (EraTransition era, EraCertState era) =>
+  (EraTransition era, EraCertState era, CertState era ~ ShelleyCertState era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
@@ -254,7 +255,7 @@ toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
 createInitialState ::
   forall era.
   -- TODO: consider making `EraCertState` part of `EraTransition`
-  (EraTransition era, HasCallStack, EraCertState era) =>
+  (EraTransition era, HasCallStack, EraCertState era, CertState era ~ ShelleyCertState era) =>
   TransitionConfig era ->
   NewEpochState era
 createInitialState tc =
@@ -314,7 +315,7 @@ createInitialState tc =
 -- when NetworkId is set to Mainnet
 registerInitialStaking ::
   forall era.
-  (HasCallStack, EraTransition era, EraCertState era) =>
+  (HasCallStack, EraTransition era, EraCertState era, CertState era ~ ShelleyCertState era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era

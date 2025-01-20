@@ -31,6 +31,7 @@ import Cardano.Ledger.EpochBoundary (
   calculatePoolDistr,
   emptySnapShots,
  )
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
@@ -72,7 +73,7 @@ instance NFData (SnapEvent era)
 
 data SnapEnv era = SnapEnv !(LedgerState era) !(PParams era)
 
-instance (EraTxOut era, EraCertState era) => STS (ShelleySNAP era) where
+instance (EraTxOut era, EraCertState era, CertState era ~ ShelleyCertState era) => STS (ShelleySNAP era) where
   type State (ShelleySNAP era) = SnapShots
   type Signal (ShelleySNAP era) = ()
   type Environment (ShelleySNAP era) = SnapEnv era
@@ -92,7 +93,7 @@ instance (EraTxOut era, EraCertState era) => STS (ShelleySNAP era) where
 -- where important changes were made to the source code.
 snapTransition ::
   forall era.
-  (EraPParams era, EraCertState era) =>
+  (EraPParams era, EraCertState era, CertState era ~ ShelleyCertState era) =>
   TransitionRule (ShelleySNAP era)
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext

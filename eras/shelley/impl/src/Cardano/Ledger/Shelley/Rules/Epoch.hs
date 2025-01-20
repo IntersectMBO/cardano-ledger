@@ -24,6 +24,7 @@ module Cardano.Ledger.Shelley.Rules.Epoch (
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.EpochBoundary (SnapShots)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -158,6 +159,7 @@ instance
   , Default (PParams era)
   , Eq (UpecPredFailure era)
   , Show (UpecPredFailure era)
+  , CertState era ~ ShelleyCertState era
   ) =>
   STS (ShelleyEPOCH era)
   where
@@ -193,6 +195,7 @@ epochTransition ::
   , GovState era ~ ShelleyGovState era
   , EraGov era
   , EraCertState era
+  , CertState era ~ ShelleyCertState era
   ) =>
   TransitionRule (ShelleyEPOCH era)
 epochTransition = do
@@ -254,6 +257,7 @@ instance
   , PredicateFailure (EraRule "SNAP" era) ~ ShelleySnapPredFailure era
   , Event (EraRule "SNAP" era) ~ SnapEvent era
   , EraCertState era
+  , CertState era ~ ShelleyCertState era
   ) =>
   Embed (ShelleySNAP era) (ShelleyEPOCH era)
   where

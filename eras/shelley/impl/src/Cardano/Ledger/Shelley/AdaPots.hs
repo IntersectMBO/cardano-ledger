@@ -31,6 +31,7 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Governance (EraGov (..))
 import Cardano.Ledger.Shelley.LedgerState.Types (
   AccountState (..),
@@ -66,6 +67,7 @@ totalAdaPotsES ::
   ( EraTxOut era
   , EraGov era
   , EraCertState era
+  , CertState era ~ ShelleyCertState era
   ) =>
   EpochState era ->
   AdaPots
@@ -103,7 +105,9 @@ sumAdaPots
       <> sumObligation obligationsPot
 
 -- | Calculate the total ada in the epoch state
-totalAdaES :: (EraTxOut era, EraGov era, EraCertState era) => EpochState era -> Coin
+totalAdaES ::
+  (EraTxOut era, EraGov era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  EpochState era -> Coin
 totalAdaES = sumAdaPots . totalAdaPotsES
 
 -- =============================================
