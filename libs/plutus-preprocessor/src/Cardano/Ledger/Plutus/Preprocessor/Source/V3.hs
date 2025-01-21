@@ -88,6 +88,7 @@ evenDatumQ =
           PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _ (Just (PV3.Datum datum))) ->
             -- Expecting a spending script with a Datum, thus failing when it is not
             P.modulo (P.unsafeDataAsI datum) 2 P.== 0
+          _ -> False
     |]
 
 evenRedeemerNoDatumQ :: Q [Dec]
