@@ -34,8 +34,10 @@ import Cardano.Ledger.Binary (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
+import Cardano.Ledger.MemoBytes (MemoBytes (Memo), decodeMemoized)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Short as SBS
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -133,6 +135,37 @@ instance
       blockSize =
         1 -- header
           + fromIntegral (numSegComponents @era)
+
+data BlockRaw h era = BlockRaw !h !(TxSeq era)
+
+instance
+  forall h era.
+  ( EraSegWits era
+  , DecCBOR h
+  , DecCBOR (TxSeq era)
+  ) =>
+  DecCBOR (BlockRaw h era)
+  where
+  decCBOR =
+    decodeRecordNamed "Block" (const blockSize) $ do
+      header <- decCBOR
+      txns <- decCBOR
+      pure $ BlockRaw header txns
+    where
+      blockSize = 1 + fromIntegral (numSegComponents @era)
+
+instance
+  forall h era.
+  ( EraSegWits era
+  , DecCBOR h
+  , DecCBOR (TxSeq era)
+  ) =>
+  DecCBOR (Block h era)
+  where
+  decCBOR = do
+    mb <- decodeMemoized (decCBOR @(BlockRaw h era))
+    let (Memo (BlockRaw h txSeq) bs) = mb
+    pure $ Block' h txSeq (BSL.fromStrict (SBS.fromShort bs))
 
 bheader ::
   Block h era ->

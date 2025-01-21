@@ -28,8 +28,10 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   ToCBOR (..),
   annotatorSlice,
+  decodeRecordNamed,
   fromPlainDecoder,
  )
+import qualified Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Hashes (
   EraIndependentTxBody,
@@ -40,9 +42,10 @@ import Cardano.Ledger.Hashes (
   hashTxBodySignature,
  )
 import Cardano.Ledger.Keys.Internal (DSIGN, KeyRole (..), VKey, asWitness)
-import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.MemoBytes (EqRaw (..), MemoBytes (Memo), decodeMemoized)
 import Control.DeepSeq
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Short as SBS
 import Data.Ord (comparing)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -96,6 +99,23 @@ instance Typeable kr => DecCBOR (Annotator (WitVKey kr)) where
       mkWitVKey k sig = WitVKeyInternal k sig (asWitness $ hashKey k)
       {-# INLINE mkWitVKey #-}
   {-# INLINE decCBOR #-}
+
+data WitVKeyRaw kr
+  = WitVKeyRaw
+      !(VKey kr)
+      !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
+      (KeyHash 'Witness)
+
+instance Typeable kr => DecCBOR (WitVKeyRaw kr) where
+  decCBOR = decodeRecordNamed "WitVKey" (const 2) $ do
+    key <- decCBOR
+    sig <- Cardano.Ledger.Binary.Crypto.decodeSignedDSIGN
+    pure $ WitVKeyRaw key sig (asWitness $ hashKey key)
+
+instance Typeable kr => DecCBOR (WitVKey kr) where
+  decCBOR = do
+    Memo (WitVKeyRaw k s kh) bs <- decodeMemoized (decCBOR @(WitVKeyRaw kr))
+    pure $ WitVKeyInternal k s kh (BSL.fromStrict (SBS.fromShort bs))
 
 instance Typeable kr => EqRaw (WitVKey kr) where
   eqRaw = eqWitVKeyRaw
