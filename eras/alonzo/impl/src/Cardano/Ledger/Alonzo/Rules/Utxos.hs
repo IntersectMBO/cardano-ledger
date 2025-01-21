@@ -58,7 +58,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.CertState (certDState, dsGenDelegs)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext,
@@ -125,6 +125,7 @@ instance
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
+  , EraCertState era
   ) =>
   STS (AlonzoUTXOS era)
   where
@@ -192,6 +193,7 @@ utxosTransition ::
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
+  , EraCertState era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
@@ -249,13 +251,14 @@ alonzoEvalScriptsTxValid ::
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext era
+  , EraCertState era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxValid = do
   TRC (UtxoEnv slot pp certState, utxos@(UTxOState utxo _ _ pup _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
-      genDelegs = dsGenDelegs (certDState certState)
+      genDelegs = certState ^. certDStateL . Shelley.dsGenDelegsL
 
   () <- pure $! Debug.traceEvent validBegin ()
 
