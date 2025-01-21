@@ -44,9 +44,15 @@ import Cardano.Ledger.BaseTypes (
   activeSlotVal,
   epochInfoPure,
   mkActiveSlotCoeff,
+  nonZeroOr,
  )
 import Cardano.Ledger.Binary (encCBOR, hashWithEncoder, natVersion, shelleyProtVer)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
+import Cardano.Ledger.Coin (
+  Coin (..),
+  DeltaCoin (..),
+  rationalToCoinViaFloor,
+  toDeltaCoin,
+ )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.EpochBoundary (
@@ -763,7 +769,7 @@ reward
     where
       totalBlocks = sum b
       stakePerPool = sumStakePerPool delegs stake
-      activeStake = sumAllStake stake
+      activeStake = sumAllStake stake `nonZeroOr` error "Active stake is zero"
       -- ensure mkPoolRewardInfo does not use stake that doesn't belong to the pool
       stakeForPool pool = poolStake (ppId pool) delegs stake
       mkPoolRewardInfo' pool =

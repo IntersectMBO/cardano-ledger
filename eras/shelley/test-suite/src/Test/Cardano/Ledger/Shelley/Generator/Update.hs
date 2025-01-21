@@ -24,6 +24,7 @@ import Cardano.Ledger.BaseTypes (
   BoundedRational,
   EpochInterval (..),
   NonNegativeInterval,
+  NonZero,
   Nonce (NeutralNonce),
   ProtVer (..),
   StrictMaybe (..),
@@ -34,6 +35,7 @@ import Cardano.Ledger.BaseTypes (
   mkVersion,
   mkVersion64,
   succVersion,
+  unsafeNonZero,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core

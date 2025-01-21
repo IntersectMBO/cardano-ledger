@@ -44,6 +44,9 @@ import Cardano.Ledger.BaseTypes (
   NonNegativeInterval,
   UnitInterval,
   epochInfoPure,
+  nonZeroOr,
+  (%.),
+  (%?),
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -110,7 +113,6 @@ import Data.Default (Default (def))
 import Data.Foldable (foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
@@ -197,7 +199,8 @@ poolsByTotalStakeFraction globals ss =
   where
     snap = currentSnapshot ss
     Coin totalStake = getTotalStake globals ss
-    stakeRatio = unCoin (fromCompact totalActiveStake) % totalStake
+    totalStakeNonZero = totalStake `nonZeroOr` error "Total stake is zero"
+    stakeRatio = unCoin (fromCompact totalActiveStake) %. totalStakeNonZero
     PoolDistr poolsByActiveStake totalActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
     toTotalStakeFrac ::
@@ -231,8 +234,8 @@ getNonMyopicMemberRewards globals ss =
   Map.fromSet (\cred -> Map.map (mkNMMRewards $ memShare cred) poolData)
   where
     maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
-    Coin totalStake = circulation es maxSupply
-    toShare (Coin x) = StakeShare (x % totalStake)
+    totalStakeCoin@(Coin totalStake) = circulation es maxSupply
+    toShare (Coin x) = StakeShare $ x %? totalStake
     memShare (Right cred) =
       toShare $ maybe mempty fromCompact $ VMap.lookup cred (EB.unStake stake)
     memShare (Left coin) = toShare coin
@@ -255,7 +258,7 @@ getNonMyopicMemberRewards globals ss =
     topPools =
       getTopRankedPoolsVMap
         rPot
-        (Coin totalStake)
+        (totalStakeCoin `nonZeroOr` error "Total stake is zero")
         pp
         poolParams
         (fmap percentile' ls)

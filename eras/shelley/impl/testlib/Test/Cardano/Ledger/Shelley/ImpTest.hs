@@ -694,7 +694,7 @@ instance
           , sgNetworkMagic = 123456 -- Mainnet value: 764824073
           , sgNetworkId = Testnet
           , sgActiveSlotsCoeff = 20 %! 100 -- Mainnet value: 5 %! 100
-          , sgSecurityParam = 108 -- Mainnet value: 2160
+          , sgSecurityParam = knownNonZeroBounded @108 -- Mainnet value: 2160
           , sgEpochLength = 4320 -- Mainnet value: 432000
           , sgSlotsPerKESPeriod = 129600
           , sgMaxKESEvolutions = 62

@@ -30,6 +30,7 @@ library
     Cardano.Ledger.AuxiliaryData
     Cardano.Ledger.BHeaderView
     Cardano.Ledger.BaseTypes
+    Cardano.Ledger.BaseTypes.NonZero
     Cardano.Ledger.Block
     Cardano.Ledger.CertState
     Cardano.Ledger.Coin

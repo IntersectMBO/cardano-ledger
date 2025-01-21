@@ -24,11 +24,23 @@ module Cardano.Ledger.Coin (
   integerToWord64,
   decodePositiveCoin,
   compactCoinOrError,
+  -- NonZero helpers
+  toCompactCoinNonZero,
+  unCoinNonZero,
+  toCoinNonZero,
+  fromCompactCoinNonZero,
+  compactCoinNonZero,
 )
 where
 
 import Cardano.HeapWords (HeapWords)
-import Cardano.Ledger.BaseTypes (Inject (..))
+import Cardano.Ledger.BaseTypes (
+  HasZero (..),
+  Inject (..),
+  NonZero,
+  unNonZero,
+  unsafeNonZero,
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
@@ -190,3 +202,21 @@ instance UniformRange Coin where
 
 instance UniformRange (CompactForm Coin) where
   uniformRM (CompactCoin l, CompactCoin h) g = CompactCoin <$> uniformRM (l, h) g
+
+instance HasZero Coin where
+  isZero = (== Coin 0)
+
+toCompactCoinNonZero :: NonZero Coin -> Maybe (NonZero (CompactForm Coin))
+toCompactCoinNonZero = fmap unsafeNonZero . toCompact . unNonZero
+
+fromCompactCoinNonZero :: NonZero (CompactForm Coin) -> NonZero Coin
+fromCompactCoinNonZero = unsafeNonZero . fromCompact . unNonZero
+
+unCoinNonZero :: NonZero Coin -> NonZero Integer
+unCoinNonZero = unsafeNonZero . unCoin . unNonZero
+
+toCoinNonZero :: Integral a => NonZero a -> NonZero Coin
+toCoinNonZero = unsafeNonZero . Coin . toInteger . unNonZero
+
+compactCoinNonZero :: NonZero Word64 -> NonZero (CompactForm Coin)
+compactCoinNonZero = unsafeNonZero . CompactCoin . unNonZero

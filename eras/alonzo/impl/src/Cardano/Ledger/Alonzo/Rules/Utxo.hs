@@ -63,8 +63,10 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
   epochInfo,
+  knownNonZero,
   networkId,
   systemStart,
+  (%.),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize)
 import Cardano.Ledger.Binary.Coders (
@@ -104,7 +106,6 @@ import Data.Coerce (coerce)
 import Data.Either (isRight)
 import Data.Foldable as F (foldl', sequenceA_, toList)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -331,7 +332,7 @@ validateInsufficientCollateral pp txBody bal =
   failureUnless (Val.scale (100 :: Int) bal >= Val.scale collPerc (toDeltaCoin txfee)) $
     InsufficientCollateral bal $
       rationalToCoinViaCeiling $
-        (fromIntegral collPerc * unCoin txfee) % 100
+        (fromIntegral collPerc * unCoin txfee) %. knownNonZero @100
   where
     txfee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
     collPerc = pp ^. ppCollateralPercentageL

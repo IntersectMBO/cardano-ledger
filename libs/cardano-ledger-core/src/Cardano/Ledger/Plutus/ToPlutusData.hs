@@ -9,9 +9,13 @@ module Cardano.Ledger.Plutus.ToPlutusData where
 import Cardano.Ledger.BaseTypes (
   BoundedRational (boundRational, unboundRational),
   EpochInterval (..),
+  HasZero,
   NonNegativeInterval,
+  NonZero (..),
   ProtVer (..),
   UnitInterval,
+  nonZero,
+  (%.),
  )
 import Cardano.Ledger.Binary.Version (Version, getVersion, mkVersion)
 import Cardano.Ledger.Coin (Coin (..))
@@ -23,7 +27,6 @@ import Cardano.Ledger.Plutus.CostModels (
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
 import Data.Word
 import GHC.Real (Ratio ((:%)))
 import Numeric.Natural (Natural)
@@ -67,14 +70,14 @@ instance ToPlutusData UnitInterval where
   toPlutusData x = List [I num, I denom]
     where
       (num :% denom) = unboundRational x
-  fromPlutusData (List [I num, I denom]) = boundRational (num % denom)
+  fromPlutusData (List [I num, I denom]) = boundRational . (num %.) =<< nonZero denom
   fromPlutusData _ = Nothing
 
 instance ToPlutusData NonNegativeInterval where
   toPlutusData x = List [I num, I denom]
     where
       (num :% denom) = unboundRational x
-  fromPlutusData (List [I num, I denom]) = boundRational (num % denom)
+  fromPlutusData (List [I num, I denom]) = boundRational . (num %.) =<< nonZero denom
   fromPlutusData _ = Nothing
 
 instance ToPlutusData CostModels where
@@ -128,3 +131,7 @@ instance ToPlutusData Word where
   toPlutusData w = I (toInteger @Word w)
   fromPlutusData (I n) | n >= 0 && n <= toInteger (maxBound @Word) = Just $ fromInteger @Word n
   fromPlutusData _ = Nothing
+
+instance (ToPlutusData a, HasZero a) => ToPlutusData (NonZero a) where
+  toPlutusData = toPlutusData . unNonZero
+  fromPlutusData x = nonZero =<< fromPlutusData x

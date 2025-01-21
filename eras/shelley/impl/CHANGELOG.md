@@ -2,6 +2,14 @@
 
 ## 1.16.0.0
 
+* Changed the type of `sgSecurityParam` to `NonZero Word64`
+* Following functions now expect a `NonZero Word64` security parameter:
+  * `startStep`
+  * `createRUpd`
+  * `desirability`
+  * `getTopRankedPools`
+  * `getTopRankedPoolsVMap`
+* `mkPoolRewardInfo` now expects `activeStake` to be a `NonZero Coin`
 * Add `MemPack` instance `ShelleyTxOut`
 * Deprecate `hashShelleyTxAuxData`
 * Stop re-exporting `ScriptHash` from `Cardano.Ledger.Shelley.Scripts`. Import it instead from `Cardano.Ledger.Hashes`.

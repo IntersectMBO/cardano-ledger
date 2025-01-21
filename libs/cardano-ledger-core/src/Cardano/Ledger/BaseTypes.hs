@@ -20,6 +20,7 @@
 
 module Cardano.Ledger.BaseTypes (
   module Slotting,
+  module NonZero,
   ProtVer (..),
   module Cardano.Ledger.Binary.Version,
   FixedPoint,
@@ -82,12 +83,14 @@ module Cardano.Ledger.BaseTypes (
 
   -- * Injection
   Inject (..),
+  positiveUnitIntervalNonZeroRational,
 )
 where
 
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BaseTypes.NonZero as NonZero
 import Cardano.Ledger.Binary (
   CBORGroup (..),
   DecCBOR (decCBOR),
@@ -678,7 +681,7 @@ data Globals = Globals
   , randomnessStabilisationWindow :: !Word64
   -- ^ Number of slots before the end of the epoch at which we stop updating
   --   the candidate nonce for the next epoch.
-  , securityParameter :: !Word64
+  , securityParameter :: !(NonZero Word64)
   -- ^ Maximum number of blocks we are allowed to roll back
   , maxKESEvo :: !Word64
   -- ^ Maximum number of KES iterations
@@ -927,3 +930,6 @@ instance Inject a a where
 -- | Helper function for a common pattern of creating objects
 kindObject :: Text -> [Pair] -> Value
 kindObject name obj = object $ ("kind" .= name) : obj
+
+positiveUnitIntervalNonZeroRational :: PositiveUnitInterval -> NonZero Rational
+positiveUnitIntervalNonZeroRational = unsafeNonZero . unboundRational
