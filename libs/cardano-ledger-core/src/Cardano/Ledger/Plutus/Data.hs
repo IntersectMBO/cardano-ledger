@@ -94,9 +94,12 @@ instance Typeable era => EncCBOR (PlutusData era) where
 instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
   decCBOR = pure <$> fromPlainDecoder Cborg.decode
 
+instance Typeable era => DecCBOR (PlutusData era) where
+  decCBOR = fromPlainDecoder Cborg.decode
+
 newtype Data era = DataConstr (MemoBytes (PlutusData era))
   deriving (Eq, Generic)
-  deriving newtype (SafeToHash, ToCBOR, NFData)
+  deriving newtype (SafeToHash, ToCBOR, NFData, DecCBOR)
 
 -- | Encodes memoized bytes created upon construction.
 instance Typeable era => EncCBOR (Data era)
