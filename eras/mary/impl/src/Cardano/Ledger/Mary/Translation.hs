@@ -14,14 +14,14 @@
 module Cardano.Ledger.Mary.Translation where
 
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
+import Cardano.Ledger.CertState (CommitteeState (..), EraCertState (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -53,7 +53,7 @@ import qualified Data.Map.Strict as Map
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-instance TranslateEra MaryEra NewEpochState where
+instance CertState MaryEra ~ ShelleyCertState MaryEra => TranslateEra MaryEra NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
@@ -84,7 +84,7 @@ instance TranslateEra MaryEra FuturePParams where
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
-instance TranslateEra MaryEra EpochState where
+instance CertState MaryEra ~ ShelleyCertState MaryEra => TranslateEra MaryEra EpochState where
   translateEra ctxt es =
     return
       EpochState
@@ -108,16 +108,9 @@ instance TranslateEra MaryEra VState where
 instance TranslateEra MaryEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra MaryEra CertState where
-  translateEra ctxt ls =
-    pure
-      CertState
-        { certDState = translateEra' ctxt $ certDState ls
-        , certPState = translateEra' ctxt $ certPState ls
-        , certVState = translateEra' ctxt $ certVState ls
-        }
+instance TranslateEra MaryEra ShelleyCertState
 
-instance TranslateEra MaryEra LedgerState where
+instance CertState MaryEra ~ ShelleyCertState MaryEra => TranslateEra MaryEra LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
