@@ -33,12 +33,13 @@ module Cardano.Ledger.Alonzo.UTxO (
 )
 where
 
+import Cardano.Ledger.Alonzo.CertState ()
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.CertState (CertState)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
@@ -314,7 +315,7 @@ getMintingScriptsNeeded txBody =
 -- | Just like `getShelleyWitsVKeyNeeded`, but also requires `reqSignerHashesTxBodyL`.
 getAlonzoWitsVKeyNeeded ::
   forall era.
-  (EraTx era, AlonzoEraTxBody era, ShelleyEraTxBody era) =>
+  (EraTx era, AlonzoEraTxBody era, ShelleyEraTxBody era, EraCertState era) =>
   CertState era ->
   UTxO era ->
   TxBody era ->
