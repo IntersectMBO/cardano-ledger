@@ -9,6 +9,13 @@
 module Cardano.Ledger.Shelley.CertState (
   ShelleyCertState (..),
   toCertStatePairs,
+  mkShelleyCertState,
+  shelleyCertDStateL,
+  shelleyCertVStateL,
+  shelleyCertPStateL,
+  shelleyObligationCertState,
+  shelleyCertsTotalDepositsTxBody,
+  shelleyCertsTotalRefundsTxBody,
 ) where
 
 import Cardano.Ledger.Binary (
