@@ -12,6 +12,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -72,10 +73,13 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
-  Mem,
   MemoBytes (Memo),
   Memoized (..),
+  decodeMemoized,
   getMemoRawType,
+  mbpackM,
+  mbpackedByteCount,
+  mbunpackM,
   mkMemoBytes,
   mkMemoized,
  )
@@ -87,14 +91,13 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Data.MemPack
-
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (fromShort)
+import Data.MemPack
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set (Set, member)
@@ -187,9 +190,8 @@ instance Era era => EncCBOR (TimelockRaw era) where
       TimeStart m -> Sum TimeStart 4 !> To m
       TimeExpire m -> Sum TimeExpire 5 !> To m
 
--- This instance allows us to derive instance DecCBOR (Annotator (Timelock crypto)).
--- Since Timelock is a newtype around (Memo (Timelock crypto)).
-
+-- This instance allows us to derive instance DecCBOR (Annotator (Timelock era)).
+-- Since Timelock is a newtype around (Memo (Timelock era)).
 instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
   decCBOR = decode (Summands "TimelockRaw" decRaw)
     where
@@ -202,30 +204,48 @@ instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
       decRaw 5 = Ann (SumD TimeExpire <! From)
       decRaw n = Invalid n
 
+instance Era era => DecCBOR (TimelockRaw era) where
+  decCBOR = decode (Summands "TimelockRaw" decRaw)
+    where
+      decRaw 0 = SumD Signature <! From
+      decRaw 1 = SumD AllOf <! D decCBOR
+      decRaw 2 = SumD AnyOf <! D decCBOR
+      decRaw 3 = SumD MOfN <! From <! D decCBOR
+      decRaw 4 = SumD TimeStart <! From
+      decRaw 5 = SumD TimeExpire <! From
+      decRaw n = Invalid n
+
 -- =================================================================
 -- Native Scripts are Memoized TimelockRaw.
 -- The patterns give the appearence that the mutual recursion is not present.
 -- They rely on memoBytes, and TimelockRaw to memoize each constructor of Timelock
 -- =================================================================
 
-newtype Timelock era = TimelockConstr (MemoBytes TimelockRaw era)
+newtype Timelock era = TimelockConstr (MemoBytes (TimelockRaw era))
   deriving (Eq, Generic)
-  deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash, MemPack)
+  deriving newtype (ToCBOR, NFData, SafeToHash)
 
+instance Era era => MemPack (Timelock era) where
+  packedByteCount (TimelockConstr mb) = mbpackedByteCount mb
+  packM (TimelockConstr mb) = mbpackM mb
+  unpackM = TimelockConstr <$> mbunpackM (eraProtVerLow @era)
+
+instance Era era => NoThunks (Timelock era)
 instance Era era => EncCBOR (Timelock era)
 
-instance Memoized Timelock where
-  type RawType Timelock = TimelockRaw
+instance Era era => DecCBOR (Timelock era) where
+  decCBOR = TimelockConstr <$> decodeMemoized decCBOR
+
+instance Memoized (Timelock era) where
+  type RawType (Timelock era) = TimelockRaw era
 
 deriving instance Show (Timelock era)
 
 instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
 
-deriving via
-  Mem TimelockRaw era
-  instance
-    Era era => DecCBOR (Annotator (Timelock era))
+instance Era era => DecCBOR (Annotator (Timelock era)) where
+  decCBOR = fmap TimelockConstr <$> decCBOR
 
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
@@ -286,39 +306,39 @@ pattern RequireTimeStart mslot <- (getTimeStart -> Just mslot)
   , RequireTimeStart
   #-}
 
-mkRequireSignatureTimelock :: Era era => KeyHash 'Witness -> Timelock era
-mkRequireSignatureTimelock = mkMemoized . Signature
-getRequireSignatureTimelock :: Era era => Timelock era -> Maybe (KeyHash 'Witness)
+mkRequireSignatureTimelock :: forall era. Era era => KeyHash 'Witness -> Timelock era
+mkRequireSignatureTimelock = mkMemoized (eraProtVerLow @era) . Signature
+getRequireSignatureTimelock :: Timelock era -> Maybe (KeyHash 'Witness)
 getRequireSignatureTimelock (TimelockConstr (Memo (Signature kh) _)) = Just kh
 getRequireSignatureTimelock _ = Nothing
 
-mkRequireAllOfTimelock :: Era era => StrictSeq (Timelock era) -> Timelock era
-mkRequireAllOfTimelock = mkMemoized . AllOf
-getRequireAllOfTimelock :: Era era => Timelock era -> Maybe (StrictSeq (Timelock era))
+mkRequireAllOfTimelock :: forall era. Era era => StrictSeq (Timelock era) -> Timelock era
+mkRequireAllOfTimelock = mkMemoized (eraProtVerLow @era) . AllOf
+getRequireAllOfTimelock :: Timelock era -> Maybe (StrictSeq (Timelock era))
 getRequireAllOfTimelock (TimelockConstr (Memo (AllOf ms) _)) = Just ms
 getRequireAllOfTimelock _ = Nothing
 
-mkRequireAnyOfTimelock :: Era era => StrictSeq (Timelock era) -> Timelock era
-mkRequireAnyOfTimelock = mkMemoized . AnyOf
-getRequireAnyOfTimelock :: Era era => Timelock era -> Maybe (StrictSeq (Timelock era))
+mkRequireAnyOfTimelock :: forall era. Era era => StrictSeq (Timelock era) -> Timelock era
+mkRequireAnyOfTimelock = mkMemoized (eraProtVerLow @era) . AnyOf
+getRequireAnyOfTimelock :: Timelock era -> Maybe (StrictSeq (Timelock era))
 getRequireAnyOfTimelock (TimelockConstr (Memo (AnyOf ms) _)) = Just ms
 getRequireAnyOfTimelock _ = Nothing
 
-mkRequireMOfTimelock :: Era era => Int -> StrictSeq (Timelock era) -> Timelock era
-mkRequireMOfTimelock n = mkMemoized . MOfN n
-getRequireMOfTimelock :: Era era => Timelock era -> Maybe (Int, (StrictSeq (Timelock era)))
+mkRequireMOfTimelock :: forall era. Era era => Int -> StrictSeq (Timelock era) -> Timelock era
+mkRequireMOfTimelock n = mkMemoized (eraProtVerLow @era) . MOfN n
+getRequireMOfTimelock :: Timelock era -> Maybe (Int, StrictSeq (Timelock era))
 getRequireMOfTimelock (TimelockConstr (Memo (MOfN n ms) _)) = Just (n, ms)
 getRequireMOfTimelock _ = Nothing
 
-mkTimeStartTimelock :: Era era => SlotNo -> Timelock era
-mkTimeStartTimelock = mkMemoized . TimeStart
-getTimeStartTimelock :: Era era => Timelock era -> Maybe SlotNo
+mkTimeStartTimelock :: forall era. Era era => SlotNo -> Timelock era
+mkTimeStartTimelock = mkMemoized (eraProtVerLow @era) . TimeStart
+getTimeStartTimelock :: Timelock era -> Maybe SlotNo
 getTimeStartTimelock (TimelockConstr (Memo (TimeStart mslot) _)) = Just mslot
 getTimeStartTimelock _ = Nothing
 
-mkTimeExpireTimelock :: Era era => SlotNo -> Timelock era
-mkTimeExpireTimelock = mkMemoized . TimeExpire
-getTimeExpireTimelock :: Era era => Timelock era -> Maybe SlotNo
+mkTimeExpireTimelock :: forall era. Era era => SlotNo -> Timelock era
+mkTimeExpireTimelock = mkMemoized (eraProtVerLow @era) . TimeExpire
+getTimeExpireTimelock :: Timelock era -> Maybe SlotNo
 getTimeExpireTimelock (TimelockConstr (Memo (TimeExpire mslot) _)) = Just mslot
 getTimeExpireTimelock _ = Nothing
 

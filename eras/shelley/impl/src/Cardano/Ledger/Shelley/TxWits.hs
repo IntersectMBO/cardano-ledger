@@ -53,6 +53,7 @@ import Cardano.Ledger.Core (
   EraScript (Script),
   EraTxWits (..),
   ScriptHash,
+  eraProtVerLow,
   hashScript,
  )
 import Cardano.Ledger.Hashes (SafeToHash (..))
@@ -103,12 +104,12 @@ instance
 
 instance EraScript era => NoThunks (ShelleyTxWitsRaw era)
 
-newtype ShelleyTxWits era = ShelleyTxWitsConstr (MemoBytes ShelleyTxWitsRaw era)
+newtype ShelleyTxWits era = ShelleyTxWitsConstr (MemoBytes (ShelleyTxWitsRaw era))
   deriving (Generic)
   deriving newtype (SafeToHash, Plain.ToCBOR)
 
-instance Memoized ShelleyTxWits where
-  type RawType ShelleyTxWits = ShelleyTxWitsRaw
+instance Memoized (ShelleyTxWits era) where
+  type RawType (ShelleyTxWits era) = ShelleyTxWitsRaw era
 
 deriving newtype instance EraScript era => Eq (ShelleyTxWits era)
 
@@ -133,7 +134,7 @@ instance EraScript era => NoThunks (ShelleyTxWits era)
 addrShelleyTxWitsL ::
   EraScript era => Lens' (ShelleyTxWits era) (Set (WitVKey 'Witness))
 addrShelleyTxWitsL =
-  lensMemoRawType addrWits' $ \witsRaw aw -> witsRaw {addrWits' = aw}
+  lensMemoRawType (eraProtVerLow @ShelleyEra) addrWits' $ \witsRaw aw -> witsRaw {addrWits' = aw}
 {-# INLINEABLE addrShelleyTxWitsL #-}
 
 -- | Bootstrap Addresses witness setter and getter for `ShelleyTxWits`. The
@@ -142,7 +143,7 @@ bootAddrShelleyTxWitsL ::
   EraScript era =>
   Lens' (ShelleyTxWits era) (Set BootstrapWitness)
 bootAddrShelleyTxWitsL =
-  lensMemoRawType bootWits' $ \witsRaw bw -> witsRaw {bootWits' = bw}
+  lensMemoRawType (eraProtVerLow @ShelleyEra) bootWits' $ \witsRaw bw -> witsRaw {bootWits' = bw}
 {-# INLINEABLE bootAddrShelleyTxWitsL #-}
 
 -- | Script witness setter and getter for `ShelleyTxWits`. The
@@ -151,7 +152,8 @@ scriptShelleyTxWitsL ::
   EraScript era =>
   Lens' (ShelleyTxWits era) (Map ScriptHash (Script era))
 scriptShelleyTxWitsL =
-  lensMemoRawType scriptWits' $ \witsRaw sw -> witsRaw {scriptWits' = sw}
+  lensMemoRawType (eraProtVerLow @ShelleyEra) scriptWits' $
+    \witsRaw sw -> witsRaw {scriptWits' = sw}
 {-# INLINEABLE scriptShelleyTxWitsL #-}
 
 instance EraTxWits ShelleyEra where
@@ -205,7 +207,7 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
   (getMemoRawType -> ShelleyTxWitsRaw addrWits scriptWits bootWits)
   where
     ShelleyTxWits awits scriptWitMap bootstrapWits =
-      mkMemoized $ ShelleyTxWitsRaw awits scriptWitMap bootstrapWits
+      mkMemoized (eraProtVerLow @ShelleyEra) $ ShelleyTxWitsRaw awits scriptWitMap bootstrapWits
 
 {-# COMPLETE ShelleyTxWits #-}
 
@@ -219,7 +221,7 @@ instance EraScript era => DecCBOR (Annotator (ShelleyTxWitsRaw era)) where
   decCBOR = decodeWits
 
 deriving via
-  (Mem ShelleyTxWitsRaw era)
+  Mem (ShelleyTxWitsRaw era)
   instance
     EraScript era => DecCBOR (Annotator (ShelleyTxWits era))
 
