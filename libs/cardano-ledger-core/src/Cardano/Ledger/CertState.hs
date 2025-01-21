@@ -72,9 +72,12 @@ import Cardano.Ledger.Binary (
   decNoShareCBOR,
   decSharePlusCBOR,
   decSharePlusLensCBOR,
+  decodeMap,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
+  interns,
+  internsFromSet,
   toMemptyLens,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -189,7 +192,9 @@ instance Era era => EncCBOR (DState era) where
       <> encCBOR ir
 
 instance DecShareCBOR (DState era) where
-  type Share (DState era) = (Interns (Credential 'Staking), Interns (KeyHash 'StakePool))
+  type
+    Share (DState era) =
+      (Interns (Credential 'Staking), Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
   decSharePlusCBOR =
     decodeRecordNamedT "DState" (const 4) $ do
       unified <- decSharePlusCBOR
@@ -316,8 +321,9 @@ authorizedHotCommitteeCredentials CommitteeState {csCommitteeCreds} =
         CommitteeMemberResigned {} -> acc
    in F.foldl' toHotCredSet Set.empty csCommitteeCreds
 
--- TODO: Implement sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance Era era => DecShareCBOR (CommitteeState era) where
+  type Share (CommitteeState era) = Interns (Credential 'HotCommitteeRole)
+  getShare = internsFromSet . authorizedHotCommitteeCredentials
   decShareCBOR _ = CommitteeState <$> decCBOR
 
 instance Era era => DecCBOR (CommitteeState era) where
@@ -353,12 +359,19 @@ instance NoThunks (VState era)
 
 instance NFData (VState era)
 
--- TODO: Implement sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance Era era => DecShareCBOR (VState era) where
-  decShareCBOR _ =
+  type
+    Share (VState era) =
+      ( Interns (Credential 'Staking)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
+  getShare VState {vsDReps, vsCommitteeState} =
+    (internsFromSet (foldMap drepDelegs vsDReps), fst (getShare vsDReps), getShare vsCommitteeState)
+  decShareCBOR (cs, cd, _) =
     decode $
       RecD VState
-        <! From
+        <! D (decodeMap (interns cd <$> decCBOR) (decShareCBOR cs))
         <! D decNoShareCBOR
         <! From
 
@@ -408,11 +421,21 @@ instance Era era => EncCBOR (CertState era) where
       <> encCBOR certDState
 
 instance Era era => DecShareCBOR (CertState era) where
-  type Share (CertState era) = (Interns (Credential 'Staking), Interns (KeyHash 'StakePool))
+  type
+    Share (CertState era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
   decSharePlusCBOR = decodeRecordNamedT "CertState" (const 3) $ do
-    certVState <- lift decNoShareCBOR -- TODO: add sharing of DRep credentials
+    certVState <-
+      decSharePlusLensCBOR $
+        lens (\(cs, _, cd, ch) -> (cs, cd, ch)) (\(_, ks, _, _) (cs, cd, ch) -> (cs, ks, cd, ch))
     certPState <- decSharePlusLensCBOR _2
-    certDState <- decSharePlusCBOR
+    certDState <-
+      decSharePlusLensCBOR $
+        lens (\(cs, ks, cd, _) -> (cs, ks, cd)) (\(_, _, _, ch) (cs, ks, cd) -> (cs, ks, cd, ch))
     pure CertState {certPState, certDState, certVState}
 
 instance Default (CertState era) where

@@ -105,6 +105,7 @@ library
     deepseq,
     mempack,
     microlens,
+    mtl,
     nothunks,
     plutus-ledger-api >=1.37,
     set-algebra,

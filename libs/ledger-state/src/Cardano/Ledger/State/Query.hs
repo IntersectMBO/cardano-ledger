@@ -65,7 +65,7 @@ insertUTxOState Shelley.UTxOState {..} = do
     UtxoState
       { utxoStateDeposited = utxosDeposited
       , utxoStateFees = utxosFees
-      , utxoStatePpups = utxosGovState
+      , utxoStateGovState = utxosGovState
       , utxoStateDonation = utxosDonation
       }
 
@@ -515,7 +515,7 @@ getLedgerState utxo LedgerState {..} dstate = do
             utxo
             utxoStateDeposited
             utxoStateFees
-            utxoStatePpups -- Maintain invariant
+            utxoStateGovState -- Maintain invariant
             utxoStateDonation
       , Shelley.lsCertState =
           Shelley.CertState

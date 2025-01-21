@@ -14,6 +14,7 @@ import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
@@ -117,6 +118,10 @@ deriving via Enc Ptr instance PersistFieldSql Ptr
 deriving via Enc (ShelleyGovState CurrentEra) instance PersistField (ShelleyGovState CurrentEra)
 
 deriving via Enc (ShelleyGovState CurrentEra) instance PersistFieldSql (ShelleyGovState CurrentEra)
+
+deriving via Enc (ConwayGovState CurrentEra) instance PersistField (ConwayGovState CurrentEra)
+
+deriving via Enc (ConwayGovState CurrentEra) instance PersistFieldSql (ConwayGovState CurrentEra)
 
 deriving via Enc (AlonzoTxOut CurrentEra) instance PersistField (AlonzoTxOut CurrentEra)
 

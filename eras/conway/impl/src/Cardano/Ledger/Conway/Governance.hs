@@ -187,16 +187,15 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   FromCBOR (..),
+  Interns,
   ToCBOR (..),
   decNoShareCBOR,
+  decodeRecordNamedT,
  )
 import Cardano.Ledger.Binary.Coders (
-  Decode (..),
   Encode (..),
-  decode,
   encode,
   (!>),
-  (<!),
  )
 import Cardano.Ledger.CertState (
   CommitteeAuthorization (..),
@@ -243,7 +242,9 @@ import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
 import Control.Monad (guard)
+import Control.Monad.Trans
 import Control.Monad.Trans.Reader (ReaderT, ask)
+import Control.Monad.Trans.State.Strict (get)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
@@ -348,18 +349,24 @@ mkEnactState gs =
     , ensPrevGovActionIds = govStatePrevGovActionIds gs
     }
 
--- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (ConwayGovState era) where
-  decShareCBOR _ =
-    decode $
-      RecD ConwayGovState
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
+  type
+    Share (ConwayGovState era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
+  decSharePlusCBOR =
+    decodeRecordNamedT "ConwayGovState" (const 7) $ do
+      cgsProposals <- decSharePlusCBOR
+      cgsCommittee <- lift decCBOR
+      cgsConstitution <- lift decCBOR
+      cgsCurPParams <- lift decCBOR
+      cgsPrevPParams <- lift decCBOR
+      cgsFuturePParams <- lift decCBOR
+      cgsDRepPulsingState <- decSharePlusCBOR
+      pure ConwayGovState {..}
 
 instance EraPParams era => DecCBOR (ConwayGovState era) where
   decCBOR = decNoShareCBOR
