@@ -15,12 +15,12 @@ module Cardano.Ledger.Allegra.Translation (shelleyToAllegraAVVMsToDelete) where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
+import Cardano.Ledger.CertState (CommitteeState (..), EraCertState (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -61,7 +61,7 @@ import qualified Data.Map.Strict as Map
 shelleyToAllegraAVVMsToDelete :: NewEpochState ShelleyEra -> UTxO ShelleyEra
 shelleyToAllegraAVVMsToDelete = stashedAVVMAddresses
 
-instance TranslateEra AllegraEra NewEpochState where
+instance CertState AllegraEra ~ ShelleyCertState AllegraEra => TranslateEra AllegraEra NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
@@ -143,16 +143,9 @@ instance TranslateEra AllegraEra VState where
 instance TranslateEra AllegraEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra AllegraEra CertState where
-  translateEra ctxt ls =
-    pure
-      CertState
-        { certDState = translateEra' ctxt $ certDState ls
-        , certPState = translateEra' ctxt $ certPState ls
-        , certVState = translateEra' ctxt $ certVState ls
-        }
+instance TranslateEra AllegraEra ShelleyCertState
 
-instance TranslateEra AllegraEra LedgerState where
+instance CertState AllegraEra ~ ShelleyCertState AllegraEra => TranslateEra AllegraEra LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
@@ -160,7 +153,7 @@ instance TranslateEra AllegraEra LedgerState where
         , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
-instance TranslateEra AllegraEra EpochState where
+instance CertState AllegraEra ~ ShelleyCertState AllegraEra => TranslateEra AllegraEra EpochState where
   translateEra ctxt es =
     return
       EpochState

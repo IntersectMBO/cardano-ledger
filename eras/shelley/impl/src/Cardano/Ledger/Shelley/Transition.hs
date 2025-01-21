@@ -67,6 +67,7 @@ class
   ( EraTxOut era
   , EraGov era
   , EraGenesis era
+  , EraCertState era
   , ToJSON (TransitionConfig era)
   , FromJSON (TransitionConfig era)
   , Default (StashedAVVMAddresses era)
@@ -140,7 +141,7 @@ tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
 registerInitialFundsThenStaking ::
-  (EraTransition era, EraCertState era) =>
+  EraTransition era =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
@@ -254,7 +255,7 @@ toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
 createInitialState ::
   forall era.
   -- TODO: consider making `EraCertState` part of `EraTransition`
-  (EraTransition era, HasCallStack, EraCertState era) =>
+  (EraTransition era, HasCallStack) =>
   TransitionConfig era ->
   NewEpochState era
 createInitialState tc =
@@ -314,7 +315,7 @@ createInitialState tc =
 -- when NetworkId is set to Mainnet
 registerInitialStaking ::
   forall era.
-  (HasCallStack, EraTransition era, EraCertState era) =>
+  (HasCallStack, EraTransition era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
