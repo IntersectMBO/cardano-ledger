@@ -15,12 +15,12 @@ module Cardano.Ledger.Allegra.Translation (shelleyToAllegraAVVMsToDelete) where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
+import Cardano.Ledger.CertState (CommitteeState (..), EraCertState (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -28,6 +28,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   UTxOState (..),
   VState (..),
+  lsCertStateL,
+  lsUTxOStateL,
   returnRedeemAddrsToReserves,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
@@ -36,7 +38,9 @@ import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Coerce (coerce)
+import Data.Default (Default, def)
 import qualified Data.Map.Strict as Map
+import Lens.Micro ((&), (.~), (^.))
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Allegra
@@ -61,7 +65,7 @@ import qualified Data.Map.Strict as Map
 shelleyToAllegraAVVMsToDelete :: NewEpochState ShelleyEra -> UTxO ShelleyEra
 shelleyToAllegraAVVMsToDelete = stashedAVVMAddresses
 
-instance TranslateEra AllegraEra NewEpochState where
+instance CertState AllegraEra ~ ShelleyCertState AllegraEra => TranslateEra AllegraEra NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
@@ -143,24 +147,19 @@ instance TranslateEra AllegraEra VState where
 instance TranslateEra AllegraEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra AllegraEra CertState where
-  translateEra ctxt ls =
-    pure
-      CertState
-        { certDState = translateEra' ctxt $ certDState ls
-        , certPState = translateEra' ctxt $ certPState ls
-        , certVState = translateEra' ctxt $ certVState ls
-        }
+instance TranslateEra AllegraEra ShelleyCertState
 
-instance TranslateEra AllegraEra LedgerState where
+instance
+  (Default (CertState AllegraEra), CertState AllegraEra ~ ShelleyCertState AllegraEra) =>
+  TranslateEra AllegraEra LedgerState
+  where
   translateEra ctxt ls =
-    return
-      LedgerState
-        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
-        , lsCertState = translateEra' ctxt $ lsCertState ls
-        }
+    pure $
+      def
+        & lsUTxOStateL .~ (translateEra' ctxt $ ls ^. lsUTxOStateL)
+        & lsCertStateL .~ (translateEra' ctxt $ ls ^. lsCertStateL)
 
-instance TranslateEra AllegraEra EpochState where
+instance CertState AllegraEra ~ ShelleyCertState AllegraEra => TranslateEra AllegraEra EpochState where
   translateEra ctxt es =
     return
       EpochState

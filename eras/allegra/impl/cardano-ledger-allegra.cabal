@@ -34,6 +34,7 @@ library
 
   hs-source-dirs: src
   other-modules:
+    Cardano.Ledger.Allegra.CertState
     Cardano.Ledger.Allegra.Era
     Cardano.Ledger.Allegra.PParams
     Cardano.Ledger.Allegra.Rules.Bbody
@@ -73,6 +74,7 @@ library
     cardano-strict-containers,
     cborg,
     containers,
+    data-default,
     deepseq,
     microlens,
     nothunks,
