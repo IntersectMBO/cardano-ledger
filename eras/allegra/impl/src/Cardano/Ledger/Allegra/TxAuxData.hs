@@ -122,7 +122,7 @@ instance NFData (AllegraTxAuxDataRaw era)
 
 newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes (AllegraTxAuxDataRaw era))
   deriving (Generic)
-  deriving newtype (Eq, ToCBOR, SafeToHash)
+  deriving newtype (Eq, ToCBOR, SafeToHash, DecCBOR)
 
 instance Memoized (AllegraTxAuxData era) where
   type RawType (AllegraTxAuxData era) = AllegraTxAuxDataRaw era
@@ -185,6 +185,30 @@ instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
           ( Ann (RecD AllegraTxAuxDataRaw)
               <*! Ann From
               <*! D (sequence <$> decCBOR)
+          )
+
+instance Era era => DecCBOR (AllegraTxAuxDataRaw era) where
+  decCBOR =
+    peekTokenType >>= \case
+      TypeMapLen -> decodeFromMap
+      TypeMapLen64 -> decodeFromMap
+      TypeMapLenIndef -> decodeFromMap
+      TypeListLen -> decodeFromList
+      TypeListLen64 -> decodeFromList
+      TypeListLenIndef -> decodeFromList
+      _ -> fail "Failed to decode AuxiliaryDataRaw"
+    where
+      decodeFromMap =
+        decode
+          ( Emit AllegraTxAuxDataRaw
+              <! From
+              <! Emit StrictSeq.empty
+          )
+      decodeFromList =
+        decode
+          ( RecD AllegraTxAuxDataRaw
+              <! From
+              <! From
           )
 
 deriving via
