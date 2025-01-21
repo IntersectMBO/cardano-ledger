@@ -2,6 +2,12 @@
 
 ## 1.17.0.0
 
+* Add DecCBOR instances for:
+  * `PlutusData`
+  * `Data`
+  * `BootstrapWitness`
+  * `WitVKey`
+  * `Block`
 * Converted `CertState` to a type family
 * Remove `applySTSValidateSuchThat` and `applySTSNonStatic` as redundant.
 * Move `AccountState` to `Cardano.Ledger.State` from `cardano-ledger-shelley`
