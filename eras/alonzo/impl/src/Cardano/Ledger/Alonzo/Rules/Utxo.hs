@@ -78,6 +78,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (unCoin), DeltaCoin, rationalToCoinViaCeiling, toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
@@ -484,6 +485,7 @@ utxoTransition ::
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
+  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
@@ -571,6 +573,7 @@ instance
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , ProtVerAtMost era 8
+  , EraCertState era
   ) =>
   STS (AlonzoUTXO era)
   where
