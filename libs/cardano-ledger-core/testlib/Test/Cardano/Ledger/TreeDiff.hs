@@ -86,7 +86,7 @@ instance ToExpr PlutusBinary
 instance ToExpr Language
 
 -- MemoBytes
-instance ToExpr (t era) => ToExpr (MemoBytes t era)
+instance ToExpr t => ToExpr (MemoBytes t)
 
 -- Core
 

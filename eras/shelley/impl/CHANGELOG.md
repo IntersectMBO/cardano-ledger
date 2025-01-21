@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Remove `Era era` constraint from `sizeShelleyTxF` and `wireSizeShelleyTxF`
 * Add `MemPack` instance `ShelleyTxOut`
 * Deprecate `hashShelleyTxAuxData`
 * Stop re-exporting `ScriptHash` from `Cardano.Ledger.Shelley.Scripts`. Import it instead from `Cardano.Ledger.Hashes`.

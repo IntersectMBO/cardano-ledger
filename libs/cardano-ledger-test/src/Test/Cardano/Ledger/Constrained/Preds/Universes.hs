@@ -214,12 +214,11 @@ bootWitness hash bootaddrs byronuniv = List.foldl' accum Set.empty bootaddrs
 -- Datums
 
 -- | The universe of non-empty Datums. i.e. There are no NoDatum Datums in this list
-genDatums ::
-  Era era => UnivSize -> Int -> Map DataHash (Data era) -> Gen [Datum era]
+genDatums :: UnivSize -> Int -> Map DataHash (Data era) -> Gen [Datum era]
 genDatums sizes n datauniv = vectorOf n (genDatum sizes datauniv)
 
 -- | Only generate non-empty Datums. I.e. There are no NoDatum Datums generated.
-genDatum :: Era era => UnivSize -> Map DataHash (Data era) -> Gen (Datum era)
+genDatum :: UnivSize -> Map DataHash (Data era) -> Gen (Datum era)
 genDatum UnivSize {usDatumFreq} datauniv =
   frequency
     [ (1, DatumHash . fst <$> genFromMap ["from genDatums DatumHash case"] datauniv)
