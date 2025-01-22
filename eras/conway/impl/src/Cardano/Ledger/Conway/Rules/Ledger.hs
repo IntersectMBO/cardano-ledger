@@ -47,6 +47,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
@@ -89,11 +90,10 @@ import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
-  DState (..),
   LedgerState (..),
   UTxOState (..),
   asTreasuryL,
+  dsUnifiedL,
   utxosGovStateL,
   utxosUtxoL,
  )
@@ -326,6 +326,7 @@ instance
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , Signal (EraRule "MEMPOOL" era) ~ Tx era
+  , EraCertState era
   ) =>
   STS (ConwayLEDGER era)
   where
@@ -373,6 +374,7 @@ ledgerTransition ::
   , Signal (EraRule "MEMPOOL" era) ~ Tx era
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
+  , EraCertState era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -429,7 +431,7 @@ ledgerTransition = do
         -- because otherwise it would not be possible to unregister a reward account and withdraw
         -- all funds from it in the same transaction.
         unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $ do
-          let dUnified = dsUnified $ certDState certState
+          let dUnified = certState ^. certDStateL . dsUnifiedL
               wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
               delegatedAddrs = DRepUView dUnified
               wdrlsKeyHashes =
@@ -521,6 +523,7 @@ instance
   , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
   , EraRule "CERTS" era ~ ConwayCERTS era
+  , EraCertState era
   ) =>
   Embed (ConwayCERTS era) (ConwayLEDGER era)
   where
@@ -553,6 +556,7 @@ instance
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era
+  , EraCertState era
   ) =>
   Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
   where
@@ -567,6 +571,7 @@ instance
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
+  , EraCertState era
   ) =>
   Embed (ConwayGOV era) (ConwayLEDGER era)
   where
@@ -580,6 +585,7 @@ instance
   , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
   , Event (EraRule "CERT" era) ~ ConwayCertEvent era
+  , EraCertState era
   ) =>
   Embed (ConwayDELEG era) (ConwayLEDGER era)
   where
@@ -593,6 +599,7 @@ instance
   , EraRule "MEMPOOL" era ~ ConwayMEMPOOL era
   , PredicateFailure (EraRule "MEMPOOL" era) ~ ConwayMempoolPredFailure era
   , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
+  , EraCertState era
   ) =>
   Embed (ConwayMEMPOOL era) (ConwayLEDGER era)
   where

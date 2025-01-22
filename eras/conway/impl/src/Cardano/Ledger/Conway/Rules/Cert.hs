@@ -26,6 +26,7 @@ module Cardano.Ledger.Conway.Rules.Cert (
 import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
   ConwayCERT,
@@ -53,7 +54,6 @@ import Cardano.Ledger.Conway.TxCert (
   ConwayTxCert (..),
  )
 import Cardano.Ledger.Shelley.API (
-  CertState (..),
   PState (..),
   PoolEnv (PoolEnv),
  )
@@ -73,6 +73,7 @@ import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import Data.Void (absurd)
 import GHC.Generics (Generic)
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks)
 
 data CertEnv era = CertEnv
@@ -184,6 +185,7 @@ instance
   , Embed (EraRule "POOL" era) (ConwayCERT era)
   , Embed (EraRule "GOVCERT" era) (ConwayCERT era)
   , TxCert era ~ ConwayTxCert era
+  , EraCertState era
   ) =>
   STS (ConwayCERT era)
   where
@@ -211,19 +213,20 @@ certTransition ::
   , Embed (EraRule "POOL" era) (ConwayCERT era)
   , Embed (EraRule "GOVCERT" era) (ConwayCERT era)
   , TxCert era ~ ConwayTxCert era
+  , EraCertState era
   ) =>
   TransitionRule (ConwayCERT era)
 certTransition = do
   TRC (CertEnv pp currentEpoch committee committeeProposals, certState, c) <- judgmentContext
   let
-    CertState {certPState} = certState
+    certPState = certState ^. certPStateL
     pools = psStakePoolParams certPState
   case c of
     ConwayTxCertDeleg delegCert -> do
       trans @(EraRule "DELEG" era) $ TRC (ConwayDelegEnv pp pools, certState, delegCert)
     ConwayTxCertPool poolCert -> do
       newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv currentEpoch pp, certPState, poolCert)
-      pure $ certState {certPState = newPState}
+      pure $ certState & certPStateL .~ newPState
     ConwayTxCertGov govCert -> do
       trans @(EraRule "GOVCERT" era) $
         TRC (ConwayGovCertEnv pp currentEpoch committee committeeProposals, certState, govCert)

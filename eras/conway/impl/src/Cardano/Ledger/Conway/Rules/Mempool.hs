@@ -22,6 +22,7 @@ module Cardano.Ledger.Conway.Rules.Mempool (
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayMEMPOOL)
 import Cardano.Ledger.Conway.Governance (
@@ -70,7 +71,7 @@ newtype ConwayMempoolEvent era = ConwayMempoolEvent Text
 type instance EraRuleEvent "MEMPOOL" ConwayEra = ConwayMempoolEvent ConwayEra
 
 instance
-  (EraTx era, ConwayEraTxBody era, ConwayEraGov era) =>
+  (EraTx era, ConwayEraTxBody era, ConwayEraGov era, EraCertState era) =>
   STS (ConwayMEMPOOL era)
   where
   type State (ConwayMEMPOOL era) = LedgerState era
@@ -83,7 +84,8 @@ instance
   transitionRules = [mempoolTransition @era]
 
 mempoolTransition ::
-  (EraTx era, ConwayEraTxBody era, ConwayEraGov era) => TransitionRule (ConwayMEMPOOL era)
+  (EraTx era, ConwayEraTxBody era, ConwayEraGov era, EraCertState era) =>
+  TransitionRule (ConwayMEMPOOL era)
 mempoolTransition = do
   TRC (_ledgerEnv, ledgerState, tx) <-
     judgmentContext
