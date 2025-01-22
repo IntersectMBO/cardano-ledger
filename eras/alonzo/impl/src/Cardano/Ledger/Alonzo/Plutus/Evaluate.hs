@@ -159,6 +159,14 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
     -- We need to pass major protocol version to the script for script evaluation
     protVer = pp ^. ppProtocolVersionL
     costModels = costModelsValid $ pp ^. ppCostModelsL
+    ledgerTxInfo =
+      LedgerTxInfo
+        { ltiProtVer = protVer
+        , ltiEpochInfo = epochInfo
+        , ltiSystemStart = systemStart
+        , ltiUTxO = utxo
+        , ltiTx = tx
+        }
 
     ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
     AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
@@ -172,14 +180,6 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
             Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
     apply (plutusScript, plutusPurpose, redeemerData, exUnits, plutusScriptHash) = do
       let lang = plutusScriptLanguage plutusScript
-          ledgerTxInfo =
-            LedgerTxInfo
-              { ltiProtVer = protVer
-              , ltiEpochInfo = epochInfo
-              , ltiSystemStart = systemStart
-              , ltiUTxO = utxo
-              , ltiTx = tx
-              }
       costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
       first BadTranslation $
         mkPlutusWithContext
