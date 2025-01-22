@@ -14,6 +14,7 @@ module Cardano.Ledger.Babbage.Translation where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import Cardano.Ledger.Babbage.CertState ()
 import Cardano.Ledger.Babbage.Core hiding (Tx)
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
@@ -22,8 +23,8 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.Core as Core (Tx)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -118,14 +119,7 @@ instance TranslateEra BabbageEra VState where
 instance TranslateEra BabbageEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra BabbageEra CertState where
-  translateEra ctxt ls =
-    pure
-      CertState
-        { certDState = translateEra' ctxt $ certDState ls
-        , certPState = translateEra' ctxt $ certPState ls
-        , certVState = translateEra' ctxt $ certVState ls
-        }
+instance TranslateEra BabbageEra ShelleyCertState
 
 instance TranslateEra BabbageEra LedgerState where
   translateEra ctxt ls =
