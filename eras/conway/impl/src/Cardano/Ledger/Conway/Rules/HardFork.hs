@@ -18,6 +18,7 @@ module Cardano.Ledger.Conway.Rules.HardFork (
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, StrictMaybe (..), natVersion)
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayHARDFORK)
 import Cardano.Ledger.DRep
@@ -51,7 +52,7 @@ newtype ConwayHardForkEvent era = ConwayHardForkEvent ProtVer
 type instance EraRuleEvent "HARDFORK" ConwayEra = ConwayHardForkEvent ConwayEra
 
 instance
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   STS (ConwayHARDFORK era)
   where
   type State (ConwayHARDFORK era) = EpochState era
@@ -63,7 +64,7 @@ instance
 
   transitionRules = [hardforkTransition @era]
 
-hardforkTransition :: TransitionRule (ConwayHARDFORK era)
+hardforkTransition :: EraCertState era => TransitionRule (ConwayHARDFORK era)
 hardforkTransition = do
   TRC (_, epochState, newPv) <-
     judgmentContext

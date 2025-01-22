@@ -207,6 +207,7 @@ import Cardano.Ledger.Binary.Plain (
  )
 import Cardano.Ledger.CertState (
   CommitteeAuthorization (..),
+  EraCertState (..),
   Obligations (..),
   certVStateL,
   csCommitteeCreds,
@@ -226,8 +227,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState,
   NewEpochState (..),
-  certDState,
-  certVState,
   credMap,
   dsUnified,
   epochStateGovStateL,
@@ -476,6 +475,7 @@ setFreshDRepPulsingState ::
   , Monad m
   , RunConwayRatify era
   , ConwayEraGov era
+  , EraCertState era
   ) =>
   EpochNo ->
   PoolDistr ->
@@ -496,8 +496,8 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
       utxoState = lsUTxOState ledgerState
       stakeDistr = credMap $ utxosStakeDistr utxoState
       certState = lsCertState ledgerState
-      dState = certDState certState
-      vState = certVState certState
+      dState = certState ^. certDStateL
+      vState = certState ^. certVStateL
       govState = epochState ^. epochStateGovStateL
       props = govState ^. cgsProposalsL
       -- Maximum number of blocks we are allowed to roll back: usually a small positive number
@@ -586,7 +586,7 @@ defaultStakePoolVote poolId poolParams dRepDelegations =
     toDefaultVote _ = DefaultNo
 
 authorizedElectedHotCommitteeCredentials ::
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   LedgerState era ->
   Set.Set (Credential 'HotCommitteeRole)
 authorizedElectedHotCommitteeCredentials ledgerState =
