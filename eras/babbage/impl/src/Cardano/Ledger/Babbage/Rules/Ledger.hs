@@ -26,8 +26,9 @@ import Cardano.Ledger.Babbage.Rules.Delegs ()
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPredFailure)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
+  CertState,
   LedgerState (..),
   UTxOState (..),
  )
@@ -117,6 +118,7 @@ instance
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , ProtVerAtMost era 8
+  , EraCertState era
   ) =>
   STS (BabbageLEDGER era)
   where

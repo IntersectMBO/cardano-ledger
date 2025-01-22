@@ -45,6 +45,7 @@ library
 
   hs-source-dirs: src
   other-modules:
+    Cardano.Ledger.Babbage.CertState
     Cardano.Ledger.Babbage.Era
     Cardano.Ledger.Babbage.Rules.Bbody
     Cardano.Ledger.Babbage.Rules.Deleg

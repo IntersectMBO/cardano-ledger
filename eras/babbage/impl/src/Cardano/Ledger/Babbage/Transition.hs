@@ -7,6 +7,7 @@ module Cardano.Ledger.Babbage.Transition (TransitionConfig (..)) where
 
 import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Transition
+import Cardano.Ledger.Babbage.CertState ()
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Genesis (NoGenesis (..))
