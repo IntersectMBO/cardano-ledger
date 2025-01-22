@@ -17,11 +17,13 @@
 
 module Cardano.Ledger.Alonzo.Plutus.Evaluate (
   evalPlutusScripts,
-  evalPlutusScriptsWithLogs,
   CollectError (..),
   collectPlutusScriptsWithContext,
 
   -- * Execution units estimation
+
+  -- | Functions in this section are provided for testing and downstream users like cardano-api
+  evalPlutusScriptsWithLogs,
   TransactionScriptFailure (..),
   evalTxExUnits,
   RedeemerReport,
