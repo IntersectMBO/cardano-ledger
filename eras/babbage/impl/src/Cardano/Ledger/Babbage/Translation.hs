@@ -22,6 +22,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.Core as Core (Tx)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -52,7 +53,7 @@ import Lens.Micro
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-instance TranslateEra BabbageEra NewEpochState where
+instance CertState BabbageEra ~ ShelleyCertState BabbageEra => TranslateEra BabbageEra NewEpochState where
   translateEra ctxt nes =
     pure $
       NewEpochState
@@ -94,7 +95,7 @@ instance TranslateEra BabbageEra FuturePParams where
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
     PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
-instance TranslateEra BabbageEra EpochState where
+instance CertState BabbageEra ~ ShelleyCertState BabbageEra => TranslateEra BabbageEra EpochState where
   translateEra ctxt es =
     pure
       EpochState
@@ -118,16 +119,9 @@ instance TranslateEra BabbageEra VState where
 instance TranslateEra BabbageEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra BabbageEra CertState where
-  translateEra ctxt ls =
-    pure
-      CertState
-        { certDState = translateEra' ctxt $ certDState ls
-        , certPState = translateEra' ctxt $ certPState ls
-        , certVState = translateEra' ctxt $ certVState ls
-        }
+instance CertState BabbageEra ~ ShelleyCertState BabbageEra => TranslateEra BabbageEra ShelleyCertState
 
-instance TranslateEra BabbageEra LedgerState where
+instance CertState BabbageEra ~ ShelleyCertState BabbageEra => TranslateEra BabbageEra LedgerState where
   translateEra ctxt ls =
     pure
       LedgerState
