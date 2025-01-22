@@ -69,7 +69,12 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
  )
 import Cardano.Ledger.Plutus.Data (Data, getPlutusData)
-import Cardano.Ledger.Plutus.Language (Language (..), LegacyPlutusArgs (..), PlutusArgs (..))
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  LegacyPlutusArgs (..),
+  PlutusArgs (..),
+  SLanguage (..),
+ )
 import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
@@ -157,6 +162,13 @@ toLegacyPlutusArgs proxy pv mkScriptContext scriptPurpose maybeSpendingData rede
 
 instance EraPlutusContext AlonzoEra where
   type ContextError AlonzoEra = AlonzoContextError AlonzoEra
+  newtype TxInfoResult AlonzoEra
+    = AlonzoTxInfoResult (Either (ContextError AlonzoEra) (PlutusTxInfo 'PlutusV1))
+
+  mkTxInfoResult = AlonzoTxInfoResult . toPlutusTxInfo SPlutusV1
+
+  lookupTxInfoResult SPlutusV1 (AlonzoTxInfoResult tirPlutusV1) = tirPlutusV1
+  lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
 
   mkPlutusWithContext (AlonzoPlutusV1 p) = toPlutusWithContext (Left p)
 

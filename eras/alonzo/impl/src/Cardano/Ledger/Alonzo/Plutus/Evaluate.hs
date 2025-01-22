@@ -169,6 +169,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
         , ltiUTxO = utxo
         , ltiTx = tx
         }
+    txInfoResult = mkTxInfoResult ledgerTxInfo
 
     ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
     AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
@@ -189,6 +190,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
           plutusScriptHash
           plutusPurpose
           ledgerTxInfo
+          txInfoResult
           (redeemerData, exUnits)
           costModel
 
@@ -366,6 +368,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiUTxO = utxo
         , ltiTx = tx
         }
+    txInfoResult = mkTxInfoResult ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL
     txBody = tx ^. bodyTxL
     wits = tx ^. witsTxL
@@ -400,6 +403,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
             plutusScriptHash
             plutusPurpose
             ledgerTxInfo
+            txInfoResult
             (redeemerData, maxBudget)
             costModel
       case evaluatePlutusWithContext P.Verbose pwc of

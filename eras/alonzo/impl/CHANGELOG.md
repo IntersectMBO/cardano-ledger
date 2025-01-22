@@ -2,6 +2,9 @@
 
 ## 1.13.0.0
 
+* Add `TxInfoResult` data family, `mkTxInfoResult` and `lookupTxInfoResult` to `EraPlutusContext`
+* Add `lookupTxInfoResultImpossible` helper
+* Add `TxInfoResult era` parameter to `toPlutusWithContext` and `mkPlutusWithContext`
 * Made the fields of predicate failures and environments lazy
 * Add `MemPack` instance for `Addr28Extra`, `DataHash32`, `AlonzoTxOut` and `PlutusScript AlonzoEra`
 * Deprecate `hashAlonzoTxAuxData`
