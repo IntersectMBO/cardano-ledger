@@ -183,28 +183,30 @@ from a sepecific `<SHA>` that had a version bump when compared to CHaP:
 $ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <SHA> \
   eras/allegra/impl \
   eras/alonzo/impl \
-  eras/alonzo/test-suite eras/babbage/impl \
-  eras/babbage/test-suite eras/conway/impl \
-  eras/conway/test-suite \
-  eras/mary/impl \
-  eras/shelley/impl \
-  eras/shelley/test-suite \
-  eras/shelley-ma/test-suite \
-  libs/cardano-ledger-api \
-  libs/cardano-ledger-core \
-  libs/cardano-ledger-binary \
-  libs/cardano-protocol-tpraos \
-  libs/non-integral \
-  libs/small-steps \
-  libs/cardano-data \
-  libs/set-algebra \
-  libs/vector-map \
+  eras/alonzo/test-suite \
+  eras/babbage/impl \
+  eras/babbage/test-suite \
   eras/byron/chain/executable-spec \
+  eras/byron/crypto \
+  eras/byron/crypto/test \
   eras/byron/ledger/executable-spec \
   eras/byron/ledger/impl \
   eras/byron/ledger/impl/test \
-  eras/byron/crypto \
-  eras/byron/crypto/test
+  eras/conway/impl \
+  eras/conway/test-suite \
+  eras/mary/impl \
+  eras/shelley-ma/test-suite \
+  eras/shelley/impl \
+  eras/shelley/test-suite \
+  libs/cardano-data \
+  libs/cardano-ledger-api \
+  libs/cardano-ledger-binary \
+  libs/cardano-ledger-core \
+  libs/cardano-protocol-tpraos \
+  libs/non-integral \
+  libs/set-algebra \
+  libs/small-steps \
+  libs/vector-map
 ```
 
 More on that command in the section below.
