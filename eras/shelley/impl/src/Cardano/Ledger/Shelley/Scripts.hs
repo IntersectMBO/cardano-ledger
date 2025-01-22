@@ -11,6 +11,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -50,7 +51,7 @@ import Cardano.Ledger.MemoBytes (
   MemoBytes,
   Memoized (..),
   getMemoRawType,
-  memoBytes,
+  memoBytesEra,
   pattern Memo,
  )
 import Cardano.Ledger.Shelley.Era
@@ -105,12 +106,12 @@ class EraScript era => ShelleyEraScript era where
 
 instance NFData (MultiSigRaw era)
 
-newtype MultiSig era = MultiSigConstr (MemoBytes MultiSigRaw era)
+newtype MultiSig era = MultiSigConstr (MemoBytes (MultiSigRaw era))
   deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
 
-instance Memoized MultiSig where
-  type RawType MultiSig = MultiSigRaw
+instance Memoized (MultiSig era) where
+  type RawType (MultiSig era) = MultiSigRaw era
 
 -- | Magic number "memorialized" in the ValidateScript class under the method:
 --   scriptPrefixTag:: Core.Script era -> Bs.ByteString, for the Shelley Era.
@@ -134,29 +135,29 @@ instance EraScript ShelleyEra where
 
 instance ShelleyEraScript ShelleyEra where
   mkRequireSignature kh =
-    MultiSigConstr $ memoBytes (Sum RequireSignature' 0 !> To kh)
+    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireSignature' 0 !> To kh)
   getRequireSignature (MultiSigConstr (Memo (RequireSignature' kh) _)) = Just kh
   getRequireSignature _ = Nothing
 
   mkRequireAllOf ms =
-    MultiSigConstr $ memoBytes (Sum RequireAllOf' 1 !> To ms)
+    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireAllOf' 1 !> To ms)
   getRequireAllOf (MultiSigConstr (Memo (RequireAllOf' ms) _)) = Just ms
   getRequireAllOf _ = Nothing
 
   mkRequireAnyOf ms =
-    MultiSigConstr $ memoBytes (Sum RequireAnyOf' 2 !> To ms)
+    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireAnyOf' 2 !> To ms)
   getRequireAnyOf (MultiSigConstr (Memo (RequireAnyOf' ms) _)) = Just ms
   getRequireAnyOf _ = Nothing
 
   mkRequireMOf n ms =
-    MultiSigConstr $ memoBytes (Sum RequireMOf' 3 !> To n !> To ms)
+    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireMOf' 3 !> To n !> To ms)
   getRequireMOf (MultiSigConstr (Memo (RequireMOf' n ms) _)) = Just (n, ms)
   getRequireMOf _ = Nothing
 
 deriving newtype instance NFData (MultiSig era)
 
 deriving via
-  Mem MultiSigRaw era
+  Mem (MultiSigRaw era)
   instance
     Era era => DecCBOR (Annotator (MultiSig era))
 

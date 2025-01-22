@@ -105,7 +105,7 @@ import Cardano.Ledger.MemoBytes (
   eqRawType,
   getMemoRawType,
   lensMemoRawType,
-  mkMemoized,
+  mkMemoizedEra,
  )
 import Cardano.Ledger.Plutus.Data (Data, hashData, upgradeData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
@@ -163,14 +163,14 @@ instance AlonzoEraScript era => EncCBOR (RedeemersRaw era) where
           <> encCBOR dats
           <> encCBOR exs
 
-instance Memoized Redeemers where
-  type RawType Redeemers = RedeemersRaw
+instance Memoized (Redeemers era) where
+  type RawType (Redeemers era) = RedeemersRaw era
 
 -- | Note that 'Redeemers' are based on 'MemoBytes' since we must preserve
 -- the original bytes for the 'Cardano.Ledger.Alonzo.Tx.ScriptIntegrity'.
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
-newtype Redeemers era = RedeemersConstr (MemoBytes RedeemersRaw era)
+newtype Redeemers era = RedeemersConstr (MemoBytes (RedeemersRaw era))
   deriving newtype (Generic, ToCBOR, SafeToHash, Typeable)
 
 deriving newtype instance AlonzoEraScript era => Eq (Redeemers era)
@@ -195,7 +195,7 @@ pattern Redeemers ::
 pattern Redeemers rs <-
   (getMemoRawType -> RedeemersRaw rs)
   where
-    Redeemers rs' = mkMemoized $ RedeemersRaw rs'
+    Redeemers rs' = mkMemoizedEra @era $ RedeemersRaw rs'
 
 {-# COMPLETE Redeemers #-}
 
@@ -263,12 +263,12 @@ instance
   ) =>
   NFData (AlonzoTxWitsRaw era)
 
-newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes AlonzoTxWitsRaw era)
+newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes (AlonzoTxWitsRaw era))
   deriving newtype (SafeToHash, ToCBOR)
   deriving (Generic)
 
-instance Memoized AlonzoTxWits where
-  type RawType AlonzoTxWits = AlonzoTxWitsRaw
+instance Memoized (AlonzoTxWits era) where
+  type RawType (AlonzoTxWits era) = AlonzoTxWitsRaw era
 
 instance AlonzoEraScript era => Semigroup (AlonzoTxWits era) where
   (<>) x y | isEmptyTxWitness x = y
@@ -308,10 +308,10 @@ pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
 
 {-# COMPLETE TxDats' #-}
 
-pattern TxDats :: Era era => Map DataHash (Data era) -> TxDats era
+pattern TxDats :: forall era. Era era => Map DataHash (Data era) -> TxDats era
 pattern TxDats m <- (getMemoRawType -> TxDatsRaw m)
   where
-    TxDats m = mkMemoized (TxDatsRaw m)
+    TxDats m = mkMemoizedEra @era (TxDatsRaw m)
 
 {-# COMPLETE TxDats #-}
 
@@ -337,12 +337,12 @@ instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
 -- the original bytes for the 'Cardano.Ledger.Alonzo.Tx.ScriptIntegrity'.
 -- Since the 'TxDats' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
-newtype TxDats era = TxDatsConstr (MemoBytes TxDatsRaw era)
+newtype TxDats era = TxDatsConstr (MemoBytes (TxDatsRaw era))
   deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
   deriving (Generic)
 
-instance Memoized TxDats where
-  type RawType TxDats = TxDatsRaw
+instance Memoized (TxDats era) where
+  type RawType (TxDats era) = TxDatsRaw era
 
 deriving instance Show (TxDats era)
 
@@ -356,7 +356,7 @@ instance Era era => Monoid (TxDats era) where
 instance Era era => EncCBOR (TxDats era)
 
 deriving via
-  (Mem TxDatsRaw era)
+  Mem (TxDatsRaw era)
   instance
     Era era => DecCBOR (Annotator (TxDats era))
 
@@ -401,6 +401,7 @@ pattern AlonzoTxWits' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} 
 {-# COMPLETE AlonzoTxWits' #-}
 
 pattern AlonzoTxWits ::
+  forall era.
   AlonzoEraScript era =>
   Set (WitVKey 'Witness) ->
   Set BootstrapWitness ->
@@ -412,7 +413,7 @@ pattern AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
   (getMemoRawType -> AlonzoTxWitsRaw txwitsVKey txwitsBoot txscripts txdats txrdmrs)
   where
     AlonzoTxWits witsVKey' witsBoot' witsScript' witsDat' witsRdmr' =
-      mkMemoized $ AlonzoTxWitsRaw witsVKey' witsBoot' witsScript' witsDat' witsRdmr'
+      mkMemoizedEra @era $ AlonzoTxWitsRaw witsVKey' witsBoot' witsScript' witsDat' witsRdmr'
 
 {-# COMPLETE AlonzoTxWits #-}
 
@@ -421,39 +422,48 @@ pattern AlonzoTxWits {txwitsVKey, txwitsBoot, txscripts, txdats, txrdmrs} <-
 -- =======================================================
 
 addrAlonzoTxWitsL ::
+  forall era.
   AlonzoEraScript era =>
   Lens' (AlonzoTxWits era) (Set (WitVKey 'Witness))
 addrAlonzoTxWitsL =
-  lensMemoRawType atwrAddrTxWits $ \witsRaw addrWits -> witsRaw {atwrAddrTxWits = addrWits}
+  lensMemoRawType @era atwrAddrTxWits $
+    \witsRaw addrWits -> witsRaw {atwrAddrTxWits = addrWits}
 {-# INLINEABLE addrAlonzoTxWitsL #-}
 
 bootAddrAlonzoTxWitsL ::
+  forall era.
   AlonzoEraScript era =>
   Lens' (AlonzoTxWits era) (Set BootstrapWitness)
 bootAddrAlonzoTxWitsL =
-  lensMemoRawType atwrBootAddrTxWits $
+  lensMemoRawType @era atwrBootAddrTxWits $
     \witsRaw bootAddrWits -> witsRaw {atwrBootAddrTxWits = bootAddrWits}
 {-# INLINEABLE bootAddrAlonzoTxWitsL #-}
 
 scriptAlonzoTxWitsL ::
+  forall era.
   AlonzoEraScript era =>
   Lens' (AlonzoTxWits era) (Map ScriptHash (Script era))
 scriptAlonzoTxWitsL =
-  lensMemoRawType atwrScriptTxWits $ \witsRaw scriptWits -> witsRaw {atwrScriptTxWits = scriptWits}
+  lensMemoRawType @era atwrScriptTxWits $
+    \witsRaw scriptWits -> witsRaw {atwrScriptTxWits = scriptWits}
 {-# INLINEABLE scriptAlonzoTxWitsL #-}
 
 datsAlonzoTxWitsL ::
+  forall era.
   AlonzoEraScript era =>
   Lens' (AlonzoTxWits era) (TxDats era)
 datsAlonzoTxWitsL =
-  lensMemoRawType atwrDatsTxWits $ \witsRaw datsWits -> witsRaw {atwrDatsTxWits = datsWits}
+  lensMemoRawType @era atwrDatsTxWits $
+    \witsRaw datsWits -> witsRaw {atwrDatsTxWits = datsWits}
 {-# INLINEABLE datsAlonzoTxWitsL #-}
 
 rdmrsAlonzoTxWitsL ::
+  forall era.
   AlonzoEraScript era =>
   Lens' (AlonzoTxWits era) (Redeemers era)
 rdmrsAlonzoTxWitsL =
-  lensMemoRawType atwrRdmrsTxWits $ \witsRaw rdmrsWits -> witsRaw {atwrRdmrsTxWits = rdmrsWits}
+  lensMemoRawType @era atwrRdmrsTxWits $
+    \witsRaw rdmrsWits -> witsRaw {atwrRdmrsTxWits = rdmrsWits}
 {-# INLINEABLE rdmrsAlonzoTxWitsL #-}
 
 instance EraScript AlonzoEra => EraTxWits AlonzoEra where
@@ -594,7 +604,7 @@ instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
 instance AlonzoEraScript era => EncCBOR (Redeemers era)
 
 deriving via
-  (Mem RedeemersRaw era)
+  Mem (RedeemersRaw era)
   instance
     AlonzoEraScript era => DecCBOR (Annotator (Redeemers era))
 
@@ -713,7 +723,7 @@ instance
   {-# INLINE decCBOR #-}
 
 deriving via
-  (Mem AlonzoTxWitsRaw era)
+  Mem (AlonzoTxWitsRaw era)
   instance
     AlonzoEraScript era => DecCBOR (Annotator (AlonzoTxWits era))
 

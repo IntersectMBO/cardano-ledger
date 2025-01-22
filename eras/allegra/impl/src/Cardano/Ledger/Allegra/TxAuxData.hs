@@ -9,7 +9,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -45,7 +47,7 @@ import Cardano.Ledger.MemoBytes (
   getMemoRawType,
   getMemoSafeHash,
   lensMemoRawType,
-  mkMemoized,
+  mkMemoizedEra,
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, ShelleyTxAuxData (..), validMetadatum)
@@ -96,17 +98,21 @@ instance EraTxAuxData AllegraEra where
 
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
 
-metadataAllegraTxAuxDataL :: Era era => Lens' (AllegraTxAuxData era) (Map Word64 Metadatum)
+metadataAllegraTxAuxDataL ::
+  forall era. Era era => Lens' (AllegraTxAuxData era) (Map Word64 Metadatum)
 metadataAllegraTxAuxDataL =
-  lensMemoRawType atadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
+  lensMemoRawType @era atadrMetadata $
+    \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
 
 instance AllegraEraTxAuxData AllegraEra where
   timelockScriptsTxAuxDataL = timelockScriptsAllegraTxAuxDataL
 
 timelockScriptsAllegraTxAuxDataL ::
+  forall era.
   Era era => Lens' (AllegraTxAuxData era) (StrictSeq (Timelock era))
 timelockScriptsAllegraTxAuxDataL =
-  lensMemoRawType atadrTimelock $ \txAuxDataRaw ts -> txAuxDataRaw {atadrTimelock = ts}
+  lensMemoRawType @era atadrTimelock $
+    \txAuxDataRaw ts -> txAuxDataRaw {atadrTimelock = ts}
 
 deriving instance Show (AllegraTxAuxDataRaw era)
 
@@ -114,14 +120,14 @@ deriving instance Era era => NoThunks (AllegraTxAuxDataRaw era)
 
 instance NFData (AllegraTxAuxDataRaw era)
 
-newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes AllegraTxAuxDataRaw era)
+newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes (AllegraTxAuxDataRaw era))
   deriving (Generic)
   deriving newtype (Eq, ToCBOR, SafeToHash)
 
-instance Memoized AllegraTxAuxData where
-  type RawType AllegraTxAuxData = AllegraTxAuxDataRaw
+instance Memoized (AllegraTxAuxData era) where
+  type RawType (AllegraTxAuxData era) = AllegraTxAuxDataRaw era
 
-type instance MemoHashIndex AllegraTxAuxDataRaw = EraIndependentTxAuxData
+type instance MemoHashIndex (AllegraTxAuxDataRaw era) = EraIndependentTxAuxData
 
 instance HashAnnotated (AllegraTxAuxData era) EraIndependentTxAuxData where
   hashAnnotated = getMemoSafeHash
@@ -135,13 +141,14 @@ deriving newtype instance NFData (AllegraTxAuxData era)
 instance EqRaw (AllegraTxAuxData era)
 
 pattern AllegraTxAuxData ::
+  forall era.
   Era era =>
   Map Word64 Metadatum ->
   StrictSeq (Timelock era) ->
   AllegraTxAuxData era
 pattern AllegraTxAuxData blob sp <- (getMemoRawType -> AllegraTxAuxDataRaw blob sp)
   where
-    AllegraTxAuxData blob sp = mkMemoized $ AllegraTxAuxDataRaw blob sp
+    AllegraTxAuxData blob sp = mkMemoizedEra @era $ AllegraTxAuxDataRaw blob sp
 
 {-# COMPLETE AllegraTxAuxData #-}
 
@@ -181,6 +188,6 @@ instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
           )
 
 deriving via
-  (Mem AllegraTxAuxDataRaw era)
+  (Mem (AllegraTxAuxDataRaw era))
   instance
     Era era => DecCBOR (Annotator (AllegraTxAuxData era))

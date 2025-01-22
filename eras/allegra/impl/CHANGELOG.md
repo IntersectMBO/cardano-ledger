@@ -2,6 +2,14 @@
 
 ## 1.7.0.0
 
+* Add `Era era` constraint to `NoThunks` instance for `TimeLock`
+* Remove `Era era` constraint from:
+  * `getRequireSignatureTimelock`
+  * `getRequireAllOfTimelock`
+  * `getRequireAnyOfTimelock`
+  * `getRequireMOfTimelock`
+  * `getTimeStartTimelock`
+  * `getTimeExpireTimelock`
 * Add `MemPack` instance for `Timelock`
 * Remove deprecated `AuxiliaryData` type synonym
 * Deprecate `Allegra` type synonym

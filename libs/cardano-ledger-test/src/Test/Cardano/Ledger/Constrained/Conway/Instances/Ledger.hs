@@ -445,7 +445,7 @@ instance IsConwayUniv fn => HasSpec fn PV1.Data where
 instance Era era => HasSimpleRep (Data era) where
   type SimpleRep (Data era) = PV1.Data
   toSimpleRep = getPlutusData
-  fromSimpleRep = mkMemoized . PlutusData
+  fromSimpleRep = mkMemoizedEra @era . PlutusData
 instance (IsConwayUniv fn, Era era) => HasSpec fn (Data era)
 
 instance Era era => HasSimpleRep (BinaryData era) where

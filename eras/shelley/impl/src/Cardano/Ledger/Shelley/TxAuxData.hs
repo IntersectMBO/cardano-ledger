@@ -41,7 +41,7 @@ import Cardano.Ledger.MemoBytes (
   getMemoRawType,
   getMemoSafeHash,
   lensMemoRawType,
-  mkMemoized,
+  mkMemoizedEra,
  )
 import Cardano.Ledger.Metadata (Metadatum (..), validMetadatum)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -75,17 +75,17 @@ deriving via
     NoThunks (ShelleyTxAuxData era)
 
 deriving via
-  (Mem ShelleyTxAuxDataRaw era)
+  Mem (ShelleyTxAuxDataRaw era)
   instance
     Era era => DecCBOR (Annotator (ShelleyTxAuxData era))
 
 newtype ShelleyTxAuxData era
-  = AuxiliaryDataConstr (MemoBytes ShelleyTxAuxDataRaw era)
+  = AuxiliaryDataConstr (MemoBytes (ShelleyTxAuxDataRaw era))
   deriving (Eq, Show, Generic)
   deriving newtype (NFData, Plain.ToCBOR, SafeToHash)
 
-instance Memoized ShelleyTxAuxData where
-  type RawType ShelleyTxAuxData = ShelleyTxAuxDataRaw
+instance Memoized (ShelleyTxAuxData era) where
+  type RawType (ShelleyTxAuxData era) = ShelleyTxAuxDataRaw era
 
 instance EraTxAuxData ShelleyEra where
   type TxAuxData ShelleyEra = ShelleyTxAuxData ShelleyEra
@@ -93,7 +93,8 @@ instance EraTxAuxData ShelleyEra where
   mkBasicTxAuxData = ShelleyTxAuxData mempty
 
   metadataTxAuxDataL =
-    lensMemoRawType stadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {stadrMetadata = md}
+    lensMemoRawType @ShelleyEra stadrMetadata $
+      \txAuxDataRaw md -> txAuxDataRaw {stadrMetadata = md}
 
   -- Calling this partial function will result in compilation error, since ByronEra has
   -- no instance for EraTxOut type class.
@@ -116,11 +117,11 @@ pattern ShelleyTxAuxData :: forall era. Era era => Map Word64 Metadatum -> Shell
 pattern ShelleyTxAuxData m <-
   (getMemoRawType -> ShelleyTxAuxDataRaw m)
   where
-    ShelleyTxAuxData m = mkMemoized $ ShelleyTxAuxDataRaw m
+    ShelleyTxAuxData m = mkMemoizedEra @era $ ShelleyTxAuxDataRaw m
 
 {-# COMPLETE ShelleyTxAuxData #-}
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (ShelleyTxAuxData era)
 
-type instance MemoHashIndex ShelleyTxAuxDataRaw = EraIndependentTxAuxData
+type instance MemoHashIndex (ShelleyTxAuxDataRaw era) = EraIndependentTxAuxData

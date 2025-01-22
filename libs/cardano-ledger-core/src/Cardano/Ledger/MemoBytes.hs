@@ -12,6 +12,7 @@ module Cardano.Ledger.MemoBytes (
   getMemoBytesType,
   getMemoBytesHash,
   memoBytes,
+  memoBytesEra,
   shorten,
   showMemo,
   printMemo,
@@ -22,6 +23,7 @@ module Cardano.Ledger.MemoBytes (
   -- * Memoized
   Memoized (RawType),
   mkMemoized,
+  mkMemoizedEra,
   decodeMemoized,
   getMemoSafeHash,
   getMemoRawType,
@@ -30,6 +32,11 @@ module Cardano.Ledger.MemoBytes (
   getMemoRawBytes,
   lensMemoRawType,
   getterMemoRawType,
+
+  -- * MemoBytes MemPack definitions
+  byteCountMemoBytes,
+  packMemoBytesM,
+  unpackMemoBytesM,
 
   -- * Raw equality
   EqRaw (..),
