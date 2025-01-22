@@ -20,6 +20,7 @@ module Cardano.Ledger.Conway.Rules.Mempool (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayLEDGER, ConwayMEMPOOL)
 import Cardano.Ledger.Conway.Governance (
@@ -71,6 +72,7 @@ instance
   , Show (PredicateFailure (EraRule "UTXOW" era))
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx era ~ Signal (EraRule "LEDGER" era)
+  , EraCertState era
   ) =>
   STS (ConwayMEMPOOL era)
   where
@@ -92,6 +94,7 @@ mempoolTransition ::
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx era ~ Signal (EraRule "LEDGER" era)
+  , EraCertState era
   ) =>
   TransitionRule (ConwayMEMPOOL era)
 mempoolTransition = do

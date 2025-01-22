@@ -53,6 +53,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
@@ -207,6 +208,7 @@ instance
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
+  , EraCertState era
   ) =>
   STS (ConwayUTXOS era)
   where
@@ -234,6 +236,7 @@ instance
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
+  , EraCertState era
   ) =>
   Embed (ConwayUTXOS era) (BabbageUTXO era)
   where
@@ -255,6 +258,7 @@ utxosTransition ::
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
+  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
@@ -278,6 +282,7 @@ conwayEvalScriptsTxValid ::
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
+  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do

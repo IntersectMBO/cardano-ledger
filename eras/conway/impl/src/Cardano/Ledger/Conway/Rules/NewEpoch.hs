@@ -26,6 +26,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (SJust, SNothing),
  )
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayNEWEPOCH)
@@ -119,6 +120,7 @@ instance
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
+  , EraCertState era
   ) =>
   STS (ConwayNEWEPOCH era)
   where
@@ -159,6 +161,7 @@ newEpochTransition ::
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
+  , EraCertState era
   ) =>
   TransitionRule (ConwayNEWEPOCH era)
 newEpochTransition = do
@@ -206,7 +209,7 @@ tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
 updateRewards ::
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   EpochState era ->
   EpochNo ->
   RewardUpdate ->
