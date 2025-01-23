@@ -40,6 +40,7 @@ module Cardano.Ledger.Shelley.Tx.Internal (
   sizeShelleyTxF,
   wireSizeShelleyTxF,
   segWitAnnTx,
+  segWitTx,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
   witsFromTxWitnesses,
@@ -53,6 +54,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (encCBOR),
   ToCBOR,
   decodeNullMaybe,
+  decodeNullStrictMaybe,
   encodeNullMaybe,
   runAnnotator,
  )
@@ -322,11 +324,33 @@ instance
           ( sequence . maybeToStrictMaybe
               <$> decodeNullMaybe decCBOR
           )
+instance
+  ( Era era
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (ShelleyTxRaw era)
+  where
+  decCBOR =
+    decode $
+      RecD ShelleyTxRaw
+        <! From
+        <! From
+        <! D (decodeNullStrictMaybe decCBOR)
 
 deriving via
   Mem (ShelleyTxRaw era)
   instance
     EraTx era => DecCBOR (Annotator (ShelleyTx era))
+
+deriving newtype instance
+  ( Era era
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (ShelleyTx era)
 
 -- | Construct a Tx containing the explicit serialised bytes.
 --
@@ -372,6 +396,30 @@ segWitAnnTx bodyAnn witsAnn metaAnn = Annotator $ \bytes ->
         witnessSet
         (maybeToStrictMaybe metadata)
         fullBytes
+
+segWitTx ::
+  forall era.
+  EraTx era =>
+  TxBody era ->
+  TxWits era ->
+  Maybe (TxAuxData era) ->
+  ShelleyTx era
+segWitTx body' witnessSet metadata =
+  let
+    wrappedMetadataBytes = case metadata of
+      Nothing -> Plain.serialize Plain.encodeNull
+      Just b -> Plain.serialize b
+    fullBytes =
+      Plain.serialize (Plain.encodeListLen 3)
+        <> Plain.serialize body'
+        <> Plain.serialize witnessSet
+        <> wrappedMetadataBytes
+   in
+    unsafeConstructTxWithBytes
+      body'
+      witnessSet
+      (maybeToStrictMaybe metadata)
+      fullBytes
 
 -- ========================================
 

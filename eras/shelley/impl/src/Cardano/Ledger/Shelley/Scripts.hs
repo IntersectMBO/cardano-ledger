@@ -34,15 +34,18 @@ module Cardano.Ledger.Shelley.Scripts (
 )
 where
 
-import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (..),
   ToCBOR,
   decodeRecordSum,
+  invalidKey,
  )
-import Cardano.Ledger.Binary.Coders (Encode (..), (!>))
+import Cardano.Ledger.Binary.Coders (
+  Encode (Sum, To),
+  (!>),
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (
@@ -50,6 +53,7 @@ import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
   Memoized (..),
+  decodeMemoized,
   getMemoRawType,
   memoBytesEra,
   pattern Memo,
@@ -187,6 +191,18 @@ pattern RequireMOf n ms <- (getRequireMOf -> Just (n, ms))
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (MultiSig era)
+
+instance Era era => DecCBOR (MultiSig era) where
+  decCBOR = MultiSigConstr <$> decodeMemoized decCBOR
+
+instance Era era => DecCBOR (MultiSigRaw era) where
+  decCBOR = decodeRecordSum "MultiSig" $ do
+    \case
+      0 -> (,) 2 . RequireSignature' . KeyHash <$> decCBOR
+      1 -> (,) 2 . RequireAllOf' <$> decCBOR
+      2 -> (,) 2 . RequireAnyOf' <$> decCBOR
+      3 -> (,) 3 <$> (RequireMOf' <$> decCBOR <*> decCBOR)
+      k -> invalidKey k
 
 instance Era era => DecCBOR (Annotator (MultiSigRaw era)) where
   decCBOR = decodeRecordSum "MultiSig" $
