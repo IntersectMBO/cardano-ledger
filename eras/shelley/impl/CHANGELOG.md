@@ -2,6 +2,13 @@
 
 ## 1.16.0.0
 
+* Add `DecCBOR` instances for:
+  * `ShelleyTxWits`
+  * `ShelleyTxAuxData`
+  * `ShelleyTxBody`
+  * `ShelleyTx`
+  * `ShelleyTxSeq`
+* Add `segWitTx`
 * Rename `segwitTx` to `segWitAnnTx`
 * Converted `CertState` to a type family
 * Restrict the monad of `applyTx` and `reapllyTx` to `Either` from abstract `MonadError`

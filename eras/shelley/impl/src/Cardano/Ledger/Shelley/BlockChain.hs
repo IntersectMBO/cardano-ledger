@@ -39,11 +39,13 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
+  Annotated (..),
   Annotator (..),
   DecCBOR (decCBOR),
   Decoder,
   EncCBOR (..),
   EncCBORGroup (..),
+  decodeAnnotated,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
   encodePreEncoded,
@@ -52,7 +54,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitAnnTx)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitAnnTx, segWitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -188,14 +190,16 @@ bbHash (TxSeq' _ bodies wits md) =
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
 -- | Given a size and a mapping from indices to maybe metadata,
---  return a sequence whose size is the size paramater and
+--  return a sequence whose size is the size parameter and
 --  whose non-Nothing values correspond to the values in the mapping.
 constructMetadata ::
-  forall era.
   Int ->
   Map Int (Annotator (TxAuxData era)) ->
   Seq (Maybe (Annotator (TxAuxData era)))
-constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n - 1])
+constructMetadata = indexLookupSeq
+
+indexLookupSeq :: Int -> Map Int a -> Seq (Maybe a)
+indexLookupSeq n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n - 1])
 
 -- | The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
 --   These are exactly the parts that are SafeToHash.
@@ -238,6 +242,39 @@ txSeqDecoder lax = do
 
 instance EraTx era => DecCBOR (Annotator (ShelleyTxSeq era)) where
   decCBOR = txSeqDecoder False
+
+instance
+  ( EraTx era
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (ShelleyTxSeq era)
+  where
+  decCBOR = do
+    Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
+    Annotated wits witsBytes <- decodeAnnotated decCBOR
+    Annotated auxDataMap auxDataBytes <- decodeAnnotated decCBOR
+    let b = length bodies
+    let inRange x = (0 <= x) && (x <= (b - 1))
+    unless
+      (all inRange (Map.keysSet auxDataMap))
+      (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b - 1)))
+    let auxData = indexLookupSeq b auxDataMap
+    let w = length wits
+    unless
+      (b == w)
+      ( fail $
+          "different number of transaction bodies ("
+            <> show b
+            <> ") and witness sets ("
+            <> show w
+            <> ")"
+      )
+    let txs =
+          StrictSeq.forceToStrict $
+            Seq.zipWith3 segWitTx bodies wits auxData
+    pure $ TxSeq' txs bodiesBytes witsBytes auxDataBytes
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s
