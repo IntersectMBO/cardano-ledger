@@ -13,7 +13,6 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Core
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Rules
-import Data.Map.Strict (mapKeys)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
@@ -38,8 +37,8 @@ instance SpecTranslate ctx (PState era) where
 
   toSpecRep PState {..} =
     Agda.MkPState
-      <$> toSpecRep (mapKeys (hashToInteger . unKeyHash) psStakePoolParams)
-      <*> toSpecRep (mapKeys (hashToInteger . unKeyHash) psRetiring)
+      <$> toSpecRep psStakePoolParams
+      <*> toSpecRep psRetiring
 
 instance SpecTranslate ctx PoolCert where
   type SpecRep PoolCert = Agda.DCert

@@ -155,12 +155,12 @@ spec =
           describe "CERTS" Certs.spec
           describe "DELEG" Deleg.spec
           describe "ENACT" Enact.spec
-          xdescribe "EPOCH" Epoch.spec
-          xdescribe "GOV" Gov.spec
+          describe "EPOCH" Epoch.spec
+          describe "GOV" Gov.spec
           describe "GOVCERT" GovCert.spec
           -- LEDGER tests pending on the dRep delegations cleanup in the spec:
           -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
-          xdescribe "LEDGER" Ledger.spec
-          xdescribe "RATIFY" Ratify.spec
-          xdescribe "UTXO" Utxo.spec
+          describe "LEDGER" Ledger.spec
+          describe "RATIFY" Ratify.spec
+          describe "UTXO" Utxo.spec
           xdescribe "UTXOS" Utxos.spec
