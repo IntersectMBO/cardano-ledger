@@ -53,6 +53,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (encCBOR),
   ToCBOR,
   decodeNullMaybe,
+  decodeNullStrictMaybe,
   encodeNullMaybe,
   runAnnotator,
  )
@@ -322,11 +323,33 @@ instance
           ( sequence . maybeToStrictMaybe
               <$> decodeNullMaybe decCBOR
           )
+instance
+  ( Era era
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (ShelleyTxRaw era)
+  where
+  decCBOR =
+    decode $
+      RecD ShelleyTxRaw
+        <! From
+        <! From
+        <! D (decodeNullStrictMaybe decCBOR)
 
 deriving via
   Mem (ShelleyTxRaw era)
   instance
     EraTx era => DecCBOR (Annotator (ShelleyTx era))
+
+deriving newtype instance
+  ( Era era
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (ShelleyTx era)
 
 -- | Construct a Tx containing the explicit serialised bytes.
 --
