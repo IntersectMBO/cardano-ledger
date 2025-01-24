@@ -481,13 +481,13 @@ govTransition = do
             _ -> pure ()
 
         -- Deposit check
-        let expectedDep = pp ^. ppGovActionDepositL
+        let expectedDeposit = pp ^. ppGovActionDepositL
          in pProcDeposit
-              == expectedDep
+              == expectedDeposit
                 ?! ProposalDepositIncorrect
                   Mismatch
                     { mismatchSupplied = pProcDeposit
-                    , mismatchExpected = expectedDep
+                    , mismatchExpected = expectedDeposit
                     }
 
         -- Return address network id check
@@ -497,44 +497,31 @@ govTransition = do
 
         -- Treasury withdrawal return address and committee well-formedness checks
         case pProcGovAction of
-          TreasuryWithdrawals wdrls proposalPolicy ->
+          TreasuryWithdrawals wdrls proposalPolicy -> do
             let mismatchedAccounts =
                   Set.filter ((/= expectedNetworkId) . raNetwork) $ Map.keysSet wdrls
-             in do
-                  Set.null mismatchedAccounts
-                    ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
+            Set.null mismatchedAccounts
+              ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
 
-                  -- Policy check
-                  runTest $ checkPolicy @era constitutionPolicy proposalPolicy
+            -- Policy check
+            runTest $ checkPolicy @era constitutionPolicy proposalPolicy
 
-                  unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $
-                    -- The sum of all withdrawals must be positive
-                    F.fold wdrls /= mempty ?! ZeroTreasuryWithdrawals pProcGovAction
+            unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $
+              -- The sum of all withdrawals must be positive
+              F.fold wdrls /= mempty ?! ZeroTreasuryWithdrawals pProcGovAction
           UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do
-            checkConflictingUpdate
-            checkExpirationEpoch
-            where
-              checkConflictingUpdate =
-                let conflicting =
-                      Set.intersection
-                        (Map.keysSet membersToAdd)
-                        membersToRemove
-                 in Set.null conflicting ?! ConflictingCommitteeUpdate conflicting
-              checkExpirationEpoch =
-                let invalidMembers = Map.filter (<= currentEpoch) membersToAdd
-                 in Map.null invalidMembers ?! ExpirationEpochTooSmall invalidMembers
+            let conflicting = Set.intersection (Map.keysSet membersToAdd) membersToRemove
+             in Set.null conflicting ?! ConflictingCommitteeUpdate conflicting
+
+            let invalidMembers = Map.filter (<= currentEpoch) membersToAdd
+             in Map.null invalidMembers ?! ExpirationEpochTooSmall invalidMembers
           ParameterChange _ _ proposalPolicy ->
             runTest $ checkPolicy @era constitutionPolicy proposalPolicy
           _ -> pure ()
 
         -- Ancestry checks and accept proposal
         let expiry = pp ^. ppGovActionLifetimeL
-            actionState =
-              mkGovActionState
-                newGaid
-                proposal
-                expiry
-                currentEpoch
+            actionState = mkGovActionState newGaid proposal expiry currentEpoch
          in case proposalsAddAction actionState ps of
               Just updatedPs -> pure updatedPs
               Nothing -> ps <$ failBecause (InvalidPrevGovActionId proposal)
