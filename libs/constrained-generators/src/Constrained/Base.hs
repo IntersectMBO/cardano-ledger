@@ -74,7 +74,7 @@ import GHC.Natural
 import GHC.Real
 import GHC.Stack
 import GHC.TypeLits
-import Prettyprinter
+import Prettyprinter hiding (cat)
 import System.Random
 import System.Random.Stateful
 import Test.QuickCheck hiding (Args, Fun, forAll)
@@ -532,7 +532,7 @@ monitorPred env = \case
     monitorPred (extendEnv x val env) p
   Exists k (x :-> p) -> do
     case k (errorGE . explain1 "monitorPred: Exists" . runTerm env) of
-      Result _ a -> monitorPred (extendEnv x a env) p
+      Result a -> monitorPred (extendEnv x a env) p
       _ -> pure id
   Explain es p -> explain es $ monitorPred env p
 
@@ -787,7 +787,7 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
   shrink (SuspendedSpec x p) =
     [TrueSpec, ErrorSpec (pure "From shrinking SuspendedSpec")]
       ++ [ s
-         | Result _ s <- [computeSpec x p]
+         | Result s <- [computeSpec x p]
          , not $ isSuspendedSpec s
          ]
       ++ [SuspendedSpec x p' | p' <- shrinkPred p]
@@ -1167,8 +1167,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
           [ "genFromSpecT on (TypeSpec tspec cant) at type " ++ showType @a
           , "tspec = "
           , show s
-          , "cant = "
-          , unlines (map (\x -> "  " ++ show x) cant)
+          , "cant = " ++ show (short cant)
           , "with mode " ++ show mode
           ]
       )
@@ -1196,7 +1195,7 @@ shrinkWithSpec (simplifySpec -> spec) a = filter (`conformsToSpec` spec) $ case 
 
 shrinkFromPreds :: HasSpec fn a => Pred fn -> Var a -> a -> [a]
 shrinkFromPreds p
-  | Result _ plan <- prepareLinearization p = \x a -> listFromGE $ do
+  | Result plan <- prepareLinearization p = \x a -> listFromGE $ do
       -- NOTE: we do this to e.g. guard against bad construction functions in Exists
       xaGood <- checkPred (singletonEnv x a) p
       unless xaGood $
@@ -1292,7 +1291,7 @@ envFromPred env p = case p of
 genFromSpec :: forall fn a. (HasCallStack, HasSpec fn a) => Specification fn a -> Gen a
 genFromSpec spec = do
   res <- catchGen $ genFromSpecT @fn @a @GE spec
-  either (error . show . NE.toList) pure res
+  either (error . show . catMessages) pure res
 
 -- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
 genFromSpecWithSeed ::
@@ -1309,9 +1308,9 @@ debugSpec spec = do
           then putStrLn "True"
           else putStrLn "False, perhaps there is an unsafeExists in the spec?"
   case ans of
-    FatalError xs x -> mapM f xs >> f x
-    GenError xs x -> mapM f xs >> f x
-    Result _ x -> print spec >> print x >> ok x
+    FatalError xs -> mapM_ f xs
+    GenError xs -> mapM_ f xs
+    Result x -> print spec >> print x >> ok x
 
 genInverse ::
   ( MonadGenError m
@@ -1519,7 +1518,7 @@ backPropagation (SolverPlan plan graph) = SolverPlan (go [] (reverse plan)) grap
         termVarEqCases spec x' t
           | Just Refl <- eqVar x x'
           , [Name y] <- Set.toList $ freeVarSet t
-          , Result _ ctx <- toCtx y t =
+          , Result ctx <- toCtx y t =
               [SolverStage y [] (propagateSpec spec ctx)]
         termVarEqCases _ _ _ = []
 
@@ -1608,7 +1607,7 @@ short xs = "([" <+> viaShow (length xs) <+> "elements ...] @" <> prettyType @a <
 prettyPlan :: HasSpec fn a => Specification fn a -> Doc ann
 prettyPlan (simplifySpec -> spec)
   | SuspendedSpec _ p <- spec
-  , Result _ plan <- prepareLinearization p =
+  , Result plan <- prepareLinearization p =
       vsep'
         [ "Simplified spec:" /> pretty spec
         , pretty plan
@@ -1761,9 +1760,9 @@ normalizeSolverStage (SolverStage x ps spec) = SolverStage x ps'' (spec <> spec'
 
 fromGESpec :: HasCallStack => GE (Specification fn a) -> Specification fn a
 fromGESpec ge = case ge of
-  Result [] s -> s
-  Result es s -> addToErrorSpec (foldr1 (<>) es) s
-  _ -> fromGE ErrorSpec ge
+  Result s -> s
+  GenError xs -> ErrorSpec (catMessageList xs)
+  FatalError es -> error $ catMessages es
 
 -- | Add the explanations, if it's an ErrorSpec, else drop them
 addToErrorSpec :: NE.NonEmpty String -> Specification fn a -> Specification fn a
@@ -1886,8 +1885,10 @@ computeSpecSimplified x p = localGESpec $ case p of
         ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty p)]
   where
     -- We want `genError` to turn into `ErrorSpec` and we want `FatalError` to turn into `FatalError`
-    localGESpec ge@FatalError {} = ge
-    localGESpec ge = pure $ fromGESpec ge
+    localGESpec ge = case ge of
+      (GenError xs) -> Result $ ErrorSpec (catMessageList xs)
+      (FatalError es) -> FatalError es
+      (Result x) -> Result x
 
 -- | Precondition: the `Pred fn` defines the `Var a`.
 --
@@ -5636,7 +5637,7 @@ showType :: forall t. Typeable t => String
 showType = show (typeRep (Proxy @t))
 
 prettyType :: forall t x. Typeable t => Doc x
-prettyType = fromString $ showType @t
+prettyType = fromString $ show (typeRep (Proxy @t))
 
 instance HasSpec fn a => Pretty (Term fn a) where
   pretty = prettyPrec 0
@@ -6236,11 +6237,13 @@ checkPredE env msgs = \case
           Right v -> v
           Left es -> error $ unlines $ NE.toList (msgs <> es)
      in case k eval of
-          Result _ a -> checkPredE (extendEnv x a env) msgs p
-          FatalError ess es -> Just (msgs <> foldr1 (<>) ess <> es)
-          GenError ess es -> Just (msgs <> foldr1 (<>) ess <> es)
+          Result a -> checkPredE (extendEnv x a env) msgs p
+          FatalError es -> Just (msgs <> catMessageList es)
+          GenError es -> Just (msgs <> catMessageList es)
   Explain es p -> checkPredE env (msgs <> es) p
 
+-- | conformsToSpec with explanation. Nothing if (conformsToSpec a spec),
+--   but (Just explanations) if not(conformsToSpec a spec).
 conformsToSpecE ::
   forall fn a.
   HasSpec fn a =>
@@ -6249,7 +6252,7 @@ conformsToSpecE ::
   NE.NonEmpty String ->
   Maybe (NE.NonEmpty String)
 conformsToSpecE a (ExplainSpec [] s) msgs = conformsToSpecE a s msgs
-conformsToSpecE a (ExplainSpec (x : xs) s) msgs = conformsToSpecE a s (msgs <> (x NE.:| xs))
+conformsToSpecE a (ExplainSpec (x : xs) s) msgs = conformsToSpecE a s ((x :| xs) <> msgs)
 conformsToSpecE _ TrueSpec _ = Nothing
 conformsToSpecE a (MemberSpec as) msgs =
   if elem a as
