@@ -25,6 +25,7 @@ import Cardano.Ledger.BaseTypes (
   maybeToStrictMaybe,
   mkTxIxPartial,
  )
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (
   pattern KeyHashObj,
@@ -182,6 +183,7 @@ genesis ::
   forall era.
   ( EraTxOut era
   , EraGov era
+  , EraCertState era
   ) =>
   LedgerState era
 genesis = genesisState genDelegs0 utxo0

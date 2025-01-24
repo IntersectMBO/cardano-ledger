@@ -133,6 +133,7 @@ filterStakePoolDelegsAndRewards umap creds =
 --
 -- Implementation for @GetFilteredDelegationsAndRewardAccounts@ query.
 queryStakePoolDelegsAndRewards ::
+  EraCertState era =>
   NewEpochState era ->
   Set (Credential 'Staking) ->
   ( Map (Credential 'Staking) (KeyHash 'StakePool)
@@ -140,8 +141,8 @@ queryStakePoolDelegsAndRewards ::
   )
 queryStakePoolDelegsAndRewards nes = filterStakePoolDelegsAndRewards (dsUnified (getDState nes))
 
-getDState :: NewEpochState era -> DState era
-getDState = certDState . lsCertState . esLState . nesEs
+getDState :: EraCertState era => NewEpochState era -> DState era
+getDState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
 
 queryConstitution :: ConwayEraGov era => NewEpochState era -> Constitution era
 queryConstitution = (^. constitutionGovStateL) . queryGovState
@@ -159,6 +160,7 @@ queryGovState nes = nes ^. nesEpochStateL . epochStateGovStateL
 
 -- | Query DRep state.
 queryDRepState ::
+  EraCertState era =>
   NewEpochState era ->
   -- | Specify a set of DRep credentials whose state should be returned. When this set is
   -- empty, states for all of the DReps will be returned.
@@ -169,7 +171,7 @@ queryDRepState nes creds
   | otherwise = updateDormantDRepExpiry' vStateFiltered ^. vsDRepsL
   where
     vStateFiltered = vState & vsDRepsL %~ (`Map.restrictKeys` creds)
-    vState = certVState $ lsCertState $ esLState $ nesEs nes
+    vState = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
     updateDormantDRepExpiry' = updateDormantDRepExpiry (nes ^. nesELL)
 
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
@@ -190,7 +192,7 @@ queryDRepStakeDistr nes creds
 -- | Query the stake distribution of the registered DReps. This does not
 -- include the @AlwaysAbstain@ and @NoConfidence@ DReps.
 queryRegisteredDRepStakeDistr ::
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   -- | Specify DRep Ids whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the registered DReps will be returned.
@@ -228,16 +230,15 @@ querySPOStakeDistr nes keys
     distr = psPoolDistr . fst $ finishedPulserState nes
 
 -- | Query committee members
-queryCommitteeState :: NewEpochState era -> CommitteeState era
-queryCommitteeState nes =
-  vsCommitteeState $ certVState $ lsCertState $ esLState $ nesEs nes
+queryCommitteeState :: EraCertState era => NewEpochState era -> CommitteeState era
+queryCommitteeState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
 {-# DEPRECATED queryCommitteeState "In favor of `queryCommitteeMembersState`" #-}
 
 -- | Query committee members. Whenever the system is in No Confidence mode this query will
 -- return `Nothing`.
 queryCommitteeMembersState ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   -- | filter by cold credentials (don't filter when empty)
   Set (Credential 'ColdCommitteeRole) ->
   -- | filter by hot credentials (don't filter when empty)
@@ -391,6 +392,7 @@ finishedPulserState nes = finishDRepPulser (nes ^. newEpochStateGovStateL . drep
 -- in absence of an explicit vote. Note that this is different from the delegatee determined
 -- by the credential of the stake pool itself.
 queryStakePoolDefaultVote ::
+  EraCertState era =>
   NewEpochState era ->
   -- | Specify the key hash of the pool whose default vote should be returned.
   KeyHash 'StakePool ->

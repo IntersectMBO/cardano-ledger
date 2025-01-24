@@ -144,7 +144,7 @@ import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (Block)
-import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
+import Cardano.Ledger.CertState (EraCertState (..), dsUnifiedL)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
 import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
@@ -468,6 +468,8 @@ class
   , NFData (EraRuleEvent "TICK" era)
   , Typeable (EraRuleEvent "TICK" era)
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
+  , ToExpr (CertState era)
+  , EraCertState era
   ) =>
   ShelleyEraImp era
   where
@@ -829,7 +831,7 @@ runShelleyBase act = do
   globals <- use impGlobalsL
   pure $ runIdentity $ runReaderT act globals
 
-getRewardAccountAmount :: RewardAccount -> ImpTestM era Coin
+getRewardAccountAmount :: EraCertState era => RewardAccount -> ImpTestM era Coin
 getRewardAccountAmount rewardAccount = do
   umap <- getsNES $ nesEsL . epochStateUMapL
   let cred = raCredential rewardAccount
@@ -1251,7 +1253,7 @@ passEpoch = do
   gets impNES >>= epochBoundaryCheck preNES
 
 epochBoundaryCheck ::
-  (EraTxOut era, EraGov era, HasCallStack) =>
+  (EraTxOut era, EraGov era, HasCallStack, EraCertState era) =>
   NewEpochState era ->
   NewEpochState era ->
   ImpTestM era ()
@@ -1495,12 +1497,12 @@ registerRewardAccount = do
   khDelegator <- freshKeyHash
   registerStakeCredential (KeyHashObj khDelegator)
 
-tryLookupReward :: Credential 'Staking -> ImpTestM era (Maybe Coin)
+tryLookupReward :: EraCertState era => Credential 'Staking -> ImpTestM era (Maybe Coin)
 tryLookupReward stakingCredential = do
   umap <- getsNES (nesEsL . epochStateUMapL)
   pure $ fromCompact . rdReward <$> UMap.lookup stakingCredential (RewDepUView umap)
 
-lookupReward :: HasCallStack => Credential 'Staking -> ImpTestM era Coin
+lookupReward :: (HasCallStack, EraCertState era) => Credential 'Staking -> ImpTestM era Coin
 lookupReward stakingCredential = do
   mbyRwd <- tryLookupReward stakingCredential
   case mbyRwd of
@@ -1613,12 +1615,12 @@ expectUTxOContent utxo = traverse_ $ \(txIn, test) -> do
     expectationFailure $
       "UTxO content failed predicate:\n" <> ansiExprString txIn <> " -> " <> ansiExprString result
 
-expectRegisteredRewardAddress :: RewardAccount -> ImpTestM era ()
+expectRegisteredRewardAddress :: EraCertState era => RewardAccount -> ImpTestM era ()
 expectRegisteredRewardAddress (RewardAccount _ cred) = do
   umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
   Map.member cred (rdPairMap umap) `shouldBe` True
 
-expectNotRegisteredRewardAddress :: RewardAccount -> ImpTestM era ()
+expectNotRegisteredRewardAddress :: EraCertState era => RewardAccount -> ImpTestM era ()
 expectNotRegisteredRewardAddress (RewardAccount _ cred) = do
   umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
   Map.member cred (rdPairMap umap) `shouldBe` False

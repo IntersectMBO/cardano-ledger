@@ -23,6 +23,7 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
  )
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -30,7 +31,6 @@ import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (StakeRef
 import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   IncrementalStake (..),
@@ -137,14 +137,15 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
         where
           utxoBal = coinBalance u'
           incrStakeBal = fold (credMap sd') <> fold (ptrMap sd')
-          ptrs = ptrsMap $ certDState dp
-          ptrs' = ptrsMap $ certDState dp'
+          ptrs = ptrsMap $ dp ^. certDStateL
+          ptrs' = ptrsMap $ dp' ^. certDStateL
 
 incrStakeComparisonTest ::
   forall era.
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGov era
+  , EraCertState era
   ) =>
   Proxy era ->
   TestTree
@@ -160,12 +161,14 @@ incrStakeComparisonTest Proxy =
 
 checkIncrementalStake ::
   forall era.
-  (EraTxOut era, EraGov era) =>
+  (EraTxOut era, EraGov era, EraCertState era) =>
   EpochState era ->
   Property
 checkIncrementalStake es =
   let
-    (LedgerState (UTxOState utxo _ _ _ incStake _) (CertState _vstate pstate dstate)) = esLState es
+    (LedgerState (UTxOState utxo _ _ _ incStake _) certState) = esLState es
+    dstate = certState ^. certDStateL
+    pstate = certState ^. certPStateL
     stake = stakeDistr @era utxo dstate pstate
     istake = incrementalStakeDistr (es ^. curPParamsEpochStateL) incStake dstate pstate
    in

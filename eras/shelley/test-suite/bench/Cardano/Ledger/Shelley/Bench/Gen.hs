@@ -11,6 +11,7 @@ module Cardano.Ledger.Shelley.Bench.Gen (
 )
 where
 
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.API (
   ApplyBlock,
@@ -60,6 +61,7 @@ import Test.QuickCheck (generate)
 genChainState ::
   ( EraGen era
   , EraGov era
+  , EraCertState era
   ) =>
   Int ->
   GenEnv era ->
@@ -113,6 +115,7 @@ genTriple ::
   , EraGov era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
+  , EraCertState era
   ) =>
   Proxy era ->
   Int ->

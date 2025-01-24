@@ -12,6 +12,7 @@ where
 
 import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block)
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
@@ -49,6 +50,7 @@ initStEx1 ::
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
   , EraGov era
+  , EraCertState era
   ) =>
   ChainState era
 initStEx1 = initSt (UTxO mempty)
@@ -92,6 +94,7 @@ expectedStEx1 ::
   , ProtVerAtMost era 6
   , EraGov era
   , Default (StashedAVVMAddresses era)
+  , EraCertState era
   ) =>
   ChainState era
 expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) $ newLab blockEx1 initStEx1
@@ -109,6 +112,7 @@ exEmptyBlock ::
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
   , EraGov era
+  , EraCertState era
   ) =>
   CHAINExample era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

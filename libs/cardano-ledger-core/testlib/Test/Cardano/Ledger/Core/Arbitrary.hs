@@ -79,7 +79,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
 import Cardano.Ledger.CertState (
   Anchor (..),
-  CertState (..),
   CommitteeAuthorization (..),
   CommitteeState (..),
   DState (..),
@@ -765,9 +764,9 @@ genRightPreferenceUMap = do
 -- Cardano.Ledger.CertState -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Era era => Arbitrary (CertState era) where
-  arbitrary = CertState <$> arbitrary <*> arbitrary <*> arbitrary
-  shrink = genericShrink
+-- instance Era era => Arbitrary (CertState era) where
+--   arbitrary = CertState <$> arbitrary <*> arbitrary <*> arbitrary
+--   shrink = genericShrink
 
 instance Era era => Arbitrary (DState era) where
   arbitrary =

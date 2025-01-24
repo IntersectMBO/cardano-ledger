@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | The data types in this file constitute a Model of the NewEpochState
 --   sufficient for generating transactions that can run in the
@@ -32,16 +33,17 @@
 module Test.Cardano.Ledger.Generic.ModelState where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.EpochBoundary (SnapShots, emptySnapShots)
 import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  CertState (..),
   DState (..),
   EpochState (..),
   IncrementalStake (..),
@@ -71,7 +73,7 @@ import qualified Data.Maybe as Maybe
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (Text)
 import GHC.Natural (Natural)
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   PDoc,
@@ -196,8 +198,8 @@ pStateZero =
     , psDeposits = Map.empty
     }
 
-dPStateZero :: CertState era
-dPStateZero = CertState def pStateZero dStateZero
+dPStateZero :: EraCertState era => CertState era
+dPStateZero = mkCertState def pStateZero dStateZero
 
 incrementalStakeZero :: IncrementalStake
 incrementalStakeZero = IStake Map.empty Map.empty
@@ -226,10 +228,10 @@ uTxOStateZero =
 pParamsZero :: Reflect era => PParams era
 pParamsZero = lift pParamsZeroByProof
 
-ledgerStateZero :: forall era. Reflect era => LedgerState era
+ledgerStateZero :: forall era. (Reflect era, EraCertState era) => LedgerState era
 ledgerStateZero = LedgerState uTxOStateZero dPStateZero
 
-epochStateZero :: Reflect era => EpochState era
+epochStateZero :: (Reflect era, EraCertState era) => EpochState era
 epochStateZero =
   EpochState
     accountStateZero
@@ -239,7 +241,7 @@ epochStateZero =
     & curPParamsEpochStateL .~ pParamsZero
     & prevPParamsEpochStateL .~ pParamsZero
 
-newEpochStateZero :: forall era. Reflect era => NewEpochState era
+newEpochStateZero :: forall era. (Reflect era, EraCertState era) => NewEpochState era
 newEpochStateZero =
   NewEpochState
     (EpochNo 0)
@@ -319,8 +321,8 @@ instance Extract (PState era) era where
 instance Extract (VState era) era where
   extract _ = VState def def (EpochNo 0)
 
-instance Extract (CertState era) era where
-  extract x = CertState (extract x) (extract x) (extract x)
+instance Extract (ShelleyCertState era) era where
+  extract x = ShelleyCertState (extract x) (extract x) (extract x)
 
 instance Reflect era => Extract (UTxOState era) era where
   extract x =
@@ -332,10 +334,12 @@ instance Reflect era => Extract (UTxOState era) era where
       emptyGovState
       mempty
 
-instance Reflect era => Extract (LedgerState era) era where
+-- TODO: think this through, I enabled `UndecidableInstances` to make it compile but
+-- I have yet to figure out if it's okay to do so
+instance (Reflect era, Extract (CertState era) era) => Extract (LedgerState era) era where
   extract x = LedgerState (extract x) (extract x)
 
-instance Reflect era => Extract (EpochState era) era where
+instance (Reflect era, Extract (CertState era) era) => Extract (EpochState era) era where
   extract x =
     EpochState
       (mAccountState x)
@@ -345,7 +349,7 @@ instance Reflect era => Extract (EpochState era) era where
       & curPParamsEpochStateL .~ mPParams x
       & prevPParamsEpochStateL .~ mPParams x
 
-instance forall era. Reflect era => Extract (NewEpochState era) era where
+instance forall era. (Reflect era, Extract (CertState era) era) => Extract (NewEpochState era) era where
   extract x =
     NewEpochState
       (mEL x)
@@ -356,7 +360,7 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
       (PoolDistr (mPoolDistr x) (CompactCoin 1))
       (stashedAVVMAddressesZero (reify :: Proof era))
 
-abstract :: EraGov era => NewEpochState era -> ModelNewEpochState era
+abstract :: (EraGov era, EraCertState era) => NewEpochState era -> ModelNewEpochState era
 abstract x =
   ModelNewEpochState
     { mPoolParams = (psStakePoolParams . certPState . lsCertState . esLState . nesEs) x
@@ -384,6 +388,9 @@ abstract x =
         SNothing -> SNothing -- <- There is no way to complete (nesRu x) to get a RewardUpdate
         SJust pru -> SJust (complete pru)
     }
+  where
+    certPState certState = certState ^. certPStateL
+    certDState certState = certState ^. certDStateL
 
 complete :: PulsingRewUpdate -> RewardUpdate
 complete (Complete r) = r
