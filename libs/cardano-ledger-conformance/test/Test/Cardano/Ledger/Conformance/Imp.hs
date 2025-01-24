@@ -157,12 +157,9 @@ spec =
           xdescribe "ENACT" Enact.spec
           xdescribe "EPOCH" Epoch.spec
           xdescribe "GOV" Gov.spec
-          -- GOVCERT tests enabling pending on these two issues in spec:
-          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/634
-          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/633
           describe "GOVCERT" GovCert.spec
-          -- LEDGER tests enabling pending (at least) on the implementation of scriptSize in the spec:
-          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/620
+          -- LEDGER tests pending on the dRep delegations cleanup in the spec:
+          -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
           xdescribe "LEDGER" Ledger.spec
           xdescribe "RATIFY" Ratify.spec
           xdescribe "UTXO" Utxo.spec
