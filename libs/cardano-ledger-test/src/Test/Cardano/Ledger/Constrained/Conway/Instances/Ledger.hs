@@ -106,6 +106,7 @@ import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.PoolParams
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardPulser (RSLP))
@@ -1005,14 +1006,16 @@ instance HasSimpleRep RDPair where
       )
 instance IsConwayUniv fn => HasSpec fn RDPair
 
-instance HasSimpleRep (CertState era)
-instance (IsConwayUniv fn, Era era) => HasSpec fn (CertState era)
+instance HasSimpleRep (ShelleyCertState era)
+instance (IsConwayUniv fn, Era era) => HasSpec fn (ShelleyCertState era)
 
 instance HasSimpleRep (GovRelation StrictMaybe era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (GovRelation StrictMaybe era)
 
 instance Era era => HasSimpleRep (GovEnv era)
-instance (EraSpecPParams era, IsConwayUniv fn) => HasSpec fn (GovEnv era)
+instance
+  (EraSpecPParams era, IsConwayUniv fn, EraCertState era, HasSpec fn (CertState era)) =>
+  HasSpec fn (GovEnv era)
 
 instance HasSimpleRep (GovActionState era)
 instance (IsConwayUniv fn, Era era, EraSpecPParams era) => HasSpec fn (GovActionState era)
@@ -1307,6 +1310,8 @@ instance
   , HasSpec fn (TxOut era)
   , IsNormalType (TxOut era)
   , HasSpec fn (GovState era)
+  , EraCertState era
+  , HasSpec fn (CertState era)
   ) =>
   HasSpec fn (LedgerState era)
 
@@ -1384,7 +1389,9 @@ instance
   HasSpec fn (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
 
 instance Era era => HasSimpleRep (UtxoEnv era)
-instance (EraSpecPParams era, IsConwayUniv fn) => HasSpec fn (UtxoEnv era)
+instance
+  (EraSpecPParams era, IsConwayUniv fn, EraCertState era, HasSpec fn (CertState era)) =>
+  HasSpec fn (UtxoEnv era)
 
 -- ================================================================
 -- All the Tx instances
@@ -1600,6 +1607,8 @@ instance
   , HasSpec fn (TxOut era)
   , IsNormalType (TxOut era)
   , HasSpec fn (GovState era)
+  , EraCertState era
+  , HasSpec fn (CertState era)
   ) =>
   HasSpec fn (EpochState era)
 
@@ -1639,6 +1648,8 @@ instance
   , IsNormalType (TxOut era)
   , HasSpec fn (GovState era)
   , HasSpec fn (StashedAVVMAddresses era)
+  , EraCertState era
+  , HasSpec fn (CertState era)
   ) =>
   HasSpec fn (NewEpochState era)
 

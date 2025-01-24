@@ -93,6 +93,7 @@ import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (Testnet), inject)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
@@ -101,7 +102,6 @@ import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   LedgerState (..),
   PState (..),
@@ -815,7 +815,7 @@ instance Reflect era => Show (GenState era) where
 -- generating a coherent Trace (a sequence of Transactions that can
 -- logically be applied one after another)
 
-initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
+initialLedgerState :: forall era. (Reflect era, EraCertState era) => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
     umap =
@@ -825,7 +825,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         (gsInitialDelegations gstate)
         Map.empty
     utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovState mempty
-    dpstate = CertState def pstate dstate
+    dpstate = mkCertState def pstate dstate
     dstate =
       DState
         umap

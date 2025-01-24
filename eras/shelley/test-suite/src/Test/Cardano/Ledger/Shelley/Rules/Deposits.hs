@@ -16,10 +16,10 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   shortChainTrace,
  )
 
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -34,6 +34,7 @@ import Cardano.Ledger.UMap (depositMap)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>))
 import qualified Data.Map.Strict as Map
+import Lens.Micro ((^.))
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -60,6 +61,7 @@ tests ::
   ( EraGen era
   , EraGov era
   , QC.HasTrace (CHAIN era) (GenEnv era)
+  , EraCertState era
   ) =>
   TestTree
 tests =
@@ -85,10 +87,13 @@ nonNegativeDeposits SourceSignalTarget {source = chainSt} =
 
 -- | Check that the sum of key Deposits (in the UMap) and the pool Depoits (in psDeposits) are equal to the utsosDeposits
 depositInvariant ::
+  EraCertState era =>
   SourceSignalTarget (CHAIN era) ->
   Property
 depositInvariant SourceSignalTarget {source = chainSt} =
-  let LedgerState {lsUTxOState = utxost, lsCertState = CertState _vstate pstate dstate} = (esLState . nesEs . chainNes) chainSt
+  let LedgerState {lsUTxOState = utxost, lsCertState = certState} = (esLState . nesEs . chainNes) chainSt
+      dstate = certState ^. certDStateL
+      pstate = certState ^. certPStateL
       allDeposits = utxosDeposited utxost
       sumCoin = Map.foldl' (<+>) (Coin 0)
       keyDeposits = (UM.fromCompact . UM.sumDepositUView . UM.RewDepUView . dsUnified) dstate
@@ -106,10 +111,12 @@ depositInvariant SourceSignalTarget {source = chainSt} =
         (allDeposits === keyDeposits <+> poolDeposits)
 
 rewardDepositDomainInvariant ::
+  EraCertState era =>
   SourceSignalTarget (CHAIN era) ->
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =
-  let LedgerState {lsCertState = CertState {certDState = dstate}} = (esLState . nesEs . chainNes) chainSt
+  let LedgerState {lsCertState = certState} = (esLState . nesEs . chainNes) chainSt
+      dstate = certState ^. certDStateL
       rewardDomain = UM.domain (UM.RewDepUView (dsUnified dstate))
       depositDomain = Map.keysSet (depositMap (dsUnified dstate))
    in counterexample

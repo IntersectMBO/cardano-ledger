@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Shelley.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.Binary
+import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -43,6 +44,8 @@ roundTripShelleyCommonSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , RuleListEra era
+  , EraCertState era
+  , Arbitrary (CertState era)
   ) =>
   Spec
 roundTripShelleyCommonSpec = do
@@ -63,6 +66,8 @@ roundTripStateEraTypesSpec ::
   , Arbitrary (Value era)
   , Arbitrary (PParams era)
   , Arbitrary (GovState era)
+  , EraCertState era
+  , Arbitrary (CertState era)
   ) =>
   Spec
 roundTripStateEraTypesSpec = do

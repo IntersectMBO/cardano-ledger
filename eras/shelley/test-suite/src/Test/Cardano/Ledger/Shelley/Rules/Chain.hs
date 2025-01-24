@@ -35,7 +35,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (VState (..))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Chain (
   ChainPredicateFailure (..),
   chainChecks,
@@ -53,15 +53,13 @@ import Cardano.Ledger.Shelley.AdaPots (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   StashedAVVMAddresses,
   curPParamsEpochStateL,
-  dsGenDelegs,
+  dsGenDelegsL,
   futurePParamsEpochStateL,
   nesEpochStateL,
   prevPParamsEpochStateL,
@@ -192,6 +190,7 @@ initialShelleyState ::
   ( EraTxOut era
   , EraGov era
   , Default (StashedAVVMAddresses era)
+  , EraCertState era
   ) =>
   WithOrigin LastAppliedBlock ->
   EpochNo ->
@@ -218,7 +217,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     emptyGovState
                     mempty
                 )
-                (CertState def def dState)
+                (mkCertState def def dState)
             )
             emptySnapShots
             def
@@ -271,6 +270,7 @@ instance
   , EncCBORGroup (TxSeq era)
   , ProtVerAtMost era 6
   , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , EraCertState era
   ) =>
   STS (CHAIN era)
   where
@@ -306,6 +306,7 @@ chainTransition ::
   , ProtVerAtMost era 6
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraGov era
+  , EraCertState era
   ) =>
   TransitionRule (CHAIN era)
 chainTransition =
@@ -349,8 +350,9 @@ chainTransition =
             NewEpochState e2 _ bcur es _ _pd _ = nes'
         let EpochState account ls _ _ = es
             pp' = es ^. curPParamsEpochStateL
-        let LedgerState _ (CertState VState {} PState {} DState {dsGenDelegs = genDelegs}) = ls
-        let ph = lastAppliedHash lab
+        let LedgerState _ certState = ls
+            genDelegs = certState ^. certDStateL . dsGenDelegsL
+            ph = lastAppliedHash lab
             etaPH = prevHashToNonce ph
 
         TicknState eta0' etaH' <-
@@ -428,13 +430,14 @@ instance Era era => Embed (PRTCL MockCrypto) (CHAIN era) where
 totalAdaPots ::
   ( EraTxOut era
   , EraGov era
+  , EraCertState era
   ) =>
   ChainState era ->
   AdaPots
 totalAdaPots = totalAdaPotsES . nesEs . chainNes
 
 -- | Calculate the total ada in the chain state
-totalAda :: (EraTxOut era, EraGov era) => ChainState era -> Coin
+totalAda :: (EraTxOut era, EraGov era, EraCertState era) => ChainState era -> Coin
 totalAda = totalAdaES . nesEs . chainNes
 
 instance
@@ -442,6 +445,7 @@ instance
   , ToExpr (TxOut era)
   , ToExpr (StashedAVVMAddresses era)
   , ToExpr (GovState era)
+  , ToExpr (CertState era)
   ) =>
   ToExpr (ChainState era)
 

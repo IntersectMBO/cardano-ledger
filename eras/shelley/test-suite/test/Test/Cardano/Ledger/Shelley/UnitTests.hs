@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..), raCredential, pattern RewardAccount)
 import Cardano.Ledger.BaseTypes hiding ((==>))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness)
@@ -41,12 +42,10 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  CertState (..),
   IncrementalStake (..),
   LedgerState (..),
   UTxOState (..),
-  certDState,
-  dsUnified,
+  dsUnifiedL,
   rewards,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -319,15 +318,15 @@ utxoState =
     mempty
 
 dpState :: CertState C
-dpState = CertState def def def
+dpState = def
 
 ledgerState :: LedgerState C
 ledgerState = LedgerState utxoState dpState
 
 addReward :: CertState C -> Credential 'Staking -> Coin -> CertState C
-addReward dp ra c = dp {certDState = ds {dsUnified = rewards'}}
+addReward dp ra c = dp & certDStateL . dsUnifiedL .~ rewards'
   where
-    ds = certDState dp
+    ds = dp ^. certDStateL
     rewards' = UM.insert ra (UM.RDPair (UM.compactCoinOrError c) (UM.CompactCoin 2)) (rewards ds)
 
 -- Any key deposit works in this test ^

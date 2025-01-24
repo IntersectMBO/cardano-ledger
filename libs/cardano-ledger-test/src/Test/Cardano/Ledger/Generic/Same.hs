@@ -30,6 +30,7 @@ import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..))
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -113,8 +114,8 @@ eqVia pcf x y = if x == y then Nothing else Just (notEq (pcf x) (pcf y))
 class Same era t where
   same :: Proof era -> t -> t -> [(String, Maybe PDoc)]
 
-instance Same era (CertState era) where
-  same proof (CertState d1 p1 v1) (CertState d2 p2 v2) =
+instance Same era (ShelleyCertState era) where
+  same proof (ShelleyCertState v1 p1 d1) (ShelleyCertState v2 p2 d2) =
     extendLabel "DState " (same proof d1 d2)
       ++ extendLabel "PState " (same proof p1 p2)
       ++ extendLabel "VState " (same proof v1 v2)
@@ -179,12 +180,12 @@ instance Reflect era => Same era (UTxOState era) where
         Babbage -> ppuPretty
         Conway -> []
 
-instance Reflect era => Same era (LedgerState era) where
+instance (Reflect era, Same era (CertState era)) => Same era (LedgerState era) where
   same proof x1 x2 =
     extendLabel "UTxOState " (same proof (lsUTxOState x1) (lsUTxOState x2))
       ++ extendLabel "CertState " (same proof (lsCertState x1) (lsCertState x2))
 
-instance Reflect era => Same era (EpochState era) where
+instance (Reflect era, Same era (CertState era)) => Same era (EpochState era) where
   same proof e1 e2 =
     [ ("AccountState", eqByShow (esAccountState e1) (esAccountState e2))
     , ("SnapShots", eqByShow (esSnapshots e1) (esSnapshots e2))
@@ -206,7 +207,7 @@ sameStashedAVVMAddresses proof x y =
     Conway -> if x == y then Nothing else Just (viaShow x)
 
 instance
-  Reflect era =>
+  (Reflect era, Same era (CertState era)) =>
   Same era (NewEpochState era)
   where
   same proof n1 n2 =
@@ -237,7 +238,7 @@ sameWithDependency (SomeM labx actx x1 x2 : more) =
     ansx -> extendLabel (labx ++ " ") ansx ++ sameWithDependency more
 
 instance
-  Reflect era =>
+  (Reflect era, Same era (CertState era)) =>
   Same era (ShelleyLedgerExamples era)
   where
   same proof x1 x2 = case (sleBlock x1, sleBlock x2) of

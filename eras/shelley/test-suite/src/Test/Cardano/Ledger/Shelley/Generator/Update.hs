@@ -37,6 +37,7 @@ import Cardano.Ledger.BaseTypes (
   succVersion,
   unsafeNonZero,
  )
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
@@ -55,6 +56,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
   UTxOState (..),
+  dsGenDelegsL,
  )
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
@@ -315,7 +317,7 @@ genUpdateForNodes c s e coreKeys pp =
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::
-  EraGen era =>
+  (EraGen era, EraCertState era) => -- TODO: consider adding EraCertState to EraGen
   Constants ->
   SlotNo ->
   [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)] ->
@@ -334,7 +336,7 @@ genUpdate
       nodes <- take 5 <$> QC.shuffle coreNodes
 
       let e = epochFromSlotNo s
-          GenDelegs genDelegs = dsGenDelegs (certDState delegPoolSt)
+          GenDelegs genDelegs = delegPoolSt ^. certDStateL . dsGenDelegsL
           genesisKeys = fst <$> nodes
           coreSigners =
             catMaybes $

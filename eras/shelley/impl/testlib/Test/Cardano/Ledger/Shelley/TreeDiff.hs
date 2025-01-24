@@ -10,9 +10,10 @@ module Test.Cardano.Ledger.Shelley.TreeDiff (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (Obligations)
+import Cardano.Ledger.CertState (EraCertState (..), Obligations)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.AdaPots (AdaPots)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -132,6 +133,7 @@ instance
   , ToExpr (PParams era)
   , ToExpr (StashedAVVMAddresses era)
   , ToExpr (GovState era)
+  , ToExpr (CertState era)
   ) =>
   ToExpr (NewEpochState era)
 
@@ -139,12 +141,14 @@ instance
   ( ToExpr (TxOut era)
   , ToExpr (PParams era)
   , ToExpr (GovState era)
+  , ToExpr (CertState era)
   ) =>
   ToExpr (EpochState era)
 
 instance
   ( ToExpr (TxOut era)
   , ToExpr (GovState era)
+  , ToExpr (CertState era)
   ) =>
   ToExpr (LedgerState era)
 
@@ -265,7 +269,7 @@ instance ToExpr (ShelleyMirEvent era)
 
 instance ToExpr RupdEvent
 
-instance ToExpr (PParamsHKD Identity era) => ToExpr (UtxoEnv era)
+instance (ToExpr (PParamsHKD Identity era), ToExpr (CertState era)) => ToExpr (UtxoEnv era)
 
 instance ToExpr (PParamsHKD Identity era) => ToExpr (LedgerEnv era)
 
@@ -274,3 +278,6 @@ instance ToExpr (PParamsHKD Identity era) => ToExpr (ShelleyLedgersEnv era)
 instance
   ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
   ToExpr (ShelleyLedgersPredFailure era)
+
+instance EraCertState era => ToExpr (ShelleyCertState era) -- where
+-- toExpr (ShelleyTxOut x y) = App "ShelleyTxOut" [toExpr x, toExpr y]

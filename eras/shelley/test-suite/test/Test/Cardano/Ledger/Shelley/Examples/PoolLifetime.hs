@@ -33,6 +33,7 @@ import Cardano.Ledger.BaseTypes (
   (⭒),
  )
 import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (CompactCoin),
@@ -330,7 +331,7 @@ blockEx2 =
     0
     (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 90) 0 (KESPeriod 0))
 
-makePulser :: EraGov era => BlocksMade -> ChainState era -> PulsingRewUpdate
+makePulser :: (EraGov era, EraCertState era) => BlocksMade -> ChainState era -> PulsingRewUpdate
 makePulser bs cs =
   startStep
     (epochSize $ EpochNo 0)
@@ -340,10 +341,11 @@ makePulser bs cs =
     (activeSlotCoeff testGlobals)
     (securityParameter testGlobals)
 
-makePulser' :: EraGov era => ChainState era -> PulsingRewUpdate
+makePulser' :: (EraGov era, EraCertState era) => ChainState era -> PulsingRewUpdate
 makePulser' = makePulser (BlocksMade mempty)
 
-makeCompletedPulser :: EraGov era => BlocksMade -> ChainState era -> PulsingRewUpdate
+makeCompletedPulser ::
+  (EraGov era, EraCertState era) => BlocksMade -> ChainState era -> PulsingRewUpdate
 makeCompletedPulser bs cs = Complete . fst . runShelleyBase . completeRupd $ makePulser bs cs
 
 pulserEx2 :: PulsingRewUpdate

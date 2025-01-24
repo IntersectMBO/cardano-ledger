@@ -28,16 +28,15 @@ import Cardano.Ledger.BaseTypes (
   maybeToStrictMaybe,
  )
 import Cardano.Ledger.Binary (EncCBOR, serialize)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   LedgerState (..),
   UTxOState (..),
-  certDState,
   ptrsMap,
   rewards,
  )
@@ -128,6 +127,7 @@ genTx ::
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
+  , EraCertState era
   ) =>
   GenEnv era ->
   LedgerEnv era ->
@@ -166,7 +166,7 @@ genTx
           constants
           ksIndexedStakeScripts
           ksIndexedStakingKeys
-          ((Map.map (UM.fromCompact . UM.rdReward) . UM.unUnify . rewards . certDState) dpState)
+          ((Map.map (UM.fromCompact . UM.rdReward) . UM.unUnify . rewards) $ dpState ^. certDStateL)
       (update, updateWits) <-
         genUpdate
           constants
@@ -215,7 +215,7 @@ genTx
 
       outputAddrs <-
         genRecipients @era (length inputs + n) ksKeyPairs ksMSigScripts
-          >>= genPtrAddrs (certDState dpState')
+          >>= genPtrAddrs (dpState' ^. certDStateL)
 
       !_ <-
         when (coin spendingBalance < mempty) $

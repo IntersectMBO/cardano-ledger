@@ -234,8 +234,6 @@ instance ToExpr SnapShot
 
 deriving newtype instance ToExpr Stake
 
-instance ToExpr (CertState era)
-
 instance ToExpr (PState era)
 
 instance ToExpr (DState era)
