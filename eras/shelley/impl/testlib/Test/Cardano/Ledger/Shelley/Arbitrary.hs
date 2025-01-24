@@ -41,6 +41,7 @@ import Cardano.Ledger.Shelley.API (
   ShelleyTx (ShelleyTx),
   ShelleyTxBody (ShelleyTxBody),
  )
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -127,6 +128,7 @@ instance
   , Arbitrary (PParams era)
   , Arbitrary (StashedAVVMAddresses era)
   , Arbitrary (GovState era)
+  , Arbitrary (CertState era)
   ) =>
   Arbitrary (NewEpochState era)
   where
@@ -144,6 +146,7 @@ instance
   ( EraTxOut era
   , Arbitrary (TxOut era)
   , Arbitrary (GovState era)
+  , Arbitrary (CertState era)
   ) =>
   Arbitrary (EpochState era)
   where
@@ -159,6 +162,7 @@ instance
   ( EraTxOut era
   , Arbitrary (TxOut era)
   , Arbitrary (GovState era)
+  , Arbitrary (CertState era)
   ) =>
   Arbitrary (LedgerState era)
   where
@@ -740,3 +744,9 @@ instance Arbitrary RawSeed where
       <*> chooseAny
       <*> chooseAny
       <*> chooseAny
+
+instance Era era => Arbitrary (ShelleyCertState era) where
+  arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+-- instance Era era => Arbitrary (CertState era) where

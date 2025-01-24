@@ -16,6 +16,7 @@
 module Test.Cardano.Ledger.Generic.MockChain where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -101,6 +102,7 @@ deriving instance
   ( EraTxOut era
   , Eq (StashedAVVMAddresses era)
   , Eq (GovState era)
+  , EraCertState era
   ) =>
   Eq (MockChainState era)
 
@@ -111,7 +113,7 @@ instance Show (MockChainState era) where
 instance Show (MockBlock era) where
   show (MockBlock is sl _) = show is ++ " " ++ show sl
 
-instance Reflect era => TotalAda (MockChainState era) where
+instance (Reflect era, EraCertState era, TotalAda (CertState era)) => TotalAda (MockChainState era) where
   totalAda (MockChainState nes _ _ _) = totalAda nes
 
 deriving instance Generic (MockChainState era)
@@ -214,7 +216,7 @@ deriving instance
   (Eq (ShelleyTickPredFailure era), Eq (ShelleyLedgersPredFailure era)) => Eq (MockChainFailure era)
 
 ppMockChainState ::
-  Reflect era =>
+  (Reflect era, EraCertState era) =>
   MockChainState era ->
   PDoc
 ppMockChainState (MockChainState nes _ sl count) =
@@ -225,7 +227,7 @@ ppMockChainState (MockChainState nes _ sl count) =
     , ("Count", ppInt count)
     ]
 
-instance Reflect era => PrettyA (MockChainState era) where
+instance (Reflect era, EraCertState era) => PrettyA (MockChainState era) where
   prettyA = ppMockChainState
 
 ppMockBlock :: MockBlock era -> PDoc

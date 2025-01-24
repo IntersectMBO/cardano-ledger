@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Shelley.Binary.Golden (
 import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..))
 import Cardano.Ledger.Binary (EncCBOR, lengthThreshold)
 import Cardano.Ledger.Binary.Plain
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
@@ -27,6 +28,7 @@ goldenNewEpochStateExpectation ::
   , EraGov era
   , ToCBOR (StashedAVVMAddresses era)
   , EncCBOR (StashedAVVMAddresses era)
+  , EraCertState era
   ) =>
   NewEpochState era ->
   Expectation

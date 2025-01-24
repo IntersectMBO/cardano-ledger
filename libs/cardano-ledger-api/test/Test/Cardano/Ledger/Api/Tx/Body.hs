@@ -28,7 +28,7 @@ import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
 totalTxDeposits ::
-  EraTxBody era =>
+  (EraTxBody era, EraCertState era) =>
   PParams era ->
   CertState era ->
   TxBody era ->
@@ -38,7 +38,7 @@ totalTxDeposits pp dpstate txb =
   where
     certs = toList (txb ^. certsTxBodyL)
     numKeys = length $ filter isRegStakeTxCert certs
-    regpools = psStakePoolParams (certPState dpstate)
+    regpools = psStakePoolParams (dpstate ^. certPStateL)
     accum (!pools, !ans) (RegPoolTxCert poolparam) =
       -- We don't pay a deposit on a pool that is already registered
       if Map.member (ppId poolparam) pools
@@ -47,7 +47,7 @@ totalTxDeposits pp dpstate txb =
     accum ans _ = ans
 
 keyTxRefunds ::
-  (EraTxBody era, ShelleyEraTxCert era) =>
+  (EraTxBody era, ShelleyEraTxCert era, EraCertState era) =>
   PParams era ->
   CertState era ->
   TxBody era ->
@@ -55,7 +55,7 @@ keyTxRefunds ::
 keyTxRefunds pp dpstate tx = snd (foldl' accum (initialKeys, Coin 0) certs)
   where
     certs = tx ^. certsTxBodyL
-    initialKeys = UM.RewDepUView $ dsUnified $ certDState dpstate
+    initialKeys = UM.RewDepUView $ dpstate ^. certDStateL . dsUnifiedL
     keyDeposit = UM.compactCoinOrError (pp ^. ppKeyDepositL)
     accum (!keys, !ans) (RegTxCert k) =
       -- Deposit is added locally to the growing 'keys'
@@ -71,7 +71,7 @@ keyTxRefunds pp dpstate tx = snd (foldl' accum (initialKeys, Coin 0) certs)
 -- | This is the old implementation of `evalBodyTxBody`. We keep it around to ensure that
 -- the produced result hasn't changed
 evaluateTransactionBalance ::
-  (MaryEraTxBody era, ShelleyEraTxCert era) =>
+  (MaryEraTxBody era, ShelleyEraTxCert era, EraCertState era) =>
   PParams era ->
   CertState era ->
   UTxO era ->
@@ -81,7 +81,7 @@ evaluateTransactionBalance pp dpstate utxo txBody =
   evaluateTransactionBalanceShelley pp dpstate utxo txBody <> (txBody ^. mintValueTxBodyF)
 
 evaluateTransactionBalanceShelley ::
-  (EraTxBody era, ShelleyEraTxCert era) =>
+  (EraTxBody era, ShelleyEraTxCert era, EraCertState era) =>
   PParams era ->
   CertState era ->
   UTxO era ->
@@ -101,15 +101,16 @@ evaluateTransactionBalanceShelley pp dpstate utxo txBody = consumed <-> produced
 -- | Randomly lookup pool params and staking credentials to add them as unregistration and
 -- undelegation certificates respectively.
 genTxBodyFrom ::
-  (EraTxBody era, ShelleyEraTxCert era, Arbitrary (TxBody era)) =>
+  (EraTxBody era, ShelleyEraTxCert era, Arbitrary (TxBody era), EraCertState era) =>
   CertState era ->
   UTxO era ->
   Gen (TxBody era)
-genTxBodyFrom CertState {certDState, certPState} (UTxO u) = do
+genTxBodyFrom certState (UTxO u) = do
   txBody <- arbitrary
   inputs <- sublistOf (Map.keys u)
-  unDelegCreds <- sublistOf (toList (UM.domain (UM.RewDepUView $ dsUnified certDState)))
-  deRegKeys <- sublistOf (Map.elems (psStakePoolParams certPState))
+  unDelegCreds <-
+    sublistOf (toList (UM.domain (UM.RewDepUView $ certState ^. certDStateL . dsUnifiedL)))
+  deRegKeys <- sublistOf (Map.elems (certState ^. certPStateL . psStakePoolParamsL))
   certs <-
     shuffle $
       toList (txBody ^. certsTxBodyL)
@@ -122,7 +123,7 @@ genTxBodyFrom CertState {certDState, certPState} (UTxO u) = do
     )
 
 propEvalBalanceTxBody ::
-  (EraUTxO era, MaryEraTxBody era, ShelleyEraTxCert era, Arbitrary (TxBody era)) =>
+  (EraUTxO era, MaryEraTxBody era, ShelleyEraTxCert era, Arbitrary (TxBody era), EraCertState era) =>
   PParams era ->
   CertState era ->
   UTxO era ->
@@ -133,12 +134,12 @@ propEvalBalanceTxBody pp certState utxo =
       evalBalanceTxBody pp lookupKeyDeposit lookupDRepDeposit isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalance pp certState utxo txBody
   where
-    lookupKeyDeposit = lookupDepositDState (certDState certState)
-    lookupDRepDeposit = lookupDepositVState (certVState certState)
-    isRegPoolId = (`Map.member` psStakePoolParams (certPState certState))
+    lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
+    lookupDRepDeposit = lookupDepositVState (certState ^. certVStateL)
+    isRegPoolId = (`Map.member` psStakePoolParams (certState ^. certPStateL))
 
 propEvalBalanceShelleyTxBody ::
-  (EraUTxO era, ShelleyEraTxCert era, Arbitrary (TxBody era)) =>
+  (EraUTxO era, ShelleyEraTxCert era, Arbitrary (TxBody era), EraCertState era) =>
   PParams era ->
   CertState era ->
   UTxO era ->
@@ -149,9 +150,9 @@ propEvalBalanceShelleyTxBody pp certState utxo =
       evalBalanceTxBody pp lookupKeyDeposit lookupDRepDeposit isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalanceShelley pp certState utxo txBody
   where
-    lookupKeyDeposit = lookupDepositDState (certDState certState)
-    lookupDRepDeposit = lookupDepositVState (certVState certState)
-    isRegPoolId = (`Map.member` psStakePoolParams (certPState certState))
+    lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
+    lookupDRepDeposit = lookupDepositVState (certState ^. certVStateL)
+    isRegPoolId = (`Map.member` psStakePoolParams (certState ^. certPStateL))
 
 -- | NOTE: We cannot have this property pass for Conway and beyond because Conway changes this calculation.
 -- This property test only exists to confirm that the old and new implementations for the evalBalanceTxBody` API matched,

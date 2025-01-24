@@ -17,6 +17,7 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
 
 import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -91,6 +92,7 @@ instance
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , ProtVerAtMost era 8
+  , EraCertState era
   ) =>
   TQC.HasTrace (ShelleyLEDGER era) (GenEnv era)
   where
@@ -120,6 +122,7 @@ instance
   , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , ProtVerAtMost era 8
+  , EraCertState era
   ) =>
   TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
   where
@@ -173,6 +176,7 @@ mkGenesisLedgerState ::
   forall a era ledger.
   ( EraGen era
   , EraGov era
+  , EraCertState era
   ) =>
   GenEnv era ->
   IRC ledger ->

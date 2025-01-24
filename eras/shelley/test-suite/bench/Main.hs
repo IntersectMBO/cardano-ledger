@@ -146,7 +146,7 @@ profileUTxO = do
 -- Registering Stake Keys
 
 touchCertState :: CertState c -> Int
-touchCertState (CertState _x _y _z) = 1
+touchCertState _ = 1
 
 touchUTxOState :: Cardano.Ledger.Shelley.LedgerState.UTxOState cryto -> Int
 touchUTxOState (UTxOState _utxo _deposited _fees _ppups _ _) = 2

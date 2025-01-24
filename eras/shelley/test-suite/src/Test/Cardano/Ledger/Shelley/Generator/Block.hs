@@ -20,7 +20,7 @@ import Cardano.Ledger.BHeaderView (bhviewBSize, bhviewHSize)
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL)
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsGenDelegsL)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.Crypto (VRF)
 import Cardano.Protocol.TPraos.API
@@ -257,7 +257,7 @@ selectNextSlotWithLeader
           epochNonce = chainEpochNonce chainSt
           poolDistr = unPoolDistr . nesPd . chainNes $ chainSt
           dpstate = (lsCertState . esLState . nesEs . chainNes) chainSt
-          (GenDelegs cores) = (dsGenDelegs . certDState) dpstate
+          (GenDelegs cores) = dpstate ^. certDStateL . dsGenDelegsL
           firstEpochSlot = slotFromEpoch (epochFromSlotNo slotNo)
           f = activeSlotCoeff testGlobals
           getUnitInterval :: PParams era -> UnitInterval

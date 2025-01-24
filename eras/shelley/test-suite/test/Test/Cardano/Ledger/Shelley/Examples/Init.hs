@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Init (
 where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Nonce (..))
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
@@ -88,6 +89,7 @@ initSt ::
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
   , EraGov era
+  , EraCertState era
   ) =>
   UTxO era ->
   ChainState era

@@ -5,6 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Functions in this module take a (Proof era) as their first
 --   parameter and do something potentially different in each Era.
@@ -35,6 +36,7 @@ import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   CertState (..),
@@ -419,8 +421,8 @@ instance TotalAda (PState era) where
 instance TotalAda (VState era) where
   totalAda _ = mempty
 
-instance TotalAda (CertState era) where
-  totalAda (CertState ds ps vs) = totalAda ds <> totalAda ps <> totalAda vs
+instance TotalAda (ShelleyCertState era) where
+  totalAda (ShelleyCertState vs ps ds) = totalAda ds <> totalAda ps <> totalAda vs
 
 instance TotalAda (ShelleyGovState era) where
   totalAda _ = mempty
@@ -434,13 +436,14 @@ govStateTotalAda = case reify @era of
   Babbage -> totalAda
   Conway -> mempty
 
-instance Reflect era => TotalAda (LedgerState era) where
+-- TODO: think these through
+instance (Reflect era, TotalAda (CertState era)) => TotalAda (LedgerState era) where
   totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps
 
-instance Reflect era => TotalAda (EpochState era) where
+instance (Reflect era, TotalAda (CertState era)) => TotalAda (EpochState era) where
   totalAda eps = totalAda (esLState eps) <+> totalAda (esAccountState eps)
 
-instance Reflect era => TotalAda (NewEpochState era) where
+instance (Reflect era, TotalAda (CertState era)) => TotalAda (NewEpochState era) where
   totalAda nes = totalAda (nesEs nes)
 
 adaPots :: Proof era -> EpochState era -> AdaPots
