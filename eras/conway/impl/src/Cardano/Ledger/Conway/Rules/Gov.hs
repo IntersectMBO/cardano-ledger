@@ -590,10 +590,13 @@ govTransition = do
             UnRegDRepTxCert drepCred _ -> Set.insert drepCred drepCreds
             _ -> drepCreds
        in F.foldl' collectRemovals mempty gsCertificates
-    cleanupProposalVotes =
-      let cleanupVoters gas =
-            gas & gasDRepVotesL %~ (`Map.withoutKeys` unregisteredDReps)
-       in mapProposals cleanupVoters
+    cleanupProposalVotes
+      -- optimization: avoid iterating over proposals when there is nothing to cleanup
+      | Set.null unregisteredDReps = id
+      | otherwise =
+          let cleanupVoters gas =
+                gas & gasDRepVotesL %~ (`Map.withoutKeys` unregisteredDReps)
+           in mapProposals cleanupVoters
 
   -- Report the event
   tellEvent $ GovNewProposals txid updatedProposalStates
