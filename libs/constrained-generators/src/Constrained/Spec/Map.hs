@@ -34,12 +34,12 @@ import Constrained.Univ
 import Control.Monad
 import Data.Foldable
 import Data.List (nub)
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NE
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Debug.Trace
 import GHC.Generics
 import Prettyprinter
 import Test.QuickCheck (Arbitrary (..), frequency, genericShrink, shrinkList)
@@ -47,6 +47,10 @@ import Test.QuickCheck (Arbitrary (..), frequency, genericShrink, shrinkList)
 ------------------------------------------------------------------------
 -- HasSpec
 ------------------------------------------------------------------------
+
+traceTest :: String -> Bool -> Bool
+traceTest _ True = True
+traceTest s False = trace ("TraceTest " ++ s) False
 
 instance Ord a => Sized fn (Map.Map a b) where
   sizeOf = toInteger . Map.size
@@ -168,11 +172,11 @@ instance
 
   conformsTo m (MapSpec _ mustKeys mustVals size kvs foldSpec) =
     and
-      [ mustKeys `Set.isSubsetOf` Map.keysSet m
-      , all (`elem` Map.elems m) mustVals
-      , sizeOf m `conformsToSpec` size
-      , all (`conformsToSpec` kvs) (Map.toList m)
-      , Map.elems m `conformsToFoldSpec` foldSpec
+      [ traceTest "must keys" $ mustKeys `Set.isSubsetOf` Map.keysSet m
+      , traceTest "must vals" $ all (`elem` Map.elems m) mustVals
+      , traceTest "size" $ sizeOf m `conformsToSpec` size
+      , traceTest "elemSpec" $ all (`conformsToSpec` kvs) (Map.toList m)
+      , traceTest "foldSpec" $ Map.elems m `conformsToFoldSpec` foldSpec
       ]
 
   genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) NoFold)

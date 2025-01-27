@@ -31,6 +31,30 @@ library
     Constrained.Examples.Map
     Constrained.Examples.Set
     Constrained.Examples.Tree
+    Constrained.Experiment.API
+    Constrained.Experiment.Base
+    Constrained.Experiment.Conformance
+    Constrained.Experiment.Examples.Basic
+    Constrained.Experiment.Examples.Either
+    Constrained.Experiment.Examples.Fold
+    Constrained.Experiment.Examples.List
+    Constrained.Experiment.Examples.Map
+    Constrained.Experiment.Examples.Set
+    Constrained.Experiment.Examples.Tree
+    Constrained.Experiment.Generic
+    Constrained.Experiment.NumSpec
+    Constrained.Experiment.Properties
+    Constrained.Experiment.Specs.ListFoldy
+    Constrained.Experiment.Specs.Map
+    Constrained.Experiment.Specs.Num
+    Constrained.Experiment.Specs.Set
+    Constrained.Experiment.Specs.Size
+    Constrained.Experiment.Specs.SumProd
+    Constrained.Experiment.Specs.Tree
+    Constrained.Experiment.SumList
+    Constrained.Experiment.Syntax
+    Constrained.Experiment.Tests.Test
+    Constrained.Experiment.TheKnot
     Constrained.GenT
     Constrained.Graph
     Constrained.Instances
@@ -60,7 +84,9 @@ library
   build-depends:
     QuickCheck >=2.14,
     base >=4.14 && <5,
+    base-orphans,
     containers,
+    hspec,
     mtl,
     prettyprinter,
     random,

@@ -25,6 +25,11 @@ library
     Test.Cardano.Ledger.Constrained.Conway.Certs
     Test.Cardano.Ledger.Constrained.Conway.Deleg
     Test.Cardano.Ledger.Constrained.Conway.Epoch
+    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances.Basic
+    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances.Ledger
+    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances.Ledgers
+    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances.PParams
+    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances.TxBody
     Test.Cardano.Ledger.Constrained.Conway.Gov
     Test.Cardano.Ledger.Constrained.Conway.GovCert
     Test.Cardano.Ledger.Constrained.Conway.Instances
