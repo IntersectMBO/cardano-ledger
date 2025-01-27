@@ -117,12 +117,12 @@ deriving stock instance
 data ShelleyDelegsPredFailure era
   = -- | Target pool which is not registered
     DelegateeNotRegisteredDELEG
-      !(KeyHash 'StakePool)
+      (KeyHash 'StakePool)
   | -- | Withdrawals that are missing or do not withdrawal the entire amount
     WithdrawalsNotInRewardsDELEGS
-      !(Map RewardAccount Coin)
+      (Map RewardAccount Coin)
   | -- | Subtransition Failures
-    DelplFailure !(PredicateFailure (EraRule "DELPL" era))
+    DelplFailure (PredicateFailure (EraRule "DELPL" era))
   deriving (Generic)
 
 type instance EraRuleFailure "DELEGS" ShelleyEra = ShelleyDelegsPredFailure ShelleyEra

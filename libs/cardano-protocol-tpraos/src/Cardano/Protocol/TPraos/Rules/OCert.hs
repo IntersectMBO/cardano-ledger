@@ -32,25 +32,25 @@ data OCERT c
 
 data OcertPredicateFailure
   = KESBeforeStartOCERT
-      !KESPeriod -- OCert Start KES Period
-      !KESPeriod -- Current KES Period
+      KESPeriod -- OCert Start KES Period
+      KESPeriod -- Current KES Period
   | KESAfterEndOCERT
-      !KESPeriod -- Current KES Period
-      !KESPeriod -- OCert Start KES Period
-      !Word64 -- Max KES Key Evolutions
+      KESPeriod -- Current KES Period
+      KESPeriod -- OCert Start KES Period
+      Word64 -- Max KES Key Evolutions
   | CounterTooSmallOCERT
-      !Word64 -- last KES counter used
-      !Word64 -- current KES counter
+      Word64 -- last KES counter used
+      Word64 -- current KES counter
   | InvalidSignatureOCERT
-      !Word64 -- OCert counter
-      !KESPeriod -- OCert KES period
+      Word64 -- OCert counter
+      KESPeriod -- OCert KES period
   | InvalidKesSignatureOCERT
-      !Word -- current KES Period
-      !Word -- KES start period
-      !Word -- expected KES evolutions
-      !String -- error message given by Consensus Layer
+      Word -- current KES Period
+      Word -- KES start period
+      Word -- expected KES evolutions
+      String -- error message given by Consensus Layer
   | NoCounterForKeyHashOCERT
-      !(KeyHash 'BlockIssuer) -- stake pool key hash
+      (KeyHash 'BlockIssuer) -- stake pool key hash
   deriving (Show, Eq, Generic)
 
 instance NoThunks OcertPredicateFailure

@@ -70,29 +70,29 @@ import Validation
 -- ==========================================================
 
 data AllegraUtxoPredFailure era
-  = BadInputsUTxO !(Set TxIn) -- The bad transaction inputs
+  = BadInputsUTxO (Set TxIn) -- The bad transaction inputs
   | OutsideValidityIntervalUTxO
-      !ValidityInterval -- transaction's validity interval
-      !SlotNo -- current slot
-  | MaxTxSizeUTxO !(Mismatch 'RelLTEQ Integer)
+      ValidityInterval -- transaction's validity interval
+      SlotNo -- current slot
+  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Integer)
   | InputSetEmptyUTxO
-  | FeeTooSmallUTxO !(Mismatch 'RelGTEQ Coin)
-  | ValueNotConservedUTxO !(Mismatch 'RelEQ (Value era)) -- Consumed, then produced
+  | FeeTooSmallUTxO (Mismatch 'RelGTEQ Coin)
+  | ValueNotConservedUTxO (Mismatch 'RelEQ (Value era)) -- Consumed, then produced
   | WrongNetwork
-      !Network -- the expected network id
-      !(Set Addr) -- the set of addresses with incorrect network IDs
+      Network -- the expected network id
+      (Set Addr) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
-      !Network -- the expected network id
-      !(Set RewardAccount) -- the set of reward addresses with incorrect network IDs
+      Network -- the expected network id
+      (Set RewardAccount) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      ![TxOut era] -- list of supplied transaction outputs that are too small
+      [TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
-      ![TxOut era] -- list of supplied bad transaction outputs
+      [TxOut era] -- list of supplied bad transaction outputs
   | -- Kept for backwards compatibility: no longer used because the `MultiAsset` type of mint doesn't allow for this possibility
     TriesToForgeADA -- TODO: remove
   | OutputTooBigUTxO
-      ![TxOut era] -- list of supplied bad transaction outputs
+      [TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" AllegraEra = AllegraUtxoPredFailure AllegraEra

@@ -92,26 +92,26 @@ import Validation
 -- | The Predicate failure type in the Alonzo Era. It embeds the Predicate
 --   failure type of the Shelley Era, as they share some failure modes.
 data AlonzoUtxowPredFailure era
-  = ShelleyInAlonzoUtxowPredFailure !(ShelleyUtxowPredFailure era)
+  = ShelleyInAlonzoUtxowPredFailure (ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
-      ![(PlutusPurpose AsItem era, ScriptHash)]
+      [(PlutusPurpose AsItem era, ScriptHash)]
   | MissingRequiredDatums
       -- TODO: Make this NonEmpty #4066
 
       -- | Set of missing data hashes
-      !(Set DataHash)
+      (Set DataHash)
       -- | Set of received data hashes
-      !(Set DataHash)
+      (Set DataHash)
   | NotAllowedSupplementalDatums
       -- TODO: Make this NonEmpty #4066
 
       -- | Set of unallowed data hashes
-      !(Set DataHash)
+      (Set DataHash)
       -- | Set of acceptable supplemental data hashes
-      !(Set DataHash)
+      (Set DataHash)
   | PPViewHashesDontMatch
-      !(Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
+      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
   | -- | Set of witnesses which were needed and not supplied
     MissingRequiredSigners -- TODO: remove once in Conway. It is now redundant. See #3972
       (Set (KeyHash 'Witness))
@@ -121,7 +121,7 @@ data AlonzoUtxowPredFailure era
       (Set TxIn)
   | -- | List of redeemers not needed
     ExtraRedeemers
-      ![PlutusPurpose AsIx era]
+      [PlutusPurpose AsIx era]
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" AlonzoEra = AlonzoUtxowPredFailure AlonzoEra

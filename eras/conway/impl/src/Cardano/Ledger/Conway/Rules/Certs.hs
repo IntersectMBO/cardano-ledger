@@ -113,9 +113,9 @@ instance (EraPParams era, NFData (Tx era)) => NFData (CertsEnv era)
 data ConwayCertsPredFailure era
   = -- | Withdrawals that are missing or do not withdrawal the entire amount
     WithdrawalsNotInRewardsCERTS
-      !(Map.Map RewardAccount Coin)
+      (Map.Map RewardAccount Coin)
   | -- | CERT rule subtransition Failures
-    CertFailure !(PredicateFailure (EraRule "CERT" era))
+    CertFailure (PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
 
 type instance EraRuleFailure "CERTS" ConwayEra = ConwayCertsPredFailure ConwayEra

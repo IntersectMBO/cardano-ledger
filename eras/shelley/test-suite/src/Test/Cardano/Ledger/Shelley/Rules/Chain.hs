@@ -150,12 +150,12 @@ chainStateNesL :: Lens' (ChainState era) (NewEpochState era)
 chainStateNesL = lens chainNes $ \x y -> x {chainNes = y}
 
 data TestChainPredicateFailure era
-  = RealChainPredicateFailure !ChainPredicateFailure
-  | BbodyFailure !(PredicateFailure (EraRule "BBODY" era)) -- Subtransition Failures
-  | TickFailure !(PredicateFailure (EraRule "TICK" era)) -- Subtransition Failures
-  | TicknFailure !(PredicateFailure (EraRule "TICKN" era)) -- Subtransition Failures
-  | PrtclFailure !(PredicateFailure (PRTCL MockCrypto)) -- Subtransition Failures
-  | PrtclSeqFailure !PrtlSeqFailure -- Subtransition Failures
+  = RealChainPredicateFailure ChainPredicateFailure
+  | BbodyFailure (PredicateFailure (EraRule "BBODY" era)) -- Subtransition Failures
+  | TickFailure (PredicateFailure (EraRule "TICK" era)) -- Subtransition Failures
+  | TicknFailure (PredicateFailure (EraRule "TICKN" era)) -- Subtransition Failures
+  | PrtclFailure (PredicateFailure (PRTCL MockCrypto)) -- Subtransition Failures
+  | PrtclSeqFailure PrtlSeqFailure -- Subtransition Failures
   deriving (Generic)
 
 data ChainEvent era

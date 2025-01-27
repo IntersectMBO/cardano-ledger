@@ -113,26 +113,26 @@ import Validation
 
 data ShelleyUtxowPredFailure era
   = InvalidWitnessesUTXOW
-      ![VKey 'Witness]
+      [VKey 'Witness]
   | -- witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
-      !(Set (KeyHash 'Witness)) -- witnesses which were needed and not supplied
+      (Set (KeyHash 'Witness)) -- witnesses which were needed and not supplied
   | MissingScriptWitnessesUTXOW
-      !(Set ScriptHash) -- missing scripts
+      (Set ScriptHash) -- missing scripts
   | ScriptWitnessNotValidatingUTXOW
-      !(Set ScriptHash) -- failed scripts
+      (Set ScriptHash) -- failed scripts
   | UtxoFailure (PredicateFailure (EraRule "UTXO" era))
   | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness))
   | MissingTxBodyMetadataHash
-      !TxAuxDataHash -- hash of the full metadata
+      TxAuxDataHash -- hash of the full metadata
   | MissingTxMetadata
-      !TxAuxDataHash -- hash of the metadata included in the transaction body
+      TxAuxDataHash -- hash of the metadata included in the transaction body
   | ConflictingMetadataHash
-      !(Mismatch 'RelEQ TxAuxDataHash)
+      (Mismatch 'RelEQ TxAuxDataHash)
   | -- Contains out of range values (strings too long)
     InvalidMetadata
   | ExtraneousScriptWitnessesUTXOW
-      !(Set ScriptHash) -- extraneous scripts
+      (Set ScriptHash) -- extraneous scripts
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" ShelleyEra = ShelleyUtxowPredFailure ShelleyEra

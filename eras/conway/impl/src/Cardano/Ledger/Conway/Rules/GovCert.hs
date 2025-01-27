@@ -114,15 +114,15 @@ deriving instance EraPParams era => Show (ConwayGovCertEnv era)
 deriving instance EraPParams era => Eq (ConwayGovCertEnv era)
 
 data ConwayGovCertPredFailure era
-  = ConwayDRepAlreadyRegistered !(Credential 'DRepRole)
-  | ConwayDRepNotRegistered !(Credential 'DRepRole)
-  | ConwayDRepIncorrectDeposit !(Mismatch 'RelEQ Coin)
-  | ConwayCommitteeHasPreviouslyResigned !(Credential 'ColdCommitteeRole)
-  | ConwayDRepIncorrectRefund !(Mismatch 'RelEQ Coin)
+  = ConwayDRepAlreadyRegistered (Credential 'DRepRole)
+  | ConwayDRepNotRegistered (Credential 'DRepRole)
+  | ConwayDRepIncorrectDeposit (Mismatch 'RelEQ Coin)
+  | ConwayCommitteeHasPreviouslyResigned (Credential 'ColdCommitteeRole)
+  | ConwayDRepIncorrectRefund (Mismatch 'RelEQ Coin)
   | -- | Predicate failure whenever an update to an unknown committee member is
     -- attempted. Current Constitutional Committee and all available proposals will be
     -- searched before reporting this predicate failure.
-    ConwayCommitteeIsUnknown !(Credential 'ColdCommitteeRole)
+    ConwayCommitteeIsUnknown (Credential 'ColdCommitteeRole)
   deriving (Show, Eq, Generic)
 
 type instance EraRuleFailure "GOVCERT" ConwayEra = ConwayGovCertPredFailure ConwayEra

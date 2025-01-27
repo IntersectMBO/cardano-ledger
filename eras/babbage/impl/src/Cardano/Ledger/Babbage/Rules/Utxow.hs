@@ -92,15 +92,15 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (failureUnless)
 
 data BabbageUtxowPredFailure era
-  = AlonzoInBabbageUtxowPredFailure !(AlonzoUtxowPredFailure era) -- TODO: embed and translate
+  = AlonzoInBabbageUtxowPredFailure (AlonzoUtxowPredFailure era) -- TODO: embed and translate
   | -- | Embed UTXO rule failures
-    UtxoFailure !(PredicateFailure (EraRule "UTXO" era))
+    UtxoFailure (PredicateFailure (EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
     MalformedScriptWitnesses
-      !(Set ScriptHash)
+      (Set ScriptHash)
   | -- | the set of malformed script witnesses
     MalformedReferenceScripts
-      !(Set ScriptHash)
+      (Set ScriptHash)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" BabbageEra = BabbageUtxowPredFailure BabbageEra

@@ -98,36 +98,36 @@ instance NoThunks OverlayEnv
 
 data OverlayPredicateFailure c
   = VRFKeyUnknown
-      !(KeyHash 'StakePool) -- unknown VRF keyhash (not registered)
+      (KeyHash 'StakePool) -- unknown VRF keyhash (not registered)
   | VRFKeyWrongVRFKey
-      !(KeyHash 'StakePool) -- KeyHash of block issuer
-      !(VRFVerKeyHash 'StakePoolVRF) -- VRF KeyHash registered with stake pool
-      !(VRFVerKeyHash 'BlockIssuerVRF) -- VRF KeyHash from Header
+      (KeyHash 'StakePool) -- KeyHash of block issuer
+      (VRFVerKeyHash 'StakePoolVRF) -- VRF KeyHash registered with stake pool
+      (VRFVerKeyHash 'BlockIssuerVRF) -- VRF KeyHash from Header
   | VRFKeyBadNonce
-      !Nonce -- Nonce constant to distinguish VRF nonce values
-      !SlotNo -- Slot used for VRF calculation
-      !Nonce -- Epoch nonce used for VRF calculation
-      !(VRF.CertifiedVRF (VRF c) Nonce) -- VRF calculated nonce value
+      Nonce -- Nonce constant to distinguish VRF nonce values
+      SlotNo -- Slot used for VRF calculation
+      Nonce -- Epoch nonce used for VRF calculation
+      (VRF.CertifiedVRF (VRF c) Nonce) -- VRF calculated nonce value
   | VRFKeyBadLeaderValue
-      !Nonce -- Leader constant to distinguish VRF leader values
-      !SlotNo -- Slot used for VRF calculation
-      !Nonce -- Epoch nonce used for VRF calculation
-      !(VRF.CertifiedVRF (VRF c) Nonce) -- VRF calculated leader value
+      Nonce -- Leader constant to distinguish VRF leader values
+      SlotNo -- Slot used for VRF calculation
+      Nonce -- Epoch nonce used for VRF calculation
+      (VRF.CertifiedVRF (VRF c) Nonce) -- VRF calculated leader value
   | VRFLeaderValueTooBig
-      !(VRF.OutputVRF (VRF c)) -- VRF Leader value
-      !Rational -- stake pool's relative stake
-      !ActiveSlotCoeff -- Praos active slot coefficient value
+      (VRF.OutputVRF (VRF c)) -- VRF Leader value
+      Rational -- stake pool's relative stake
+      ActiveSlotCoeff -- Praos active slot coefficient value
   | NotActiveSlotOVERLAY
-      !SlotNo -- Slot which is supposed to be silent
+      SlotNo -- Slot which is supposed to be silent
   | WrongGenesisColdKeyOVERLAY
-      !(KeyHash 'BlockIssuer) -- KeyHash of block issuer
-      !(KeyHash 'GenesisDelegate) -- KeyHash genesis delegate keyhash assigned to this slot
+      (KeyHash 'BlockIssuer) -- KeyHash of block issuer
+      (KeyHash 'GenesisDelegate) -- KeyHash genesis delegate keyhash assigned to this slot
   | WrongGenesisVRFKeyOVERLAY
-      !(KeyHash 'BlockIssuer) -- KeyHash of block issuer
-      !(VRFVerKeyHash 'GenDelegVRF) -- VRF KeyHash registered with genesis delegation
-      !(VRFVerKeyHash 'BlockIssuerVRF) -- VRF KeyHash from Header
+      (KeyHash 'BlockIssuer) -- KeyHash of block issuer
+      (VRFVerKeyHash 'GenDelegVRF) -- VRF KeyHash registered with genesis delegation
+      (VRFVerKeyHash 'BlockIssuerVRF) -- VRF KeyHash from Header
   | UnknownGenesisKeyOVERLAY
-      !(KeyHash 'Genesis) -- KeyHash which does not correspond to o genesis node
+      (KeyHash 'Genesis) -- KeyHash which does not correspond to o genesis node
   | OcertFailure (PredicateFailure (OCERT c)) -- Subtransition Failures
   deriving (Generic)
 

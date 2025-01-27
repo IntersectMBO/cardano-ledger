@@ -119,58 +119,58 @@ import Validation
 data AlonzoUtxoPredFailure era
   = -- | The bad transaction inputs
     BadInputsUTxO
-      !(Set TxIn)
+      (Set TxIn)
   | OutsideValidityIntervalUTxO
       -- | transaction's validity interval
-      !ValidityInterval
+      ValidityInterval
       -- | current slot
-      !SlotNo
-  | MaxTxSizeUTxO !(Mismatch 'RelLTEQ Integer)
+      SlotNo
+  | MaxTxSizeUTxO (Mismatch 'RelLTEQ Integer)
   | InputSetEmptyUTxO
-  | FeeTooSmallUTxO !(Mismatch 'RelGTEQ Coin)
-  | ValueNotConservedUTxO !(Mismatch 'RelEQ (Value era))
+  | FeeTooSmallUTxO (Mismatch 'RelGTEQ Coin)
+  | ValueNotConservedUTxO (Mismatch 'RelEQ (Value era))
   | -- | the set of addresses with incorrect network IDs
     WrongNetwork
       -- | the expected network id
-      !Network
+      Network
       -- | the set of addresses with incorrect network IDs
-      !(Set Addr)
+      (Set Addr)
   | WrongNetworkWithdrawal
       -- | the expected network id
-      !Network
+      Network
       -- | the set of reward addresses with incorrect network IDs
-      !(Set RewardAccount)
+      (Set RewardAccount)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
-      ![TxOut era]
+      [TxOut era]
   | -- | Subtransition Failures
     UtxosFailure (PredicateFailure (EraRule "UTXOS" era))
   | -- | list of supplied bad transaction outputs
     OutputBootAddrAttrsTooBig
-      ![TxOut era]
+      [TxOut era]
   | -- Kept for backwards compatibility: no longer used because the `MultiAsset` type of mint doesn't allow for this possibility
     TriesToForgeADA
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
     OutputTooBigUTxO
-      ![(Integer, Integer, TxOut era)]
+      [(Integer, Integer, TxOut era)]
   | InsufficientCollateral
       -- | balance computed
-      !DeltaCoin
+      DeltaCoin
       -- | the required collateral for the given fee
-      !Coin
+      Coin
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
-      !(UTxO era)
-  | ExUnitsTooBigUTxO !(Mismatch 'RelLTEQ ExUnits)
+      (UTxO era)
+  | ExUnitsTooBigUTxO (Mismatch 'RelLTEQ ExUnits)
   | -- | The inputs marked for use as fees contain non-ADA tokens
-    CollateralContainsNonADA !(Value era)
+    CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body
-    WrongNetworkInTxBody !(Mismatch 'RelEQ Network)
+    WrongNetworkInTxBody (Mismatch 'RelEQ Network)
   | -- | slot number outside consensus forecast range
     OutsideForecast
-      !SlotNo
+      SlotNo
   | -- | There are too many collateral inputs
-    TooManyCollateralInputs !(Mismatch 'RelLTEQ Natural)
+    TooManyCollateralInputs (Mismatch 'RelLTEQ Natural)
   | NoCollateralInputs
   deriving (Generic)
 

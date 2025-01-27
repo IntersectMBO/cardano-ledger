@@ -170,27 +170,27 @@ instance (Era era, NFData (Event (EraRule "PPUP" era)), NFData (TxOut era)) => N
 
 data ShelleyUtxoPredFailure era
   = BadInputsUTxO
-      !(Set TxIn) -- The bad transaction inputs
+      (Set TxIn) -- The bad transaction inputs
   | ExpiredUTxO
-      !(Mismatch 'RelLTEQ SlotNo)
+      (Mismatch 'RelLTEQ SlotNo)
   | MaxTxSizeUTxO
-      !(Mismatch 'RelLTEQ Integer)
+      (Mismatch 'RelLTEQ Integer)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
-      !(Mismatch 'RelGTEQ Coin)
+      (Mismatch 'RelGTEQ Coin)
   | ValueNotConservedUTxO
-      !(Mismatch 'RelEQ (Value era))
+      (Mismatch 'RelEQ (Value era))
   | WrongNetwork
-      !Network -- the expected network id
-      !(Set Addr) -- the set of addresses with incorrect network IDs
+      Network -- the expected network id
+      (Set Addr) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
-      !Network -- the expected network id
-      !(Set RewardAccount) -- the set of reward addresses with incorrect network IDs
+      Network -- the expected network id
+      (Set RewardAccount) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      ![TxOut era] -- list of supplied transaction outputs that are too small
+      [TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
-      ![TxOut era] -- list of supplied bad transaction outputs
+      [TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" ShelleyEra = ShelleyUtxoPredFailure ShelleyEra

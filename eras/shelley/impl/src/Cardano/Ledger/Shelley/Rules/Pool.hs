@@ -90,18 +90,18 @@ instance NFData (PParams era) => NFData (PoolEnv era)
 
 data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
-      !(KeyHash 'StakePool) -- KeyHash which cannot be retired since it is not registered
+      (KeyHash 'StakePool) -- KeyHash which cannot be retired since it is not registered
   | StakePoolRetirementWrongEpochPOOL
-      !(Mismatch 'RelGT EpochNo)
-      !(Mismatch 'RelLTEQ EpochNo)
+      (Mismatch 'RelGT EpochNo)
+      (Mismatch 'RelLTEQ EpochNo)
   | StakePoolCostTooLowPOOL
-      !(Mismatch 'RelGTEQ Coin)
+      (Mismatch 'RelGTEQ Coin)
   | WrongNetworkPOOL
-      !(Mismatch 'RelEQ Network)
-      !(KeyHash 'StakePool) -- Stake Pool ID
+      (Mismatch 'RelEQ Network)
+      (KeyHash 'StakePool) -- Stake Pool ID
   | PoolMedataHashTooBig
-      !(KeyHash 'StakePool) -- Stake Pool ID
-      !Int -- Size of the metadata hash
+      (KeyHash 'StakePool) -- Stake Pool ID
+      Int -- Size of the metadata hash
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "POOL" ShelleyEra = ShelleyPoolPredFailure ShelleyEra

@@ -48,14 +48,14 @@ pparamsToChainChecksPParams pp =
 
 data ChainPredicateFailure
   = HeaderSizeTooLargeCHAIN
-      !Int -- Header Size
-      !Word16 -- Max Header Size
+      Int -- Header Size
+      Word16 -- Max Header Size
   | BlockSizeTooLargeCHAIN
-      !Word32 -- Block Size
-      !Word32 -- Max Block Size
+      Word32 -- Block Size
+      Word32 -- Max Block Size
   | ObsoleteNodeCHAIN
-      !Version -- protocol version used
-      !Version -- max protocol version
+      Version -- protocol version used
+      Version -- max protocol version
   deriving (Generic, Show, Eq, Ord)
 
 instance NoThunks ChainPredicateFailure

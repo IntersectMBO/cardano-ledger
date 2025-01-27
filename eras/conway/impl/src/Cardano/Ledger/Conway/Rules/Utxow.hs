@@ -73,60 +73,60 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 data ConwayUtxowPredFailure era
   = UtxoFailure (PredicateFailure (EraRule "UTXO" era))
   | InvalidWitnessesUTXOW
-      ![VKey 'Witness]
+      [VKey 'Witness]
   | -- | witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
       -- | witnesses which were needed and not supplied
-      !(Set (KeyHash 'Witness))
+      (Set (KeyHash 'Witness))
   | -- | missing scripts
     MissingScriptWitnessesUTXOW
-      !(Set ScriptHash)
+      (Set ScriptHash)
   | -- | failed scripts
     ScriptWitnessNotValidatingUTXOW
-      !(Set ScriptHash)
+      (Set ScriptHash)
   | -- | hash of the full metadata
     MissingTxBodyMetadataHash
-      !TxAuxDataHash
+      TxAuxDataHash
   | -- | hash of the metadata included in the transaction body
     MissingTxMetadata
-      !TxAuxDataHash
+      TxAuxDataHash
   | ConflictingMetadataHash
-      !(Mismatch 'RelEQ TxAuxDataHash)
+      (Mismatch 'RelEQ TxAuxDataHash)
   | -- | Contains out of range values (string`s too long)
     InvalidMetadata
   | -- | extraneous scripts
     ExtraneousScriptWitnessesUTXOW
-      !(Set ScriptHash)
+      (Set ScriptHash)
   | MissingRedeemers
-      ![(PlutusPurpose AsItem era, ScriptHash)]
+      [(PlutusPurpose AsItem era, ScriptHash)]
   | MissingRequiredDatums
       -- TODO: Make this NonEmpty #4066
 
       -- | Set of missing data hashes
-      !(Set DataHash)
+      (Set DataHash)
       -- | Set of received data hashes
-      !(Set DataHash)
+      (Set DataHash)
   | NotAllowedSupplementalDatums
       -- TODO: Make this NonEmpty #4066
 
       -- | Set of unallowed data hashes.
-      !(Set DataHash)
+      (Set DataHash)
       -- | Set of acceptable supplemental data hashes
-      !(Set DataHash)
+      (Set DataHash)
   | PPViewHashesDontMatch
-      !(Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
+      (Mismatch 'RelEQ (StrictMaybe ScriptIntegrityHash))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
       -- TODO: Make this NonEmpty #4066
       (Set TxIn)
   | -- | List of redeemers not needed
-    ExtraRedeemers ![PlutusPurpose AsIx era]
+    ExtraRedeemers [PlutusPurpose AsIx era]
   | -- | Embed UTXO rule failures
     MalformedScriptWitnesses
-      !(Set ScriptHash)
+      (Set ScriptHash)
   | -- | the set of malformed script witnesses
     MalformedReferenceScripts
-      !(Set ScriptHash)
+      (Set ScriptHash)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXOW" ConwayEra = ConwayUtxowPredFailure ConwayEra
