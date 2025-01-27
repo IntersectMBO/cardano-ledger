@@ -89,7 +89,6 @@ import Constrained.Graph qualified as Graph
 import Constrained.List
 import Constrained.SumList (Cost (..), Solution (..), pickAll)
 import Constrained.Univ
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NE
 
 {- NOTE [High level overview of generation from predicates]:
@@ -644,11 +643,6 @@ memberSpecList xs messages =
   case NE.nonEmpty xs of
     Nothing -> ErrorSpec messages
     Just ys -> MemberSpec ys
-
-instance Arbitrary a => Arbitrary (NE.NonEmpty a) where
-  arbitrary = do
-    NonEmpty xs <- arbitrary
-    pure (NE.fromList xs)
 
 instance HasSpec fn a => Semigroup (Specification fn a) where
   ExplainSpec es x <> y = explainSpecOpt es (x <> y)
