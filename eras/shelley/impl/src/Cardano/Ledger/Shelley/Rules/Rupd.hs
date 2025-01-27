@@ -74,7 +74,7 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 data RupdEnv era
-  = RupdEnv !BlocksMade !(EpochState era)
+  = RupdEnv BlocksMade (EpochState era)
 
 data ShelleyRupdPredFailure era -- No predicate failures
   deriving (Show, Eq, Generic)

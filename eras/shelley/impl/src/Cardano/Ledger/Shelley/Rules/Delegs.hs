@@ -99,13 +99,13 @@ import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
 data DelegsEnv era = DelegsEnv
-  { delegsSlotNo :: !SlotNo
+  { delegsSlotNo :: SlotNo
   , delegsEpochNo :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
-  , delegsIx :: !TxIx
-  , delegspp :: !(PParams era)
-  , delegsTx :: !(Tx era)
-  , delegsAccount :: !AccountState
+  , delegsIx :: TxIx
+  , delegspp :: (PParams era)
+  , delegsTx :: (Tx era)
+  , delegsAccount :: AccountState
   }
 
 deriving stock instance

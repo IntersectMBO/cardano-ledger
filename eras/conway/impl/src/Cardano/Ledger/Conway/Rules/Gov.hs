@@ -137,11 +137,11 @@ import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
 data GovEnv era = GovEnv
-  { geTxId :: !TxId
-  , geEpoch :: !EpochNo
-  , gePParams :: !(PParams era)
-  , gePPolicy :: !(StrictMaybe ScriptHash)
-  , geCertState :: !(CertState era)
+  { geTxId :: TxId
+  , geEpoch :: EpochNo
+  , gePParams :: (PParams era)
+  , gePPolicy :: (StrictMaybe ScriptHash)
+  , geCertState :: (CertState era)
   }
   deriving (Generic)
 

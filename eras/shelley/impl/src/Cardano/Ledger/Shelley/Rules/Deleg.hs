@@ -81,12 +81,12 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data DelegEnv era = DelegEnv
-  { slotNo :: !SlotNo
+  { slotNo :: SlotNo
   , deCurEpochNo :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
-  , ptr_ :: !Ptr
-  , acnt_ :: !AccountState
-  , ppDE :: !(PParams era) -- The protocol parameters are only used for the HardFork mechanism
+  , ptr_ :: Ptr
+  , acnt_ :: AccountState
+  , ppDE :: (PParams era) -- The protocol parameters are only used for the HardFork mechanism
   }
   deriving (Generic)
 
