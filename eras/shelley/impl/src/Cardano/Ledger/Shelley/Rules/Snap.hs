@@ -70,7 +70,7 @@ deriving instance Eq (SnapEvent era)
 
 instance NFData (SnapEvent era)
 
-data SnapEnv era = SnapEnv !(LedgerState era) !(PParams era)
+data SnapEnv era = SnapEnv (LedgerState era) (PParams era)
 
 instance EraTxOut era => STS (ShelleySNAP era) where
   type State (ShelleySNAP era) = SnapShots (EraCrypto era)

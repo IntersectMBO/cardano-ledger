@@ -1183,9 +1183,9 @@ instance SpecTranslate ctx (EpochExecEnv era) where
 
 -- | This type is used as the Env only in the Agda Spec
 data ConwayExecEnactEnv era = ConwayExecEnactEnv
-  { ceeeGid :: !(GovActionId (EraCrypto era))
-  , ceeeTreasury :: !Coin
-  , ceeeEpoch :: !EpochNo
+  { ceeeGid :: (GovActionId (EraCrypto era))
+  , ceeeTreasury :: Coin
+  , ceeeEpoch :: EpochNo
   }
   deriving (Generic, Eq, Show)
 

@@ -217,8 +217,8 @@ data GenSize = GenSize
   deriving (Show)
 
 data GenEnv era = GenEnv
-  { gePParams :: !(PParams era)
-  , geSize :: !GenSize
+  { gePParams :: (PParams era)
+  , geSize :: GenSize
   }
 
 data GenState era = GenState

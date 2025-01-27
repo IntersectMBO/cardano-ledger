@@ -74,7 +74,7 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data PoolEnv era
-  = PoolEnv !EpochNo !(PParams era)
+  = PoolEnv EpochNo (PParams era)
   deriving (Generic)
 
 instance EraPParams era => EncCBOR (PoolEnv era) where

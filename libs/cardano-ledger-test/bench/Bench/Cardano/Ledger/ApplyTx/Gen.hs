@@ -57,10 +57,10 @@ applyTxMempoolEnv pp =
     }
 
 data ApplyTxEnv era = ApplyTxEnv
-  { ateGlobals :: !Globals
-  , ateMempoolEnv :: !(MempoolEnv era)
-  , ateState :: !(LedgerState era)
-  , ateTx :: !(Tx era)
+  { ateGlobals :: Globals
+  , ateMempoolEnv :: (MempoolEnv era)
+  , ateState :: (LedgerState era)
+  , ateTx :: (Tx era)
   }
   deriving (Generic)
 

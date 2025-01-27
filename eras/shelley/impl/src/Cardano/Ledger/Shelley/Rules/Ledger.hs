@@ -91,12 +91,12 @@ import NoThunks.Class (NoThunks (..))
 -- ========================================================
 
 data LedgerEnv era = LedgerEnv
-  { ledgerSlotNo :: !SlotNo
-  , ledgerEpochNo :: !(Maybe EpochNo)
-  , ledgerIx :: !TxIx
-  , ledgerPp :: !(PParams era)
-  , ledgerAccount :: !AccountState
-  , ledgerMempool :: !Bool
+  { ledgerSlotNo :: SlotNo
+  , ledgerEpochNo :: (Maybe EpochNo)
+  , ledgerIx :: TxIx
+  , ledgerPp :: (PParams era)
+  , ledgerAccount :: AccountState
+  , ledgerMempool :: Bool
   }
   deriving (Generic)
 

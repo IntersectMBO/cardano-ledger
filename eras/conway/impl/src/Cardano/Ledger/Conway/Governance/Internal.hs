@@ -571,14 +571,14 @@ ratifySignalL = lens unRatifySignal (\x y -> x {unRatifySignal = y})
 instance EraPParams era => NFData (RatifySignal era)
 
 data RatifyEnv era = RatifyEnv
-  { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
-  , reStakePoolDistr :: !(PoolDistr (EraCrypto era))
-  , reDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
-  , reDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-  , reCurrentEpoch :: !EpochNo
-  , reCommitteeState :: !(CommitteeState era)
-  , reDelegatees :: !(Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
-  , rePoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+  { reStakeDistr :: (Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+  , reStakePoolDistr :: (PoolDistr (EraCrypto era))
+  , reDRepDistr :: (Map (DRep (EraCrypto era)) (CompactForm Coin))
+  , reDRepState :: (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+  , reCurrentEpoch :: EpochNo
+  , reCommitteeState :: (CommitteeState era)
+  , reDelegatees :: (Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
+  , rePoolParams :: (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
   }
   deriving (Generic)
 
