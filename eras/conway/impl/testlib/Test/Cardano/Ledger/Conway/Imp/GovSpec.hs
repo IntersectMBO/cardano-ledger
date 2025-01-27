@@ -880,7 +880,14 @@ votingSpec =
       spoHash <- freshKeyHash
       registerPool spoHash
       passNEpochs 3
-      gaId <- submitGovAction InfoAction
+      govPolicy <- getGovPolicy
+      --gaId <- submitGovAction $ HardForkInitiation SNothing (ProtVer (fromJust $ mkVersion 10) 1)
+      gaId <- submitGovAction $
+        ParameterChange
+          SNothing
+          (emptyPParamsUpdate & ppuMinFeeAL .~ SJust (Coin 100))
+          govPolicy
+      --gaId <- submitGovAction InfoAction
       submitVote_ @era VoteYes (StakePoolVoter spoHash) gaId
   where
     disallowedVoteFailure = injectFailure . DisallowedVotesDuringBootstrap
