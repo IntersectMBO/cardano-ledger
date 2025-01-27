@@ -58,6 +58,7 @@ import Control.Monad (guard)
 import Data.Foldable (fold, foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
@@ -289,7 +290,9 @@ rewardOnePoolMember
       pool = poolPs rewardInfo
       sigma = poolRelativeStake rewardInfo
       poolR = poolPot rewardInfo
-      stakeShare = StakeShare $ c %? unCoin totalStake
+      -- warning: totalStake could be zero!
+      stakeShare =
+        StakeShare $ c % unCoin totalStake
       r = memberRew poolR pool stakeShare sigma
 
 -- | Calculate single stake pool specific values for the reward computation.
@@ -332,7 +335,8 @@ mkPoolRewardInfo
     -- intermediate values needed for the individual reward calculations.
     Just blocksN ->
       let Coin pledge = ppPledge pool
-          pledgeRelative = pledge %? unCoin totalStake
+          -- warning: totalStake could be zero!
+          pledgeRelative = pledge % unCoin totalStake
           sigmaA = pstakeTot %? unCoin activeStake
           Coin maxP =
             if pledge <= ostake
