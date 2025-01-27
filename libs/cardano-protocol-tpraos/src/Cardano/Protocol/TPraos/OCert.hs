@@ -61,8 +61,8 @@ import NoThunks.Class (NoThunks (..))
 import Quiet
 
 data OCertEnv = OCertEnv
-  { ocertEnvStPools :: (Set (KeyHash 'StakePool))
-  , ocertEnvGenDelegs :: (Set (KeyHash 'GenesisDelegate))
+  { ocertEnvStPools :: Set (KeyHash 'StakePool)
+  , ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate)
   }
   deriving (Show, Eq)
 

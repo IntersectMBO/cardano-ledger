@@ -86,7 +86,7 @@ data DelegEnv era = DelegEnv
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , ptr_ :: Ptr
   , acnt_ :: AccountState
-  , ppDE :: (PParams era) -- The protocol parameters are only used for the HardFork mechanism
+  , ppDE :: PParams era -- The protocol parameters are only used for the HardFork mechanism
   }
   deriving (Generic)
 

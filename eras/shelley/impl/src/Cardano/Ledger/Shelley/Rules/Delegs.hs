@@ -103,8 +103,8 @@ data DelegsEnv era = DelegsEnv
   , delegsEpochNo :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , delegsIx :: TxIx
-  , delegspp :: (PParams era)
-  , delegsTx :: (Tx era)
+  , delegspp :: PParams era
+  , delegsTx :: Tx era
   , delegsAccount :: AccountState
   }
 

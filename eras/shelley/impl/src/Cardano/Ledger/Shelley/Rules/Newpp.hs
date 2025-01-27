@@ -45,8 +45,8 @@ data ShelleyNewppState era
   = NewppState (PParams era) (ShelleyGovState era)
 
 data NewppEnv era = NewppEnv
-  { neCertState :: (CertState era)
-  , neUTxOState :: (UTxOState era)
+  { neCertState :: CertState era
+  , neUTxOState :: UTxOState era
   }
 
 instance

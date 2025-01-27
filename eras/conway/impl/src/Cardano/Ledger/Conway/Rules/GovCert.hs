@@ -88,7 +88,7 @@ import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 data ConwayGovCertEnv era = ConwayGovCertEnv
-  { cgcePParams :: (PParams era)
+  { cgcePParams :: PParams era
   , cgceCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , cgceCurrentCommittee :: StrictMaybe (Committee era)

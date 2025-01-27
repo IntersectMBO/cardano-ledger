@@ -86,8 +86,8 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data CertsEnv era = CertsEnv
-  { certsTx :: (Tx era)
-  , certsPParams :: (PParams era)
+  { certsTx :: Tx era
+  , certsPParams :: PParams era
   , certsCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , certsCurrentCommittee :: StrictMaybe (Committee era)
