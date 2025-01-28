@@ -24,20 +24,23 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (body))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  CertState (..),
-  DState (dsUnified),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
   curPParamsEpochStateL,
+  dsUnifiedL,
+  esLStateL,
+  lsCertStateL,
   prevPParamsEpochStateL,
+  psDepositsL,
+  psStakePoolParamsL,
  )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgerPredFailure (..),
@@ -222,10 +225,12 @@ makeEpochState gstate ledgerstate =
     & prevPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
     & curPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
 
-snaps :: EraTxOut era => LedgerState era -> SnapShots
-snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (CertState _ pstate dstate)) =
+snaps :: (EraTxOut era, EraCertState era) => LedgerState era -> SnapShots
+snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} certState) =
   SnapShots snap (calculatePoolDistr snap) snap snap f
   where
+    pstate = certState ^. certPStateL
+    dstate = certState ^. certDStateL
     snap = stakeDistr u dstate pstate
 
 -- ==============================================================================
@@ -251,9 +256,9 @@ raiseMockError ::
   String
 raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
   let utxo = unUTxO $ (utxosUtxo . lsUTxOState . esLState) epochstate
-      _ssPoolParams = (psStakePoolParams . certPState . lsCertState . esLState) epochstate
-      _pooldeposits = (psDeposits . certPState . lsCertState . esLState) epochstate
-      _keydeposits = (UM.depositMap . dsUnified . certDState . lsCertState . esLState) epochstate
+      _ssPoolParams = epochstate ^. esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+      _pooldeposits = epochstate ^. esLStateL . lsCertStateL . certPStateL . psDepositsL
+      _keydeposits = UM.depositMap $ epochstate ^. esLStateL . lsCertStateL . certDStateL . dsUnifiedL
    in show $
         vsep
           [ ppString "==================================="

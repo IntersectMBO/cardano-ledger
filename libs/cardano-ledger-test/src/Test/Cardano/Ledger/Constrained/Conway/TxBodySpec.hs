@@ -59,10 +59,11 @@ import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.CertState (lookupDepositDState, lookupDepositVState)
+import Cardano.Ledger.CertState (EraCertState (..), lookupDepositDState, lookupDepositVState)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (Consumed (..), Produced (..), consumedTxBody, producedTxBody)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (CertState (..), PState (..))
 import Data.Text (pack)
 import Lens.Micro
@@ -143,13 +144,18 @@ adjustTxOutCoin (DeltaCoin n) x = x & coinTxOutL .~ ((x ^. coinTxOutL) <+> (Coin
 --   It depends on the PParams (deposit ammounts for registering a staking key, a ppol, and registering a Drep)
 --   and on the CertState (what deposits were made in the past)
 getDepositRefund ::
-  forall era. EraTxCert era => PParams era -> CertState era -> [TxCert era] -> (DeltaCoin, DeltaCoin)
-getDepositRefund pp (CertState vs ps ds) certs =
+  forall era.
+  (EraTxCert era, EraCertState era) =>
+  PParams era -> CertState era -> [TxCert era] -> (DeltaCoin, DeltaCoin)
+getDepositRefund pp certState certs =
   ( delta $ getTotalDepositsTxCerts pp (`Map.member` psStakePoolParams ps) certs
   , delta $ getTotalRefundsTxCerts pp (lookupDepositDState ds) (lookupDepositVState vs) certs
   )
   where
     delta (Coin n) = DeltaCoin n
+    vs = certState ^. certVStateL
+    ps = certState ^. certPStateL
+    ds = certState ^. certDStateL
 
 -- | This is exactly the same as reify, except it names the existential varaible for better error messages
 reifyX ::
@@ -187,6 +193,7 @@ bodyspec ::
   ( EraSpecTxOut era fn
   , EraSpecCert era fn
   , EraSpecTxCert fn era
+  , EraCertState era
   ) =>
   WitUniv era ->
   CertsEnv era ->
@@ -258,6 +265,8 @@ go2 ::
   , EraSpecCert era ConwayFn
   , EraSpecTxCert ConwayFn era
   , HasSpec ConwayFn (Tx era)
+  , CertState era ~ ShelleyCertState era
+  , EraCertState era
   ) =>
   IO ()
 go2 = do

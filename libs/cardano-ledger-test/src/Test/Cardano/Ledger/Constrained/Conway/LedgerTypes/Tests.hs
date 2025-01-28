@@ -16,6 +16,7 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -120,6 +121,7 @@ specSuite ::
   forall (era :: Type).
   ( EraSpecLedger era ConwayFn
   , PrettyA (GovState era)
+  , CertState era ~ ShelleyCertState era -- TODO: this is probably wrong
   ) =>
   Int -> Spec
 specSuite n = do
@@ -190,7 +192,9 @@ spec = do
   specSuite @ConwayEra 10
 
 utxoStateGen ::
-  forall era. EraSpecLedger era ConwayFn => Gen (Specification ConwayFn (UTxOState era))
+  forall era.
+  (EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  Gen (Specification ConwayFn (UTxOState era))
 utxoStateGen =
   utxoStateSpec @era
     <$> genConwayFn @(PParams era) pparamsSpec

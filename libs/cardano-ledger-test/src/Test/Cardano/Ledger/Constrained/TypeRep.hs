@@ -124,6 +124,7 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoPlutusPurposePointer)
 import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (add, zero),
+  CertStateF (..),
   PParamsF (..),
   PParamsUpdateF (..),
   PlutusPointerF (..),
@@ -137,6 +138,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
   TxOutF (..),
   TxWitsF (..),
   ValueF (..),
+  genCertState,
   genFuturePParams,
   genPParams,
   genPParamsUpdate,
@@ -166,6 +168,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   credSummary,
   keyHashSummary,
   pcAnchor,
+  pcCertState,
   pcCoin,
   pcCommittee,
   pcConstitution,
@@ -277,6 +280,7 @@ data Rep era t where
   PParamsR :: Era era => Proof era -> Rep era (PParamsF era)
   FuturePParamsR :: Era era => Proof era -> Rep era (FuturePParams era)
   PParamsUpdateR :: Era era => Proof era -> Rep era (PParamsUpdateF era)
+  CertStateR :: Era era => Proof era -> Rep era (CertStateF era)
   --
   DeltaCoinR :: Rep era DeltaCoin
   GenDelegPairR :: Era era => Rep era GenDelegPair
@@ -478,6 +482,7 @@ repHasInstances r = case r of
   PParamsR {} -> IsTypeable
   FuturePParamsR {} -> IsTypeable
   PParamsUpdateR {} -> IsTypeable
+  CertStateR {} -> IsEq
   DeltaCoinR {} -> IsOrd
   GenDelegPairR {} -> IsOrd
   FutureGenDelegR {} -> IsOrd
@@ -608,6 +613,8 @@ synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map
 synopsis (PParamsR _) (PParamsF p x) = show $ pcPParams p x
 synopsis (FuturePParamsR p) x = show $ pcFuturePParams p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
+-- TODO: think this through
+synopsis (CertStateR _) (CertStateF p x) = show $ pcCertState p x
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
 synopsis FutureGenDelegR x = show (pcFutureGenDeleg x)
@@ -767,6 +774,7 @@ genSizedRep _n (UTxOR p) = genUTxO p
 genSizedRep _ (PParamsR p) = genPParams p
 genSizedRep _ (FuturePParamsR p) = genFuturePParams p
 genSizedRep _ (PParamsUpdateR p) = genPParamsUpdate p
+genSizedRep _ (CertStateR p) = genCertState p
 genSizedRep _ DeltaCoinR = DeltaCoin <$> choose (-1000, 1000)
 genSizedRep _ GenDelegPairR = arbitrary
 genSizedRep _ FutureGenDelegR = arbitrary
@@ -1034,6 +1042,7 @@ shrinkRep (UTxOR _) _ = []
 shrinkRep (PParamsR _) _ = []
 shrinkRep (FuturePParamsR _) _ = []
 shrinkRep (PParamsUpdateR _) _ = []
+shrinkRep (CertStateR _) _ = []
 shrinkRep CharR t = shrink t
 shrinkRep DeltaCoinR t = shrink t
 shrinkRep GenDelegPairR t = shrink t

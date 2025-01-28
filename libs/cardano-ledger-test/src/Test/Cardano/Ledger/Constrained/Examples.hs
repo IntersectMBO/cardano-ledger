@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Constrained.Examples where
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (EpochNo (..))
-import Cardano.Ledger.CertState (FutureGenDeleg (..))
+import Cardano.Ledger.CertState (EraCertState (..), FutureGenDeleg (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core (Era)
@@ -223,7 +223,7 @@ test5 = failn Mary "Test 5. Bad Sum, impossible partition." False stoi cs Skip
 -- ===========================================================
 -- Example list of Constraints for test4 and test5
 
-constraints :: EraGov era => Proof era -> [Pred era]
+constraints :: (EraGov era, EraCertState era) => Proof era -> [Pred era]
 constraints proof =
   [ Sized (ExactSize 10) credsUniv
   , Sized (ExactSize 10) poolHashUniv
@@ -296,7 +296,7 @@ test7 loud = do
 
 -- ================================================
 
-pstateConstraints :: Era era => [Pred era]
+pstateConstraints :: EraCertState era => [Pred era]
 pstateConstraints =
   [ Sized (ExactSize 20) poolHashUniv
   , -- we have , retiring :⊆: regPools        :⊆: poolsUinv AND
@@ -519,7 +519,7 @@ test16 =
 
 -- ==============================================
 
-univPreds :: Era era => Proof era -> [Pred era]
+univPreds :: EraCertState era => Proof era -> [Pred era]
 univPreds p =
   [ Sized (ExactSize 15) credsUniv
   , Sized (ExactSize 20) poolHashUniv
@@ -553,7 +553,7 @@ univPreds p =
   , Dom (utxo p) :⊆: txinUniv
   ]
 
-pstatePreds :: Era era => Proof era -> [Pred era]
+pstatePreds :: EraCertState era => Proof era -> [Pred era]
 pstatePreds _p =
   [ Sized (AtMost 3) (Dom futureRegPools) -- See comments in test8 why we need these Fixed predicates
   , Sized (Range 5 6) (Dom retiring) -- we need       retiring :⊆: regPools        :⊆: poolsUinv
@@ -565,7 +565,7 @@ pstatePreds _p =
     Disjoint (Dom futureRegPools) (Dom retiring)
   ]
 
-dstatePreds :: Era era => Proof era -> [Pred era]
+dstatePreds :: EraCertState era => Proof era -> [Pred era]
 dstatePreds _p =
   [ Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
   , Dom rewards :=: Dom stakeDeposits
@@ -676,13 +676,13 @@ test17 =
 -- ==========================================================
 -- Tests of the Term projection function ProjS
 
-projPreds1 :: Era era => Proof era -> [Pred era]
+projPreds1 :: EraCertState era => Proof era -> [Pred era]
 projPreds1 _proof =
   [ Sized (ExactSize 4) futureGenDelegs
   , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
   ]
 
-projPreds2 :: Era era => Proof era -> [Pred era]
+projPreds2 :: EraCertState era => Proof era -> [Pred era]
 projPreds2 _proof =
   [ Dom genDelegs :⊆: Dom genesisHashUniv
   , Sized (ExactSize 12) futGDUniv

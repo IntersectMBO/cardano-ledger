@@ -8,7 +8,9 @@
 
 module Test.Cardano.Ledger.Constrained.Preds.NewEpochState where
 
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core (Era)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.State (PoolDistr (..), SnapShot (..), Stake (..), calculatePoolDistr)
 import qualified Cardano.Ledger.UMap as UMap
@@ -37,7 +39,7 @@ import Test.Tasty (TestTree, defaultMain)
 
 -- ===========================================================
 
-epochstatePreds :: EraGov era => Proof era -> [Pred era]
+epochstatePreds :: (EraGov era, EraCertState era) => Proof era -> [Pred era]
 epochstatePreds _proof =
   [ incrementalStake :=: markStake
   , delegations :=: markDelegs
@@ -88,7 +90,7 @@ epochStateStage ::
   Gen (Subst era)
 epochStateStage proof = toolChainSub proof standardOrderInfo (epochstatePreds proof)
 
-demoES :: Reflect era => Proof era -> ReplMode -> IO ()
+demoES :: (Reflect era, CertState era ~ ShelleyCertState era) => Proof era -> ReplMode -> IO ()
 demoES proof mode = do
   env <-
     generate
@@ -123,7 +125,7 @@ newEpochStateStage ::
   Gen (Subst era)
 newEpochStateStage proof = toolChainSub proof (standardOrderInfo {sumBeforeParts = False}) (newEpochStatePreds proof)
 
-demoNES :: Reflect era => Proof era -> ReplMode -> IO ()
+demoNES :: (Reflect era, CertState era ~ ShelleyCertState era) => Proof era -> ReplMode -> IO ()
 demoNES proof mode = do
   env <-
     generate

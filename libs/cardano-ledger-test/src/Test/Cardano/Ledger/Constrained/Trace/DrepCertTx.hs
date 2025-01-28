@@ -8,6 +8,7 @@
 -- | Generate a Simple Tx with 1 inout, 1 output, and 1 DRep related Cert
 module Test.Cardano.Ledger.Constrained.Trace.DrepCertTx where
 
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
@@ -27,20 +28,19 @@ import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.DRep hiding (drepDeposit)
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
-  DState (..),
   EpochState (..),
   IncrementalStake (..),
   LedgerState (..),
   NewEpochState (..),
   UTxOState (..),
-  VState (..),
   allObligations,
+  dsUnifiedL,
   esLStateL,
   esSnapshotsL,
   lsUTxOStateL,
   nesEsL,
   utxosGovStateL,
+  vsDRepsL,
  )
 import Cardano.Ledger.State (ssStakeMarkPoolDistrL)
 import qualified Cardano.Ledger.UMap as UMap
@@ -209,7 +209,8 @@ allValidSignals p (MockChainState nes _ slot count) (MockBlock _ _ _txs) _stateN
     ("\nCount " ++ show count ++ " Slot " ++ show slot ++ "\n" ++ show (pcNewEpochState p nes))
     (property True)
 
-pulserWorks :: ConwayEraGov era => MockChainState era -> MockChainState era -> Property
+pulserWorks ::
+  (ConwayEraGov era, EraCertState era) => MockChainState era -> MockChainState era -> Property
 pulserWorks mcsfirst mcslast =
   counterexample
     ( "\nFirst "
@@ -221,7 +222,7 @@ pulserWorks mcsfirst mcslast =
 
 bruteForceDRepDistr ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   Map.Map DRep (CompactForm Coin)
 bruteForceDRepDistr nes =
@@ -232,8 +233,8 @@ bruteForceDRepDistr nes =
     poolD = nes ^. nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL
     cs = lsCertState ls
     IStake incstk _ = utxosStakeDistr (lsUTxOState ls)
-    umap = dsUnified (certDState cs)
-    dreps = vsDReps (certVState cs)
+    umap = cs ^. certDStateL . dsUnifiedL
+    dreps = cs ^. certVStateL . vsDRepsL
 
 extractPulsingDRepDistr ::
   ConwayEraGov era =>
@@ -260,7 +261,7 @@ showMap msg m = unlines (msg : map show (Map.toList m))
 traceMap :: (Show k, Show v) => String -> Map.Map k v -> a -> a
 traceMap s m x = Debug.trace (showMap s m) x
 
-showPotObl :: ConwayEraGov era => NewEpochState era -> String
+showPotObl :: (ConwayEraGov era, EraCertState era) => NewEpochState era -> String
 showPotObl nes =
   "\nPOT "
     ++ show (utxosDeposited us)
