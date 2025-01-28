@@ -54,7 +54,7 @@ import NoThunks.Class (NoThunks (..))
 data ShelleyNewEpochPredFailure era
   = EpochFailure (PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
   | CorruptRewardUpdate
-      !RewardUpdate -- The reward update which violates an invariant
+      RewardUpdate -- The reward update which violates an invariant
   | MirFailure (PredicateFailure (EraRule "MIR" era)) -- Subtransition Failures
   deriving (Generic)
 

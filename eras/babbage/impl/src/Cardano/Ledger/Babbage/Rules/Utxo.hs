@@ -108,20 +108,20 @@ import Validation (Validation, failureIf, failureUnless)
 
 -- | Predicate failure for the Babbage Era
 data BabbageUtxoPredFailure era
-  = AlonzoInBabbageUtxoPredFailure !(AlonzoUtxoPredFailure era) -- Inherited from Alonzo
+  = AlonzoInBabbageUtxoPredFailure (AlonzoUtxoPredFailure era) -- Inherited from Alonzo
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField
       -- | collateral provided
-      !DeltaCoin
+      DeltaCoin
       -- | collateral amount declared in transaction body
-      !Coin
+      Coin
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO
-      ![(TxOut era, Coin)]
+      [(TxOut era, Coin)]
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs
-      !(NonEmpty TxIn)
+      (NonEmpty TxIn)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" BabbageEra = BabbageUtxoPredFailure BabbageEra

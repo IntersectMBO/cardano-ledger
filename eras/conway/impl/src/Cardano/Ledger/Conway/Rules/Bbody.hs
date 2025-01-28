@@ -91,12 +91,12 @@ maxRefScriptSizePerBlock :: Int
 maxRefScriptSizePerBlock = 1024 * 1024 -- 1MiB
 
 data ConwayBbodyPredFailure era
-  = WrongBlockBodySizeBBODY !(Mismatch 'RelEQ Int)
-  | InvalidBodyHashBBODY !(Mismatch 'RelEQ (Hash HASH EraIndependentBlockBody))
+  = WrongBlockBodySizeBBODY (Mismatch 'RelEQ Int)
+  | InvalidBodyHashBBODY (Mismatch 'RelEQ (Hash HASH EraIndependentBlockBody))
   | -- | LEDGERS rule subtransition Failures
-    LedgersFailure !(PredicateFailure (EraRule "LEDGERS" era))
-  | TooManyExUnits !(Mismatch 'RelLTEQ ExUnits)
-  | BodyRefScriptsSizeTooBig !(Mismatch 'RelLTEQ Int)
+    LedgersFailure (PredicateFailure (EraRule "LEDGERS" era))
+  | TooManyExUnits (Mismatch 'RelLTEQ ExUnits)
+  | BodyRefScriptsSizeTooBig (Mismatch 'RelLTEQ Int)
   deriving (Generic)
 
 deriving instance

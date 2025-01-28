@@ -76,7 +76,7 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
 data CertEnv era = CertEnv
-  { cePParams :: !(PParams era)
+  { cePParams :: PParams era
   , ceCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , ceCurrentCommittee :: StrictMaybe (Committee era)

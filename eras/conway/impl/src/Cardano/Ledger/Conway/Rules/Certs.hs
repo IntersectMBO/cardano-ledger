@@ -86,8 +86,8 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data CertsEnv era = CertsEnv
-  { certsTx :: !(Tx era)
-  , certsPParams :: !(PParams era)
+  { certsTx :: Tx era
+  , certsPParams :: PParams era
   , certsCurrentEpoch :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , certsCurrentCommittee :: StrictMaybe (Committee era)
@@ -113,9 +113,9 @@ instance (EraPParams era, NFData (Tx era)) => NFData (CertsEnv era)
 data ConwayCertsPredFailure era
   = -- | Withdrawals that are missing or do not withdrawal the entire amount
     WithdrawalsNotInRewardsCERTS
-      !(Map.Map RewardAccount Coin)
+      (Map.Map RewardAccount Coin)
   | -- | CERT rule subtransition Failures
-    CertFailure !(PredicateFailure (EraRule "CERT" era))
+    CertFailure (PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
 
 type instance EraRuleFailure "CERTS" ConwayEra = ConwayCertsPredFailure ConwayEra

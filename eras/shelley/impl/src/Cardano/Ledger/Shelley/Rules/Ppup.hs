@@ -90,23 +90,23 @@ data ShelleyPpupPredFailure era
     --  `mismatchSupplied` ~ key hashes which were a part of the update.
     --  `mismatchExpected` ~ key hashes of the genesis keys.
     NonGenesisUpdatePPUP
-      !(Mismatch 'RelSubset (Set (KeyHash 'Genesis)))
+      (Mismatch 'RelSubset (Set (KeyHash 'Genesis)))
   | -- | An update was proposed for the wrong epoch.
     --  The first 'EpochNo' is the current epoch.
     --  The second 'EpochNo' is the epoch listed in the update.
     --  The last parameter indicates if the update was intended
     --  for the current or the next epoch.
     PPUpdateWrongEpoch
-      !EpochNo
-      !EpochNo
-      !VotingPeriod
+      EpochNo
+      EpochNo
+      VotingPeriod
   | -- | An update was proposed which contains an invalid protocol version.
     --  New protocol versions must either increase the major
     --  number by exactly one and set the minor version to zero,
     --  or keep the major version the same and increase the minor
     --  version by exactly one.
     PVCannotFollowPPUP
-      !ProtVer
+      ProtVer
   deriving (Show, Eq, Generic)
 
 type instance EraRuleFailure "PPUP" ShelleyEra = ShelleyPpupPredFailure ShelleyEra

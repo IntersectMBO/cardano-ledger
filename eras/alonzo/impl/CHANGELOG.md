@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Made the fields of predicate failures and environments lazy
 * Add `MemPack` instance for `Addr28Extra`, `DataHash32`, `AlonzoTxOut` and `PlutusScript AlonzoEra`
 * Deprecate `hashAlonzoTxAuxData`
 * Stop re-exporting deprecated `AuxiliaryDataHash` from `Cardano.Ledger.Alonzo.TxAuxData`

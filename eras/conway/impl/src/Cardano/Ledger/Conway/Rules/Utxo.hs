@@ -85,74 +85,74 @@ data ConwayUtxoPredFailure era
     UtxosFailure (PredicateFailure (EraRule "UTXOS" era))
   | -- | The bad transaction inputs
     BadInputsUTxO
-      !(Set TxIn)
+      (Set TxIn)
   | OutsideValidityIntervalUTxO
       -- | transaction's validity interval
-      !ValidityInterval
+      ValidityInterval
       -- | current slot
-      !SlotNo
+      SlotNo
   | MaxTxSizeUTxO
-      !(Mismatch 'RelLTEQ Integer)
+      (Mismatch 'RelLTEQ Integer)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
-      !(Mismatch 'RelGTEQ Coin) -- The values are serialised in reverse order
+      (Mismatch 'RelGTEQ Coin) -- The values are serialised in reverse order
   | ValueNotConservedUTxO
-      !(Mismatch 'RelEQ (Value era)) -- Serialise consumed first, then produced
+      (Mismatch 'RelEQ (Value era)) -- Serialise consumed first, then produced
   | -- | the set of addresses with incorrect network IDs
     WrongNetwork
       -- | the expected network id
-      !Network
+      Network
       -- | the set of addresses with incorrect network IDs
-      !(Set Addr)
+      (Set Addr)
   | WrongNetworkWithdrawal
       -- | the expected network id
-      !Network
+      Network
       -- | the set of reward addresses with incorrect network IDs
-      !(Set RewardAccount)
+      (Set RewardAccount)
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
-      ![TxOut era]
+      [TxOut era]
   | -- | list of supplied bad transaction outputs
     OutputBootAddrAttrsTooBig
-      ![TxOut era]
+      [TxOut era]
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
     OutputTooBigUTxO
-      ![(Int, Int, TxOut era)]
+      [(Int, Int, TxOut era)]
   | InsufficientCollateral
       -- | balance computed
-      !DeltaCoin
+      DeltaCoin
       -- | the required collateral for the given fee
-      !Coin
+      Coin
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
-      !(UTxO era)
+      (UTxO era)
   | ExUnitsTooBigUTxO
-      !(Mismatch 'RelLTEQ ExUnits) -- The values are serialised in reverse order
+      (Mismatch 'RelLTEQ ExUnits) -- The values are serialised in reverse order
   | -- | The inputs marked for use as fees contain non-ADA tokens
-    CollateralContainsNonADA !(Value era)
+    CollateralContainsNonADA (Value era)
   | -- | Wrong Network ID in body
     WrongNetworkInTxBody
-      !(Mismatch 'RelEQ Network) -- The values are serialised in reverse order
+      (Mismatch 'RelEQ Network) -- The values are serialised in reverse order
   | -- | slot number outside consensus forecast range
     OutsideForecast
-      !SlotNo
+      SlotNo
   | -- | There are too many collateral inputs
     TooManyCollateralInputs
-      !(Mismatch 'RelLTEQ Natural) -- The values are serialised in reverse order
+      (Mismatch 'RelLTEQ Natural) -- The values are serialised in reverse order
   | NoCollateralInputs
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField
       -- | collateral provided
-      !DeltaCoin
+      DeltaCoin
       -- | collateral amount declared in transaction body
-      !Coin
+      Coin
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO
-      ![(TxOut era, Coin)]
+      [(TxOut era, Coin)]
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs
-      !(NonEmpty TxIn)
+      (NonEmpty TxIn)
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" ConwayEra = ConwayUtxoPredFailure ConwayEra

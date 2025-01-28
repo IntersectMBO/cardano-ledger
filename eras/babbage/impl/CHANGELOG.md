@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Made the fields of predicate failures and environments lazy
 * Add `MemPack` instance for `BabbageTxOut` and `PlutusScript BabbageEra`
 * Deprecate `Babbage` type synonym
 * Remove crypto parametrization from `BabbageEra`

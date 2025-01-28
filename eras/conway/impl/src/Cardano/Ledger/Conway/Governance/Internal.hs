@@ -561,14 +561,14 @@ ratifySignalL = lens unRatifySignal (\x y -> x {unRatifySignal = y})
 instance EraPParams era => NFData (RatifySignal era)
 
 data RatifyEnv era = RatifyEnv
-  { reStakeDistr :: !(Map (Credential 'Staking) (CompactForm Coin))
-  , reStakePoolDistr :: !PoolDistr
-  , reDRepDistr :: !(Map DRep (CompactForm Coin))
-  , reDRepState :: !(Map (Credential 'DRepRole) DRepState)
-  , reCurrentEpoch :: !EpochNo
-  , reCommitteeState :: !(CommitteeState era)
-  , reDelegatees :: !(Map (Credential 'Staking) DRep)
-  , rePoolParams :: !(Map (KeyHash 'StakePool) PoolParams)
+  { reStakeDistr :: Map (Credential 'Staking) (CompactForm Coin)
+  , reStakePoolDistr :: PoolDistr
+  , reDRepDistr :: Map DRep (CompactForm Coin)
+  , reDRepState :: Map (Credential 'DRepRole) DRepState
+  , reCurrentEpoch :: EpochNo
+  , reCommitteeState :: CommitteeState era
+  , reDelegatees :: Map (Credential 'Staking) DRep
+  , rePoolParams :: Map (KeyHash 'StakePool) PoolParams
   }
   deriving (Generic)
 

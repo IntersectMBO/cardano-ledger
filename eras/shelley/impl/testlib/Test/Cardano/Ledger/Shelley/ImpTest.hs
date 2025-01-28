@@ -793,7 +793,7 @@ data ImpTestEnv era = ImpTestEnv
       LedgerState era ->
       Tx era ->
       BaseImpM ()
-  , iteCborRoundTripFailures :: !Bool
+  , iteCborRoundTripFailures :: Bool
   -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
   }
 

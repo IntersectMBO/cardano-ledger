@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Made the fields of predicate failures and environments lazy
 * Move `Crypto` and `StandardCrypto` definitions from `cardano-ledger-core` into new
   `Cardano.Protocol.Crypto` module.
 * Remove crypto parametrization from types:
