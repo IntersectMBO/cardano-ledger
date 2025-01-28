@@ -49,7 +49,8 @@ import qualified Data.Semigroup as Semigroup
 import Constrained.BaseExperiment
 import Constrained.SyntaxExperiment
 
--- STUB
+-- ===================================
+-- STUBS
 elem_ :: Term e -> Term [e] -> Term Bool
 elem_ = undefined
 
@@ -66,6 +67,12 @@ rewriteRules ::
     Maybe (Term fn b)
 -}    
 rewriteRules _ _ = Nothing
+
+conformsToSpec :: a -> Specification a -> Bool
+conformsToSpec = undefined
+
+satisfies :: Term a -> Specification a -> Pred
+satisfies = undefined
 
 -- =======================================================
 -- helpers
@@ -351,16 +358,13 @@ simplifySpec spec = case regularizeNames spec of
 
 
 -- | Precondition: the `Pred fn` defines the `Var a`
---  STUB
+
 -- Runs in `GE` in order for us to have detailed context on failure.
 computeSpecSimplified ::
   forall fn a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Specification a)
 computeSpecSimplified x p = undefined {- localGESpec $ case p of
   Monitor {} -> pure mempty
-  -- FIX ME
-  GenHint h t -> undefined 
-                {- case toCtx x t of
-                   (Some c) -> propagateSpec (giveHint h) <$> c -} -- NOTE: this implies you do need to actually propagate hints, e.g. propagate depth control in a `tail` or `cdr` like function
+  GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t
   Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genError es
@@ -375,19 +379,18 @@ computeSpecSimplified x p = undefined {- localGESpec $ case p of
   Assert (Lit True) -> pure mempty
   Assert (Lit False) -> genError1 (show p)
 
--- FIX ME STUBB Patterns
---  Assert (ElemPat _ (Lit [])) -> pure (ErrorSpec (pure (show p)))
---  Assert (ElemPat t (Lit xs)) -> propagateSpec (MemberSpec (NE.fromList xs)) <$> toCtx x t
+  Assert (ElemPat _ (Lit [])) -> pure (ErrorSpec (pure (show p)))
+  Assert (ElemPat t (Lit xs)) -> propagateSpec (MemberSpec (NE.fromList xs)) <$> toCtx x t
 
-  Assert t -> undefined --- FIX ME propagateSpec (equalSpec True) <$> toCtx x t
+  Assert t -> undefined -- propagateSpec (equalSpec True) <$> toCtx x t
   ForAll (Lit s) b -> fold <$> mapM (\val -> computeSpec x $ unBind val b) (forAllToList s)
   ForAll t b -> do
     bSpec <- computeSpecBinderSimplified b
-    undefined -- FIX ME propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
+    propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
   Case (Lit val) bs -> runCaseOn val (mapList thing bs) $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
   Case t branches -> do
     branchSpecs <- mapMList (traverseWeighted computeSpecBinderSimplified) branches
-    undefined -- FIX ME propagateSpec (caseSpec (Just (showType @a)) branchSpecs) <$> toCtx x t
+    propagateSpec (caseSpec (Just (showType @a)) branchSpecs) <$> toCtx x t
   When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
   -- This shouldn't happen a lot of the time because when the body is trivial we mostly get rid of the `When` entirely
   When {} -> pure $ SuspendedSpec x p
@@ -397,7 +400,7 @@ computeSpecSimplified x p = undefined {- localGESpec $ case p of
         pure $
           ErrorSpec (NE.fromList ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a])
   Reifies t' (Lit val) f ->
-    undefined -- FIX ME propagateSpec (equalSpec (f val)) <$> toCtx x t'
+    propagateSpec (equalSpec (f val)) <$> toCtx x t'
   Reifies Lit {} _ _ ->
     fatalError $ NE.fromList ["Dependency error in computeSpec: Reifies", "  " ++ show p]
   Explain es p -> do
@@ -423,7 +426,7 @@ computeSpecSimplified x p = undefined {- localGESpec $ case p of
       (GenError xs) -> Result $ ErrorSpec (catMessageList xs)
       (FatalError es) -> FatalError es
       (Result x) -> Result x
-
+-}
 -- | Precondition: the `Pred fn` defines the `Var a`.
 --
 -- Runs in `GE` in order for us to have detailed context on failure.
@@ -437,6 +440,28 @@ computeSpecBinder (x :-> p) = computeSpec x p
 computeSpecBinderSimplified :: Binder a -> GE (Specification a)
 computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
+
+
+-- ===================================================================================
+-- The type we will use for the SimpleRep of Sums
+
+{- 
+guardSumSpec ::
+  forall a b.
+  (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
+  [String] ->
+  SumSpec a b ->
+  Specification (Sum a b)
+guardSumSpec msgs s@(SumSpecRaw tString _ sa sb)
+  | isErrorLike sa
+  , isErrorLike sb =
+      ErrorSpec $
+        NE.fromList $
+          msgs ++ ["All branches in a caseOn" ++ sumType tString ++ " simplify to False.", show s]
+  | otherwise = typeSpec s
+-}
+
+{-
 -- | Turn a list of branches into a SumSpec. If all the branches fail return an ErrorSpec.
 caseSpec ::
   forall as.
@@ -476,28 +501,9 @@ caseSpec tString ss
             (Nothing, Nothing) -> Nothing
             (a, b) -> Just (fromMaybe 1 a, fromMaybe (lengthList ss) b)
 -}
+
 totalWeight :: List (Weighted f) as -> Maybe Int
 totalWeight = fmap Semigroup.getSum . foldMapList (fmap Semigroup.Sum . weight)
-
-
--- ===================================================================================
--- The type we will use for the SimpleRep of Sums
-
-{- 
-guardSumSpec ::
-  forall a b.
-  (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
-  [String] ->
-  SumSpec a b ->
-  Specification (Sum a b)
-guardSumSpec msgs s@(SumSpecRaw tString _ sa sb)
-  | isErrorLike sa
-  , isErrorLike sb =
-      ErrorSpec $
-        NE.fromList $
-          msgs ++ ["All branches in a caseOn" ++ sumType tString ++ " simplify to False.", show s]
-  | otherwise = typeSpec s
--}
 
 data SumSpec a b
   = SumSpecRaw
@@ -531,3 +537,52 @@ sumWeightL Nothing = "1"
 sumWeightL (Just (x, _)) = fromString (show x)
 sumWeightR Nothing = "1"
 sumWeightR (Just (_, x)) = fromString (show x)
+
+-- ====================================================================
+-- Monoid and Semigroup, depends on conformance functions    
+-- ====================================================================    
+
+instance HasSpec a => Semigroup (Specification a) where
+  ExplainSpec es x <> y = explainSpecOpt es (x <> y)
+  x <> ExplainSpec es y = explainSpecOpt es (x <> y)
+  TrueSpec <> s = s
+  s <> TrueSpec = s
+  ErrorSpec e <> ErrorSpec e' =
+    ErrorSpec
+      ( e
+          <> pure ("------ spec <> spec ------ @" ++ showType @a)
+          <> e'
+      )
+  ErrorSpec e <> _ = ErrorSpec e
+  _ <> ErrorSpec e = ErrorSpec e
+  MemberSpec as <> MemberSpec as' =
+    addToErrorSpec
+      ( NE.fromList
+          ["Intersecting: ", "  MemberSpec " ++ show (NE.toList as), "  MemberSpec " ++ show (NE.toList as')]
+      )
+      ( memberSpecList
+          (nub $ intersect (NE.toList as) (NE.toList as'))
+          (pure "Empty intersection")
+      )
+  ms@(MemberSpec as) <> ts@TypeSpec {} =
+    memberSpecList
+      (nub $ NE.filter (`conformsToSpec` ts) as)
+      ( NE.fromList
+          [ "The two " ++ showType @a ++ " Specifications are inconsistent."
+          , "  " ++ show ms
+          , "  " ++ show ts
+          ]
+      )
+  TypeSpec s cant <> MemberSpec as = MemberSpec as <> TypeSpec s cant
+  SuspendedSpec v p <> SuspendedSpec v' p' = SuspendedSpec v (p <> rename v' v p')
+  SuspendedSpec v ps <> s = SuspendedSpec v (ps <> satisfies (V v) s)
+  s <> SuspendedSpec v ps = SuspendedSpec v (ps <> satisfies (V v) s)
+  TypeSpec s cant <> TypeSpec s' cant' = case combineSpec s s' of
+    -- NOTE: This might look like an unnecessary case, but doing
+    -- it like this avoids looping.
+    TypeSpec s'' cant'' -> TypeSpec s'' (cant <> cant' <> cant'')
+    s'' -> s'' <> notMemberSpec (cant <> cant')
+
+instance HasSpec a => Monoid (Specification a) where
+  mempty = TrueSpec
+
