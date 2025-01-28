@@ -63,6 +63,6 @@ library
     cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.3.1,
     cardano-prelude,
     cardano-prelude-test,
-    cryptonite,
+    crypton,
     hedgehog >=1.0.4,
     memory,
