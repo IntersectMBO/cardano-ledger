@@ -49,10 +49,12 @@ spec = do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
       freshKeyHash >>= \kh -> do
+        let cred = KeyHashObj kh
+        regTxCert <- genRegTxCert cred
         submitTx_ $
           mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL .~ [RegTxCert (KeyHashObj kh)]
-        expectRegistered (KeyHashObj kh)
+            & bodyTxL . certsTxBodyL .~ [regTxCert]
+        expectRegistered cred
 
       freshKeyHash >>= \kh -> do
         submitTx_ $
@@ -207,13 +209,11 @@ spec = do
       expectRegisteredRewardAddress otherRewardAccount
       submitAndExpireProposalToMakeReward otherStakeCred
       lookupReward otherStakeCred `shouldReturn` govActionDeposit
+      unRegTxCert <- genUnRegTxCert stakeCred
       submitTx_ . mkBasicTx $
         mkBasicTxBody
           & certsTxBodyL
-            .~ SSeq.fromList
-              -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/636
-              -- we use this inplace of UnRegTxCert to make conformance-spec happy
-              [UnRegDepositTxCert stakeCred keyDeposit]
+            .~ SSeq.fromList [unRegTxCert]
           & withdrawalsTxBodyL
             .~ Withdrawals
               ( Map.fromList
