@@ -2,6 +2,16 @@
 
 ## 1.13.0.0
 
+* Add `DecCBOR` instances for:
+  * `MaryTxBody`
+  * `TxDats`
+  * `AlonzoTxAuxData`
+  * `AlonzoScript`
+  * `Redeemers`
+  * `AlonzoTxWits`
+  * `AlonozTxBody`
+  * `AlonzoTx`
+  * `AlonzoTxSeq`
 * Remove redundant `EncCBOR (Data era)` constraint from `DecCBOR` instance for `Annotator (AlonzoTxWits era)`
 * Converted `CertState` to a type family
 * Remove `reapplyAlonzoTx` as no longer needed.
@@ -17,6 +27,7 @@
 
 ### `testlib`
 
+* Add `DecCBOR` instances for `TranslationInstance`
 * Converted `CertState` to a type family
 * Expose `alonzoFixupFees`
 

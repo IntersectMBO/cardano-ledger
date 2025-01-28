@@ -59,6 +59,7 @@ import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
   Annotator (..),
   DecCBOR (..),
+  Decoder,
   EncCBOR (..),
   ToCBOR,
   TokenType (..),
@@ -183,16 +184,10 @@ getAlonzoTxAuxDataScripts AlonzoTxAuxData {atadTimelock = timelocks, atadPlutus 
 
 instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
   decCBOR =
-    peekTokenType >>= \case
-      TypeMapLen -> decodeShelley
-      TypeMapLen64 -> decodeShelley
-      TypeMapLenIndef -> decodeShelley
-      TypeListLen -> decodeShelleyMA
-      TypeListLen64 -> decodeShelleyMA
-      TypeListLenIndef -> decodeShelleyMA
-      TypeTag -> decodeAlonzo
-      TypeTag64 -> decodeAlonzo
-      _ -> fail "Failed to decode AlonzoTxAuxData"
+    decodeTxAuxDataByTokenType @(Annotator (AlonzoTxAuxDataRaw era))
+      decodeShelley
+      decodeAllegra
+      decodeAlonzo
     where
       decodeShelley =
         decode
@@ -201,7 +196,7 @@ instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
               <*! Ann (Emit StrictSeq.empty)
               <*! Ann (Emit Map.empty)
           )
-      decodeShelleyMA =
+      decodeAllegra =
         decode
           ( Ann (RecD AlonzoTxAuxDataRaw)
               <*! Ann From
@@ -214,13 +209,6 @@ instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
           TagD 259 $
             SparseKeyed "AlonzoTxAuxData" (pure emptyAuxData) auxDataField []
 
-      addPlutusScripts lang scripts ad =
-        case NE.nonEmpty scripts of
-          Nothing -> ad
-          Just neScripts ->
-            -- Avoid leaks by deepseq, since non empty list is lazy.
-            neScripts `deepseq` ad {atadrPlutus = Map.insert lang neScripts $ atadrPlutus ad}
-
       auxDataField :: Word -> Field (Annotator (AlonzoTxAuxDataRaw era))
       auxDataField 0 = fieldA (\x ad -> ad {atadrMetadata = x}) From
       auxDataField 1 =
@@ -232,6 +220,53 @@ instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
       auxDataField 4 = fieldA (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
       auxDataField n = field (\_ t -> t) (Invalid n)
 
+instance Era era => DecCBOR (AlonzoTxAuxDataRaw era) where
+  decCBOR =
+    decodeTxAuxDataByTokenType @(AlonzoTxAuxDataRaw era)
+      decodeShelley
+      decodeAllegra
+      decodeAlonzo
+    where
+      decodeShelley =
+        decode
+          (Emit AlonzoTxAuxDataRaw <! From <! Emit StrictSeq.empty <! Emit Map.empty)
+      decodeAllegra =
+        decode
+          (RecD AlonzoTxAuxDataRaw <! From <! From <! Emit Map.empty)
+      decodeAlonzo =
+        decode $
+          TagD 259 $
+            SparseKeyed "AlonzoTxAuxData" emptyAuxData auxDataField []
+
+      auxDataField :: Word -> Field (AlonzoTxAuxDataRaw era)
+      auxDataField 0 = field (\x ad -> ad {atadrMetadata = x}) From
+      auxDataField 1 = field (\x ad -> ad {atadrTimelock = atadrTimelock ad <> x}) From
+      auxDataField 2 = field (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
+      auxDataField 3 = field (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
+      auxDataField 4 = field (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
+      auxDataField n = field (\_ t -> t) (Invalid n)
+
+decodeTxAuxDataByTokenType :: forall t s. Decoder s t -> Decoder s t -> Decoder s t -> Decoder s t
+decodeTxAuxDataByTokenType decodeShelley decodeAllegra decodeAlonzo =
+  peekTokenType >>= \case
+    TypeMapLen -> decodeShelley
+    TypeMapLen64 -> decodeShelley
+    TypeMapLenIndef -> decodeShelley
+    TypeListLen -> decodeAllegra
+    TypeListLen64 -> decodeAllegra
+    TypeListLenIndef -> decodeAllegra
+    TypeTag -> decodeAlonzo
+    TypeTag64 -> decodeAlonzo
+    _ -> fail "Failed to decode AlonzoTxAuxData"
+
+addPlutusScripts :: Language -> [PlutusBinary] -> AlonzoTxAuxDataRaw era -> AlonzoTxAuxDataRaw era
+addPlutusScripts lang scripts ad =
+  case NE.nonEmpty scripts of
+    Nothing -> ad
+    Just neScripts ->
+      -- Avoid leaks by deepseq, since non empty list is lazy.
+      neScripts `deepseq` ad {atadrPlutus = Map.insert lang neScripts $ atadrPlutus ad}
+
 emptyAuxData :: AlonzoTxAuxDataRaw era
 emptyAuxData = AlonzoTxAuxDataRaw mempty mempty mempty
 
@@ -240,7 +275,7 @@ emptyAuxData = AlonzoTxAuxDataRaw mempty mempty mempty
 
 newtype AlonzoTxAuxData era = AlonzoTxAuxDataConstr (MemoBytes (AlonzoTxAuxDataRaw era))
   deriving (Generic)
-  deriving newtype (ToCBOR, SafeToHash)
+  deriving newtype (ToCBOR, SafeToHash, DecCBOR)
 
 instance Memoized (AlonzoTxAuxData era) where
   type RawType (AlonzoTxAuxData era) = AlonzoTxAuxDataRaw era

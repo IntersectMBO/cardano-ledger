@@ -8,6 +8,7 @@
   * `ShelleyTxBody`
   * `ShelleyTx`
   * `ShelleyTxSeq`
+* Add `indexLookupSeq`
 * Add `segWitTx`
 * Rename `segwitTx` to `segWitAnnTx`
 * Converted `CertState` to a type family

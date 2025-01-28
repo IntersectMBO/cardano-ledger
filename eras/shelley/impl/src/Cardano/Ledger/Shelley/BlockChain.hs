@@ -19,6 +19,7 @@
 module Cardano.Ledger.Shelley.BlockChain (
   ShelleyTxSeq (ShelleyTxSeq, txSeqTxns', TxSeq'),
   constructMetadata,
+  indexLookupSeq,
   txSeqTxns,
   bbHash,
   bBodySize,
@@ -62,6 +63,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Monoid (All (..))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -255,20 +257,20 @@ instance
     Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
     Annotated wits witsBytes <- decodeAnnotated decCBOR
     Annotated auxDataMap auxDataBytes <- decodeAnnotated decCBOR
-    let b = length bodies
-    let inRange x = (0 <= x) && (x <= (b - 1))
+    let bodiesLength = length bodies
+    let inRange x = (0 <= x) && (x <= (bodiesLength - 1))
     unless
-      (all inRange (Map.keysSet auxDataMap))
-      (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b - 1)))
-    let auxData = indexLookupSeq b auxDataMap
-    let w = length wits
+      (getAll (Map.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
+      (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (bodiesLength - 1)))
+    let auxData = indexLookupSeq bodiesLength auxDataMap
+    let witsLength = length wits
     unless
-      (b == w)
+      (bodiesLength == witsLength)
       ( fail $
           "different number of transaction bodies ("
-            <> show b
+            <> show bodiesLength
             <> ") and witness sets ("
-            <> show w
+            <> show witsLength
             <> ")"
       )
     let txs =

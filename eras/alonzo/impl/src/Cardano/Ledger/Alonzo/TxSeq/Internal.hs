@@ -32,9 +32,11 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), alonzoSegwitTx)
 import Cardano.Ledger.Binary (
+  Annotated (..),
   Annotator,
   DecCBOR (..),
   EncCBORGroup (..),
+  decodeAnnotated,
   encCBOR,
   encodeFoldableEncoder,
   encodeFoldableMapEncoder,
@@ -44,14 +46,14 @@ import Cardano.Ledger.Binary (
   withSlice,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
+import Cardano.Ledger.Shelley.BlockChain (constructMetadata, indexLookupSeq)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (strictMaybeToMaybe)
+import Data.Maybe.Strict (maybeToStrictMaybe, strictMaybeToMaybe)
 import Data.Monoid (All (..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
@@ -230,6 +232,65 @@ instance AlonzoEraTx era => DecCBOR (Annotator (AlonzoTxSeq era)) where
         <*> witsAnn
         <*> auxDataAnn
         <*> isValAnn
+
+instance
+  ( AlonzoEraTx era
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (AlonzoTxSeq era)
+  where
+  decCBOR = do
+    Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
+    Annotated wits witsBytes <- decodeAnnotated decCBOR
+    Annotated auxDataMap auxDataBytes <- decodeAnnotated decCBOR
+    let bodiesLength = length bodies
+        inRange x = (0 <= x) && (x <= (bodiesLength - 1))
+        witsLength = length wits
+    unless
+      (getAll (Map.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
+      ( fail
+          ( "Some Auxiliarydata index is not in the range: 0 .. "
+              ++ show (bodiesLength - 1)
+          )
+      )
+    let auxData = indexLookupSeq bodiesLength auxDataMap
+    Annotated isValidIdxs isValidBytes <- decodeAnnotated decCBOR
+    let validFlags = alignedValidFlags bodiesLength isValidIdxs
+    unless
+      (bodiesLength == witsLength)
+      ( fail $
+          "different number of transaction bodies ("
+            <> show bodiesLength
+            <> ") and witness sets ("
+            <> show witsLength
+            <> ")"
+      )
+    unless
+      (all inRange isValidIdxs)
+      ( fail
+          ( "Some IsValid index is not in the range: 0 .. "
+              ++ show (bodiesLength - 1)
+              ++ ", "
+              ++ show isValidIdxs
+          )
+      )
+    let mkTx body wit isValid aData =
+          mkBasicTx body
+            & witsTxL .~ wit
+            & auxDataTxL .~ maybeToStrictMaybe aData
+            & isValidTxL .~ isValid
+    let txs =
+          StrictSeq.forceToStrict $
+            Seq.zipWith4 mkTx bodies wits validFlags auxData
+    pure $
+      AlonzoTxSeqRaw
+        txs
+        bodiesBytes
+        witsBytes
+        auxDataBytes
+        isValidBytes
 
 --------------------------------------------------------------------------------
 -- Internal utility functions
