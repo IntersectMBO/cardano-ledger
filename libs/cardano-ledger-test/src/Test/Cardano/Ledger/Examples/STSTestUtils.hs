@@ -48,6 +48,7 @@ import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes (mkTxIxPartial)
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
@@ -292,6 +293,7 @@ testUTXOWwith ::
   forall era.
   ( EraTx era
   , EraGov era
+  , EraCertState era
   ) =>
   WitRule "UTXOW" era ->
   (Result era -> Result era -> Assertion) ->

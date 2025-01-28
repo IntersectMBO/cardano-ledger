@@ -73,6 +73,7 @@ import Cardano.Ledger.Babbage.Core (BabbageEraPParams)
 import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..), BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (ConwayGovState, RunConwayRatify (..))
@@ -96,6 +97,7 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core (EraGov, ShelleyEraTxCert)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), ShelleyGovState (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
@@ -142,6 +144,8 @@ class
   , EraTxAuxData era
   , EraScript era
   , ShelleyEraTxCert era
+  , EraCertState era
+  , CertState era ~ ShelleyCertState era
   ) =>
   Reflect era
   where
