@@ -7,6 +7,14 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 10.2
+
+- Add registered DRep stake distribution query
+
+## 10.1.4
+
+- Add a check to `MEMPOOL` rule that prevents unelected CC from voting
+
 ## 10.1
 
 - Fix drep delegation invariant preservation [#4709](https://github.com/IntersectMBO/cardano-ledger/pull/4709)
