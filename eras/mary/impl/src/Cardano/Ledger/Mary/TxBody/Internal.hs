@@ -148,6 +148,8 @@ deriving via
   instance
     MaryEraTxBody era => DecCBOR (Annotator (MaryTxBody era))
 
+deriving newtype instance MaryEraTxBody era => DecCBOR (MaryTxBody era)
+
 type instance MemoHashIndex (MaryTxBodyRaw era) = EraIndependentTxBody
 
 instance Era era => HashAnnotated (MaryTxBody era) EraIndependentTxBody where
