@@ -2,6 +2,16 @@
 
 ## 1.13.0.0
 
+* Add `DecCBOR` instances for:
+  * `MaryTxBody`
+  * `TxDats`
+  * `AlonzoTxAuxData`
+  * `AlonzoScript`
+  * `Redeemers`
+  * `AlonzoTxWits`
+  * `AlonozTxBody`
+  * `AlonzoTx`
+  * `AlonzoTxSeq`
 * Remove redundant `EncCBOR (Data era)` constraint from `DecCBOR` instance for `Annotator (AlonzoTxWits era)`
 * Remove `reapplyAlonzoTx` as no longer needed.
 * Add `TxInfoResult` data family, `mkTxInfoResult` and `lookupTxInfoResult` to `EraPlutusContext`
@@ -16,6 +26,7 @@
 
 ### `testlib`
 
+* Add `DecCBOR` instances for `TranslationInstance`
 * Expose `alonzoFixupFees`
 
 ## 1.12.0.0

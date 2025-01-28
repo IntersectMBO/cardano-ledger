@@ -391,7 +391,7 @@ segWitAnnTx bodyAnn witsAnn metaAnn = Annotator $ \bytes ->
           <> Plain.serialize body'
           <> Plain.serialize witnessSet
           <> wrappedMetadataBytes
-    in unsafeConstructTxWithBytes
+   in unsafeConstructTxWithBytes
         body'
         witnessSet
         (maybeToStrictMaybe metadata)

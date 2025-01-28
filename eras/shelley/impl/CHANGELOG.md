@@ -8,6 +8,7 @@
   * `ShelleyTxBody`
   * `ShelleyTx`
   * `ShelleyTxSeq`
+* Add `indexLookupSeq`
 * Add `segWitTx`
 * Rename `segwitTx` to `segWitAnnTx`
 * Restrict the monad of `applyTx` and `reapllyTx` to `Either` from abstract `MonadError`
