@@ -51,6 +51,7 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   mkTxIxPartial,
  )
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (
@@ -315,6 +316,7 @@ testUTXOWwith ::
   forall era.
   ( EraTx era
   , EraGov era
+  , EraCertState era
   ) =>
   WitRule "UTXOW" era ->
   (Result era -> Result era -> Assertion) ->

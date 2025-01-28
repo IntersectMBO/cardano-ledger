@@ -254,6 +254,7 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
+import Cardano.Ledger.Tools (boom)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
@@ -1048,6 +1049,9 @@ pcPParams proof pp = ppRecord ("PParams " <> pack (show proof)) pairs
 --   are a newtype wrapped around a type family.
 instance Reflect era => PrettyA (PParams era) where
   prettyA = pcPParams reify
+
+pcCertState :: Proof era -> CertState era -> PDoc
+pcCertState = boom
 
 -- =================================
 -- Type families that have Fields, can be pretty printed (for all eras) by using
@@ -3162,18 +3166,18 @@ instance PrettyA FutureGenDeleg where
 instance PrettyA GenDelegPair where
   prettyA = pcGenDelegPair
 
-pcCertState :: DP.EraCertState era => CertState era -> PDoc
-pcCertState certState =
-  ppRecord
-    "CertState"
-    [ ("pstate", pcPState pst)
-    , ("vstate", pcVState vst)
-    , ("dstate", pcDState dst)
-    ]
-  where
-    vst = certState ^. certVStateL
-    pst = certState ^. certPStateL
-    dst = certState ^. certDStateL
+-- pcCertState :: DP.EraCertState era => CertState era -> PDoc
+-- pcCertState certState =
+--   ppRecord
+--     "CertState"
+--     [ ("pstate", pcPState pst)
+--     , ("vstate", pcVState vst)
+--     , ("dstate", pcDState dst)
+--     ]
+--   where
+--     vst = certState ^. certVStateL
+--     pst = certState ^. certPStateL
+--     dst = certState ^. certDStateL
 
 pcVState :: VState era -> PDoc
 pcVState (VState dreps committeeState numDormantEpochs) =
@@ -3369,24 +3373,24 @@ psUTxOState proof (UTxOState (UTxO u) dep fs gs (IStake m _) don) =
     , ("donation", pcCoin don)
     ]
 
-pcLedgerState :: DP.EraCertState era => Proof era -> LedgerState era -> PDoc
+pcLedgerState :: Proof era -> LedgerState era -> PDoc
 pcLedgerState proof ls =
   ppRecord
     "LedgerState"
     [ ("utxoState", pcUTxOState proof (lsUTxOState ls))
-    , ("certState", pcCertState (lsCertState ls))
+    , ("certState", pcCertState proof (lsCertState ls))
     ]
 
 instance (Reflect era, DP.EraCertState era) => PrettyA (LedgerState era) where
   prettyA = pcLedgerState reify
 
 -- | Like pcLedgerState, except it prints only a summary of the UTxO
-psLedgerState :: (Reflect era, DP.EraCertState era) => Proof era -> LedgerState era -> PDoc
+psLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
 psLedgerState proof ls =
   ppRecord
     "LedgerState"
     [ ("utxoState", psUTxOState proof (lsUTxOState ls))
-    , ("certState", pcCertState (lsCertState ls))
+    , ("certState", pcCertState proof (lsCertState ls))
     ]
 
 pcPState :: PState era -> PDoc

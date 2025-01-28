@@ -15,6 +15,7 @@ import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Api.Tx (RedeemerReport, TransactionScriptFailure (..), evalTxExUnits)
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, inject)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Plutus (
   Data (..),
@@ -138,6 +139,7 @@ exampleExUnitCalc ::
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraPlutusContext era
   , EraGov era
+  , EraCertState era
   ) =>
   Proof era ->
   IO ()
@@ -227,7 +229,7 @@ validatingBody pf =
 exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
-uenv :: AlonzoEraPParams era => UtxoEnv era
+uenv :: (AlonzoEraPParams era, EraCertState era) => UtxoEnv era
 uenv = UtxoEnv (SlotNo 0) testPParams def
 
 ustate ::

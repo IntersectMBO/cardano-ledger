@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Constrained.Preds.LedgerState where
 
 import Cardano.Ledger.Alonzo.PParams (ppuMaxValSizeL)
 import Cardano.Ledger.Babbage.PParams (ppuCoinsPerUTxOByteL)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
@@ -38,6 +39,7 @@ import Cardano.Ledger.Core (
   ppuMinFeeBL,
  )
 import Cardano.Ledger.DRep (drepDepositL)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Governance (FuturePParams (..))
 import Control.Monad (when)
 import Data.Default (Default (def))
@@ -101,7 +103,10 @@ enactStateGenPreds p =
 enactStateCheckPreds :: Proof era -> [Pred era]
 enactStateCheckPreds _ = []
 
-ledgerStatePreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
+ledgerStatePreds ::
+  forall era.
+  (Reflect era, CertState era ~ ShelleyCertState era, EraCertState era) =>
+  UnivSize -> Proof era -> [Pred era]
 ledgerStatePreds _usize p =
   [ Subset (Dom enactWithdrawals) credsUniv
   , Random enactTreasury
@@ -169,7 +174,7 @@ ledgerStatePreds _usize p =
     getOne [] = NoPParamsUpdate
 
 ledgerStateStage ::
-  Reflect era =>
+  (Reflect era, CertState era ~ ShelleyCertState era, EraCertState era) =>
   UnivSize ->
   Proof era ->
   Subst era ->
@@ -182,7 +187,9 @@ ledgerStateStage usize proof subst0 = do
     Nothing -> pure subst
     Just msg -> error msg
 
-demo :: Reflect era => Proof era -> ReplMode -> IO ()
+demo ::
+  (Reflect era, CertState era ~ ShelleyCertState era, EraCertState era) =>
+  Proof era -> ReplMode -> IO ()
 demo proof mode = do
   env <-
     generate

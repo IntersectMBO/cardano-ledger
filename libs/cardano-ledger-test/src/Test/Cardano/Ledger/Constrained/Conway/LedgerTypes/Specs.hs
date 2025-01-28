@@ -34,6 +34,7 @@ import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..), 
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -42,6 +43,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   StashedAVVMAddresses,
   UTxOState (..),
+  lsCertStateL,
   updateStakeDistribution,
  )
 import Cardano.Ledger.UMap (CompactForm (..))
@@ -56,6 +58,7 @@ import qualified Data.Set as Set
 import Data.Typeable
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
+import Lens.Micro ((^.))
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Constrained.Conway.Gov (govProposalsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
@@ -74,6 +77,8 @@ class
   ( EraSpecTxOut era fn
   , Era era
   , HasSpec fn (GovState era)
+  , EraCertState era
+  , HasSpec fn (CertState era)
   ) =>
   EraSpecLedger era fn
   where
@@ -359,7 +364,7 @@ certStateSpec ::
   WitUniv era ->
   Term fn AccountState ->
   Term fn EpochNo ->
-  Specification fn (CertState era)
+  Specification fn (ShelleyCertState era)
 certStateSpec univ acct epoch = constrained $ \ [var|certState|] ->
   match certState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pstateSpec univ epoch)
@@ -389,10 +394,10 @@ utxoSpecWit univ delegs = constrained $ \ [var|utxo|] ->
 
 utxoStateSpec ::
   forall era fn.
-  EraSpecLedger era fn =>
+  (EraSpecLedger era fn, CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->
-  Term fn (CertState era) ->
+  Term fn (ShelleyCertState era) ->
   Specification fn (UTxOState era)
 utxoStateSpec pp univ certstate =
   constrained $ \ [var|utxoState|] ->
@@ -410,9 +415,9 @@ utxoStateSpec pp univ certstate =
 
 getDelegs ::
   forall era.
-  CertState era ->
+  ShelleyCertState era ->
   Map (Credential 'Staking) (KeyHash 'StakePool)
-getDelegs cs = UMap.sPoolMap (dsUnified (certDState cs))
+getDelegs (ShelleyCertState _v _p certDState) = UMap.sPoolMap (dsUnified certDState)
 
 -- ====================================================================
 -- Specs for LedgerState
@@ -456,7 +461,7 @@ conwayGovStateSpec pp govenv =
 
 ledgerStateSpec ::
   forall era fn.
-  EraSpecLedger era fn =>
+  (EraSpecLedger era fn, CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->
   Term fn AccountState ->
@@ -495,16 +500,16 @@ snapShotsSpec marksnap =
         ]
 
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
-getMarkSnapShot :: forall era. LedgerState era -> SnapShot
+getMarkSnapShot :: forall era. EraCertState era => LedgerState era -> SnapShot
 getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
   where
     markStake :: VMap VB VP (Credential 'Staking) (CompactForm Coin)
     markStake = VMap.fromMap (credMap (utxosStakeDistr (lsUTxOState ls)))
     markDelegations ::
       VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
-    markDelegations = VMap.fromMap (UMap.sPoolMap (dsUnified (certDState (lsCertState ls))))
+    markDelegations = VMap.fromMap (UMap.sPoolMap (ls ^. lsCertStateL . certDStateL . dsUnifiedL))
     markPoolParams :: VMap VB VB (KeyHash 'StakePool) PoolParams
-    markPoolParams = VMap.fromMap (psStakePoolParams (certPState (lsCertState ls)))
+    markPoolParams = VMap.fromMap (psStakePoolParams (ls ^. lsCertStateL . certPStateL))
 
 -- ====================================================================
 -- Specs for EpochState and NewEpochState
@@ -512,7 +517,7 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
 
 epochStateSpec ::
   forall era fn.
-  EraSpecLedger era fn =>
+  (EraSpecLedger era fn, CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->
   Term fn EpochNo ->
@@ -534,7 +539,7 @@ getPoolDistr es = ssStakeMarkPoolDistr (esSnapshots es)
 -- The 'newEpochStateSpec' method (of (EraSpecLedger era fn) class) in the Shelley instance
 newEpochStateSpecUTxO ::
   forall era fn.
-  (EraSpecLedger era fn, StashedAVVMAddresses era ~ UTxO era) =>
+  (EraSpecLedger era fn, StashedAVVMAddresses era ~ UTxO era, CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->
   Specification fn (NewEpochState era)
@@ -560,7 +565,7 @@ newEpochStateSpecUTxO pp univ =
 -- The 'newEpochStateSpec' method (of (EraSpecLedger era fn) class) in the instances for (Allegra,Mary,Alonzo,Babbage,Conway)
 newEpochStateSpecUnit ::
   forall era fn.
-  (EraSpecLedger era fn, StashedAVVMAddresses era ~ ()) =>
+  (EraSpecLedger era fn, StashedAVVMAddresses era ~ (), CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->
   Specification fn (NewEpochState era)
