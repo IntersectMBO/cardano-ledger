@@ -181,6 +181,10 @@ import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Globals (..),
   StrictMaybe (..),
+  knownNonZero,
+  mulNonZero,
+  toIntegerNonZero,
+  (%.),
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -251,7 +255,6 @@ import qualified Data.Foldable as F (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
@@ -491,14 +494,14 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
       k = securityParameter globals -- On mainnet set to 2160
       umap = dsUnified dState
       umapSize = Map.size $ umElems umap
-      pulseSize = max 1 (umapSize `div` (fromIntegral :: Word64 -> Int) (4 * k))
+      pulseSize = max 1 (fromIntegral umapSize %. (knownNonZero @4 `mulNonZero` toIntegerNonZero k))
       govState' =
         predictFuturePParams $
           govState
             & cgsDRepPulsingStateL
               .~ DRPulsing
                 ( DRepPulser
-                    { dpPulseSize = pulseSize
+                    { dpPulseSize = floor pulseSize
                     , dpUMap = dsUnified dState
                     , dpIndex = 0 -- used as the index of the remaining UMap
                     , dpStakeDistr = stakeDistr -- used as part of the snapshot

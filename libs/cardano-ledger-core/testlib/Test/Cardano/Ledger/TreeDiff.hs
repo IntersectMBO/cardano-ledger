@@ -256,3 +256,6 @@ deriving instance (Era era, ToExpr (Script era)) => ToExpr (ScriptsProvided era)
 instance ToExpr (TxOut era) => ToExpr (UTxO era)
 
 instance ToExpr TxOutSource
+
+instance ToExpr a => ToExpr (NonZero a) where
+  toExpr x = App "NonZero" [toExpr $ unNonZero x]

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -13,6 +14,7 @@ import Cardano.Ledger.BaseTypes (
   EpochSize (..),
   Globals (..),
   Network (..),
+  knownNonZeroBounded,
   mkActiveSlotCoeff,
  )
 import Cardano.Ledger.Core
@@ -32,7 +34,7 @@ testGlobals =
     , slotsPerKESPeriod = 20
     , stabilityWindow = 33
     , randomnessStabilisationWindow = 33
-    , securityParameter = 10
+    , securityParameter = knownNonZeroBounded @10
     , maxKESEvo = 10
     , quorum = 5
     , maxLovelaceSupply = 45 * 1000 * 1000 * 1000 * 1000 * 1000

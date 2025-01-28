@@ -10,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Protocol.TPraos.BHeader (
   HashHeader (..),
@@ -53,6 +54,7 @@ import Cardano.Ledger.BaseTypes (
   mkNonceFromNumber,
   mkNonceFromOutputVRF,
  )
+import Cardano.Ledger.BaseTypes.NonZero (nonZero, (%.))
 import Cardano.Ledger.Binary (
   Annotator (..),
   Case (..),
@@ -98,7 +100,6 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
-import Data.Ratio ((%))
 import Data.Typeable
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
@@ -409,7 +410,10 @@ checkLeaderNatValue bn σ f =
   where
     c, recip_q, x :: FixedPoint
     c = activeSlotLog f
-    recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
+    recip_q =
+      case nonZero . toInteger $ certNatMax - certNat of
+        Just d -> fromRational (toInteger certNatMax %. d)
+        Nothing -> fromIntegral @Natural @FixedPoint certNatMax
     x = -fromRational σ * c
     certNatMax = bvMaxValue bn
     certNat = bvValue bn

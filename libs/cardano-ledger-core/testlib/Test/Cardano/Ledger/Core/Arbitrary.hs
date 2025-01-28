@@ -54,6 +54,7 @@ import Cardano.Ledger.BaseTypes (
   CertIx (..),
   DnsName,
   EpochInterval (..),
+  HasZero,
   Mismatch (..),
   Network (..),
   NonNegativeInterval,
@@ -73,6 +74,7 @@ import Cardano.Ledger.BaseTypes (
   textToDns,
   textToUrl,
  )
+import qualified Cardano.Ledger.BaseTypes as NZ
 import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
 import Cardano.Ledger.CertState (
   Anchor (..),
@@ -547,6 +549,9 @@ instance Arbitrary DRep where
       , pure DRepAlwaysAbstain
       , pure DRepAlwaysNoConfidence
       ]
+
+instance (Arbitrary a, HasZero a) => Arbitrary (NZ.NonZero a) where
+  arbitrary = arbitrary `suchThatMap` NZ.nonZero
 
 -- | Used for testing UMap operations
 genValidTuples ::

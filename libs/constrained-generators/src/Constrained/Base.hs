@@ -5104,7 +5104,7 @@ instance BaseUniverse fn => Functions (IntFn fn) fn where
     | HOLE :? Value i :> Nil <- ctx =
         case spec of
           TypeSpec ts cant ->
-            subtractSpec @fn i ts <> notMemberSpec (catMaybes $ map (safeSubtract @fn i) cant)
+            subtractSpec @fn i ts <> notMemberSpec (mapMaybe (safeSubtract @fn i) cant)
           MemberSpec es ->
             memberSpecList
               (nub $ mapMaybe (safeSubtract @fn i) (NE.toList es))

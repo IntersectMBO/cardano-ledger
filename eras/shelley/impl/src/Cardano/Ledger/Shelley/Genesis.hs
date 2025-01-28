@@ -52,6 +52,7 @@ import Cardano.Ledger.BaseTypes (
   EpochSize (..),
   Globals (..),
   Network,
+  NonZero (..),
   Nonce (..),
   PositiveUnitInterval,
   mkActiveSlotCoeff,
@@ -211,7 +212,7 @@ data ShelleyGenesis = ShelleyGenesis
   , sgNetworkMagic :: !Word32
   , sgNetworkId :: !Network
   , sgActiveSlotsCoeff :: !PositiveUnitInterval
-  , sgSecurityParam :: !Word64
+  , sgSecurityParam :: !(NonZero Word64)
   , sgEpochLength :: !EpochSize
   , sgSlotsPerKESPeriod :: !Word64
   , sgMaxKESEvolutions :: !Word64
@@ -634,14 +635,14 @@ validateGenesis
         let activeSlotsCoeff = unboundRational sgActiveSlotsCoeff
             minLength =
               EpochSize . ceiling $
-                fromIntegral @_ @Double (3 * sgSecurityParam)
+                fromIntegral @_ @Double (3 * unNonZero sgSecurityParam)
                   / fromRational activeSlotsCoeff
          in if minLength > sgEpochLength
               then
                 Just $
                   EpochNotLongEnough
                     sgEpochLength
-                    sgSecurityParam
+                    (unNonZero sgSecurityParam)
                     activeSlotsCoeff
                     minLength
               else Nothing
@@ -680,6 +681,6 @@ mkShelleyGlobals genesis epochInfoAc =
     systemStart = SystemStart $ sgSystemStart genesis
     k = sgSecurityParam genesis
     stabilityWindow =
-      computeStabilityWindow k (sgActiveSlotCoeff genesis)
+      computeStabilityWindow (unNonZero k) (sgActiveSlotCoeff genesis)
     randomnessStabilisationWindow =
-      computeRandomnessStabilisationWindow k (sgActiveSlotCoeff genesis)
+      computeRandomnessStabilisationWindow (unNonZero k) (sgActiveSlotCoeff genesis)

@@ -44,9 +44,15 @@ import Cardano.Ledger.BaseTypes (
   activeSlotVal,
   epochInfoPure,
   mkActiveSlotCoeff,
+  (%?),
  )
 import Cardano.Ledger.Binary (encCBOR, hashWithEncoder, natVersion, shelleyProtVer)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
+import Cardano.Ledger.Coin (
+  Coin (..),
+  DeltaCoin (..),
+  rationalToCoinViaFloor,
+  toDeltaCoin,
+ )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.EpochBoundary (
@@ -485,8 +491,8 @@ rewardOld
         ]
       results = do
         (hk, pparams) <- VMap.toAscList poolParams
-        let sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
-            sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
+        let sigma = fromIntegral pstake %? fromIntegral totalStake
+            sigmaA = fromIntegral pstake %? fromIntegral activeStake
             blocksProduced = Map.lookup hk b
             actgr = poolStake hk delegs stake
             Coin pstake = sumAllStake actgr
