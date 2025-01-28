@@ -39,6 +39,7 @@
 --   And, by design, nothing more.
 module Constrained.BaseExperiment where
 
+import Debug.Trace
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, tell)
 import Data.Kind(Type,Constraint)
@@ -59,7 +60,6 @@ import Constrained.GenericExperiment
 import Data.Foldable(toList)
 import Data.Type.Equality(TestEquality(..))
 import Data.String(fromString)
-import Data.Maybe(isJust)
 import qualified Data.Set as Set
 import Data.Set(Set)
 import qualified Data.Map.Strict as Map
@@ -452,7 +452,7 @@ instance SimpleConstructor f => SimpleGeneric (C1 ('MetaCons c a b) f) where
 -- I dont think all the Typeable instances are necessary
 
 data BaseWitness (sym :: Symbol) (dom :: [Type]) (rng :: Type) where 
-  EqualW :: forall a . (Typeable a,Eq a) => BaseWitness "==." '[a,a] Bool  
+  EqualW :: forall a . Eq a => BaseWitness "==." '[a,a] Bool  
   -- List
   ElemW :: forall a. (Eq a,Typeable a) => BaseWitness "elem_" '[a,[a]] Bool
   -- Bool
@@ -523,18 +523,27 @@ isBaseWit :: forall (a :: Symbol) (b :: [Type]) c f (x:: Symbol) (y:: [ Type ]) 
     (Typeable a, Typeable b,Typeable c,Typeable f,Typeable x,Typeable y, Typeable z) => 
     BaseWitness a b c -> 
     f x y z -> 
-    (Maybe (BaseWitness x y z), Maybe (f :~: BaseWitness),Maybe(b :~: y),Maybe (c :~: z))
-isBaseWit t x = 
+    (Maybe (BaseWitness x y z), Maybe (f :~: BaseWitness),Maybe(a :~: x),Maybe(b :~: y),Maybe (c :~: z))
+isBaseWit t x = trace "HERE" $
    case (eqT @f @BaseWitness, eqT @a @x, eqT @b @y, eqT @c @z) of
-     (p1@(Just Refl), (Just Refl), p3@(Just Refl), p4@(Just Refl)) 
-       -> if t==x then (Just t,p1,p3,p4) else (Nothing,p1,p3,p4)
-     _ -> (Nothing,Nothing,Nothing,Nothing)
+     (p1@(Just Refl), p2@(Just Refl), p3@(Just Refl), p4@(Just Refl)) 
+       -> if t==x then (Just t,p1,p2,p3,p4) else (Nothing,p1,p2,p3,p4)
+     _ -> (Nothing,Nothing,Nothing,Nothing,Nothing)
+
+
+pattern EqualPat :: 
+  forall a rng . (Typeable a, Eq a) => 
+  forall        . (rng ~ Bool,FunctionSymbol "==." BaseWitness '[a,a] Bool) 
+                 => Term a -> Term a -> Term rng
+pattern EqualPat x y <- App (isBaseWit (EqualW @a) -> (Just EqualW, Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
+   where EqualPat x y = App EqualW (x :> y :> Nil)
+
 
 pattern PairPat :: 
   forall a b rng . (Typeable a, Typeable b) => 
   forall         . (rng ~ Prod a b,FunctionSymbol "pair_" BaseWitness '[a,b] (Prod a b)) 
                  => Term a -> Term b -> Term rng
-pattern PairPat x y <- App (isBaseWit (PairW @a @b) -> (Just PairW, Just Refl,_,Just Refl)) (x :> y :> Nil)
+pattern PairPat x y <- App (isBaseWit (PairW @a @b) -> (Just PairW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
    where PairPat x y = App PairW (x :> y :> Nil)
    -- You can't actually apply PairPat, because when this pattern was written,
    -- there was no instance (FunctionSymbol "pair_" BaseWitness '[a,b] (Prod a b)) yet!
@@ -543,14 +552,14 @@ pattern FromGenericPat ::
   forall a rng . (Typeable a,Typeable (SimpleRep a),HasSimpleRep a) => 
   forall       . (rng ~ a,FunctionSymbol "fromGenericFn" BaseWitness '[SimpleRep a] a) 
               => Term (SimpleRep a) -> Term rng
-pattern FromGenericPat x <- App (isBaseWit (FromGenericW @a) -> (Just FromGenericW, Just Refl,_,Just Refl)) (x :> Nil)
+pattern FromGenericPat x <- App (isBaseWit (FromGenericW @a) -> (Just FromGenericW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
    where FromGenericPat x = App FromGenericW (x :> Nil)   
 
 pattern ToGenericPat :: 
   forall a rng . (Typeable a,Typeable (SimpleRep a),HasSimpleRep a) => 
   forall       . (rng ~ SimpleRep a,FunctionSymbol "toGenericFn" BaseWitness '[a] (SimpleRep a))
               => Term a -> Term rng
-pattern ToGenericPat x <- App (isBaseWit (ToGenericW @a) -> (Just ToGenericW, Just Refl,Just Refl,Just Refl)) (x :> Nil)
+pattern ToGenericPat x <- App (isBaseWit (ToGenericW @a) -> (Just ToGenericW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
    -- where ToGenericPat x = App ToGenericW (x :> Nil)      
 
 -- ====================================================================
@@ -593,6 +602,9 @@ instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where
     propagate (Context NotW (HOLE End)) spec = caseBoolSpec spec (equalSpec . not)
     propagate ctx _ = error ("NotW\nUnreachable context, too many args\n"++show ctx)
 
+not_ :: Term Bool -> Term Bool
+not_ = appTerm NotW
+
 caseBoolSpec :: forall a. HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
 caseBoolSpec = undefined
    where _ = emptySpec @a
@@ -620,20 +632,6 @@ instance HasSpec a => FunctionSymbol "==."  BaseWitness '[a, a] Bool where
 
 (==.) :: forall a. (HasSpec a) => Term a -> Term a -> Term Bool
 (==.) = appTerm EqualW
-
--- ================================================
--- Name
-
-data Name where
-  Name :: HasSpec a => Var a -> Name
-
-deriving instance Show Name
-
-instance Eq Name where
-  Name v == Name v' = isJust $ eqVar v v'
-
-instance Ord Name where
-  compare (Name v) (Name v') = compare (nameOf v, typeOf v) (nameOf v', typeOf v')
 
 -- =================================================
 -- Term
@@ -663,8 +661,18 @@ same (x :> xs) (y :> ys) = x==y && same xs ys
 appSym :: forall sym t as b. FunctionSymbol sym t as b => t sym as b -> List Term as -> Term b
 appSym w xs = App w xs
 
--- | The result will we a function with a type like
---   (appTerm sym) :: Term d1 -> Term d2 -> ... -> Term dn -> Term b
+
+-- | This extracts the semantics of a witness (i.e. a function over Terms) 
+--   Recall FunctionSymbols are functions that you can use when writing Terms
+--   Usually the Haskel name ends in '_', i.e. not_, subset_ ,lookup_
+--   And infix FunctionSymbols names end in '.', ie. ==. , <=. etc.
+--   E.g  app NotW :: Term Bool -> Term Bool
+--        app NotW (lit False)  ==reducesto==> not_ False
+--   this functionality is embedded in the Haskel function not_
+--   Note the witness (NotW) must have a FunctionSymbol instance like
+--   instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where ...
+--             Name in Haskell^      ^  its arguments^   ^ its result
+--                  The type of NotW |
 appTerm :: forall sym t ds b. FunctionSymbol sym t ds b => t sym ds b -> FunTy (MapList Term ds) (Term b)
 appTerm sym = curryList @ds (App @sym @t @ds @b sym)  
 
@@ -1067,6 +1075,7 @@ instance HasSpec a => Pretty (Specification a) where
 instance HasSpec a => Show (Specification a) where
   showsPrec d = shows . pretty . WithPrec d
 
+
 -- ==============================================
 -- Language constructs 
 
@@ -1182,11 +1191,8 @@ lit = Lit
 genHint :: forall t. HasGenHint t => Hint t -> Term t -> Pred
 genHint = GenHint
 
-
-data XWitness (sym :: Symbol) (dom :: [Type]) (rng :: Type) where 
-  EqualX :: forall a . Eq a => (a -> a -> Bool) -> Term a -> Term a -> XWitness "==." '[a,a] Bool  
-  -- List
-  ElemX:: forall a. Eq a => a -> [a] -> XWitness "elem_" '[a,[a]] Bool
+-- =========================================================
+-- HasSpec Bool (Temporary solution)
 
 
 instance HasSpec Bool where
@@ -1237,6 +1243,12 @@ data Mode = Pre | Post
 infixr 5 :<|
 infixr 1 :>|
 
+data CtxtList (x::Mode) (as :: [Type]) (hole :: Type) where
+  End :: CtxtList Post '[] h
+  (:<|) :: Typeable a => a -> CtxtList Post as h -> CtxtList Post (a : as) h
+  HOLE :: CtxtList Post as i -> CtxtList Pre (b : as) b
+  (:>|) :: Typeable a => a -> CtxtList Pre as h -> CtxtList Pre (a : as) h
+
 -- Here is an Example
 c6 :: CtxtList Pre [Bool, String, b, Bool, ()] b
 c6 =  True :>| ("abc" :: String)  :>| (HOLE $ True :<| () :<| End)
@@ -1246,13 +1258,6 @@ c6 =  True :>| ("abc" :: String)  :>| (HOLE $ True :<| () :<| End)
 
 t6 :: List [] [Bool, String, Int, Bool, ()]
 t6 = [] :> ["abc"] :> [67,12] :> [True,False] :> [()] :> Nil
-
-
-data CtxtList (x::Mode) (as :: [Type]) (hole :: Type) where
-  End :: CtxtList Post '[] h
-  (:<|) :: Typeable a => a -> CtxtList Post as h -> CtxtList Post (a : as) h
-  HOLE :: CtxtList Post as i -> CtxtList Pre (b : as) b
-  (:>|) :: Typeable a => a -> CtxtList Pre as h -> CtxtList Pre (a : as) h
 
 -- Show instance puts parens in the output correctly to 
 -- remind us where the parens go.
