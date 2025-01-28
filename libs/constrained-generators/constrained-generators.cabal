@@ -47,6 +47,7 @@ library
     Constrained.Univ
     Constrained.GenericExperiment
     Constrained.BaseExperiment
+    Constrained.SyntaxExperiment
 
   hs-source-dirs: src
   default-language: Haskell2010
