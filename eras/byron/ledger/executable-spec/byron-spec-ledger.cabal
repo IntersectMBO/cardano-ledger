@@ -47,7 +47,7 @@ library
     cardano-crypto-class,
     cardano-ledger-binary >=1.0,
     containers,
-    cryptonite,
+    crypton,
     hashable,
     hedgehog >=1.0.4,
     microlens,

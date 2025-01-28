@@ -248,7 +248,7 @@ library
     cborg,
     containers,
     contra-tracer,
-    cryptonite,
+    crypton,
     digest,
     directory,
     filepath,

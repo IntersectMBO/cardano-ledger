@@ -149,7 +149,7 @@ library
     cardano-strict-containers,
     constrained-generators,
     containers,
-    cryptonite,
+    crypton,
     data-default,
     deepseq,
     formatting,
