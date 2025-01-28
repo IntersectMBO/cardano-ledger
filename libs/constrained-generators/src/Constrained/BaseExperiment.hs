@@ -507,8 +507,9 @@ baseSem LookupW = Map.lookup
 baseSem FromGenericW = fromSimpleRep
 baseSem ToGenericW = toSimpleRep
 
--- -----------------------------------
+-- =============================================
 -- Patterns over Function Symbols
+-- =============================================
 
 -- | When writing patterns over (App witness arglist), we have to obtain proof that 'witness' 
 --   is some particular constructor of BaseWitness (or some other witness type). For example
@@ -530,7 +531,15 @@ isBaseWit t x = trace "HERE" $
        -> if t==x then (Just t,p1,p2,p3,p4) else (Nothing,p1,p2,p3,p4)
      _ -> (Nothing,Nothing,Nothing,Nothing,Nothing)
 
+-- ========== "elem_"
+pattern ElemPat :: 
+  forall a rng . (Typeable a, Eq a) => 
+  forall        . (rng ~ Bool,FunctionSymbol "elem_" BaseWitness '[a,[a]] Bool) 
+                 => Term a -> Term [a] -> Term rng
+pattern ElemPat x y <- App (isBaseWit (ElemW @a) -> (Just ElemW, Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
+   where ElemPat x y = App ElemW (x :> y :> Nil)
 
+-- ========== "==."
 pattern EqualPat :: 
   forall a rng . (Typeable a, Eq a) => 
   forall        . (rng ~ Bool,FunctionSymbol "==." BaseWitness '[a,a] Bool) 
@@ -538,7 +547,7 @@ pattern EqualPat ::
 pattern EqualPat x y <- App (isBaseWit (EqualW @a) -> (Just EqualW, Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
    where EqualPat x y = App EqualW (x :> y :> Nil)
 
-
+-- ========== "pair_"
 pattern PairPat :: 
   forall a b rng . (Typeable a, Typeable b) => 
   forall         . (rng ~ Prod a b,FunctionSymbol "pair_" BaseWitness '[a,b] (Prod a b)) 
@@ -548,6 +557,7 @@ pattern PairPat x y <- App (isBaseWit (PairW @a @b) -> (Just PairW, Just Refl, J
    -- You can't actually apply PairPat, because when this pattern was written,
    -- there was no instance (FunctionSymbol "pair_" BaseWitness '[a,b] (Prod a b)) yet!
 
+-- ============= fromGenericFn
 pattern FromGenericPat :: 
   forall a rng . (Typeable a,Typeable (SimpleRep a),HasSimpleRep a) => 
   forall       . (rng ~ a,FunctionSymbol "fromGenericFn" BaseWitness '[SimpleRep a] a) 
@@ -555,6 +565,7 @@ pattern FromGenericPat ::
 pattern FromGenericPat x <- App (isBaseWit (FromGenericW @a) -> (Just FromGenericW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
    where FromGenericPat x = App FromGenericW (x :> Nil)   
 
+-- ============= toGenericFn
 pattern ToGenericPat :: 
   forall a rng . (Typeable a,Typeable (SimpleRep a),HasSimpleRep a) => 
   forall       . (rng ~ SimpleRep a,FunctionSymbol "toGenericFn" BaseWitness '[a] (SimpleRep a))
@@ -568,8 +579,9 @@ pattern ToGenericPat x <- App (isBaseWit (ToGenericW @a) -> (Just ToGenericW, Ju
 -- data, that uniquely identifies a higher order function (the 'semantics' method)
 -- Sort of a combination of the FunctionLike and Functions classes
 -- An instance "assigns" several functions to each Symbol 's' 
-class ( KnownSymbol s
+-- =====================================================================
 
+class ( KnownSymbol s
       , Show (t s dom rng)
       , Eq (t s dom rng)
       , Typeable t
@@ -587,7 +599,13 @@ class ( KnownSymbol s
       prop :: Ctx rng hole -> Specification rng -> Specification hole
       prop (Ctx text@(Context _ _)) = propagate text 
                   -- ^ The pattern match brings the FunctionSymbol constraint into scope
-
+propagateSpec ::
+  forall v a.
+  Specification a ->
+  Ctx a v ->
+  Specification v
+propagateSpec spec (Ctx context) = propagate context spec
+  
 -- ================ Probably Move this, but it was good practice since it is simple
 instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where
     witness = NotW
@@ -664,12 +682,12 @@ appSym w xs = App w xs
 
 -- | This extracts the semantics of a witness (i.e. a function over Terms) 
 --   Recall FunctionSymbols are functions that you can use when writing Terms
---   Usually the Haskel name ends in '_', i.e. not_, subset_ ,lookup_
---   And infix FunctionSymbols names end in '.', ie. ==. , <=. etc.
+--   Usually the Haskel name ends in '_', for example consider: not_, subset_ ,lookup_
+--   Infix FunctionSymbols names end in '.', for example: ==. , <=. 
 --   E.g  app NotW :: Term Bool -> Term Bool
 --        app NotW (lit False)  ==reducesto==> not_ False
 --   this functionality is embedded in the Haskel function not_
---   Note the witness (NotW) must have a FunctionSymbol instance like
+--   Note the witness (NotW) must have a FunctionSymbol instance like:
 --   instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where ...
 --             Name in Haskell^      ^  its arguments^   ^ its result
 --                  The type of NotW |
@@ -1220,22 +1238,14 @@ instance HasSpec Bool where
 -- ==========================================================
 -- Contexts 
 
--- | A context identifies a Term with exactly 1 variable. It is a key part
---   of implementing the 'propagate' method instances. We have patterns that
---   Specialize Contexts for Function symbols with 1 or 2 arguments
---   function symbols with 3 or more arguments can us the Raw Constructors.
---   Ctx1of1 :: witness sym '[hole] rng -> Hole hole -> Contxt hole rng
---   Ctx1of2 :: witness sym '[hole,b] rng -> Hole hole -> b -> Contxt hole rng
---   Ctx2of2 :: witness sym '[b,hole] rng -> b -> Hole hole -> Contxt hole rng
+-- | A context identifies a Term with exactly 1 variable. 
+data Context (s :: Symbol) (t :: Symbol -> [Type] -> Type -> Type) (dom :: [Type]) rng hole where 
+  Context :: t s dom rng -> CtxtList Pre dom hole -> Context s t dom rng hole
 
-data Context s t dom rng hole where 
-  Context :: FunctionSymbol s t dom rng => 
-             t s dom rng -> CtxtList Pre dom hole -> Context s t dom rng hole
-
-deriving instance All Show dom => Show (Context s t dom rng hole)
+deriving instance (Show (t s dom rng),All Show dom) => Show (Context s t dom rng hole)
 
 data Ctx rng hole where 
-  Ctx :: (HasSpec hole) => Context s t dom rng hole -> Ctx rng hole  
+  Ctx :: (HasSpec hole,FunctionSymbol s t dom rng) => Context s t dom rng hole -> Ctx rng hole  
  
 data Mode = Pre | Post
 
@@ -1267,31 +1277,6 @@ instance (All Show as) => Show (CtxtList m as h) where
   show (HOLE xs) = "(HOLE $ "++show xs
   show (x :>| xs) = show x ++ " :>| "++show xs
 
-pattern Ctx1of1 :: 
-   forall rng hole .  () => 
-   forall (f :: Symbol -> [Type] -> Type -> Type) (sym :: Symbol) . 
-             (FunctionSymbol sym f '[hole] rng) => 
-             f sym '[hole] rng -> (CtxtList Pre '[hole] hole) -> Ctx rng hole
-pattern Ctx1of1 wit lst <- Ctx (Context wit lst@(HOLE End))
-  where Ctx1of1 wit lst = Ctx (Context wit lst)
-
-{- Some thing is wrong here
-pattern Ctx1of2 :: 
-   forall rng hole .  () => 
-   forall (f :: Symbol -> [Type] -> Type -> Type) (sym :: Symbol) x . 
-             (FunctionSymbol sym f '[hole,x] rng) => 
-             f sym '[hole,x] rng -> (CtxtList Pre '[hole,x] hole) -> Ctx rng hole
-pattern Ctx1of2 wit lst x <- Ctx (Context wit lst@(HOLE ( x :<| End)))
-  where Ctx1of2 wit lst x = Ctx (Context wit lst)  
-
-pattern Ctx2of2 :: 
-   forall rng hole .  () => 
-   forall (f :: Symbol -> [Type] -> Type -> Type) (sym :: Symbol) x . 
-             (FunctionSymbol sym f '[x,hole] rng) => 
-             f sym '[x,hole] rng -> (CtxtList Pre '[x,hole] hole) -> Ctx rng hole
-pattern Ctx2of2 wit lst <- Ctx (Context wit lst@(x :>| (HOLE End)))
-  where Ctx2of2 wit lst = Ctx (Context wit lst)    
--}
 -- ===========================================================================
 
 -- | Construct a Context from a Var and a Term (which we hope has exactly
@@ -1351,26 +1336,3 @@ toCtx v term = case term of
               pure $ uncurryList_ runIdentity (semantics w) vs
 
 -- ====================================================================
-
-{- Might be usefull, might not
-type family PP (a :: Nat) (n :: Type) (b :: [Type]) ::  Type where
-  PP 0 t (t ': _)  = t :~: t
-  PP 1 t ( _ ': t ': _) = t :~: t
-  PP 2 t ( _ ': _ ': t ': _) = t :~: t
-  PP 3 t ( _ ': _ ': _ ': t ': _) = t :~: t
-  PP 4 t ( _ ': _ ': _ ': _ ': t ': _) = t :~: t
-  
-
-holeType :: forall xs f t . (CtxtList Pre xs t) -> List f xs -> (t :~: t)
-holeType (HOLE End) ( _ :> Nil) = Refl
-holeType (HOLE ( _ :<| xs)) ( _ :> ys) = Refl
-holeType (x :>| xs) (y :> ys) = holeType xs ys
-
-holeV :: CtxtList Pre xs t -> List f xs -> f t
-holeV (HOLE End) ( x :> Nil) = x
-holeV (HOLE ( _ :<| xs)) ( y :> ys) = y
-holeV (x :>| xs) (y :> ys) = holeV xs ys
-  
-castUnaryCtxt :: forall hole x . CtxtList Pre '[x] hole -> x -> hole 
-castUnaryCtxt (HOLE End) x = x
--}
