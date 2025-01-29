@@ -336,12 +336,22 @@ instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
       (mapTraverseableDecoderA (decodeList decCBOR) (TxDatsRaw . Map.fromElems hashData))
   {-# INLINE decCBOR #-}
 
+instance Era era => DecCBOR (TxDatsRaw era) where
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      ( allowTag setTag
+          >> TxDatsRaw . Map.fromElems hashData . NE.toList <$> decodeNonEmptyList decCBOR
+      )
+      (TxDatsRaw . Map.fromElems hashData <$> decodeList decCBOR)
+  {-# INLINE decCBOR #-}
+
 -- | Note that 'TxDats' are based on 'MemoBytes' since we must preserve
 -- the original bytes for the 'Cardano.Ledger.Alonzo.Tx.ScriptIntegrity'.
 -- Since the 'TxDats' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype TxDats era = TxDatsConstr (MemoBytes (TxDatsRaw era))
-  deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData)
+  deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData, DecCBOR)
   deriving (Generic)
 
 instance Memoized (TxDats era) where
