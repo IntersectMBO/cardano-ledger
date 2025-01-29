@@ -609,9 +609,7 @@ deriving via
     AlonzoEraScript era => DecCBOR (Annotator (Redeemers era))
 
 instance
-  ( AlonzoEraScript era
-  , EncCBOR (Data era)
-  ) =>
+  AlonzoEraScript era =>
   DecCBOR (Annotator (AlonzoTxWitsRaw era))
   where
   decCBOR =
