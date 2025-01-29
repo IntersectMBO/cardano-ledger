@@ -201,6 +201,10 @@ import Cardano.Ledger.Binary.Coders (
   encode,
   (!>),
  )
+import Cardano.Ledger.Binary.Plain (
+  decodeWord8,
+  encodeWord8,
+ )
 import Cardano.Ledger.CertState (
   CommitteeAuthorization (..),
   Obligations (..),
@@ -546,6 +550,23 @@ data DefaultVote
     --   default vote is @Yes@ in case of a @NoConfidence@ action, otherwise @No@.
     DefaultNoConfidence
   deriving (Eq, Show)
+
+instance FromCBOR DefaultVote where
+  fromCBOR = do
+    tag <- decodeWord8
+    case tag of
+      0 -> pure DefaultNo
+      1 -> pure DefaultAbstain
+      2 -> pure DefaultNoConfidence
+      _ -> fail $ "Invalid DefaultVote tag " ++ show tag
+
+instance ToCBOR DefaultVote where
+  toCBOR DefaultNo = encodeWord8 0
+  toCBOR DefaultAbstain = encodeWord8 1
+  toCBOR DefaultNoConfidence = encodeWord8 2
+
+instance EncCBOR DefaultVote
+instance DecCBOR DefaultVote
 
 defaultStakePoolVote ::
   -- | Specify the key hash of the pool whose default vote should be returned.
