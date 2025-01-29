@@ -236,6 +236,14 @@ deriving instance
 newtype BabbageTxBody era = TxBodyConstr (MemoBytes (BabbageTxBodyRaw era))
   deriving newtype (Generic, SafeToHash, ToCBOR)
 
+deriving newtype instance
+  ( Era era
+  , DecCBOR (TxOut era)
+  , DecCBOR (TxCert era)
+  , DecCBOR (PParamsUpdate era)
+  ) =>
+  DecCBOR (BabbageTxBody era)
+
 instance Memoized (BabbageTxBody era) where
   type RawType (BabbageTxBody era) = BabbageTxBodyRaw era
 
