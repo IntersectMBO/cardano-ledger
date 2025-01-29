@@ -49,6 +49,7 @@ import qualified Data.Semigroup as Semigroup
 import Constrained.BaseExperiment
 import Constrained.SyntaxExperiment
 
+
 -- ===================================
 -- STUBS
 elem_ :: Term e -> Term [e] -> Term Bool
@@ -68,14 +69,18 @@ rewriteRules ::
 -}    
 rewriteRules _ _ = Nothing
 
-conformsToSpec :: a -> Specification a -> Bool
-conformsToSpec = undefined
-
-satisfies :: Term a -> Specification a -> Pred
-satisfies = undefined
 
 -- =======================================================
 -- helpers
+-- | If the `Specification fn Bool` doesn't constrain the boolean you will get a `TrueSpec` out.
+
+caseBoolSpec :: HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
+caseBoolSpec spec cont = case possibleValues spec of
+  [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
+  [b] -> cont b
+  _ -> mempty
+  where
+    possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
 
 ifElse :: (IsPred p, IsPred q) => Term Bool -> p -> q -> Pred 
 ifElse b p q = whenTrue b p <> whenTrue (not_ b) q
@@ -539,8 +544,16 @@ sumWeightR Nothing = "1"
 sumWeightR (Just (_, x)) = fromString (show x)
 
 -- ====================================================================
--- Monoid and Semigroup, depends on conformance functions    
+-- Monoid and Semigroup, depends only on conformance functions    
 -- ====================================================================    
+
+-- STUB
+conformsToSpec :: a -> Specification a -> Bool
+conformsToSpec = undefined
+
+satisfies :: Term a -> Specification a -> Pred
+satisfies = undefined
+
 
 instance HasSpec a => Semigroup (Specification a) where
   ExplainSpec es x <> y = explainSpecOpt es (x <> y)

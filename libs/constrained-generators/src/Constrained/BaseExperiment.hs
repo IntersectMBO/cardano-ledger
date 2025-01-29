@@ -65,7 +65,42 @@ import Data.Set(Set)
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict(Map)
 
--- =============================================
+-- ====================================================================
+-- The FunctionSymbol class for implementing new function symbols in
+-- the first order logic. Note that a function symbol is first order
+-- data, that uniquely identifies a higher order function (the 'semantics' method)
+-- Sort of a combination of the FunctionLike and Functions classes
+-- An instance "assigns" several functions to each Symbol 's' 
+-- =====================================================================
+
+class ( KnownSymbol s
+      , Show (t s dom rng)
+      , Eq (t s dom rng)
+      , Typeable t
+      , TypeList dom
+      , Typeable dom      
+      , All HasSpec dom
+      , HasSpec rng
+      ) =>
+      FunctionSymbol  (s::Symbol) (t:: Symbol -> [Type] -> Type -> Type) (dom::[Type]) rng | s -> t
+      where
+      witness :: t s dom rng
+      type Wit s :: Symbol -> [Type] -> Type -> Type
+      semantics :: t s dom rng -> FunTy dom rng
+      propagate :: Context s t dom rng hole -> Specification rng -> Specification hole
+      -- prop :: Ctx rng hole -> Specification rng -> Specification hole
+      -- prop (Ctx text@(Context _ _)) = propagate text 
+                  -- ^ The pattern match brings the FunctionSymbol constraint into scope
+propagateSpec ::
+  forall v a.
+  Specification a ->
+  Ctx a v ->
+  Specification v
+propagateSpec spec (Ctx context) = propagate context spec
+  
+-- ========================================================
+-- A Specification is tells us what constraints must hold
+-- ========================================================  
 
 -- | A `Specification a` denotes a set of `a`s
 data Specification a where
@@ -99,6 +134,17 @@ data Specification a where
     Specification a
   -- | Anything
   TrueSpec :: Specification a
+
+
+typeSpec :: HasSpec a => TypeSpec a -> Specification a
+typeSpec ts = TypeSpec ts mempty
+
+-- =================================================================
+-- The class (HasSpec a) tells us what operations type 'a' must
+-- support to add it to the constraint solver and generator
+-- Writing HasSpec instances gives the system the power to grow
+-- Don't be afraid of all the methods. Most have default implementations. 
+-- =================================================================
 
 class (Typeable a, Eq a, Show a, Show (TypeSpec a)) => HasSpec a
   where
@@ -268,35 +314,27 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a)) => HasSpec a
     Specification Integer
   cardinalTypeSpec = cardinalTypeSpec @(SimpleRep a)
 
--- =================================================
+-- ====================================================================
+-- SimpleRep and Generics
+-- If the TypeSpec method of the HasSpec class has a SimpleRep instance, Like this
+-- type TypeSpec = a
+-- where 'a' has a SimpleRep instance, then all of the other methods 
+-- can us the default implementation. This saves lots of trouble for mundane types.
+--
+-- `HasSimpleRep` and `GenericsFn` are meant to allow you to express that a
+-- type is isomorphic to some other type 't' that has a (HasSpec t) instance.
+--
+-- The trick is that the default instance of `HasSpec a` assumes
+-- `HasSimpleRep a` and defines `TypeSpec a = TypeSpec (SimpleRep a)`.
+-- 
+-- From this it's possible to work with things of type `a` in constraints by
+-- treating them like things of type `SimpleRep a`. This allows us to do case
+-- matching etc. on `a` when `SimpleRep a` is a `Sum` type, for example.
+-- 
+-- Or alternatively it allows us to treat `a` as a newtype over `SimpleRep a`
+-- when using `match`.
+-- ====================================================================
 
-typeSpec :: HasSpec a => TypeSpec a -> Specification a
-typeSpec ts = TypeSpec ts mempty
-
--- Used to show binary operators like SumSpec and PairSpec
-data BinaryShow where
-  BinaryShow :: forall a. String -> [Doc a] -> BinaryShow
-  NonBinary :: BinaryShow
-
-------------------------------------------------------------------------
--- Generics
-------------------------------------------------------------------------
-
-{-
-`HasSimpleRep` and `GenericsFn` are meant to allow you to express that a
-type is isomorphic to some other type 't' that has a (HasSpec t) instance.
-
-The trick is that the default instance of `HasSpec a` assumes
-`HasSimpleRep a` and defines `TypeSpec a = TypeSpec (SimpleRep a)`.
-
-From this it's possible to work with things of type `a` in constraints by
-treating them like things of type `SimpleRep a`. This allows us to do case
-matching etc. on `a` when `SimpleRep a` is a `Sum` type, for example.
-
-Or alternatively it allows us to treat `a` as a newtype over `SimpleRep a`
-when using `match`.
-
--}
 
 class HasSimpleRep a where
   type SimpleRep a
@@ -329,7 +367,9 @@ type family SimplifyRep f where
   SimplifyRep f = SOP (SOPOf f)
 
 -- ===================================================================
--- toGeneric and fromGeneric as Terms    
+-- toGeneric and fromGeneric as Function Symbols
+-- That means they can be used inside (Term a)  
+-- ===================================================================  
 
 instance  ( HasSimpleRep a, HasSpec a, HasSpec rng
           , rng ~ SimpleRep a,TypeSpec a ~ TypeSpec (SimpleRep a)) => 
@@ -344,9 +384,9 @@ instance  ( HasSimpleRep a, HasSpec a, HasSpec rng
   propagate (Context ToGenericW  (HOLE End)) (SuspendedSpec v ps) = 
      constrained $ \ v' -> Let (App ToGenericW (v' :> Nil)) (v :-> ps)
   propagate (Context ToGenericW  (HOLE End)) (TypeSpec s cant) = TypeSpec s (fromSimpleRep <$> cant)
-  propagate (Context ToGenericW  (HOLE End)) (MemberSpec es) = MemberSpec (fmap fromSimpleRep es)  
-  propagate ctx _ = error ("ToGenricW\nUnreachable context, too many args\n"++show ctx)
-
+  propagate (Context ToGenericW  (HOLE End)) (MemberSpec es) = MemberSpec (fmap fromSimpleRep es) 
+  propagate ctx _ = ErrorSpec (NE.fromList["ToGenericW (toGenericFn)","Unreachable context, too many args",show ctx]) 
+  
 toGeneric_ ::
   forall a .
   ( TypeSpec a ~ TypeSpec (SimpleRep a) 
@@ -372,9 +412,9 @@ instance  ( HasSimpleRep a, HasSpec a, HasSpec (SimpleRep a), HasSpec dom
   propagate (Context FromGenericW  (HOLE End)) (SuspendedSpec v ps) = 
     constrained $ \ v' -> Let (App FromGenericW (v' :> Nil)) (v :-> ps)
   propagate (Context FromGenericW  (HOLE End)) (TypeSpec s cant) = TypeSpec s (toSimpleRep <$> cant)
-  propagate (Context FromGenericW  (HOLE End)) (MemberSpec es) = MemberSpec (fmap toSimpleRep es)  
-  propagate ctx _ = error ("FromGenericW\nUnreachable context, too many args\n"++show ctx)
-
+  propagate (Context FromGenericW  (HOLE End)) (MemberSpec es) = MemberSpec (fmap toSimpleRep es)
+  propagate ctx _ = ErrorSpec (NE.fromList["FromGenericW (fromGenericFn)","Unreachable context, too many args",show ctx])  
+  
 fromGeneric_ ::
   forall a .
   ( TypeSpec a ~ TypeSpec (SimpleRep a)
@@ -384,6 +424,12 @@ fromGeneric_ ::
   Term (SimpleRep a) ->
   Term a
 fromGeneric_ = appTerm FromGenericW 
+
+-- ====================================================================
+-- Generic Transformers  
+-- Using Generics to transform from ordinary (Specifications a) to
+-- Specifications over 'a's SimpleRep (Specification (SimpleRep a))
+-- ====================================================================
 
 
 fromSimpleRepSpec ::
@@ -404,6 +450,7 @@ fromSimpleRepSpec = \case
 toSimpleRepSpec ::
   forall a.
   ( HasSimpleRep a, 
+    HasSpec (SimpleRep a),
     TypeSpec a ~ TypeSpec (SimpleRep a)
   , FunctionSymbol  "fromGenericFn" BaseWitness '[SimpleRep a] a ) =>
   Specification a ->
@@ -418,7 +465,9 @@ toSimpleRepSpec = \case
     constrained $ \x' ->
       Let (fromGeneric_ x') (x :-> p) 
 
--- ==============================================================================
+-- ===============================================================
+-- How to move back and forth from (SimpleRep a) to 'a'  
+-- ===============================================================
 
 class SimpleGeneric rep where
   toSimpleRep' :: rep p -> SimplifyRep rep
@@ -446,10 +495,14 @@ instance SimpleConstructor f => SimpleGeneric (C1 ('MetaCons c a b) f) where
   toSimpleRep' (M1 f) = toSimpleCon' f
   fromSimpleRep' a = M1 (fromSimpleCon' a)
 
+
 -- ============================================================
 -- One Witness to FunctionSymbol . This is the Witness for many
 -- of the functions symbols available in the the Base modules
--- I dont think all the Typeable instances are necessary
+-- If you want to extend the system, yoe can define you own
+-- Witness type and use it to give FunctionSymbol instances
+-- that you can write, to extend the system.
+-- ==============================================================
 
 data BaseWitness (sym :: Symbol) (dom :: [Type]) (rng :: Type) where 
   EqualW :: forall a . Eq a => BaseWitness "==." '[a,a] Bool  
@@ -531,9 +584,16 @@ isBaseWit t x = trace "HERE" $
        -> if t==x then (Just t,p1,p2,p3,p4) else (Nothing,p1,p2,p3,p4)
      _ -> (Nothing,Nothing,Nothing,Nothing,Nothing)
 
+
+extractSym :: 
+  forall (a :: Symbol) (b :: Symbol) . 
+  (KnownSymbol a) => 
+  SSymbol b -> Maybe (b :~: a)
+extractSym b = testEquality b (SSymbol @a)      
+
 -- ========== "elem_"
 pattern ElemPat :: 
-  forall a rng . (Typeable a, Eq a) => 
+  forall a rng . (HasSpec a,HasSpec[a]) => 
   forall        . (rng ~ Bool,FunctionSymbol "elem_" BaseWitness '[a,[a]] Bool) 
                  => Term a -> Term [a] -> Term rng
 pattern ElemPat x y <- App (isBaseWit (ElemW @a) -> (Just ElemW, Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
@@ -541,7 +601,7 @@ pattern ElemPat x y <- App (isBaseWit (ElemW @a) -> (Just ElemW, Just Refl,Just 
 
 -- ========== "==."
 pattern EqualPat :: 
-  forall a rng . (Typeable a, Eq a) => 
+  forall a rng . (HasSpec a) => 
   forall        . (rng ~ Bool,FunctionSymbol "==." BaseWitness '[a,a] Bool) 
                  => Term a -> Term a -> Term rng
 pattern EqualPat x y <- App (isBaseWit (EqualW @a) -> (Just EqualW, Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
@@ -549,7 +609,7 @@ pattern EqualPat x y <- App (isBaseWit (EqualW @a) -> (Just EqualW, Just Refl,Ju
 
 -- ========== "pair_"
 pattern PairPat :: 
-  forall a b rng . (Typeable a, Typeable b) => 
+  forall a b rng . (HasSpec a, HasSpec b,HasSpec (Prod a b)) => 
   forall         . (rng ~ Prod a b,FunctionSymbol "pair_" BaseWitness '[a,b] (Prod a b)) 
                  => Term a -> Term b -> Term rng
 pattern PairPat x y <- App (isBaseWit (PairW @a @b) -> (Just PairW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
@@ -559,7 +619,7 @@ pattern PairPat x y <- App (isBaseWit (PairW @a @b) -> (Just PairW, Just Refl, J
 
 -- ============= fromGenericFn
 pattern FromGenericPat :: 
-  forall a rng . (Typeable a,Typeable (SimpleRep a),HasSimpleRep a) => 
+  forall a rng . (HasSpec a,HasSpec (SimpleRep a),HasSimpleRep a) => 
   forall       . (rng ~ a,FunctionSymbol "fromGenericFn" BaseWitness '[SimpleRep a] a) 
               => Term (SimpleRep a) -> Term rng
 pattern FromGenericPat x <- App (isBaseWit (FromGenericW @a) -> (Just FromGenericW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
@@ -573,39 +633,7 @@ pattern ToGenericPat ::
 pattern ToGenericPat x <- App (isBaseWit (ToGenericW @a) -> (Just ToGenericW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
    -- where ToGenericPat x = App ToGenericW (x :> Nil)      
 
--- ====================================================================
--- The FunctionSymbol class for implementing new function symbols in
--- the first order logic. Note that a function symbol is first order
--- data, that uniquely identifies a higher order function (the 'semantics' method)
--- Sort of a combination of the FunctionLike and Functions classes
--- An instance "assigns" several functions to each Symbol 's' 
--- =====================================================================
 
-class ( KnownSymbol s
-      , Show (t s dom rng)
-      , Eq (t s dom rng)
-      , Typeable t
-      , TypeList dom
-      , Typeable dom
-      , All HasSpec dom
-      , Typeable rng
-      , HasSpec rng ) =>
-      FunctionSymbol  (s::Symbol) (t:: Symbol -> [Type] -> Type -> Type) (dom::[Type]) rng | s -> t 
-      where
-      witness :: t s dom rng
-      type Wit s :: Symbol -> [Type] -> Type -> Type
-      semantics :: t s dom rng -> FunTy dom rng
-      propagate :: Context s t dom rng hole -> Specification rng -> Specification hole
-      prop :: Ctx rng hole -> Specification rng -> Specification hole
-      prop (Ctx text@(Context _ _)) = propagate text 
-                  -- ^ The pattern match brings the FunctionSymbol constraint into scope
-propagateSpec ::
-  forall v a.
-  Specification a ->
-  Ctx a v ->
-  Specification v
-propagateSpec spec (Ctx context) = propagate context spec
-  
 -- ================ Probably Move this, but it was good practice since it is simple
 instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where
     witness = NotW
@@ -618,7 +646,7 @@ instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where
     propagate (Context NotW (HOLE End)) (SuspendedSpec v ps) = 
       constrained $ \ v' -> Let (App NotW (v' :> Nil)) (v :-> ps)
     propagate (Context NotW (HOLE End)) spec = caseBoolSpec spec (equalSpec . not)
-    propagate ctx _ = error ("NotW\nUnreachable context, too many args\n"++show ctx)
+    propagate ctx _ = ErrorSpec (NE.fromList["NotW (not_)","Unreachable context, too many args",show ctx])
 
 not_ :: Term Bool -> Term Bool
 not_ = appTerm NotW
@@ -645,18 +673,26 @@ instance HasSpec a => FunctionSymbol "==."  BaseWitness '[a, a] Bool where
       caseBoolSpec spec $ \case {True -> equalSpec a; False -> notEqualSpec a}
     propagate (Context EqualW (a :>| (HOLE End))) spec = 
       caseBoolSpec spec $ \case { True -> equalSpec a; False -> notEqualSpec a}
-    propagate ctx _ = error ("EqualW\nUnreachable context, too many args\n"++show ctx)      
-
-
+    propagate ctx _ = ErrorSpec (NE.fromList["EqualW ( ==. )","Unreachable context, too many args",show ctx])      
+  
 (==.) :: forall a. (HasSpec a) => Term a -> Term a -> Term Bool
 (==.) = appTerm EqualW
+
+-- =====================================================================
+-- Now the supporting operations and types.
+-- =====================================================================  
+
+-- Used to show binary operators like SumSpec and PairSpec
+data BinaryShow where
+  BinaryShow :: forall a. String -> [Doc a] -> BinaryShow
+  NonBinary :: BinaryShow
 
 -- =================================================
 -- Term
 
 data Term a where
   App :: forall sym t dom rng. 
-        (FunctionSymbol sym t dom rng, Typeable t, Typeable sym, Typeable dom, All HasSpec dom, Typeable rng, HasSpec rng) => 
+        (FunctionSymbol sym t dom rng, All HasSpec dom, HasSpec rng) => 
         t sym dom rng -> List Term dom -> Term rng
   Lit :: Show a => a -> Term a
   V :: HasSpec a => Var a -> Term a
@@ -676,7 +712,9 @@ same :: All HasSpec as => List Term as -> List Term as -> Bool
 same Nil Nil = True
 same (x :> xs) (y :> ys) = x==y && same xs ys  
 
-appSym :: forall sym t as b. FunctionSymbol sym t as b => t sym as b -> List Term as -> Term b
+appSym :: forall sym t as b.
+   (FunctionSymbol sym t as b) => 
+   t sym as b -> List Term as -> Term b
 appSym w xs = App w xs
 
 
@@ -691,7 +729,9 @@ appSym w xs = App w xs
 --   instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where ...
 --             Name in Haskell^      ^  its arguments^   ^ its result
 --                  The type of NotW |
-appTerm :: forall sym t ds b. FunctionSymbol sym t ds b => t sym ds b -> FunTy (MapList Term ds) (Term b)
+appTerm :: forall sym t ds b. 
+           (FunctionSymbol sym t ds b) => 
+           t sym ds b -> FunTy (MapList Term ds) (Term b)
 appTerm sym = curryList @ds (App @sym @t @ds @b sym)  
 
 -- ===========================================
@@ -989,11 +1029,6 @@ ppSymbol (_ :: SSymbol z) = fromString (symbolVal (Proxy @z))
 -- ==========================================================================
 -- Pretty and Show instances
 
-extractSym :: 
-  forall (a :: Symbol) (b :: Symbol) . 
-  (KnownSymbol a) => 
-  SSymbol b -> Maybe (b :~: a)
-extractSym b = testEquality b (SSymbol @a) 
 
 -- ------------ Term -----------------
 instance Show a => Pretty (WithPrec (Term a)) where
@@ -1095,7 +1130,9 @@ instance HasSpec a => Show (Specification a) where
 
 
 -- ==============================================
--- Language constructs 
+-- Language constructs, Haskell functions, for
+-- users, who want to build (Term a) and Pred
+-- ==============================================
 
 constrained ::
   forall a p.
