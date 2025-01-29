@@ -267,6 +267,14 @@ instance
 newtype ConwayTxBody era = TxBodyConstr (MemoBytes (ConwayTxBodyRaw era))
   deriving (Generic, SafeToHash, ToCBOR)
 
+deriving newtype instance
+  ( EraPParams era
+  , DecCBOR (TxOut era)
+  , ShelleyEraTxCert era
+  , TxCert era ~ ConwayTxCert era
+  ) =>
+  DecCBOR (ConwayTxBody era)
+
 deriving instance
   (EraPParams era, NoThunks (TxOut era)) =>
   NoThunks (ConwayTxBody era)
