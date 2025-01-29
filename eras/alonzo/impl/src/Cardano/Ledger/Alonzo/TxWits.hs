@@ -723,6 +723,69 @@ instance
           pairDecoder = fmap (asHashedPair . fromNativeScript) <$> decCBOR
   {-# INLINE decCBOR #-}
 
+instance
+  ( AlonzoEraScript era
+  , DecCBOR (NativeScript era)
+  ) =>
+  DecCBOR (AlonzoTxWitsRaw era)
+  where
+  decCBOR =
+    decode $
+      SparseKeyed
+        "AlonzoTxWits"
+        emptyTxWitness
+        txWitnessField
+        []
+    where
+      txWitnessField :: Word -> Field (AlonzoTxWitsRaw era)
+      txWitnessField 0 =
+        field
+          (\x wits -> wits {atwrAddrTxWits = x})
+          ( D $
+              ifDecoderVersionAtLeast
+                (natVersion @9)
+                ( allowTag setTag
+                    >> Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
+                )
+                (Set.fromList <$> decodeList decCBOR)
+          )
+      txWitnessField 1 = field addScripts (D nativeScriptsDecoder)
+      txWitnessField 2 =
+        field
+          (\x wits -> wits {atwrBootAddrTxWits = x})
+          ( D $
+              ifDecoderVersionAtLeast
+                (natVersion @9)
+                ( allowTag setTag
+                    >> Set.fromList . NE.toList <$> decodeNonEmptyList decCBOR
+                )
+                (Set.fromList <$> decodeList decCBOR)
+          )
+      txWitnessField 3 = field addScripts (decodePlutus SPlutusV1)
+      txWitnessField 4 = field (\x wits -> wits {atwrDatsTxWits = x}) From
+      txWitnessField 5 = field (\x wits -> wits {atwrRdmrsTxWits = x}) From
+      txWitnessField 6 = field addScripts (decodePlutus SPlutusV2)
+      txWitnessField 7 = field addScripts (decodePlutus SPlutusV3)
+      txWitnessField n = field (\_ t -> t) (Invalid n)
+
+      nativeScriptsDecoder :: Decoder s (Map ScriptHash (Script era))
+      nativeScriptsDecoder =
+        ifDecoderVersionAtLeast
+          (natVersion @9)
+          ( allowTag setTag
+              >> Map.fromList . NE.toList <$> decodeNonEmptyList pairDecoder
+          )
+          (Map.fromList <$> decodeList pairDecoder)
+        where
+          pairDecoder :: Decoder s (ScriptHash, Script era)
+          pairDecoder = asHashedPair @era . fromNativeScript <$> decCBOR
+
+deriving newtype instance
+  ( AlonzoEraScript era
+  , DecCBOR (NativeScript era)
+  ) =>
+  DecCBOR (AlonzoTxWits era)
+
 addScripts ::
   Map ScriptHash (Script era) ->
   AlonzoTxWitsRaw era ->
