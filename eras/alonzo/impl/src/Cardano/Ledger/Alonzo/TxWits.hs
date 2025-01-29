@@ -171,7 +171,7 @@ instance Memoized (Redeemers era) where
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype Redeemers era = RedeemersConstr (MemoBytes (RedeemersRaw era))
-  deriving newtype (Generic, ToCBOR, SafeToHash, Typeable)
+  deriving newtype (Generic, ToCBOR, SafeToHash, Typeable, DecCBOR)
 
 deriving newtype instance AlonzoEraScript era => Eq (Redeemers era)
 deriving newtype instance AlonzoEraScript era => NFData (Redeemers era)
@@ -610,6 +610,40 @@ instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
           "Redeemer"
           (\(rdmrPtr, _, _) -> fromIntegral (listLen rdmrPtr) + 2)
           $ (,,) <$> decCBORGroup <*> decCBOR <*> decCBOR
+      {-# INLINE decodeElement #-}
+  {-# INLINE decCBOR #-}
+
+instance AlonzoEraScript era => DecCBOR (RedeemersRaw era) where
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      ( peekTokenType >>= \case
+          TypeMapLenIndef -> decodeMapRedeemers
+          TypeMapLen -> decodeMapRedeemers
+          _ -> decodeListRedeemers
+      )
+      (RedeemersRaw . Map.fromList <$> decodeList decodeElement)
+    where
+      decodeMapRedeemers :: Decoder s (RedeemersRaw era)
+      decodeMapRedeemers =
+        RedeemersRaw . Map.fromList . NE.toList <$> do
+          (_, xs) <- decodeListLikeWithCount decodeMapLenOrIndef (:) $ \_ -> do
+            ptr <- decCBOR
+            (annData, exUnits) <- decCBOR
+            pure (ptr, (annData, exUnits))
+          case NE.nonEmpty xs of
+            Nothing -> fail "Expected redeemers map to be non-empty"
+            Just neList -> pure $ NE.reverse neList
+      decodeListRedeemers :: Decoder s (RedeemersRaw era)
+      decodeListRedeemers =
+        RedeemersRaw . Map.fromList . NE.toList
+          <$> decodeNonEmptyList decodeElement
+      decodeElement :: Decoder s (PlutusPurpose AsIx era, (Data era, ExUnits))
+      decodeElement = do
+        decodeRecordNamed
+          "Redeemer"
+          (\(rdmrPtr, _) -> fromIntegral (listLen rdmrPtr) + 2)
+          $ (,) <$> decCBORGroup <*> ((,) <$> decCBOR <*> decCBOR)
       {-# INLINE decodeElement #-}
   {-# INLINE decCBOR #-}
 
