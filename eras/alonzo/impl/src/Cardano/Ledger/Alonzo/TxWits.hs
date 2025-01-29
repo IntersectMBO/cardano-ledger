@@ -205,6 +205,9 @@ unRedeemers = unRedeemersRaw . getMemoRawType
 nullRedeemers :: Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
 
+emptyTxWitness :: AlonzoEraScript era => AlonzoTxWitsRaw era
+emptyTxWitness = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
+
 emptyRedeemers :: AlonzoEraScript era => Redeemers era
 emptyRedeemers = Redeemers mempty
 
@@ -608,6 +611,11 @@ deriving via
   instance
     AlonzoEraScript era => DecCBOR (Annotator (Redeemers era))
 
+deriving via
+  Mem (AlonzoTxWitsRaw era)
+  instance
+    AlonzoEraScript era => DecCBOR (Annotator (AlonzoTxWits era))
+
 instance
   AlonzoEraScript era =>
   DecCBOR (Annotator (AlonzoTxWitsRaw era))
@@ -620,8 +628,6 @@ instance
         txWitnessField
         []
     where
-      emptyTxWitness = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
-
       txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
       txWitnessField 0 =
         fieldAA
@@ -671,59 +677,57 @@ instance
         where
           pairDecoder :: Decoder s (Annotator (ScriptHash, Script era))
           pairDecoder = fmap (asHashedPair . fromNativeScript) <$> decCBOR
-
-      addScripts ::
-        Map ScriptHash (Script era) ->
-        AlonzoTxWitsRaw era ->
-        AlonzoTxWitsRaw era
-      addScripts scriptWitnesses txWits =
-        txWits
-          { atwrScriptTxWits = scriptWitnesses <> atwrScriptTxWits txWits
-          }
-      {-# INLINE addScripts #-}
-
-      decodePlutus ::
-        PlutusLanguage l =>
-        SLanguage l ->
-        Decode ('Closed 'Dense) (Map ScriptHash (Script era))
-      decodePlutus slang =
-        D $
-          ifDecoderVersionAtLeast
-            (natVersion @9)
-            (scriptDecoderV9 (fromPlutusScript <$> decodePlutusScript slang))
-            (scriptDecoder (fromPlutusScript <$> decodePlutusScript slang))
-      {-# INLINE decodePlutus #-}
-
-      scriptDecoderV9 ::
-        Decoder s (Script era) ->
-        Decoder s (Map ScriptHash (Script era))
-      scriptDecoderV9 decodeScript = do
-        allowTag setTag
-        scriptMap <- decodeMapLikeEnforceNoDuplicates decodeListLenOrIndef $ do
-          asHashedPair <$> decodeScript
-        when (Map.null scriptMap) $ fail "Empty list of scripts is not allowed"
-        pure scriptMap
-      {-# INLINE scriptDecoderV9 #-}
-
-      scriptDecoder ::
-        Decoder s (Script era) ->
-        Decoder s (Map ScriptHash (Script era))
-      scriptDecoder decodeScript =
-        fmap Map.fromList $
-          decodeList $
-            asHashedPair <$> decodeScript
-      {-# INLINE scriptDecoder #-}
-
-      asHashedPair script =
-        let !scriptHash = hashScript @era script
-         in (scriptHash, script)
-      {-# INLINE asHashedPair #-}
   {-# INLINE decCBOR #-}
 
-deriving via
-  Mem (AlonzoTxWitsRaw era)
-  instance
-    AlonzoEraScript era => DecCBOR (Annotator (AlonzoTxWits era))
+addScripts ::
+  Map ScriptHash (Script era) ->
+  AlonzoTxWitsRaw era ->
+  AlonzoTxWitsRaw era
+addScripts scriptWitnesses txWits =
+  txWits
+    { atwrScriptTxWits = scriptWitnesses <> atwrScriptTxWits txWits
+    }
+{-# INLINE addScripts #-}
+
+decodePlutus ::
+  (AlonzoEraScript era, PlutusLanguage l) =>
+  SLanguage l ->
+  Decode ('Closed 'Dense) (Map ScriptHash (Script era))
+decodePlutus slang =
+  D $
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      (scriptDecoderV9 (fromPlutusScript <$> decodePlutusScript slang))
+      (scriptDecoder (fromPlutusScript <$> decodePlutusScript slang))
+{-# INLINE decodePlutus #-}
+
+scriptDecoderV9 ::
+  EraScript era =>
+  Decoder s (Script era) ->
+  Decoder s (Map ScriptHash (Script era))
+scriptDecoderV9 decodeScript = do
+  allowTag setTag
+  scriptMap <- decodeMapLikeEnforceNoDuplicates decodeListLenOrIndef $ do
+    asHashedPair <$> decodeScript
+  when (Map.null scriptMap) $ fail "Empty list of scripts is not allowed"
+  pure scriptMap
+{-# INLINE scriptDecoderV9 #-}
+
+scriptDecoder ::
+  EraScript era =>
+  Decoder s (Script era) ->
+  Decoder s (Map ScriptHash (Script era))
+scriptDecoder decodeScript =
+  fmap Map.fromList $
+    decodeList $
+      asHashedPair <$> decodeScript
+{-# INLINE scriptDecoder #-}
+
+asHashedPair :: forall era. EraScript era => Script era -> (ScriptHash, Script era)
+asHashedPair script =
+  let !scriptHash = hashScript @era script
+   in (scriptHash, script)
+{-# INLINE asHashedPair #-}
 
 alonzoEqTxWitsRaw :: AlonzoEraTxWits era => TxWits era -> TxWits era -> Bool
 alonzoEqTxWitsRaw txWits1 txWits2 =
