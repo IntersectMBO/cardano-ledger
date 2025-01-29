@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Remove redundant `EncCBOR (Data era)` constraint from `DecCBOR` instance for `Annotator (AlonzoTxWits era)`
 * Remove `reapplyAlonzoTx` as no longer needed.
 * Add `TxInfoResult` data family, `mkTxInfoResult` and `lookupTxInfoResult` to `EraPlutusContext`
 * Add `lookupTxInfoResultImpossible` helper
