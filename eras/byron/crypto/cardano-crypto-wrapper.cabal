@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-crypto-wrapper
-version: 1.5.1.3
+version: 1.6.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -89,7 +89,7 @@ library
     cardano-crypto,
     cardano-ledger-binary >=1.3.1,
     cardano-prelude >=0.2.0.0,
-    cryptonite,
+    crypton,
     data-default,
     deepseq,
     formatting,
@@ -143,7 +143,7 @@ test-suite test
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-prelude,
     cardano-prelude-test,
-    cryptonite,
+    crypton,
     filepath,
     formatting,
     hedgehog >=1.0.4,

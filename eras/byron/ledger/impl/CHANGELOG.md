@@ -1,5 +1,9 @@
 # Revision history for `cardano-ledger-byron`
 
+## 1.1.0.0
+
+* Switch from cryptonite library (deprecated) to crypton (a drop in replacement)
+
 ## 1.0.2.1
 
 *

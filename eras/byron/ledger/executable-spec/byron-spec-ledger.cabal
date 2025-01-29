@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: byron-spec-ledger
-version: 1.0.1.0
+version: 1.1.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -47,7 +47,7 @@ library
     cardano-crypto-class,
     cardano-ledger-binary >=1.0,
     containers,
-    cryptonite,
+    crypton,
     hashable,
     hedgehog >=1.0.4,
     microlens,
