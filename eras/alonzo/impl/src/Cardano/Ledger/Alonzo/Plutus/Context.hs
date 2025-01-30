@@ -7,12 +7,16 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+-- Recursive definition constraints of `EraPlutusContext` and `EraPlutusTxInfo` lead to a wrongful
+-- redundant constraint warning in the definition of `lookupTxInfoResult`
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   EraPlutusTxInfo (..),
   EraPlutusContext (..),
   toPlutusWithContext,
+  lookupTxInfoResultImpossible,
 
   -- * Language dependent translation
   PlutusTxInfo,
@@ -45,6 +49,8 @@ import Cardano.Ledger.Plutus (
   PlutusRunnable,
   PlutusScriptContext,
   PlutusWithContext (..),
+  SLanguage (..),
+  isLanguage,
  )
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -52,8 +58,8 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import Data.Kind (Type)
-import Data.Proxy (Proxy (..))
 import Data.Text (Text)
+import GHC.Stack
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
@@ -109,11 +115,28 @@ class
   where
   type ContextError era = (r :: Type) | r -> era
 
+  -- | This data type family is used to memoize the results of `toPlutusTxInfo`, so the outcome can
+  -- be shared between execution of different scripts with the same language version.
+  data TxInfoResult era :: Type
+
+  -- | Construct `PlutusTxInfo` for all supported languages in this era.
+  mkTxInfoResult :: LedgerTxInfo era -> TxInfoResult era
+
+  -- | `TxInfo` for the same language can be shared between executions of every script of the same
+  -- version in a single transaction.
+  --
+  -- /Note/ - The `EraPlutusTxInfo` is here only to enforce this function is not called with an
+  -- unsupported plutus language version.
+  lookupTxInfoResult ::
+    EraPlutusTxInfo l era =>
+    SLanguage l -> TxInfoResult era -> Either (ContextError era) (PlutusTxInfo l)
+
   mkPlutusWithContext ::
     PlutusScript era ->
     ScriptHash ->
     PlutusPurpose AsIxItem era ->
     LedgerTxInfo era ->
+    TxInfoResult era ->
     (Data era, ExUnits) ->
     CostModel ->
     Either (ContextError era) PlutusWithContext
@@ -125,16 +148,17 @@ toPlutusWithContext ::
   ScriptHash ->
   PlutusPurpose AsIxItem era ->
   LedgerTxInfo era ->
+  TxInfoResult era ->
   (Data era, ExUnits) ->
   CostModel ->
   Either (ContextError era) PlutusWithContext
-toPlutusWithContext script scriptHash plutusPurpose lti (redeemerData, exUnits) costModel = do
-  let proxy = Proxy @l
+toPlutusWithContext script scriptHash plutusPurpose lti txInfoResult (redeemerData, exUnits) costModel = do
+  let slang = isLanguage @l
       maybeSpendingDatum =
         getSpendingDatum (ltiUTxO lti) (ltiTx lti) (hoistPlutusPurpose toAsItem plutusPurpose)
-  txInfo <- toPlutusTxInfo proxy lti
+  txInfo <- lookupTxInfoResult slang txInfoResult
   plutusArgs <-
-    toPlutusArgs proxy (ltiProtVer lti) txInfo plutusPurpose maybeSpendingDatum redeemerData
+    toPlutusArgs slang (ltiProtVer lti) txInfo plutusPurpose maybeSpendingDatum redeemerData
   pure $
     PlutusWithContext
       { pwcProtocolVersion = pvMajor (ltiProtVer lti)
@@ -144,6 +168,13 @@ toPlutusWithContext script scriptHash plutusPurpose lti (redeemerData, exUnits) 
       , pwcExUnits = exUnits
       , pwcCostModel = costModel
       }
+
+-- | Helper function to use when implementing `lookupTxInfoResult` for plutus languages that are not
+-- supported by the era.
+lookupTxInfoResultImpossible ::
+  (HasCallStack, EraPlutusTxInfo l era) => SLanguage l -> Either (ContextError era) (PlutusTxInfo l)
+lookupTxInfoResultImpossible slang =
+  error $ "Impossible: Attempt to lookup TxInfoResult for an unsupported language: " <> show slang
 
 -- =============================================
 -- Type families that specify Plutus types that are different from one version to another

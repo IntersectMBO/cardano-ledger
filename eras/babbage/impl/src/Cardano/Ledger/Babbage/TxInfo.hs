@@ -32,6 +32,8 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusScriptPurpose,
+  PlutusTxInfo,
+  lookupTxInfoResultImpossible,
   toPlutusWithContext,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
@@ -65,7 +67,7 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
-import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..))
+import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..), SLanguage (..))
 import Cardano.Ledger.Plutus.TxInfo (
   TxOutSource (..),
   transAddr,
@@ -221,6 +223,16 @@ transTxRedeemers proxy pv tx =
 
 instance EraPlutusContext BabbageEra where
   type ContextError BabbageEra = BabbageContextError BabbageEra
+  data TxInfoResult BabbageEra
+    = BabbageTxInfoResult -- Fields must be kept lazy
+        (Either (ContextError BabbageEra) (PlutusTxInfo 'PlutusV1))
+        (Either (ContextError BabbageEra) (PlutusTxInfo 'PlutusV2))
+
+  mkTxInfoResult lti = BabbageTxInfoResult (toPlutusTxInfo SPlutusV1 lti) (toPlutusTxInfo SPlutusV2 lti)
+
+  lookupTxInfoResult SPlutusV1 (BabbageTxInfoResult tirPlutusV1 _) = tirPlutusV1
+  lookupTxInfoResult SPlutusV2 (BabbageTxInfoResult _ tirPlutusV2) = tirPlutusV2
+  lookupTxInfoResult slang _ = lookupTxInfoResultImpossible slang
 
   mkPlutusWithContext = \case
     BabbagePlutusV1 p -> toPlutusWithContext $ Left p

@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusTxInfo (..),
   LedgerTxInfo (..),
   PlutusTxCert,
+  PlutusTxInfo,
   toPlutusWithContext,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
@@ -92,7 +93,7 @@ import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Plutus.Data (Data)
-import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..))
+import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..), SLanguage (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Plutus.TxInfo (
   transBoundedRational,
@@ -129,6 +130,22 @@ import qualified PlutusLedgerApi.V3.MintValue as PV3
 
 instance EraPlutusContext ConwayEra where
   type ContextError ConwayEra = ConwayContextError ConwayEra
+
+  data TxInfoResult ConwayEra
+    = ConwayTxInfoResult -- Fields must be kept lazy
+        (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV1))
+        (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV2))
+        (Either (ContextError ConwayEra) (PlutusTxInfo 'PlutusV3))
+
+  mkTxInfoResult lti =
+    ConwayTxInfoResult
+      (toPlutusTxInfo SPlutusV1 lti)
+      (toPlutusTxInfo SPlutusV2 lti)
+      (toPlutusTxInfo SPlutusV3 lti)
+
+  lookupTxInfoResult SPlutusV1 (ConwayTxInfoResult tirPlutusV1 _ _) = tirPlutusV1
+  lookupTxInfoResult SPlutusV2 (ConwayTxInfoResult _ tirPlutusV2 _) = tirPlutusV2
+  lookupTxInfoResult SPlutusV3 (ConwayTxInfoResult _ _ tirPlutusV3) = tirPlutusV3
 
   mkPlutusWithContext = \case
     ConwayPlutusV1 p -> toPlutusWithContext $ Left p
