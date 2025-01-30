@@ -39,7 +39,7 @@ module Cardano.Ledger.Shelley.Tx.Internal (
   auxDataShelleyTxL,
   sizeShelleyTxF,
   wireSizeShelleyTxF,
-  segwitTx,
+  segWitAnnTx,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
   witsFromTxWitnesses,
@@ -348,14 +348,14 @@ unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (ShelleyTxRaw b w
 -- Segregated witness
 --------------------------------------------------------------------------------
 
-segwitTx ::
+segWitAnnTx ::
   forall era.
   EraTx era =>
   Annotator (TxBody era) ->
   Annotator (TxWits era) ->
   Maybe (Annotator (TxAuxData era)) ->
   Annotator (ShelleyTx era)
-segwitTx
+segWitAnnTx
   bodyAnn
   witsAnn
   metaAnn = Annotator $ \bytes ->
