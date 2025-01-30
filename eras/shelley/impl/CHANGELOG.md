@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Rename `segwitTx` to `segWitAnnTx`
 * Converted `CertState` to a type family
 * Restrict the monad of `applyTx` and `reapllyTx` to `Either` from abstract `MonadError`
 * Remove `applyTxOpts` in favor of new `applyTxValidation` function in `ApplyTx`

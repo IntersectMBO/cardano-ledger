@@ -52,7 +52,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, segwitTx)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitAnnTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -233,7 +233,7 @@ txSeqDecoder lax = do
   let txns =
         sequenceA $
           StrictSeq.forceToStrict $
-            Seq.zipWith3 segwitTx bodies wits metadata
+            Seq.zipWith3 segWitAnnTx bodies wits metadata
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 instance EraTx era => DecCBOR (Annotator (ShelleyTxSeq era)) where
