@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Rename `segwitTx` to `segWitAnnTx`
 * Move `AccountState` to `Cardano.Ledger.State`
 * Deprecated `RewardAccounts`
 * Deprecated `utxosUtxoL`

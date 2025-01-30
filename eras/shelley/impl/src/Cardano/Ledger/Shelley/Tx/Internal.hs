@@ -39,7 +39,7 @@ module Cardano.Ledger.Shelley.Tx.Internal (
   auxDataShelleyTxL,
   sizeShelleyTxF,
   wireSizeShelleyTxF,
-  segwitTx,
+  segWitAnnTx,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
   witsFromTxWitnesses,
@@ -348,33 +348,30 @@ unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (ShelleyTxRaw b w
 -- Segregated witness
 --------------------------------------------------------------------------------
 
-segwitTx ::
+segWitAnnTx ::
   forall era.
   EraTx era =>
   Annotator (TxBody era) ->
   Annotator (TxWits era) ->
   Maybe (Annotator (TxAuxData era)) ->
   Annotator (ShelleyTx era)
-segwitTx
-  bodyAnn
-  witsAnn
-  metaAnn = Annotator $ \bytes ->
-    let body' = runAnnotator bodyAnn bytes
-        witnessSet = runAnnotator witsAnn bytes
-        metadata = flip runAnnotator bytes <$> metaAnn
-        wrappedMetadataBytes = case metadata of
-          Nothing -> Plain.serialize Plain.encodeNull
-          Just b -> Plain.serialize b
-        fullBytes =
-          Plain.serialize (Plain.encodeListLen 3)
-            <> Plain.serialize body'
-            <> Plain.serialize witnessSet
-            <> wrappedMetadataBytes
-     in unsafeConstructTxWithBytes
-          body'
-          witnessSet
-          (maybeToStrictMaybe metadata)
-          fullBytes
+segWitAnnTx bodyAnn witsAnn metaAnn = Annotator $ \bytes ->
+  let body' = runAnnotator bodyAnn bytes
+      witnessSet = runAnnotator witsAnn bytes
+      metadata = flip runAnnotator bytes <$> metaAnn
+      wrappedMetadataBytes = case metadata of
+        Nothing -> Plain.serialize Plain.encodeNull
+        Just b -> Plain.serialize b
+      fullBytes =
+        Plain.serialize (Plain.encodeListLen 3)
+          <> Plain.serialize body'
+          <> Plain.serialize witnessSet
+          <> wrappedMetadataBytes
+    in unsafeConstructTxWithBytes
+        body'
+        witnessSet
+        (maybeToStrictMaybe metadata)
+        fullBytes
 
 -- ========================================
 
