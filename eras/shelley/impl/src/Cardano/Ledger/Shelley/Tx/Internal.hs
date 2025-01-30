@@ -40,6 +40,7 @@ module Cardano.Ledger.Shelley.Tx.Internal (
   sizeShelleyTxF,
   wireSizeShelleyTxF,
   segWitAnnTx,
+  segWitTx,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
   witsFromTxWitnesses,
@@ -397,6 +398,33 @@ segWitAnnTx
           witnessSet
           (maybeToStrictMaybe metadata)
           fullBytes
+
+segWitTx ::
+  forall era.
+  EraTx era =>
+  TxBody era ->
+  TxWits era ->
+  Maybe (TxAuxData era) ->
+  ShelleyTx era
+segWitTx
+  body'
+  witnessSet
+  metadata =
+    let
+      wrappedMetadataBytes = case metadata of
+        Nothing -> Plain.serialize Plain.encodeNull
+        Just b -> Plain.serialize b
+      fullBytes =
+        Plain.serialize (Plain.encodeListLen 3)
+          <> Plain.serialize body'
+          <> Plain.serialize witnessSet
+          <> wrappedMetadataBytes
+     in
+      unsafeConstructTxWithBytes
+        body'
+        witnessSet
+        (maybeToStrictMaybe metadata)
+        fullBytes
 
 -- ========================================
 

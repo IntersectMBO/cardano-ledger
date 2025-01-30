@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `segWitTx`
 * Rename `segwitTx` to `segWitAnnTx`
 * Made the fields of predicate failures and environments lazy
 * Changed the type of `sgSecurityParam` to `NonZero Word64`
