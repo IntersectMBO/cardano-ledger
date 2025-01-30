@@ -457,6 +457,16 @@ tests =
                 <> S vk -- vkey
                 <> T (testKey1SigToken @C) -- signature
             )
+    , case mkWitnessVKey (testTxbHash @C) testKey1 of
+        w@(WitVKey vk _sig) ->
+          checkEncodingCBORAnnotated
+            shelleyProtVer
+            "vkey_witnesses"
+            w -- Transaction _witnessVKeySet element
+            ( T (TkListLen 2)
+                <> S vk -- vkey
+                <> T (testKey1SigToken @C) -- signature
+            )
     , checkEncoding
         shelleyProtVer
         (fromPlainEncoding . toCBOR)
@@ -1045,55 +1055,64 @@ tests =
               & witsTxL @C .~ (mkBasicTxWits @C & addrTxWitsL .~ ws & scriptTxWitsL .~ ss)
               & auxDataTxL @C .~ SJust tx5MD
           txns = ShelleyTxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
-       in checkEncodingCBORAnnotated
-            shelleyProtVer
-            "rich_block"
-            (Block @C bh txns)
-            ( (T $ TkListLen 4)
-                -- header
-                <> S bh
-                -- bodies
-                <> T (TkListLen 5)
-                <> S txb1
-                <> S txb2
-                <> S txb3
-                <> S txb4
-                <> S txb5
-                -- witnesses
-                <> T (TkListLen 5)
-                -- tx 1, one key
-                <> T (TkMapLen 1 . TkWord 0)
-                <> T (TkListLen 1)
-                <> S w1
-                -- tx 2, two keys
-                <> T (TkMapLen 1 . TkWord 0)
-                <> T (TkListLen 2)
-                <> S w2
-                <> S w1
-                -- tx 3, one script
-                <> T (TkMapLen 1 . TkWord 1)
-                <> T (TkListLen 1)
-                <> S testScript
-                -- tx 4, two scripts
-                <> T (TkMapLen 1 . TkWord 1)
-                <> T (TkListLen 2)
-                <> S testScript
-                <> S testScript2
-                -- tx 5, two keys and two scripts
-                <> T (TkMapLen 2)
-                <> T (TkWord 0)
-                <> T (TkListLen 2)
-                <> S w2
-                <> S w1
-                <> T (TkWord 1)
-                <> T (TkListLen 2)
-                <> S testScript
-                <> S testScript2
-                -- metadata
-                <> T (TkMapLen 1)
-                <> T (TkInt 4)
-                <> S tx5MD
-            )
+          xxx =
+            (T $ TkListLen 4)
+              -- header
+              <> S bh
+              -- bodies
+              <> T (TkListLen 5)
+              <> S txb1
+              <> S txb2
+              <> S txb3
+              <> S txb4
+              <> S txb5
+              -- witnesses
+              <> T (TkListLen 5)
+              -- tx 1, one key
+              <> T (TkMapLen 1 . TkWord 0)
+              <> T (TkListLen 1)
+              <> S w1
+              -- tx 2, two keys
+              <> T (TkMapLen 1 . TkWord 0)
+              <> T (TkListLen 2)
+              <> S w2
+              <> S w1
+              -- tx 3, one script
+              <> T (TkMapLen 1 . TkWord 1)
+              <> T (TkListLen 1)
+              <> S testScript
+              -- tx 4, two scripts
+              <> T (TkMapLen 1 . TkWord 1)
+              <> T (TkListLen 2)
+              <> S testScript
+              <> S testScript2
+              -- tx 5, two keys and two scripts
+              <> T (TkMapLen 2)
+              <> T (TkWord 0)
+              <> T (TkListLen 2)
+              <> S w2
+              <> S w1
+              <> T (TkWord 1)
+              <> T (TkListLen 2)
+              <> S testScript
+              <> S testScript2
+              -- metadata
+              <> T (TkMapLen 1)
+              <> T (TkInt 4)
+              <> S tx5MD
+       in testGroup
+            "Block"
+            [ checkEncodingCBORAnnotated
+                shelleyProtVer
+                "rich_block"
+                (Block @C bh txns)
+                xxx
+            , checkEncodingCBOR
+                shelleyProtVer
+                "rich_block - non-annotated"
+                (Block @C bh txns)
+                xxx
+            ]
     , let actual =
             Plain.serialize' $ Ex.sleNewEpochState Ex.ledgerExamplesShelley
           expected = either error id $ B16.decode expectedHex
