@@ -15,6 +15,7 @@ module Constrained.SimplifyExperiment where
 
 import Constrained.BaseExperiment
 import Constrained.GenericExperiment
+import Constrained.ConformanceExperiment
 import Constrained.Core
 
 import Control.Monad.Identity
@@ -50,26 +51,6 @@ import Constrained.BaseExperiment
 import Constrained.SyntaxExperiment
 
 
--- ===================================
--- STUBS
-elem_ :: Term e -> Term [e] -> Term Bool
-elem_ = undefined
-
--- STUB  Add this to the FunctionSymbol class
-{-
-rewriteRules ::
-    ( TypeList as
-    , Typeable as
-    , HasSpec b
-    , All HasSpec as
-    ) =>
-    Witness ->
-    List Term as ->
-    Maybe (Term fn b)
--}    
-rewriteRules _ _ = Nothing
-
-
 -- =======================================================
 -- helpers
 -- | If the `Specification fn Bool` doesn't constrain the boolean you will get a `TrueSpec` out.
@@ -96,7 +77,7 @@ whenTrue b (toPred  -> p) = When b p
 -- meaning that all the variables in the term are free in p).
 --
 -- TODO: complete this with more cases!
-pinnedBy :: forall a. (Eq a,Typeable a) => Var a -> Pred -> Maybe (Term a)
+pinnedBy :: forall a. (HasSpec a) => Var a -> Pred -> Maybe (Term a)
 -- pinnedBy x (Assert (App (extractFn @EqFn @fn -> Just EqualW) (t :> t' :> Nil)))
 pinnedBy x (Assert (EqualPat (t :: Term a) t'))
   | V x' <- t, Just Refl <- eqVar x x' = Just t'
@@ -238,20 +219,29 @@ substituteAndSimplifyTerm sub t =
       | b -> simplifyTerm t'
       | otherwise -> t'
 
+-- | Simplify a Term, if the Term is an 'App', apply the rewrite rules
+--   chosen by the (FunctionSymbol sym t bs a) instance attached
+--   to the function witness 'f'    
 simplifyTerm :: forall a. Term a -> Term a
 simplifyTerm = \case
   V v -> V v
   Lit l -> Lit l
-  App f (mapList simplifyTerm -> ts)
+  App (f :: t sym bs a) (mapList simplifyTerm -> ts)
     | Just vs <- fromLits ts -> Lit $ uncurryList_ unValue (semantics f) vs
-    | Just t <- rewriteRules f ts -> simplifyTerm t
+    | Just t <- rewriteRules @sym @t @bs @a f ts -> simplifyTerm t
     | otherwise -> App f ts
-
-
+ 
 simplifyPred :: Pred -> Pred 
 simplifyPred = \case
   -- If the term simplifies away to a literal, that means there is no
   -- more generation to do so we can get rid of `GenHint`
+  p@(ElemPred bool t xs) -> case simplifyTerm t of
+    Lit x -> case (elem x xs,bool) of
+      (True,True) -> TruePred
+      (True,False) -> FalsePred ( "notElemPred reduces to True" :| [ show p] )
+      (False,True) -> FalsePred ( "elemPred reduces to False" :| [ show p] )
+      (False,False) -> TruePred
+    t' -> ElemPred bool t' xs  
   GenHint h t -> case simplifyTerm t of
     Lit {} -> TruePred
     t' -> GenHint h t'
@@ -319,6 +309,7 @@ regularizeBinder (x :-> p) = x' :-> substitutePred x (V x') (regularizeNamesPred
 
 regularizeNamesPred :: Pred -> Pred
 regularizeNamesPred p = case p of
+  ElemPred {} -> p
   Monitor {} -> p
   And ps -> And $ map regularizeNamesPred ps
   Exists k b -> Exists k (regularizeBinder b)
@@ -366,8 +357,10 @@ simplifySpec spec = case regularizeNames spec of
 
 -- Runs in `GE` in order for us to have detailed context on failure.
 computeSpecSimplified ::
-  forall fn a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Specification a)
-computeSpecSimplified x p = undefined {- localGESpec $ case p of
+  forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Specification a)
+computeSpecSimplified x p = localGESpec $ case p of
+  ElemPred True t xs -> propagateSpec (MemberSpec xs) <$> toCtx x t
+  ElemPred False (t :: Term b) xs -> propagateSpec (TypeSpec @b (emptySpec @b) (NE.toList xs)) <$> toCtx x t
   Monitor {} -> pure mempty
   GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t
   Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
@@ -384,18 +377,20 @@ computeSpecSimplified x p = undefined {- localGESpec $ case p of
   Assert (Lit True) -> pure mempty
   Assert (Lit False) -> genError1 (show p)
 
-  Assert (ElemPat _ (Lit [])) -> pure (ErrorSpec (pure (show p)))
-  Assert (ElemPat t (Lit xs)) -> propagateSpec (MemberSpec (NE.fromList xs)) <$> toCtx x t
+  -- Assert (ElemPat _ (Lit [])) -> pure (ErrorSpec (pure (show p)))
+  -- Assert (ElemPat t (Lit xs)) -> propagateSpec (MemberSpec (NE.fromList xs)) <$> toCtx x t
 
-  Assert t -> undefined -- propagateSpec (equalSpec True) <$> toCtx x t
+  Assert t -> propagateSpec (equalSpec True) <$> toCtx x t
   ForAll (Lit s) b -> fold <$> mapM (\val -> computeSpec x $ unBind val b) (forAllToList s)
   ForAll t b -> do
     bSpec <- computeSpecBinderSimplified b
     propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
   Case (Lit val) bs -> runCaseOn val (mapList thing bs) $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
+
   Case t branches -> do
     branchSpecs <- mapMList (traverseWeighted computeSpecBinderSimplified) branches
     propagateSpec (caseSpec (Just (showType @a)) branchSpecs) <$> toCtx x t
+
   When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
   -- This shouldn't happen a lot of the time because when the body is trivial we mostly get rid of the `When` entirely
   When {} -> pure $ SuspendedSpec x p
@@ -425,13 +420,15 @@ computeSpecSimplified x p = undefined {- localGESpec $ case p of
     fatalError $
       NE.fromList
         ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty p)]
+        
   where
     -- We want `genError` to turn into `ErrorSpec` and we want `FatalError` to turn into `FatalError`
     localGESpec ge = case ge of
       (GenError xs) -> Result $ ErrorSpec (catMessageList xs)
       (FatalError es) -> FatalError es
       (Result x) -> Result x
--}
+
+
 -- | Precondition: the `Pred fn` defines the `Var a`.
 --
 -- Runs in `GE` in order for us to have detailed context on failure.
@@ -446,27 +443,7 @@ computeSpecBinderSimplified :: Binder a -> GE (Specification a)
 computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
 
-
--- ===================================================================================
--- The type we will use for the SimpleRep of Sums
-
-{- 
-guardSumSpec ::
-  forall a b.
-  (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
-  [String] ->
-  SumSpec a b ->
-  Specification (Sum a b)
-guardSumSpec msgs s@(SumSpecRaw tString _ sa sb)
-  | isErrorLike sa
-  , isErrorLike sb =
-      ErrorSpec $
-        NE.fromList $
-          msgs ++ ["All branches in a caseOn" ++ sumType tString ++ " simplify to False.", show s]
-  | otherwise = typeSpec s
--}
-
-{-
+-- STUB
 -- | Turn a list of branches into a SumSpec. If all the branches fail return an ErrorSpec.
 caseSpec ::
   forall as.
@@ -474,57 +451,61 @@ caseSpec ::
   Maybe String ->
   List (Weighted Specification) as ->
   Specification (SumOver as)
-caseSpec tString ss
-  | allBranchesFail ss =
-      ErrorSpec
-        ( NE.fromList
-            [ "When simplifying SumSpec, all branches in a caseOn" ++ sumType tString ++ " simplify to False."
-            , show spec
-            ]
-        )
-  | True = spec
-  where
-    spec = loop tString ss
+caseSpec tString ss = undefined
 
-    allBranchesFail :: forall as. List (Weighted Specification) as -> Bool
-    allBranchesFail Nil = error "The impossible happened in allBranchesFail"
-    allBranchesFail (Weighted _ s :> Nil) = isErrorLike s
-    allBranchesFail (Weighted _ s :> ss@(_ :> _)) = isErrorLike s && allBranchesFail ss
 
-    loop ::
-      forall as.
-      HasSpec (SumOver as) =>
-      Maybe String -> List (Weighted Specification) as -> Specification (SumOver as)
-    loop _ Nil = error "The impossible happened in caseSpec"
-    loop _ (s :> Nil) = thing s
-    loop mTypeString (s :> ss@(_ :> _))
-      | Evidence <- prerequisites @(SumOver as) =
-          (typeSpec $ SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss))
-      where
-        theWeights =
-          case (weight s, totalWeight ss) of
-            (Nothing, Nothing) -> Nothing
-            (a, b) -> Just (fromMaybe 1 a, fromMaybe (lengthList ss) b)
+
+{-
+
+src/Constrained/SimplifyExperiment.hs:523:23: error: [GHC-05617]
+    • Could not deduce ‘TypeSpec (Sum a (SumOver (a1 : as3)))
+                        ~ SumSpec a (SumOver (a1 : as3))’
+      from the context: as1 ~ (a : as2)
+        bound by a pattern with constructor:
+                   :> :: forall {k} (f :: k -> *) (a :: k) (as1 :: [k]).
+                         f a -> List f as1 -> List f (a : as1),
+                 in an equation for ‘loop’
+        at src/Constrained/SimplifyExperiment.hs:521:23-38
+      or from: as2 ~ (a1 : as3)
+        bound by a pattern with constructor:
+                   :> :: forall {k} (f :: k -> *) (a :: k) (as1 :: [k]).
+                         f a -> List f as1 -> List f (a : as1),
+                 in an equation for ‘loop’
+        at src/Constrained/SimplifyExperiment.hs:521:32-37
+      or from: Prerequisites (SumOver as1)
+        bound by a pattern with constructor:
+                   Evidence :: forall (c :: Constraint). c => Evidence c,
+                 in a pattern binding in
+                      a pattern guard for
+                        an equation for ‘loop’
+        at src/Constrained/SimplifyExperiment.hs:522:9-16
+      Expected: TypeSpec (SumOver as1)
+        Actual: SumSpec a (SumOver (a1 : as3))
+    • In the second argument of ‘($)’, namely
+        ‘SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss)’
+      In the expression:
+        typeSpec
+          $ SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss)
+      In an equation for ‘loop’:
+          loop mTypeString (s :> ss@(_ :> _))
+            | Evidence <- prerequisites @(SumOver as)
+            = (typeSpec
+                 $ SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss))
+            where
+                theWeights
+                  = case (weight s, totalWeight ss) of
+                      (Nothing, Nothing) -> Nothing
+                      (a, b) -> Just ...
+    • Relevant bindings include
+        s :: Weighted Specification a
+          (bound at src/Constrained/SimplifyExperiment.hs:521:23)
+    |
+523 |           (typeSpec $ SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss))
 -}
+
 
 totalWeight :: List (Weighted f) as -> Maybe Int
 totalWeight = fmap Semigroup.getSum . foldMapList (fmap Semigroup.Sum . weight)
-
-data SumSpec a b
-  = SumSpecRaw
-      (Maybe String) -- A String which is the type of arg in (caseOn arg branch1 .. branchN)
-      (Maybe (Int, Int))
-      (Specification a)
-      (Specification b)
-
-pattern SumSpec ::
-  (Maybe (Int, Int)) -> (Specification a) -> (Specification b) -> SumSpec a b
-pattern SumSpec a b c <- SumSpecRaw _ a b c
-  where
-    SumSpec a b c = SumSpecRaw Nothing a b c
-
-{-# COMPLETE SumSpec #-}
-{-# COMPLETE SumSpecRaw #-} 
 
 type family CountCases a where
   CountCases (Sum a b) = 1 + CountCases b
@@ -542,60 +523,3 @@ sumWeightL Nothing = "1"
 sumWeightL (Just (x, _)) = fromString (show x)
 sumWeightR Nothing = "1"
 sumWeightR (Just (_, x)) = fromString (show x)
-
--- ====================================================================
--- Monoid and Semigroup, depends only on conformance functions    
--- ====================================================================    
-
--- STUB
-conformsToSpec :: a -> Specification a -> Bool
-conformsToSpec = undefined
-
-satisfies :: Term a -> Specification a -> Pred
-satisfies = undefined
-
-
-instance HasSpec a => Semigroup (Specification a) where
-  ExplainSpec es x <> y = explainSpecOpt es (x <> y)
-  x <> ExplainSpec es y = explainSpecOpt es (x <> y)
-  TrueSpec <> s = s
-  s <> TrueSpec = s
-  ErrorSpec e <> ErrorSpec e' =
-    ErrorSpec
-      ( e
-          <> pure ("------ spec <> spec ------ @" ++ showType @a)
-          <> e'
-      )
-  ErrorSpec e <> _ = ErrorSpec e
-  _ <> ErrorSpec e = ErrorSpec e
-  MemberSpec as <> MemberSpec as' =
-    addToErrorSpec
-      ( NE.fromList
-          ["Intersecting: ", "  MemberSpec " ++ show (NE.toList as), "  MemberSpec " ++ show (NE.toList as')]
-      )
-      ( memberSpecList
-          (nub $ intersect (NE.toList as) (NE.toList as'))
-          (pure "Empty intersection")
-      )
-  ms@(MemberSpec as) <> ts@TypeSpec {} =
-    memberSpecList
-      (nub $ NE.filter (`conformsToSpec` ts) as)
-      ( NE.fromList
-          [ "The two " ++ showType @a ++ " Specifications are inconsistent."
-          , "  " ++ show ms
-          , "  " ++ show ts
-          ]
-      )
-  TypeSpec s cant <> MemberSpec as = MemberSpec as <> TypeSpec s cant
-  SuspendedSpec v p <> SuspendedSpec v' p' = SuspendedSpec v (p <> rename v' v p')
-  SuspendedSpec v ps <> s = SuspendedSpec v (ps <> satisfies (V v) s)
-  s <> SuspendedSpec v ps = SuspendedSpec v (ps <> satisfies (V v) s)
-  TypeSpec s cant <> TypeSpec s' cant' = case combineSpec s s' of
-    -- NOTE: This might look like an unnecessary case, but doing
-    -- it like this avoids looping.
-    TypeSpec s'' cant'' -> TypeSpec s'' (cant <> cant' <> cant'')
-    s'' -> s'' <> notMemberSpec (cant <> cant')
-
-instance HasSpec a => Monoid (Specification a) where
-  mempty = TrueSpec
-

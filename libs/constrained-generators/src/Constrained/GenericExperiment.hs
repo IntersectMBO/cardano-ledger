@@ -107,6 +107,7 @@ instance FunctionLike (PairFn fn) where
 -- Sums
 ------------------------------------------------------------------------
 
+-- | Generic way to represent Sums
 data Sum a b
   = SumLeft a
   | SumRight b
@@ -116,7 +117,7 @@ type family SumOver as where
   SumOver '[a] = a
   SumOver (a : as) = Sum a (SumOver as)
 
-{-
+{-  This should be a Sum Witness type?
 injLeftFn :: forall fn a b. Member (SumFn fn) fn => fn '[a] (Sum a b)
 injLeftFn = injectFn @(SumFn fn) @fn InjLeft
 
