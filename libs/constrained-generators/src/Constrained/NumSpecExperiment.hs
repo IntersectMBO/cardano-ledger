@@ -1,34 +1,16 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ImpredicativeTypes #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# OPTIONS_GHC -Wno-orphans #-}   -- Random Natural, Arbitrary Natural, Uniform Natural
 
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
 -- cases and turning off the overlap check in newer ghc versions we disable the check for old
@@ -37,56 +19,29 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 #endif
 
-module NumSpecExperiment where
+module Constrained.NumSpecExperiment where
 
 import Constrained.BaseExperiment
-import Constrained.BaseExperiment(FunctionSymbol(witness))
-import Constrained.GenericExperiment
-import Constrained.SyntaxExperiment
 
-
-import Constrained.Core
-import Control.Applicative
 import Control.Arrow (first)
-import Control.Monad
-import Control.Monad.Identity
-import Control.Monad.Writer (Writer, runWriter, tell)
-import Data.Foldable
-import Data.Kind
-import Data.List (intersect, isPrefixOf, isSuffixOf, nub, partition, (\\))
-import Data.Map (Map)
-import qualified Data.Map as Map
-import Data.Maybe
-import qualified Data.Monoid as Monoid
-import Data.Semigroup (Any (..), Max (..), getAll, getMax, sconcat)
-import qualified Data.Semigroup as Semigroup
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Data.String
-import Data.Typeable
+import Control.Applicative((<|>))
+import Data.Typeable(typeOf)
+import Constrained.GenT(MonadGenError(..),GenT,pureGen,sizeT)
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NE
+import Data.List(nub)
 import Data.Word
-import GHC.Generics
 import GHC.Int
 import GHC.Natural
 import GHC.Real
-import GHC.Stack
-import GHC.TypeLits
-import Prettyprinter hiding (cat)
-import System.Random
-import System.Random.Stateful
-import Test.QuickCheck hiding (Args, Fun, forAll,Witness,witness)
-import Test.QuickCheck.Gen
-import Test.QuickCheck.Random
-import Constrained.Core
-import Constrained.Env
-import Constrained.GenT
-import Constrained.Graph hiding (dependency, irreflexiveDependencyOn, noDependencies)
-import qualified Constrained.Graph as Graph
-import Constrained.List
-import Constrained.SumList (Cost (..), Solution (..), pickAll)
-import Constrained.Univ
-import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty as NE
+import Test.QuickCheck(Arbitrary(shrink,arbitrary),frequency,choose)
+import System.Random.Stateful(Random(..),Uniform(..))
+import qualified Data.Set as Set
+import Data.Kind
+import GHC.TypeLits(Symbol)
+import Constrained.Core(unionWithMaybe)
+import Data.Maybe(maybeToList)
+import Data.Foldable(fold)
 
 
 -- ====================================
@@ -95,7 +50,7 @@ import qualified Data.List.NonEmpty as NE
 
 data OrdWitness (sym :: Symbol) (dom :: [Type]) (rng :: Type) where 
   LessOrEqualW :: (Ord a, OrdLike a) => OrdWitness "<=." '[a,a] Bool
-  LessW :: (Ord a, OrdLike a) => OrdWitness "<=." '[a,a] Bool
+  LessW :: (Ord a, OrdLike a) => OrdWitness "<." '[a,a] Bool
 
 class HasSpec a => OrdLike a where
   leqSpec :: a -> Specification a
@@ -305,7 +260,7 @@ constrainInterval ml mu r =
       | u > 0 -> pure (negate r', min u r')
       | otherwise -> pure (u - r' - r', u)
     (Just l, Just u)
-      | l > u -> genError1 ("bad interval: " ++ show l ++ " " ++ show u)
+      | l > u -> genError (pure("bad interval: " ++ show l ++ " " ++ show u))
       | u < 0 -> pure (safeSub l (safeSub l u r') r', u)
       | l >= 0 -> pure (l, safeAdd u (safeAdd u l r') r')
       -- TODO: this is a bit suspect if the bounds are lopsided
@@ -324,8 +279,7 @@ conformsToNumSpec :: Ord n => n -> NumSpec n -> Bool
 conformsToNumSpec i (NumSpecInterval ml mu) = maybe True (<= i) ml && maybe True (i <=) mu
 
 toPredsNumSpec ::
-  ( Ord n
-  , OrdLike n
+  ( OrdLike n
   ) =>
   Term n ->
   NumSpec n ->
@@ -335,10 +289,47 @@ toPredsNumSpec v (NumSpecInterval ml mu) =
     [assert $ Lit l <=. v | l <- maybeToList ml]
       ++ [assert $ v <=. Lit u | u <- maybeToList mu]
 
+infixr 4 <=.
 -- STUB
-(<=.) :: OrdLike n => Term n -> Term n -> Term Bool
-(<=.) = undefined      
+(<=.) :: forall a . Term a -> Term a -> Term Bool
+(<=.) _ _ = undefined      
+  
 
+{-  
+lessOrEqualFn :: forall fn a. (Ord a, OrdLike fn a) => fn '[a, a] Bool
+lessOrEqualFn = injectFn (LessOrEqual @_ @fn)
+
+lessFn :: forall fn a. (Ord a, OrdLike fn a) => fn '[a, a] Bool
+lessFn = injectFn (Less @_ @fn)
+
+instance FunctionLike (OrdFn fn) where
+  sem LessOrEqual = (<=)
+  sem Less = (<)
+
+instance BaseUniverse fn => Functions (OrdFn fn) fn where
+  propagateSpecFun fn ctx (ExplainSpec es s) = explainSpecOpt es $ propagateSpecFun fn ctx s
+  propagateSpecFun _ _ TrueSpec = TrueSpec
+  propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
+  propagateSpecFun fn (ListCtx pre HOLE suf) (SuspendedSpec x p) =
+    constrained $ \x' ->
+      let args = appendList (mapList (\(Value a) -> Lit a) pre) (x' :> mapList (\(Value a) -> Lit a) suf)
+       in Let (App (injectFn fn) args) (x :-> p)
+  propagateSpecFun LessOrEqual ctx spec
+    | HOLE :? Value l :> Nil <- ctx = caseBoolSpec spec $ \case
+        True -> leqSpec @fn l
+        False -> gtSpec @fn l
+    | Value l :! NilCtx HOLE <- ctx = caseBoolSpec spec $ \case
+        True -> geqSpec @fn l
+        False -> ltSpec @fn l
+  propagateSpecFun Less ctx spec
+    | HOLE :? Value l :> Nil <- ctx = caseBoolSpec spec $ \case
+        True -> ltSpec @fn l
+        False -> geqSpec @fn l
+    | Value l :! NilCtx HOLE <- ctx = caseBoolSpec spec $ \case
+        True -> gtSpec @fn l
+        False -> leqSpec @fn l
+
+-}
 -- =======================================================================
 -- Several of the methods of HasSpec that have default implementations
 -- could benefit from type specific implementations for numbers. Those
@@ -422,22 +413,6 @@ notInNumSpec ns@(NumSpecInterval a b) bad
   | otherwise = TypeSpec @n ns bad
 
 
--- | A generic function to use as an instance for the HasSpec method
---   cardinalTypeSpec :: HasSpec a => TypeSpec a -> Specification Integer
---   for types 'n' such that (TypeSpec n ~ NumSpec n)
-cardinalNumSpec ::
-  forall n. (Integral n, MaybeBounded n) => NumSpec n -> Specification Integer
-cardinalNumSpec (NumSpecInterval (Just lo) (Just hi)) =
-  if hi >= lo then MemberSpec (pure (toInteger hi - toInteger lo + 1)) else MemberSpec (pure 0)
-cardinalNumSpec (NumSpecInterval Nothing (Just hi)) =
-  case lowerBound @n of
-    Just lo -> MemberSpec (pure (toInteger hi - toInteger lo))
-    Nothing -> TrueSpec
-cardinalNumSpec (NumSpecInterval (Just lo) Nothing) =
-  case upperBound @n of
-    Just hi -> MemberSpec (pure (toInteger hi - toInteger lo))
-    Nothing -> TrueSpec
-cardinalNumSpec (NumSpecInterval Nothing Nothing) = TrueSpec
 
 -- ===================================================
 -- HasSpec instances for many kinds of numbers
@@ -593,144 +568,227 @@ instance HasSpec Float where
   cardinalTypeSpec _ = TrueSpec
   guardTypeSpec = guardNumSpec
 
+-- ==========================================================================
+-- Num n => (NumSpec n) can support operation of Num as interval arithmetic. 
+-- So we will make a (Num (NumSpec Integer)) instance. We won't make other 
+-- instances, because  they would be subject to overflow.
+-- Given operator ☉, then (a,b) ☉ (c,d) = (minimum s, maximum s) where s = [a ☉ c, a ☉ d, b ☉ c, b ☉ d]
+-- There are simpler rules for (+) and (-), but for (*) we need to use the general rule.
+-- ==========================================================================
+
+guardEmpty :: (Ord n, Num n) => Maybe n -> Maybe n -> NumSpec  n -> NumSpec  n
+guardEmpty (Just a) (Just b) s
+  | a <= b = s
+  | otherwise = NumSpecInterval (Just 1) (Just 0)
+guardEmpty _ _ s = s
+
+addNumSpec :: (Ord n, Num n) => NumSpec n -> NumSpec n -> NumSpec n
+addNumSpec (NumSpecInterval x y) (NumSpecInterval a b) =
+  guardEmpty x y $
+    guardEmpty a b $
+      NumSpecInterval ((+) <$> x <*> a) ((+) <$> y <*> b)
+
+subNumSpec :: (Ord n, Num n) => NumSpec n -> NumSpec n -> NumSpec n
+subNumSpec (NumSpecInterval x y) (NumSpecInterval a b) =
+  guardEmpty x y $
+    guardEmpty a b $
+      NumSpecInterval ((-) <$> x <*> b) ((-) <$> y <*> a)
+
+multNumSpec :: (Ord n, Num n) => NumSpec n -> NumSpec n -> NumSpec  n
+multNumSpec (NumSpecInterval a b) (NumSpecInterval c d) =
+  guardEmpty a b $
+    guardEmpty c d $
+      NumSpecInterval (unT (minimum s)) (unT (maximum s))
+  where
+    s = [multT (neg a) (neg c), multT (neg a) (pos d), multT (pos b) (neg c), multT (pos b) (pos d)]
+
+negNumSpec :: Num n => NumSpec n -> NumSpec n
+negNumSpec (NumSpecInterval lo hi) = NumSpecInterval (negate <$> hi) (negate <$> lo)
+
+instance Num (NumSpec Integer) where
+  (+) = addNumSpec
+  (-) = subNumSpec
+  (*) = multNumSpec
+  negate = negNumSpec
+  fromInteger n = NumSpecInterval (Just (fromInteger n)) (Just (fromInteger n))
+  abs = error "No abs in the Num (NumSpec  Integer) instance"
+  signum = error "No signum in the Num (NumSpec  Integer) instance"
+
+-- ========================================================================
+-- Helper functions for interval multiplication
+--  (a,b) * (c,d) = (minimum s, maximum s) where s = [a * c, a * d, b * c, b * d]
+
+-- | T is a sort of special version of Maybe, with two Nothings.
+--   Given:: NumSpecInterval (Maybe n) (Maybe n) -> Numspec
+--   We can't distinguish between the two Nothings in (NumSpecInterval Nothing Nothing)
+--   But using (NumSpecInterval NegInf PosInf) we can, In fact we can make a total ordering on 'T'
+--   So an ascending Sorted [T x] would all the NegInf on the left and all the PosInf on the right, with
+--   the Ok's sorted in between. I.e. [NegInf, NegInf, Ok 3, Ok 6, Ok 12, Pos Inf]
+data T x = NegInf | Ok x | PosInf
+  deriving (Show)
+
+instance Ord x => Eq (T x) where
+  x == y = compare x y == EQ
+
+instance Ord x => Ord (T x) where
+  compare NegInf NegInf = EQ
+  compare NegInf _ = LT
+  compare (Ok _) NegInf = GT
+  compare (Ok x) (Ok y) = compare x y
+  compare (Ok _) PosInf = LT
+  compare PosInf PosInf = EQ
+  compare PosInf _ = GT
+
+  -- | Conversion between (T x) and (Maybe x)
+unT :: T x -> Maybe x
+unT (Ok x) = Just x
+unT _ = Nothing
+
+-- | Use this on the lower bound. I.e. lo from pair (lo,hi)
+neg :: Maybe x -> T x
+neg Nothing = NegInf
+neg (Just x) = Ok x
+
+-- | Use this on the upper bound. I.e. hi from pair (lo,hi)
+pos :: Maybe x -> T x
+pos Nothing = PosInf
+pos (Just x) = Ok x
+
+-- | multiply two (T x), correctly handling the infinities NegInf and PosInf
+multT :: Num x => T x -> T x -> T x
+multT NegInf NegInf = PosInf
+multT NegInf PosInf = NegInf
+multT NegInf (Ok _) = NegInf
+multT (Ok _) NegInf = NegInf
+multT (Ok x) (Ok y) = Ok (x * y)
+multT (Ok _) PosInf = PosInf
+multT PosInf PosInf = PosInf
+multT PosInf NegInf = NegInf
+multT PosInf (Ok _) = PosInf
+
+-- ========================================================================
+-- We have 
+-- (1) Num Integer
+-- (2) Num (NumSpec Integer)   And we need
+-- (3) Num (Specification Integer)
+-- We need this to implement the method cardinalTypeSpec of (HasSpec t).
+-- cardinalTypeSpec :: HasSpec fn a => TypeSpec fn a -> Specification fn Integer
+-- Basically for defining these two cases
+-- cardinalTypeSpec (Cartesian x y) = (cardinality x) * (cardinality y)
+-- cardinalTypeSpec (SumSpec leftspec rightspec) = (cardinality leftspec) + (cardinality rightspec)
+-- So we define addSpecInt for (+)   and  multSpecInt for (*)
+
+addSpecInt ::
+  Specification Integer -> Specification Integer -> Specification Integer
+addSpecInt x y = operateSpec " + " (+) (+) x y
+
+subSpecInt ::
+  Specification Integer -> Specification Integer -> Specification Integer
+subSpecInt x y = operateSpec " - " (-) (-) x y
+
+multSpecInt ::
+  Specification Integer -> Specification Integer -> Specification Integer
+multSpecInt x y = operateSpec " * " (*) (*) x y
+
+-- | let 'n' be some numeric type, and 'f' and 'ft' be operations on 'n' and (TypeSpec fn n)
+--   Then lift these operations from (TypeSpec fn n) to (Specification fn n)
+--   Normally 'f' will be a (Num n) instance method (+,-,*) on n,
+--   and 'ft' will be a a (Num (TypeSpec fn n)) instance method (+,-,*) on (TypeSpec fn n)
+--   But this will work for any operations 'f' and 'ft' with the right types
+operateSpec ::
+  (TypeSpec n ~ NumSpec n, Enum n, Ord n, HasSpec n) =>
+  String ->
+  (n -> n -> n) ->
+  (TypeSpec n -> TypeSpec n -> TypeSpec n) ->
+  Specification n ->
+  Specification n ->
+  Specification n
+operateSpec operator f ft (ExplainSpec es x) y = explainSpecOpt es $ operateSpec operator f ft x y
+operateSpec operator f ft x (ExplainSpec es y) = explainSpecOpt es $ operateSpec operator f ft x y
+operateSpec operator f ft x y = case (x, y) of
+  (ErrorSpec xs, ErrorSpec ys) -> ErrorSpec (xs <> ys)
+  (ErrorSpec xs, _) -> ErrorSpec xs
+  (_, ErrorSpec ys) -> ErrorSpec ys
+  (TrueSpec, _) -> TrueSpec
+  (_, TrueSpec) -> TrueSpec
+  (_, SuspendedSpec _ _) -> TrueSpec
+  (SuspendedSpec _ _, _) -> TrueSpec
+  (TypeSpec a bad1, TypeSpec b bad2) -> TypeSpec (ft a b) [f b1 b2 | b1 <- bad1, b2 <- bad2]
+  (MemberSpec xs, MemberSpec ys) ->
+    nubOrdMemberSpec
+      (show x ++ operator ++ show y)
+      [f x1 y1 | x1 <- NE.toList xs, y1 <- NE.toList ys]
+  -- This block is all (MemberSpec{}, TypeSpec{}) with MemberSpec on the left
+  (MemberSpec ys, TypeSpec (NumSpecInterval (Just i) (Just j)) bad) ->
+    let xs = NE.toList ys
+     in nubOrdMemberSpec
+          (show x ++ operator ++ show y)
+          [f x1 y1 | x1 <- xs, y1 <- [i .. j], not (elem y1 bad)]
+  -- Somewhat loose spec here, but more accurate then TrueSpec, it is exact if 'xs' has one element (i.e. 'xs' = [i])
+  (MemberSpec ys, TypeSpec (NumSpecInterval lo hi) bads) ->
+    -- We use the specialized version of 'TypeSpec' 'typeSpecOpt'
+    let xs = NE.toList ys
+     in typeSpecOpt
+          (NumSpecInterval (f (minimum xs) <$> lo) (f (maximum xs) <$> hi))
+          [f x1 b | x1 <- xs, b <- bads]
+  -- we flip the arguments, so we need to flip the functions as well
+  (sleft, sright) -> operateSpec operator (\a b -> f b a) (\u v -> ft v u) sright sleft
+
+-- | This is very liberal, since in lots of cases it returns TrueSpec.
+--  for example all operations on SuspendedSpec, and certain 
+--  operations between TypeSpec and MemberSpec. Perhaps we should 
+--  remove it. Only the addSpec (+) and multSpec (*) methods are used.
+instance Num (Specification Integer) where
+   (+) = addSpecInt
+   (-) = subSpecInt
+   (*) = multSpecInt
+   fromInteger n = TypeSpec (NumSpecInterval (Just n) (Just n)) []
+   abs _ = TrueSpec
+   signum _ = TrueSpec
+
+-- ===========================================================================
+
+
+-- | Put some (admittedly loose bounds) on the number of solutions that
+--   'genFromTypeSpec' might return. For lots of types, there is no way to be very accurate.
+--   Here we lift the HasSpec methods 'cardinalTrueSpec' and 'cardinalTypeSpec'
+--   from (TypeSpec fn Integer) to (Specification fn Integer)
+cardinality ::
+  forall a. HasSpec a => Specification a -> Specification Integer
+cardinality (ExplainSpec es s) = explainSpecOpt es (cardinality s)
+cardinality TrueSpec = cardinalTrueSpec @a
+cardinality (MemberSpec es) = equalSpec (toInteger $ length (nub (NE.toList es)))
+cardinality ErrorSpec {} = equalSpec 0
+cardinality (TypeSpec s cant) =
+  subSpecInt
+    (cardinalTypeSpec @a s)
+    (equalSpec (toInteger $ length (nub $ filter (\c -> conformsTo @a c s) cant)))
+cardinality SuspendedSpec {} = cardinalTrueSpec @a
+
+
+-- | A generic function to use as an instance for the HasSpec method
+--   cardinalTypeSpec :: HasSpec a => TypeSpec a -> Specification Integer
+--   for types 'n' such that (TypeSpec n ~ NumSpec n)
+cardinalNumSpec ::
+  forall n. (Integral n, MaybeBounded n) => NumSpec n -> Specification Integer
+cardinalNumSpec (NumSpecInterval (Just lo) (Just hi)) =
+  if hi >= lo then MemberSpec (pure (toInteger hi - toInteger lo + 1)) else MemberSpec (pure 0)
+cardinalNumSpec (NumSpecInterval Nothing (Just hi)) =
+  case lowerBound @n of
+    Just lo -> MemberSpec (pure (toInteger hi - toInteger lo))
+    Nothing -> TrueSpec
+cardinalNumSpec (NumSpecInterval (Just lo) Nothing) =
+  case upperBound @n of
+    Just hi -> MemberSpec (pure (toInteger hi - toInteger lo))
+    Nothing -> TrueSpec
+cardinalNumSpec (NumSpecInterval Nothing Nothing) = TrueSpec
+
 -- =======================================================
--- All he Foldy class instances are intimately tied to 
--- Numbers. But that is not required, but this is a 
--- convenient place to put the code.
--- =======================================================    
-
-data FunWitness (sym :: Symbol) (dom :: [Type]) (rng :: Type) where 
-  IdW :: forall a. FunWitness "id_" '[a] a
-  ComposeW :: forall s1 t1 s2 t2 a b c . 
-              ( FunctionSymbol s1 t1 '[b] c
-              , FunctionSymbol s2 t2 '[a] b ) =>
-              t1 s1 '[b] c -> 
-              t2 s2 '[a] b ->
-              FunWitness "composeFn" '[a] c
-  FlipW :: forall sym t a b c . 
-           FunctionSymbol sym t '[a,b] c => 
-           t sym '[a,b] c ->  FunWitness "flip_" '[b,a] c
-
-instance KnownSymbol s => Show (FunWitness s dom rng) where
-  show IdW = "IdW[id_]"
-  show (FlipW f) = "(FlipW "++show f++")[flip_]"
-  show (ComposeW x y) = "(ComposeW "++show x++" "++show y++")[composeFn]"
-
-instance Eq (FunWitness s dom rng) where
-  IdW == IdW = True
-  FlipW t1 == FlipW t2 = compareWit t1 t2
-  ComposeW f f' == ComposeW g g' = compareWit f g && compareWit g g'
-
-compareWit :: 
-  forall s1 t1 bs1 c1 s2 t2 bs2 c2. 
-         (FunctionSymbol s1 t1 bs1 c1, FunctionSymbol s2 t2 bs2 c2) => 
-         t1 s1 bs1 c1 -> t2 s2 bs2 c2 -> Bool
-compareWit x y = case (eqT @t1 @t2, eqT @s1 @s2, eqT @bs1 @bs2, eqT @c1 @c2) of
-    (Just Refl, Just Refl, Just Refl, Just Refl) -> x==y
-    _ -> False
-
-funSem :: FunWitness sym dom rng -> FunTy dom rng
-funSem IdW = id
-funSem (ComposeW f g) = (\ a -> semantics f (semantics g a))
-funSem (FlipW f) = flip (semantics f)
-
-instance (HasSpec a) => FunctionSymbol "id_" FunWitness '[a] a where
-    witness = IdW
-    type Wit "id_" = FunWitness
-    semantics = funSem
-    propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-    propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-    propagate ctxt (ErrorSpec msgs) = ErrorSpec msgs
-    propagate (Context IdW (HOLE End)) spec = spec
-    propagate ctxt _ = ErrorSpec (NE.fromList["IdW (id_)","Unreachable context, too many args",show ctxt])
-
-
-instance (HasSpec b, HasSpec a,forall sym t. FunctionSymbol sym t '[a,b] c,All Typeable [a,b,c]) =>
-          FunctionSymbol "flip_" FunWitness '[b,a] c  where
-    witness =  undefined -- FlipW $ getwitness @sym @t @('[a,b]) @c
-    type Wit "flip_" = FunWitness
-    semantics = funSem
-    propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-    propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-    propagate ctxt (ErrorSpec msgs) = ErrorSpec msgs
-    propagate (Context (FlipW f) (HOLE (v :<| End))) spec = propagate (Context f (v :>| HOLE End)) spec
-    propagate (Context (FlipW f) (v :>| (HOLE End))) spec = propagate (Context f (HOLE $ v :<| End)) spec
-    propagate ctxt _ = ErrorSpec (NE.fromList["FlipW (flip_)","Unreachable context, too many args",show ctxt])
-
-getwitness :: forall sym t dom rng . FunctionSymbol sym t dom rng => t sym dom rng
-getwitness = witness @sym @t @dom @rng
-
-instance ( HasSpec a,HasSpec c,All Typeable [a,c]
-         , forall s1 t1 b. FunctionSymbol s1 t1 '[b] c
-         , forall s2 t2 b. FunctionSymbol s2 t2 '[a] b ) => 
-        FunctionSymbol "composeFn" FunWitness '[a] c where
-    witness =  undefined -- FlipW $ getwitness @sym @t @('[a,b]) @c
-    type Wit "composeFn" = FunWitness  
-    semantics = funSem
-    propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-    propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-    propagate ctxt (ErrorSpec msgs) = ErrorSpec msgs  
-    propagate (Context (ComposeW f g) (HOLE End)) spec = 
-        propagate (Context g (HOLE End)) $ propagate (Context f (HOLE End)) spec
-    propagate ctxt _ = ErrorSpec (NE.fromList["ComposeW (composeFn)","Unreachable context, too many args",show ctxt])    
-
-
 {-
-
-class HasSpec a => Foldy a where
-  genList ::
-    (MonadGenError m) => Specification a -> Specification a -> GenT m [a]
-  theAddFn :: '[a, a] a
-  theZero :: a
-  genSizedList ::
-    (MonadGenError m) =>
-    Specification Integer -> Specification a -> Specification a -> GenT m [a]
-  noNegativeValues :: Bool
-
-adds :: forall a. Foldy a => [a] -> a
-adds = foldr (sem $ theAddFn @fn) (theZero @fn)
-
-data FoldSpec a where
-  NoFold :: FoldSpec a
-  FoldSpec ::
-    forall b a.
-    ( HasSpec a
-    , HasSpec b
-    , Foldy b
-    , Member (ListFn fn) fn
-    , BaseUniverse fn
-    ) =>
-    '[a] b ->
-    Specification b ->
-    FoldSpec a
-
-instance {-# OVERLAPPABLE #-} (Arbitrary (TypeSpec a), Foldy a, BaseUniverse fn) => Arbitrary (FoldSpec a) where
-  arbitrary = oneof [FoldSpec idFn <$> arbitrary, pure NoFold]
-  shrink NoFold = []
-  shrink (FoldSpec (extractFn @(FunFn fn) @fn -> Just Id) spec) = FoldSpec idFn <$> shrink spec
-  shrink FoldSpec {} = [NoFold]
-
-preMapFoldSpec :: HasSpec a => '[a] b -> FoldSpec b -> FoldSpec a
-preMapFoldSpec _ NoFold = NoFold
-preMapFoldSpec f (FoldSpec g s) = FoldSpec (composeFn g f) s
-
-combineFoldSpec :: FoldSpec a -> FoldSpec a -> Either [String] (FoldSpec a)
-combineFoldSpec NoFold s = pure s
-combineFoldSpec s NoFold = pure s
-combineFoldSpec (FoldSpec (f :: as b) s) (FoldSpec (f' :: fn' as' b') s')
-  | Just Refl <- eqT @b @b'
-  , Just Refl <- eqT @fn @fn'
-  , f == f' =
-      pure $ FoldSpec f (s <> s')
-  | otherwise =
-      Left ["Can't combine fold specs on different functions", "  " ++ show f, "  " ++ show f']
-
-conformsToFoldSpec :: forall a. [a] -> FoldSpec a -> Bool
-conformsToFoldSpec _ NoFold = True
-conformsToFoldSpec xs (FoldSpec f s) = adds @fn (map (sem f) xs) `conformsToSpec` s
-
-toPredsFoldSpec :: forall a. BaseUniverse => Term [a] -> FoldSpec a -> Pred fn
-toPredsFoldSpec _ NoFold = TruePred
-toPredsFoldSpec x (FoldSpec sspec) =
-  satisfies (app (foldMapFn fn) x) sspec
+instance HasSimpleRep Bool where type SimpleRep Bool = Sum () ()
+instance HasSpec ()=> HasSpec Bool where
+  shrinkWithTypeSpec _ = shrink
+  cardinalTypeSpec (SumSpec _ a b) =
+    MemberSpec (NE.fromList [0, 1, 2]) <> addSpecInt (cardinality a) (cardinality b)
+  cardinalTrueSpec = MemberSpec (pure 2)   
 -}  
