@@ -869,6 +869,15 @@ votingSpec =
             . constitutionAnchorL
       expectNoCurrentProposals
       conAnchor `shouldNotBe` anchor
+    it "can submit SPO votes" $ do
+      spoHash <- freshKeyHash
+      registerPool spoHash
+      passNEpochs 3
+      gaId <-
+        submitParameterChange SNothing $
+          def
+            & ppuMinFeeAL .~ SJust (Coin 100)
+      submitVote_ @era VoteYes (StakePoolVoter spoHash) gaId
 
 constitutionSpec ::
   forall era.

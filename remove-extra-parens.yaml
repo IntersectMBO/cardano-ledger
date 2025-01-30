@@ -1,0 +1,12 @@
+id: remove-extra-parens
+language: Haskell
+rule:
+  kind: field
+  all:
+  - has:
+      field: name
+      pattern: $NAME
+  - has:
+      field: type
+      pattern: ($TYPE)
+fix: '$NAME :: $TYPE'
