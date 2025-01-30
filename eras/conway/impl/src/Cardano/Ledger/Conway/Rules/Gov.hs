@@ -46,6 +46,8 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
+  internMap,
+  internSet,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -77,7 +79,6 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
-  foldlVotingProcedures,
   foldrVotingProcedures,
   gasAction,
   gasDRepVotesL,
@@ -122,6 +123,8 @@ import Control.State.Transition.Extended (
   tellEvent,
   (?!),
  )
+import Data.Bifunctor (bimap)
+import Data.Either (partitionEithers)
 import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
@@ -478,13 +481,13 @@ govTransition = do
             _ -> pure ()
 
         -- Deposit check
-        let expectedDep = pp ^. ppGovActionDepositL
+        let expectedDeposit = pp ^. ppGovActionDepositL
          in pProcDeposit
-              == expectedDep
+              == expectedDeposit
                 ?! ProposalDepositIncorrect
                   Mismatch
                     { mismatchSupplied = pProcDeposit
-                    , mismatchExpected = expectedDep
+                    , mismatchExpected = expectedDeposit
                     }
 
         -- Return address network id check
@@ -494,44 +497,31 @@ govTransition = do
 
         -- Treasury withdrawal return address and committee well-formedness checks
         case pProcGovAction of
-          TreasuryWithdrawals wdrls proposalPolicy ->
+          TreasuryWithdrawals wdrls proposalPolicy -> do
             let mismatchedAccounts =
                   Set.filter ((/= expectedNetworkId) . raNetwork) $ Map.keysSet wdrls
-             in do
-                  Set.null mismatchedAccounts
-                    ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
+            Set.null mismatchedAccounts
+              ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
 
-                  -- Policy check
-                  runTest $ checkPolicy @era constitutionPolicy proposalPolicy
+            -- Policy check
+            runTest $ checkPolicy @era constitutionPolicy proposalPolicy
 
-                  unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $
-                    -- The sum of all withdrawals must be positive
-                    F.fold wdrls /= mempty ?! ZeroTreasuryWithdrawals pProcGovAction
+            unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $
+              -- The sum of all withdrawals must be positive
+              F.fold wdrls /= mempty ?! ZeroTreasuryWithdrawals pProcGovAction
           UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do
-            checkConflictingUpdate
-            checkExpirationEpoch
-            where
-              checkConflictingUpdate =
-                let conflicting =
-                      Set.intersection
-                        (Map.keysSet membersToAdd)
-                        membersToRemove
-                 in Set.null conflicting ?! ConflictingCommitteeUpdate conflicting
-              checkExpirationEpoch =
-                let invalidMembers = Map.filter (<= currentEpoch) membersToAdd
-                 in Map.null invalidMembers ?! ExpirationEpochTooSmall invalidMembers
+            let conflicting = Set.intersection (Map.keysSet membersToAdd) membersToRemove
+             in Set.null conflicting ?! ConflictingCommitteeUpdate conflicting
+
+            let invalidMembers = Map.filter (<= currentEpoch) membersToAdd
+             in Map.null invalidMembers ?! ExpirationEpochTooSmall invalidMembers
           ParameterChange _ _ proposalPolicy ->
             runTest $ checkPolicy @era constitutionPolicy proposalPolicy
           _ -> pure ()
 
         -- Ancestry checks and accept proposal
         let expiry = pp ^. ppGovActionLifetimeL
-            actionState =
-              mkGovActionState
-                newGaid
-                proposal
-                expiry
-                currentEpoch
+            actionState = mkGovActionState newGaid proposal expiry currentEpoch
          in case proposalsAddAction actionState ps of
               Just updatedPs -> pure updatedPs
               Nothing -> ps <$ failBecause (InvalidPrevGovActionId proposal)
@@ -540,12 +530,11 @@ govTransition = do
     foldlM' processProposal st $
       indexedGovProps (SSeq.fromStrict (OSet.toStrictSeq gsProposalProcedures))
 
-  -- Inversion of the keys in VotingProcedures, where we can find the voters for every
-  -- govActionId
-  let (unknownGovActionIds, knownVotes, replacedVotes) =
+  let knownVotes = [(voter, gas) | (voter, _vote, gas) <- knownVotesWithCast]
+      (unknownGovActionIds, !knownVotesWithCast, replacedVotes) =
         foldrVotingProcedures
           -- strictness is not needed for `unknown` or `replaced`
-          ( \voter gaId _ (unknown, !known, replaced) ->
+          ( \voter gaId vp (unknown, !known, replaced) ->
               case Map.lookup gaId curGovActionIds of
                 Just gas ->
                   let isVoteReplaced =
@@ -556,19 +545,22 @@ govTransition = do
                       replaced'
                         | isVoteReplaced = Set.insert (voter, gaId) replaced
                         | otherwise = replaced
-                   in (unknown, (voter, gas) : known, replaced')
+                   in (unknown, (voter, vProcVote vp, gas) : known, replaced')
                 Nothing -> (gaId : unknown, known, replaced)
           )
           ([], [], Set.empty)
-          gsVotingProcedures
+          (VotingProcedures knownVoters)
       curGovActionIds = proposalsActionsMap proposals
-      isVoterKnown = \case
-        CommitteeVoter hotCred -> hotCred `Set.member` knownCommitteeMembers
-        DRepVoter cred -> cred `Map.member` knownDReps
-        StakePoolVoter poolId -> poolId `Map.member` knownStakePools
-      unknownVoters =
-        Map.keys $
-          Map.filterWithKey (\voter _ -> not (isVoterKnown voter)) (unVotingProcedures gsVotingProcedures)
+      internVoter = \case
+        CommitteeVoter hotCred -> CommitteeVoter <$> internSet hotCred knownCommitteeMembers
+        DRepVoter cred -> DRepVoter <$> internMap cred knownDReps
+        StakePoolVoter poolId -> StakePoolVoter <$> internMap poolId knownStakePools
+      (unknownVoters, knownVoters) =
+        bimap Set.fromList Map.fromList $
+          partitionEithers
+            [ maybe (Left voter) (\v -> Right (v, votes)) (internVoter voter)
+            | (voter, votes) <- Map.toList (unVotingProcedures gsVotingProcedures)
+            ]
 
   failOnNonEmpty unknownVoters VotersDoNotExist
   failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
@@ -577,20 +569,21 @@ govTransition = do
   runTest $ checkVotersAreValid currentEpoch committeeState knownVotes
 
   let
-    addVoterVote ps voter govActionId VotingProcedure {vProcVote} =
-      proposalsAddVote voter vProcVote govActionId ps
-    updatedProposalStates =
-      cleanupProposalVotes $
-        foldlVotingProcedures addVoterVote proposals gsVotingProcedures
+    !updatedProposalStates =
+      let addVoterVote ps (voter, vote, gas) = proposalsAddVote voter vote (gasId gas) ps
+       in cleanupProposalVotes $ F.foldl' addVoterVote proposals knownVotesWithCast
     unregisteredDReps =
       let collectRemovals drepCreds = \case
             UnRegDRepTxCert drepCred _ -> Set.insert drepCred drepCreds
             _ -> drepCreds
        in F.foldl' collectRemovals mempty gsCertificates
-    cleanupProposalVotes =
-      let cleanupVoters gas =
-            gas & gasDRepVotesL %~ (`Map.withoutKeys` unregisteredDReps)
-       in mapProposals cleanupVoters
+    cleanupProposalVotes
+      -- optimization: avoid iterating over proposals when there is nothing to cleanup
+      | Set.null unregisteredDReps = id
+      | otherwise =
+          let cleanupVoters gas =
+                gas & gasDRepVotesL %~ (`Map.withoutKeys` unregisteredDReps)
+           in mapProposals cleanupVoters
 
   -- Report the event
   tellEvent $ GovNewProposals txid updatedProposalStates

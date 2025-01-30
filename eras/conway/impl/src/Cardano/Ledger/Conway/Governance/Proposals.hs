@@ -15,6 +15,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | This module isolates all the types and functionality around
@@ -125,6 +126,10 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
+  Interns,
+  decodeListLenOrIndef,
+  decodeListLikeWithCountT,
+  decodeRecordNamedT,
  )
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Conway.Governance.Procedures
@@ -134,6 +139,7 @@ import Cardano.Ledger.UMap (addCompact, toCompact)
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Control.Monad (unless)
+import Control.Monad.Trans (lift)
 import Data.Aeson (ToJSON (..))
 import Data.Default (Default (..))
 import Data.Either (partitionEithers)
@@ -359,9 +365,20 @@ instance EraPParams era => EncCBOR (Proposals era) where
 instance EraPParams era => DecCBOR (Proposals era) where
   decCBOR = decCBOR >>= uncurry mkProposals
 
--- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (Proposals era) where
-  decShareCBOR _ = decCBOR
+  type
+    Share (Proposals era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
+  decSharePlusCBOR = do
+    decodeRecordNamedT "Proposals" (const 2) $ do
+      gaid <- lift decCBOR
+      (_, omap) <- decodeListLikeWithCountT (lift decodeListLenOrIndef) (flip (OMap.|>)) $ \_ ->
+        decSharePlusCBOR
+      mkProposals gaid omap
 
 -- | Add a vote to an existing `GovActionState`. This is a no-op if the
 -- provided `GovActionId` does not already exist

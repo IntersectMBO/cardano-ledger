@@ -43,7 +43,12 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   FromCBOR (..),
+  Interns,
   ToCBOR (..),
+  decNoShareCBOR,
+  decodeMap,
+  decodeStrictSeq,
+  interns,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -146,24 +151,24 @@ instance EraPParams era => EncCBOR (PulsingSnapshot era) where
         !> To psDRepState
         !> To psPoolDistr
 
--- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (PulsingSnapshot era) where
-  decShareCBOR _ =
+  type
+    Share (PulsingSnapshot era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
+  decShareCBOR is@(cs, ks, cd, _) =
     decode $
       RecD PulsingSnapshot
-        <! From
-        <! From
-        <! From
-        <! From
+        <! D (decodeStrictSeq (decShareCBOR is))
+        <! D (decodeMap (decShareCBOR cd) decCBOR)
+        <! D (decodeMap (interns cd <$> decCBOR) (decShareCBOR cs))
+        <! D (decodeMap (interns ks <$> decCBOR) decCBOR)
 
 instance EraPParams era => DecCBOR (PulsingSnapshot era) where
-  decCBOR =
-    decode $
-      RecD PulsingSnapshot
-        <! From
-        <! From
-        <! From
-        <! From
+  decCBOR = decNoShareCBOR
 
 instance EraPParams era => ToCBOR (PulsingSnapshot era) where
   toCBOR = toEraCBOR @era
@@ -436,13 +441,19 @@ instance EraPParams era => EncCBOR (DRepPulsingState era) where
     where
       (snap, ratstate) = finishDRepPulser x
 
--- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (DRepPulsingState era) where
-  decShareCBOR _ =
+  type
+    Share (DRepPulsingState era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
+  decShareCBOR is =
     decode $
       RecD DRComplete
-        <! From
-        <! From
+        <! D (decShareCBOR is)
+        <! D (decShareCBOR is)
 
 instance EraPParams era => DecCBOR (DRepPulsingState era) where
   decCBOR = decode (RecD DRComplete <! From <! From)

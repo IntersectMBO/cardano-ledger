@@ -19,7 +19,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Governance.Procedures (
@@ -92,16 +94,19 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   FromCBOR (fromCBOR),
+  Interns,
   ToCBOR (toCBOR),
   decNoShareCBOR,
   decodeEnumBounded,
   decodeMapByKey,
   decodeNullStrictMaybe,
   decodeRecordNamed,
+  decodeRecordNamedT,
   encodeEnum,
   encodeListLen,
   encodeNullStrictMaybe,
   encodeWord8,
+  internsFromMap,
   invalidKey,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -120,6 +125,8 @@ import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (when)
+import Control.Monad.Trans (lift)
+import Control.Monad.Trans.State.Strict (get, put)
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
@@ -280,18 +287,30 @@ instance EraPParams era => NoThunks (GovActionState era)
 
 instance EraPParams era => NFData (GovActionState era)
 
--- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (GovActionState era) where
-  decShareCBOR _ =
-    decode $
-      RecD GovActionState
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
+  type
+    Share (GovActionState era) =
+      ( Interns (Credential 'Staking)
+      , Interns (KeyHash 'StakePool)
+      , Interns (Credential 'DRepRole)
+      , Interns (Credential 'HotCommitteeRole)
+      )
+  decSharePlusCBOR =
+    decodeRecordNamedT "GovActionState" (const 7) $ do
+      gasId <- lift decCBOR
+
+      (cs, ks, cd, ch) <- get
+      gasCommitteeVotes <- lift $ decShareCBOR (ch, mempty)
+      gasDRepVotes <- lift $ decShareCBOR (cd, mempty)
+      gasStakePoolVotes <- lift $ decShareCBOR (ks, mempty)
+
+      -- DRep votes do not contain any new credentials, thus only additon of interns for SPOs and CCs
+      put (cs, ks <> internsFromMap gasStakePoolVotes, cd, ch <> internsFromMap gasCommitteeVotes)
+
+      gasProposalProcedure <- lift decCBOR
+      gasProposedIn <- lift decCBOR
+      gasExpiresAfter <- lift decCBOR
+      pure GovActionState {..}
 
 instance EraPParams era => DecCBOR (GovActionState era) where
   decCBOR = decNoShareCBOR
@@ -308,7 +327,6 @@ instance EraPParams era => EncCBOR (GovActionState era) where
         !> To gasProposedIn
         !> To gasExpiresAfter
 
--- Ref: https://gitlab.haskell.org/ghc/ghc/-/issues/14046
 instance OMap.HasOKey GovActionId (GovActionState era) where
   okeyL = lens gasId $ \gas gi -> gas {gasId = gi}
 

@@ -17,6 +17,7 @@ module Cardano.Ledger.State.Schema where
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core (PParams)
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.Keys as Keys
@@ -78,7 +79,7 @@ LedgerState
 UtxoState
   deposited Coin
   fees Coin
-  ppups (Shelley.ShelleyGovState CurrentEra)
+  govState (ConwayGovState CurrentEra)
   donation Coin
 DState
   fGenDelegs FGenDelegs

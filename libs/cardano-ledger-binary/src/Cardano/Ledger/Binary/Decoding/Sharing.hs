@@ -17,8 +17,11 @@ module Cardano.Ledger.Binary.Decoding.Sharing (
   decSharePlusLensCBOR,
   decNoShareCBOR,
   interns,
+  internsFromSet,
   internsFromMap,
   internsFromVMap,
+  internMap,
+  internSet,
   toMemptyLens,
   decShareMonadCBOR,
 )
@@ -34,6 +37,8 @@ import Data.Kind
 import qualified Data.Map.Strict as Map (size)
 import Data.Map.Strict.Internal (Map (..))
 import Data.Primitive.Types (Prim)
+import qualified Data.Set as Set (size)
+import qualified Data.Set.Internal as Set (Set (..))
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
 import Lens.Micro
@@ -61,6 +66,17 @@ data Intern a = Intern
 newtype Interns a = Interns [Intern a]
   deriving (Monoid)
 
+instance Semigroup (Interns a) where
+  (<>) is1 (Interns []) = is1
+  (<>) (Interns []) is2 = is2
+  (<>) (Interns is1) (Interns is2) =
+    Interns (F.foldr insertIntoSortedInterns is2 is1)
+    where
+      insertIntoSortedInterns i [] = [i]
+      insertIntoSortedInterns i (a : as)
+        | internWeight a > internWeight i = a : insertIntoSortedInterns i as
+        | otherwise = i : a : as
+
 interns :: Interns k -> k -> k
 interns (Interns []) !k = k -- optimize for common case when there are no interns
 interns (Interns is) !k = go is
@@ -72,41 +88,58 @@ interns (Interns is) !k = go is
         Nothing -> go xs
 {-# INLINE interns #-}
 
+internMap :: Ord k => k -> Map k a -> Maybe k
+internMap k = go
+  where
+    go Tip = Nothing
+    go (Bin _ kx _ l r) =
+      case compare k kx of
+        LT -> go l
+        GT -> go r
+        EQ -> Just kx
+
+internSet :: Ord a => a -> Set.Set a -> Maybe a
+internSet k = go
+  where
+    go Set.Tip = Nothing
+    go (Set.Bin _ kx l r) =
+      case compare k kx of
+        LT -> go l
+        GT -> go r
+        EQ -> Just kx
+
+internsFromSet :: Ord k => Set.Set k -> Interns k
+internsFromSet s
+  | Set.size s == 0 = mempty
+  | otherwise =
+      Interns
+        [ Intern
+            { internMaybe = (`internSet` s)
+            , internWeight = Set.size s
+            }
+        ]
+
 internsFromMap :: Ord k => Map k a -> Interns k
-internsFromMap m =
-  Interns
-    [ Intern
-        { internMaybe = \k ->
-            let go Tip = Nothing
-                go (Bin _ kx _ l r) =
-                  case compare k kx of
-                    LT -> go l
-                    GT -> go r
-                    EQ -> Just kx
-             in go m
-        , internWeight = Map.size m
-        }
-    ]
+internsFromMap m
+  | Map.size m == 0 = mempty
+  | otherwise =
+      Interns
+        [ Intern
+            { internMaybe = (`internMap` m)
+            , internWeight = Map.size m
+            }
+        ]
 
 internsFromVMap :: Ord k => VMap VB kv k a -> Interns k
-internsFromVMap m =
-  Interns
-    [ Intern
-        { internMaybe = \k -> VMap.internMaybe k m
-        , internWeight = VMap.size m
-        }
-    ]
-
-instance Semigroup (Interns a) where
-  (<>) is1 (Interns []) = is1
-  (<>) (Interns []) is2 = is2
-  (<>) (Interns is1) (Interns is2) =
-    Interns (F.foldr insertIntoSortedInterns is2 is1)
-    where
-      insertIntoSortedInterns i [] = [i]
-      insertIntoSortedInterns i (a : as)
-        | internWeight a > internWeight i = a : insertIntoSortedInterns i as
-        | otherwise = i : a : as
+internsFromVMap m
+  | VMap.size m == 0 = mempty
+  | otherwise =
+      Interns
+        [ Intern
+            { internMaybe = \k -> VMap.internMaybe k m
+            , internWeight = VMap.size m
+            }
+        ]
 
 class Monoid (Share a) => DecShareCBOR a where
   {-# MINIMAL (decShareCBOR | decSharePlusCBOR) #-}
@@ -178,6 +211,11 @@ decSharePlusLensCBOR l = do
 -- | Use `DecShareCBOR` class while ignoring sharing
 decNoShareCBOR :: DecShareCBOR a => Decoder s a
 decNoShareCBOR = decShareCBOR mempty
+
+instance (Ord k, DecCBOR k) => DecShareCBOR (Set.Set k) where
+  type Share (Set.Set k) = Interns k
+  decShareCBOR kis = decodeSet (interns kis <$> decCBOR)
+  getShare = internsFromSet
 
 instance (Ord k, DecCBOR k, DecCBOR v) => DecShareCBOR (Map k v) where
   type Share (Map k v) = (Interns k, Interns v)

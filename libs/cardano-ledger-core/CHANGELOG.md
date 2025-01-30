@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `DecShareCBOR` instances for `DRep` and `DRepState`
 * Added `ToPlutusData` instance for `NonZero`
 * `maxpool'` now expects `nOpt` to be a `NonZero Word16`
 * Add `HasZero` instance for `Coin` together with lifted conversion functions:

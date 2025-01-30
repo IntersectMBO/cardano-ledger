@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.DRep (
@@ -17,7 +18,15 @@ module Cardano.Ledger.DRep (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  DecShareCBOR (..),
+  EncCBOR (..),
+  Interns,
+  decNoShareCBOR,
+  interns,
+  internsFromSet,
+ )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential (..), credToText, parseCredential)
@@ -81,10 +90,23 @@ instance DecCBOR DRep where
       3 -> SumD DRepAlwaysNoConfidence
       k -> Invalid k
 
+instance DecShareCBOR DRep where
+  type Share DRep = Interns (Credential 'DRepRole)
+  decShareCBOR cd = do
+    dRep <- decCBOR
+    pure $!
+      case dRepToCred dRep of
+        Nothing -> dRep
+        Just cred -> credToDRep $ interns cd cred
+
 dRepToCred :: DRep -> Maybe (Credential 'DRepRole)
 dRepToCred (DRepKeyHash kh) = Just $ KeyHashObj kh
 dRepToCred (DRepScriptHash sh) = Just $ ScriptHashObj sh
 dRepToCred _ = Nothing
+
+credToDRep :: Credential 'DRepRole -> DRep
+credToDRep (KeyHashObj kh) = DRepKeyHash kh
+credToDRep (ScriptHashObj sh) = DRepScriptHash sh
 
 instance ToJSON DRep where
   toJSON = String . dRepToText
@@ -135,13 +157,18 @@ instance NoThunks DRepState
 instance NFData DRepState
 
 instance DecCBOR DRepState where
-  decCBOR = do
+  decCBOR = decNoShareCBOR
+
+instance DecShareCBOR DRepState where
+  type Share DRepState = Interns (Credential 'Staking)
+  getShare = internsFromSet . drepDelegs
+  decShareCBOR is = do
     decode $
       RecD DRepState
         <! From
         <! From
         <! From
-        <! From
+        <! D (decShareCBOR is)
 
 instance EncCBOR DRepState where
   encCBOR DRepState {..} =
