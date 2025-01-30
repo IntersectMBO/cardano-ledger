@@ -22,12 +22,14 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
+{-
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
 -- cases and turning off the overlap check in newer ghc versions we disable the check for old
 -- versions.
 #if __GLASGOW_HASKELL__ < 900
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 #endif
+-}
 
 -- | This module contains the most basic parts the implementation. Essentially 
 --   everything to define Specification, HasSpec, HasSimpleRep, Term, Pred,
@@ -38,6 +40,8 @@
 --   user interface to the domain embedded language (constrained, forall, exists etc.).
 --   And, by design, nothing more.
 module Constrained.BaseExperiment where
+
+import Constrained.GenericExperiment
 
 import Debug.Trace
 import Control.Monad.Identity
@@ -53,10 +57,10 @@ import Constrained.Core(Var(..),eqVar,Evidence(..))
 import Constrained.GenT(MonadGenError(..),GE(..),GenT,fatalError1,catMessageList,catMessages,pureGen)
 import Constrained.List
 import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty(NonEmpty)
 -- import GHC.TypeLits(SSymbol,KnownSymbol,Symbol,symbolSing,symbolVal,pattern SSymbol,KnownNat)
 import  GHC.TypeLits hiding(Text)
 import Data.Orphans() -- instances on Symbol
-import Constrained.GenericExperiment
 import Data.Foldable(toList)
 import Data.Type.Equality(TestEquality(..))
 import Data.String(fromString)
@@ -84,13 +88,47 @@ class ( KnownSymbol s
       ) =>
       FunctionSymbol  (s::Symbol) (t:: Symbol -> [Type] -> Type -> Type) (dom::[Type]) rng | s -> t
       where
-      witness :: t s dom rng
-      type Wit s :: Symbol -> [Type] -> Type -> Type
+      {-# MINIMAL witness, semantics, (propagate | simplepropagate) #-}
+      witness :: String -- For documentation about what constructor of 't' implements 's'
       semantics :: t s dom rng -> FunTy dom rng
-      propagate :: Context s t dom rng hole -> Specification rng -> Specification hole
-      -- prop :: Ctx rng hole -> Specification rng -> Specification hole
-      -- prop (Ctx text@(Context _ _)) = propagate text 
-                  -- ^ The pattern match brings the FunctionSymbol constraint into scope
+
+      -- Handles all the obvious default cases. So if this is what you want
+      -- then define simplepropagate instead. If you need special instructions
+      -- for ExplainSpec, ErrorSpec, SuspendedSpec, or TrueSpec, then write your own.
+      propagate :: Context s t dom rng hole -> Specification rng -> Specification hole     
+      propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+      propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+      propagate _ TrueSpec = TrueSpec
+      propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+
+      -- this is only good for unary functions
+      propagate (Context witW (HOLE End)) (SuspendedSpec v ps) = 
+         constrained $ \ v' -> Let (App witW (v' :> Nil)) (v :-> ps)
+
+      -- this is only good for binary functions         
+      propagate (Context witW (HOLE (x :<| End))) (SuspendedSpec v ps) =
+         constrained $ \v' -> Let (App witW (v' :> Lit x :> Nil)) (v :-> ps)
+      propagate (Context witW ( x :>| (HOLE End))) (SuspendedSpec v ps) = 
+         constrained $ \v' ->  Let (App witW (Lit x :> v' :> Nil)) (v :-> ps)
+
+      -- Handle the important cases
+      propagate ctxt spec = case simplepropagate ctxt spec of
+         Left xs -> ErrorSpec xs
+         Right spec2 -> spec2
+
+      simplepropagate :: Context s t dom rng hole -> Specification rng -> Either (NonEmpty String) (Specification hole)
+      simplepropagate ctxt spec = Right $ propagate ctxt spec
+
+      rewriteRules :: ( TypeList as, Typeable as, HasSpec b, All HasSpec as ) =>
+         t sym as b -> List Term as -> Maybe (Term b)
+      rewriteRules _ _ = Nothing
+
+      -- mapTypeSpec :: (HasSpec a, HasSpec b) => f sym '[a] b -> TypeSpec a -> Specification b
+    
+
+propagateSpecFun :: Ctx rng hole -> Specification rng -> Specification hole
+propagateSpecFun (Ctx text@(Context _ _)) = propagate text 
+                         -- ^ The pattern match brings the FunctionSymbol constraint into scope
 propagateSpec ::
   forall v a.
   Specification a ->
@@ -366,6 +404,7 @@ class HasSimpleRep a where
 type family SimplifyRep f where
   SimplifyRep f = SOP (SOPOf f)
 
+
 -- ===================================================================
 -- toGeneric and fromGeneric as Function Symbols
 -- That means they can be used inside (Term a)  
@@ -375,17 +414,11 @@ instance  ( HasSimpleRep a, HasSpec a, HasSpec rng
           , rng ~ SimpleRep a,TypeSpec a ~ TypeSpec (SimpleRep a)) => 
           FunctionSymbol  "toGenericFn" BaseWitness '[a] rng where
   semantics = baseSem 
-  witness = ToGenericW
-  type Wit "toGenericFn" = BaseWitness
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate (Context ToGenericW  (HOLE End)) TrueSpec = TrueSpec
-  propagate (Context ToGenericW  (HOLE End)) (ErrorSpec xs) = ErrorSpec xs
-  propagate (Context ToGenericW  (HOLE End)) (SuspendedSpec v ps) = 
-     constrained $ \ v' -> Let (App ToGenericW (v' :> Nil)) (v :-> ps)
-  propagate (Context ToGenericW  (HOLE End)) (TypeSpec s cant) = TypeSpec s (fromSimpleRep <$> cant)
-  propagate (Context ToGenericW  (HOLE End)) (MemberSpec es) = MemberSpec (fmap fromSimpleRep es) 
-  propagate ctx _ = ErrorSpec (NE.fromList["ToGenericW (toGenericFn)","Unreachable context, too many args",show ctx]) 
+  witness = "ToGenericW[toGenericFn]"
+ 
+  simplepropagate (Context ToGenericW  (HOLE End)) (TypeSpec s cant) = Right $ TypeSpec s (fromSimpleRep <$> cant)
+  simplepropagate (Context ToGenericW  (HOLE End)) (MemberSpec es) = Right $ MemberSpec (fmap fromSimpleRep es) 
+  simplepropagate ctx _ = Left(NE.fromList["ToGenericW (toGenericFn)","Unreachable context, too many args",show ctx]) 
   
 toGeneric_ ::
   forall a .
@@ -403,17 +436,11 @@ instance  ( HasSimpleRep a, HasSpec a, HasSpec (SimpleRep a), HasSpec dom
           , dom ~ SimpleRep a, TypeSpec a ~ TypeSpec (SimpleRep a) ) => 
           FunctionSymbol "fromGenericFn" BaseWitness '[dom] a where
   semantics = baseSem  
-  witness = FromGenericW      
-  type Wit "fromGenericFn" = BaseWitness   
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate (Context FromGenericW  (HOLE End)) TrueSpec = TrueSpec
-  propagate (Context FromGenericW  (HOLE End)) (ErrorSpec xs) = ErrorSpec xs
-  propagate (Context FromGenericW  (HOLE End)) (SuspendedSpec v ps) = 
-    constrained $ \ v' -> Let (App FromGenericW (v' :> Nil)) (v :-> ps)
-  propagate (Context FromGenericW  (HOLE End)) (TypeSpec s cant) = TypeSpec s (toSimpleRep <$> cant)
-  propagate (Context FromGenericW  (HOLE End)) (MemberSpec es) = MemberSpec (fmap toSimpleRep es)
-  propagate ctx _ = ErrorSpec (NE.fromList["FromGenericW (fromGenericFn)","Unreachable context, too many args",show ctx])  
+  witness = "FromGenericW[fromGenericFn]"     
+  
+  simplepropagate (Context FromGenericW  (HOLE End)) (TypeSpec s cant) = Right $ TypeSpec s (toSimpleRep <$> cant)
+  simplepropagate (Context FromGenericW  (HOLE End)) (MemberSpec es) = Right $ MemberSpec (fmap toSimpleRep es)
+  simplepropagate ctx _ = Left (NE.fromList["FromGenericW (fromGenericFn)","Unreachable context, too many args",show ctx])  
   
 fromGeneric_ ::
   forall a .
@@ -617,6 +644,22 @@ pattern PairPat x y <- App (isBaseWit (PairW @a @b) -> (Just PairW, Just Refl, J
    -- You can't actually apply PairPat, because when this pattern was written,
    -- there was no instance (FunctionSymbol "pair_" BaseWitness '[a,b] (Prod a b)) yet!
 
+pattern InjLeftPat :: 
+  forall a b rng . (HasSpec a, HasSpec b,HasSpec (Sum a b)) => 
+  forall         . (rng ~ Sum a b,FunctionSymbol "injectLeft_" BaseWitness '[a] (Sum a b)) 
+                 => Term a -> Term rng
+pattern InjLeftPat x <- App (isBaseWit (InjLeftW @a @b) -> (Just InjLeftW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
+   where InjLeftPat x = App InjLeftW (x :> Nil)
+
+pattern InjRightPat :: 
+  forall a b rng . (HasSpec a, HasSpec b,HasSpec (Sum a b)) => 
+  forall         . (rng ~ Sum a b,FunctionSymbol "injectRight_" BaseWitness '[b] (Sum a b)) 
+                 => Term b -> Term rng
+pattern InjRightPat x <- App (isBaseWit (InjRightW @a @b) -> (Just InjRightW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
+   where InjRightPat x = App InjRightW (x :> Nil)   
+
+
+
 -- ============= fromGenericFn
 pattern FromGenericPat :: 
   forall a rng . (HasSpec a,HasSpec (SimpleRep a),HasSimpleRep a) => 
@@ -636,17 +679,11 @@ pattern ToGenericPat x <- App (isBaseWit (ToGenericW @a) -> (Just ToGenericW, Ju
 
 -- ================ Probably Move this, but it was good practice since it is simple
 instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where
-    witness = NotW
-    type Wit "not_" = BaseWitness
+    witness = "NotW[not_]"
     semantics = baseSem
-    propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-    propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-    propagate (Context NotW (HOLE End)) TrueSpec = TrueSpec
-    propagate (Context NotW (HOLE End))  (ErrorSpec msgs) = ErrorSpec msgs
-    propagate (Context NotW (HOLE End)) (SuspendedSpec v ps) = 
-      constrained $ \ v' -> Let (App NotW (v' :> Nil)) (v :-> ps)
-    propagate (Context NotW (HOLE End)) spec = caseBoolSpec spec (equalSpec . not)
-    propagate ctx _ = ErrorSpec (NE.fromList["NotW (not_)","Unreachable context, too many args",show ctx])
+    
+    simplepropagate (Context NotW (HOLE End)) spec = Right $ caseBoolSpec spec (equalSpec . not)
+    simplepropagate ctx _ = Left (NE.fromList["NotW (not_)","Unreachable context, too many args",show ctx])
 
 not_ :: Term Bool -> Term Bool
 not_ = appTerm NotW
@@ -656,24 +693,14 @@ caseBoolSpec = undefined
    where _ = emptySpec @a
 
 instance HasSpec a => FunctionSymbol "==."  BaseWitness '[a, a] Bool where
-    witness = EqualW
-    type Wit "==." = BaseWitness 
+    witness = "EqualW[==.]"
     semantics = baseSem
-
-    propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-    propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-    propagate _ (ErrorSpec err) = ErrorSpec err
-
-    propagate (Context EqualW (HOLE (x :<| End))) (SuspendedSpec v ps) =
-      constrained $ \v' -> Let (App EqualW (v' :> Lit x :> Nil)) (v :-> ps)
-    propagate (Context EqualW ( x :>| (HOLE End))) (SuspendedSpec v ps) = 
-      constrained $ \v' ->  Let (App EqualW (Lit x :> v' :> Nil)) (v :-> ps)
     
-    propagate (Context EqualW (HOLE (a :<| End)))  spec =  
-      caseBoolSpec spec $ \case {True -> equalSpec a; False -> notEqualSpec a}
-    propagate (Context EqualW (a :>| (HOLE End))) spec = 
-      caseBoolSpec spec $ \case { True -> equalSpec a; False -> notEqualSpec a}
-    propagate ctx _ = ErrorSpec (NE.fromList["EqualW ( ==. )","Unreachable context, too many args",show ctx])      
+    simplepropagate (Context EqualW (HOLE (a :<| End)))  spec =  
+      Right $ caseBoolSpec spec $ \case {True -> equalSpec a; False -> notEqualSpec a}
+    simplepropagate (Context EqualW (a :>| (HOLE End))) spec = 
+      Right $ caseBoolSpec spec $ \case { True -> equalSpec a; False -> notEqualSpec a}
+    simplepropagate ctx _ = Left (NE.fromList["EqualW ( ==. )","Unreachable context, too many args",show ctx])      
   
 (==.) :: forall a. (HasSpec a) => Term a -> Term a -> Term Bool
 (==.) = appTerm EqualW
@@ -758,6 +785,7 @@ bind bodyf = newv :-> bodyPred
     boundBinder :: Binder a -> Int
     boundBinder (x :-> p) = max (nameOf x) (bound p)
 
+    bound (ElemPred _ _ _) = -1
     bound (Explain _ p) = bound p
     bound (Subst x _ p) = max (nameOf x) (bound p)
     bound (And  ps) = maximum $ (-1) : map bound ps -- (-1) as the default to get 0 as `nextVar p`
@@ -790,6 +818,7 @@ traverseWeighted f (Weighted w t) = Weighted w <$> f t
 -- Pred    
 
 data Pred  where
+  ElemPred :: forall a .HasSpec a => Bool -> Term a -> NonEmpty a -> Pred
   Monitor :: ((forall a. Term a -> a) -> Property -> Property) -> Pred
   And  :: [Pred] -> Pred 
   Exists ::
@@ -1077,6 +1106,8 @@ instance Show a => Show (Term a) where
 
 instance Pretty Pred where
   pretty = \case
+    ElemPred True term vs -> align $ sep ["memberPred",pretty term, fillSep (punctuate "," (map viaShow (NE.toList vs)))]
+    ElemPred False term vs -> align $ sep ["notMemberPred",pretty term, fillSep (punctuate "," (map viaShow (NE.toList vs)))]    
     Exists _ (x :-> p) -> align $ sep ["exists" <+> viaShow x <+> "in", pretty p]
     Let t (x :-> p) -> align $ sep ["let" <+> viaShow x <+> "=" /> pretty t <+> "in", pretty p]
     And ps -> braces $ vsep' $ map pretty ps
@@ -1249,6 +1280,15 @@ genHint = GenHint
 -- =========================================================
 -- HasSpec Bool (Temporary solution)
 
+{- 
+Permanent Solution, can't be dome here as certain things are not in scope.
+instance HasSimpleRep Bool where type SimpleRep Bool = Sum () ()
+instance HasSpec ()=> HasSpec Bool where
+  shrinkWithTypeSpec _ = shrink
+  cardinalTypeSpec (SumSpec _ a b) =
+    MemberSpec (NE.fromList [0, 1, 2]) <> addSpecInt (cardinality a) (cardinality b)
+  cardinalTrueSpec = MemberSpec (pure 2)
+-} 
 
 instance HasSpec Bool where
   type TypeSpec Bool = Set Bool
@@ -1271,6 +1311,7 @@ instance HasSpec Bool where
         xs -> FalsePred $ NE.fromList["Spec in toPreds has too may entries ",show xs]
   cardinalTypeSpec set = equalSpec(toInteger $ Set.size set)
   cardinalTrueSpec = MemberSpec (pure 2)
+
 
 -- ==========================================================
 -- Contexts 
