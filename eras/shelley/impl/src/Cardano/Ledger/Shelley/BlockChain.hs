@@ -19,6 +19,7 @@
 module Cardano.Ledger.Shelley.BlockChain (
   ShelleyTxSeq (ShelleyTxSeq, txSeqTxns', TxSeq'),
   constructMetadata,
+  indexLookupSeq,
   txSeqTxns,
   bbHash,
   bBodySize,

@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `indexLookupSeq`
 * Add `segWitTx`
 * Rename `segwitTx` to `segWitAnnTx`
 * Move `AccountState` to `Cardano.Ledger.State`
