@@ -11,6 +11,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}   -- instance HasCaseBoolSpec
 
 module Constrained.SimplifyExperiment where
 
@@ -58,13 +60,12 @@ caseSpec _tString _ss = undefined
 -- helpers
 -- | If the `Specification fn Bool` doesn't constrain the boolean you will get a `TrueSpec` out.
 
-caseBoolSpec :: HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
-caseBoolSpec spec cont = case possibleValues spec of
-  [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
-  [b] -> cont b
-  _ -> mempty
-  where
-    possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
+instance HasSpec a => HasCaseBoolSpec a where
+  caseBoolSpec spec cont = case possibleValues spec of
+     [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
+     [b] -> cont b
+     _ -> mempty
+    where possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
 
 ifElse :: (IsPred p, IsPred q) => Term Bool -> p -> q -> Pred 
 ifElse b p q = whenTrue b p <> whenTrue (not_ b) q

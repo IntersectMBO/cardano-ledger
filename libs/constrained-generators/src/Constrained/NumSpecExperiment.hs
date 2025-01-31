@@ -10,6 +10,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}   -- Random Natural, Arbitrary Natural, Uniform Natural
 
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
@@ -22,11 +24,14 @@
 module Constrained.NumSpecExperiment where
 
 import Constrained.GenericExperiment
+import Constrained.WitnessExperiment
 import Constrained.BaseExperiment
+import Constrained.SimplifyExperiment() -- HasCaseBoolSpec instance
 
 import Control.Arrow (first)
 import Control.Applicative((<|>))
-import Data.Typeable(typeOf)
+-- import Data.Typeable(typeOf)
+import Data.Typeable(typeOf,Typeable)
 import Constrained.GenT(MonadGenError(..),GenT,pureGen,sizeT)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
@@ -40,20 +45,73 @@ import System.Random.Stateful(Random(..),Uniform(..))
 import qualified Data.Set as Set
 import Data.Kind
 import GHC.TypeLits(Symbol)
-import Constrained.Core(unionWithMaybe)
+import Constrained.Core(unionWithMaybe,Evidence(..))
 import Data.Maybe(maybeToList)
 import Data.Foldable(fold)
 
+-- ====================================================================
+-- NumOrdW  witnesses for comparison operations (<=. and <.) on numbers
+-- The other operations are defined in terms of these.
+-- =====================================================================  
 
--- ====================================
--- OrdLike
--- ===================================
+data NumOrdW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where 
+  LessOrEqualW :: (OrdLike a) => NumOrdW (OrdLike a) "<=." '[a,a] Bool
+  LessW :: (OrdLike a) => NumOrdW (OrdLike a) "<." '[a,a] Bool
 
-data OrdWitness (sym :: Symbol) (dom :: [Type]) (rng :: Type) where 
-  LessOrEqualW :: (Ord a, OrdLike a) => OrdWitness "<=." '[a,a] Bool
-  LessW :: (Ord a, OrdLike a) => OrdWitness "<." '[a,a] Bool
+instance Eq (NumOrdW c s ds r) where
+  LessOrEqualW == LessOrEqualW  = True
+  LessW == LessW  = True
 
-class HasSpec a => OrdLike a where
+instance Show (NumOrdW c s ds r) where
+  show LessOrEqualW = "<=."
+  show LessW = "<."
+
+instance Witness NumOrdW
+  where
+  semantics LessOrEqualW = (<=)
+  semantics LessW = (<)
+  getevidence (LessOrEqualW @a) = Evidence @(OrdLike a)
+  getevidence (LessW @a) = Evidence @(OrdLike a)
+
+instance (Typeable a,HasSpec a) => 
+         FunctionSymbol (OrdLike a) "<=." NumOrdW '[a,a] Bool where
+    witness = "LessOrEqualW[<=.]"    
+    simplepropagate (Context LessOrEqualW (l :>| (HOLE End))) spec = Right $
+      caseBoolSpec spec $ \case
+        True ->  geqSpec l
+        False -> ltSpec l    
+    simplepropagate (Context LessOrEqualW (HOLE (l :<| End))) spec = Right $
+      caseBoolSpec spec $ \case
+        True -> leqSpec l
+        False -> gtSpec l
+    simplepropagate ctx _ = Left (NE.fromList["LessOrEqual[<=.]","Unreachable context, too many args",show ctx])        
+
+infixr 4 <=.
+(<=.) :: forall a . (OrdLike a) => Term a -> Term a -> Term Bool
+(<=.) = appTerm LessOrEqualW
+
+instance (Typeable a,HasSpec a) => 
+         FunctionSymbol (OrdLike a) "<." NumOrdW '[a,a] Bool where
+    witness = "LessW[<.]"    
+    simplepropagate (Context LessW (l :>| (HOLE End))) spec = Right $
+      caseBoolSpec spec $ \case
+        True -> gtSpec l
+        False -> leqSpec l   
+    simplepropagate (Context LessW (HOLE (l :<| End))) spec = Right $
+      caseBoolSpec spec $ \case
+        True -> ltSpec l
+        False -> geqSpec l
+    simplepropagate ctx _ = Left (NE.fromList["LessOrEqual[<=.]","Unreachable context, too many args",show ctx])  
+
+infixr 4 <.
+(<.) :: forall a . (OrdLike a) => Term a -> Term a -> Term Bool
+(<.) = appTerm LessW
+
+-- =============================================
+-- OrdLike. Ord for Numbers in the Logic
+-- =============================================
+
+class (Ord a,HasSpec a,Num a,TypeSpec a ~ NumSpec a,MaybeBounded a) => OrdLike a where
   leqSpec :: a -> Specification a
   default leqSpec ::
     ( TypeSpec a ~ TypeSpec (SimpleRep a)
@@ -94,8 +152,9 @@ class HasSpec a => OrdLike a where
     Specification a
   gtSpec = fromSimpleRepSpec . gtSpec . toSimpleRep
 
+
 -- | This instance should be general enough for every type of Number that has a NumSpec as its TypeSpec
-instance {-# OVERLAPPABLE #-} (HasSpec a, MaybeBounded a, Num a, TypeSpec a ~ NumSpec a) => OrdLike a where
+instance {-# OVERLAPPABLE #-} (Ord a, HasSpec a, MaybeBounded a, Num a, TypeSpec a ~ NumSpec a) => OrdLike a where
   leqSpec l = typeSpec $ NumSpecInterval Nothing (Just l)
   ltSpec l
     | Just b <- lowerBound
@@ -109,9 +168,8 @@ instance {-# OVERLAPPABLE #-} (HasSpec a, MaybeBounded a, Num a, TypeSpec a ~ Nu
         ErrorSpec (pure ("gtSpec @" ++ show (typeOf l) ++ " " ++ show l))
     | otherwise = typeSpec $ NumSpecInterval (Just (l + 1)) Nothing
 
-
 -- ========================================================================
--- Numbers ----------------------------------------------------------------
+-- helper functions for the TypeSpec for Numbers 
 -- ========================================================================
 
 
@@ -150,7 +208,6 @@ instance MaybeBounded Natural where
 instance MaybeBounded Float where
   lowerBound = Nothing
   upperBound = Nothing
-
 
 -- ===================================================================
 -- The TypeSpec for numbers
@@ -217,7 +274,8 @@ instance Random (Ratio Integer) where
      in (n % d, g'')
 
 -- ==============================================================================
--- Operations on NumSpec, that give it the required properties of a TypeSpec    
+-- Operations on NumSpec, that give it the required properties of a TypeSpec 
+-- ==============================================================================   
 
 emptyNumSpec :: Ord a => NumSpec a
 emptyNumSpec = mempty
@@ -280,8 +338,7 @@ conformsToNumSpec :: Ord n => n -> NumSpec n -> Bool
 conformsToNumSpec i (NumSpecInterval ml mu) = maybe True (<= i) ml && maybe True (i <=) mu
 
 toPredsNumSpec ::
-  ( OrdLike n
-  ) =>
+  ( OrdLike n ) =>
   Term n ->
   NumSpec n ->
   Pred 
@@ -290,47 +347,7 @@ toPredsNumSpec v (NumSpecInterval ml mu) =
     [assert $ Lit l <=. v | l <- maybeToList ml]
       ++ [assert $ v <=. Lit u | u <- maybeToList mu]
 
-infixr 4 <=.
--- STUB
-(<=.) :: forall a . Term a -> Term a -> Term Bool
-(<=.) _ _ = undefined      
-  
 
-{-  
-lessOrEqualFn :: forall fn a. (Ord a, OrdLike fn a) => fn '[a, a] Bool
-lessOrEqualFn = injectFn (LessOrEqual @_ @fn)
-
-lessFn :: forall fn a. (Ord a, OrdLike fn a) => fn '[a, a] Bool
-lessFn = injectFn (Less @_ @fn)
-
-instance FunctionLike (OrdFn fn) where
-  sem LessOrEqual = (<=)
-  sem Less = (<)
-
-instance BaseUniverse fn => Functions (OrdFn fn) fn where
-  propagateSpecFun fn ctx (ExplainSpec es s) = explainSpecOpt es $ propagateSpecFun fn ctx s
-  propagateSpecFun _ _ TrueSpec = TrueSpec
-  propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
-  propagateSpecFun fn (ListCtx pre HOLE suf) (SuspendedSpec x p) =
-    constrained $ \x' ->
-      let args = appendList (mapList (\(Value a) -> Lit a) pre) (x' :> mapList (\(Value a) -> Lit a) suf)
-       in Let (App (injectFn fn) args) (x :-> p)
-  propagateSpecFun LessOrEqual ctx spec
-    | HOLE :? Value l :> Nil <- ctx = caseBoolSpec spec $ \case
-        True -> leqSpec @fn l
-        False -> gtSpec @fn l
-    | Value l :! NilCtx HOLE <- ctx = caseBoolSpec spec $ \case
-        True -> geqSpec @fn l
-        False -> ltSpec @fn l
-  propagateSpecFun Less ctx spec
-    | HOLE :? Value l :> Nil <- ctx = caseBoolSpec spec $ \case
-        True -> ltSpec @fn l
-        False -> geqSpec @fn l
-    | Value l :! NilCtx HOLE <- ctx = caseBoolSpec spec $ \case
-        True -> gtSpec @fn l
-        False -> leqSpec @fn l
-
--}
 -- =======================================================================
 -- Several of the methods of HasSpec that have default implementations
 -- could benefit from type specific implementations for numbers. Those
@@ -412,8 +429,6 @@ notInNumSpec ns@(NumSpecInterval a b) bad
         ("call to: (notInNumSpec " ++ show ns ++ " " ++ show bad ++ ")")
         [x | x <- [lowBound a .. highBound b], notElem x bad]
   | otherwise = TypeSpec @n ns bad
-
-
 
 -- ===================================================
 -- HasSpec instances for many kinds of numbers
@@ -739,6 +754,7 @@ operateSpec operator f ft x y = case (x, y) of
 --  for example all operations on SuspendedSpec, and certain 
 --  operations between TypeSpec and MemberSpec. Perhaps we should 
 --  remove it. Only the addSpec (+) and multSpec (*) methods are used.
+--  But, it is kind of cool ...
 instance Num (Specification Integer) where
    (+) = addSpecInt
    (-) = subSpecInt
