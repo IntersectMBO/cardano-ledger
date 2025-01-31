@@ -156,7 +156,7 @@ spec =
           describe "DELEG" Deleg.spec
           describe "ENACT" Enact.spec
           xdescribe "EPOCH" Epoch.spec
-          xdescribe "GOV" Gov.spec
+          describe "GOV" Gov.spec
           describe "GOVCERT" GovCert.spec
           -- LEDGER tests pending on the dRep delegations cleanup in the spec:
           -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/635
