@@ -1052,11 +1052,12 @@ demo mode = do
   when (mode == Interactive) $ displayTerm env2 txterm
   -- compute Produced and Consumed
   (TxBodyF _ txb) <- monadTyped (findVar (unVar txbodyterm) env2)
-  certState <- monadTyped $ runTarget env1 certstateT
+  certState <- monadTyped . runTarget env1 $ certStateT
   (PParamsF _ ppV) <- monadTyped (findVar (unVar (pparams proof)) env2)
   utxoV <- monadTyped (findVar (unVar (utxo proof)) env2)
-  when (mode == Interactive) $ putStrLn (show (producedTxBody txb ppV certState))
-  when (mode == Interactive) $ putStrLn (show (consumedTxBody txb ppV certState (liftUTxO utxoV)))
+  when (mode == Interactive) $ putStrLn (show (producedTxBody txb ppV $ unCertStateF certState))
+  when (mode == Interactive) $
+    putStrLn (show (consumedTxBody txb ppV (unCertStateF certState) (liftUTxO utxoV)))
   modeRepl mode proof env2 ""
 
 demoTest :: TestTree

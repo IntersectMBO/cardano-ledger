@@ -34,7 +34,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Cert (
   testGenesisCert,
   testShelleyCert,
  )
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances hiding (certStateSpec)
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
@@ -121,7 +121,7 @@ specSuite ::
   forall (era :: Type).
   ( EraSpecLedger era ConwayFn
   , PrettyA (GovState era)
-  , CertState era ~ ShelleyCertState era -- TODO: this is probably wrong
+  , CertState era ~ ShelleyCertState era
   ) =>
   Int -> Spec
 specSuite n = do
@@ -193,10 +193,12 @@ spec = do
 
 utxoStateGen ::
   forall era.
-  (EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  ( EraSpecLedger era ConwayFn
+  , CertState era ~ ShelleyCertState era
+  ) =>
   Gen (Specification ConwayFn (UTxOState era))
 utxoStateGen =
   utxoStateSpec @era
     <$> genConwayFn @(PParams era) pparamsSpec
     <*> genWitUniv @era 25
-    <*> (lit <$> wff @(CertState era) @era)
+    <*> (lit <$> wff @(ShelleyCertState era) @era) -- TODO: revisit once we have `ConwayCertState`

@@ -212,9 +212,9 @@ instance
   , SpecRep (TxOut era) ~ Agda.TxOut
   , GovState era ~ ConwayGovState era
   , SpecTranslate (CertState era) (TxOut era)
-  , CertState era ~ ShelleyCertState era
   , SpecRep (CertState era) ~ Agda.CertState
   , EraCertState era
+  , CertState era ~ ShelleyCertState era
   ) =>
   SpecTranslate ctx (NewEpochState era)
   where

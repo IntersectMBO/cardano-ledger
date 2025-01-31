@@ -7,9 +7,7 @@
 
 module Test.Cardano.Ledger.Constrained.Stage where
 
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core (Era (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
@@ -44,7 +42,7 @@ type Pipeline era = [Stage era]
 
 -- | A pipeline for specifying the LederState
 ledgerPipeline ::
-  (Reflect era, CertState era ~ ShelleyCertState era, EraCertState era) =>
+  Reflect era =>
   UnivSize -> Proof era -> Pipeline era
 ledgerPipeline sizes proof =
   [ Stage standardOrderInfo (pParamsPreds proof)

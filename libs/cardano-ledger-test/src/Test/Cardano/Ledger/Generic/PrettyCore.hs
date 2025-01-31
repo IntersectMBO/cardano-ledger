@@ -191,9 +191,9 @@ import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  CertState (..),
   DState (..),
   EpochState (..),
+  EraCertState (..),
   FutureGenDeleg (..),
   IncrementalStake (IStake),
   InstantaneousRewards (..),
@@ -258,7 +258,6 @@ import Cardano.Ledger.State (
   Stake (..),
   UTxO (..),
  )
-import Cardano.Ledger.Tools (boom)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
@@ -334,10 +333,12 @@ import Test.Cardano.Ledger.Generic.Fields (
  )
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
 import Test.Cardano.Ledger.Generic.Proof (
+  CertStateWit (..),
   GovStateWit (..),
   Proof (..),
   Reflect (..),
   unReflect,
+  whichCertState,
   whichGovState,
  )
 
@@ -1052,9 +1053,6 @@ pcPParams proof pp = ppRecord ("PParams " <> pack (show proof)) pairs
 --   are a newtype wrapped around a type family.
 instance Reflect era => PrettyA (PParams era) where
   prettyA = pcPParams reify
-
-pcCertState :: Proof era -> CertState era -> PDoc
-pcCertState = boom
 
 -- =================================
 -- Type families that have Fields, can be pretty printed (for all eras) by using
@@ -2497,7 +2495,7 @@ pStateSummary (PState pp fpp retire deposit) =
     , ("Deposits", ppInt (Map.size deposit))
     ]
 
-dpStateSummary :: DP.EraCertState era => CertState era -> PDoc
+dpStateSummary :: EraCertState era => CertState era -> PDoc
 dpStateSummary certState = vsep [pcVState v, pStateSummary p, dStateSummary d]
   where
     v = certState ^. certVStateL
@@ -3169,18 +3167,18 @@ instance PrettyA FutureGenDeleg where
 instance PrettyA GenDelegPair where
   prettyA = pcGenDelegPair
 
--- pcCertState :: DP.EraCertState era => CertState era -> PDoc
--- pcCertState certState =
---   ppRecord
---     "CertState"
---     [ ("pstate", pcPState pst)
---     , ("vstate", pcVState vst)
---     , ("dstate", pcDState dst)
---     ]
---   where
---     vst = certState ^. certVStateL
---     pst = certState ^. certPStateL
---     dst = certState ^. certDStateL
+pcCertState :: Proof era -> CertState era -> PDoc
+pcCertState p certState = case whichCertState p of
+  CertStateShelleyToBabbage -> pcShelleyCertState p certState
+
+pcShelleyCertState :: Proof era -> ShelleyCertState era -> PDoc
+pcShelleyCertState _p (ShelleyCertState {..}) =
+  ppRecord
+    "ShelleyCertState"
+    [ ("pstate", pcPState shelleyCertPState)
+    , ("vstate", pcVState shelleyCertVState)
+    , ("dstate", pcDState shelleyCertDState)
+    ]
 
 pcVState :: VState era -> PDoc
 pcVState (VState dreps committeeState numDormantEpochs) =
@@ -3291,7 +3289,7 @@ pcPParamsSynopsis p x = withEraPParams p help
 showProtver :: ProtVer -> String
 showProtver (ProtVer x y) = "(" ++ show x ++ " " ++ show y ++ ")"
 
-pcEpochState :: (Reflect era, DP.EraCertState era) => Proof era -> EpochState era -> PDoc
+pcEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
 pcEpochState proof es@(EpochState (AccountState tre res) ls sss nonmy) =
   ppRecord
     "EpochState"
@@ -3302,7 +3300,7 @@ pcEpochState proof es@(EpochState (AccountState tre res) ls sss nonmy) =
     , ("AdaPots", pcAdaPot es)
     ]
 
-instance (Reflect era, DP.EraCertState era) => PrettyA (EpochState era) where
+instance Reflect era => PrettyA (EpochState era) where
   prettyA = pcEpochState reify
 
 pcAccountState :: AccountState -> PDoc
@@ -3312,7 +3310,7 @@ instance PrettyA AccountState where
   prettyA = pcAccountState
 
 -- | Like pcEpochState.but it only prints a summary of the UTxO
-psEpochState :: (Reflect era, DP.EraCertState era) => Proof era -> EpochState era -> PDoc
+psEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
 psEpochState proof es@(EpochState (AccountState tre res) ls sss _) =
   ppRecord
     "EpochState"
@@ -3322,7 +3320,7 @@ psEpochState proof es@(EpochState (AccountState tre res) ls sss _) =
     , ("AdaPots", pcAdaPot es)
     ]
 
-pcNewEpochState :: (Reflect era, DP.EraCertState era) => Proof era -> NewEpochState era -> PDoc
+pcNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
 pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd _) _) =
   ppRecord
     "NewEpochState"
@@ -3333,11 +3331,11 @@ pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (
     , ("EpochNo", ppEpochNo en)
     ]
 
-instance (Reflect era, DP.EraCertState era) => PrettyA (NewEpochState era) where
+instance Reflect era => PrettyA (NewEpochState era) where
   prettyA = pcNewEpochState reify
 
 -- | Like pcEpochState.but it only prints a summary of the UTxO
-psNewEpochState :: (Reflect era, DP.EraCertState era) => Proof era -> NewEpochState era -> PDoc
+psNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
 psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd _) _) =
   ppRecord
     "NewEpochState"
@@ -3384,7 +3382,7 @@ pcLedgerState proof ls =
     , ("certState", pcCertState proof (lsCertState ls))
     ]
 
-instance (Reflect era, DP.EraCertState era) => PrettyA (LedgerState era) where
+instance Reflect era => PrettyA (LedgerState era) where
   prettyA = pcLedgerState reify
 
 -- | Like pcLedgerState, except it prints only a summary of the UTxO
@@ -3465,7 +3463,7 @@ instance PrettyA DP.Obligations where
 pcAdaPot ::
   ( EraTxOut era
   , EraGov era
-  , DP.EraCertState era
+  , EraCertState era
   ) =>
   EpochState era ->
   PDoc
@@ -3669,13 +3667,7 @@ instance Reflect era => PrettyA (CertEnv era) where
       ]
 
 instance Reflect era => PrettyA (ShelleyCertState era) where
-  prettyA ShelleyCertState {..} =
-    ppRecord
-      "CertState"
-      [ ("vState", prettyA shelleyCertVState)
-      , ("pState", prettyA shelleyCertPState)
-      , ("dState", prettyA shelleyCertDState)
-      ]
+  prettyA = pcShelleyCertState reify
 
 instance PrettyA x => PrettyA (Seq x) where
   prettyA x = prettyA (toList x)

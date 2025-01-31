@@ -12,7 +12,6 @@ where
 
 import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))

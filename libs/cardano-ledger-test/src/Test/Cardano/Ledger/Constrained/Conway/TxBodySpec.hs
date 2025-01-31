@@ -47,7 +47,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Cert (
 import Test.Cardano.Ledger.Constrained.Conway.Certs (certsEnvSpec, projectEnv)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody (fromShelleyBody)
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraSpecLedger (..))
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraSpecLedger)
 
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
@@ -64,7 +64,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (Consumed (..), Produced (..), consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
-import Cardano.Ledger.Shelley.LedgerState (CertState (..), PState (..))
+import Cardano.Ledger.Shelley.LedgerState (CertState, PState (..))
 import Data.Text (pack)
 import Lens.Micro
 import Prettyprinter (sep, vsep)
@@ -193,7 +193,6 @@ bodyspec ::
   ( EraSpecTxOut era fn
   , EraSpecCert era fn
   , EraSpecTxCert fn era
-  , EraCertState era
   ) =>
   WitUniv era ->
   CertsEnv era ->
@@ -265,8 +264,7 @@ go2 ::
   , EraSpecCert era ConwayFn
   , EraSpecTxCert ConwayFn era
   , HasSpec ConwayFn (Tx era)
-  , CertState era ~ ShelleyCertState era
-  , EraCertState era
+  , HasSpec ConwayFn (CertState era)
   ) =>
   IO ()
 go2 = do
@@ -276,7 +274,7 @@ go2 = do
   certState <-
     generate $
       genFromSpec @ConwayFn @(CertState era)
-        (certStateSpec @ConwayFn @era univ delegatees wdrls) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
+        (certStateSpec @era @ConwayFn univ delegatees wdrls) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
         -- error "STOP"
   certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv era) certsEnvSpec
 
@@ -302,7 +300,7 @@ testBody = do
   certState <-
     generate $
       genFromSpec @ConwayFn @(CertState AllegraEra)
-        (certStateSpec @ConwayFn @AllegraEra univ delegatees wdrls)
+        (certStateSpec @AllegraEra @ConwayFn univ delegatees wdrls)
 
   cert <-
     generate $

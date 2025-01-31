@@ -34,7 +34,6 @@ import qualified Cardano.Ledger.BaseTypes as Base (EpochInterval (..), Globals (
 import Cardano.Ledger.CertState (
   CommitteeAuthorization (..),
   CommitteeState (..),
-  EraCertState (..),
   csCommitteeCredsL,
   vsNumDormantEpochsL,
  )
@@ -81,7 +80,7 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
+import Cardano.Ledger.Shelley.CertState -- (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Governance (FuturePParams (..), futureProposalsL, proposalsL)
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
@@ -130,6 +129,7 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (
+  CertStateF (..),
   GovState (..),
   PParamsF (..),
   PParamsUpdateF (..),
@@ -146,6 +146,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
   ValueF (..),
   liftUTxO,
   pparamsWrapperL,
+  unCertStateF,
   unPParamsUpdate,
   unPlutusPointerF,
   unPlutusPurposeF,
@@ -535,6 +536,8 @@ snapshots = Var (V "snapshots" SnapShotsR (Yes NewEpochStateR snapshotsL))
 
 snapshotsL :: NELens era SnapShots
 snapshotsL = nesEsL . esSnapshotsL
+
+-- TODO: remove this duplication of `pparamsFL`
 
 -- | Lens' from the Core PParams to the Model PParamsF which embeds a (Proof era)
 ppFL :: Proof era -> Lens' (PParams era) (PParamsF era)
@@ -991,9 +994,7 @@ newEpochStateConstr
 
 -- | Target for NewEpochState
 newEpochStateT ::
-  forall era.
-  (Gov.EraGov era, CertState era ~ ShelleyCertState era, EraCertState era) =>
-  Proof era -> RootTarget era (NewEpochState era) (NewEpochState era)
+  forall era. Reflect era => Proof era -> RootTarget era (NewEpochState era) (NewEpochState era)
 newEpochStateT proof =
   Invert "NewEpochState" (typeRep @(NewEpochState era)) (newEpochStateConstr proof)
     :$ Lensed currentEpoch nesELL
@@ -1004,9 +1005,7 @@ newEpochStateT proof =
 
 -- | Target for EpochState
 epochStateT ::
-  forall era.
-  (Gov.EraGov era, CertState era ~ ShelleyCertState era, EraCertState era) =>
-  Proof era -> RootTarget era (EpochState era) (EpochState era)
+  forall era. Reflect era => Proof era -> RootTarget era (EpochState era) (EpochState era)
 epochStateT proof =
   Invert "EpochState" (typeRep @(EpochState era)) epochStateFun
     :$ Shift accountStateT esAccountStateL
@@ -1024,13 +1023,17 @@ accountStateT =
 
 -- | Target for LedgerState
 ledgerStateT ::
-  forall era.
-  (Gov.EraGov era, CertState era ~ ShelleyCertState era, EraCertState era) =>
-  Proof era -> RootTarget era (LedgerState era) (LedgerState era)
+  forall era. Reflect era => Proof era -> RootTarget era (LedgerState era) (LedgerState era)
 ledgerStateT proof =
-  Invert "LedgerState" (typeRep @(LedgerState era)) LedgerState
+  Invert "LedgerState" (typeRep @(LedgerState era)) ledgerStateFun
     :$ Shift (utxoStateT proof) lsUTxOStateL
-    :$ Shift certstateT lsCertStateL
+    :$ Shift certStateT (lsCertStateL . unCertStateFL)
+  where
+    ledgerStateFun ::
+      UTxOState era ->
+      CertStateF era ->
+      LedgerState era
+    ledgerStateFun utxoState (CertStateF _ x) = LedgerState utxoState x
 
 ledgerState :: Reflect era => Term era (LedgerState era)
 ledgerState = Var $ V "ledgerState" (LedgerStateR reify) No
@@ -1063,18 +1066,41 @@ unGovL p = lens (\x -> GovState p x) (\_ (GovState _ y) -> y)
 justProtocolVersion :: forall era. Reflect era => Proof era -> PParams era
 justProtocolVersion proof = newPParams proof [Fields.ProtocolVersion $ protocolVersion proof]
 
--- TODO: think about this
+unCertStateFL :: Reflect era => Lens' (CertState era) (CertStateF era)
+unCertStateFL = lens (CertStateF reify) (\_ (CertStateF _ x) -> x)
+
+certStateFL :: Lens' (CertStateF era) (CertState era)
+certStateFL = lens unCertStateF (\(CertStateF p _) y -> CertStateF p y)
 
 -- | Target for CertState
-certstateT ::
-  forall era.
-  (CertState era ~ ShelleyCertState era, EraCertState era) =>
-  RootTarget era (ShelleyCertState era) (ShelleyCertState era)
-certstateT =
-  Invert "CertState" (typeRep @(ShelleyCertState era)) ShelleyCertState
-    :$ (Shift vstateT certVStateL)
-    :$ (Shift pstateT certPStateL)
-    :$ (Shift dstateT certDStateL)
+certStateT :: forall era. Reflect era => RootTarget era (CertStateF era) (CertStateF era)
+certStateT = case reify @era of
+  Shelley ->
+    Invert "CertState" (typeRep @(CertStateF era)) (CertStateF reify)
+      :$ Shift shelleyCertStateT certStateFL
+  Allegra ->
+    Invert "CertState" (typeRep @(CertStateF era)) (CertStateF reify)
+      :$ Shift shelleyCertStateT certStateFL
+  Mary ->
+    Invert "CertState" (typeRep @(CertStateF era)) (CertStateF reify)
+      :$ Shift shelleyCertStateT certStateFL
+  Alonzo ->
+    Invert "CertState" (typeRep @(CertStateF era)) (CertStateF reify)
+      :$ Shift shelleyCertStateT certStateFL
+  Babbage ->
+    Invert "CertState" (typeRep @(CertStateF era)) (CertStateF reify)
+      :$ Shift shelleyCertStateT certStateFL
+  -- TODO: Add `conwayCertStateT`
+  Conway ->
+    Invert "CertState" (typeRep @(CertStateF era)) (CertStateF reify)
+      :$ Shift shelleyCertStateT certStateFL
+  where
+    shelleyCertStateT :: RootTarget era (ShelleyCertState era) (ShelleyCertState era)
+    shelleyCertStateT =
+      Invert "ShelleyCertState" (typeRep @(ShelleyCertState era)) ShelleyCertState
+        :$ (Shift vstateT shelleyCertVStateL)
+        :$ (Shift pstateT shelleyCertPStateL)
+        :$ (Shift dstateT shelleyCertDStateL)
 
 -- | Target for VState
 vstateT :: forall era. EraCertState era => RootTarget era (VState era) (VState era)
@@ -1745,7 +1771,7 @@ utxoPulse p = Var $ V "utxoPulse" (PairR (MapR TxInR (TxOutR p)) DRepPulserR) No
 -- | an invertable RootTarget to compute a (UtxoPulse era)
 pulsingPairT ::
   forall era.
-  (RunConwayRatify era, Reflect era, EraCertState era) =>
+  (RunConwayRatify era, Reflect era) =>
   Proof era ->
   RootTarget era (UtxoPulse era) (UtxoPulse era)
 pulsingPairT proof =
@@ -1768,7 +1794,7 @@ pulsingPairT proof =
 
 justPulser ::
   forall era.
-  (Reflect era, RunConwayRatify era, EraCertState era) =>
+  (Reflect era, RunConwayRatify era) =>
   Proof era ->
   RootTarget
     era
@@ -1795,7 +1821,7 @@ drepPulser = Var $ V "drepPulser" DRepPulserR No
 
 -- | Predicates that constrain the DRepPuser and all its 'prevXXX' snapshots
 --   These ensure we generate state just passing the epoch boundary
-prevPulsingPreds :: (RunConwayRatify era, Reflect era, EraCertState era) => Proof era -> [Pred era]
+prevPulsingPreds :: (RunConwayRatify era, Reflect era) => Proof era -> [Pred era]
 prevPulsingPreds p =
   [ Sized (ExactSize 0) (Dom enactWithdrawals)
   , Lit CoinR (Coin 0) :=: enactTreasury
@@ -1822,7 +1848,7 @@ prevPulsingPreds p =
 --   from 'drepPulser' :: forall era. Term era (DRepPulser era Identity (RatifyState era))
 pulsingPulsingStateT ::
   forall era.
-  (RunConwayRatify era, Reflect era, EraCertState era) =>
+  (RunConwayRatify era, Reflect era) =>
   RootTarget era (DRepPulsingState era) (DRepPulsingState era)
 pulsingPulsingStateT =
   Invert "DRPulsing" (typeRep @(DRepPulsingState era)) DRPulsing
@@ -2072,7 +2098,7 @@ prevRegPoolsL =
 
 conwayGovStateT ::
   forall era.
-  (RunConwayRatify era, Reflect era, EraCertState era) =>
+  (RunConwayRatify era, Reflect era) =>
   Proof era ->
   RootTarget era (ConwayGovState era) (ConwayGovState era)
 conwayGovStateT p =

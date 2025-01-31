@@ -252,7 +252,6 @@ toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
 -- This function does not register any initial funds or delegates.
 createInitialState ::
   forall era.
-  -- TODO: consider making `EraCertState` part of `EraTransition`
   (EraTransition era, HasCallStack) =>
   TransitionConfig era ->
   NewEpochState era

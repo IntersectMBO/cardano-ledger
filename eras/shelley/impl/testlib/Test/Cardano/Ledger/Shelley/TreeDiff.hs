@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Shelley.TreeDiff (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (EraCertState (..), Obligations)
+import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.AdaPots (AdaPots)
 import Cardano.Ledger.Shelley.CertState (ShelleyCertState)

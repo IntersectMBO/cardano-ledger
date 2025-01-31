@@ -53,7 +53,7 @@ import Cardano.Ledger.Shelley.API (
   Update,
  )
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
+  CertState,
   DState (..),
   UTxOState (..),
   dsGenDelegsL,

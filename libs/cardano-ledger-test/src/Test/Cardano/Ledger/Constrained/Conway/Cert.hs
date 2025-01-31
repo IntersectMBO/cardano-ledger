@@ -66,14 +66,14 @@ delegateeSpec univ = constrained $ \x ->
   , assert $ sizeOf_ x >=. 10
   ]
 
-certStateSpec ::
+shelleyCertStateSpec ::
   forall fn era.
   (IsConwayUniv fn, EraSpecDeleg era, Era era) =>
   WitUniv era ->
   Set (Credential 'DRepRole) ->
   Map (RewardAccount) Coin ->
   Specification fn (ShelleyCertState era)
-certStateSpec univ delegatees wdrls =
+shelleyCertStateSpec univ delegatees wdrls =
   constrained $ \cs ->
     match cs $ \vState pState dState ->
       [ satisfies vState (vStateSpec @fn @era univ delegatees)
@@ -183,25 +183,36 @@ class
   where
   txCertSpec :: WitUniv era -> CertEnv era -> CertState era -> Specification fn (TxCert era)
   txCertKey :: TxCert era -> CertKey
+  certStateSpec ::
+    WitUniv era ->
+    Set (Credential 'DRepRole) ->
+    Map (RewardAccount) Coin ->
+    Specification fn (CertState era)
 
 instance IsConwayUniv fn => EraSpecCert ShelleyEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
+  certStateSpec = shelleyCertStateSpec
 instance IsConwayUniv fn => EraSpecCert AllegraEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
+  certStateSpec = shelleyCertStateSpec
 instance IsConwayUniv fn => EraSpecCert MaryEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
+  certStateSpec = shelleyCertStateSpec
 instance IsConwayUniv fn => EraSpecCert AlonzoEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
+  certStateSpec = shelleyCertStateSpec
 instance IsConwayUniv fn => EraSpecCert BabbageEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
+  certStateSpec = shelleyCertStateSpec
 instance IsConwayUniv fn => EraSpecCert ConwayEra fn where
   txCertSpec = conwayTxCertSpec
   txCertKey = conwayTxCertKey
+  certStateSpec = shelleyCertStateSpec
 
 -- | Used to aggregate the key used in registering a Certificate. Different
 --   certificates use different kinds of Keys, that allows us to use one
@@ -267,7 +278,8 @@ testShelleyCert = do
   delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
   env <- genFromSpec @ConwayFn @(CertEnv era) (certEnvSpec @ConwayFn @era univ)
   dstate <-
-    genFromSpec @ConwayFn @(ShelleyCertState era) (certStateSpec @ConwayFn @era univ delegatees wdrls)
+    genFromSpec @ConwayFn @(ShelleyCertState era)
+      (shelleyCertStateSpec @ConwayFn @era univ delegatees wdrls)
   let spec = shelleyTxCertSpec univ env dstate
   ans <- genFromSpec @ConwayFn spec
   let tag = case ans of
@@ -290,7 +302,8 @@ testConwayCert = do
   delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
   dstate <-
     genFromSpec @ConwayFn @(CertState ConwayEra)
-      (certStateSpec @ConwayFn @ConwayEra univ delegatees wdrls)
+      -- TODO: change to `conwayCertStateSpec` once it's implemented
+      (shelleyCertStateSpec univ delegatees wdrls)
   let spec :: Specification ConwayFn (ConwayTxCert ConwayEra)
       spec = conwayTxCertSpec univ env dstate
   ans <- genFromSpec @ConwayFn spec

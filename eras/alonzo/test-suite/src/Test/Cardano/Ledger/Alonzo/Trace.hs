@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.CertState (EraCertState)
-import Cardano.Ledger.Shelley.LedgerState (CertState (..), UTxOState)
+import Cardano.Ledger.Shelley.LedgerState (CertState, UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv,
   DelplEnv,
