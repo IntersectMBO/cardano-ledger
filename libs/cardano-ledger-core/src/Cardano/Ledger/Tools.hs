@@ -40,7 +40,7 @@ import Cardano.Ledger.Keys (
   WitVKey (..),
   asWitness,
  )
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.State.UTxO (EraUTxO (..), UTxO (..))
 import Data.Bits (Bits (..), shiftR)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS

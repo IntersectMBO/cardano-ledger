@@ -16,7 +16,7 @@ import Cardano.Ledger.Shelley.UTxO (
   getShelleyWitsVKeyNeeded,
   shelleyProducedValue,
  )
-import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
 import Lens.Micro
 
 instance EraUTxO AllegraEra where

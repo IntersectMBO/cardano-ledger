@@ -35,7 +35,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   updateStakeDistribution,
  )
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
-import Cardano.Ledger.UTxO (UTxO)
+import Cardano.Ledger.State (UTxO)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (compile, compute, run)

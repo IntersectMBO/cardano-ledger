@@ -165,4 +165,4 @@ import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyGovState (..))
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)
-import Cardano.Ledger.UTxO (CanGetUTxO (..), CanSetUTxO (..), UTxO (..))
+import Cardano.Ledger.State (CanGetUTxO (..), CanSetUTxO (..), UTxO (..))

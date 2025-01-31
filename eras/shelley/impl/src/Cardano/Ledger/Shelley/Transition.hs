@@ -48,8 +48,8 @@ import Cardano.Ledger.Shelley.Translation (
   FromByronTranslationContext (..),
   toFromByronTranslationContext,
  )
+import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val
 import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, pairs, withObject, (.:))
 import Data.Default

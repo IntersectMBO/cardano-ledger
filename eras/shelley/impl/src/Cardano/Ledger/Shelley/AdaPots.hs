@@ -41,8 +41,8 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.TxBody (unWithdrawals)
+import Cardano.Ledger.State (UTxO (..), coinBalance, txInsFilter, txouts)
 import Cardano.Ledger.UMap (sumRewardsUView)
-import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txInsFilter, txouts)
 import Control.DeepSeq (NFData)
 import Data.Foldable (fold)
 import GHC.Generics (Generic)

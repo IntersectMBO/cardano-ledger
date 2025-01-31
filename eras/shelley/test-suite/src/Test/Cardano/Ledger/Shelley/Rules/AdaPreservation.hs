@@ -63,9 +63,9 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   showMap,
   showWithdrawal,
  )
+import Cardano.Ledger.State (UTxO (..), coinBalance, txInsFilter, txouts)
 import Cardano.Ledger.UMap (sumRewardsUView)
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txInsFilter, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (BHeader (..))
 import Data.Foldable as F (fold, foldl', toList)

@@ -24,8 +24,8 @@ import Cardano.Ledger.Core
 
 -- import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
+import Cardano.Ledger.State (UTxO (..), coinBalance)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val
 import Constrained hiding (Value)
 import Constrained.Base

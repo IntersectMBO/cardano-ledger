@@ -44,9 +44,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   updateStakeDistribution,
  )
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.UMap (CompactForm (..))
 import qualified Cardano.Ledger.UMap as UMap
-import Cardano.Ledger.UTxO (UTxO (..))
 import Constrained hiding (Value)
 import Constrained.Base (Pred (..))
 import Data.Map (Map)

@@ -57,13 +57,13 @@ import Cardano.Ledger.Shelley.Rewards (
   aggregateRewards,
   filterRewards,
  )
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.UMap (
   UMElem,
   UMap (..),
   member,
  )
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Control.Exception (assert)
 import Data.Coerce (coerce)

@@ -21,8 +21,8 @@ import Cardano.Ledger.Credential (
  )
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
+import Cardano.Ledger.State (UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (UTxO))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData (..), deepseq)
 import Criterion

@@ -142,8 +142,8 @@ import Cardano.Ledger.Shelley.TxOut as X (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits as X (
   ShelleyTxWits,
  )
-import Cardano.Ledger.TxIn as X (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO as X (
+import Cardano.Ledger.State as X (
   UTxO (..),
   balance,
  )
+import Cardano.Ledger.TxIn as X (TxId (..), TxIn (..))

@@ -47,9 +47,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   VState (..),
  )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..), coinBalance, unScriptsProvided)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance, unScriptsProvided)
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 import Control.Monad.Reader (runReader)

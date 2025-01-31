@@ -78,7 +78,7 @@ import Cardano.Ledger.Shelley.Rules (
   updateUTxOState,
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
-import Cardano.Ledger.UTxO (
+import Cardano.Ledger.State (
   EraUTxO (..),
   UTxO (..),
   coinBalance,

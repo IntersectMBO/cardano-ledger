@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Cardano.Ledger.UTxO (EraUTxO)
+import Cardano.Ledger.State (EraUTxO)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition

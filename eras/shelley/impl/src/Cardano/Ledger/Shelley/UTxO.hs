@@ -57,8 +57,25 @@ import Cardano.Ledger.Shelley.TxBody (
   Withdrawals (..),
   raCredential,
  )
+import Cardano.Ledger.State as UTxO (
+  CanGetUTxO (..),
+  CanSetUTxO (..),
+  EraUTxO (..),
+  ScriptsProvided (..),
+  UTxO (..),
+  areAllAdaOnly,
+  balance,
+  coinBalance,
+  getScriptHash,
+  sumAllCoin,
+  sumAllValue,
+  txInsFilter,
+  txinLookup,
+  txins,
+  txouts,
+  verifyWitVKey,
+ )
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO as UTxO
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Control.SetAlgebra (eval, (◁))

@@ -32,9 +32,9 @@ import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap
-import Cardano.Ledger.UTxO
 import Data.Functor.Identity
 import Data.TreeDiff.OMap
 import GHC.TypeLits

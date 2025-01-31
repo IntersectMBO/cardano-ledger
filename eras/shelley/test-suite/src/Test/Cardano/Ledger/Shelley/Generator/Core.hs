@@ -79,8 +79,8 @@ import Cardano.Ledger.Slot (
   epochInfoFirst,
   (*-),
  )
+import Cardano.Ledger.State (UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId, TxIn (TxIn))
-import Cardano.Ledger.UTxO (UTxO (UTxO))
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Codec.Serialise (serialise)
 import Control.Monad (replicateM)
