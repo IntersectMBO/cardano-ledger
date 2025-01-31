@@ -19,7 +19,7 @@
 -- Description : Functions and definitions for rules at epoch boundary.
 --
 -- This modules implements the necessary functions for the changes that can happen at epoch boundaries.
-module Cardano.Ledger.EpochBoundary (
+module Cardano.Ledger.State.SnapShots (
   Stake (..),
   sumAllStake,
   sumAllStakeCompact,
