@@ -21,6 +21,7 @@
 
 module Constrained.NumSpecExperiment where
 
+import Constrained.GenericExperiment
 import Constrained.BaseExperiment
 
 import Control.Arrow (first)

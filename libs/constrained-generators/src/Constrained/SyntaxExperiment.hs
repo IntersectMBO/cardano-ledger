@@ -41,6 +41,10 @@
 --    5) Syntacic only transformations
 module Constrained.SyntaxExperiment where
 
+-- import Constrained.GenericExperiment
+import Constrained.WitnessExperiment
+import Constrained.BaseExperiment
+
 import Control.Monad.Writer (Writer, tell)
 import Data.Typeable
 import Constrained.Core(Var(..),eqVar)
@@ -60,9 +64,6 @@ import Data.Semigroup (Any (..))
 import Constrained.Env
 import qualified Data.Semigroup as Semigroup
 import Data.Foldable(fold)
-
-import Constrained.BaseExperiment
-
 
 -- ============================================================
 -- 1) Free variables and variable names
@@ -472,8 +473,8 @@ instance Rename (f a) => Rename (Weighted f a) where
 --             Name in Haskell^      ^  its arguments^   ^ its result
 --                  The type of NotW |
 app ::
-  (FunctionSymbol sym wit as b ) =>
-  wit sym as b ->
+  (FunctionSymbol c sym wit as b ) =>
+  wit c sym as b ->
   FunTy (MapList Term as) (Term b)
 app fn = curryList (App fn)
 
