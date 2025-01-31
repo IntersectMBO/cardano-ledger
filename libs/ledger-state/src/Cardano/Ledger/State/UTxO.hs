@@ -30,7 +30,6 @@ import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap (rewardMap, sPoolMap)
 import qualified Cardano.Ledger.UMap as UM (ptrMap)
-import Cardano.Ledger.UTxO
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))

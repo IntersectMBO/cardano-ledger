@@ -15,7 +15,6 @@ import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default

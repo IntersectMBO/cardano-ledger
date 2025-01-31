@@ -10,6 +10,12 @@
 -- as state transformations on a ledger state ('LedgerState'),
 -- as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 module Cardano.Ledger.Shelley.LedgerState (
+  -- * UTxO
+  UTxO (..),
+  CanGetUTxO (..),
+  CanSetUTxO (..),
+
+  -- * Others to organize
   AccountState (..),
   CertState (..),
   DState (..),
@@ -159,3 +165,4 @@ import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyGovState (..))
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)
+import Cardano.Ledger.UTxO (CanGetUTxO (..), CanSetUTxO (..), UTxO (..))

@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Add `CanGetUTxO` and `CanSetUTxO` type classes
+* Add `CanGetUTxO` and `CanSetUTxO` instances for `UTxO` 
 * Add `DecShareCBOR` instances for `DRep` and `DRepState`
 * Added `ToPlutusData` instance for `NonZero`
 * `maxpool'` now expects `nOpt` to be a `NonZero Word16`
