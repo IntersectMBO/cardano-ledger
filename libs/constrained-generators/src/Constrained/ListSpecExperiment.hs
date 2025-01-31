@@ -43,7 +43,9 @@ import Data.Maybe(maybeToList)
 import Data.Foldable(fold)
 
 -- =====================================================================
- 
+-- STUB requires Foldy instance 
+
+
 data ListSpec fn a = ListSpec
   { listSpecHint :: Maybe Integer
   , listSpecMust :: [a]
