@@ -44,7 +44,7 @@ type Pipeline era = [Stage era]
 
 -- | A pipeline for specifying the LederState
 ledgerPipeline ::
-  (Reflect era, CertState era ~ ShelleyCertState era, EraCertState era) =>
+  (Reflect era, CertState era ~ ShelleyCertState era) =>
   UnivSize -> Proof era -> Pipeline era
 ledgerPipeline sizes proof =
   [ Stage standardOrderInfo (pParamsPreds proof)

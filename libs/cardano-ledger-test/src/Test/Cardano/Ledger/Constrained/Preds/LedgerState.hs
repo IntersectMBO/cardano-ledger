@@ -105,7 +105,7 @@ enactStateCheckPreds _ = []
 
 ledgerStatePreds ::
   forall era.
-  (Reflect era, CertState era ~ ShelleyCertState era, EraCertState era) =>
+  (Reflect era, CertState era ~ ShelleyCertState era) =>
   UnivSize -> Proof era -> [Pred era]
 ledgerStatePreds _usize p =
   [ Subset (Dom enactWithdrawals) credsUniv
@@ -174,7 +174,7 @@ ledgerStatePreds _usize p =
     getOne [] = NoPParamsUpdate
 
 ledgerStateStage ::
-  (Reflect era, CertState era ~ ShelleyCertState era, EraCertState era) =>
+  (Reflect era, CertState era ~ ShelleyCertState era) =>
   UnivSize ->
   Proof era ->
   Subst era ->
@@ -188,7 +188,7 @@ ledgerStateStage usize proof subst0 = do
     Just msg -> error msg
 
 demo ::
-  (Reflect era, CertState era ~ ShelleyCertState era, EraCertState era) =>
+  (Reflect era, CertState era ~ ShelleyCertState era) =>
   Proof era -> ReplMode -> IO ()
 demo proof mode = do
   env <-

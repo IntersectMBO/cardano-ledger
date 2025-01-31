@@ -193,7 +193,6 @@ bodyspec ::
   ( EraSpecTxOut era fn
   , EraSpecCert era fn
   , EraSpecTxCert fn era
-  , EraCertState era
   ) =>
   WitUniv era ->
   CertsEnv era ->
@@ -266,7 +265,6 @@ go2 ::
   , EraSpecTxCert ConwayFn era
   , HasSpec ConwayFn (Tx era)
   , CertState era ~ ShelleyCertState era
-  , EraCertState era
   ) =>
   IO ()
 go2 = do

@@ -85,6 +85,8 @@ class
   govStateSpec :: PParams era -> Specification fn (GovState era)
   newEpochStateSpec :: PParams era -> WitUniv era -> Specification fn (NewEpochState era)
 
+-- TODO: consider adding `certStateSpec`
+
 instance IsConwayUniv fn => EraSpecLedger ShelleyEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUTxO

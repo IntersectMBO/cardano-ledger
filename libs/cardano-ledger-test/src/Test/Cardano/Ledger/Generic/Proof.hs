@@ -50,6 +50,7 @@ module Test.Cardano.Ledger.Generic.Proof (
   UTxOWit (..),
   ScriptWit (..),
   GovStateWit (..),
+  CertStateWit (..),
   whichValue,
   whichTxOut,
   whichTxCert,
@@ -57,6 +58,7 @@ module Test.Cardano.Ledger.Generic.Proof (
   whichUTxO,
   whichScript,
   whichGovState,
+  whichCertState,
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
@@ -145,7 +147,6 @@ class
   , EraScript era
   , ShelleyEraTxCert era
   , EraCertState era
-  , CertState era ~ ShelleyCertState era
   ) =>
   Reflect era
   where
@@ -551,3 +552,18 @@ whichGovState Mary = GovStateShelleyToBabbage
 whichGovState Alonzo = GovStateShelleyToBabbage
 whichGovState Babbage = GovStateShelleyToBabbage
 whichGovState Conway = GovStateConwayToConway
+
+data CertStateWit era where
+  CertStateShelleyToBabbage ::
+    (EraCertState era, CertState era ~ ShelleyCertState era) => CertStateWit era
+
+-- TODO: Add `CertStateConwayToConway` when Conway related fields are removed from `ShelleyCertState`
+
+whichCertState :: Proof era -> CertStateWit era
+whichCertState Shelley = CertStateShelleyToBabbage
+whichCertState Allegra = CertStateShelleyToBabbage
+whichCertState Mary = CertStateShelleyToBabbage
+whichCertState Alonzo = CertStateShelleyToBabbage
+whichCertState Babbage = CertStateShelleyToBabbage
+-- TODO: Add `CertStateConwayToConway`, see above
+whichCertState Conway = CertStateShelleyToBabbage

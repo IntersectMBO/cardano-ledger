@@ -228,10 +228,10 @@ uTxOStateZero =
 pParamsZero :: Reflect era => PParams era
 pParamsZero = lift pParamsZeroByProof
 
-ledgerStateZero :: forall era. (Reflect era, EraCertState era) => LedgerState era
+ledgerStateZero :: forall era. Reflect era => LedgerState era
 ledgerStateZero = LedgerState uTxOStateZero dPStateZero
 
-epochStateZero :: (Reflect era, EraCertState era) => EpochState era
+epochStateZero :: Reflect era => EpochState era
 epochStateZero =
   EpochState
     accountStateZero
@@ -241,7 +241,7 @@ epochStateZero =
     & curPParamsEpochStateL .~ pParamsZero
     & prevPParamsEpochStateL .~ pParamsZero
 
-newEpochStateZero :: forall era. (Reflect era, EraCertState era) => NewEpochState era
+newEpochStateZero :: forall era. Reflect era => NewEpochState era
 newEpochStateZero =
   NewEpochState
     (EpochNo 0)

@@ -95,7 +95,7 @@ vstateCheckPreds :: Proof era -> [Pred era]
 vstateCheckPreds _p = []
 
 vstateStage ::
-  (Reflect era, EraCertState era) =>
+  Reflect era =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
@@ -166,7 +166,7 @@ pstateCheckPreds _ =
   ]
 
 pstateStage ::
-  (Reflect era, EraCertState era) =>
+  Reflect era =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
@@ -308,7 +308,7 @@ certStateCheckPreds p =
   ]
 
 dstateStage ::
-  (Reflect era, EraCertState era) =>
+  Reflect era =>
   Proof era ->
   Subst era ->
   Gen (Subst era)

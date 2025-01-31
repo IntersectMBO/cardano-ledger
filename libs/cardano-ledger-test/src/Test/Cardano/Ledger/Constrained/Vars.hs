@@ -1737,7 +1737,7 @@ utxoPulse p = Var $ V "utxoPulse" (PairR (MapR TxInR (TxOutR p)) DRepPulserR) No
 -- | an invertable RootTarget to compute a (UtxoPulse era)
 pulsingPairT ::
   forall era.
-  (RunConwayRatify era, Reflect era, EraCertState era) =>
+  (RunConwayRatify era, Reflect era) =>
   Proof era ->
   RootTarget era (UtxoPulse era) (UtxoPulse era)
 pulsingPairT proof =
@@ -1760,7 +1760,7 @@ pulsingPairT proof =
 
 justPulser ::
   forall era.
-  (Reflect era, RunConwayRatify era, EraCertState era) =>
+  (Reflect era, RunConwayRatify era) =>
   Proof era ->
   RootTarget
     era
@@ -1787,7 +1787,7 @@ drepPulser = Var $ V "drepPulser" DRepPulserR No
 
 -- | Predicates that constrain the DRepPuser and all its 'prevXXX' snapshots
 --   These ensure we generate state just passing the epoch boundary
-prevPulsingPreds :: (RunConwayRatify era, Reflect era, EraCertState era) => Proof era -> [Pred era]
+prevPulsingPreds :: (RunConwayRatify era, Reflect era) => Proof era -> [Pred era]
 prevPulsingPreds p =
   [ Sized (ExactSize 0) (Dom enactWithdrawals)
   , Lit CoinR (Coin 0) :=: enactTreasury
@@ -1814,7 +1814,7 @@ prevPulsingPreds p =
 --   from 'drepPulser' :: forall era. Term era (DRepPulser era Identity (RatifyState era))
 pulsingPulsingStateT ::
   forall era.
-  (RunConwayRatify era, Reflect era, EraCertState era) =>
+  (RunConwayRatify era, Reflect era) =>
   RootTarget era (DRepPulsingState era) (DRepPulsingState era)
 pulsingPulsingStateT =
   Invert "DRPulsing" (typeRep @(DRepPulsingState era)) DRPulsing
@@ -2064,7 +2064,7 @@ prevRegPoolsL =
 
 conwayGovStateT ::
   forall era.
-  (RunConwayRatify era, Reflect era, EraCertState era) =>
+  (RunConwayRatify era, Reflect era) =>
   Proof era ->
   RootTarget era (ConwayGovState era) (ConwayGovState era)
 conwayGovStateT p =
