@@ -20,9 +20,9 @@ import Cardano.Ledger.Shelley.Genesis (
   mkShelleyGlobals,
  )
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State
 import Cardano.Ledger.State.UTxO (CurrentEra, readNewEpochState)
 import Cardano.Ledger.UMap
-import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)

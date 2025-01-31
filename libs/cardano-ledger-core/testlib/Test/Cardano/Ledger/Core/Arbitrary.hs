@@ -114,6 +114,7 @@ import Cardano.Ledger.PoolParams (
   SizeOfPoolRelays (..),
   StakePoolRelay (..),
  )
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
@@ -123,7 +124,6 @@ import Cardano.Ledger.UMap (
   unUnify,
   unify,
  )
-import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
 import Control.Monad.Trans.Fail.String (errorFail)

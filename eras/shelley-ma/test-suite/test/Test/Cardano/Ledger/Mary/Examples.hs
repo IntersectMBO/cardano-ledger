@@ -12,7 +12,7 @@ import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), smartUTxOState)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.UTxO (UTxO)
+import Cardano.Ledger.State (UTxO)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty)

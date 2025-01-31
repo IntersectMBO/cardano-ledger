@@ -109,8 +109,8 @@ import Cardano.Ledger.Plutus.TxInfo (
 import qualified Cardano.Ledger.Plutus.TxInfo as TxInfo
 import Cardano.Ledger.PoolParams
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
+import Cardano.Ledger.State (UTxO)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO (UTxO)
 import Control.Arrow (ArrowChoice (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)

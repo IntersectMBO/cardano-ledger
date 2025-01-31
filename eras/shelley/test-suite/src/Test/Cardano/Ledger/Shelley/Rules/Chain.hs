@@ -80,8 +80,8 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTickPredFailure,
  )
 import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Ledger.State (UTxO (..))
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
   HashHeader,

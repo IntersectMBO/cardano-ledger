@@ -23,7 +23,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import Constrained hiding (Value)
 import Data.Kind (Type)
 import Data.Map (Map)

@@ -30,8 +30,8 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types (curPParamsEpochStateL, prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
+import Cardano.Ledger.State (coinBalance)
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val (zero, (<->))
 import qualified Data.ByteString.Short as SBS
 import Data.Default (def)

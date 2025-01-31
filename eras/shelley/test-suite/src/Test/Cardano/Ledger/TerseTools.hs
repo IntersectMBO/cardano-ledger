@@ -14,8 +14,8 @@ import Cardano.Ledger.Credential (
   StakeReference (..),
  )
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..))
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Data.Map.Strict as Map
 
 -- ====================================================

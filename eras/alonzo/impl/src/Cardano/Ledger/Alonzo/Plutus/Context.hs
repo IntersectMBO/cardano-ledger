@@ -46,7 +46,7 @@ import Cardano.Ledger.Plutus (
   PlutusScriptContext,
   PlutusWithContext (..),
  )
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)

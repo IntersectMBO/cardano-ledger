@@ -110,9 +110,9 @@ import Cardano.Ledger.Shelley.Rules (
   shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
+import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.UMap (UView (..))
 import qualified Cardano.Ledger.UMap as UMap
-import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, void, when)
 import Control.State.Transition.Extended (

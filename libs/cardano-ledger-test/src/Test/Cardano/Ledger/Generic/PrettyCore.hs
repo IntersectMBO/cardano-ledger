@@ -254,6 +254,7 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
+import Cardano.Ledger.State (ScriptsNeeded, UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
@@ -265,7 +266,6 @@ import Cardano.Ledger.UMap (
   sPoolMap,
  )
 import qualified Cardano.Ledger.UMap as UM (UMap, UView (..), size)
-import Cardano.Ledger.UTxO (ScriptsNeeded, UTxO (..))
 import qualified Cardano.Ledger.Val as Val
 import Codec.Binary.Bech32
 import Control.Monad.Identity (Identity)

@@ -45,7 +45,7 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEnv (..),
   ShelleyPOOL,
  )
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (
   BHeader (..),

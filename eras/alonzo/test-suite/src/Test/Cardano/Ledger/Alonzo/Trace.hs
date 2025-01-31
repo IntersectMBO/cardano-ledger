@@ -26,7 +26,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyDelplPredFailure,
   UtxoEnv,
  )
-import Cardano.Ledger.UTxO (EraUTxO)
+import Cardano.Ledger.State (EraUTxO)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition

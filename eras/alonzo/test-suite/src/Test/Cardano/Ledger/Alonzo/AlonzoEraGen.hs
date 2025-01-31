@@ -73,14 +73,14 @@ import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (
+import Cardano.Ledger.State (
   EraUTxO (..),
   UTxO (..),
   coinBalance,
   getScriptsNeeded,
   txInsFilter,
  )
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
 import Control.Monad (replicateM)
 import qualified Data.List as List

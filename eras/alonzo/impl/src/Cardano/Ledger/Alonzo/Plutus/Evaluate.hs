@@ -48,8 +48,8 @@ import Cardano.Ledger.Plutus.Evaluate (
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
+import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)

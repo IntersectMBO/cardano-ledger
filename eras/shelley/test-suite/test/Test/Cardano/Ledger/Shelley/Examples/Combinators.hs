@@ -87,6 +87,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards, votedFuturePParams)
+import Cardano.Ledger.State (UTxO (..), txins, txouts)
 import Cardano.Ledger.UMap (
   RDPair (..),
   UView (PtrUView, RewDepUView, SPoolUView),
@@ -94,7 +95,6 @@ import Cardano.Ledger.UMap (
   unUView,
  )
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),

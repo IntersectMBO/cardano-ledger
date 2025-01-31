@@ -50,8 +50,8 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPpupPredFailure,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..), txouts)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import Control.DeepSeq (NFData)

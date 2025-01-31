@@ -65,6 +65,7 @@ library
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash
     Cardano.Ledger.Slot
+    Cardano.Ledger.State
     Cardano.Ledger.Tools
     Cardano.Ledger.TxIn
     Cardano.Ledger.UMap

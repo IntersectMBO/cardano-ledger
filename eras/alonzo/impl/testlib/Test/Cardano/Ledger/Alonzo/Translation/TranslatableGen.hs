@@ -27,7 +27,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (eraMaxLanguage))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)

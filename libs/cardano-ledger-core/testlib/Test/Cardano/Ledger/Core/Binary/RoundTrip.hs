@@ -40,7 +40,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys.Bootstrap
-import Cardano.Ledger.UTxO
+import Cardano.Ledger.State
 import Control.State.Transition.Extended (STS (..))
 import Data.Typeable
 import GHC.TypeLits (Symbol)

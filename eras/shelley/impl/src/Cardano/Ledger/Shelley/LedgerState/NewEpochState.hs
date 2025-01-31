@@ -24,8 +24,8 @@ import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
+import Cardano.Ledger.State (UTxO (..), coinBalance)
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Default (def)
 import Data.Foldable (fold)

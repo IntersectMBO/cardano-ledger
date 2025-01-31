@@ -32,7 +32,7 @@ import Cardano.Ledger.Plutus (
   PlutusWithContext (..),
   hashPlutusScript,
  )
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))

@@ -85,7 +85,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.UTxO (getProducedValue)
-import Cardano.Ledger.UTxO (EraUTxO (getConsumedValue), UTxO)
+import Cardano.Ledger.State (EraUTxO (getConsumedValue), UTxO)
 import Cardano.Ledger.Val ((<->))
 import Lens.Micro (Lens', lens)
 

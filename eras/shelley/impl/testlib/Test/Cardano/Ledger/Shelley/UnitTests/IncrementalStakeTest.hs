@@ -22,10 +22,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   psStakePoolParamsL,
   updateStakeDistribution,
  )
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UMap (RDPair (..), rdRewardCoin)
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MonoTuple (TupleN)

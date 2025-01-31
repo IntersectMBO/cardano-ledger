@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   NewEpochState (..),
  )
-import Cardano.Ledger.UTxO (EraUTxO)
+import Cardano.Ledger.State (EraUTxO)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended

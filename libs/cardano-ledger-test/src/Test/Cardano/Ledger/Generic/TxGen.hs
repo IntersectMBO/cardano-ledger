@@ -74,8 +74,8 @@ import Cardano.Ledger.Shelley.TxCert (
   pattern UnRegTxCert,
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (forM, replicateM)
