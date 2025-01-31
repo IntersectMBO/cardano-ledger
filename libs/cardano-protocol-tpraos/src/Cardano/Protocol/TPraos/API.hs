@@ -62,7 +62,6 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), coerceKeyRole)
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -75,6 +74,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.State (PoolDistr (..), individualPoolStake)
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody,

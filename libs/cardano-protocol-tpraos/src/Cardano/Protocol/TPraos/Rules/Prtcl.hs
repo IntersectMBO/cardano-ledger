@@ -38,8 +38,8 @@ import Cardano.Ledger.Binary.Plain (
   encodeListLen,
  )
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
+import Cardano.Ledger.State (PoolDistr)
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),

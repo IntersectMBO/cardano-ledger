@@ -38,7 +38,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Genesis (EraGenesis)
 import Cardano.Ledger.Keys
-import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.Governance

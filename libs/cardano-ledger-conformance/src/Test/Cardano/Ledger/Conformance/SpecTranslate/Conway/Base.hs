@@ -72,7 +72,6 @@ import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Plutus (CostModels, ExUnits (..), Prices)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Rules (Identity)
 import Cardano.Ledger.Shelley.Scripts (
@@ -81,7 +80,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (IndividualPoolStake (..), PoolDistr (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (fromCompact)
 import Cardano.Ledger.Val (Val (..))

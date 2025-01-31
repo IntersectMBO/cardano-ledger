@@ -9,9 +9,8 @@
 module Test.Cardano.Ledger.Constrained.Preds.NewEpochState where
 
 import Cardano.Ledger.Core (Era)
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Core (EraGov)
-import Cardano.Ledger.State (SnapShot (..), Stake (..), calculatePoolDistr)
+import Cardano.Ledger.State (PoolDistr (..), SnapShot (..), Stake (..), calculatePoolDistr)
 import qualified Cardano.Ledger.UMap as UMap
 import Control.Monad (when)
 import Data.Default (Default (def))

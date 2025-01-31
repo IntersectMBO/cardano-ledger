@@ -79,7 +79,6 @@ import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..), poolDistrDistrL)
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Shelley.Governance (FuturePParams (..), futureProposalsL, proposalsL)
 import qualified Cardano.Ledger.Shelley.Governance as Gov
@@ -99,7 +98,14 @@ import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
-import Cardano.Ledger.State (SnapShot (..), SnapShots (..), Stake (..))
+import Cardano.Ledger.State (
+  IndividualPoolStake (..),
+  PoolDistr (..),
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
+  poolDistrDistrL,
+ )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, sPoolMap, unify)
 import Cardano.Ledger.Val (Val (..))

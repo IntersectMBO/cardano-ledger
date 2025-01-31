@@ -67,9 +67,9 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..), individualTotalPoolStake)
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.State (PoolDistr (..), individualTotalPoolStake)
 import Cardano.Ledger.Val (Val (..), (<+>))
 import Control.State.Transition.Extended (
   Embed (..),

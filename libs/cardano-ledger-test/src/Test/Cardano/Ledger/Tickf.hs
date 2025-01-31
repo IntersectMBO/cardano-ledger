@@ -10,10 +10,15 @@ module Test.Cardano.Ledger.Tickf (oldCalculatePoolDistr, calcPoolDistOldEqualsNe
 import Cardano.Ledger.Coin (Coin (Coin), CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppVrf))
 import Cardano.Ledger.Shelley.Rules (calculatePoolDistr)
-import Cardano.Ledger.State (SnapShot (..), Stake (..), sumAllStake)
+import Cardano.Ledger.State (
+  IndividualPoolStake (..),
+  PoolDistr (..),
+  SnapShot (..),
+  Stake (..),
+  sumAllStake,
+ )
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.VMap as VMap

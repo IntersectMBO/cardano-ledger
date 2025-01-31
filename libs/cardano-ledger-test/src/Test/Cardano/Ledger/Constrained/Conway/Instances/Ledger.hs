@@ -105,7 +105,6 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.Language
-import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
 import Cardano.Ledger.Shelley.PoolRank

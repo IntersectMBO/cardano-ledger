@@ -220,7 +220,6 @@ import Cardano.Ledger.Conway.Governance.Proposals
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppRewardAccount))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
@@ -246,6 +245,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   vsCommitteeStateL,
   vsDReps,
  )
+import Cardano.Ledger.State (PoolDistr (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
