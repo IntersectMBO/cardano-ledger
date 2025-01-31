@@ -13,10 +13,10 @@ import Cardano.Ledger.Babbage.TxOut (internBabbageTxOut)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core (TxOut, emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
-import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, prevPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import qualified Cardano.Ledger.State as State
 import Cardano.Ledger.State.Orphans
 import Cardano.Ledger.State.Schema
 import Cardano.Ledger.State.Transform
@@ -135,11 +135,11 @@ insertSnapShot ::
   MonadIO m =>
   Key EpochState ->
   SnapShotType ->
-  EpochBoundary.SnapShot ->
+  State.SnapShot ->
   ReaderT SqlBackend m ()
-insertSnapShot snapShotEpochStateId snapShotType EpochBoundary.SnapShot {..} = do
+insertSnapShot snapShotEpochStateId snapShotType State.SnapShot {..} = do
   snapShotId <- insert $ SnapShot {snapShotType, snapShotEpochStateId}
-  VG.forM_ (VMap.unVMap (EpochBoundary.unStake ssStake)) $ \(cred, c) -> do
+  VG.forM_ (VMap.unVMap (State.unStake ssStake)) $ \(cred, c) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (SnapShotStake snapShotId credId c)
   VG.forM_ (VMap.unVMap ssDelegations) $ \(cred, spKeyHash) -> do
@@ -153,9 +153,9 @@ insertSnapShot snapShotEpochStateId snapShotType EpochBoundary.SnapShot {..} = d
 insertSnapShots ::
   MonadIO m =>
   Key EpochState ->
-  EpochBoundary.SnapShots ->
+  State.SnapShots ->
   ReaderT SqlBackend m ()
-insertSnapShots epochStateKey EpochBoundary.SnapShots {..} = do
+insertSnapShots epochStateKey State.SnapShots {..} = do
   mapM_
     (uncurry (insertSnapShot epochStateKey))
     [ (SnapShotMark, ssStakeMark)
@@ -174,7 +174,7 @@ insertEpochState es@Shelley.EpochState {..} = do
         , epochStatePrevPp = es ^. prevPParamsEpochStateL
         , epochStatePp = es ^. curPParamsEpochStateL
         , epochStateNonMyopic = esNonMyopic
-        , epochStateSnapShotsFee = EpochBoundary.ssFee esSnapshots
+        , epochStateSnapShotsFee = State.ssFee esSnapshots
         }
   insertSnapShots epochStateKey esSnapshots
   insertLedgerState epochStateKey esLState
@@ -323,7 +323,7 @@ getSnapShotNoSharing ::
   MonadResource m =>
   Key EpochState ->
   SnapShotType ->
-  ReaderT SqlBackend m EpochBoundary.SnapShot
+  ReaderT SqlBackend m State.SnapShot
 getSnapShotNoSharing epochStateId snapShotType = do
   snapShotId <-
     selectFirst
@@ -347,8 +347,8 @@ getSnapShotNoSharing epochStateId snapShotType = do
       KeyHash keyHash <- getJust snapShotPoolKeyHashId
       pure (Keys.coerceKeyRole keyHash, snapShotPoolParams)
   pure
-    EpochBoundary.SnapShot
-      { ssStake = EpochBoundary.Stake stake
+    State.SnapShot
+      { ssStake = State.Stake stake
       , ssDelegations = delegations
       , ssPoolParams = poolParams
       }
@@ -357,15 +357,15 @@ getSnapShotNoSharing epochStateId snapShotType = do
 getSnapShotsNoSharing ::
   MonadResource m =>
   Entity EpochState ->
-  ReaderT SqlBackend m EpochBoundary.SnapShots
+  ReaderT SqlBackend m State.SnapShots
 getSnapShotsNoSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
   mark <- getSnapShotNoSharing epochStateId SnapShotMark
   set <- getSnapShotNoSharing epochStateId SnapShotSet
   go <- getSnapShotNoSharing epochStateId SnapShotGo
   pure $
-    EpochBoundary.SnapShots
+    State.SnapShots
       { ssStakeMark = mark
-      , ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark
+      , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
       , ssStakeSet = set
       , ssStakeGo = go
       , ssFee = epochStateSnapShotsFee
@@ -391,20 +391,20 @@ getSnapShotsNoSharingM (Entity epochStateId EpochState {epochStateSnapShotsFee})
 
 getSnapShotWithSharing ::
   MonadResource m =>
-  [EpochBoundary.SnapShot] ->
+  [State.SnapShot] ->
   Key EpochState ->
   SnapShotType ->
-  ReaderT SqlBackend m EpochBoundary.SnapShot
+  ReaderT SqlBackend m State.SnapShot
 getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
   let internOtherStakes =
         interns
-          (foldMap (internsFromVMap . EpochBoundary.unStake . EpochBoundary.ssStake) otherSnapShots)
+          (foldMap (internsFromVMap . State.unStake . State.ssStake) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherPoolParams =
-        interns (foldMap (internsFromVMap . EpochBoundary.ssPoolParams) otherSnapShots)
+        interns (foldMap (internsFromVMap . State.ssPoolParams) otherSnapShots)
           . Keys.coerceKeyRole
   let internOtherDelegations =
-        interns (foldMap (internsFromVMap . EpochBoundary.ssDelegations) otherSnapShots)
+        interns (foldMap (internsFromVMap . State.ssDelegations) otherSnapShots)
           . Keys.coerceKeyRole
   snapShotId <-
     selectFirst
@@ -428,8 +428,8 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
       pure (internOtherDelegations credential, internPoolParams keyHash)
   pure
-    EpochBoundary.SnapShot
-      { ssStake = EpochBoundary.Stake stake
+    State.SnapShot
+      { ssStake = State.Stake stake
       , ssDelegations = delegations
       , ssPoolParams = poolParams
       }
@@ -438,15 +438,15 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
 getSnapShotsWithSharing ::
   MonadResource m =>
   Entity EpochState ->
-  ReaderT SqlBackend m EpochBoundary.SnapShots
+  ReaderT SqlBackend m State.SnapShots
 getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}) = do
   mark <- getSnapShotWithSharing [] epochStateId SnapShotMark
   set <- getSnapShotWithSharing [mark] epochStateId SnapShotSet
   go <- getSnapShotWithSharing [mark, set] epochStateId SnapShotGo
   pure $
-    EpochBoundary.SnapShots
+    State.SnapShots
       { ssStakeMark = mark
-      , ssStakeMarkPoolDistr = EpochBoundary.calculatePoolDistr mark
+      , ssStakeMarkPoolDistr = State.calculatePoolDistr mark
       , ssStakeSet = set
       , ssStakeGo = go
       , ssFee = epochStateSnapShotsFee
@@ -767,12 +767,12 @@ loadEpochStateWithSharing fp = runSqlite fp $ do
       & curPParamsEpochStateL .~ epochStatePp
 
 loadSnapShotsNoSharing ::
-  MonadUnliftIO m => T.Text -> Entity EpochState -> m EpochBoundary.SnapShots
+  MonadUnliftIO m => T.Text -> Entity EpochState -> m State.SnapShots
 loadSnapShotsNoSharing fp = runSqlite fp . getSnapShotsNoSharing
 {-# INLINEABLE loadSnapShotsNoSharing #-}
 
 loadSnapShotsWithSharing ::
-  MonadUnliftIO m => T.Text -> Entity EpochState -> m EpochBoundary.SnapShots
+  MonadUnliftIO m => T.Text -> Entity EpochState -> m State.SnapShots
 loadSnapShotsWithSharing fp = runSqlite fp . getSnapShotsWithSharing
 {-# INLINEABLE loadSnapShotsWithSharing #-}
 

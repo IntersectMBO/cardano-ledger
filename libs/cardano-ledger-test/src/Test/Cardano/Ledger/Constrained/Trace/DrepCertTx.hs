@@ -26,7 +26,6 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.DRep hiding (drepDeposit)
-import Cardano.Ledger.EpochBoundary (ssStakeMarkPoolDistrL)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -43,6 +42,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   utxosGovStateL,
  )
+import Cardano.Ledger.State (ssStakeMarkPoolDistrL)
 import qualified Cardano.Ledger.UMap as UMap
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map

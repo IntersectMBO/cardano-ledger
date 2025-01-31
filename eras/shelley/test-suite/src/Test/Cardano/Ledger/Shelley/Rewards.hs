@@ -55,13 +55,6 @@ import Cardano.Ledger.Coin (
  )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.EpochBoundary (
-  Stake (..),
-  maxPool,
-  poolStake,
-  sumAllStake,
-  sumStakePerPool,
- )
 import Cardano.Ledger.Keys (VKey (..))
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
@@ -108,6 +101,13 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Slot (epochInfoSize)
+import Cardano.Ledger.State (
+  Stake (..),
+  maxPool,
+  poolStake,
+  sumAllStake,
+  sumStakePerPool,
+ )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
 import Cardano.Protocol.Crypto (VRF, hashVerKeyVRF)

@@ -12,7 +12,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core (EraTxOut, emptyPParams, mkCoinTxOut)
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
-import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -22,7 +21,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   psStakePoolParamsL,
   updateStakeDistribution,
  )
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (SnapShot (..), Stake (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UMap (RDPair (..), rdRewardCoin)
 import qualified Cardano.Ledger.UMap as UM

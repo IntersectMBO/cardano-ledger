@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Move `Cardano.Ledger.SnapShots` module contents into `Cardano.Ledger.State` and deprecated the former
 * Move `Cardano.Ledger.UTxO` module contents into `Cardano.Ledger.State` and deprecated the former
 * Add `CanGetUTxO` and `CanSetUTxO` type classes
 * Add `CanGetUTxO` and `CanSetUTxO` instances for `UTxO` 

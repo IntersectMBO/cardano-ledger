@@ -25,7 +25,6 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
-import Cardano.Ledger.EpochBoundary (SnapShots (..), calculatePoolDistr)
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -46,7 +45,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersPredFailure (..),
   ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
  )
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (SnapShots (..), UTxO (..), calculatePoolDistr)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)

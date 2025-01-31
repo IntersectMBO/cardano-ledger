@@ -36,7 +36,6 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Genesis (EraGenesis)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr

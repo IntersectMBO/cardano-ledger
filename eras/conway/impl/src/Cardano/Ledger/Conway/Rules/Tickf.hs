@@ -13,10 +13,10 @@ where
 import Cardano.Ledger.BaseTypes (ShelleyBase, SlotNo)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMarkPoolDistr))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (solidifyNextEpochPParams)
+import Cardano.Ledger.State (SnapShots (ssStakeMarkPoolDistr))
 import Control.State.Transition
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))

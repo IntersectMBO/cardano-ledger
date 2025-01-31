@@ -14,7 +14,6 @@ import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -23,7 +22,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (SnapShots (..), UTxO (..))
 import Constrained hiding (Value)
 import Data.Kind (Type)
 import Data.Map (Map)

@@ -11,9 +11,9 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (..))
 import Cardano.Ledger.Binary (EncCBOR, lengthThreshold)
 import Cardano.Ledger.Binary.Plain
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import Test.Cardano.Ledger.Binary.Plain.Golden

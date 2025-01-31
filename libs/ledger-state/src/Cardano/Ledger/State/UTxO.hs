@@ -20,13 +20,13 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys hiding (Hash)
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap (rewardMap, sPoolMap)
 import qualified Cardano.Ledger.UMap as UM (ptrMap)

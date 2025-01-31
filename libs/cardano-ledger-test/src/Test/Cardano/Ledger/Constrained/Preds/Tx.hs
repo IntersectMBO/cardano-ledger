@@ -116,7 +116,7 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
 import Cardano.Ledger.DRep (drepDepositL)
-import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..), calculatePoolDistr)
+import Cardano.Ledger.State (SnapShot (..), Stake (..), calculatePoolDistr)
 import qualified Cardano.Ledger.UMap as UMap
 import qualified Data.VMap as VMap
 import qualified Test.Cardano.Ledger.Constrained.Preds.CertState as CertState
