@@ -58,7 +58,6 @@ import Cardano.Ledger.Shelley.API (
   StakeReference (..),
   Withdrawals (..),
  )
-import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
   ShelleyEraScript,
@@ -847,7 +846,7 @@ getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegDelegCert cred _ _)) = Ju
 getConwayTxCertCredential (ConwayTxCertGov _) = Nothing
 
 genWithdrawals ::
-  Reflect era => SlotNo -> GenRS era (Withdrawals, RewardAccounts)
+  Reflect era => SlotNo -> GenRS era (Withdrawals, Map (Credential 'Staking) Coin)
 genWithdrawals slot =
   if epochFromSlotNo slot == EpochNo 0
     then do

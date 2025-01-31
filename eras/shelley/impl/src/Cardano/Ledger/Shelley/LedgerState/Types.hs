@@ -94,6 +94,7 @@ import Numeric.Natural (Natural)
 
 type RewardAccounts =
   Map (Credential 'Staking) Coin
+{-# DEPRECATED RewardAccounts "In favor of `Map` (`Credential` `Staking`) `Coin`" #-}
 
 data AccountState = AccountState
   { asTreasury :: !Coin
