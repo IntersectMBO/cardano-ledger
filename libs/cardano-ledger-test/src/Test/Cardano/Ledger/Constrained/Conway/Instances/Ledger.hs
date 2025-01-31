@@ -124,7 +124,6 @@ import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
-import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
 import Constrained hiding (Sized, Value)
 import Constrained qualified as C

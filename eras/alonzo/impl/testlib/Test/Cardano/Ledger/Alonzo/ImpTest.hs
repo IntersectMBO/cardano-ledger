@@ -81,10 +81,8 @@ import Cardano.Ledger.Plutus (
  )
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
-  esLStateL,
-  lsUTxOStateL,
   nesEsL,
-  utxosUtxoL,
+  utxoL,
  )
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..), txouts)
 import Cardano.Ledger.TxIn (TxIn)
@@ -162,7 +160,7 @@ impGetPlutusContexts ::
   ImpTestM era [(PlutusPurpose AsIxItem era, ScriptHash, ScriptTestContext)]
 impGetPlutusContexts tx = do
   let txBody = tx ^. bodyTxL
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getsNES utxoL
   let AlonzoScriptsNeeded asn = getScriptsNeeded utxo txBody
   mbyContexts <- forM asn $ \(prp, sh) -> do
     pure $ (prp,sh,) <$> impGetScriptContextMaybe @era sh
@@ -529,7 +527,7 @@ expectTxSuccess ::
   Tx era -> ImpTestM era ()
 expectTxSuccess tx
   | tx ^. isValidTxL == IsValid True = do
-      utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+      utxo <- getsNES utxoL
       let inputs = Set.toList $ tx ^. bodyTxL . inputsTxBodyL
           outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL
       impAnn "Inputs should be gone from UTxO" $
@@ -537,7 +535,7 @@ expectTxSuccess tx
       impAnn "Outputs should be in UTxO" $
         expectUTxOContent utxo [(txIn, (== Just txOut)) | (txIn, txOut) <- outputs]
   | otherwise = do
-      utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+      utxo <- getsNES utxoL
       let inputs = tx ^. bodyTxL . inputsTxBodyL
           collaterals = tx ^. bodyTxL . collateralInputsTxBodyL
           outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL

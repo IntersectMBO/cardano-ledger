@@ -169,6 +169,7 @@ import Cardano.Ledger.Shelley.Genesis (
   validateGenesis,
  )
 import Cardano.Ledger.Shelley.LedgerState (
+  CanSetUTxO (..),
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
@@ -186,7 +187,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   prevPParamsEpochStateL,
   produced,
   utxosDonationL,
-  utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
@@ -584,8 +584,7 @@ defaultInitImpTestState nes = do
     rootCoin = Coin (toInteger (sgMaxLovelaceSupply shelleyGenesis))
     rootTxIn :: TxIn
     rootTxIn = TxIn (mkTxId 0) minBound
-    nesWithRoot =
-      nes & nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL <>~ UTxO (Map.singleton rootTxIn rootTxOut)
+    nesWithRoot = nes & utxoL <>~ UTxO (Map.singleton rootTxIn rootTxOut)
   prepState <- get
   let epochInfoE =
         fixedEpochInfo
@@ -779,7 +778,7 @@ impWitsVKeyNeeded txBody = do
       bootAddrs = Set.fromList $ mapMaybe toBootAddr $ Set.toList (txBody ^. spendableInputsTxBodyF)
       bootKeyHashes = Set.map (coerceKeyRole . bootstrapKeyHash) bootAddrs
       allKeyHashes =
-        getWitsVKeyNeeded (ls ^. lsCertStateL) (ls ^. lsUTxOStateL . utxosUtxoL) txBody
+        getWitsVKeyNeeded (ls ^. lsCertStateL) (ls ^. utxoL) txBody
   pure (bootAddrs, allKeyHashes Set.\\ bootKeyHashes)
 
 data ImpTestEnv era = ImpTestEnv
@@ -1046,7 +1045,7 @@ shelleyFixupTx =
 logFeeMismatch :: (EraGov era, EraUTxO era, HasCallStack) => Tx era -> ImpTestM era ()
 logFeeMismatch tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getsNES utxoL
   let Coin feeUsed = tx ^. bodyTxL . feeTxBodyL
       Coin feeMin = getMinFeeTxUtxo pp tx utxo
   when (feeUsed /= feeMin) $ do
@@ -1442,7 +1441,7 @@ getsNES :: SimpleGetter (NewEpochState era) a -> ImpTestM era a
 getsNES l = gets . view $ impNESL . l
 
 getUTxO :: ImpTestM era (UTxO era)
-getUTxO = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+getUTxO = getsNES utxoL
 
 getProtVer :: EraGov era => ImpTestM era ProtVer
 getProtVer = getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL

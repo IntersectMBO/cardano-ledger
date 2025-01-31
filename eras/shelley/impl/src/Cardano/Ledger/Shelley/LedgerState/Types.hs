@@ -68,7 +68,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
 import Cardano.Ledger.UMap (UMap (..))
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.UTxO (CanGetUTxO (..), CanSetUTxO (..), UTxO (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
@@ -129,6 +129,11 @@ data EpochState era = EpochState
   -- See https://github.com/intersectmbo/cardano-ledger/releases/latest/download/pool-ranking.pdf
   }
   deriving (Generic)
+
+instance CanGetUTxO EpochState
+instance CanSetUTxO EpochState where
+  utxoL = (lens esLState $ \s ls -> s {esLState = ls}) . utxoL
+  {-# INLINE utxoL #-}
 
 deriving stock instance
   ( EraTxOut era
@@ -285,6 +290,11 @@ data UTxOState era = UTxOState
   }
   deriving (Generic)
 
+instance CanGetUTxO UTxOState
+instance CanSetUTxO UTxOState where
+  utxoL = lens utxosUtxo $ \s u -> s {utxosUtxo = u}
+  {-# INLINE utxoL #-}
+
 instance
   ( EraTxOut era
   , NFData (GovState era)
@@ -403,6 +413,11 @@ data NewEpochState era = NewEpochState
   }
   deriving (Generic)
 
+instance CanGetUTxO NewEpochState
+instance CanSetUTxO NewEpochState where
+  utxoL = (lens nesEs $ \s es -> s {nesEs = es}) . utxoL
+  {-# INLINE utxoL #-}
+
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses ShelleyEra = UTxO ShelleyEra
   StashedAVVMAddresses _ = ()
@@ -489,6 +504,11 @@ data LedgerState era = LedgerState
   , lsCertState :: !(CertState era)
   }
   deriving (Generic)
+
+instance CanGetUTxO LedgerState
+instance CanSetUTxO LedgerState where
+  utxoL = (lens lsUTxOState $ \s us -> s {lsUTxOState = us}) . utxoL
+  {-# INLINE utxoL #-}
 
 deriving stock instance
   ( EraTxOut era
@@ -664,6 +684,7 @@ lsCertStateL = lens lsCertState (\x y -> x {lsCertState = y})
 
 utxosUtxoL :: Lens' (UTxOState era) (UTxO era)
 utxosUtxoL = lens utxosUtxo (\x y -> x {utxosUtxo = y})
+{-# DEPRECATED utxosUtxoL "In favor of `utxoL`" #-}
 
 utxosDepositedL :: Lens' (UTxOState era) Coin
 utxosDepositedL = lens utxosDeposited (\x y -> x {utxosDeposited = y})

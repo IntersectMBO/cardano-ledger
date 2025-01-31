@@ -209,9 +209,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   newEpochStateGovStateL,
   produced,
   unifiedL,
+  utxoL,
   utxosGovStateL,
   utxosStakeDistrL,
-  utxosUtxoL,
   vsCommitteeStateL,
   vsDRepsL,
  )
@@ -1761,7 +1761,7 @@ logConwayTxBalance ::
 logConwayTxBalance tx = do
   pp <- getsPParams id
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getsNES utxoL
   logString $ showConwayTxBalance pp certState utxo tx
 
 submitBootstrapAwareFailingVote ::

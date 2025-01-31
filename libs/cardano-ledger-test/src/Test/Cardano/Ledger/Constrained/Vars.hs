@@ -102,7 +102,6 @@ import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, sPoolMap, unify)
-import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Arrow (first)
 import Data.Default (Default (def))
@@ -358,10 +357,10 @@ numDormantEpochsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsNumDorma
 -- UTxOState
 
 utxo :: Era era => Proof era -> Term era (Map TxIn (TxOutF era))
-utxo p = Var $ pV p "utxo" (MapR TxInR (TxOutR p)) (Yes NewEpochStateR (utxoL p))
+utxo p = Var $ pV p "utxo" (MapR TxInR (TxOutR p)) (Yes NewEpochStateR (utxoL' p))
 
-utxoL :: Proof era -> NELens era (Map TxIn (TxOutF era))
-utxoL proof = nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL . unUtxoL proof
+utxoL' :: Proof era -> NELens era (Map TxIn (TxOutF era))
+utxoL' proof = utxoL . unUtxoL proof
 
 unUtxoL :: Proof era -> Lens' (UTxO era) (Map TxIn (TxOutF era))
 unUtxoL p = lens (Map.map (TxOutF p) . unUTxO) (\(UTxO _) new -> liftUTxO new)
@@ -1027,7 +1026,7 @@ utxoStateT ::
   forall era. Gov.EraGov era => Proof era -> RootTarget era (UTxOState era) (UTxOState era)
 utxoStateT p =
   Invert "UTxOState" (typeRep @(UTxOState era)) (unReflect utxofun p)
-    :$ Lensed (utxo p) (utxosUtxoL . unUtxoL p)
+    :$ Lensed (utxo p) (utxoL . unUtxoL p)
     :$ Lensed deposits utxosDepositedL
     :$ Lensed fees utxosFeesL
     :$ Shift (govStateT p) (utxosGovStateL . unGovL p)
