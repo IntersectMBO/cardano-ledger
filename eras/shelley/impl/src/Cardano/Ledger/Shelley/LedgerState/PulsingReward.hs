@@ -73,13 +73,7 @@ import Cardano.Ledger.Shelley.Rewards (
   sumRewards,
  )
 import Cardano.Ledger.Slot (EpochSize (..))
-import Cardano.Ledger.State (
-  SnapShot (..),
-  SnapShots (..),
-  Stake (..),
-  sumAllStake,
-  sumStakePerPool,
- )
+import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Data.Group (invert)

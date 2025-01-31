@@ -56,7 +56,7 @@ import Cardano.Ledger.Shelley.Rewards (
   aggregateRewards,
   filterRewards,
  )
-import Cardano.Ledger.State (SnapShot (..), Stake (..), UTxO (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (
   UMElem,
   UMap (..),

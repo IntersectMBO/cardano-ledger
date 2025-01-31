@@ -65,15 +65,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
-import Cardano.Ledger.State (
-  CanGetUTxO (..),
-  CanSetUTxO (..),
-  PoolDistr (..),
-  SnapShots (..),
-  UTxO (..),
-  ssStakeDistrL,
-  ssStakeMarkL,
- )
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (UMap (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
@@ -95,35 +87,6 @@ import Numeric.Natural (Natural)
 type RewardAccounts =
   Map (Credential 'Staking) Coin
 {-# DEPRECATED RewardAccounts "In favor of `Map` (`Credential` `Staking`) `Coin`" #-}
-
-data AccountState = AccountState
-  { asTreasury :: !Coin
-  , asReserves :: !Coin
-  }
-  deriving (Show, Eq, Generic)
-
-instance EncCBOR AccountState where
-  encCBOR (AccountState t r) =
-    encodeListLen 2 <> encCBOR t <> encCBOR r
-
-instance DecCBOR AccountState where
-  decCBOR =
-    decodeRecordNamed "AccountState" (const 2) $ AccountState <$> decCBOR <*> decCBOR
-
-instance ToJSON AccountState where
-  toJSON = object . toAccountStatePairs
-  toEncoding = pairs . mconcat . toAccountStatePairs
-
-toAccountStatePairs :: KeyValue e a => AccountState -> [a]
-toAccountStatePairs as@(AccountState _ _) =
-  let AccountState {asTreasury, asReserves} = as
-   in [ "treasury" .= asTreasury
-      , "reserves" .= asReserves
-      ]
-
-instance NoThunks AccountState
-
-instance NFData AccountState
 
 data EpochState era = EpochState
   { esAccountState :: !AccountState
@@ -606,9 +569,6 @@ instance
 
 instance Default (UTxOState era) => Default (LedgerState era) where
   def = LedgerState def def
-
-instance Default AccountState where
-  def = AccountState (Coin 0) (Coin 0)
 
 -- =============================================================
 -- Lenses for types found inside NewEpochState and its fields

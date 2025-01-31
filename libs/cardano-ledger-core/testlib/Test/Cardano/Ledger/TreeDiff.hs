@@ -179,6 +179,8 @@ instance ToExpr TxIn
 
 instance ToExpr TxId
 
+instance ToExpr AccountState
+
 -- CertState
 instance ToExpr DRep
 

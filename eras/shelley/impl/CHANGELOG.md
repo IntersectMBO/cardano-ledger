@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Move `AccountState` to `Cardano.Ledger.State`
 * Deprecated `RewardAccounts`
 * Deprecated `utxosUtxoL`
 * Added `CanGetUTxO` and `CanSetUTxO` instances for `EpochState`, `UTxOState`, `NewEpochState`, `LedgerState` 
