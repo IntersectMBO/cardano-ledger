@@ -10,6 +10,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -Wno-orphans #-}   -- Semigroup (Specification a), Monoid (Specification a)
 
 module Constrained.ConformanceExperiment where
@@ -34,7 +35,7 @@ import qualified Data.List.NonEmpty as NE
 -- =================================================================
 
 -- requires (HasSpec Bool)
-assertReified :: HasSpec a => Term a -> (a -> Bool) -> Pred
+assertReified :: (HasCaseBoolSpec Bool,HasSpec a) => Term a -> (a -> Bool) -> Pred
 -- Note, it is necessary to introduce the extra variable from the `exists` here
 -- to make things like `assertRealMultiple` work, if you don't have it then the
 -- `reifies` isn't a defining constraint for anything any more.
