@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Cardano.Ledger.UTxO (
+module Cardano.Ledger.State.UTxO (
   CanGetUTxO (..),
   CanSetUTxO (..),
 
