@@ -105,7 +105,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   LedgerState (..),
   PState (..),
-  RewardAccounts,
   smartUTxOState,
   totalObligation,
   utxosGovStateL,
@@ -1196,7 +1195,7 @@ initStableFields = do
 
 -- Adds to the rewards of the ModelNewEpochState. This used exclusively to generate Withdrawals, so
 -- we mark these as ones to avoid in the future. Especialy when generating DeRegKey.
-genRewards :: Reflect era => GenRS era RewardAccounts
+genRewards :: Reflect era => GenRS era (Map (Credential 'Staking) Coin)
 genRewards = do
   wmax <- gets (withdrawalMax . geSize . gsGenEnv)
   n <- lift $ choose (1, wmax)
