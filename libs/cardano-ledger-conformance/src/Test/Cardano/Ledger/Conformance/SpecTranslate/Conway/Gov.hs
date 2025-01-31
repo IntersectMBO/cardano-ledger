@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -13,11 +14,14 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Gov () where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (CertState)
+import Cardano.Ledger.CertState (CertState, certDStateL, dsUnifiedL)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.UMap (umElemsL)
 import Data.Functor.Identity (Identity)
+import qualified Data.Map.Strict as Map
+import Lens.Micro ((^.))
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
@@ -36,6 +40,7 @@ instance
 
   toSpecRep GovEnv {..} = do
     enactState <- askCtx @(EnactState era)
+    let rewardAccounts = Map.keysSet $ geCertState ^. certDStateL . dsUnifiedL . umElemsL
     Agda.MkGovEnv
       <$> toSpecRep geTxId
       <*> toSpecRep geEpoch
@@ -43,6 +48,7 @@ instance
       <*> toSpecRep gePPolicy
       <*> toSpecRep enactState
       <*> toSpecRep geCertState
+      <*> toSpecRep rewardAccounts
 
 instance
   ( EraPParams era
