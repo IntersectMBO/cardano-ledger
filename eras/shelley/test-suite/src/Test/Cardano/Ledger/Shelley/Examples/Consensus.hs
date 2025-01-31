@@ -19,7 +19,6 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys hiding (hashVerKeyVRF)
-import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API hiding (hashVerKeyVRF)
 import Cardano.Ledger.Shelley.Core

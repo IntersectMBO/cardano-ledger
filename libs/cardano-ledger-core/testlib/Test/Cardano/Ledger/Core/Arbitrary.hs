@@ -105,7 +105,6 @@ import Cardano.Ledger.Plutus.CostModels (
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
   PoolParams (..),
@@ -494,7 +493,7 @@ instance Arbitrary SizeOfPoolOwners where
   arbitrary = pure SizeOfPoolOwners
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.PoolDistr --------------------------------------------------------------
+-- Cardano.Ledger.State.PoolDistr --------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 instance Arbitrary PoolDistr where
@@ -506,14 +505,14 @@ instance Arbitrary IndividualPoolStake where
   arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.DRepDistr --------------------------------------------------------------
+-- Cardano.Ledger.DRepState --------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 instance Arbitrary DRepState where
   arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.UTxO -------------------------------------------------------------------
+-- Cardano.Ledger.State.UTxO -------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 deriving instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (UTxO era)

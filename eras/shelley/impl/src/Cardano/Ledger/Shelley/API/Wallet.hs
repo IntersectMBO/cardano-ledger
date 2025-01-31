@@ -65,10 +65,6 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (WitVKey (..))
-import Cardano.Ledger.PoolDistr (
-  IndividualPoolStake (..),
-  PoolDistr (..),
- )
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
@@ -100,7 +96,7 @@ import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Slot (epochInfoSize)
-import Cardano.Ledger.State (UTxO (..), txInsFilter)
+import Cardano.Ledger.State (IndividualPoolStake (..), PoolDistr (..), UTxO (..), txInsFilter)
 import qualified Cardano.Ledger.State as EB
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (EpochSize)

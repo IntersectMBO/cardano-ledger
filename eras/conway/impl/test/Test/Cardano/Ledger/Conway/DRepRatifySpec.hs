@@ -33,7 +33,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
+import Cardano.Ledger.State (PoolDistr (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)

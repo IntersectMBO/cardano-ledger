@@ -181,7 +181,6 @@ import Cardano.Ledger.Plutus.Data (
  )
 import qualified Cardano.Ledger.Plutus.ExUnits as ExUnits (Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
@@ -249,7 +248,15 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.State (ScriptsNeeded, SnapShot (..), SnapShots (..), Stake (..), UTxO (..))
+import Cardano.Ledger.State (
+  IndividualPoolStake (..),
+  PoolDistr (..),
+  ScriptsNeeded,
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
+  UTxO (..),
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),

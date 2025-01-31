@@ -60,7 +60,6 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -69,6 +68,7 @@ import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
 import Cardano.Ledger.State (
   CanGetUTxO (..),
   CanSetUTxO (..),
+  PoolDistr (..),
   SnapShots (..),
   UTxO (..),
   ssStakeDistrL,

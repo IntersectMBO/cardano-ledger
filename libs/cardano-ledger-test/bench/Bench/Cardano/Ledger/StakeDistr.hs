@@ -21,7 +21,6 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..))
 import Cardano.Ledger.Binary.Plain as Plain (FromCBOR (..), decodeFullDecoder)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin), DeltaCoin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Genesis (
   ShelleyGenesis (..),
   fromNominalDiffTimeMicro,
@@ -52,6 +51,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Slot (EpochNo, SlotNo (..))
 import Cardano.Ledger.State (
+  PoolDistr (..),
   SnapShot (..),
   SnapShots (..),
   calculatePoolDistr,

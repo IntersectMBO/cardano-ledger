@@ -23,9 +23,9 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Mary
-import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State
 import Cardano.Ledger.Val
 import Test.Cardano.Ledger.Api.DebugTools
 
