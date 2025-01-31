@@ -146,17 +146,6 @@ module Cardano.Ledger.Shelley.LedgerState (
 ) where
 
 import Cardano.Ledger.CertState
-import Cardano.Ledger.EpochBoundary (
-  ssDelegationsL,
-  ssFeeL,
-  ssPoolParamsL,
-  ssStakeDistrL,
-  ssStakeGoL,
-  ssStakeL,
-  ssStakeMarkL,
-  ssStakeMarkPoolDistrL,
-  ssStakeSetL,
- )
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.LedgerState.NewEpochState
 import Cardano.Ledger.Shelley.LedgerState.PulsingReward
@@ -165,4 +154,4 @@ import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyGovState (..))
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)
-import Cardano.Ledger.State (CanGetUTxO (..), CanSetUTxO (..), UTxO (..))
+import Cardano.Ledger.State (CanGetUTxO (..), CanSetUTxO (..), UTxO (..), ssDelegationsL, ssFeeL, ssPoolParamsL, ssStakeDistrL, ssStakeGoL, ssStakeL, ssStakeMarkL, ssStakeMarkPoolDistrL, ssStakeSetL)

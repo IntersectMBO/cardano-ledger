@@ -38,7 +38,6 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.State
 import Control.State.Transition.Extended (STS (..))

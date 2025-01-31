@@ -66,7 +66,6 @@ import Cardano.Ledger.Core (
  )
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.Hashes (
   DataHash,
   EraIndependentScriptIntegrity,
@@ -100,6 +99,7 @@ import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
+import Cardano.Ledger.State (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, sPoolMap, unify)
 import Cardano.Ledger.Val (Val (..))

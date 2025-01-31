@@ -35,7 +35,6 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.Governance
@@ -64,6 +63,7 @@ import Cardano.Ledger.Shelley.Rules.Rupd (
  )
 import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo, SlotNo, getTheSlotOfNoReturn)
+import Cardano.Ledger.State (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition

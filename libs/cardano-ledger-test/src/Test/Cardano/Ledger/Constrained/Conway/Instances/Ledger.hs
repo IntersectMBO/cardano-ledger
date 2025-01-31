@@ -98,7 +98,6 @@ import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Keys (BootstrapWitness, WitVKey, coerceKeyRole)
@@ -122,6 +121,7 @@ import Cardano.Ledger.Shelley.TxCert (
  )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val)

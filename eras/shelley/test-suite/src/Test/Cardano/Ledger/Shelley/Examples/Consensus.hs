@@ -18,7 +18,6 @@ import Cardano.Crypto.Seed as Seed
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys hiding (hashVerKeyVRF)
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -28,6 +27,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
 import Cardano.Ledger.Shelley.TxWits
+import Cardano.Ledger.State
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader

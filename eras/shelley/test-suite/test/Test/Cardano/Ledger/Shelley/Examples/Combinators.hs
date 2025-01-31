@@ -59,7 +59,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block (..), bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr)
-import Cardano.Ledger.EpochBoundary (SnapShot, SnapShots (..), calculatePoolDistr)
 import Cardano.Ledger.Hashes (GenDelegPair, GenDelegs (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -87,7 +86,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards, votedFuturePParams)
-import Cardano.Ledger.State (UTxO (..), txins, txouts)
+import Cardano.Ledger.State (SnapShot, SnapShots (..), UTxO (..), calculatePoolDistr, txins, txouts)
 import Cardano.Ledger.UMap (
   RDPair (..),
   UView (PtrUView, RewDepUView, SPoolUView),

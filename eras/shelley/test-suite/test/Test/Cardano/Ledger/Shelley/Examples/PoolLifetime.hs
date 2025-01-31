@@ -42,7 +42,6 @@ import Cardano.Ledger.Coin (
  )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
-import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
 import Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
@@ -82,7 +81,7 @@ import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
  )
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
@@ -144,8 +143,8 @@ toCompactCoinError c =
     Nothing -> error $ "Invalid coin: " <> show c
     Just compactCoin -> compactCoin
 
-mkStake :: [(Credential 'Staking, Coin)] -> EB.Stake
-mkStake = EB.Stake . GHC.Exts.fromList . map (fmap toCompactCoinError)
+mkStake :: [(Credential 'Staking, Coin)] -> Stake
+mkStake = Stake . GHC.Exts.fromList . map (fmap toCompactCoinError)
 
 initUTxO :: UTxO ShelleyEra
 initUTxO =
@@ -393,19 +392,19 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: EB.SnapShot
+snapEx3 :: SnapShot
 snapEx3 =
-  EB.SnapShot
-    { EB.ssStake =
+  SnapShot
+    { ssStake =
         mkStake
           [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr)
           , (Cast.bobSHK, bobInitCoin)
           ]
-    , EB.ssDelegations =
+    , ssDelegations =
         [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
         , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]
-    , EB.ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
+    , ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
     }
 
 expectedStEx3 :: ChainState ShelleyEra
@@ -530,21 +529,21 @@ blockEx5 =
     10
     (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 220) 1 (KESPeriod 10))
 
-snapEx5 :: EB.SnapShot
+snapEx5 :: SnapShot
 snapEx5 =
-  EB.SnapShot
-    { EB.ssStake =
+  SnapShot
+    { ssStake =
         mkStake
           [ (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr)
           , (Cast.carlSHK, carlMIR)
           , (Cast.bobSHK, bobInitCoin)
           ]
-    , EB.ssDelegations =
+    , ssDelegations =
         [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
         , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
         , (Cast.bobSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]
-    , EB.ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
+    , ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
     }
 
 pdEx5 :: PoolDistr
@@ -786,10 +785,10 @@ blockEx9 =
     20
     (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 410) 2 (KESPeriod 20))
 
-snapEx9 :: EB.SnapShot
+snapEx9 :: SnapShot
 snapEx9 =
   snapEx5
-    { EB.ssStake =
+    { ssStake =
         mkStake
           [ (Cast.bobSHK, bobInitCoin <> bobRAcnt8)
           , (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr <> aliceRAcnt8)
@@ -944,7 +943,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
     blocks = 0
     t = leaderProbability f relativeStake (unsafeBoundRational 0.5)
     -- everyone has delegated to Alice's Pool
-    Coin stake = EB.sumAllStake (EB.ssStake snapEx5)
+    Coin stake = sumAllStake (ssStake snapEx5)
     relativeStake = fromRational (stake % supply)
     Coin supply = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals
@@ -1008,15 +1007,15 @@ blockEx12 =
     25
     (mkOCert (coreNodeKeysBySchedule @ShelleyEra ppEx 510) 3 (KESPeriod 25))
 
-snapEx12 :: EB.SnapShot
+snapEx12 :: SnapShot
 snapEx12 =
   snapEx9
-    { EB.ssStake =
+    { ssStake =
         mkStake
           [ (Cast.aliceSHK, aliceRAcnt8 <> aliceCoinEx2Ptr <> aliceCoinEx11Ptr)
           , (Cast.carlSHK, carlMIR)
           ]
-    , EB.ssDelegations =
+    , ssDelegations =
         [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
         , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]

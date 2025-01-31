@@ -91,7 +91,6 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..), unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (BootstrapWitness (..), ChainCode (..), VKey (..), WitVKey (..))
@@ -114,7 +113,7 @@ import Cardano.Ledger.PoolParams (
   SizeOfPoolRelays (..),
   StakePoolRelay (..),
  )
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),

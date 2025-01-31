@@ -34,11 +34,6 @@ import Cardano.Ledger.Credential as X (
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.EpochBoundary as X (
-  SnapShot (..),
-  SnapShots (..),
-  Stake (..),
- )
 import Cardano.Ledger.Hashes as X (
   ScriptHash (..),
  )
@@ -143,6 +138,9 @@ import Cardano.Ledger.Shelley.TxWits as X (
   ShelleyTxWits,
  )
 import Cardano.Ledger.State as X (
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
   UTxO (..),
   balance,
  )
