@@ -68,6 +68,12 @@ import Data.String(fromString)
 import qualified Data.Set as Set
 import Data.Set(Set)
 
+-- ==================================================
+-- Knot tying Classes
+
+class HasSpec a => HasCaseBoolSpec a where
+  caseBoolSpec :: Specification Bool -> (Bool -> Specification a) -> Specification a
+
 -- ====================================================================
 -- The FunctionSymbol class for implementing new function symbols in
 -- the first order logic. Note that a function symbol is first order
@@ -481,6 +487,37 @@ pattern EqualPat ::
 pattern EqualPat x y <- App (isBaseWit (EqualW @a) -> (Just EqualW, Just Refl,Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
    where EqualPat x y = App EqualW (x :> y :> Nil)
 
+-- ===========================================================================
+-- This is quite usefull, as long as we have actual Function Symbol instances
+extractW :: 
+  forall t2 c2 s2 d2 a2 t c s d a. 
+    ( FunctionSymbol c s t d a, Witness t2
+    , Typeable t2, Typeable s2, Typeable d2, Typeable a2, Typeable s, Typeable c2) =>
+  t2 c2 s2 d2 a2 -> t c s d a ->  Maybe (t :~: t2)
+extractW known hidden = case (eqT @t @t2, eqT @c @c2,eqT @s @s2, eqT @d @d2, eqT @a @a2) of
+       (Just p@Refl,Just Refl,Just Refl,Just Refl,Just Refl) -> if known==hidden then (Just p) else Nothing
+       _bad -> Nothing  
+  where _ = semantics known       -- These force the FunctionSymbol and 
+        _ = App hidden undefined  -- Witness constraints to be not redundant
+
+testTerm :: HasCaseBoolSpec Bool => Term Bool
+testTerm = (App EqualW (Lit True :> Lit False :> Nil))
+
+-- | The intended use of extractW, is as a view pattern inside of App
+--   The pattern (App (extractW X -> Just Refl) xs) means 
+--   1) the Just tells us the FunctionSymbol in the App is 'X'
+--   2) the Refl, gives us a proof of that type, which we can use when processing 'xs'
+--   Note when matching Polymorphic instances, we need to apply them to types (EqualW @Bool)
+foo :: HasCaseBoolSpec Bool => String
+foo = case testTerm of
+         (App (extractW NotW -> Just _)  _ ) -> "OR"           -- This should fail
+         (App (extractW (EqualW @Bool) -> Just Refl) _ ) -> "EQUAL"  -- This should succeed, and we know that witness 't' :: BaseW
+         _ -> "No"                                                -- We should never reach here
+-- =============================================================================================
+
+
+
+
 {-   
 extract :: 
   forall s t d a s2 t2 d2 a2.
@@ -574,21 +611,18 @@ pattern ToGenericPat x <- App (isBaseWit (ToGenericW @a) -> (Just ToGenericW, Ju
 -- ================ Probably Move this, but it was good practice since it is simple
 
 
-instance FunctionSymbol () "not_" BaseW '[Bool] Bool where
+instance HasCaseBoolSpec Bool => FunctionSymbol () "not_" BaseW '[Bool] Bool where
     witness = "NotW[not_]"
     
     simplepropagate (Context NotW (HOLE End)) spec = Right $ caseBoolSpec spec (equalSpec . not)
     simplepropagate ctx _ = Left (NE.fromList["NotW (not_)","Unreachable context, too many args",show ctx])
 
 
-not_ :: Term Bool -> Term Bool
+not_ :: HasCaseBoolSpec Bool => Term Bool -> Term Bool
 not_ = appTerm NotW
 
-caseBoolSpec :: forall a. HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
-caseBoolSpec = undefined
-   where _ = emptySpec @a
 
-instance HasSpec a => FunctionSymbol (Eq a) "==."  BaseW '[a, a] Bool where
+instance (HasCaseBoolSpec a, HasCaseBoolSpec Bool,HasSpec a) => FunctionSymbol (Eq a) "==."  BaseW '[a, a] Bool where
     witness = "EqualW[==.]"
     
     simplepropagate (Context EqualW (HOLE (a :<| End)))  spec =  
@@ -597,7 +631,7 @@ instance HasSpec a => FunctionSymbol (Eq a) "==."  BaseW '[a, a] Bool where
       Right $ caseBoolSpec spec $ \case { True -> equalSpec a; False -> notEqualSpec a}
     simplepropagate ctx _ = Left (NE.fromList["EqualW ( ==. )","Unreachable context, too many args",show ctx])      
   
-(==.) :: forall a. (HasSpec a) => Term a -> Term a -> Term Bool
+(==.) :: forall a. (HasCaseBoolSpec a,HasCaseBoolSpec Bool) => Term a -> Term a -> Term Bool
 (==.) = appTerm EqualW
 
 -- =====================================================================
@@ -1179,7 +1213,7 @@ instance HasSpec ()=> HasSpec Bool where
   cardinalTrueSpec = MemberSpec (pure 2)
 -} 
 
-instance HasSpec Bool where
+instance HasCaseBoolSpec Bool => HasSpec Bool where
   type TypeSpec Bool = Set Bool
 
   emptySpec = Set.fromList[True,False]

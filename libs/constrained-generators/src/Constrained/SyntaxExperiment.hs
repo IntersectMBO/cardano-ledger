@@ -532,7 +532,7 @@ runCaseOn s ((x :-> ps) :> bs@(_ :> _)) f = case s of
 -- ==================================================
 
 -- Common subexpression elimination but only on terms that are already let-bound.
-letSubexpressionElimination :: Pred -> Pred
+letSubexpressionElimination :: HasCaseBoolSpec Bool => Pred -> Pred
 letSubexpressionElimination = go []
   where
     adjustSub x sub =
