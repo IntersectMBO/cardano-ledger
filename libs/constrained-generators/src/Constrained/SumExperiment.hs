@@ -83,7 +83,7 @@ import qualified Data.Semigroup as Semigroup
 genFromSpecT :: forall a m. (HasCallStack, HasSpec a, MonadGenError m) => Specification a -> GenT m a
 genFromSpecT = undefined
 
--- shrinkWithSpec = undefined
+shrinkWithSpec = undefined
 
 guardSumSpec :: forall a b.
   (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
