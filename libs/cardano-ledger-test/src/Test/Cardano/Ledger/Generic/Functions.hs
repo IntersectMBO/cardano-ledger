@@ -39,7 +39,7 @@ import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  CertState (..),
+  CertState,
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -436,14 +436,22 @@ govStateTotalAda = case reify @era of
   Babbage -> totalAda
   Conway -> mempty
 
--- TODO: think these through
-instance (Reflect era, TotalAda (CertState era)) => TotalAda (LedgerState era) where
-  totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps
+certStateTotalAda :: forall era. Reflect era => CertState era -> Coin
+certStateTotalAda = case reify @era of
+  Shelley -> totalAda
+  Mary -> totalAda
+  Allegra -> totalAda
+  Alonzo -> totalAda
+  Babbage -> totalAda
+  Conway -> mempty
 
-instance (Reflect era, TotalAda (CertState era)) => TotalAda (EpochState era) where
+instance Reflect era => TotalAda (LedgerState era) where
+  totalAda (LedgerState utxos dps) = totalAda utxos <+> certStateTotalAda dps
+
+instance Reflect era => TotalAda (EpochState era) where
   totalAda eps = totalAda (esLState eps) <+> totalAda (esAccountState eps)
 
-instance (Reflect era, TotalAda (CertState era)) => TotalAda (NewEpochState era) where
+instance Reflect era => TotalAda (NewEpochState era) where
   totalAda nes = totalAda (nesEs nes)
 
 adaPots :: Proof era -> EpochState era -> AdaPots

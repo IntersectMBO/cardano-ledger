@@ -18,7 +18,7 @@ import Control.Monad (when)
 import Data.Default (Default (def))
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
-import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
+import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..), unCertStateF)
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL, strictMaybeToMaybeL)
 import Test.Cardano.Ledger.Constrained.Monad (generateWithSeed, monadTyped)
@@ -95,7 +95,7 @@ vstateCheckPreds :: Proof era -> [Pred era]
 vstateCheckPreds _p = []
 
 vstateStage ::
-  (Reflect era, EraCertState era) =>
+  Reflect era =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
@@ -166,7 +166,7 @@ pstateCheckPreds _ =
   ]
 
 pstateStage ::
-  (Reflect era, EraCertState era) =>
+  Reflect era =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
@@ -308,7 +308,7 @@ certStateCheckPreds p =
   ]
 
 dstateStage ::
-  (Reflect era, EraCertState era) =>
+  Reflect era =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
@@ -350,8 +350,8 @@ demoC mode = do
           >>= dstateStage proof
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
-  certState <- monadTyped $ runTarget env certstateT
-  when (mode == Interactive) $ putStrLn (show (pcCertState proof certState))
+  certState <- monadTyped . runTarget env $ certStateT
+  when (mode == Interactive) $ putStrLn (show (pcCertState proof (unCertStateF certState)))
   modeRepl mode proof env ""
 
 demoTestC :: TestTree

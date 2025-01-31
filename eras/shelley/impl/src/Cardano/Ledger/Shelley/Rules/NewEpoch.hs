@@ -28,7 +28,6 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (SJust, SNothing),
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)

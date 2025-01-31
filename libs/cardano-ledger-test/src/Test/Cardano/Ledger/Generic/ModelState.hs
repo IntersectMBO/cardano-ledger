@@ -6,8 +6,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 -- | The data types in this file constitute a Model of the NewEpochState
 --   sufficient for generating transactions that can run in the
@@ -232,10 +232,10 @@ uTxOStateZero =
 pParamsZero :: Reflect era => PParams era
 pParamsZero = lift pParamsZeroByProof
 
-ledgerStateZero :: forall era. (Reflect era, EraCertState era) => LedgerState era
+ledgerStateZero :: forall era. Reflect era => LedgerState era
 ledgerStateZero = LedgerState uTxOStateZero dPStateZero
 
-epochStateZero :: (Reflect era, EraCertState era) => EpochState era
+epochStateZero :: Reflect era => EpochState era
 epochStateZero =
   EpochState
     accountStateZero
@@ -245,7 +245,7 @@ epochStateZero =
     & curPParamsEpochStateL .~ pParamsZero
     & prevPParamsEpochStateL .~ pParamsZero
 
-newEpochStateZero :: forall era. (Reflect era, EraCertState era) => NewEpochState era
+newEpochStateZero :: forall era. Reflect era => NewEpochState era
 newEpochStateZero =
   NewEpochState
     (EpochNo 0)
@@ -325,9 +325,6 @@ instance Extract (PState era) era where
 instance Extract (VState era) era where
   extract _ = VState def def (EpochNo 0)
 
-instance Extract (ShelleyCertState era) era where
-  extract x = ShelleyCertState (extract x) (extract x) (extract x)
-
 instance Reflect era => Extract (UTxOState era) era where
   extract x =
     smartUTxOState
@@ -338,12 +335,22 @@ instance Reflect era => Extract (UTxOState era) era where
       emptyGovState
       mempty
 
--- TODO: think this through, I enabled `UndecidableInstances` to make it compile but
--- I have yet to figure out if it's okay to do so
-instance (Reflect era, Extract (CertState era) era) => Extract (LedgerState era) era where
-  extract x = LedgerState (extract x) (extract x)
+-- TODO: think this through
+extractCertState :: forall era. Reflect era => CertState era
+extractCertState = case reify @era of
+  Shelley -> shelleyCertState
+  Mary -> shelleyCertState
+  Allegra -> shelleyCertState
+  Alonzo -> shelleyCertState
+  Babbage -> shelleyCertState
+  Conway -> shelleyCertState -- TODO: add `conwayCertState`
+  where
+    shelleyCertState = ShelleyCertState def def def
 
-instance (Reflect era, Extract (CertState era) era) => Extract (EpochState era) era where
+instance Reflect era => Extract (LedgerState era) era where
+  extract x = LedgerState (extract x) extractCertState
+
+instance Reflect era => Extract (EpochState era) era where
   extract x =
     EpochState
       (mAccountState x)
@@ -353,7 +360,7 @@ instance (Reflect era, Extract (CertState era) era) => Extract (EpochState era) 
       & curPParamsEpochStateL .~ mPParams x
       & prevPParamsEpochStateL .~ mPParams x
 
-instance forall era. (Reflect era, Extract (CertState era) era) => Extract (NewEpochState era) era where
+instance forall era. Reflect era => Extract (NewEpochState era) era where
   extract x =
     NewEpochState
       (mEL x)

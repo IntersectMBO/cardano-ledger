@@ -48,7 +48,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "DELEG" ConwayEra where
   environmentSpec _ = delegEnvSpec
 
   stateSpec (univ, ccec) _env =
-    certStateSpec @_ @ConwayEra univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
+    certStateSpec @ConwayEra univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
 
   signalSpec _ = conwayDelegCertSpec
 

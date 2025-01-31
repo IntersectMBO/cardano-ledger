@@ -17,7 +17,6 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsUnifiedL, incrementalStakeDistr)

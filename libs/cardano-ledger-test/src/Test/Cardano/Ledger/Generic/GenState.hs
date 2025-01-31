@@ -815,7 +815,7 @@ instance Reflect era => Show (GenState era) where
 -- generating a coherent Trace (a sequence of Transactions that can
 -- logically be applied one after another)
 
-initialLedgerState :: forall era. (Reflect era, EraCertState era) => GenState era -> LedgerState era
+initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
     umap =

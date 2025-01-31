@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.Bench.Gen (
 import Cardano.Ledger.Shelley.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
+  CertState,
   DState (..),
   LedgerState (..),
   PState (..),

@@ -18,7 +18,6 @@ module Cardano.Ledger.Conway.Rules.HardFork (
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, StrictMaybe (..), natVersion)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayHARDFORK)
 import Cardano.Ledger.DRep

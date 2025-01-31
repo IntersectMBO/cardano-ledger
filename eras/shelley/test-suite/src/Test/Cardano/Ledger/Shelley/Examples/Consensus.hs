@@ -17,7 +17,6 @@ import Cardano.Crypto.KES as KES
 import Cardano.Crypto.Seed as Seed
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys hiding (hashVerKeyVRF)
 import Cardano.Ledger.Shelley (ShelleyEra)

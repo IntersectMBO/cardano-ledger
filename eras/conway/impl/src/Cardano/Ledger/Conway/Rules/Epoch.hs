@@ -380,12 +380,12 @@ epochTransition = do
     certState1 =
       mkCertState
         -- Increment the dormant epoch counter
-        (updateNumDormantEpochs eNo newProposals vState)
+        ( updateNumDormantEpochs eNo newProposals vState
+            & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
+        )
         pState2
-        dState2
-        & certDStateL . dsUnifiedL .~ newUMap
-        -- Remove cold credentials of committee members that were removed or were invalid
-        & certVStateL . vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
+        (dState2 & dsUnifiedL .~ newUMap)
+    -- Remove cold credentials of committee members that were removed or were invalid
     accountState3 =
       accountState2
         -- Move donations and unclaimed rewards from proposals to treasury:

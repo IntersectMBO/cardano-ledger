@@ -66,7 +66,7 @@ import qualified Data.VMap as VMap
 import Lens.Micro ((^.))
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Constrained.Conway.Gov (govProposalsSpec)
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances hiding (certStateSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.QuickCheck hiding (forAll, witness)
 
@@ -89,30 +89,40 @@ class
   where
   govStateSpec :: PParams era -> Specification fn (GovState era)
   newEpochStateSpec :: PParams era -> WitUniv era -> Specification fn (NewEpochState era)
+  certStateSpec ::
+    WitUniv era -> Term fn AccountState -> Term fn EpochNo -> Specification fn (CertState era)
+
+-- TODO: consider adding `certStateSpec`
 
 instance IsConwayUniv fn => EraSpecLedger ShelleyEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUTxO
+  certStateSpec = shelleyCertStateSpec
 
 instance IsConwayUniv fn => EraSpecLedger AllegraEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
+  certStateSpec = shelleyCertStateSpec
 
 instance IsConwayUniv fn => EraSpecLedger MaryEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
+  certStateSpec = shelleyCertStateSpec
 
 instance IsConwayUniv fn => EraSpecLedger AlonzoEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
+  certStateSpec = shelleyCertStateSpec
 
 instance IsConwayUniv fn => EraSpecLedger BabbageEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
+  certStateSpec = shelleyCertStateSpec
 
 instance IsConwayUniv fn => EraSpecLedger ConwayEra fn where
   govStateSpec pp = conwayGovStateSpec pp (testGovEnv pp)
   newEpochStateSpec = newEpochStateSpecUnit
+  certStateSpec = shelleyCertStateSpec
 
 -- This is a hack, neccessitated by the fact that conwayGovStateSpec,
 -- written for the conformance tests, requires an actual GovEnv as an input.
@@ -363,15 +373,15 @@ accountStateSpec =
 --   the spec for DState spec (every stake delegation is to a registered pool)
 --   and parts of the DState are passed as an argument to the spec for VState
 --   (every voting delegation is to a registered DRep)
-certStateSpec ::
+shelleyCertStateSpec ::
   forall era fn.
   EraSpecLedger era fn =>
   WitUniv era ->
   Term fn AccountState ->
   Term fn EpochNo ->
   Specification fn (ShelleyCertState era)
-certStateSpec univ acct epoch = constrained $ \ [var|certState|] ->
-  match certState $ \ [var|vState|] [var|pState|] [var|dState|] ->
+shelleyCertStateSpec univ acct epoch = constrained $ \ [var|shellCertState|] ->
+  match shellCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pstateSpec univ epoch)
     , reify pState psStakePoolParams $ \ [var|poolreg|] ->
         [ dependsOn dState poolreg
@@ -399,10 +409,10 @@ utxoSpecWit univ delegs = constrained $ \ [var|utxo|] ->
 
 utxoStateSpec ::
   forall era fn.
-  (EraSpecLedger era fn, CertState era ~ ShelleyCertState era) =>
+  EraSpecLedger era fn =>
   PParams era ->
   WitUniv era ->
-  Term fn (ShelleyCertState era) ->
+  Term fn (CertState era) ->
   Specification fn (UTxOState era)
 utxoStateSpec pp univ certstate =
   constrained $ \ [var|utxoState|] ->
@@ -420,9 +430,10 @@ utxoStateSpec pp univ certstate =
 
 getDelegs ::
   forall era.
-  ShelleyCertState era ->
+  EraCertState era =>
+  CertState era ->
   Map (Credential 'Staking) (KeyHash 'StakePool)
-getDelegs (ShelleyCertState _v _p certDState) = UMap.sPoolMap (dsUnified certDState)
+getDelegs cs = UMap.sPoolMap $ cs ^. certDStateL . dsUnifiedL
 
 -- ====================================================================
 -- Specs for LedgerState
@@ -464,6 +475,30 @@ conwayGovStateSpec pp govenv =
 
 -- =========================================================================
 
+-- TODO: Figure out how to keep this era parametric and make GHC happy
+-- without the `CertState era ~ ShelleyCertState era` constraint.
+-- When it's removed, GHC will complain with:
+--     • Could not deduce: FunTy
+--                          (MapList
+--                             (Term fn) (Constrained.Spec.Generics.Args (CertState era)))
+--                          p0
+--                        ~ (Term fn (CertState era) -> [Pred fn])
+-- ...
+--       Expected type: FunTy
+--                       (MapList
+--                          (Term fn)
+--                          (Constrained.Spec.Generics.ProductAsList (LedgerState era)))
+--                       p0
+--        Actual type: Term fn (UTxOState era)
+--                     -> Term fn (CertState era) -> [Pred fn]
+-- I figured that the problem might be that GHC can't establish what `Term fn (CertState era)`
+-- is, since it's a type family and thus we can't `match` on it because at this point the compiler
+-- doesn't know how `Term fn (CertState era)` looks like. However, this might not be the case
+-- because when I try `reify`ing `@era` and pattern match on all the eras, the compiler is still
+-- confused and complaining. Which would make sense, since that's why we have the `Generics` and
+-- `SOP` machinery in place: so we don't have to know how things look like.
+-- So maybe, it's not a matter of "don't know what it is" but rather the fact that
+-- it's a type family and not a concrete type, to which the `Generics` magic might not apply.
 ledgerStateSpec ::
   forall era fn.
   (EraSpecLedger era fn, CertState era ~ ShelleyCertState era) =>

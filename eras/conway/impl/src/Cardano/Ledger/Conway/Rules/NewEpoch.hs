@@ -26,7 +26,6 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (SJust, SNothing),
  )
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayNEWEPOCH)

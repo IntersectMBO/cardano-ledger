@@ -33,12 +33,11 @@ import Cardano.Ledger.State (SnapShot (..), SnapShots (..))
 import Constrained hiding (Value)
 import Data.Map (Map)
 import Test.Cardano.Ledger.Constrained.Conway ()
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances hiding (certStateSpec)
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   EraSpecLedger (..),
   accountStateSpec,
   aggregateDRep,
-  certStateSpec,
   conwayGovStateSpec,
   dstateSpec,
   epochNoSpec,
@@ -94,12 +93,12 @@ vsX = do
         TrueSpec
   genFromSpec @ConwayFn @(VState era) (vstateSpec univ (lit epoch) (lit delegatees))
 
-csX :: forall era. EraSpecLedger era ConwayFn => Gen (ShelleyCertState era)
+csX :: forall era. EraSpecLedger era ConwayFn => Gen (CertState era)
 csX = do
   univ <- genWitUniv 25
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
-  genFromSpec @ConwayFn @(ShelleyCertState era)
+  genFromSpec @ConwayFn @(CertState era)
     (certStateSpec univ (lit acct) (lit epoch))
 
 utxoX :: forall era. EraSpecLedger era ConwayFn => Gen (UTxO era)
@@ -114,7 +113,10 @@ utxoX = do
 
 utxostateX ::
   forall era.
-  (EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  ( EraSpecLedger era ConwayFn
+  , -- TODO: this is temporary, remove once `utxoStateSpec` is general enough
+    CertState era ~ ShelleyCertState era
+  ) =>
   PParams era -> Gen (UTxOState era)
 utxostateX pp = do
   univ <- genWitUniv @era 50
@@ -131,7 +133,10 @@ conwaygovX pp = do
 
 lsX ::
   forall era.
-  (EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  ( EraSpecLedger era ConwayFn
+  , -- TODO: remove once `ledgerStateSpec` is general enough
+    CertState era ~ ShelleyCertState era
+  ) =>
   PParams era -> Gen (LedgerState era)
 lsX pp = do
   univ <- genWitUniv @era 50
@@ -212,7 +217,10 @@ instance (GenScript era, EraSpecPParams era) => WellFormed (VState era) era wher
   wff = vsX
   wffWithPP _ = vsX
 
-instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed (ShelleyCertState era) era where
+instance
+  (EraSpecPParams era, EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  WellFormed (ShelleyCertState era) era
+  where
   wff = csX
 
 instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed (UTxO era) era where

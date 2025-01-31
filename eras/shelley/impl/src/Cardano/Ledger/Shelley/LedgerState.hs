@@ -117,9 +117,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   epochStateTreasuryL,
 
   -- * Lenses from CertState
-  certDStateL,
-  certPStateL,
-  certVStateL,
   dsUnifiedL,
   dsGenDelegsL,
   dsIRewardsL,

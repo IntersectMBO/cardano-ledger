@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Conway.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance

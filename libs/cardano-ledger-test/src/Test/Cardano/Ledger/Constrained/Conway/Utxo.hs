@@ -29,7 +29,6 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (
   DRepState (..),
-  EraCertState (..),
   dsUnifiedL,
   psDepositsL,
   vsDRepsL,
@@ -195,6 +194,7 @@ instance
             !> To uecUTxO
             !> To uecUtxoEnv
 
+-- TODO: generalise
 instance CertState era ~ ShelleyCertState era => Inject (UtxoExecContext era) (ShelleyCertState era) where
   inject ctx = (uecUtxoEnv ctx) ^. utxoEnvCertStateL
 

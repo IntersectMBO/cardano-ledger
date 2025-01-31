@@ -18,7 +18,6 @@ where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (Block, bheader)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (GenDelegPair (..), asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
