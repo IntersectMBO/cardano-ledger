@@ -16,7 +16,7 @@
 -- determined by Ouroboros (Praos and Genesis), our consensus mechanism.
 -- See Section 16, "Leader Value Calculation", of the
 -- <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf formal specification>.
-module Cardano.Ledger.PoolDistr (
+module Cardano.Ledger.State.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),
   poolDistrDistrL,

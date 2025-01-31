@@ -66,7 +66,14 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
-import Cardano.Ledger.State (CanGetUTxO (..), CanSetUTxO (..), SnapShots (..), UTxO (..), ssStakeDistrL, ssStakeMarkL)
+import Cardano.Ledger.State (
+  CanGetUTxO (..),
+  CanSetUTxO (..),
+  SnapShots (..),
+  UTxO (..),
+  ssStakeDistrL,
+  ssStakeMarkL,
+ )
 import Cardano.Ledger.UMap (UMap (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
