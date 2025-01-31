@@ -203,10 +203,6 @@ instance
   -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
   shrink = recursivelyShrink
 
-instance Arbitrary AccountState where
-  arbitrary = AccountState <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
 instance Arbitrary IncrementalStake where
   arbitrary = IStake <$> arbitrary <*> pure mempty -- Once in Conway Ptrs Map will be removed
   shrink = genericShrink

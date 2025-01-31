@@ -79,6 +79,7 @@ library
     Cardano.Ledger.Core.Translation
     Cardano.Ledger.Core.TxCert
     Cardano.Ledger.Keys.Internal
+    Cardano.Ledger.State.AccountState
     Cardano.Ledger.State.PoolDistr
     Cardano.Ledger.State.SnapShots
     Cardano.Ledger.State.UTxO

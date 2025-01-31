@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Move `AccountState` to `Cardano.Ledger.State` from `cardano-ledger-shelley`
 * Move `Cardano.Ledger.PoolDistr` module contents into `Cardano.Ledger.State` and deprecated the former
 * Move `Cardano.Ledger.SnapShots` module contents into `Cardano.Ledger.State` and deprecated the former
 * Move `Cardano.Ledger.UTxO` module contents into `Cardano.Ledger.State` and deprecated the former

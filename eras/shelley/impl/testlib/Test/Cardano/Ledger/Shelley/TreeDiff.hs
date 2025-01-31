@@ -126,7 +126,6 @@ instance ToExpr PulsingRewUpdate where
 instance ToExpr RewardUpdate
 
 -- LedgerState/Types
-instance ToExpr AccountState
 
 instance
   ( ToExpr (TxOut era)
