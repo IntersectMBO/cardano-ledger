@@ -10,46 +10,49 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Constrained.SimplifyExperiment where
 
-import Constrained.BaseExperiment
 import Constrained.GenericExperiment
+import Constrained.WitnessExperiment
+import Constrained.BaseExperiment
+import Constrained.SyntaxExperiment
 import Constrained.ConformanceExperiment
 import Constrained.Core
 
-import Control.Monad.Identity
 import Data.Foldable
-import Data.List (intersect, isPrefixOf, isSuffixOf, nub, partition, (\\))
 import Data.Maybe
-import Data.Semigroup (Any (..), Max (..), getAll, getMax, sconcat)
+import Data.Semigroup (Any (..))
 import Data.String(fromString)
 import Data.Typeable
 import GHC.Stack
 import GHC.TypeLits
-import GHC.TypeLits(pattern SSymbol)
 import Prettyprinter hiding (cat)
-import Test.QuickCheck hiding (Args, Fun, forAll, Witness)
-import Test.QuickCheck.Gen
-import Test.QuickCheck.Random
 import Constrained.Env
 import Constrained.GenT
 import Constrained.List
-import Constrained.Core(Var(..),unionWithMaybe,Rename(rename))
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import Data.List.NonEmpty qualified as NE
-import Data.Type.Equality(TestEquality(..))
+import qualified Data.List.NonEmpty as NE
 import Control.Monad.Writer (Writer, tell,runWriter)
 import qualified Data.Set as Set
-import Data.Set(Set)
-import qualified Data.Map.Strict as Map
-import Data.Map.Strict(Map)
-import Data.Monoid qualified as Monoid
+-- import Data.Set(Set)
 import qualified Data.Semigroup as Semigroup
+import Prelude hiding (pred)
 
-import Constrained.BaseExperiment
-import Constrained.SyntaxExperiment
 
+-- =======================================================
+-- Stubb  Probably in SumExperiment
+
+caseSpec ::
+  forall as.
+  -- HasSpec (SumOver as) =>
+  Maybe String ->
+  List (Weighted Specification) as ->
+  Specification (SumOver as)
+caseSpec _tString _ss = undefined    
+
+-- Use of UnionPat below requires HasSpec(Set a) instance
 
 -- =======================================================
 -- helpers
@@ -99,12 +102,15 @@ optimisePred p =
     . simplifyPred
     $ p
 
-aggressiveInlining :: Pred -> Pred
-aggressiveInlining p 
+
+-- XXX
+
+aggressiveInlining ::Pred -> Pred 
+aggressiveInlining pred
   | inlined = aggressiveInlining pInlined
-  | otherwise = p
+  | otherwise = pred
   where
-    (pInlined, Any inlined) = runWriter $ go (freeVars p) [] p
+    (pInlined, Any inlined) = runWriter $ go (freeVars pred) [] pred
 
     underBinder fvs x p = fvs `without` [Name x] <> singleton (Name x) (countOf (Name x) p)
 
@@ -130,7 +136,13 @@ aggressiveInlining p
       -- TODO: we can (and should) probably add a bunch of cases to this.
       _ -> False
 
-    go fvs sub p = case p of
+    go fvs sub pred2 = case pred2 of
+      ElemPred bool t xs 
+        | not (isLit t)
+        , Lit a <- substituteAndSimplifyTerm sub t -> do
+            tell $ Any True
+            pure $ ElemPred bool (Lit a) xs
+        | otherwise -> pure $ ElemPred bool t xs 
       Subst x t p -> go fvs sub (substitutePred x t p)
       Reifies t' t f
         | not (isLit t)
@@ -182,7 +194,7 @@ aggressiveInlining p
         , Lit b <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
             pure $ toPred b
-        | otherwise -> pure p
+        | otherwise -> pure pred2
       -- If the term turns into a literal, there is no more generation to do here
       -- so we can ignore the `GenHint`
       GenHint _ t
@@ -190,7 +202,7 @@ aggressiveInlining p
         , Lit {} <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
             pure TruePred
-        | otherwise -> pure p
+        | otherwise -> pure pred2
       DependsOn t t'
         | not (isLit t)
         , Lit {} <- substituteAndSimplifyTerm sub t -> do
@@ -200,11 +212,12 @@ aggressiveInlining p
         , Lit {} <- substituteAndSimplifyTerm sub t' -> do
             tell $ Any True
             pure $ TruePred
-        | otherwise -> pure p
-      TruePred -> pure p
-      FalsePred {} -> pure p
-      Monitor {} -> pure p
+        | otherwise -> pure pred2
+      TruePred -> pure pred2
+      FalsePred {} -> pure pred2
+      Monitor {} -> pure pred2
       Explain es p -> Explain es <$> go fvs sub p
+
 
 -- =======================================================================
 -- Simplification for preds and terms -------------------------------------
@@ -226,9 +239,9 @@ simplifyTerm :: forall a. Term a -> Term a
 simplifyTerm = \case
   V v -> V v
   Lit l -> Lit l
-  App (f :: t sym bs a) (mapList simplifyTerm -> ts)
+  App (f :: t con sym bs a) (mapList simplifyTerm -> ts)
     | Just vs <- fromLits ts -> Lit $ uncurryList_ unValue (semantics f) vs
-    | Just t <- rewriteRules @sym @t @bs @a f ts -> simplifyTerm t
+    | Just t <- rewriteRules @con @sym @t @bs @a f ts -> simplifyTerm t
     | otherwise -> App f ts
  
 simplifyPred :: Pred -> Pred 
@@ -250,15 +263,16 @@ simplifyPred = \case
   Reifies t' t f -> case simplifyTerm t of
     Lit a -> Assert $ simplifyTerm t' ==. Lit (f a)
     t'' -> Reifies (simplifyTerm t') t'' f
-  ForAll set b -> case simplifyTerm set of
+  ForAll (ts :: Term t) (b :: Binder a) ->  case simplifyTerm ts of
     Lit as -> foldMap (`unBind` b) (forAllToList as)
-    {-  FIX ME STUBB undefined
-    App UnionW (xs :> ys :> Nil) ->
-      let b' = simplifyBinder b
+    -- (App (extractW (UnionW @t) -> Just Refl) xs) -> error "MADE IT"
+    {- Has to wait until we have HasSpec(Set a) instance
+    UnionPat (xs :: Term (Set a)) ys ->
+       let b' = simplifyBinder b   
        in mkForAll xs b' <> mkForAll ys b' -}
     set' -> case simplifyBinder b of
-      _ :-> TruePred -> TruePred
-      b' -> ForAll set' b'
+              _ :-> TruePred -> TruePred
+              b' -> ForAll set' b'
   DependsOn _ Lit {} -> TruePred
   DependsOn Lit {} _ -> TruePred
   DependsOn x y -> DependsOn x y
@@ -308,22 +322,22 @@ regularizeBinder (x :-> p) = x' :-> substitutePred x (V x') (regularizeNamesPred
     x' = regularize x p
 
 regularizeNamesPred :: Pred -> Pred
-regularizeNamesPred p = case p of
-  ElemPred {} -> p
-  Monitor {} -> p
+regularizeNamesPred pred = case pred of
+  ElemPred {} -> pred
+  Monitor {} -> pred
   And ps -> And $ map regularizeNamesPred ps
   Exists k b -> Exists k (regularizeBinder b)
   Subst v t p -> regularizeNamesPred (substitutePred v t p)
   Let t b -> Let t (regularizeBinder b)
-  Assert {} -> p
-  Reifies {} -> p
-  DependsOn {} -> p
+  Assert {} -> pred
+  Reifies {} -> pred
+  DependsOn {} -> pred
   ForAll t b -> ForAll t (regularizeBinder b)
   Case t bs -> Case t (mapList (mapWeighted regularizeBinder) bs)
   When b p' -> When b (regularizeNamesPred p')
-  GenHint {} -> p
-  TruePred {} -> p
-  FalsePred {} -> p
+  GenHint {} -> pred
+  TruePred {} -> pred
+  FalsePred {} -> pred
   Explain es p' -> Explain es (regularizeNamesPred p')
 
 regularizeNames :: Specification a -> Specification a
@@ -358,7 +372,7 @@ simplifySpec spec = case regularizeNames spec of
 -- Runs in `GE` in order for us to have detailed context on failure.
 computeSpecSimplified ::
   forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Specification a)
-computeSpecSimplified x p = localGESpec $ case p of
+computeSpecSimplified x pred3 = localGESpec $ case pred3 of
   ElemPred True t xs -> propagateSpec (MemberSpec xs) <$> toCtx x t
   ElemPred False (t :: Term b) xs -> propagateSpec (TypeSpec @b (emptySpec @b) (NE.toList xs)) <$> toCtx x t
   Monitor {} -> pure mempty
@@ -375,10 +389,10 @@ computeSpecSimplified x p = localGESpec $ case p of
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert (Lit True) -> pure mempty
-  Assert (Lit False) -> genError1 (show p)
+  Assert (Lit False) -> genError1 (show pred3)
 
-  -- Assert (ElemPat _ (Lit [])) -> pure (ErrorSpec (pure (show p)))
-  -- Assert (ElemPat t (Lit xs)) -> propagateSpec (MemberSpec (NE.fromList xs)) <$> toCtx x t
+  Assert (ElemPat ( _ :: Term a) (Lit [])) -> pure (ErrorSpec (NE.fromList["Empty list in ElemPat",show pred3]))
+  Assert (ElemPat (t :: Term a) (Lit xs)) -> propagateSpec (MemberSpec (NE.fromList xs)) <$> toCtx x t
 
   Assert t -> propagateSpec (equalSpec True) <$> toCtx x t
   ForAll (Lit s) b -> fold <$> mapM (\val -> computeSpec x $ unBind val b) (forAllToList s)
@@ -393,7 +407,7 @@ computeSpecSimplified x p = localGESpec $ case p of
 
   When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
   -- This shouldn't happen a lot of the time because when the body is trivial we mostly get rid of the `When` entirely
-  When {} -> pure $ SuspendedSpec x p
+  When {} -> pure $ SuspendedSpec x pred3
   Reifies (Lit a) (Lit val) f
     | f val == a -> pure TrueSpec
     | otherwise ->
@@ -402,31 +416,31 @@ computeSpecSimplified x p = localGESpec $ case p of
   Reifies t' (Lit val) f ->
     propagateSpec (equalSpec (f val)) <$> toCtx x t'
   Reifies Lit {} _ _ ->
-    fatalError $ NE.fromList ["Dependency error in computeSpec: Reifies", "  " ++ show p]
+    fatalError $ NE.fromList ["Dependency error in computeSpec: Reifies", "  " ++ show pred3]
   Explain es p -> do
     -- In case things crash in here we want the explanation
     s <- pushGE (NE.toList es) (computeSpecSimplified x p)
     -- This is because while we do want to propagate `explanation`s into `SuspendedSpec`
     -- we probably don't want to propagate the full "currently simplifying xyz" explanation.
     case s of
-      SuspendedSpec x p -> pure $ SuspendedSpec x (explanation es p)
+      SuspendedSpec x2 p2 -> pure $ SuspendedSpec x2 (explanation es p2)
       _ -> pure $ addToErrorSpec es s
   -- Impossible cases that should be ruled out by the dependency analysis and linearizer
   DependsOn {} ->
     fatalError $
       NE.fromList
-        ["The impossible happened in computeSpec: DependsOn", "  " ++ show x, show $ indent 2 (pretty p)]
+        ["The impossible happened in computeSpec: DependsOn", "  " ++ show x, show $ indent 2 (pretty pred3)]
   Reifies {} ->
     fatalError $
       NE.fromList
-        ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty p)]
+        ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty pred3)]
         
   where
     -- We want `genError` to turn into `ErrorSpec` and we want `FatalError` to turn into `FatalError`
     localGESpec ge = case ge of
       (GenError xs) -> Result $ ErrorSpec (catMessageList xs)
       (FatalError es) -> FatalError es
-      (Result x) -> Result x
+      (Result v) -> Result v
 
 
 -- | Precondition: the `Pred fn` defines the `Var a`.
@@ -445,63 +459,6 @@ computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
 -- STUB
 -- | Turn a list of branches into a SumSpec. If all the branches fail return an ErrorSpec.
-caseSpec ::
-  forall as.
-  HasSpec (SumOver as) =>
-  Maybe String ->
-  List (Weighted Specification) as ->
-  Specification (SumOver as)
-caseSpec tString ss = undefined
-
-
-
-{-
-
-src/Constrained/SimplifyExperiment.hs:523:23: error: [GHC-05617]
-    • Could not deduce ‘TypeSpec (Sum a (SumOver (a1 : as3)))
-                        ~ SumSpec a (SumOver (a1 : as3))’
-      from the context: as1 ~ (a : as2)
-        bound by a pattern with constructor:
-                   :> :: forall {k} (f :: k -> *) (a :: k) (as1 :: [k]).
-                         f a -> List f as1 -> List f (a : as1),
-                 in an equation for ‘loop’
-        at src/Constrained/SimplifyExperiment.hs:521:23-38
-      or from: as2 ~ (a1 : as3)
-        bound by a pattern with constructor:
-                   :> :: forall {k} (f :: k -> *) (a :: k) (as1 :: [k]).
-                         f a -> List f as1 -> List f (a : as1),
-                 in an equation for ‘loop’
-        at src/Constrained/SimplifyExperiment.hs:521:32-37
-      or from: Prerequisites (SumOver as1)
-        bound by a pattern with constructor:
-                   Evidence :: forall (c :: Constraint). c => Evidence c,
-                 in a pattern binding in
-                      a pattern guard for
-                        an equation for ‘loop’
-        at src/Constrained/SimplifyExperiment.hs:522:9-16
-      Expected: TypeSpec (SumOver as1)
-        Actual: SumSpec a (SumOver (a1 : as3))
-    • In the second argument of ‘($)’, namely
-        ‘SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss)’
-      In the expression:
-        typeSpec
-          $ SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss)
-      In an equation for ‘loop’:
-          loop mTypeString (s :> ss@(_ :> _))
-            | Evidence <- prerequisites @(SumOver as)
-            = (typeSpec
-                 $ SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss))
-            where
-                theWeights
-                  = case (weight s, totalWeight ss) of
-                      (Nothing, Nothing) -> Nothing
-                      (a, b) -> Just ...
-    • Relevant bindings include
-        s :: Weighted Specification a
-          (bound at src/Constrained/SimplifyExperiment.hs:521:23)
-    |
-523 |           (typeSpec $ SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss))
--}
 
 
 totalWeight :: List (Weighted f) as -> Maybe Int

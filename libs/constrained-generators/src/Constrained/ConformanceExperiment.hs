@@ -14,6 +14,7 @@
 
 module Constrained.ConformanceExperiment where
 
+import Constrained.WitnessExperiment
 import Constrained.BaseExperiment
 import Constrained.SyntaxExperiment
 

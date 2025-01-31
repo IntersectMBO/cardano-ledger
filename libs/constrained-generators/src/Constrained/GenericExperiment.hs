@@ -8,7 +8,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DefaultSignatures #-}
 
+-- | How can we automatically inject normal Haskell types into the logic, using GHC.Generics
 module Constrained.GenericExperiment where
 
 import GHC.TypeLits(Symbol)
@@ -79,30 +81,6 @@ splitProd = go (listShape @xs) (listShape @ys)
       where
         Prod p0 p1 = go (a :> as) bs xs
 
-{-
-fstFn :: forall fn a b. Member (PairFn fn) fn => fn '[Prod a b] a
-fstFn = injectFn $ Fst @fn
-
-sndFn :: forall fn a b. Member (PairFn fn) fn => fn '[Prod a b] b
-sndFn = injectFn $ Snd @fn
-
-pairFn :: forall fn a b. Member (PairFn fn) fn => fn '[a, b] (Prod a b)
-pairFn = injectFn $ Pair @fn
-
-data PairFn (fn :: [Type] -> Type -> Type) args res where
-  Pair :: PairFn fn '[a, b] (Prod a b)
-  Fst :: PairFn fn '[Prod a b] a
-  Snd :: PairFn fn '[Prod a b] b
-
-deriving instance Show (PairFn fn args res)
-deriving instance Eq (PairFn fn args res)
-
-instance FunctionLike (PairFn fn) where
-  sem = \case
-    Pair -> Prod
-    Fst -> prodFst
-    Snd -> prodSnd
--}
 ------------------------------------------------------------------------
 -- Sums
 ------------------------------------------------------------------------
@@ -117,56 +95,108 @@ type family SumOver as where
   SumOver '[a] = a
   SumOver (a : as) = Sum a (SumOver as)
 
-{-  This should be a Sum Witness type?
-injLeftFn :: forall fn a b. Member (SumFn fn) fn => fn '[a] (Sum a b)
-injLeftFn = injectFn @(SumFn fn) @fn InjLeft
+-- =========================================================================
+-- The idea is for each type, we define a type family (HasSimpleRep) the maps 
+-- that type to another type we already know how to deal with. The methods
+-- 'toSimpleRep' and 'fromSimpleRep' cature that knowledge. The strategy 
+-- we want to use most of the time, is to use GHC.Generics, to construct 
+-- the SimpleRep out of Sum and Prod, and to write the 'toSimpleRep' and 
+-- 'fromSimpleRep' methods automatically. If we can do that, then 
+-- every thing else will come for free. Note that it is not REQUIRED to make 
+-- the (SimpleRep t) out of Sum and Prod, but it helps. Note the default
+-- method instances use Sum and Prod, but that is not required.
+-- ==========================================================================
 
-injRightFn :: forall fn a b. Member (SumFn fn) fn => fn '[b] (Sum a b)
-injRightFn = injectFn @(SumFn fn) @fn InjRight
+class HasSimpleRep a where
+  type SimpleRep a
+  type TheSop a :: [Type]
+  toSimpleRep :: a -> SimpleRep a
+  fromSimpleRep :: SimpleRep a -> a
 
-data SumFn (fn :: [Type] -> Type -> Type) args res where
-  InjLeft :: SumFn fn '[a] (Sum a b)
-  InjRight :: SumFn fn '[b] (Sum a b)
+  type TheSop a = SOPOf (Rep a)
+  type SimpleRep a = SOP (TheSop a)
 
-deriving instance Show (SumFn fn args res)
-deriving instance Eq (SumFn fn args res)
+  default toSimpleRep ::
+    ( Generic a
+    , SimpleGeneric (Rep a)
+    , SimpleRep a ~ SimplifyRep (Rep a)
+    ) =>
+    a ->
+    SimpleRep a
+  toSimpleRep = toSimpleRep' . from
 
-instance FunctionLike (SumFn fn) where
-  sem = \case
-    InjLeft -> SumLeft
-    InjRight -> SumRight
--}
+  default fromSimpleRep ::
+    ( Generic a
+    , SimpleGeneric (Rep a)
+    , SimpleRep a ~ SimplifyRep (Rep a)
+    ) =>
+    SimpleRep a ->
+    a
+  fromSimpleRep = to . fromSimpleRep'
 
------------------------------------------------------------------
--- Generics
------------------------------------------------------------------
+type family SimplifyRep f where
+  SimplifyRep f = SOP (SOPOf f)
 
-{- This part of the code base is responsible for implementing the conversion
-   from a `Generic` type to a `Sum` over `Prod` representation that automatically
-   gives you an instance of `HasSpec`. The user has three options for building their
-   own instances of `HasSpec`, either they hand-roll an instance, they go with the
-   entirely `Generic` instance, or they provide their own `SimpleRep` for their type.
+-- ===============================================================
+-- How to move back and forth from (SimpleRep a) to 'a' in a 
+-- generic way, derived by the Generics machinery is captured 
+-- by the SimpleGeneric class 
+-- ===============================================================
 
-   The latter may be appropriate when the type is an optimized representation:
+class SimpleGeneric rep where
+  toSimpleRep' :: rep p -> SimplifyRep rep
+  fromSimpleRep' :: SimplifyRep rep -> rep p
 
-   ```
-   newtype Foo = Foo { unFoo :: MemoBytes ActualFoo }
+instance SimpleGeneric f => SimpleGeneric (D1 d f) where
+  toSimpleRep' (M1 f) = toSimpleRep' f
+  fromSimpleRep' a = M1 (fromSimpleRep' a)
 
-   instance HasSimpleRep Foo where
-     type SimpleRep Foo = ActualFoo
-     toSimpleRep = unMemoBytes . unFoo
-     fromSimpleRep = Foo . memoBytes
-   ```
+instance
+  ( SimpleGeneric f
+  , SimpleGeneric g
+  , SopList (SOPOf f) (SOPOf g)
+  ) =>
+  SimpleGeneric (f :+: g)
+  where
+  toSimpleRep' (L1 f) = injectSOPLeft @(SOPOf f) @(SOPOf g) $ toSimpleRep' f
+  toSimpleRep' (R1 g) = injectSOPRight @(SOPOf f) @(SOPOf g) $ toSimpleRep' g
+  fromSimpleRep' sop =
+    case caseSOP @(SOPOf f) @(SOPOf g) sop of
+      SumLeft l -> L1 (fromSimpleRep' l)
+      SumRight r -> R1 (fromSimpleRep' r)
 
-   This would then allow for `Foo` to be treated as a simple `newtype` over `ActualFoo`
-   in constraints:
+instance SimpleConstructor f => SimpleGeneric (C1 ('MetaCons c a b) f) where
+  toSimpleRep' (M1 f) = toSimpleCon' f
+  fromSimpleRep' a = M1 (fromSimpleCon' a)
 
-   ```
-   fooSpec :: Specification Foo
-   fooSpec = constrained $ \ foo ->
-     match foo $ \ actualFoo -> ...
-   ```
--}
+
+-- ================================================================================
+--    This part of the code base is responsible for implementing the conversion
+--    from a `Generic` type to a `Sum` over `Prod` representation that automatically
+--    gives you an instance of `HasSpec`. The user has three options for building their
+--    own instances of `HasSpec`, either they hand-roll an instance, they go with the
+--    entirely `Generic` instance, or they provide their own `SimpleRep` for their type.
+--
+--    The latter may be appropriate when the type is an optimized representation:
+--
+--    ```
+--    newtype Foo = Foo { unFoo :: MemoBytes ActualFoo }
+--
+--    instance HasSimpleRep Foo where
+--      type SimpleRep Foo = ActualFoo
+--      toSimpleRep = unMemoBytes . unFoo
+--      fromSimpleRep = Foo . memoBytes
+--    ```
+--
+--    This would then allow for `Foo` to be treated as a simple `newtype` over `ActualFoo`
+--    in constraints:
+--
+--    ```
+--    fooSpec :: Specification Foo
+--    fooSpec = constrained $ \ foo ->
+--      match foo $ \ actualFoo -> ...
+--    ```
+-- =========================================================================================
 
 -- Building a SOP type (Sum Of Prod) --------------------------------------
 
@@ -200,7 +230,8 @@ type family SOP constrs where
   SOP '[c ::: prod] = ProdOver prod
   SOP ((c ::: prod) : constrs) = Sum (ProdOver prod) (SOP constrs)
 
--- Constructing a SOP -----------------------------------------------------
+-- =====================================================
+-- Constructing a SOP ----------------------------------
 
 type family ConstrOf c sop where
   ConstrOf c (c ::: constr : sop) = constr
@@ -229,7 +260,8 @@ inject ::
   forall c constrs. Inject c constrs (SOP constrs) => FunTy (ConstrOf c constrs) (SOP constrs)
 inject = inject' @c @constrs id
 
--- Deconstructing a SOP ---------------------------------------------------
+-- =====================================================
+-- Deconstructing a SOP --------------------------------
 
 -- | An `ALG constrs r` is a function that takes a way to turn every
 -- constructor into an `r`:
@@ -257,8 +289,8 @@ instance (TypeList prod, SOPLike (con : cases) r) => SOPLike ((c ::: prod) : con
 
   consts r _ = consts @(con : cases) r
 
-
--- The individual constructor level ---------------------------------------
+-- ========================================================
+-- The individual constructor level -----------------------
 
 class SimpleConstructor rep where
   toSimpleCon' :: rep p -> ProdOver (Constr rep)
@@ -288,7 +320,8 @@ instance SimpleConstructor U1 where
   toSimpleCon' U1 = ()
   fromSimpleCon' _ = U1
 
--- The sum type level -----------------------------------------------------
+-- ===================================================
+-- The sum type level --------------------------------
 
 -- | Construct and deconstruct cases in a `SOP`
 class SopList xs ys where
@@ -311,3 +344,25 @@ instance SopList (x' : xs) (y : ys) => SopList (c ::: x : x' : xs) (y : ys) wher
   caseSOP (SumRight b) = case caseSOP @(x' : xs) @(y : ys) b of
     SumLeft b' -> SumLeft (SumRight b')
     SumRight b' -> SumRight b'
+
+-- ===========================================================
+-- How it works
+-- If the TypeSpec method of the HasSpec class has a SimpleRep instance, Like this
+-- type TypeSpec = a
+-- where 'a' has a Sum Product representation then all of the other methods 
+-- can use the default implementation. This saves lots of trouble for mundane types.
+--
+-- `HasSimpleRep` and `GenericsFn` are meant to allow you to express that a
+-- type is isomorphic to some other type 't' that has a (HasSpec t) instance.
+--
+-- The trick is that the default instance of `HasSpec a` assumes
+-- `HasSimpleRep a` and defines `TypeSpec a = TypeSpec (SimpleRep a)`.
+-- 
+-- From this it's possible to work with things of type `a` in constraints by
+-- treating them like things of type `SimpleRep a`. This allows us to do case
+-- matching etc. on `a` when `SimpleRep a` is a `Sum` type, for example.
+-- 
+-- Or alternatively it allows us to treat `a` as a newtype over `SimpleRep a`
+-- when using `match`.
+-- ====================================================================
+

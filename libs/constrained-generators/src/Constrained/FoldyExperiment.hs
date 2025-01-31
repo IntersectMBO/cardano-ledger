@@ -213,26 +213,26 @@ class HasSpec a => Foldy a where
 adds :: forall a. (forall t sym. FunctionSymbol sym t [a, a] a) => Foldy a => [a] -> a
 adds = foldr (semantics $ theAddFn) theZero
 
-{-
+
 data FoldSpec a where
   NoFold :: FoldSpec a
   FoldSpec ::
-    forall b a.
+    forall b a t sym.
     ( HasSpec a
     , HasSpec b
     , Foldy b
-    , Member (ListFn fn) fn
-    , BaseUniverse fn
+    , FunctionSymbol sym t '[a] b
     ) =>
-    '[a] b ->
-    Specification b ->
-    FoldSpec a
+    t sym '[a] b -> Specification b -> FoldSpec a
 
-instance {-# OVERLAPPABLE #-} (Arbitrary (TypeSpec a), Foldy a, BaseUniverse fn) => Arbitrary (FoldSpec a) where
-  arbitrary = oneof [FoldSpec idFn <$> arbitrary, pure NoFold]
+
+{-
+instance {-# OVERLAPPABLE #-} (Arbitrary (TypeSpec a), Foldy a) => Arbitrary (FoldSpec a) where
+  arbitrary = oneof [FoldSpec IdW <$> arbitrary, pure NoFold]
   shrink NoFold = []
   shrink (FoldSpec (extractFn @(FunFn fn) @fn -> Just Id) spec) = FoldSpec idFn <$> shrink spec
   shrink FoldSpec {} = [NoFold]
+
 
 preMapFoldSpec :: HasSpec a => '[a] b -> FoldSpec b -> FoldSpec a
 preMapFoldSpec _ NoFold = NoFold

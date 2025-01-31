@@ -21,6 +21,7 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 
 {-
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
@@ -42,14 +43,14 @@
 module Constrained.BaseExperiment where
 
 import Constrained.GenericExperiment
+import Constrained.WitnessExperiment
 
-import Debug.Trace
+-- import Debug.Trace
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, tell)
 import Data.Kind(Type,Constraint)
 import Data.Semigroup (Max (..), getMax)
 import Data.Typeable
-import GHC.Generics
 import GHC.Stack
 import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, forAll, Witness, witness)
@@ -62,12 +63,10 @@ import Data.List.NonEmpty(NonEmpty)
 import  GHC.TypeLits hiding(Text)
 import Data.Orphans() -- instances on Symbol
 import Data.Foldable(toList)
-import Data.Type.Equality(TestEquality(..))
+-- import Data.Type.Equality(TestEquality(..))
 import Data.String(fromString)
 import qualified Data.Set as Set
 import Data.Set(Set)
-import qualified Data.Map.Strict as Map
-import Data.Map.Strict(Map)
 
 -- ====================================================================
 -- The FunctionSymbol class for implementing new function symbols in
@@ -76,26 +75,26 @@ import Data.Map.Strict(Map)
 -- Sort of a combination of the FunctionLike and Functions classes
 -- An instance "assigns" several functions to each Symbol 's' 
 -- =====================================================================
-
-class ( KnownSymbol s
-      , Show (t s dom rng)
-      , Eq (t s dom rng)
+    
+class ( Typeable c
+      , KnownSymbol s
       , Typeable t
+      , Witness t 
       , TypeList dom
-      , Typeable dom      
+      , Typeable dom
       , All HasSpec dom
       , HasSpec rng
+      , Show (t c s dom rng)
+      , Eq (t c s dom rng)
       ) =>
-      FunctionSymbol  (s::Symbol) (t:: Symbol -> [Type] -> Type -> Type) (dom::[Type]) rng | s -> t
+      FunctionSymbol  (c::Constraint) (s::Symbol) (t:: Constraint -> Symbol -> [Type] -> Type -> Type) (dom::[Type]) rng | s -> t
       where
-      {-# MINIMAL witness, semantics, (propagate | simplepropagate) #-}
-      witness :: String -- For documentation about what constructor of 't' implements 's'
-      semantics :: t s dom rng -> FunTy dom rng
-
+      {-# MINIMAL witness, (propagate | simplepropagate) #-}
+      witness :: String -- For documentation about what constructor of 't' implements 's' 
       -- Handles all the obvious default cases. So if this is what you want
       -- then define simplepropagate instead. If you need special instructions
       -- for ExplainSpec, ErrorSpec, SuspendedSpec, or TrueSpec, then write your own.
-      propagate :: Context s t dom rng hole -> Specification rng -> Specification hole     
+      propagate :: Context c s t dom rng hole -> Specification rng -> Specification hole     
       propagate ctxt (ExplainSpec [] s) = propagate ctxt s
       propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
       propagate _ TrueSpec = TrueSpec
@@ -116,11 +115,11 @@ class ( KnownSymbol s
          Left xs -> ErrorSpec xs
          Right spec2 -> spec2
 
-      simplepropagate :: Context s t dom rng hole -> Specification rng -> Either (NonEmpty String) (Specification hole)
+      simplepropagate :: Context c s t dom rng hole -> Specification rng -> Either (NonEmpty String) (Specification hole)
       simplepropagate ctxt spec = Right $ propagate ctxt spec
 
       rewriteRules :: ( TypeList as, Typeable as, HasSpec b, All HasSpec as ) =>
-         t sym as b -> List Term as -> Maybe (Term b)
+         t c sym as b -> List Term as -> Maybe (Term b)
       rewriteRules _ _ = Nothing
 
       -- mapTypeSpec :: (HasSpec a, HasSpec b) => f sym '[a] b -> TypeSpec a -> Specification b
@@ -352,70 +351,17 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a)) => HasSpec a
     Specification Integer
   cardinalTypeSpec = cardinalTypeSpec @(SimpleRep a)
 
--- ====================================================================
--- SimpleRep and Generics
--- If the TypeSpec method of the HasSpec class has a SimpleRep instance, Like this
--- type TypeSpec = a
--- where 'a' has a SimpleRep instance, then all of the other methods 
--- can us the default implementation. This saves lots of trouble for mundane types.
---
--- `HasSimpleRep` and `GenericsFn` are meant to allow you to express that a
--- type is isomorphic to some other type 't' that has a (HasSpec t) instance.
---
--- The trick is that the default instance of `HasSpec a` assumes
--- `HasSimpleRep a` and defines `TypeSpec a = TypeSpec (SimpleRep a)`.
--- 
--- From this it's possible to work with things of type `a` in constraints by
--- treating them like things of type `SimpleRep a`. This allows us to do case
--- matching etc. on `a` when `SimpleRep a` is a `Sum` type, for example.
--- 
--- Or alternatively it allows us to treat `a` as a newtype over `SimpleRep a`
--- when using `match`.
--- ====================================================================
-
-
-class HasSimpleRep a where
-  type SimpleRep a
-  type TheSop a :: [Type]
-  toSimpleRep :: a -> SimpleRep a
-  fromSimpleRep :: SimpleRep a -> a
-
-  type TheSop a = SOPOf (Rep a)
-  type SimpleRep a = SOP (TheSop a)
-
-  default toSimpleRep ::
-    ( Generic a
-    , SimpleGeneric (Rep a)
-    , SimpleRep a ~ SimplifyRep (Rep a)
-    ) =>
-    a ->
-    SimpleRep a
-  toSimpleRep = toSimpleRep' . from
-
-  default fromSimpleRep ::
-    ( Generic a
-    , SimpleGeneric (Rep a)
-    , SimpleRep a ~ SimplifyRep (Rep a)
-    ) =>
-    SimpleRep a ->
-    a
-  fromSimpleRep = to . fromSimpleRep'
-
-type family SimplifyRep f where
-  SimplifyRep f = SOP (SOPOf f)
-
 
 -- ===================================================================
 -- toGeneric and fromGeneric as Function Symbols
 -- That means they can be used inside (Term a)  
--- ===================================================================  
-
+-- ===================================================================    
+  
 instance  ( HasSimpleRep a, HasSpec a, HasSpec rng
           , rng ~ SimpleRep a,TypeSpec a ~ TypeSpec (SimpleRep a)) => 
-          FunctionSymbol  "toGenericFn" BaseWitness '[a] rng where
-  semantics = baseSem 
-  witness = "ToGenericW[toGenericFn]"
- 
+          FunctionSymbol  (HasSimpleRep a) "toGenericFn" BaseW '[a] rng where
+  witness = "ToGenericW[toGenericFn]" 
+
   simplepropagate (Context ToGenericW  (HOLE End)) (TypeSpec s cant) = Right $ TypeSpec s (fromSimpleRep <$> cant)
   simplepropagate (Context ToGenericW  (HOLE End)) (MemberSpec es) = Right $ MemberSpec (fmap fromSimpleRep es) 
   simplepropagate ctx _ = Left(NE.fromList["ToGenericW (toGenericFn)","Unreachable context, too many args",show ctx]) 
@@ -432,10 +378,10 @@ toGeneric_ ::
 toGeneric_ = appTerm ToGenericW 
 
 
+
 instance  ( HasSimpleRep a, HasSpec a, HasSpec (SimpleRep a), HasSpec dom
           , dom ~ SimpleRep a, TypeSpec a ~ TypeSpec (SimpleRep a) ) => 
-          FunctionSymbol "fromGenericFn" BaseWitness '[dom] a where
-  semantics = baseSem  
+          FunctionSymbol (HasSimpleRep a) "fromGenericFn" BaseW '[dom] a where
   witness = "FromGenericW[fromGenericFn]"     
   
   simplepropagate (Context FromGenericW  (HOLE End)) (TypeSpec s cant) = Right $ TypeSpec s (toSimpleRep <$> cant)
@@ -479,7 +425,7 @@ toSimpleRepSpec ::
   ( HasSimpleRep a, 
     HasSpec (SimpleRep a),
     TypeSpec a ~ TypeSpec (SimpleRep a)
-  , FunctionSymbol  "fromGenericFn" BaseWitness '[SimpleRep a] a ) =>
+  , FunctionSymbol  (HasSimpleRep a) "fromGenericFn" BaseW '[SimpleRep a] a ) =>
   Specification a ->
   Specification (SimpleRep a)
 toSimpleRepSpec = \case
@@ -492,168 +438,116 @@ toSimpleRepSpec = \case
     constrained $ \x' ->
       Let (fromGeneric_ x') (x :-> p) 
 
--- ===============================================================
--- How to move back and forth from (SimpleRep a) to 'a'  
--- ===============================================================
-
-class SimpleGeneric rep where
-  toSimpleRep' :: rep p -> SimplifyRep rep
-  fromSimpleRep' :: SimplifyRep rep -> rep p
-
-instance SimpleGeneric f => SimpleGeneric (D1 d f) where
-  toSimpleRep' (M1 f) = toSimpleRep' f
-  fromSimpleRep' a = M1 (fromSimpleRep' a)
-
-instance
-  ( SimpleGeneric f
-  , SimpleGeneric g
-  , SopList (SOPOf f) (SOPOf g)
-  ) =>
-  SimpleGeneric (f :+: g)
-  where
-  toSimpleRep' (L1 f) = injectSOPLeft @(SOPOf f) @(SOPOf g) $ toSimpleRep' f
-  toSimpleRep' (R1 g) = injectSOPRight @(SOPOf f) @(SOPOf g) $ toSimpleRep' g
-  fromSimpleRep' sop =
-    case caseSOP @(SOPOf f) @(SOPOf g) sop of
-      SumLeft l -> L1 (fromSimpleRep' l)
-      SumRight r -> R1 (fromSimpleRep' r)
-
-instance SimpleConstructor f => SimpleGeneric (C1 ('MetaCons c a b) f) where
-  toSimpleRep' (M1 f) = toSimpleCon' f
-  fromSimpleRep' a = M1 (fromSimpleCon' a)
 
 
--- ============================================================
--- One Witness to FunctionSymbol . This is the Witness for many
--- of the functions symbols available in the the Base modules
--- If you want to extend the system, yoe can define you own
--- Witness type and use it to give FunctionSymbol instances
--- that you can write, to extend the system.
--- ==============================================================
-
-data BaseWitness (sym :: Symbol) (dom :: [Type]) (rng :: Type) where 
-  EqualW :: forall a . Eq a => BaseWitness "==." '[a,a] Bool  
-  -- List
-  ElemW :: forall a. (Eq a,Typeable a) => BaseWitness "elem_" '[a,[a]] Bool
-  -- Bool
-  NotW :: BaseWitness "not_" '[Bool] Bool
-  OrW :: BaseWitness "or_" '[Bool, Bool] Bool
-  -- Pair
-  PairW :: forall a b. BaseWitness "pair_" '[a, b] (Prod a b)
-  FstW :: forall a b. BaseWitness "fst_" '[Prod a b] a
-  SndW :: forall a b. BaseWitness "snd_" '[Prod a b] b  
-  -- Sum
-  InjLeftW :: forall a b. BaseWitness "injectLeft_" '[a] (Sum a b)
-  InjRightW ::forall a b. BaseWitness "injectRight_" '[b] (Sum a b)
-  -- Set
-  SubsetW :: (Ord a, Show a, Typeable a) => BaseWitness "subset_" '[Set a, Set a] Bool
-  DisjointW :: (Ord a, Show a, Typeable a) => BaseWitness "disjoint_" '[Set a, Set a] Bool
-  MemberW :: (Ord a, Show a, Typeable a) => BaseWitness "member_" '[a, Set a] Bool
-  SingletonW :: Ord a => BaseWitness "ssingleton_" '[a] (Set a)
-  UnionW :: (Ord a, Show a, Typeable a) => BaseWitness "union_" '[Set a, Set a] (Set a)
-  FromListW :: Ord a => BaseWitness "fromList_" '[[a]] (Set a)
-  -- Map
-  DomW :: forall k v. (Typeable k,Typeable v,Ord k) => BaseWitness "dom_" '[Map k v] (Set k)
-  RngW :: forall k v. (Typeable k,Typeable v) => BaseWitness "rng_" '[Map k v] [v]
-  LookupW :: forall k v. (Typeable k,Typeable v,Ord k) => BaseWitness "lookup_" '[k, Map k v] (Maybe v)
-  -- Generic (SimpleRep)
-  FromGenericW :: forall a. HasSimpleRep a => BaseWitness "fromGenericFn" '[SimpleRep a] a 
-  ToGenericW :: forall a. HasSimpleRep a => BaseWitness "toGenericFn" '[a] (SimpleRep a)
-  
-deriving instance Eq (BaseWitness s dom rng)
-
-instance KnownSymbol s => Show (BaseWitness s dom rng) where
-  show (_ :: BaseWitness s dom rng) = show (ppSymbol (SSymbol @s))
-
-baseSem :: BaseWitness sym dom rng -> FunTy dom rng
-baseSem EqualW = (==)
-baseSem ElemW = elem
-baseSem NotW = not
-baseSem OrW = (||)
-baseSem PairW = Prod
-baseSem FstW = prodFst
-baseSem SndW = prodSnd
-baseSem InjLeftW = SumLeft
-baseSem InjRightW = SumRight
-baseSem SubsetW = Set.isSubsetOf
-baseSem DisjointW = Set.disjoint
-baseSem MemberW = Set.member
-baseSem SingletonW = Set.singleton
-baseSem UnionW = Set.union
-baseSem FromListW = Set.fromList
-baseSem DomW = Map.keysSet
-baseSem RngW = Map.elems
-baseSem LookupW = Map.lookup
-baseSem FromGenericW = fromSimpleRep
-baseSem ToGenericW = toSimpleRep
 
 -- =============================================
 -- Patterns over Function Symbols
 -- =============================================
 
 -- | When writing patterns over (App witness arglist), we have to obtain proof that 'witness' 
---   is some particular constructor of BaseWitness (or some other witness type). For example
+--   is some particular constructor of BaseW (or some other witness type). For example
 --   suppose we were writing a pattern for (PairPat x y) <- (App (x::(f s d r)) (x :> y :> Nil)) 
---   we want proof that (x:: f s d r) is (PairW :: BaseWitness "pair_" '[a, b] (Prod a b))
+--   we want proof that (x:: f s d r) is (PairW :: BaseW "pair_" '[a, b] (Prod a b))
 --   So we test 4 things 
---   (1) f :~: BaseWitness
+--   (1) f :~: BaseW
 --   (2) s :~: "pair_" 
 --   (3) d :~: '[a,b]
 --   (4) r :~: (Prod a b)
-isBaseWit :: forall (a :: Symbol) (b :: [Type]) c f (x:: Symbol) (y:: [ Type ]) z. 
-    (Typeable a, Typeable b,Typeable c,Typeable f,Typeable x,Typeable y, Typeable z) => 
-    BaseWitness a b c -> 
-    f x y z -> 
-    (Maybe (BaseWitness x y z), Maybe (f :~: BaseWitness),Maybe(a :~: x),Maybe(b :~: y),Maybe (c :~: z))
-isBaseWit t x = trace "HERE" $
-   case (eqT @f @BaseWitness, eqT @a @x, eqT @b @y, eqT @c @z) of
-     (p1@(Just Refl), p2@(Just Refl), p3@(Just Refl), p4@(Just Refl)) 
-       -> if t==x then (Just t,p1,p2,p3,p4) else (Nothing,p1,p2,p3,p4)
-     _ -> (Nothing,Nothing,Nothing,Nothing,Nothing)
-
-
-extractSym :: 
-  forall (a :: Symbol) (b :: Symbol) . 
-  (KnownSymbol a) => 
-  SSymbol b -> Maybe (b :~: a)
-extractSym b = testEquality b (SSymbol @a)      
+isBaseWit :: forall (m :: Constraint) (a :: Symbol) (b :: [Type]) c f (n::Constraint) (x:: Symbol) (y:: [ Type ]) z. 
+    (Typeable a, Typeable b,Typeable c,Typeable f,Typeable x,Typeable y, Typeable z,Typeable m, Typeable n) => 
+    BaseW m a b c -> 
+    f n x y z -> 
+    (Maybe (BaseW n x y z), Maybe (f :~: BaseW),Maybe(m :~: n),Maybe(a :~: x),Maybe(b :~: y),Maybe (c :~: z))
+isBaseWit t x = 
+   case (eqT @f @BaseW, eqT @m @n, eqT @a @x,eqT @b @y, eqT @c @z) of
+     (p1@(Just Refl),  pcon@(Just Refl), p2@(Just Refl),p3@(Just Refl), p4@(Just Refl)) 
+       -> if t==x then (Just t,p1,pcon, p2,p3,p4) else (Nothing,p1,pcon,p2,p3,p4)
+     _ -> (Nothing,Nothing,Nothing,Nothing,Nothing,Nothing)
 
 -- ========== "elem_"
 pattern ElemPat :: 
-  forall a rng . (HasSpec a,HasSpec[a]) => 
-  forall        . (rng ~ Bool,FunctionSymbol "elem_" BaseWitness '[a,[a]] Bool) 
+  forall a rng . (Eq a,Typeable a) => 
+  forall        . (rng ~ Bool,FunctionSymbol (Eq a) "elem_" BaseW '[a,[a]] Bool) 
                  => Term a -> Term [a] -> Term rng
-pattern ElemPat x y <- App (isBaseWit (ElemW @a) -> (Just ElemW, Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
+pattern ElemPat x y <- App (isBaseWit (ElemW @a) -> (Just ElemW, Just Refl, Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
    where ElemPat x y = App ElemW (x :> y :> Nil)
 
 -- ========== "==."
 pattern EqualPat :: 
-  forall a rng . (HasSpec a) => 
-  forall        . (rng ~ Bool,FunctionSymbol "==." BaseWitness '[a,a] Bool) 
+  forall a rng . (Eq a,Typeable a) => 
+  forall        . (rng ~ Bool,FunctionSymbol (Eq a) "==." BaseW '[a,a] Bool) 
                  => Term a -> Term a -> Term rng
-pattern EqualPat x y <- App (isBaseWit (EqualW @a) -> (Just EqualW, Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
+pattern EqualPat x y <- App (isBaseWit (EqualW @a) -> (Just EqualW, Just Refl,Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
    where EqualPat x y = App EqualW (x :> y :> Nil)
+
+{-   
+extract :: 
+  forall s t d a s2 t2 d2 a2.
+  (FunctionSymbol s t d a, FunctionSymbol s2 t2 d2 a2) => 
+  t2 s2 d2 a2 -> t s d a ->  Maybe (t s d a)
+extract known hidden = case (eqT @t @t2, eqT @s @s2, eqT @d @d2, eqT @a @a2) of
+  (Just Refl,Just Refl,Just Refl,Just Refl) -> if known==hidden then (Just known) else Nothing
+  _ -> Nothing
+
+-- ===========================================================================
+-- This is quite usefull, as long as we have actual Function Symbol instances
+extractW :: 
+  forall t2 s2 d2 a2 t s d a. 
+    ( FunctionSymbol s t d a, Witness t2
+    , Typeable t2, Typeable s2, Typeable d2, Typeable a2, Typeable s) =>
+  t2 s2 d2 a2 -> t s d a ->  Maybe (t :~: t2)
+extractW known hidden = case (eqT @t @t2, eqT @s @s2, eqT @d @d2, eqT @a @a2) of
+       (Just p@Refl,Just Refl,Just Refl,Just Refl) -> if known==hidden then (Just p) else Nothing
+       _bad -> Nothing  
+  where _ = semantics known       -- These force the FunctionSymbol and 
+        _ = App hidden undefined  -- Witness constraints to be not redundant
+
+testTerm :: Term Bool
+testTerm = (App EqualW (Lit True :> Lit False :> Nil))
+
+-- | The intended use of extractW, is as a view pattern inside of App
+--   The pattern (App (extractW X -> Just Refl) xs) means 
+--   1) the Just tells us the FunctionSymbol in the App is 'X'
+--   2) the Refl, gives us a proof of that type, which we can use when processing 'xs'
+--   Note when matching Polymorphic instances, we need to apply them to types (EqualW @Bool)
+foo :: String
+foo = case testTerm of
+         (App (extractW NotW -> Just _)  _ ) -> "OR"           -- This should fail
+         (App (extractW (EqualW @Bool) -> Just Refl) _ ) -> "EQUAL"  -- This should succeed, and we know that witness 't' :: BaseW
+         _ -> "No"                                                -- We should never reach here
+-- =============================================================================================
+
+-- UnionW :: (Ord a, Show a, Typeable a) => BaseW "union_" '[Set a, Set a] (Set a)
+-- ============= "union_"
+pattern UnionPat :: 
+  forall a rng . (Typeable a,Ord a) => 
+  forall        . (rng ~ Set a,FunctionSymbol "union_" BaseW '[Set a,Set a] (Set a)) 
+                 => Term (Set a) -> Term (Set a) -> Term rng
+pattern UnionPat x y <- App (isBaseWit (UnionW @a) -> (Just UnionW, Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
+   where UnionPat x y = App UnionW (x :> y :> Nil)
+
 
 -- ========== "pair_"
 pattern PairPat :: 
-  forall a b rng . (HasSpec a, HasSpec b,HasSpec (Prod a b)) => 
-  forall         . (rng ~ Prod a b,FunctionSymbol "pair_" BaseWitness '[a,b] (Prod a b)) 
+  forall a b rng . (Typeable a,Typeable b) => 
+  forall         . (rng ~ Prod a b,FunctionSymbol "pair_" BaseW '[a,b] (Prod a b)) 
                  => Term a -> Term b -> Term rng
 pattern PairPat x y <- App (isBaseWit (PairW @a @b) -> (Just PairW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
    where PairPat x y = App PairW (x :> y :> Nil)
    -- You can't actually apply PairPat, because when this pattern was written,
-   -- there was no instance (FunctionSymbol "pair_" BaseWitness '[a,b] (Prod a b)) yet!
+   -- there was no instance (FunctionSymbol "pair_" BaseW '[a,b] (Prod a b)) yet!
 
 pattern InjLeftPat :: 
-  forall a b rng . (HasSpec a, HasSpec b,HasSpec (Sum a b)) => 
-  forall         . (rng ~ Sum a b,FunctionSymbol "injectLeft_" BaseWitness '[a] (Sum a b)) 
+  forall a b rng . (Typeable a, Typeable b) => 
+  forall         . (rng ~ Sum a b,FunctionSymbol "injectLeft_" BaseW '[a] (Sum a b)) 
                  => Term a -> Term rng
 pattern InjLeftPat x <- App (isBaseWit (InjLeftW @a @b) -> (Just InjLeftW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
    where InjLeftPat x = App InjLeftW (x :> Nil)
 
 pattern InjRightPat :: 
-  forall a b rng . (HasSpec a, HasSpec b,HasSpec (Sum a b)) => 
-  forall         . (rng ~ Sum a b,FunctionSymbol "injectRight_" BaseWitness '[b] (Sum a b)) 
+  forall a b rng . (Typeable a,Typeable b) => 
+  forall         . (rng ~ Sum a b,FunctionSymbol "injectRight_" BaseW '[b] (Sum a b)) 
                  => Term b -> Term rng
 pattern InjRightPat x <- App (isBaseWit (InjRightW @a @b) -> (Just InjRightW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
    where InjRightPat x = App InjRightW (x :> Nil)   
@@ -662,8 +556,8 @@ pattern InjRightPat x <- App (isBaseWit (InjRightW @a @b) -> (Just InjRightW, Ju
 
 -- ============= fromGenericFn
 pattern FromGenericPat :: 
-  forall a rng . (HasSpec a,HasSpec (SimpleRep a),HasSimpleRep a) => 
-  forall       . (rng ~ a,FunctionSymbol "fromGenericFn" BaseWitness '[SimpleRep a] a) 
+  forall a rng . (HasSimpleRep a,Typeable a,Typeable (SimpleRep a)) => 
+  forall       . (rng ~ a,FunctionSymbol "fromGenericFn" BaseW '[SimpleRep a] a) 
               => Term (SimpleRep a) -> Term rng
 pattern FromGenericPat x <- App (isBaseWit (FromGenericW @a) -> (Just FromGenericW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
    where FromGenericPat x = App FromGenericW (x :> Nil)   
@@ -671,19 +565,21 @@ pattern FromGenericPat x <- App (isBaseWit (FromGenericW @a) -> (Just FromGeneri
 -- ============= toGenericFn
 pattern ToGenericPat :: 
   forall a rng . (Typeable a,Typeable (SimpleRep a),HasSimpleRep a) => 
-  forall       . (rng ~ SimpleRep a,FunctionSymbol "toGenericFn" BaseWitness '[a] (SimpleRep a))
+  forall       . (rng ~ SimpleRep a,FunctionSymbol "toGenericFn" BaseW '[a] (SimpleRep a))
               => Term a -> Term rng
 pattern ToGenericPat x <- App (isBaseWit (ToGenericW @a) -> (Just ToGenericW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
    -- where ToGenericPat x = App ToGenericW (x :> Nil)      
-
+-}
 
 -- ================ Probably Move this, but it was good practice since it is simple
-instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where
+
+
+instance FunctionSymbol () "not_" BaseW '[Bool] Bool where
     witness = "NotW[not_]"
-    semantics = baseSem
     
     simplepropagate (Context NotW (HOLE End)) spec = Right $ caseBoolSpec spec (equalSpec . not)
     simplepropagate ctx _ = Left (NE.fromList["NotW (not_)","Unreachable context, too many args",show ctx])
+
 
 not_ :: Term Bool -> Term Bool
 not_ = appTerm NotW
@@ -692,9 +588,8 @@ caseBoolSpec :: forall a. HasSpec a => Specification Bool -> (Bool -> Specificat
 caseBoolSpec = undefined
    where _ = emptySpec @a
 
-instance HasSpec a => FunctionSymbol "==."  BaseWitness '[a, a] Bool where
+instance HasSpec a => FunctionSymbol (Eq a) "==."  BaseW '[a, a] Bool where
     witness = "EqualW[==.]"
-    semantics = baseSem
     
     simplepropagate (Context EqualW (HOLE (a :<| End)))  spec =  
       Right $ caseBoolSpec spec $ \case {True -> equalSpec a; False -> notEqualSpec a}
@@ -718,9 +613,9 @@ data BinaryShow where
 -- Term
 
 data Term a where
-  App :: forall sym t dom rng. 
-        (FunctionSymbol sym t dom rng, All HasSpec dom, HasSpec rng) => 
-        t sym dom rng -> List Term dom -> Term rng
+  App :: forall c sym t dom rng. 
+        (FunctionSymbol c sym t dom rng, All HasSpec dom, HasSpec rng) => 
+        t c sym dom rng -> List Term dom -> Term rng
   Lit :: Show a => a -> Term a
   V :: HasSpec a => Var a -> Term a
 
@@ -739,9 +634,9 @@ same :: All HasSpec as => List Term as -> List Term as -> Bool
 same Nil Nil = True
 same (x :> xs) (y :> ys) = x==y && same xs ys  
 
-appSym :: forall sym t as b.
-   (FunctionSymbol sym t as b) => 
-   t sym as b -> List Term as -> Term b
+appSym :: forall c sym t as b.
+   (FunctionSymbol c sym t as b) => 
+   t c sym as b -> List Term as -> Term b
 appSym w xs = App w xs
 
 
@@ -753,13 +648,13 @@ appSym w xs = App w xs
 --        app NotW (lit False)  ==reducesto==> not_ False
 --   this functionality is embedded in the Haskel function not_
 --   Note the witness (NotW) must have a FunctionSymbol instance like:
---   instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where ...
+--   instance FunctionSymbol "not_" BaseW '[Bool] Bool where ...
 --             Name in Haskell^      ^  its arguments^   ^ its result
 --                  The type of NotW |
-appTerm :: forall sym t ds b. 
-           (FunctionSymbol sym t ds b) => 
-           t sym ds b -> FunTy (MapList Term ds) (Term b)
-appTerm sym = curryList @ds (App @sym @t @ds @b sym)  
+appTerm :: forall c sym t ds b. 
+           (FunctionSymbol c sym t ds b) => 
+           t c sym ds b -> FunTy (MapList Term ds) (Term b)
+appTerm sym = curryList @ds (App @c @sym @t @ds @b sym)  
 
 -- ===========================================
 -- Binder
@@ -1049,12 +944,6 @@ short [x] =
    in "[" <+> fromString refined <+> "]"
 short xs = "([" <+> viaShow (length xs) <+> "elements ...] @" <> prettyType @a <> ")"
 
-showType :: forall t. Typeable t => String
-showType = show (typeRep (Proxy @t))
-
-ppSymbol :: KnownSymbol a => (SSymbol a) -> Doc ann
-ppSymbol (_ :: SSymbol z) = fromString (symbolVal (Proxy @z))
-
 -- ==========================================================================
 -- Pretty and Show instances
 
@@ -1317,13 +1206,13 @@ instance HasSpec Bool where
 -- Contexts 
 
 -- | A context identifies a Term with exactly 1 variable. 
-data Context (s :: Symbol) (t :: Symbol -> [Type] -> Type -> Type) (dom :: [Type]) rng hole where 
-  Context :: t s dom rng -> CtxtList Pre dom hole -> Context s t dom rng hole
+data Context (c :: Constraint) (s :: Symbol) (t :: Constraint -> Symbol -> [Type] -> Type -> Type) (dom :: [Type]) rng hole where 
+  Context :: t c s dom rng -> CtxtList Pre dom hole -> Context c s t dom rng hole
 
-deriving instance (Show (t s dom rng),All Show dom) => Show (Context s t dom rng hole)
+deriving instance (Show (t c s dom rng),All Show dom) => Show (Context c s t dom rng hole)
 
 data Ctx rng hole where 
-  Ctx :: (HasSpec hole,FunctionSymbol s t dom rng) => Context s t dom rng hole -> Ctx rng hole  
+  Ctx :: (HasSpec hole,FunctionSymbol c s t dom rng) => Context c s t dom rng hole -> Ctx rng hole  
  
 data Mode = Pre | Post
 
