@@ -37,10 +37,10 @@ prop_setWithNoDuplicatesAndTag :: Property
 prop_setWithNoDuplicatesAndTag =
   forAllBlind genUniqueListEncoding $
     \(s, setEncoder) ->
-      let trip = Trip id (decCBOR @(Set.Set Int)) (dropCBOR (Proxy @(Set.Set Int)))
+      let trip = Trip id (decCBOR @(Set.Set Int)) (dropCBOR (Proxy @(Set.Set Int))) True
        in property $
             forM_ [(natVersion @9) .. maxBound] $
-              \v -> embedTripExpectation v v trip (\s' _ -> (s' `shouldBe` s)) setEncoder
+              \v -> embedTripExpectation v v trip (\s' _ -> s' `shouldBe` s) setEncoder
 
 spec :: Spec
 spec = do

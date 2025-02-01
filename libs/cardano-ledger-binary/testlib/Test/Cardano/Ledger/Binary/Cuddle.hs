@@ -9,6 +9,7 @@
 module Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
   huddleRoundTripCborSpec,
+  huddleRoundTripCborNoFlatTermpCompSpec,
   huddleRoundTripAnnCborSpec,
   writeSpec,
 ) where
@@ -46,6 +47,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (RoundTripFailure),
   Trip (..),
   cborTrip,
+  cborTripNoFlatTermComp,
   decodeAnnExtra,
   embedTripLabelExtra,
  )
@@ -86,9 +88,30 @@ huddleRoundTripCborSpec ::
   -- | Name of the CDDL rule to test
   T.Text ->
   SpecWith CuddleData
-huddleRoundTripCborSpec version ruleName =
+huddleRoundTripCborSpec = huddleRoundTripCborSpecInternal @a True
+
+huddleRoundTripCborNoFlatTermpCompSpec ::
+  forall a.
+  (HasCallStack, Eq a, Show a, EncCBOR a, DecCBOR a) =>
+  -- | Serialization version
+  Version ->
+  -- | Name of the CDDL rule to test
+  T.Text ->
+  SpecWith CuddleData
+huddleRoundTripCborNoFlatTermpCompSpec = huddleRoundTripCborSpecInternal @a False
+
+huddleRoundTripCborSpecInternal ::
+  forall a.
+  (HasCallStack, Eq a, Show a, EncCBOR a, DecCBOR a) =>
+  Bool ->
+  Version ->
+  T.Text ->
+  SpecWith CuddleData
+huddleRoundTripCborSpecInternal flatTermComp version ruleName =
   let lbl = label $ Proxy @a
-      trip = cborTrip @a
+      trip
+        | flatTermComp = cborTrip @a
+        | otherwise = cborTripNoFlatTermComp @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
           withGenTerm cddlData (Cuddle.Name ruleName) $

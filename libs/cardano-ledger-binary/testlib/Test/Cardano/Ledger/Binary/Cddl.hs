@@ -9,6 +9,7 @@
 
 module Test.Cardano.Ledger.Binary.Cddl (
   cddlRoundTripCborSpec,
+  cddlRoundTripCborNoFlatTermCompSpec,
   cddlRoundTripExpectation,
   cddlRoundTripAnnCborSpec,
   cddlRoundTripAnnExpectation,
@@ -130,11 +131,33 @@ cddlRoundTripCborSpec ::
   -- | Name of the CDDL variable to test
   T.Text ->
   SpecWith CddlData
-cddlRoundTripCborSpec version varName =
+cddlRoundTripCborSpec = cddlRoundTripCborSpecInternal @a True
+
+cddlRoundTripCborNoFlatTermCompSpec ::
+  forall a.
+  (HasCallStack, Eq a, Show a, EncCBOR a, DecCBOR a) =>
+  -- | Serialization version
+  Version ->
+  -- | Name of the CDDL variable to test
+  T.Text ->
+  SpecWith CddlData
+cddlRoundTripCborNoFlatTermCompSpec = cddlRoundTripCborSpecInternal @a False
+
+cddlRoundTripCborSpecInternal ::
+  forall a.
+  (HasCallStack, Eq a, Show a, EncCBOR a, DecCBOR a) =>
+  Bool ->
+  Version ->
+  T.Text ->
+  SpecWith CddlData
+cddlRoundTripCborSpecInternal flatTermComp version varName =
   let lbl = label $ Proxy @a
+      trip
+        | flatTermComp = cborTrip @a
+        | otherwise = cborTripNoFlatTermComp @a
    in it (T.unpack $ varName <> ": " <> lbl) $ \cddlData ->
         withCddlVarFile varName cddlData $
-          cddlRoundTripExpectation lbl version version (cborTrip @a)
+          cddlRoundTripExpectation lbl version version trip
 
 -- | Verify that random data generated is:
 --

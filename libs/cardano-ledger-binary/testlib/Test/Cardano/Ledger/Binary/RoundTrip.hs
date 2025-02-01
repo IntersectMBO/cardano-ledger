@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   -- * Spec
   roundTripSpec,
   roundTripCborSpec,
+  roundTripCborNoFlatTermCompSpec,
   roundTripAnnCborSpec,
   roundTripRangeSpec,
 
@@ -51,6 +52,7 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   Trip (..),
   mkTrip,
   cborTrip,
+  cborTripNoFlatTermComp,
 
   -- * Tripping functions
   roundTrip,
@@ -104,6 +106,12 @@ roundTripCborSpec ::
   (Show t, Eq t, Arbitrary t, EncCBOR t, DecCBOR t) =>
   Spec
 roundTripCborSpec = roundTripSpec (cborTrip @t)
+
+roundTripCborNoFlatTermCompSpec ::
+  forall t.
+  (Show t, Eq t, Arbitrary t, EncCBOR t, DecCBOR t) =>
+  Spec
+roundTripCborNoFlatTermCompSpec = roundTripSpec (cborTripNoFlatTermComp @t)
 
 -- | Tests the roundtrip property using QuickCheck generators for all possible versions
 -- starting with `shelleyProtVer`.
@@ -247,13 +255,14 @@ roundTripCborExpectation = roundTripExpectation (cborTrip @t @t)
 roundTripCborRangeExpectation ::
   forall t.
   (Show t, Eq t, EncCBOR t, DecCBOR t, HasCallStack) =>
+  Bool ->
   -- | From Version
   Version ->
   -- | To Version
   Version ->
   t ->
   Expectation
-roundTripCborRangeExpectation = roundTripRangeExpectation (cborTrip @t)
+roundTripCborRangeExpectation = roundTripRangeExpectation . cborTripInternal @t
 
 roundTripAnnExpectation ::
   (Show t, Eq t, ToCBOR t, DecCBOR (Annotator t), HasCallStack) =>
@@ -406,15 +415,22 @@ data Trip a b = Trip
   { tripEncoder :: a -> Encoding
   , tripDecoder :: forall s. Decoder s b
   , tripDropper :: forall s. Decoder s ()
+  , flatTermComp :: Bool
   }
 
 cborTrip :: forall a b. (EncCBOR a, DecCBOR b) => Trip a b
-cborTrip = Trip encCBOR decCBOR (dropCBOR (Proxy @b))
+cborTrip = cborTripInternal True
+
+cborTripNoFlatTermComp :: forall a b. (EncCBOR a, DecCBOR b) => Trip a b
+cborTripNoFlatTermComp = cborTripInternal False
+
+cborTripInternal :: forall a b. (EncCBOR a, DecCBOR b) => Bool -> Trip a b
+cborTripInternal = Trip encCBOR decCBOR (dropCBOR (Proxy @b))
 
 -- | Construct a `Trip` using encoder and decoder, with dropper set to the decoder which
 -- drops the value
 mkTrip :: forall a b. (a -> Encoding) -> (forall s. Decoder s b) -> Trip a b
-mkTrip encoder decoder = Trip encoder decoder (() <$ decoder)
+mkTrip encoder decoder = Trip encoder decoder (() <$ decoder) True
 
 -- | Check that serialization followed by deserialization of the value produces the same
 -- value back. We also check that re-serialization is idempotent. In other words, we
@@ -444,7 +460,7 @@ roundTripTwiddled ::
   Gen (Either RoundTripFailure t)
 roundTripTwiddled version x = do
   tw <- twiddle version x
-  pure (roundTrip version (Trip (const (encodeTerm tw)) decCBOR (dropCBOR (Proxy @t))) x)
+  pure (roundTrip version (Trip (const (encodeTerm tw)) decCBOR (dropCBOR (Proxy @t)) True) x)
 
 roundTripAnn :: (ToCBOR t, DecCBOR (Annotator t)) => Version -> t -> Either RoundTripFailure t
 roundTripAnn v = embedTripAnn v v
@@ -514,7 +530,7 @@ embedTripLabelExtra ::
   Trip a b ->
   a ->
   Either RoundTripFailure (b, Plain.Encoding, BSL.ByteString)
-embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s = result
+embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper flatTermComp) s = result
   where
     mkFailure = RoundTripFailure encVersion decVersion encoding encodedBytes Nothing
     result =
@@ -531,7 +547,7 @@ embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
                       -- Left $ mkFailure (Just $ "fromFlatTerm error:" <> err) Nothing Nothing
                       Right (val, encoding, encodedBytes)
                     Right valFromFlatTerm
-                      | val /= valFromFlatTerm ->
+                      | flatTermComp && val /= valFromFlatTerm ->
                           let errMsg =
                                 "Deserializing through FlatTerm produced a different "
                                   ++ "value then the regular deserializer did"

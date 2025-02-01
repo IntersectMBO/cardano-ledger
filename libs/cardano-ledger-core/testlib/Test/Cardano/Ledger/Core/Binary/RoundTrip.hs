@@ -17,6 +17,7 @@ module Test.Cardano.Ledger.Core.Binary.RoundTrip (
 
   -- * Spec
   roundTripEraSpec,
+  roundTripEraNoFlatTermCompSpec,
   roundTripAnnEraSpec,
   roundTripEraTypeSpec,
   roundTripAnnEraTypeSpec,
@@ -56,6 +57,13 @@ roundTripEraSpec ::
 roundTripEraSpec =
   prop (show (typeRep $ Proxy @t)) $ roundTripEraExpectation @era @t
 
+roundTripEraNoFlatTermCompSpec ::
+  forall era t.
+  (Era era, Show t, Eq t, EncCBOR t, DecCBOR t, Arbitrary t, HasCallStack) =>
+  Spec
+roundTripEraNoFlatTermCompSpec =
+  prop (show (typeRep $ Proxy @t)) $ roundTripEraExpectationInternal @era @t False
+
 -- | Roundtrip CBOR testing for types and type families that implement
 -- EncCBOR/DecCBOR. Requires TypeApplication of an @@era@
 roundTripEraExpectation ::
@@ -64,7 +72,16 @@ roundTripEraExpectation ::
   t ->
   Expectation
 roundTripEraExpectation =
-  roundTripCborRangeExpectation (eraProtVerLow @era) (eraProtVerHigh @era)
+  roundTripEraExpectationInternal @era @t True
+
+roundTripEraExpectationInternal ::
+  forall era t.
+  (Era era, Show t, Eq t, EncCBOR t, DecCBOR t, HasCallStack) =>
+  Bool ->
+  t ->
+  Expectation
+roundTripEraExpectationInternal noFlatTermCompare =
+  roundTripCborRangeExpectation noFlatTermCompare (eraProtVerLow @era) (eraProtVerHigh @era)
 
 -- | QuickCheck property spec that uses `roundTripAnnEraExpectation`
 roundTripAnnEraSpec ::
