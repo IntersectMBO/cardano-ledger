@@ -55,24 +55,15 @@ import GHC.Stack
 import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, forAll, Witness, witness)
 import Constrained.Core(Var(..),eqVar,Evidence(..))
-import Constrained.GenT(MonadGenError(..),GE(..),GenT,fatalError1,catMessageList,catMessages,pureGen)
+import Constrained.GenT(MonadGenError(..),GE(..),GenT,fatalError1,catMessageList,catMessages)
 import Constrained.List
 import qualified Data.List.NonEmpty as NE
 import Data.List.NonEmpty(NonEmpty)
--- import GHC.TypeLits(SSymbol,KnownSymbol,Symbol,symbolSing,symbolVal,pattern SSymbol,KnownNat)
 import  GHC.TypeLits hiding(Text)
 import Data.Orphans() -- instances on Symbol
 import Data.Foldable(toList)
--- import Data.Type.Equality(TestEquality(..))
 import Data.String(fromString)
-import qualified Data.Set as Set
-import Data.Set(Set)
 
--- ==================================================
--- Knot tying Classes
-
-class HasSpec a => HasCaseBoolSpec a where
-  caseBoolSpec :: Specification Bool -> (Bool -> Specification a) -> Specification a
 
 -- ====================================================================
 -- The FunctionSymbol class for implementing new function symbols in
@@ -128,16 +119,17 @@ class ( Typeable c
          t c sym as b -> List Term as -> Maybe (Term b)
       rewriteRules _ _ = Nothing
 
-      -- mapTypeSpec :: (HasSpec a, HasSpec b) => f sym '[a] b -> TypeSpec a -> Specification b
+      mapTypeSpec :: (HasSpec a, HasSpec b) => t c sym '[a] b -> TypeSpec a -> Specification b
+      mapTypeSpec _ts _spec = TrueSpec
     
 
-propagateSpecFun :: Ctx rng hole -> Specification rng -> Specification hole
+propagateSpecFun :: Ctx hole rng -> Specification rng -> Specification hole
 propagateSpecFun (Ctx text@(Context _ _)) = propagate text 
                          -- ^ The pattern match brings the FunctionSymbol constraint into scope
 propagateSpec ::
   forall v a.
   Specification a ->
-  Ctx a v ->
+  Ctx v a ->
   Specification v
 propagateSpec spec (Ctx context) = propagate context spec
   
@@ -177,7 +169,6 @@ data Specification a where
     Specification a
   -- | Anything
   TrueSpec :: Specification a
-
 
 typeSpec :: HasSpec a => TypeSpec a -> Specification a
 typeSpec ts = TypeSpec ts mempty
@@ -357,7 +348,6 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a)) => HasSpec a
     Specification Integer
   cardinalTypeSpec = cardinalTypeSpec @(SimpleRep a)
 
-
 -- ===================================================================
 -- toGeneric and fromGeneric as Function Symbols
 -- That means they can be used inside (Term a)  
@@ -383,8 +373,6 @@ toGeneric_ ::
   Term (SimpleRep a)
 toGeneric_ = appTerm ToGenericW 
 
-
-
 instance  ( HasSimpleRep a, HasSpec a, HasSpec (SimpleRep a), HasSpec dom
           , dom ~ SimpleRep a, TypeSpec a ~ TypeSpec (SimpleRep a) ) => 
           FunctionSymbol (HasSimpleRep a) "fromGenericFn" BaseW '[dom] a where
@@ -409,7 +397,6 @@ fromGeneric_ = appTerm FromGenericW
 -- Using Generics to transform from ordinary (Specifications a) to
 -- Specifications over 'a's SimpleRep (Specification (SimpleRep a))
 -- ====================================================================
-
 
 fromSimpleRepSpec ::
   forall a.
@@ -443,9 +430,6 @@ toSimpleRepSpec = \case
   SuspendedSpec x p ->
     constrained $ \x' ->
       Let (fromGeneric_ x') (x :-> p) 
-
-
-
 
 -- =============================================
 -- Patterns over Function Symbols
@@ -499,67 +483,17 @@ extractW known hidden = case (eqT @t @t2, eqT @c @c2,eqT @s @s2, eqT @d @d2, eqT
        _bad -> Nothing  
   where _ = semantics known       -- These force the FunctionSymbol and 
         _ = App hidden undefined  -- Witness constraints to be not redundant
-
-testTerm :: HasCaseBoolSpec Bool => Term Bool
-testTerm = (App EqualW (Lit True :> Lit False :> Nil))
-
--- | The intended use of extractW, is as a view pattern inside of App
---   The pattern (App (extractW X -> Just Refl) xs) means 
---   1) the Just tells us the FunctionSymbol in the App is 'X'
---   2) the Refl, gives us a proof of that type, which we can use when processing 'xs'
---   Note when matching Polymorphic instances, we need to apply them to types (EqualW @Bool)
-foo :: HasCaseBoolSpec Bool => String
-foo = case testTerm of
-         (App (extractW NotW -> Just _)  _ ) -> "OR"           -- This should fail
-         (App (extractW (EqualW @Bool) -> Just Refl) _ ) -> "EQUAL"  -- This should succeed, and we know that witness 't' :: BaseW
-         _ -> "No"                                                -- We should never reach here
+                                        -- We should never reach here
 -- =============================================================================================
 
-
-
-
-{-   
-extract :: 
-  forall s t d a s2 t2 d2 a2.
-  (FunctionSymbol s t d a, FunctionSymbol s2 t2 d2 a2) => 
-  t2 s2 d2 a2 -> t s d a ->  Maybe (t s d a)
-extract known hidden = case (eqT @t @t2, eqT @s @s2, eqT @d @d2, eqT @a @a2) of
-  (Just Refl,Just Refl,Just Refl,Just Refl) -> if known==hidden then (Just known) else Nothing
-  _ -> Nothing
-
--- ===========================================================================
--- This is quite usefull, as long as we have actual Function Symbol instances
-extractW :: 
-  forall t2 s2 d2 a2 t s d a. 
-    ( FunctionSymbol s t d a, Witness t2
-    , Typeable t2, Typeable s2, Typeable d2, Typeable a2, Typeable s) =>
-  t2 s2 d2 a2 -> t s d a ->  Maybe (t :~: t2)
-extractW known hidden = case (eqT @t @t2, eqT @s @s2, eqT @d @d2, eqT @a @a2) of
-       (Just p@Refl,Just Refl,Just Refl,Just Refl) -> if known==hidden then (Just p) else Nothing
-       _bad -> Nothing  
-  where _ = semantics known       -- These force the FunctionSymbol and 
-        _ = App hidden undefined  -- Witness constraints to be not redundant
-
-testTerm :: Term Bool
-testTerm = (App EqualW (Lit True :> Lit False :> Nil))
-
--- | The intended use of extractW, is as a view pattern inside of App
---   The pattern (App (extractW X -> Just Refl) xs) means 
---   1) the Just tells us the FunctionSymbol in the App is 'X'
---   2) the Refl, gives us a proof of that type, which we can use when processing 'xs'
---   Note when matching Polymorphic instances, we need to apply them to types (EqualW @Bool)
-foo :: String
-foo = case testTerm of
-         (App (extractW NotW -> Just _)  _ ) -> "OR"           -- This should fail
-         (App (extractW (EqualW @Bool) -> Just Refl) _ ) -> "EQUAL"  -- This should succeed, and we know that witness 't' :: BaseW
-         _ -> "No"                                                -- We should never reach here
--- =============================================================================================
+{-
+These are out of date See EqualPat and ElemPat to see why
 
 -- UnionW :: (Ord a, Show a, Typeable a) => BaseW "union_" '[Set a, Set a] (Set a)
 -- ============= "union_"
 pattern UnionPat :: 
   forall a rng . (Typeable a,Ord a) => 
-  forall        . (rng ~ Set a,FunctionSymbol "union_" BaseW '[Set a,Set a] (Set a)) 
+  forall        . (rng ~ Set a,FunctionSymbol (Ord a) "union_" BaseW '[Set a,Set a] (Set a)) 
                  => Term (Set a) -> Term (Set a) -> Term rng
 pattern UnionPat x y <- App (isBaseWit (UnionW @a) -> (Just UnionW, Just Refl,Just Refl,Just Refl,Just Refl)) (x :> y :> Nil)
    where UnionPat x y = App UnionW (x :> y :> Nil)
@@ -589,8 +523,6 @@ pattern InjRightPat ::
 pattern InjRightPat x <- App (isBaseWit (InjRightW @a @b) -> (Just InjRightW, Just Refl, Just Refl,Just Refl,Just Refl)) (x :> Nil)
    where InjRightPat x = App InjRightW (x :> Nil)   
 
-
-
 -- ============= fromGenericFn
 pattern FromGenericPat :: 
   forall a rng . (HasSimpleRep a,Typeable a,Typeable (SimpleRep a)) => 
@@ -608,31 +540,6 @@ pattern ToGenericPat x <- App (isBaseWit (ToGenericW @a) -> (Just ToGenericW, Ju
    -- where ToGenericPat x = App ToGenericW (x :> Nil)      
 -}
 
--- ================ Probably Move this, but it was good practice since it is simple
-
-
-instance HasCaseBoolSpec Bool => FunctionSymbol () "not_" BaseW '[Bool] Bool where
-    witness = "NotW[not_]"
-    
-    simplepropagate (Context NotW (HOLE End)) spec = Right $ caseBoolSpec spec (equalSpec . not)
-    simplepropagate ctx _ = Left (NE.fromList["NotW (not_)","Unreachable context, too many args",show ctx])
-
-
-not_ :: HasCaseBoolSpec Bool => Term Bool -> Term Bool
-not_ = appTerm NotW
-
-
-instance (HasCaseBoolSpec a, HasCaseBoolSpec Bool,HasSpec a) => FunctionSymbol (Eq a) "==."  BaseW '[a, a] Bool where
-    witness = "EqualW[==.]"
-    
-    simplepropagate (Context EqualW (HOLE (a :<| End)))  spec =  
-      Right $ caseBoolSpec spec $ \case {True -> equalSpec a; False -> notEqualSpec a}
-    simplepropagate (Context EqualW (a :>| (HOLE End))) spec = 
-      Right $ caseBoolSpec spec $ \case { True -> equalSpec a; False -> notEqualSpec a}
-    simplepropagate ctx _ = Left (NE.fromList["EqualW ( ==. )","Unreachable context, too many args",show ctx])      
-  
-(==.) :: forall a. (HasCaseBoolSpec a,HasCaseBoolSpec Bool) => Term a -> Term a -> Term Bool
-(==.) = appTerm EqualW
 
 -- =====================================================================
 -- Now the supporting operations and types.
@@ -1174,6 +1081,15 @@ reify t f body =
     , Explain (pure ("reifies " ++ show x)) $ toPred (body x)
     ]
 
+
+-- | requires (HasSpec Bool)
+assertReified :: (HasSpec Bool, HasSpec a) => Term a -> (a -> Bool) -> Pred
+-- Note, it is necessary to introduce the extra variable from the `exists` here
+-- to make things like `assertRealMultiple` work, if you don't have it then the
+-- `reifies` isn't a defining constraint for anything any more.
+assertReified t f =
+  reify t f assert    
+
 -- | Wrap an 'Explain' around a Pred, unless there is a simpler form.
 explanation :: NE.NonEmpty String -> Pred -> Pred
 explanation _ p@DependsOn {} = p
@@ -1200,41 +1116,6 @@ lit = Lit
 genHint :: forall t. HasGenHint t => Hint t -> Term t -> Pred
 genHint = GenHint
 
--- =========================================================
--- HasSpec Bool (Temporary solution)
-
-{- 
-Permanent Solution, can't be dome here as certain things are not in scope.
-instance HasSimpleRep Bool where type SimpleRep Bool = Sum () ()
-instance HasSpec ()=> HasSpec Bool where
-  shrinkWithTypeSpec _ = shrink
-  cardinalTypeSpec (SumSpec _ a b) =
-    MemberSpec (NE.fromList [0, 1, 2]) <> addSpecInt (cardinality a) (cardinality b)
-  cardinalTrueSpec = MemberSpec (pure 2)
--} 
-
-instance HasCaseBoolSpec Bool => HasSpec Bool where
-  type TypeSpec Bool = Set Bool
-
-  emptySpec = Set.fromList[True,False]
-  combineSpec x y = TypeSpec (Set.intersection x y) []
-  genFromTypeSpec set = pureGen $ elements (Set.toList set)
-
-  -- | Check conformance to the spec.
-  conformsTo x set = Set.member x set
-
-  -- | Shrink an `a` with the aide of a `TypeSpec`
-  shrinkWithTypeSpec _ _ = []
-
-  toPreds term set = case Set.toList set of 
-        [] -> FalsePred (pure "Empty Set in toPreds")
-        [True] -> Assert $ term ==. lit True
-        [False] -> Assert $ term ==. lit False
-        [False,True] -> TruePred
-        xs -> FalsePred $ NE.fromList["Spec in toPreds has too may entries ",show xs]
-  cardinalTypeSpec set = equalSpec(toInteger $ Set.size set)
-  cardinalTrueSpec = MemberSpec (pure 2)
-
 
 -- ==========================================================
 -- Contexts 
@@ -1245,8 +1126,8 @@ data Context (c :: Constraint) (s :: Symbol) (t :: Constraint -> Symbol -> [Type
 
 deriving instance (Show (t c s dom rng),All Show dom) => Show (Context c s t dom rng hole)
 
-data Ctx rng hole where 
-  Ctx :: (HasSpec hole,FunctionSymbol c s t dom rng) => Context c s t dom rng hole -> Ctx rng hole  
+data Ctx hole rng where 
+  Ctx :: (HasSpec hole,FunctionSymbol c s t dom rng) => Context c s t dom rng hole -> Ctx hole rng  
  
 data Mode = Pre | Post
 
@@ -1292,7 +1173,7 @@ toCtx ::
   ) =>
   Var v ->
   Term a ->
-  m (Ctx a v)
+  m (Ctx v a)
 toCtx v term = case term of  
     (App w ( V v' :> Nil))
       | Just Refl <- eqVar v v' -> pure $ Ctx (Context w (HOLE End))
@@ -1336,4 +1217,20 @@ toCtx v term = case term of
               vs <- mapMList (fmap Identity . checkForVar) ts
               pure $ uncurryList_ runIdentity (semantics w) vs
 
--- ====================================================================
+-- =================================================================
+-- A simple but important HasSpec instances. The  other
+-- instance usually come in a file of their own.
+
+instance HasSpec () where
+  type TypeSpec () = ()
+  emptySpec = ()
+  combineSpec _ _ = typeSpec ()
+  _ `conformsTo` _ = True
+  shrinkWithTypeSpec _ _ = []
+  genFromTypeSpec _ = pure ()
+  toPreds _ _ = TruePred
+  cardinalTypeSpec _ = MemberSpec (pure 1)
+  cardinalTrueSpec = equalSpec 1 -- there is exactly one, ()
+  typeSpecOpt _ [] = TrueSpec
+  typeSpecOpt _ (_ : _) = ErrorSpec (pure "Non null 'cant' set in typeSpecOpt @()")
+

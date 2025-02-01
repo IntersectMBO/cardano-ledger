@@ -64,6 +64,8 @@ import Data.Semigroup (Any (..))
 import Constrained.Env
 import qualified Data.Semigroup as Semigroup
 import Data.Foldable(fold)
+import Prettyprinter hiding (cat)
+import Data.String(fromString)
 
 -- ============================================================
 -- 1) Free variables and variable names
@@ -414,6 +416,12 @@ instance Eq Name where
 
 -- Instances 
 
+instance Pretty (Var a) where
+  pretty = fromString . show
+
+instance Pretty Name where
+  pretty (Name v) = pretty v
+
 instance Ord Name where
   compare (Name v) (Name v') = compare (nameOf v, typeOf v) (nameOf v', typeOf v')
 
@@ -532,7 +540,7 @@ runCaseOn s ((x :-> ps) :> bs@(_ :> _)) f = case s of
 -- ==================================================
 
 -- Common subexpression elimination but only on terms that are already let-bound.
-letSubexpressionElimination :: HasCaseBoolSpec Bool => Pred -> Pred
+letSubexpressionElimination :: HasSpec Bool => Pred -> Pred
 letSubexpressionElimination = go []
   where
     adjustSub x sub =
@@ -660,3 +668,6 @@ letFloating = fold . go []
       TruePred -> TruePred : ctx
       FalsePred es -> FalsePred es : ctx
       Monitor m -> Monitor m : ctx
+
+-- ========================================================================
+
