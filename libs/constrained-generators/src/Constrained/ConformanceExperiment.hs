@@ -11,6 +11,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE BangPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}   -- Semigroup (Specification a), Monoid (Specification a)
 
 module Constrained.ConformanceExperiment where
@@ -30,17 +31,10 @@ import Constrained.GenT
 import Constrained.List
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
+-- import GHC.Stack
 
 
 -- =================================================================
-
--- requires (HasSpec Bool)
-assertReified :: (HasCaseBoolSpec Bool,HasSpec a) => Term a -> (a -> Bool) -> Pred
--- Note, it is necessary to introduce the extra variable from the `exists` here
--- to make things like `assertRealMultiple` work, if you don't have it then the
--- `reifies` isn't a defining constraint for anything any more.
-assertReified t f =
-  reify t f assert    
 
 -- ============================================================
 -- This simplest kind of conformance, 
@@ -309,6 +303,46 @@ instance HasSpec a => Monoid (Specification a) where
   mempty = TrueSpec
 
 
+{-
+-- | Generate a value that satisfies the spec. This function can fail if the
+-- spec is inconsistent, there is a dependency error, or if the underlying
+-- generators are not flexible enough.
+genFromSpecT ::
+  forall a m. (HasCallStack, HasSpec a, MonadGenError m) => Specification a -> GenT m a
+genFromSpecT (simplifySpec -> spec) = case spec of
+  ExplainSpec [] s -> genFromSpecT s
+  ExplainSpec es s -> push es (genFromSpecT s)
+  MemberSpec as -> explain1 ("genFromSpecT on spec" ++ show spec) $ pureGen (elements (NE.toList as))
+  TrueSpec -> genFromSpecT (typeSpec $ emptySpec @a)
+  SuspendedSpec x p
+    -- NOTE: If `x` isn't free in `p` we still have to try to generate things
+    -- from `p` to make sure `p` is sat and then we can throw it away. A better
+    -- approach would be to only do this in the case where we don't know if `p`
+    -- is sat. The proper way to implement such a sat check is to remove
+    -- sat-but-unnecessary variables in the optimiser.
+    | not $ Name x `appearsIn` p -> do
+        !_ <- genFromPreds mempty p
+        genFromSpecT TrueSpec
+    | otherwise -> do
+        env <- genFromPreds mempty p
+        findEnv env x
+  TypeSpec s cant -> do
+    mode <- getMode
+    explain
+      ( NE.fromList
+          [ "genFromSpecT on (TypeSpec tspec cant) at type " ++ showType @a
+          , "tspec = "
+          , show s
+          , "cant = " ++ show (short cant)
+          , "with mode " ++ show mode
+          ]
+      )
+      $
+      -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
+      -- starts giving us trouble.
+      genFromTypeSpec s `suchThatT` (`notElem` cant)
+  ErrorSpec e -> genError e
+-}
 
 {- Might be usefull, might not
 type family PP (a :: Nat) (n :: Type) (b :: [Type]) ::  Type where

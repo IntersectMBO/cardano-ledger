@@ -14,13 +14,20 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}   -- instance HasCaseBoolSpec
 
+--{-# OPTIONS_GHC -Wno-name-shadowing #-}
+
+
+
 module Constrained.SimplifyExperiment where
 
 import Constrained.GenericExperiment
 import Constrained.WitnessExperiment
 import Constrained.BaseExperiment
 import Constrained.SyntaxExperiment
-import Constrained.ConformanceExperiment
+import Constrained.NumSpecExperiment
+-- import Constrained.ConformanceExperiment
+
+-- import Constrained.SumExperiment
 import Constrained.Core
 
 import Data.Foldable
@@ -29,7 +36,7 @@ import Data.Semigroup (Any (..))
 import Data.String(fromString)
 import Data.Typeable
 import GHC.Stack
-import GHC.TypeLits
+-- import GHC.TypeLits
 import Prettyprinter hiding (cat)
 import Constrained.Env
 import Constrained.GenT
@@ -39,13 +46,14 @@ import qualified Data.List.NonEmpty as NE
 import Control.Monad.Writer (Writer, tell,runWriter)
 import qualified Data.Set as Set
 -- import Data.Set(Set)
-import qualified Data.Semigroup as Semigroup
+-- import qualified Data.Semigroup as Semigroup
 import Prelude hiding (pred)
 
 
 -- =======================================================
 -- Stubb  Probably in SumExperiment
 
+{-
 caseSpec ::
   forall as.
   -- HasSpec (SumOver as) =>
@@ -53,19 +61,13 @@ caseSpec ::
   List (Weighted Specification) as ->
   Specification (SumOver as)
 caseSpec _tString _ss = undefined    
+-}
 
 -- Use of UnionPat below requires HasSpec(Set a) instance
 
 -- =======================================================
 -- helpers
--- | If the `Specification fn Bool` doesn't constrain the boolean you will get a `TrueSpec` out.
-
-instance HasSpec a => HasCaseBoolSpec a where
-  caseBoolSpec spec cont = case possibleValues spec of
-     [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
-     [b] -> cont b
-     _ -> mempty
-    where possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
+-- | If the `Specification Bool` doesn't constrain the boolean you will get a `TrueSpec` out.
 
 ifElse :: (IsPred p, IsPred q) => Term Bool -> p -> q -> Pred 
 ifElse b p q = whenTrue b p <> whenTrue (not_ b) q
@@ -352,19 +354,20 @@ regularizeNames spec = spec
 -- ===================================================================
 -- Simplifcation
 
+
 simplifySpec :: HasSpec a => Specification a -> Specification a
 simplifySpec spec = case regularizeNames spec of
-  SuspendedSpec x p ->
-    let optP = optimisePred p
-     in fromGESpec $
-          explain
-            (pure ("\nWhile calling simplifySpec on var " ++ show x))
-            (computeSpecSimplified x optP)
-  MemberSpec xs -> MemberSpec xs
-  ErrorSpec es -> ErrorSpec es
-  TypeSpec ts cant -> TypeSpec ts cant
-  TrueSpec -> TrueSpec
-  ExplainSpec es s -> explainSpecOpt es (simplifySpec s)
+    SuspendedSpec x p ->
+      let optP = optimisePred p
+       in fromGESpec $
+            explain
+              (pure ("\nWhile calling simplifySpec on var " ++ show x))
+              (computeSpecSimplified x optP)
+    MemberSpec xs -> MemberSpec xs
+    ErrorSpec es -> ErrorSpec es
+    TypeSpec ts cant -> TypeSpec ts cant
+    TrueSpec -> TrueSpec
+    ExplainSpec es s -> explainSpecOpt es (simplifySpec s)
 
 
 
@@ -458,26 +461,51 @@ computeSpecBinderSimplified :: Binder a -> GE (Specification a)
 computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
 
--- STUB
--- | Turn a list of branches into a SumSpec. If all the branches fail return an ErrorSpec.
-
-
-totalWeight :: List (Weighted f) as -> Maybe Int
-totalWeight = fmap Semigroup.getSum . foldMapList (fmap Semigroup.Sum . weight)
-
-type family CountCases a where
-  CountCases (Sum a b) = 1 + CountCases b
-  CountCases _ = 1
-
-countCases :: forall a. KnownNat (CountCases a) => Int
-countCases = fromIntegral (natVal @(CountCases a) Proxy)   
-
-sumType :: (Maybe String) -> String
-sumType Nothing = ""
-sumType (Just x) = " type=" ++ x
-
 sumWeightL, sumWeightR :: Maybe (Int, Int) -> Doc a
 sumWeightL Nothing = "1"
 sumWeightL (Just (x, _)) = fromString (show x)
 sumWeightR Nothing = "1"
 sumWeightR (Just (_, x)) = fromString (show x)
+
+
+-- | Turn a list of branches into a SumSpec. If all the branches fail return an ErrorSpec.
+caseSpec ::
+  forall as.
+  HasSpec (SumOver as) =>
+  Maybe String ->
+  List (Weighted (Specification)) as ->
+  Specification (SumOver as)
+caseSpec tString ss
+  | allBranchesFail ss =
+      ErrorSpec
+        ( NE.fromList
+            [ "When simplifying SumSpec, all branches in a caseOn" ++ sumType tString ++ " simplify to False."
+            , show spec
+            ]
+        )
+  | True = spec
+  where
+    spec = loop tString ss
+
+    allBranchesFail :: forall as2. List (Weighted Specification) as2 -> Bool
+    allBranchesFail Nil = error "The impossible happened in allBranchesFail"
+    allBranchesFail (Weighted _ s :> Nil) = isErrorLike s
+    allBranchesFail (Weighted _ s :> ss2@(_ :> _)) = isErrorLike s && allBranchesFail ss2
+
+    loop ::
+      forall as3.
+      HasSpec (SumOver as3) =>
+      Maybe String -> List (Weighted Specification) as3 -> Specification (SumOver as3)
+    loop _ Nil = error "The impossible happened in caseSpec"
+    loop _ (s :> Nil) = thing s
+    loop mTypeString (s :> ss1@(_ :> _))
+      | Evidence <- prerequisites @(SumOver as3) =
+          (typeSpec $ SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss1))
+      where
+        theWeights =
+          case (weight s, totalWeight ss1) of
+            (Nothing, Nothing) -> Nothing
+            (a, b) -> Just (fromMaybe 1 a, fromMaybe (lengthList ss1) b)
+
+-- ========================================================================
+-- below here cam from SumExperimet 

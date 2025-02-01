@@ -12,6 +12,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}   -- Random Natural, Arbitrary Natural, Uniform Natural
 
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
@@ -26,13 +29,19 @@ module Constrained.NumSpecExperiment where
 import Constrained.GenericExperiment
 import Constrained.WitnessExperiment
 import Constrained.BaseExperiment
-import Constrained.SimplifyExperiment() -- HasCaseBoolSpec instance
+import Constrained.SyntaxExperiment(app)
+import Constrained.ConformanceExperiment(satisfies,conformsToSpec)
 
+import Prettyprinter
+import Data.String(fromString)
+import Data.Semigroup (getSum)
+import qualified Data.Semigroup as Semigroup
 import Control.Arrow (first)
 import Control.Applicative((<|>))
 -- import Data.Typeable(typeOf)
-import Data.Typeable(typeOf,Typeable)
-import Constrained.GenT(MonadGenError(..),GenT,pureGen,sizeT)
+import Data.Typeable(typeOf,Typeable,Proxy(..))
+import Constrained.GenT(MonadGenError(..),GenT,pureGen,sizeT,frequencyT)
+import Constrained.List
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.List(nub)
@@ -44,10 +53,22 @@ import Test.QuickCheck(Arbitrary(shrink,arbitrary),frequency,choose)
 import System.Random.Stateful(Random(..),Uniform(..))
 import qualified Data.Set as Set
 import Data.Kind
-import GHC.TypeLits(Symbol)
+import GHC.TypeLits
+-- import GHC.TypeLits(SSymbol,KnownSymbol,Symbol,symbolSing,symbolVal,pattern SSymbol,KnownNat)
 import Constrained.Core(unionWithMaybe,Evidence(..))
 import Data.Maybe(maybeToList)
 import Data.Foldable(fold)
+import Data.Maybe(fromMaybe)
+
+
+-- STUBS
+
+
+genFromSpecT :: Specification a -> GenT m a
+genFromSpecT = undefined
+shrinkWithSpec :: Specification a -> a -> [a]
+shrinkWithSpec = undefined
+
 
 -- ====================================================================
 -- NumOrdW  witnesses for comparison operations (<=. and <.) on numbers
@@ -73,7 +94,7 @@ instance Witness NumOrdW
   getevidence (LessOrEqualW @a) = Evidence @(OrdLike a)
   getevidence (LessW @a) = Evidence @(OrdLike a)
 
-instance (Typeable a,HasSpec a) => 
+instance (Typeable a,HasSpec Bool,HasSpec a) => 
          FunctionSymbol (OrdLike a) "<=." NumOrdW '[a,a] Bool where
     witness = "LessOrEqualW[<=.]"    
     simplepropagate (Context LessOrEqualW (l :>| (HOLE End))) spec = Right $
@@ -87,7 +108,7 @@ instance (Typeable a,HasSpec a) =>
     simplepropagate ctx _ = Left (NE.fromList["LessOrEqual[<=.]","Unreachable context, too many args",show ctx])        
 
 infixr 4 <=.
-(<=.) :: forall a . (OrdLike a) => Term a -> Term a -> Term Bool
+(<=.) :: forall a . (HasSpec Bool,OrdLike a) => Term a -> Term a -> Term Bool
 (<=.) = appTerm LessOrEqualW
 
 instance (Typeable a,HasSpec a) => 
@@ -104,7 +125,7 @@ instance (Typeable a,HasSpec a) =>
     simplepropagate ctx _ = Left (NE.fromList["LessOrEqual[<=.]","Unreachable context, too many args",show ctx])  
 
 infixr 4 <.
-(<.) :: forall a . (OrdLike a) => Term a -> Term a -> Term Bool
+(<.) :: forall a . OrdLike a => Term a -> Term a -> Term Bool
 (<.) = appTerm LessW
 
 -- =============================================
@@ -338,7 +359,7 @@ conformsToNumSpec :: Ord n => n -> NumSpec n -> Bool
 conformsToNumSpec i (NumSpecInterval ml mu) = maybe True (<= i) ml && maybe True (i <=) mu
 
 toPredsNumSpec ::
-  ( OrdLike n ) =>
+  OrdLike n =>
   Term n ->
   NumSpec n ->
   Pred 
@@ -694,15 +715,15 @@ multT PosInf (Ok _) = PosInf
 -- cardinalTypeSpec (SumSpec leftspec rightspec) = (cardinality leftspec) + (cardinality rightspec)
 -- So we define addSpecInt for (+)   and  multSpecInt for (*)
 
-addSpecInt ::
+addSpecInt :: 
   Specification Integer -> Specification Integer -> Specification Integer
 addSpecInt x y = operateSpec " + " (+) (+) x y
 
-subSpecInt ::
+subSpecInt :: 
   Specification Integer -> Specification Integer -> Specification Integer
 subSpecInt x y = operateSpec " - " (-) (-) x y
 
-multSpecInt ::
+multSpecInt :: 
   Specification Integer -> Specification Integer -> Specification Integer
 multSpecInt x y = operateSpec " * " (*) (*) x y
 
@@ -727,7 +748,7 @@ operateSpec operator f ft x y = case (x, y) of
   (_, ErrorSpec ys) -> ErrorSpec ys
   (TrueSpec, _) -> TrueSpec
   (_, TrueSpec) -> TrueSpec
-  (_, SuspendedSpec _ _) -> TrueSpec
+  (_, SuspendedSpec _ _) -> TrueSpec 
   (SuspendedSpec _ _, _) -> TrueSpec
   (TypeSpec a bad1, TypeSpec b bad2) -> TypeSpec (ft a b) [f b1 b2 | b1 <- bad1, b2 <- bad2]
   (MemberSpec xs, MemberSpec ys) ->
@@ -809,3 +830,222 @@ instance HasSpec ()=> HasSpec Bool where
     MemberSpec (NE.fromList [0, 1, 2]) <> addSpecInt (cardinality a) (cardinality b)
   cardinalTrueSpec = MemberSpec (pure 2)   
 -}  
+
+-- ================================================================
+-- Now that we can talk abput cardinality we can make some
+-- HasSpec instances, which by definition, need to know about
+-- cardinality, which is only just defined in this file.
+
+
+guardSumSpec :: forall a b.
+  (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
+  [String] ->
+  SumSpec a b ->
+  Specification (Sum a b)
+guardSumSpec msgs s@(SumSpecRaw tString _ sa sb)
+  | isErrorLike sa
+  , isErrorLike sb =
+      ErrorSpec $
+        NE.fromList $
+          msgs ++ ["All branches in a caseOn" ++ sumType tString ++ " simplify to False.", show s]
+  | otherwise = typeSpec s
+-- | The Specification for Sums.
+data SumSpec a b
+  = SumSpecRaw
+      (Maybe String) -- A String which is the type of arg in (caseOn arg branch1 .. branchN)
+      (Maybe (Int, Int))
+      (Specification a)
+      (Specification b)
+
+pattern SumSpec ::
+  (Maybe (Int, Int)) -> (Specification a) -> (Specification b) -> SumSpec a b
+pattern SumSpec a b c <- SumSpecRaw _ a b c
+  where
+    SumSpec a b c = SumSpecRaw Nothing a b c
+
+{-# COMPLETE SumSpec #-}
+{-# COMPLETE SumSpecRaw #-} 
+
+instance (KnownNat (CountCases b), HasSpec a, HasSpec b) => Show (SumSpec a b) where
+  show sumspec@(SumSpecRaw tstring hint l r) = case alternateShow @(Sum a b) sumspec of
+    (BinaryShow _ ps) -> show $ parens (fromString ("SumSpec" ++ sumType tstring) /> vsep ps)
+    NonBinary ->
+      "(SumSpec"
+        ++ sumType tstring
+        ++ show (sumWeightL hint)
+        ++ " ("
+        ++ show l
+        ++ ") "
+        ++ show (sumWeightR hint)
+        ++ " ("
+        ++ show r
+        ++ "))"
+
+
+combTypeName :: Maybe String -> Maybe String -> Maybe String
+combTypeName (Just x) (Just y) =
+  if x == y then Just x else Just ("(" ++ x ++ " | " ++ y ++ ")")
+combTypeName (Just x) Nothing = Just x
+combTypeName Nothing (Just x) = Just x
+combTypeName Nothing Nothing = Nothing
+
+instance (HasSpec a, HasSpec b) => Semigroup (SumSpec a b) where
+  SumSpecRaw t h sa sb <> SumSpecRaw t' h' sa' sb' =
+    SumSpecRaw (combTypeName t t') (unionWithMaybe mergeH h h') (sa <> sa') (sb <> sb')
+    where
+      -- TODO: think more carefully about this, now weights like 2 2 and 10 15 give more weight to 10 15
+      -- than would be the case if you had 2 2 and 2 3. But on the other hand this approach is associative
+      -- whereas actually averaging the ratios is not. One could keep a list. Future work.
+      mergeH (fA, fB) (fA', fB') = (fA + fA', fB + fB')
+
+instance forall a b. (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Monoid (SumSpec a b) where
+  mempty = SumSpec Nothing mempty mempty
+
+type family CountCases a where
+  CountCases (Sum a b) = 1 + CountCases b
+  CountCases _ = 1
+
+countCases :: forall a. KnownNat (CountCases a) => Int
+countCases = fromIntegral (natVal @(CountCases a) Proxy)
+
+
+totalWeight :: List (Weighted f) as -> Maybe Int
+totalWeight = fmap getSum . foldMapList (fmap Semigroup.Sum . weight)
+
+
+
+instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => HasSpec (Sum a b) where
+  type TypeSpec (Sum a b) = SumSpec a b
+
+  type Prerequisites (Sum a b) = (HasSpec a, HasSpec b)
+
+  emptySpec = mempty
+
+  combineSpec s s' = guardSumSpec ["When combining SumSpecs", "  " ++ show s, "  " ++ show s'] (s <> s')
+
+  conformsTo (SumLeft a) (SumSpec _ sa _) = conformsToSpec a sa
+  conformsTo (SumRight b) (SumSpec _ _ sb) = conformsToSpec b sb
+
+  genFromTypeSpec (SumSpec h sa sb)
+    | emptyA, emptyB = genError $ pure("genFromTypeSpec @SumSpec: empty")
+    | emptyA = SumRight <$> genFromSpecT sb
+    | emptyB = SumLeft <$> genFromSpecT sa
+    | fA == 0, fB == 0 = genError $ pure("All frequencies 0")
+    | otherwise =
+        frequencyT
+          [ (fA, SumLeft <$> genFromSpecT sa)
+          , (fB, SumRight <$> genFromSpecT sb)
+          ]
+    where
+      (max 0 -> fA, max 0 -> fB) = fromMaybe (1, countCases @b) h
+      emptyA = isErrorLike sa
+      emptyB = isErrorLike sb
+
+  shrinkWithTypeSpec (SumSpec _ sa _) (SumLeft a) = SumLeft <$> shrinkWithSpec sa a
+  shrinkWithTypeSpec (SumSpec _ _ sb) (SumRight b) = SumRight <$> shrinkWithSpec sb b
+
+  toPreds ct (SumSpec h sa sb) =
+    Case
+      ct
+      ( (Weighted (fst <$> h) $ bind $ \a -> satisfies a sa)
+          :> (Weighted (snd <$> h) $ bind $ \b -> satisfies b sb)
+          :> Nil
+      )
+
+  cardinalTypeSpec (SumSpec _ leftspec rightspec) = addSpecInt (cardinality leftspec) (cardinality rightspec)
+
+  typeSpecHasError (SumSpec _ x y) =
+    case (isErrorLike x, isErrorLike y) of
+      (True, True) -> Just $ (errorLikeMessage x <> errorLikeMessage y)
+      _ -> Nothing
+
+  alternateShow (SumSpec h left right@(TypeSpec r [])) =
+    case alternateShow @b r of
+      (BinaryShow "SumSpec" ps) -> BinaryShow "SumSpec" ("|" <+> sumWeightL h <+> viaShow left : ps)
+      (BinaryShow "Cartesian" ps) ->
+        BinaryShow "SumSpec" ("|" <+> sumWeightL h <+> viaShow left : [parens ("Cartesian" /> vsep ps)])
+      _ ->
+        BinaryShow "SumSpec" ["|" <+> sumWeightL h <+> viaShow left, "|" <+> sumWeightR h <+> viaShow right]
+  alternateShow (SumSpec h left right) =
+    BinaryShow "SumSpec" ["|" <+> sumWeightL h <+> viaShow left, "|" <+> sumWeightR h <+> viaShow right]
+
+sumType :: (Maybe String) -> String
+sumType Nothing = ""
+sumType (Just x) = " type=" ++ x
+
+sumWeightL, sumWeightR :: Maybe (Int, Int) -> Doc a
+sumWeightL Nothing = "1"
+sumWeightL (Just (x, _)) = fromString (show x)
+sumWeightR Nothing = "1"
+sumWeightR (Just (_, x)) = fromString (show x)
+
+instance (Arbitrary (Specification a), Arbitrary (Specification b)) => Arbitrary (SumSpec a b) where
+  arbitrary =
+    SumSpec
+      <$> frequency
+        [ (3, pure Nothing)
+        , (10, Just <$> ((,) <$> choose (0, 100) <*> choose (0, 100)))
+        , (1, arbitrary)
+        ]
+      <*> arbitrary
+      <*> arbitrary
+  shrink (SumSpec h a b) = [SumSpec h' a' b' | (h', a', b') <- shrink (h, a, b)]
+
+
+mapSpec ::
+  forall a b c sym t.
+  ( HasSpec a
+  , FunctionSymbol c sym t '[a] b
+  ) =>
+  t c sym '[a] b ->
+  Specification a ->
+  Specification b
+mapSpec f (ExplainSpec es s) = explainSpecOpt es (mapSpec f s)
+mapSpec f TrueSpec = mapTypeSpec @c @sym @t @'[a] @b f (emptySpec @a)
+mapSpec _ (ErrorSpec err) = ErrorSpec err
+mapSpec f (MemberSpec as) = MemberSpec $ NE.nub $ fmap (semantics f) as
+mapSpec f (SuspendedSpec x p) =
+  constrained $ \x' ->
+    Exists (\_ -> fatalError (pure "mapSpec")) (x :-> fold [assert $ x' ==. app f (V x), p])
+mapSpec f (TypeSpec ts cant) = mapTypeSpec @c @sym @t @'[a] @b f ts <> notMemberSpec (map (semantics f) cant)
+
+
+instance HasSimpleRep Bool
+instance (HasSpec ()) => HasSpec Bool where
+  shrinkWithTypeSpec _ = shrink
+  cardinalTypeSpec (SumSpec _ a b) =
+    MemberSpec (NE.fromList [0, 1, 2]) <> addSpecInt (cardinality a) (cardinality b)
+  cardinalTrueSpec = MemberSpec (pure 2)
+
+caseBoolSpec :: HasSpec a => Specification Bool -> (Bool -> Specification a) -> Specification a
+caseBoolSpec spec cont = case possibleValues spec of
+     [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
+     [b] -> cont b
+     _ -> mempty
+  -- where possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]  
+  -- This will always get the same result, and probably faster since running 2
+  -- conformsToSpec on True and False takes less time than simplifying the spec.
+  where possibleValues s = filter (flip conformsToSpec s) [True, False]  
+
+
+instance FunctionSymbol () "not_" BaseW '[Bool] Bool where
+    witness = "NotW[not_]"
+    
+    simplepropagate (Context NotW (HOLE End)) spec = Right $ caseBoolSpec spec (equalSpec . not)
+    simplepropagate ctx _ = Left (NE.fromList["NotW (not_)","Unreachable context, too many args",show ctx])
+
+not_ :: Term Bool -> Term Bool
+not_ = appTerm NotW
+
+instance HasSpec a => FunctionSymbol (Eq a) "==."  BaseW '[a, a] Bool where
+    witness = "EqualW[==.]"
+    
+    simplepropagate (Context EqualW (HOLE (a :<| End)))  spec =  
+      Right $ caseBoolSpec spec $ \case {True -> equalSpec a; False -> notEqualSpec a}
+    simplepropagate (Context EqualW (a :>| (HOLE End))) spec = 
+      Right $ caseBoolSpec spec $ \case { True -> equalSpec a; False -> notEqualSpec a}
+    simplepropagate ctx _ = Left (NE.fromList["EqualW ( ==. )","Unreachable context, too many args",show ctx])      
+  
+(==.) :: forall a. HasSpec a => Term a -> Term a -> Term Bool
+(==.) = appTerm EqualW
+
