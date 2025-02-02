@@ -1,43 +1,44 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE BangPatterns #-}
-{-# OPTIONS_GHC -Wno-orphans #-}   -- Semigroup (Specification a), Monoid (Specification a)
+{-# LANGUAGE ViewPatterns #-}
+-- Semigroup (Specification a), Monoid (Specification a)
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Constrained.Experiment.Conformance where
 
-import Constrained.WitnessExperiment
-import Constrained.BaseExperiment
-import Constrained.SyntaxExperiment
+import Constrained.Experiment.Base
+import Constrained.Experiment.Syntax
+import Constrained.Experiment.Witness
 
 import Constrained.Core
-import Control.Monad.Identity
-import Data.List (intersect,nub) 
-import Data.Maybe
-import Data.Semigroup (sconcat)
-import Prettyprinter hiding (cat)
 import Constrained.Env
 import Constrained.GenT
 import Constrained.List
+import Control.Monad.Identity
+import Data.List (intersect, nub)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
--- import GHC.Stack
+import Data.Maybe
+import Data.Semigroup (sconcat)
+import Prettyprinter hiding (cat)
 
+-- import GHC.Stack
 
 -- =================================================================
 
 -- ============================================================
--- This simplest kind of conformance, 
+-- This simplest kind of conformance,
 -- Either it doesn't evaluate successfully: Left (NE.NonEmpty whatWentWrong),
 -- or it does: Right thevalue
 
@@ -47,28 +48,28 @@ runTermE env = \case
   V v -> case lookupEnv env v of
     Just a -> Right a
     Nothing -> Left (pure ("Couldn't find " ++ show v ++ " in " ++ show env))
-  App f (ts :: List Term dom)-> do
+  App f (ts :: List Term dom) -> do
     vs <- mapMList (fmap Identity . runTermE env) ts
     pure $ uncurryList_ runIdentity (semantics f) vs
 
 runTerm :: MonadGenError m => Env -> Term a -> m a
 runTerm env x = case runTermE env x of
-   Left msgs -> fatalError msgs
-   Right val -> pure val
+  Left msgs -> fatalError msgs
+  Right val -> pure val
 
 -- =========================================================================
 
 -- | Does the Pred evaluate to true under the given Env.
---   If it doesn't, some explanation appears in the failure of the monad 'm'  
-checkPred :: forall m. (MonadGenError m) => Env -> Pred -> m Bool
+--   If it doesn't, some explanation appears in the failure of the monad 'm'
+checkPred :: forall m. MonadGenError m => Env -> Pred -> m Bool
 checkPred env = \case
   p@(ElemPred bool term xs) -> do
-     v <- runTerm env term
-     case (elem v xs,bool) of
-      (True,True) -> pure True
-      (True,False) -> fatalError ( "notElemPred reduces to True" :| [ show p] )
-      (False,True) -> fatalError ( "elemPred reduces to False" :| [ show p] )
-      (False,False) -> pure True
+    v <- runTerm env term
+    case (elem v xs, bool) of
+      (True, True) -> pure True
+      (True, False) -> fatalError ("notElemPred reduces to True" :| [show p])
+      (False, True) -> fatalError ("elemPred reduces to False" :| [show p])
+      (False, False) -> pure True
   Monitor {} -> pure True
   Subst x t p -> checkPred env $ substitutePred x t p
   Assert t -> runTerm env t
@@ -110,12 +111,13 @@ checkPredPure :: Env -> Pred -> Bool
 checkPredPure env p = fromGE (const False) $ checkPred env p
 
 -- ==========================================================
+
 -- | Like checkPred, But it takes [Pred] rather than a single Pred,
 --   and it builds a much more involved explanation if it fails.
 --   Does the Pred evaluate to True under the given Env?
 --   If it doesn't, an involved explanation appears in the (Just message)
 --   If it does, then it returns Nothing
-checkPredsE :: 
+checkPredsE ::
   NE.NonEmpty String ->
   Env ->
   [Pred] ->
@@ -129,14 +131,14 @@ checkPredsE msgs env ps =
 --   The most important explanations come when an assertion fails.
 checkPredE :: Env -> NE.NonEmpty String -> Pred -> Maybe (NE.NonEmpty String)
 checkPredE env msgs = \case
-  p@(ElemPred bool t xs) -> 
+  p@(ElemPred bool t xs) ->
     case runTermE env t of
       Left message -> Just (msgs <> message)
-      Right v -> case (elem v xs,bool) of
-        (True,True) -> Nothing
-        (True,False) -> Just ( "notElemPred reduces to True" :| [ show p] )
-        (False,True) -> Just ( "elemPred reduces to False" :| [ show p] )
-        (False,False) -> Nothing
+      Right v -> case (elem v xs, bool) of
+        (True, True) -> Nothing
+        (True, False) -> Just ("notElemPred reduces to True" :| [show p])
+        (False, True) -> Just ("elemPred reduces to False" :| [show p])
+        (False, False) -> Nothing
   Monitor {} -> Nothing
   Subst x t p -> checkPredE env msgs $ substitutePred x t p
   Assert t -> case runTermE env t of
@@ -184,7 +186,7 @@ checkPredE env msgs = \case
   TruePred -> Nothing
   FalsePred es -> Just (msgs <> pure "checkPredE: FalsePred" <> es)
   DependsOn {} -> Nothing
-  And  ps ->
+  And ps ->
     case catMaybes (fmap (checkPredE env (pure "Some items in And  fail")) ps) of
       [] -> Nothing
       (x : xs) -> Just (msgs <> NE.nub (sconcat (x NE.:| xs)))
@@ -202,12 +204,11 @@ checkPredE env msgs = \case
           GenError es -> Just (msgs <> catMessageList es)
   Explain es p -> checkPredE env (msgs <> es) p
 
-
-
 -- | conformsToSpec with explanation. Nothing if (conformsToSpec a spec),
 --   but (Just explanations) if not(conformsToSpec a spec).
 conformsToSpecE ::
-  forall a. HasSpec a =>
+  forall a.
+  HasSpec a =>
   a ->
   Specification a ->
   NE.NonEmpty String ->
@@ -239,11 +240,10 @@ conformsToSpecE a (SuspendedSpec v ps) msgs =
     Just es -> Just (pure ("conformsToSpecE SuspendedSpec case on var " ++ show v ++ " fails") <> es)
 conformsToSpecE _ (ErrorSpec es) msgs = Just (msgs <> pure "conformsToSpecE ErrorSpec case" <> es)
 
-
 conformsToSpec :: HasSpec a => a -> Specification a -> Bool
 conformsToSpec a x = case conformsToSpecE a x (pure "call to conformsToSpecE") of
-   Nothing -> True
-   Just _ -> False
+  Nothing -> True
+  Just _ -> False
 
 satisfies :: forall a. HasSpec a => Term a -> Specification a -> Pred
 satisfies e (ExplainSpec [] s) = satisfies e s
@@ -252,13 +252,13 @@ satisfies _ TrueSpec = TruePred
 satisfies e (MemberSpec nonempty) = ElemPred True e nonempty
 satisfies t (SuspendedSpec x p) = Subst x t p
 satisfies e (TypeSpec s cant) = case cant of
-    [] -> toPreds e s
-    (c : cs) -> ElemPred False e (c :| cs) <> toPreds e s
+  [] -> toPreds e s
+  (c : cs) -> ElemPred False e (c :| cs) <> toPreds e s
 satisfies _ (ErrorSpec e) = FalsePred e
 
 -- ==================================================================
 
-instance HasSpec a => Semigroup (Specification a) where 
+instance HasSpec a => Semigroup (Specification a) where
   ExplainSpec es x <> y = explainSpecOpt es (x <> y)
   x <> ExplainSpec es y = explainSpecOpt es (x <> y)
   TrueSpec <> s = s
@@ -301,7 +301,6 @@ instance HasSpec a => Semigroup (Specification a) where
 
 instance HasSpec a => Monoid (Specification a) where
   mempty = TrueSpec
-
 
 {-
 -- | Generate a value that satisfies the spec. This function can fail if the
@@ -351,7 +350,6 @@ type family PP (a :: Nat) (n :: Type) (b :: [Type]) ::  Type where
   PP 2 t ( _ ': _ ': t ': _) = t :~: t
   PP 3 t ( _ ': _ ': _ ': t ': _) = t :~: t
   PP 4 t ( _ ': _ ': _ ': _ ': t ': _) = t :~: t
-  
 
 holeType :: forall xs f t . (CtxtList Pre xs t) -> List f xs -> (t :~: t)
 holeType (HOLE End) ( _ :> Nil) = Refl
@@ -362,7 +360,7 @@ holeV :: CtxtList Pre xs t -> List f xs -> f t
 holeV (HOLE End) ( x :> Nil) = x
 holeV (HOLE ( _ :<| xs)) ( y :> ys) = y
 holeV (x :>| xs) (y :> ys) = holeV xs ys
-  
-castUnaryCtxt :: forall hole x . CtxtList Pre '[x] hole -> x -> hole 
+
+castUnaryCtxt :: forall hole x . CtxtList Pre '[x] hole -> x -> hole
 castUnaryCtxt (HOLE End) x = x
 -}
