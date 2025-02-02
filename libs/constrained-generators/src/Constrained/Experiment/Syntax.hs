@@ -39,7 +39,7 @@
 --    3) Renaming
 --    4) internal helper functions
 --    5) Syntacic only transformations
-module Constrained.SyntaxExperiment where
+module Constrained.Experiment.Syntax where
 
 -- import Constrained.GenericExperiment
 import Constrained.WitnessExperiment
