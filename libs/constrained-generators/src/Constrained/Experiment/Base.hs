@@ -40,7 +40,7 @@
 --   because many functions require these instances. It exports functions that define the
 --   user interface to the domain embedded language (constrained, forall, exists etc.).
 --   And, by design, nothing more.
-module Constrained.BaseExperiment where
+module Constrained.Experiment.Base where
 
 import Constrained.GenericExperiment
 import Constrained.WitnessExperiment

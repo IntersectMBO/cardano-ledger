@@ -14,7 +14,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}   -- Semigroup (Specification a), Monoid (Specification a)
 
-module Constrained.ConformanceExperiment where
+module Constrained.Experiment.Conformance where
 
 import Constrained.WitnessExperiment
 import Constrained.BaseExperiment

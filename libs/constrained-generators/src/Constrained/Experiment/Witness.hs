@@ -32,7 +32,7 @@
 --     1. How do we use types to make the logic terms well formed.
 --     2. What are some of the properties that FunctionSymbols have
 --
-module Constrained.WitnessExperiment where
+module Constrained.Experiment.Witness where
 
 import Constrained.GenericExperiment-- (Sum(..),Prod(..),SOPOF,SOP)
 
