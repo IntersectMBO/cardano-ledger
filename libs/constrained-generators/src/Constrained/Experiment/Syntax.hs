@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveFunctor #-}
@@ -8,10 +7,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -19,19 +19,9 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
-
-{-# OPTIONS_GHC -Wno-orphans #-} -- Rename instances
-
-{-
--- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
--- cases and turning off the overlap check in newer ghc versions we disable the check for old
--- versions.
-#if __GLASGOW_HASKELL__ < 900
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-#endif
--}
+-- Rename instances
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains operations and tranformations on Syntax, Term, Pred, etc.
 --    1) Computing Free Variables
@@ -41,31 +31,32 @@
 --    5) Syntacic only transformations
 module Constrained.Experiment.Syntax where
 
--- import Constrained.GenericExperiment
-import Constrained.WitnessExperiment
-import Constrained.BaseExperiment
+import Constrained.Core (Rename (rename), Value (..), Var (..), eqVar, freshen, unValue)
 
-import Control.Monad.Writer (Writer, tell)
-import Data.Typeable
-import Constrained.Core(Var(..),eqVar)
-import Constrained.Core(Rename(rename),Value(..),unValue,freshen)
-import Constrained.GenT(MonadGenError(..),GE(..))
-import Constrained.List
-import Data.Orphans() -- instances on Symbol
-import Constrained.GenericExperiment
-import Data.Foldable(toList)
-import Data.Maybe(isJust,fromMaybe,isNothing)
-import qualified Data.Set as Set
-import Data.Set(Set)
-import qualified Data.Map.Strict as Map
-import Data.Map.Strict(Map)
-import qualified Data.Monoid as Monoid
-import Data.Semigroup (Any (..))
+-- instances on Symbol
+
 import Constrained.Env
+import Constrained.Experiment.Base
+import Constrained.Experiment.Generic
+import Constrained.Experiment.Witness
+import Constrained.GenT (GE (..), MonadGenError (..))
+import Constrained.List
+import Control.Monad.Writer (Writer, tell)
+import Data.Foldable (fold, toList)
+import qualified Data.List.NonEmpty as NE
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe, isJust, isNothing)
+import qualified Data.Monoid as Monoid
+import Data.Orphans ()
+import Data.Semigroup (Any (..))
 import qualified Data.Semigroup as Semigroup
-import Data.Foldable(fold)
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.String (fromString)
+import Data.Typeable
 import Prettyprinter hiding (cat)
-import Data.String(fromString)
+import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 
 -- ============================================================
 -- 1) Free variables and variable names
@@ -268,10 +259,10 @@ instance HasVariables a => HasVariables (Set a) where
 -- 2) Substitutions
 -- ============================================================
 
-type Subst  = [SubstEntry]
+type Subst = [SubstEntry]
 
 data SubstEntry where
-  (:=) :: HasSpec a => Var a -> Term a -> SubstEntry 
+  (:=) :: HasSpec a => Var a -> Term a -> SubstEntry
 
 backwardsSubstitution :: forall a. HasSpec a => Subst -> Term a -> Term a
 backwardsSubstitution sub0 t =
@@ -377,7 +368,7 @@ substTerm env = \case
 substBinder :: Env -> Binder a -> Binder a
 substBinder env (x :-> p) = x :-> substPred (removeVar x env) p
 
-substPred :: Env -> Pred  -> Pred 
+substPred :: Env -> Pred -> Pred
 substPred env = \case
   ElemPred bool t xs -> ElemPred bool (substTerm env t) xs
   GenHint h t -> GenHint h (substTerm env t)
@@ -399,10 +390,9 @@ substPred env = \case
 unBind :: a -> Binder a -> Pred
 unBind a (x :-> p) = substPred (singletonEnv x a) p
 
-
 -- ==========================================================
--- Renaming    
--- ============================================================    
+-- Renaming
+-- ============================================================
 
 -- Name
 
@@ -414,7 +404,7 @@ deriving instance Show Name
 instance Eq Name where
   Name v == Name v' = isJust $ eqVar v v'
 
--- Instances 
+-- Instances
 
 instance Pretty (Var a) where
   pretty = fromString . show
@@ -469,7 +459,7 @@ instance Rename (f a) => Rename (Weighted f a) where
 -- 4) Internals
 -- ============================================================================
 
--- | This extracts the semantics of a witness (i.e. a function over Terms) 
+-- | This extracts the semantics of a witness (i.e. a function over Terms)
 --   Recall FunctionSymbols are functions that you can use when writing Terms
 --   Usually the Haskel name ends in '_', i.e. not_, subset_ ,lookup_
 --   And infix FunctionSymbols names end in '.', ie. ==. , <=. etc.
@@ -481,7 +471,7 @@ instance Rename (f a) => Rename (Weighted f a) where
 --             Name in Haskell^      ^  its arguments^   ^ its result
 --                  The type of NotW |
 app ::
-  (FunctionSymbol c sym wit as b ) =>
+  FunctionSymbol c sym wit as b =>
   wit c sym as b ->
   FunTy (MapList Term as) (Term b)
 app fn = curryList (App fn)
@@ -495,7 +485,7 @@ fromLit _ = Nothing
 
 isLit :: Term a -> Bool
 isLit = isJust . fromLit
- 
+
 name :: String -> Term a -> Term a
 name nh (V (Var i _)) = V (Var i nh)
 name _ _ = error "applying name to non-var thing! Shame on you!"
@@ -598,8 +588,6 @@ letSubexpressionElimination = go []
       Monitor m -> Monitor m
       Explain es p -> Explain es $ go sub p
 
-
-
 -- TODO: this can probably be cleaned up and generalized along with generalizing
 -- to make sure we float lets in some missing cases.
 letFloating :: Pred -> Pred
@@ -619,8 +607,8 @@ letFloating = fold . go []
 
     goExists ::
       HasSpec a =>
-      [Pred ] ->
-      (Binder a -> Pred ) ->
+      [Pred] ->
+      (Binder a -> Pred) ->
       Var a ->
       Pred ->
       [Pred]
@@ -670,4 +658,115 @@ letFloating = fold . go []
       Monitor m -> Monitor m : ctx
 
 -- ========================================================================
+-- For the API
 
+assertExplain ::
+  IsPred p =>
+  NE.NonEmpty String ->
+  p ->
+  Pred
+assertExplain nes p = Explain nes (toPred p)
+
+assert ::
+  IsPred p =>
+  p ->
+  Pred
+assert p = toPred p
+
+forAll ::
+  ( Forallable t a
+  , HasSpec t
+  , HasSpec a
+  , IsPred p
+  ) =>
+  Term t ->
+  (Term a -> p) ->
+  Pred
+forAll tm = mkForAll tm . bind
+
+mkForAll ::
+  ( Forallable t a
+  , HasSpec t
+  , HasSpec a
+  ) =>
+  Term t ->
+  Binder a ->
+  Pred
+mkForAll (Lit (forAllToList -> [])) _ = TruePred
+mkForAll _ (_ :-> TruePred) = TruePred
+mkForAll tm binder = ForAll tm binder
+
+exists ::
+  forall a p.
+  (HasSpec a, IsPred p) =>
+  ((forall b. Term b -> b) -> GE a) ->
+  (Term a -> p) ->
+  Pred
+exists sem k =
+  Exists sem $ bind k
+
+unsafeExists ::
+  forall a p.
+  (HasSpec a, IsPred p) =>
+  (Term a -> p) ->
+  Pred
+unsafeExists = exists (\_ -> fatalError (pure "unsafeExists"))
+
+letBind ::
+  ( HasSpec a
+  , IsPred p
+  ) =>
+  Term a ->
+  (Term a -> p) ->
+  Pred
+letBind tm@V {} body = toPred (body tm)
+letBind tm body = Let tm (bind body)
+
+reify ::
+  ( HasSpec a
+  , HasSpec b
+  , IsPred p
+  ) =>
+  Term a ->
+  (a -> b) ->
+  (Term b -> p) ->
+  Pred
+reify t f body =
+  exists (\eval -> pure $ f (eval t)) $ \x ->
+    [ reifies x t f
+    , Explain (pure ("reifies " ++ show x)) $ toPred (body x)
+    ]
+
+-- | requires (HasSpec Bool)
+assertReified :: (HasSpec Bool, HasSpec a) => Term a -> (a -> Bool) -> Pred
+-- Note, it is necessary to introduce the extra variable from the `exists` here
+-- to make things like `assertRealMultiple` work, if you don't have it then the
+-- `reifies` isn't a defining constraint for anything any more.
+assertReified t f =
+  reify t f assert
+
+-- | Wrap an 'Explain' around a Pred, unless there is a simpler form.
+explanation :: NE.NonEmpty String -> Pred -> Pred
+explanation _ p@DependsOn {} = p
+explanation _ TruePred = TruePred
+explanation es (FalsePred es') = FalsePred (es <> es')
+explanation es (Assert t) = Explain es $ Assert t
+explanation es p = Explain es p
+
+-- | Add QuickCheck monitoring (e.g. 'Test.QuickCheck.collect' or 'Test.QuickCheck.counterexample')
+--   to a predicate. To use the monitoring in a property call 'monitorSpec' on the 'Specification'
+--   containing the monitoring and a value generated from the specification.
+monitor :: ((forall a. Term a -> a) -> Property -> Property) -> Pred
+monitor = Monitor
+
+reifies :: (HasSpec a, HasSpec b) => Term b -> Term a -> (a -> b) -> Pred
+reifies = Reifies
+
+dependsOn :: (HasSpec a, HasSpec b) => Term a -> Term b -> Pred
+dependsOn = DependsOn
+
+lit :: Show a => a -> Term a
+lit = Lit
+
+genHint :: forall t. HasGenHint t => Hint t -> Term t -> Pred
+genHint = GenHint

@@ -25,8 +25,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
@@ -40,14 +40,20 @@
 
 module FoldyExperiment where
 
-import Debug.Trace
 import Constrained.BaseExperiment
-import Constrained.BaseExperiment(FunctionSymbol(witness))
+import Constrained.BaseExperiment (FunctionSymbol (witness))
 import Constrained.GenericExperiment
 import Constrained.SyntaxExperiment
-
+import Debug.Trace
 
 import Constrained.Core
+import Constrained.Env
+import Constrained.GenT
+import Constrained.Graph hiding (dependency, irreflexiveDependencyOn, noDependencies)
+import qualified Constrained.Graph as Graph
+import Constrained.List
+import Constrained.SumList (Cost (..), Solution (..), pickAll)
+import Constrained.Univ
 import Control.Applicative
 import Control.Arrow (first)
 import Control.Monad
@@ -56,6 +62,8 @@ import Control.Monad.Writer (Writer, runWriter, tell)
 import Data.Foldable
 import Data.Kind
 import Data.List (intersect, isPrefixOf, isSuffixOf, nub, partition, (\\))
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
@@ -76,19 +84,9 @@ import GHC.TypeLits
 import Prettyprinter hiding (cat)
 import System.Random
 import System.Random.Stateful
-import Test.QuickCheck hiding (Args, Fun, forAll,Witness,witness)
+import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 import Test.QuickCheck.Gen
 import Test.QuickCheck.Random
-import Constrained.Core
-import Constrained.Env
-import Constrained.GenT
-import Constrained.Graph hiding (dependency, irreflexiveDependencyOn, noDependencies)
-import qualified Constrained.Graph as Graph
-import Constrained.List
-import Constrained.SumList (Cost (..), Solution (..), pickAll)
-import Constrained.Univ
-import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty as NE
 
 -- =============================================================
 -- All Foldy class instances are over Numbers (so far).
@@ -99,120 +97,129 @@ import qualified Data.List.NonEmpty as NE
 -- other classes as inputs. See FlipW amd ComposeW
 -- ==============================================================
 
-data FunWitness (sym :: Symbol) (dom :: [Type]) (rng :: Type) where 
+data FunWitness (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   IdW :: forall a. FunWitness "id_" '[a] a
-  ComposeW :: forall s1 t1 s2 t2 a b c . 
-              ( FunctionSymbol s1 t1 '[b] c
-              , FunctionSymbol s2 t2 '[a] b ) =>
-              t1 s1 '[b] c -> 
-              t2 s2 '[a] b ->
-              FunWitness "composeFn" '[a] c
-  FlipW :: forall sym t a b c . 
-           FunctionSymbol sym t '[a,b] c => 
-           t sym '[a,b] c ->  FunWitness "flip_" '[b,a] c
+  ComposeW ::
+    forall s1 t1 s2 t2 a b c.
+    ( FunctionSymbol s1 t1 '[b] c
+    , FunctionSymbol s2 t2 '[a] b
+    ) =>
+    t1 s1 '[b] c ->
+    t2 s2 '[a] b ->
+    FunWitness "composeFn" '[a] c
+  FlipW ::
+    forall sym t a b c.
+    FunctionSymbol sym t '[a, b] c =>
+    t sym '[a, b] c -> FunWitness "flip_" '[b, a] c
 
 funSem :: FunWitness sym dom rng -> FunTy dom rng
 funSem IdW = id
-funSem (ComposeW f g) = (\ a -> semantics f (semantics g a))
-funSem (FlipW f) = flip (semantics f)           
+funSem (ComposeW f g) = (\a -> semantics f (semantics g a))
+funSem (FlipW f) = flip (semantics f)
 
 instance KnownSymbol s => Show (FunWitness s dom rng) where
   show IdW = "IdW[id_]"
-  show (FlipW f) = "(FlipW "++show f++")[flip_]"
-  show (ComposeW x y) = "(ComposeW "++show x++" "++show y++")[composeFn]"
+  show (FlipW f) = "(FlipW " ++ show f ++ ")[flip_]"
+  show (ComposeW x y) = "(ComposeW " ++ show x ++ " " ++ show y ++ ")[composeFn]"
 
 instance Eq (FunWitness s dom rng) where
   IdW == IdW = True
   FlipW t1 == FlipW t2 = compareWit t1 t2
   ComposeW f f' == ComposeW g g' = compareWit f g && compareWit f' g'
 
-compareWit :: 
-  forall s1 t1 bs1 c1 s2 t2 bs2 c2. 
-         (FunctionSymbol s1 t1 bs1 c1, FunctionSymbol s2 t2 bs2 c2) => 
-         t1 s1 bs1 c1 -> t2 s2 bs2 c2 -> Bool
+compareWit ::
+  forall s1 t1 bs1 c1 s2 t2 bs2 c2.
+  (FunctionSymbol s1 t1 bs1 c1, FunctionSymbol s2 t2 bs2 c2) =>
+  t1 s1 bs1 c1 -> t2 s2 bs2 c2 -> Bool
 compareWit x y = case (eqT @t1 @t2, eqT @s1 @s2, eqT @bs1 @bs2, eqT @c1 @c2) of
-    (Just Refl, Just Refl, Just Refl, Just Refl) -> x==y
-    x -> trace ("compareWit "++show x) False
+  (Just Refl, Just Refl, Just Refl, Just Refl) -> x == y
+  x -> trace ("compareWit " ++ show x) False
 
 -- ===================================
--- FunctionSymbol instances for IdW, FlipW and ComposeW 
--- Also their Haskell implementations id_ flip_ composeFn   
+-- FunctionSymbol instances for IdW, FlipW and ComposeW
+-- Also their Haskell implementations id_ flip_ composeFn
 
-instance (HasSpec a) => FunctionSymbol "id_" FunWitness '[a] a where
-    witness = "IdW[id_]"
-   
-    semantics = funSem
-    propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-    propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-    propagate ctxt (ErrorSpec msgs) = ErrorSpec msgs
-    propagate (Context IdW (HOLE End)) spec = spec
-    propagate ctxt _ = ErrorSpec (NE.fromList["IdW (id_)","Unreachable context, too many args",show ctxt])
+instance HasSpec a => FunctionSymbol "id_" FunWitness '[a] a where
+  witness = "IdW[id_]"
 
-id_ :: forall a. (HasSpec a) => Term a -> Term a 
+  semantics = funSem
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate ctxt (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context IdW (HOLE End)) spec = spec
+  propagate ctxt _ = ErrorSpec (NE.fromList ["IdW (id_)", "Unreachable context, too many args", show ctxt])
+
+id_ :: forall a. HasSpec a => Term a -> Term a
 id_ = appTerm IdW
 
-instance (HasSpec b, HasSpec a,forall sym t. FunctionSymbol sym t '[a,b] c,All Typeable [a,b,c]) =>
-          FunctionSymbol "flip_" FunWitness '[b,a] c  where
-    witness = "Flip w1 w2[flip_]"
+instance
+  (HasSpec b, HasSpec a, forall sym t. FunctionSymbol sym t '[a, b] c, All Typeable [a, b, c]) =>
+  FunctionSymbol "flip_" FunWitness '[b, a] c
+  where
+  witness = "Flip w1 w2[flip_]"
 
-    semantics = funSem
-    propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-    propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-    propagate ctxt (ErrorSpec msgs) = ErrorSpec msgs
-    propagate (Context (FlipW f) (HOLE (v :<| End))) spec = propagate (Context f (v :>| HOLE End)) spec
-    propagate (Context (FlipW f) (v :>| (HOLE End))) spec = propagate (Context f (HOLE $ v :<| End)) spec
-    propagate ctxt _ = ErrorSpec (NE.fromList["FlipW (flip_)","Unreachable context, too many args",show ctxt])
+  semantics = funSem
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate ctxt (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context (FlipW f) (HOLE (v :<| End))) spec = propagate (Context f (v :>| HOLE End)) spec
+  propagate (Context (FlipW f) (v :>| (HOLE End))) spec = propagate (Context f (HOLE $ v :<| End)) spec
+  propagate ctxt _ = ErrorSpec (NE.fromList ["FlipW (flip_)", "Unreachable context, too many args", show ctxt])
 
 type W = Symbol -> [Type] -> Type -> Type
-flip_ ::  forall (t :: W) (sym :: Symbol) a b c. 
-                 (HasSpec b, HasSpec a, HasSpec c, forall sym t. FunctionSymbol sym t '[a,b] c) =>
-                 t sym '[a,b] c -> Term b -> Term a -> Term c
-flip_ x = appTerm (FlipW x)          
+flip_ ::
+  forall (t :: W) (sym :: Symbol) a b c.
+  (HasSpec b, HasSpec a, HasSpec c, forall sym t. FunctionSymbol sym t '[a, b] c) =>
+  t sym '[a, b] c -> Term b -> Term a -> Term c
+flip_ x = appTerm (FlipW x)
 
-instance ( HasSpec a,HasSpec c,All Typeable [a,c]
-         , forall s1 t1 b. FunctionSymbol s1 t1 '[b] c
-         , forall s2 t2 b. FunctionSymbol s2 t2 '[a] b ) => 
-        FunctionSymbol "composeFn" FunWitness '[a] c where
-    witness = "ComposeW w1 w2[composeFn]"
-    semantics = funSem
-    propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-    propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-    propagate ctxt (ErrorSpec msgs) = ErrorSpec msgs  
-    propagate (Context (ComposeW f g) (HOLE End)) spec = 
-        propagate (Context g (HOLE End)) $ propagate (Context f (HOLE End)) spec
-    propagate ctxt _ = ErrorSpec (NE.fromList["ComposeW (composeFn)","Unreachable context, too many args",show ctxt])    
+instance
+  ( HasSpec a
+  , HasSpec c
+  , All Typeable [a, c]
+  , forall s1 t1 b. FunctionSymbol s1 t1 '[b] c
+  , forall s2 t2 b. FunctionSymbol s2 t2 '[a] b
+  ) =>
+  FunctionSymbol "composeFn" FunWitness '[a] c
+  where
+  witness = "ComposeW w1 w2[composeFn]"
+  semantics = funSem
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate ctxt (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context (ComposeW f g) (HOLE End)) spec =
+    propagate (Context g (HOLE End)) $ propagate (Context f (HOLE End)) spec
+  propagate ctxt _ = ErrorSpec (NE.fromList ["ComposeW (composeFn)", "Unreachable context, too many args", show ctxt])
 
-
-composeFn :: forall a b c (t1 :: W) (t2 :: W) s1 s2. 
-             ( forall s1 t1 b. FunctionSymbol s1 t1 '[b] c
-             , forall s2 t2 b. FunctionSymbol s2 t2 '[a] b 
-             ) => t1 s1 '[b] c -> t2 s2 '[a] b -> Term a -> Term c
+composeFn ::
+  forall a b c (t1 :: W) (t2 :: W) s1 s2.
+  ( forall s1 t1 b. FunctionSymbol s1 t1 '[b] c
+  , forall s2 t2 b. FunctionSymbol s2 t2 '[a] b
+  ) =>
+  t1 s1 '[b] c -> t2 s2 '[a] b -> Term a -> Term c
 composeFn f g = appTerm $ ComposeW f g
 
-
-getwitness :: forall sym t dom rng . FunctionSymbol sym t dom rng => String
+getwitness :: forall sym t dom rng. FunctionSymbol sym t dom rng => String
 getwitness = witness @sym @t @dom @rng
 
 -- =======================================================
--- All he Foldy class instances are intimately tied to 
--- Numbers. But that is not required, but this is a 
+-- All he Foldy class instances are intimately tied to
+-- Numbers. But that is not required, but this is a
 -- convenient place to put the code.
--- =======================================================    
-
+-- =======================================================
 
 class HasSpec a => Foldy a where
   genList ::
-    (MonadGenError m) => Specification a -> Specification a -> GenT m [a]
-  theAddFn :: FunctionSymbol sym t '[a, a] a => t sym '[a,a] a
+    MonadGenError m => Specification a -> Specification a -> GenT m [a]
+  theAddFn :: FunctionSymbol sym t '[a, a] a => t sym '[a, a] a
   theZero :: a
   genSizedList ::
-    (MonadGenError m) =>
+    MonadGenError m =>
     Specification Integer -> Specification a -> Specification a -> GenT m [a]
   noNegativeValues :: Bool
 
 adds :: forall a. (forall t sym. FunctionSymbol sym t [a, a] a) => Foldy a => [a] -> a
 adds = foldr (semantics $ theAddFn) theZero
-
 
 data FoldSpec a where
   NoFold :: FoldSpec a
@@ -225,14 +232,12 @@ data FoldSpec a where
     ) =>
     t sym '[a] b -> Specification b -> FoldSpec a
 
-
 {-
 instance {-# OVERLAPPABLE #-} (Arbitrary (TypeSpec a), Foldy a) => Arbitrary (FoldSpec a) where
   arbitrary = oneof [FoldSpec IdW <$> arbitrary, pure NoFold]
   shrink NoFold = []
   shrink (FoldSpec (extractFn @(FunFn fn) @fn -> Just Id) spec) = FoldSpec idFn <$> shrink spec
   shrink FoldSpec {} = [NoFold]
-
 
 preMapFoldSpec :: HasSpec a => '[a] b -> FoldSpec b -> FoldSpec a
 preMapFoldSpec _ NoFold = NoFold
@@ -257,4 +262,4 @@ toPredsFoldSpec :: forall a. BaseUniverse => Term [a] -> FoldSpec a -> Pred fn
 toPredsFoldSpec _ NoFold = TruePred
 toPredsFoldSpec x (FoldSpec sspec) =
   satisfies (app (foldMapFn fn) x) sspec
--}  
+-}
