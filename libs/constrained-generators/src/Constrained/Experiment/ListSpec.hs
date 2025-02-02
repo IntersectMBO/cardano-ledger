@@ -2,15 +2,16 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# OPTIONS_GHC -Wno-orphans #-}   -- Random Natural, Arbitrary Natural, Uniform Natural
+-- Random Natural, Arbitrary Natural, Uniform Natural
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
 -- cases and turning off the overlap check in newer ghc versions we disable the check for old
@@ -23,28 +24,27 @@ module Constrained.ListSpecExperiment where
 
 import Constrained.BaseExperiment
 
+import Constrained.Core (unionWithMaybe)
+import Constrained.GenT (GenT, MonadGenError (..), pureGen, sizeT)
+import Control.Applicative ((<|>))
 import Control.Arrow (first)
-import Control.Applicative((<|>))
-import Data.Typeable(typeOf)
-import Constrained.GenT(MonadGenError(..),GenT,pureGen,sizeT)
+import Data.Foldable (fold)
+import Data.Kind
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
+import Data.Maybe (maybeToList)
+import qualified Data.Set as Set
+import Data.Typeable (typeOf)
 import Data.Word
 import GHC.Int
 import GHC.Natural
 import GHC.Real
-import Test.QuickCheck(Arbitrary(shrink,arbitrary),frequency,choose)
-import System.Random.Stateful(Random(..),Uniform(..))
-import qualified Data.Set as Set
-import Data.Kind
-import GHC.TypeLits(Symbol)
-import Constrained.Core(unionWithMaybe)
-import Data.Maybe(maybeToList)
-import Data.Foldable(fold)
+import GHC.TypeLits (Symbol)
+import System.Random.Stateful (Random (..), Uniform (..))
+import Test.QuickCheck (Arbitrary (arbitrary, shrink), choose, frequency)
 
 -- =====================================================================
--- STUB requires Foldy instance 
-
+-- STUB requires Foldy instance
 
 data ListSpec fn a = ListSpec
   { listSpecHint :: Maybe Integer

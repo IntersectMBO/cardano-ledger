@@ -1,25 +1,27 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | How can we automatically inject normal Haskell types into the logic, using GHC.Generics
 module Constrained.Experiment.Generic where
 
-import GHC.TypeLits(Symbol)
+import GHC.TypeLits (Symbol)
+
 -- import Data.Orphans -- instances on Symbol
-import Data.Kind
+
 import Constrained.List
-import GHC.Generics
-import Data.Functor.Identity
 import Data.Functor.Const
+import Data.Functor.Identity
+import Data.Kind
+import GHC.Generics
 
 -- Sum and Prod and their operations came from Constrained.Univ
 -- Since that file is basically about Fn, which is going to disappear
@@ -96,13 +98,13 @@ type family SumOver as where
   SumOver (a : as) = Sum a (SumOver as)
 
 -- =========================================================================
--- The idea is for each type, we define a type family (HasSimpleRep) the maps 
+-- The idea is for each type, we define a type family (HasSimpleRep) the maps
 -- that type to another type we already know how to deal with. The methods
--- 'toSimpleRep' and 'fromSimpleRep' cature that knowledge. The strategy 
--- we want to use most of the time, is to use GHC.Generics, to construct 
--- the SimpleRep out of Sum and Prod, and to write the 'toSimpleRep' and 
--- 'fromSimpleRep' methods automatically. If we can do that, then 
--- every thing else will come for free. Note that it is not REQUIRED to make 
+-- 'toSimpleRep' and 'fromSimpleRep' cature that knowledge. The strategy
+-- we want to use most of the time, is to use GHC.Generics, to construct
+-- the SimpleRep out of Sum and Prod, and to write the 'toSimpleRep' and
+-- 'fromSimpleRep' methods automatically. If we can do that, then
+-- every thing else will come for free. Note that it is not REQUIRED to make
 -- the (SimpleRep t) out of Sum and Prod, but it helps. Note the default
 -- method instances use Sum and Prod, but that is not required.
 -- ==========================================================================
@@ -138,9 +140,9 @@ type family SimplifyRep f where
   SimplifyRep f = SOP (SOPOf f)
 
 -- ===============================================================
--- How to move back and forth from (SimpleRep a) to 'a' in a 
--- generic way, derived by the Generics machinery is captured 
--- by the SimpleGeneric class 
+-- How to move back and forth from (SimpleRep a) to 'a' in a
+-- generic way, derived by the Generics machinery is captured
+-- by the SimpleGeneric class
 -- ===============================================================
 
 class SimpleGeneric rep where
@@ -168,7 +170,6 @@ instance
 instance SimpleConstructor f => SimpleGeneric (C1 ('MetaCons c a b) f) where
   toSimpleRep' (M1 f) = toSimpleCon' f
   fromSimpleRep' a = M1 (fromSimpleCon' a)
-
 
 -- ================================================================================
 --    This part of the code base is responsible for implementing the conversion
@@ -349,7 +350,7 @@ instance SopList (x' : xs) (y : ys) => SopList (c ::: x : x' : xs) (y : ys) wher
 -- How it works
 -- If the TypeSpec method of the HasSpec class has a SimpleRep instance, Like this
 -- type TypeSpec = a
--- where 'a' has a Sum Product representation then all of the other methods 
+-- where 'a' has a Sum Product representation then all of the other methods
 -- can use the default implementation. This saves lots of trouble for mundane types.
 --
 -- `HasSimpleRep` and `GenericsFn` are meant to allow you to express that a
@@ -357,12 +358,11 @@ instance SopList (x' : xs) (y : ys) => SopList (c ::: x : x' : xs) (y : ys) wher
 --
 -- The trick is that the default instance of `HasSpec a` assumes
 -- `HasSimpleRep a` and defines `TypeSpec a = TypeSpec (SimpleRep a)`.
--- 
+--
 -- From this it's possible to work with things of type `a` in constraints by
 -- treating them like things of type `SimpleRep a`. This allows us to do case
 -- matching etc. on `a` when `SimpleRep a` is a `Sum` type, for example.
--- 
+--
 -- Or alternatively it allows us to treat `a` as a newtype over `SimpleRep a`
 -- when using `match`.
 -- ====================================================================
-
