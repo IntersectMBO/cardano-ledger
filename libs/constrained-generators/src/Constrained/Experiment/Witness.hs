@@ -1,27 +1,18 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE PolyKinds #-}
-{-# OPTIONS_GHC -Wno-orphans #-} -- Show Evidence
-
-{-
--- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
--- cases and turning off the overlap check in newer ghc versions we disable the check for old
--- versions.
-#if __GLASGOW_HASKELL__ < 900
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-#endif
--}
+-- Show Evidence
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | A First-order typed logic has 4 components
 --     1. Terms        (Variables (x), Constants (5), and Applications (F x 5) i.e. FunctionSymbol term1 .. termn)
@@ -31,22 +22,21 @@
 --  In this module we talk about 3 things.
 --     1. How do we use types to make the logic terms well formed.
 --     2. What are some of the properties that FunctionSymbols have
---
 module Constrained.Experiment.Witness where
 
-import Constrained.GenericExperiment-- (Sum(..),Prod(..),SOPOF,SOP)
+import Constrained.Experiment.Generic -- (Sum(..),Prod(..),SOPOF,SOP)
 
-import Data.Kind(Type,Constraint)
-import Data.Typeable
-import Prettyprinter hiding (cat)
-import Constrained.Core(Evidence(..))
+import Constrained.Core (Evidence (..))
 import Constrained.List
-import  GHC.TypeLits hiding(Text)
-import Data.String(fromString)
-import qualified Data.Set as Set
-import Data.Set(Set)
+import Data.Kind (Constraint, Type)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Map.Strict(Map)
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.String (fromString)
+import Data.Typeable
+import GHC.TypeLits hiding (Text)
+import Prettyprinter hiding (cat)
 
 -- ==========================================================================
 -- Printing a few things
@@ -58,7 +48,7 @@ ppSymbol :: KnownSymbol a => (SSymbol a) -> Doc ann
 ppSymbol (_ :: SSymbol z) = fromString (symbolVal (Proxy @z))
 
 instance forall (c :: Constraint). Typeable c => Show (Evidence c) where
-   show _ = "Evidence ("++ showType @c++")"
+  show _ = "Evidence (" ++ showType @c ++ ")"
 
 -- ============================================================================
 
@@ -69,44 +59,43 @@ instance forall (c :: Constraint). Typeable c => Show (Evidence c) where
 --   What Haskell Constraints must be met to do so: 'getevidence'
 --   The type 't' witnesses one or more FunctionSymbols. There can be several witness types
 --   each having a Witness instance. This is one step in extending the system.
-class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type)
-    where semantics :: t constraint name domain range -> FunTy domain range  -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
-          getevidence :: t constraint name domain range -> Evidence constraint
+class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
+  semantics :: t constraint name domain range -> FunTy domain range -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
+  getevidence :: t constraint name domain range -> Evidence constraint
 
 -- | Here is one witness type, witnessing FunctionSymbols over Bool, List,
 -- Set, Map, Products, Sums, and the types used to interface with GHC.Generics.
--- There will be others, and  if you want.you can add your own types, and witnesses 
--- to your own FunctionSymbols over those types. These are some of the Base 
--- FunctionSymbols that come with the system "out of the box"    
-data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where 
-  EqualW :: forall a . Eq a => BaseW (Eq a) "==." '[a,a] Bool  
+-- There will be others, and  if you want.you can add your own types, and witnesses
+-- to your own FunctionSymbols over those types. These are some of the Base
+-- FunctionSymbols that come with the system "out of the box"
+data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
+  EqualW :: forall a. Eq a => BaseW (Eq a) "==." '[a, a] Bool
   -- List
-  ElemW :: forall a. (Eq a,Typeable a) =>  BaseW (Eq a) "elem_" '[a,[a]] Bool
+  ElemW :: forall a. (Eq a, Typeable a) => BaseW (Eq a) "elem_" '[a, [a]] Bool
   -- Bool
   NotW :: BaseW () "not_" '[Bool] Bool
-  OrW ::  BaseW () "or_" '[Bool, Bool] Bool
+  OrW :: BaseW () "or_" '[Bool, Bool] Bool
   -- Pair
-  PairW ::forall a b. BaseW () "pair_" '[a, b] (Prod a b)
+  PairW :: forall a b. BaseW () "pair_" '[a, b] (Prod a b)
   FstW :: forall a b. BaseW () "fst_" '[Prod a b] a
-  SndW :: forall a b. BaseW () "snd_" '[Prod a b] b  
+  SndW :: forall a b. BaseW () "snd_" '[Prod a b] b
   -- Sum
   InjLeftW :: forall a b. BaseW () "injectLeft_" '[a] (Sum a b)
-  InjRightW ::forall a b. BaseW () "injectRight_" '[b] (Sum a b)
+  InjRightW :: forall a b. BaseW () "injectRight_" '[b] (Sum a b)
   -- Set
-  SubsetW :: (Ord a) => BaseW (Ord a) "subset_" '[Set a, Set a] Bool
-  DisjointW :: (Ord a) => BaseW (Ord a) "disjoint_" '[Set a, Set a] Bool
-  MemberW :: (Ord a) => BaseW (Ord a) "member_" '[a, Set a] Bool
-  SingletonW :: (Ord a) => BaseW (Ord a) "ssingleton_" '[a] (Set a)
-  UnionW :: (Ord a) =>  BaseW (Ord a) "union_" '[Set a, Set a] (Set a)
-  FromListW :: (Ord a) => BaseW (Ord a) "fromList_" '[[a]] (Set a)
+  SubsetW :: Ord a => BaseW (Ord a) "subset_" '[Set a, Set a] Bool
+  DisjointW :: Ord a => BaseW (Ord a) "disjoint_" '[Set a, Set a] Bool
+  MemberW :: Ord a => BaseW (Ord a) "member_" '[a, Set a] Bool
+  SingletonW :: Ord a => BaseW (Ord a) "ssingleton_" '[a] (Set a)
+  UnionW :: Ord a => BaseW (Ord a) "union_" '[Set a, Set a] (Set a)
+  FromListW :: Ord a => BaseW (Ord a) "fromList_" '[[a]] (Set a)
   -- Map
-  DomW :: forall k v. (Ord k) => BaseW (Ord k) "dom_" '[Map k v] (Set k)
+  DomW :: forall k v. Ord k => BaseW (Ord k) "dom_" '[Map k v] (Set k)
   RngW :: forall k v. () => BaseW () "rng_" '[Map k v] [v]
-  LookupW :: forall k v. (Ord k) => BaseW (Ord k) "lookup_" '[k, Map k v] (Maybe v)
+  LookupW :: forall k v. Ord k => BaseW (Ord k) "lookup_" '[k, Map k v] (Maybe v)
   -- Generic (SimpleRep)
-  FromGenericW :: forall a. HasSimpleRep a =>  BaseW (HasSimpleRep a) "fromGenericFn" '[SimpleRep a] a 
-  ToGenericW :: forall a. HasSimpleRep a =>  BaseW (HasSimpleRep a) "toGenericFn" '[a] (SimpleRep a)
-
+  FromGenericW :: forall a. HasSimpleRep a => BaseW (HasSimpleRep a) "fromGenericFn" '[SimpleRep a] a
+  ToGenericW :: forall a. HasSimpleRep a => BaseW (HasSimpleRep a) "toGenericFn" '[a] (SimpleRep a)
 
 deriving instance Eq (BaseW c s dom rng)
 
@@ -140,9 +129,8 @@ baseSem LookupW = Map.lookup
 baseSem FromGenericW = fromSimpleRep
 baseSem ToGenericW = toSimpleRep
 
-
-instance Witness BaseW  where
-  semantics = baseSem 
+instance Witness BaseW where
+  semantics = baseSem
 
   getevidence (EqualW @a) = Evidence @(Eq a)
   getevidence (ElemW @a) = Evidence @(Eq a)
@@ -157,11 +145,10 @@ instance Witness BaseW  where
   getevidence (DisjointW @a) = Evidence @(Ord a)
   getevidence (MemberW @a) = Evidence @(Ord a)
   getevidence (SingletonW @a) = Evidence @(Ord a)
-  getevidence (UnionW  @a) = Evidence @(Ord a)
+  getevidence (UnionW @a) = Evidence @(Ord a)
   getevidence (FromListW @a) = Evidence @(Ord a)
   getevidence (DomW @k @v) = Evidence @(Ord k)
   getevidence (RngW @k @v) = Evidence @()
   getevidence (LookupW @k @v) = Evidence @(Ord k)
   getevidence (FromGenericW @a) = Evidence @(HasSimpleRep a)
-  getevidence (ToGenericW @a) = Evidence @(HasSimpleRep a)  
-
+  getevidence (ToGenericW @a) = Evidence @(HasSimpleRep a)
