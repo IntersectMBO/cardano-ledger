@@ -45,15 +45,13 @@ library
     Constrained.SumList
     Constrained.Syntax
     Constrained.Univ
-    Constrained.GenericExperiment
-    Constrained.BaseExperiment
-    Constrained.SyntaxExperiment
-    Constrained.NumSpecExperiment
-    Constrained.ConformanceExperiment
-    Constrained.SimplifyExperiment
-    Constrained.WitnessExperiment
-    Constrained.GenExperiment
-
+    Constrained.Experiment.Generic
+    Constrained.Experiment.Base
+    Constrained.Experiment.Syntax
+    Constrained.Experiment.NumSpec
+    Constrained.Experiment.Conformance
+    Constrained.Experiment.TheKnot
+    Constrained.Experiment.Witness
 
   hs-source-dirs: src
   default-language: Haskell2010
