@@ -24,7 +24,7 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 #endif
 
-module Constrained.NumSpecExperiment where
+module Constrained.Experiment.NumSpec where
 
 import Constrained.GenericExperiment
 import Constrained.WitnessExperiment
