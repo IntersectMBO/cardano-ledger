@@ -36,29 +36,28 @@ module Constrained.GenExperiment where
 -- import Constrained.GenericExperiment
 -- import Constrained.WitnessExperiment
 import Constrained.BaseExperiment
-import Constrained.SyntaxExperiment
-import Constrained.NumSpecExperiment
 import Constrained.ConformanceExperiment
+import Constrained.NumSpecExperiment
 import Constrained.SimplifyExperiment
+import Constrained.SyntaxExperiment
 
-
-import Control.Monad
-import Data.Foldable
-import Data.Maybe
-import Data.Set (Set)
-import Data.Set qualified as Set
-import Data.String
-import Data.Typeable
-import Prettyprinter hiding (cat)
 import Constrained.Core
 import Constrained.Env
 import Constrained.GenT
 import Constrained.Graph hiding (dependency, irreflexiveDependencyOn, noDependencies)
 import Constrained.Graph qualified as Graph
 import Constrained.List
+import Control.Monad
+import Data.Foldable
+import Data.List (partition)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.List.NonEmpty qualified as NE
-import Data.List(partition)
+import Data.Maybe
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Data.String
+import Data.Typeable
+import Prettyprinter hiding (cat)
 
 --------------------------------
 -- Stub
@@ -67,19 +66,19 @@ import Data.List(partition)
 -- Dependency Graphs
 ------------------------------------------------------------------------
 
-type DependGraph = Graph.Graph Name 
+type DependGraph = Graph.Graph Name
 
-dependency :: HasVariables t => Name -> t -> DependGraph 
+dependency :: HasVariables t => Name -> t -> DependGraph
 dependency x (freeVarSet -> xs) = Graph.dependency x xs
 
 irreflexiveDependencyOn ::
-  forall t t'. (HasVariables t, HasVariables t') => t -> t' -> DependGraph 
+  forall t t'. (HasVariables t, HasVariables t') => t -> t' -> DependGraph
 irreflexiveDependencyOn (freeVarSet -> xs) (freeVarSet -> ys) = Graph.irreflexiveDependencyOn xs ys
 
 noDependencies :: HasVariables t => t -> DependGraph
 noDependencies (freeVarSet -> xs) = Graph.noDependencies xs
 
-type Hints = DependGraph 
+type Hints = DependGraph
 
 respecting :: Hints -> DependGraph -> DependGraph
 respecting hints g = g `subtractGraph` opGraph hints
@@ -106,7 +105,6 @@ shrinkWithSpecX (simplifySpec -> spec) a = filter (`conformsToSpec` spec) $ case
   ErrorSpec {} -> []
   where
     shr = shrinkWithTypeSpec (emptySpec @a)
-
 
 shrinkFromPreds :: HasSpec a => Pred -> Var a -> a -> [a]
 shrinkFromPreds p
@@ -228,15 +226,13 @@ prepareLinearization p = do
           ]
       )
       $ linearize preds graph
-  pure $ backPropagation $ SolverPlan plan graph   
-
+  pure $ backPropagation $ SolverPlan plan graph
 
 -- TODO: here we can compute both the explicit hints (i.e. constraints that
 -- define the order of two variables) and any whole-program smarts.
-computeHints :: [Pred ] -> Hints
+computeHints :: [Pred] -> Hints
 computeHints ps =
   transitiveClosure $ fold [x `irreflexiveDependencyOn` y | DependsOn x y <- ps]
-
 
 -- Consider: A + B = C + D
 -- We want to fail if A and B are independent.
@@ -285,10 +281,9 @@ linearize preds graph = do
 
     isLastVariable n set = n `Set.member` set && solvableFrom n (Set.delete n set) graph
 
-  
 -- | Flatten nested `Let`, `Exists`, and `And` in a `Pred fn`. `Let` and
 -- `Exists` bound variables become free in the result.
-flattenPred :: Pred -> [Pred ]
+flattenPred :: Pred -> [Pred]
 flattenPred pIn = go (freeVarNames pIn) [pIn]
   where
     go _ [] = []
@@ -306,13 +301,12 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
     goBinder ::
       Set Int ->
       Binder a ->
-      [Pred ] ->
-      (HasSpec a => Var a -> [Pred ] -> [Pred ]) ->
-      [Pred ]
+      [Pred] ->
+      (HasSpec a => Var a -> [Pred] -> [Pred]) ->
+      [Pred]
     goBinder fvs (x :-> p) ps k = k x' $ go (Set.insert (nameOf x') fvs) (p' : ps)
       where
         (x', p') = freshen x p fvs
-
 
 computeDependencies :: Pred -> DependGraph
 computeDependencies = \case
@@ -338,13 +332,13 @@ computeDependencies = \case
   Exists _ b -> computeBinderDependencies b
   Let t b -> noDependencies t <> computeBinderDependencies b
   GenHint _ t -> noDependencies t
-  Explain _ p -> computeDependencies p   
+  Explain _ p -> computeDependencies p
 
-computeBinderDependencies :: Binder a -> DependGraph 
+computeBinderDependencies :: Binder a -> DependGraph
 computeBinderDependencies (x :-> p) =
   deleteNode (Name x) $ computeDependencies p
 
-computeTermDependencies :: Term a -> DependGraph 
+computeTermDependencies :: Term a -> DependGraph
 computeTermDependencies = fst . computeTermDependencies'
 
 computeTermDependencies' :: Term a -> (DependGraph, Set Name)
@@ -358,7 +352,6 @@ computeTermDependencies' (App _ args) = go args
        in (ntgr `irreflexiveDependencyOn` ngr <> tgr <> gr, ngr <> ntgr)
 computeTermDependencies' Lit {} = (mempty, mempty)
 computeTermDependencies' (V x) = (noDependencies (Name x), Set.singleton (Name x))
-
 
 {-
 -- | A version of `genFromSpecT` that simply errors if the generator fails
@@ -411,12 +404,11 @@ genInverse f argS x =
 -- Generating things from predicates --------------------------------------
 -}
 
-
 data SolverStage where
   SolverStage ::
     HasSpec a =>
     { stageVar :: Var a
-    , stagePreds :: [Pred ]
+    , stagePreds :: [Pred]
     , stageSpec :: Specification a
     } ->
     SolverStage
@@ -425,15 +417,15 @@ instance Pretty SolverStage where
   pretty SolverStage {..} =
     viaShow stageVar
       <+> "<-"
-        /> vsep'
-          ( [pretty stageSpec | not $ isTrueSpec stageSpec]
-              ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
-              ++ map pretty stagePreds
-          )
+      /> vsep'
+        ( [pretty stageSpec | not $ isTrueSpec stageSpec]
+            ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
+            ++ map pretty stagePreds
+        )
 
 data SolverPlan = SolverPlan
-  { solverPlan :: [SolverStage ]
-  , solverDependencies :: Graph Name 
+  { solverPlan :: [SolverStage]
+  , solverDependencies :: Graph Name
   }
 
 instance Pretty SolverPlan where
@@ -448,12 +440,11 @@ isTrueSpec :: Specification a -> Bool
 isTrueSpec TrueSpec = True
 isTrueSpec _ = False
 
-prettyLinear :: [SolverStage ] -> Doc ann
+prettyLinear :: [SolverStage] -> Doc ann
 prettyLinear = vsep' . map pretty
 
-
 -- | Does nothing if the variable is not in the plan already.
-mergeSolverStage :: SolverStage -> [SolverStage ] -> [SolverStage ]
+mergeSolverStage :: SolverStage -> [SolverStage] -> [SolverStage]
 mergeSolverStage (SolverStage x ps spec) plan =
   [ case eqVar x y of
       Just Refl ->
@@ -474,7 +465,6 @@ mergeSolverStage (SolverStage x ps spec) plan =
       Nothing -> stage
   | stage@(SolverStage y ps' spec') <- plan
   ]
-
 
 short :: forall a x. (Show a, Typeable a) => [a] -> Doc x
 short [] = "[]"
@@ -534,7 +524,6 @@ stepPlan env (SolverPlan (SolverStage x ps spec : pl) gr) = do
   let env1 = extendEnv x val env
   pure (env1, backPropagation $ SolverPlan (substStage env1 <$> pl) (deleteNode (Name x) gr))
 
-
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
 genFromPreds :: forall m. MonadGenError m => Env -> Pred -> GenT m Env
@@ -558,11 +547,11 @@ genFromPreds env0 (optimisePred . optimisePred -> preds) =
 -- DEAL with Patterns
 -- ==============================================
 
-
 -- | Push as much information we can backwards through the plan.
 backPropagation :: SolverPlan -> SolverPlan
 backPropagation (SolverPlan _plan _graph) = undefined
-{- Depends on Patterns 
+
+{- Depends on Patterns
 backPropagation (SolverPlan plan graph) = SolverPlan (go [] (reverse plan)) graph
   where
     go acc [] = acc
@@ -603,8 +592,9 @@ backPropagation (SolverPlan plan graph) = SolverPlan (go [] (reverse plan)) grap
 -- `[cJust A == B, case B of Nothing -> False; Just _ -> True]` to add extra information
 -- about the variables in `B`. Consequently, `y` in the example above is
 -- constrained to `MemberSpec [100 .. 102]` in the plan.
-saturatePred :: Pred -> [Pred ]
+saturatePred :: Pred -> [Pred]
 saturatePred _p = undefined
+
 {-- Depends on Patterns
   p -- <--- if there is an Explain, it is still on 'p' here
     : case p of
