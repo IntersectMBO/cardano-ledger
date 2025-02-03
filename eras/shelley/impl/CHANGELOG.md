@@ -2,6 +2,9 @@
 
 ## 1.16.0.0
 
+* Add `indexLookupSeq`
+* Add `segWitTx`
+* Rename `segwitTx` to `segWitAnnTx`
 * Made the fields of predicate failures and environments lazy
 * Changed the type of `sgSecurityParam` to `NonZero Word64`
 * Following functions now expect a `NonZero Word64` security parameter:

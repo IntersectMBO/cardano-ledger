@@ -39,7 +39,8 @@ module Cardano.Ledger.Shelley.Tx.Internal (
   auxDataShelleyTxL,
   sizeShelleyTxF,
   wireSizeShelleyTxF,
-  segwitTx,
+  segWitAnnTx,
+  segWitTx,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
   witsFromTxWitnesses,
@@ -322,11 +323,33 @@ instance
           ( sequence . maybeToStrictMaybe
               <$> decodeNullMaybe decCBOR
           )
+instance
+  ( Era era
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (ShelleyTxRaw era)
+  where
+  decCBOR =
+    decode $
+      RecD ShelleyTxRaw
+        <! From
+        <! From
+        <! D (maybeToStrictMaybe <$> decodeNullMaybe decCBOR)
 
 deriving via
   Mem (ShelleyTxRaw era)
   instance
     EraTx era => DecCBOR (Annotator (ShelleyTx era))
+
+deriving newtype instance
+  ( Era era
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (ShelleyTx era)
 
 -- | Construct a Tx containing the explicit serialised bytes.
 --
@@ -348,14 +371,14 @@ unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (ShelleyTxRaw b w
 -- Segregated witness
 --------------------------------------------------------------------------------
 
-segwitTx ::
+segWitAnnTx ::
   forall era.
   EraTx era =>
   Annotator (TxBody era) ->
   Annotator (TxWits era) ->
   Maybe (Annotator (TxAuxData era)) ->
   Annotator (ShelleyTx era)
-segwitTx
+segWitAnnTx
   bodyAnn
   witsAnn
   metaAnn = Annotator $ \bytes ->
@@ -375,6 +398,33 @@ segwitTx
           witnessSet
           (maybeToStrictMaybe metadata)
           fullBytes
+
+segWitTx ::
+  forall era.
+  EraTx era =>
+  TxBody era ->
+  TxWits era ->
+  Maybe (TxAuxData era) ->
+  ShelleyTx era
+segWitTx
+  body'
+  witnessSet
+  metadata =
+    let
+      wrappedMetadataBytes = case metadata of
+        Nothing -> Plain.serialize Plain.encodeNull
+        Just b -> Plain.serialize b
+      fullBytes =
+        Plain.serialize (Plain.encodeListLen 3)
+          <> Plain.serialize body'
+          <> Plain.serialize witnessSet
+          <> wrappedMetadataBytes
+     in
+      unsafeConstructTxWithBytes
+        body'
+        witnessSet
+        (maybeToStrictMaybe metadata)
+        fullBytes
 
 -- ========================================
 
