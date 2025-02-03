@@ -53,6 +53,27 @@ module Constrained.Experiment.API (
   fst_,
   snd_,
   pair_,
+  IsNormalType,
+  sumleft_,
+  sumright_,
+  left_,
+  right_,
+  cJust_,
+  cNothing_,
+  caseOn,
+  branch,
+  branchW,
+  forAll',
+  constrained',
+  reify',
+  con,
+  onCon,
+  isCon,
+  sel,
+  match,
+  onJust,
+  isJust,
+  chooseSpec,
 )
 where
 
@@ -78,6 +99,30 @@ import Constrained.Experiment.NumSpec (
   addFn,
   cardinality,
   negateFn,
+ )
+-- instances only
+import Constrained.Experiment.Specs.Generics (
+  IsNormalType,
+  branch,
+  branchW,
+  cJust_,
+  cNothing_,
+  caseOn,
+  chooseSpec,
+  con,
+  constrained',
+  forAll',
+  isCon,
+  isJust,
+  left_,
+  match,
+  onCon,
+  onJust,
+  reify',
+  right_,
+  sel,
+  sumleft_,
+  sumright_,
  )
 import Constrained.Experiment.Specs.Pairs (fst_, pair_, snd_)
 import Constrained.Experiment.TheKnot (
