@@ -76,9 +76,9 @@ data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   NotW :: BaseW () "not_" '[Bool] Bool
   OrW :: BaseW () "or_" '[Bool, Bool] Bool
   -- Pair
-  PairW :: forall a b. BaseW () "pair_" '[a, b] (Prod a b)
-  FstW :: forall a b. BaseW () "fst_" '[Prod a b] a
-  SndW :: forall a b. BaseW () "snd_" '[Prod a b] b
+  PairW :: forall a b. (Typeable a, Typeable b) => BaseW () "pair_" '[a, b] (Prod a b)
+  FstW :: forall a b. (Typeable a, Typeable b) => BaseW () "fst_" '[Prod a b] a
+  SndW :: forall a b. (Typeable a, Typeable b) => BaseW () "snd_" '[Prod a b] b
   -- Sum
   InjLeftW :: forall a b. BaseW () "injectLeft_" '[a] (Sum a b)
   InjRightW :: forall a b. BaseW () "injectRight_" '[b] (Sum a b)

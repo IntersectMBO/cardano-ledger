@@ -126,7 +126,7 @@ class
     t c sym as b -> List Term as -> Maybe (Term b)
   rewriteRules _ _ = Nothing
 
-  mapTypeSpec :: (HasSpec a, HasSpec b) => t c sym '[a] b -> TypeSpec a -> Specification b
+  mapTypeSpec :: (HasSpec a, HasSpec b) => t c s '[a] b -> TypeSpec a -> Specification b
   mapTypeSpec _ts _spec = TrueSpec
 
 propagateSpecFun :: Ctx hole rng -> Specification rng -> Specification hole
@@ -155,6 +155,22 @@ extractFn t1 t2 =
    in case (eqT @t @t', eqT @c @c', eqT @s @s', eqT @dom @dom', eqT @rng @rng') of
         (Just Refl, Just Refl, Just Refl, Just Refl, Just Refl) -> if t1 == t2 then Just (()) else Nothing
         _ -> Nothing
+
+extractDom ::
+  forall rng (t :: Constraint -> Symbol -> [Type] -> Type -> Type) c s dom t' c' s' dom' rng'.
+  ( Typeable c
+  , Typeable t
+  , Typeable dom
+  , Typeable rng
+  , KnownSymbol s
+  , FunctionSymbol c' s' t' dom' rng'
+  ) =>
+  t c s dom rng -> t' c' s' dom' rng' -> Maybe (dom :~: dom')
+extractDom t1 t2 =
+  case (eqT @t @t', eqT @c @c', eqT @s @s', eqT @dom @dom', eqT @rng @rng') of
+    (Just Refl, Just Refl, Just Refl, p@(Just Refl), (Just Refl)) ->
+      if t1 == t2 then p else Nothing
+    _ -> Nothing
 
 -- ========================================================
 -- A Specification is tells us what constraints must hold
