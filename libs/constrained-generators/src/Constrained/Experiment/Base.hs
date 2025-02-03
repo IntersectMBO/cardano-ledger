@@ -78,6 +78,7 @@ class
   , Typeable t
   , Witness t
   , TypeList dom
+  , All Typeable dom
   , Typeable dom
   , All HasSpec dom
   , HasSpec rng
@@ -138,6 +139,22 @@ propagateSpec ::
   Ctx v a ->
   Specification v
 propagateSpec spec (Ctx context) = propagate context spec
+
+-- | Used in View Patterns
+extractFn ::
+  forall rng t c s dom t' c' s' dom' rng'.
+  ( FunctionSymbol c s t dom rng
+  , FunctionSymbol c' s' t' dom' rng'
+  -- , All HasSpec dom'
+  -- , HasSpec rng'
+  ) =>
+  t c s dom rng -> t' c' s' dom' rng' -> Maybe (())
+extractFn t1 t2 =
+  let _temp@Evidence = getevidence @_ @_ @_ @_ @rng t1
+      _temp2@Evidence = getevidence @_ @_ @_ @_ @rng' t2
+   in case (eqT @t @t', eqT @c @c', eqT @s @s', eqT @dom @dom', eqT @rng @rng') of
+        (Just Refl, Just Refl, Just Refl, Just Refl, Just Refl) -> if t1 == t2 then Just (()) else Nothing
+        _ -> Nothing
 
 -- ========================================================
 -- A Specification is tells us what constraints must hold
