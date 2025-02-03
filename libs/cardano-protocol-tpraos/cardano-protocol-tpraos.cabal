@@ -61,6 +61,7 @@ library
 
 library testlib
   exposed-modules:
+    Test.Cardano.Protocol.Binary.RoundTrip
     Test.Cardano.Protocol.Crypto.KES
     Test.Cardano.Protocol.Crypto.VRF
     Test.Cardano.Protocol.Crypto.VRF.Fake

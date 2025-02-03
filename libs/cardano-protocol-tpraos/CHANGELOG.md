@@ -16,6 +16,7 @@
 
 ### `testlib`
 
+* Add `RoundTrip` module with `roundTripBlockSpec`
 * Add `genAllIssuerKeys`
 * Add `Arbitrary` instances for `KESKeyPair` and `VRFKeyPair`
 * Move `VRFNatVal` from `cardano-ledger-shelley-test` in here.
