@@ -36,6 +36,7 @@ library
     Constrained.Experiment.Conformance
     Constrained.Experiment.Generic
     Constrained.Experiment.NumSpec
+    Constrained.Experiment.Specs.Generics
     Constrained.Experiment.Specs.Pairs
     Constrained.Experiment.Syntax
     Constrained.Experiment.TheKnot
