@@ -1,4 +1,7 @@
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Constrained.Experiment.API (
   FunctionSymbol (..),
