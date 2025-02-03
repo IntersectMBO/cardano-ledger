@@ -61,7 +61,7 @@ instance forall (c :: Constraint). Typeable c => Show (Evidence c) where
 --   each having a Witness instance. This is one step in extending the system.
 class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
   semantics :: t constraint name domain range -> FunTy domain range -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
-  getevidence :: t constraint name domain range -> Evidence constraint
+  getevidence :: t constraint name dom rng -> Evidence constraint
 
 -- | Here is one witness type, witnessing FunctionSymbols over Bool, List,
 -- Set, Map, Products, Sums, and the types used to interface with GHC.Generics.
