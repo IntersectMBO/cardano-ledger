@@ -50,10 +50,12 @@ module Constrained.Experiment.API (
   addFn,
   negateFn,
   Numeric,
+  fst_,
+  snd_,
+  pair_,
 )
 where
 
--- instances only
 import Constrained.Experiment.Base (
   FunctionSymbol (..),
   HasSpec (..),
@@ -77,6 +79,7 @@ import Constrained.Experiment.NumSpec (
   cardinality,
   negateFn,
  )
+import Constrained.Experiment.Specs.Pairs (fst_, pair_, snd_)
 import Constrained.Experiment.TheKnot (
   debugSpec,
   genFromSpec,
