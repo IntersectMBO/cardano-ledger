@@ -100,6 +100,7 @@ import Constrained.Experiment.NumSpec (
   cardinality,
   negateFn,
  )
+
 -- instances only
 import Constrained.Experiment.Specs.Generics (
   IsNormalType,
