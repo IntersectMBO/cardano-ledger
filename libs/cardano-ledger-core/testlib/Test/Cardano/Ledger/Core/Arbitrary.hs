@@ -127,6 +127,7 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
 import Control.Monad.Trans.Fail.String (errorFail)
+import qualified Data.ByteString
 import Data.GenValidity
 import Data.Int (Int64)
 import Data.Map.Strict (Map)
@@ -482,7 +483,7 @@ instance Arbitrary PoolParams where
       <*> arbitrary
 
 instance Arbitrary PoolMetadata where
-  arbitrary = PoolMetadata <$> arbitrary <*> arbitrary
+  arbitrary = PoolMetadata <$> arbitrary <*> (Data.ByteString.pack <$> vectorOf 32 (choose (0, 255)))
 
 instance Arbitrary StakePoolRelay where
   arbitrary = genericArbitraryU
