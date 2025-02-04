@@ -94,8 +94,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
   asTreasuryL,
+  utxoL,
   utxosGovStateL,
-  utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -407,7 +407,7 @@ ledgerTransition = do
                       }
                   )
 
-        let totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxosUtxoL) tx
+        let totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxoL) tx
         totalRefScriptSize
           <= maxRefScriptSizePerTx
             ?! ConwayTxRefScriptsSizeTooBig

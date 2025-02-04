@@ -84,7 +84,7 @@ testImpConformance _globals impRuleResult env state signal = do
           , clecUtxoExecContext =
               UtxoExecContext
                 { uecTx = signal
-                , uecUTxO = state ^. lsUTxOStateL . utxosUtxoL
+                , uecUTxO = state ^. utxoL
                 , uecUtxoEnv =
                     UtxoEnv
                       { ueSlot = env ^. ledgerSlotNoL

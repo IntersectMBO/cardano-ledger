@@ -80,7 +80,7 @@ import Cardano.Ledger.Shelley.TxBody (RewardAccount)
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (getMinFeeTxUtxo), UTxO (..), balance, txouts)
+import Cardano.Ledger.UTxO (CanSetUTxO (..), EraUTxO (getMinFeeTxUtxo), UTxO (..), balance, txouts)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq
@@ -360,7 +360,8 @@ utxoInductive ::
   TransitionRule (EraRule "UTXO" era)
 utxoInductive = do
   TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
-  let UTxOState utxo _ _ ppup _ _ = utxos
+  let utxo = utxos ^. utxoL
+      UTxOState _ _ _ ppup _ _ = utxos
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
       genDelegs = dsGenDelegs (certDState certState)

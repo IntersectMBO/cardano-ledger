@@ -25,7 +25,6 @@ import Cardano.Ledger.State.Vector
 import qualified Cardano.Ledger.TxIn as TxIn
 import Cardano.Ledger.UMap (ptrMap, rewardMap, sPoolMap, unify)
 import qualified Cardano.Ledger.UMap as UM
-import qualified Cardano.Ledger.UTxO as Shelley
 import Conduit
 import Control.Foldl (Fold (..))
 import Control.Monad
