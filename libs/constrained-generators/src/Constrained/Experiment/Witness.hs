@@ -93,14 +93,28 @@ data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   DomW :: forall k v. Ord k => BaseW (Ord k) "dom_" '[Map k v] (Set k)
   RngW :: forall k v. () => BaseW () "rng_" '[Map k v] [v]
   LookupW :: forall k v. Ord k => BaseW (Ord k) "lookup_" '[k, Map k v] (Maybe v)
-  -- Generic (SimpleRep)
-  FromGenericW :: forall a. HasSimpleRep a => BaseW (HasSimpleRep a) "fromGenericFn" '[SimpleRep a] a
-  ToGenericW :: forall a. HasSimpleRep a => BaseW (HasSimpleRep a) "toGenericFn" '[a] (SimpleRep a)
 
 deriving instance Eq (BaseW c s dom rng)
 
-instance KnownSymbol s => Show (BaseW c s dom rng) where
-  show (_ :: BaseW c s dom rng) = show (ppSymbol (SSymbol @s))
+instance Show (BaseW c s dom rng) where
+  show EqualW = "==."
+  show ElemW = "elem_"
+  show NotW = "not_"
+  show OrW = "or_"
+  show PairW = "pair_"
+  show FstW = "fst_"
+  show SndW = "snd_"
+  show InjLeftW = "sumleft_"
+  show InjRightW = "sumright_"
+  show SubsetW = "subset_"
+  show DisjointW = "disjoint_"
+  show MemberW = "member_"
+  show SingletonW = "singleton_"
+  show UnionW = "union_"
+  show FromListW = "fromList_"
+  show DomW = "dom_"
+  show RngW = "rng_"
+  show LookupW = "lookup_"
 
 -- =================================================================
 -- Witness class instance
@@ -126,8 +140,6 @@ baseSem FromListW = Set.fromList
 baseSem DomW = Map.keysSet
 baseSem RngW = Map.elems
 baseSem LookupW = Map.lookup
-baseSem FromGenericW = fromSimpleRep
-baseSem ToGenericW = toSimpleRep
 
 instance Witness BaseW where
   semantics = baseSem
@@ -150,5 +162,3 @@ instance Witness BaseW where
   getevidence (DomW @k @v) = Evidence @(Ord k)
   getevidence (RngW @k @v) = Evidence @()
   getevidence (LookupW @k @v) = Evidence @(Ord k)
-  getevidence (FromGenericW @a) = Evidence @(HasSimpleRep a)
-  getevidence (ToGenericW @a) = Evidence @(HasSimpleRep a)
