@@ -58,11 +58,14 @@ import qualified Data.List.NonEmpty as NE
 import Data.Orphans ()
 import Data.Semigroup (Max (..), getMax)
 import Data.String (fromString)
-import Data.Typeable
+import Data.Typeable (Proxy (..), Typeable, eqT, typeRep, (:~:) (Refl))
 import GHC.Stack
 import GHC.TypeLits hiding (Text)
 import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
+
+-- import Type.Reflection(TypeRep)
+import Debug.Trace
 
 -- ====================================================================
 -- The FunctionSymbol class for implementing new function symbols in
@@ -140,22 +143,7 @@ propagateSpec ::
   Specification v
 propagateSpec spec (Ctx context) = propagate context spec
 
--- | Used in View Patterns
-extractFn ::
-  forall rng t c s dom t' c' s' dom' rng'.
-  ( FunctionSymbol c s t dom rng
-  , FunctionSymbol c' s' t' dom' rng'
-  -- , All HasSpec dom'
-  -- , HasSpec rng'
-  ) =>
-  t c s dom rng -> t' c' s' dom' rng' -> Maybe (())
-extractFn t1 t2 =
-  let _temp@Evidence = getevidence @_ @_ @_ @_ @rng t1
-      _temp2@Evidence = getevidence @_ @_ @_ @_ @rng' t2
-   in case (eqT @t @t', eqT @c @c', eqT @s @s', eqT @dom @dom', eqT @rng @rng') of
-        (Just Refl, Just Refl, Just Refl, Just Refl, Just Refl) -> if t1 == t2 then Just (()) else Nothing
-        _ -> Nothing
-
+-- ========================================================================
 extractDom ::
   forall rng (t :: Constraint -> Symbol -> [Type] -> Type -> Type) c s dom t' c' s' dom' rng'.
   ( Typeable c
@@ -171,6 +159,43 @@ extractDom t1 t2 =
     (Just Refl, Just Refl, Just Refl, p@(Just Refl), (Just Refl)) ->
       if t1 == t2 then p else Nothing
     _ -> Nothing
+
+-- | Use this as a view pattern to match against the Term App constructor
+--   test :: Term a -> String
+--   test x = case x of
+--     (App (extractAll NotW -> Just(NotW,Evidence,Refl,Refl)) xs) -> "NotW"
+--     (App (extractAll (EqualW @Integer) -> Just(EqualW,Evidence,Refl,Refl)) xs) -> "EqualW Integer"
+--     (App (extractAll (EqualW @Int) -> Just(EqualW,Evidence,Refl,Refl)) xs) -> "EqualW Int"
+--     (App (extractAll (EqualW @Bool) -> Just (EqualW, Evidence, Refl, Refl)) _) -> "EqualW Bool"
+--     (App (extractAll (AddW @Integer) -> Just(AddW,Evidence,Refl,Refl)) xs) -> "AddW Integer"
+--     (App (extractAll (NegateW @Integer) -> Just(NegateW, Evidence,Refl, Refl)) _) -> "NegateW Integer"
+--     _ -> "All branches fail"
+--  Just(constr, constraints, domain equality, range equality)
+extractAll ::
+  forall
+    (f :: Type)
+    (t' :: Constraint -> Symbol -> [Type] -> Type -> Type)
+    (c' :: Constraint)
+    (s' :: Symbol)
+    (d' :: [Type])
+    r'
+    (t :: Constraint -> Symbol -> [Type] -> Type -> Type)
+    c
+    s
+    d
+    r.
+  ( FunctionSymbol c s t d r
+  , Typeable t'
+  , Typeable c'
+  , KnownSymbol s'
+  , Typeable d'
+  , Typeable r'
+  ) =>
+  f -> t c s d r -> Maybe (t' c' s' d' r', Evidence c', d :~: d', r :~: r')
+extractAll _f hidden =
+  case (eqT @t @t', eqT @c @c', eqT @s @s', eqT @d @d', eqT @r @r') of
+    (Just Refl, Just Refl, Just Refl, Just dp@Refl, Just rp@Refl) -> Just (hidden, getevidence hidden, dp, rp)
+    x -> trace (show x) $ Nothing
 
 -- ========================================================
 -- A Specification is tells us what constraints must hold
@@ -219,7 +244,7 @@ typeSpec ts = TypeSpec ts mempty
 -- Don't be afraid of all the methods. Most have default implementations.
 -- =================================================================
 
-class (Typeable a, Eq a, Show a, Show (TypeSpec a)) => HasSpec a where
+class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => HasSpec a where
   -- | The `TypeSpec a` is the type-specific `Specification a`.
   type TypeSpec a
 
@@ -391,14 +416,53 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a)) => HasSpec a where
 -- That means they can be used inside (Term a)
 -- ===================================================================
 
+data GenericsW constraint symbol args res where
+  ToGenericW ::
+    ( HasSimpleRep a
+    , HasSpec (SimpleRep a)
+    , TypeSpec a ~ TypeSpec (SimpleRep a)
+    ) =>
+    GenericsW
+      (HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
+      "toGenericFn"
+      '[a]
+      (SimpleRep a)
+  FromGenericW ::
+    ( HasSimpleRep a
+    , HasSpec (SimpleRep a)
+    , TypeSpec a ~ TypeSpec (SimpleRep a)
+    ) =>
+    GenericsW
+      (HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
+      "fromGenericFn"
+      '[SimpleRep a]
+      a
+
+deriving instance Eq (GenericsW c s dom rng)
+
+instance Show (GenericsW constraint symbol args res) where
+  show ToGenericW = "toGenericFn"
+  show FromGenericW = "fromGenericFn"
+
+instance Witness GenericsW where
+  semantics FromGenericW = fromSimpleRep
+  semantics ToGenericW = toSimpleRep
+
+  getevidence (FromGenericW @a) = Evidence @(HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
+  getevidence (ToGenericW @a) = Evidence @(HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
+
 instance
   ( HasSimpleRep a
   , HasSpec a
   , HasSpec rng
   , rng ~ SimpleRep a
   , TypeSpec a ~ TypeSpec (SimpleRep a)
+  , ta ~ TypeSpec a
+  , tr ~ TypeSpec (SimpleRep a)
+  , Typeable ta
+  -- , Typeable tr
   ) =>
-  FunctionSymbol (HasSimpleRep a) "toGenericFn" BaseW '[a] rng
+  FunctionSymbol (HasSimpleRep a, HasSpec rng, ta ~ tr) "toGenericFn" GenericsW '[a] rng
   where
   witness = "ToGenericW[toGenericFn]"
 
@@ -409,7 +473,8 @@ instance
 toGeneric_ ::
   forall a.
   ( TypeSpec a ~ TypeSpec (SimpleRep a)
-  , HasSimpleRep a
+  , -- , Typeable (TypeSpec (SimpleRep a))
+    HasSimpleRep a
   , HasSpec a
   , HasSpec (SimpleRep a)
   ) =>
@@ -424,8 +489,17 @@ instance
   , HasSpec dom
   , dom ~ SimpleRep a
   , TypeSpec a ~ TypeSpec (SimpleRep a)
+  , typespecA ~ TypeSpec a
+  , typespecDOM ~ TypeSpec dom
+  , Typeable typespecA
+  -- , Typeable typespecDOM
   ) =>
-  FunctionSymbol (HasSimpleRep a) "fromGenericFn" BaseW '[dom] a
+  FunctionSymbol
+    (HasSimpleRep a, HasSpec dom, typespecA ~ typespecDOM)
+    "fromGenericFn"
+    GenericsW
+    '[dom]
+    a
   where
   witness = "FromGenericW[fromGenericFn]"
 
@@ -644,9 +718,9 @@ data BinaryShow where
 data Term a where
   App ::
     forall c sym t dom rng.
-    (FunctionSymbol c sym t dom rng, All HasSpec dom, HasSpec rng) =>
+    (FunctionSymbol c sym t dom rng, All HasSpec dom, HasSpec rng, Eq (t c sym dom rng)) =>
     t c sym dom rng -> List Term dom -> Term rng
-  Lit :: Show a => a -> Term a
+  Lit :: (Typeable a, Show a) => a -> Term a
   V :: HasSpec a => Var a -> Term a
 
 instance Eq a => Eq (Term a) where
