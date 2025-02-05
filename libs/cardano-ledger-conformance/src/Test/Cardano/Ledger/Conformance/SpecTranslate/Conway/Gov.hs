@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE DataKinds #-}
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Gov () where
 
@@ -21,10 +22,13 @@ import Data.Functor.Identity (Identity)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
+import Cardano.Ledger.Credential (Credential)
+import Data.Set (Set)
 
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , Inject ctx (EnactState era)
+  , Inject ctx (Set (Credential 'Staking))
   , EraPParams era
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecTranslate ctx (CertState era)
@@ -36,6 +40,7 @@ instance
 
   toSpecRep GovEnv {..} = do
     enactState <- askCtx @(EnactState era)
+    rewardCreds <- askCtx @(Set (Credential 'Staking))
     Agda.MkGovEnv
       <$> toSpecRep geTxId
       <*> toSpecRep geEpoch
@@ -43,6 +48,7 @@ instance
       <*> toSpecRep gePPolicy
       <*> toSpecRep enactState
       <*> toSpecRep geCertState
+      <*> toSpecRep rewardCreds
 
 instance
   ( EraPParams era
