@@ -457,7 +457,12 @@ data GenericsW constraint symbol args res where
       (SimpleRep a)
   FromGenericW ::
     GenericsW
-      (HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
+      ( Typeable (SimpleRep a)
+      , Typeable (TypeSpec a)
+      , HasSimpleRep a
+      , HasSpec (SimpleRep a)
+      , TypeSpec a ~ TypeSpec (SimpleRep a)
+      )
       "fromGenericFn"
       '[SimpleRep a]
       a
@@ -472,21 +477,26 @@ instance Witness GenericsW where
   semantics FromGenericW = fromSimpleRep
   semantics ToGenericW = toSimpleRep
 
--- getevidence (FromGenericW @a) = Evidence @(HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
--- getevidence (ToGenericW @a) = Evidence @(HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
+-- (HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a)
+--      , Typeable (TypeSpec (SimpleRep a)),Typeable (SimpleRep a))
 
 instance
   ( HasSimpleRep a
-  , HasSpec a
-  , HasSpec rng
-  , rng ~ SimpleRep a
+  , HasSpec (SimpleRep a)
   , TypeSpec a ~ TypeSpec (SimpleRep a)
-  , ta ~ TypeSpec a
-  , tr ~ TypeSpec (SimpleRep a)
-  , Typeable ta
-  -- , Typeable tr
+  , Typeable (TypeSpec (SimpleRep a))
+  , Typeable (SimpleRep a)
+  , HasSpec a
+  , typespecA ~ TypeSpec a
+  , typespecsimplerep ~ TypeSpec (SimpleRep a)
+  , simplerepA ~ SimpleRep a
   ) =>
-  FunctionSymbol (HasSimpleRep a, HasSpec rng, ta ~ tr) "toGenericFn" GenericsW '[a] rng
+  FunctionSymbol
+    (HasSimpleRep a, HasSpec simplerepA, typespecA ~ typespecsimplerep)
+    "toGenericFn"
+    GenericsW
+    '[a]
+    simplerepA
   where
   witness = "ToGenericW[toGenericFn]"
 
@@ -519,7 +529,7 @@ instance
   -- , Typeable typespecDOM
   ) =>
   FunctionSymbol
-    (HasSimpleRep a, HasSpec dom, typespecA ~ typespecDOM)
+    (Typeable dom, Typeable typespecA, HasSimpleRep a, HasSpec dom, typespecA ~ typespecDOM)
     "fromGenericFn"
     GenericsW
     '[dom]
@@ -748,7 +758,7 @@ data BinaryShow where
 data Term a where
   App ::
     forall c sym t dom rng.
-    (FunctionSymbol c sym t dom rng, All HasSpec dom, HasSpec rng) =>
+    (FunctionSymbol c sym t dom rng, c, All HasSpec dom, HasSpec rng) =>
     t c sym dom rng -> List Term dom -> Term rng
   Lit :: (Typeable a, Show a) => a -> Term a
   V :: HasSpec a => Var a -> Term a
@@ -1221,8 +1231,8 @@ c6 = True :>| ("abc" :: String) :>| (HOLE $ True :<| () :<| End)
 -- We need to put parenthesis around the segment from (Hole $ .... End),
 -- before the rightmost (:>|), to make the fixity work.
 
-t6 :: List [] [Bool, String, Int, Bool, ()]
-t6 = [] :> ["abc"] :> [67, 12] :> [True, False] :> [()] :> Nil
+val6 :: List [] [Bool, String, Int, Bool, ()]
+val6 = [] :> ["abc"] :> [67, 12] :> [True, False] :> [()] :> Nil
 
 -- Show instance puts parens in the output correctly to
 -- remind us where the parens go.

@@ -21,6 +21,7 @@ import Constrained.List
 import Data.Functor.Const
 import Data.Functor.Identity
 import Data.Kind
+import Data.Typeable
 import GHC.Generics
 
 -- Sum and Prod and their operations came from Constrained.Univ
@@ -109,7 +110,7 @@ type family SumOver as where
 -- method instances use Sum and Prod, but that is not required.
 -- ==========================================================================
 
-class HasSimpleRep a where
+class Typeable (SimpleRep a) => HasSimpleRep a where
   type SimpleRep a
   type TheSop a :: [Type]
   toSimpleRep :: a -> SimpleRep a
