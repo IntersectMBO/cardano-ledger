@@ -4,6 +4,7 @@ module Test.Cardano.Ledger.Common (
   ledgerTestMainWith,
   ledgerHspecConfig,
   NFData,
+  runGen,
 
   -- * Expr
   ToExpr (..),
@@ -63,6 +64,8 @@ import Test.Hspec.Runner
 import Test.ImpSpec (ansiDocToString, impSpecConfig, impSpecMainWithConfig)
 import Test.ImpSpec.Expectations
 import Test.QuickCheck as X
+import Test.QuickCheck.Gen (Gen (..))
+import Test.QuickCheck.Random (mkQCGen)
 import UnliftIO.Exception (evaluateDeep)
 
 infix 1 `shouldBeExpr`
@@ -110,3 +113,13 @@ shouldBeLeftExpr e x = expectLeftExpr e >>= (`shouldBeExpr` x)
 -- | Same as `Test.QuickCheck.discard` but outputs a debug trace message
 tracedDiscard :: String -> a
 tracedDiscard message = (if False then Debug.trace $ "\nDiscarded trace: " ++ message else id) discard
+
+runGen ::
+  -- | Seed
+  Int ->
+  -- | Size
+  Int ->
+  -- | Generator to run.
+  Gen a ->
+  a
+runGen seed size gen = unGen gen (mkQCGen seed) size

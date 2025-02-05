@@ -10,6 +10,8 @@
 --   Functions in this module make specific assumptions about the sets of keys
 --   involved, and thus cannot be used as generic generators.
 module Test.Cardano.Ledger.Shelley.Generator.Presets (
+  genCoreNodeKeys,
+  genIssuerKeys,
   coreNodeKeys,
   keySpace,
   genEnv,
@@ -28,25 +30,20 @@ import Cardano.Ledger.Keys (
   coerceKeyRole,
   hashKey,
  )
-import Cardano.Protocol.Crypto (hashVerKeyVRF)
-import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import Data.List.NonEmpty (NonEmpty ((:|)))
+import Cardano.Protocol.Crypto (Crypto, hashVerKeyVRF)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), allScripts, someKeyPairs)
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (keyPairs)
-import Test.Cardano.Ledger.Shelley.Utils (
-  maxKESIterations,
-  mkKESKeyPair,
-  mkVRFKeyPair,
-  slotsPerKESIteration,
- )
+import Test.Cardano.Ledger.Shelley.Utils (maxKESIterations, slotsPerKESIteration)
+import Test.Cardano.Protocol.TPraos.Create (genAllIssuerKeys)
 
 -- =================================================================
 
@@ -97,26 +94,27 @@ keySpace c =
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
 coreNodeKeys ::
+  Crypto c =>
   Constants ->
-  [(KeyPair 'Genesis, AllIssuerKeys MockCrypto 'GenesisDelegate)]
-coreNodeKeys c@Constants {numCoreNodes} =
-  [ ( (toKeyPair . mkGenKey) (RawSeed x 0 0 0 0)
-    , issuerKeys c 0 x
-    )
-  | x <- [1001 .. 1000 + numCoreNodes]
-  ]
-  where
-    toKeyPair (sk, vk) = KeyPair vk sk
+  [(KeyPair 'Genesis, AllIssuerKeys c 'GenesisDelegate)]
+coreNodeKeys = runGen 1000 30 . genCoreNodeKeys
+
+genCoreNodeKeys ::
+  Crypto c =>
+  Constants ->
+  Gen [(KeyPair 'Genesis, AllIssuerKeys c 'GenesisDelegate)]
+genCoreNodeKeys c@Constants {numCoreNodes} =
+  replicateM (fromIntegral numCoreNodes) $ (,) <$> arbitrary <*> genIssuerKeys c
 
 -- Pre-generate a set of keys to use for genesis delegates.
-genesisDelegates :: Constants -> [AllIssuerKeys MockCrypto 'GenesisDelegate]
+genesisDelegates :: Crypto c => Constants -> [AllIssuerKeys c 'GenesisDelegate]
 genesisDelegates c =
   [ issuerKeys c 20 x
   | x <- [0 .. 50]
   ]
 
 -- Pre-generate a set of keys to use for stake pools.
-stakePoolKeys :: Constants -> [AllIssuerKeys MockCrypto 'StakePool]
+stakePoolKeys :: Crypto c => Constants -> [AllIssuerKeys c 'StakePool]
 stakePoolKeys c =
   [ issuerKeys c 10 x
   | x <- [0 .. 50]
@@ -124,35 +122,19 @@ stakePoolKeys c =
 
 -- | Generate all keys for any entity which will be issuing blocks.
 issuerKeys ::
+  Crypto c =>
   Constants ->
   -- | Namespace parameter. Can be used to differentiate between different
   --   "types" of issuer.
   Word64 ->
   Word64 ->
-  AllIssuerKeys MockCrypto r
-issuerKeys Constants {maxSlotTrace} ns x =
-  let (skCold, vkCold) = mkKeyPair (RawSeed x 0 0 0 (ns + 1))
-      iters =
-        0
-          :| [ 1
-             .. 1
-              + ( maxSlotTrace
-                    `div` fromIntegral (maxKESIterations * slotsPerKESIteration)
-                )
-             ]
-   in AllIssuerKeys
-        { aikCold = KeyPair vkCold skCold
-        , aikHot =
-            fmap
-              ( \iter ->
-                  ( KESPeriod (fromIntegral (iter * fromIntegral maxKESIterations))
-                  , mkKESKeyPair (RawSeed x 0 0 (fromIntegral iter) (ns + 3))
-                  )
-              )
-              iters
-        , aikVrf = mkVRFKeyPair (RawSeed x 0 0 0 (ns + 2))
-        , aikColdKeyHash = hashKey vkCold
-        }
+  AllIssuerKeys c r
+issuerKeys c ns x =
+  runGen (fromIntegral x) 30 $ variant ns (genIssuerKeys c)
+
+genIssuerKeys :: Crypto c => Constants -> Gen (AllIssuerKeys c r)
+genIssuerKeys Constants {maxSlotTrace} =
+  genAllIssuerKeys maxSlotTrace maxKESIterations slotsPerKESIteration
 
 genesisDelegs0 ::
   Constants ->
@@ -164,7 +146,7 @@ genesisDelegs0 c =
           (coerceKeyRole . hashVKey $ aikCold pkeys)
           (hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf pkeys)
       )
-    | (gkey, pkeys) <- coreNodeKeys c
+    | (gkey, pkeys) <- coreNodeKeys @MockCrypto c
     ]
   where
     hashVKey = hashKey . vKey

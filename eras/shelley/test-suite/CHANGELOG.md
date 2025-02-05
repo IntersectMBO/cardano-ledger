@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Add `genCoreNodeKeys` and `genIssuerKeys`
 * Move `VRFNatVal` into `cardano-protocol-tpraos:testlib`
 * Account for removal of crypto parametrization
 * Remove crypto parametrization from `PoolSetUpArgs`, `PoolInfo`, `RewardUpdateOld`
