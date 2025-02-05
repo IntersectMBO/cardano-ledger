@@ -34,7 +34,7 @@ import Constrained.Experiment.Conformance ()
 import Constrained.Experiment.Generic
 import Constrained.Experiment.Witness (Witness (..), showType)
 
-import Constrained.Core (Evidence (..), unionWithMaybe)
+import Constrained.Core (unionWithMaybe)
 import Constrained.GenT (GenT, MonadGenError (..), pureGen, sizeT)
 import Control.Applicative ((<|>))
 import Control.Arrow (first)
@@ -74,8 +74,9 @@ instance Show (NumOrdW c s ds r) where
 instance Witness NumOrdW where
   semantics LessOrEqualW = (<=)
   semantics LessW = (<)
-  getevidence (LessOrEqualW @a) = Evidence @(OrdLike a)
-  getevidence (LessW @a) = Evidence @(OrdLike a)
+
+-- getevidence (LessOrEqualW @a) = Evidence @(OrdLike a)
+-- getevidence (LessW @a) = Evidence @(OrdLike a)
 
 -- =============================================
 -- OrdLike. Ord for Numbers in the Logic
@@ -645,8 +646,8 @@ class (Num a, HasSpec a) => NumLike a where
   safeSubtract a b = fromSimpleRep <$> safeSubtract @(SimpleRep a) (toSimpleRep a) (toSimpleRep b)
 
 data IntW (c :: Constraint) (s :: Symbol) (as :: [Type]) b where
-  AddW :: NumLike a => IntW (NumLike a) "addFn" '[a, a] a
-  NegateW :: NumLike a => IntW (NumLike a) "negateFn" '[a] a
+  AddW :: IntW (NumLike a) "addFn" '[a, a] a
+  NegateW :: IntW (NumLike a) "negateFn" '[a] a
 
 deriving instance Eq (IntW c s dom rng)
 
@@ -657,8 +658,9 @@ instance Show (IntW c s d r) where
 instance Witness IntW where
   semantics AddW = (+)
   semantics NegateW = negate
-  getevidence (AddW @a) = Evidence @(NumLike a)
-  getevidence (NegateW @a) = Evidence @(NumLike a)
+
+-- getevidence (AddW @a) = Evidence @(NumLike a)
+-- getevidence (NegateW @a) = Evidence @(NumLike a)
 
 type Numeric a = (HasSpec a, Ord a, Num a, TypeSpec a ~ NumSpec a, MaybeBounded a)
 
