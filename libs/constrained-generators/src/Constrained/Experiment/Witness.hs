@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -51,6 +52,9 @@ instance forall (c :: Constraint). Typeable c => Show (Evidence c) where
   show _ = "Evidence (" ++ showType @c ++ ")"
 
 -- ============================================================================
+data Possible c where Possible :: forall (c :: Constraint). c => Possible c
+invoke :: forall (c :: Constraint). c => Possible c -> Evidence c
+invoke Possible = Evidence
 
 -- | A FunctionSymbol has 4 components, all reflected in its type,
 --   And a bunch of operations, reflected in the classes for which the type has instances.
@@ -60,8 +64,7 @@ instance forall (c :: Constraint). Typeable c => Show (Evidence c) where
 --   The type 't' witnesses one or more FunctionSymbols. There can be several witness types
 --   each having a Witness instance. This is one step in extending the system.
 class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
-  semantics :: t constraint name domain range -> FunTy domain range -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
-  getevidence :: t constraint name dom rng -> Evidence constraint
+  semantics :: t constraint name domain range -> forall. constraint => FunTy domain range -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
 
 -- | Here is one witness type, witnessing FunctionSymbols over Bool, List,
 -- Set, Map, Products, Sums, and the types used to interface with GHC.Generics.
@@ -69,9 +72,9 @@ class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
 -- to your own FunctionSymbols over those types. These are some of the Base
 -- FunctionSymbols that come with the system "out of the box"
 data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  EqualW :: forall a. Eq a => BaseW (Eq a) "==." '[a, a] Bool
+  EqualW :: forall a. BaseW (Eq a) "==." '[a, a] Bool
   -- List
-  ElemW :: forall a. (Eq a, Typeable a) => BaseW (Eq a) "elem_" '[a, [a]] Bool
+  ElemW :: forall a. BaseW (Eq a) "elem_" '[a, [a]] Bool
   -- Bool
   NotW :: BaseW () "not_" '[Bool] Bool
   OrW :: BaseW () "or_" '[Bool, Bool] Bool
@@ -83,16 +86,16 @@ data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   InjLeftW :: forall a b. (Typeable a, Typeable b) => BaseW () "sumleft_" '[a] (Sum a b)
   InjRightW :: forall a b. (Typeable a, Typeable b) => BaseW () "sumright_" '[b] (Sum a b)
   -- Set
-  SubsetW :: Ord a => BaseW (Ord a) "subset_" '[Set a, Set a] Bool
-  DisjointW :: Ord a => BaseW (Ord a) "disjoint_" '[Set a, Set a] Bool
-  MemberW :: Ord a => BaseW (Ord a) "member_" '[a, Set a] Bool
-  SingletonW :: Ord a => BaseW (Ord a) "ssingleton_" '[a] (Set a)
-  UnionW :: Ord a => BaseW (Ord a) "union_" '[Set a, Set a] (Set a)
-  FromListW :: Ord a => BaseW (Ord a) "fromList_" '[[a]] (Set a)
+  SubsetW :: BaseW (Ord a) "subset_" '[Set a, Set a] Bool
+  DisjointW :: BaseW (Ord a) "disjoint_" '[Set a, Set a] Bool
+  MemberW :: BaseW (Ord a) "member_" '[a, Set a] Bool
+  SingletonW :: BaseW (Ord a) "ssingleton_" '[a] (Set a)
+  UnionW :: BaseW (Ord a) "union_" '[Set a, Set a] (Set a)
+  FromListW :: BaseW (Ord a) "fromList_" '[[a]] (Set a)
   -- Map
-  DomW :: forall k v. Ord k => BaseW (Ord k) "dom_" '[Map k v] (Set k)
-  RngW :: forall k v. () => BaseW () "rng_" '[Map k v] [v]
-  LookupW :: forall k v. Ord k => BaseW (Ord k) "lookup_" '[k, Map k v] (Maybe v)
+  DomW :: forall k v. BaseW (Ord k) "dom_" '[Map k v] (Set k)
+  RngW :: forall k v. BaseW () "rng_" '[Map k v] [v]
+  LookupW :: forall k v. BaseW (Ord k) "lookup_" '[k, Map k v] (Maybe v)
 
 deriving instance Eq (BaseW c s dom rng)
 
@@ -121,7 +124,7 @@ instance Show (BaseW c s dom rng) where
 -- =================================================================
 
 -- | Haskell functions give meaning to the BaseW constructors
-baseSem :: BaseW c sym dom rng -> FunTy dom rng
+baseSem :: BaseW c sym dom rng -> forall. c => FunTy dom rng
 baseSem EqualW = (==)
 baseSem ElemW = elem
 baseSem NotW = not
@@ -144,6 +147,7 @@ baseSem LookupW = Map.lookup
 instance Witness BaseW where
   semantics = baseSem
 
+{-
   getevidence (EqualW @a) = Evidence @(Eq a)
   getevidence (ElemW @a) = Evidence @(Eq a)
   getevidence NotW = Evidence @()
@@ -162,3 +166,4 @@ instance Witness BaseW where
   getevidence (DomW @k @v) = Evidence @(Ord k)
   getevidence (RngW @k @v) = Evidence @()
   getevidence (LookupW @k @v) = Evidence @(Ord k)
+-}
