@@ -64,6 +64,7 @@ import Constrained.List
 import Constrained.Spec.Pairs ()
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
+import Data.Typeable
 
 ------------------------------------------------------------------------
 -- Generics
@@ -71,14 +72,18 @@ import qualified Data.List.NonEmpty as NE
 
 -- HasSpec for various generic types --------------------------------------
 
-instance HasSimpleRep (a, b)
-instance HasSimpleRep (a, b, c)
-instance HasSimpleRep (a, b, c, d)
-instance HasSimpleRep (a, b, c, d, e)
-instance HasSimpleRep (a, b, c, d, e, g)
-instance HasSimpleRep (a, b, c, d, e, g, h)
-instance HasSimpleRep (Maybe a)
-instance HasSimpleRep (Either a b)
+instance (Typeable a, Typeable b) => HasSimpleRep (a, b)
+instance (Typeable a, Typeable b, Typeable c) => HasSimpleRep (a, b, c)
+instance (Typeable a, Typeable b, Typeable c, Typeable d) => HasSimpleRep (a, b, c, d)
+instance (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e) => HasSimpleRep (a, b, c, d, e)
+instance
+  (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e, Typeable g) =>
+  HasSimpleRep (a, b, c, d, e, g)
+instance
+  (Typeable a, Typeable b, Typeable c, Typeable d, Typeable e, Typeable g, Typeable h) =>
+  HasSimpleRep (a, b, c, d, e, g, h)
+instance Typeable a => HasSimpleRep (Maybe a)
+instance (Typeable a, Typeable b) => HasSimpleRep (Either a b)
 
 instance
   ( HasSpec a
