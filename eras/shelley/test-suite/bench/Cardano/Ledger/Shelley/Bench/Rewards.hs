@@ -28,7 +28,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)

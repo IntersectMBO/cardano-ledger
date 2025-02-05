@@ -203,18 +203,18 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
+import Cardano.Ledger.State (
+  EraUTxO (..),
+  ScriptsProvided (..),
+  UTxO (..),
+  txinLookup,
+ )
 import Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
   setMinCoinTxOut,
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
-import Cardano.Ledger.UTxO (
-  EraUTxO (..),
-  ScriptsProvided (..),
-  UTxO (..),
-  txinLookup,
- )
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (mkSlotLength)

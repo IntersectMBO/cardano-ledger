@@ -69,7 +69,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
   updateUTxOState,
  )
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (nonEmpty)

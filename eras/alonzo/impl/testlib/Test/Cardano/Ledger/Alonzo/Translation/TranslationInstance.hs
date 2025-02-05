@@ -39,7 +39,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import qualified Data.ByteString.Lazy as BSL
 import Data.Typeable (Typeable)

@@ -22,14 +22,13 @@ import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus (ExUnits (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Shelley.Governance (FuturePParams (..), ShelleyGovState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import qualified Cardano.Ledger.Shelley.PParams as PP (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
+import Cardano.Ledger.State (IndividualPoolStake (..), ScriptsNeeded, UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (ScriptsNeeded, UTxO (..))
 import Cardano.Ledger.Val (Val (coin, modifyCoin, (<+>)))
 import Data.Default (Default (def))
 import qualified Data.List as List

@@ -45,12 +45,7 @@ import Cardano.Ledger.Coin (
   toDeltaCoin,
  )
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
-import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
-import Cardano.Ledger.PoolDistr (
-  IndividualPoolStake (..),
-  PoolDistr (..),
- )
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley
 import Cardano.Ledger.Shelley.Core
@@ -87,8 +82,8 @@ import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
  )
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
@@ -317,21 +312,21 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @C ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: EB.SnapShot
+snapEx3 :: SnapShot
 snapEx3 =
-  EB.SnapShot
-    { EB.ssStake =
+  SnapShot
+    { ssStake =
         mkStake
           [ (Cast.aliceSHK, aliceCoinEx1)
           , (Cast.bobSHK, bobInitCoin)
           , (Cast.carlSHK, carlInitCoin)
           ]
-    , EB.ssDelegations =
+    , ssDelegations =
         [ (Cast.aliceSHK, aikColdKeyHash Cast.alicePoolKeys)
         , (Cast.bobSHK, aikColdKeyHash Cast.bobPoolKeys)
         , (Cast.carlSHK, aikColdKeyHash Cast.alicePoolKeys)
         ]
-    , EB.ssPoolParams =
+    , ssPoolParams =
         [ (aikColdKeyHash Cast.alicePoolKeys, alicePoolParams')
         , (aikColdKeyHash Cast.bobPoolKeys, bobPoolParams')
         ]
@@ -638,7 +633,7 @@ alicePoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ ma
     appPerf = mkApparentPerformance (ppEx @ShelleyEra ^. ppDL) alicePoolStake 2 3
     pledge = unCoin $ ppPledge alicePoolParams'
     pr = pledge % circulation
-    maxP = EB.maxPool @ShelleyEra ppEx bigR aliceStakeShareTot pr
+    maxP = maxPool @ShelleyEra ppEx bigR aliceStakeShareTot pr
 
 carlMemberRewardsFromAlice :: Coin
 carlMemberRewardsFromAlice =
@@ -662,7 +657,7 @@ bobPoolRewards = rationalToCoinViaFloor (appPerf * (fromIntegral . unCoin $ maxP
     appPerf = mkApparentPerformance (ppEx @ShelleyEra ^. ppDL) bobPoolStake 1 3
     pledge = unCoin $ ppPledge bobPoolParams'
     pr = pledge % circulation
-    maxP = EB.maxPool @ShelleyEra ppEx bigR bobStakeShareTot pr
+    maxP = maxPool @ShelleyEra ppEx bigR bobStakeShareTot pr
 
 carlLeaderRewardsFromBob :: Coin
 carlLeaderRewardsFromBob =

@@ -27,7 +27,6 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (StakeRefBase, StakeRefPtr))
-import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
@@ -43,8 +42,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   incrementalStakeDistr,
   ptrsMap,
  )
+import Cardano.Ledger.State (SnapShot (..), Stake (..), UTxO (..), coinBalance)
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Control.SetAlgebra (dom, eval, (▷), (◁))
 import Data.Foldable (fold)
 import Data.Map (Map)

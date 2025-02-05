@@ -111,7 +111,6 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -120,6 +119,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   epochStateStakeDistrL,
   epochStateUMapL,
  )
+import Cardano.Ledger.State (PoolDistr (..))
 import Cardano.Ledger.UMap
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))

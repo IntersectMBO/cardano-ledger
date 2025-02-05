@@ -35,8 +35,8 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
+import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.Monad (when)
 import Control.State.Transition.Extended (STS (..), TRC (..))
@@ -116,7 +116,7 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
 import Cardano.Ledger.DRep (drepDepositL)
-import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..), calculatePoolDistr)
+import Cardano.Ledger.State (SnapShot (..), Stake (..), calculatePoolDistr)
 import qualified Cardano.Ledger.UMap as UMap
 import qualified Data.VMap as VMap
 import qualified Test.Cardano.Ledger.Constrained.Preds.CertState as CertState

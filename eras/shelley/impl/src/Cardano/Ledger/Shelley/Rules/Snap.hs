@@ -23,19 +23,19 @@ import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.EpochBoundary (
-  SnapShot (ssDelegations, ssStake),
-  SnapShots (..),
-  Stake (unStake),
-  calculatePoolDistr,
-  emptySnapShots,
- )
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   LedgerState (..),
   UTxOState (..),
   incrementalStakeDistr,
+ )
+import Cardano.Ledger.State (
+  SnapShot (ssDelegations, ssStake),
+  SnapShots (..),
+  Stake (unStake),
+  calculatePoolDistr,
+  emptySnapShots,
  )
 import Control.DeepSeq (NFData)
 import Control.State.Transition (

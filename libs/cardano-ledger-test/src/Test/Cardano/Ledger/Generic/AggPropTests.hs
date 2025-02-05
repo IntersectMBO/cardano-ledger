@@ -20,8 +20,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.UMap (UView (RewDepUView), depositMap, domain, fromCompact, sumDepositUView)
-import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
 import Data.Default (Default (def))

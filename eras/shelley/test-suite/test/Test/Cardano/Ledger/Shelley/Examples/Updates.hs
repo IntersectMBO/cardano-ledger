@@ -24,7 +24,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
@@ -39,8 +38,8 @@ import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
  )
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
@@ -364,7 +363,7 @@ ppExUpdated =
 expectedStEx4 :: ChainState ShelleyEra
 expectedStEx4 =
   C.newEpoch blockEx4
-    . C.newSnapshot EB.emptySnapShot (feeTx1 <+> feeTx2 <+> feeTx3)
+    . C.newSnapshot emptySnapShot (feeTx1 <+> feeTx2 <+> feeTx3)
     . C.applyRewardUpdate emptyRewardUpdate
     . C.setCurrentProposals (collectVotes ppVoteB [1])
     . C.setFutureProposals (ProposedPPUpdates Map.empty)

@@ -70,7 +70,6 @@ import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
 import Cardano.Ledger.Conway.Rules.HardFork (
   ConwayHardForkEvent (..),
  )
-import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DState (..),
@@ -106,6 +105,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Ledger.State (SnapShots (..))
 import Cardano.Ledger.UMap (RDPair (..), UMap, UView (..), (∪+), (◁))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (zero, (<->))

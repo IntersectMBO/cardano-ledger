@@ -156,11 +156,6 @@ import Cardano.Ledger.Credential (
   StakeReference (..),
  )
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.EpochBoundary (
-  SnapShot (..),
-  SnapShots (..),
-  Stake (..),
- )
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -186,7 +181,6 @@ import Cardano.Ledger.Plutus.Data (
  )
 import qualified Cardano.Ledger.Plutus.ExUnits as ExUnits (Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
@@ -254,6 +248,15 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
+import Cardano.Ledger.State (
+  IndividualPoolStake (..),
+  PoolDistr (..),
+  ScriptsNeeded,
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
+  UTxO (..),
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
@@ -265,7 +268,6 @@ import Cardano.Ledger.UMap (
   sPoolMap,
  )
 import qualified Cardano.Ledger.UMap as UM (UMap, UView (..), size)
-import Cardano.Ledger.UTxO (ScriptsNeeded, UTxO (..))
 import qualified Cardano.Ledger.Val as Val
 import Codec.Binary.Bech32
 import Control.Monad.Identity (Identity)

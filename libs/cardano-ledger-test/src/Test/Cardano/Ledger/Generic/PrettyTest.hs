@@ -3,7 +3,7 @@ module Test.Cardano.Ledger.Generic.PrettyTest (testwidth, prettyTest) where
 import Cardano.Ledger.Core (Tx, TxBody)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
-import Cardano.Ledger.UTxO (UTxO)
+import Cardano.Ledger.State (UTxO)
 import Prettyprinter (defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text (renderStrict)
 import Prettyprinter.Util (putDocW)

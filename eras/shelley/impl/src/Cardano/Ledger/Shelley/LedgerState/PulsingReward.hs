@@ -44,13 +44,6 @@ import Cardano.Ledger.Coin (
   toDeltaCoin,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.EpochBoundary (
-  SnapShot (..),
-  SnapShots (..),
-  Stake (..),
-  sumAllStake,
-  sumStakePerPool,
- )
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
@@ -80,6 +73,7 @@ import Cardano.Ledger.Shelley.Rewards (
   sumRewards,
  )
 import Cardano.Ledger.Slot (EpochSize (..))
+import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Data.Group (invert)

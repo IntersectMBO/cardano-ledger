@@ -215,10 +215,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   vsCommitteeStateL,
   vsDRepsL,
  )
+import Cardano.Ledger.State (EraUTxO, UTxO, balance, sumAllValue, txInsFilter)
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.UMap (dRepMap)
 import qualified Cardano.Ledger.UMap as UMap
-import Cardano.Ledger.UTxO (EraUTxO, UTxO, balance, sumAllValue, txInsFilter)
 import Cardano.Ledger.Val (Val (..), (<->))
 import Control.Monad (forM)
 import Control.Monad.Trans.Fail.String (errorFail)

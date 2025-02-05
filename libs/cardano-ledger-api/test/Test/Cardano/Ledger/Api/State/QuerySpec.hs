@@ -34,9 +34,9 @@ import Cardano.Ledger.Conway.Governance (
   rsEnactStateL,
  )
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (UMap)
 import Data.Default (Default (..))
 import Data.Foldable (foldMap')

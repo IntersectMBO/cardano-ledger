@@ -19,7 +19,6 @@ import Cardano.Ledger.BaseTypes (Mismatch (..), Nonce, StrictMaybe (..), mkCertI
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
-import Cardano.Ledger.EpochBoundary (emptySnapShot)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
@@ -40,8 +39,8 @@ import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
+import Cardano.Ledger.State (UTxO (..), emptySnapShot)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)

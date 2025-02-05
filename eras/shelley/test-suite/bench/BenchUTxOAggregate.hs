@@ -25,11 +25,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
  )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (
+import Cardano.Ledger.State (
   UTxO (..),
  )
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import qualified Cardano.Ledger.UMap as UM
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (compile, compute, run)
 import Control.Monad (replicateM)

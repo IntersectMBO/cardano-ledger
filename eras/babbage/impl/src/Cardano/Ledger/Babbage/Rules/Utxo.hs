@@ -71,8 +71,8 @@ import Cardano.Ledger.Rules.ValidationMode (
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (utxosUtxo))
 import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.State (EraUTxO (..), UTxO (..), areAllAdaOnly, balance)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, balance)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val (inject, isAdaOnly, pointwise)
 import Control.DeepSeq (NFData)

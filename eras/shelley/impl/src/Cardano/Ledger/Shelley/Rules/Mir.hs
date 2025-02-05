@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -21,13 +22,14 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState,
   InstantaneousRewards (..),
-  RewardAccounts,
   certDState,
   curPParamsEpochStateL,
   dsIRewards,
@@ -127,13 +129,13 @@ mirTransition = do
       rewards' = rewards ds
       reserves = asReserves acnt
       treasury = asTreasury acnt
-      irwdR = rewards' UM.◁ iRReserves (dsIRewards ds) :: RewardAccounts
-      irwdT = rewards' UM.◁ iRTreasury (dsIRewards ds) :: RewardAccounts
+      irwdR = rewards' UM.◁ iRReserves (dsIRewards ds) :: Map.Map (Credential 'Staking) Coin
+      irwdT = rewards' UM.◁ iRTreasury (dsIRewards ds) :: Map.Map (Credential 'Staking) Coin
       totR = fold irwdR
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` deltaReserves (dsIRewards ds)
       availableTreasury = treasury `addDeltaCoin` deltaTreasury (dsIRewards ds)
-      update = eval (irwdR ∪+ irwdT) :: RewardAccounts
+      update = eval (irwdR ∪+ irwdT) :: Map.Map (Credential 'Staking) Coin
 
   if totR <= availableReserves && totT <= availableTreasury
     then do

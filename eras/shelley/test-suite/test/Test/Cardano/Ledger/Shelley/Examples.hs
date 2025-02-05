@@ -7,10 +7,10 @@ module Test.Cardano.Ledger.Shelley.Examples (
 where
 
 import Cardano.Ledger.Block (Block)
-import Cardano.Ledger.PoolDistr (individualTotalPoolStakeL, poolDistrDistrL, poolDistrTotalL)
 import Cardano.Ledger.Shelley ()
 import Cardano.Ledger.Shelley.LedgerState (nesPdL)
 import Cardano.Ledger.Shelley.Scripts ()
+import Cardano.Ledger.State (individualTotalPoolStakeL, poolDistrDistrL, poolDistrTotalL)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.List.NonEmpty (NonEmpty)

@@ -21,7 +21,6 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys
 import Cardano.Ledger.MemoBytes
@@ -30,11 +29,10 @@ import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.Plutus.TxInfo
-import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap
-import Cardano.Ledger.UTxO
 import Data.Functor.Identity
 import Data.TreeDiff.OMap
 import GHC.TypeLits
@@ -180,6 +178,8 @@ deriving newtype instance
 instance ToExpr TxIn
 
 instance ToExpr TxId
+
+instance ToExpr AccountState
 
 -- CertState
 instance ToExpr DRep

@@ -47,7 +47,6 @@ import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (StakeRefBase, StakeRefPtr),
  )
-import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..))
 import Cardano.Ledger.Shelley.Governance (EraGov (GovState))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
@@ -57,13 +56,13 @@ import Cardano.Ledger.Shelley.Rewards (
   aggregateRewards,
   filterRewards,
  )
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (
   UMElem,
   UMap (..),
   member,
  )
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..))
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Control.Exception (assert)
 import Data.Coerce (coerce)

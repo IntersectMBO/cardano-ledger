@@ -79,8 +79,8 @@ import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.TxBody (RewardAccount)
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.State (CanSetUTxO (..), EraUTxO (getMinFeeTxUtxo), UTxO (..), balance, txouts)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (CanSetUTxO (..), EraUTxO (getMinFeeTxUtxo), UTxO (..), balance, txouts)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq

@@ -98,7 +98,6 @@ import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -106,7 +105,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   LedgerState (..),
   PState (..),
-  RewardAccounts,
   smartUTxOState,
   totalObligation,
   utxosGovStateL,
@@ -119,9 +117,9 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Cardano.Ledger.State (IndividualPoolStake (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (join, replicateM, when, zipWithM_)
@@ -1197,7 +1195,7 @@ initStableFields = do
 
 -- Adds to the rewards of the ModelNewEpochState. This used exclusively to generate Withdrawals, so
 -- we mark these as ones to avoid in the future. Especialy when generating DeRegKey.
-genRewards :: Reflect era => GenRS era RewardAccounts
+genRewards :: Reflect era => GenRS era (Map (Credential 'Staking) Coin)
 genRewards = do
   wmax <- gets (withdrawalMax . geSize . gsGenEnv)
   n <- lift $ choose (1, wmax)

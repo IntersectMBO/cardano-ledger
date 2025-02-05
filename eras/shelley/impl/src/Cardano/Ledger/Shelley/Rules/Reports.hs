@@ -27,7 +27,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..), Withdrawals (..))
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import Data.Foldable (fold, toList)
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))

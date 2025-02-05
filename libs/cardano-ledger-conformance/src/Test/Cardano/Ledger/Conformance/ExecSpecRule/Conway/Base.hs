@@ -78,7 +78,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
+import Cardano.Ledger.State (IndividualPoolStake (..))
 import Constrained hiding (inject)
 import Data.Either (isRight)
 import Data.Foldable (Foldable (..))

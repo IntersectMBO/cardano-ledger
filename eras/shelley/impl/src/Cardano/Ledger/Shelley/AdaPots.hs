@@ -33,7 +33,6 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Governance (EraGov (..))
 import Cardano.Ledger.Shelley.LedgerState.Types (
-  AccountState (..),
   EpochState (..),
   LedgerState (..),
   UTxOState (..),
@@ -41,8 +40,8 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.TxBody (unWithdrawals)
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (sumRewardsUView)
-import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txInsFilter, txouts)
 import Control.DeepSeq (NFData)
 import Data.Foldable (fold)
 import GHC.Generics (Generic)

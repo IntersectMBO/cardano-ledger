@@ -25,8 +25,8 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
+import Cardano.Ledger.State (getMinFeeTxUtxo)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (getMinFeeTxUtxo)
 import Cardano.Ledger.Val
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Functor ((<&>))

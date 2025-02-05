@@ -58,8 +58,8 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyUtxowPredFailure (..),
   UtxoEnv,
  )
+import Cardano.Ledger.State (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (Embed (..), STS (..))
 import Data.Maybe.Strict (StrictMaybe)

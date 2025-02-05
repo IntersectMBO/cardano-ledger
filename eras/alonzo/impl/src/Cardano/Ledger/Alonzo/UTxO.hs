@@ -49,13 +49,13 @@ import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
  )
-import Cardano.Ledger.TxIn
-import Cardano.Ledger.UTxO (
+import Cardano.Ledger.State (
   EraUTxO (..),
   ScriptsProvided (..),
   UTxO (..),
   getScriptHash,
  )
+import Cardano.Ledger.TxIn
 import Control.SetAlgebra (eval, (◁))
 import Data.Foldable as F (foldl', toList)
 import qualified Data.Map.Strict as Map

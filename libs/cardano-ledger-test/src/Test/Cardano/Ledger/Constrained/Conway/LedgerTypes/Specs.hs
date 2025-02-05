@@ -30,9 +30,7 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..), calculatePoolDistr)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -44,9 +42,16 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   updateStakeDistribution,
  )
+import Cardano.Ledger.State (
+  PoolDistr (..),
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
+  UTxO (..),
+  calculatePoolDistr,
+ )
 import Cardano.Ledger.UMap (CompactForm (..))
 import qualified Cardano.Ledger.UMap as UMap
-import Cardano.Ledger.UTxO (UTxO (..))
 import Constrained hiding (Value)
 import Constrained.Base (Pred (..))
 import Data.Map (Map)

@@ -43,14 +43,14 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
-import Cardano.Ledger.TxIn (TxIn (..))
-import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (
+import Cardano.Ledger.State (
   EraUTxO,
   UTxO (..),
   getMinFeeTxUtxo,
   sumAllValue,
  )
+import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
 import Control.State.Transition

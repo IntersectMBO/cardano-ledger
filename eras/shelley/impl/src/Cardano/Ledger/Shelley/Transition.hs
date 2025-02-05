@@ -36,10 +36,8 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Genesis (EraGenesis)
 import Cardano.Ledger.Keys
-import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.Governance
@@ -48,8 +46,8 @@ import Cardano.Ledger.Shelley.Translation (
   FromByronTranslationContext (..),
   toFromByronTranslationContext,
  )
+import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val
 import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, pairs, withObject, (.:))
 import Data.Default

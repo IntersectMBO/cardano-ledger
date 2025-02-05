@@ -17,7 +17,6 @@ source-repository head
 
 library
   exposed-modules:
-    Cardano.Ledger.State
     Cardano.Ledger.State.Orphans
     Cardano.Ledger.State.Query
     Cardano.Ledger.State.Schema

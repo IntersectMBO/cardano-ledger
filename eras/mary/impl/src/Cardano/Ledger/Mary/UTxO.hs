@@ -22,7 +22,7 @@ import Cardano.Ledger.Shelley.UTxO (
   getShelleyWitsVKeyNeeded,
   shelleyProducedValue,
  )
-import Cardano.Ledger.UTxO (
+import Cardano.Ledger.State (
   EraUTxO (..),
   ScriptsProvided (..),
   UTxO,

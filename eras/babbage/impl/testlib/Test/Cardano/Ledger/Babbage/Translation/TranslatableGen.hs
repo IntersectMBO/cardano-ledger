@@ -23,8 +23,8 @@ import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import Data.Sequence.Strict (fromList)

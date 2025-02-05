@@ -26,7 +26,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   updateStakeDistribution,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
 import Control.State.Transition.Extended hiding (Assertion)

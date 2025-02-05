@@ -41,8 +41,6 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.EpochBoundary
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
@@ -53,6 +51,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTickPredFailure (..),
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
+import Cardano.Ledger.State
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.State.Transition

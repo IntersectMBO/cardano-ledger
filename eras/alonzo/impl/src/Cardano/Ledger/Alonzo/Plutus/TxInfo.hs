@@ -79,8 +79,8 @@ import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
+import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
-import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (zero)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)

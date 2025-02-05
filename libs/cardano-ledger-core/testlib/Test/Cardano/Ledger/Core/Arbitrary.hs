@@ -91,7 +91,6 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..), unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (BootstrapWitness (..), ChainCode (..), VKey (..), WitVKey (..))
@@ -106,7 +105,6 @@ import Cardano.Ledger.Plutus.CostModels (
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
   PoolParams (..),
@@ -114,6 +112,7 @@ import Cardano.Ledger.PoolParams (
   SizeOfPoolRelays (..),
   StakePoolRelay (..),
  )
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
@@ -123,7 +122,6 @@ import Cardano.Ledger.UMap (
   unUnify,
   unify,
  )
-import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
 import Control.Monad.Trans.Fail.String (errorFail)
@@ -495,7 +493,15 @@ instance Arbitrary SizeOfPoolOwners where
   arbitrary = pure SizeOfPoolOwners
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.PoolDistr --------------------------------------------------------------
+-- Cardano.Ledger.State ------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+instance Arbitrary AccountState where
+  arbitrary = AccountState <$> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.State.PoolDistr --------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 instance Arbitrary PoolDistr where
@@ -507,14 +513,14 @@ instance Arbitrary IndividualPoolStake where
   arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.DRepDistr --------------------------------------------------------------
+-- Cardano.Ledger.DRepState --------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 instance Arbitrary DRepState where
   arbitrary = DRepState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
--- Cardano.Ledger.UTxO -------------------------------------------------------------------
+-- Cardano.Ledger.State.UTxO -------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
 deriving instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (UTxO era)

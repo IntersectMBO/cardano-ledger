@@ -84,8 +84,8 @@ import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.StabilityWindow
+import Cardano.Ledger.State (UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (UTxO))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart (SystemStart))

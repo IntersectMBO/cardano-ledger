@@ -17,7 +17,6 @@ import BenchValidation (
   validateInput,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Bench.Gen (
   genBlock,
@@ -35,7 +34,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   updateStakeDistribution,
  )
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
-import Cardano.Ledger.UTxO (UTxO)
+import Cardano.Ledger.State
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (compile, compute, run)
@@ -212,14 +211,14 @@ epochAt x =
 action2m ::
   EraTxOut era =>
   (DState era, PState era, UTxO era) ->
-  EB.SnapShot
+  SnapShot
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
 action2im ::
   forall era.
   EraTxOut era =>
   (DState era, PState era, UTxO era) ->
-  EB.SnapShot
+  SnapShot
 action2im (dstate, pstate, utxo) =
   let pp = emptyPParams @era
       incStake = updateStakeDistribution pp mempty mempty utxo

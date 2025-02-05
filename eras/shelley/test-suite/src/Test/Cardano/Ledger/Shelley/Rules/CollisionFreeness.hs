@@ -18,8 +18,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
  )
+import Cardano.Ledger.State (UTxO (..), txins, txouts)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
 import Control.SetAlgebra (eval, (∩))
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map

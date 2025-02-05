@@ -64,7 +64,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
-import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (

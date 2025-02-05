@@ -21,8 +21,8 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State
 import qualified Data.Foldable as Set
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map, keysSet)

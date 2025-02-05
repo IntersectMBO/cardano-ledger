@@ -22,7 +22,6 @@ module Cardano.Ledger.Shelley.Rules.Epoch (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -61,6 +60,7 @@ import Cardano.Ledger.Shelley.Rules.Snap (
  )
 import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Ledger.State (SnapShots)
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
