@@ -9,6 +9,7 @@ module Test.Cardano.Protocol.Crypto.VRF (
 
 import qualified Cardano.Crypto.VRF.Class as VRF
 import Cardano.Protocol.Crypto
+import Test.Cardano.Ledger.Common
 
 data VRFKeyPair c = VRFKeyPair
   { vrfSignKey :: !(VRF.SignKeyVRF (VRF c))
@@ -17,3 +18,12 @@ data VRFKeyPair c = VRFKeyPair
 
 deriving instance
   (Show (VRF.SignKeyVRF (VRF c)), Show (VRF.VerKeyVRF (VRF c))) => Show (VRFKeyPair c)
+
+instance (Crypto c, Arbitrary (VRF.SignKeyVRF (VRF c))) => Arbitrary (VRFKeyPair c) where
+  arbitrary = do
+    signKey <- arbitrary
+    pure $
+      VRFKeyPair
+        { vrfSignKey = signKey
+        , vrfVerKey = VRF.deriveVerKeyVRF signKey
+        }

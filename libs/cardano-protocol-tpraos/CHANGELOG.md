@@ -14,6 +14,8 @@
 
 ### `testlib`
 
+* Add `genAllIssuerKeys`
+* Add `Arbitrary` instances for `KESKeyPair` and `VRFKeyPair`
 * Move `VRFNatVal` from `cardano-ledger-shelley-test` in here.
 * Change type of `kesSignKey` in `KESKeyPair` and result of `evolveKESUntil` from `SignKeyKES` to `UnsoundPureSignKeyKES`
 
