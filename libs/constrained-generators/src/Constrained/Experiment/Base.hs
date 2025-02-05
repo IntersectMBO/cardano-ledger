@@ -35,8 +35,6 @@ module Constrained.Experiment.Base where
 import Constrained.Experiment.Generic
 import Constrained.Experiment.Witness
 
--- import Debug.Trace
-
 import Constrained.Core (Evidence (..), Var (..), eqVar)
 import Constrained.GenT (
   GE (..),
@@ -65,7 +63,6 @@ import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 
 -- import Type.Reflection(TypeRep)
-import Debug.Trace
 
 -- ====================================================================
 -- The FunctionSymbol class for implementing new function symbols in
@@ -77,7 +74,7 @@ import Debug.Trace
 
 class
   ( Typeable c
-  , KnownSymbol s
+  , Typeable s
   , Typeable t
   , Witness t
   , TypeList dom
@@ -87,6 +84,7 @@ class
   , HasSpec rng
   , Show (t c s dom rng)
   , Eq (t c s dom rng)
+  , c
   ) =>
   FunctionSymbol
     (c :: Constraint)
@@ -97,6 +95,8 @@ class
     | s -> t
   where
   {-# MINIMAL witness, (propagate | simplepropagate) #-}
+  evidence :: t c s dom rng -> Evidence c
+  evidence _ = Evidence
   witness :: String -- For documentation about what constructor of 't' implements 's'
   -- Handles all the obvious default cases. So if this is what you want
   -- then define simplepropagate instead. If you need special instructions
@@ -163,12 +163,12 @@ extractDom t1 t2 =
 -- | Use this as a view pattern to match against the Term App constructor
 --   test :: Term a -> String
 --   test x = case x of
---     (App (extractAll NotW -> Just(NotW,Evidence,Refl,Refl)) xs) -> "NotW"
---     (App (extractAll (EqualW @Integer) -> Just(EqualW,Evidence,Refl,Refl)) xs) -> "EqualW Integer"
---     (App (extractAll (EqualW @Int) -> Just(EqualW,Evidence,Refl,Refl)) xs) -> "EqualW Int"
---     (App (extractAll (EqualW @Bool) -> Just (EqualW, Evidence, Refl, Refl)) _) -> "EqualW Bool"
---     (App (extractAll (AddW @Integer) -> Just(AddW,Evidence,Refl,Refl)) xs) -> "AddW Integer"
---     (App (extractAll (NegateW @Integer) -> Just(NegateW, Evidence,Refl, Refl)) _) -> "NegateW Integer"
+--     (App (extractAll NotW -> Just(NotW,Evidence,Refl,Refl,Refl)) xs) -> "NotW"
+--     (App (extractAll (EqualW @Integer) -> Just(EqualW,Evidence,Refl,Refl,Refl)) xs) -> "EqualW Integer"
+--     (App (extractAll (EqualW @Int) -> Just(EqualW,Evidence,Refl,Refl,Refl)) xs) -> "EqualW Int"
+--     (App (extractAll (EqualW @Bool) -> Just (EqualW, Evidence, Refl, Refl,Refl)) _) -> "EqualW Bool"
+--     (App (extractAll (AddW @Integer) -> Just(AddW,Evidence,Refl,Refl,Refl)) xs) -> "AddW Integer"
+--     (App (extractAll (NegateW @Integer) -> Just(NegateW, Evidence,Refl, Refl,Refl)) _) -> "NegateW Integer"
 --     _ -> "All branches fail"
 --  Just(constr, constraints, domain equality, range equality)
 extractAll ::
@@ -187,15 +187,47 @@ extractAll ::
   ( FunctionSymbol c s t d r
   , Typeable t'
   , Typeable c'
-  , KnownSymbol s'
+  , Typeable s'
   , Typeable d'
   , Typeable r'
+  , f ~ t' c' s' d' r'
   ) =>
-  f -> t c s d r -> Maybe (t' c' s' d' r', Evidence c', d :~: d', r :~: r')
+  f -> t c s d r -> Maybe (t' c' s' d' r', Evidence c', d :~: d', r :~: r', f :~: t' c' s' d' r')
 extractAll _f hidden =
-  case (eqT @t @t', eqT @c @c', eqT @s @s', eqT @d @d', eqT @r @r') of
-    (Just Refl, Just Refl, Just Refl, Just dp@Refl, Just rp@Refl) -> Just (hidden, getevidence hidden, dp, rp)
-    x -> trace (show x) $ Nothing
+  case (eqT @t @t', eqT @c @c', eqT @s @s', eqT @d @d', eqT @r @r', eqT @f @(t' c' s' d' r')) of
+    (Just Refl, Just Refl, Just Refl, Just dp@Refl, Just rp@Refl, Just fp@Refl) ->
+      Just (hidden, evidence hidden, dp, rp, fp)
+    _ -> Nothing
+
+type FSType = Constraint -> Symbol -> [Type] -> Type -> Type
+
+matchFS ::
+  forall
+    (k :: FSType)
+    (c1 :: Constraint)
+    (s1 :: Symbol)
+    (d1 :: [Type])
+    r1
+    f
+    (c2 :: Constraint)
+    (s2 :: Symbol)
+    (d2 :: [Type])
+    r2.
+  ( Typeable k
+  , Typeable c1
+  , Typeable s1
+  , Typeable d1
+  , Typeable r1
+  , FunctionSymbol c2 s2 f d2 r2
+  ) =>
+  k c1 s1 d1 r1 ->
+  f c2 s2 d2 r2 ->
+  Maybe (k c1 s1 d1 r1, Evidence c1, f :~: k, s1 :~: s2, d1 :~: d2, r1 :~: r2)
+matchFS t x =
+  case (eqT @f @k, eqT @c1 @c2, eqT @s1 @s2, eqT @d1 @d2, eqT @r1 @r2) of
+    (Just pT@Refl, Just Refl, Just p2@Refl, Just p3@Refl, Just p4@Refl) ->
+      if t == x then Just (t, evidence x, pT, p2, p3, p4) else Nothing
+    _ -> Nothing
 
 -- ========================================================
 -- A Specification is tells us what constraints must hold
@@ -418,20 +450,12 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
 
 data GenericsW constraint symbol args res where
   ToGenericW ::
-    ( HasSimpleRep a
-    , HasSpec (SimpleRep a)
-    , TypeSpec a ~ TypeSpec (SimpleRep a)
-    ) =>
     GenericsW
       (HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
       "toGenericFn"
       '[a]
       (SimpleRep a)
   FromGenericW ::
-    ( HasSimpleRep a
-    , HasSpec (SimpleRep a)
-    , TypeSpec a ~ TypeSpec (SimpleRep a)
-    ) =>
     GenericsW
       (HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
       "fromGenericFn"
@@ -448,8 +472,8 @@ instance Witness GenericsW where
   semantics FromGenericW = fromSimpleRep
   semantics ToGenericW = toSimpleRep
 
-  getevidence (FromGenericW @a) = Evidence @(HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
-  getevidence (ToGenericW @a) = Evidence @(HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
+-- getevidence (FromGenericW @a) = Evidence @(HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
+-- getevidence (ToGenericW @a) = Evidence @(HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
 
 instance
   ( HasSimpleRep a
@@ -542,8 +566,8 @@ fromSimpleRepSpec = \case
 
 toSimpleRepSpec ::
   forall a.
-  ( HasSimpleRep a
-  , HasSpec (SimpleRep a)
+  ( -- HasSimpleRep a
+    HasSpec (SimpleRep a)
   , TypeSpec a ~ TypeSpec (SimpleRep a)
   , FunctionSymbol (HasSimpleRep a) "fromGenericFn" BaseW '[SimpleRep a] a
   ) =>
@@ -631,24 +655,30 @@ pattern EqualPat x y <-
 -- This is quite usefull, as long as we have actual Function Symbol instances
 extractW ::
   forall t2 c2 s2 d2 a2 t c s d a.
-  ( FunctionSymbol c s t d a
-  , Witness t2
-  , Typeable t2
+  ( Typeable t2
   , Typeable s2
   , Typeable d2
   , Typeable a2
   , Typeable s
   , Typeable c2
+  , Typeable a
+  , Typeable c
+  , Typeable d
+  , Typeable t
+  , Eq (t c s d a)
   ) =>
   t2 c2 s2 d2 a2 -> t c s d a -> Maybe (t :~: t2)
 extractW known hidden = case (eqT @t @t2, eqT @c @c2, eqT @s @s2, eqT @d @d2, eqT @a @a2) of
   (Just p@Refl, Just Refl, Just Refl, Just Refl, Just Refl) -> if known == hidden then (Just p) else Nothing
   _bad -> Nothing
+
+{-
   where
     _ = semantics known -- These force the FunctionSymbol and
     _ = App hidden undefined -- Witness constraints to be not redundant
     -- We should never reach here
-    -- =============================================================================================
+-}
+-- =============================================================================================
 
 {-
 These are out of date See EqualPat and ElemPat to see why
@@ -718,7 +748,7 @@ data BinaryShow where
 data Term a where
   App ::
     forall c sym t dom rng.
-    (FunctionSymbol c sym t dom rng, All HasSpec dom, HasSpec rng, Eq (t c sym dom rng)) =>
+    (FunctionSymbol c sym t dom rng, All HasSpec dom, HasSpec rng) =>
     t c sym dom rng -> List Term dom -> Term rng
   Lit :: (Typeable a, Show a) => a -> Term a
   V :: HasSpec a => Var a -> Term a
