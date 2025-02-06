@@ -82,8 +82,8 @@ data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   FstW :: forall a b. (Typeable a, Typeable b) => BaseW () "fst_" '[Prod a b] a
   SndW :: forall a b. (Typeable a, Typeable b) => BaseW () "snd_" '[Prod a b] b
   -- Sum
-  InjLeftW :: forall a b. (Typeable a, Typeable b) => BaseW () "sumleft_" '[a] (Sum a b)
-  InjRightW :: forall a b. (Typeable a, Typeable b) => BaseW () "sumright_" '[b] (Sum a b)
+  InjLeftW :: forall a b. BaseW () "sumleft_" '[a] (Sum a b)
+  InjRightW :: forall a b. BaseW () "sumright_" '[b] (Sum a b)
   -- Set
   SubsetW :: BaseW (Ord a) "subset_" '[Set a, Set a] Bool
   DisjointW :: BaseW (Ord a) "disjoint_" '[Set a, Set a] Bool

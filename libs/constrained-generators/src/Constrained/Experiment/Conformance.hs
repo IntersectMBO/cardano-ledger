@@ -18,7 +18,6 @@
 module Constrained.Experiment.Conformance where
 
 import Constrained.Experiment.Base
-import Constrained.Experiment.Generic
 import Constrained.Experiment.Syntax
 import Constrained.Experiment.Witness
 
@@ -26,7 +25,6 @@ import Constrained.Core
 import Constrained.Env
 import Constrained.GenT
 import Constrained.List
-import Control.Monad.Identity
 import Data.List (intersect, nub)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
@@ -35,31 +33,6 @@ import Data.Semigroup (sconcat)
 import Prettyprinter hiding (cat)
 
 -- import GHC.Stack
-
--- =================================================================
-
--- ============================================================
--- This simplest kind of conformance,
--- Either it doesn't evaluate successfully: Left (NE.NonEmpty whatWentWrong),
--- or it does: Right thevalue
-
-runTermE :: forall a. Env -> Term a -> Either (NE.NonEmpty String) a
-runTermE env = \case
-  Lit a -> Right a
-  V v -> case lookupEnv env v of
-    Just a -> Right a
-    Nothing -> Left (pure ("Couldn't find " ++ show v ++ " in " ++ show env))
-  App f (ts :: List Term dom) -> do
-    vs <- mapMList (fmap Identity . runTermE env) ts
-    pure $ uncurryList_ runIdentity (semantics f) vs
-  To x -> toSimpleRep <$> runTermE env x
-  From x -> fromSimpleRep <$> runTermE env x
-  Equal x y -> (==) <$> runTermE env x <*> runTermE env y
-
-runTerm :: MonadGenError m => Env -> Term a -> m a
-runTerm env x = case runTermE env x of
-  Left msgs -> fatalError msgs
-  Right val -> pure val
 
 -- =========================================================================
 
