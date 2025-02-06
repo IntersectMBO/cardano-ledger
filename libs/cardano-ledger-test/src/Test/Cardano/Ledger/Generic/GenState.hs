@@ -845,7 +845,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
 -- Generators of inter-related items
 
 -- Adds to the gsKeys
-genKeyHash :: GenRS era (KeyHash kr)
+genKeyHash :: forall kr era. GenRS era (KeyHash kr)
 genKeyHash = do
   keyPair <- lift arbitrary
   let keyHash = hashKey $ vKey keyPair
@@ -1017,7 +1017,7 @@ genPlutusScript proof tag = do
 -- Adds to both gsKeys and gsScripts and gsPlutusScript
 -- via genKeyHash and genScript
 genCredential ::
-  forall era kr. Reflect era => PlutusPurposeTag -> GenRS era (Credential kr)
+  forall kr era. Reflect era => PlutusPurposeTag -> GenRS era (Credential kr)
 genCredential tag =
   frequencyT
     [ (35, KeyHashObj <$> genKeyHash')

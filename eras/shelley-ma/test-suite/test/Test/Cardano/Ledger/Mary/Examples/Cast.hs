@@ -39,7 +39,7 @@ aliceStake = KeyPair vk sk
 
 -- | Alice's base address
 aliceAddr :: Addr
-aliceAddr = mkAddr (alicePay, aliceStake)
+aliceAddr = mkAddr alicePay aliceStake
 
 -- | Bob's payment key pair
 bobPay :: KeyPair 'Payment
@@ -55,7 +55,7 @@ bobStake = KeyPair vk sk
 
 -- | Bob's address
 bobAddr :: Addr
-bobAddr = mkAddr (bobPay, bobStake)
+bobAddr = mkAddr bobPay bobStake
 
 -- Carl's payment key pair
 carlPay :: KeyPair 'Payment
@@ -71,7 +71,7 @@ carlStake = KeyPair vk sk
 
 -- | Carl's address
 carlAddr :: Addr
-carlAddr = mkAddr (carlPay, carlStake)
+carlAddr = mkAddr carlPay carlStake
 
 -- | Daria's payment key pair
 dariaPay :: KeyPair 'Payment
@@ -87,4 +87,4 @@ dariaStake = KeyPair vk sk
 
 -- | Daria's address
 dariaAddr :: Addr
-dariaAddr = mkAddr (dariaPay, dariaStake)
+dariaAddr = mkAddr dariaPay dariaStake

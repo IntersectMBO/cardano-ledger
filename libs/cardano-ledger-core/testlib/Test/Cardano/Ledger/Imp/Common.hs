@@ -7,6 +7,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Imp.Common (
+  -- * Ledger
+  KeyPair (..),
+  mkAddr,
+  mkCredential,
+
+  -- * Re-exports
   module X,
   io,
 
@@ -123,6 +129,7 @@ import Test.Cardano.Ledger.Common as X hiding (
   variant,
   vectorOf,
  )
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkCredential)
 import Test.ImpSpec (modifyImpInit, withImpInit)
 import Test.ImpSpec.Expectations.Lifted
 import Test.ImpSpec.Random (

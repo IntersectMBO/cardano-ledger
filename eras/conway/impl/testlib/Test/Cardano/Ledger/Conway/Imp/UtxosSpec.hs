@@ -40,7 +40,6 @@ import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModels)
 import Test.Cardano.Ledger.Plutus.Examples (
@@ -629,7 +628,7 @@ scriptLockedTxOut ::
   TxOut era
 scriptLockedTxOut shSpending =
   mkBasicTxOut
-    (Addr Testnet (ScriptHashObj shSpending) StakeRefNull)
+    (mkAddr shSpending StakeRefNull)
     mempty
     & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
 
@@ -640,11 +639,10 @@ mkRefTxOut ::
   ScriptHash ->
   ImpTestM era (TxOut era)
 mkRefTxOut sh = do
-  kpPayment <- lookupKeyPair =<< freshKeyHash
-  kpStaking <- lookupKeyPair =<< freshKeyHash
+  addr <- freshKeyAddr_
   let mbyPlutusScript = impLookupPlutusScriptMaybe sh
   pure $
-    mkBasicTxOut (mkAddr (kpPayment, kpStaking)) mempty
+    mkBasicTxOut addr mempty
       & referenceScriptTxOutL .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)
 
 setupRefTx ::

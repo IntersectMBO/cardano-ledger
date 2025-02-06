@@ -46,7 +46,7 @@ exampleAllegraTxBody value =
   mkBasicTxBody
     & inputsTxBodyL .~ exampleTxIns
     & outputsTxBodyL
-      .~ StrictSeq.singleton (mkBasicTxOut (mkAddr (examplePayKey, exampleStakeKey)) value)
+      .~ StrictSeq.singleton (mkBasicTxOut (mkAddr examplePayKey exampleStakeKey) value)
     & certsTxBodyL .~ exampleCerts
     & withdrawalsTxBodyL .~ exampleWithdrawals
     & feeTxBodyL .~ Coin 3

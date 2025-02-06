@@ -13,7 +13,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
-import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
@@ -24,21 +23,19 @@ spec ::
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "LEDGER" $ do
   it "Transactions update UTxO" $ do
-    kpPayment1 <- lookupKeyPair =<< freshKeyHash
-    kpStaking1 <- lookupKeyPair =<< freshKeyHash
+    addr1 <- freshKeyAddr_
     let coin1 = Coin 2000000
     tx1 <-
       submitTxAnn "First transaction" . mkBasicTx $
         mkBasicTxBody
           & outputsTxBodyL @era
             .~ SSeq.singleton
-              (mkBasicTxOut (mkAddr (kpPayment1, kpStaking1)) $ inject coin1)
+              (mkBasicTxOut addr1 $ inject coin1)
     UTxO utxo1 <- getUTxO
     case Map.lookup (txInAt (0 :: Int) tx1) utxo1 of
       Just out1 -> out1 ^. coinTxOutL `shouldBe` coin1
       Nothing -> expectationFailure "Could not find the TxOut of the first transaction"
-    kpPayment2 <- lookupKeyPair =<< freshKeyHash
-    kpStaking2 <- lookupKeyPair =<< freshKeyHash
+    addr2 <- freshKeyAddr_
     let coin2 = Coin 3000000
     tx2 <-
       submitTxAnn "Second transaction" . mkBasicTx $
@@ -47,8 +44,7 @@ spec = describe "LEDGER" $ do
             .~ Set.singleton
               (txInAt (0 :: Int) tx1)
           & outputsTxBodyL @era
-            .~ SSeq.singleton
-              (mkBasicTxOut (mkAddr (kpPayment2, kpStaking2)) $ inject coin2)
+            .~ SSeq.singleton (mkBasicTxOut addr2 $ inject coin2)
     UTxO utxo2 <- getUTxO
     case Map.lookup (txInAt (0 :: Int) tx2) utxo2 of
       Just out1 -> do

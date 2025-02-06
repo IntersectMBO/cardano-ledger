@@ -6,8 +6,6 @@
 
 module Test.Cardano.Ledger.Shelley.UnitTests.IncrementalStakeTest (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core (EraTxOut, emptyPParams, mkCoinTxOut)
@@ -32,13 +30,10 @@ import qualified Data.VMap as VMap
 import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 
 ppIdL :: Lens' PoolParams (KeyHash 'StakePool)
 ppIdL = lens ppId (\x y -> x {ppId = y})
-
-address :: Credential 'Payment -> Maybe (Credential 'Staking) -> Addr
-address pc Nothing = Addr Testnet pc StakeRefNull
-address pc (Just sc) = Addr Testnet pc (StakeRefBase sc)
 
 arbitraryLens :: Arbitrary a => Lens' a b -> b -> Gen a
 arbitraryLens l b = do a <- arbitrary; pure (a & l .~ b)
@@ -56,10 +51,10 @@ stakeDistrIncludesRewards = do
 
   (tomRD, johnRD, annRD, ronRD, maryRD) <- arbitrary @(TupleN 5 RDPair)
 
-  let tomAddr = address tomPay Nothing -- Nothing means tomAddr does not have a StakeReference
-      johnAddr = address johnPay (Just john)
-      annAddr = address annPay (Just ann)
-      ronAddr = address ronPay (Just ron)
+  let tomAddr = mkAddr tomPay StakeRefNull
+      johnAddr = mkAddr johnPay john
+      annAddr = mkAddr annPay ann
+      ronAddr = mkAddr ronPay ron
       -- maryAddr is omitted on purpose. Mary will not have a UTxO entry
 
       rewards :: Map (Credential 'Staking) RDPair

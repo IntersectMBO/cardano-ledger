@@ -136,13 +136,12 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   delegateSPORewardAddressToDRep_,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
-  Network (..),
   ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
@@ -185,7 +184,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
@@ -241,7 +240,6 @@ import Prettyprinter (align, hsep, viaShow, vsep)
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff (tableDoc)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCred)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModel)
@@ -472,11 +470,7 @@ setupSingleDRep stake = do
   let tx =
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
-            .~ SSeq.fromList
-              [ RegDepositTxCert
-                  (KeyHashObj delegatorKH)
-                  deposit
-              ]
+            .~ SSeq.fromList [RegDepositTxCert (KeyHashObj delegatorKH) deposit]
   submitTx_ tx
   spendingKP <-
     delegateToDRep (KeyHashObj delegatorKH) (Coin stake) (DRepCredential (KeyHashObj drepKH))
@@ -490,21 +484,13 @@ delegateToDRep ::
   ImpTestM era (KeyPair 'Payment)
 delegateToDRep cred stake dRep = do
   (_, spendingKP) <- freshKeyPair
-  let addr = Addr Testnet (mkCred spendingKP) (StakeRefBase cred)
+
   submitTxAnn_ "Delegate to DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . outputsTxBodyL
-        .~ SSeq.singleton
-          ( mkBasicTxOut
-              addr
-              (inject stake)
-          )
+        .~ SSeq.singleton (mkBasicTxOut (mkAddr spendingKP cred) (inject stake))
       & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList
-          [ DelegTxCert
-              cred
-              (DelegVote dRep)
-          ]
+        .~ SSeq.fromList [DelegTxCert cred (DelegVote dRep)]
   pure spendingKP
 
 lookupDRepState ::
@@ -534,10 +520,7 @@ setupPoolWithStake delegCoin = do
   registerPool khPool
   credDelegatorPayment <- KeyHashObj <$> freshKeyHash
   credDelegatorStaking <- KeyHashObj <$> freshKeyHash
-  void $
-    sendCoinTo
-      (Addr Testnet credDelegatorPayment (StakeRefBase credDelegatorStaking))
-      delegCoin
+  sendCoinTo_ (mkAddr credDelegatorPayment credDelegatorStaking) delegCoin
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   submitTxAnn_ "Delegate to stake pool" $
     mkBasicTx mkBasicTxBody

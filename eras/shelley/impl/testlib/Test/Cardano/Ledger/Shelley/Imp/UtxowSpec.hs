@@ -12,7 +12,7 @@ import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
 import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
@@ -60,8 +60,8 @@ spec = describe "UTXOW" $ do
       submitFailingTx txBad [injectFailure $ InvalidWitnessesUTXOW [aliceVKey]]
 
   it "MissingVKeyWitnessesUTXOW" $ do
-    aliceKh <- freshKeyHash
-    txIn <- sendCoinTo (Addr Testnet (KeyHashObj aliceKh) StakeRefNull) mempty
+    aliceKh <- freshKeyHash @'Payment
+    txIn <- sendCoinTo (mkAddr aliceKh StakeRefNull) mempty
     let tx = mkBasicTx $ mkBasicTxBody & inputsTxBodyL <>~ [txIn]
     let isAliceWitness wit = witVKeyHash wit == asWitness aliceKh
     withPostFixup (pure . (witsTxL . addrTxWitsL %~ Set.filter (not . isAliceWitness))) $
