@@ -147,9 +147,9 @@ instance
 -- Sums
 ------------------------------------------------------------------------
 
-instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunctionSymbol () "sumleft_" BaseW '[a] (Sum a b) where
+instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_" BaseW '[a] (Sum a b) where
   witness = "InjLeftW[sumleft_]"
-  simplepropagate ctx@(Context InjLeftW (HOLE End)) spec =
+  simplepropagate ctx@(Context _ InjLeftW (HOLE End)) spec =
     case spec of
       TypeSpec (SumSpec _ sl _) cant -> Right $ sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
       MemberSpec es -> case [a | SumLeft a <- NE.toList es] of
@@ -172,10 +172,10 @@ sumleft_ = appTerm InjLeftW
 
 instance
   (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
-  FunctionSymbol () "sumright_" BaseW '[b] (Sum a b)
+  FunSym () "sumright_" BaseW '[b] (Sum a b)
   where
   witness = "InjRightW[sumright_]"
-  simplepropagate ctx@(Context InjRightW (HOLE End)) spec =
+  simplepropagate ctx@(Context _ InjRightW (HOLE End)) spec =
     case spec of
       TypeSpec (SumSpec _ _ sr) cant -> Right $ sr <> foldMap notEqualSpec [a | SumRight a <- cant]
       MemberSpec es -> case [a | SumRight a <- NE.toList es] of

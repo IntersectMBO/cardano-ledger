@@ -4,7 +4,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Constrained.Experiment.API (
-  FunctionSymbol (..),
+  FunSym (..),
   Specification (..),
   Term (..),
   Pred (..),
@@ -74,17 +74,23 @@ module Constrained.Experiment.API (
   onJust,
   isJust,
   chooseSpec,
+  equalSpec,
+  notEqualSpec,
+  notMemberSpec,
 )
 where
 
 import Constrained.Experiment.Base (
-  FunctionSymbol (..),
+  FunSym (..),
   HasSpec (..),
   Pred (..),
   Specification (..),
   Term (..),
   constrained,
+  equalSpec,
   fromGeneric_,
+  notEqualSpec,
+  notMemberSpec,
   toGeneric_,
   (==.),
  )
