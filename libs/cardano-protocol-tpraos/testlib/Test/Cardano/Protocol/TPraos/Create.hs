@@ -5,6 +5,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -12,6 +13,7 @@
 
 module Test.Cardano.Protocol.TPraos.Create (
   AllIssuerKeys (..),
+  genAllIssuerKeys,
   KESKeyPair (..),
   VRFKeyPair (..),
   mkOCert,
@@ -52,12 +54,14 @@ import Cardano.Protocol.TPraos.OCert (
   OCert (..),
   OCertSignable (..),
  )
+import Control.Monad (forM)
 import Data.Coerce
 import Data.List.NonEmpty as NE
 import Data.Ratio (denominator, numerator, (%))
 import Data.Sequence.Strict as StrictSeq
 import Data.Word
 import Numeric.Natural
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Protocol.Crypto.KES (KESKeyPair (..))
 import Test.Cardano.Protocol.Crypto.VRF (VRFKeyPair (..))
@@ -73,6 +77,33 @@ data AllIssuerKeys c (r :: KeyRole) = AllIssuerKeys
 deriving instance
   (Show (VRF.SignKeyVRF (VRF c)), Show (VRF.VerKeyVRF (VRF c)), Show (KES.VerKeyKES (KES c))) =>
   Show (AllIssuerKeys c r)
+
+genAllIssuerKeys ::
+  Crypto c =>
+  -- | Maxium slot number
+  Int ->
+  -- | This corresponds to number of KES evolutions `Cardano.Ledger.BaseTypes.maxKESEvo` from
+  -- `Cardano.Ledger.BaseTypes.Globals`.
+  Word64 ->
+  -- | This corresponds to number of KES evolutions `Cardano.Ledger.BaseTypes.slotsPerKESPeriod` from
+  -- `Cardano.Ledger.BaseTypes.Globals`.
+  Word64 ->
+  Gen (AllIssuerKeys c r)
+genAllIssuerKeys maxSlotNumber maxKESIterations slotsPerKESPeriod = do
+  coldKeyPair <- arbitrary
+  let maxIter =
+        maxSlotNumber `div` fromIntegral (maxKESIterations * slotsPerKESPeriod)
+      iters = 0 :| [1 .. 1 + maxIter]
+  hotKESKeys <- forM iters $ \iter ->
+    (KESPeriod (fromIntegral (iter * fromIntegral maxKESIterations)),) <$> arbitrary
+  vrfKeyPair <- arbitrary
+  pure $
+    AllIssuerKeys
+      { aikCold = coldKeyPair
+      , aikHot = hotKESKeys
+      , aikVrf = vrfKeyPair
+      , aikColdKeyHash = hashKey (vKey coldKeyPair)
+      }
 
 mkOCert ::
   forall c r.

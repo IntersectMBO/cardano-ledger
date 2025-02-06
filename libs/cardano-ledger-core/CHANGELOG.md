@@ -7,7 +7,7 @@
 * Move `Cardano.Ledger.SnapShots` module contents into `Cardano.Ledger.State` and deprecated the former
 * Move `Cardano.Ledger.UTxO` module contents into `Cardano.Ledger.State` and deprecated the former
 * Add `CanGetUTxO` and `CanSetUTxO` type classes
-* Add `CanGetUTxO` and `CanSetUTxO` instances for `UTxO` 
+* Add `CanGetUTxO` and `CanSetUTxO` instances for `UTxO`
 * Add `DecShareCBOR` instances for `DRep` and `DRepState`
 * Added `ToPlutusData` instance for `NonZero`
 * `maxpool'` now expects `nOpt` to be a `NonZero Word16`
@@ -99,6 +99,7 @@
 
 ### `testlib`
 
+* Add `runGen`
 * Added `Arbitrary` and `ToExpr` instances for `NonZero`
 * Deprecate `genBadPtr`, `genAddrBadPtr` and `genCompactAddrBadPtr`
 * Remove crypto parametrization from types: `KeyPair` and `KeyPairs`
