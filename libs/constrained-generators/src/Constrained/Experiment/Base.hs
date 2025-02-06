@@ -73,29 +73,24 @@ import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 -- An instance "assigns" several functions to each Symbol 's'
 -- =====================================================================
 
-class
-  ( Typeable t
-  , Typeable c
-  , Typeable s
-  , Typeable dom
-  , Typeable rng
-  , Witness t
-  , TypeList dom
-  , All Typeable dom
-  , --  , All HasSpec dom -- We defer these to where we build an App  appTerm and appSym
-    --  , HasSpec rng
-    Show (t c s dom rng)
-  , Eq (t c s dom rng)
-  , c
-  ) =>
-  FunctionSymbol
-    (c :: Constraint)
-    (s :: Symbol)
-    (t :: Constraint -> Symbol -> [Type] -> Type -> Type)
-    (dom :: [Type])
-    rng
-    | s -> t
-  where
+-- The kind of a type, that is a candidate for a FunctionSymbol instance
+type FSType = Constraint -> Symbol -> [Type] -> Type -> Type
+
+type FSPre c s (t :: FSType) dom rng = 
+     ( Typeable t
+     , Typeable c
+     , Typeable s
+     , Typeable dom
+     , Typeable rng
+     , Witness t
+     , TypeList dom
+     , All Typeable dom
+     , Show (t c s dom rng)
+     , Eq (t c s dom rng)
+     , c
+     )
+ 
+class FSPre c s t dom rng => FunctionSymbol c s t dom rng | s -> t where
   {-# MINIMAL witness, (propagate | simplepropagate) #-}
   evidence :: t c s dom rng -> Evidence c
   evidence _ = Evidence
@@ -134,8 +129,10 @@ class
   mapTypeSpec :: (HasSpec a, HasSpec b) => t c s '[a] b -> TypeSpec a -> Specification b
   mapTypeSpec _ts _spec = TrueSpec
 
+{-
 propagateSpecFun :: Ctx hole rng -> Specification rng -> Specification hole
 propagateSpecFun (Ctx text@(Context _ _)) = propagate text
+-}
 
 -- \^ The pattern match brings the FunctionSymbol constraint into scope
 propagateSpec ::
@@ -162,6 +159,7 @@ extractDom t1 t2 =
       if t1 == t2 then p else Nothing
     _ -> Nothing
 
+{-
 -- | Use this as a view pattern to match against the Term App constructor
 --   test :: Term a -> String
 --   test x = case x of
@@ -201,7 +199,7 @@ extractAll _f hidden =
       Just (hidden, evidence hidden, dp, rp, fp)
     _ -> Nothing
 
-type FSType = Constraint -> Symbol -> [Type] -> Type -> Type
+-}
 
 matchFS ::
   forall
@@ -224,11 +222,11 @@ matchFS ::
   ) =>
   k c1 s1 d1 r1 ->
   f c2 s2 d2 r2 ->
-  Maybe (k c1 s1 d1 r1, Evidence c1, f :~: k, s1 :~: s2, d1 :~: d2, r1 :~: r2)
+  Maybe (k c1 s1 d1 r1,Evidence c2,f :~: k, s1 :~: s2, d1 :~: d2, r1 :~: r2)
 matchFS t x =
   case (eqT @f @k, eqT @c1 @c2, eqT @s1 @s2, eqT @d1 @d2, eqT @r1 @r2) of
     (Just pT@Refl, Just Refl, Just p2@Refl, Just p3@Refl, Just p4@Refl) ->
-      if t == x then Just (t, evidence x, pT, p2, p3, p4) else Nothing
+      if t == x then Just (t,Evidence @c2,pT, p2, p3, p4) else Nothing
     _ -> Nothing
 
 -- ========================================================
@@ -608,8 +606,8 @@ fromSimpleRepSpec = \case
 
 toSimpleRepSpec ::
   forall a.
-  ( -- HasSimpleRep a
-    HasSpec (SimpleRep a)
+  ( HasSpec (SimpleRep a)
+  -- , HasSimpleRep a
   , TypeSpec a ~ TypeSpec (SimpleRep a)
   , FunctionSymbol (HasSimpleRep a) "fromGenericFn" BaseW '[SimpleRep a] a
   ) =>
@@ -849,7 +847,7 @@ sameTerms (x :> xs) (y :> ys) = x == y && sameTerms xs ys
 
 appSym ::
   forall c sym t as b.
-  (FunctionSymbol c sym t as b, All HasSpec as, HasSpec b) =>
+  (FunctionSymbol c sym t as b, All HasSpec as, HasSpec b) => -- ,c) =>
   t c sym as b -> List Term as -> Term b
 appSym w xs = App w xs
 
@@ -866,7 +864,7 @@ appSym w xs = App w xs
 --                  The type of NotW |
 appTerm ::
   forall c sym t ds r.
-  (FunctionSymbol c sym t ds r, All HasSpec ds, HasSpec r) =>
+  (FunctionSymbol c sym t ds r, All HasSpec ds, HasSpec r) => -- ,c) =>
   t c sym ds r -> FunTy (MapList Term ds) (Term r)
 appTerm sym = curryList @ds (App @c @sym @t @ds @r sym)
 
