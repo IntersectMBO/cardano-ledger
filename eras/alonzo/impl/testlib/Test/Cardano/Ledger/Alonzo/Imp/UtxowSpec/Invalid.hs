@@ -9,7 +9,6 @@
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec) where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
@@ -20,7 +19,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unRedeemers)
-import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..), StrictMaybe (..), natVersion)
+import Cardano.Ledger.BaseTypes (Mismatch (..), StrictMaybe (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
@@ -139,10 +138,9 @@ spec = describe "Invalid transactions" $ do
             testHashMismatch SNothing
 
         it "UnspendableUTxONoDatumHash" $ do
-          let scriptHash = redeemerSameAsDatumHash
-
           txIn <- impAnn "Produce script at a txout with a missing datahash" $ do
-            let addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
+            let scriptHash = redeemerSameAsDatumHash
+            let addr = mkAddr scriptHash StakeRefNull
             let tx =
                   mkBasicTx mkBasicTxBody
                     & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr mempty]

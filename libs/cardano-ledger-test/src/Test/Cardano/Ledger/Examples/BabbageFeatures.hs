@@ -46,7 +46,6 @@ import Cardano.Ledger.Babbage.TxInfo (
   ),
  )
 import Cardano.Ledger.BaseTypes (
-  Network (..),
   SlotNo (..),
   StrictMaybe (..),
   TxIx (..),
@@ -54,7 +53,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (ConwayUtxoPredFailure (..))
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Plutus.Language (
   Language (..),
@@ -81,7 +80,7 @@ import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkGenesisTxIn,
   mkTxDats,
@@ -105,7 +104,7 @@ import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
-import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
+import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase)
 
@@ -154,18 +153,10 @@ evenData3ArgsScript proof =
           ]
 
 plainAddr :: forall era. Proof era -> Addr
-plainAddr pf = Addr Testnet pCred sCred
-  where
-    (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 2)
-    pCred = KeyHashObj . hashKey . vKey $ someKeys pf
-    sCred = StakeRefBase . KeyHashObj . hashKey $ svk
+plainAddr pf = mkAddr (someKeys pf) $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
 
 scriptAddr :: forall era. Reflect era => Proof era -> Script era -> Addr
-scriptAddr _pf s = Addr Testnet pCred sCred
-  where
-    pCred = ScriptHashObj . hashScript @era $ s
-    (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 0)
-    sCred = StakeRefBase . KeyHashObj . hashKey $ svk
+scriptAddr _pf s = mkAddr (hashScript s) $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 0)
 
 simpleScriptAddr :: forall era. (Reflect era, Scriptic era) => Proof era -> Addr
 simpleScriptAddr pf = scriptAddr pf (simpleScript pf)

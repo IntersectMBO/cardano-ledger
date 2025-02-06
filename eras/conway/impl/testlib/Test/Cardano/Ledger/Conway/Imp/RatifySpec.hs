@@ -7,7 +7,6 @@
 
 module Test.Cardano.Ledger.Conway.Imp.RatifySpec (spec) where
 
-import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
@@ -628,7 +627,7 @@ votingSpec =
           -- Bump up the UTxO delegated
           -- to barely make the threshold (65 %! 100)
           stakingKP1 <- lookupKeyPair stakingKH1
-          _ <- sendCoinTo (mkAddr (paymentKP1, stakingKP1)) (inject $ Coin 858_000_000)
+          sendCoinTo_ (mkAddr paymentKP1 stakingKP1) (inject $ Coin 858_000_000)
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -929,10 +928,7 @@ votingSpec =
           getLastEnactedCommittee `shouldReturn` SNothing
           -- Bump up the UTxO delegated
           -- to barely make the threshold (51 %! 100)
-          _ <-
-            sendCoinTo
-              (Addr Testnet delegatorCPayment1 (StakeRefBase delegatorCStaking1))
-              (Coin 40_900_000)
+          sendCoinTo_ (mkAddr delegatorCPayment1 delegatorCStaking1) (Coin 40_900_000)
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)

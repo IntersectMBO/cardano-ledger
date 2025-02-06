@@ -103,7 +103,7 @@ alicePay = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 0)
 
 aliceAddr :: Addr
-aliceAddr = mkAddr (alicePay, aliceStake)
+aliceAddr = mkAddr alicePay aliceStake
 
 -- ==========================================================
 

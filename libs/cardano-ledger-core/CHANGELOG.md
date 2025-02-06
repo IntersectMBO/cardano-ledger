@@ -99,6 +99,11 @@
 
 ### `testlib`
 
+* Re-export `KeyPair`, `mkAddr` and `mkCredential` from `Test.Cardano.Ledger.Imp.Common`
+* Add `MakeStakeReference` and `MakeCredential`
+* Deprecate `mkCred` in favor of `mkCredential` from `MakeCredential`
+* Change `mkAddr` to accept two polymorphic arguments instead of a tuple of keypairs
+* Deprecate `mkScriptAddr`
 * Add `runGen`
 * Added `Arbitrary` and `ToExpr` instances for `NonZero`
 * Deprecate `genBadPtr`, `genAddrBadPtr` and `genCompactAddrBadPtr`
