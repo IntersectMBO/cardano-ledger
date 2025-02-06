@@ -72,7 +72,6 @@ class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
 -- to your own FunctionSymbols over those types. These are some of the Base
 -- FunctionSymbols that come with the system "out of the box"
 data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  EqualW :: forall a. BaseW (Eq a) "==." '[a, a] Bool
   -- List
   ElemW :: forall a. BaseW (Eq a) "elem_" '[a, [a]] Bool
   -- Bool
@@ -100,7 +99,6 @@ data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
 deriving instance Eq (BaseW c s dom rng)
 
 instance Show (BaseW c s dom rng) where
-  show EqualW = "==."
   show ElemW = "elem_"
   show NotW = "not_"
   show OrW = "or_"
@@ -125,7 +123,6 @@ instance Show (BaseW c s dom rng) where
 
 -- | Haskell functions give meaning to the BaseW constructors
 baseSem :: BaseW c sym dom rng -> forall. c => FunTy dom rng
-baseSem EqualW = (==)
 baseSem ElemW = elem
 baseSem NotW = not
 baseSem OrW = (||)

@@ -130,18 +130,30 @@ instance HasVariables (Term a) where
     Lit {} -> mempty
     V x -> freeVar (Name x)
     App _ ts -> freeVars ts
+    To x -> freeVars x
+    From x -> freeVars x
+    Equal x y -> freeVars (x :> y :> Nil)
   freeVarSet = \case
     Lit {} -> mempty
     V x -> freeVarSet (Name x)
     App _ ts -> freeVarSet ts
+    To x -> freeVarSet x
+    From x -> freeVarSet x
+    Equal x y -> freeVarSet (x :> y :> Nil)
   countOf n = \case
     Lit {} -> 0
     V x -> countOf n (Name x)
     App _ ts -> countOf n ts
+    To x -> countOf n x
+    From x -> countOf n x
+    Equal x y -> countOf n (x :> y :> Nil)
   appearsIn n = \case
     Lit {} -> False
     V x -> appearsIn n (Name x)
     App _ ts -> appearsIn n ts
+    To x -> appearsIn n x
+    From x -> appearsIn n x
+    Equal x y -> appearsIn n (x :> y :> Nil)
 
 instance HasVariables Pred where
   freeVars = \case
@@ -273,6 +285,9 @@ backwardsSubstitution sub0 t =
       Lit a -> Lit a
       V x -> V x
       App f ts -> App f (mapListC @HasSpec (backwardsSubstitution sub0) ts)
+      To x -> To (backwardsSubstitution sub0 x)
+      From x -> From (backwardsSubstitution sub0 x)
+      Equal x y -> Equal (backwardsSubstitution sub0 x) (backwardsSubstitution sub0 y)
   where
     findMatch :: Subst -> Term a -> Maybe (Var a)
     findMatch [] _ = Nothing
@@ -293,12 +308,18 @@ fastInequality (App _ as) (App _ bs) = go as bs
     go Nil Nil = False
     go (a :> as') (b :> bs') = fastInequality a b || go as' bs'
     go _ _ = True
+fastInequality (To x) (To y) = fastInequality x y
+fastInequality (From x) (From y) = fastInequality x y
+fastInequality (Equal a b) (Equal x y) = fastInequality a x || fastInequality b y
 fastInequality _ _ = True
 
 -- ===================================================================
 
 substituteTerm :: forall a. Subst -> Term a -> Term a
 substituteTerm sub = \case
+  To x -> To $ substituteTerm sub x
+  From x -> From $ substituteTerm sub x
+  Equal x y -> Equal (substituteTerm sub x) (substituteTerm sub y)
   Lit a -> Lit a
   V x -> substVar sub x
   App f (mapList (substituteTerm sub) -> (ts :: List Term dom)) ->
@@ -314,6 +335,9 @@ substituteTerm sub = \case
 
 substituteTerm' :: forall a. Subst -> Term a -> Writer Any (Term a)
 substituteTerm' sub = \case
+  To x -> To <$> substituteTerm' sub x
+  From x -> From <$> substituteTerm' sub x
+  Equal x y -> Equal <$> substituteTerm' sub x <*> substituteTerm' sub y
   Lit a -> pure $ Lit a
   V x -> substVar sub x
   App f ts ->
@@ -356,6 +380,9 @@ substitutePred x tm = \case
 
 substTerm :: Env -> Term a -> Term a
 substTerm env = \case
+  To x -> To $ substTerm env x
+  From x -> From $ substTerm env x
+  Equal x y -> Equal (substTerm env x) (substTerm env y)
   Lit a -> Lit a
   V v
     | Just a <- lookupEnv env v -> Lit a
@@ -425,6 +452,9 @@ instance Rename (Term a) where
         Lit l -> Lit l
         V v'' -> V (rename v v' v'')
         App f a -> App f (rename v v' a)
+        To x -> To $ rename v v' x
+        From x -> From $ rename v v' x
+        Equal x y -> Equal (rename v v' x) (rename v v' y)
 
 instance Rename Pred where
   rename v v'
@@ -481,6 +511,8 @@ fromLits = mapMList fromLit
 
 fromLit :: Term a -> Maybe (Value a)
 fromLit (Lit l) = pure $ Value l
+fromLit (To x) = (Value . toSimpleRep . unValue) <$> fromLit x -- MAYBE we don't want to do this?
+fromLit (From x) = (Value . fromSimpleRep . unValue) <$> fromLit x -- Why not apply unary functions to Lit ?
 fromLit _ = Nothing
 
 isLit :: Term a -> Bool
@@ -765,7 +797,7 @@ reifies = Reifies
 dependsOn :: (HasSpec a, HasSpec b) => Term a -> Term b -> Pred
 dependsOn = DependsOn
 
-lit :: (Typeable a, Show a) => a -> Term a
+lit :: (Typeable a, Eq a, Show a) => a -> Term a
 lit = Lit
 
 genHint :: forall t. HasGenHint t => Hint t -> Term t -> Pred
