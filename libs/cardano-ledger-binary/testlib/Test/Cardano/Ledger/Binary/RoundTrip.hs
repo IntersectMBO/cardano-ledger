@@ -522,10 +522,13 @@ embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
         Right val
           | Nothing <- mDropperError ->
               let flatTerm = CBOR.toFlatTerm encoding
-                  plainDecoder = toPlainDecoder (Just encodedBytes) decVersion decoder
+                  -- We must not pass original bytes, because FlatTerm can't handle offsets
+                  plainDecoder = toPlainDecoder Nothing decVersion decoder
                in case CBOR.fromFlatTerm plainDecoder flatTerm of
-                    Left err ->
-                      Left $ mkFailure (Just $ "fromFlatTerm error:" <> err) Nothing Nothing
+                    Left err
+                      | err == originalBytesExpectedFailureMessage -> Right (val, encoding, encodedBytes)
+                      | otherwise ->
+                          Left $ mkFailure (Just $ "fromFlatTerm error:" <> err) Nothing Nothing
                     Right valFromFlatTerm
                       | val /= valFromFlatTerm ->
                           let errMsg =
