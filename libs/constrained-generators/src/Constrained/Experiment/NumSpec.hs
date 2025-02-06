@@ -715,10 +715,10 @@ instance NumLike a => Num (Term a) where
 -- | Just a note that these instances won't work until we are in a context where
 --   there is a HasSpec instance of 'a', which (NumLike a) demands.
 --   This happens in Constrained.Experiment.TheKnot
-instance (Typeable a, NumLike a) => FunctionSymbol (NumLike a) "addFn" IntW '[a, a] a where
+instance (Typeable a, NumLike a) => FunSym (NumLike a) "addFn" IntW '[a, a] a where
   witness = "AddW[addFn]"
-  simplepropagate (Context AddW (l :>| (HOLE End))) spec = Right $ propagate (Context AddW (HOLE (l :<| End))) spec
-  simplepropagate ctx@(Context AddW (HOLE (i :<| End))) spec =
+  simplepropagate (Context ev AddW (l :>| (HOLE End))) spec = Right $ propagate (Context ev AddW (HOLE (l :<| End))) spec
+  simplepropagate ctx@(Context _ AddW (HOLE (i :<| End))) spec =
     case spec of
       TypeSpec ts cant ->
         Right $
@@ -739,10 +739,10 @@ instance (Typeable a, NumLike a) => FunctionSymbol (NumLike a) "addFn" IntW '[a,
 addFn :: forall a. NumLike a => Term a -> Term a -> Term a
 addFn = appTerm AddW
 
-instance (Typeable a, NumLike a) => FunctionSymbol (NumLike a) "negateFn" IntW '[a] a where
+instance (Typeable a, NumLike a) => FunSym (NumLike a) "negateFn" IntW '[a] a where
   witness = "NegateW[negateFn]"
 
-  simplepropagate ctx@(Context NegateW (HOLE End)) spec =
+  simplepropagate ctx@(Context _ NegateW (HOLE End)) spec =
     case spec of
       TypeSpec ts (cant :: [a]) ->
         Right $
