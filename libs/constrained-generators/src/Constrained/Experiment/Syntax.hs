@@ -12,6 +12,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -39,8 +40,10 @@ import Constrained.Env
 import Constrained.Experiment.Base
 import Constrained.Experiment.Generic
 import Constrained.Experiment.Witness
-import Constrained.GenT (GE (..), MonadGenError (..))
+import Constrained.GenT (GE (..), MonadGenError (..), errorGE, explain1)
+import Constrained.Graph (Graph (..))
 import Constrained.List
+import Control.Monad.Identity
 import Control.Monad.Writer (Writer, tell)
 import Data.Foldable (fold, toList)
 import qualified Data.List.NonEmpty as NE
@@ -804,3 +807,139 @@ lit = Lit
 
 genHint :: forall t. HasGenHint t => Hint t -> Term t -> Pred
 genHint = GenHint
+
+-- ==============================================================================
+
+-- Construct an environment for all variables that show up on the top level
+-- (i.e. ones bound in `let` and `exists`) from an environment for all the free
+-- variables in the pred. The environment you get out of this function is
+-- _bigger_ than the environment you put in. From
+-- ```
+-- let y = x + 1 in let z = y + 1 in foo x y z
+-- ```
+-- and an environment with `{x -> 1}` you would get `{x -> 1, y -> 2, z -> 3}`
+-- out.
+envFromPred :: Env -> Pred -> GE Env
+envFromPred env p = case p of
+  ElemPred _bool _term _xs -> pure env
+  -- NOTE: these don't bind anything
+  Assert {} -> pure env
+  DependsOn {} -> pure env
+  Monitor {} -> pure env
+  TruePred {} -> pure env
+  FalsePred {} -> pure env
+  GenHint {} -> pure env
+  -- NOTE: this is ok because the variables either come from an `Exists`, a `Let`, or from
+  -- the top level
+  Reifies {} -> pure env
+  -- NOTE: variables in here shouldn't escape to the top level
+  ForAll {} -> pure env
+  Case {} -> pure env
+  -- These can introduce binders that show up in the plan
+  When _ pp -> envFromPred env pp
+  Subst x a pp -> envFromPred env (substitutePred x a pp)
+  Let t (x :-> pp) -> do
+    v <- runTerm env t
+    envFromPred (extendEnv x v env) pp
+  Explain _ pp -> envFromPred env pp
+  Exists c (x :-> pp) -> do
+    v <- c (errorGE . explain1 "envFromPred: Exists" . runTerm env)
+    envFromPred (extendEnv x v env) pp
+  And [] -> pure env
+  And (pp : ps) -> do
+    env' <- envFromPred env pp
+    envFromPred env' (And ps)
+
+-- ==============================================================================
+
+-- | Flatten nested `Let`, `Exists`, and `And` in a `Pred fn`. `Let` and
+-- `Exists` bound variables become free in the result.
+flattenPred :: Pred -> [Pred]
+flattenPred pIn = go (freeVarNames pIn) [pIn]
+  where
+    go _ [] = []
+    go fvs (p : ps) = case p of
+      And ps' -> go fvs (ps' ++ ps)
+      -- NOTE: the order of the arguments to `==.` here are important.
+      -- The whole point of `Let` is that it allows us to solve all of `t`
+      -- before we solve the variables in `t`.
+      Let t b -> goBinder fvs b ps (\x -> (assert (t ==. V x) :))
+      Exists _ b -> goBinder fvs b ps (const id)
+      When b pp -> map (When b) (go fvs [pp]) ++ go fvs ps
+      Explain es pp -> map (explanation es) (go fvs [pp]) ++ go fvs ps
+      _ -> p : go fvs ps
+
+    goBinder ::
+      Set Int ->
+      Binder a ->
+      [Pred] ->
+      (HasSpec a => Var a -> [Pred] -> [Pred]) ->
+      [Pred]
+    goBinder fvs (x :-> p) ps k = k x' $ go (Set.insert (nameOf x') fvs) (p' : ps)
+      where
+        (x', p') = freshen x p fvs
+
+-- ============================================================
+-- A bit more than just syntax, but it is used here
+-- Either it doesn't evaluate successfully: Left (NE.NonEmpty whatWentWrong),
+-- or it does: Right thevalue
+
+runTermE :: forall a. Env -> Term a -> Either (NE.NonEmpty String) a
+runTermE env = \case
+  Lit a -> Right a
+  V v -> case lookupEnv env v of
+    Just a -> Right a
+    Nothing -> Left (pure ("Couldn't find " ++ show v ++ " in " ++ show env))
+  App f (ts :: List Term dom) -> do
+    vs <- mapMList (fmap Identity . runTermE env) ts
+    pure $ uncurryList_ runIdentity (semantics f) vs
+  To x -> toSimpleRep <$> runTermE env x
+  From x -> fromSimpleRep <$> runTermE env x
+  Equal x y -> (==) <$> runTermE env x <*> runTermE env y
+
+runTerm :: MonadGenError m => Env -> Term a -> m a
+runTerm env x = case runTermE env x of
+  Left msgs -> fatalError msgs
+  Right val -> pure val
+
+-- ===============================================================================
+-- Syntax for Solving : stages and plans
+
+data SolverStage where
+  SolverStage ::
+    HasSpec a =>
+    { stageVar :: Var a
+    , stagePreds :: [Pred]
+    , stageSpec :: Specification a
+    } ->
+    SolverStage
+
+instance Pretty SolverStage where
+  pretty SolverStage {..} =
+    viaShow stageVar
+      <+> "<-"
+        /> vsep'
+          ( [pretty stageSpec | not $ isTrueSpec stageSpec]
+              ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
+              ++ map pretty stagePreds
+          )
+
+data SolverPlan = SolverPlan
+  { solverPlan :: [SolverStage]
+  , solverDependencies :: Graph Name
+  }
+
+instance Pretty SolverPlan where
+  pretty SolverPlan {..} =
+    "\nSolverPlan"
+      /> vsep'
+        [ -- "\nDependencies:" /> pretty solverDependencies, -- Might be usefull someday
+          "\nLinearization:" /> prettyLinear solverPlan
+        ]
+
+isTrueSpec :: Specification a -> Bool
+isTrueSpec TrueSpec = True
+isTrueSpec _ = False
+
+prettyLinear :: [SolverStage] -> Doc ann
+prettyLinear = vsep' . map pretty
