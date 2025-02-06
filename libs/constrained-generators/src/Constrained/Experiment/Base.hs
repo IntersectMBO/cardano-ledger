@@ -74,16 +74,17 @@ import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 -- =====================================================================
 
 class
-  ( Typeable c
+  ( Typeable t
+  , Typeable c
   , Typeable s
-  , Typeable t
+  , Typeable dom
+  , Typeable rng
   , Witness t
   , TypeList dom
   , All Typeable dom
-  , Typeable dom
-  , All HasSpec dom
-  , HasSpec rng
-  , Show (t c s dom rng)
+  , --  , All HasSpec dom -- We defer these to where we build an App  appTerm and appSym
+    --  , HasSpec rng
+    Show (t c s dom rng)
   , Eq (t c s dom rng)
   , c
   ) =>
@@ -665,11 +666,14 @@ isBaseWit t x =
     _ -> (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
 -- ========== "elem_"
+
+-- This is the wrong place to define a pattern like this. Patterns should be defined
+-- in a scoper where the FunctionSymbol instace is in scope.
 pattern ElemPat ::
   forall a rng.
-  (Eq a, Typeable a) =>
+  (HasSpec a, HasSpec [a], HasSpec Bool, FunctionSymbol (Eq a) "elem_" BaseW '[a, [a]] Bool) =>
   forall.
-  (rng ~ Bool, FunctionSymbol (Eq a) "elem_" BaseW '[a, [a]] Bool) =>
+  (rng ~ Bool, Eq a) =>
   Term a -> Term [a] -> Term rng
 pattern ElemPat x y <-
   App
@@ -808,12 +812,14 @@ type GenericC a =
   , TypeSpec a ~ TypeSpec (SimpleRep a)
   )
 
+type Literal a = (Typeable a, Eq a, Show a)
+
 data Term a where
   App ::
     forall c sym t dom rng.
     (FunctionSymbol c sym t dom rng, c, All HasSpec dom, HasSpec rng) =>
     t c sym dom rng -> List Term dom -> Term rng
-  Lit :: (Typeable a, Eq a, Show a) => a -> Term a
+  Lit :: Literal a => a -> Term a
   V :: HasSpec a => Var a -> Term a
   To :: GenericC a => Term a -> Term (SimpleRep a)
   From :: GenericC a => Term (SimpleRep a) -> Term a
@@ -836,13 +842,14 @@ instance Eq (Term a) where
       Nothing -> False
   _ == _ = False
 
+-- Can we do this with Function Symbol instead of (All HasSpec as)? HERE
 sameTerms :: All HasSpec as => List Term as -> List Term as -> Bool
 sameTerms Nil Nil = True
 sameTerms (x :> xs) (y :> ys) = x == y && sameTerms xs ys
 
 appSym ::
   forall c sym t as b.
-  FunctionSymbol c sym t as b =>
+  (FunctionSymbol c sym t as b, All HasSpec as, HasSpec b) =>
   t c sym as b -> List Term as -> Term b
 appSym w xs = App w xs
 
@@ -858,10 +865,10 @@ appSym w xs = App w xs
 --             Name in Haskell^      ^  its arguments^   ^ its result
 --                  The type of NotW |
 appTerm ::
-  forall c sym t ds b.
-  FunctionSymbol c sym t ds b =>
-  t c sym ds b -> FunTy (MapList Term ds) (Term b)
-appTerm sym = curryList @ds (App @c @sym @t @ds @b sym)
+  forall c sym t ds r.
+  (FunctionSymbol c sym t ds r, All HasSpec ds, HasSpec r) =>
+  t c sym ds r -> FunTy (MapList Term ds) (Term r)
+appTerm sym = curryList @ds (App @c @sym @t @ds @r sym)
 
 -- ===========================================
 -- Binder
@@ -1120,7 +1127,7 @@ prettyPrec p = pretty . WithPrec p
 
 ppList ::
   forall f as ann.
-  All HasSpec as =>
+  All HasSpec as => -- can we use something other than All HasSpec as here? We know Function Symbol HERE
   (forall a. HasSpec a => f a -> Doc ann) ->
   List f as ->
   [Doc ann]
@@ -1269,7 +1276,9 @@ data
     rng
     hole
   where
-  Context :: t c s dom rng -> CtxtList Pre dom hole -> Context c s t dom rng hole
+  Context ::
+    (All HasSpec dom, HasSpec rng) =>
+    t c s dom rng -> CtxtList Pre dom hole -> Context c s t dom rng hole
 
 deriving instance (Show (t c s dom rng), All Show dom) => Show (Context c s t dom rng hole)
 
@@ -1284,12 +1293,12 @@ infixr 1 :>|
 
 data CtxtList (x :: Mode) (as :: [Type]) (hole :: Type) where
   End :: CtxtList Post '[] h
-  (:<|) :: Typeable a => a -> CtxtList Post as h -> CtxtList Post (a : as) h
-  HOLE :: CtxtList Post as i -> CtxtList Pre (b : as) b
-  (:>|) :: Typeable a => a -> CtxtList Pre as h -> CtxtList Pre (a : as) h
+  (:<|) :: Literal a => a -> CtxtList Post as h -> CtxtList Post (a : as) h
+  HOLE :: HasSpec b => CtxtList Post as i -> CtxtList Pre (b : as) b
+  (:>|) :: Literal a => a -> CtxtList Pre as h -> CtxtList Pre (a : as) h
 
 -- Here is an Example
-c6 :: CtxtList Pre [Bool, String, b, Bool, ()] b
+c6 :: HasSpec b => CtxtList Pre [Bool, String, b, Bool, ()] b
 c6 = True :>| ("abc" :: String) :>| (HOLE $ True :<| () :<| End)
 
 --                      rightmost ^   ^--parens here ------------^
