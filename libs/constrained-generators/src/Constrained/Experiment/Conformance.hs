@@ -18,6 +18,7 @@
 module Constrained.Experiment.Conformance where
 
 import Constrained.Experiment.Base
+import Constrained.Experiment.Generic
 import Constrained.Experiment.Syntax
 import Constrained.Experiment.Witness
 
@@ -51,6 +52,9 @@ runTermE env = \case
   App f (ts :: List Term dom) -> do
     vs <- mapMList (fmap Identity . runTermE env) ts
     pure $ uncurryList_ runIdentity (semantics f) vs
+  To x -> toSimpleRep <$> runTermE env x
+  From x -> fromSimpleRep <$> runTermE env x
+  Equal x y -> (==) <$> runTermE env x <*> runTermE env y
 
 runTerm :: MonadGenError m => Env -> Term a -> m a
 runTerm env x = case runTermE env x of
