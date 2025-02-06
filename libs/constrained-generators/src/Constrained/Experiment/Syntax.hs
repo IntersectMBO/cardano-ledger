@@ -489,6 +489,7 @@ instance Rename (f a) => Rename (Weighted f a) where
 -- 4) Internals
 -- ============================================================================
 
+{-
 -- | This extracts the semantics of a witness (i.e. a function over Terms)
 --   Recall FunctionSymbols are functions that you can use when writing Terms
 --   Usually the Haskel name ends in '_', i.e. not_, subset_ ,lookup_
@@ -501,10 +502,11 @@ instance Rename (f a) => Rename (Weighted f a) where
 --             Name in Haskell^      ^  its arguments^   ^ its result
 --                  The type of NotW |
 app ::
-  FunctionSymbol c sym wit as b =>
+  (HasSpec b,FunctionSymbol c sym wit as b) =>
   wit c sym as b ->
   FunTy (MapList Term as) (Term b)
 app fn = curryList (App fn)
+-}
 
 fromLits :: List Term as -> Maybe (List Value as)
 fromLits = mapMList fromLit
