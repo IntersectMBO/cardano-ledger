@@ -95,6 +95,9 @@ instance ToJSON b => ToJSON (Annotated b a) where
 instance FromJSON b => FromJSON (Annotated b ()) where
   parseJSON j = flip Annotated () <$> parseJSON j
 
+instance DecCBOR a => DecCBOR (Annotated a BSL.ByteString) where
+  decCBOR = decodeAnnotated decCBOR
+
 -- | A decoder for a value paired with an annotation specifying the start and end
 -- of the consumed bytes.
 annotatedDecoder :: Decoder s a -> Decoder s (Annotated a ByteSpan)

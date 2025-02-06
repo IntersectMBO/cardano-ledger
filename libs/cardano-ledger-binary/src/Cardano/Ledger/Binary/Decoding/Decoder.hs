@@ -18,6 +18,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   withPlainDecoder,
   enforceDecoderVersion,
   getOriginalBytes,
+  originalBytesExpectedFailureMessage,
   DecoderError (..),
   C.ByteOffset,
   ByteArray (..),
@@ -340,8 +341,14 @@ getOriginalBytes :: Decoder s BSL.ByteString
 getOriginalBytes =
   Decoder $ \maybeBytes _ ->
     case maybeBytes of
-      Nothing -> fail "Decoder was expected to provide the original ByteString"
+      Nothing -> fail originalBytesExpectedFailureMessage
       Just bsl -> pure bsl
+
+-- | This is the message that will be reported by `getOriginalBytes` when original bytes are not
+-- provided. It is defined as a separate biding for testing.
+originalBytesExpectedFailureMessage :: String
+originalBytesExpectedFailureMessage =
+  "Decoder was expected to provide the original ByteString"
 
 --------------------------------------------------------------------------------
 -- Working with current decoder version

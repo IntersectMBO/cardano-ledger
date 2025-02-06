@@ -46,11 +46,13 @@ import Cardano.Crypto.VRF.Mock (MockVRF)
 import Cardano.Crypto.VRF.Praos (PraosVRF)
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import Cardano.Ledger.Binary
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Slotting.Block (BlockNo)
 import Cardano.Slotting.Slot (EpochNo, EpochSize, SlotNo, WithOrigin)
 import Cardano.Slotting.Time (SystemStart)
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
 import Control.Monad (when)
+import qualified Data.ByteString.Lazy as BSL
 import Data.Fixed (Nano, Pico)
 import Data.Foldable as F
 import Data.IP (IPv4, IPv6)
@@ -75,6 +77,27 @@ import Numeric.Natural
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Hspec
+import Test.QuickCheck
+
+-- This type is for testing roundtripping of types that need access to their bytes. The first field
+-- is a boolean indicator that decides whether we should use the actual type of interest (it is
+-- Float in here) or the preencoded bytes whenever we do the encoding. The last type is there just
+-- so we have some data that follows, whcih ensures out offsets are used correctly
+data SubBytes = SubBytes Bool (Annotated Float BSL.ByteString) (Maybe Word)
+  deriving (Eq, Show)
+
+instance Arbitrary SubBytes where
+  arbitrary = do
+    f <- arbitrary
+    let fAnn = Annotated f (Plain.serialize f)
+    SubBytes <$> arbitrary <*> pure fAnn <*> arbitrary
+
+instance DecCBOR SubBytes where
+  decCBOR = SubBytes <$> decCBOR <*> decCBOR <*> decCBOR
+
+instance EncCBOR SubBytes where
+  encCBOR (SubBytes x (Annotated y ybs) z) =
+    encCBOR x <> (if x then encCBOR y else encodePreEncoded (BSL.toStrict ybs)) <> encCBOR z
 
 spec :: Spec
 spec = do
@@ -116,6 +139,7 @@ spec = do
     roundTripSpec @Prim.ByteArray cborTrip
     roundTripSpec @ByteArray cborTrip
     roundTripSpec @SlicedByteArray cborTrip
+    roundTripSpec @SubBytes cborTrip
     roundTripSpec @(Maybe Integer) $
       mkTrip (encodeNullMaybe encCBOR) (decodeNullMaybe decCBOR)
     roundTripSpec @(StrictMaybe Integer) $
