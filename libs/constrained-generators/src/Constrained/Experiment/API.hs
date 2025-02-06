@@ -86,6 +86,7 @@ import Constrained.Experiment.Base (
   constrained,
   fromGeneric_,
   toGeneric_,
+  (==.),
  )
 import Constrained.Experiment.Conformance (
   conformsToSpec,
@@ -137,7 +138,6 @@ import Constrained.Experiment.TheKnot (
   whenTrue,
   (<.),
   (<=.),
-  (==.),
  )
 import Constrained.Experiment.Witness ()
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveFunctor #-}
@@ -354,6 +355,13 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
   guardTypeSpec :: [String] -> TypeSpec a -> Specification a
   guardTypeSpec _ ty = typeSpec ty
 
+  -- | For some types an Equality like (a ==. b) can be expanded by adding additional Pred. For example:
+  --   `(cJust_ A) ==. B` can be expanded by adding [case B of Nothing -> False; Just _ -> True]
+  --   This additional information is conjoined with the original equality , which should make it
+  --   easier to solve. The simplify mechanism will pass both sides of the equality to 'saturate'
+  saturate :: Term a -> Term a -> [Pred]
+  saturate _ _ = []
+
   -- | Prerequisites for the instance that are sometimes necessary
   -- when working with e.g. `Specification`s or functions in the universe.
   type Prerequisites a :: Constraint
@@ -442,6 +450,29 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
     TypeSpec a ->
     Specification Integer
   cardinalTypeSpec = cardinalTypeSpec @(SimpleRep a)
+
+-- ====================================================================
+-- The Equality Function Symbol
+-- ====================================================================
+
+data EqW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
+  EqualW :: forall a. Typeable a => EqW (Eq a) "==." '[a, a] Bool
+
+deriving instance Eq (EqW c s dom rng)
+
+instance Show (EqW c s dom rng) where
+  show EqualW = "==."
+
+instance Witness EqW where
+  semantics = eqSem
+
+eqSem :: EqW c sym dom rng -> forall. c => FunTy dom rng -- Requires PolyKinds, RankNTypes
+eqSem EqualW = (==)
+
+-- | Note we inject this into the Term languge using the special 'Equal' construtor of Term
+--   The FunctionSymbol instance appears in Constrained.Experiment.TheKnot where caseBoolSpec is finally defined
+(==.) :: forall a. HasSpec a => Term a -> Term a -> Term Bool
+(==.) = Equal
 
 -- ===================================================================
 -- toGeneric and fromGeneric as Function Symbols
@@ -647,20 +678,6 @@ pattern ElemPat x y <-
   where
     ElemPat x y = App ElemW (x :> y :> Nil)
 
--- ========== "==."
-pattern EqualPat ::
-  forall a rng.
-  (Eq a, Typeable a) =>
-  forall.
-  (rng ~ Bool, FunctionSymbol (Eq a) "==." BaseW '[a, a] Bool) =>
-  Term a -> Term a -> Term rng
-pattern EqualPat x y <-
-  App
-    (isBaseWit (EqualW @a) -> (Just EqualW, Just Refl, Just Refl, Just Refl, Just Refl, Just Refl))
-    (x :> y :> Nil)
-  where
-    EqualPat x y = App EqualW (x :> y :> Nil)
-
 -- ===========================================================================
 -- This is quite usefull, as long as we have actual Function Symbol instances
 extractW ::
@@ -754,7 +771,7 @@ data BinaryShow where
 
 -- =================================================
 -- Term
-
+{-
 data Term a where
   App ::
     forall c sym t dom rng.
@@ -777,6 +794,51 @@ instance Eq a => Eq (Term a) where
 same :: All HasSpec as => List Term as -> List Term as -> Bool
 same Nil Nil = True
 same (x :> xs) (y :> ys) = x == y && same xs ys
+-}
+
+-- The things you need to know to lift toSimpleRep and fromSimpleRep
+-- to the Term level. I think they are all reasonable requirements
+type GenericC a =
+  ( Typeable a
+  , HasSpec a
+  , HasSimpleRep a
+  , Typeable (SimpleRep a)
+  , HasSpec (SimpleRep a)
+  , Show (SimpleRep a)
+  , TypeSpec a ~ TypeSpec (SimpleRep a)
+  )
+
+data Term a where
+  App ::
+    forall c sym t dom rng.
+    (FunctionSymbol c sym t dom rng, c, All HasSpec dom, HasSpec rng) =>
+    t c sym dom rng -> List Term dom -> Term rng
+  Lit :: (Typeable a, Eq a, Show a) => a -> Term a
+  V :: HasSpec a => Var a -> Term a
+  To :: GenericC a => Term a -> Term (SimpleRep a)
+  From :: GenericC a => Term (SimpleRep a) -> Term a
+  Equal :: HasSpec a => Term a -> Term a -> Term Bool
+
+instance Eq (Term a) where
+  V x == V x' = x == x'
+  Lit a == Lit b = a == b
+  App (w1 :: x1) (ts :: List Term dom1) == App (w2 :: x2) (ts' :: List Term dom2) =
+    case (eqT @dom1 @dom2, eqT @x1 @x2) of
+      (Just Refl, Just Refl) ->
+        w1 == w2
+          && sameTerms ts ts'
+      _ -> False
+  To (x :: b) == To (y :: c) = case eqT @b @c of Just Refl -> x == y; Nothing -> False
+  From (x :: Term b) == From (y :: Term c) = case eqT @b @c of Just Refl -> x == y; Nothing -> False
+  (Equal @t1 x y) == (Equal @t2 m n) =
+    case eqT @t1 @t2 of
+      Just Refl -> x == m && y == n
+      Nothing -> False
+  _ == _ = False
+
+sameTerms :: All HasSpec as => List Term as -> List Term as -> Bool
+sameTerms Nil Nil = True
+sameTerms (x :> xs) (y :> ys) = x == y && sameTerms xs ys
 
 appSym ::
   forall c sym t as b.
@@ -1127,6 +1189,9 @@ instance Show a => Pretty (WithPrec (Term a)) where
     -- App FromGenericW (x :> Nil) -> prettyPrec p x
 
     App f as -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))
+    To x -> parensIf (p > 10) $ "toSimpleRep_" <+> align (prettyPrec 11 x)
+    From x -> parensIf (p > 10) $ "fromSimpleRep_" <+> align (prettyPrec 11 x)
+    Equal x y -> parensIf (p > 10) $ prettyPrec 11 x <+> "==." <+> prettyPrec 11 y
 
 instance Show a => Pretty (Term a) where
   pretty = prettyPrec 0
@@ -1258,6 +1323,22 @@ toCtx ::
   Term a ->
   m (Ctx v a)
 toCtx v term = case term of
+  (To (V v')) -- Special Syntax for (toSimpleRep_ HOLE)
+    | Just Refl <- eqVar v v' -> pure $ Ctx (Context ToGenericW (HOLE End))
+    | otherwise -> fatalError1 "oops"
+  (From (V v')) -- Special Syntax for (fromSimpleRep_ HOLE)
+    | Just Refl <- eqVar v v' -> pure $ Ctx (Context FromGenericW (HOLE End))
+    | otherwise -> fatalError1 "oops"
+  {- FIX ME The Function Symbol instance is not in scope, and can't be
+   (Equal (V v') x)  -- Special Syntax for ( HOLE ==. 6)
+     | Just Refl <- eqVar v v' -> do
+         y <- checkForVar x
+         pure $ Ctx (Context EqualW (HOLE (y :<| End)))
+   (Equal x (V v')) -- Special Syntax for ( 13 ==. HOLE)
+     | Just Refl <- eqVar v v' -> do
+         y <- checkForVar x
+         pure $ Ctx (Context EqualW (y :>| (HOLE End)))
+   -}
   (App w (V v' :> Nil))
     | Just Refl <- eqVar v v' -> pure $ Ctx (Context w (HOLE End))
     | otherwise -> fatalError1 "oops"
@@ -1307,6 +1388,9 @@ toCtx v term = case term of
       App w (ts :: List Term dom) -> do
         vs <- mapMList (fmap Identity . checkForVar) ts
         pure $ uncurryList_ runIdentity (semantics w) vs
+      To x -> toSimpleRep <$> checkForVar x
+      From x -> fromSimpleRep <$> checkForVar x
+      Equal x y -> (==) <$> checkForVar x <*> checkForVar y
 
 -- =================================================================
 -- A simple but important HasSpec instances. The  other
