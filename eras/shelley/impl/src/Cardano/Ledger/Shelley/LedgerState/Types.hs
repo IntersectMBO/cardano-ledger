@@ -105,6 +105,11 @@ instance CanSetUTxO EpochState where
   utxoL = (lens esLState $ \s ls -> s {esLState = ls}) . utxoL
   {-# INLINE utxoL #-}
 
+instance CanGetInstantStake EpochState
+instance CanSetInstantStake EpochState where
+  instantStakeL = (lens esLState $ \s ls -> s {esLState = ls}) . instantStakeL
+  {-# INLINE instantStakeL #-}
+
 deriving stock instance
   ( EraTxOut era
   , Show (GovState era)
@@ -266,6 +271,11 @@ instance CanSetUTxO UTxOState where
   utxoL = lens utxosUtxo $ \s u -> s {utxosUtxo = u}
   {-# INLINE utxoL #-}
 
+instance CanGetInstantStake UTxOState
+instance CanSetInstantStake UTxOState where
+  instantStakeL = lens utxosInstantStake $ \s is -> s {utxosInstantStake = is}
+  {-# INLINE instantStakeL #-}
+
 instance
   ( EraTxOut era
   , NFData (GovState era)
@@ -287,7 +297,12 @@ deriving stock instance
   ) =>
   Eq (UTxOState era)
 
-instance (NoThunks (UTxO era), NoThunks (GovState era), NoThunks (GovState era)) => NoThunks (UTxOState era)
+instance
+  ( NoThunks (UTxO era)
+  , NoThunks (GovState era)
+  , NoThunks (InstantStake era)
+  ) =>
+  NoThunks (UTxOState era)
 
 instance
   ( EraTxOut era
@@ -319,7 +334,7 @@ instance (EraTxOut era, EraGov era, EraStake era) => DecShareCBOR (UTxOState era
       , Interns (Credential 'HotCommitteeRole)
       )
   decShareCBOR is@(cs, _, _, _) =
-    decodeRecordNamed "UTxOState" (const 6) $ do
+    decodeRecordNamed "UTxOState" (const 7) $ do
       utxosUtxo <- decShareCBOR cs
       utxosDeposited <- decCBOR
       utxosFees <- decCBOR
@@ -386,6 +401,11 @@ instance CanGetUTxO NewEpochState
 instance CanSetUTxO NewEpochState where
   utxoL = (lens nesEs $ \s es -> s {nesEs = es}) . utxoL
   {-# INLINE utxoL #-}
+
+instance CanGetInstantStake NewEpochState
+instance CanSetInstantStake NewEpochState where
+  instantStakeL = (lens nesEs $ \s es -> s {nesEs = es}) . instantStakeL
+  {-# INLINE instantStakeL #-}
 
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses ShelleyEra = UTxO ShelleyEra
@@ -483,6 +503,11 @@ instance CanGetUTxO LedgerState
 instance CanSetUTxO LedgerState where
   utxoL = (lens lsUTxOState $ \s us -> s {lsUTxOState = us}) . utxoL
   {-# INLINE utxoL #-}
+
+instance CanGetInstantStake LedgerState
+instance CanSetInstantStake LedgerState where
+  instantStakeL = (lens lsUTxOState $ \s us -> s {lsUTxOState = us}) . instantStakeL
+  {-# INLINE instantStakeL #-}
 
 deriving stock instance
   ( EraTxOut era

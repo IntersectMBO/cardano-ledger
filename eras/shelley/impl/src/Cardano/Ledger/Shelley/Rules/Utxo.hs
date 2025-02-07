@@ -79,7 +79,7 @@ import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.TxBody (RewardAccount)
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.State (CanSetUTxO (..), EraUTxO (getMinFeeTxUtxo), UTxO (..), balance, txouts)
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
@@ -274,6 +274,7 @@ instance
 instance
   ( EraTx era
   , EraUTxO era
+  , EraStake era
   , ShelleyEraTxBody era
   , EraGov era
   , GovState era ~ ShelleyGovState era
@@ -342,6 +343,7 @@ instance
 utxoInductive ::
   forall era.
   ( EraUTxO era
+  , EraStake era
   , ShelleyEraTxBody era
   , ExactEra ShelleyEra era
   , STS (EraRule "UTXO" era)
@@ -361,7 +363,7 @@ utxoInductive ::
 utxoInductive = do
   TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let utxo = utxos ^. utxoL
-      UTxOState _ _ _ ppup _ _ = utxos
+      UTxOState _ _ _ ppup _ _ _ = utxos
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
       genDelegs = dsGenDelegs (certDState certState)
@@ -434,9 +436,9 @@ validateInputSetEmptyUTxO ::
   TxBody era ->
   Test (ShelleyUtxoPredFailure era)
 validateInputSetEmptyUTxO txb =
-  failureUnless (txins /= Set.empty) InputSetEmptyUTxO
+  failureUnless (inputs /= Set.empty) InputSetEmptyUTxO
   where
-    txins = txb ^. inputsTxBodyL
+    inputs = txb ^. inputsTxBodyL
 
 -- | Ensure that the fee is at least the amount specified by the `minfee`
 --
@@ -466,11 +468,11 @@ validateBadInputsUTxO ::
   UTxO era ->
   Set TxIn ->
   Test (ShelleyUtxoPredFailure era)
-validateBadInputsUTxO utxo txins =
+validateBadInputsUTxO utxo inputs =
   failureUnless (Set.null badInputs) $ BadInputsUTxO badInputs
   where
     {- inputs ➖ dom utxo -}
-    badInputs = Set.filter (`Map.notMember` unUTxO utxo) txins
+    badInputs = Set.filter (`Map.notMember` unUTxO utxo) inputs
 
 -- | Make sure all addresses match the supplied NetworkId
 --
@@ -586,7 +588,7 @@ validateMaxTxSizeUTxO pp tx =
 -- be called on the @deposit - refund@ change, which is normally used to emit the
 -- `TotalDeposits` event.
 updateUTxOState ::
-  (EraTxBody era, Monad m) =>
+  (EraTxBody era, EraStake era, Monad m) =>
   PParams era ->
   UTxOState era ->
   TxBody era ->
@@ -617,6 +619,8 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiff
       , utxosFees = utxosFees <> txBody ^. feeTxBodyL
       , utxosGovState = govState
       , utxosStakeDistr = newIncStakeDistro
+      , utxosInstantStake =
+          deleteInstantStake deletedUTxO (addInstantStake utxoAdd (utxos ^. instantStakeL))
       , utxosDonation = utxosDonation
       }
 

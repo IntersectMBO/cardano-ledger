@@ -37,6 +37,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.Rules ()
 import qualified Cardano.Ledger.Shelley.Rules as STS
+import Cardano.Ledger.Shelley.State ()
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (left, right)
 import Control.Monad.Except

@@ -171,7 +171,6 @@ import Cardano.Ledger.Shelley.Genesis (
   validateGenesis,
  )
 import Cardano.Ledger.Shelley.LedgerState (
-  CanSetUTxO (..),
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
@@ -205,12 +204,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
-import Cardano.Ledger.State (
-  EraUTxO (..),
-  ScriptsProvided (..),
-  UTxO (..),
-  txinLookup,
- )
+import Cardano.Ledger.State
 import Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
   setMinCoinTxOut,
@@ -410,6 +404,7 @@ class
   ( EraGov era
   , EraUTxO era
   , EraTxOut era
+  , EraStake era
   , EraPParams era
   , ShelleyEraTxCert era
   , ShelleyEraScript era

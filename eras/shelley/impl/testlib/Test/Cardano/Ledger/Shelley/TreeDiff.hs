@@ -13,6 +13,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.AdaPots (AdaPots)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -132,6 +133,7 @@ instance
   , ToExpr (PParams era)
   , ToExpr (StashedAVVMAddresses era)
   , ToExpr (GovState era)
+  , ToExpr (InstantStake era)
   ) =>
   ToExpr (NewEpochState era)
 
@@ -139,22 +141,27 @@ instance
   ( ToExpr (TxOut era)
   , ToExpr (PParams era)
   , ToExpr (GovState era)
+  , ToExpr (InstantStake era)
   ) =>
   ToExpr (EpochState era)
 
 instance
   ( ToExpr (TxOut era)
   , ToExpr (GovState era)
+  , ToExpr (InstantStake era)
   ) =>
   ToExpr (LedgerState era)
 
 instance
   ( ToExpr (TxOut era)
   , ToExpr (GovState era)
+  , ToExpr (InstantStake era)
   ) =>
   ToExpr (UTxOState era)
 
 instance ToExpr IncrementalStake
+
+instance ToExpr (ShelleyInstantStake era)
 
 -- Rules/Utxo
 instance

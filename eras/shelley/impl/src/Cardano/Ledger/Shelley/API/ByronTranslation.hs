@@ -28,6 +28,7 @@ import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types (curPParamsEpochStateL, prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rules ()
+import Cardano.Ledger.Shelley.State ()
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.State (coinBalance, emptySnapShots)
 import qualified Cardano.Ledger.UMap as UM
@@ -164,6 +165,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
               , utxosFees = Coin 0
               , utxosGovState = emptyGovState
               , utxosStakeDistr = IStake mempty Map.empty
+              , utxosInstantStake = mempty
               , utxosDonation = mempty
               }
         , lsCertState =

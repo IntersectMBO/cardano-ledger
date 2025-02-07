@@ -28,16 +28,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   LedgerState (..),
   UTxOState (..),
-  incrementalStakeDistr,
  )
 import Cardano.Ledger.State
-import Cardano.Ledger.State (
-  SnapShot (ssDelegations, ssStake),
-  SnapShots (..),
-  Stake (unStake),
-  calculatePoolDistr,
-  emptySnapShots,
- )
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
   STS (..),
@@ -93,12 +85,12 @@ instance (EraTxOut era, EraStake era) => STS (ShelleySNAP era) where
 -- where important changes were made to the source code.
 snapTransition ::
   forall era.
-  (EraPParams era, EraStake era) =>
+  EraStake era =>
   TransitionRule (ShelleySNAP era)
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext
 
-  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _ _) (CertState _ pstate dstate)) pp = snapEnv
+  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _ _) (CertState _ pstate dstate)) _ = snapEnv
       instantStake = ls ^. instantStakeL
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
       istakeSnap = snapShotFromInstantStake instantStake dstate pstate

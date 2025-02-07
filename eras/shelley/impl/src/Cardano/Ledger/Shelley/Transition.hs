@@ -251,7 +251,7 @@ toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
 -- This function does not register any initial funds or delegates.
 createInitialState ::
   forall era.
-  (EraTransition era, HasCallStack) =>
+  (EraTransition era, EraStake era, HasCallStack) =>
   TransitionConfig era ->
   NewEpochState era
 createInitialState tc =

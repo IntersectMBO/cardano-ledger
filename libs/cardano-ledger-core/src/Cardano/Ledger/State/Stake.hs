@@ -5,7 +5,9 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-
+-- TODO: submit a ghc bug report
+-- some GHC bug wrongfully complains about CanGetInstantStake constraint being redundant.
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 module Cardano.Ledger.State.Stake (
   EraStake (..),
   CanGetInstantStake (..),
@@ -35,6 +37,8 @@ import NoThunks.Class (NoThunks)
 
 class
   ( Era era
+  , Eq (InstantStake era)
+  , Show (InstantStake era)
   , Monoid (InstantStake era)
   , Default (InstantStake era)
   , NFData (InstantStake era)
