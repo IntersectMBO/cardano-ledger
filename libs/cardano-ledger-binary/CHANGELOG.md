@@ -2,6 +2,8 @@
 
 ## 1.6.0.0
 
+* Add `DecCBOR` instance for `Annotated a ByteString`
+* Add `originalBytesExpectedFailureMessage` needed for testing
 * Add `decodeListLikeWithCountT`
 * Add `internMap`, `internSet`, ` internsFromSet`
 * Add `DecShareCBOR` for  `Set`

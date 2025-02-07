@@ -522,14 +522,13 @@ embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
         Right val
           | Nothing <- mDropperError ->
               let flatTerm = CBOR.toFlatTerm encoding
-                  plainDecoder = toPlainDecoder (Just encodedBytes) decVersion decoder
+                  -- We must not pass original bytes, because FlatTerm can't handle offsets
+                  plainDecoder = toPlainDecoder Nothing decVersion decoder
                in case CBOR.fromFlatTerm plainDecoder flatTerm of
-                    Left _err ->
-                      -- Until we switch to a release of cborg that includes a fix for this issue:
-                      -- https://github.com/well-typed/cborg/issues/324
-                      -- We can't rely on FlatTerm decoding
-                      -- Left $ mkFailure (Just $ "fromFlatTerm error:" <> err) Nothing Nothing
-                      Right (val, encoding, encodedBytes)
+                    Left err
+                      | err == originalBytesExpectedFailureMessage -> Right (val, encoding, encodedBytes)
+                      | otherwise ->
+                          Left $ mkFailure (Just $ "fromFlatTerm error:" <> err) Nothing Nothing
                     Right valFromFlatTerm
                       | val /= valFromFlatTerm ->
                           let errMsg =
@@ -542,10 +541,9 @@ embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
                                   ++ "FlatTerm for the type is not valid"
                            in Left $ mkFailure (Just errMsg) Nothing Nothing
                       | otherwise -> Right (val, encoding, encodedBytes)
-          --  else Left $ mkFailure Nothing Nothing
           | Just err <- mDropperError -> Left $ mkFailure Nothing (Just err) Nothing
         Left err ->
-          -- In case of failure we only record dropper error if it differs from the
+          -- In case of failure we only record dropper error iff it differs from the
           -- decoder failure:
           let mErr = do
                 dropperError <- mDropperError
