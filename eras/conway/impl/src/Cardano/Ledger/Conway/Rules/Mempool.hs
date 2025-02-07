@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -16,23 +17,24 @@
 
 module Cardano.Ledger.Conway.Rules.Mempool (
   ConwayMEMPOOL,
-  ConwayMempoolEvent (..),
-  ConwayMempoolPredFailure (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra, ConwayMEMPOOL)
+import Cardano.Ledger.Conway.Era (ConwayLEDGER, ConwayMEMPOOL)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
+  ConwayGovState,
+  Proposals,
   Voter (..),
   authorizedElectedHotCommitteeCredentials,
   unVotingProcedures,
  )
+import Cardano.Ledger.Conway.Rules.Certs (CertsEnv)
+import Cardano.Ledger.Conway.Rules.Gov (GovEnv, GovSignal)
+import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerEvent, ConwayLedgerPredFailure (..))
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
-import Control.DeepSeq (NFData)
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv)
 import Control.State.Transition (
   BaseM,
   Environment,
@@ -45,51 +47,58 @@ import Control.State.Transition (
   TransitionRule,
   failOnNonEmpty,
   judgmentContext,
-  tellEvent,
   transitionRules,
  )
+import Control.State.Transition.Extended (Embed (..), trans)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
+import Data.Sequence (Seq)
 import qualified Data.Set as Set
-import Data.Text as T (Text, pack)
-import GHC.Generics (Generic)
+import Data.Text as T (pack)
 import Lens.Micro ((^.))
-import NoThunks.Class (NoThunks)
-
-newtype ConwayMempoolPredFailure era = ConwayMempoolPredFailure Text
-  deriving (Eq, Show, Generic)
-  deriving newtype (NoThunks, NFData, ToCBOR, FromCBOR, EncCBOR, DecCBOR)
-
-type instance EraRuleFailure "MEMPOOL" ConwayEra = ConwayMempoolPredFailure ConwayEra
-instance InjectRuleFailure "MEMPOOL" ConwayMempoolPredFailure ConwayEra
-
-newtype ConwayMempoolEvent era = ConwayMempoolEvent Text
-  deriving (Generic, Eq)
-  deriving newtype (NFData)
-
-type instance EraRuleEvent "MEMPOOL" ConwayEra = ConwayMempoolEvent ConwayEra
 
 instance
-  (EraTx era, ConwayEraTxBody era, ConwayEraGov era) =>
+  ( EraTx era
+  , ConwayEraTxBody era
+  , ConwayEraGov era
+  , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Eq (PredicateFailure (EraRule "CERTS" era))
+  , Eq (PredicateFailure (EraRule "GOV" era))
+  , Eq (PredicateFailure (EraRule "UTXOW" era))
+  , Show (PredicateFailure (EraRule "CERTS" era))
+  , Show (PredicateFailure (EraRule "GOV" era))
+  , Show (PredicateFailure (EraRule "UTXOW" era))
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Tx era ~ Signal (EraRule "LEDGER" era)
+  ) =>
   STS (ConwayMEMPOOL era)
   where
   type State (ConwayMEMPOOL era) = LedgerState era
   type Signal (ConwayMEMPOOL era) = Tx era
   type Environment (ConwayMEMPOOL era) = LedgerEnv era
   type BaseM (ConwayMEMPOOL era) = ShelleyBase
-  type PredicateFailure (ConwayMEMPOOL era) = ConwayMempoolPredFailure era
-  type Event (ConwayMEMPOOL era) = ConwayMempoolEvent era
+  type PredicateFailure (ConwayMEMPOOL era) = ConwayLedgerPredFailure era
+  type Event (ConwayMEMPOOL era) = ConwayLedgerEvent era
 
   transitionRules = [mempoolTransition @era]
 
 mempoolTransition ::
-  (EraTx era, ConwayEraTxBody era, ConwayEraGov era) => TransitionRule (ConwayMEMPOOL era)
+  forall era.
+  ( EraTx era
+  , ConwayEraTxBody era
+  , ConwayEraGov era
+  , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
+  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
+  , Tx era ~ Signal (EraRule "LEDGER" era)
+  ) =>
+  TransitionRule (ConwayMEMPOOL era)
 mempoolTransition = do
-  TRC (_ledgerEnv, ledgerState, tx) <-
+  TRC trc@(_ledgerEnv, ledgerState, tx) <-
     judgmentContext
   -- This rule only gets invoked on transactions within the mempool.
   -- Add checks here that sanitize undesired transactions.
-  tellEvent . ConwayMempoolEvent . ("Mempool rule for tx " <>) . T.pack . show $ txIdTx tx
   let
     authorizedElectedHotCreds = authorizedElectedHotCommitteeCredentials ledgerState
     collectUnelectedCommitteeVotes !unelectedHotCreds voter _ =
@@ -104,5 +113,31 @@ mempoolTransition = do
     addPrefix =
       ("Unelected committee members are not allowed to cast votes: " <>)
   failOnNonEmpty unelectedCommitteeVoters $
-    ConwayMempoolPredFailure . addPrefix . T.pack . show . NE.toList
-  pure ledgerState
+    ConwayMempoolFailure . addPrefix . T.pack . show . NE.toList
+  trans @(EraRule "LEDGER" era) $ TRC trc
+
+instance
+  ( AlonzoEraTx era
+  , ConwayEraTxBody era
+  , ConwayEraGov era
+  , BaseM (EraRule "CERTS" era) ~ ShelleyBase
+  , BaseM (EraRule "GOV" era) ~ ShelleyBase
+  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
+  , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
+  , Embed (EraRule "GOV" era) (ConwayLEDGER era)
+  , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
+  , Environment (EraRule "CERTS" era) ~ CertsEnv era
+  , Environment (EraRule "GOV" era) ~ GovEnv era
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , State (EraRule "CERTS" era) ~ CertState era
+  , State (EraRule "GOV" era) ~ Proposals era
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , GovState era ~ ConwayGovState era
+  , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
+  , Signal (EraRule "GOV" era) ~ GovSignal era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
+  ) =>
+  Embed (ConwayLEDGER era) (ConwayMEMPOOL era)
+  where
+  wrapFailed = id
+  wrapEvent = id

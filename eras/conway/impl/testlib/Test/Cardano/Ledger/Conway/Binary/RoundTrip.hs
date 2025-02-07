@@ -84,7 +84,6 @@ instance RuleListEra ConwayEra where
        , "GOV"
        , "LEDGER"
        , "LEDGERS"
-       , "MEMPOOL"
        , "POOL"
        , "UTXO"
        , "UTXOS"

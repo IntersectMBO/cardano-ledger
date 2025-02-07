@@ -28,7 +28,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayHardForkEvent,
   ConwayLedgerEvent,
   ConwayLedgerPredFailure,
-  ConwayMempoolEvent,
   ConwayNewEpochEvent,
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
@@ -85,7 +84,6 @@ spec ::
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
   , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
@@ -127,7 +125,6 @@ conwaySpec ::
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
   , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era

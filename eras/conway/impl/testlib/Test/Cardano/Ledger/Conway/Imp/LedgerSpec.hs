@@ -16,7 +16,6 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
   ConwayLedgerEvent (..),
   ConwayLedgerPredFailure (..),
-  ConwayMempoolEvent (..),
   maxRefScriptSizePerTx,
  )
 import Cardano.Ledger.Credential (Credential (..))
@@ -44,7 +43,6 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
-  , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
   , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq.Seq (Tx era)
@@ -235,7 +233,7 @@ spec = do
           (LedgersEnv slotNo epochNo pp account)
           ls
           (Seq.singleton tx)
-      let mempoolEvents = [ev | LedgerEvent ev@(MempoolEvent (ConwayMempoolEvent _)) <- evs]
+      let mempoolEvents = [ev | LedgerEvent ev <- evs]
       mempoolEvents `shouldBeExpr` []
 
     it "Mempool events should be emitted via `applyTx` with `mkMempoolEnv`" $ do
@@ -256,7 +254,7 @@ spec = do
         Left e ->
           assertFailure $ "Unexpected failure while applyingTx: " <> show tx <> ": " <> show e
         Right (_, evs) ->
-          length [ev | ev@(MempoolEvent (ConwayMempoolEvent _)) <- evs] `shouldBe` 1
+          length [ev | ev <- evs] `shouldBe` 1
 
     it "Unelected Committee voting" $ whenPostBootstrap $ do
       globals <- use impGlobalsL
