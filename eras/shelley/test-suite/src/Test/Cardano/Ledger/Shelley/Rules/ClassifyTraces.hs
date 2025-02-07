@@ -34,6 +34,7 @@ import Cardano.Ledger.Shelley.PParams (
   pattern ProposedPPUpdates,
   pattern Update,
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxCert (
   isDelegation,
   isGenesisDelegation,
@@ -101,6 +102,7 @@ import qualified Test.Tasty.QuickCheck as TQC
 relevantCasesAreCovered ::
   forall era.
   ( EraGen era
+  , EraStake era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
@@ -276,14 +278,13 @@ txScriptOutputsRatio txoutsList =
     (sum (map length txoutsList))
   where
     countScriptOuts :: StrictSeq (TxOut era) -> Int
-    countScriptOuts txouts =
-      getSum $
-        foldMap'
+    countScriptOuts =
+      getSum
+        . foldMap'
           ( \out -> case out ^. addrTxOutL of
               Addr _ (ScriptHashObj _) _ -> Sum 1
               _ -> Sum 0
           )
-          txouts
 
 hasWithdrawal :: (ShelleyEraTxBody era, EraTx era) => Tx era -> Bool
 hasWithdrawal tx = not . null $ unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
@@ -303,6 +304,7 @@ hasMetadata tx = f (tx ^. bodyTxL . auxDataHashTxBodyL)
 onlyValidLedgerSignalsAreGenerated ::
   forall era ledger.
   ( EraGen era
+  , EraStake era
   , QC.HasTrace ledger (GenEnv MockCrypto era)
   , QC.BaseEnv ledger ~ Globals
   , State ledger ~ LedgerState era
@@ -332,8 +334,9 @@ onlyValidLedgerSignalsAreGenerated =
 propAbstractSizeBoundsBytes ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (ShelleyLEDGER era) (GenEnv MockCrypto era)
   , EraGov era
+  , EraStake era
+  , QC.HasTrace (ShelleyLEDGER era) (GenEnv MockCrypto era)
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
@@ -358,8 +361,9 @@ propAbstractSizeBoundsBytes = property $ do
 propAbstractSizeNotTooBig ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (ShelleyLEDGER era) (GenEnv MockCrypto era)
   , EraGov era
+  , EraStake era
+  , QC.HasTrace (ShelleyLEDGER era) (GenEnv MockCrypto era)
   ) =>
   Property
 propAbstractSizeNotTooBig = property $ do
@@ -389,8 +393,9 @@ propAbstractSizeNotTooBig = property $ do
 onlyValidChainSignalsAreGenerated ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , EraGov era
+  , EraStake era
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   TestTree
 onlyValidChainSignalsAreGenerated =

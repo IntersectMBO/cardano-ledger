@@ -45,6 +45,7 @@ import Cardano.Ledger.Babbage.Collateral (
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXOS)
 import Cardano.Ledger.Babbage.Rules.Ppup ()
+import Cardano.Ledger.Babbage.State
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
@@ -59,7 +60,7 @@ import Cardano.Ledger.Plutus.Evaluate (
   ScriptFailure (..),
   ScriptResult (..),
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), dsGenDelegsL, updateStakeDistribution)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), dsGenDelegsL)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
   PpupEnv (..),
@@ -69,7 +70,6 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
   updateUTxOState,
  )
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (nonEmpty)
@@ -97,6 +97,8 @@ instance
   , BabbageEraTxBody era
   , AlonzoEraUTxO era
   , EraPlutusContext era
+  , EraStake era
+  , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , EraGov era
   , GovState era ~ ShelleyGovState era
@@ -111,7 +113,6 @@ instance
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , EraRule "UTXOS" era ~ BabbageUTXOS era
-  , EraCertState era
   ) =>
   STS (BabbageUTXOS era)
   where
@@ -141,6 +142,8 @@ utxosTransition ::
   , BabbageEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , EraCertState era
+  , EraStake era
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
@@ -155,7 +158,6 @@ utxosTransition ::
   , EraRule "UTXOS" era ~ BabbageUTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
-  , EraCertState era
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -204,6 +206,8 @@ babbageEvalScriptsTxValid ::
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ShelleyEraTxBody era
+  , EraStake era
+  , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (BabbageUTXOS era)
   , Signal (BabbageUTXOS era) ~ Tx era
@@ -216,7 +220,6 @@ babbageEvalScriptsTxValid ::
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , EraRule "UTXOS" era ~ BabbageUTXOS era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
-  , EraCertState era
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
@@ -247,7 +250,8 @@ babbageEvalScriptsTxValid = do
 
 babbageEvalScriptsTxInvalid ::
   forall era.
-  ( AlonzoEraTx era
+  ( EraStake era
+  , AlonzoEraTx era
   , BabbageEraTxBody era
   , EraPlutusContext era
   , AlonzoEraUTxO era
@@ -262,7 +266,7 @@ babbageEvalScriptsTxInvalid ::
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 babbageEvalScriptsTxInvalid = do
-  TRC (UtxoEnv _ pp _, us@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
+  TRC (UtxoEnv _ pp _, utxos@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
   {- txb := txbody tx -}
   let txBody = tx ^. bodyTxL
   sysSt <- liftSTS $ asks systemStart
@@ -293,9 +297,10 @@ babbageEvalScriptsTxInvalid = do
       UTxO collouts = collOuts txBody
       DeltaCoin collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
   pure $!
-    us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
+    utxos {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
       { utxosUtxo = UTxO (Map.union utxoKeep collouts) -- NEW to Babbage
       {- fees + collateralFees -}
       , utxosFees = fees <> Coin collateralFees -- NEW to Babbage
-      , utxosStakeDistr = updateStakeDistribution pp (utxosStakeDistr us) (UTxO utxoDel) (UTxO collouts)
+      , utxosInstantStake =
+          deleteInstantStake (UTxO utxoDel) (addInstantStake (UTxO collouts) (utxos ^. instantStakeL))
       }

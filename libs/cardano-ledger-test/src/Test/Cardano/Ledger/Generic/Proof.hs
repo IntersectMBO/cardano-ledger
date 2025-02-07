@@ -100,15 +100,15 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
-import Cardano.Ledger.Shelley.Core (EraGov, ShelleyEraTxCert)
-import Cardano.Ledger.Shelley.Governance (EraGov (..), ShelleyGovState (..))
+import Cardano.Ledger.Shelley.Core (ShelleyEraTxCert)
+import Cardano.Ledger.Shelley.Governance (ShelleyGovState (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded)
-import Cardano.Ledger.State (EraUTxO (..), ScriptsNeeded)
+import Cardano.Ledger.State
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
@@ -145,6 +145,7 @@ class
   , EraUTxO era
   , EraTxAuxData era
   , EraScript era
+  , EraStake era
   , ShelleyEraTxCert era
   , EraCertState era
   ) =>

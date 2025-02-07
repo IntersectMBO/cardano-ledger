@@ -90,6 +90,7 @@ import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Data.VMap as VMap
 import Data.Word (Word16)
 import GHC.Generics (Generic)
@@ -97,7 +98,9 @@ import GHC.Word (Word64)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
--- | Type of stake as map from hash key to coins associated.
+-- | Type of stake as map from staking credential to coins associated. Any staking credential that
+-- has no stake will not appear in this Map, even if it is registered. For this reason, this data
+-- type should not be used for infering whether credential is registered or not.
 newtype Stake = Stake
   { unStake :: VMap VB VP (Credential 'Staking) (CompactForm Coin)
   }
@@ -126,6 +129,8 @@ poolStake hk delegs (Stake stake) =
   -- Stake $ (eval (dom (delegs ▷ setSingleton hk) ◁ stake))
   Stake $ VMap.filter (\cred _ -> VMap.lookup cred delegs == Just hk) stake
 
+-- | Compute amount of stake each pool has. Any registered stake pool that has no stake will not be
+-- inlcuded in the resulting map
 sumStakePerPool ::
   VMap VB VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Stake ->
@@ -288,9 +293,9 @@ calculatePoolStake includeHash delegs stake = VMap.foldlWithKey accum Map.empty 
   where
     accum ans cred keyHash =
       if includeHash keyHash
-        then case VMap.lookup cred (unStake stake) of
-          Nothing -> ans
-          Just (CompactCoin c) -> Map.insertWith (+) keyHash c ans
+        then
+          let CompactCoin c = fromMaybe mempty $ VMap.lookup cred (unStake stake)
+           in Map.insertWith (+) keyHash c ans
         else ans
 
 calculatePoolDistr :: SnapShot -> PoolDistr

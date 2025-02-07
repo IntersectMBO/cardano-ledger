@@ -25,6 +25,7 @@ import Cardano.Ledger.Binary.Encoding (EncCBOR)
 import Cardano.Ledger.CertState (CertState, certDStateL, dsGenDelegsL)
 import Cardano.Ledger.Coin (Coin (..), rationalToCoinViaCeiling)
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.DRep (drepDepositL)
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Keys (WitVKey (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
@@ -35,10 +36,11 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (Val (..), inject)
-import Control.Monad (when)
+import Control.Monad (join, when)
 import Control.State.Transition.Extended (STS (..), TRC (..))
 import Data.Default (Default (def))
 import Data.Foldable as F (foldl', toList)
@@ -49,6 +51,7 @@ import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
+import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
@@ -64,19 +67,26 @@ import Test.Cardano.Ledger.Constrained.Monad (
   monadTyped,
  )
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
+import qualified Test.Cardano.Ledger.Constrained.Preds.CertState as CertState
 import Test.Cardano.Ledger.Constrained.Preds.Certs (certsStage)
+import qualified Test.Cardano.Ledger.Constrained.Preds.Certs as Certs
 import Test.Cardano.Ledger.Constrained.Preds.LedgerState (ledgerStateStage)
+import qualified Test.Cardano.Ledger.Constrained.Preds.LedgerState as LedgerState
 import Test.Cardano.Ledger.Constrained.Preds.NewEpochState (epochStateStage, newEpochStateStage)
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
+import qualified Test.Cardano.Ledger.Constrained.Preds.PParams as PParams
 import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), goRepl, modeRepl)
 import Test.Cardano.Ledger.Constrained.Preds.TxOut (txOutPreds)
+import qualified Test.Cardano.Ledger.Constrained.Preds.TxOut as TxOut
 import Test.Cardano.Ledger.Constrained.Preds.UTxO (utxoStage)
 import Test.Cardano.Ledger.Constrained.Preds.Universes hiding (demo, demoTest, main)
+import qualified Test.Cardano.Ledger.Constrained.Preds.Universes as Universes
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Scripts (sufficientScript)
 import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
+import Test.Cardano.Ledger.Constrained.Utils (checkForSoundness, testIO)
 import Test.Cardano.Ledger.Constrained.Vars hiding (totalAda)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.Fields (
@@ -114,18 +124,6 @@ import Test.Cardano.Ledger.Generic.Updaters (newScriptIntegrityHash)
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
-
-import Cardano.Ledger.DRep (drepDepositL)
-import Cardano.Ledger.State (SnapShot (..), Stake (..), calculatePoolDistr)
-import qualified Cardano.Ledger.UMap as UMap
-import qualified Data.VMap as VMap
-import qualified Test.Cardano.Ledger.Constrained.Preds.CertState as CertState
-import qualified Test.Cardano.Ledger.Constrained.Preds.Certs as Certs
-import qualified Test.Cardano.Ledger.Constrained.Preds.LedgerState as LedgerState
-import qualified Test.Cardano.Ledger.Constrained.Preds.PParams as PParams
-import qualified Test.Cardano.Ledger.Constrained.Preds.TxOut as TxOut
-import qualified Test.Cardano.Ledger.Constrained.Preds.Universes as Universes
-import Test.Cardano.Ledger.Constrained.Utils (checkForSoundness, testIO)
 
 predsTests :: TestTree
 predsTests =
@@ -204,7 +202,7 @@ rdmrPtrsT ::
   AlonzoEraScript era =>
   Target
     era
-    ( [((PlutusPurposeF era), ScriptHash)] ->
+    ( [(PlutusPurposeF era, ScriptHash)] ->
       Map ScriptHash any ->
       Set (PlutusPointerF era)
     )
@@ -212,7 +210,7 @@ rdmrPtrsT = Constr "getRdmrPtrs" getRdmrPtrs
 
 getRdmrPtrs ::
   AlonzoEraScript era =>
-  [((PlutusPurposeF era), ScriptHash)] ->
+  [(PlutusPurposeF era, ScriptHash)] ->
   Map ScriptHash any ->
   Set (PlutusPointerF era)
 getRdmrPtrs xs allplutus = List.foldl' accum Set.empty xs
@@ -239,7 +237,7 @@ bootWitsT ::
   TxBodyF era ->
   Map (KeyHash 'Payment) (Addr, SigningKey) ->
   Set BootstrapWitness
-bootWitsT proof spend (TxBodyF _ txb) byronUniv = bootWitness h boots byronUniv
+bootWitsT proof spend (TxBodyF _ txb) = bootWitness h boots
   where
     boots :: [BootstrapAddress] -- Not every Addr has a BootStrapAddress
     boots = Map.foldl' accum [] spend -- Compute a list of them.
@@ -291,7 +289,7 @@ sufficientScriptKeys ::
   Proof era ->
   Map ScriptHash (ScriptF era) ->
   Set (KeyHash 'Witness)
-sufficientScriptKeys proof scriptmap = Map.foldl' accum Set.empty scriptmap
+sufficientScriptKeys proof = Map.foldl' accum Set.empty
   where
     accum ans (ScriptF _ s) = Set.union ans (sufficientScript proof s)
 
@@ -313,7 +311,7 @@ pcUtxo :: Reflect era => Map TxIn (TxOutF era) -> String
 pcUtxo m = show (pcUtxoDoc m)
 
 pcUtxoDoc :: Reflect era => Map TxIn (TxOutF era) -> PDoc
-pcUtxoDoc m = ppMap pcTxIn (\(TxOutF p o) -> pcTxOut p o) m
+pcUtxoDoc = ppMap pcTxIn (\(TxOutF p o) -> pcTxOut p o)
 
 necessaryKeyHashTarget ::
   forall era.
@@ -323,13 +321,12 @@ necessaryKeyHashTarget ::
   -- Target era (Set (WitVKey 'Witness ))
   Target era (Set (KeyHash 'Witness))
 necessaryKeyHashTarget txbodyparam reqSignersparam =
-  ( Constr "keywits" necessaryKeyHashes
-      ^$ txbodyparam
-      ^$ (utxo reify)
-      ^$ genDelegs
-      --  ^$ keymapUniv
-      ^$ reqSignersparam
-  )
+  Constr "keywits" necessaryKeyHashes
+    ^$ txbodyparam
+    ^$ utxo reify
+    ^$ genDelegs
+    --  ^$ keymapUniv
+    ^$ reqSignersparam
 
 -- | Compute the needed key witnesses from a transaction body.
 --   First find all the key hashes from every use of keys in the transaction
@@ -432,7 +429,7 @@ allValid xs = IsValid (all valid xs)
     valid (IsValid b) = b
 
 scriptWitsLangs :: Map k (ScriptF era) -> Set Language
-scriptWitsLangs m = Map.foldl' accum Set.empty m
+scriptWitsLangs = Map.foldl' accum Set.empty
   where
     accum :: Set Language -> ScriptF era -> Set Language
     accum ans (ScriptF Alonzo (PlutusScript ps)) = Set.insert (plutusScriptLanguage ps) ans
@@ -508,10 +505,10 @@ minusMultiValue p v1 v2 = case whichValue p of
 
 txBodyPreds :: forall era. (HasCallStack, Reflect era) => UnivSize -> Proof era -> [Pred era]
 txBodyPreds sizes@UnivSize {..} p =
-  (txOutPreds sizes p balanceCoin (outputs p))
+  txOutPreds sizes p balanceCoin (outputs p)
     ++ [ mint
           :<-: ( Constr "sumAssets" (\out spend -> minusMultiValue p (txoutSum out) (txoutSum spend))
-                  ^$ (outputs p)
+                  ^$ outputs p
                   ^$ spending
                )
        , networkID :<-: justTarget network
@@ -521,7 +518,7 @@ txBodyPreds sizes@UnivSize {..} p =
        , Subset inputs (Dom (utxo p))
        , -- collateral
          Disjoint inputs collateral
-       , Sized (Range (usMinCollaterals) (usMaxCollaterals)) collateral
+       , Sized (Range usMinCollaterals usMaxCollaterals) collateral
        , Subset collateral (Dom colUtxo)
        , --       , Member (Left colInput) collateral
          colRestriction :=: Restrict collateral colUtxo
@@ -554,7 +551,7 @@ txBodyPreds sizes@UnivSize {..} p =
        , Disjoint refInputs inputs -- New constraint in Conway, added PR #4024
        , Sized (Range 1 2) reqSignerHashes
        , Subset reqSignerHashes (Dom keymapUniv)
-       , ttl :<-: (Constr "(+5)" (\x -> x + 5) ^$ currentSlot)
+       , ttl :<-: (Constr "(+5)" (+ 5) ^$ currentSlot)
        , spending :=: Restrict inputs (utxo p)
        , SumsTo
           (Right (Coin 1))
@@ -640,7 +637,7 @@ txBodyPreds sizes@UnivSize {..} p =
         , necessaryHashes :<-: necessaryKeyHashTarget @era tempTxBody reqSignerHashes
         , sufficientHashes
             :<-: ( Constr "sufficient" (sufficientKeyHashes p)
-                    ^$ (Restrict neededHashSet (allScriptUniv p))
+                    ^$ Restrict neededHashSet (allScriptUniv p)
                     ^$ certs
                     ^$ genDelegs
                  )
@@ -651,11 +648,11 @@ txBodyPreds sizes@UnivSize {..} p =
             :<-: makeKeyWitnessTarget txbodyterm necessaryHashes sufficientHashes scriptWits byronAddrUniv
         , -- 'langs' is not computed from the 'scriptWits' because that does not include needed
           -- scripts that are reference scripts, So get the scripts from the neededHashSet
-          langs :<-: (Constr "languages" scriptWitsLangs ^$ (Restrict neededHashSet (allScriptUniv p)))
+          langs :<-: (Constr "languages" scriptWitsLangs ^$ Restrict neededHashSet (allScriptUniv p))
         , wppHash :<-: integrityHash p (pparams p) langs redeemers dataWits
         , owed
             :<-: ( Constr "owed" (\percent (Coin fee) -> rationalToCoinViaCeiling ((fromIntegral percent * fee) % 100))
-                    ^$ (collateralPercentage p)
+                    ^$ collateralPercentage p
                     ^$ txfee
                  )
         , -- we need to add 'extraCol' to the colUtxo, to pay the collateral fee.
@@ -832,19 +829,18 @@ genTxAndLedger sizes proof = do
 genTxAndNewEpoch :: Reflect era => UnivSize -> Proof era -> Gen (NewEpochState era, Tx era, Env era)
 genTxAndNewEpoch sizes proof = do
   subst <-
-    ( pure emptySubst
-        >>= pParamsStage proof
-        >>= universeStage sizes proof
-        >>= utxoStage sizes proof
-        >>= vstateStage proof
-        >>= pstateStage proof
-        >>= dstateStage proof
-        >>= certsStage sizes proof
-        >>= ledgerStateStage sizes proof
-        >>= txBodyStage sizes proof
-        >>= epochStateStage proof
-        >>= newEpochStateStage proof
-    )
+    pure emptySubst
+      >>= pParamsStage proof
+      >>= universeStage sizes proof
+      >>= utxoStage sizes proof
+      >>= vstateStage proof
+      >>= pstateStage proof
+      >>= dstateStage proof
+      >>= certsStage sizes proof
+      >>= ledgerStateStage sizes proof
+      >>= txBodyStage sizes proof
+      >>= epochStateStage proof
+      >>= newEpochStateStage proof
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
   env2 <- errorTyped $ adjustColInput env1
@@ -856,10 +852,10 @@ demoTxNes :: IO ()
 demoTxNes = do
   let proof = Conway
   (nes, _tx, env) <- generate $ genTxAndNewEpoch def proof
-  putStrLn (show (psNewEpochState proof nes))
+  print (psNewEpochState proof nes)
   pools <- monadTyped $ runTerm env regPools
   deleg <- monadTyped $ runTerm env delegations
-  stak <- monadTyped $ runTerm env incrementalStake
+  stak <- monadTyped $ runTerm env instantStakeTerm
   putDoc (ppString "\nPool " <> prettyA pools)
   putDoc (ppString "\nDeleg " <> prettyA deleg)
   putDoc (ppString "\nStake " <> prettyA stak)
@@ -877,8 +873,8 @@ demoTx :: IO ()
 demoTx = do
   let proof = Conway
   (ls, tx, env) <- generate $ genTxAndLedger def proof
-  putStrLn (show (pcLedgerState proof ls))
-  putStrLn (show (pcTx proof tx))
+  print (pcLedgerState proof ls)
+  print (pcTx proof tx)
   goRepl proof env ""
 
 -- ================================================================
@@ -906,17 +902,16 @@ gone = do
       goRepl Babbage env ""
 
 test :: Maybe Int -> IO ()
-test (Just seed) = do x <- generateWithSeed seed gone; x
+test (Just seed) = join $ generateWithSeed seed gone
 test Nothing = do
   seed <- generate arbitrary
   putStrLn ("SEED = " ++ show seed)
-  x <- generateWithSeed seed gone
-  x
+  join $ generateWithSeed seed gone
 
 bad :: [Int]
 bad = [] -- [3, 8, 13, 41, 50, 60, 65, 82, 99, 100, 109, 112]
 go :: Int -> IO ()
-go n = sequence_ [print i >> test (Just i) | i <- [n .. 113], not (elem i bad)]
+go n = sequence_ [print i >> test (Just i) | i <- [n .. 113], notElem i bad]
 
 -- ========================================
 
@@ -952,7 +947,7 @@ pgenTxField ::
   [(Text, PDoc)]
 pgenTxField proof ut x = case x of
   Body b -> [(pack "txbody hash", ppSafeHash (hashAnnotated b)), (pack "body", pgenTxBody proof b ut)]
-  BodyI xs -> [(pack "body", ppRecord (pack "TxBody") (concat (map (pgenTxBodyField proof ut) xs)))]
+  BodyI xs -> [(pack "body", ppRecord (pack "TxBody") (concatMap (pgenTxBodyField proof ut) xs))]
   _other -> pcTxField proof x
 
 pgenTx :: Reflect era => Proof era -> Map TxIn (TxOutF era) -> Tx era -> PDoc
@@ -1042,9 +1037,7 @@ demo mode = do
   -- rewritten <- snd <$> generate (rewriteGen (1, txBodyPreds sizes proof))
   -- putStrLn (show rewritten)
   (_, status) <- monadTyped $ checkForSoundness (txBodyPreds sizes proof) subst
-  case status of
-    Nothing -> pure ()
-    Just msg -> error msg
+  mapM_ error status
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
   env2 <- generate $ errorTyped $ adjustColInput env1
@@ -1055,9 +1048,9 @@ demo mode = do
   certState <- monadTyped . runTarget env1 $ certStateT
   (PParamsF _ ppV) <- monadTyped (findVar (unVar (pparams proof)) env2)
   utxoV <- monadTyped (findVar (unVar (utxo proof)) env2)
-  when (mode == Interactive) $ putStrLn (show (producedTxBody txb ppV $ unCertStateF certState))
+  when (mode == Interactive) $ print (producedTxBody txb ppV $ unCertStateF certState)
   when (mode == Interactive) $
-    putStrLn (show (consumedTxBody txb ppV (unCertStateF certState) (liftUTxO utxoV)))
+    print (consumedTxBody txb ppV (unCertStateF certState) (liftUTxO utxoV))
   modeRepl mode proof env2 ""
 
 demoTest :: TestTree

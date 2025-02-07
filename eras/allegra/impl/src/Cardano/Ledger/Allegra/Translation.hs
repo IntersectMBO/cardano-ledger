@@ -14,6 +14,7 @@ module Cardano.Ledger.Allegra.Translation (shelleyToAllegraAVVMsToDelete) where
 
 import Cardano.Ledger.Allegra.CertState ()
 import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.State
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
@@ -35,7 +36,6 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
-import Cardano.Ledger.State (UTxO (..))
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 
@@ -126,9 +126,12 @@ instance TranslateEra AllegraEra UTxOState where
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
         , utxosGovState = translateEra' ctxt $ utxosGovState us
-        , utxosStakeDistr = utxosStakeDistr us
+        , utxosInstantStake = translateEra' ctxt $ utxosInstantStake us
         , utxosDonation = utxosDonation us
         }
+
+instance TranslateEra AllegraEra ShelleyInstantStake where
+  translateEra _ = pure . coerce
 
 instance TranslateEra AllegraEra DState where
   translateEra _ DState {..} = pure DState {..}

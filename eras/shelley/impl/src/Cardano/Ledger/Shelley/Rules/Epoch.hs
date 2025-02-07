@@ -61,7 +61,7 @@ import Cardano.Ledger.Shelley.Rules.Snap (
  )
 import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.State (SnapShots)
+import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
@@ -141,6 +141,7 @@ instance
 instance
   ( EraTxOut era
   , EraGov era
+  , EraStake era
   , EraCertState era
   , GovState era ~ ShelleyGovState era
   , Embed (EraRule "SNAP" era) (ShelleyEPOCH era)
@@ -251,6 +252,7 @@ epochTransition = do
 
 instance
   ( EraTxOut era
+  , EraStake era
   , PredicateFailure (EraRule "SNAP" era) ~ ShelleySnapPredFailure era
   , Event (EraRule "SNAP" era) ~ SnapEvent era
   , EraCertState era
