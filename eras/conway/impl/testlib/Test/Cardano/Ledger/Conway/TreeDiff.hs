@@ -290,5 +290,3 @@ instance
   , ToExpr (Tx era)
   ) =>
   ToExpr (CertsEnv era)
-
-instance ToExpr (ConwayMempoolEvent era)
