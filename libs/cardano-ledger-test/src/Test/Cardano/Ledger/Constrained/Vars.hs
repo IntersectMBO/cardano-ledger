@@ -45,6 +45,17 @@ import Cardano.Ledger.Conway.PParams (
   ppDRepDepositL,
   ppGovActionDepositL,
  )
+import Cardano.Ledger.Conway.State (
+  EraStake (..),
+  IndividualPoolStake (..),
+  PoolDistr (..),
+  ShelleyInstantStake (..),
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
+  instantStakeL,
+  poolDistrDistrL,
+ )
 import Cardano.Ledger.Core (
   Era,
   PParams,
@@ -85,12 +96,9 @@ import Cardano.Ledger.Shelley.Governance (FuturePParams (..))
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState hiding (
-  credMapL,
   delegations,
   deltaReserves,
   deltaTreasury,
-  ptrMap,
-  ptrMapL,
   rewards,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
@@ -99,14 +107,6 @@ import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
-import Cardano.Ledger.State (
-  IndividualPoolStake (..),
-  PoolDistr (..),
-  SnapShot (..),
-  SnapShots (..),
-  Stake (..),
-  poolDistrDistrL,
- )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, sPoolMap, unify)
 import Cardano.Ledger.Val (Val (..))
@@ -482,33 +482,33 @@ individualPoolStakeL = lens individualPoolStake (\ds u -> ds {individualPoolStak
 
 -- Incremental Stake
 
-isPtrMapT :: Era era => Term era (Map Ptr Coin)
+isPtrMapT :: (Era era, InstantStake era ~ ShelleyInstantStake era) => Term era (Map Ptr Coin)
 isPtrMapT = Var $ V "ptrMap" (MapR PtrR CoinR) (Yes NewEpochStateR ptrMapL)
 
-ptrMapL :: Lens' (NewEpochState era) (Map Ptr Coin)
-ptrMapL = nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL . isPtrMapL
+ptrMapL :: InstantStake era ~ ShelleyInstantStake era => Lens' (NewEpochState era) (Map Ptr Coin)
+ptrMapL = instantStakeL . isPtrMapL
 
-isCredMapT :: Era era => Term era (Map (Credential 'Staking) Coin)
+isCredMapT :: EraStake era => Term era (Map (Credential 'Staking) Coin)
 isCredMapT = Var $ V "credMap" (MapR CredR CoinR) (Yes NewEpochStateR credMapL)
 
-credMapL :: Lens' (NewEpochState era) (Map (Credential 'Staking) Coin)
-credMapL = nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL . isCredMapL
+credMapL :: EraStake era => Lens' (NewEpochState era) (Map (Credential 'Staking) Coin)
+credMapL = instantStakeL . isCredMapL
 
 -- | This variable is computed from the UTxO and the PParams,
---   It represents the incremental stake that is computed by 'smartUTxO'
+--   It represents the instant stake that is computed by 'smartUTxO'
 --   in the UTxOState Target UTxOStateT
 --   The domain of this map is the complete set of credentials used to delegate Coin
 --   in the TxOuts in the UTxO.
-incrementalStake :: Era era => Term era (Map (Credential 'Staking) Coin)
-incrementalStake = Var $ V "incrementalStake" (MapR CredR CoinR) No
+instantStakeTerm :: Era era => Term era (Map (Credential 'Staking) Coin)
+instantStakeTerm = Var $ V "instantStake" (MapR CredR CoinR) No
 
-incrementalStakeT ::
+instantStakeTarget ::
   Reflect era => Proof era -> Target era (Map (Credential 'Staking) Coin)
-incrementalStakeT proof = Constr "computeIncrementalStake" get ^$ (utxo proof)
+instantStakeTarget proof = Constr "computeInstantStake" get ^$ utxo proof
   where
     get utxom =
-      let IStake stakeDistr _ = updateStakeDistribution (justProtocolVersion proof) mempty mempty (liftUTxO utxom)
-       in Map.map fromCompact stakeDistr
+      let instantStakeMap = addInstantStake (liftUTxO utxom) mempty ^. instantStakeCredentialsL
+       in Map.map fromCompact instantStakeMap
 
 -- ==========================
 -- AccountState
@@ -1896,14 +1896,12 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
   let umap = unify Map.empty Map.empty Map.empty credDRepMap
       umapSize = Map.size credDRepMap
       k = securityParameter testGlobals
-      pp :: PParams era
-      pp = def & ppProtocolVersionL .~ protocolVersion proof
-      IStake stakeDistr _ = updateStakeDistribution pp mempty mempty (utx ^. utxoFL proof)
+      instantStake = addInstantStake (utx ^. utxoFL proof) mempty
    in DRepPulser
         (max 1 (ceiling (toInteger umapSize %. (knownNonZero @8 `mulNonZero` toIntegerNonZero k))))
         umap
         0
-        stakeDistr
+        instantStake
         (PoolDistr poold $ CompactCoin 1)
         Map.empty
         credDRepStateMap
@@ -1940,7 +1938,7 @@ pulsingSnapshotT =
     :$ Lensed prevDRepState psDRepStateL
     :$ Lensed partialIndividualPoolStake (psPoolDistrL . mapCompactFormCoinL)
 
-pulsingSnapshotL :: Lens' (DRepPulsingState era) (PulsingSnapshot era)
+pulsingSnapshotL :: EraStake era => Lens' (DRepPulsingState era) (PulsingSnapshot era)
 pulsingSnapshotL = lens getter setter
   where
     getter (DRComplete x _) = x
@@ -1965,13 +1963,13 @@ completePulsingStateT _p =
 ratifyState :: Reflect era => Term era (RatifyState era)
 ratifyState = Var $ V "ratifyState" RatifyStateR No
 
-ratifyStateL :: Lens' (DRepPulsingState era) (RatifyState era)
+ratifyStateL :: Reflect era => Lens' (DRepPulsingState era) (RatifyState era)
 ratifyStateL = lens getter setter
   where
     getter (DRComplete _ y) = y
-    getter (x@(DRPulsing {})) = snd (finishDRepPulser x)
+    getter x@(DRPulsing {}) = snd (finishDRepPulser x)
     setter (DRComplete x _) y = DRComplete x y
-    setter (z@(DRPulsing {})) y = case finishDRepPulser z of
+    setter z@(DRPulsing {}) y = case finishDRepPulser z of
       (x, _) -> DRComplete x y
 
 prevProposals :: Era era => Proof era -> Term era (Proposals era)
@@ -1980,7 +1978,7 @@ prevProposals p = Var $ V "prevProposals" (ProposalsR p) No
 ratifyGovActionStatesL :: Lens' (DRepPulser era Identity (RatifyState era)) [GovActionState era]
 ratifyGovActionStatesL =
   lens
-    (\x -> F.toList (dpProposals x))
+    (F.toList . dpProposals)
     (\x y -> x {dpProposals = SS.fromList y})
 
 -- | Partially computed DRepDistr inside the pulser
@@ -1991,7 +1989,7 @@ partialDRepDistrL ::
   Lens' (DRepPulser era Identity (RatifyState era)) (Map DRep Coin)
 partialDRepDistrL =
   lens
-    (\x -> Map.map fromCompact (dpDRepDistr x))
+    (Map.map fromCompact . dpDRepDistr)
     (\x y -> x {dpDRepDistr = Map.map compactCoinOrError y})
 
 -- | Snapshot of 'dreps' from the start of the current epoch

@@ -11,15 +11,7 @@ module Test.Cardano.Ledger.Shelley.Rules.PoolReap (
 )
 where
 
-import Test.Cardano.Ledger.Shelley.Rules.TestChain (
-  chainSstWithTick,
-  forAllChainTrace,
-  traceLen,
- )
-
-import Cardano.Ledger.Block (
-  Block (..),
- )
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -30,6 +22,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   psStakePoolParams,
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.BHeader (
   bhbody,
@@ -44,6 +37,11 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (
+  chainSstWithTick,
+  forAllChainTrace,
+  traceLen,
+ )
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   epochFromSlotNo,
@@ -66,8 +64,9 @@ import Test.Tasty.QuickCheck (testProperty)
 
 tests ::
   forall era.
-  ( ChainProperty era
-  , EraGen era
+  ( EraGen era
+  , EraStake era
+  , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   TestTree

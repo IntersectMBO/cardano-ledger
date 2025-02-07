@@ -42,11 +42,11 @@ import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (
   FromByronTranslationContext (..),
   toFromByronTranslationContext,
  )
-import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val
 import Data.Aeson (FromJSON (..), KeyValue (..), ToJSON (..), object, pairs, withObject, (.:))
@@ -64,6 +64,7 @@ import NoThunks.Class (NoThunks (..))
 class
   ( EraTxOut era
   , EraGov era
+  , EraStake era
   , EraGenesis era
   , EraCertState era
   , ToJSON (TransitionConfig era)
@@ -372,7 +373,7 @@ registerInitialStaking tc nes =
         { psStakePoolParams = ListMap.toMap sgsPools
         }
 
-    pp = nes ^. nesEsL . curPParamsEpochStateL
+    _pp = nes ^. nesEsL . curPParamsEpochStateL
 
     -- The new stake distribution is made on the basis of a snapshot taken
     -- during the previous epoch. We create a "fake" snapshot in order to
@@ -382,16 +383,9 @@ registerInitialStaking tc nes =
       -- Since we build a stake from nothing, we first initialise an
       -- 'IncrementalStake' as empty, and then:
       --
-      -- 1. Add the initial UTxO, whilst deleting nothing.
+      -- 1. Add the initial UTxO.
       -- 2. Update the stake map given the initial delegation.
-      incrementalStakeDistr
-        pp
-        -- Note that 'updateStakeDistribution' takes first the set of UTxO to
-        -- delete, and then the set to add. In our case, there is nothing to
-        -- delete, since this is an initial UTxO set.
-        (updateStakeDistribution pp mempty mempty (utxosUtxo (lsUTxOState ledgerState)))
-        dState'
-        pState'
+      snapShotFromInstantStake (addInstantStake (ledgerState ^. utxoL) mempty) dState' pState'
 
 -- | Register the initial funds in the 'NewEpochState'.
 --
@@ -455,9 +449,6 @@ registerInitialFunds tc nes =
         { asReserves = reserves <-> coin (balance initialFundsUtxo)
         }
 
-    -- Since we only add entries to our UTxO, rather than spending them, there
-    -- is nothing to delete in the incremental update.
-    utxoToDel = UTxO mempty
     ledgerState' =
       ledgerState
         { lsUTxOState =
@@ -465,13 +456,8 @@ registerInitialFunds tc nes =
               { utxosUtxo = utxo'
               , -- Normally we would incrementally update here. But since we pass
                 -- the full UTxO as "toAdd" rather than a delta, we simply
-                -- reinitialise the full incremental stake.
-                utxosStakeDistr =
-                  updateStakeDistribution
-                    (nes ^. nesEsL . curPParamsEpochStateL)
-                    mempty
-                    utxoToDel
-                    utxo'
+                -- reinitialise the full instant stake.
+                utxosInstantStake = addInstantStake utxo' mempty
               }
         }
 

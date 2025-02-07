@@ -50,7 +50,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPpupPredFailure,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..), txouts)
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
@@ -163,6 +163,8 @@ instance
 utxoTransition ::
   forall era.
   ( EraUTxO era
+  , EraStake era
+  , EraCertState era
   , ShelleyEraTxBody era
   , AllegraEraTxBody era
   , Eq (EraRuleFailure "PPUP" era)
@@ -175,7 +177,6 @@ utxoTransition ::
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
   , EraRule "UTXO" era ~ AllegraUTXO era
-  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
@@ -293,9 +294,10 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 -- UTXO STS
 --------------------------------------------------------------------------------
 instance
-  forall era.
   ( EraTx era
   , EraUTxO era
+  , EraStake era
+  , EraCertState era
   , ShelleyEraTxBody era
   , AllegraEraTxBody era
   , Embed (EraRule "PPUP" era) (AllegraUTXO era)
@@ -309,7 +311,6 @@ instance
   , GovState era ~ ShelleyGovState era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
-  , EraCertState era
   ) =>
   STS (AllegraUTXO era)
   where

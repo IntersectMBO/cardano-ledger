@@ -30,6 +30,7 @@ import Cardano.Ledger.Shelley.API (
   applyTx,
  )
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
 import Criterion
@@ -65,6 +66,7 @@ benchWithGenState ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
+  , EraStake era
   , EraGov era
   ) =>
   Proxy era ->
@@ -83,6 +85,7 @@ benchApplyTx ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
+  , EraStake era
   , EraGov era
   ) =>
   Proxy era ->
@@ -114,6 +117,7 @@ deserialiseTxEra ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , NFData (Tx era)
+  , EraStake era
   , EraGov era
   ) =>
   Proxy era ->

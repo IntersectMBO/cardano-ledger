@@ -18,7 +18,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.State (UTxO (..), txins, txouts)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.SetAlgebra (eval, (∩))
 import Data.Foldable (toList)
@@ -40,9 +40,7 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   ledgerTraceFromBlock,
   traceLen,
  )
-import Test.Cardano.Ledger.Shelley.Utils (
-  ChainProperty,
- )
+import Test.Cardano.Ledger.Shelley.Utils (ChainProperty)
 import Test.Control.State.Transition.Trace (
   SourceSignalTarget (..),
   sourceSignalTargets,
@@ -62,6 +60,7 @@ import Test.Tasty.QuickCheck (testProperty)
 tests ::
   forall era ledger.
   ( EraGen era
+  , EraStake era
   , ChainProperty era
   , TestingLedger era ledger
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)

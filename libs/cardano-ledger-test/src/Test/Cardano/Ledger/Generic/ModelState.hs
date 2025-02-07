@@ -43,7 +43,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DState (..),
   EpochState (..),
-  IncrementalStake (..),
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
@@ -113,7 +112,7 @@ import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 type MUtxo era = Map TxIn (TxOut era)
 
 pcMUtxo :: Reflect era => Proof era -> MUtxo era -> PDoc
-pcMUtxo proof m = ppMap pcTxIn (pcTxOut proof) m
+pcMUtxo proof = ppMap pcTxIn (pcTxOut proof)
 
 -- ===========================================================
 
@@ -203,9 +202,6 @@ pStateZero =
 
 dPStateZero :: EraCertState era => CertState era
 dPStateZero = mkCertState def pStateZero dStateZero
-
-incrementalStakeZero :: IncrementalStake
-incrementalStakeZero = IStake Map.empty Map.empty
 
 nonMyopicZero :: NonMyopic
 nonMyopicZero = NonMyopic Map.empty mempty

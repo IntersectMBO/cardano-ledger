@@ -28,15 +28,8 @@ import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
-  incrementalStakeDistr,
  )
-import Cardano.Ledger.State (
-  SnapShot (ssDelegations, ssStake),
-  SnapShots (..),
-  Stake (unStake),
-  calculatePoolDistr,
-  emptySnapShots,
- )
+import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
   STS (..),
@@ -49,7 +42,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- ======================================================
@@ -72,7 +65,7 @@ instance NFData (SnapEvent era)
 
 data SnapEnv era = SnapEnv (LedgerState era) (PParams era)
 
-instance (EraTxOut era, EraCertState era) => STS (ShelleySNAP era) where
+instance (EraTxOut era, EraStake era, EraCertState era) => STS (ShelleySNAP era) where
   type State (ShelleySNAP era) = SnapShots
   type Signal (ShelleySNAP era) = ()
   type Environment (ShelleySNAP era) = SnapEnv era
@@ -90,16 +83,14 @@ instance (EraTxOut era, EraCertState era) => STS (ShelleySNAP era) where
 --
 -- but is now computed incrementally. We leave the comment as a historical note about
 -- where important changes were made to the source code.
-snapTransition ::
-  forall era.
-  (EraPParams era, EraCertState era) =>
-  TransitionRule (ShelleySNAP era)
+snapTransition :: (EraStake era, EraCertState era) => TransitionRule (ShelleySNAP era)
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext
 
-  let SnapEnv (LedgerState (UTxOState _utxo _ fees _ incStake _) certState) pp = snapEnv
+  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _) certState) _pp = snapEnv
+      instantStake = ls ^. instantStakeG
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
-      istakeSnap = incrementalStakeDistr pp incStake (certState ^. certDStateL) (certState ^. certPStateL)
+      istakeSnap = snapShotFromInstantStake instantStake (certState ^. certDStateL) (certState ^. certPStateL)
 
   tellEvent $
     let stMap :: Map (Credential 'Staking) (CompactForm Coin)

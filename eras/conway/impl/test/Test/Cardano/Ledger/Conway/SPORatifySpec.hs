@@ -32,11 +32,11 @@ import Cardano.Ledger.Conway.Rules (
   spoAccepted,
   spoAcceptedRatio,
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.PoolParams (PoolParams, ppId, ppRewardAccount)
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
-import Cardano.Ledger.State (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
@@ -63,6 +63,8 @@ acceptedRatioProp ::
   forall era.
   ( Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (InstantStake era)
+  , Show (InstantStake era)
   , ConwayEraPParams era
   ) =>
   Spec
@@ -101,6 +103,8 @@ noStakeProp ::
   forall era.
   ( Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (InstantStake era)
+  , Show (InstantStake era)
   , ConwayEraPParams era
   ) =>
   Spec
@@ -117,6 +121,8 @@ allAbstainProp ::
   forall era.
   ( Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (InstantStake era)
+  , Show (InstantStake era)
   , ConwayEraPParams era
   ) =>
   Spec
@@ -139,6 +145,8 @@ noVotesProp ::
   forall era.
   ( Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (InstantStake era)
+  , Show (InstantStake era)
   , ConwayEraPParams era
   ) =>
   Spec
@@ -161,6 +169,8 @@ allYesProp ::
   forall era.
   ( Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (InstantStake era)
+  , Show (InstantStake era)
   , ConwayEraPParams era
   ) =>
   Spec
@@ -189,6 +199,8 @@ noConfidenceProp ::
   forall era.
   ( Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (InstantStake era)
+  , Show (InstantStake era)
   , ConwayEraPParams era
   ) =>
   Spec

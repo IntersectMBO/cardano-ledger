@@ -98,8 +98,8 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Shelley.Governance (EraGov (..), FuturePParams (..))
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (
   StakeCredentials (scRewards, scSPools),
   UMap,
@@ -209,11 +209,11 @@ queryRegisteredDRepStakeDistr nes creds =
       Map.insert dRepCred (totalDelegations drepDelegs) distrAcc
     totalDelegations =
       fromCompact . foldMap stakeAndDeposits
-    stakeDistr = nes ^. nesEsL . epochStateIncrStakeDistrL
+    instantStake = nes ^. instantStakeL . instantStakeCredentialsL
     proposalDeposits = proposalsDeposits $ nes ^. newEpochStateGovStateL . proposalsGovStateL
     stakeAndDeposits stakeCred =
       fromMaybe (CompactCoin 0) $
-        Map.lookup stakeCred stakeDistr <> Map.lookup stakeCred proposalDeposits
+        Map.lookup stakeCred instantStake <> Map.lookup stakeCred proposalDeposits
 
 -- | Query pool stake distribution.
 querySPOStakeDistr ::

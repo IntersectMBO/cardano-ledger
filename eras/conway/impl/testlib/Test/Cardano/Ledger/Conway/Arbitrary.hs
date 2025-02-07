@@ -49,6 +49,7 @@ import Cardano.Ledger.Conway.PParams (
  )
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
@@ -81,7 +82,7 @@ instance
   arbitrary = PulsingSnapshot <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance
-  (Arbitrary (PParams era), Arbitrary (PParamsUpdate era), Era era) =>
+  (Arbitrary (InstantStake era), Arbitrary (PParams era), Arbitrary (PParamsUpdate era), Era era) =>
   Arbitrary (DRepPulsingState era)
   where
   arbitrary = DRComplete <$> arbitrary <*> arbitrary
@@ -154,8 +155,14 @@ instance Arbitrary ConwayGovCert where
       , ConwayResignCommitteeColdKey <$> arbitrary <*> arbitrary
       ]
 
+deriving instance Arbitrary (ConwayInstantStake era)
+
 instance
-  (EraPParams era, Arbitrary (PParams era), Arbitrary (PParamsHKD StrictMaybe era)) =>
+  ( EraPParams era
+  , Arbitrary (InstantStake era)
+  , Arbitrary (PParams era)
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
   Arbitrary (ConwayGovState era)
   where
   arbitrary =
@@ -186,10 +193,7 @@ instance
     | (a', b', c', d') <- shrink (a, toList b, c, d)
     ]
 
-instance
-  Era era =>
-  Arbitrary (RatifyEnv era)
-  where
+instance (Era era, Arbitrary (InstantStake era)) => Arbitrary (RatifyEnv era) where
   arbitrary =
     RatifyEnv
       <$> arbitrary
@@ -200,8 +204,6 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-
-  shrink = genericShrink
 
 instance
   (Era era, Arbitrary (PParams era)) =>

@@ -17,6 +17,7 @@ import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus (CostModels)
 import Cardano.Ledger.Shelley.LedgerState
@@ -29,6 +30,8 @@ roundTripConwayCommonSpec ::
   forall era.
   ( EraTx era
   , EraGov era
+  , EraStake era
+  , EraCertState era
   , StashedAVVMAddresses era ~ ()
   , Arbitrary (Tx era)
   , Arbitrary (TxBody era)
@@ -43,14 +46,14 @@ roundTripConwayCommonSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (PParamsHKD StrictMaybe era)
-  , RuleListEra era
-  , EraCertState era
+  , Arbitrary (InstantStake era)
   , Arbitrary (CertState era)
   , DecCBOR (Script era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody era)
   , DecCBOR (Tx era)
+  , RuleListEra era
   ) =>
   Spec
 roundTripConwayCommonSpec = do
@@ -62,7 +65,9 @@ roundTripConwayEraTypesSpec ::
   ( Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (PParamsHKD StrictMaybe era)
+  , Arbitrary (InstantStake era)
   , EraPParams era
+  , EraStake era
   ) =>
   Spec
 roundTripConwayEraTypesSpec = do

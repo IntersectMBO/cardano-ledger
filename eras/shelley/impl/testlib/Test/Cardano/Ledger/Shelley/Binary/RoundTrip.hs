@@ -16,8 +16,8 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.State
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
@@ -26,6 +26,7 @@ roundTripShelleyCommonSpec ::
   forall era.
   ( EraTx era
   , EraGov era
+  , EraStake era
   , Eq (StashedAVVMAddresses era)
   , Show (StashedAVVMAddresses era)
   , EncCBOR (StashedAVVMAddresses era)
@@ -43,6 +44,7 @@ roundTripShelleyCommonSpec ::
   , Arbitrary (GovState era)
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
+  , Arbitrary (InstantStake era)
   , RuleListEra era
   , EraCertState era
   , Arbitrary (CertState era)
@@ -62,6 +64,8 @@ roundTripStateEraTypesSpec ::
   forall era.
   ( EraTxOut era
   , EraGov era
+  , EraStake era
+  , EraCertState era
   , Eq (StashedAVVMAddresses era)
   , Show (StashedAVVMAddresses era)
   , EncCBOR (StashedAVVMAddresses era)
@@ -71,8 +75,8 @@ roundTripStateEraTypesSpec ::
   , Arbitrary (Value era)
   , Arbitrary (PParams era)
   , Arbitrary (GovState era)
-  , EraCertState era
   , Arbitrary (CertState era)
+  , Arbitrary (InstantStake era)
   ) =>
   Spec
 roundTripStateEraTypesSpec = do

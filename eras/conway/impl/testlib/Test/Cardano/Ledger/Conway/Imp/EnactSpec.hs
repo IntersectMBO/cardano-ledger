@@ -339,7 +339,7 @@ noConfidenceSpec =
         initialCommitteeMembers
         committeeMap
     (khSPO, _, _) <- setupPoolWithStake $ Coin 42_000_000
-    logStakeDistr
+    logInstantStake
     submitYesVote_ (StakePoolVoter khSPO) gaidCommittee
     replicateM_ 4 passEpoch
     impAnn "Committee should be elected" $ do
