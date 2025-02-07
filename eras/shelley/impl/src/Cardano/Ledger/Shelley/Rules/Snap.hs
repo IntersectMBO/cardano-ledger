@@ -30,6 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   incrementalStakeDistr,
  )
+import Cardano.Ledger.State
 import Cardano.Ledger.State (
   SnapShot (ssDelegations, ssStake),
   SnapShots (..),
@@ -49,6 +50,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- ======================================================
@@ -71,7 +73,7 @@ instance NFData (SnapEvent era)
 
 data SnapEnv era = SnapEnv (LedgerState era) (PParams era)
 
-instance EraTxOut era => STS (ShelleySNAP era) where
+instance (EraTxOut era, EraStake era) => STS (ShelleySNAP era) where
   type State (ShelleySNAP era) = SnapShots
   type Signal (ShelleySNAP era) = ()
   type Environment (ShelleySNAP era) = SnapEnv era
@@ -91,14 +93,15 @@ instance EraTxOut era => STS (ShelleySNAP era) where
 -- where important changes were made to the source code.
 snapTransition ::
   forall era.
-  EraPParams era =>
+  (EraPParams era, EraStake era) =>
   TransitionRule (ShelleySNAP era)
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext
 
-  let SnapEnv (LedgerState (UTxOState _utxo _ fees _ incStake _) (CertState _ pstate dstate)) pp = snapEnv
+  let SnapEnv ls@(LedgerState (UTxOState _utxo _ fees _ _ _ _) (CertState _ pstate dstate)) pp = snapEnv
+      instantStake = ls ^. instantStakeL
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
-      istakeSnap = incrementalStakeDistr pp incStake dstate pstate
+      istakeSnap = snapShotFromInstantStake instantStake dstate pstate
 
   tellEvent $
     let stMap :: Map (Credential 'Staking) (CompactForm Coin)

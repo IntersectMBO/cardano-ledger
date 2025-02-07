@@ -144,7 +144,7 @@ incAggUtxoCoinByCred pp f (UTxO u) initial =
 --
 --   TO IncrementalStake
 smartUTxOState ::
-  EraTxOut era =>
+  (EraTxOut era, EraStake era) =>
   PParams era ->
   UTxO era ->
   Coin ->
@@ -159,6 +159,7 @@ smartUTxOState pp utxo c1 c2 st =
     c2
     st
     (updateStakeDistribution pp mempty mempty utxo)
+    (addInstantStake utxo mempty)
 
 -- =======================================================================
 -- Part 2. Compute a Snapshot using the IncrementalStake in Snap rule

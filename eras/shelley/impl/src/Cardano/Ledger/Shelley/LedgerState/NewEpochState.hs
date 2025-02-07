@@ -60,7 +60,7 @@ getGKeys nes = Map.keysSet genDelegs
 --  contains the specified transaction outputs.
 genesisState ::
   forall era.
-  EraGov era =>
+  (EraGov era, EraStake era) =>
   Map (KeyHash 'Genesis) GenDelegPair ->
   UTxO era ->
   LedgerState era
@@ -72,6 +72,7 @@ genesisState genDelegs0 utxo0 =
         (Coin 0)
         emptyGovState
         (IStake mempty Map.empty)
+        mempty
         mempty
     )
     (CertState def def dState)
