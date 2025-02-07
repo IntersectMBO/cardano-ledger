@@ -31,19 +31,17 @@ module Test.Cardano.Ledger.Shelley.Generator.EraGen (
 )
 where
 
-import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe)
+import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe)
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (WitVKey)
 import Cardano.Ledger.Shelley.API (
-  Addr (Addr),
-  Block (..),
-  Credential (ScriptHashObj),
   LedgerEnv,
   LedgerState,
   ShelleyLedgersEnv,
-  StakeReference (StakeRefBase),
  )
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -54,6 +52,7 @@ import Cardano.Ledger.TxIn (TxId (TxId), TxIn)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.State.Transition.Extended (STS (..))
+import Data.Bifunctor (bimap)
 import Data.Default (Default)
 import Data.Map (Map)
 import Data.Sequence (Seq)
@@ -275,17 +274,10 @@ genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = 
   genesisKeys <- someKeyPairs c range
   genesisScripts <- someScripts @era c range
   outs <-
-    (genEraTxOut @era ge)
-      (genGenesisValue @era ge)
-      (fmap mkAddr genesisKeys ++ fmap (scriptsmkAddr' Testnet) genesisScripts)
+    genEraTxOut ge (genGenesisValue ge) $
+      fmap (uncurry mkAddr) genesisKeys
+        ++ fmap (uncurry mkAddr . bimap hashScript hashScript) genesisScripts
   return (genesisCoins genesisId outs)
-  where
-    scriptsmkAddr' :: Network -> (Script era, Script era) -> Addr
-    scriptsmkAddr' n (payScript, stakeScript) =
-      Addr n (scriptToCred' payScript) (StakeRefBase $ scriptToCred' stakeScript)
-
-    scriptToCred' :: Script era -> Credential kr
-    scriptToCred' = ScriptHashObj . hashScript @era
 
 -- | We share this dummy TxId as genesis transaction id across eras
 genesisId :: TxId

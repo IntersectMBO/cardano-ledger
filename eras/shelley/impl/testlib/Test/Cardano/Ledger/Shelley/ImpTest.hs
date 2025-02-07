@@ -81,7 +81,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   shelleyFixupTx,
   lookupImpRootTxOut,
   sendValueTo,
+  sendValueTo_,
   sendCoinTo,
+  sendCoinTo_,
   expectUTxOContent,
   expectRegisteredRewardAddress,
   expectNotRegisteredRewardAddress,
@@ -147,7 +149,7 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
+import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..), credToText)
 import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
@@ -262,12 +264,7 @@ import qualified System.Random.Stateful as R
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborRangeFailureExpectation)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
-import Test.Cardano.Ledger.Core.KeyPair (
-  ByronKeyPair (..),
-  KeyPair (..),
-  mkAddr,
-  mkWitnessesVKey,
- )
+import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..), mkStakeRef, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, txInAt)
 import Test.Cardano.Ledger.Imp.Common
@@ -575,10 +572,10 @@ defaultInitImpTestState ::
   m (ImpTestState era)
 defaultInitImpTestState nes = do
   shelleyGenesis <- initGenesis @ShelleyEra
-  rootKeyHash <- freshKeyHash
+  rootKeyHash <- freshKeyHash @'Payment
   let
     rootAddr :: Addr
-    rootAddr = Addr Testnet (KeyHashObj rootKeyHash) StakeRefNull
+    rootAddr = mkAddr rootKeyHash StakeRefNull
     rootTxOut :: TxOut era
     rootTxOut = mkBasicTxOut rootAddr $ inject rootCoin
     rootCoin = Coin (toInteger (sgMaxLovelaceSupply shelleyGenesis))
@@ -975,8 +972,7 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-  (_, kpSpending) <- freshKeyPair
-  (_, kpStaking) <- freshKeyPair
+  addr <- freshKeyAddr_
   nativeScriptKeyPairs <- impNativeScriptKeyPairs tx
   let
     nativeScriptKeyWits = Map.keysSet nativeScriptKeyPairs
@@ -991,10 +987,7 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
   changeBeforeFee <- ensureNonNegativeCoin $ coin consumedValue <-> coin producedValue
   logToExpr changeBeforeFee
   let
-    changeBeforeFeeTxOut =
-      mkBasicTxOut
-        (mkAddr (kpSpending, kpStaking))
-        (inject changeBeforeFee)
+    changeBeforeFeeTxOut = mkBasicTxOut addr (inject changeBeforeFee)
     txNoWits = tx & bodyTxL . outputsTxBodyL %~ (:|> changeBeforeFeeTxOut)
     outsBeforeFee = tx ^. bodyTxL . outputsTxBodyL
     suppliedFee = txOriginal ^. bodyTxL . feeTxBodyL
@@ -1344,12 +1337,14 @@ lookupKeyPair keyHash = do
 -- ImpTestState. If you also need the `KeyPair` consider using `freshKeyPair` for
 -- generation or `lookupKeyPair` to look up the `KeyPair` corresponding to the `KeyHash`
 freshKeyHash ::
+  forall r s g m.
   (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r)
 freshKeyHash = fst <$> freshKeyPair
 
 -- | Generate a random `KeyPair` and add it to the known keys in the Imp state
 freshKeyPair ::
+  forall r s g m.
   (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r, KeyPair r)
 freshKeyPair = do
@@ -1360,17 +1355,20 @@ freshKeyPair = do
 -- | Generate a random `Addr` that uses a `KeyHash`, and add the corresponding `KeyPair`
 -- to the known keys in the Imp state.
 freshKeyAddr_ ::
-  (HasKeyPairs s, MonadState s m, HasStatefulGen g m) => m Addr
+  (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) => m Addr
 freshKeyAddr_ = snd <$> freshKeyAddr
 
 -- | Generate a random `Addr` that uses a `KeyHash`, add the corresponding `KeyPair`
 -- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
 freshKeyAddr ::
-  (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
-  m (KeyHash r, Addr)
+  (HasKeyPairs s, MonadState s m, HasStatefulGen g m, MonadGen m) =>
+  m (KeyHash 'Payment, Addr)
 freshKeyAddr = do
-  keyHash <- freshKeyHash
-  pure (coerceKeyRole keyHash, Addr Testnet (KeyHashObj keyHash) StakeRefNull)
+  paymentKeyHash <- freshKeyHash @'Payment
+  stakingKeyHash <-
+    oneof
+      [Just . mkStakeRef <$> freshKeyHash @'Staking, Just . mkStakeRef @Ptr <$> arbitrary, pure Nothing]
+  pure (paymentKeyHash, mkAddr paymentKeyHash stakingKeyHash)
 
 -- | Looks up the keypair corresponding to the `BootstrapAddress`. The `BootstrapAddress`
 -- must be created with `freshBootstrapAddess` for this to work.
@@ -1412,18 +1410,13 @@ freshBootstapAddress = do
   modify $ keyPairsByronL %~ Map.insert bootAddr keyPair
   pure bootAddr
 
-sendCoinTo ::
-  (ShelleyEraImp era, HasCallStack) =>
-  Addr ->
-  Coin ->
-  ImpTestM era TxIn
+sendCoinTo :: (ShelleyEraImp era, HasCallStack) => Addr -> Coin -> ImpTestM era TxIn
 sendCoinTo addr = sendValueTo addr . inject
 
-sendValueTo ::
-  (ShelleyEraImp era, HasCallStack) =>
-  Addr ->
-  Value era ->
-  ImpTestM era TxIn
+sendCoinTo_ :: (ShelleyEraImp era, HasCallStack) => Addr -> Coin -> ImpTestM era ()
+sendCoinTo_ addr = void . sendCoinTo addr
+
+sendValueTo :: (ShelleyEraImp era, HasCallStack) => Addr -> Value era -> ImpTestM era TxIn
 sendValueTo addr amount = do
   tx <-
     submitTxAnn
@@ -1431,6 +1424,9 @@ sendValueTo addr amount = do
       $ mkBasicTx mkBasicTxBody
         & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr amount)
   pure $ txInAt (0 :: Int) tx
+
+sendValueTo_ :: (ShelleyEraImp era, HasCallStack) => Addr -> Value era -> ImpTestM era ()
+sendValueTo_ addr = void . sendValueTo addr
 
 -- | Modify the current new epoch state with a function
 modifyNES :: (NewEpochState era -> NewEpochState era) -> ImpTestM era ()
@@ -1654,7 +1650,7 @@ produceScript ::
   ScriptHash ->
   ImpTestM era TxIn
 produceScript scriptHash = do
-  let addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
+  let addr = mkAddr scriptHash StakeRefNull
   let tx =
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr mempty)

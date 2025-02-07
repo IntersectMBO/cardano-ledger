@@ -47,17 +47,10 @@ import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
-import Cardano.Ledger.BaseTypes (
-  Network (..),
-  mkTxIxPartial,
- )
+import Cardano.Ledger.BaseTypes (mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
-import Cardano.Ledger.Credential (
-  Credential (..),
-  StakeCredential,
-  StakeReference (..),
- )
+import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Shelley.API (
   Block (..),
@@ -84,19 +77,14 @@ import qualified Data.Map.Strict as Map
 import GHC.Natural (Natural)
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
-import Test.Cardano.Ledger.Generic.Fields (
-  TxOutField (..),
- )
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
+import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..), after, matchkey)
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
-import Test.Cardano.Ledger.Shelley.Utils (
-  RawSeed (..),
-  mkKeyPair,
- )
+import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
 import Test.Cardano.Ledger.Constrained.Preds.Tx (pcTxWithUTxO)
@@ -123,19 +111,11 @@ someKeys _pf = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 someAddr :: forall era. Proof era -> Addr
-someAddr pf = Addr Testnet pCred sCred
-  where
-    (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 2)
-    pCred = KeyHashObj . hashKey . vKey $ someKeys pf
-    sCred = StakeRefBase . KeyHashObj . hashKey $ svk
+someAddr pf = mkAddr (someKeys pf) $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
 
 -- Create an address with a given payment script.
 someScriptAddr :: forall era. Scriptic era => Script era -> Addr
-someScriptAddr s = Addr Testnet pCred sCred
-  where
-    pCred = ScriptHashObj . hashScript @era $ s
-    (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 0)
-    sCred = StakeRefBase . KeyHashObj . hashKey $ svk
+someScriptAddr s = mkAddr (hashScript s) $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 0)
 
 timelockScript :: PostShelley era => Int -> Proof era -> Script era
 timelockScript s = fromNativeScript . allOf [matchkey 1, after (100 + s)]
@@ -187,11 +167,8 @@ initUTxO pf =
     someOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
     collateralOutput = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
     timelockOut = newTxOut pf [Address $ timelockAddr, Amount (inject $ Coin 1)]
-    timelockAddr = Addr Testnet pCred sCred
+    timelockAddr = mkAddr tlh $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
       where
-        (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 2)
-        pCred = ScriptHashObj tlh
-        sCred = StakeRefBase . KeyHashObj . hashKey $ svk
         tlh = hashScript @era $ tls 0
         tls s = fromNativeScript $ allOf [matchkey 1, after (100 + s)] pf
     -- This output is unspendable since it is locked by a plutus script, but has no datum hash.

@@ -55,7 +55,6 @@ import Cardano.Ledger.Shelley.API (
   PoolParams (..),
   RewardAccount (..),
   ShelleyDelegCert (..),
-  StakeReference (..),
   Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.Scripts (
@@ -100,7 +99,7 @@ import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.Fields hiding (Mint)
 import qualified Test.Cardano.Ledger.Generic.Fields as Generic (TxBodyField (Mint))
 import Test.Cardano.Ledger.Generic.Functions
@@ -396,16 +395,16 @@ redeemerWitnessMaker proof tag listWithCred =
 --   As we generate this we add to the gsKeys field of the GenState.
 genNoScriptRecipient :: GenRS era Addr
 genNoScriptRecipient = do
-  paymentCred <- KeyHashObj <$> genKeyHash
-  stakeCred <- StakeRefBase . KeyHashObj <$> genKeyHash
-  pure (Addr Testnet paymentCred stakeCred)
+  paymentCred <- genKeyHash @'Payment
+  stakeCred <- genKeyHash @'Staking
+  pure (mkAddr paymentCred stakeCred)
 
 -- | Sometimes generates new Credentials, and some times reuses old ones
 genRecipient :: Reflect era => GenRS era Addr
 genRecipient = do
-  paymentCred <- genCredential Spending
-  stakeCred <- genCredential Certifying
-  pure (Addr Testnet paymentCred (StakeRefBase stakeCred))
+  paymentCred <- genCredential @'Payment Spending
+  stakeCred <- genCredential @'Staking Rewarding
+  pure (mkAddr paymentCred stakeCred)
 
 genDatum :: Era era => GenRS era (Data era)
 genDatum = snd <$> genDatumWithHash

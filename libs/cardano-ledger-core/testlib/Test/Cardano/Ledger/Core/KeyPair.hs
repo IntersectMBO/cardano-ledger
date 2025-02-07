@@ -1,7 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -9,6 +12,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Core.KeyPair (
+  MakeCredential (..),
+  MakeStakeReference (..),
   mkAddr,
   mkScriptAddr,
   mkCred,
@@ -48,6 +53,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
+  Ptr,
   StakeReference (..),
  )
 import Cardano.Ledger.Keys (
@@ -110,15 +116,56 @@ deriving instance Typeable r => Eq (KeyPair r)
 instance ToExpr (KeyPair r) where
   toExpr (KeyPair x y) = Tree.App "KeyPair" [toExpr x, Tree.App (take 10 (show y)) []]
 
-mkAddr :: (KeyPair 'Payment, KeyPair 'Staking) -> Addr
-mkAddr (payKey, stakeKey) = Addr Testnet (mkCred payKey) (StakeRefBase $ mkCred stakeKey)
+class MakeCredential c r where
+  mkCredential :: c -> Credential r
+instance MakeCredential (Credential r) r where
+  mkCredential = id
+instance MakeCredential (KeyPair r) r where
+  mkCredential = KeyHashObj . hashKey . vKey
+instance MakeCredential (KeyHash r) r where
+  mkCredential = KeyHashObj
+instance MakeCredential ScriptHash r where
+  mkCredential = ScriptHashObj
 
-mkScriptAddr :: ScriptHash -> KeyPair 'Staking -> Addr
-mkScriptAddr scriptHash stakeKey =
-  Addr Testnet (ScriptHashObj scriptHash) (StakeRefBase $ mkCred stakeKey)
+class MakeStakeReference c where
+  mkStakeRef :: c -> StakeReference
+  default mkStakeRef :: MakeCredential c 'Staking => c -> StakeReference
+  mkStakeRef = StakeRefBase . mkCredential
+instance MakeStakeReference StakeReference where
+  mkStakeRef = id
+instance MakeStakeReference (Credential 'Staking)
+instance MakeStakeReference (KeyPair 'Staking)
+instance MakeStakeReference (KeyHash 'Staking)
+instance MakeStakeReference ScriptHash
+instance MakeStakeReference Ptr where
+  mkStakeRef = StakeRefPtr
+instance MakeStakeReference (Maybe StakeReference) where
+  mkStakeRef = mkStakeRefMaybe
+instance MakeStakeReference (Maybe (Credential 'Staking)) where
+  mkStakeRef = mkStakeRefMaybe
+instance MakeStakeReference (Maybe (KeyPair 'Staking)) where
+  mkStakeRef = mkStakeRefMaybe
+instance MakeStakeReference (Maybe (KeyHash 'Staking)) where
+  mkStakeRef = mkStakeRefMaybe
+instance MakeStakeReference (Maybe ScriptHash) where
+  mkStakeRef = mkStakeRefMaybe
+
+mkStakeRefMaybe :: MakeStakeReference c => Maybe c -> StakeReference
+mkStakeRefMaybe = \case
+  Nothing -> StakeRefNull
+  Just c -> mkStakeRef c
+
+-- | Construct a `Testnet` address from payment and staking components
+mkAddr :: (MakeCredential p 'Payment, MakeStakeReference s) => p -> s -> Addr
+mkAddr pay stake = Addr Testnet (mkCredential pay) (mkStakeRef stake)
 
 mkCred :: KeyPair kr -> Credential kr
-mkCred k = KeyHashObj . hashKey $ vKey k
+mkCred = mkCredential
+{-# DEPRECATED mkCred "In favor of `mkCredential`" #-}
+
+mkScriptAddr :: ScriptHash -> KeyPair 'Staking -> Addr
+mkScriptAddr = mkAddr
+{-# DEPRECATED mkScriptAddr "In favor of `mkAddr`" #-}
 
 -- | Create a witness for transaction
 mkWitnessVKey ::

@@ -99,7 +99,7 @@ exampleTxBodyAlonzo =
     (Set.fromList [mkTxInPartial (TxId (mkDummySafeHash 2)) 1]) -- collateral
     ( StrictSeq.fromList
         [ AlonzoTxOut
-            (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
+            (mkAddr SLE.examplePayKey SLE.exampleStakeKey)
             (SLE.exampleMultiAssetValue 2)
             (SJust $ mkDummySafeHash 1) -- outputs
         ]

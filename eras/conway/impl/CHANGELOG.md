@@ -10,6 +10,7 @@
 
 ### `testlib`
 
+* Add `sendCoinTo_` and `sendValueTo_`
 * Add `genRegTxCert` and `genUnRegTxCert`. #4830
 * Add `Arbitrary` instance for `ConwayBbodyPredFailure` and `ConwayMempoolPredFailure`
 
