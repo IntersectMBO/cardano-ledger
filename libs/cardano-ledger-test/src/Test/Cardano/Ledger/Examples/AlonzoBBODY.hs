@@ -15,7 +15,7 @@
 module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
@@ -37,7 +37,6 @@ import qualified Cardano.Ledger.Conway.Rules as Conway (
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
-  StakeReference (..),
  )
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
@@ -77,7 +76,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (mkSingleRedeemer)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysFailsHash,
@@ -114,6 +113,7 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
   mkKeyPair,
+  mkKeyPair',
   mkVRFKeyPair,
  )
 import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
@@ -632,11 +632,8 @@ testBBodyState pf =
           , DHash' [hashData $ anotherDatum @era]
           ]
       timelockOut = newTxOut pf [Address $ timelockAddr, Amount (inject $ Coin 1)]
-      timelockAddr = Addr Testnet pCred sCred
+      timelockAddr = mkAddr timelockHash $ mkKeyPair' @'Staking (RawSeed 0 0 0 0 2)
         where
-          (_ssk, svk) = mkKeyPair (RawSeed 0 0 0 0 2)
-          pCred = ScriptHashObj timelockHash
-          sCred = StakeRefBase . KeyHashObj . hashKey $ svk
           timelockHash = hashScript @era $ fromNativeScript $ allOf [matchkey 1, after 100] pf
       -- This output is unspendable since it is locked by a plutus script,
       -- but has no datum hash.

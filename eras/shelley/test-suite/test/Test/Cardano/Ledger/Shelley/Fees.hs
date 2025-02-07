@@ -131,7 +131,7 @@ alicePoolParams =
     }
 
 aliceAddr :: Addr
-aliceAddr = mkAddr (alicePay, aliceStake)
+aliceAddr = mkAddr alicePay aliceStake
 
 bobPay :: KeyPair 'Payment
 bobPay = KeyPair vk sk
@@ -147,7 +147,7 @@ bobSHK :: Credential 'Staking
 bobSHK = KeyHashObj . hashKey $ vKey bobStake
 
 bobAddr :: Addr
-bobAddr = mkAddr (bobPay, bobStake)
+bobAddr = mkAddr bobPay bobStake
 
 carlPay :: KeyPair 'Payment
 carlPay = KeyPair vk sk

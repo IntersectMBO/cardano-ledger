@@ -21,16 +21,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core (
-  BabbageEraTxBody (..),
-  EraTx (..),
-  EraTxBody (..),
-  EraTxOut (..),
-  EraTxWits (..),
-  coinTxOutL,
-  eraProtVerLow,
-  txIdTx,
- )
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
   ConwayLedgerPredFailure (..),
   ConwayUtxoPredFailure (..),
@@ -43,7 +34,6 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (.~))
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
 
@@ -95,11 +85,11 @@ spec = describe "Regression" $ do
     withImpInit @(LedgerSpec ConwayEra) $
       it "InsufficientCollateral is not encoded with negative coin #4198" $ do
         collateralAddress <- freshKeyAddr_
-        (_, skp) <- freshKeyPair
+        stakingKeyHash <- freshKeyHash @'Staking
         let
           plutusVersion = SPlutusV2
           scriptHash = hashPlutusScript $ redeemerSameAsDatum plutusVersion
-          lockScriptAddress = mkScriptAddr scriptHash skp
+          lockScriptAddress = mkAddr scriptHash stakingKeyHash
         collateralReturnAddr <- freshKeyAddr_
         lockedTx <-
           submitTxAnn @ConwayEra "Script locked tx" $
@@ -110,7 +100,7 @@ spec = describe "Regression" $ do
                   , mkBasicTxOut collateralAddress mempty
                   ]
               & bodyTxL . collateralReturnTxBodyL
-                .~ SJust (mkBasicTxOut collateralReturnAddr . inject $ Coin 849070)
+                .~ SJust (mkBasicTxOut collateralReturnAddr . inject $ Coin 862000)
         let
           modifyRootCoin = coinTxOutL .~ Coin 989482376
           modifyRootTxOut (x SSeq.:<| SSeq.Empty) =

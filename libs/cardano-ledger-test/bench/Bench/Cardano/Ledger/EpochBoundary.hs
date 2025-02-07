@@ -6,8 +6,7 @@
 -- | Benchmarks for things which happen on an epoch boundary.
 module Bench.Cardano.Ledger.EpochBoundary where
 
-import Cardano.Ledger.Address (Addr (Addr), compactAddr)
-import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.Address (compactAddr)
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Compactible (Compactible (toCompact))
 import Cardano.Ledger.Core
@@ -17,7 +16,7 @@ import Cardano.Ledger.Credential (
   Ptr (..),
   SlotNo32 (..),
   StakeCredential,
-  StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
+  StakeReference (StakeRefNull),
  )
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -35,6 +34,7 @@ import Data.Maybe (fromJust)
 import Data.Proxy
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
+import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (aggregateUtxoCoinByCredential)
 
 type TestEra = MaryEra
@@ -56,15 +56,13 @@ txIns = [minBound ..] <&> TxIn txId
 txOutUnstaked :: TxOut TestEra
 txOutUnstaked =
   TxOutCompact @TestEra
-    (compactAddr $ Addr Testnet payCred StakeRefNull)
+    (compactAddr $ mkAddr payCred StakeRefNull)
     (fromJust . toCompact . Val.inject $ Coin 1000)
 
 -- | Generate TxOuts for each stake credential.
 txOutsFromCreds :: [StakeCredential] -> [TxOut TestEra]
 txOutsFromCreds creds =
-  [ TxOutCompact
-      (compactAddr $ Addr Testnet payCred (StakeRefBase cred))
-      coinVal
+  [ TxOutCompact (compactAddr $ mkAddr payCred cred) coinVal
   | cred <- creds
   ]
   where
@@ -72,9 +70,7 @@ txOutsFromCreds creds =
 
 txOutsFromPtrs :: [Ptr] -> [TxOut TestEra]
 txOutsFromPtrs ptrs =
-  [ TxOutCompact
-      (compactAddr $ Addr Testnet payCred (StakeRefPtr ptr))
-      coinVal
+  [ TxOutCompact (compactAddr $ mkAddr payCred ptr) coinVal
   | ptr <- ptrs
   ]
   where

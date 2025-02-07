@@ -35,7 +35,6 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
@@ -149,11 +148,11 @@ spec =
       _ <- impAddNativeScript script
       pure script
 
-    addScriptAddr :: HasCallStack => NativeScript era -> ImpTestM era Addr
+    addScriptAddr :: NativeScript era -> ImpTestM era Addr
     addScriptAddr script = do
-      kpStaking1 <- lookupKeyPair =<< freshKeyHash
       scriptHash <- impAddNativeScript script
-      pure $ mkScriptAddr scriptHash kpStaking1
+      stakingKeyHash <- freshKeyHash @'Staking
+      pure $ mkAddr scriptHash stakingKeyHash
 
     scriptSize :: Script era -> Int
     scriptSize = \case

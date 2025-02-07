@@ -110,7 +110,7 @@ ledgerExamplesConway =
 collateralOutput :: BabbageTxOut ConwayEra
 collateralOutput =
   BabbageTxOut
-    (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
+    (mkAddr SLE.examplePayKey SLE.exampleStakeKey)
     (MaryValue (Coin 8675309) mempty)
     NoDatum
     SNothing
@@ -130,7 +130,7 @@ exampleTxBodyConway =
     ( StrictSeq.fromList
         [ mkSized (eraProtVerHigh @ConwayEra) $
             BabbageTxOut
-              (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
+              (mkAddr SLE.examplePayKey SLE.exampleStakeKey)
               (MarySLE.exampleMultiAssetValue 2)
               (Datum $ dataToBinaryData datumExample) -- inline datum
               (SJust $ alwaysSucceeds @'PlutusV2 3) -- reference script

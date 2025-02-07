@@ -419,7 +419,7 @@ exampleTxBodyShelley =
   ShelleyTxBody
     exampleTxIns
     ( StrictSeq.fromList
-        [ ShelleyTxOut (mkAddr (examplePayKey, exampleStakeKey)) (Coin 100000)
+        [ ShelleyTxOut (mkAddr examplePayKey exampleStakeKey) (Coin 100000)
         ]
     )
     exampleCerts

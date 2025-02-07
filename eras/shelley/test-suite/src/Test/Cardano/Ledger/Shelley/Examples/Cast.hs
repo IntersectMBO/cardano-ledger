@@ -49,7 +49,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (
   Credential (..),
   Ptr (..),
-  StakeReference (..),
  )
 import Cardano.Ledger.Keys (
   KeyRole (..),
@@ -68,7 +67,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkCredential)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (..),
@@ -107,19 +106,19 @@ alicePoolKeys =
 
 -- | Alice's base address
 aliceAddr :: Addr
-aliceAddr = mkAddr (alicePay, aliceStake)
+aliceAddr = mkAddr alicePay aliceStake
 
 -- | Alice's payment credential
 alicePHK :: Credential 'Payment
-alicePHK = (KeyHashObj . hashKey . vKey) alicePay
+alicePHK = mkCredential alicePay
 
 -- | Alice's stake credential
 aliceSHK :: Credential 'Staking
-aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
+aliceSHK = mkCredential aliceStake
 
 -- | Alice's base address
 alicePtrAddr :: Addr
-alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr 10 minBound minBound)
+alicePtrAddr = mkAddr alicePHK (Ptr 10 minBound minBound)
 
 -- | Alice's stake pool parameters
 alicePoolParams :: PoolParams
@@ -159,11 +158,11 @@ bobStake = KeyPair vk sk
 
 -- | Bob's address
 bobAddr :: Addr
-bobAddr = mkAddr (bobPay, bobStake)
+bobAddr = mkAddr bobPay bobStake
 
 -- | Bob's stake credential
 bobSHK :: Credential 'Staking
-bobSHK = (KeyHashObj . hashKey . vKey) bobStake
+bobSHK = mkCredential bobStake
 
 -- | Bob's stake pool keys (cold keys, VRF keys, hot KES keys)
 bobPoolKeys :: AllIssuerKeys MockCrypto 'StakePool
@@ -209,11 +208,11 @@ carlStake = KeyPair vk sk
 
 -- | Carl's address
 carlAddr :: Addr
-carlAddr = mkAddr (carlPay, carlStake)
+carlAddr = mkAddr carlPay carlStake
 
 -- | Carl's stake credential
 carlSHK :: Credential 'Staking
-carlSHK = (KeyHashObj . hashKey . vKey) carlStake
+carlSHK = mkCredential carlStake
 
 -- | Daria's payment key pair
 dariaPay :: KeyPair 'Payment
@@ -229,8 +228,8 @@ dariaStake = KeyPair vk sk
 
 -- | Daria's address
 dariaAddr :: Addr
-dariaAddr = mkAddr (dariaPay, dariaStake)
+dariaAddr = mkAddr dariaPay dariaStake
 
 -- | Daria's stake credential
 dariaSHK :: Credential 'Staking
-dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake
+dariaSHK = mkCredential dariaStake

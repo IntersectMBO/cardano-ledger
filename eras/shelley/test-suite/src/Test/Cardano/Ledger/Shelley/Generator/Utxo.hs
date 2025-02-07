@@ -76,7 +76,8 @@ import Test.Cardano.Ledger.Core.KeyPair (
   KeyPair,
   KeyPairs,
   makeWitnessesFromScriptKeys,
-  mkCred,
+  mkAddr,
+  mkCredential,
   mkWitnessesVKey,
  )
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..), defaultConstants)
@@ -846,20 +847,18 @@ genRecipients nRecipients' keys scripts = do
   recipientKeys <- ruffle nKeys keys
   recipientScripts <- ruffle nScripts scripts
 
-  let payKeys = mkCred . fst <$> recipientKeys
-      stakeKeys = mkCred . snd <$> recipientKeys
-      payScripts = scriptToCred' . fst <$> recipientScripts
-      stakeScripts = scriptToCred' . snd <$> recipientScripts
+  let payKeys = mkCredential . fst <$> recipientKeys
+      stakeKeys = mkCredential . snd <$> recipientKeys
+      payScripts = mkCredential . hashScript . fst <$> recipientScripts
+      stakeScripts = mkCredential . hashScript . snd <$> recipientScripts
 
   -- zip keys and scripts together as base addresses
-  let payCreds = payKeys ++ payScripts
+  let payCreds :: [Credential 'Payment]
+      payCreds = payKeys ++ payScripts
+      stakeCreds :: [Credential 'Staking]
       stakeCreds = stakeKeys ++ stakeScripts
-  let stakeCreds' = fmap StakeRefBase stakeCreds
 
-  return (zipWith (Addr Testnet) payCreds stakeCreds')
-  where
-    scriptToCred' :: Script era -> Credential kr
-    scriptToCred' = ScriptHashObj . hashScript @era
+  return (zipWith mkAddr payCreds stakeCreds)
 
 genPtrAddrs :: DState era -> [Addr] -> Gen [Addr]
 genPtrAddrs ds addrs = do
