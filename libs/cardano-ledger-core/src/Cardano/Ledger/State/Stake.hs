@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -7,6 +8,8 @@
 
 module Cardano.Ledger.State.Stake (
   EraStake (..),
+  CanGetInstantStake (..),
+  CanSetInstantStake (..),
   snapShotFromInstantStake,
 )
 where
@@ -27,6 +30,7 @@ import Data.Aeson (ToJSON)
 import Data.Default (Default)
 import Data.Kind (Type)
 import qualified Data.VMap as VMap
+import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 class
@@ -70,3 +74,12 @@ snapShotFromInstantStake iStake dState PState {psStakePoolParams} =
     stake = resolveInstantStake iStake um
     delegs = UM.unUnifyToVMap (UM.SPoolUView um)
     um = dsUnified dState
+
+class CanGetInstantStake t where
+  instantStakeG :: SimpleGetter (t era) (InstantStake era)
+  default instantStakeG :: CanSetInstantStake t => SimpleGetter (t era) (InstantStake era)
+  instantStakeG = instantStakeL
+  {-# INLINE instantStakeG #-}
+
+class CanGetInstantStake t => CanSetInstantStake t where
+  instantStakeL :: Lens' (t era) (InstantStake era)

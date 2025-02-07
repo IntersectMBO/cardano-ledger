@@ -128,6 +128,8 @@ poolStake hk delegs (Stake stake) =
   -- Stake $ (eval (dom (delegs ▷ setSingleton hk) ◁ stake))
   Stake $ VMap.filter (\cred _ -> VMap.lookup cred delegs == Just hk) stake
 
+-- | Compute amount of stake each pool has. Any registered stake pool that has no stake will not be
+-- inlcuded in the resulting map
 sumStakePerPool ::
   VMap VB VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Stake ->

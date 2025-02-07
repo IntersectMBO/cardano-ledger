@@ -6,6 +6,7 @@
 
 module Main where
 
+import Cardano.Ledger.Shelley.State
 import BenchUTxOAggregate (expr, genTestCase)
 import BenchValidation (
   applyBlock,
@@ -201,6 +202,7 @@ epochAt x =
       ("UTxO=" ++ show x ++ ",  address=" ++ show n)
       [ bench "stakeDistr" (nf action2m arg)
       , bench "incrementalStakeDistr" (nf action2im arg)
+      , bench "instantStake" (nf benchInstantStake arg)
       , env (pure (updateStakeDistribution emptyPParams mempty mempty utxo)) $ \incStake ->
           bench "incrementalStakeDistr (no update)" $
             nf (incrementalStakeDistr (emptyPParams @ShelleyEra) incStake dstate) pstate
@@ -223,6 +225,15 @@ action2im (dstate, pstate, utxo) =
   let pp = emptyPParams @era
       incStake = updateStakeDistribution pp mempty mempty utxo
    in incrementalStakeDistr pp incStake dstate pstate
+
+benchInstantStake ::
+  forall era.
+  (EraTxOut era, EraStake era) =>
+  (DState era, PState era, UTxO era) ->
+  SnapShot
+benchInstantStake (dstate, pstate, utxo) =
+  let instantStake = addInstantStake utxo mempty
+   in snapShotFromInstantStake instantStake dstate pstate
 
 -- =================================================================
 
