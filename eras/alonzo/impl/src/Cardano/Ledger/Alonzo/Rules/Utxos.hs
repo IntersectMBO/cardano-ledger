@@ -42,6 +42,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   evalPlutusScripts,
  )
 import Cardano.Ledger.Alonzo.Rules.Ppup ()
+import Cardano.Ledger.Alonzo.State
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (
@@ -66,7 +67,7 @@ import Cardano.Ledger.Plutus.Evaluate (
   ScriptResult (..),
  )
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), updateStakeDistribution)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
@@ -78,11 +79,6 @@ import Cardano.Ledger.Shelley.Rules (
   updateUTxOState,
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
-import Cardano.Ledger.State (
-  EraUTxO (..),
-  UTxO (..),
-  coinBalance,
- )
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.DeepSeq (NFData)
@@ -107,7 +103,6 @@ import NoThunks.Class (NoThunks)
 --------------------------------------------------------------------------------
 
 instance
-  forall era.
   ( AlonzoEraTx era
   , AlonzoEraPParams era
   , ShelleyEraTxBody era
@@ -126,6 +121,7 @@ instance
   , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
   , EraCertState era
+  , EraStake era
   ) =>
   STS (AlonzoUTXOS era)
   where
@@ -194,6 +190,7 @@ utxosTransition ::
   , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
   , EraCertState era
+  , EraStake era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 utxosTransition =
@@ -252,6 +249,7 @@ alonzoEvalScriptsTxValid ::
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext era
   , EraCertState era
+  , EraStake era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxValid = do
@@ -292,10 +290,11 @@ alonzoEvalScriptsTxInvalid ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
   , EraPlutusContext era
+  , EraStake era
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxInvalid = do
-  TRC (UtxoEnv slot pp _, us@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
+  TRC (UtxoEnv slot pp _, utxos@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
   () <- pure $! Debug.traceEvent invalidBegin ()
@@ -314,10 +313,10 @@ alonzoEvalScriptsTxInvalid = do
   {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
   let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
   pure $!
-    us
+    utxos
       { utxosUtxo = UTxO utxoKeep
       , utxosFees = fees <> coinBalance (UTxO utxoDel)
-      , utxosStakeDistr = updateStakeDistribution pp (utxosStakeDistr us) (UTxO utxoDel) mempty
+      , utxosInstantStake = deleteInstantStake (UTxO utxoDel) (utxos ^. instantStakeL)
       }
 
 -- =======================================

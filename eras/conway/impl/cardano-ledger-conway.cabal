@@ -38,6 +38,7 @@ library
     Cardano.Ledger.Conway.Plutus.Context
     Cardano.Ledger.Conway.Rules
     Cardano.Ledger.Conway.Scripts
+    Cardano.Ledger.Conway.State
     Cardano.Ledger.Conway.Transition
     Cardano.Ledger.Conway.Translation
     Cardano.Ledger.Conway.Tx
@@ -74,6 +75,7 @@ library
     Cardano.Ledger.Conway.Rules.Utxo
     Cardano.Ledger.Conway.Rules.Utxos
     Cardano.Ledger.Conway.Rules.Utxow
+    Cardano.Ledger.Conway.State.Stake
     Cardano.Ledger.Conway.TxAuxData
     Cardano.Ledger.Conway.TxOut
 
@@ -114,6 +116,7 @@ library
     text,
     transformers,
     validation-selective,
+    vector-map,
 
   if flag(asserts)
     ghc-options: -fno-ignore-asserts

@@ -4,22 +4,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Shelley.UnitTests.IncrementalStakeTest (spec) where
+module Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest (spec) where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core (EraTxOut, emptyPParams, mkCoinTxOut)
+import Cardano.Ledger.Core (EraTxOut, mkCoinTxOut)
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.LedgerState (
-  IncrementalStake (..),
-  dsUnifiedL,
-  incrementalStakeDistr,
-  psStakePoolParamsL,
-  updateStakeDistribution,
- )
-import Cardano.Ledger.State (SnapShot (..), Stake (..), UTxO (..))
+import Cardano.Ledger.Shelley.LedgerState (dsUnifiedL, psStakePoolParamsL)
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UMap (RDPair (..), rdRewardCoin)
 import qualified Cardano.Ledger.UMap as UM
@@ -36,12 +30,12 @@ ppIdL :: Lens' PoolParams (KeyHash 'StakePool)
 ppIdL = lens ppId (\x y -> x {ppId = y})
 
 arbitraryLens :: Arbitrary a => Lens' a b -> b -> Gen a
-arbitraryLens l b = do a <- arbitrary; pure (a & l .~ b)
+arbitraryLens l b = (l .~ b) <$> arbitrary
 
 -- ===========================================
 
-stakeDistrIncludesRewards :: forall era. EraTxOut era => Gen Property
-stakeDistrIncludesRewards = do
+instantStakeIncludesRewards :: forall era. (EraTxOut era, EraStake era) => Gen Property
+instantStakeIncludesRewards = do
   (tom, john, ann, ron, mary) <- arbitrary @(TupleN 5 (Credential 'Staking))
   (tomPay, johnPay, annPay, ronPay) <- arbitrary @(TupleN 4 (Credential 'Payment))
 
@@ -97,9 +91,7 @@ stakeDistrIncludesRewards = do
             ]
         )
 
-    pparams = emptyPParams @era
-
-    incrementalStake = updateStakeDistribution pparams (IStake mempty mempty) mempty utxo1
+    instantStake = addInstantStake utxo1 mempty
     umap = UM.unify rewards Map.empty delegations Map.empty
     poolparamMap = Map.fromList [(pool1, pool1Params), (pool2, pool2Params)]
   -- We can either use an emptyDstate with just the umap, like this
@@ -107,26 +99,25 @@ stakeDistrIncludesRewards = do
   -- Or an arbitrary one, where we overwrite the umap, with the one we need.
   dState <- arbitraryLens dsUnifiedL umap
   pState <- arbitraryLens psStakePoolParamsL poolparamMap
-  let computedStakeDistr = Map.map fromCompact (VMap.toMap (unStake (ssStake snap)))
-        where
-          snap =
-            incrementalStakeDistr -- This computes the actual Incremental Stake
-              pparams
-              incrementalStake
-              dState
-              pState
+  let snapShot = snapShotFromInstantStake instantStake dState pState
+      computedStakeDistr = Map.map fromCompact (VMap.toMap (unStake (ssStake snapShot)))
 
       expectedStakeDistr :: Map (Credential 'Staking) Coin
       expectedStakeDistr =
-        Map.fromList -- Coin Part is (rdRewardCoin <> utxoCoin)
-          [ (tom, rdRewardCoin tomRD <> Coin 0) -- tom uxtxoCoin is zero because his address has StakeRefNull
-          , (ann, rdRewardCoin annRD <> annCoin)
+        Map.fromList $
+          [ (ann, rdRewardCoin annRD <> annCoin)
           , (ron, rdRewardCoin ronRD <> ronCoin)
           , (john, rdRewardCoin johnRD <> johnCoin)
-          , (mary, rdRewardCoin maryRD <> Coin 0) -- mary uxtxoCoin is zero because she has no UtxO entry
           ]
+            ++ [ stake
+               | stake@(_, reward) <-
+                  [ (tom, rdRewardCoin tomRD) -- tom uxtxoCoin cab be zero because his address has StakeRefNull
+                  , (mary, rdRewardCoin maryRD) -- mary uxtxoCoin can be zero because she has no UtxO entry
+                  ]
+               , reward /= Coin 0 -- We need to filter out zero rewards from instant stake
+               ]
 
   pure (computedStakeDistr === expectedStakeDistr)
 
-spec :: forall era. EraTxOut era => Spec
-spec = prop "StakeDistrIncludesRewards" (stakeDistrIncludesRewards @era)
+spec :: forall era. (EraTxOut era, EraStake era) => Spec
+spec = prop "InstantStakeIncludesRewards" (instantStakeIncludesRewards @era)

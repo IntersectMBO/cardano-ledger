@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   NewEpochState (..),
  )
-import Cardano.Ledger.State (EraUTxO)
+import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended
@@ -60,6 +60,7 @@ import Test.QuickCheck (generate)
 genChainState ::
   ( EraGen era
   , EraGov era
+  , EraStake era
   ) =>
   Int ->
   GenEnv MockCrypto era ->
@@ -76,9 +77,7 @@ genChainState n ge =
           }
       ge' = GenEnv (geKeySpace ge) (ScriptSpace [] [] Map.empty Map.empty) cs
    in fromRight (error "genChainState failed")
-        <$> ( generate $
-                mkGenesisChainState ge' (IRC ())
-            )
+        <$> generate (mkGenesisChainState ge' (IRC ()))
 
 -- | Benchmark generating a block given a chain state.
 genBlock ::
@@ -104,13 +103,14 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 genTriple ::
   ( EraGen era
+  , EraGov era
+  , EraStake era
   , EraUTxO era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
   , Tx era ~ ShelleyTx era
-  , EraGov era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   ) =>

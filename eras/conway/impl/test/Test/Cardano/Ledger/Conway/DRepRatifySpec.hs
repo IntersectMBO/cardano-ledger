@@ -31,9 +31,9 @@ import Cardano.Ledger.Conway.Rules (
   dRepAccepted,
   dRepAcceptedRatio,
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.State (PoolDistr (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
@@ -202,6 +202,8 @@ noStakeProp ::
   forall era.
   ( Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (PParamsHKD Identity era)
+  , Arbitrary (InstantStake era)
+  , Show (InstantStake era)
   , ConwayEraPParams era
   ) =>
   Spec
@@ -318,7 +320,7 @@ genPctsOf100 = do
 emptyRatifyEnv :: RatifyEnv ConwayEra
 emptyRatifyEnv =
   RatifyEnv
-    Map.empty
+    mempty
     (PoolDistr Map.empty mempty)
     Map.empty
     Map.empty

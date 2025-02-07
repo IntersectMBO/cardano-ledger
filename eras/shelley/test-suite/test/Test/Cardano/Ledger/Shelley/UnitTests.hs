@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  IncrementalStake (..),
   LedgerState (..),
   UTxOState (..),
   dsUnifiedL,
@@ -314,7 +313,7 @@ utxoState =
     (Coin 0)
     (Coin 0)
     def
-    (IStake mempty mempty)
+    mempty
     mempty
 
 dpState :: CertState C

@@ -20,6 +20,7 @@ import Cardano.Ledger.Mary.CertState ()
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
+import Cardano.Ledger.Mary.State
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -35,7 +36,6 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
-import Cardano.Ledger.State (UTxO (..))
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 
@@ -142,9 +142,12 @@ instance TranslateEra MaryEra UTxOState where
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
         , utxosGovState = translateEra' ctxt $ utxosGovState us
-        , utxosStakeDistr = utxosStakeDistr us
+        , utxosInstantStake = translateEra' ctxt $ utxosInstantStake us
         , utxosDonation = utxosDonation us
         }
+
+instance TranslateEra MaryEra ShelleyInstantStake where
+  translateEra _ = pure . coerce
 
 instance TranslateEra MaryEra ShelleyTxOut where
   translateEra NoGenesis = pure . upgradeTxOut

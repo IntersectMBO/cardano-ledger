@@ -215,10 +215,9 @@ gdKeyHash = fieldToTerm gdKeyHashField
 
 gdkeyL :: Lens' GenDelegPair (KeyHash 'Witness)
 gdkeyL =
-  ( lens
-      (\(GenDelegPair x _) -> asWitness x)
-      (\(GenDelegPair _ y) x -> GenDelegPair (coerceKeyRole x) y)
-  )
+  lens
+    (\(GenDelegPair x _) -> asWitness x)
+    (\(GenDelegPair _ y) x -> GenDelegPair (coerceKeyRole x) y)
 
 -- ============================================================================
 
@@ -235,7 +234,7 @@ certStateGenPreds p =
     GenFrom treasury (constTarget (Coin <$> choose (1000, 4000)))
   , GenFrom reserves (constTarget (Coin <$> choose (4000, 5000)))
   , GenFrom deltaTreasury (constTarget (DeltaCoin <$> choose (-200, 400)))
-  , Negate (deltaReserves) :=: deltaTreasury -- Means deltaReserves ranges from (-400,200)
+  , Negate deltaReserves :=: deltaTreasury -- Means deltaReserves ranges from (-400,200)
   , -- 'rewards' needs to be small enough that it leaves some slack with
     -- credUniv (size about 30), but it also cannot be empty
     MetaSize (SzRng 8 15) rewardSize
@@ -250,7 +249,7 @@ certStateGenPreds p =
   , Dom rewards :=: Dom stakeDeposits
   , Sized (AtMost 8) delegations
   , Dom delegations :⊆: Dom rewards
-  , Dom delegations :⊆: Dom incrementalStake
+  , Dom delegations :⊆: Dom instantStakeTerm
   , Rng delegations :⊆: Dom regPools
   , if protocolVersion p >= protocolVersion Conway
       then Sized (ExactSize 0) ptrs
@@ -260,7 +259,7 @@ certStateGenPreds p =
   , -- Preds to compute genDelegs
     -- First, a set of GenDelegPairs, where no keyHash is repeated.
     Sized genDelegSize gdKeyHashSet
-  , ProjS gdkeyL WitHashR gdKeyHashSet `Subset` (Dom keymapUniv)
+  , ProjS gdkeyL WitHashR gdKeyHashSet `Subset` Dom keymapUniv
   , gdKeyHashList :<-: setToListTarget gdKeyHashSet
   , Sized genDelegSize genDelegs
   , gdKeyHashList :=: Elems genDelegs

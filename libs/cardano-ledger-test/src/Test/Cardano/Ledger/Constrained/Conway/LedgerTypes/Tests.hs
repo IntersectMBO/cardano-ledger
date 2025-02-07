@@ -23,7 +23,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.State (SnapShots (..), UTxO (..))
+import Cardano.Ledger.State
 import Constrained hiding (Value)
 import Data.Kind (Type)
 import Data.Map (Map)
@@ -121,6 +121,7 @@ specSuite ::
   forall (era :: Type).
   ( EraSpecLedger era ConwayFn
   , PrettyA (GovState era)
+  , HasSpec ConwayFn (InstantStake era)
   , CertState era ~ ShelleyCertState era
   ) =>
   Int -> Spec
@@ -133,22 +134,19 @@ specSuite n = do
     (5 * n)
     $ do
       univ <- genWitUniv @era 50
-      (dstateSpec @era univ !$! accountStateSpec !*! poolMapSpec)
+      dstateSpec @era univ !$! accountStateSpec !*! poolMapSpec
 
   soundSpecWith @(VState era)
     (10 * n)
     $ do
       univ <- genWitUniv @era 25
-      ( vstateSpec @_ @era univ
-          !$! epochNoSpec
-          !*! (goodDrep @era univ)
-        )
+      vstateSpec @_ @era univ
+        !$! epochNoSpec
+        !*! goodDrep @era univ
 
-  soundSpecWith @(CertState era)
-    (5 * n)
-    $ do
-      univ <- genWitUniv @era 50
-      (certStateSpec @era @ConwayFn univ {- (lit drepRoleCredSet) -} !$! accountStateSpec !*! epochNoSpec)
+  soundSpecWith @(CertState era) (5 * n) $ do
+    univ <- genWitUniv @era 50
+    certStateSpec @era @ConwayFn univ {- (lit drepRoleCredSet) -} !$! accountStateSpec !*! epochNoSpec
 
   soundSpecWith @(UTxO era) (5 * n) (utxoSpecWit @era <$> universe !*! delegationsSpec)
 
@@ -156,7 +154,7 @@ specSuite n = do
 
   soundSpecWith @(GovState era)
     (2 * n)
-    (do x <- genFromSpec (pparamsSpec @ConwayFn); pure $ govStateSpec @era x)
+    (govStateSpec @era <$> genFromSpec (pparamsSpec @ConwayFn))
 
   soundSpecWith @(LedgerState era)
     (2 * n)
@@ -183,7 +181,7 @@ spec = do
       (irewardSpec @ShelleyEra (eraWitUniv @ShelleyEra 50) !$! accountStateSpec)
     soundSpecWith @SnapShots
       10
-      (snapShotsSpec <$> ((lit . getMarkSnapShot) <$> (wff @(LedgerState ConwayEra) @ConwayEra)))
+      (snapShotsSpec <$> (lit . getMarkSnapShot <$> wff @(LedgerState ConwayEra) @ConwayEra))
   specSuite @ShelleyEra 10
   specSuite @AllegraEra 10
   specSuite @MaryEra 10
@@ -194,6 +192,7 @@ spec = do
 utxoStateGen ::
   forall era.
   ( EraSpecLedger era ConwayFn
+  , HasSpec ConwayFn (InstantStake era)
   , CertState era ~ ShelleyCertState era
   ) =>
   Gen (Specification ConwayFn (UTxOState era))

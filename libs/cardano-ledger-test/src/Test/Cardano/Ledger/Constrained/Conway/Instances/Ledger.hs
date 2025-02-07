@@ -95,6 +95,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.Scripts ()
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
@@ -107,7 +108,7 @@ import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
-import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardPulser (RSLP))
 import Cardano.Ledger.Shelley.Rewards (LeaderOnlyReward, PoolRewardInfo, StakeShare)
@@ -121,7 +122,6 @@ import Cardano.Ledger.Shelley.TxCert (
  )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
-import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val)
@@ -1241,7 +1241,7 @@ instance HasSimpleRep (Committee era)
 instance (Era era, IsConwayUniv fn) => HasSpec fn (Committee era)
 
 instance HasSimpleRep (RatifyEnv era)
-instance (Era era, IsConwayUniv fn) => HasSpec fn (RatifyEnv era)
+instance IsConwayUniv fn => HasSpec fn (RatifyEnv ConwayEra)
 
 instance HasSimpleRep (RatifyState ConwayEra)
 instance (EraSpecPParams ConwayEra, IsConwayUniv fn) => HasSpec fn (RatifyState ConwayEra)
@@ -1310,7 +1310,9 @@ instance
   , HasSpec fn (TxOut era)
   , IsNormalType (TxOut era)
   , HasSpec fn (GovState era)
+  , EraStake era
   , EraCertState era
+  , HasSpec fn (InstantStake era)
   , HasSpec fn (CertState era)
   ) =>
   HasSpec fn (LedgerState era)
@@ -1321,12 +1323,16 @@ instance
   , HasSpec fn (TxOut era)
   , IsNormalType (TxOut era)
   , HasSpec fn (GovState era)
+  , HasSpec fn (InstantStake era)
   , IsConwayUniv fn
   ) =>
   HasSpec fn (UTxOState era)
 
-instance HasSimpleRep IncrementalStake
-instance IsConwayUniv fn => HasSpec fn IncrementalStake
+instance HasSimpleRep (ShelleyInstantStake era)
+instance (Typeable era, IsConwayUniv fn) => HasSpec fn (ShelleyInstantStake era)
+
+instance HasSimpleRep (ConwayInstantStake era)
+instance (Typeable era, IsConwayUniv fn) => HasSpec fn (ConwayInstantStake era)
 
 instance HasSimpleRep (UTxO era)
 instance
@@ -1346,7 +1352,7 @@ type DRepPulserTypes =
   '[ Int
    , UMap
    , Int
-   , Map (Credential 'Staking) (CompactForm Coin)
+   , InstantStake ConwayEra
    , PoolDistr
    , Map DRep (CompactForm Coin)
    , Map (Credential 'DRepRole) DRepState
@@ -1369,7 +1375,7 @@ instance
       dpPulseSize
       dpUMap
       dpIndex
-      dpStakeDistr
+      dpInstantStake
       dpStakePoolDistr
       dpDRepDistr
       dpDRepState
@@ -1607,7 +1613,9 @@ instance
   , HasSpec fn (TxOut era)
   , IsNormalType (TxOut era)
   , HasSpec fn (GovState era)
+  , EraStake era
   , EraCertState era
+  , HasSpec fn (InstantStake era)
   , HasSpec fn (CertState era)
   ) =>
   HasSpec fn (EpochState era)
@@ -1636,7 +1644,7 @@ instance IsConwayUniv fn => HasSpec fn RewardAns
 instance HasSimpleRep PulsingRewUpdate where
   type SimpleRep PulsingRewUpdate = SimpleRep RewardUpdate
   toSimpleRep (Complete x) = toSimpleRep x
-  toSimpleRep x@(Pulsing _ _) = toSimpleRep (runShelleyBase (fst <$> (completeRupd x)))
+  toSimpleRep x@(Pulsing _ _) = toSimpleRep (runShelleyBase (fst <$> completeRupd x))
   fromSimpleRep x = Complete (fromSimpleRep x)
 instance IsConwayUniv fn => HasSpec fn PulsingRewUpdate
 
@@ -1648,8 +1656,10 @@ instance
   , IsNormalType (TxOut era)
   , HasSpec fn (GovState era)
   , HasSpec fn (StashedAVVMAddresses era)
+  , EraStake era
   , EraCertState era
   , HasSpec fn (CertState era)
+  , HasSpec fn (InstantStake era)
   ) =>
   HasSpec fn (NewEpochState era)
 

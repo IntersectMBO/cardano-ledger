@@ -25,6 +25,7 @@ library
     Cardano.Ledger.Allegra.Core
     Cardano.Ledger.Allegra.Rules
     Cardano.Ledger.Allegra.Scripts
+    Cardano.Ledger.Allegra.State
     Cardano.Ledger.Allegra.Transition
     Cardano.Ledger.Allegra.Translation
     Cardano.Ledger.Allegra.Tx
@@ -47,6 +48,7 @@ library
     Cardano.Ledger.Allegra.Rules.Ppup
     Cardano.Ledger.Allegra.Rules.Utxo
     Cardano.Ledger.Allegra.Rules.Utxow
+    Cardano.Ledger.Allegra.State.Stake
     Cardano.Ledger.Allegra.TxCert
     Cardano.Ledger.Allegra.TxOut
     Cardano.Ledger.Allegra.TxSeq

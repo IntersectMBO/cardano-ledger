@@ -24,9 +24,9 @@ import Cardano.Ledger.Plutus (
   exBudgetToExUnits,
   transExUnits,
  )
-import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
@@ -139,6 +139,7 @@ exampleExUnitCalc ::
   , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraPlutusContext era
   , EraGov era
+  , EraStake era
   , EraCertState era
   ) =>
   Proof era ->
@@ -235,6 +236,7 @@ uenv = UtxoEnv (SlotNo 0) testPParams def
 ustate ::
   ( EraTxOut era
   , PostShelley era
+  , EraStake era
   , EraGov era
   ) =>
   Proof era ->
@@ -245,7 +247,7 @@ ustate pf =
     , utxosDeposited = Coin 0
     , utxosFees = Coin 0
     , utxosGovState = def
-    , utxosStakeDistr = IStake mempty mempty
+    , utxosInstantStake = mempty
     , utxosDonation = mempty
     }
 

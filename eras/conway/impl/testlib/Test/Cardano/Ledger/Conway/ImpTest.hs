@@ -180,6 +180,7 @@ import Cardano.Ledger.Conway.Rules (
   validCommitteeTerm,
   withdrawalCanWithdraw,
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -188,7 +189,6 @@ import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutus
 import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
-  IncrementalStake (..),
   asTreasuryL,
   consumed,
   curPParamsEpochStateL,
@@ -205,13 +205,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   newEpochStateGovStateL,
   produced,
   unifiedL,
-  utxoL,
   utxosGovStateL,
-  utxosStakeDistrL,
   vsCommitteeStateL,
   vsDRepsL,
  )
-import Cardano.Ledger.State (EraUTxO, UTxO, balance, sumAllValue, txInsFilter)
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.UMap (dRepMap)
 import qualified Cardano.Ledger.UMap as UMap
@@ -993,17 +990,17 @@ expectMissingGovActionId govActionId =
 getRatifyEnv :: (ConwayEraGov era, EraCertState era) => ImpTestM era (RatifyEnv era)
 getRatifyEnv = do
   eNo <- getsNES nesELL
-  stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
+  instantStake <- getsNES instantStakeG
   poolDistr <- getsNES nesPdL
   drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
-  umap <- getsNES $ unifiedL
+  umap <- getsNES unifiedL
   poolPs <- getsNES $ nesEsL . epochStatePoolParamsL
   pure
     RatifyEnv
       { reStakePoolDistr = poolDistr
-      , reStakeDistr = credMap stakeDistr
+      , reInstantStake = instantStake
       , reDRepState = drepState
       , reDRepDistr = drepDistr
       , reCurrentEpoch = eNo - 1
@@ -1581,7 +1578,7 @@ lastEpochProposals =
           . pulsingStateSnapshotL
       )
 
-pulsingStateSnapshotL :: Lens' (DRepPulsingState era) (PulsingSnapshot era)
+pulsingStateSnapshotL :: EraStake era => Lens' (DRepPulsingState era) (PulsingSnapshot era)
 pulsingStateSnapshotL = lens getter setter
   where
     getter (DRComplete x _) = x

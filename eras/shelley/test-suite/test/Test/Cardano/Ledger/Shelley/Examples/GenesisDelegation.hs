@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -23,6 +22,7 @@ import Cardano.Ledger.Keys (GenDelegPair (..), asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -87,11 +87,12 @@ initUTxO =
 
 initStGenesisDeleg ::
   ( EraTxOut era
+  , EraGov era
+  , EraStake era
+  , EraCertState era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
-  , EraGov era
   , Default (StashedAVVMAddresses era)
-  , EraCertState era
   ) =>
   ChainState era
 initStGenesisDeleg = initSt initUTxO

@@ -24,9 +24,9 @@ import Cardano.Ledger.Shelley.API hiding (hashVerKeyVRF)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
 import Cardano.Ledger.Shelley.TxWits
-import Cardano.Ledger.State
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
@@ -97,6 +97,7 @@ deriving instance
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
   , Eq (CertState era)
+  , Eq (InstantStake era)
   ) =>
   Eq (ShelleyLedgerExamples era)
 
@@ -108,11 +109,12 @@ defaultShelleyLedgerExamples ::
   forall era.
   ( EraSegWits era
   , EraGov era
+  , EraStake era
+  , EraCertState era
   , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
   , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
   , Default (StashedAVVMAddresses era)
   , ProtVerAtMost era 4
-  , EraCertState era
   ) =>
   (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
   (ShelleyTx era -> Tx era) ->
@@ -288,8 +290,9 @@ exampleNewEpochState ::
   forall era.
   ( EraTxOut era
   , EraGov era
-  , Default (StashedAVVMAddresses era)
+  , EraStake era
   , EraCertState era
+  , Default (StashedAVVMAddresses era)
   ) =>
   Value era ->
   PParams era ->
@@ -330,7 +333,7 @@ exampleNewEpochState value ppp pp =
                     , utxosDeposited = Coin 1000
                     , utxosFees = Coin 1
                     , utxosGovState = emptyGovState
-                    , utxosStakeDistr = mempty
+                    , utxosInstantStake = mempty
                     , utxosDonation = mempty
                     }
               , lsCertState = def

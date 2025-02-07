@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -97,7 +98,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks (restrictPoolMetadataHash)
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.State (IndividualPoolStake (..), SnapShots (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val ((<+>)))
@@ -959,7 +960,7 @@ genSizedRep _ DRepPulserR = do
     <$> arbitrary -- pulsesize
     <*> arbitrary -- umap
     <*> arbitrary -- balance
-    <*> arbitrary -- stakedistr
+    <*> genInstantStake reify -- instantStake
     <*> arbitrary -- poolDistr
     <*> arbitrary -- partial drep distr
     <*> arbitrary -- drepstate
@@ -970,6 +971,15 @@ genSizedRep _ DRepPulserR = do
     <*> pure (proposalsDeposits $ def & pPropsL .~ OMap.fromFoldable props)
     <*> pure testGlobals
     <*> arbitrary -- poolparams
+  where
+    genInstantStake :: Proof era -> Gen (InstantStake era)
+    genInstantStake = \case
+      Shelley -> arbitrary
+      Allegra -> arbitrary
+      Mary -> arbitrary
+      Alonzo -> arbitrary
+      Babbage -> arbitrary
+      Conway -> arbitrary
 genSizedRep n DelegateeR =
   oneof
     [ DelegStake <$> genSizedRep n (PoolHashR @era)

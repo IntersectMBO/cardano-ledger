@@ -42,7 +42,7 @@ utxoPreds usize p =
   , Subset (Rng colUtxo) (colTxoutUniv p)
   , NotMember feeTxIn (Dom colUtxo)
   , NotMember feeTxOut (Rng colUtxo)
-  , incrementalStake :<-: incrementalStakeT p -- Computes incrementalStake from the Term 'utxo' and the proof 'p'
+  , instantStakeTerm :<-: instantStakeTarget p -- Computes instantStake from the Term 'utxo' and the proof 'p'
   ]
   where
     colUtxo = Var (V "colUtxo" (MapR TxInR (TxOutR p)) No)

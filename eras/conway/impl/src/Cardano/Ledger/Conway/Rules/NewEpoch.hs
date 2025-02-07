@@ -106,6 +106,8 @@ instance
 instance
   ( EraTxOut era
   , ConwayEraGov era
+  , EraStake era
+  , EraCertState era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
   , Event (EraRule "RUPD" era) ~ RupdEvent
   , Environment (EraRule "EPOCH" era) ~ ()
@@ -119,7 +121,6 @@ instance
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
-  , EraCertState era
   ) =>
   STS (ConwayNEWEPOCH era)
   where
@@ -148,6 +149,7 @@ newEpochTransition ::
   forall era.
   ( EraTxOut era
   , ConwayEraGov era
+  , EraCertState era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
   , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
@@ -160,7 +162,6 @@ newEpochTransition ::
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
-  , EraCertState era
   ) =>
   TransitionRule (ConwayNEWEPOCH era)
 newEpochTransition = do

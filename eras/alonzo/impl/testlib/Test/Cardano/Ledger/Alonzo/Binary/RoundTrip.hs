@@ -14,12 +14,12 @@ module Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.State
 import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
-import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -36,6 +36,8 @@ roundTripAlonzoCommonSpec ::
   forall era.
   ( EraTx era
   , EraGov era
+  , EraStake era
+  , EraCertState era
   , StashedAVVMAddresses era ~ ()
   , Arbitrary (Tx era)
   , Arbitrary (TxBody era)
@@ -49,14 +51,14 @@ roundTripAlonzoCommonSpec ::
   , Arbitrary (GovState era)
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
-  , RuleListEra era
-  , EraCertState era
   , Arbitrary (CertState era)
+  , Arbitrary (InstantStake era)
   , DecCBOR (Script era)
   , DecCBOR (TxAuxData era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxBody era)
   , DecCBOR (Tx era)
+  , RuleListEra era
   ) =>
   Spec
 roundTripAlonzoCommonSpec = do

@@ -37,6 +37,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTickEvent,
   ShelleyTickPredFailure,
  )
+import Cardano.Ledger.State
 import Cardano.Slotting.Slot (EpochNo, SlotNo)
 import Control.State.Transition (
   Embed (..),
@@ -102,6 +103,7 @@ deriving instance
   ( EraTxOut era
   , Eq (StashedAVVMAddresses era)
   , Eq (GovState era)
+  , Eq (InstantStake era)
   , EraCertState era
   ) =>
   Eq (MockChainState era)

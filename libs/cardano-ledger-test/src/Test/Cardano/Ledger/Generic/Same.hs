@@ -161,7 +161,7 @@ instance Reflect era => Same era (UTxOState era) where
     , ("Fees", eqByShow (utxosFees u1) (utxosFees u2))
     ]
       ++ ppu
-      ++ [("StakeDistr", eqByShow (utxosStakeDistr u1) (utxosStakeDistr u2))]
+      ++ [("StakeDistr", eqByShow (utxosInstantStake u1) (utxosInstantStake u2))]
     where
       ppuPretty :: GovState era ~ ShelleyGovState era => [(String, Maybe PDoc)]
       ppuPretty = [("ShelleyGovState", samePPUP proof (utxosGovState u1) (utxosGovState u2))]
@@ -179,9 +179,9 @@ instance Reflect era => Same era (LedgerState era) where
       ++ certState
     where
       prettyShelley :: [(String, Maybe PDoc)]
-      prettyShelley = [("ShelleyCertState", (sameCertState (lsCertState x1) (lsCertState x2)))]
+      prettyShelley = [("ShelleyCertState", sameCertState (lsCertState x1) (lsCertState x2))]
       prettyConway :: [(String, Maybe PDoc)]
-      prettyConway = [("ConwayCertState", (sameCertState (lsCertState x1) (lsCertState x2)))]
+      prettyConway = [("ConwayCertState", sameCertState (lsCertState x1) (lsCertState x2))]
       certState = case reify @era of
         Shelley -> prettyShelley
         Mary -> prettyShelley

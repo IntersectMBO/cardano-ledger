@@ -63,7 +63,6 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (WitVKey (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -72,7 +71,7 @@ import Cardano.Ledger.Shelley.AdaPots (
   totalAdaES,
   totalAdaPotsES,
  )
-import Cardano.Ledger.Shelley.Core (EraGov)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -83,7 +82,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   createRUpd,
   curPParamsEpochStateL,
   esLStateL,
-  incrementalStakeDistr,
   lsCertStateL,
   nesEsL,
   psStakePoolParamsL,
@@ -97,9 +95,8 @@ import Cardano.Ledger.Shelley.PoolRank (
  )
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
-import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (epochInfoSize)
-import Cardano.Ledger.State (IndividualPoolStake (..), PoolDistr (..), UTxO (..), txInsFilter)
 import qualified Cardano.Ledger.State as EB
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (EpochSize)
@@ -188,8 +185,7 @@ getPoolParameters = Map.restrictKeys . f
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
-  forall era.
-  (EraGov era, EraCertState era) =>
+  (EraGov era, EraStake era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
   PoolDistr
@@ -221,7 +217,7 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  (EraGov era, EraCertState era) =>
+  (EraGov era, EraStake era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
   Set (Either Coin (Credential 'Staking)) ->
@@ -281,13 +277,13 @@ sumPoolOwnersStake pool stake =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: forall era. (EraGov era, EraCertState era) => NewEpochState era -> EB.SnapShot
+currentSnapshot :: (EraGov era, EraStake era, EraCertState era) => NewEpochState era -> EB.SnapShot
 currentSnapshot ss =
-  incrementalStakeDistr pp incrementalStake dstate pstate
+  snapShotFromInstantStake instantStake dstate pstate
   where
-    pp = nesEs ss ^. curPParamsEpochStateL
+    _pp = nesEs ss ^. curPParamsEpochStateL
     ledgerState = esLState $ nesEs ss
-    incrementalStake = utxosStakeDistr $ lsUTxOState ledgerState
+    instantStake = ledgerState ^. instantStakeG
     dstate = ledgerState ^. lsCertStateL . certDStateL
     pstate = ledgerState ^. lsCertStateL . certPStateL
 
@@ -349,7 +345,7 @@ deriving instance ToJSON RewardParams
 -- Also included are global information such as
 -- the total stake or protocol parameters.
 getRewardInfoPools ::
-  (EraGov era, EraCertState era) =>
+  (EraGov era, EraStake era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
   (RewardParams, Map (KeyHash 'StakePool) RewardInfoPool)
