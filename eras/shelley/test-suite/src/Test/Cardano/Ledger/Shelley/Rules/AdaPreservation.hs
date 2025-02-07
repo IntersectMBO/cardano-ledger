@@ -13,14 +13,6 @@ module Test.Cardano.Ledger.Shelley.Rules.AdaPreservation (
   tests,
 ) where
 
-import Test.Cardano.Ledger.Shelley.Rules.TestChain (
-  TestingLedger,
-  forAllChainTrace,
-  ledgerTraceFromBlock,
-  ledgerTraceFromBlockWithRestrictedUTxO,
-  longTraceLen,
- )
-
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (
   Block (..),
@@ -68,7 +60,7 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   showMap,
   showWithdrawal,
  )
-import Cardano.Ledger.State (UTxO (..), coinBalance, txInsFilter, txouts)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.UMap (sumRewardsUView)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -85,6 +77,13 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..), totalAda, totalAdaPots)
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (
+  TestingLedger,
+  forAllChainTrace,
+  ledgerTraceFromBlock,
+  ledgerTraceFromBlockWithRestrictedUTxO,
+  longTraceLen,
+ )
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   runShelleyBase,
@@ -112,6 +111,7 @@ import qualified Test.Tasty.QuickCheck as TQC
 tests ::
   forall era ledger.
   ( EraGen era
+  , EraStake era
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
@@ -128,6 +128,7 @@ tests n =
 adaPreservationProps ::
   forall era ledger.
   ( EraGen era
+  , EraStake era
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)

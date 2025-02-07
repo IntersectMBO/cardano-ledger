@@ -2,6 +2,9 @@
 
 ## 1.16.0.0
 
+* Add `ShelleyInstantStake`, `shelleyInstantStakeCredentialsL`, `addShelleyInstantStake`, `deleteShelleyInstantStake`, `resolveShelleyInstantStake`
+* Remove  `IncrementalStake` type, `incrementalStakeDistr`, `updateStakeDistribution`, `utxosStakeDistrL`
+* Replace `IncrementalStake` with `InstantStake` in `UTxOState`
 * Add `ToCBOR` and `FromCBOR` instance for `FromByronTranslationContext`
 * Add `auxDataSeqDecoder`
 * Remove `constructMetadata`

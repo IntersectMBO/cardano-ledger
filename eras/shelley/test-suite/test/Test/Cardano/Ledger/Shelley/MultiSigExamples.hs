@@ -4,7 +4,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.MultiSigExamples (
   applyTxWithScript,
@@ -49,6 +48,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
@@ -183,6 +183,7 @@ genesis ::
   forall era.
   ( EraTxOut era
   , EraGov era
+  , EraStake era
   , EraCertState era
   ) =>
   LedgerState era

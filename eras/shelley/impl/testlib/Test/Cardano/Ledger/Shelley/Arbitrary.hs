@@ -72,6 +72,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
@@ -129,6 +130,7 @@ instance
   , Arbitrary (StashedAVVMAddresses era)
   , Arbitrary (GovState era)
   , Arbitrary (CertState era)
+  , Arbitrary (InstantStake era)
   ) =>
   Arbitrary (NewEpochState era)
   where
@@ -147,6 +149,7 @@ instance
   , Arbitrary (TxOut era)
   , Arbitrary (GovState era)
   , Arbitrary (CertState era)
+  , Arbitrary (InstantStake era)
   ) =>
   Arbitrary (EpochState era)
   where
@@ -163,6 +166,7 @@ instance
   , Arbitrary (TxOut era)
   , Arbitrary (GovState era)
   , Arbitrary (CertState era)
+  , Arbitrary (InstantStake era)
   ) =>
   Arbitrary (LedgerState era)
   where
@@ -182,6 +186,7 @@ instance
   ( EraTxOut era
   , Arbitrary (TxOut era)
   , Arbitrary (GovState era)
+  , Arbitrary (InstantStake era)
   ) =>
   Arbitrary (UTxOState era)
   where
@@ -207,8 +212,8 @@ instance
   -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
   shrink = recursivelyShrink
 
-instance Arbitrary IncrementalStake where
-  arbitrary = IStake <$> arbitrary <*> pure mempty -- Once in Conway Ptrs Map will be removed
+instance Arbitrary (ShelleyInstantStake era) where
+  arbitrary = ShelleyInstantStake <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
 ------------------------------------------------------------------------------------------

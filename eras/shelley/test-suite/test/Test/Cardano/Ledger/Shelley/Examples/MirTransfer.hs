@@ -74,13 +74,13 @@ testMirTransfer ::
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
   checkTrace @(ShelleyDELEG ShelleyEra) runShelleyBase (env pv acnt) $
-    (pure (dStateWithRewards ir)) .- (MirTxCert (MIRCert pot target)) .->> (dStateWithRewards expected)
+    pure (dStateWithRewards ir) .- MirTxCert (MIRCert pot target) .->> dStateWithRewards expected
 testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyDELEG ShelleyEra)
             (TRC (env pv acnt, dStateWithRewards ir, MirTxCert (MIRCert pot target)))
-  (ignoreAllButIRWD st) @?= predicateFailure
+  ignoreAllButIRWD st @?= predicateFailure
 
 dStateWithRewards :: InstantaneousRewards -> DState ShelleyEra
 dStateWithRewards ir =

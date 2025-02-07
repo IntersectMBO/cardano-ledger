@@ -331,10 +331,10 @@ dRepSpec =
 
     it "DRep registration should succeed" $ do
       logString "Stake distribution before DRep registration:"
-      logStakeDistr
+      logInstantStake
       _ <- registerDRep
       logString "Stake distribution after DRep registration:"
-      logStakeDistr
+      logInstantStake
       passEpoch
 
 dRepVotingSpec ::

@@ -58,11 +58,11 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Plutus (PlutusWithContext)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), updateUTxOState)
-import Cardano.Ledger.State (EraUTxO (..), UTxO)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
@@ -200,6 +200,8 @@ instance
   , ConwayEraTxBody era
   , ConwayEraPParams era
   , EraGov era
+  , EraStake era
+  , EraCertState era
   , EraPlutusContext era
   , GovState era ~ ConwayGovState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
@@ -208,7 +210,6 @@ instance
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
-  , EraCertState era
   ) =>
   STS (ConwayUTXOS era)
   where
@@ -227,6 +228,8 @@ instance
   , ConwayEraTxBody era
   , ConwayEraPParams era
   , EraGov era
+  , EraStake era
+  , EraCertState era
   , EraPlutusContext era
   , GovState era ~ ConwayGovState era
   , PredicateFailure (EraRule "UTXOS" era) ~ ConwayUtxosPredFailure era
@@ -236,7 +239,6 @@ instance
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
-  , EraCertState era
   ) =>
   Embed (ConwayUTXOS era) (BabbageUTXO era)
   where
@@ -249,6 +251,8 @@ utxosTransition ::
   , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , EraPlutusContext era
+  , EraStake era
+  , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , STS (EraRule "UTXOS" era)
@@ -258,7 +262,6 @@ utxosTransition ::
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
-  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
@@ -273,6 +276,8 @@ conwayEvalScriptsTxValid ::
   , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , EraPlutusContext era
+  , EraStake era
+  , EraCertState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , STS (EraRule "UTXOS" era)
@@ -282,7 +287,6 @@ conwayEvalScriptsTxValid ::
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
-  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do

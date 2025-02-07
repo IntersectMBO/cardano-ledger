@@ -13,7 +13,6 @@ import Cardano.Ledger.Credential (
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..))
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Data.Map.Strict as Map
@@ -97,11 +96,6 @@ instance Terse Coin where
 
 instance Terse (CompactForm Coin) where
   terse (CompactCoin n) = show n
-
-tersediffincremental :: String -> IncrementalStake -> IncrementalStake -> String
-tersediffincremental message (IStake a b) (IStake c d) =
-  tersemapdiffs (message ++ " " ++ "hashes") a c
-    ++ tersemapdiffs (message ++ " " ++ "ptrs") b d
 
 terseutxo :: Terse (TxOut era) => String -> UTxO era -> String
 terseutxo message (UTxO mp) = terselist message (Map.toList mp)

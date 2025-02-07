@@ -14,6 +14,7 @@ import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -44,11 +45,12 @@ import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce)
 
 initStEx1 ::
   ( EraTxOut era
+  , EraGov era
+  , EraStake era
+  , EraCertState era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
-  , EraGov era
-  , EraCertState era
   ) =>
   ChainState era
 initStEx1 = initSt (UTxO mempty)
@@ -88,11 +90,12 @@ blockNonce = getBlockNonce (blockEx1 @era)
 expectedStEx1 ::
   forall era.
   ( EraSegWits era
+  , EraGov era
+  , EraStake era
+  , EraCertState era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
-  , EraGov era
   , Default (StashedAVVMAddresses era)
-  , EraCertState era
   ) =>
   ChainState era
 expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) $ newLab blockEx1 initStEx1
@@ -106,11 +109,12 @@ expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) $ newLab blockEx1 initStEx
 -- evolving and candidate nonces, and the last applied block.
 exEmptyBlock ::
   ( EraSegWits era
+  , EraGov era
+  , EraStake era
+  , EraCertState era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
-  , EraGov era
-  , EraCertState era
   ) =>
   CHAINExample era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

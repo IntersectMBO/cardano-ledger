@@ -369,4 +369,4 @@ mkPoolRewardInfo
         guard (hk == ppId pool)
         fromCompact <$> VMap.lookup (KeyHashObj o) (unStake stake)
       Coin ostake = Set.foldl' accOwnerStake mempty (ppOwners pool)
-      sigma = fromIntegral pstakeTot %? unCoin totalStake
+      sigma = pstakeTot %? unCoin totalStake

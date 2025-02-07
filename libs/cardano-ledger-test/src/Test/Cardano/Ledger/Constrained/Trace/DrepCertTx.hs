@@ -12,12 +12,10 @@ import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
-  EraGov,
   GovActionId,
   GovActionState,
   PulsingSnapshot (..),
   computeDRepDistr,
-  curPParamsGovStateL,
   finishDRepPulser,
   newEpochStateDRepPulsingStateL,
   proposalsActionsMap,
@@ -29,7 +27,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.DRep hiding (drepDeposit)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
-  IncrementalStake (..),
   LedgerState (..),
   NewEpochState (..),
   UTxOState (..),
@@ -42,7 +39,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
   vsDRepsL,
  )
-import Cardano.Ledger.State (ssStakeMarkPoolDistrL)
+import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UMap
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
@@ -226,13 +223,13 @@ bruteForceDRepDistr ::
   NewEpochState era ->
   Map.Map DRep (CompactForm Coin)
 bruteForceDRepDistr nes =
-  fst $ computeDRepDistr incstk dreps propDeps poolD Map.empty $ UMap.umElems umap
+  fst $ computeDRepDistr instantStake dreps propDeps poolD Map.empty $ UMap.umElems umap
   where
     ls = esLState (nesEs nes)
     propDeps = proposalsDeposits $ ls ^. lsUTxOStateL . utxosGovStateL . proposalsGovStateL
     poolD = nes ^. nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL
     cs = lsCertState ls
-    IStake incstk _ = utxosStakeDistr (lsUTxOState ls)
+    instantStake = ls ^. instantStakeG
     umap = cs ^. certDStateL . dsUnifiedL
     dreps = cs ^. certVStateL . vsDRepsL
 
@@ -259,7 +256,7 @@ showMap :: (Show k, Show v) => String -> Map.Map k v -> String
 showMap msg m = unlines (msg : map show (Map.toList m))
 
 traceMap :: (Show k, Show v) => String -> Map.Map k v -> a -> a
-traceMap s m x = Debug.trace (showMap s m) x
+traceMap s m = Debug.trace (showMap s m)
 
 showPotObl :: (ConwayEraGov era, EraCertState era) => NewEpochState era -> String
 showPotObl nes =

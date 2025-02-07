@@ -2,6 +2,9 @@
 
 ## 1.19.0.0
 
+* Add `ConwayInstantStake`, `conwayInstantStakeCredentialsL`, `addConwayInstantStake`, `deleteConwayInstantStake`, `resolveConwayInstantStake`
+* Replace `IncrementalStake` with `InstantStake` in `DrepPuser`, `RatifyEnv`
+* Replace stake-map with `InstantStake` in `computeDRepDistr`
 * Add `ToCBOR` and `FromCBOR` instance for `ConwayGenesis`
 * Switch `ctbrCerts` to use `TxCert` instead of `ConwayTxCert`
 * Add `DecCBOR` instance for `ConwayTxBody`

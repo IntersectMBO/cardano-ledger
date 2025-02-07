@@ -34,6 +34,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   nesBcur,
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.API (
   ChainDepState (..),
@@ -73,6 +74,7 @@ instance NFData (ValidateInput era) where
 
 validateInput ::
   ( EraGen era
+  , EraStake era
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
   , API.ApplyBlock era
@@ -81,19 +83,7 @@ validateInput ::
   ) =>
   Int ->
   IO (ValidateInput era)
-validateInput utxoSize = genValidateInput utxoSize
-
-genValidateInput ::
-  ( EraGen era
-  , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
-  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
-  , API.ApplyBlock era
-  , GetLedgerView era
-  , MinLEDGER_STS era
-  ) =>
-  Int ->
-  IO (ValidateInput era)
-genValidateInput n = do
+validateInput n = do
   let ge = genEnv (Proxy :: Proxy era) defaultConstants
   chainstate <- genChainState n ge
   block <- genBlock ge chainstate
@@ -113,6 +103,7 @@ applyBlock ::
   forall era.
   ( API.ApplyBlock era
   , NFData (StashedAVVMAddresses era)
+  , NFData (InstantStake era)
   , GovState era ~ ShelleyGovState era
   , EraCertState era
   , Show (PredicateFailure (EraRule "BBODY" era))
@@ -166,6 +157,7 @@ instance NFData UpdateInputs where
 genUpdateInputs ::
   forall era.
   ( EraGen era
+  , EraStake era
   , MinLEDGER_STS era
   , GetLedgerView era
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
