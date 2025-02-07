@@ -214,13 +214,12 @@ computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapCh
   where
     go (!drepAccum, !poolAccum) stakeCred umElem =
       let stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred stakeDistr
-          proposalDeposit = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred proposalDeposits
           stakeAndDeposits = addCompact stake proposalDeposit
        in case umElemDelegations umElem of
             Nothing -> (drepAccum, poolAccum)
             Just (RewardDelegationSPO spo _r) ->
               ( drepAccum
-              , addToPoolDistr spo proposalDeposit poolAccum
+              , addToPoolDistr spo stakeCred poolAccum
               )
             Just (RewardDelegationDRep drep r) ->
               ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
@@ -228,10 +227,10 @@ computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapCh
               )
             Just (RewardDelegationBoth spo drep r) ->
               ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
-              , addToPoolDistr spo proposalDeposit poolAccum
+              , addToPoolDistr spo stakeCred poolAccum
               )
-    addToPoolDistr spo proposalDeposit distr = fromMaybe distr $ do
-      guard (proposalDeposit /= mempty)
+    addToPoolDistr spo stakeCred distr = fromMaybe distr $ do
+      proposalDeposit <- Map.lookup stakeCred proposalDeposits
       ips <- Map.lookup spo $ distr ^. poolDistrDistrL
       pure $
         distr
