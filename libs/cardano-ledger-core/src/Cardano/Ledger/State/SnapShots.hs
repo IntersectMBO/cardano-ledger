@@ -97,7 +97,9 @@ import GHC.Word (Word64)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
--- | Type of stake as map from hash key to coins associated.
+-- | Type of stake as map from staking credential to coins associated. Any staking credential that
+-- has no stake will not appear in this Map, even if it is registered. For this reason, this data
+-- type should not be used for infering whether credential is registered or not.
 newtype Stake = Stake
   { unStake :: VMap VB VP (Credential 'Staking) (CompactForm Coin)
   }
@@ -130,12 +132,12 @@ sumStakePerPool ::
   VMap VB VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Stake ->
   Map (KeyHash 'StakePool) Coin
-sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
+sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty delegs
   where
-    accum !acc cred compactCoin =
-      case VMap.lookup cred delegs of
-        Nothing -> acc
-        Just kh -> Map.insertWith (<+>) kh (fromCompact compactCoin) acc
+    accum !acc cred poolId =
+      case VMap.lookup cred stake of
+        Nothing -> Map.insertWith (<+>) poolId mempty acc
+        Just compactCoin -> Map.insertWith (<+>) kh (fromCompact compactCoin) acc
 
 -- | Calculate maximal pool reward
 maxPool' ::
