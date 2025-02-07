@@ -46,6 +46,7 @@ library
     Cardano.Ledger.Shelley.Scripts
     Cardano.Ledger.Shelley.SoftForks
     Cardano.Ledger.Shelley.StabilityWindow
+    Cardano.Ledger.Shelley.State
     Cardano.Ledger.Shelley.Transition
     Cardano.Ledger.Shelley.Translation
     Cardano.Ledger.Shelley.Tx
@@ -83,6 +84,7 @@ library
     Cardano.Ledger.Shelley.Rules.Upec
     Cardano.Ledger.Shelley.Rules.Utxo
     Cardano.Ledger.Shelley.Rules.Utxow
+    Cardano.Ledger.Shelley.State.Stake
 
   default-language: Haskell2010
   ghc-options:
