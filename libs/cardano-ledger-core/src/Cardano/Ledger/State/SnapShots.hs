@@ -132,12 +132,12 @@ sumStakePerPool ::
   VMap VB VB (Credential 'Staking) (KeyHash 'StakePool) ->
   Stake ->
   Map (KeyHash 'StakePool) Coin
-sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty delegs
+sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
   where
-    accum !acc cred poolId =
-      case VMap.lookup cred stake of
-        Nothing -> Map.insertWith (<+>) poolId mempty acc
-        Just compactCoin -> Map.insertWith (<+>) kh (fromCompact compactCoin) acc
+    accum !acc cred compactCoin =
+      case VMap.lookup cred delegs of
+        Nothing -> acc
+        Just kh -> Map.insertWith (<+>) kh (fromCompact compactCoin) acc
 
 -- | Calculate maximal pool reward
 maxPool' ::
