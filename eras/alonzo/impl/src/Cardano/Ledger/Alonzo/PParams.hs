@@ -378,8 +378,6 @@ instance EraGov AlonzoEra where
   type GovState AlonzoEra = ShelleyGovState AlonzoEra
   emptyGovState = emptyShelleyGovState
 
-  getProposedPPUpdates = Just . sgsCurProposals
-
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL

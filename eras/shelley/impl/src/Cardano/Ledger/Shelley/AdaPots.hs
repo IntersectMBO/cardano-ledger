@@ -31,7 +31,6 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Governance (EraGov (..))
 import Cardano.Ledger.Shelley.LedgerState.Types (
   EpochState (..),
   LedgerState (..),

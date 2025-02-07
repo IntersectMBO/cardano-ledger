@@ -45,7 +45,6 @@ import Cardano.Ledger.Coin (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.Governance (EraGov)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.PoolRank (

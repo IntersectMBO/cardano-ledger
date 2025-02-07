@@ -44,8 +44,6 @@ instance EraGov AllegraEra where
   type GovState AllegraEra = ShelleyGovState AllegraEra
   emptyGovState = emptyShelleyGovState
 
-  getProposedPPUpdates = Just . sgsCurProposals
-
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL

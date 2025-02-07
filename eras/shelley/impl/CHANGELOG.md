@@ -2,6 +2,8 @@
 
 ## 1.16.0.0
 
+* Remove `getProposedPPUpdates` as no longer relevant
+* Remove `proposalsL` and `futureProposalsL` as unused
 * Move `AccountState` to `Cardano.Ledger.State`
 * Deprecated `RewardAccounts`
 * Deprecated `utxosUtxoL`

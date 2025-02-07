@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Remove `getProposedPPUpdates` as no longer relevant
 * Expose new `TxAuxDataHash` and deprecate old `AuxiliaryDataHash`
 * Stop re-exporting `Crypto` and `StandardCrypto`, since they have been moved to `cardano-protocol-tpraos`
 * Removal of crypto parametrization:
