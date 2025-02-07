@@ -79,7 +79,7 @@ import Data.Proxy
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- ==================================
@@ -251,8 +251,7 @@ toIncrementalStakePairs iStake@(IStake _ _) =
 --   this invariant. This happens in the UTxO rule.
 data UTxOState era = UTxOState
   { utxosUtxo :: !(UTxO era)
-  , utxosDeposited :: Coin
-  -- ^ This field is left lazy, because we only use it for assertions
+  , utxosDeposited :: !Coin
   , utxosFees :: !Coin
   , utxosGovState :: !(GovState era)
   , utxosStakeDistr :: !IncrementalStake
@@ -283,16 +282,7 @@ deriving stock instance
   ) =>
   Eq (UTxOState era)
 
-deriving via
-  AllowThunksIn
-    '["utxosDeposited"]
-    (UTxOState era)
-  instance
-    ( NoThunks (UTxO era)
-    , NoThunks (GovState era)
-    , Era era
-    ) =>
-    NoThunks (UTxOState era)
+instance (NoThunks (UTxO era), NoThunks (GovState era)) => NoThunks (UTxOState era)
 
 instance
   ( EraTxOut era
