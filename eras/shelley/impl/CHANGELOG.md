@@ -2,6 +2,8 @@
 
 ## 1.16.0.0
 
+* Remove `getProposedPPUpdates` as no longer relevant
+* Remove `proposalsL` and `futureProposalsL` as unused
 * Remove redundant supercalss constraints for `ApplyBlock`
 * Add `applyBlockEither`, `applyBlockEitherNoEvents`, `applyBlockNoValidaton`, `applyTickNoEvents`.
 * Add `applyBlock` and `applyTick` to `ApplyBlock` type class.
