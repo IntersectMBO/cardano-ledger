@@ -71,7 +71,6 @@ import Cardano.Ledger.State
 import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)
-import Control.Monad (guard)
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
@@ -214,12 +213,13 @@ computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapCh
   where
     go (!drepAccum, !poolAccum) stakeCred umElem =
       let stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred stakeDistr
-          stakeAndDeposits = addCompact stake proposalDeposit
+          mProposalDeposit = Map.lookup stakeCred proposalDeposits
+          stakeAndDeposits = maybe stake (addCompact stake) mProposalDeposit
        in case umElemDelegations umElem of
             Nothing -> (drepAccum, poolAccum)
             Just (RewardDelegationSPO spo _r) ->
               ( drepAccum
-              , addToPoolDistr spo stakeCred poolAccum
+              , addToPoolDistr spo mProposalDeposit poolAccum
               )
             Just (RewardDelegationDRep drep r) ->
               ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
@@ -227,10 +227,10 @@ computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapCh
               )
             Just (RewardDelegationBoth spo drep r) ->
               ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
-              , addToPoolDistr spo stakeCred poolAccum
+              , addToPoolDistr spo mProposalDeposit poolAccum
               )
-    addToPoolDistr spo stakeCred distr = fromMaybe distr $ do
-      proposalDeposit <- Map.lookup stakeCred proposalDeposits
+    addToPoolDistr spo mProposalDeposit distr = fromMaybe distr $ do
+      proposalDeposit <- mProposalDeposit
       ips <- Map.lookup spo $ distr ^. poolDistrDistrL
       pure $
         distr
