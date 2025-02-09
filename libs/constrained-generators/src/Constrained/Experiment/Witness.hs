@@ -56,6 +56,13 @@ data Possible c where Possible :: forall (c :: Constraint). c => Possible c
 invoke :: forall (c :: Constraint). c => Possible c -> Evidence c
 invoke Possible = Evidence
 
+
+data ConName a where 
+    ConName :: forall (c :: Constraint) . String -> ConName c
+
+instance Show (ConName c) where
+  show (ConName s) = "(ConName "++s++")"
+
 -- | A FunctionSymbol has 4 components, all reflected in its type,
 --   And a bunch of operations, reflected in the classes for which the type has instances.
 --   The first class 'Witness' witnesses the semantic properties of a FunctionSymbol
@@ -64,8 +71,10 @@ invoke Possible = Evidence
 --   The type 't' witnesses one or more FunctionSymbols. There can be several witness types
 --   each having a Witness instance. This is one step in extending the system.
 class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
-  semantics :: t constraint name domain range -> forall. constraint => FunTy domain range -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
-
+  semantics :: forall c s d r. c => t c s d r -> FunTy d r -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
+  constraint :: forall c s f d r . Show (f c s d r) => f c s d r -> ConName c
+  constraint (t :: tx con sym dom rng) = ConName @con (show t)
+ 
 -- | Here is one witness type, witnessing FunctionSymbols over Bool, List,
 -- Set, Map, Products, Sums, and the types used to interface with GHC.Generics.
 -- There will be others, and  if you want.you can add your own types, and witnesses
@@ -78,9 +87,9 @@ data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   NotW :: BaseW () "not_" '[Bool] Bool
   OrW :: BaseW () "or_" '[Bool, Bool] Bool
   -- Pair
-  PairW :: forall a b. (Typeable a, Typeable b) => BaseW () "pair_" '[a, b] (Prod a b)
-  FstW :: forall a b. (Typeable a, Typeable b) => BaseW () "fst_" '[Prod a b] a
-  SndW :: forall a b. (Typeable a, Typeable b) => BaseW () "snd_" '[Prod a b] b
+  PairW ::forall a b. BaseW () "pair_" '[a, b] (Prod a b)
+  FstW :: forall a b. BaseW () "fst_" '[Prod a b] a
+  SndW :: forall a b. BaseW () "snd_" '[Prod a b] b
   -- Sum
   InjLeftW :: forall a b. BaseW () "sumleft_" '[a] (Sum a b)
   InjRightW :: forall a b. BaseW () "sumright_" '[b] (Sum a b)
@@ -122,7 +131,7 @@ instance Show (BaseW c s dom rng) where
 -- =================================================================
 
 -- | Haskell functions give meaning to the BaseW constructors
-baseSem :: BaseW c sym dom rng -> forall. c => FunTy dom rng
+baseSem :: c => BaseW c sym dom rng -> FunTy dom rng
 baseSem ElemW = elem
 baseSem NotW = not
 baseSem OrW = (||)
