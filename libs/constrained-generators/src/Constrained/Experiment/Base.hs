@@ -85,8 +85,10 @@ type FSPre c s (t :: FSType) dom rng =
   )
 
 class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
-  {-# MINIMAL witness, (propagate | simplepropagate) #-}
-  witness :: String -- For documentation about what constructor of 't' implements 's'
+  {-# MINIMAL (propagate | simplepropagate) #-}
+  -- witness :: String -- For documentation about what constructor of 't' implements 's'
+  name :: t c s dom rng -> String
+  name x = show x++" "++showType @c++" "++showType @s
 
   -- 'propagate' handles all the obvious default cases. So if this is what you want
   -- then define simplepropagate instead. If you need special instructions
@@ -115,11 +117,11 @@ class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
   simplepropagate ctxt spec = Right $ propagate ctxt spec
 
   rewriteRules ::
-    (TypeList as, Typeable as, HasSpec b, All HasSpec as) =>
-    t c sym as b -> List Term as -> Maybe (Term b)
-  rewriteRules _ _ = Nothing
+    (TypeList dom, Typeable dom, HasSpec rng, All HasSpec dom) =>
+    t c s dom rng -> List Term dom -> Evidence (AppRequires c s t dom rng) -> Maybe (Term rng)
+  rewriteRules _ _ _ = Nothing
 
-  mapTypeSpec :: (HasSpec a, HasSpec b) => t c s '[a] b -> TypeSpec a -> Specification b
+  mapTypeSpec :: (HasSpec a, HasSpec b,c) => t c s '[a] b -> TypeSpec a -> Specification b
   mapTypeSpec _ts _spec = TrueSpec
 
 -- This is where the logical properties of FunSym, are applied to transform one spec into another
@@ -129,6 +131,8 @@ propagateSpec ::
   Ctx v a ->
   Specification v
 propagateSpec spec (Ctx context) = propagate context spec
+
+data Fn dom rng where Fn :: FunSym c s t dom rng => t c s dom rng -> Fn dom rng
 
 -- ========================================================================
 
@@ -158,6 +162,34 @@ matchT (App (_fs :: t c s d r) (_xs :: List Term d)) (_x :: t' c' s' d' r') _ = 
   Refl <- eqT @r2 @r'
   Just (Evidence, c, s, t, d, r)
 matchT _ _ _ = Nothing -- A function symbol call can only match against an App
+
+sameFunSym ::
+  forall c1 s1 (t1 :: FSType) d1 r1 c2 s2 (t2 :: FSType) d2 r2.
+  (FunSym c1 s1 t1 d1 r1, FunSym c2 s2 t2 d2 r2) =>
+  t1 c1 s1 d1 r1 ->
+  t2 c2 s2 d2 r2 ->
+  Maybe (t1 c1 s1 d1 r1, c1 :~: c2, s1 :~: s2, t1 :~: t2, d1 :~: d2, r1 :~: r2)
+sameFunSym x y = do
+  c@Refl <- eqT @c1 @c2
+  s@Refl <- eqT @s1 @s2
+  t@Refl <- eqT @t1 @t2
+  d@Refl <- eqT @d1 @d2
+  r@Refl <- eqT @r1 @r2
+  if x==y
+     then Just(x,c,s,t,d,r)
+     else Nothing
+
+withDomEvidence :: 
+  forall b a c1 s1 t1 d1 r1. 
+  FunSym c1 s1 t1 d1 r1 => 
+  t1 c1 s1 d1 r1 -> 
+  Term a -> 
+  (Evidence (All HasSpec d1) -> Term a -> Maybe b) -> 
+  Maybe b
+withDomEvidence t1 t@(App t2 _) f = case sameFunSym t1 t2 of
+     Just (_,Refl,Refl,Refl,Refl,Refl) -> f (Evidence @(All HasSpec d1)) t 
+     Nothing -> Nothing
+withDomEvidence _ _ _ = Nothing     
 
 -- ========================================================
 -- A Specification is tells us what constraints must hold
@@ -388,7 +420,7 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
 -- ====================================================================
 
 data EqW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  EqualW :: forall a. Typeable a => EqW (Eq a) "==." '[a, a] Bool
+  EqualW :: {- forall a. Typeable a => -} EqW (Eq a) "==." '[a, a] Bool
 
 deriving instance Eq (EqW c s dom rng)
 
@@ -459,7 +491,6 @@ instance
     '[a]
     simplerepA
   where
-  witness = "ToGenericW[toGenericFn]"
 
   simplepropagate (Context _ ToGenericW (HOLE End)) (TypeSpec s cant) = Right $ TypeSpec s (fromSimpleRep <$> cant)
   simplepropagate (Context _ ToGenericW (HOLE End)) (MemberSpec es) = Right $ MemberSpec (fmap fromSimpleRep es)
@@ -496,7 +527,6 @@ instance
     '[dom]
     a
   where
-  witness = "FromGenericW[fromGenericFn]"
 
   simplepropagate (Context _ FromGenericW (HOLE End)) (TypeSpec s cant) = Right $ TypeSpec s (toSimpleRep <$> cant)
   simplepropagate (Context _ FromGenericW (HOLE End)) (MemberSpec es) = Right $ MemberSpec (fmap toSimpleRep es)
@@ -572,10 +602,17 @@ data BinaryShow where
 --  But such things also occurr in Contexts.
 type Literal a = (Typeable a, Eq a, Show a)
 
+-- | What constraints does the Term constructor App require?
+--   (FunSym c sym t dom rng) supplies the Logic of propagating contexts
+--   (c) supplies the constraints supported by that particular functin symbol, Ie (Eq a) for EqualW
+--   (All HasSpec dom) the argument types are part of the system
+--   (HasSpec rng) the return type is part of the system.
+type AppRequires c sym t dom rng = (FunSym c sym t dom rng, c, All HasSpec dom, HasSpec rng)
+
 data Term a where
   App ::
     forall c sym t dom rng.
-    (FunSym c sym t dom rng, c, All HasSpec dom, HasSpec rng) =>
+    (AppRequires c sym t dom rng) =>
     t c sym dom rng -> List Term dom -> Term rng
   Lit :: Literal a => a -> Term a
   V :: HasSpec a => Var a -> Term a
@@ -630,18 +667,18 @@ sameTerms (x :> xs) (y :> ys) = x == y && sameTerms xs ys
 --             Name in Haskell^    type of NotW^   arg types^   result type^
 --   The FunSym instance does not demand any of these things have any properties at all.
 --   It is here, where we actually build the App node, that we demand the properties App terms require.
---   App :: (FunSym c s t ds r, c, All HasSpec ds, HasSpec r) => t c s ds r -> List Term dom -> Term rng
---           ^--logic-and-semantics     ^--^---------------^----Required-properties
+--   App :: AppRequires c s t ds r => t c s ds r -> List Term dom -> Term rng
 appSym ::
-  forall c sym t as b.
-  (FunSym c sym t as b, c, All HasSpec as, HasSpec b) =>
+  forall c sym t as b. AppRequires c sym t as b =>
   t c sym as b -> List Term as -> Term b
 appSym w xs = App w xs
 
--- All the same properties as 'aaSym' but builds functions over terms, rather that just one App term.
+
+-- Like 'appSym' but builds functions over terms, rather that just one App term.
 appTerm ::
-  forall c sym t ds r.
-  (FunSym c sym t ds r, c, All HasSpec ds, HasSpec r) =>
+  forall c sym t ds r. AppRequires c sym t ds r =>
+  -- (FunSym c sym t ds r, c, All HasSpec ds, HasSpec r) =>
+
   t c sym ds r -> FunTy (MapList Term ds) (Term r)
 appTerm sym = curryList @ds (App @c @sym @t @ds @r sym)
 

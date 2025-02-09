@@ -31,8 +31,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Maybe
 import Data.Semigroup (sconcat)
 import Prettyprinter hiding (cat)
-
--- import GHC.Stack
+import Data.Foldable (fold)
 
 -- =========================================================================
 
@@ -279,65 +278,16 @@ instance HasSpec a => Semigroup (Specification a) where
 instance HasSpec a => Monoid (Specification a) where
   mempty = TrueSpec
 
-{-
--- | Generate a value that satisfies the spec. This function can fail if the
--- spec is inconsistent, there is a dependency error, or if the underlying
--- generators are not flexible enough.
-genFromSpecT ::
-  forall a m. (HasCallStack, HasSpec a, MonadGenError m) => Specification a -> GenT m a
-genFromSpecT (simplifySpec -> spec) = case spec of
-  ExplainSpec [] s -> genFromSpecT s
-  ExplainSpec es s -> push es (genFromSpecT s)
-  MemberSpec as -> explain1 ("genFromSpecT on spec" ++ show spec) $ pureGen (elements (NE.toList as))
-  TrueSpec -> genFromSpecT (typeSpec $ emptySpec @a)
-  SuspendedSpec x p
-    -- NOTE: If `x` isn't free in `p` we still have to try to generate things
-    -- from `p` to make sure `p` is sat and then we can throw it away. A better
-    -- approach would be to only do this in the case where we don't know if `p`
-    -- is sat. The proper way to implement such a sat check is to remove
-    -- sat-but-unnecessary variables in the optimiser.
-    | not $ Name x `appearsIn` p -> do
-        !_ <- genFromPreds mempty p
-        genFromSpecT TrueSpec
-    | otherwise -> do
-        env <- genFromPreds mempty p
-        findEnv env x
-  TypeSpec s cant -> do
-    mode <- getMode
-    explain
-      ( NE.fromList
-          [ "genFromSpecT on (TypeSpec tspec cant) at type " ++ showType @a
-          , "tspec = "
-          , show s
-          , "cant = " ++ show (short cant)
-          , "with mode " ++ show mode
-          ]
-      )
-      $
-      -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
-      -- starts giving us trouble.
-      genFromTypeSpec s `suchThatT` (`notElem` cant)
-  ErrorSpec e -> genError e
--}
 
-{- Might be usefull, might not
-type family PP (a :: Nat) (n :: Type) (b :: [Type]) ::  Type where
-  PP 0 t (t ': _)  = t :~: t
-  PP 1 t ( _ ': t ': _) = t :~: t
-  PP 2 t ( _ ': _ ': t ': _) = t :~: t
-  PP 3 t ( _ ': _ ': _ ': t ': _) = t :~: t
-  PP 4 t ( _ ': _ ': _ ': _ ': t ': _) = t :~: t
-
-holeType :: forall xs f t . (CtxtList Pre xs t) -> List f xs -> (t :~: t)
-holeType (HOLE End) ( _ :> Nil) = Refl
-holeType (HOLE ( _ :<| xs)) ( _ :> ys) = Refl
-holeType (x :>| xs) (y :> ys) = holeType xs ys
-
-holeV :: CtxtList Pre xs t -> List f xs -> f t
-holeV (HOLE End) ( x :> Nil) = x
-holeV (HOLE ( _ :<| xs)) ( y :> ys) = y
-holeV (x :>| xs) (y :> ys) = holeV xs ys
-
-castUnaryCtxt :: forall hole x . CtxtList Pre '[x] hole -> x -> hole
-castUnaryCtxt (HOLE End) x = x
--}
+-- | Functor like property for Specification, but instead of a Haskell function (a -> b),
+--   it takes a function symbol (t c s '[a] b) from a to b. We had to wait until here to
+--   write this because it depends on Semigroup property of Specification.
+mapSpec :: forall c s t a b . (FunSym c s t '[a] b, c, HasSpec b,HasSpec a) => t c s '[a] b -> Specification a -> Specification b
+mapSpec f (ExplainSpec es s) = explainSpecOpt es (mapSpec f s)
+mapSpec f TrueSpec = mapTypeSpec  @_ @_ @_ @'[a] @b  f (emptySpec @a)
+mapSpec _ (ErrorSpec err) = ErrorSpec err
+mapSpec f (MemberSpec as) = MemberSpec $ NE.nub $ fmap (semantics f) as
+mapSpec f (SuspendedSpec x p) =
+  constrained $ \x' ->
+    Exists (\_ -> fatalError (pure "mapSpec")) (x :-> fold [Assert $ x' ==. appTerm f (V x), p])      
+mapSpec f (TypeSpec ts cant) = mapTypeSpec @c @s @t @'[a] @b f ts <> notMemberSpec (map (semantics f) cant)
