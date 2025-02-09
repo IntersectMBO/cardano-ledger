@@ -10,7 +10,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
@@ -29,12 +31,11 @@ import Constrained.Experiment.NumSpec (cardinality)
 import Constrained.Experiment.TheKnot
 import Constrained.Experiment.Witness
 import Constrained.List
-import Data.Kind
+import Constrained.Core(Evidence(..))
 import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
-import Data.Typeable (Typeable, eqT, (:~:) (Refl))
-import GHC.TypeLits
+import Data.Typeable ((:~:) (Refl))
 import Prettyprinter
 import Test.QuickCheck hiding (Witness, witness)
 
@@ -102,55 +103,19 @@ instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
 -- ==================================================================================
 -- FunSym instances for PairW, FstW, SndW
 
-matchFS ::
-  forall
-    (k :: FSType)
-    (c1 :: Constraint)
-    (s1 :: Symbol)
-    (d1 :: [Type])
-    r1
-    f
-    (c2 :: Constraint)
-    (s2 :: Symbol)
-    (d2 :: [Type])
-    r2.
-  ( Typeable k
-  , Typeable c1
-  , Typeable s1
-  , Typeable d1
-  , Typeable r1
-  , FunSym c2 s2 f d2 r2
-  ) =>
-  k c1 s1 d1 r1 ->
-  f c2 s2 d2 r2 ->
-  Maybe (k c1 s1 d1 r1, f :~: k, s1 :~: s2, d1 :~: d2, r1 :~: r2)
-matchFS t x =
-  case (eqT @f @k, eqT @c1 @c2, eqT @s1 @s2, eqT @d1 @d2, eqT @r1 @r2) of
-    (Just pT@Refl, Just Refl, Just p2@Refl, Just p3@Refl, Just p4@Refl) ->
-      if t == x then Just (t, pT, p2, p3, p4) else Nothing
-    _ -> Nothing
-
-{-
-pairView::
-  forall a b. (Typeable a, Typeable b) => Term (Prod a b) -> Maybe (Term a, Term b)
-pairView (App (extractDom(PairW @a @b) -> Just(Refl)) (x :> y :> Nil)) = Just (x, y)
-pairView _ = Nothing
--}
-
-pairView ::
-  forall a b. (Typeable a, Typeable b) => Term (Prod a b) -> Maybe (Term a, Term b)
-pairView (App (matchFS @BaseW (PairW @a @b) -> Just (_, _, _, Refl, _)) (x :> y :> Nil)) = Just (x, y)
-pairView _ = Nothing
-
+pairView:: forall a b. (HasSpec a,HasSpec b) => Term (Prod a b) -> Maybe (Term a, Term b)
+pairView (App (sameFunSym $ PairW @a @b -> Just (_,Refl,Refl,Refl,Refl,Refl)) (x :> y :> Nil)) = Just(x,y)
+pairView _ = Nothing  
+ 
 -- ========= FstW
 
 instance (HasSpec a, HasSpec b) => FunSym () "fst_" BaseW '[Prod a b] a where
-  witness = "FstW[fst_]"
-  simplepropagate (Context _ FstW (HOLE End)) (spec :: Specification a) = Right $ (cartesian @a @b spec TrueSpec)
+
+  simplepropagate (Context Evidence FstW (HOLE End)) (spec :: Specification a) = Right $ (cartesian @a @b spec TrueSpec)
   simplepropagate ctx _ = Left (NE.fromList ["FstW[fst_]", "Unreachable context, wrong number of args", show ctx])
 
-  rewriteRules FstW ((pairView -> Just (x, _)) :> Nil) = Just x
-  rewriteRules _ _ = Nothing
+  rewriteRules FstW ((pairView -> Just (x, _)) :> Nil) Evidence = Just x
+  rewriteRules _ _ _ = Nothing
 
   mapTypeSpec f ts = case f of
     FstW | Cartesian s _ <- ts -> s
@@ -161,12 +126,12 @@ fst_ = appTerm FstW
 -- ========= SndW
 
 instance (HasSpec a, HasSpec b) => FunSym () "snd_" BaseW '[Prod a b] b where
-  witness = "SndW[snd_]"
+
   simplepropagate (Context _ SndW (HOLE End)) spec = Right $ (cartesian @a @b TrueSpec spec)
   simplepropagate ctx _ = Left (NE.fromList ["SndW[fst_]", "Unreachable context, wrong number of args", show ctx])
 
-  rewriteRules SndW ((pairView -> Just (_, y)) :> Nil) = Just y
-  rewriteRules _ _ = Nothing
+  rewriteRules SndW ((pairView -> Just (_, y)) :> Nil) Evidence = Just y
+  rewriteRules _ _ _ = Nothing
 
   mapTypeSpec f ts = case f of
     SndW | Cartesian _ s <- ts -> s
@@ -177,7 +142,7 @@ snd_ = appTerm SndW
 -- ========= PairW
 
 instance (HasSpec a, HasSpec b) => FunSym () "pair_" BaseW '[a, b] (Prod a b) where
-  witness = "PairW[pair_]"
+
   simplepropagate ctx@(Context _ PairW (a :>| (HOLE End))) spec =
     let sameFst ps = [b | Prod a' b <- ps, a == a']
      in case spec of

@@ -148,7 +148,7 @@ instance
 ------------------------------------------------------------------------
 
 instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_" BaseW '[a] (Sum a b) where
-  witness = "InjLeftW[sumleft_]"
+
   simplepropagate ctx@(Context _ InjLeftW (HOLE End)) spec =
     case spec of
       TypeSpec (SumSpec _ sl _) cant -> Right $ sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
@@ -174,7 +174,7 @@ instance
   (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
   FunSym () "sumright_" BaseW '[b] (Sum a b)
   where
-  witness = "InjRightW[sumright_]"
+
   simplepropagate ctx@(Context _ InjRightW (HOLE End)) spec =
     case spec of
       TypeSpec (SumSpec _ _ sr) cant -> Right $ sr <> foldMap notEqualSpec [a | SumRight a <- cant]
@@ -637,19 +637,3 @@ chooseSpec (w, s) (w', s') =
           (branchW w $ \_ -> True)
       ]
 
-{-
--- Arbitrary instances ----------------------------------------------------
-
-instance
-  (HasSpec a, HasSpec b, Arbitrary (FoldSpec a), Arbitrary (FoldSpec b)) =>
-  Arbitrary (FoldSpec (a, b))
-  where
-  arbitrary =
-    oneof
-      [ preMapFoldSpec (composeFn fstFn toGenericFn) <$> arbitrary
-      , preMapFoldSpec (composeFn sndFn toGenericFn) <$> arbitrary
-      , pure NoFold
-      ]
-  shrink NoFold = []
-  shrink FoldSpec {} = [NoFold]
--}
