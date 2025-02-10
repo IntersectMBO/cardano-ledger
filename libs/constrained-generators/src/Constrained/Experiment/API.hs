@@ -77,6 +77,18 @@ module Constrained.Experiment.API (
   equalSpec,
   notEqualSpec,
   notMemberSpec,
+  id_,
+  flip_,
+  compose_,
+  foldMap_,
+  elem_,
+  singleton_,
+  append_,
+  sizeOf,
+  sizeOf_,
+  genFromSizeSpec,
+  between,
+  maxSpec,
 )
 where
 
@@ -168,6 +180,26 @@ import Constrained.Experiment.Syntax (
   reify,
   unsafeExists,
  )
+
+import Constrained.Experiment.Specs.ListFoldy (
+  append_,
+  compose_,
+  elem_,
+  flip_,
+  foldMap_,
+  id_,
+  singleton_,
+ )
+
+import Constrained.Experiment.Specs.Size (
+  Sized (sizeOf),
+  between,
+  genFromSizeSpec,
+  maxSpec,
+  sizeOf_,
+ )
+
+-- =================================================
 
 (+.) :: NumLike a => Term a -> Term a -> Term a
 (+.) = addFn
