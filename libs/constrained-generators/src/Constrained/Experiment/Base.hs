@@ -86,9 +86,10 @@ type FSPre c s (t :: FSType) dom rng =
 
 class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
   {-# MINIMAL (propagate | simplepropagate) #-}
+
   -- witness :: String -- For documentation about what constructor of 't' implements 's'
   name :: t c s dom rng -> String
-  name x = show x++" "++showType @c++" "++showType @s
+  name x = show x ++ " " ++ showType @c ++ " " ++ showType @s
 
   -- 'propagate' handles all the obvious default cases. So if this is what you want
   -- then define simplepropagate instead. If you need special instructions
@@ -121,7 +122,7 @@ class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
     t c s dom rng -> List Term dom -> Evidence (AppRequires c s t dom rng) -> Maybe (Term rng)
   rewriteRules _ _ _ = Nothing
 
-  mapTypeSpec :: (HasSpec a, HasSpec b,c) => t c s '[a] b -> TypeSpec a -> Specification b
+  mapTypeSpec :: (HasSpec a, HasSpec b, c) => t c s '[a] b -> TypeSpec a -> Specification b
   mapTypeSpec _ts _spec = TrueSpec
 
 -- This is where the logical properties of FunSym, are applied to transform one spec into another
@@ -175,21 +176,21 @@ sameFunSym x y = do
   t@Refl <- eqT @t1 @t2
   d@Refl <- eqT @d1 @d2
   r@Refl <- eqT @r1 @r2
-  if x==y
-     then Just(x,c,s,t,d,r)
-     else Nothing
+  if x == y
+    then Just (x, c, s, t, d, r)
+    else Nothing
 
-withDomEvidence :: 
-  forall b a c1 s1 t1 d1 r1. 
-  FunSym c1 s1 t1 d1 r1 => 
-  t1 c1 s1 d1 r1 -> 
-  Term a -> 
-  (Evidence (All HasSpec d1) -> Term a -> Maybe b) -> 
+withDomEvidence ::
+  forall b a c1 s1 t1 d1 r1.
+  FunSym c1 s1 t1 d1 r1 =>
+  t1 c1 s1 d1 r1 ->
+  Term a ->
+  (Evidence (All HasSpec d1) -> Term a -> Maybe b) ->
   Maybe b
 withDomEvidence t1 t@(App t2 _) f = case sameFunSym t1 t2 of
-     Just (_,Refl,Refl,Refl,Refl,Refl) -> f (Evidence @(All HasSpec d1)) t 
-     Nothing -> Nothing
-withDomEvidence _ _ _ = Nothing     
+  Just (_, Refl, Refl, Refl, Refl, Refl) -> f (Evidence @(All HasSpec d1)) t
+  Nothing -> Nothing
+withDomEvidence _ _ _ = Nothing
 
 -- ========================================================
 -- A Specification is tells us what constraints must hold
@@ -420,7 +421,7 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
 -- ====================================================================
 
 data EqW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  EqualW :: {- forall a. Typeable a => -} EqW (Eq a) "==." '[a, a] Bool
+  EqualW {- forall a. Typeable a => -} :: EqW (Eq a) "==." '[a, a] Bool
 
 deriving instance Eq (EqW c s dom rng)
 
@@ -491,7 +492,6 @@ instance
     '[a]
     simplerepA
   where
-
   simplepropagate (Context _ ToGenericW (HOLE End)) (TypeSpec s cant) = Right $ TypeSpec s (fromSimpleRep <$> cant)
   simplepropagate (Context _ ToGenericW (HOLE End)) (MemberSpec es) = Right $ MemberSpec (fmap fromSimpleRep es)
   simplepropagate ctx _ = Left (NE.fromList ["ToGenericW (toGenericFn)", "Unreachable context, too many args", show ctx])
@@ -527,7 +527,6 @@ instance
     '[dom]
     a
   where
-
   simplepropagate (Context _ FromGenericW (HOLE End)) (TypeSpec s cant) = Right $ TypeSpec s (toSimpleRep <$> cant)
   simplepropagate (Context _ FromGenericW (HOLE End)) (MemberSpec es) = Right $ MemberSpec (fmap toSimpleRep es)
   simplepropagate ctx _ =
@@ -612,7 +611,7 @@ type AppRequires c sym t dom rng = (FunSym c sym t dom rng, c, All HasSpec dom, 
 data Term a where
   App ::
     forall c sym t dom rng.
-    (AppRequires c sym t dom rng) =>
+    AppRequires c sym t dom rng =>
     t c sym dom rng -> List Term dom -> Term rng
   Lit :: Literal a => a -> Term a
   V :: HasSpec a => Var a -> Term a
@@ -669,14 +668,15 @@ sameTerms (x :> xs) (y :> ys) = x == y && sameTerms xs ys
 --   It is here, where we actually build the App node, that we demand the properties App terms require.
 --   App :: AppRequires c s t ds r => t c s ds r -> List Term dom -> Term rng
 appSym ::
-  forall c sym t as b. AppRequires c sym t as b =>
+  forall c sym t as b.
+  AppRequires c sym t as b =>
   t c sym as b -> List Term as -> Term b
 appSym w xs = App w xs
 
-
 -- Like 'appSym' but builds functions over terms, rather that just one App term.
 appTerm ::
-  forall c sym t ds r. AppRequires c sym t ds r =>
+  forall c sym t ds r.
+  AppRequires c sym t ds r =>
   -- (FunSym c sym t ds r, c, All HasSpec ds, HasSpec r) =>
 
   t c sym ds r -> FunTy (MapList Term ds) (Term r)
@@ -1163,3 +1163,36 @@ constrained ::
 constrained body =
   let x :-> p = bind body
    in SuspendedSpec x p
+
+-- ====================================================
+-- The Fun type encapuslates a FunSym instance to hide
+-- everything but the domain and range. This is a way
+-- to pass around functions without pain. Usefull in the
+-- ListFoldy implementaion that deals with higher order functions.
+
+data Fun dom rng where
+  Fun ::
+    forall c s t dom rng.
+    FunSym c s t dom rng =>
+    Evidence c -> t c s dom rng -> Fun dom rng
+
+instance Show (Fun d r) where
+  show (Fun Evidence (f :: t c s dom rng)) = "(Fun " ++ show f ++ ")"
+
+extractf :: forall c s t d r. FSPre c s t d r => Fun d r -> Maybe (t c s d r)
+extractf (Fun _ (x :: t1 c1 s1 d1 r1)) =
+  case (eqT @t @t1, eqT @c @c1, eqT @s @s1, eqT @d @d1, eqT @r @r1) of
+    (Just Refl, Just Refl, Just Refl, Just Refl, Just Refl) -> Just x
+    _ -> Nothing
+
+appFun :: (HasSpec x, HasSpec b) => Fun '[x] b -> Term x -> Term b
+appFun (Fun Evidence f) x = App f (x :> Nil)
+
+sameFun :: Fun d1 r1 -> Fun d2 r2 -> Bool
+sameFun (Fun Evidence f) (Fun Evidence g) =
+  case sameFunSym f g of
+    Just (_f, Refl, Refl, Refl, Refl, Refl) -> True
+    Nothing -> False
+
+instance Eq (Fun d r) where
+  (==) = sameFun

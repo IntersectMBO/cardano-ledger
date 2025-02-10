@@ -1,18 +1,18 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
@@ -24,6 +24,7 @@
 
 module Constrained.Experiment.Specs.Pairs where
 
+import Constrained.Core (Evidence (..))
 import Constrained.Experiment.Base
 import Constrained.Experiment.Conformance
 import Constrained.Experiment.Generic
@@ -31,7 +32,6 @@ import Constrained.Experiment.NumSpec (cardinality)
 import Constrained.Experiment.TheKnot
 import Constrained.Experiment.Witness
 import Constrained.List
-import Constrained.Core(Evidence(..))
 import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
@@ -103,14 +103,13 @@ instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
 -- ==================================================================================
 -- FunSym instances for PairW, FstW, SndW
 
-pairView:: forall a b. (HasSpec a,HasSpec b) => Term (Prod a b) -> Maybe (Term a, Term b)
-pairView (App (sameFunSym $ PairW @a @b -> Just (_,Refl,Refl,Refl,Refl,Refl)) (x :> y :> Nil)) = Just(x,y)
-pairView _ = Nothing  
- 
+pairView :: forall a b. (HasSpec a, HasSpec b) => Term (Prod a b) -> Maybe (Term a, Term b)
+pairView (App (sameFunSym $ PairW @a @b -> Just (_, Refl, Refl, Refl, Refl, Refl)) (x :> y :> Nil)) = Just (x, y)
+pairView _ = Nothing
+
 -- ========= FstW
 
 instance (HasSpec a, HasSpec b) => FunSym () "fst_" BaseW '[Prod a b] a where
-
   simplepropagate (Context Evidence FstW (HOLE End)) (spec :: Specification a) = Right $ (cartesian @a @b spec TrueSpec)
   simplepropagate ctx _ = Left (NE.fromList ["FstW[fst_]", "Unreachable context, wrong number of args", show ctx])
 
@@ -126,7 +125,6 @@ fst_ = appTerm FstW
 -- ========= SndW
 
 instance (HasSpec a, HasSpec b) => FunSym () "snd_" BaseW '[Prod a b] b where
-
   simplepropagate (Context _ SndW (HOLE End)) spec = Right $ (cartesian @a @b TrueSpec spec)
   simplepropagate ctx _ = Left (NE.fromList ["SndW[fst_]", "Unreachable context, wrong number of args", show ctx])
 
@@ -142,7 +140,6 @@ snd_ = appTerm SndW
 -- ========= PairW
 
 instance (HasSpec a, HasSpec b) => FunSym () "pair_" BaseW '[a, b] (Prod a b) where
-
   simplepropagate ctx@(Context _ PairW (a :>| (HOLE End))) spec =
     let sameFst ps = [b | Prod a' b <- ps, a == a']
      in case spec of
@@ -154,7 +151,8 @@ instance (HasSpec a, HasSpec b) => FunSym () "pair_" BaseW '[a, b] (Prod a b) wh
             (w : ws) -> Right $ MemberSpec (w :| ws)
             [] ->
               Left $
-                pure ("propagateSpecFun (pair_ a HOLE) on (MemberSpec " ++ show es ++ " where a does not appear in as.")
+                pure
+                  ("propagateSpecFun (pair_ a HOLE) on (MemberSpec " ++ show es ++ " where a does not appear in as.")
           _ -> Left (NE.fromList ["PairW[pair_]", "Unreachable context, wrong number of args", show ctx])
   simplepropagate ctx@(Context _ PairW (HOLE (b :<| End))) spec =
     let sameSnd ps = [a | Prod a b' <- ps, b == b']
@@ -167,7 +165,8 @@ instance (HasSpec a, HasSpec b) => FunSym () "pair_" BaseW '[a, b] (Prod a b) wh
             (w : ws) -> Right $ MemberSpec (w :| ws)
             [] ->
               Left $
-                pure ("propagateSpecFun (pair_ HOLE b) on (MemberSpec " ++ show es ++ " where a does not appear in as.")
+                pure
+                  ("propagateSpecFun (pair_ HOLE b) on (MemberSpec " ++ show es ++ " where a does not appear in as.")
           _ -> Left (NE.fromList ["PairW[pair_]", "Unreachable context, wrong number of args", show ctx])
   simplepropagate ctx _ = Left (NE.fromList ["PairW[pair_]", "Unreachable context, wrong number of args", show ctx])
 
