@@ -739,7 +739,6 @@ addFn :: forall a. NumLike a => Term a -> Term a -> Term a
 addFn = appTerm AddW
 
 instance (Typeable a, NumLike a) => FunSym (NumLike a) "negateFn" IntW '[a] a where
-
   simplepropagate ctx@(Context _ NegateW (HOLE End)) spec =
     case spec of
       TypeSpec ts (cant :: [a]) ->

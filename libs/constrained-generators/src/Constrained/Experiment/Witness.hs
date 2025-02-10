@@ -56,12 +56,11 @@ data Possible c where Possible :: forall (c :: Constraint). c => Possible c
 invoke :: forall (c :: Constraint). c => Possible c -> Evidence c
 invoke Possible = Evidence
 
-
-data ConName a where 
-    ConName :: forall (c :: Constraint) . String -> ConName c
+data ConName a where
+  ConName :: forall (c :: Constraint). String -> ConName c
 
 instance Show (ConName c) where
-  show (ConName s) = "(ConName "++s++")"
+  show (ConName s) = "(ConName " ++ s ++ ")"
 
 -- | A FunctionSymbol has 4 components, all reflected in its type,
 --   And a bunch of operations, reflected in the classes for which the type has instances.
@@ -72,22 +71,20 @@ instance Show (ConName c) where
 --   each having a Witness instance. This is one step in extending the system.
 class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
   semantics :: forall c s d r. c => t c s d r -> FunTy d r -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
-  constraint :: forall c s f d r . Show (f c s d r) => f c s d r -> ConName c
+  constraint :: forall c s f d r. Show (f c s d r) => f c s d r -> ConName c
   constraint (t :: tx con sym dom rng) = ConName @con (show t)
- 
+
 -- | Here is one witness type, witnessing FunctionSymbols over Bool, List,
 -- Set, Map, Products, Sums, and the types used to interface with GHC.Generics.
 -- There will be others, and  if you want.you can add your own types, and witnesses
 -- to your own FunctionSymbols over those types. These are some of the Base
 -- FunctionSymbols that come with the system "out of the box"
 data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  -- List
-  ElemW :: forall a. BaseW (Eq a) "elem_" '[a, [a]] Bool
   -- Bool
   NotW :: BaseW () "not_" '[Bool] Bool
   OrW :: BaseW () "or_" '[Bool, Bool] Bool
   -- Pair
-  PairW ::forall a b. BaseW () "pair_" '[a, b] (Prod a b)
+  PairW :: forall a b. BaseW () "pair_" '[a, b] (Prod a b)
   FstW :: forall a b. BaseW () "fst_" '[Prod a b] a
   SndW :: forall a b. BaseW () "snd_" '[Prod a b] b
   -- Sum
@@ -97,7 +94,7 @@ data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   SubsetW :: BaseW (Ord a) "subset_" '[Set a, Set a] Bool
   DisjointW :: BaseW (Ord a) "disjoint_" '[Set a, Set a] Bool
   MemberW :: BaseW (Ord a) "member_" '[a, Set a] Bool
-  SingletonW :: BaseW (Ord a) "ssingleton_" '[a] (Set a)
+  -- SingletonW :: BaseW (Ord a) "ssingleton_" '[a] (Set a)
   UnionW :: BaseW (Ord a) "union_" '[Set a, Set a] (Set a)
   FromListW :: BaseW (Ord a) "fromList_" '[[a]] (Set a)
   -- Map
@@ -108,7 +105,6 @@ data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
 deriving instance Eq (BaseW c s dom rng)
 
 instance Show (BaseW c s dom rng) where
-  show ElemW = "elem_"
   show NotW = "not_"
   show OrW = "or_"
   show PairW = "pair_"
@@ -119,7 +115,6 @@ instance Show (BaseW c s dom rng) where
   show SubsetW = "subset_"
   show DisjointW = "disjoint_"
   show MemberW = "member_"
-  show SingletonW = "singleton_"
   show UnionW = "union_"
   show FromListW = "fromList_"
   show DomW = "dom_"
@@ -132,7 +127,6 @@ instance Show (BaseW c s dom rng) where
 
 -- | Haskell functions give meaning to the BaseW constructors
 baseSem :: c => BaseW c sym dom rng -> FunTy dom rng
-baseSem ElemW = elem
 baseSem NotW = not
 baseSem OrW = (||)
 baseSem PairW = Prod
@@ -143,7 +137,6 @@ baseSem InjRightW = SumRight
 baseSem SubsetW = Set.isSubsetOf
 baseSem DisjointW = Set.disjoint
 baseSem MemberW = Set.member
-baseSem SingletonW = Set.singleton
 baseSem UnionW = Set.union
 baseSem FromListW = Set.fromList
 baseSem DomW = Map.keysSet

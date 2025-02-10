@@ -25,13 +25,13 @@ import Constrained.Core
 import Constrained.Env
 import Constrained.GenT
 import Constrained.List
+import Data.Foldable (fold)
 import Data.List (intersect, nub)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
 import Data.Semigroup (sconcat)
 import Prettyprinter hiding (cat)
-import Data.Foldable (fold)
 
 -- =========================================================================
 
@@ -278,16 +278,17 @@ instance HasSpec a => Semigroup (Specification a) where
 instance HasSpec a => Monoid (Specification a) where
   mempty = TrueSpec
 
-
 -- | Functor like property for Specification, but instead of a Haskell function (a -> b),
 --   it takes a function symbol (t c s '[a] b) from a to b. We had to wait until here to
 --   write this because it depends on Semigroup property of Specification.
-mapSpec :: forall c s t a b . (FunSym c s t '[a] b, c, HasSpec b,HasSpec a) => t c s '[a] b -> Specification a -> Specification b
+mapSpec ::
+  forall c s t a b.
+  (FunSym c s t '[a] b, c, HasSpec b, HasSpec a) => t c s '[a] b -> Specification a -> Specification b
 mapSpec f (ExplainSpec es s) = explainSpecOpt es (mapSpec f s)
-mapSpec f TrueSpec = mapTypeSpec  @_ @_ @_ @'[a] @b  f (emptySpec @a)
+mapSpec f TrueSpec = mapTypeSpec @_ @_ @_ @'[a] @b f (emptySpec @a)
 mapSpec _ (ErrorSpec err) = ErrorSpec err
 mapSpec f (MemberSpec as) = MemberSpec $ NE.nub $ fmap (semantics f) as
 mapSpec f (SuspendedSpec x p) =
   constrained $ \x' ->
-    Exists (\_ -> fatalError (pure "mapSpec")) (x :-> fold [Assert $ x' ==. appTerm f (V x), p])      
+    Exists (\_ -> fatalError (pure "mapSpec")) (x :-> fold [Assert $ x' ==. appTerm f (V x), p])
 mapSpec f (TypeSpec ts cant) = mapTypeSpec @c @s @t @'[a] @b f ts <> notMemberSpec (map (semantics f) cant)
