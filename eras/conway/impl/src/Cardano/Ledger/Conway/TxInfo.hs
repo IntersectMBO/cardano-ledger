@@ -111,7 +111,6 @@ import Cardano.Ledger.Plutus.TxInfo (
 import qualified Cardano.Ledger.Plutus.TxInfo as TxInfo
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO)
 import Control.Arrow (ArrowChoice (..))
@@ -430,7 +429,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
   toPlutusArgs = Babbage.toPlutusV2Args
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
-  toPlutusTxCert _ pv = pure . transTxCert pv
+  toPlutusTxCert _ _ = pure . transTxCert
 
   toPlutusScriptPurpose = transScriptPurpose
 
@@ -496,8 +495,8 @@ transTxBodyWithdrawals txBody =
 -- was causing the deposit in `RegDepositTxCert` and `UnRegDepositTxCert` to be omitted.
 -- We need to keep this behavior for version 9, so, now that the bug in the patterns has been fixed,
 -- we are explicitly omitting the deposit in these cases.
-transTxCert :: ConwayEraTxCert era => ProtVer -> TxCert era -> PV3.TxCert
-transTxCert pv = \case
+transTxCert :: ConwayEraTxCert era => TxCert era -> PV3.TxCert
+transTxCert = \case
   RegPoolTxCert PoolParams {ppId, ppVrf} ->
     PV3.TxCertPoolRegister
       (transKeyHash ppId)
@@ -509,15 +508,9 @@ transTxCert pv = \case
   UnRegTxCert stakeCred ->
     PV3.TxCertUnRegStaking (transCred stakeCred) Nothing
   RegDepositTxCert stakeCred deposit ->
-    let transDeposit
-          | HF.bootstrapPhase pv = Nothing
-          | otherwise = Just (transCoinToLovelace deposit)
-     in PV3.TxCertRegStaking (transCred stakeCred) transDeposit
+    PV3.TxCertRegStaking (transCred stakeCred) (Just (transCoinToLovelace deposit))
   UnRegDepositTxCert stakeCred refund ->
-    let transRefund
-          | HF.bootstrapPhase pv = Nothing
-          | otherwise = Just (transCoinToLovelace refund)
-     in PV3.TxCertUnRegStaking (transCred stakeCred) transRefund
+    PV3.TxCertUnRegStaking (transCred stakeCred) (Just (transCoinToLovelace refund))
   DelegTxCert stakeCred delegatee ->
     PV3.TxCertDelegStaking (transCred stakeCred) (transDelegatee delegatee)
   RegDepositDelegTxCert stakeCred delegatee deposit ->
