@@ -28,6 +28,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv,
  )
 import Cardano.Ledger.State (EraUTxO)
+import Cardano.Protocol.Crypto (Crypto)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -66,8 +67,9 @@ instance
   , Tx era ~ AlonzoTx era
   , ProtVerAtMost era 8
   , EraCertState era
+  , Crypto c
   ) =>
-  TQC.HasTrace (AlonzoLEDGER era) (GenEnv era)
+  TQC.HasTrace (AlonzoLEDGER era) (GenEnv c era)
   where
   envGen GenEnv {geConstants} =
     LedgerEnv (SlotNo 0) Nothing minBound

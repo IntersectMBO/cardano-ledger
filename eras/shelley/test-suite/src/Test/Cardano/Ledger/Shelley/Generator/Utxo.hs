@@ -51,6 +51,7 @@ import Cardano.Ledger.State (
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
+import Cardano.Protocol.Crypto (Crypto)
 import Control.Monad (when)
 import Control.State.Transition
 import qualified Data.ByteString.Lazy as BSL
@@ -120,15 +121,16 @@ import qualified Test.QuickCheck as QC
 -- the generator 'Constants' so that there is sufficient spending balance.
 
 genTx ::
-  forall era.
+  forall era c.
   ( EraGen era
   , EraUTxO era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
+  , Crypto c
   ) =>
-  GenEnv era ->
+  GenEnv c era ->
   LedgerEnv era ->
   LedgerState era ->
   Gen (Tx era)
@@ -358,12 +360,12 @@ encodedLen x = fromIntegral $ BSL.length (serialize (eraProtVerHigh @era) x)
 -- | Do the work of computing what additioanl inputs we need to 'fix-up' the transaction
 -- so that it will balance.
 genNextDelta ::
-  forall era.
+  forall era c.
   (EraGen era, EraUTxO era) =>
   ScriptInfo era ->
   UTxO era ->
   PParams era ->
-  KeySpace era ->
+  KeySpace c era ->
   Tx era ->
   Int ->
   Delta era ->
@@ -474,7 +476,7 @@ genNextDelta
 -- genNextDelta repeatedly until genNextDelta delta = delta
 
 genNextDeltaTilFixPoint ::
-  forall era.
+  forall era c.
   ( EraGen era
   , EraUTxO era
   ) =>
@@ -484,7 +486,7 @@ genNextDeltaTilFixPoint ::
   [(Script era, Script era)] ->
   UTxO era ->
   PParams era ->
-  KeySpace era ->
+  KeySpace c era ->
   Tx era ->
   Gen (Delta era)
 genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx = do
@@ -496,14 +498,14 @@ genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace
     (deltaZero initialfee pparams addr)
 
 applyDelta ::
-  forall era.
+  forall era c.
   EraGen era =>
   UTxO era ->
   ScriptInfo era ->
   PParams era ->
   [KeyPair 'Witness] ->
   Map ScriptHash (Script era) ->
-  KeySpace era ->
+  KeySpace c era ->
   Tx era ->
   Delta era ->
   Tx era
@@ -552,7 +554,7 @@ fix :: (Eq d, Monad m) => Int -> (Int -> d -> m d) -> d -> m d
 fix n f d = do d1 <- f n d; if d1 == d then pure d else fix (n + 1) f d1
 
 converge ::
-  forall era.
+  forall era c.
   (EraGen era, EraUTxO era) =>
   ScriptInfo era ->
   Coin ->
@@ -562,7 +564,7 @@ converge ::
   [(Script era, Script era)] ->
   UTxO era ->
   PParams era ->
-  KeySpace era ->
+  KeySpace c era ->
   Tx era ->
   Gen (Tx era)
 converge

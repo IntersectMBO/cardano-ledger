@@ -114,7 +114,7 @@ tests ::
   ( EraGen era
   , TestingLedger era ledger
   , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , GovState era ~ ShelleyGovState era
   ) =>
   Int ->
@@ -130,7 +130,7 @@ adaPreservationProps ::
   ( EraGen era
   , TestingLedger era ledger
   , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , GovState era ~ ShelleyGovState era
   ) =>
   Property
