@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -30,6 +32,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.Alonzo.UTxO ()
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data ()
@@ -38,7 +41,7 @@ import Cardano.Ledger.Shelley.API
 import Control.Arrow (left)
 import Control.Monad.Except (MonadError, liftEither)
 import Control.Monad.Reader (runReader)
-import Control.State.Transition.Extended (TRC (TRC))
+import Control.State.Transition.Extended (STS (..), TRC (TRC))
 
 type Alonzo = AlonzoEra
 
@@ -48,7 +51,13 @@ type Alonzo = AlonzoEra
 
 reapplyAlonzoTx ::
   forall era m.
-  (ApplyTx era, MonadError (ApplyTxError era) m) =>
+  ( MonadError (ApplyTxError era) m
+  , BaseM (ApplyTxRule era) ~ ShelleyBase
+  , STS (ApplyTxRule era)
+  , Environment (ApplyTxRule era) ~ LedgerEnv era
+  , State (ApplyTxRule era) ~ LedgerState era
+  , Tx era ~ Signal (ApplyTxRule era)
+  ) =>
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
@@ -58,7 +67,7 @@ reapplyAlonzoTx globals env state vtx =
   let res =
         flip runReader globals
           . applySTSNonStatic
-            @(EraRule "LEDGER" era)
+            @(ApplyTxRule era)
           $ TRC (env, state, extractTx vtx)
    in liftEither . left ApplyTxError $ res
 

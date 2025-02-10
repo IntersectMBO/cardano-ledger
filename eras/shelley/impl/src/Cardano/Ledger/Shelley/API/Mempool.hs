@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -61,6 +62,7 @@ import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
+import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Typeable (Typeable)
 import Lens.Micro ((^.))
@@ -99,35 +101,40 @@ class
   , Eq (ApplyTxError era)
   , Show (ApplyTxError era)
   , Typeable (ApplyTxError era)
-  , STS (EraRule "LEDGER" era)
-  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ MempoolState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , BaseM (ApplyTxRule era) ~ ShelleyBase
+  , STS (ApplyTxRule era)
+  , Environment (ApplyTxRule era) ~ LedgerEnv era
+  , State (ApplyTxRule era) ~ LedgerState.LedgerState era
+  , Tx era ~ Signal (ApplyTxRule era)
   ) =>
   ApplyTx era
   where
+  type ApplyTxRule era :: Type
+  type ApplyTxRule era = EraRule "LEDGER" era
+
   -- | Validate a transaction against a mempool state and for given STS options,
   -- and return the new mempool state, a "validated" 'TxInBlock' and,
   -- depending on the passed options, the emitted events.
   applyTxOpts ::
     forall ep m.
-    (MonadError (ApplyTxError era) m, EventReturnTypeRep ep) =>
+    ( MonadError (ApplyTxError era) m
+    , EventReturnTypeRep ep
+    ) =>
     ApplySTSOpts ep ->
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
     Tx era ->
-    m (EventReturnType ep (EraRule "LEDGER" era) (MempoolState era, Validated (Tx era)))
+    m (EventReturnType ep (ApplyTxRule era) (MempoolState era, Validated (Tx era)))
   applyTxOpts opts globals env state tx =
     let res =
           flip runReader globals
-            . applySTSOptsEither @(EraRule "LEDGER" era) opts
+            . applySTSOptsEither @(ApplyTxRule era) opts
             $ TRC (env, state, tx)
      in liftEither
           . left ApplyTxError
           . right
-            (mapEventReturn @ep @(EraRule "LEDGER" era) @(MempoolState era) (,Validated tx))
+            (mapEventReturn @ep @(ApplyTxRule era) @(MempoolState era) (,Validated tx))
           $ res
 
   -- | Reapply a previously validated 'Tx'.
@@ -151,7 +158,7 @@ class
   reapplyTx globals env state (Validated tx) =
     let res =
           flip runReader globals
-            . applySTS @(EraRule "LEDGER" era)
+            . applySTS @(ApplyTxRule era)
             $ TRC (env, state, tx)
      in liftEither
           . left ApplyTxError
@@ -203,14 +210,14 @@ mkMempoolEnv
 mkMempoolState :: NewEpochState era -> MempoolState era
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} = LedgerState.esLState nesEs
 
-newtype ApplyTxError era = ApplyTxError (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
+newtype ApplyTxError era = ApplyTxError (NonEmpty (PredicateFailure (ApplyTxRule era)))
 
 deriving stock instance
-  Eq (PredicateFailure (EraRule "LEDGER" era)) =>
+  Eq (PredicateFailure (ApplyTxRule era)) =>
   Eq (ApplyTxError era)
 
 deriving stock instance
-  Show (PredicateFailure (EraRule "LEDGER" era)) =>
+  Show (PredicateFailure (ApplyTxRule era)) =>
   Show (ApplyTxError era)
 
 -- TODO: This instance can be switched back to a derived version, once we are officially
@@ -218,13 +225,13 @@ deriving stock instance
 --
 -- deriving newtype instance
 --   ( Era era
---   , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
+--   , EncCBOR (PredicateFailure (ApplyTxRule era))
 --   ) =>
 --   EncCBOR (ApplyTxError era)
 
 instance
   ( Era era
-  , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
+  , EncCBOR (PredicateFailure (ApplyTxRule era))
   ) =>
   EncCBOR (ApplyTxError era)
   where
@@ -236,13 +243,13 @@ instance
 
 deriving newtype instance
   ( Era era
-  , DecCBOR (PredicateFailure (EraRule "LEDGER" era))
+  , DecCBOR (PredicateFailure (ApplyTxRule era))
   ) =>
   DecCBOR (ApplyTxError era)
 
 instance
   ( Era era
-  , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
+  , EncCBOR (PredicateFailure (ApplyTxRule era))
   ) =>
   ToCBOR (ApplyTxError era)
   where
@@ -250,7 +257,7 @@ instance
 
 instance
   ( Era era
-  , DecCBOR (PredicateFailure (EraRule "LEDGER" era))
+  , DecCBOR (PredicateFailure (ApplyTxRule era))
   ) =>
   FromCBOR (ApplyTxError era)
   where

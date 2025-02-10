@@ -11,6 +11,7 @@ module Bench.Cardano.Ledger.ApplyTx.Gen (generateApplyTxEnvForEra, ApplyTxEnv (.
 
 import Cardano.Ledger.Shelley.API (
   AccountState (..),
+  ApplyTx (..),
   Coin (..),
   Globals,
   LedgerEnv (..),
@@ -71,11 +72,11 @@ instance NFData (ApplyTxEnv era) where
 generateApplyTxEnvForEra ::
   forall era.
   ( EraGen era
-  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
-  , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , Signal (EraRule "LEDGER" era) ~ Tx era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , HasTrace (ApplyTxRule era) (GenEnv era)
+  , BaseEnv (ApplyTxRule era) ~ Globals
+  , Signal (ApplyTxRule era) ~ Tx era
+  , Environment (ApplyTxRule era) ~ LedgerEnv era
+  , State (ApplyTxRule era) ~ LedgerState era
   , EraGov era
   ) =>
   Proxy era ->
@@ -86,7 +87,7 @@ generateApplyTxEnvForEra eraProxy seed =
       qcSeed = mkQCGen seed
       traceGen =
         traceFromInitState
-          @(EraRule "LEDGER" era)
+          @(ApplyTxRule era)
           testGlobals
           20
           ge

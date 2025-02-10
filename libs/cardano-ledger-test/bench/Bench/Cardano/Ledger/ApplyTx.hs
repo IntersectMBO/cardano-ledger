@@ -23,7 +23,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
-  ApplyTx,
+  ApplyTx (..),
   Globals,
   LedgerEnv,
   LedgerState,
@@ -59,11 +59,11 @@ benchmarkSeed = 24601
 benchWithGenState ::
   ( NFData a
   , EraGen era
-  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
-  , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , Signal (EraRule "LEDGER" era) ~ Tx era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , HasTrace (ApplyTxRule era) (GenEnv era)
+  , BaseEnv (ApplyTxRule era) ~ Globals
+  , Signal (ApplyTxRule era) ~ Tx era
+  , Environment (ApplyTxRule era) ~ LedgerEnv era
+  , State (ApplyTxRule era) ~ LedgerState era
   , EraGov era
   ) =>
   Proxy era ->
@@ -77,8 +77,8 @@ benchApplyTx ::
   forall era.
   ( EraGen era
   , ApplyTx era
-  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
-  , BaseEnv (EraRule "LEDGER" era) ~ Globals
+  , HasTrace (ApplyTxRule era) (GenEnv era)
+  , BaseEnv (ApplyTxRule era) ~ Globals
   , EraGov era
   ) =>
   Proxy era ->
@@ -104,11 +104,11 @@ benchApplyTx px =
 deserialiseTxEra ::
   forall era.
   ( EraGen era
-  , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
-  , State (EraRule "LEDGER" era) ~ LedgerState era
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
+  , BaseEnv (ApplyTxRule era) ~ Globals
+  , HasTrace (ApplyTxRule era) (GenEnv era)
+  , State (ApplyTxRule era) ~ LedgerState era
+  , Environment (ApplyTxRule era) ~ LedgerEnv era
+  , Signal (ApplyTxRule era) ~ Tx era
   , NFData (Tx era)
   , EraGov era
   ) =>

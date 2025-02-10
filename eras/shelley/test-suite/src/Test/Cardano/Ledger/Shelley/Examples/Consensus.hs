@@ -93,7 +93,7 @@ deriving instance
   ( EraTx era
   , EraGov era
   , Eq (TxSeq era)
-  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Eq (PredicateFailure (ApplyTxRule era))
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
   ) =>
@@ -108,7 +108,7 @@ defaultShelleyLedgerExamples ::
   ( EraSegWits era
   , EraGov era
   , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
-  , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
+  , PredicateFailure (ApplyTxRule era) ~ ShelleyLedgerPredFailure era
   , Default (StashedAVVMAddresses era)
   , ProtVerAtMost era 4
   ) =>

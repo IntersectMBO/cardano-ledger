@@ -32,6 +32,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
+  ApplyTx (..),
   ApplyTxError (ApplyTxError),
   MultiSig,
   NominalDiffTimeMicro (..),
@@ -711,7 +712,7 @@ instance
 
 instance
   ( Era era
-  , Arbitrary (PredicateFailure (EraRule "LEDGER" era))
+  , Arbitrary (PredicateFailure (ApplyTxRule era))
   ) =>
   Arbitrary (ApplyTxError era)
   where

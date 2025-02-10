@@ -9,10 +9,9 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API (ApplyTx, ApplyTxError)
+import Cardano.Ledger.Shelley.API (ApplyTx (..), ApplyTxError)
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Proxy (Proxy (Proxy))
 import Data.Typeable (typeRep)
@@ -28,17 +27,17 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
 eraRoundTripProps ::
-  forall e.
-  ( ApplyTx e
-  , Arbitrary (ApplyTxError e)
-  , EncCBOR (PredicateFailure (EraRule "LEDGER" e))
-  , DecCBOR (PredicateFailure (EraRule "LEDGER" e))
+  forall era.
+  ( ApplyTx era
+  , Arbitrary (ApplyTxError era)
+  , EncCBOR (PredicateFailure (ApplyTxRule era))
+  , DecCBOR (PredicateFailure (ApplyTxRule era))
   ) =>
   TestTree
 eraRoundTripProps =
   testGroup
-    (show $ typeRep (Proxy @e))
-    [ testProperty "ApplyTxError" $ roundTripCborExpectation @(ApplyTxError e)
+    (show $ typeRep (Proxy @era))
+    [ testProperty "ApplyTxError" $ roundTripCborExpectation @(ApplyTxError era)
     ]
 
 allEraRoundtripTests :: TestTree
