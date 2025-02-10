@@ -29,6 +29,7 @@ import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Test.Cardano.Ledger.Shelley.ByronTranslation as ByronTranslation (
   testGroupByronTranslation,
  )
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
 import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTraces (
   onlyValidChainSignalsAreGenerated,
@@ -55,8 +56,8 @@ commonTests ::
   forall era ledger.
   ( EraGen era
   , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
-  , QC.HasTrace ledger (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
+  , QC.HasTrace ledger (GenEnv MockCrypto era)
   , Embed (EraRule "DELEGS" era) ledger
   , Embed (EraRule "UTXOW" era) ledger
   , Environment ledger ~ LedgerEnv era

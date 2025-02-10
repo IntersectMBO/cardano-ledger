@@ -51,6 +51,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.VMap as VMap
 import Lens.Micro hiding (ix)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -79,7 +80,7 @@ incrStakeComputationTest ::
   ( EraGen era
   , TestingLedger era ledger
   , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   TestTree
 incrStakeComputationTest =
@@ -142,7 +143,7 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
 incrStakeComparisonTest ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , EraGov era
   ) =>
   Proxy era ->

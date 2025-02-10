@@ -50,11 +50,13 @@ import Test.Cardano.Protocol.TPraos.Create (genAllIssuerKeys)
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
 genEnv ::
-  forall era.
-  EraGen era =>
+  forall era c.
+  ( EraGen era
+  , Crypto c
+  ) =>
   Proxy era ->
   Constants ->
-  GenEnv era
+  GenEnv c era
 genEnv _ constants =
   GenEnv
     (keySpace constants)
@@ -77,10 +79,12 @@ scriptSpace scripts3 scripts2 =
 
 -- | Example keyspace for use in generators
 keySpace ::
-  forall era.
-  EraGen era =>
+  forall era c.
+  ( EraGen era
+  , Crypto c
+  ) =>
   Constants ->
-  KeySpace era
+  KeySpace c era
 keySpace c =
   KeySpace
     (coreNodeKeys c)

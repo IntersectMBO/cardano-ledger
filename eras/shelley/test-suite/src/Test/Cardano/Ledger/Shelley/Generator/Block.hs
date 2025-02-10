@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -51,7 +50,6 @@ import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Common (tracedDiscard)
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (
   AllIssuerKeys (..),
   GenEnv (..),
@@ -88,16 +86,17 @@ type TxGen era =
 
 -- | Generate a valid block.
 genBlock ::
-  forall era.
+  forall era c.
   ( MinLEDGER_STS era
   , ApplyBlock era
   , GetLedgerView era
-  , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv era)
+  , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv c era)
   , EraGen era
+  , PraosCrypto c
   ) =>
-  GenEnv era ->
+  GenEnv c era ->
   ChainState era ->
-  Gen (Block (BHeader MockCrypto) era)
+  Gen (Block (BHeader c) era)
 genBlock ge = genBlockWithTxGen genTxs ge
   where
     genTxs :: TxGen era
@@ -107,15 +106,16 @@ genBlock ge = genBlockWithTxGen genTxs ge
       genEraTweakBlock @era pp block
 
 genBlockWithTxGen ::
-  forall era.
+  forall era c.
   ( GetLedgerView era
   , ApplyBlock era
   , EraGen era
+  , PraosCrypto c
   ) =>
   TxGen era ->
-  GenEnv era ->
+  GenEnv c era ->
   ChainState era ->
-  Gen (Block (BHeader MockCrypto) era)
+  Gen (Block (BHeader c) era)
 genBlockWithTxGen
   genTxs
   ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _scriptspace _)
@@ -197,16 +197,17 @@ genBlockWithTxGen
         At (LastAppliedBlock b s hh) -> (b, s, hh)
 
 selectNextSlotWithLeader ::
-  forall era.
+  forall era c.
   ( EraGen era
   , GetLedgerView era
   , ApplyBlock era
+  , PraosCrypto c
   ) =>
-  GenEnv era ->
+  GenEnv c era ->
   ChainState era ->
   -- Starting slot
   SlotNo ->
-  Maybe (SlotNo, ChainState era, AllIssuerKeys MockCrypto 'BlockIssuer)
+  Maybe (SlotNo, ChainState era, AllIssuerKeys c 'BlockIssuer)
 selectNextSlotWithLeader
   (GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _ _)
   origChainState
@@ -221,7 +222,7 @@ selectNextSlotWithLeader
       selectNextSlotWithLeaderThisEpoch ::
         -- Slot number whence we begin our search
         SlotNo ->
-        Maybe (SlotNo, ChainState era, AllIssuerKeys MockCrypto 'BlockIssuer)
+        Maybe (SlotNo, ChainState era, AllIssuerKeys c 'BlockIssuer)
       selectNextSlotWithLeaderThisEpoch fromSlot =
         findJust selectLeaderForSlot [fromSlot .. toSlot]
         where
@@ -236,7 +237,7 @@ selectNextSlotWithLeader
       -- Try to select a leader for the given slot
       selectLeaderForSlot ::
         SlotNo ->
-        Maybe (ChainState era, AllIssuerKeys MockCrypto 'BlockIssuer)
+        Maybe (ChainState era, AllIssuerKeys c 'BlockIssuer)
       selectLeaderForSlot slotNo =
         (chainSt,)
           <$> case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of
@@ -265,7 +266,7 @@ selectNextSlotWithLeader
           d = (getUnitInterval . view curPParamsEpochStateL . nesEs . chainNes) chainSt
 
           isLeader poolHash vrfKey =
-            let y = VRF.evalCertified @(VRF MockCrypto) () (mkSeed seedL slotNo epochNonce) vrfKey
+            let y = VRF.evalCertified @(VRF c) () (mkSeed seedL slotNo epochNonce) vrfKey
                 stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
              in case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of
                   Nothing -> checkLeaderValue (VRF.certifiedOutput y) stake f
