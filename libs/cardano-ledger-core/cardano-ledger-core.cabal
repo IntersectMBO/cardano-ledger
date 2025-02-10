@@ -81,6 +81,7 @@ library
     Cardano.Ledger.Keys.Internal
     Cardano.Ledger.State.AccountState
     Cardano.Ledger.State.PoolDistr
+    Cardano.Ledger.State.Pulser
     Cardano.Ledger.State.SnapShots
     Cardano.Ledger.State.UTxO
 
