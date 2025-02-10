@@ -431,7 +431,7 @@ instance Show (EqW c s dom rng) where
 instance Witness EqW where
   semantics = eqSem
 
-eqSem :: EqW c sym dom rng -> forall. c => FunTy dom rng -- Requires PolyKinds, RankNTypes
+eqSem :: c => EqW c sym dom rng -> FunTy dom rng -- Requires PolyKinds, RankNTypes
 eqSem EqualW = (==)
 
 -- | Note we inject this into the Term languge using the special 'Equal' construtor of Term
