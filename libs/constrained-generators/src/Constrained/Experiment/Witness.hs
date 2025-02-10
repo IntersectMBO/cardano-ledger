@@ -49,7 +49,7 @@ ppSymbol :: KnownSymbol a => (SSymbol a) -> Doc ann
 ppSymbol (_ :: SSymbol z) = fromString (symbolVal (Proxy @z))
 
 instance forall (c :: Constraint). Typeable c => Show (Evidence c) where
-  show _ = "Evidence (" ++ showType @c ++ ")"
+  show _ = "Evidence@(" ++ showType @c ++ ")"
 
 -- ============================================================================
 data Possible c where Possible :: forall (c :: Constraint). c => Possible c
