@@ -36,6 +36,7 @@ import Cardano.Protocol.TPraos.BHeader (
  )
 import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
 import qualified Data.Set as Set
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -65,7 +66,7 @@ tests ::
   forall era.
   ( ChainProperty era
   , EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   TestTree
 tests =

@@ -252,7 +252,7 @@ okAsCollateral utxo inputx =
   maybe False vKeyLockedAdaOnly $ Map.lookup inputx (unUTxO utxo)
 
 genAlonzoTxBody ::
-  GenEnv AlonzoEra ->
+  GenEnv c AlonzoEra ->
   UTxO AlonzoEra ->
   PParams AlonzoEra ->
   SlotNo ->

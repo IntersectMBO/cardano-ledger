@@ -318,8 +318,8 @@ genUpdate ::
   EraGen era =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)] ->
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys MockCrypto 'GenesisDelegate) ->
+  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams era ->
   (UTxOState era, CertState era) ->
   Gen (Maybe (Update era), [KeyPair 'Witness])

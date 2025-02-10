@@ -38,7 +38,7 @@ import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Protocol.Crypto (hashVerKeyVRF)
+import Cardano.Protocol.Crypto (Crypto, hashVerKeyVRF)
 import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈))
 import Data.Foldable (fold)
@@ -92,10 +92,10 @@ deriving instance (Era era, Show (Script era)) => Show (CertCred era)
 -- Note: we register keys and pools more often than deregistering/retiring them,
 -- and we generate more delegations than registrations of keys/pools.
 genTxCert ::
-  forall era.
-  (EraGen era, ProtVerAtMost era 8) =>
+  forall era c.
+  (EraGen era, ProtVerAtMost era 8, Crypto c) =>
   Constants ->
-  KeySpace era ->
+  KeySpace c era ->
   PParams era ->
   AccountState ->
   CertState era ->
@@ -308,11 +308,12 @@ genDelegation
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
-  (Era era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  forall era c.
+  (Era era, ShelleyEraTxCert era, ProtVerAtMost era 8, Crypto c) =>
   -- | Core nodes
-  [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)] ->
+  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
-  [AllIssuerKeys MockCrypto 'GenesisDelegate] ->
+  [AllIssuerKeys c 'GenesisDelegate] ->
   CertState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genGenesisDelegation coreNodes delegateKeys dpState =
@@ -332,7 +333,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
         ( GenesisDelegTxCert
             (hashVKey gkey)
             (hashVKey key)
-            (hashVerKeyVRF @MockCrypto vrf)
+            (hashVerKeyVRF @c vrf)
         , CoreKeyCred [gkey]
         )
     GenDelegs genDelegs_ = dsGenDelegs $ certDState dpState
@@ -349,8 +350,10 @@ genGenesisDelegation coreNodes delegateKeys dpState =
 
 -- | Generate PoolParams and the key witness.
 genStakePool ::
+  forall c.
+  Crypto c =>
   -- | Available keys for stake pool registration
-  [AllIssuerKeys MockCrypto 'StakePool] ->
+  [AllIssuerKeys c 'StakePool] ->
   -- | KeyPairs containing staking keys to act as owners/reward account
   KeyPairs ->
   -- | Minimum pool cost Protocol Param
@@ -372,7 +375,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
     getAnyStakeKey :: KeyPairs -> Gen (VKey 'Staking)
     getAnyStakeKey keys = vKey . snd <$> QC.elements keys
     mkPoolParams ::
-      AllIssuerKeys MockCrypto 'StakePool ->
+      AllIssuerKeys c 'StakePool ->
       Coin ->
       Coin ->
       Natural ->
@@ -383,7 +386,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
           pps =
             PoolParams
               (hashKey . vKey $ aikCold allPoolKeys)
-              (hashVerKeyVRF @MockCrypto . vrfVerKey $ aikVrf allPoolKeys)
+              (hashVerKeyVRF @c . vrfVerKey $ aikVrf allPoolKeys)
               pledge
               cost
               interval
@@ -395,8 +398,8 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
 
 -- | Generate `RegPool` and the key witness.
 genRegPool ::
-  (Era era, EraTxCert era) =>
-  [AllIssuerKeys MockCrypto 'StakePool] ->
+  (Era era, EraTxCert era, Crypto c) =>
+  [AllIssuerKeys c 'StakePool] ->
   KeyPairs ->
   Coin ->
   Gen (Maybe (TxCert era, CertCred era))
@@ -414,7 +417,7 @@ genRegPool poolKeys keyPairs minPoolCost = do
 genRetirePool ::
   (EraPParams era, EraTxCert era) =>
   PParams era ->
-  [AllIssuerKeys MockCrypto 'StakePool] ->
+  [AllIssuerKeys c 'StakePool] ->
   PState era ->
   SlotNo ->
   Gen (Maybe (TxCert era, CertCred era))
@@ -452,7 +455,7 @@ genInstantaneousRewardsAccounts ::
   (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys MockCrypto 'GenesisDelegate) ->
+  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams era ->
   AccountState ->
   DState era ->
@@ -502,7 +505,7 @@ genInstantaneousRewardsTransfer ::
   (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys MockCrypto 'GenesisDelegate) ->
+  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams era ->
   AccountState ->
   DState era ->
@@ -539,7 +542,7 @@ genInstantaneousRewards ::
   (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
   SlotNo ->
   -- | Index over the cold key hashes of all possible Genesis Delegates
-  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys MockCrypto 'GenesisDelegate) ->
+  Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams era ->
   AccountState ->
   DState era ->

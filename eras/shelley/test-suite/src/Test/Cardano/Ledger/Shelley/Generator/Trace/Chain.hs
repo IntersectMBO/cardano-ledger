@@ -53,6 +53,7 @@ import Data.Proxy (Proxy (..))
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (
@@ -102,9 +103,10 @@ instance
   , Environment (EraRule "TICK" era) ~ ()
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv era)
+  , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv c era)
+  , c ~ MockCrypto
   ) =>
-  HasTrace (CHAIN era) (GenEnv era)
+  HasTrace (CHAIN era) (GenEnv c era)
   where
   envGen _ = pure ()
 
@@ -127,11 +129,11 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- To achieve this we (1) use 'IRC CHAIN' (the "initial rule context") instead of simply 'Chain Env'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
-  forall era a.
+  forall era a c.
   ( EraGen era
   , EraGov era
   ) =>
-  GenEnv era ->
+  GenEnv c era ->
   IRC (CHAIN era) ->
   Gen (Either a (ChainState era))
 mkGenesisChainState ge@(GenEnv _ _ constants) (IRC _slotNo) = do

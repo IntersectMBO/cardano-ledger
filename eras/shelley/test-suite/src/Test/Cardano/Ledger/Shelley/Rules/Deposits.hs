@@ -46,6 +46,7 @@ import Test.Control.State.Transition.Trace (
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 
 import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.QuickCheck (
   Property,
   counterexample,
@@ -59,7 +60,7 @@ tests ::
   forall era.
   ( EraGen era
   , EraGov era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   TestTree
 tests =

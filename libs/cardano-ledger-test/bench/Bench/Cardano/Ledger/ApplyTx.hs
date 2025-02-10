@@ -38,6 +38,7 @@ import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.MaryEraGen ()
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
@@ -59,7 +60,7 @@ benchmarkSeed = 24601
 benchWithGenState ::
   ( NFData a
   , EraGen era
-  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
+  , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
@@ -77,7 +78,7 @@ benchApplyTx ::
   forall era.
   ( EraGen era
   , ApplyTx era
-  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
+  , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , EraGov era
   ) =>
@@ -105,7 +106,7 @@ deserialiseTxEra ::
   forall era.
   ( EraGen era
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
-  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
+  , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ Tx era

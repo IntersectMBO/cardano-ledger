@@ -102,7 +102,7 @@ relevantCasesAreCovered ::
   forall era.
   ( EraGen era
   , ChainProperty era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   Int ->
   TestTree
@@ -115,11 +115,16 @@ relevantCasesAreCovered n =
       let tl = 100
       checkCoverageWith stdConfidence {certainty = 1_000_000} $
         forAllBlind
-          (traceFromInitState @(CHAIN era) testGlobals tl (genEnv p defaultConstants) genesisChainSt)
+          ( traceFromInitState @(CHAIN era)
+              testGlobals
+              tl
+              (genEnv @era @MockCrypto p defaultConstants)
+              genesisChainSt
+          )
           relevantCasesAreCoveredForTrace
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just $ mkGenesisChainState (genEnv p defaultConstants)
+    genesisChainSt = Just $ mkGenesisChainState (genEnv @era @MockCrypto p defaultConstants)
 
 relevantCasesAreCoveredForTrace ::
   forall era.
@@ -299,7 +304,7 @@ hasMetadata tx = f (tx ^. bodyTxL . auxDataHashTxBodyL)
 onlyValidLedgerSignalsAreGenerated ::
   forall era ledger.
   ( EraGen era
-  , QC.HasTrace ledger (GenEnv era)
+  , QC.HasTrace ledger (GenEnv MockCrypto era)
   , QC.BaseEnv ledger ~ Globals
   , State ledger ~ LedgerState era
   , Show (Environment ledger)
@@ -320,7 +325,7 @@ onlyValidLedgerSignalsAreGenerated =
           genesisLedgerSt
     p :: Proxy era
     p = Proxy
-    ge = genEnv p defaultConstants
+    ge = genEnv @era @MockCrypto p defaultConstants
     genesisLedgerSt = Just $ mkGenesisLedgerState ge
 
 -- | Check that the abstract transaction size function
@@ -328,7 +333,7 @@ onlyValidLedgerSignalsAreGenerated =
 propAbstractSizeBoundsBytes ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
+  , QC.HasTrace (ShelleyLEDGER era) (GenEnv MockCrypto era)
   , EraGov era
   ) =>
   Property
@@ -338,7 +343,7 @@ propAbstractSizeBoundsBytes = property $ do
   forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
-    (genEnv p defaultConstants)
+    (genEnv @era @MockCrypto p defaultConstants)
     genesisLedgerSt
     $ \tr -> do
       let txs :: [Tx era]
@@ -347,14 +352,14 @@ propAbstractSizeBoundsBytes = property $ do
   where
     p :: Proxy era
     p = Proxy
-    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p defaultConstants)
+    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv @era @MockCrypto p defaultConstants)
 
 -- | Check that the abstract transaction size function
 -- is not off by an acceptable order of magnitude.
 propAbstractSizeNotTooBig ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
+  , QC.HasTrace (ShelleyLEDGER era) (GenEnv MockCrypto era)
   , EraGov era
   ) =>
   Property
@@ -371,7 +376,7 @@ propAbstractSizeNotTooBig = property $ do
   forAllTraceFromInitState @(ShelleyLEDGER era)
     testGlobals
     tl
-    (genEnv p defaultConstants)
+    (genEnv @era @MockCrypto p defaultConstants)
     genesisLedgerSt
     $ \tr -> do
       let txs :: [Tx era]
@@ -380,12 +385,12 @@ propAbstractSizeNotTooBig = property $ do
   where
     p :: Proxy era
     p = Proxy
-    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv p defaultConstants)
+    genesisLedgerSt = Just $ mkGenesisLedgerState (genEnv @era @MockCrypto p defaultConstants)
 
 onlyValidChainSignalsAreGenerated ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , EraGov era
   ) =>
   TestTree
@@ -397,11 +402,11 @@ onlyValidChainSignalsAreGenerated =
         onlyValidSignalsAreGeneratedFromInitState @(CHAIN era)
           testGlobals
           100
-          (genEnv p defaultConstants)
+          (genEnv @era @MockCrypto p defaultConstants)
           genesisChainSt
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just (mkGenesisChainState (genEnv p defaultConstants))
+    genesisChainSt = Just (mkGenesisChainState (genEnv @era @MockCrypto p defaultConstants))
 
 -- | Counts the epochs spanned by this trace
 epochsInTrace :: forall era. [Block (BHeader MockCrypto) era] -> Int

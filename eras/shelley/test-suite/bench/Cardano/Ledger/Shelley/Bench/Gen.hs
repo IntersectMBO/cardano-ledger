@@ -62,7 +62,7 @@ genChainState ::
   , EraGov era
   ) =>
   Int ->
-  GenEnv era ->
+  GenEnv MockCrypto era ->
   IO (ChainState era)
 genChainState n ge =
   let cs =
@@ -86,10 +86,10 @@ genBlock ::
   , MinLEDGER_STS era
   , GetLedgerView era
   , EraRule "LEDGERS" era ~ ShelleyLEDGERS era
-  , QC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
+  , QC.HasTrace (ShelleyLEDGERS era) (GenEnv MockCrypto era)
   , ApplyBlock era
   ) =>
-  GenEnv era ->
+  GenEnv MockCrypto era ->
   ChainState era ->
   IO (Block (BHeader MockCrypto) era)
 genBlock ge cs = generate $ GenBlock.genBlock ge cs
@@ -116,7 +116,7 @@ genTriple ::
   ) =>
   Proxy era ->
   Int ->
-  IO (GenEnv era, ChainState era, GenEnv era -> IO (ShelleyTx era))
+  IO (GenEnv MockCrypto era, ChainState era, GenEnv MockCrypto era -> IO (ShelleyTx era))
 genTriple proxy n = do
   let ge = genEnv proxy defaultConstants
   cs <- genChainState n ge

@@ -77,7 +77,7 @@ instance NFData (ValidateInput era) where
 validateInput ::
   ( EraGen era
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
-  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
+  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
   , API.ApplyBlock era
   , GetLedgerView era
   , MinLEDGER_STS era
@@ -89,7 +89,7 @@ validateInput utxoSize = genValidateInput utxoSize
 genValidateInput ::
   ( EraGen era
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
-  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
+  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
   , API.ApplyBlock era
   , GetLedgerView era
   , MinLEDGER_STS era
@@ -170,7 +170,7 @@ genUpdateInputs ::
   , MinLEDGER_STS era
   , GetLedgerView era
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
-  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
+  , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv MockCrypto era)
   , API.ApplyBlock era
   ) =>
   Int ->
