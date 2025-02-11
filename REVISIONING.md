@@ -87,7 +87,6 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/cardano-protocol-tpraos/1.1.0.0"' \
    '.#"ghc96/non-integral/1.0.0.0"' \
    '.#"ghc96/small-steps/1.0.1.0"' \
-   '.#"ghc96/small-steps-test/1.0.1.0"' \
    '.#"ghc96/cardano-data/1.2.0.0"' \
    '.#"ghc96/set-algebra/1.1.0.2"' \
    '.#"ghc96/vector-map/1.1.0.0"'
@@ -136,7 +135,6 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/cardano-protocol-tpraos/1.1.0.0"' \
    '.#"ghc96/non-integral/1.0.0.0"' \
    '.#"ghc96/small-steps/1.0.1.0"' \
-   '.#"ghc96/small-steps-test/1.0.1.0"' \
    '.#"ghc96/cardano-data/1.2.0.0"' \
    '.#"ghc96/set-algebra/1.1.0.2"' \
    '.#"ghc96/vector-map/1.1.0.0"'
@@ -186,7 +184,6 @@ extra-packages:
   cardano-protocol-tpraos-1.1.0.0,
   non-integral-1.0.0.0,
   small-steps-1.0.1.0,
-  small-steps-test-1.0.1.0,
   cardano-data-1.2.0.0,
   set-algebra-1.1.0.2,
   vector-map-1.1.0.0
@@ -229,7 +226,6 @@ library
    cardano-protocol-tpraos \
    non-integral \
    small-steps \
-   small-steps-test \
    cardano-data \
    set-algebra \
    vector-map
@@ -279,7 +275,6 @@ library
    cardano-protocol-tpraos \
    non-integral \
    small-steps \
-   small-steps-test \
    cardano-data \
    set-algebra \
    vector-map
