@@ -148,7 +148,7 @@ instance
 ------------------------------------------------------------------------
 
 instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_" BaseW '[a] (Sum a b) where
-  simplepropagate ctx@(Context _ InjLeftW (HOLE End)) spec =
+  simplepropagate ctx@(Context _ InjLeftW (HOLE :<> End)) spec =
     case spec of
       TypeSpec (SumSpec _ sl _) cant -> Right $ sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
       MemberSpec es -> case [a | SumLeft a <- NE.toList es] of
@@ -173,7 +173,7 @@ instance
   (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
   FunSym () "sumright_" BaseW '[b] (Sum a b)
   where
-  simplepropagate ctx@(Context _ InjRightW (HOLE End)) spec =
+  simplepropagate ctx@(Context _ InjRightW (HOLE :<> End)) spec =
     case spec of
       TypeSpec (SumSpec _ _ sr) cant -> Right $ sr <> foldMap notEqualSpec [a | SumRight a <- cant]
       MemberSpec es -> case [a | SumRight a <- NE.toList es] of
