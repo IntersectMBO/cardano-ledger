@@ -261,7 +261,6 @@ switched to [CHaPs](https://github.com/input-output-hk/cardano-haskell-packages)
 Changes recorded below are for all of the package versions in the list:
 
   * `small-steps-1.0.0.0`
-  * `small-steps-test-1.0.0.0`
   * `vector-map-1.0.0.0`
   * `cardano-data-1.0.0.0`
   * `set-algebra-1.0.0.0`
