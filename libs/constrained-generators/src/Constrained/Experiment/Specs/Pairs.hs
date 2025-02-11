@@ -110,7 +110,7 @@ pairView _ = Nothing
 -- ========= FstW
 
 instance (HasSpec a, HasSpec b) => FunSym () "fst_" BaseW '[Prod a b] a where
-  simplepropagate (Context Evidence FstW (HOLE End)) (spec :: Specification a) = Right $ (cartesian @a @b spec TrueSpec)
+  simplepropagate (Context Evidence FstW (HOLE :<> End)) (spec :: Specification a) = Right $ (cartesian @a @b spec TrueSpec)
   simplepropagate ctx _ = Left (NE.fromList ["FstW[fst_]", "Unreachable context, wrong number of args", show ctx])
 
   rewriteRules FstW ((pairView -> Just (x, _)) :> Nil) Evidence = Just x
@@ -125,7 +125,7 @@ fst_ = appTerm FstW
 -- ========= SndW
 
 instance (HasSpec a, HasSpec b) => FunSym () "snd_" BaseW '[Prod a b] b where
-  simplepropagate (Context _ SndW (HOLE End)) spec = Right $ (cartesian @a @b TrueSpec spec)
+  simplepropagate (Context _ SndW (HOLE :<> End)) spec = Right $ (cartesian @a @b TrueSpec spec)
   simplepropagate ctx _ = Left (NE.fromList ["SndW[fst_]", "Unreachable context, wrong number of args", show ctx])
 
   rewriteRules SndW ((pairView -> Just (_, y)) :> Nil) Evidence = Just y
@@ -140,7 +140,7 @@ snd_ = appTerm SndW
 -- ========= PairW
 
 instance (HasSpec a, HasSpec b) => FunSym () "pair_" BaseW '[a, b] (Prod a b) where
-  simplepropagate ctx@(Context _ PairW (a :>| (HOLE End))) spec =
+  simplepropagate ctx@(Context _ PairW (a :|> HOLE :<> End)) spec =
     let sameFst ps = [b | Prod a' b <- ps, a == a']
      in case spec of
           TypeSpec (Cartesian sa sb) cant
@@ -154,7 +154,7 @@ instance (HasSpec a, HasSpec b) => FunSym () "pair_" BaseW '[a, b] (Prod a b) wh
                 pure
                   ("propagateSpecFun (pair_ a HOLE) on (MemberSpec " ++ show es ++ " where a does not appear in as.")
           _ -> Left (NE.fromList ["PairW[pair_]", "Unreachable context, wrong number of args", show ctx])
-  simplepropagate ctx@(Context _ PairW (HOLE (b :<| End))) spec =
+  simplepropagate ctx@(Context _ PairW (HOLE :<> b :<| End)) spec =
     let sameSnd ps = [a | Prod a b' <- ps, b == b']
      in case spec of
           TypeSpec (Cartesian sa sb) cant
