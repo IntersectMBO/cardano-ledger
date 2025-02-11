@@ -101,12 +101,12 @@ class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
   propagate _ (ErrorSpec msgs) = ErrorSpec msgs
   -- this is only good for unary functions
   -- Needed evidence--V             to build the App node.
-  propagate (Context Evidence witW (HOLE End)) (SuspendedSpec v ps) =
+  propagate (Context Evidence witW (HOLE :<> End)) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App witW (v' :> Nil)) (v :-> ps)
   -- this is only good for binary functions
-  propagate (Context Evidence witW (HOLE (x :<| End))) (SuspendedSpec v ps) =
+  propagate (Context Evidence witW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App witW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context Evidence witW (x :>| (HOLE End))) (SuspendedSpec v ps) =
+  propagate (Context Evidence witW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App witW (Lit x :> v' :> Nil)) (v :-> ps)
   -- Handle the important cases
   propagate ctxt spec = case simplepropagate ctxt spec of
@@ -132,6 +132,7 @@ propagateSpec ::
   Ctx v a ->
   Specification v
 propagateSpec spec (Ctx context) = propagate context spec
+propagateSpec _ HOLE = ErrorSpec (pure "propagateSpec on HOLE")
 
 data Fn dom rng where Fn :: FunSym c s t dom rng => t c s dom rng -> Fn dom rng
 
@@ -492,8 +493,8 @@ instance
     '[a]
     simplerepA
   where
-  simplepropagate (Context _ ToGenericW (HOLE End)) (TypeSpec s cant) = Right $ TypeSpec s (fromSimpleRep <$> cant)
-  simplepropagate (Context _ ToGenericW (HOLE End)) (MemberSpec es) = Right $ MemberSpec (fmap fromSimpleRep es)
+  simplepropagate (Context _ ToGenericW (HOLE :<> End)) (TypeSpec s cant) = Right $ TypeSpec s (fromSimpleRep <$> cant)
+  simplepropagate (Context _ ToGenericW (HOLE :<> End)) (MemberSpec es) = Right $ MemberSpec (fmap fromSimpleRep es)
   simplepropagate ctx _ = Left (NE.fromList ["ToGenericW (toGenericFn)", "Unreachable context, too many args", show ctx])
 
 toGeneric_ ::
@@ -512,7 +513,6 @@ instance
   ( HasSimpleRep a
   , HasSpec a
   , HasSpec (SimpleRep a)
-  , HasSpec dom
   , dom ~ SimpleRep a
   , TypeSpec a ~ TypeSpec (SimpleRep a)
   , typespecA ~ TypeSpec a
@@ -527,8 +527,8 @@ instance
     '[dom]
     a
   where
-  simplepropagate (Context _ FromGenericW (HOLE End)) (TypeSpec s cant) = Right $ TypeSpec s (toSimpleRep <$> cant)
-  simplepropagate (Context _ FromGenericW (HOLE End)) (MemberSpec es) = Right $ MemberSpec (fmap toSimpleRep es)
+  simplepropagate (Context _ FromGenericW (HOLE :<> End)) (TypeSpec s cant) = Right $ TypeSpec s (toSimpleRep <$> cant)
+  simplepropagate (Context _ FromGenericW (HOLE :<> End)) (MemberSpec es) = Right $ MemberSpec (fmap toSimpleRep es)
   simplepropagate ctx _ =
     Left (NE.fromList ["FromGenericW (fromGenericFn)", "Unreachable context, too many args", show ctx])
 
@@ -1099,44 +1099,48 @@ data
   where
   Context ::
     (All HasSpec dom, HasSpec rng) =>
-    Evidence c -> t c s dom rng -> CtxtList Pre dom hole -> Context c s t dom rng hole
-
-deriving instance
-  (Show (t c s dom rng), All Show dom, Typeable c) => Show (Context c s t dom rng hole)
+    Evidence c -> t c s dom rng -> CList Pre dom hole -> Context c s t dom rng hole
 
 data Ctx hole rng where
   Ctx :: (HasSpec hole, FunSym c s t dom rng) => Context c s t dom rng hole -> Ctx hole rng
+  HOLE :: HasSpec a => Ctx a a
 
 data Mode = Pre | Post
 
--- Note arrows point towards the HOLE
 infixr 5 :<|
-infixr 1 :>|
+infixr 5 :|>
+infixr 5 :<>
 
-data CtxtList (x :: Mode) (as :: [Type]) (hole :: Type) where
-  End :: CtxtList Post '[] h
-  (:<|) :: Literal a => a -> CtxtList Post as h -> CtxtList Post (a : as) h
-  HOLE :: HasSpec b => CtxtList Post as i -> CtxtList Pre (b : as) b
-  (:>|) :: Literal a => a -> CtxtList Pre as h -> CtxtList Pre (a : as) h
+data CList (x :: Mode) (as :: [Type]) (hole :: Type) where
+  End :: CList Post '[] h
+  (:<|) :: (Typeable a, Show a) => a -> CList Post as h -> CList Post (a ': as) h
+  (:<>) :: Ctx x y -> CList Post as i -> CList Pre (y ': as) x
+  (:|>) :: (Typeable a, Show a) => a -> CList Pre as h -> CList Pre (a ': as) h
 
--- Here is an Example
-c6 :: HasSpec b => CtxtList Pre [Bool, String, b, Bool, ()] b
-c6 = True :>| ("abc" :: String) :>| (HOLE $ True :<| () :<| End)
+instance Show (CList mode rng hole) where
+  show clist = "(" ++ showCList clist
+    where
+      showCList :: forall m d r. CList m d r -> String
+      showCList End = "End)"
+      showCList (x :<| y) = show x ++ " :<| " ++ showCList y
+      showCList (hole :<> xs) = show hole ++ " :<> " ++ showCList xs
+      showCList (x :|> y) = show x ++ " :|> " ++ showCList y
 
---                      rightmost ^   ^--parens here ------------^
--- We need to put parenthesis around the segment from (Hole $ .... End),
--- before the rightmost (:>|), to make the fixity work.
+-- Examples
+c6 :: HasSpec b => CList Pre [Bool, String, b, Bool, ()] b
+c6 = True :|> ("abc" :: String) :|> HOLE :<> True :<| () :<| End
 
 val6 :: List [] [Bool, String, Int, Bool, ()]
 val6 = [] :> ["abc"] :> [67, 12] :> [True, False] :> [()] :> Nil
 
--- Show instance puts parens in the output correctly to
--- remind us where the parens go.
-instance All Show as => Show (CtxtList m as h) where
-  show End = "End)"
-  show (x :<| xs) = show x ++ " :<| " ++ show xs
-  show (HOLE xs) = "(HOLE $ " ++ show xs
-  show (x :>| xs) = show x ++ " :>| " ++ show xs
+-- Show instances
+
+instance Show (Ctx rng hole) where
+  show (Ctx context) = "Ctx" ++ show context
+  show HOLE = "[_ " ++ showType @hole ++ " _]"
+
+instance (Typeable c, Show (t c s d r)) => Show (Context c s t d r h) where
+  show (Context ev f xs) = "(Context " ++ show ev ++ " " ++ show f ++ " " ++ show xs ++ ")"
 
 -- =================================================================
 -- A simple but important HasSpec instances. The  other
