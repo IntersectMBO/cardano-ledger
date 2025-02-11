@@ -126,7 +126,7 @@ instance HasSpec a => FunSym () "id_" FunW '[a] a where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context _ IdW (HOLE End)) spec = spec
+  propagate (Context _ IdW (HOLE :<> End)) spec = spec
   propagate ctxt _ = ErrorSpec (NE.fromList ["IdW (id_)", "Unreachable context, too many args", show ctxt])
 
   mapTypeSpec IdW ts = typeSpec ts
@@ -142,8 +142,8 @@ instance
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context ev (FlipW f) (HOLE (v :<| End))) spec = propagate (Context ev f (v :>| HOLE End)) spec
-  propagate (Context ev (FlipW f) (v :>| (HOLE End))) spec = propagate (Context ev f (HOLE $ v :<| End)) spec
+  propagate (Context ev (FlipW f) (HOLE :<> v :<| End)) spec = propagate (Context ev f (v :|> HOLE :<> End)) spec
+  propagate (Context ev (FlipW f) (v :|> HOLE :<> End)) spec = propagate (Context ev f (HOLE :<> v :<| End)) spec
   propagate ctxt@(Context Evidence _ _) _ = ErrorSpec (NE.fromList ["FlipW (flip_)", "Unreachable context, too many args", show ctxt])
 
   -- Note we need Evidence to apply App to f
@@ -167,9 +167,9 @@ instance
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context Evidence (ComposeW (f :: t1' c1' s1' '[b'] r') (g :: t2' c2' s2' '[a'] b'')) (HOLE End)) spec =
-    propagate @c2' @s2' @t2' @'[a'] @b' (Context (Evidence @c2') g (HOLE End)) $
-      propagate @c1' @s1' @t1' @'[b'] @r' (Context (Evidence @c1') f (HOLE End)) spec
+  propagate (Context Evidence (ComposeW (f :: t1' c1' s1' '[b'] r') (g :: t2' c2' s2' '[a'] b'')) (HOLE :<> End)) spec =
+    propagate @c2' @s2' @t2' @'[a'] @b' (Context (Evidence @c2') g (HOLE :<> End)) $
+      propagate @c1' @s1' @t1' @'[b'] @r' (Context (Evidence @c1') f (HOLE :<> End)) spec
   propagate ctxt@(Context Evidence _ _) _ = ErrorSpec (NE.fromList ["ComposeW (composeFn)", "Unreachable context, too many args", show ctxt])
 
   mapTypeSpec (ComposeW g h) ts = mapSpec g . mapSpec h $ typeSpec ts
@@ -283,7 +283,7 @@ genInverse ::
   b ->
   GenT m a
 genInverse (Fun Evidence f) argS x =
-  let argSpec' = argS <> propagate (Context Evidence f (HOLE End)) (equalSpec x)
+  let argSpec' = argS <> propagate (Context Evidence f (HOLE :<> End)) (equalSpec x)
    in explain
         ( NE.fromList
             [ "genInverse"
@@ -328,8 +328,8 @@ genFromFold must (simplifySpec -> size) elemS fun@(Fun Evidence fn) foldS
       $ do
         let elemS' = mapSpec fn elemS
             mustVal = adds (map (semantics fn) must)
-            foldS' = propagate (Context Evidence theAddFn (HOLE $ mustVal :<| End)) foldS
-            sizeSpec' = propagate (Context Evidence AddW (HOLE $ (sizeOf must) :<| End)) size
+            foldS' = propagate (Context Evidence theAddFn (HOLE :<> mustVal :<| End)) foldS
+            sizeSpec' = propagate (Context Evidence AddW (HOLE :<> (sizeOf must) :<| End)) size
         when (isErrorLike sizeSpec') $ genError1 "Inconsistent size spec"
         results0 <- genSizedList sizeSpec' (simplifySpec elemS') (simplifySpec foldS')
         results <-
@@ -407,7 +407,7 @@ deriving instance (Eq (ListW c s d r))
 -- ============= FunSymbol for FoldMapW
 
 instance (Typeable a, Typeable b) => FunSym (Foldy b) "foldMap_" ListW '[[a]] b where
-  simplepropagate (Context Evidence (FoldMapW f) (HOLE End)) spec =
+  simplepropagate (Context Evidence (FoldMapW f) (HOLE :<> End)) spec =
     Right $ typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f spec)
   simplepropagate _ _ = Left (pure "Unreachable context for (FunSym (Foldy b) \"foldMap_\" ListW '[[a]] b)")
   mapTypeSpec (FoldMapW g) ts =
@@ -439,12 +439,12 @@ toPredsFoldSpec x (FoldSpec funAB sspec) =
 -- ============ FunSymbol for ElemW
 
 instance Typeable a => FunSym (Eq a) "elem_" ListW '[a, [a]] Bool where
-  simplepropagate (Context Evidence ElemW (HOLE (es :<| End))) spec = Right $ caseBoolSpec spec $ \case
+  simplepropagate (Context Evidence ElemW (HOLE :<> es :<| End)) spec = Right $ caseBoolSpec spec $ \case
     True -> case nub es of
       [] -> ErrorSpec (pure "propagate on (elem_ x []), The empty list, [], has no solution")
       (z : zs) -> MemberSpec (z :| zs)
     False -> notMemberSpec es
-  simplepropagate (Context Evidence ElemW (e :>| (HOLE End))) spec = Right $ caseBoolSpec spec $ \case
+  simplepropagate (Context Evidence ElemW (e :|> HOLE :<> End)) spec = Right $ caseBoolSpec spec $ \case
     True -> typeSpec $ ListSpec Nothing [e] mempty mempty NoFold
     False -> typeSpec $ ListSpec Nothing mempty mempty (notEqualSpec e) NoFold
   simplepropagate _ _ = Left (pure "Unreachable context for (FunSym (Eq a) \"elem_\" ListW  '[a, [a]] Bool)")
@@ -462,7 +462,7 @@ elemFn = Fun Evidence ElemW
 -- ============= FunSymbol for SingletonW
 
 instance Typeable a => FunSym () "singelton_" ListW '[a] [a] where
-  simplepropagate (Context Evidence SingletonW (HOLE End)) spec =
+  simplepropagate (Context Evidence SingletonW (HOLE :<> End)) spec =
     case spec of
       MemberSpec xss ->
         case [a | [a] <- NE.toList xss] of
@@ -497,7 +497,7 @@ instance Typeable a => FunSym () "singelton_" ListW '[a] [a] where
 reverseFoldSpec :: FoldSpec a -> Specification a
 reverseFoldSpec NoFold = TrueSpec
 -- The single element list has to sum to something that obeys spec, i.e. `conformsToSpec (f a) spec`
-reverseFoldSpec (FoldSpec (Fun Evidence fn) spec) = propagate (Context Evidence fn (HOLE End)) spec
+reverseFoldSpec (FoldSpec (Fun Evidence fn) spec) = propagate (Context Evidence fn (HOLE :<> End)) spec
 
 singleton_ :: (Sized [a], HasSpec a) => Term a -> Term [a]
 singleton_ = appTerm SingletonW
@@ -510,7 +510,7 @@ singletonFn = Fun Evidence SingletonW
 instance (Sized [a], Typeable a) => FunSym () "append_" ListW '[[a], [a]] [a] where
   simplepropagate ctx spec = case spec of
     MemberSpec xss
-      | Context Evidence AppendW (HOLE ((ys :: [a]) :<| End)) <- ctx
+      | Context Evidence AppendW (HOLE :<> (ys :: [a]) :<| End) <- ctx
       , Evidence <- prerequisites @[a] ->
           -- Only keep the prefixes of the elements of xss that can
           -- give you the correct resulting list
@@ -523,7 +523,7 @@ instance (Sized [a], Typeable a) => FunSym () "append_" ListW '[[a], [a]] [a] wh
                     ]
                 )
             (x : xs) -> Right $ MemberSpec (x :| xs)
-      | Context Evidence AppendW ((ys :: [a]) :>| (HOLE End)) <- ctx
+      | Context Evidence AppendW ((ys :: [a]) :|> HOLE :<> End) <- ctx
       , Evidence <- prerequisites @[a] ->
           -- Only keep the suffixes of the elements of xss that can
           -- give you the correct resulting list
@@ -537,12 +537,12 @@ instance (Sized [a], Typeable a) => FunSym () "append_" ListW '[[a], [a]] [a] wh
                 )
             (x : xs) -> Right (MemberSpec (x :| xs))
     TypeSpec ts@ListSpec {listSpecElem = e} cant
-      | Context Evidence AppendW (HOLE ((ys :: [a]) :<| End)) <- ctx
+      | Context Evidence AppendW (HOLE :<> (ys :: [a]) :<| End) <- ctx
       , Evidence <- prerequisites @[a]
       , all (`conformsToSpec` e) ys ->
           Right $
             TypeSpec (alreadyHave ys ts) (suffixedBy ys cant)
-      | Context Evidence AppendW ((ys :: [a]) :>| (HOLE End)) <- ctx
+      | Context Evidence AppendW ((ys :: [a]) :|> HOLE :<> End) <- ctx
       , Evidence <- prerequisites @[a]
       , all (`conformsToSpec` e) ys ->
           Right $
@@ -882,7 +882,7 @@ genNumList elemSIn foldSIn = do
               $ do
                 sz <- sizeT
                 x <- genFromSpecT elemS
-                let foldS' = propagate (Context Evidence theAddFn (HOLE (x :<| End))) foldS
+                let foldS' = propagate (Context Evidence theAddFn (HOLE :<> x :<| End)) foldS
                     specs' = narrowByFuelAndSize (fromIntegral $ fuel - 1) sz (elemS, foldS')
                 pure (x, specs')
                 `suchThatT` not

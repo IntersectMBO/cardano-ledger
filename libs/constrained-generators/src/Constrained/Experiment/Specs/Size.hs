@@ -58,7 +58,7 @@ instance Witness SizeW where
   semantics SizeOfW = sizeOf -- From the Sized class.
 
 instance HasSpec t => FunSym (Sized t) "sizeOf_" SizeW '[t] Integer where
-  simplepropagate (Context Evidence SizeOfW (HOLE End)) spec = case spec of
+  simplepropagate (Context Evidence SizeOfW (HOLE :<> End)) spec = case spec of
     (TypeSpec x cant) -> Right $ liftSizeSpec x cant
     (MemberSpec xs) -> Right $ liftMemberSpec (NE.toList xs)
     impossible -> Left (NE.fromList ["SizeOfW[sizeOf_]", "Unreachable spec in simplepropagate", show impossible])
@@ -149,15 +149,6 @@ instance Ord a => Sized  (Set.Set a) where
     Nothing -> ErrorSpec (pure ("In liftMemberSpec for the (Sized Set) instance, xs is the empty list"))
     Just zs -> typeSpec (SetSpec mempty TrueSpec (MemberSpec zs))
   sizeOfTypeSpec (SetSpec must _ sz) = sz <> geqSpec (sizeOf must)
-
-instance Sized  [a] where
-  sizeOf = toInteger . length
-  liftSizeSpec spec cant = typeSpec (ListSpec Nothing mempty (TypeSpec spec cant) TrueSpec NoFold)
-  liftMemberSpec xs = case NE.nonEmpty xs of
-    Nothing -> ErrorSpec (pure ("In liftMemberSpec for (Sized List) instance, xs is the empty list"))
-    Just zs -> typeSpec (ListSpec Nothing mempty (MemberSpec zs) TrueSpec NoFold)
-  sizeOfTypeSpec (ListSpec _ _ _ ErrorSpec {} _) = equalSpec 0
-  sizeOfTypeSpec (ListSpec _ must sizespec _ _) = sizespec <> geqSpec (sizeOf must)
 -}
 
 -- How to constrain the size of any type, with a Sized instance
