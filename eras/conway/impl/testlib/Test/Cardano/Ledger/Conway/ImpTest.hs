@@ -213,6 +213,7 @@ import Data.Maybe (fromJust, fromMaybe, isJust)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
@@ -1151,63 +1152,66 @@ logRatificationChecks ::
   GovActionId ->
   ImpTestM era ()
 logRatificationChecks gaId = do
-  gas@GovActionState {gasCommitteeVotes, gasDRepVotes} <- getGovActionState gaId
-  let govAction = gasAction gas
-  ens@EnactState {..} <- getEnactState
-  committee <- getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
-  ratEnv@RatifyEnv {reCurrentEpoch} <- getRatifyEnv
-  let ratSt = RatifyState ens mempty mempty False
-  curTreasury <- getsNES treasuryL
-  currentEpoch <- getsNES nesELL
-  pv <- getProtVer
-  let
-    members = foldMap' committeeMembers committee
-    committeeState = reCommitteeState ratEnv
-  curPParams <- getsNES $ nesEsL . epochStateGovStateL . curPParamsGovStateL
-  logDoc $
-    tableDoc
-      (Just "RATIFICATION CHECKS")
-      [ ("prevActionAsExpected:", viaShow $ prevActionAsExpected gas ensPrevGovActionIds)
-      , ("validCommitteeTerm:", viaShow $ validCommitteeTerm govAction curPParams currentEpoch)
-      , ("notDelayed:", "??")
-      , ("withdrawalCanWithdraw:", viaShow $ withdrawalCanWithdraw govAction curTreasury)
-      ,
-        ( "committeeAccepted:"
-        , hsep
-            [ viaShow $ committeeAccepted ratEnv ratSt gas
-            , "["
-            , "To Pass:"
-            , viaShow $ committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch
-            , ">="
-            , viaShow $ votingCommitteeThreshold reCurrentEpoch ratSt committeeState (gasAction gas)
-            , "]"
-            ]
-        )
-      ,
-        ( "spoAccepted:"
-        , hsep
-            [ viaShow $ spoAccepted ratEnv ratSt gas
-            , "["
-            , "To Pass:"
-            , viaShow $ spoAcceptedRatio ratEnv gas pv
-            , ">="
-            , viaShow $ votingStakePoolThreshold ratSt (gasAction gas)
-            , "]"
-            ]
-        )
-      ,
-        ( "dRepAccepted:"
-        , hsep
-            [ viaShow $ dRepAccepted ratEnv ratSt gas
-            , "["
-            , "To Pass:"
-            , viaShow $ dRepAcceptedRatio ratEnv gasDRepVotes (gasAction gas)
-            , ">="
-            , viaShow $ votingDRepThreshold ratSt (gasAction gas)
-            , "]"
-            ]
-        )
-      ]
+  mbyGas <- lookupGovActionState gaId
+  case mbyGas of
+    Nothing -> logText $ "Goveranance action not found: " <> T.pack (show gaId)
+    Just gas@GovActionState {gasCommitteeVotes, gasDRepVotes} -> do
+      let govAction = gasAction gas
+      ens@EnactState {..} <- getEnactState
+      committee <- getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
+      ratEnv@RatifyEnv {reCurrentEpoch} <- getRatifyEnv
+      let ratSt = RatifyState ens mempty mempty False
+      curTreasury <- getsNES treasuryL
+      currentEpoch <- getsNES nesELL
+      pv <- getProtVer
+      let
+        members = foldMap' committeeMembers committee
+        committeeState = reCommitteeState ratEnv
+      curPParams <- getsNES $ nesEsL . epochStateGovStateL . curPParamsGovStateL
+      logDoc $
+        tableDoc
+          (Just "RATIFICATION CHECKS")
+          [ ("prevActionAsExpected:", viaShow $ prevActionAsExpected gas ensPrevGovActionIds)
+          , ("validCommitteeTerm:", viaShow $ validCommitteeTerm govAction curPParams currentEpoch)
+          , ("notDelayed:", "??")
+          , ("withdrawalCanWithdraw:", viaShow $ withdrawalCanWithdraw govAction curTreasury)
+          ,
+            ( "committeeAccepted:"
+            , hsep
+                [ viaShow $ committeeAccepted ratEnv ratSt gas
+                , "["
+                , "To Pass:"
+                , viaShow $ committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch
+                , ">="
+                , viaShow $ votingCommitteeThreshold reCurrentEpoch ratSt committeeState (gasAction gas)
+                , "]"
+                ]
+            )
+          ,
+            ( "spoAccepted:"
+            , hsep
+                [ viaShow $ spoAccepted ratEnv ratSt gas
+                , "["
+                , "To Pass:"
+                , viaShow $ spoAcceptedRatio ratEnv gas pv
+                , ">="
+                , viaShow $ votingStakePoolThreshold ratSt (gasAction gas)
+                , "]"
+                ]
+            )
+          ,
+            ( "dRepAccepted:"
+            , hsep
+                [ viaShow $ dRepAccepted ratEnv ratSt gas
+                , "["
+                , "To Pass:"
+                , viaShow $ dRepAcceptedRatio ratEnv gasDRepVotes (gasAction gas)
+                , ">="
+                , viaShow $ votingDRepThreshold ratSt (gasAction gas)
+                , "]"
+                ]
+            )
+          ]
 
 -- | Submits a transaction that registers a hot key for the given cold key.
 -- Returns the hot key hash.

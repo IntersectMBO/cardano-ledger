@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
@@ -12,7 +13,13 @@ module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
+import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
+  ProtVer (..),
+  StrictMaybe (..),
+  addEpochInterval,
+  natVersion,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -475,6 +482,83 @@ spec = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [UnRegDepositTxCert cred expectedDeposit]
+      expectNotRegistered cred
+      expectNotDelegatedVote cred
+    disableImpInitExpectLedgerRuleConformance $
+      it "Delegate vote and unregister after hardfork" $ do
+        let
+          bootstrapVer = ProtVer (natVersion @9) 0
+          setProtVer pv = modifyNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ pv
+        initialProtVer <- getProtVer
+        (_, ccCred, _) <- impAnn "Set up a committee" $ do
+          -- Temporarily set protver to 10 to elect a committee
+          setProtVer $ ProtVer (natVersion @10) 0
+          res <- electBasicCommittee
+          setProtVer initialProtVer
+          pure res
+        (khSPO, _, _) <- setupPoolWithStake $ Coin 10_000_000
+        -- Using an irrefutable pattern here to prevent evaluation of tuple
+        -- unless we actually need a value from it
+        ~(drepCred, _, _) <-
+          if initialProtVer > bootstrapVer
+            then setupSingleDRep 100_000_000
+            else pure $ error "drepCred should not be accessed before protver 10"
+        passNEpochs 3
+        expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+        cred <- KeyHashObj <$> freshKeyHash
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ [RegDepositDelegTxCert cred (DelegVote DRepAlwaysAbstain) expectedDeposit]
+        registerAndRetirePoolToMakeReward cred
+        expectRegistered cred
+        expectDelegatedVote cred DRepAlwaysAbstain
+        impAnn "Version should be unchanged" $
+          getProtVer `shouldReturn` initialProtVer
+        let nextVer = majorFollow initialProtVer
+        hfGaid <- submitGovAction $ HardForkInitiation SNothing nextVer
+        submitVote_ VoteYes (StakePoolVoter khSPO) hfGaid
+        submitVote_ VoteYes (CommitteeVoter ccCred) hfGaid
+        when (initialProtVer > bootstrapVer) $
+          submitVote_ VoteYes (DRepVoter drepCred) hfGaid
+        passNEpochs 3
+        logRatificationChecks hfGaid
+        impAnn "Version should be bumped" $
+          getProtVer `shouldReturn` nextVer
+        withdrawalAmount <- getsPParams ppPoolDepositL
+        rewardAccount <- getRewardAccountFor cred
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL .~ [UnRegTxCert cred]
+            & bodyTxL . withdrawalsTxBodyL
+              .~ Withdrawals (Map.singleton rewardAccount withdrawalAmount)
+        expectNotRegistered cred
+        expectNotDelegatedVote cred
+    it "Delegate vote and undelegate after delegating to some stake pools" $ do
+      (khSPO, _, _) <- setupPoolWithStake $ Coin 1_000_000
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      cred <- KeyHashObj <$> freshKeyHash
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [RegDepositDelegTxCert cred (DelegVote DRepAlwaysAbstain) expectedDeposit]
+      registerAndRetirePoolToMakeReward cred
+      expectRegistered cred
+      expectDelegatedVote cred DRepAlwaysAbstain
+      forM_ @[] [1 .. 3 :: Int] $ \_ -> do
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ [DelegTxCert cred (DelegStake khSPO)]
+      passNEpochs 3
+      withdrawalAmount <- getsPParams ppPoolDepositL
+      rewardAccount <- getRewardAccountFor cred
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [UnRegTxCert cred]
+          & bodyTxL . withdrawalsTxBodyL
+            .~ Withdrawals (Map.singleton rewardAccount withdrawalAmount)
       expectNotRegistered cred
       expectNotDelegatedVote cred
 
