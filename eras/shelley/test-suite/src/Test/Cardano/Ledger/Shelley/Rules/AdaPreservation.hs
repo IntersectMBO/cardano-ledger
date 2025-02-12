@@ -312,10 +312,8 @@ checkWithdrawalBound SourceSignalTarget {source, signal, target} =
     rewardDelta :: Coin
     rewardDelta =
       fromCompact
-        -- (sumRewardsUView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ source))
         (sumRewardsUView (rewards $ (chainNes source) ^. nesEsL . esLStateL . lsCertStateL . certDStateL))
         <-> fromCompact
-          -- (sumRewardsUView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ target))
           (sumRewardsUView (rewards $ (chainNes target) ^. nesEsL . esLStateL . lsCertStateL . certDStateL))
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
@@ -408,12 +406,10 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
           LedgerState
             UTxOState {utxosUtxo = u, utxosDeposited = d, utxosFees = f}
             cState1
-        , -- CertState {certDState = DState {dsUnified = umap1}}
-        target =
+        , target =
           LedgerState
             UTxOState {utxosUtxo = u', utxosDeposited = d', utxosFees = f'}
             cState2
-            -- CertState {certDState = DState {dsUnified = umap2}}
         } =
         (coinBalance u' <+> d' <+> f')
           <-> (coinBalance u <+> d <+> f)

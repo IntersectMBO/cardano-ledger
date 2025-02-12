@@ -613,7 +613,6 @@ synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map
 synopsis (PParamsR _) (PParamsF p x) = show $ pcPParams p x
 synopsis (FuturePParamsR p) x = show $ pcFuturePParams p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
--- TODO: think this through
 synopsis (CertStateR _) (CertStateF p x) = show $ pcCertState p x
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)

@@ -92,8 +92,6 @@ class
   certStateSpec ::
     WitUniv era -> Term fn AccountState -> Term fn EpochNo -> Specification fn (CertState era)
 
--- TODO: consider adding `certStateSpec`
-
 instance IsConwayUniv fn => EraSpecLedger ShelleyEra fn where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUTxO

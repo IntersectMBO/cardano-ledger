@@ -38,7 +38,6 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -335,20 +334,20 @@ instance Reflect era => Extract (UTxOState era) era where
       emptyGovState
       mempty
 
--- TODO: think this through
-extractCertState :: forall era. Reflect era => CertState era
-extractCertState = case reify @era of
-  Shelley -> shelleyCertState
-  Mary -> shelleyCertState
-  Allegra -> shelleyCertState
-  Alonzo -> shelleyCertState
-  Babbage -> shelleyCertState
-  Conway -> shelleyCertState -- TODO: add `conwayCertState`
+extractCertState :: forall era. Reflect era => ModelNewEpochState era -> CertState era
+extractCertState x = case reify @era of
+  Shelley -> cs
+  Mary -> cs
+  Allegra -> cs
+  Alonzo -> cs
+  Babbage -> cs
+  Conway -> cs -- TODO: add `conwayCertState`
   where
-    shelleyCertState = ShelleyCertState def def def
+    cs :: CertState era
+    cs = mkCertState (extract x) (extract x) (extract x)
 
 instance Reflect era => Extract (LedgerState era) era where
-  extract x = LedgerState (extract x) extractCertState
+  extract x = LedgerState (extract x) (extractCertState x)
 
 instance Reflect era => Extract (EpochState era) era where
   extract x =

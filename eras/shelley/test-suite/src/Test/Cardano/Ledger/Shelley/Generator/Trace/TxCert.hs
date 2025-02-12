@@ -219,7 +219,7 @@ genTxCerts
         Constants {maxCertsPerTx}
       )
   pp
-  certState -- @CertState {certDState, certVState, certPState}
+  certState
   slot
   txIx
   acnt = do
