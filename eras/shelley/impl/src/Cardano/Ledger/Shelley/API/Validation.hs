@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Interface to the block validation and chain extension logic in the Shelley
 -- API.
@@ -42,7 +43,7 @@ import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty (..))
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -52,7 +53,8 @@ import NoThunks.Class (NoThunks (..))
 -------------------------------------------------------------------------------}
 
 class
-  ( STS (EraRule "TICK" era)
+  ( EraGov era
+  , STS (EraRule "TICK" era)
   , BaseM (EraRule "TICK" era) ~ ShelleyBase
   , Environment (EraRule "TICK" era) ~ ()
   , State (EraRule "TICK" era) ~ NewEpochState era
@@ -95,14 +97,6 @@ class
     NewEpochState era ->
     Block BHeaderView era ->
     m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
-  default applyBlockOpts ::
-    forall ep m.
-    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m, EraGov era) =>
-    ApplySTSOpts ep ->
-    Globals ->
-    NewEpochState era ->
-    Block BHeaderView era ->
-    m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
   applyBlockOpts opts globals state blk =
     liftEither
       . left BlockTransitionError
@@ -122,18 +116,32 @@ class
           (LedgerState.esLState $ LedgerState.nesEs state)
           (LedgerState.nesBcur state)
 
+  applyBlockOptsEither ::
+    ApplySTSOpts ep ->
+    Globals ->
+    NewEpochState era ->
+    Block BHeaderView era ->
+    Either (BlockTransitionError era) (NewEpochState era, [Event (EraRule "BBODY" era)])
+  applyBlockOptsEither opts globals state blk =
+    case stsResultFailures of
+      [] -> Right (updateNewEpochState state stsResultState, stsResultEvents)
+      f : fs -> Left $ BlockTransitionError $ f :| fs
+    where
+      STSResult {stsResultState, stsResultFailures, stsResultEvents} =
+        flip runReader globals $
+          applySTSOptsResult @(EraRule "BBODY" era) opts $
+            TRC (mkBbodyEnv state, bbs, blk)
+      bbs =
+        STS.BbodyState
+          (LedgerState.esLState $ LedgerState.nesEs state)
+          (LedgerState.nesBcur state)
+
   -- | Re-apply a ledger block to the same state it has been applied to before.
   --
   -- This function does no validation of whether the block applies successfully;
   -- the caller implicitly guarantees that they have previously called
   -- 'applyBlockTransition' on the same block and that this was successful.
   reapplyBlock ::
-    Globals ->
-    NewEpochState era ->
-    Block BHeaderView era ->
-    NewEpochState era
-  default reapplyBlock ::
-    EraGov era =>
     Globals ->
     NewEpochState era ->
     Block BHeaderView era ->
@@ -159,7 +167,7 @@ applyTick =
   applyTickOpts $
     ApplySTSOpts
       { asoAssertions = globalAssertionPolicy
-      , asoValidation = ValidateAll
+      , asoValidation = ValidateNone
       , asoEvents = EPDiscard
       }
 

@@ -1,8 +1,8 @@
 # Version history for `small-steps`
 
-## 1.1.0.2
+## 1.1.1.0
 
-*
+* Add `STSResult` and `applySTSOptsResult`
 
 ## 1.1.0.1
 

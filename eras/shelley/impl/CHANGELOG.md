@@ -2,6 +2,8 @@
 
 ## 1.16.0.0
 
+* Add `applyBlockOptsEither`.
+* Disable validation level for `applyTick`
 * Restrict the monad of `applyTx` and `reapllyTx` to `Either` from abstract `MonadError`
 * Remove `applyTxOpts` in favor of new `applyTxValidation` function in `ApplyTx`
 * Move `reapplyTx` outside of the `ApplyTx` type class.
