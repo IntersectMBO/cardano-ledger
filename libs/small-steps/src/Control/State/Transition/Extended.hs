@@ -68,7 +68,9 @@ module Control.State.Transition.Extended (
   AssertionPolicy (..),
   ValidationPolicy (..),
   ApplySTSOpts (..),
+  STSResult (..),
   applySTSOpts,
+  applySTSOptsResult,
   applySTSOptsEither,
   applySTS,
   applySTSIndifferently,
@@ -502,6 +504,37 @@ type RuleInterpreter ep =
   RuleContext rtype s ->
   Rule s rtype (State s) ->
   m (EventReturnType ep s (State s, [PredicateFailure s]))
+
+data STSResult s = STSResult
+  { stsResultState :: State s
+  , stsResultFailures :: [PredicateFailure s]
+  , stsResultEvents :: [Event s]
+  }
+
+applySTSOptsResult ::
+  forall s m rtype ep.
+  (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
+  ApplySTSOpts ep ->
+  RuleContext rtype s ->
+  m (STSResult s)
+applySTSOptsResult opts ctx =
+  case asoEvents opts of
+    EPDiscard -> do
+      (stsState, stsFailure) <- applySTSOpts opts ctx
+      pure
+        STSResult
+          { stsResultState = stsState
+          , stsResultFailures = stsFailure
+          , stsResultEvents = []
+          }
+    EPReturn -> do
+      ((stsState, stsFailure), stsEvents) <- applySTSOpts opts ctx
+      pure
+        STSResult
+          { stsResultState = stsState
+          , stsResultFailures = stsFailure
+          , stsResultEvents = stsEvents
+          }
 
 -- | Apply an STS with options. Note that this returns both the final state and
 -- the list of predicate failures.

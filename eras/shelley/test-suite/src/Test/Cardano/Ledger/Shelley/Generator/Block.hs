@@ -303,7 +303,7 @@ tickChainState
         ChainDepState {csProtocol, csTickn} =
           tickChainDepState testGlobals lv isNewEpoch cds
         PrtclState ocertIssue evNonce candNonce = csProtocol
-        nes' = applyTick testGlobals chainNes slotNo
+        nes' = applyTickNoEvents testGlobals chainNes slotNo
      in ChainState
           { chainNes = nes'
           , chainOCertIssue = ocertIssue

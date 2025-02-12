@@ -94,7 +94,7 @@ incrStakeComputationTest =
 
 incrStakeComp ::
   forall era ledger.
-  (EraSegWits era, ChainProperty era, TestingLedger era ledger) =>
+  (ChainProperty era, TestingLedger era ledger) =>
   SourceSignalTarget (CHAIN era) ->
   Property
 incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
