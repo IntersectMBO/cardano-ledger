@@ -279,5 +279,4 @@ instance
   ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>
   ToExpr (ShelleyLedgersPredFailure era)
 
-instance EraCertState era => ToExpr (ShelleyCertState era) -- where
--- toExpr (ShelleyTxOut x y) = App "ShelleyTxOut" [toExpr x, toExpr y]
+instance EraCertState era => ToExpr (ShelleyCertState era)

@@ -748,5 +748,3 @@ instance Arbitrary RawSeed where
 instance Era era => Arbitrary (ShelleyCertState era) where
   arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
-
--- instance Era era => Arbitrary (CertState era) where
