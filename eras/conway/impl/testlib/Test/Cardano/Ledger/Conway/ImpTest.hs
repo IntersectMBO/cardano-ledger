@@ -317,7 +317,7 @@ instance ShelleyEraImp ConwayEra where
 
   modifyPParams = conwayModifyPParams
 
-  fixupTx = alonzoFixupTx
+  fixupTx = babbageFixupTx
 
 instance MaryEraImp ConwayEra
 

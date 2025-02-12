@@ -7,6 +7,10 @@
 * Deprecate `Babbage` type synonym
 * Remove crypto parametrization from `BabbageEra`
 
+### `testlib`
+
+* Add `babbageFixupTx`
+
 ## 1.10.1.0
 
 * Use `Mismatch` to clarify predicate failures. #4711
