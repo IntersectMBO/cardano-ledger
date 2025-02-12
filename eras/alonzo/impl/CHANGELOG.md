@@ -12,6 +12,10 @@
 * Deprecate `Alonzo` type synonym
 * Remove crypto parametrization from `AlonzoEra`
 
+### `testlib`
+
+* Expose `alonzoFixupFees`
+
 ## 1.12.0.0
 
 * Remove deprecated `lookupPlutusScript`

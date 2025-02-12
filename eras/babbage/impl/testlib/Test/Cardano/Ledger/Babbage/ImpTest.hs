@@ -11,6 +11,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Babbage.ImpTest (
+  babbageFixupTx,
   module Test.Cardano.Ledger.Alonzo.ImpTest,
   produceRefScript,
   produceRefScripts,
@@ -23,11 +24,12 @@ import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Cardano.Ledger.Tools (setMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
-import Control.Monad (forM)
+import Control.Monad (forM, (>=>))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence.Strict as SSeq
-import Lens.Micro ((&), (.~), (<>~))
+import GHC.Stack (HasCallStack)
+import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (testingCostModels)
@@ -37,7 +39,40 @@ instance ShelleyEraImp BabbageEra where
     defaultInitNewEpochState
       (nesEsL . curPParamsEpochStateL . ppCostModelsL <>~ testingCostModels [PlutusV2])
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
-  fixupTx = alonzoFixupTx
+  fixupTx = babbageFixupTx
+
+babbageFixupTx ::
+  ( HasCallStack
+  , AlonzoEraImp era
+  , BabbageEraTxBody era
+  ) =>
+  Tx era ->
+  ImpTestM era (Tx era)
+babbageFixupTx =
+  addNativeScriptTxWits
+    >=> fixupAuxDataHash
+    >=> addCollateralInput
+    >=> addRootTxIn
+    >=> fixupScriptWits
+    >=> fixupOutputDatums
+    >=> fixupDatums
+    >=> fixupRedeemerIndices
+    >=> fixupTxOuts
+    >=> fixupCollateralReturn
+    >=> alonzoFixupFees
+    >=> fixupRedeemers
+    >=> fixupPPHash
+    >=> updateAddrTxWits
+
+fixupCollateralReturn ::
+  ( ShelleyEraImp era
+  , BabbageEraTxBody era
+  ) =>
+  Tx era ->
+  ImpTestM era (Tx era)
+fixupCollateralReturn tx = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  pure $ tx & bodyTxL . collateralReturnTxBodyL %~ fmap (setMinCoinTxOut pp)
 
 instance ShelleyEraImp BabbageEra => MaryEraImp BabbageEra
 

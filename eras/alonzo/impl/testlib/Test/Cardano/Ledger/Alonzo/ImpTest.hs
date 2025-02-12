@@ -38,6 +38,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   fixupRedeemers,
   fixupRedeemerIndices,
   fixupScriptWits,
+  alonzoFixupFees,
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
