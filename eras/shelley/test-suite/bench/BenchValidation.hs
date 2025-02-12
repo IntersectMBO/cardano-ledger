@@ -1,15 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -55,6 +50,7 @@ import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.DeepSeq (NFData (rnf))
 import Control.Monad.Except ()
+import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
@@ -104,37 +100,38 @@ genValidateInput n = do
   pure (ValidateInput testGlobals (chainNes chainstate) block)
 
 benchValidate ::
-  forall era.
-  (API.ApplyBlock era, Era era) =>
+  (API.ApplyBlock era, Show (PredicateFailure (EraRule "BBODY" era))) =>
   ValidateInput era ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state (Block bh txs)) =
-  case API.applyBlock @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
-    Right x -> pure x
-    Left x -> error (show x)
+  let block = UnsafeUnserialisedBlock (makeHeaderView bh) txs
+   in case API.applyBlockEitherNoEvents ValidateAll globals state block of
+        Right x -> pure x
+        Left x -> error (show x)
 
 applyBlock ::
   forall era.
-  ( EraTxOut era
-  , API.ApplyBlock era
+  ( API.ApplyBlock era
   , NFData (StashedAVVMAddresses era)
   , GovState era ~ ShelleyGovState era
   , EraCertState era
+  , Show (PredicateFailure (EraRule "BBODY" era))
   ) =>
   ValidateInput era ->
   Int ->
   Int
 applyBlock (ValidateInput globals state (Block bh txs)) n =
-  case API.applyBlock @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
-    Right x -> seq (rnf x) (n + 1)
-    Left x -> error (show x)
+  let block = UnsafeUnserialisedBlock (makeHeaderView bh) txs
+   in case API.applyBlockEitherNoEvents ValidateAll globals state block of
+        Right x -> seq (rnf x) (n + 1)
+        Left x -> error (show x)
 
 benchreValidate ::
-  (API.ApplyBlock era, Era era) =>
+  API.ApplyBlock era =>
   ValidateInput era ->
   NewEpochState era
 benchreValidate (ValidateInput globals state (Block bh txs)) =
-  API.reapplyBlock globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs)
+  API.applyBlockNoValidaton globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs)
 
 -- ==============================================================
 
