@@ -44,9 +44,6 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
-  encodeFoldableAsIndefLenList,
-  ifEncodingVersionAtLeast,
-  natVersion,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
@@ -201,26 +198,11 @@ deriving stock instance
   Show (PredicateFailure (EraRule "LEDGER" era)) =>
   Show (ApplyTxError era)
 
--- TODO: This instance can be switched back to a derived version, once we are officially
--- in the Conway era:
---
--- deriving newtype instance
---   ( Era era
---   , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
---   ) =>
---   EncCBOR (ApplyTxError era)
-
-instance
+deriving newtype instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   EncCBOR (ApplyTxError era)
-  where
-  encCBOR (ApplyTxError failures) =
-    ifEncodingVersionAtLeast
-      (natVersion @9)
-      (encCBOR failures)
-      (encodeFoldableAsIndefLenList encCBOR failures)
 
 deriving newtype instance
   ( Era era
