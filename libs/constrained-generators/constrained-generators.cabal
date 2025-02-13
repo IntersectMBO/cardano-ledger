@@ -36,13 +36,12 @@ library
     Constrained.Experiment.Conformance
     Constrained.Experiment.Generic
     Constrained.Experiment.NumSpec
-    Constrained.Experiment.Specs.Generics
     Constrained.Experiment.Specs.ListFoldy
     Constrained.Experiment.Specs.Pairs
     Constrained.Experiment.Specs.Size
+    Constrained.Experiment.Specs.Sum
     Constrained.Experiment.Syntax
     Constrained.Experiment.TheKnot
-    -- Constrained.Experiment.Witness
     Constrained.GenT
     Constrained.Graph
     Constrained.Instances
