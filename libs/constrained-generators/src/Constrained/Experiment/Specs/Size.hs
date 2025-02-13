@@ -31,7 +31,6 @@ import Constrained.Experiment.Generic
 import Constrained.Experiment.NumSpec
 import Constrained.Experiment.Syntax
 import Constrained.Experiment.TheKnot
-import Constrained.Experiment.Witness
 
 import Constrained.Core
 import Constrained.GenT
@@ -52,7 +51,9 @@ data SizeW (c :: Constraint) (s :: Symbol) (dom :: [Type]) rng :: Type where
   SizeOfW :: forall n. SizeW (Sized n) "sizeOf_" '[n] Integer
 
 deriving instance Eq (SizeW c s ds r)
-deriving instance Show (SizeW c s ds r)
+
+instance Show (SizeW c s d r) where
+  show SizeOfW = "sizeOf_"
 
 instance Witness SizeW where
   semantics SizeOfW = sizeOf -- From the Sized class.
@@ -72,7 +73,7 @@ mapTypeSpecSize ::
 mapTypeSpecSize SizeOfW ts =
   constrained $ \x ->
     unsafeExists $ \x' ->
-      Assert (x ==. sizeOf_ x') <> toPreds @t x' ts
+      Assert (Equal x (sizeOf_ x')) <> toPreds @t x' ts
 
 sizeOfFn :: forall a. (HasSpec a, Sized a) => Fun '[a] Integer
 sizeOfFn = Fun Evidence SizeOfW

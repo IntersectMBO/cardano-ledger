@@ -30,9 +30,10 @@
 module Constrained.Experiment.NumSpec where
 
 import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance ()
+import Constrained.Experiment.Conformance (caseBoolSpecX)
 import Constrained.Experiment.Generic
-import Constrained.Experiment.Witness (Witness (..), showType)
+
+-- import Constrained.Experiment.Witness (Witness (..), showType)
 
 import Constrained.Core (unionWithMaybe)
 import Constrained.GenT (GenT, MonadGenError (..), pureGen, sizeT)
@@ -752,3 +753,59 @@ instance (Typeable a, NumLike a) => FunSym (NumLike a) "negateFn" IntW '[a] a wh
 
 negateFn :: forall a. NumLike a => Term a -> Term a
 negateFn = appTerm NegateW
+
+-- ============================================================
+
+{-
+caseBoolSpecX :: (HasSpec Bool,HasSpec a) => Specification Bool -> (Bool -> Specification a) -> Specification a
+caseBoolSpecX spec cont = case possibleValues spec of
+  [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
+  [b] -> cont b
+  _ -> mempty
+  where
+    -- where possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
+    -- This will always get the same result, and probably faster since running 2
+    -- conformsToSpec on True and False takes less time than simplifying the spec.
+    -- Since we are in TheKnot, we could keep the simplifySpec. Is there a good reason to?
+    possibleValues s = filter (flip conformsToSpec s) [True, False]
+-}
+
+instance
+  (Typeable a, HasSpec Bool, HasSpec a, OrdLike a) =>
+  FunSym (OrdLike a) "<=." NumOrdW '[a, a] Bool
+  where
+  simplepropagate (Context _ LessOrEqualW (l :|> HOLE :<> End)) spec = Right $
+    caseBoolSpecX spec $ \case
+      True -> geqSpec l
+      False -> ltSpec l
+  simplepropagate (Context _ LessOrEqualW (HOLE :<> l :<| End)) spec = Right $
+    caseBoolSpecX spec $ \case
+      True -> leqSpec l
+      False -> gtSpec l
+  simplepropagate ctx _ = Left (NE.fromList ["LessOrEqual[<=.]", "Unreachable context, too many args", show ctx])
+
+{-
+infixr 4 <=.
+(<=.) :: forall a. (HasSpec Bool, OrdLike a) => Term a -> Term a -> Term Bool
+(<=.) = appTerm LessOrEqualW
+-}
+
+instance
+  (Typeable a, HasSpec Bool, HasSpec a, OrdLike a) =>
+  FunSym (OrdLike a) "<." NumOrdW '[a, a] Bool
+  where
+  simplepropagate (Context _ LessW (l :|> HOLE :<> End)) spec = Right $
+    caseBoolSpecX spec $ \case
+      True -> gtSpec l
+      False -> leqSpec l
+  simplepropagate (Context _ LessW (HOLE :<> l :<| End)) spec = Right $
+    caseBoolSpecX spec $ \case
+      True -> ltSpec l
+      False -> geqSpec l
+  simplepropagate ctx _ = Left (NE.fromList ["LessOrEqual[<=.]", "Unreachable context, too many args", show ctx])
+
+{-
+infixr 4 <.
+(<.) :: forall a. (HasSpec Bool,OrdLike a) => Term a -> Term a -> Term Bool
+(<.) = appTerm LessW
+-}

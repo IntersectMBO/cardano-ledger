@@ -38,7 +38,8 @@ import Constrained.Experiment.NumSpec
 import Constrained.Experiment.Specs.Size (Sized (..), genFromSizeSpec, sizeOf_)
 import Constrained.Experiment.Syntax (forAll, genHint, unsafeExists)
 import Constrained.Experiment.TheKnot (caseBoolSpec, genFromSpecT, shrinkWithSpec, simplifySpec)
-import Constrained.Experiment.Witness (Witness (..), showType)
+
+-- import Constrained.Experiment.Witness (Witness (..), showType)
 
 import Constrained.GenT
 import Constrained.List
@@ -186,9 +187,6 @@ compose_ ::
 compose_ f g = appTerm $ ComposeW f g -- @b @c1 @c2 @s1 @s2 @t1 @t2 @a @r f g
 
 -- =============================================================
-
-eqFn :: forall a. (Typeable a, Eq a) => Fun '[a, a] Bool
-eqFn = Fun (Evidence @(Eq a)) EqualW
 
 composeFn :: HasSpec b => Fun '[b] c -> Fun '[a] b -> Fun '[a] c
 composeFn (Fun (Evidence :: Evidence x) f) (Fun (Evidence :: Evidence y) g) = (Fun (Evidence @(x, y)) (ComposeW f g))
@@ -413,7 +411,7 @@ instance (Typeable a, Typeable b) => FunSym (Foldy b) "foldMap_" ListW '[[a]] b 
   mapTypeSpec (FoldMapW g) ts =
     constrained $ \x ->
       unsafeExists $ \x' ->
-        Assert (x ==. appFun (foldMapFn g) x') <> toPreds x' ts
+        Assert (Equal x (appFun (foldMapFn g) x')) <> toPreds x' ts
 
 foldMap_ :: forall a b. (Sized [a], Foldy b, HasSpec a) => (Term a -> Term b) -> Term [a] -> Term b
 foldMap_ f = appFun $ foldMapFn $ toFn $ f (V v)
@@ -426,6 +424,12 @@ foldMap_ f = appFun $ foldMapFn $ toFn $ f (V v)
     toFn (App fn (t :> Nil)) = composeFn (Fun Evidence fn) (toFn t)
     toFn (V v') | Just Refl <- eqVar v v' = idFn
     toFn _ = error "foldMap_ has not been given a function of the form \\ x -> f (g ... (h x))"
+
+sum_ ::
+  Foldy a =>
+  Term [a] ->
+  Term a
+sum_ = foldMap_ id
 
 foldMapFn :: forall a b. (HasSpec a, Foldy b) => Fun '[a] b -> Fun '[[a]] b
 foldMapFn f = Fun Evidence (FoldMapW f)
@@ -450,7 +454,7 @@ instance Typeable a => FunSym (Eq a) "elem_" ListW '[a, [a]] Bool where
   simplepropagate _ _ = Left (pure "Unreachable context for (FunSym (Eq a) \"elem_\" ListW  '[a, [a]] Bool)")
 
   rewriteRules ElemW (_ :> Lit [] :> Nil) Evidence = Just $ Lit False
-  rewriteRules ElemW (t :> Lit [a] :> Nil) Evidence = Just $ t ==. Lit a
+  rewriteRules ElemW (t :> Lit [a] :> Nil) Evidence = Just $ Equal t (Lit a)
   rewriteRules _ _ _ = Nothing
 
 elem_ :: (Sized [a], HasSpec a) => Term a -> Term [a] -> Term Bool
