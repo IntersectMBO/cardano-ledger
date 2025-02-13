@@ -25,7 +25,7 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 #endif
 
-module Constrained.Experiment.Specs.Generics (
+module Constrained.Experiment.Specs.Sum (
   IsNormalType,
   sumleft_,
   sumright_,
