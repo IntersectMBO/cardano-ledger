@@ -64,7 +64,6 @@ testScriptPostTranslation =
               minBound
               emptyPParams
               (S.AccountState (S.Coin 0) (S.Coin 0))
-              False
           utxoStShelley = def {S.utxosUtxo = utxo}
           utxoStAllegra = fromRight . runExcept $ translateEra @AllegraEra NoGenesis utxoStShelley
           txb =

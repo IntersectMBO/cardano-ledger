@@ -24,7 +24,6 @@ module Cardano.Ledger.Shelley.Rules.Ledger (
   ledgerIxL,
   ledgerPpL,
   ledgerAccountL,
-  ledgerMempoolL,
   ShelleyLedgerPredFailure (..),
   ShelleyLedgerEvent (..),
   Event,
@@ -95,18 +94,16 @@ data LedgerEnv era = LedgerEnv
   , ledgerIx :: TxIx
   , ledgerPp :: PParams era
   , ledgerAccount :: AccountState
-  , ledgerMempool :: Bool
   }
   deriving (Generic)
 
 deriving instance Show (PParams era) => Show (LedgerEnv era)
 deriving instance Eq (PParams era) => Eq (LedgerEnv era)
 
-instance NFData (PParams era) => NFData (LedgerEnv era) where
-  rnf (LedgerEnv _slotNo _ _ix pp _account _mempool) = rnf pp
+instance NFData (PParams era) => NFData (LedgerEnv era)
 
 instance EraPParams era => EncCBOR (LedgerEnv era) where
-  encCBOR env@(LedgerEnv _ _ _ _ _ _) =
+  encCBOR env@(LedgerEnv _ _ _ _ _) =
     let LedgerEnv {..} = env
      in encode $
           Rec LedgerEnv
@@ -115,7 +112,6 @@ instance EraPParams era => EncCBOR (LedgerEnv era) where
             !> To ledgerIx
             !> To ledgerPp
             !> To ledgerAccount
-            !> To ledgerMempool
 
 data ShelleyLedgerPredFailure era
   = UtxowFailure (PredicateFailure (EraRule "UTXOW" era)) -- Subtransition Failures
@@ -136,9 +132,6 @@ ledgerPpL = lens ledgerPp $ \x y -> x {ledgerPp = y}
 
 ledgerAccountL :: Lens' (LedgerEnv era) AccountState
 ledgerAccountL = lens ledgerAccount $ \x y -> x {ledgerAccount = y}
-
-ledgerMempoolL :: Lens' (LedgerEnv era) Bool
-ledgerMempoolL = lens ledgerMempool $ \x y -> x {ledgerMempool = y}
 
 type instance EraRuleFailure "LEDGER" ShelleyEra = ShelleyLedgerPredFailure ShelleyEra
 
@@ -298,7 +291,7 @@ ledgerTransition ::
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot mbCurEpochNo txIx pp account _, LedgerState utxoSt certState, tx) <-
+  TRC (LedgerEnv slot mbCurEpochNo txIx pp account, LedgerState utxoSt certState, tx) <-
     judgmentContext
   curEpochNo <- maybe (liftSTS $ epochFromSlot slot) pure mbCurEpochNo
   certState' <-
@@ -351,7 +344,7 @@ renderDepositEqualsObligationViolation ::
   AssertionViolation t ->
   String
 renderDepositEqualsObligationViolation
-  AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ _ pp _ _, _, tx), avState} =
+  AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ _ pp _, _, tx), avState} =
     case avState of
       Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
       Just lstate ->

@@ -198,7 +198,7 @@ poolTraceFromBlock chainSt block =
     certs = concatMap (toList . view certsTxBodyL . view bodyTxL)
     poolCerts = mapMaybe getPoolCertTxCert (certs txs)
     poolEnv =
-      let (LedgerEnv sl _ _ pp _ _) = ledgerEnv
+      let LedgerEnv sl _ _ pp _ = ledgerEnv
        in PoolEnv (epochFromSlotNo sl) pp
     poolSt0 =
       certPState (lsCertState ledgerSt0)
@@ -223,7 +223,7 @@ delegTraceFromBlock chainSt block =
     certs = concatMap (reverse . toList . view certsTxBodyL . view bodyTxL)
     blockCerts = filter delegCert (certs txs)
     delegEnv =
-      let (LedgerEnv slot@(SlotNo slot64) _ txIx pp reserves _) = ledgerEnv
+      let LedgerEnv slot@(SlotNo slot64) _ txIx pp reserves = ledgerEnv
           dummyCertIx = minBound
           ptr = Ptr (SlotNo32 (fromIntegral slot64)) txIx dummyCertIx
        in DelegEnv slot (epochFromSlotNo slot) ptr reserves pp
@@ -251,7 +251,7 @@ ledgerTraceBase ::
   (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt
-  , LedgerEnv slot Nothing minBound pp_ (esAccountState nes) False
+  , LedgerEnv slot Nothing minBound pp_ (esAccountState nes)
   , esLState nes
   , txs
   )

@@ -361,7 +361,7 @@ ledgerTransition ::
   TransitionRule (someLEDGER era)
 ledgerTransition = do
   TRC
-    ( LedgerEnv slot mbCurEpochNo _txIx pp account _mempool
+    ( LedgerEnv slot mbCurEpochNo _txIx pp account
       , LedgerState utxoState certState
       , tx
       ) <-

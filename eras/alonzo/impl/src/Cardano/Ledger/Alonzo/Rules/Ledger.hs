@@ -127,7 +127,7 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot mbCurEpochNo txIx pp account _, LedgerState utxoSt certState, tx) <-
+  TRC (LedgerEnv slot mbCurEpochNo txIx pp account, LedgerState utxoSt certState, tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
 

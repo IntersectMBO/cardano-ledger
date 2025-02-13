@@ -2,6 +2,8 @@
 
 ## 1.16.0.0
 
+* Remove the no longer necessary `ledgerMempool` field
+* Fix `NFData` instance for `LedgerEnv`
 * Move `AccountState` to `Cardano.Ledger.State`
 * Deprecated `RewardAccounts`
 * Deprecated `utxosUtxoL`
