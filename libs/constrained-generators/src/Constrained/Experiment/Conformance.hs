@@ -2,11 +2,15 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -19,18 +23,20 @@ module Constrained.Experiment.Conformance where
 
 import Constrained.Experiment.Base
 import Constrained.Experiment.Syntax
-import Constrained.Experiment.Witness
 
 import Constrained.Core
 import Constrained.Env
 import Constrained.GenT
 import Constrained.List
 import Data.Foldable (fold)
+import Data.Kind (Constraint, Type)
 import Data.List (intersect, nub)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
 import Data.Semigroup (sconcat)
+import Data.Typeable (Typeable, (:~:) (Refl))
+import GHC.TypeLits hiding (Text)
 import Prettyprinter hiding (cat)
 
 -- =========================================================================
@@ -290,5 +296,102 @@ mapSpec _ (ErrorSpec err) = ErrorSpec err
 mapSpec f (MemberSpec as) = MemberSpec $ NE.nub $ fmap (semantics f) as
 mapSpec f (SuspendedSpec x p) =
   constrained $ \x' ->
-    Exists (\_ -> fatalError (pure "mapSpec")) (x :-> fold [Assert $ x' ==. appTerm f (V x), p])
+    Exists (\_ -> fatalError (pure "mapSpec")) (x :-> fold [Assert $ (Equal x' (appTerm f (V x))), p])
 mapSpec f (TypeSpec ts cant) = mapTypeSpec @c @s @t @'[a] @b f ts <> notMemberSpec (map (semantics f) cant)
+
+-- ================================================================================
+-- Bool and equality
+
+data BoolW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
+  NotW :: BoolW () "not_" '[Bool] Bool
+  OrW :: BoolW () "or_" '[Bool, Bool] Bool
+  EqualW :: BoolW (Eq a) "==." '[a, a] Bool
+
+deriving instance Eq (BoolW c s dom rng)
+
+instance Show (BoolW c s dom rng) where
+  show NotW = "not_"
+  show OrW = "or_"
+  show EqualW = "==."
+
+boolSem :: c => BoolW c sym dom rng -> FunTy dom rng
+boolSem NotW = not
+boolSem OrW = (||)
+boolSem EqualW = (==)
+
+instance Witness BoolW where
+  semantics = boolSem
+
+-- ======= FunSym instance EqualW(==.)
+
+instance Typeable a => FunSym (Eq a) "==." BoolW '[a, a] Bool where
+  simplepropagate (Context Evidence EqualW (HOLE :<> a :<| End)) spec =
+    Right $ caseBoolSpecX spec $ \case True -> equalSpec a; False -> notEqualSpec a
+  simplepropagate (Context Evidence EqualW (a :|> HOLE :<> End)) spec =
+    Right $ caseBoolSpecX spec $ \case True -> equalSpec a; False -> notEqualSpec a
+  simplepropagate ctx@(Context Evidence _ _) _ = Left (NE.fromList ["", "Unreachable context, too many args", show ctx])
+
+-- Note we DO NOT define (==.) here like we do for other FunSym instances. Instead (==.) is defined
+-- in terms of the Term constructor Equal in Constrained.Experiment.Base.
+-- If we did that there would be two different representations of equality. Because of that I don't
+-- expect the EqualPat to ever match any term. In fact the annoying (Typeable a) constraint makes
+-- very hard to use.
+
+pattern EqualPat ::
+  forall a rng.
+  Typeable a =>
+  forall.
+  (rng ~ Bool, HasSpec a, Eq a, Literal a) =>
+  Term a -> Term a -> Term rng
+pattern EqualPat x y <-
+  (App (sameFunSym (EqualW @a) -> Just (EqualW, Refl, Refl, Refl, Refl, Refl)) (x :> y :> Nil))
+
+-- ======= FunSym instance NotW(not_)
+
+instance FunSym () "not_" BoolW '[Bool] Bool where
+  simplepropagate (Context _ NotW (HOLE :<> End)) spec = Right $ caseBoolSpecX spec (equalSpec . not)
+  simplepropagate ctx _ = Left (NE.fromList ["NotW (not_)", "Unreachable context, too many args", show ctx])
+
+-- mapTypeSpec Not (SumSpec h a b) = typeSpec $ SumSpec h b a
+
+eqFn :: forall a. (Typeable a, Eq a) => Fun '[a, a] Bool
+eqFn = Fun (Evidence @(Eq a)) EqualW
+
+not_ :: HasSpec Bool => Term Bool -> Term Bool
+not_ = appTerm NotW
+
+-- ======= FunSym instance OrW(or_)
+
+instance FunSym () "or_" BoolW '[Bool, Bool] Bool where
+  simplepropagate (Context Evidence OrW (HOLE :<> (s :: Bool) :<| End)) spec = Right $ caseBoolSpecX spec (okOr s)
+  simplepropagate (Context Evidence OrW ((s :: Bool) :|> HOLE :<> End)) spec = Right $ caseBoolSpecX spec (okOr s)
+  simplepropagate ctx@(Context Evidence _ _) _ = Left (NE.fromList ["OrW(or_)", "Unreachable context, too many args", show ctx])
+
+or_ :: HasSpec Bool => Term Bool -> Term Bool -> Term Bool
+or_ = appTerm OrW
+
+-- | We have something like ('constant' ||. HOLE) must evaluate to 'need'.
+--   Return a (Specification Bool) for HOLE, that makes that True.
+okOr :: Bool -> Bool -> Specification Bool
+okOr constant need = case (constant, need) of
+  (True, True) -> TrueSpec
+  (True, False) ->
+    ErrorSpec
+      (pure ("(" ++ show constant ++ "||. HOLE) must equal False. That cannot be the case."))
+  (False, False) -> MemberSpec (pure False)
+  (False, True) -> MemberSpec (pure True)
+
+-- ========================================================================
+
+caseBoolSpecX ::
+  (HasSpec Bool, HasSpec a) => Specification Bool -> (Bool -> Specification a) -> Specification a
+caseBoolSpecX spec cont = case possibleValues spec of
+  [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
+  [b] -> cont b
+  _ -> mempty
+  where
+    -- where possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
+    -- This will always get the same result, and probably faster since running 2
+    -- conformsToSpec on True and False takes less time than simplifying the spec.
+    -- Since we are in TheKnot, we could keep the simplifySpec. Is there a good reason to?
+    possibleValues s = filter (flip conformsToSpec s) [True, False]

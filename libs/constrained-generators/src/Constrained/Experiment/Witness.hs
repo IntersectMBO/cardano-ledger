@@ -39,18 +39,6 @@ import Data.Typeable
 import GHC.TypeLits hiding (Text)
 import Prettyprinter hiding (cat)
 
--- ==========================================================================
--- Printing a few things
-
-showType :: forall t. Typeable t => String
-showType = show (typeRep (Proxy @t))
-
-ppSymbol :: KnownSymbol a => (SSymbol a) -> Doc ann
-ppSymbol (_ :: SSymbol z) = fromString (symbolVal (Proxy @z))
-
-instance forall (c :: Constraint). Typeable c => Show (Evidence c) where
-  show _ = "Evidence@(" ++ showType @c ++ ")"
-
 -- ============================================================================
 data Possible c where Possible :: forall (c :: Constraint). c => Possible c
 invoke :: forall (c :: Constraint). c => Possible c -> Evidence c

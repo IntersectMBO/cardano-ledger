@@ -5,9 +5,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -45,6 +47,7 @@ module Constrained.Experiment.Specs.Generics (
   onJust,
   isJust,
   chooseSpec,
+  SumW (..),
 ) where
 
 import Constrained.Experiment.Base
@@ -52,8 +55,7 @@ import Constrained.Experiment.Conformance (conformsToSpec, satisfies)
 import Constrained.Experiment.Generic
 import Constrained.Experiment.Syntax (exists, forAll, letBind, mkCase, reify)
 import Constrained.Experiment.TheKnot
-import Constrained.Experiment.Witness
-
+import Data.Kind (Constraint, Type)
 import GHC.TypeLits (Symbol)
 import GHC.TypeNats
 
@@ -147,7 +149,24 @@ instance
 -- Sums
 ------------------------------------------------------------------------
 
-instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_" BaseW '[a] (Sum a b) where
+data SumW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
+  InjLeftW :: forall a b. SumW () "sumleft_" '[a] (Sum a b)
+  InjRightW :: forall a b. SumW () "sumright_" '[b] (Sum a b)
+
+deriving instance Eq (SumW c s dom rng)
+
+instance Show (SumW c s dom rng) where
+  show InjLeftW = "sumleft_"
+  show InjRightW = "sumright_"
+
+sumSem :: SumW c sym dom rng -> FunTy dom rng
+sumSem InjLeftW = SumLeft
+sumSem InjRightW = SumRight
+
+instance Witness SumW where
+  semantics = sumSem
+
+instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_" SumW '[a] (Sum a b) where
   simplepropagate ctx@(Context _ InjLeftW (HOLE :<> End)) spec =
     case spec of
       TypeSpec (SumSpec _ sl _) cant -> Right $ sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
@@ -171,7 +190,7 @@ sumleft_ = appTerm InjLeftW
 
 instance
   (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
-  FunSym () "sumright_" BaseW '[b] (Sum a b)
+  FunSym () "sumright_" SumW '[b] (Sum a b)
   where
   simplepropagate ctx@(Context _ InjRightW (HOLE :<> End)) spec =
     case spec of
