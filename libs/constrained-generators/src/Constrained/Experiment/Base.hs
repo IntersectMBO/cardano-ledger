@@ -12,6 +12,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -22,6 +23,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
+-- Show Evidence
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains the most basic parts the implementation. Essentially
 --   everything to define Specification, HasSpec, HasSimpleRep, Term, Pred,
@@ -34,7 +37,8 @@
 module Constrained.Experiment.Base where
 
 import Constrained.Experiment.Generic
-import Constrained.Experiment.Witness
+
+-- import Constrained.Experiment.Witness
 
 import Constrained.Core (Evidence (..), Var (..))
 import Constrained.GenT (
@@ -60,7 +64,51 @@ import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 
 -- ====================================================================
--- The FunSym class for implementing new function symbols in
+
+data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
+  ToGenericW ::
+    BaseW
+      (HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
+      "toGenericFn"
+      '[a]
+      (SimpleRep a)
+  FromGenericW ::
+    BaseW
+      ( Typeable (SimpleRep a)
+      , Typeable (TypeSpec a)
+      , HasSimpleRep a
+      , HasSpec (SimpleRep a)
+      , TypeSpec a ~ TypeSpec (SimpleRep a)
+      )
+      "fromGenericFn"
+      '[SimpleRep a]
+      a
+
+deriving instance Eq (BaseW c s dom rng)
+
+instance Show (BaseW c s d r) where
+  show ToGenericW = "toGenericFn"
+  show FromGenericW = "fromGenericFn"
+
+baseSem :: c => BaseW c s d r -> FunTy d r
+baseSem FromGenericW = fromSimpleRep
+baseSem ToGenericW = toSimpleRep
+
+class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
+  semantics :: forall c s d r. c => t c s d r -> FunTy d r -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
+
+instance Witness BaseW where
+  semantics = baseSem
+
+-- ====================================================================
+
+-- | A First-order typed logic has 4 components
+--     1. Terms        (Variables (x), Constants (5), and Applications (F x 5) (i.e. FunctionSymbol term1 .. termn)
+--     2. Predicates   (Ordered, Odd, ...)
+--     3. Connectives  (And, Or, Not, =>, ...)
+--     4. Quantifiers  (Forall, Exists)
+--
+-- The FunSym class implements new function symbols in
 -- the first order logic. Note that a function symbol is first order
 -- data, that uniquely identifies a higher order function (the 'semantics' method)
 -- Sort of a combination of the FunctionLike and Functions classes
@@ -126,15 +174,30 @@ class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
   mapTypeSpec _ts _spec = TrueSpec
 
 -- This is where the logical properties of FunSym, are applied to transform one spec into another
+-- Note if there is a bunch of functions nested together, like (sizeOf_ (elems_ (snd_ x)))
+-- we propagate f over them one at a time.
 propagateSpec ::
   forall v a.
+  HasSpec v =>
   Specification a ->
   Ctx v a ->
   Specification v
-propagateSpec spec (Ctx context) = propagate context spec
-propagateSpec _ HOLE = ErrorSpec (pure "propagateSpec on HOLE")
+propagateSpec spec = \case
+  HOLE -> spec
+  Ctx (Context Evidence f (x :|> newctx :<> y :<| End)) ->
+    propagateSpec (propagate (Context Evidence f (x :|> HOLE :<> y :<| End)) spec) newctx
+  Ctx (Context Evidence f clist) -> case clist of
+    (ctx :<> more) -> propagateSpec (propagate (Context Evidence f (HOLE :<> more)) spec) ctx
+    (a :|> ctx :<> more) -> propagateSpec (propagate (Context Evidence f (a :|> HOLE :<> more)) spec) ctx
+    (a :|> b :|> ctx :<> more) ->
+      propagateSpec (propagate (Context Evidence f (a :|> b :|> HOLE :<> more)) spec) ctx
+    (a :|> b :|> c :|> ctx :<> more) ->
+      propagateSpec (propagate (Context Evidence f (a :|> b :|> c :|> HOLE :<> more)) spec) ctx
+    (a :|> b :|> c :|> d :|> ctx :<> more) ->
+      propagateSpec (propagate (Context Evidence f (a :|> b :|> c :|> d :|> HOLE :<> more)) spec) ctx
+    _ -> ErrorSpec $ pure ("function with more than 5 arguments in propagateSpec: " ++ show f)
 
-data Fn dom rng where Fn :: FunSym c s t dom rng => t c s dom rng -> Fn dom rng
+-- data Fn dom rng where Fn :: FunSym c s t dom rng => t c s dom rng -> Fn dom rng
 
 -- ========================================================================
 
@@ -414,66 +477,11 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
     Specification Integer
   cardinalTypeSpec = cardinalTypeSpec @(SimpleRep a)
 
--- ====================================================================
--- The Equality Function Symbol
--- This is given a FunSym instance in TheKnot, because all the things
--- that equality depends on, are not defined until that point
--- Note that we can still build equalities using the Equal Term constructor
--- ====================================================================
-
-data EqW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  EqualW {- forall a. Typeable a => -} :: EqW (Eq a) "==." '[a, a] Bool
-
-deriving instance Eq (EqW c s dom rng)
-
-instance Show (EqW c s dom rng) where
-  show EqualW = "==."
-
-instance Witness EqW where
-  semantics = eqSem
-
-eqSem :: c => EqW c sym dom rng -> FunTy dom rng -- Requires PolyKinds, RankNTypes
-eqSem EqualW = (==)
-
--- | Note we inject this into the Term languge using the special 'Equal' construtor of Term
---   The FunSym instance appears in Constrained.Experiment.TheKnot where caseBoolSpec is finally defined
-(==.) :: forall a. HasSpec a => Term a -> Term a -> Term Bool
-(==.) = Equal
-
 -- ===================================================================
 -- toGeneric and fromGeneric as Function Symbols
 -- That means they can be used inside (Term a)
 -- ===================================================================
 -- TODO cast this all in terms of PreG
-
-data GenericsW constraint symbol args res where
-  ToGenericW ::
-    GenericsW
-      (HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
-      "toGenericFn"
-      '[a]
-      (SimpleRep a)
-  FromGenericW ::
-    GenericsW
-      ( Typeable (SimpleRep a)
-      , Typeable (TypeSpec a)
-      , HasSimpleRep a
-      , HasSpec (SimpleRep a)
-      , TypeSpec a ~ TypeSpec (SimpleRep a)
-      )
-      "fromGenericFn"
-      '[SimpleRep a]
-      a
-
-deriving instance Eq (GenericsW c s dom rng)
-
-instance Show (GenericsW constraint symbol args res) where
-  show ToGenericW = "toGenericFn"
-  show FromGenericW = "fromGenericFn"
-
-instance Witness GenericsW where
-  semantics FromGenericW = fromSimpleRep
-  semantics ToGenericW = toSimpleRep
 
 instance
   ( HasSimpleRep a
@@ -489,7 +497,7 @@ instance
   FunSym
     (HasSimpleRep a, HasSpec simplerepA, typespecA ~ typespecsimplerep)
     "toGenericFn"
-    GenericsW
+    BaseW
     '[a]
     simplerepA
   where
@@ -523,7 +531,7 @@ instance
   FunSym
     (Typeable dom, Typeable typespecA, HasSimpleRep a, HasSpec dom, typespecA ~ typespecDOM)
     "fromGenericFn"
-    GenericsW
+    BaseW
     '[dom]
     a
   where
@@ -618,6 +626,9 @@ data Term a where
   To :: GenericC a => Term a -> Term (SimpleRep a)
   From :: GenericC a => Term (SimpleRep a) -> Term a
   Equal :: HasSpec a => Term a -> Term a -> Term Bool
+
+(==.) :: HasSpec a => Term a -> Term a -> Term Bool
+(==.) = Equal
 
 -- The things you need to know to lift toSimpleRep and fromSimpleRep
 -- to the Term level. I think they are all reasonable requirements
@@ -970,6 +981,15 @@ short [x] =
    in "[" <+> fromString refined <+> "]"
 short xs = "([" <+> viaShow (length xs) <+> "elements ...] @" <> prettyType @a <> ")"
 
+showType :: forall t. Typeable t => String
+showType = show (typeRep (Proxy @t))
+
+ppSymbol :: KnownSymbol a => (SSymbol a) -> Doc ann
+ppSymbol (_ :: SSymbol z) = fromString (symbolVal (Proxy @z))
+
+instance forall (c :: Constraint). Typeable c => Show (Evidence c) where
+  show _ = "Evidence@(" ++ showType @c ++ ")"
+
 -- ==========================================================================
 -- Pretty and Show instances
 -- ==========================================================================
@@ -994,21 +1014,6 @@ instance Show a => Pretty (WithPrec (Term a)) where
     AppendPat y (Lit n) -> parensIf (p > 10) $ "append_" <+> prettyPrec 10 y <+> short n
     -}
     App x Nil -> viaShow x
-    {-
-    App f as
-      | Just Equal <- extractFn @(EqFn fn) f
-      , a :> b :> _ <- as ->
-          parensIf (p > 9) $ prettyPrec 10 a <+> "==." <+> prettyPrec 10 b
-      | Just ToGeneric <- extractFn @(GenericsFn fn) f
-      , a :> _ <- as ->
-          prettyPrec p a
-      | Just FromGeneric <- extractFn @(GenericsFn fn) f
-      , a :> _ <- as ->
-          prettyPrec p a
-    -}
-    -- App ToGenericW (x :> Nil) -> prettyPrec p x
-    -- App FromGenericW (x :> Nil) -> prettyPrec p x
-
     App f as -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))
     To x -> parensIf (p > 10) $ "toSimpleRep_" <+> align (prettyPrec 11 x)
     From x -> parensIf (p > 10) $ "fromSimpleRep_" <+> align (prettyPrec 11 x)
@@ -1053,7 +1058,7 @@ instance Pretty (f a) => Pretty (Weighted f a) where
 instance Pretty (Binder a) where
   pretty (x :-> p) = viaShow x <+> "->" <+> pretty p
 
--- ------------ Specification -----------------
+-- ------------ Specifications -----------------
 
 instance HasSpec a => Pretty (WithPrec (Specification a)) where
   pretty (WithPrec d s) = case s of
@@ -1099,7 +1104,7 @@ data
   where
   Context ::
     (All HasSpec dom, HasSpec rng) =>
-    Evidence c -> t c s dom rng -> CList Pre dom hole -> Context c s t dom rng hole
+    Evidence c -> t c s dom rng -> CList Pre dom hole y -> Context c s t dom rng hole
 
 data Ctx hole rng where
   Ctx :: (HasSpec hole, FunSym c s t dom rng) => Context c s t dom rng hole -> Ctx hole rng
@@ -1111,23 +1116,23 @@ infixr 5 :<|
 infixr 5 :|>
 infixr 5 :<>
 
-data CList (x :: Mode) (as :: [Type]) (hole :: Type) where
-  End :: CList Post '[] h
-  (:<|) :: (Typeable a, Show a) => a -> CList Post as h -> CList Post (a ': as) h
-  (:<>) :: Ctx x y -> CList Post as i -> CList Pre (y ': as) x
-  (:|>) :: (Typeable a, Show a) => a -> CList Pre as h -> CList Pre (a ': as) h
+data CList (x :: Mode) (as :: [Type]) (hole :: Type) (y :: Type) where
+  End :: CList Post '[] h y
+  (:<|) :: (Typeable a, Show a) => a -> CList Post as h y -> CList Post (a ': as) h y
+  (:<>) :: HasSpec y => Ctx x y -> CList Post as i j -> CList Pre (y ': as) x y
+  (:|>) :: (Typeable a, Show a) => a -> CList Pre as h y -> CList Pre (a ': as) h y
 
-instance Show (CList mode rng hole) where
+instance Show (CList mode as hole y) where
   show clist = "(" ++ showCList clist
     where
-      showCList :: forall m d r. CList m d r -> String
+      showCList :: forall m ds h z. CList m ds h z -> String
       showCList End = "End)"
       showCList (x :<| y) = show x ++ " :<| " ++ showCList y
       showCList (hole :<> xs) = show hole ++ " :<> " ++ showCList xs
       showCList (x :|> y) = show x ++ " :|> " ++ showCList y
 
 -- Examples
-c6 :: HasSpec b => CList Pre [Bool, String, b, Bool, ()] b
+c6 :: HasSpec b => CList Pre [Bool, String, b, Bool, ()] b b
 c6 = True :|> ("abc" :: String) :|> HOLE :<> True :<| () :<| End
 
 val6 :: List [] [Bool, String, Int, Bool, ()]
@@ -1136,15 +1141,15 @@ val6 = [] :> ["abc"] :> [67, 12] :> [True, False] :> [()] :> Nil
 -- Show instances
 
 instance Show (Ctx rng hole) where
-  show (Ctx context) = "Ctx" ++ show context
+  show (Ctx context) = show context
   show HOLE = "[_ " ++ showType @hole ++ " _]"
 
 instance (Typeable c, Show (t c s d r)) => Show (Context c s t d r h) where
-  show (Context ev f xs) = "(Context " ++ show ev ++ " " ++ show f ++ " " ++ show xs ++ ")"
+  show (Context _ f xs) = "(Context " ++ show f ++ " " ++ show xs ++ ")"
 
 -- =================================================================
 -- A simple but important HasSpec instances. The  other
--- instance usually come in a file of their own.
+-- instances usually come in a file of their own.
 
 instance HasSpec () where
   type TypeSpec () = ()

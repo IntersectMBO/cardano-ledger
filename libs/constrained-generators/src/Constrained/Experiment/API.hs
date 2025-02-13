@@ -5,6 +5,15 @@
 
 module Constrained.Experiment.API (
   FunSym (..),
+  Witness (..),
+  BaseW (ToGenericW, FromGenericW),
+  BoolW (NotW, OrW, EqualW),
+  ProdW (FstW, SndW, PairW),
+  SumW (InjLeftW, InjRightW),
+  NumOrdW (LessOrEqualW, LessW),
+  IntW (AddW, NegateW),
+  SizeW (SizeOfW),
+  FunW (IdW, ComposeW, FlipW),
   Specification (..),
   Term (..),
   Pred (..),
@@ -42,6 +51,7 @@ module Constrained.Experiment.API (
   (>.),
   (==.),
   not_,
+  or_,
   toGeneric_,
   fromGeneric_,
   (+.),
@@ -81,6 +91,7 @@ module Constrained.Experiment.API (
   flip_,
   compose_,
   foldMap_,
+  sum_,
   elem_,
   singleton_,
   append_,
@@ -93,11 +104,13 @@ module Constrained.Experiment.API (
 where
 
 import Constrained.Experiment.Base (
+  BaseW (..),
   FunSym (..),
   HasSpec (..),
   Pred (..),
   Specification (..),
   Term (..),
+  Witness (..),
   constrained,
   equalSpec,
   fromGeneric_,
@@ -107,13 +120,18 @@ import Constrained.Experiment.Base (
   (==.),
  )
 import Constrained.Experiment.Conformance (
+  BoolW (..),
   conformsToSpec,
   conformsToSpecE,
+  not_,
+  or_,
   satisfies,
  )
 import Constrained.Experiment.Generic (HasSimpleRep (..))
 import Constrained.Experiment.NumSpec (
+  IntW (..),
   NumLike,
+  NumOrdW (..),
   Numeric,
   addFn,
   cardinality,
@@ -123,6 +141,7 @@ import Constrained.Experiment.NumSpec (
 -- instances only
 import Constrained.Experiment.Specs.Generics (
   IsNormalType,
+  SumW (..),
   branch,
   branchW,
   cJust_,
@@ -144,25 +163,18 @@ import Constrained.Experiment.Specs.Generics (
   sumleft_,
   sumright_,
  )
-import Constrained.Experiment.Specs.Pairs (fst_, pair_, snd_)
+import Constrained.Experiment.Specs.Pairs (ProdW (..), fst_, pair_, snd_)
 import Constrained.Experiment.TheKnot (
   debugSpec,
   genFromSpec,
   genFromSpecT,
   ifElse,
-  not_,
   simplifySpec,
   simplifyTerm,
   whenTrue,
   (<.),
   (<=.),
  )
-import Constrained.Experiment.Witness ()
-
--- ==============================================
--- Language constructs, Haskell functions, for
--- users, who want to build (Term a) and Pred
--- ==============================================
 
 import Constrained.Experiment.Syntax (
   assert,
@@ -182,6 +194,7 @@ import Constrained.Experiment.Syntax (
  )
 
 import Constrained.Experiment.Specs.ListFoldy (
+  FunW (..),
   append_,
   compose_,
   elem_,
@@ -189,9 +202,11 @@ import Constrained.Experiment.Specs.ListFoldy (
   foldMap_,
   id_,
   singleton_,
+  sum_,
  )
 
 import Constrained.Experiment.Specs.Size (
+  SizeW (..),
   Sized (sizeOf),
   between,
   genFromSizeSpec,

@@ -39,7 +39,8 @@ import Constrained.Core (Rename (rename), Value (..), Var (..), eqVar, freshen, 
 import Constrained.Env
 import Constrained.Experiment.Base
 import Constrained.Experiment.Generic
-import Constrained.Experiment.Witness
+
+-- import Constrained.Experiment.Witness
 import Constrained.GenT (GE (..), MonadGenError (..), errorGE, explain1)
 import Constrained.Graph (Graph (..))
 import Constrained.List
@@ -863,7 +864,7 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
       -- NOTE: the order of the arguments to `==.` here are important.
       -- The whole point of `Let` is that it allows us to solve all of `t`
       -- before we solve the variables in `t`.
-      Let t b -> goBinder fvs b ps (\x -> (assert (t ==. V x) :))
+      Let t b -> goBinder fvs b ps (\x -> (assert (Equal t (V x)) :))
       Exists _ b -> goBinder fvs b ps (const id)
       When b pp -> map (When b) (go fvs [pp]) ++ go fvs ps
       Explain es pp -> map (explanation es) (go fvs [pp]) ++ go fvs ps
