@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -14,7 +15,6 @@ module Cardano.Ledger.Babbage (
 )
 where
 
-import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
 import Cardano.Ledger.Babbage.Era (BabbageEra)
@@ -33,6 +33,6 @@ type Babbage = BabbageEra
 -- =====================================================
 
 instance ApplyTx BabbageEra where
-  reapplyTx = reapplyAlonzoTx
+  applyTxValidation = ruleApplyTxValidation @"LEDGER"
 
 instance ApplyBlock BabbageEra

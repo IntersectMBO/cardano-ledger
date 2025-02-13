@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -19,7 +20,7 @@ import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Allegra.TxSeq ()
 import Cardano.Ledger.Allegra.UTxO ()
-import Cardano.Ledger.Shelley.API (ApplyBlock, ApplyTx)
+import Cardano.Ledger.Shelley.API
 
 type Allegra = AllegraEra
 
@@ -29,6 +30,7 @@ type Allegra = AllegraEra
 -- Mempool instances
 --------------------------------------------------------------------------------
 
-instance ApplyTx AllegraEra
+instance ApplyTx AllegraEra where
+  applyTxValidation = ruleApplyTxValidation @"LEDGER"
 
 instance ApplyBlock AllegraEra

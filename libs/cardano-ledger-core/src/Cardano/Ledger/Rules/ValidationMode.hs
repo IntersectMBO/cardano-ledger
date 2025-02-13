@@ -19,8 +19,6 @@ module Cardano.Ledger.Rules.ValidationMode (
   (?!#),
   (?!#:),
   failBecauseS,
-  applySTSNonStatic,
-  applySTSValidateSuchThat,
 
   -- * Interface for independent Tests
   Inject (..),
@@ -36,22 +34,6 @@ import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Validation
-
-applySTSValidateSuchThat ::
-  forall s m rtype.
-  (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
-  ([Label] -> Bool) ->
-  RuleContext rtype s ->
-  m (Either (NonEmpty (PredicateFailure s)) (State s))
-applySTSValidateSuchThat cond =
-  applySTSOptsEither opts
-  where
-    opts =
-      ApplySTSOpts
-        { asoAssertions = AssertionsOff
-        , asoValidation = ValidateSuchThat cond
-        , asoEvents = EPDiscard
-        }
 
 --------------------------------------------------------------------------------
 -- Static checks
@@ -95,14 +77,6 @@ infix 1 ?!#:
 -- | Fail, if static checks are enabled.
 failBecauseS :: PredicateFailure sts -> Rule sts ctx ()
 failBecauseS = (False ?!#)
-
--- | Apply an STS system and do not validate any static checks.
-applySTSNonStatic ::
-  forall s m rtype.
-  (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
-  RuleContext rtype s ->
-  m (Either (NonEmpty (PredicateFailure s)) (State s))
-applySTSNonStatic = applySTSValidateSuchThat (notElem lblStatic)
 
 -- ===========================================================
 

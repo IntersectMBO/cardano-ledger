@@ -2,6 +2,9 @@
 
 ## 1.19.0.0
 
+* Remove `ConwayMempoolPredFailure` and `ConwayMempoolEvent`
+* Switch to `MEMPOOL` rule to be the entry point for `ApplyTx` instead of `LEDGER` and invert their
+  ivocation.
 * Added `ToCBOR` and `FromCBOR` instances for `DefaultVote`.
 * Made the fields of predicate failures and environments lazy
 * Add `MemPack` instance for `PlutusScript ConwayEra`

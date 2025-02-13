@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
-import Cardano.Ledger.BaseTypes (Inject, ShelleyBase)
+import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure,
@@ -26,20 +26,16 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
   ConwayHardForkEvent,
-  ConwayLedgerEvent,
   ConwayLedgerPredFailure,
   ConwayNewEpochEvent,
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyLedgersEnv,
-  ShelleyLedgersEvent,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
  )
 import Control.State.Transition.Extended
-import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as Bbody
@@ -84,13 +80,7 @@ spec ::
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
-  , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
-  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
-  , STS (EraRule "LEDGERS" era)
   , ApplyTx era
   , NFData (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "ENACT" era))
@@ -125,13 +115,7 @@ conwaySpec ::
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
-  , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
-  , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
-  , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
-  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
-  , STS (EraRule "LEDGERS" era)
   , ApplyTx era
   , NFData (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "ENACT" era))

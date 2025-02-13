@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Remove `reapplyAlonzoTx` as no longer needed.
 * Add `TxInfoResult` data family, `mkTxInfoResult` and `lookupTxInfoResult` to `EraPlutusContext`
 * Add `lookupTxInfoResultImpossible` helper
 * Add `TxInfoResult era` parameter to `toPlutusWithContext` and `mkPlutusWithContext`
