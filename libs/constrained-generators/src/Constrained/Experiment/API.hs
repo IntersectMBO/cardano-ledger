@@ -139,7 +139,9 @@ import Constrained.Experiment.NumSpec (
  )
 
 -- instances only
-import Constrained.Experiment.Specs.Generics (
+
+import Constrained.Experiment.Specs.Pairs (ProdW (..), fst_, pair_, snd_)
+import Constrained.Experiment.Specs.Sum (
   IsNormalType,
   SumW (..),
   branch,
@@ -163,7 +165,6 @@ import Constrained.Experiment.Specs.Generics (
   sumleft_,
   sumright_,
  )
-import Constrained.Experiment.Specs.Pairs (ProdW (..), fst_, pair_, snd_)
 import Constrained.Experiment.TheKnot (
   debugSpec,
   genFromSpec,
