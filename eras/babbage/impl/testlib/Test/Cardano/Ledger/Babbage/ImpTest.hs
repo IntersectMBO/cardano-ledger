@@ -72,7 +72,7 @@ fixupCollateralReturn ::
   ImpTestM era (Tx era)
 fixupCollateralReturn tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  pure $ tx & bodyTxL . collateralReturnTxBodyL %~ fmap (setMinCoinTxOut pp)
+  pure $ tx & bodyTxL . collateralReturnTxBodyL %~ fmap (ensureMinCoinTxOut pp)
 
 instance ShelleyEraImp BabbageEra => MaryEraImp BabbageEra
 
