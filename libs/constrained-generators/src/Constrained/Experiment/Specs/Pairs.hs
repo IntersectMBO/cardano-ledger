@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -30,12 +31,13 @@ import Constrained.Experiment.Conformance
 import Constrained.Experiment.Generic
 import Constrained.Experiment.NumSpec (cardinality)
 import Constrained.Experiment.TheKnot
-import Constrained.Experiment.Witness
 import Constrained.List
+import Data.Kind (Constraint, Type)
 import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.Typeable ((:~:) (Refl))
+import GHC.TypeLits hiding (Text)
 import Prettyprinter
 import Test.QuickCheck hiding (Witness, witness)
 
@@ -107,9 +109,29 @@ pairView :: forall a b. (HasSpec a, HasSpec b) => Term (Prod a b) -> Maybe (Term
 pairView (App (sameFunSym $ PairW @a @b -> Just (_, Refl, Refl, Refl, Refl, Refl)) (x :> y :> Nil)) = Just (x, y)
 pairView _ = Nothing
 
+data ProdW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
+  PairW :: forall a b. ProdW () "pair_" '[a, b] (Prod a b)
+  FstW :: forall a b. ProdW () "fst_" '[Prod a b] a
+  SndW :: forall a b. ProdW () "snd_" '[Prod a b] b
+
+deriving instance Eq (ProdW c s dom rng)
+
+instance Show (ProdW c s dom rng) where
+  show PairW = "pair_"
+  show FstW = "fst_"
+  show SndW = "snd_"
+
+pairSem :: ProdW c sym dom rng -> FunTy dom rng
+pairSem PairW = Prod
+pairSem FstW = prodFst
+pairSem SndW = prodSnd
+
+instance Witness ProdW where
+  semantics = pairSem
+
 -- ========= FstW
 
-instance (HasSpec a, HasSpec b) => FunSym () "fst_" BaseW '[Prod a b] a where
+instance (HasSpec a, HasSpec b) => FunSym () "fst_" ProdW '[Prod a b] a where
   simplepropagate (Context Evidence FstW (HOLE :<> End)) (spec :: Specification a) = Right $ (cartesian @a @b spec TrueSpec)
   simplepropagate ctx _ = Left (NE.fromList ["FstW[fst_]", "Unreachable context, wrong number of args", show ctx])
 
@@ -124,7 +146,7 @@ fst_ = appTerm FstW
 
 -- ========= SndW
 
-instance (HasSpec a, HasSpec b) => FunSym () "snd_" BaseW '[Prod a b] b where
+instance (HasSpec a, HasSpec b) => FunSym () "snd_" ProdW '[Prod a b] b where
   simplepropagate (Context _ SndW (HOLE :<> End)) spec = Right $ (cartesian @a @b TrueSpec spec)
   simplepropagate ctx _ = Left (NE.fromList ["SndW[fst_]", "Unreachable context, wrong number of args", show ctx])
 
@@ -139,7 +161,7 @@ snd_ = appTerm SndW
 
 -- ========= PairW
 
-instance (HasSpec a, HasSpec b) => FunSym () "pair_" BaseW '[a, b] (Prod a b) where
+instance (HasSpec a, HasSpec b) => FunSym () "pair_" ProdW '[a, b] (Prod a b) where
   simplepropagate ctx@(Context _ PairW (a :|> HOLE :<> End)) spec =
     let sameFst ps = [b | Prod a' b <- ps, a == a']
      in case spec of
