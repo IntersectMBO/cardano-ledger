@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.BinarySpec (spec) where
@@ -11,6 +13,7 @@ import Cardano.Ledger.Hashes (EraIndependentData, SafeHash, ScriptHash)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap (RDPair)
+import Test.Cardano.Ledger.Binary.Cddl
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -36,6 +39,7 @@ spec = do
     roundTripCborSpec @CertIx
     roundTripCborSpec @Anchor
     roundTripAnnCborSpec @BootstrapWitness
+    roundTripCborSpec @BootstrapWitness
     roundTripCborSpec @TxId
     roundTripCborSpec @GenDelegPair
     roundTripCborSpec @GenDelegs
@@ -44,3 +48,38 @@ spec = do
     roundTripCborSpec @RDPair
     roundTripCborSpec @ScriptHash
     roundTripCborSpec @(SafeHash EraIndependentData)
+
+  describe "DecCBOR instances equivalence" $ do
+    yyy @BootstrapWitness minBound maxBound
+    yyy @(WitVKey 'Witness) minBound maxBound
+  -- it "yyy" $
+
+  describe "zzz" $ do
+    sSpec
+
+dProp :: Property
+dProp = forAll (arbitrary @String) $ \_ -> property True
+
+sProp :: String -> Property
+sProp s = property $ s `shouldBe` "a"
+
+dSpec :: Spec
+dSpec = prop "d" dProp
+
+sSpec :: Spec
+sSpec = prop "s" sProp
+
+ioSpec :: Spec
+ioSpec = prop "IO" $ print "yooo"
+
+iosSpec :: Spec
+iosSpec = prop "IOS" $ conjoin $ replicate 10 (print "")
+
+f :: String -> IO ()
+f = print
+
+iosProp :: Property
+iosProp = property $ forM_ ["a", "b", "c"] f
+
+iosSpec2 :: Spec
+iosSpec2 = prop "IOS2" $ forM_ ["a", "b", "c"] f

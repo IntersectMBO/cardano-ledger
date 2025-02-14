@@ -21,11 +21,13 @@ import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
   cddlRoundTripAnnCborSpec,
   cddlRoundTripCborSpec,
+  xxx,
  )
 import Test.Cardano.Ledger.Binary.Cuddle (
   huddleRoundTripAnnCborSpec,
   huddleRoundTripCborSpec,
   specWithHuddle,
+  xxxHuddle,
  )
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.Binary.Cddl (readShelleyCddlFiles)
@@ -36,6 +38,7 @@ spec =
   describe "CDDL" $ do
     let v = eraProtVerLow @ShelleyEra
     describe "Ruby-based" $ beforeAllCddlFile 3 readShelleyCddlFiles $ do
+      xxx @BootstrapWitness v "bootstrap_witness"
       cddlRoundTripAnnCborSpec @BootstrapWitness v "bootstrap_witness"
       cddlRoundTripCborSpec @Addr v "address"
       cddlRoundTripCborSpec @RewardAccount v "reward_account"
@@ -54,6 +57,7 @@ spec =
     describe "Huddle" $ specWithHuddle shelleyCDDL 100 $ do
       huddleRoundTripCborSpec @Addr v "address"
       huddleRoundTripAnnCborSpec @BootstrapWitness v "bootstrap_witness"
+      xxxHuddle @BootstrapWitness v "bootstrap_witness"
       huddleRoundTripCborSpec @RewardAccount v "reward_account"
       huddleRoundTripCborSpec @(Credential 'Staking) v "stake_credential"
       huddleRoundTripAnnCborSpec @(TxBody ShelleyEra) v "transaction_body"

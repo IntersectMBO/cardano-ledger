@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
   huddleRoundTripCborSpec,
   huddleRoundTripAnnCborSpec,
+  xxxHuddle,
   writeSpec,
 ) where
 
@@ -48,6 +49,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   cborTrip,
   decodeAnnExtra,
   embedTripLabelExtra,
+  yyyExpectation,
  )
 import Test.Hspec (
   Expectation,
@@ -93,6 +95,23 @@ huddleRoundTripCborSpec version ruleName =
         \cddlData ->
           withGenTerm cddlData (Cuddle.Name ruleName) $
             roundTripExample lbl version version trip
+
+xxxHuddle ::
+  forall a.
+  (HasCallStack, Eq a, Show a, DecCBOR a, DecCBOR (Annotator a)) =>
+  -- | Serialization version
+  Version ->
+  -- | Name of the CDDL rule to test
+  T.Text ->
+  SpecWith CuddleData
+xxxHuddle version ruleName =
+  let lbl = label $ Proxy @a
+   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
+        \cddlData ->
+          withGenTerm cddlData (Cuddle.Name ruleName) $ \term -> do
+            let encoding = CBOR.encodeTerm term
+                initCborBytes = CBOR.toLazyByteString encoding
+            yyyExpectation @a version initCborBytes
 
 huddleRoundTripAnnCborSpec ::
   forall a.

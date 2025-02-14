@@ -22,6 +22,7 @@ spec =
     describe "Ruby-based" $ beforeAllCddlFile 3 readAllegraCddlFiles $ do
       cddlRoundTripCborSpec @(Value AllegraEra) v "coin"
       cddlRoundTripAnnCborSpec @(TxBody AllegraEra) v "transaction_body"
+      cddlRoundTripCborSpec @(TxBody AllegraEra) v "transaction_body"
       cddlRoundTripAnnCborSpec @(Script AllegraEra) v "native_script"
       cddlRoundTripAnnCborSpec @(TxAuxData AllegraEra) v "auxiliary_data"
 

@@ -42,6 +42,7 @@ roundTripShelleyCommonSpec ::
   , Arbitrary (GovState era)
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
+  , DecCBOR (Script era)
   , RuleListEra era
   ) =>
   Spec

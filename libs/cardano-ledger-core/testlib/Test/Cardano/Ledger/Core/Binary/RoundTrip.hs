@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Core.Binary.RoundTrip (
   EraRuleProof (..),
 
   -- * Spec
+  yyyEra,
   roundTripEraSpec,
   roundTripAnnEraSpec,
   roundTripEraTypeSpec,
@@ -46,6 +47,19 @@ import GHC.TypeLits (Symbol)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+
+yyyEra ::
+  forall era t.
+  ( Era era
+  , Eq t
+  , DecCBOR t
+  , EncCBOR t
+  , DecCBOR (Annotator t)
+  , Arbitrary t
+  , Show t
+  ) =>
+  Spec
+yyyEra = yyy @t (eraProtVerLow @era) (eraProtVerHigh @era)
 
 -- | QuickCheck property spec that uses `roundTripEraExpectation`
 roundTripEraSpec ::
@@ -200,6 +214,7 @@ roundTripCoreEraTypesSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , HasCallStack
+  , DecCBOR (Script era)
   ) =>
   Spec
 roundTripCoreEraTypesSpec = do
@@ -211,6 +226,7 @@ roundTripCoreEraTypesSpec = do
     roundTripEraSpec @era @(PParams era)
     roundTripEraSpec @era @(PParamsUpdate era)
     roundTripAnnEraSpec @era @(Script era)
+    yyyEra @era @(Script era)
     roundTripAnnEraSpec @era @(TxAuxData era)
     roundTripAnnEraSpec @era @(TxWits era)
     roundTripAnnEraSpec @era @(TxBody era)

@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Conway.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
@@ -43,6 +44,7 @@ roundTripConwayCommonSpec ::
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (PParamsHKD StrictMaybe era)
   , RuleListEra era
+  , DecCBOR (Script era)
   ) =>
   Spec
 roundTripConwayCommonSpec = do

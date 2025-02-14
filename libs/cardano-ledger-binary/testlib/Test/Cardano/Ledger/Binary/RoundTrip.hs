@@ -11,6 +11,9 @@
 
 -- | Defines reusable abstractions for testing RoundTrip properties of CBOR instances
 module Test.Cardano.Ledger.Binary.RoundTrip (
+  yyy,
+  yyyExpectation,
+
   -- * Spec
   roundTripSpec,
   roundTripCborSpec,
@@ -68,7 +71,7 @@ where
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Codec.CBOR.FlatTerm as CBOR
-import Control.Monad (forM_, guard)
+import Control.Monad (forM, forM_, guard)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor
@@ -86,6 +89,100 @@ import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck hiding (label)
 
 -- =====================================================================
+
+yyy ::
+  forall t.
+  ( Eq t
+  , DecCBOR t
+  , EncCBOR t
+  , DecCBOR (Annotator t)
+  , Arbitrary t
+  , Show t
+  ) =>
+  Version ->
+  Version ->
+  Spec
+yyy fromVersion toVersion = prop lbl $ yyyProp @t fromVersion toVersion
+  where
+    lbl = show (typeRep $ Proxy @t)
+
+yyyProp ::
+  forall t.
+  ( Eq t
+  , DecCBOR t
+  , EncCBOR t
+  , DecCBOR (Annotator t)
+  , Show t
+  ) =>
+  Version ->
+  Version ->
+  t ->
+  Property
+yyyProp fromVersion toVersion t =
+  property $
+    forM_ [fromVersion .. toVersion] $ \version -> do
+      let bs = serialize version t
+      yyyExpectation @t version bs
+
+yyyExpectation ::
+  forall t.
+  ( Eq t
+  , DecCBOR t
+  , DecCBOR (Annotator t)
+  , Show t
+  ) =>
+  Version ->
+  BSL.ByteString ->
+  Expectation
+yyyExpectation version bs = do
+  let decAnn = decodeFullAnnotator @t version (typeLabel @t) decCBOR bs
+  let dec = decodeFull @t version bs
+  -- TODO: error
+  decAnn `shouldBe` dec
+
+yyyX ::
+  forall t.
+  ( Eq t
+  , DecCBOR t
+  , EncCBOR t
+  , DecCBOR (Annotator t)
+  , Show t
+  ) =>
+  Version ->
+  Version ->
+  t ->
+  Spec
+yyyX fromVersion toVersion t =
+  prop lbl $
+    property $
+      forM_ [fromVersion .. toVersion] $ \version -> do
+        let bs = serialize version t
+        let decAnn = decodeFullAnnotator @t version (T.pack lbl) decCBOR bs
+        let dec = decodeFull @t version bs
+        decAnn `shouldBe` dec
+  where
+    lbl = show (typeRep $ Proxy @t)
+
+yyyOld ::
+  forall t.
+  ( Eq t
+  , DecCBOR t
+  , EncCBOR t
+  , DecCBOR (Annotator t)
+  , Arbitrary t
+  , Show t
+  ) =>
+  Version ->
+  Version ->
+  Spec
+yyyOld fromVersion toVersion =
+  prop lbl $
+    forM_ [fromVersion .. toVersion] $ \version -> do
+      t <- generate $ arbitrary @t
+      let bs = serialize version t
+      yyyExpectation @t version bs
+  where
+    lbl = show (typeRep $ Proxy @t)
 
 -- | Tests the roundtrip property using QuickCheck generators for all possible versions
 -- starting with `shelleyProtVer`.
