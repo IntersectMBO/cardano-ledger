@@ -61,7 +61,6 @@ tests ::
   ( EraGen era
   , EraGov era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , EraCertState era
   ) =>
   TestTree
 tests =

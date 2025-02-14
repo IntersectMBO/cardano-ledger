@@ -303,8 +303,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
 
 -- If we are not at an Epoch Boundary (i.e. epoch source == epoch target)
 -- then the total rewards should change only by withdrawals
-checkWithdrawalBound ::
-  (EraGen era, EraCertState era) => SourceSignalTarget (CHAIN era) -> Property
+checkWithdrawalBound :: EraGen era => SourceSignalTarget (CHAIN era) -> Property
 checkWithdrawalBound SourceSignalTarget {source, signal, target} =
   counterexample "checkWithdrawalBound" $
     rewardDelta === withdrawals signal

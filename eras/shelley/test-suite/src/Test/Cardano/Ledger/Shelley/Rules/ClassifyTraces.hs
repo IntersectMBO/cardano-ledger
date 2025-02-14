@@ -22,7 +22,6 @@ where
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary.Plain as Plain (serialize')
 import Cardano.Ledger.Block (Block (..), bheader)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.API (
   Addr (..),
   Credential (..),
@@ -306,7 +305,6 @@ onlyValidLedgerSignalsAreGenerated ::
   , Show (Environment ledger)
   , Show (Signal ledger)
   , EraGov era
-  , EraCertState era
   ) =>
   TestTree
 onlyValidLedgerSignalsAreGenerated =
@@ -332,7 +330,6 @@ propAbstractSizeBoundsBytes ::
   ( EraGen era
   , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
   , EraGov era
-  , EraCertState era
   ) =>
   Property
 propAbstractSizeBoundsBytes = property $ do
@@ -359,7 +356,6 @@ propAbstractSizeNotTooBig ::
   ( EraGen era
   , QC.HasTrace (ShelleyLEDGER era) (GenEnv era)
   , EraGov era
-  , EraCertState era
   ) =>
   Property
 propAbstractSizeNotTooBig = property $ do
@@ -391,7 +387,6 @@ onlyValidChainSignalsAreGenerated ::
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGov era
-  , EraCertState era
   ) =>
   TestTree
 onlyValidChainSignalsAreGenerated =

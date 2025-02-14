@@ -130,7 +130,6 @@ mkGenesisChainState ::
   forall era a.
   ( EraGen era
   , EraGov era
-  , EraCertState era
   ) =>
   GenEnv era ->
   IRC (CHAIN era) ->

@@ -317,7 +317,7 @@ genUpdateForNodes c s e coreKeys pp =
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::
-  (EraGen era, EraCertState era) => -- TODO: consider adding EraCertState to EraGen
+  EraGen era =>
   Constants ->
   SlotNo ->
   [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)] ->

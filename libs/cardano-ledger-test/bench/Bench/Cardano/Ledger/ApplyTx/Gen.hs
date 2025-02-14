@@ -9,7 +9,6 @@
 -- | Generates fixed transaction/state pairs for benchmarking.
 module Bench.Cardano.Ledger.ApplyTx.Gen (generateApplyTxEnvForEra, ApplyTxEnv (..)) where
 
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.API (
   AccountState (..),
   Coin (..),
@@ -77,7 +76,6 @@ generateApplyTxEnvForEra ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , EraGov era
-  , EraCertState era
   ) =>
   Proxy era ->
   Int ->
