@@ -144,7 +144,6 @@ incrStakeComparisonTest ::
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGov era
-  , EraCertState era
   ) =>
   Proxy era ->
   TestTree

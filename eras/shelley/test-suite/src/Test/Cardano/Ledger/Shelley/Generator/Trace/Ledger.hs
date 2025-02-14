@@ -176,7 +176,6 @@ mkGenesisLedgerState ::
   forall a era ledger.
   ( EraGen era
   , EraGov era
-  , EraCertState era
   ) =>
   GenEnv era ->
   IRC ledger ->

@@ -127,7 +127,6 @@ genTx ::
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
   , State (EraRule "DELPL" era) ~ CertState era
   , Signal (EraRule "DELPL" era) ~ TxCert era
-  , EraCertState era
   ) =>
   GenEnv era ->
   LedgerEnv era ->

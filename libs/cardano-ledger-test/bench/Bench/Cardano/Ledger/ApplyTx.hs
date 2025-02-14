@@ -20,7 +20,6 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
 import qualified Cardano.Ledger.Binary.Plain as Plain
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
@@ -66,7 +65,6 @@ benchWithGenState ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , EraGov era
-  , EraCertState era
   ) =>
   Proxy era ->
   (ApplyTxEnv era -> IO a) ->
@@ -85,7 +83,6 @@ benchApplyTx ::
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , EraGov era
-  , EraCertState era
   ) =>
   Proxy era ->
   Benchmark
@@ -117,7 +114,6 @@ deserialiseTxEra ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , NFData (Tx era)
   , EraGov era
-  , EraCertState era
   ) =>
   Proxy era ->
   Benchmark

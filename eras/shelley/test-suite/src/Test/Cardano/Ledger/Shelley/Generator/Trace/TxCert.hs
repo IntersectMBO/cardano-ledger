@@ -196,7 +196,6 @@ genTxCerts ::
   , Environment (Core.EraRule "DELPL" era) ~ DelplEnv era
   , State (Core.EraRule "DELPL" era) ~ CertState era
   , Signal (Core.EraRule "DELPL" era) ~ TxCert era
-  , EraCertState era
   ) =>
   GenEnv era ->
   Core.PParams era ->
