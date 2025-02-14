@@ -93,13 +93,21 @@ module Constrained.Experiment.API (
   foldMap_,
   sum_,
   elem_,
-  singleton_,
+  singletonList_,
   append_,
   sizeOf,
   sizeOf_,
   genFromSizeSpec,
   between,
   maxSpec,
+  SetW (..),
+  SetSpec (..),
+  singleton_,
+  member_,
+  union_,
+  subset_,
+  disjoint_,
+  fromList_,
 )
 where
 
@@ -202,10 +210,20 @@ import Constrained.Experiment.Specs.ListFoldy (
   flip_,
   foldMap_,
   id_,
-  singleton_,
+  singletonList_,
   sum_,
  )
 
+import Constrained.Experiment.Specs.Set (
+  SetSpec (..),
+  SetW (..),
+  disjoint_,
+  fromList_,
+  member_,
+  singleton_,
+  subset_,
+  union_,
+ )
 import Constrained.Experiment.Specs.Size (
   SizeW (..),
   Sized (sizeOf),

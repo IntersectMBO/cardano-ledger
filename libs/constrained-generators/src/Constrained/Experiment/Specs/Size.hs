@@ -59,12 +59,17 @@ instance Witness SizeW where
   semantics SizeOfW = sizeOf -- From the Sized class.
 
 instance HasSpec t => FunSym (Sized t) "sizeOf_" SizeW '[t] Integer where
- 
-  propTypeSpec  (Context Evidence SizeOfW (HOLE :<> End)) ts cant = liftSizeSpec ts cant
-  propTypeSpec ctx _ _ = ErrorSpec (NE.fromList ["SizeOfW[sizeOf_] on TypeSpec ", "Unreachable context, wrong number of args", show ctx])
+  propTypeSpec (Context Evidence SizeOfW (HOLE :<> End)) ts cant = liftSizeSpec ts cant
+  propTypeSpec ctx _ _ =
+    ErrorSpec
+      (NE.fromList ["SizeOfW[sizeOf_] on TypeSpec ", "Unreachable context, wrong number of args", show ctx])
 
-  propMemberSpec  (Context Evidence SizeOfW (HOLE :<> End)) es = liftMemberSpec (NE.toList es)
-  propMemberSpec ctx _ = ErrorSpec (NE.fromList ["SizeOfW[sizeOf_] on MemberSpec ", "Unreachable context, wrong number of args", show ctx])
+  propMemberSpec (Context Evidence SizeOfW (HOLE :<> End)) es = liftMemberSpec (NE.toList es)
+  propMemberSpec ctx _ =
+    ErrorSpec
+      ( NE.fromList
+          ["SizeOfW[sizeOf_] on MemberSpec ", "Unreachable context, wrong number of args", show ctx]
+      )
 
   mapTypeSpec f ts = mapTypeSpecSize f ts
 
