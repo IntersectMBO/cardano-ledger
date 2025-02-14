@@ -84,6 +84,7 @@ spec = describe "Regression" $ do
   describe "ImpTest" $
     withImpInit @(LedgerSpec ConwayEra) $
       it "InsufficientCollateral is not encoded with negative coin #4198" $ do
+        modifyPParams $ ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 4310)
         collateralAddress <- freshKeyAddr_
         stakingKeyHash <- freshKeyHash @'Staking
         let
