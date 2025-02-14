@@ -324,33 +324,32 @@ instance Witness BoolW where
 
 -- ======= FunSym instance EqualW(==.)
 
-instance (Typeable a,HasSpec Bool) => FunSym (Eq a) "==." BoolW '[a, a] Bool where
+instance (Typeable a, HasSpec Bool) => FunSym (Eq a) "==." BoolW '[a, a] Bool where
   propTypeSpec (Context Evidence EqualW (HOLE :<> a :<| End)) ts cant =
     caseBoolSpecX (TypeSpec ts cant) $ \case True -> equalSpec a; False -> notEqualSpec a
-  propTypeSpec ctx _ _ = badContext ctx "TypeSpec"      
+  propTypeSpec ctx _ _ = badContext ctx "TypeSpec"
 
   propMemberSpec (Context Evidence EqualW (a :|> HOLE :<> End)) xs =
     caseBoolSpecX (MemberSpec xs) $ \case True -> equalSpec a; False -> notEqualSpec a
-  propMemberSpec ctx _ = badContext ctx "MemberSpec" 
+  propMemberSpec ctx _ = badContext ctx "MemberSpec"
 
 -- Note we DO NOT define (==.) here like we do for other FunSym instances. Instead (==.) is defined
 -- in terms of the Term constructor Equal in Constrained.Experiment.Base.
--- If we did that there would be two different representations of equality. 
+-- If we did that there would be two different representations of equality.
 
 -- ======= FunSym instance NotW(not_)
 
 instance HasSpec Bool => FunSym () "not_" BoolW '[Bool] Bool where
-  
   propTypeSpec (Context _ NotW (HOLE :<> End)) ts cant = caseBoolSpecX (TypeSpec ts cant) (equalSpec . not)
-  propTypeSpec ctx _ _ = badContext ctx "TypeSpec"  
+  propTypeSpec ctx _ _ = badContext ctx "TypeSpec"
 
-  propMemberSpec (Context _ NotW (HOLE :<> End)) xs  = caseBoolSpecX (MemberSpec xs) (equalSpec . not)
-  propMemberSpec ctx _ = badContext ctx "TypeSpec"  
+  propMemberSpec (Context _ NotW (HOLE :<> End)) xs = caseBoolSpecX (MemberSpec xs) (equalSpec . not)
+  propMemberSpec ctx _ = badContext ctx "TypeSpec"
 
 --   FIX ME undefined
 -- mapTypeSpec Not (SumSpec h a b) = typeSpec $ SumSpec h b a
 
-eqFn :: forall a. (Typeable a, Eq a,HasSpec Bool) => Fun '[a, a] Bool
+eqFn :: forall a. (Typeable a, Eq a, HasSpec Bool) => Fun '[a, a] Bool
 eqFn = Fun (Evidence @(Eq a)) EqualW
 
 not_ :: HasSpec Bool => Term Bool -> Term Bool
@@ -360,8 +359,8 @@ not_ = appTerm NotW
 
 instance HasSpec Bool => FunSym () "or_" BoolW '[Bool, Bool] Bool where
   propTypeSpec (Context Evidence OrW (HOLE :<> (s :: Bool) :<| End)) ts cant = caseBoolSpecX (TypeSpec ts cant) (okOr s)
-  propTypeSpec (Context Evidence OrW ((s :: Bool) :|> HOLE :<> End)) ts cant  = caseBoolSpecX (TypeSpec ts cant) (okOr s)
-  propTypeSpec ctxt _  _= badContext ctxt "TypeSpec"
+  propTypeSpec (Context Evidence OrW ((s :: Bool) :|> HOLE :<> End)) ts cant = caseBoolSpecX (TypeSpec ts cant) (okOr s)
+  propTypeSpec ctxt _ _ = badContext ctxt "TypeSpec"
 
   propMemberSpec (Context Evidence OrW (HOLE :<> (s :: Bool) :<| End)) xs = caseBoolSpecX (MemberSpec xs) (okOr s)
   propMemberSpec (Context Evidence OrW ((s :: Bool) :|> HOLE :<> End)) xs = caseBoolSpecX (MemberSpec xs) (okOr s)

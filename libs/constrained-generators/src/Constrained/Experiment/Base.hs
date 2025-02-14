@@ -134,7 +134,7 @@ type FSPre c s (t :: FSType) dom rng =
   )
 
 class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
-  {-# MINIMAL (propagate | propTypeSpec, propMemberSpec ) #-}
+  {-# MINIMAL (propagate | propTypeSpec, propMemberSpec) #-}
 
   -- witness :: String -- For documentation about what constructor of 't' implements 's'
   name :: t c s dom rng -> String
@@ -157,20 +157,21 @@ class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
     constrained $ \v' -> Let (App witW (v' :> Lit x :> Nil)) (v :-> ps)
   propagate (Context Evidence witW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App witW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate ctx (SuspendedSpec _ _) = ErrorSpec $ pure ("FunSym instance for function with more than three arguments. "++show ctx)
+  propagate ctx (SuspendedSpec _ _) = ErrorSpec $ pure ("FunSym instance for function with more than three arguments. " ++ show ctx)
   -- Handle the important cases
   propagate ctx (TypeSpec ts cant) = propTypeSpec ctx ts cant
   propagate ctx (MemberSpec xs) = propMemberSpec ctx xs
-  
-  propTypeSpec :: HasSpec rng => Context c s t dom rng hole -> TypeSpec rng -> [rng] -> Specification hole  
+
+  propTypeSpec ::
+    HasSpec rng => Context c s t dom rng hole -> TypeSpec rng -> [rng] -> Specification hole
   propTypeSpec ctxt ts cant = propagate ctxt (TypeSpec ts cant)
   propMemberSpec :: HasSpec rng => Context c s t dom rng hole -> NonEmpty rng -> Specification hole
   propMemberSpec ctxt xs = propagate ctxt (MemberSpec xs)
-  
-{-    
-  simplepropagate ::
-    Context c s t dom rng hole -> Specification rng -> Either (NonEmpty String) (Specification hole)
--}
+
+  {-
+    simplepropagate ::
+      Context c s t dom rng hole -> Specification rng -> Either (NonEmpty String) (Specification hole)
+  -}
 
   rewriteRules ::
     (TypeList dom, Typeable dom, HasSpec rng, All HasSpec dom) =>
@@ -180,10 +181,10 @@ class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
   mapTypeSpec :: (HasSpec a, HasSpec b, c) => t c s '[a] b -> TypeSpec a -> Specification b
   mapTypeSpec _ts _spec = TrueSpec
 
--- | For some reason GHC can't tell that a Context with 'dom1' can't match against 
+-- | For some reason GHC can't tell that a Context with 'dom1' can't match against
 --   a CList with 'dom2' with a different size.
 badContext :: FunSym c s t dom rng => Context c s t dom rng hole -> String -> Specification hole
-badContext ctx@(Context Evidence x _) msg = ErrorSpec (NE.fromList [msg++" "++show x, "Unreachable context, too many args", show ctx])
+badContext ctx@(Context Evidence x _) msg = ErrorSpec (NE.fromList [msg ++ " " ++ show x, "Unreachable context, too many args", show ctx])
 
 -- This is where the logical properties of FunSym, are applied to transform one spec into another
 -- Note if there is a bunch of functions nested together, like (sizeOf_ (elems_ (snd_ x)))
@@ -554,7 +555,6 @@ instance
 
   propMemberSpec (Context _ FromGenericW (HOLE :<> End)) es = MemberSpec (fmap toSimpleRep es)
   propMemberSpec ctx _ = badContext ctx "fromGenericFn MemberSpec"
-  
 
 fromGeneric_ ::
   forall a.
