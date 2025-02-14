@@ -719,30 +719,42 @@ instance NumLike a => Num (Term a) where
 instance (Typeable a, NumLike a) => FunSym (NumLike a) "addFn" IntW '[a, a] a where
   propTypeSpec (Context ev AddW (l :|> HOLE :<> End)) ts cant = propTypeSpec (Context ev AddW (HOLE :<> l :<| End)) ts cant
   propTypeSpec (Context _ AddW (HOLE :<> i :<| End)) ts cant = subtractSpec i ts <> notMemberSpec (mapMaybe (safeSubtract i) cant)
-  propTypeSpec ctx _ _ = ErrorSpec (NE.fromList ["AddW[addFn] on TypeSpec", "Unreachable context, wrong number of args", show ctx])
+  propTypeSpec ctx _ _ =
+    ErrorSpec
+      (NE.fromList ["AddW[addFn] on TypeSpec", "Unreachable context, wrong number of args", show ctx])
 
   propMemberSpec (Context ev AddW (l :|> HOLE :<> End)) es = propMemberSpec (Context ev AddW (HOLE :<> l :<| End)) es
-  propMemberSpec (Context _ AddW (HOLE :<> i :<| End)) es =  
+  propMemberSpec (Context _ AddW (HOLE :<> i :<| End)) es =
     memberSpecList
       (nub $ mapMaybe (safeSubtract i) (NE.toList es))
       ( NE.fromList
-                [ "propagateSpecFn on (" ++ show i ++ " +. HOLE)"
-                , "The Spec is a MemberSpec = " ++ show (MemberSpec es)
-                , "We can't safely subtract " ++ show i ++ " from any choice in the MemberSpec."
-                ])
-  propMemberSpec ctx _ = ErrorSpec (NE.fromList ["AddW[addFn] on MemberSpec", "Unreachable context, wrong number of args", show ctx])                
-
+          [ "propagateSpecFn on (" ++ show i ++ " +. HOLE)"
+          , "The Spec is a MemberSpec = " ++ show (MemberSpec es)
+          , "We can't safely subtract " ++ show i ++ " from any choice in the MemberSpec."
+          ]
+      )
+  propMemberSpec ctx _ =
+    ErrorSpec
+      (NE.fromList ["AddW[addFn] on MemberSpec", "Unreachable context, wrong number of args", show ctx])
 
 addFn :: forall a. NumLike a => Term a -> Term a -> Term a
 addFn = appTerm AddW
 
 instance (Typeable a, NumLike a) => FunSym (NumLike a) "negateFn" IntW '[a] a where
   propTypeSpec (Context _ NegateW (HOLE :<> End)) ts cant = negateSpec @a ts <> notMemberSpec (map negate cant)
-  propTypeSpec ctx _ _ = ErrorSpec (NE.fromList ["NegateW[negateFn] on TypeSpec ", "Unreachable context, wrong number of args", show ctx])
+  propTypeSpec ctx _ _ =
+    ErrorSpec
+      ( NE.fromList
+          ["NegateW[negateFn] on TypeSpec ", "Unreachable context, wrong number of args", show ctx]
+      )
 
   propMemberSpec (Context _ NegateW (HOLE :<> End)) es = MemberSpec $ NE.nub $ fmap negate es
-  propMemberSpec ctx _ = ErrorSpec (NE.fromList ["NegateW[negateFn] on MemberSpec ", "Unreachable context, wrong number of args", show ctx])
-  
+  propMemberSpec ctx _ =
+    ErrorSpec
+      ( NE.fromList
+          ["NegateW[negateFn] on MemberSpec ", "Unreachable context, wrong number of args", show ctx]
+      )
+
   mapTypeSpec NegateW (ts :: TypeSpec a) = negateSpec @a ts
 
 negateFn :: forall a. NumLike a => Term a -> Term a
@@ -754,28 +766,33 @@ instance
   (Typeable a, HasSpec Bool, HasSpec a, OrdLike a) =>
   FunSym (OrdLike a) "<=." NumOrdW '[a, a] Bool
   where
-  propTypeSpec (Context _ LessOrEqualW (l :|> HOLE :<> End)) ts cant = 
+  propTypeSpec (Context _ LessOrEqualW (l :|> HOLE :<> End)) ts cant =
     caseBoolSpecX (TypeSpec ts cant) $ \case
       True -> geqSpec l
       False -> ltSpec l
-  propTypeSpec (Context _ LessOrEqualW (HOLE :<> l :<| End)) ts cant = 
+  propTypeSpec (Context _ LessOrEqualW (HOLE :<> l :<| End)) ts cant =
     caseBoolSpecX (TypeSpec ts cant) $ \case
       True -> leqSpec l
       False -> gtSpec l
-  propTypeSpec ctx _ _ = ErrorSpec (NE.fromList ["LessOrEqualW[<=.] on TypeSpec ", "Unreachable context, wrong number of args", show ctx])
+  propTypeSpec ctx _ _ =
+    ErrorSpec
+      ( NE.fromList
+          ["LessOrEqualW[<=.] on TypeSpec ", "Unreachable context, wrong number of args", show ctx]
+      )
 
-
-  propMemberSpec (Context _ LessOrEqualW (l :|> HOLE :<> End)) es = 
+  propMemberSpec (Context _ LessOrEqualW (l :|> HOLE :<> End)) es =
     caseBoolSpecX (MemberSpec es) $ \case
       True -> geqSpec l
       False -> ltSpec l
   propMemberSpec (Context _ LessOrEqualW (HOLE :<> l :<| End)) es =
     caseBoolSpecX (MemberSpec es) $ \case
       True -> leqSpec l
-      False -> gtSpec l 
-  propMemberSpec ctx _ = ErrorSpec (NE.fromList ["LessOrEqualW[<=.] on MemberSpec ", "Unreachable context, wrong number of args", show ctx])
-
-
+      False -> gtSpec l
+  propMemberSpec ctx _ =
+    ErrorSpec
+      ( NE.fromList
+          ["LessOrEqualW[<=.] on MemberSpec ", "Unreachable context, wrong number of args", show ctx]
+      )
 
 {-
 infixr 4 <=.
@@ -787,25 +804,29 @@ instance
   (Typeable a, HasSpec Bool, HasSpec a, OrdLike a) =>
   FunSym (OrdLike a) "<." NumOrdW '[a, a] Bool
   where
-  propTypeSpec (Context _ LessW (l :|> HOLE :<> End)) ts cant =  
+  propTypeSpec (Context _ LessW (l :|> HOLE :<> End)) ts cant =
     caseBoolSpecX (TypeSpec ts cant) $ \case
       True -> gtSpec l
       False -> leqSpec l
-  propTypeSpec (Context _ LessW (HOLE :<> l :<| End)) ts cant =  
+  propTypeSpec (Context _ LessW (HOLE :<> l :<| End)) ts cant =
     caseBoolSpecX (TypeSpec ts cant) $ \case
       True -> ltSpec l
       False -> geqSpec l
-  propTypeSpec ctx _ _ = ErrorSpec (NE.fromList ["LessOrEqual[<.] on TypeSpec", "Unreachable context, too many args", show ctx])
+  propTypeSpec ctx _ _ =
+    ErrorSpec
+      (NE.fromList ["LessOrEqual[<.] on TypeSpec", "Unreachable context, too many args", show ctx])
 
-  propMemberSpec (Context _ LessW (l :|> HOLE :<> End)) es =  
+  propMemberSpec (Context _ LessW (l :|> HOLE :<> End)) es =
     caseBoolSpecX (MemberSpec es) $ \case
       True -> gtSpec l
       False -> leqSpec l
-  propMemberSpec (Context _ LessW (HOLE :<> l :<| End)) es =  
+  propMemberSpec (Context _ LessW (HOLE :<> l :<| End)) es =
     caseBoolSpecX (MemberSpec es) $ \case
       True -> ltSpec l
       False -> geqSpec l
-  propMemberSpec ctx _ = ErrorSpec (NE.fromList ["LessOrEqual[<.] on MemberSpec", "Unreachable context, too many args", show ctx])  
+  propMemberSpec ctx _ =
+    ErrorSpec
+      (NE.fromList ["LessOrEqual[<.] on MemberSpec", "Unreachable context, too many args", show ctx])
 
 {-
 infixr 4 <.

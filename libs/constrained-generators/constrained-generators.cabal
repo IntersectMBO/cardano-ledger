@@ -38,11 +38,12 @@ library
     Constrained.Experiment.NumSpec
     Constrained.Experiment.Specs.ListFoldy
     Constrained.Experiment.Specs.Pairs
+    Constrained.Experiment.Specs.Set
     Constrained.Experiment.Specs.Size
     Constrained.Experiment.Specs.Sum
+    Constrained.Experiment.SumList
     Constrained.Experiment.Syntax
     Constrained.Experiment.TheKnot
-    Constrained.Experiment.SumList
     Constrained.GenT
     Constrained.Graph
     Constrained.Instances
