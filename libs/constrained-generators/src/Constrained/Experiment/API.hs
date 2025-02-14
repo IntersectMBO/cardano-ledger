@@ -223,11 +223,12 @@ import Constrained.Experiment.Specs.Size (
 negate_ :: NumLike a => Term a -> Term a
 negate_ = negateFn
 
+-- See  https://www.mathsisfun.com/algebra/inequality-solving.html
 (>=.) :: Numeric n => Term n -> Term n -> Term Bool
-(>=.) = flip (<.)
+(>=.) = flip (<=.)
 
 (>.) :: Numeric n => Term n -> Term n -> Term Bool
-(>.) = flip (<=.)
+(>.) = flip (<.)
 
 (-.) :: Numeric n => Term n -> Term n -> Term n
 (-.) x y = addFn x (negateFn y)

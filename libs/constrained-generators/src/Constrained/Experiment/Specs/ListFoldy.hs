@@ -38,12 +38,9 @@ import Constrained.Experiment.NumSpec
 import Constrained.Experiment.Specs.Size (Sized (..), genFromSizeSpec, sizeOf_)
 import Constrained.Experiment.Syntax (forAll, genHint, unsafeExists)
 import Constrained.Experiment.TheKnot (caseBoolSpec, genFromSpecT, shrinkWithSpec, simplifySpec)
-
--- import Constrained.Experiment.Witness (Witness (..), showType)
-
 import Constrained.GenT
 import Constrained.List
-import Constrained.SumList (Cost (..), Solution (No, Yes), pickAll)
+import Constrained.Experiment.SumList (Cost (..), Solution (No, Yes), pickAll)
 import Control.Applicative ((<|>))
 import Control.Monad (guard, when)
 import Data.Int
@@ -162,6 +159,7 @@ instance
   ( All Typeable [a, r]
   , Typeable c1
   , Typeable c2
+  , HasSpec r
   ) =>
   FunSym (c1, c2) "composeFn" FunW '[a] r
   where
@@ -404,10 +402,14 @@ deriving instance (Eq (ListW c s d r))
 
 -- ============= FunSymbol for FoldMapW
 
-instance (Typeable a, Typeable b) => FunSym (Foldy b) "foldMap_" ListW '[[a]] b where
-  simplepropagate (Context Evidence (FoldMapW f) (HOLE :<> End)) spec =
-    Right $ typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f spec)
-  simplepropagate _ _ = Left (pure "Unreachable context for (FunSym (Foldy b) \"foldMap_\" ListW '[[a]] b)")
+instance (Typeable a, HasSpec b) => FunSym (Foldy b) "foldMap_" ListW '[[a]] b where
+  propTypeSpec (Context Evidence (FoldMapW f) (HOLE :<> End)) ts cant =
+       typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f (TypeSpec ts cant))
+  propTypeSpec _ _  _ = ErrorSpec (pure "Unreachable context in TypeSpec for (FunSym (Foldy b) \"foldMap_\" ListW '[[a]] b)")
+  propMemberSpec (Context Evidence (FoldMapW f) (HOLE :<> End)) es =
+       typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f (MemberSpec es))  
+  propMemberSpec _ _  = ErrorSpec (pure "Unreachable context in MemberSpec for (FunSym (Foldy b) \"foldMap_\" ListW '[[a]] b)")        
+
   mapTypeSpec (FoldMapW g) ts =
     constrained $ \x ->
       unsafeExists $ \x' ->
@@ -443,15 +445,25 @@ toPredsFoldSpec x (FoldSpec funAB sspec) =
 -- ============ FunSymbol for ElemW
 
 instance Typeable a => FunSym (Eq a) "elem_" ListW '[a, [a]] Bool where
-  simplepropagate (Context Evidence ElemW (HOLE :<> es :<| End)) spec = Right $ caseBoolSpec spec $ \case
-    True -> case nub es of
-      [] -> ErrorSpec (pure "propagate on (elem_ x []), The empty list, [], has no solution")
-      (z : zs) -> MemberSpec (z :| zs)
-    False -> notMemberSpec es
-  simplepropagate (Context Evidence ElemW (e :|> HOLE :<> End)) spec = Right $ caseBoolSpec spec $ \case
-    True -> typeSpec $ ListSpec Nothing [e] mempty mempty NoFold
-    False -> typeSpec $ ListSpec Nothing mempty mempty (notEqualSpec e) NoFold
-  simplepropagate _ _ = Left (pure "Unreachable context for (FunSym (Eq a) \"elem_\" ListW  '[a, [a]] Bool)")
+  propTypeSpec (Context Evidence ElemW (HOLE :<> es :<| End)) ts cant =
+      caseBoolSpec (TypeSpec ts cant) $ \case
+        True -> memberSpecList (nub es) (pure "propagate on (elem_ x []), The empty list, [], has no solution")
+        False -> notMemberSpec es
+  propTypeSpec (Context Evidence ElemW (e :|> HOLE :<> End)) ts cant = 
+      caseBoolSpec (TypeSpec ts cant) $ \case
+        True -> typeSpec $ ListSpec Nothing [e] mempty mempty NoFold
+        False -> typeSpec $ ListSpec Nothing mempty mempty (notEqualSpec e) NoFold
+  propTypeSpec _ _ _ = ErrorSpec (pure "Unreachable context in TypeSpec for (FunSym (Eq a) \"elem_\" ListW  '[a, [a]] Bool)")
+
+  propMemberSpec (Context Evidence ElemW (HOLE :<> es :<| End)) xs =
+      caseBoolSpec (MemberSpec xs) $ \case
+        True -> memberSpecList (nub es) (pure "propagate on (elem_ x []), The empty list, [], has no solution")
+        False -> notMemberSpec es
+  propMemberSpec (Context Evidence ElemW (e :|> HOLE :<> End)) xs = 
+      caseBoolSpec (MemberSpec xs) $ \case
+        True -> typeSpec $ ListSpec Nothing [e] mempty mempty NoFold
+        False -> typeSpec $ ListSpec Nothing mempty mempty (notEqualSpec e) NoFold
+  propMemberSpec _ _ = ErrorSpec (pure "Unreachable context in MemberSpec for TypeSpec for (FunSym (Eq a) \"elem_\" ListW  '[a, [a]] Bool)")  
 
   rewriteRules ElemW (_ :> Lit [] :> Nil) Evidence = Just $ Lit False
   rewriteRules ElemW (t :> Lit [a] :> Nil) Evidence = Just $ Equal t (Lit a)
@@ -465,35 +477,36 @@ elemFn = Fun Evidence ElemW
 
 -- ============= FunSymbol for SingletonW
 
-instance Typeable a => FunSym () "singelton_" ListW '[a] [a] where
-  simplepropagate (Context Evidence SingletonW (HOLE :<> End)) spec =
-    case spec of
-      MemberSpec xss ->
-        case [a | [a] <- NE.toList xss] of
-          [] -> Left $ (pure "PropagateSpec SingletonW  with MemberSpec which has no lists of length 1")
-          (x : xs) -> Right $ MemberSpec (x :| xs)
-      TypeSpec (ListSpec _ m sz e f) cant
-        | length m > 1 ->
-            Left $
+instance HasSpec a => FunSym () "singelton_" ListW '[a] [a] where
+  propTypeSpec (Context Evidence SingletonW (HOLE :<> End)) (ListSpec _ m sz e f) cant
+    | length m > 1  =
+            ErrorSpec $
               NE.fromList
                 [ "Too many required elements for SingletonW : "
                 , "  " ++ show m
                 ]
-        | not $ 1 `conformsToSpec` sz ->
-            Left $ pure $ "Size spec requires too many elements for SingletonW : " ++ show sz
-        | bad@(_ : _) <- filter (not . (`conformsToSpec` e)) m ->
-            Left $
+    | not $ 1 `conformsToSpec` sz =
+            ErrorSpec $ pure $ "Size spec requires too many elements for SingletonW : " ++ show sz
+    | bad@(_ : _) <- filter (not . (`conformsToSpec` e)) m =
+            ErrorSpec $
               NE.fromList
                 [ "The following elements of the must spec do not conforms to the elem spec:"
                 , show bad
                 ]
-        -- There is precisely one required element in the final list, so the argument to singletonList_ has to
-        -- be that element and we have to respect the cant and fold specs
-        | [a] <- m -> Right $ equalSpec a <> notMemberSpec [z | [z] <- cant] <> reverseFoldSpec f
+      -- There is precisely one required element in the final list, so the argument to singletonList_ has to
+      -- be that element and we have to respect the cant and fold specs
+    | [a] <- m = equalSpec a <> notMemberSpec [z | [z] <- cant] <> reverseFoldSpec f
         -- We have to respect the elem-spec, the can't spec, and the fold spec.
-        | otherwise -> Right $ e <> notMemberSpec [a | [a] <- cant] <> reverseFoldSpec f
-      _ -> Left (pure "Unreachable Specification in simplepropagate singletonW FunSym instance")
-  simplepropagate ctx@(Context Evidence _ _) _ = Left (pure $ "Ill formed context in singletonW FunSym instance: " ++ show ctx)
+    | otherwise = e <> notMemberSpec [a | [a] <- cant] <> reverseFoldSpec f   
+  propTypeSpec ctx _ _ = 
+      ErrorSpec (pure $ "Ill formed context in TypeSpec for SingletonW FunSym instance: " ++ show ctx)
+
+  propMemberSpec (Context Evidence SingletonW (HOLE :<> End)) xss = 
+      case [a | [a] <- NE.toList xss] of
+        [] -> ErrorSpec $ (pure "PropagateSpec SingletonW  with MemberSpec which has no lists of length 1")
+        (x : xs) -> MemberSpec (x :| xs)
+  propMemberSpec ctx _ = 
+      ErrorSpec (pure $ "Ill formed context in MemberSpec for SingletonW FunSym instance: " ++ show ctx)
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec SingletonW ts = typeSpec (ListSpec Nothing [] (equalSpec 1) (typeSpec ts) NoFold)
@@ -511,47 +524,44 @@ singletonFn = Fun Evidence SingletonW
 
 -- ============== FunSymbol for AppendW
 
-instance (Sized [a], Typeable a) => FunSym () "append_" ListW '[[a], [a]] [a] where
-  simplepropagate ctx spec = case spec of
-    MemberSpec xss
+instance (Sized [a], HasSpec a) => FunSym () "append_" ListW '[[a], [a]] [a] where
+  propMemberSpec ctx xss 
       | Context Evidence AppendW (HOLE :<> (ys :: [a]) :<| End) <- ctx
-      , Evidence <- prerequisites @[a] ->
+      , Evidence <- prerequisites @[a] =
           -- Only keep the prefixes of the elements of xss that can
           -- give you the correct resulting list
           case suffixedBy ys (NE.toList xss) of
             [] ->
-              Left
+              ErrorSpec
                 ( NE.fromList
                     [ "propagateSpecFun (append HOLE ys) with (MemberSpec xss)"
                     , "there are no elements in xss with suffix ys"
                     ]
                 )
-            (x : xs) -> Right $ MemberSpec (x :| xs)
+            (x : xs) -> MemberSpec (x :| xs)
       | Context Evidence AppendW ((ys :: [a]) :|> HOLE :<> End) <- ctx
-      , Evidence <- prerequisites @[a] ->
+      , Evidence <- prerequisites @[a] =
           -- Only keep the suffixes of the elements of xss that can
           -- give you the correct resulting list
           case prefixedBy ys (NE.toList xss) of
             [] ->
-              Left
+              ErrorSpec
                 ( NE.fromList
                     [ "propagateSpecFun (append ys HOLE) with (MemberSpec xss)"
                     , "there are no elements in xss with prefix ys"
                     ]
                 )
-            (x : xs) -> Right (MemberSpec (x :| xs))
-    TypeSpec ts@ListSpec {listSpecElem = e} cant
+            (x : xs) -> MemberSpec (x :| xs)
+  propMemberSpec _ _ = ErrorSpec $ pure "The spec given to propMemberSpec for AppendW is inconsistent!"            
+
+  propTypeSpec ctx (ts@ListSpec {listSpecElem = e}) cant
       | Context Evidence AppendW (HOLE :<> (ys :: [a]) :<| End) <- ctx
       , Evidence <- prerequisites @[a]
-      , all (`conformsToSpec` e) ys ->
-          Right $
-            TypeSpec (alreadyHave ys ts) (suffixedBy ys cant)
+      , all (`conformsToSpec` e) ys = TypeSpec (alreadyHave ys ts) (suffixedBy ys cant)
       | Context Evidence AppendW ((ys :: [a]) :|> HOLE :<> End) <- ctx
       , Evidence <- prerequisites @[a]
-      , all (`conformsToSpec` e) ys ->
-          Right $
-            TypeSpec (alreadyHave ys ts) (prefixedBy ys cant)
-    _ -> Left $ pure "The spec given to propagateSpecFun AppendSpec is inconsistent!"
+      , all (`conformsToSpec` e) ys = TypeSpec (alreadyHave ys ts) (prefixedBy ys cant)
+      | otherwise = ErrorSpec $ pure "The spec given to propTypeSpec for AppendW is inconsistent!"
 
 prefixedBy :: Eq a => [a] -> [[a]] -> [[a]]
 prefixedBy ys xss = [drop (length ys) xs | xs <- xss, ys `isPrefixOf` xs]
@@ -1106,27 +1116,24 @@ genListWithSize sizeSpec elemSpec foldSpec
             , "  foldSpec = " ++ specName foldSpec
             ]
         )
-  | otherwise =
-      let message =
+  | otherwise = do
+      total <- genFromSpecT foldSpec
+          -- The compatible sizes for the list, for a given choice of total
+      let sizeAdjusted = if total /= 0 
+                            then sizeSpec <> gtSpec 0 -- if total is not zero, we better not pick a 0 size
+                            else sizeSpec <> equalSpec 0 -- if it is zero, the only possible size is 0
+          message =
             [ "\nGenSizedList fails"
             , "sizespec = " ++ specName sizeSpec
             , "elemSpec = " ++ specName elemSpec
             , "foldSpec = " ++ specName foldSpec
-            , "size adjusted = " ++ show (sizeSpec <> geqSpec 0)
+            , "total choosen from foldSpec = "++show total
+            , "size adjusted for total = " ++ show sizeAdjusted
             ]
-       in push message $ do
-            count <- genFromSpecT (sizeSpec <> geqSpec 0) -- Sizes cannot be negative.
-            total <- genFromSpecT foldSpec
+      push message $ do
+            count <- genFromSpecT sizeAdjusted 
             case compare total 0 of
-              EQ ->
-                if conformsToSpec 0 sizeSpec
-                  then pure []
-                  else
-                    if noNegativeValues @a
-                      then
-                        fatalError1
-                          ("Can't find a non-zero number of things that add to 0 at type " ++ showType @a)
-                      else pickNegative elemSpec total count
+              EQ -> pure [] -- the adusted size either failed in the call to genFromSpecT or it is zero
               GT -> pickPositive elemSpec total count
               LT -> pickNegative elemSpec total count
 
