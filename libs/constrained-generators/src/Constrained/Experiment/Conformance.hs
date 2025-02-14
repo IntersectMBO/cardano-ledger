@@ -35,7 +35,7 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
 import Data.Semigroup (sconcat)
-import Data.Typeable (Typeable, (:~:) (Refl))
+import Data.Typeable (Typeable)
 import GHC.TypeLits hiding (Text)
 import Prettyprinter hiding (cat)
 
@@ -289,7 +289,7 @@ instance HasSpec a => Monoid (Specification a) where
 --   write this because it depends on Semigroup property of Specification.
 mapSpec ::
   forall c s t a b.
-  (FunSym c s t '[a] b, c, HasSpec b, HasSpec a) => t c s '[a] b -> Specification a -> Specification b
+  (FunSym c s t '[a] b, c, HasSpec a) => t c s '[a] b -> Specification a -> Specification b
 mapSpec f (ExplainSpec es s) = explainSpecOpt es (mapSpec f s)
 mapSpec f TrueSpec = mapTypeSpec @_ @_ @_ @'[a] @b f (emptySpec @a)
 mapSpec _ (ErrorSpec err) = ErrorSpec err
@@ -324,37 +324,33 @@ instance Witness BoolW where
 
 -- ======= FunSym instance EqualW(==.)
 
-instance Typeable a => FunSym (Eq a) "==." BoolW '[a, a] Bool where
-  simplepropagate (Context Evidence EqualW (HOLE :<> a :<| End)) spec =
-    Right $ caseBoolSpecX spec $ \case True -> equalSpec a; False -> notEqualSpec a
-  simplepropagate (Context Evidence EqualW (a :|> HOLE :<> End)) spec =
-    Right $ caseBoolSpecX spec $ \case True -> equalSpec a; False -> notEqualSpec a
-  simplepropagate ctx@(Context Evidence _ _) _ = Left (NE.fromList ["", "Unreachable context, too many args", show ctx])
+instance (Typeable a,HasSpec Bool) => FunSym (Eq a) "==." BoolW '[a, a] Bool where
+  propTypeSpec (Context Evidence EqualW (HOLE :<> a :<| End)) ts cant =
+    caseBoolSpecX (TypeSpec ts cant) $ \case True -> equalSpec a; False -> notEqualSpec a
+  propTypeSpec ctx _ _ = badContext ctx "TypeSpec"      
+
+  propMemberSpec (Context Evidence EqualW (a :|> HOLE :<> End)) xs =
+    caseBoolSpecX (MemberSpec xs) $ \case True -> equalSpec a; False -> notEqualSpec a
+  propMemberSpec ctx _ = badContext ctx "MemberSpec" 
 
 -- Note we DO NOT define (==.) here like we do for other FunSym instances. Instead (==.) is defined
 -- in terms of the Term constructor Equal in Constrained.Experiment.Base.
--- If we did that there would be two different representations of equality. Because of that I don't
--- expect the EqualPat to ever match any term. In fact the annoying (Typeable a) constraint makes
--- very hard to use.
-
-pattern EqualPat ::
-  forall a rng.
-  Typeable a =>
-  forall.
-  (rng ~ Bool, HasSpec a, Eq a, Literal a) =>
-  Term a -> Term a -> Term rng
-pattern EqualPat x y <-
-  (App (sameFunSym (EqualW @a) -> Just (EqualW, Refl, Refl, Refl, Refl, Refl)) (x :> y :> Nil))
+-- If we did that there would be two different representations of equality. 
 
 -- ======= FunSym instance NotW(not_)
 
-instance FunSym () "not_" BoolW '[Bool] Bool where
-  simplepropagate (Context _ NotW (HOLE :<> End)) spec = Right $ caseBoolSpecX spec (equalSpec . not)
-  simplepropagate ctx _ = Left (NE.fromList ["NotW (not_)", "Unreachable context, too many args", show ctx])
+instance HasSpec Bool => FunSym () "not_" BoolW '[Bool] Bool where
+  
+  propTypeSpec (Context _ NotW (HOLE :<> End)) ts cant = caseBoolSpecX (TypeSpec ts cant) (equalSpec . not)
+  propTypeSpec ctx _ _ = badContext ctx "TypeSpec"  
 
+  propMemberSpec (Context _ NotW (HOLE :<> End)) xs  = caseBoolSpecX (MemberSpec xs) (equalSpec . not)
+  propMemberSpec ctx _ = badContext ctx "TypeSpec"  
+
+--   FIX ME undefined
 -- mapTypeSpec Not (SumSpec h a b) = typeSpec $ SumSpec h b a
 
-eqFn :: forall a. (Typeable a, Eq a) => Fun '[a, a] Bool
+eqFn :: forall a. (Typeable a, Eq a,HasSpec Bool) => Fun '[a, a] Bool
 eqFn = Fun (Evidence @(Eq a)) EqualW
 
 not_ :: HasSpec Bool => Term Bool -> Term Bool
@@ -362,10 +358,14 @@ not_ = appTerm NotW
 
 -- ======= FunSym instance OrW(or_)
 
-instance FunSym () "or_" BoolW '[Bool, Bool] Bool where
-  simplepropagate (Context Evidence OrW (HOLE :<> (s :: Bool) :<| End)) spec = Right $ caseBoolSpecX spec (okOr s)
-  simplepropagate (Context Evidence OrW ((s :: Bool) :|> HOLE :<> End)) spec = Right $ caseBoolSpecX spec (okOr s)
-  simplepropagate ctx@(Context Evidence _ _) _ = Left (NE.fromList ["OrW(or_)", "Unreachable context, too many args", show ctx])
+instance HasSpec Bool => FunSym () "or_" BoolW '[Bool, Bool] Bool where
+  propTypeSpec (Context Evidence OrW (HOLE :<> (s :: Bool) :<| End)) ts cant = caseBoolSpecX (TypeSpec ts cant) (okOr s)
+  propTypeSpec (Context Evidence OrW ((s :: Bool) :|> HOLE :<> End)) ts cant  = caseBoolSpecX (TypeSpec ts cant) (okOr s)
+  propTypeSpec ctxt _  _= badContext ctxt "TypeSpec"
+
+  propMemberSpec (Context Evidence OrW (HOLE :<> (s :: Bool) :<| End)) xs = caseBoolSpecX (MemberSpec xs) (okOr s)
+  propMemberSpec (Context Evidence OrW ((s :: Bool) :|> HOLE :<> End)) xs = caseBoolSpecX (MemberSpec xs) (okOr s)
+  propMemberSpec ctxt _ = badContext ctxt "MemberSpec"
 
 or_ :: HasSpec Bool => Term Bool -> Term Bool -> Term Bool
 or_ = appTerm OrW

@@ -59,11 +59,12 @@ instance Witness SizeW where
   semantics SizeOfW = sizeOf -- From the Sized class.
 
 instance HasSpec t => FunSym (Sized t) "sizeOf_" SizeW '[t] Integer where
-  simplepropagate (Context Evidence SizeOfW (HOLE :<> End)) spec = case spec of
-    (TypeSpec x cant) -> Right $ liftSizeSpec x cant
-    (MemberSpec xs) -> Right $ liftMemberSpec (NE.toList xs)
-    impossible -> Left (NE.fromList ["SizeOfW[sizeOf_]", "Unreachable spec in simplepropagate", show impossible])
-  simplepropagate ctx _ = Left (NE.fromList ["SizeOfW[sizeOf_]", "Unreachable context, wrong number of args", show ctx])
+ 
+  propTypeSpec  (Context Evidence SizeOfW (HOLE :<> End)) ts cant = liftSizeSpec ts cant
+  propTypeSpec ctx _ _ = ErrorSpec (NE.fromList ["SizeOfW[sizeOf_] on TypeSpec ", "Unreachable context, wrong number of args", show ctx])
+
+  propMemberSpec  (Context Evidence SizeOfW (HOLE :<> End)) es = liftMemberSpec (NE.toList es)
+  propMemberSpec ctx _ = ErrorSpec (NE.fromList ["SizeOfW[sizeOf_] on MemberSpec ", "Unreachable context, wrong number of args", show ctx])
 
   mapTypeSpec f ts = mapTypeSpecSize f ts
 
@@ -141,16 +142,6 @@ class Sized t where
     ) =>
     TypeSpec t -> Specification Integer
   sizeOfTypeSpec = sizeOfTypeSpec @(SimpleRep t)
-
-{-
-instance Ord a => Sized  (Set.Set a) where
-  sizeOf = toInteger . Set.size
-  liftSizeSpec spec cant = typeSpec (SetSpec mempty TrueSpec (TypeSpec spec cant))
-  liftMemberSpec xs = case NE.nonEmpty xs of
-    Nothing -> ErrorSpec (pure ("In liftMemberSpec for the (Sized Set) instance, xs is the empty list"))
-    Just zs -> typeSpec (SetSpec mempty TrueSpec (MemberSpec zs))
-  sizeOfTypeSpec (SetSpec must _ sz) = sz <> geqSpec (sizeOf must)
--}
 
 -- How to constrain the size of any type, with a Sized instance
 hasSize :: (HasSpec t, Sized t) => SizeSpec -> Specification t
