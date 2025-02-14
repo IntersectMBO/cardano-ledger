@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -31,6 +32,7 @@ type Mary = MaryEra
 
 {-# DEPRECATED Mary "In favor of `MaryEra`" #-}
 
-instance ApplyTx MaryEra
+instance ApplyTx MaryEra where
+  applyTxValidation = ruleApplyTxValidation @"LEDGER"
 
 instance ApplyBlock MaryEra

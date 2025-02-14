@@ -226,9 +226,6 @@ instance
   where
   arbitrary = genericArbitraryU
 
-instance Arbitrary (ConwayMempoolPredFailure era) where
-  arbitrary = genericArbitraryU
-
 instance
   ( EraTxOut era
   , Arbitrary (Value era)

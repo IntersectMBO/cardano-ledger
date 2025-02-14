@@ -2,10 +2,16 @@
 
 ## 1.16.0.0
 
+* Restrict the monad of `applyTx` and `reapllyTx` to `Either` from abstract `MonadError`
+* Remove `applyTxOpts` in favor of new `applyTxValidation` function in `ApplyTx`
+* Move `reapplyTx` outside of the `ApplyTx` type class.
+* Add helper `ruleApplyTxValidation` that is used to implement `applyTxValidation`
+* Remove the no longer necessary `ledgerMempool` field
+* Fix `NFData` instance for `LedgerEnv`
 * Move `AccountState` to `Cardano.Ledger.State`
 * Deprecated `RewardAccounts`
 * Deprecated `utxosUtxoL`
-* Added `CanGetUTxO` and `CanSetUTxO` instances for `EpochState`, `UTxOState`, `NewEpochState`, `LedgerState` 
+* Added `CanGetUTxO` and `CanSetUTxO` instances for `EpochState`, `UTxOState`, `NewEpochState`, `LedgerState`
 * Made the fields of predicate failures and environments lazy
 * Changed the type of `sgSecurityParam` to `NonZero Word64`
 * Following functions now expect a `NonZero Word64` security parameter:

@@ -180,6 +180,7 @@ library testlib
     plutus-ledger-api,
     prettyprinter,
     small-steps >=1.1,
+    text,
 
 executable huddle-cddl
   main-is: Main.hs

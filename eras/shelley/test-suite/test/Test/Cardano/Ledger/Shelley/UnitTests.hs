@@ -332,7 +332,7 @@ addReward dp ra c = dp {certDState = ds {dsUnified = rewards'}}
 
 -- Any key deposit works in this test ^
 ledgerEnv :: LedgerEnv C
-ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound pp (AccountState (Coin 0) (Coin 0)) False
+ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound pp (AccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::
   NonEmpty (PredicateFailure (ShelleyLEDGER C)) ->
@@ -493,7 +493,7 @@ testExpiredTx =
             , ttl = SlotNo 0
             , signers = [asWitness alicePay]
             }
-      ledgerEnv' = LedgerEnv (SlotNo 1) Nothing minBound pp (AccountState (Coin 0) (Coin 0)) False
+      ledgerEnv' = LedgerEnv (SlotNo 1) Nothing minBound pp (AccountState (Coin 0) (Coin 0))
    in testLEDGER ledgerState tx ledgerEnv' (Left errs)
 
 testInvalidWintess :: Assertion

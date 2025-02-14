@@ -14,7 +14,6 @@ module Cardano.Ledger.Alonzo (
   AlonzoTxBody,
   AlonzoScript,
   AlonzoTxAuxData,
-  reapplyAlonzoTx,
 )
 where
 
@@ -30,15 +29,9 @@ import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody, AlonzoTxOut)
 import Cardano.Ledger.Alonzo.TxWits ()
 import Cardano.Ledger.Alonzo.UTxO ()
-import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus.Data ()
-import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import Cardano.Ledger.Shelley.API
-import Control.Arrow (left)
-import Control.Monad.Except (MonadError, liftEither)
-import Control.Monad.Reader (runReader)
-import Control.State.Transition.Extended (TRC (TRC))
 
 type Alonzo = AlonzoEra
 
@@ -46,23 +39,7 @@ type Alonzo = AlonzoEra
 
 -- =====================================================
 
-reapplyAlonzoTx ::
-  forall era m.
-  (ApplyTx era, MonadError (ApplyTxError era) m) =>
-  Globals ->
-  MempoolEnv era ->
-  MempoolState era ->
-  Validated (Tx era) ->
-  m (MempoolState era)
-reapplyAlonzoTx globals env state vtx =
-  let res =
-        flip runReader globals
-          . applySTSNonStatic
-            @(EraRule "LEDGER" era)
-          $ TRC (env, state, extractTx vtx)
-   in liftEither . left ApplyTxError $ res
-
 instance ApplyTx AlonzoEra where
-  reapplyTx = reapplyAlonzoTx
+  applyTxValidation = ruleApplyTxValidation @"LEDGER"
 
 instance ApplyBlock AlonzoEra

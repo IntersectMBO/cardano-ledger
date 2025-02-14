@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,12 +17,14 @@
 -- mempool.
 module Cardano.Ledger.Shelley.API.Mempool (
   applyTx,
+  reapplyTx,
   ApplyTx (..),
   ApplyTxError (..),
   Validated,
   extractTx,
   coerceValidated,
   translateValidated,
+  ruleApplyTxValidation,
 
   -- * Exports for testing
   MempoolEnv,
@@ -41,11 +44,9 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
-  encodeFoldableAsIndefLenList,
-  ifEncodingVersionAtLeast,
-  natVersion,
  )
 import Cardano.Ledger.Core
+import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
@@ -54,11 +55,11 @@ import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 import Cardano.Ledger.Slot (SlotNo)
-import Control.Arrow (ArrowChoice (right), left)
 import Control.DeepSeq (NFData)
-import Control.Monad.Except (Except, MonadError, liftEither)
+import Control.Monad.Except (Except)
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
+import Data.Bifunctor (bimap)
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
@@ -99,65 +100,50 @@ class
   , Eq (ApplyTxError era)
   , Show (ApplyTxError era)
   , Typeable (ApplyTxError era)
-  , STS (EraRule "LEDGER" era)
-  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ MempoolState era
-  , Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>
   ApplyTx era
   where
   -- | Validate a transaction against a mempool state and for given STS options,
   -- and return the new mempool state, a "validated" 'TxInBlock' and,
   -- depending on the passed options, the emitted events.
-  applyTxOpts ::
-    forall ep m.
-    (MonadError (ApplyTxError era) m, EventReturnTypeRep ep) =>
-    ApplySTSOpts ep ->
+  applyTxValidation ::
+    ValidationPolicy ->
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
     Tx era ->
-    m (EventReturnType ep (EraRule "LEDGER" era) (MempoolState era, Validated (Tx era)))
-  applyTxOpts opts globals env state tx =
-    let res =
-          flip runReader globals
-            . applySTSOptsEither @(EraRule "LEDGER" era) opts
-            $ TRC (env, state, tx)
-     in liftEither
-          . left ApplyTxError
-          . right
-            (mapEventReturn @ep @(EraRule "LEDGER" era) @(MempoolState era) (,Validated tx))
-          $ res
+    Either (ApplyTxError era) (MempoolState era, Validated (Tx era))
 
-  -- | Reapply a previously validated 'Tx'.
-  --
-  --   This applies the (validated) transaction to a new mempool state. It may
-  --   fail due to the mempool state changing (for example, a needed output
-  --   having already been spent). It should not fail due to any static check
-  --   (such as cryptographic checks).
-  --
-  --   Implementations of this function may optionally skip the performance of
-  --   any static checks. This is not required, but strongly encouraged since
-  --   this function will be called each time the mempool revalidates
-  --   transactions against a new mempool state.
-  reapplyTx ::
-    MonadError (ApplyTxError era) m =>
-    Globals ->
-    MempoolEnv era ->
-    MempoolState era ->
-    Validated (Tx era) ->
-    m (MempoolState era)
-  reapplyTx globals env state (Validated tx) =
-    let res =
-          flip runReader globals
-            . applySTS @(EraRule "LEDGER" era)
-            $ TRC (env, state, tx)
-     in liftEither
-          . left ApplyTxError
-          $ res
+ruleApplyTxValidation ::
+  forall rule era.
+  ( STS (EraRule rule era)
+  , BaseM (EraRule rule era) ~ ShelleyBase
+  , Environment (EraRule rule era) ~ LedgerEnv era
+  , State (EraRule rule era) ~ MempoolState era
+  , Signal (EraRule rule era) ~ Tx era
+  , PredicateFailure (EraRule rule era) ~ PredicateFailure (EraRule "LEDGER" era)
+  ) =>
+  ValidationPolicy ->
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  Tx era ->
+  Either (ApplyTxError era) (MempoolState era, Validated (Tx era))
+ruleApplyTxValidation validationPolicy globals env state tx =
+  let opts =
+        ApplySTSOpts
+          { asoAssertions = globalAssertionPolicy
+          , asoValidation = validationPolicy
+          , asoEvents = EPDiscard
+          }
+      result =
+        flip runReader globals
+          . applySTSOptsEither @(EraRule rule era) opts
+          $ TRC (env, state, tx)
+   in bimap ApplyTxError (,Validated tx) result
 
-instance ApplyTx ShelleyEra
+instance ApplyTx ShelleyEra where
+  applyTxValidation = ruleApplyTxValidation @"LEDGER"
 
 type MempoolEnv era = Ledger.LedgerEnv era
 
@@ -192,7 +178,6 @@ mkMempoolEnv
       , Ledger.ledgerIx = minBound
       , Ledger.ledgerPp = nesEs ^. curPParamsEpochStateL
       , Ledger.ledgerAccount = LedgerState.esAccountState nesEs
-      , Ledger.ledgerMempool = True
       }
 
 -- | Construct a mempool state from the wider ledger state.
@@ -213,26 +198,11 @@ deriving stock instance
   Show (PredicateFailure (EraRule "LEDGER" era)) =>
   Show (ApplyTxError era)
 
--- TODO: This instance can be switched back to a derived version, once we are officially
--- in the Conway era:
---
--- deriving newtype instance
---   ( Era era
---   , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
---   ) =>
---   EncCBOR (ApplyTxError era)
-
-instance
+deriving newtype instance
   ( Era era
   , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   EncCBOR (ApplyTxError era)
-  where
-  encCBOR (ApplyTxError failures) =
-    ifEncodingVersionAtLeast
-      (natVersion @9)
-      (encCBOR failures)
-      (encodeFoldableAsIndefLenList encCBOR failures)
 
 deriving newtype instance
   ( Era era
@@ -280,16 +250,26 @@ overNewEpochState f st = do
 -- 'TxInBlock' has had all checks run, and can now only fail due to checks
 -- which depend on the state; most notably, that UTxO inputs disappear.
 applyTx ::
-  (ApplyTx era, MonadError (ApplyTxError era) m) =>
+  ApplyTx era =>
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
   Tx era ->
-  m (MempoolState era, Validated (Tx era))
-applyTx =
-  applyTxOpts $
-    ApplySTSOpts
-      { asoAssertions = globalAssertionPolicy
-      , asoValidation = ValidateAll
-      , asoEvents = EPDiscard
-      }
+  Either (ApplyTxError era) (MempoolState era, Validated (Tx era))
+applyTx = applyTxValidation ValidateAll
+
+-- | Reapply a previously validated 'Tx'.
+--
+--   This applies the (validated) transaction to a new mempool state. It may
+--   fail due to the mempool state changing (for example, a needed output
+--   having already been spent). It does not fail due to any static check
+--   (such as cryptographic checks).
+reapplyTx ::
+  ApplyTx era =>
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  Validated (Tx era) ->
+  Either (ApplyTxError era) (MempoolState era)
+reapplyTx globals env state (Validated tx) =
+  fst <$> applyTxValidation (ValidateSuchThat (notElem lblStatic)) globals env state tx

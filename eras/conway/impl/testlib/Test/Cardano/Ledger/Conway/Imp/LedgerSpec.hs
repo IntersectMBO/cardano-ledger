@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -14,22 +15,18 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
-  ConwayLedgerEvent (..),
   ConwayLedgerPredFailure (..),
-  ConwayMempoolEvent (..),
   maxRefScriptSizePerTx,
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), applyTx, mkMempoolEnv)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), ApplyTxError (..), applyTx, mkMempoolEnv)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (ShelleyLedgersEnv (..), ShelleyLedgersEvent (..))
-import Control.State.Transition.Extended
 import qualified Data.Map.Strict as Map
-import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -44,13 +41,6 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
-  , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
-  , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
-  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , Signal (EraRule "LEDGERS" era) ~ Seq.Seq (Tx era)
-  , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
-  , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
-  , STS (EraRule "LEDGERS" era)
   , ApplyTx era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -221,43 +211,7 @@ spec = do
       mkBasicTx $
         mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, mempty)]
 
-  describe "Mempool events" $ do
-    it "No Mempool events should be emitted via LEDGERS rules " $ do
-      nes <- use impNESL
-      slotNo <- use impLastTickG
-      let ls = nes ^. nesEsL . esLStateL
-          pp = nes ^. nesEsL . curPParamsEpochStateL
-          account = nes ^. nesEsL . esAccountStateL
-          epochNo = nes ^. nesELL
-      tx <- fixupTx $ mkBasicTx mkBasicTxBody
-      Right (_, evs) <-
-        tryRunImpRule @"LEDGERS"
-          (LedgersEnv slotNo epochNo pp account)
-          ls
-          (Seq.singleton tx)
-      let mempoolEvents = [ev | LedgerEvent ev@(MempoolEvent (ConwayMempoolEvent _)) <- evs]
-      mempoolEvents `shouldBeExpr` []
-
-    it "Mempool events should be emitted via `applyTx` with `mkMempoolEnv`" $ do
-      globals <- use impGlobalsL
-      slotNo <- use impLastTickG
-      nes <- use impNESL
-      let ls = nes ^. nesEsL . esLStateL
-
-      let mempoolEnv = mkMempoolEnv nes slotNo
-      tx <- fixupTx $ mkBasicTx mkBasicTxBody
-      let stsOpts =
-            ApplySTSOpts
-              { asoAssertions = AssertionsAll
-              , asoValidation = ValidateAll
-              , asoEvents = EPReturn
-              }
-      case applyTxOpts stsOpts globals mempoolEnv ls tx of
-        Left e ->
-          assertFailure $ "Unexpected failure while applyingTx: " <> show tx <> ": " <> show e
-        Right (_, evs) ->
-          length [ev | ev@(MempoolEvent (ConwayMempoolEvent _)) <- evs] `shouldBe` 1
-
+  describe "Mempool" $ do
     it "Unelected Committee voting" $ whenPostBootstrap $ do
       globals <- use impGlobalsL
       slotNo <- use impLastTickG
@@ -293,6 +247,10 @@ spec = do
                   )
 
       case applyTx globals mempoolEnv ls tx of
-        Left _ -> pure ()
+        Left err ->
+          let expectedFailure =
+                ConwayMempoolFailure $
+                  "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
+           in err `shouldBe` ApplyTxError @era (pure (injectFailure expectedFailure))
         Right _ -> assertFailure $ "Expected failure due to an unallowed vote: " <> show tx
       withNoFixup $ submitTx_ tx

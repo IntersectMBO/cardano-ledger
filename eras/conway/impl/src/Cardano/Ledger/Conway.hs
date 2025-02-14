@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -10,7 +11,6 @@ module Cardano.Ledger.Conway (
 )
 where
 
-import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (RunConwayRatify (..))
@@ -30,7 +30,7 @@ type Conway = ConwayEra
 -- =====================================================
 
 instance ApplyTx ConwayEra where
-  reapplyTx = reapplyAlonzoTx
+  applyTxValidation = ruleApplyTxValidation @"MEMPOOL"
 
 instance ApplyBlock ConwayEra
 

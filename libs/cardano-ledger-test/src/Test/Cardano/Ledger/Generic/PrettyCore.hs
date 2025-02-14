@@ -3629,10 +3629,10 @@ instance Reflect era => PrettyA (LedgerEnv era) where
     ppRecord
       "LedgerEnv"
       [ ("slot no", prettyA ledgerSlotNo)
+      , ("epoch no", ppMaybe prettyA ledgerEpochNo)
       , ("ix", prettyA (txIxToInt ledgerIx))
       , ("pparams", prettyA ledgerPp)
       , ("account", prettyA ledgerAccount)
-      , ("mempool", prettyA ledgerMempool)
       ]
 
 instance Reflect era => PrettyA (UtxoEnv era) where
