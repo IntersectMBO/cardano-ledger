@@ -42,6 +42,7 @@ library
     Constrained.Experiment.Specs.Sum
     Constrained.Experiment.Syntax
     Constrained.Experiment.TheKnot
+    Constrained.Experiment.SumList
     Constrained.GenT
     Constrained.Graph
     Constrained.Instances

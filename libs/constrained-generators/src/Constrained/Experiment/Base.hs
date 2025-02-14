@@ -130,17 +130,18 @@ type FSPre c s (t :: FSType) dom rng =
   , All Typeable dom
   , Show (t c s dom rng)
   , Eq (t c s dom rng)
+  , HasSpec rng
   )
 
 class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
-  {-# MINIMAL (propagate | simplepropagate) #-}
+  {-# MINIMAL (propagate | propTypeSpec, propMemberSpec ) #-}
 
   -- witness :: String -- For documentation about what constructor of 't' implements 's'
   name :: t c s dom rng -> String
   name x = show x ++ " " ++ showType @c ++ " " ++ showType @s
 
   -- 'propagate' handles all the obvious default cases. So if this is what you want
-  -- then define simplepropagate instead. If you need special instructions
+  -- then just define propTypeSpec and propMemberSpec. If you need special instructions
   -- for ExplainSpec, ErrorSpec, SuspendedSpec, or TrueSpec, then write your own propagate.
   propagate :: Context c s t dom rng hole -> Specification rng -> Specification hole
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
@@ -156,14 +157,20 @@ class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
     constrained $ \v' -> Let (App witW (v' :> Lit x :> Nil)) (v :-> ps)
   propagate (Context Evidence witW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App witW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate ctx (SuspendedSpec _ _) = ErrorSpec $ pure ("FunSym instance for function with more than three arguments. "++show ctx)
   -- Handle the important cases
-  propagate ctxt spec = case simplepropagate ctxt spec of
-    Left xs -> ErrorSpec xs
-    Right spec2 -> spec2
-
+  propagate ctx (TypeSpec ts cant) = propTypeSpec ctx ts cant
+  propagate ctx (MemberSpec xs) = propMemberSpec ctx xs
+  
+  propTypeSpec :: HasSpec rng => Context c s t dom rng hole -> TypeSpec rng -> [rng] -> Specification hole  
+  propTypeSpec ctxt ts cant = propagate ctxt (TypeSpec ts cant)
+  propMemberSpec :: HasSpec rng => Context c s t dom rng hole -> NonEmpty rng -> Specification hole
+  propMemberSpec ctxt xs = propagate ctxt (MemberSpec xs)
+  
+{-    
   simplepropagate ::
     Context c s t dom rng hole -> Specification rng -> Either (NonEmpty String) (Specification hole)
-  simplepropagate ctxt spec = Right $ propagate ctxt spec
+-}
 
   rewriteRules ::
     (TypeList dom, Typeable dom, HasSpec rng, All HasSpec dom) =>
@@ -172,6 +179,11 @@ class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
 
   mapTypeSpec :: (HasSpec a, HasSpec b, c) => t c s '[a] b -> TypeSpec a -> Specification b
   mapTypeSpec _ts _spec = TrueSpec
+
+-- | For some reason GHC can't tell that a Context with 'dom1' can't match against 
+--   a CList with 'dom2' with a different size.
+badContext :: FunSym c s t dom rng => Context c s t dom rng hole -> String -> Specification hole
+badContext ctx@(Context Evidence x _) msg = ErrorSpec (NE.fromList [msg++" "++show x, "Unreachable context, too many args", show ctx])
 
 -- This is where the logical properties of FunSym, are applied to transform one spec into another
 -- Note if there is a bunch of functions nested together, like (sizeOf_ (elems_ (snd_ x)))
@@ -501,9 +513,11 @@ instance
     '[a]
     simplerepA
   where
-  simplepropagate (Context _ ToGenericW (HOLE :<> End)) (TypeSpec s cant) = Right $ TypeSpec s (fromSimpleRep <$> cant)
-  simplepropagate (Context _ ToGenericW (HOLE :<> End)) (MemberSpec es) = Right $ MemberSpec (fmap fromSimpleRep es)
-  simplepropagate ctx _ = Left (NE.fromList ["ToGenericW (toGenericFn)", "Unreachable context, too many args", show ctx])
+  propTypeSpec (Context _ ToGenericW (HOLE :<> End)) s cant = TypeSpec s (fromSimpleRep <$> cant)
+  propTypeSpec ctx _ _ = badContext ctx "TypeSpec"
+
+  propMemberSpec (Context _ ToGenericW (HOLE :<> End)) es = MemberSpec (fmap fromSimpleRep es)
+  propMemberSpec ctx _ = badContext ctx "MemberSpec"
 
 toGeneric_ ::
   forall a.
@@ -535,10 +549,12 @@ instance
     '[dom]
     a
   where
-  simplepropagate (Context _ FromGenericW (HOLE :<> End)) (TypeSpec s cant) = Right $ TypeSpec s (toSimpleRep <$> cant)
-  simplepropagate (Context _ FromGenericW (HOLE :<> End)) (MemberSpec es) = Right $ MemberSpec (fmap toSimpleRep es)
-  simplepropagate ctx _ =
-    Left (NE.fromList ["FromGenericW (fromGenericFn)", "Unreachable context, too many args", show ctx])
+  propTypeSpec (Context _ FromGenericW (HOLE :<> End)) s cant = TypeSpec s (toSimpleRep <$> cant)
+  propTypeSpec ctx _ _ = badContext ctx "fromGenericFn TypeSpec"
+
+  propMemberSpec (Context _ FromGenericW (HOLE :<> End)) es = MemberSpec (fmap toSimpleRep es)
+  propMemberSpec ctx _ = badContext ctx "fromGenericFn MemberSpec"
+  
 
 fromGeneric_ ::
   forall a.
