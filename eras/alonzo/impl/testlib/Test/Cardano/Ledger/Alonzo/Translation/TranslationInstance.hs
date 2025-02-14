@@ -35,6 +35,7 @@ import Cardano.Ledger.Binary.Coders (
   decode,
   encode,
   (!>),
+  (<!),
   (<*!),
  )
 import Cardano.Ledger.Core as Core
@@ -161,6 +162,23 @@ instance
         <*! Ann From
         <*! From
         <*! Ann From
+
+instance
+  ( Typeable era
+  , DecCBOR (PParams era)
+  , DecCBOR (UTxO era)
+  , DecCBOR (Core.Tx era)
+  ) =>
+  DecCBOR (TranslationInstance era)
+  where
+  decCBOR =
+    decode $
+      RecD TranslationInstance
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
 
 deserializeTranslationInstances ::
   forall era.

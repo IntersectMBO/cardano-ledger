@@ -401,6 +401,10 @@ deriving via
     (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
     DecCBOR (Annotator (AlonzoTxBody era))
 
+deriving newtype instance
+  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
+  DecCBOR (AlonzoTxBody era)
+
 pattern AlonzoTxBody ::
   forall era.
   (EraTxOut era, EraTxCert era) =>

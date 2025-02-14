@@ -449,6 +449,23 @@ instance
           )
   {-# INLINE decCBOR #-}
 
+instance
+  ( Typeable era
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (AlonzoTx era)
+  where
+  decCBOR =
+    decode $
+      RecD AlonzoTx
+        <! From
+        <! From
+        <! From
+        <! D (maybeToStrictMaybe <$> decodeNullMaybe decCBOR)
+  {-# INLINE decCBOR #-}
+
 alonzoEqTxRaw :: AlonzoEraTx era => Tx era -> Tx era -> Bool
 alonzoEqTxRaw tx1 tx2 =
   shelleyEqTxRaw tx1 tx2 && (tx1 ^. isValidTxL == tx2 ^. isValidTxL)

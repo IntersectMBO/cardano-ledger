@@ -62,6 +62,7 @@ import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
   Memoized (..),
+  decodeMemoized,
   getMemoRawType,
   lensMemoRawType,
   mkMemoizedEra,
@@ -123,6 +124,9 @@ instance
   NFData (ShelleyTxWits era)
 
 instance EraScript era => NoThunks (ShelleyTxWits era)
+
+instance (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWits era) where
+  decCBOR = ShelleyTxWitsConstr <$> decodeMemoized decCBOR
 
 -- =======================================================
 -- Accessors
@@ -224,10 +228,37 @@ deriving via
   instance
     EraScript era => DecCBOR (Annotator (ShelleyTxWits era))
 
+instance forall era. (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWitsRaw era) where
+  decCBOR =
+    decode $
+      SparseKeyed
+        "ShelleyTxWits"
+        (ShelleyTxWitsRaw mempty mempty mempty)
+        witField
+        []
+    where
+      witField :: Word -> Field (ShelleyTxWitsRaw era)
+      witField 0 =
+        field
+          (\x wits -> wits {addrWits' = x})
+          (D $ withIgnoreSigOrd <$> decodeList decCBOR)
+      witField 1 =
+        field
+          (\x wits -> wits {scriptWits' = x})
+          (D $ Map.fromElems (hashScript @era) <$> decodeList decCBOR)
+      witField 2 =
+        field
+          (\x wits -> wits {bootWits' = x})
+          (D $ Set.fromList <$> decodeList decCBOR)
+      witField n = field (\_ wits -> wits) (Invalid n)
+
 -- | This type is only used to preserve the old buggy behavior where signature
 -- was ignored in the `Ord` instance for `WitVKey`s.
 newtype IgnoreSigOrd kr = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr}
   deriving (Eq)
+
+withIgnoreSigOrd :: Typeable kr => [WitVKey kr] -> Set (WitVKey kr)
+withIgnoreSigOrd = Set.map unIgnoreSigOrd . Set.fromList . fmap IgnoreSigOrd
 
 instance Typeable kr => Ord (IgnoreSigOrd kr) where
   compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witVKeyHash w1) (witVKeyHash w2)
@@ -252,7 +283,7 @@ decodeWits =
         ( D $
             mapTraverseableDecoderA
               (decodeList decCBOR)
-              (Set.map unIgnoreSigOrd . Set.fromList . fmap IgnoreSigOrd)
+              withIgnoreSigOrd
         )
     witField 1 =
       fieldAA
