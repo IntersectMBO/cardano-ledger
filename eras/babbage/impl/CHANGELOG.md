@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Converted `CertState` to a type family
 * Made the fields of predicate failures and environments lazy
 * Add `MemPack` instance for `BabbageTxOut` and `PlutusScript BabbageEra`
 * Deprecate `Babbage` type synonym

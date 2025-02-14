@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Converted `CertState` to a type family
 * Remove `reapplyAlonzoTx` as no longer needed.
 * Add `TxInfoResult` data family, `mkTxInfoResult` and `lookupTxInfoResult` to `EraPlutusContext`
 * Add `lookupTxInfoResultImpossible` helper
@@ -15,6 +16,7 @@
 
 ### `testlib`
 
+* Converted `CertState` to a type family
 * Expose `alonzoFixupFees`
 
 ## 1.12.0.0
