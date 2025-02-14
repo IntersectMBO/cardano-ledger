@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Converted `CertState` to a type family
 * Made the fields of predicate failures and environments lazy
 * Add `Era era` constraint to `NoThunks` instance for `TimeLock`
 * Remove `Era era` constraint from:

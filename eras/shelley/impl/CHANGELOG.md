@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Converted `CertState` to a type family
 * Restrict the monad of `applyTx` and `reapllyTx` to `Either` from abstract `MonadError`
 * Remove `applyTxOpts` in favor of new `applyTxValidation` function in `ApplyTx`
 * Move `reapplyTx` outside of the `ApplyTx` type class.
@@ -40,6 +41,7 @@
 
 ### `testlib`
 
+* Converted `CertState` to a type family
 * Add `disableImpInitExpectLedgerRuleConformance`. #4821
 
 ## 1.15.0.0
