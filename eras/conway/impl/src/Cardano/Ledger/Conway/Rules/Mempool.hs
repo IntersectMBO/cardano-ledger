@@ -20,8 +20,6 @@ module Cardano.Ledger.Conway.Rules.Mempool (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayLEDGER, ConwayMEMPOOL)
 import Cardano.Ledger.Conway.Governance (
@@ -140,6 +138,7 @@ instance
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , Signal (EraRule "UTXOW" era) ~ Tx era
+  , EraCertState era
   ) =>
   Embed (ConwayLEDGER era) (ConwayMEMPOOL era)
   where
