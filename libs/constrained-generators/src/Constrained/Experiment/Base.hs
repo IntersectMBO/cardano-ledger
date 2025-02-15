@@ -58,47 +58,13 @@ import Data.Orphans ()
 import Data.Semigroup (Max (..), getMax)
 import Data.String (fromString)
 import Data.Typeable (Proxy (..), Typeable, eqT, typeRep, (:~:) (Refl))
+import Debug.Trace
 import GHC.Stack
 import GHC.TypeLits hiding (Text)
 import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 
 -- ====================================================================
-
-data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  ToGenericW ::
-    BaseW
-      (HasSimpleRep a, HasSpec (SimpleRep a), TypeSpec a ~ TypeSpec (SimpleRep a))
-      "toGenericFn"
-      '[a]
-      (SimpleRep a)
-  FromGenericW ::
-    BaseW
-      ( Typeable (SimpleRep a)
-      , Typeable (TypeSpec a)
-      , HasSimpleRep a
-      , HasSpec (SimpleRep a)
-      , TypeSpec a ~ TypeSpec (SimpleRep a)
-      )
-      "fromGenericFn"
-      '[SimpleRep a]
-      a
-
-deriving instance Eq (BaseW c s dom rng)
-
-instance Show (BaseW c s d r) where
-  show ToGenericW = "toGenericFn"
-  show FromGenericW = "fromGenericFn"
-
-baseSem :: c => BaseW c s d r -> FunTy d r
-baseSem FromGenericW = fromSimpleRep
-baseSem ToGenericW = toSimpleRep
-
-class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
-  semantics :: forall c s d r. c => t c s d r -> FunTy d r -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
-
-instance Witness BaseW where
-  semantics = baseSem
 
 -- ====================================================================
 
@@ -114,6 +80,8 @@ instance Witness BaseW where
 -- Sort of a combination of the FunctionLike and Functions classes
 -- An instance "assigns" several functions to each Symbol 's'
 -- =====================================================================
+class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
+  semantics :: forall c s d r. c => t c s d r -> FunTy d r -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
 
 -- The kind of a type, that is a candidate for a FunSym instance
 type FSType = Constraint -> Symbol -> [Type] -> Type -> Type
@@ -150,6 +118,9 @@ class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
   mapTypeSpec :: (HasSpec a, HasSpec b, c) => t c s '[a] b -> TypeSpec a -> Specification b
   mapTypeSpec _ts _spec = TrueSpec
 
+-- view :: t c s dom rng -> Term a -> Maybe (List Term dom)
+-- view _ _ = Nothing
+
 -- | For some reason GHC can't tell that a Context with 'dom1' can't match against
 --   a CList with 'dom2' with a different size.
 badContext :: FunSym c s t dom rng => Context c s t dom rng hole -> String -> Specification hole
@@ -157,7 +128,7 @@ badContext ctx@(Context Evidence x _) msg = ErrorSpec (NE.fromList [msg ++ " " +
 
 -- This is where the logical properties of FunSym, are applied to transform one spec into another
 -- Note if there is a bunch of functions nested together, like (sizeOf_ (elems_ (snd_ x)))
--- we propagate f over them one at a time.
+-- we propagate f over them one at a time. Note the recusive calls to 'propagateSpec'
 propagateSpec ::
   forall v a.
   HasSpec v =>
@@ -178,8 +149,6 @@ propagateSpec spec = \case
     (a :|> b :|> c :|> d :|> ctx :<> more) ->
       propagateSpec (propagate (Context Evidence f (a :|> b :|> c :|> d :|> HOLE :<> more)) spec) ctx
     _ -> ErrorSpec $ pure ("function with more than 5 arguments in propagateSpec: " ++ show f)
-
--- data Fn dom rng where Fn :: FunSym c s t dom rng => t c s dom rng -> Fn dom rng
 
 -- ========================================================================
 
@@ -217,14 +186,14 @@ sameFunSym ::
   t2 c2 s2 d2 r2 ->
   Maybe (t1 c1 s1 d1 r1, c1 :~: c2, s1 :~: s2, t1 :~: t2, d1 :~: d2, r1 :~: r2)
 sameFunSym x y = do
-  c@Refl <- eqT @c1 @c2
-  s@Refl <- eqT @s1 @s2
-  t@Refl <- eqT @t1 @t2
-  d@Refl <- eqT @d1 @d2
-  r@Refl <- eqT @r1 @r2
+  c@Refl <- trace "C" $ eqT @c1 @c2
+  s@Refl <- trace "S" $ eqT @s1 @s2
+  t@Refl <- trace "T" $ eqT @t1 @t2
+  d@Refl <- trace "D" $ eqT @d1 @d2
+  r@Refl <- trace "R" $ eqT @r1 @r2
   if x == y
     then Just (x, c, s, t, d, r)
-    else Nothing
+    else trace "x is not equalto y" $ Nothing
 
 withDomEvidence ::
   forall b a c1 s1 t1 d1 r1.
@@ -463,21 +432,51 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
 -- toGeneric and fromGeneric as Function Symbols
 -- That means they can be used inside (Term a)
 -- ===================================================================
--- TODO cast this all in terms of PreG
 
-instance
-  ( HasSimpleRep a
+-- The things you need to know to lift toSimpleRep and fromSimpleRep
+-- to the Term level. I think they are all reasonable requirements
+type GenericC a =
+  ( HasSpec a -- This gives Show, Eq, and Typeable instances
+  , HasSimpleRep a
   , HasSpec (SimpleRep a)
   , TypeSpec a ~ TypeSpec (SimpleRep a)
-  , Typeable (TypeSpec (SimpleRep a))
-  , Typeable (SimpleRep a)
-  , HasSpec a
-  , typespecA ~ TypeSpec a
-  , typespecsimplerep ~ TypeSpec (SimpleRep a)
-  , simplerepA ~ SimpleRep a
-  ) =>
+  )
+
+data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
+  ToGenericW ::
+    GenericC a =>
+    BaseW
+      ()
+      "toGenericFn"
+      '[a]
+      (SimpleRep a)
+  FromGenericW ::
+    GenericC a =>
+    BaseW
+      ()
+      "fromGenericFn"
+      '[SimpleRep a]
+      a
+
+deriving instance Eq (BaseW c s dom rng)
+
+instance Show (BaseW c s d r) where
+  show ToGenericW = "toGenericFn"
+  show FromGenericW = "fromGenericFn"
+
+baseSemW :: BaseW c s d r -> FunTy d r
+baseSemW FromGenericW = fromSimpleRep
+baseSemW ToGenericW = toSimpleRep
+
+instance Witness BaseW where
+  semantics = baseSemW
+
+-- ============== ToGenericW FunSym instance
+
+instance
+  (GenericC a, simplerepA ~ SimpleRep a) =>
   FunSym
-    (HasSimpleRep a, HasSpec simplerepA, typespecA ~ typespecsimplerep)
+    ()
     "toGenericFn"
     BaseW
     '[a]
@@ -496,34 +495,14 @@ instance
 
 toGeneric_ ::
   forall a.
-  ( TypeSpec a ~ TypeSpec (SimpleRep a)
-  , -- , Typeable (TypeSpec (SimpleRep a))
-    HasSimpleRep a
-  , HasSpec a
-  , HasSpec (SimpleRep a)
-  ) =>
+  GenericC a =>
   Term a ->
   Term (SimpleRep a)
 toGeneric_ = appTerm ToGenericW
 
-instance
-  ( HasSimpleRep a
-  , HasSpec a
-  , HasSpec (SimpleRep a)
-  , dom ~ SimpleRep a
-  , TypeSpec a ~ TypeSpec (SimpleRep a)
-  , typespecA ~ TypeSpec a
-  , typespecDOM ~ TypeSpec dom
-  , Typeable typespecA
-  -- , Typeable typespecDOM
-  ) =>
-  FunSym
-    (Typeable dom, Typeable typespecA, HasSimpleRep a, HasSpec dom, typespecA ~ typespecDOM)
-    "fromGenericFn"
-    BaseW
-    '[dom]
-    a
-  where
+-- ============== FromGenericW FunSym instance
+
+instance (GenericC a, dom ~ SimpleRep a) => FunSym () "fromGenericFn" BaseW '[dom] a where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -537,11 +516,7 @@ instance
 
 fromGeneric_ ::
   forall a.
-  ( TypeSpec a ~ TypeSpec (SimpleRep a)
-  , HasSimpleRep a
-  , HasSpec a
-  , HasSpec (SimpleRep a)
-  ) =>
+  GenericC a =>
   Term (SimpleRep a) ->
   Term a
 fromGeneric_ = appTerm FromGenericW
@@ -625,18 +600,6 @@ data Term a where
 (==.) :: HasSpec a => Term a -> Term a -> Term Bool
 (==.) = Equal
 
--- The things you need to know to lift toSimpleRep and fromSimpleRep
--- to the Term level. I think they are all reasonable requirements
-type GenericC a =
-  ( Typeable a
-  , HasSpec a
-  , HasSimpleRep a
-  , Typeable (SimpleRep a)
-  , HasSpec (SimpleRep a)
-  , Show (SimpleRep a)
-  , TypeSpec a ~ TypeSpec (SimpleRep a)
-  )
-
 instance Eq (Term a) where
   V x == V x' = x == x'
   Lit a == Lit b = a == b
@@ -683,8 +646,6 @@ appSym w xs = App w xs
 appTerm ::
   forall c sym t ds r.
   AppRequires c sym t ds r =>
-  -- (FunSym c sym t ds r, c, All HasSpec ds, HasSpec r) =>
-
   t c sym ds r -> FunTy (MapList Term ds) (Term r)
 appTerm sym = curryList @ds (App @c @sym @t @ds @r sym)
 

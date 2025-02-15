@@ -7,6 +7,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -68,6 +69,24 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.Typeable
 
+{-
+pattern SLeft ::
+  forall a b c. (FunSym () "sumleft_" SumW '[a] (Sum a b)) =>
+              (c ~ (Sum a b)) => Term a -> Term c
+pattern SLeft a <- t@(App (matchT t (InjLeftW @a @b) -> Just(Evidence,Refl,Refl,Refl,Refl,Refl)) (a :> Nil))
+
+pattern PLeft ::
+  forall a b c. (FunSym () "sumleft_" SumW '[a] (Sum a b)) =>
+              (c ~ (Sum a b), FunSym () "sumleft_" SumW '[a] (Sum a b),HasSpec a,HasSpec c) => Term a -> Term c
+pattern PLeft a <- (App (sameFunSym (InjLeftW @a @b) -> Just(injLeftW,Refl,Refl,Refl,Refl,Refl)) (a :> Nil))
+
+foo :: Term a -> String
+foo (V _) = "VAR"
+foo (Lit _) = "LIT"
+-- foo (SLeft x) = "InjLeft"
+foo (Equal _ _) = "Equal"
+foo _ = "other"
+-}
 ------------------------------------------------------------------------
 -- Generics
 ------------------------------------------------------------------------
