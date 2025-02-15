@@ -134,44 +134,13 @@ type FSPre c s (t :: FSType) dom rng =
   )
 
 class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
-  {-# MINIMAL (propagate | propTypeSpec, propMemberSpec) #-}
+  {-# MINIMAL (propagate) #-}
 
-  -- witness :: String -- For documentation about what constructor of 't' implements 's'
+  -- name :: String -- For documentation about what constructor of 't' implements 's'
   name :: t c s dom rng -> String
   name x = show x ++ " " ++ showType @c ++ " " ++ showType @s
 
-  -- 'propagate' handles all the obvious default cases. So if this is what you want
-  -- then just define propTypeSpec and propMemberSpec. If you need special instructions
-  -- for ExplainSpec, ErrorSpec, SuspendedSpec, or TrueSpec, then write your own propagate.
   propagate :: Context c s t dom rng hole -> Specification rng -> Specification hole
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  -- this is only good for unary functions
-  -- Needed evidence--V             to build the App node.
-  propagate (Context Evidence witW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App witW (v' :> Nil)) (v :-> ps)
-  -- this is only good for binary functions
-  propagate (Context Evidence witW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App witW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context Evidence witW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App witW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate ctx (SuspendedSpec _ _) = ErrorSpec $ pure ("FunSym instance for function with more than three arguments. " ++ show ctx)
-  -- Handle the important cases
-  propagate ctx (TypeSpec ts cant) = propTypeSpec ctx ts cant
-  propagate ctx (MemberSpec xs) = propMemberSpec ctx xs
-
-  propTypeSpec ::
-    HasSpec rng => Context c s t dom rng hole -> TypeSpec rng -> [rng] -> Specification hole
-  propTypeSpec ctxt ts cant = propagate ctxt (TypeSpec ts cant)
-  propMemberSpec :: HasSpec rng => Context c s t dom rng hole -> NonEmpty rng -> Specification hole
-  propMemberSpec ctxt xs = propagate ctxt (MemberSpec xs)
-
-  {-
-    simplepropagate ::
-      Context c s t dom rng hole -> Specification rng -> Either (NonEmpty String) (Specification hole)
-  -}
 
   rewriteRules ::
     (TypeList dom, Typeable dom, HasSpec rng, All HasSpec dom) =>
@@ -514,11 +483,16 @@ instance
     '[a]
     simplerepA
   where
-  propTypeSpec (Context _ ToGenericW (HOLE :<> End)) s cant = TypeSpec s (fromSimpleRep <$> cant)
-  propTypeSpec ctx _ _ = badContext ctx "TypeSpec"
-
-  propMemberSpec (Context _ ToGenericW (HOLE :<> End)) es = MemberSpec (fmap fromSimpleRep es)
-  propMemberSpec ctx _ = badContext ctx "MemberSpec"
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence ToGenericW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App ToGenericW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence ToGenericW (HOLE :<> End)) (TypeSpec s cant) = TypeSpec s (fromSimpleRep <$> cant)
+  propagate (Context Evidence ToGenericW (HOLE :<> End)) (MemberSpec es) = MemberSpec (fmap fromSimpleRep es)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for ToGenericFn with wrong number of arguments. " ++ show ctx)
 
 toGeneric_ ::
   forall a.
@@ -550,11 +524,16 @@ instance
     '[dom]
     a
   where
-  propTypeSpec (Context _ FromGenericW (HOLE :<> End)) s cant = TypeSpec s (toSimpleRep <$> cant)
-  propTypeSpec ctx _ _ = badContext ctx "fromGenericFn TypeSpec"
-
-  propMemberSpec (Context _ FromGenericW (HOLE :<> End)) es = MemberSpec (fmap toSimpleRep es)
-  propMemberSpec ctx _ = badContext ctx "fromGenericFn MemberSpec"
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence FromGenericW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App FromGenericW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence FromGenericW (HOLE :<> End)) (TypeSpec s cant) = TypeSpec s (toSimpleRep <$> cant)
+  propagate (Context Evidence FromGenericW (HOLE :<> End)) (MemberSpec es) = MemberSpec (fmap toSimpleRep es)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for FromGenericFn with wrong number of arguments. " ++ show ctx)
 
 fromGeneric_ ::
   forall a.
@@ -1221,3 +1200,5 @@ sameFun (Fun Evidence f) (Fun Evidence g) =
 
 instance Eq (Fun d r) where
   (==) = sameFun
+
+-- =============================================

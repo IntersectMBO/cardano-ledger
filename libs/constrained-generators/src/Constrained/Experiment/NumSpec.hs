@@ -32,10 +32,11 @@ module Constrained.Experiment.NumSpec where
 import Constrained.Experiment.Base
 import Constrained.Experiment.Conformance (caseBoolSpecX)
 import Constrained.Experiment.Generic
+import Constrained.List
 
 -- import Constrained.Experiment.Witness (Witness (..), showType)
 
-import Constrained.Core (unionWithMaybe)
+import Constrained.Core (Evidence (..), unionWithMaybe)
 import Constrained.GenT (GenT, MonadGenError (..), pureGen, sizeT)
 import Control.Applicative ((<|>))
 import Control.Arrow (first)
@@ -717,14 +718,19 @@ instance NumLike a => Num (Term a) where
 --   there is a HasSpec instance of 'a', which (NumLike a) demands.
 --   This happens in Constrained.Experiment.TheKnot
 instance (Typeable a, NumLike a) => FunSym (NumLike a) "addFn" IntW '[a, a] a where
-  propTypeSpec (Context ev AddW (l :|> HOLE :<> End)) ts cant = propTypeSpec (Context ev AddW (HOLE :<> l :<| End)) ts cant
-  propTypeSpec (Context _ AddW (HOLE :<> i :<| End)) ts cant = subtractSpec i ts <> notMemberSpec (mapMaybe (safeSubtract i) cant)
-  propTypeSpec ctx _ _ =
-    ErrorSpec
-      (NE.fromList ["AddW[addFn] on TypeSpec", "Unreachable context, wrong number of args", show ctx])
-
-  propMemberSpec (Context ev AddW (l :|> HOLE :<> End)) es = propMemberSpec (Context ev AddW (HOLE :<> l :<| End)) es
-  propMemberSpec (Context _ AddW (HOLE :<> i :<| End)) es =
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence AddW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App AddW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate (Context Evidence AddW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App AddW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence AddW (i :|> HOLE :<> End)) spec =
+    propagate (Context Evidence AddW (HOLE :<> i :<| End)) spec
+  propagate (Context Evidence AddW (HOLE :<> i :<| End)) (TypeSpec ts cant) =
+    subtractSpec i ts <> notMemberSpec (mapMaybe (safeSubtract i) cant)
+  propagate (Context Evidence AddW (HOLE :<> i :<| End)) (MemberSpec es) =
     memberSpecList
       (nub $ mapMaybe (safeSubtract i) (NE.toList es))
       ( NE.fromList
@@ -733,27 +739,25 @@ instance (Typeable a, NumLike a) => FunSym (NumLike a) "addFn" IntW '[a, a] a wh
           , "We can't safely subtract " ++ show i ++ " from any choice in the MemberSpec."
           ]
       )
-  propMemberSpec ctx _ =
-    ErrorSpec
-      (NE.fromList ["AddW[addFn] on MemberSpec", "Unreachable context, wrong number of args", show ctx])
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for AddW with wrong number of arguments. " ++ show ctx)
 
 addFn :: forall a. NumLike a => Term a -> Term a -> Term a
 addFn = appTerm AddW
 
 instance (Typeable a, NumLike a) => FunSym (NumLike a) "negateFn" IntW '[a] a where
-  propTypeSpec (Context _ NegateW (HOLE :<> End)) ts cant = negateSpec @a ts <> notMemberSpec (map negate cant)
-  propTypeSpec ctx _ _ =
-    ErrorSpec
-      ( NE.fromList
-          ["NegateW[negateFn] on TypeSpec ", "Unreachable context, wrong number of args", show ctx]
-      )
-
-  propMemberSpec (Context _ NegateW (HOLE :<> End)) es = MemberSpec $ NE.nub $ fmap negate es
-  propMemberSpec ctx _ =
-    ErrorSpec
-      ( NE.fromList
-          ["NegateW[negateFn] on MemberSpec ", "Unreachable context, wrong number of args", show ctx]
-      )
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence NegateW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App NegateW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence NegateW (HOLE :<> End)) (TypeSpec ts cant) =
+    negateSpec @a ts <> notMemberSpec (map negate cant)
+  propagate (Context Evidence NegateW (HOLE :<> End)) (MemberSpec es) =
+    MemberSpec $ NE.nub $ fmap negate es
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for NegateW with wrong number of arguments. " ++ show ctx)
 
   mapTypeSpec NegateW (ts :: TypeSpec a) = negateSpec @a ts
 
@@ -766,37 +770,24 @@ instance
   (Typeable a, HasSpec Bool, HasSpec a, OrdLike a) =>
   FunSym (OrdLike a) "<=." NumOrdW '[a, a] Bool
   where
-  propTypeSpec (Context _ LessOrEqualW (l :|> HOLE :<> End)) ts cant =
-    caseBoolSpecX (TypeSpec ts cant) $ \case
-      True -> geqSpec l
-      False -> ltSpec l
-  propTypeSpec (Context _ LessOrEqualW (HOLE :<> l :<| End)) ts cant =
-    caseBoolSpecX (TypeSpec ts cant) $ \case
-      True -> leqSpec l
-      False -> gtSpec l
-  propTypeSpec ctx _ _ =
-    ErrorSpec
-      ( NE.fromList
-          ["LessOrEqualW[<=.] on TypeSpec ", "Unreachable context, wrong number of args", show ctx]
-      )
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence LessOrEqualW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App LessOrEqualW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate (Context Evidence LessOrEqualW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App LessOrEqualW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence LessOrEqualW (HOLE :<> l :<| End)) spec =
+    caseBoolSpecX spec $ \case True -> leqSpec l; False -> gtSpec l
+  propagate (Context Evidence LessOrEqualW (l :|> HOLE :<> End)) spec =
+    caseBoolSpecX spec $ \case True -> geqSpec l; False -> ltSpec l
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for LessOrEqualW with wrong number of arguments. " ++ show ctx)
 
-  propMemberSpec (Context _ LessOrEqualW (l :|> HOLE :<> End)) es =
-    caseBoolSpecX (MemberSpec es) $ \case
-      True -> geqSpec l
-      False -> ltSpec l
-  propMemberSpec (Context _ LessOrEqualW (HOLE :<> l :<| End)) es =
-    caseBoolSpecX (MemberSpec es) $ \case
-      True -> leqSpec l
-      False -> gtSpec l
-  propMemberSpec ctx _ =
-    ErrorSpec
-      ( NE.fromList
-          ["LessOrEqualW[<=.] on MemberSpec ", "Unreachable context, wrong number of args", show ctx]
-      )
-
-{-
-infixr 4 <=.
-(<=.) :: forall a. (HasSpec Bool, OrdLike a) => Term a -> Term a -> Term Bool
+{- In TheKnot, where there is a HasSpec instance
+infixr 4 <.
+(<=.) :: forall a. (HasSpec Bool,OrdLike a) => Term a -> Term a -> Term Bool
 (<=.) = appTerm LessOrEqualW
 -}
 
@@ -804,31 +795,22 @@ instance
   (Typeable a, HasSpec Bool, HasSpec a, OrdLike a) =>
   FunSym (OrdLike a) "<." NumOrdW '[a, a] Bool
   where
-  propTypeSpec (Context _ LessW (l :|> HOLE :<> End)) ts cant =
-    caseBoolSpecX (TypeSpec ts cant) $ \case
-      True -> gtSpec l
-      False -> leqSpec l
-  propTypeSpec (Context _ LessW (HOLE :<> l :<| End)) ts cant =
-    caseBoolSpecX (TypeSpec ts cant) $ \case
-      True -> ltSpec l
-      False -> geqSpec l
-  propTypeSpec ctx _ _ =
-    ErrorSpec
-      (NE.fromList ["LessOrEqual[<.] on TypeSpec", "Unreachable context, too many args", show ctx])
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence LessW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App LessW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate (Context Evidence LessW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App LessW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence LessW (HOLE :<> l :<| End)) spec =
+    caseBoolSpecX spec $ \case True -> ltSpec l; False -> geqSpec l
+  propagate (Context Evidence LessW (l :|> HOLE :<> End)) spec =
+    caseBoolSpecX spec $ \case True -> gtSpec l; False -> leqSpec l
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for LessW with wrong number of arguments. " ++ show ctx)
 
-  propMemberSpec (Context _ LessW (l :|> HOLE :<> End)) es =
-    caseBoolSpecX (MemberSpec es) $ \case
-      True -> gtSpec l
-      False -> leqSpec l
-  propMemberSpec (Context _ LessW (HOLE :<> l :<| End)) es =
-    caseBoolSpecX (MemberSpec es) $ \case
-      True -> ltSpec l
-      False -> geqSpec l
-  propMemberSpec ctx _ =
-    ErrorSpec
-      (NE.fromList ["LessOrEqual[<.] on MemberSpec", "Unreachable context, too many args", show ctx])
-
-{-
+{- In TheKnot, where there is a HasSpec instance
 infixr 4 <.
 (<.) :: forall a. (HasSpec Bool,OrdLike a) => Term a -> Term a -> Term Bool
 (<.) = appTerm LessW

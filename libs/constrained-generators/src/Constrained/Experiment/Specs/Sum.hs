@@ -166,24 +166,26 @@ sumSem InjRightW = SumRight
 instance Witness SumW where
   semantics = sumSem
 
-instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_" SumW '[a] (Sum a b) where
-  propTypeSpec (Context _ InjLeftW (HOLE :<> End)) (SumSpec _ sl _) cant = sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
-  propTypeSpec ctx _ _ =
-    ErrorSpec $
-      NE.fromList
-        ["InjLeftW[sumleft_] on TypeSpec", "Unreachable context, wrong number of args", show ctx]
+-- ============= InjLeftW ====
 
-  propMemberSpec (Context _ InjLeftW (HOLE :<> End)) es =
+instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_" SumW '[a] (Sum a b) where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence InjLeftW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App InjLeftW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence InjLeftW (HOLE :<> End)) (TypeSpec (SumSpec _ sl _) cant) =
+    sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
+  propagate (Context Evidence InjLeftW (HOLE :<> End)) (MemberSpec es) =
     case [a | SumLeft a <- NE.toList es] of
+      (x : xs) -> MemberSpec (x :| xs)
       [] ->
         ErrorSpec $
           pure $
             "propMemberSpec (sumleft_ HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
-      (x : xs) -> MemberSpec (x :| xs)
-  propMemberSpec ctx _ =
-    ErrorSpec $
-      NE.fromList
-        ["InjLeftW[sumleft_] on MemberSpec", "Unreachable context, wrong number of args", show ctx]
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for InjLeftW with wrong number of arguments. " ++ show ctx)
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
@@ -192,35 +194,29 @@ instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_"
 sumleft_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term a -> Term (Sum a b)
 sumleft_ = appTerm InjLeftW
 
+-- ============= InjRightW ====
+
 instance
   (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
   FunSym () "sumright_" SumW '[b] (Sum a b)
   where
-  propTypeSpec (Context _ InjRightW (HOLE :<> End)) (SumSpec _ _ sr) cant = sr <> foldMap notEqualSpec [a | SumRight a <- cant]
-  propTypeSpec ctx _ _ =
-    ErrorSpec
-      ( NE.fromList
-          [ "InjRightW[sumright_] on TypeSpec"
-          , "Unreachable context, wrong number of args"
-          , show ctx
-          ]
-      )
-
-  propMemberSpec (Context _ InjRightW (HOLE :<> End)) es =
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence InjRightW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App InjRightW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence InjRightW (HOLE :<> End)) (TypeSpec (SumSpec _ _ sr) cant) =
+    sr <> foldMap notEqualSpec [a | SumRight a <- cant]
+  propagate (Context Evidence InjRightW (HOLE :<> End)) (MemberSpec es) =
     case [a | SumRight a <- NE.toList es] of
+      (x : xs) -> MemberSpec (x :| xs)
       [] ->
         ErrorSpec $
           pure $
             "propagate(InjRight HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
-      (x : xs) -> MemberSpec (x :| xs)
-  propMemberSpec ctx _ =
-    ErrorSpec
-      ( NE.fromList
-          [ "InjRightW[sumright_] on MemberSpec"
-          , "Unreachable context, wrong number of args"
-          , show ctx
-          ]
-      )
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for InjRightW with wrong number of arguments. " ++ show ctx)
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of

@@ -403,16 +403,18 @@ deriving instance (Eq (ListW c s d r))
 -- ============= FunSymbol for FoldMapW
 
 instance (Typeable a, HasSpec b) => FunSym (Foldy b) "foldMap_" ListW '[[a]] b where
-  propTypeSpec (Context Evidence (FoldMapW f) (HOLE :<> End)) ts cant =
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence (FoldMapW f) (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App (FoldMapW f) (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence (FoldMapW f) (HOLE :<> End)) (TypeSpec ts cant) =
     typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f (TypeSpec ts cant))
-  propTypeSpec _ _ _ =
-    ErrorSpec
-      (pure "Unreachable context in TypeSpec for (FunSym (Foldy b) \"foldMap_\" ListW '[[a]] b)")
-  propMemberSpec (Context Evidence (FoldMapW f) (HOLE :<> End)) es =
+  propagate (Context Evidence (FoldMapW f) (HOLE :<> End)) (MemberSpec es) =
     typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f (MemberSpec es))
-  propMemberSpec _ _ =
-    ErrorSpec
-      (pure "Unreachable context in MemberSpec for (FunSym (Foldy b) \"foldMap_\" ListW '[[a]] b)")
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for FoldMapW with wrong number of arguments. " ++ show ctx)
 
   mapTypeSpec (FoldMapW g) ts =
     constrained $ \x ->
@@ -448,32 +450,25 @@ toPredsFoldSpec x (FoldSpec funAB sspec) =
 
 -- ============ FunSymbol for ElemW
 
-instance Typeable a => FunSym (Eq a) "elem_" ListW '[a, [a]] Bool where
-  propTypeSpec (Context Evidence ElemW (HOLE :<> es :<| End)) ts cant =
+instance HasSpec a => FunSym (Eq a) "elem_" ListW '[a, [a]] Bool where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence ElemW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App ElemW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate (Context Evidence ElemW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App ElemW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence ElemW (HOLE :<> es :<| End)) (TypeSpec ts cant) =
     caseBoolSpec (TypeSpec ts cant) $ \case
       True -> memberSpecList (nub es) (pure "propagate on (elem_ x []), The empty list, [], has no solution")
       False -> notMemberSpec es
-  propTypeSpec (Context Evidence ElemW (e :|> HOLE :<> End)) ts cant =
+  propagate (Context Evidence ElemW (e :|> HOLE :<> End)) (TypeSpec ts cant) =
     caseBoolSpec (TypeSpec ts cant) $ \case
-      True -> typeSpec $ ListSpec Nothing [e] mempty mempty NoFold
-      False -> typeSpec $ ListSpec Nothing mempty mempty (notEqualSpec e) NoFold
-  propTypeSpec _ _ _ =
-    ErrorSpec
-      (pure "Unreachable context in TypeSpec for (FunSym (Eq a) \"elem_\" ListW  '[a, [a]] Bool)")
-
-  propMemberSpec (Context Evidence ElemW (HOLE :<> es :<| End)) xs =
-    caseBoolSpec (MemberSpec xs) $ \case
-      True -> memberSpecList (nub es) (pure "propagate on (elem_ x []), The empty list, [], has no solution")
-      False -> notMemberSpec es
-  propMemberSpec (Context Evidence ElemW (e :|> HOLE :<> End)) xs =
-    caseBoolSpec (MemberSpec xs) $ \case
-      True -> typeSpec $ ListSpec Nothing [e] mempty mempty NoFold
-      False -> typeSpec $ ListSpec Nothing mempty mempty (notEqualSpec e) NoFold
-  propMemberSpec _ _ =
-    ErrorSpec
-      ( pure
-          "Unreachable context in MemberSpec for TypeSpec for (FunSym (Eq a) \"elem_\" ListW  '[a, [a]] Bool)"
-      )
+      True -> typeSpec (ListSpec Nothing [e] mempty mempty NoFold)
+      False -> typeSpec (ListSpec Nothing mempty mempty (notEqualSpec e) NoFold)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for ElemW with wrong number of arguments. " ++ show ctx)
 
   rewriteRules ElemW (_ :> Lit [] :> Nil) Evidence = Just $ Lit False
   rewriteRules ElemW (t :> Lit [a] :> Nil) Evidence = Just $ Equal t (Lit a)
@@ -488,7 +483,13 @@ elemFn = Fun Evidence ElemW
 -- ============= FunSymbol for SingletonListW
 
 instance HasSpec a => FunSym () "singeltonList_" ListW '[a] [a] where
-  propTypeSpec (Context Evidence SingletonListW (HOLE :<> End)) (ListSpec _ m sz e f) cant
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence SingletonListW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App SingletonListW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence SingletonListW (HOLE :<> End)) (TypeSpec (ListSpec _ m sz e f) cant)
     | length m > 1 =
         ErrorSpec $
           NE.fromList
@@ -508,17 +509,13 @@ instance HasSpec a => FunSym () "singeltonList_" ListW '[a] [a] where
     | [a] <- m = equalSpec a <> notMemberSpec [z | [z] <- cant] <> reverseFoldSpec f
     -- We have to respect the elem-spec, the can't spec, and the fold spec.
     | otherwise = e <> notMemberSpec [a | [a] <- cant] <> reverseFoldSpec f
-  propTypeSpec ctx _ _ =
-    ErrorSpec (pure $ "Ill formed context in TypeSpec for SingletonListW FunSym instance: " ++ show ctx)
-
-  propMemberSpec (Context Evidence SingletonListW (HOLE :<> End)) xss =
+  propagate (Context Evidence SingletonListW (HOLE :<> End)) (MemberSpec xss) =
     case [a | [a] <- NE.toList xss] of
       [] ->
         ErrorSpec $ (pure "PropagateSpec SingletonListW  with MemberSpec which has no lists of length 1")
       (x : xs) -> MemberSpec (x :| xs)
-  propMemberSpec ctx _ =
-    ErrorSpec
-      (pure $ "Ill formed context in MemberSpec for SingletonListW FunSym instance: " ++ show ctx)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for SingletonListW with wrong number of arguments. " ++ show ctx)
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec SingletonListW ts = typeSpec (ListSpec Nothing [] (equalSpec 1) (typeSpec ts) NoFold)
@@ -537,8 +534,25 @@ singletonListFn = Fun Evidence SingletonListW
 -- ============== FunSymbol for AppendW
 
 instance (Sized [a], HasSpec a) => FunSym () "append_" ListW '[[a], [a]] [a] where
-  propMemberSpec ctx xss
-    | Context Evidence AppendW (HOLE :<> (ys :: [a]) :<| End) <- ctx
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence AppendW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App AppendW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate (Context Evidence AppendW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App AppendW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence AppendW ctx) (TypeSpec (ts@ListSpec {listSpecElem = e}) cant)
+    | (HOLE :<> (ys :: [a]) :<| End) <- ctx
+    , Evidence <- prerequisites @[a]
+    , all (`conformsToSpec` e) ys =
+        TypeSpec (alreadyHave ys ts) (suffixedBy ys cant)
+    | ((ys :: [a]) :|> HOLE :<> End) <- ctx
+    , Evidence <- prerequisites @[a]
+    , all (`conformsToSpec` e) ys =
+        TypeSpec (alreadyHave ys ts) (prefixedBy ys cant)
+    | otherwise = ErrorSpec $ pure "The spec given to propagate for AppendW is inconsistent!"
+  propagate (Context Evidence AppendW ctx) (MemberSpec xss)
+    | (HOLE :<> (ys :: [a]) :<| End) <- ctx
     , Evidence <- prerequisites @[a] =
         -- Only keep the prefixes of the elements of xss that can
         -- give you the correct resulting list
@@ -551,7 +565,7 @@ instance (Sized [a], HasSpec a) => FunSym () "append_" ListW '[[a], [a]] [a] whe
                   ]
               )
           (x : xs) -> MemberSpec (x :| xs)
-    | Context Evidence AppendW ((ys :: [a]) :|> HOLE :<> End) <- ctx
+    | ((ys :: [a]) :|> HOLE :<> End) <- ctx
     , Evidence <- prerequisites @[a] =
         -- Only keep the suffixes of the elements of xss that can
         -- give you the correct resulting list
@@ -564,18 +578,8 @@ instance (Sized [a], HasSpec a) => FunSym () "append_" ListW '[[a], [a]] [a] whe
                   ]
               )
           (x : xs) -> MemberSpec (x :| xs)
-  propMemberSpec _ _ = ErrorSpec $ pure "The spec given to propMemberSpec for AppendW is inconsistent!"
-
-  propTypeSpec ctx (ts@ListSpec {listSpecElem = e}) cant
-    | Context Evidence AppendW (HOLE :<> (ys :: [a]) :<| End) <- ctx
-    , Evidence <- prerequisites @[a]
-    , all (`conformsToSpec` e) ys =
-        TypeSpec (alreadyHave ys ts) (suffixedBy ys cant)
-    | Context Evidence AppendW ((ys :: [a]) :|> HOLE :<> End) <- ctx
-    , Evidence <- prerequisites @[a]
-    , all (`conformsToSpec` e) ys =
-        TypeSpec (alreadyHave ys ts) (prefixedBy ys cant)
-    | otherwise = ErrorSpec $ pure "The spec given to propTypeSpec for AppendW is inconsistent!"
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for AppendW with wrong number of arguments. " ++ show ctx)
 
 prefixedBy :: Eq a => [a] -> [[a]] -> [[a]]
 prefixedBy ys xss = [drop (length ys) xs | xs <- xss, ys `isPrefixOf` xs]
