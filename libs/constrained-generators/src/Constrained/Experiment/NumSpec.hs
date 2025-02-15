@@ -46,7 +46,7 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromJust, mapMaybe)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable, typeOf)
+import Data.Typeable (Typeable, typeOf) -- (:~:)(Refl), eqT)
 import Data.Word
 import GHC.Int
 import GHC.Natural
