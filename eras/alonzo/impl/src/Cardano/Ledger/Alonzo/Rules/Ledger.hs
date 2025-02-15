@@ -23,9 +23,10 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
+  CertState,
   LedgerState (..),
   UTxOState (..),
  )
@@ -166,6 +167,7 @@ instance
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , ProtVerAtMost era 8
+  , EraCertState era
   ) =>
   STS (AlonzoLEDGER era)
   where

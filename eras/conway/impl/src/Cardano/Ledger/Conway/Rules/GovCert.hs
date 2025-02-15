@@ -38,14 +38,18 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (
-  CertState (..),
   CommitteeAuthorization (..),
   CommitteeState (..),
-  DState (..),
+  EraCertState (..),
   VState (..),
+  csCommitteeCredsL,
+  dsUnifiedL,
+  vsCommitteeStateL,
+  vsDRepsL,
   vsNumDormantEpochsL,
  )
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Conway.CertState ()
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT)
 import Cardano.Ledger.Conway.Governance (
@@ -59,6 +63,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
@@ -84,7 +89,7 @@ import Data.Maybe (isJust)
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 data ConwayGovCertEnv era = ConwayGovCertEnv
@@ -163,10 +168,11 @@ instance
   , EraRule "GOVCERT" era ~ ConwayGOVCERT era
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
+  , EraCertState era
   ) =>
   STS (ConwayGOVCERT era)
   where
-  type State (ConwayGOVCERT era) = CertState era
+  type State (ConwayGOVCERT era) = ShelleyCertState era
   type Signal (ConwayGOVCERT era) = ConwayGovCert
   type Environment (ConwayGOVCERT era) = ConwayGovCertEnv era
   type BaseM (ConwayGOVCERT era) = ShelleyBase
@@ -176,18 +182,19 @@ instance
   transitionRules = [conwayGovCertTransition @era]
 
 conwayGovCertTransition ::
-  ConwayEraPParams era => TransitionRule (ConwayGOVCERT era)
+  (ConwayEraPParams era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  TransitionRule (ConwayGOVCERT era)
 conwayGovCertTransition = do
   TRC
     ( ConwayGovCertEnv {cgcePParams, cgceCurrentEpoch, cgceCurrentCommittee, cgceCommitteeProposals}
-      , certState@CertState {certVState = vState@VState {vsDReps}, certDState}
+      , certState
       , cert
       ) <-
     judgmentContext
   let ppDRepDeposit = cgcePParams ^. ppDRepDepositL
       ppDRepActivity = cgcePParams ^. ppDRepActivityL
       checkAndOverwriteCommitteeMemberState coldCred newMemberState = do
-        let VState {vsCommitteeState = CommitteeState csCommitteeCreds} = vState
+        let VState {vsCommitteeState = CommitteeState csCommitteeCreds} = certState ^. certVStateL
             coldCredResigned =
               Map.lookup coldCred csCommitteeCreds >>= \case
                 CommitteeMemberResigned {} -> Just coldCred
@@ -202,19 +209,12 @@ conwayGovCertTransition = do
             isPotentialFutureMember =
               any committeeUpdateContainsColdCred cgceCommitteeProposals
         isCurrentMember || isPotentialFutureMember ?! ConwayCommitteeIsUnknown coldCred
-        pure
+        pure $
           certState
-            { certVState =
-                vState
-                  { vsCommitteeState =
-                      CommitteeState
-                        { csCommitteeCreds = Map.insert coldCred newMemberState csCommitteeCreds
-                        }
-                  }
-            }
+            & certVStateL . vsCommitteeStateL . csCommitteeCredsL %~ Map.insert coldCred newMemberState
   case cert of
     ConwayRegDRep cred deposit mAnchor -> do
-      Map.notMember cred vsDReps ?! ConwayDRepAlreadyRegistered cred
+      Map.notMember cred (certState ^. certVStateL . vsDRepsL) ?! ConwayDRepAlreadyRegistered cred
       deposit
         == ppDRepDeposit
           ?! ConwayDRepIncorrectDeposit
@@ -228,20 +228,16 @@ conwayGovCertTransition = do
                   computeDRepExpiryVersioned
                     cgcePParams
                     cgceCurrentEpoch
-                    (vState ^. vsNumDormantEpochsL)
+                    (certState ^. certVStateL . vsNumDormantEpochsL)
               , drepAnchor = mAnchor
               , drepDeposit = ppDRepDeposit
               , drepDelegs = mempty
               }
-      pure
+      pure $
         certState
-          { certVState =
-              vState
-                { vsDReps = Map.insert cred drepState vsDReps
-                }
-          }
+          & certVStateL . vsDRepsL %~ Map.insert cred drepState
     ConwayUnRegDRep cred refund -> do
-      let mDRepState = Map.lookup cred vsDReps
+      let mDRepState = Map.lookup cred (certState ^. certVStateL . vsDRepsL)
           drepRefundMismatch = do
             drepState <- mDRepState
             let paidDeposit = drepState ^. drepDepositL
@@ -251,39 +247,32 @@ conwayGovCertTransition = do
       failOnJust drepRefundMismatch $ ConwayDRepIncorrectRefund . Mismatch refund
       let
         certState' =
-          certState {certVState = vState {vsDReps = Map.delete cred vsDReps}}
+          certState & certVStateL . vsDRepsL %~ Map.delete cred
       pure $
         case mDRepState of
           Nothing -> certState'
           Just dRepState ->
             certState'
-              { certDState =
-                  certDState
-                    { dsUnified = drepDelegs dRepState UM.⋪ UM.DRepUView (dsUnified certDState)
-                    }
-              }
+              & certDStateL . dsUnifiedL
+                .~ drepDelegs dRepState UM.⋪ UM.DRepUView (certState ^. certDStateL . dsUnifiedL)
     -- Update a DRep expiry along with its anchor.
     ConwayUpdateDRep cred mAnchor -> do
-      Map.member cred vsDReps ?! ConwayDRepNotRegistered cred
-      pure
+      Map.member cred (certState ^. certVStateL . vsDRepsL) ?! ConwayDRepNotRegistered cred
+      pure $
         certState
-          { certVState =
-              vState
-                { vsDReps =
-                    Map.adjust
-                      ( \drepState ->
-                          drepState
-                            & drepExpiryL
-                              .~ computeDRepExpiry
-                                ppDRepActivity
-                                cgceCurrentEpoch
-                                (vState ^. vsNumDormantEpochsL)
-                            & drepAnchorL .~ mAnchor
-                      )
-                      cred
-                      vsDReps
-                }
-          }
+          & certVStateL . vsDRepsL
+            %~ ( Map.adjust
+                  ( \drepState ->
+                      drepState
+                        & drepExpiryL
+                          .~ computeDRepExpiry
+                            ppDRepActivity
+                            cgceCurrentEpoch
+                            (certState ^. certVStateL . vsNumDormantEpochsL)
+                        & drepAnchorL .~ mAnchor
+                  )
+                  cred
+               )
     ConwayAuthCommitteeHotKey coldCred hotCred ->
       checkAndOverwriteCommitteeMemberState coldCred $ CommitteeHotCredential hotCred
     ConwayResignCommitteeColdKey coldCred anchor ->

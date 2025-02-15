@@ -12,6 +12,7 @@
 
 module Cardano.Ledger.Alonzo.Translation where
 
+import Cardano.Ledger.Alonzo.CertState ()
 import Cardano.Ledger.Alonzo.Core hiding (Tx)
 import qualified Cardano.Ledger.Alonzo.Core as Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -19,9 +20,9 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..), PState (..), VState (..))
+import Cardano.Ledger.CertState (CommitteeState (..), EraCertState (..), PState (..), VState (..))
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -116,14 +117,8 @@ instance TranslateEra AlonzoEra VState where
 instance TranslateEra AlonzoEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra AlonzoEra CertState where
-  translateEra ctxt ls =
-    pure
-      CertState
-        { certDState = translateEra' ctxt $ certDState ls
-        , certPState = translateEra' ctxt $ certPState ls
-        , certVState = translateEra' ctxt $ certVState ls
-        }
+instance TranslateEra AlonzoEra ShelleyCertState where
+  translateEra (AlonzoGenesisWrapper _scs) = pure . upgradeCertState
 
 instance TranslateEra AlonzoEra LedgerState where
   translateEra ctxt ls =

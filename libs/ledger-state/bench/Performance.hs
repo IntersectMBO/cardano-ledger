@@ -118,7 +118,7 @@ main = do
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
               ]
     , env (pure es) $ \newEpochState ->
-        let umap = dsUnified . certDState . lsCertState . esLState $ nesEs newEpochState
+        let umap = newEpochState ^. nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
             elems = umElems umap
             creds = runStateGen_ stdGen (uniformSubSet (Just 10) (Map.keysSet elems))
          in bgroup

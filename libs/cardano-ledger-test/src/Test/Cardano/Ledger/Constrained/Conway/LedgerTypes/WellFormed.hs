@@ -27,17 +27,17 @@ import Cardano.Ledger.Conway.Rules (GovEnv (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State (SnapShot (..), SnapShots (..))
 import Constrained hiding (Value)
 import Data.Map (Map)
 import Test.Cardano.Ledger.Constrained.Conway ()
-import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances hiding (certStateSpec)
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   EraSpecLedger (..),
   accountStateSpec,
   aggregateDRep,
-  certStateSpec,
   conwayGovStateSpec,
   dstateSpec,
   epochNoSpec,
@@ -111,7 +111,13 @@ utxoX = do
       (hasSize (rangeSize 30 30))
   genFromSpec @ConwayFn @(UTxO era) (utxoSpecWit @era univ (lit cs))
 
-utxostateX :: forall era. EraSpecLedger era ConwayFn => PParams era -> Gen (UTxOState era)
+utxostateX ::
+  forall era.
+  ( EraSpecLedger era ConwayFn
+  , -- TODO: this is temporary, remove once `utxoStateSpec` is general enough
+    CertState era ~ ShelleyCertState era
+  ) =>
+  PParams era -> Gen (UTxOState era)
 utxostateX pp = do
   univ <- genWitUniv @era 50
   certstate <- csX @era
@@ -125,14 +131,23 @@ conwaygovX pp = do
   env <- genFromSpec @ConwayFn @(GovEnv ConwayEra) (govEnvSpec pp)
   genFromSpec @ConwayFn @(ConwayGovState ConwayEra) (conwayGovStateSpec pp env)
 
-lsX :: forall era. EraSpecLedger era ConwayFn => PParams era -> Gen (LedgerState era)
+lsX ::
+  forall era.
+  ( EraSpecLedger era ConwayFn
+  , -- TODO: remove once `ledgerStateSpec` is general enough
+    CertState era ~ ShelleyCertState era
+  ) =>
+  PParams era -> Gen (LedgerState era)
 lsX pp = do
   univ <- genWitUniv @era 50
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
   genFromSpec @ConwayFn @(LedgerState era) (ledgerStateSpec pp univ (lit acct) (lit epoch))
 
-esX :: forall era. EraSpecLedger era ConwayFn => PParams era -> Gen (EpochState era)
+esX ::
+  forall era.
+  (EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  PParams era -> Gen (EpochState era)
 esX pp = do
   univ <- genWitUniv @era 50
   epoch <- genFromSpec @ConwayFn @EpochNo epochNoSpec
@@ -146,7 +161,9 @@ nesX pp = do
 snapX :: Gen SnapShot
 snapX = genFromSpec @ConwayFn @SnapShot snapShotSpec
 
-snapsX :: forall era. EraSpecLedger era ConwayFn => PParams era -> Gen SnapShots
+snapsX ::
+  forall era.
+  (EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) => PParams era -> Gen SnapShots
 snapsX pp = do
   univ <- genWitUniv @era 50
   acct <- genFromSpec @ConwayFn @AccountState accountStateSpec
@@ -200,13 +217,19 @@ instance (GenScript era, EraSpecPParams era) => WellFormed (VState era) era wher
   wff = vsX
   wffWithPP _ = vsX
 
-instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed (CertState era) era where
+instance
+  (EraSpecPParams era, EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  WellFormed (ShelleyCertState era) era
+  where
   wff = csX
 
 instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed (UTxO era) era where
   wff = utxoX
 
-instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed (UTxOState era) era where
+instance
+  (EraSpecPParams era, EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  WellFormed (UTxOState era) era
+  where
   wffWithPP = utxostateX
 
 instance WellFormed (GovEnv ConwayEra) ConwayEra where
@@ -218,10 +241,16 @@ instance WellFormed (ConwayGovState ConwayEra) ConwayEra where
 instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed (ShelleyGovState era) era where
   wffWithPP pp = genFromSpec @ConwayFn @(ShelleyGovState era) (shelleyGovStateSpec pp)
 
-instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed (LedgerState era) era where
+instance
+  (EraSpecPParams era, EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  WellFormed (LedgerState era) era
+  where
   wffWithPP = lsX
 
-instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed (EpochState era) era where
+instance
+  (EraSpecPParams era, EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  WellFormed (EpochState era) era
+  where
   wffWithPP = esX
 
 instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed (NewEpochState era) era where
@@ -230,7 +259,10 @@ instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed (NewEpoc
 instance EraSpecPParams era => WellFormed SnapShot era where
   wff = snapX
 
-instance (EraSpecPParams era, EraSpecLedger era ConwayFn) => WellFormed SnapShots era where
+instance
+  (EraSpecPParams era, EraSpecLedger era ConwayFn, CertState era ~ ShelleyCertState era) =>
+  WellFormed SnapShots era
+  where
   wffWithPP = snapsX @era
 
 instance

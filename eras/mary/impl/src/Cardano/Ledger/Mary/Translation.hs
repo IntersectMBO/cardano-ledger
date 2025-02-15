@@ -16,12 +16,13 @@ module Cardano.Ledger.Mary.Translation where
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
+import Cardano.Ledger.Mary.CertState ()
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -108,14 +109,7 @@ instance TranslateEra MaryEra VState where
 instance TranslateEra MaryEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra MaryEra CertState where
-  translateEra ctxt ls =
-    pure
-      CertState
-        { certDState = translateEra' ctxt $ certDState ls
-        , certPState = translateEra' ctxt $ certPState ls
-        , certVState = translateEra' ctxt $ certVState ls
-        }
+instance TranslateEra MaryEra ShelleyCertState
 
 instance TranslateEra MaryEra LedgerState where
   translateEra ctxt ls =

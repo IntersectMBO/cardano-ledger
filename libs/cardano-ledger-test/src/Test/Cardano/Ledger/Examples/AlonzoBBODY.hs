@@ -28,6 +28,7 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (
@@ -44,7 +45,6 @@ import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..))
 import Cardano.Ledger.Shelley.API (
-  CertState (..),
   DState (..),
   GenDelegs (..),
   LedgerState (..),
@@ -75,6 +75,7 @@ import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
+import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (mkSingleRedeemer)
@@ -165,6 +166,7 @@ initialBBodyState ::
   , PostShelley era
   , EraGov era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , EraCertState era
   ) =>
   Proof era ->
   UTxO era ->
@@ -176,18 +178,17 @@ initialBBodyState pf utxo =
       smartUTxOState (pp pf) utxo (UM.fromCompact successDeposit) (Coin 0) def mempty
     dpstate =
       def
-        { certDState =
-            DState
-              { dsUnified =
-                  UM.insert
-                    (scriptStakeCredSuceed pf)
-                    (UM.RDPair (UM.CompactCoin 1000) successDeposit)
-                    (RewDepUView UM.empty)
-              , dsFutureGenDelegs = Map.empty
-              , dsGenDelegs = GenDelegs Map.empty
-              , dsIRewards = def
-              }
-        }
+        & certDStateL
+          .~ DState
+            { dsUnified =
+                UM.insert
+                  (scriptStakeCredSuceed pf)
+                  (UM.RDPair (UM.CompactCoin 1000) successDeposit)
+                  (RewDepUView UM.empty)
+            , dsFutureGenDelegs = Map.empty
+            , dsGenDelegs = GenDelegs Map.empty
+            , dsIRewards = def
+            }
 
 testAlonzoBlock ::
   ( HasTokens era
@@ -600,6 +601,7 @@ testBBodyState ::
   , EraGov era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , ShelleyEraTxCert era
+  , EraCertState era
   ) =>
   Proof era ->
   ShelleyBbodyState era

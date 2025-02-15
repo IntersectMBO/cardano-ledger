@@ -58,13 +58,14 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.CertState (
-  CertState (..),
   CommitteeState (..),
+  EraCertState (..),
   PState (..),
   VState (..),
   authorizedHotCommitteeCredentials,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.CertState ()
 import Cardano.Ledger.Conway.Core (ppGovActionDepositL, ppGovActionLifetimeL)
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
@@ -148,7 +149,7 @@ data GovEnv era = GovEnv
   }
   deriving (Generic)
 
-instance EraPParams era => EncCBOR (GovEnv era) where
+instance (EraPParams era, EraCertState era) => EncCBOR (GovEnv era) where
   encCBOR x@(GovEnv _ _ _ _ _) =
     let GovEnv {..} = x
      in encode $
@@ -159,9 +160,9 @@ instance EraPParams era => EncCBOR (GovEnv era) where
             !> To gePPolicy
             !> To geCertState
 
-instance (NFData (PParams era), Era era) => NFData (GovEnv era)
-deriving instance (Show (PParams era), Era era) => Show (GovEnv era)
-deriving instance Eq (PParams era) => Eq (GovEnv era)
+instance (NFData (PParams era), Era era, EraCertState era) => NFData (GovEnv era)
+deriving instance (Show (PParams era), Era era, EraCertState era) => Show (GovEnv era)
+deriving instance (Eq (PParams era), EraCertState era) => Eq (GovEnv era)
 
 data ConwayGovPredFailure era
   = GovActionsDoNotExist (NonEmpty GovActionId)
@@ -319,6 +320,7 @@ instance
   , ConwayEraPParams era
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
+  , EraCertState era
   ) =>
   STS (ConwayGOV era)
   where
@@ -427,16 +429,20 @@ govTransition ::
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , State (EraRule "GOV" era) ~ Proposals era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
+  , EraCertState era
   ) =>
   TransitionRule (EraRule "GOV" era)
 govTransition = do
   TRC
-    ( GovEnv txid currentEpoch pp constitutionPolicy CertState {certDState, certPState, certVState}
+    ( GovEnv txid currentEpoch pp constitutionPolicy certState
       , st
       , GovSignal {gsVotingProcedures, gsProposalProcedures, gsCertificates}
       ) <-
     judgmentContext
   let prevGovActionIds = st ^. pRootsL . L.to toPrevGovActionIds
+      certVState = certState ^. certVStateL
+      certPState = certState ^. certPStateL
+      certDState = certState ^. certDStateL
       committeeState = vsCommitteeState certVState
       knownDReps = vsDReps certVState
       knownStakePools = psStakePoolParams certPState

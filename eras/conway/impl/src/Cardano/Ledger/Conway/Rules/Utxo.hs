@@ -57,6 +57,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXO, ConwayUTXOS)
@@ -239,6 +240,7 @@ instance
   , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , PredicateFailure (EraRule "UTXO" era) ~ ConwayUtxoPredFailure era
+  , EraCertState era
   ) =>
   STS (ConwayUTXO era)
   where

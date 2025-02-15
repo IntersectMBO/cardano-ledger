@@ -43,6 +43,7 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
@@ -50,10 +51,8 @@ import Cardano.Ledger.Rules.ValidationMode (Test)
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
-  CertState (..),
   DState (..),
   PState (..),
-  certDState,
   psStakePoolParams,
   rewards,
  )
@@ -94,7 +93,7 @@ import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
@@ -159,6 +158,7 @@ instance
 
 instance
   ( EraTx era
+  , EraCertState era
   , ShelleyEraTxBody era
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -228,6 +228,7 @@ instance
 delegsTransition ::
   forall era.
   ( EraTx era
+  , EraCertState era
   , ShelleyEraTxBody era
   , Embed (EraRule "DELPL" era) (ShelleyDELEGS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -243,18 +244,18 @@ delegsTransition = do
 
   case certificates of
     Empty -> do
-      let dState = certDState certState
+      let dState = certState ^. certDStateL
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       validateTrans WithdrawalsNotInRewardsDELEGS $
         validateZeroRewards dState withdrawals network
-      pure $ certState {certDState = drainWithdrawals dState withdrawals}
+      pure $ certState & certDStateL .~ drainWithdrawals dState withdrawals
     gamma :|> txCert -> do
       certState' <-
         trans @(ShelleyDELEGS era) $ TRC (env, certState, gamma)
       validateTrans DelegateeNotRegisteredDELEG $
         case txCert of
           DelegStakeTxCert _ targetPool ->
-            validateStakePoolDelegateeRegistered (certPState certState') targetPool
+            validateStakePoolDelegateeRegistered (certState' ^. certPStateL) targetPool
           _ -> pure ()
       -- It is impossible to have 65535 number of certificates in a transaction.
       let certIx = CertIx (fromIntegral @Int @Word16 $ length gamma)

@@ -20,13 +20,14 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
 import Cardano.Ledger.Block (
   Block (..),
  )
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
-  EpochState (..),
-  LedgerState (..),
   NewEpochState (..),
   PState (..),
+  esLStateL,
+  lsCertStateL,
+  nesEsL,
   psStakePoolParams,
  )
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -36,6 +37,7 @@ import Cardano.Protocol.TPraos.BHeader (
  )
 import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
 import qualified Data.Set as Set
+import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -75,7 +77,7 @@ tests =
         map removedAfterPoolreap_ $
           filter (not . sameEpoch) (chainSstWithTick tr)
   where
-    poolState = certPState . lsCertState . esLState . nesEs . chainNes
+    poolState target = (chainNes target) ^. nesEsL . esLStateL . lsCertStateL . certPStateL
 
     removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
     removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (UnserialisedBlock bh _)}) =

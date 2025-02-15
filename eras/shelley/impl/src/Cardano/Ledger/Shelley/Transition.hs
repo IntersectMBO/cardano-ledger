@@ -65,6 +65,7 @@ class
   ( EraTxOut era
   , EraGov era
   , EraGenesis era
+  , EraCertState era
   , ToJSON (TransitionConfig era)
   , FromJSON (TransitionConfig era)
   , Default (StashedAVVMAddresses era)
@@ -271,12 +272,7 @@ createInitialState tc =
                 LedgerState
                   { lsUTxOState =
                       smartUTxOState pp initialUtxo zero zero govState zero
-                  , lsCertState =
-                      CertState
-                        { certDState = dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)}
-                        , certPState = def
-                        , certVState = def
-                        }
+                  , lsCertState = mkCertState def def (dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)})
                   }
             , esNonMyopic = def
             }
@@ -328,9 +324,8 @@ registerInitialStaking tc nes =
               ledgerState
                 { lsCertState =
                     dpState
-                      { certDState = dState'
-                      , certPState = pState'
-                      }
+                      & certDStateL .~ dState'
+                      & certPStateL .~ pState'
                 }
           , esSnapshots =
               (esSnapshots epochState)
@@ -355,7 +350,7 @@ registerInitialStaking tc nes =
     -- See STS DELEG for details
     dState' :: DState era
     dState' =
-      (certDState dpState)
+      (dpState ^. certDStateL)
         { dsUnified =
             UM.unify
               ( Map.map (const $ UM.RDPair (CompactCoin 0) (CompactCoin 0))
@@ -373,7 +368,7 @@ registerInitialStaking tc nes =
     -- See STS POOL for details
     pState' :: PState era
     pState' =
-      (certPState dpState)
+      (dpState ^. certPStateL)
         { psStakePoolParams = ListMap.toMap sgsPools
         }
 

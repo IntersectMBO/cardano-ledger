@@ -14,7 +14,7 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Gov () where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (CertState, certDStateL, dsUnifiedL)
+import Cardano.Ledger.CertState (EraCertState (..), dsUnifiedL)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
@@ -33,6 +33,7 @@ instance
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecTranslate ctx (CertState era)
   , SpecRep (CertState era) ~ Agda.CertState
+  , EraCertState era
   ) =>
   SpecTranslate ctx (GovEnv era)
   where

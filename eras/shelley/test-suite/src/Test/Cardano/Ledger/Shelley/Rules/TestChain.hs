@@ -28,9 +28,10 @@ import Cardano.Ledger.Block (
   bheader,
   neededTxInsForBlock,
  )
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
-import Cardano.Ledger.Shelley.API (ApplyBlock, CertState (..), ShelleyDELEG)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -38,6 +39,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   UTxOState (..),
   curPParamsEpochStateL,
+  lsCertStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegEnv (..),
@@ -201,7 +203,7 @@ poolTraceFromBlock chainSt block =
       let LedgerEnv sl _ _ pp _ = ledgerEnv
        in PoolEnv (epochFromSlotNo sl) pp
     poolSt0 =
-      certPState (lsCertState ledgerSt0)
+      ledgerSt0 ^. lsCertStateL . certPStateL
 
 -- | Reconstruct a DELEG trace from all the transaction certificates in a Block
 delegTraceFromBlock ::
@@ -228,7 +230,7 @@ delegTraceFromBlock chainSt block =
           ptr = Ptr (SlotNo32 (fromIntegral slot64)) txIx dummyCertIx
        in DelegEnv slot (epochFromSlotNo slot) ptr reserves pp
     delegSt0 =
-      certDState (lsCertState ledgerSt0)
+      ledgerSt0 ^. lsCertStateL . certDStateL
     delegCert (RegTxCert _) = True
     delegCert (UnRegTxCert _) = True
     delegCert (DelegStakeTxCert _ _) = True

@@ -17,11 +17,11 @@ module Test.Cardano.Ledger.Shelley.Generator.TxCert (
 where
 
 import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.API (
   AccountState (..),
-  CertState (..),
   Coin (..),
   Credential (..),
   DState (..),
@@ -35,7 +35,12 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
+import Cardano.Ledger.Shelley.LedgerState (
+  availableAfterMIR,
+  dsFutureGenDelegsL,
+  dsGenDelegsL,
+  rewards,
+ )
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Protocol.Crypto (hashVerKeyVRF)
@@ -93,7 +98,7 @@ deriving instance (Era era, Show (Script era)) => Show (CertCred era)
 -- and we generate more delegations than registrations of keys/pools.
 genTxCert ::
   forall era.
-  (EraGen era, ProtVerAtMost era 8) =>
+  (EraGen era, ProtVerAtMost era 8, EraCertState era) =>
   Constants ->
   KeySpace era ->
   PParams era ->
@@ -145,8 +150,8 @@ genTxCert
         )
       ]
     where
-      dState = certDState dpState
-      pState = certPState dpState
+      dState = dpState ^. certDStateL
+      pState = dpState ^. certPStateL
 
 -- | Generate a RegKey certificate
 genRegKeyCert ::
@@ -256,7 +261,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
 -- registered pools.
 genDelegation ::
   forall era.
-  (EraScript era, ShelleyEraTxCert era) =>
+  (EraScript era, ShelleyEraTxCert era, EraCertState era) =>
   Constants ->
   KeyPairs ->
   [(Script era, Script era)] ->
@@ -300,15 +305,15 @@ genDelegation
         where
           scriptCert =
             DelegStakeTxCert (scriptToCred' delegatorScript) poolKey
-      registeredDelegate k = UM.member k (rewards (certDState dpState))
+      registeredDelegate k = UM.member k (rewards (dpState ^. certDStateL))
       availableDelegates = filter (registeredDelegate . mkCredential . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred' . snd) scripts
-      registeredPools = psStakePoolParams (certPState dpState)
+      registeredPools = psStakePoolParams (dpState ^. certPStateL)
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
-  (Era era, ShelleyEraTxCert era, ProtVerAtMost era 8) =>
+  (Era era, ShelleyEraTxCert era, ProtVerAtMost era 8, EraCertState era) =>
   -- | Core nodes
   [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)] ->
   -- | All potential genesis delegate keys
@@ -335,13 +340,13 @@ genGenesisDelegation coreNodes delegateKeys dpState =
             (hashVerKeyVRF @MockCrypto vrf)
         , CoreKeyCred [gkey]
         )
-    GenDelegs genDelegs_ = dsGenDelegs $ certDState dpState
+    GenDelegs genDelegs_ = dpState ^. certDStateL . dsGenDelegsL
     genesisDelegator k = eval (k ∈ dom genDelegs_)
     genesisDelegators = filter (genesisDelegator . hashVKey) (fst <$> coreNodes)
     activeGenDelegsKeyHashSet =
       Set.fromList $ genDelegKeyHash <$> Map.elems genDelegs_
     futureGenDelegsKeyHashSet =
-      Set.fromList $ genDelegKeyHash <$> Map.elems (dsFutureGenDelegs $ certDState dpState)
+      Set.fromList $ genDelegKeyHash <$> Map.elems (dpState ^. certDStateL . dsFutureGenDelegsL)
     notActiveDelegatee k = coerceKeyRole k `Set.notMember` activeGenDelegsKeyHashSet
     notFutureDelegatee k = coerceKeyRole k `Set.notMember` futureGenDelegsKeyHashSet
     notDelegatee k = notActiveDelegatee k && notFutureDelegatee k

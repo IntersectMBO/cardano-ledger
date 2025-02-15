@@ -12,15 +12,16 @@
 
 module Cardano.Ledger.Allegra.Translation (shelleyToAllegraAVVMsToDelete) where
 
+import Cardano.Ledger.Allegra.CertState ()
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -143,14 +144,7 @@ instance TranslateEra AllegraEra VState where
 instance TranslateEra AllegraEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra AllegraEra CertState where
-  translateEra ctxt ls =
-    pure
-      CertState
-        { certDState = translateEra' ctxt $ certDState ls
-        , certPState = translateEra' ctxt $ certPState ls
-        , certVState = translateEra' ctxt $ certVState ls
-        }
+instance TranslateEra AllegraEra ShelleyCertState
 
 instance TranslateEra AllegraEra LedgerState where
   translateEra ctxt ls =

@@ -157,12 +157,14 @@ dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
 
 conwayDelegCertSpec ::
   forall fn era.
-  (EraPParams era, IsConwayUniv fn) =>
+  (EraPParams era, IsConwayUniv fn, EraCertState era) =>
   ConwayDelegEnv era ->
   CertState era ->
   Specification fn ConwayDelegCert
-conwayDelegCertSpec (ConwayDelegEnv pp pools) (CertState vs _ps ds) =
-  let rewardMap = unUnify $ rewards ds
+conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
+  let ds = certState ^. certDStateL
+      vs = certState ^. certVStateL
+      rewardMap = unUnify $ rewards ds
       dReps = vsDReps vs
       delegMap = unUnify $ delegations ds
       zeroReward = (== 0) . fromCompact . rdReward

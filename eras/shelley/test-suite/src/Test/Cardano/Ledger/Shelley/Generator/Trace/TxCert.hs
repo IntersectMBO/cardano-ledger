@@ -20,7 +20,7 @@ where
 
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, SlotNo (..), TxIx)
 import Cardano.Ledger.CertState (
-  CertState (..),
+  EraCertState (..),
   lookupDepositDState,
   lookupDepositVState,
   psStakePoolParams,
@@ -63,6 +63,7 @@ import Data.Maybe (catMaybes, mapMaybe)
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
+import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..))
@@ -159,6 +160,7 @@ instance
   , State (Core.EraRule "DELPL" era) ~ CertState era
   , Signal (Core.EraRule "DELPL" era) ~ TxCert era
   , ProtVerAtMost era 8
+  , EraCertState era
   ) =>
   QC.HasTrace (CERTS era) (GenEnv era)
   where
@@ -216,12 +218,15 @@ genTxCerts
         Constants {maxCertsPerTx}
       )
   pp
-  certState@CertState {certDState, certVState, certPState}
+  certState
   slot
   txIx
   acnt = do
     let env = (slot, txIx, pp, acnt)
         st0 = (certState, minBound)
+        certDState = certState ^. certDStateL
+        certPState = certState ^. certPStateL
+        certVState = certState ^. certVStateL
 
     certsTrace <-
       QC.traceFrom @(CERTS era) testGlobals maxCertsPerTx ge env st0
