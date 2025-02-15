@@ -773,8 +773,8 @@ data CertStateF era where
 unCertStateF :: CertStateF era -> CertState era
 unCertStateF (CertStateF _ x) = x
 
-instance PrettyA (CertStateF era) where
-  prettyA (CertStateF p x) = unReflect pcCertState p x
+instance Reflect era => PrettyA (CertStateF era) where
+  prettyA (CertStateF _ x) = pcCertState x
 
 instance Eq (CertStateF era) where
   (CertStateF Shelley x) == (CertStateF Shelley y) = x == y
@@ -882,14 +882,14 @@ genProposedPPUpdates p = case p of
   Babbage -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
   Conway -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
 
-genCertState :: Proof era -> Gen (CertStateF era)
-genCertState p = case p of
-  Shelley -> CertStateF p <$> arbitrary
-  Allegra -> CertStateF p <$> arbitrary
-  Mary -> CertStateF p <$> arbitrary
-  Alonzo -> CertStateF p <$> arbitrary
-  Babbage -> CertStateF p <$> arbitrary
-  Conway -> CertStateF p <$> arbitrary
+genCertState :: forall era. Reflect era => Gen (CertStateF era)
+genCertState = case reify @era of
+  p@Shelley -> CertStateF p <$> arbitrary
+  p@Allegra -> CertStateF p <$> arbitrary
+  p@Mary -> CertStateF p <$> arbitrary
+  p@Alonzo -> CertStateF p <$> arbitrary
+  p@Babbage -> CertStateF p <$> arbitrary
+  p@Conway -> CertStateF p <$> arbitrary
 
 genGovState :: Proof era -> Gen (GovState era)
 genGovState p = case p of
