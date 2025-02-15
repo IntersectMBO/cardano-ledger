@@ -325,13 +325,20 @@ instance Witness BoolW where
 -- ======= FunSym instance EqualW(==.)
 
 instance (Typeable a, HasSpec Bool) => FunSym (Eq a) "==." BoolW '[a, a] Bool where
-  propTypeSpec (Context Evidence EqualW (HOLE :<> a :<| End)) ts cant =
-    caseBoolSpecX (TypeSpec ts cant) $ \case True -> equalSpec a; False -> notEqualSpec a
-  propTypeSpec ctx _ _ = badContext ctx "TypeSpec"
-
-  propMemberSpec (Context Evidence EqualW (a :|> HOLE :<> End)) xs =
-    caseBoolSpecX (MemberSpec xs) $ \case True -> equalSpec a; False -> notEqualSpec a
-  propMemberSpec ctx _ = badContext ctx "MemberSpec"
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence EqualW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App EqualW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate (Context Evidence EqualW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App EqualW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence EqualW (HOLE :<> (s :: a) :<| End)) spec =
+    caseBoolSpecX spec $ \case True -> equalSpec s; False -> notEqualSpec s
+  propagate (Context Evidence EqualW ((s :: a) :|> HOLE :<> End)) spec =
+    caseBoolSpecX spec $ \case True -> equalSpec s; False -> notEqualSpec s
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for EqualW with wrong number of arguments. " ++ show ctx)
 
 -- Note we DO NOT define (==.) here like we do for other FunSym instances. Instead (==.) is defined
 -- in terms of the Term constructor Equal in Constrained.Experiment.Base.
@@ -340,11 +347,16 @@ instance (Typeable a, HasSpec Bool) => FunSym (Eq a) "==." BoolW '[a, a] Bool wh
 -- ======= FunSym instance NotW(not_)
 
 instance HasSpec Bool => FunSym () "not_" BoolW '[Bool] Bool where
-  propTypeSpec (Context _ NotW (HOLE :<> End)) ts cant = caseBoolSpecX (TypeSpec ts cant) (equalSpec . not)
-  propTypeSpec ctx _ _ = badContext ctx "TypeSpec"
-
-  propMemberSpec (Context _ NotW (HOLE :<> End)) xs = caseBoolSpecX (MemberSpec xs) (equalSpec . not)
-  propMemberSpec ctx _ = badContext ctx "TypeSpec"
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence NotW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App NotW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence NotW (HOLE :<> End)) spec =
+    caseBoolSpecX spec (equalSpec . not)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for NotW with wrong number of arguments. " ++ show ctx)
 
 --   FIX ME undefined
 -- mapTypeSpec Not (SumSpec h a b) = typeSpec $ SumSpec h b a
@@ -358,13 +370,20 @@ not_ = appTerm NotW
 -- ======= FunSym instance OrW(or_)
 
 instance HasSpec Bool => FunSym () "or_" BoolW '[Bool, Bool] Bool where
-  propTypeSpec (Context Evidence OrW (HOLE :<> (s :: Bool) :<| End)) ts cant = caseBoolSpecX (TypeSpec ts cant) (okOr s)
-  propTypeSpec (Context Evidence OrW ((s :: Bool) :|> HOLE :<> End)) ts cant = caseBoolSpecX (TypeSpec ts cant) (okOr s)
-  propTypeSpec ctxt _ _ = badContext ctxt "TypeSpec"
-
-  propMemberSpec (Context Evidence OrW (HOLE :<> (s :: Bool) :<| End)) xs = caseBoolSpecX (MemberSpec xs) (okOr s)
-  propMemberSpec (Context Evidence OrW ((s :: Bool) :|> HOLE :<> End)) xs = caseBoolSpecX (MemberSpec xs) (okOr s)
-  propMemberSpec ctxt _ = badContext ctxt "MemberSpec"
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence OrW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App OrW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate (Context Evidence OrW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App OrW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence OrW (HOLE :<> (s :: Bool) :<| End)) spec =
+    caseBoolSpecX spec (okOr s)
+  propagate (Context Evidence OrW ((s :: Bool) :|> HOLE :<> End)) spec =
+    caseBoolSpecX spec (okOr s)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for OrW with wrong number of arguments. " ++ show ctx)
 
 or_ :: HasSpec Bool => Term Bool -> Term Bool -> Term Bool
 or_ = appTerm OrW
