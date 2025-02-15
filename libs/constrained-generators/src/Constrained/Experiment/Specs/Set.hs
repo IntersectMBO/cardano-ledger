@@ -255,7 +255,13 @@ singletons :: [Set a] -> [Set a] -- Every Set in the filterd output has size 1 (
 singletons = filter ((1 ==) . Set.size)
 
 instance (HasSpec a, Ord a) => FunSym (Ord a) "singleton_" SetW '[a] (Set a) where
-  propTypeSpec (Context Evidence SingletonW (HOLE :<> End)) (SetSpec must es size) cant
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence SingletonW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App SingletonW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence SingletonW (HOLE :<> End)) (TypeSpec (SetSpec must es size) cant)
     | not $ 1 `conformsToSpec` size =
         ErrorSpec (pure "propagateSpecFun Singleton with spec that doesn't accept 1 size set")
     | [a] <- Set.toList must
@@ -264,25 +270,12 @@ instance (HasSpec a, Ord a) => FunSym (Ord a) "singleton_" SetW '[a] (Set a) whe
         equalSpec a
     | null must = es <> notMemberSpec (Set.toList $ fold $ singletons cant)
     | otherwise = ErrorSpec (pure "propagateSpecFun Singleton with `must` of size > 1")
-  propTypeSpec ctx _ _ =
-    ErrorSpec $
-      NE.fromList
-        [ "In propTypeSpec for SingletonW[singleton_]"
-        , "The context is unreachable"
-        , show ctx
-        ]
-
-  propMemberSpec (Context Evidence SingletonW (HOLE :<> End)) es =
+  propagate (Context Evidence SingletonW (HOLE :<> End)) (MemberSpec es) =
     case Set.toList $ fold $ singletons (NE.toList es) of
       [] -> ErrorSpec $ pure "In propagateSpecFun Singleton, the sets of size 1, in MemberSpec is empty"
       (x : xs) -> MemberSpec (x :| xs)
-  propMemberSpec ctx _ =
-    ErrorSpec $
-      NE.fromList
-        [ "In propMemberSpec for SingletonW[singleton_]"
-        , "The context is unreachable"
-        , show ctx
-        ]
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for SingletonW with wrong number of arguments. " ++ show ctx)
 
   mapTypeSpec SingletonW ts =
     constrained $ \x ->
