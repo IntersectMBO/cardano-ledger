@@ -280,7 +280,7 @@ data Rep era t where
   PParamsR :: Era era => Proof era -> Rep era (PParamsF era)
   FuturePParamsR :: Era era => Proof era -> Rep era (FuturePParams era)
   PParamsUpdateR :: Era era => Proof era -> Rep era (PParamsUpdateF era)
-  CertStateR :: Era era => Proof era -> Rep era (CertStateF era)
+  CertStateR :: Reflect era => Rep era (CertStateF era)
   --
   DeltaCoinR :: Rep era DeltaCoin
   GenDelegPairR :: Era era => Rep era GenDelegPair
@@ -613,7 +613,7 @@ synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map
 synopsis (PParamsR _) (PParamsF p x) = show $ pcPParams p x
 synopsis (FuturePParamsR p) x = show $ pcFuturePParams p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
-synopsis (CertStateR _) (CertStateF p x) = show $ pcCertState p x
+synopsis CertStateR (CertStateF _ x) = show $ pcCertState x
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
 synopsis FutureGenDelegR x = show (pcFutureGenDeleg x)
@@ -773,7 +773,7 @@ genSizedRep _n (UTxOR p) = genUTxO p
 genSizedRep _ (PParamsR p) = genPParams p
 genSizedRep _ (FuturePParamsR p) = genFuturePParams p
 genSizedRep _ (PParamsUpdateR p) = genPParamsUpdate p
-genSizedRep _ (CertStateR p) = genCertState p
+genSizedRep _ CertStateR = genCertState
 genSizedRep _ DeltaCoinR = DeltaCoin <$> choose (-1000, 1000)
 genSizedRep _ GenDelegPairR = arbitrary
 genSizedRep _ FutureGenDelegR = arbitrary
@@ -1041,7 +1041,7 @@ shrinkRep (UTxOR _) _ = []
 shrinkRep (PParamsR _) _ = []
 shrinkRep (FuturePParamsR _) _ = []
 shrinkRep (PParamsUpdateR _) _ = []
-shrinkRep (CertStateR _) _ = []
+shrinkRep CertStateR _ = []
 shrinkRep CharR t = shrink t
 shrinkRep DeltaCoinR t = shrink t
 shrinkRep GenDelegPairR t = shrink t

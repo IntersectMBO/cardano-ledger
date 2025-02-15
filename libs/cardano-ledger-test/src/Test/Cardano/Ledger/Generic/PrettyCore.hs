@@ -3167,12 +3167,12 @@ instance PrettyA FutureGenDeleg where
 instance PrettyA GenDelegPair where
   prettyA = pcGenDelegPair
 
-pcCertState :: Proof era -> CertState era -> PDoc
-pcCertState p certState = case whichCertState p of
-  CertStateShelleyToBabbage -> pcShelleyCertState p certState
+pcCertState :: forall era. Reflect era => CertState era -> PDoc
+pcCertState certState = case whichCertState (reify @era) of
+  CertStateShelleyToBabbage -> pcShelleyCertState certState
 
-pcShelleyCertState :: Proof era -> ShelleyCertState era -> PDoc
-pcShelleyCertState _p (ShelleyCertState {..}) =
+pcShelleyCertState :: ShelleyCertState era -> PDoc
+pcShelleyCertState (ShelleyCertState {..}) =
   ppRecord
     "ShelleyCertState"
     [ ("pstate", pcPState shelleyCertPState)
@@ -3374,12 +3374,12 @@ psUTxOState proof (UTxOState (UTxO u) dep fs gs (IStake m _) don) =
     , ("donation", pcCoin don)
     ]
 
-pcLedgerState :: Proof era -> LedgerState era -> PDoc
+pcLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
 pcLedgerState proof ls =
   ppRecord
     "LedgerState"
     [ ("utxoState", pcUTxOState proof (lsUTxOState ls))
-    , ("certState", pcCertState proof (lsCertState ls))
+    , ("certState", pcCertState (lsCertState ls))
     ]
 
 instance Reflect era => PrettyA (LedgerState era) where
@@ -3391,7 +3391,7 @@ psLedgerState proof ls =
   ppRecord
     "LedgerState"
     [ ("utxoState", psUTxOState proof (lsUTxOState ls))
-    , ("certState", pcCertState proof (lsCertState ls))
+    , ("certState", pcCertState (lsCertState ls))
     ]
 
 pcPState :: PState era -> PDoc
@@ -3667,7 +3667,7 @@ instance Reflect era => PrettyA (CertEnv era) where
       ]
 
 instance Reflect era => PrettyA (ShelleyCertState era) where
-  prettyA = pcShelleyCertState reify
+  prettyA = pcShelleyCertState
 
 instance PrettyA x => PrettyA (Seq x) where
   prettyA x = prettyA (toList x)

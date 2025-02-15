@@ -179,9 +179,9 @@ instance Reflect era => Same era (LedgerState era) where
       ++ certState
     where
       prettyShelley :: [(String, Maybe PDoc)]
-      prettyShelley = [("ShelleyCertState", (sameCertState proof (lsCertState x1) (lsCertState x2)))]
+      prettyShelley = [("ShelleyCertState", (sameCertState (lsCertState x1) (lsCertState x2)))]
       prettyConway :: [(String, Maybe PDoc)]
-      prettyConway = [("ConwayCertState", (sameCertState proof (lsCertState x1) (lsCertState x2)))]
+      prettyConway = [("ConwayCertState", (sameCertState (lsCertState x1) (lsCertState x2)))]
       certState = case reify @era of
         Shelley -> prettyShelley
         Mary -> prettyShelley
@@ -350,13 +350,14 @@ sameTransCtx Babbage x y = eqByShow x y
 sameTransCtx Conway x y = eqByShow x y
 {-# NOINLINE sameTransCtx #-}
 
-sameCertState :: Proof era -> CertState era -> CertState era -> Maybe PDoc
-sameCertState Shelley x y = eqByShow x y
-sameCertState Allegra x y = eqByShow x y
-sameCertState Mary x y = eqByShow x y
-sameCertState Alonzo x y = eqByShow x y
-sameCertState Babbage x y = eqByShow x y
-sameCertState Conway x y = eqByShow x y
+sameCertState :: forall era. Reflect era => CertState era -> CertState era -> Maybe PDoc
+sameCertState x y = case reify @era of
+  Shelley -> eqByShow x y
+  Allegra -> eqByShow x y
+  Mary -> eqByShow x y
+  Alonzo -> eqByShow x y
+  Babbage -> eqByShow x y
+  Conway -> eqByShow x y
 {-# NOINLINE sameCertState #-}
 
 -- ==========================

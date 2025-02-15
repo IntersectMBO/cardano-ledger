@@ -351,7 +351,7 @@ demoC mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   certState <- monadTyped . runTarget env $ certStateT
-  when (mode == Interactive) $ putStrLn (show (pcCertState proof (unCertStateF certState)))
+  when (mode == Interactive) $ putStrLn (show (pcCertState (unCertStateF certState)))
   modeRepl mode proof env ""
 
 demoTestC :: TestTree
