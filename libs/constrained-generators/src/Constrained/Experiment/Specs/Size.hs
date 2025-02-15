@@ -34,6 +34,7 @@ import Constrained.Experiment.TheKnot
 
 import Constrained.Core
 import Constrained.GenT
+import Constrained.List
 import Data.Kind
 import qualified Data.List.NonEmpty as NE
 import GHC.TypeLits
@@ -59,17 +60,18 @@ instance Witness SizeW where
   semantics SizeOfW = sizeOf -- From the Sized class.
 
 instance HasSpec t => FunSym (Sized t) "sizeOf_" SizeW '[t] Integer where
-  propTypeSpec (Context Evidence SizeOfW (HOLE :<> End)) ts cant = liftSizeSpec ts cant
-  propTypeSpec ctx _ _ =
-    ErrorSpec
-      (NE.fromList ["SizeOfW[sizeOf_] on TypeSpec ", "Unreachable context, wrong number of args", show ctx])
-
-  propMemberSpec (Context Evidence SizeOfW (HOLE :<> End)) es = liftMemberSpec (NE.toList es)
-  propMemberSpec ctx _ =
-    ErrorSpec
-      ( NE.fromList
-          ["SizeOfW[sizeOf_] on MemberSpec ", "Unreachable context, wrong number of args", show ctx]
-      )
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence SizeOfW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App SizeOfW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence SizeOfW (HOLE :<> End)) (TypeSpec ts cant) =
+    liftSizeSpec ts cant
+  propagate (Context Evidence SizeOfW (HOLE :<> End)) (MemberSpec es) =
+    liftMemberSpec (NE.toList es)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for SizeOfW with wrong number of arguments. " ++ show ctx)
 
   mapTypeSpec f ts = mapTypeSpecSize f ts
 

@@ -132,15 +132,18 @@ instance Witness ProdW where
 -- ========= FstW
 
 instance (HasSpec a, HasSpec b) => FunSym () "fst_" ProdW '[Prod a b] a where
-  propTypeSpec (Context Evidence FstW (HOLE :<> End)) ts cant = cartesian @a @b (TypeSpec ts cant) TrueSpec
-  propTypeSpec ctx _ _ =
-    ErrorSpec
-      (NE.fromList ["FstW[fst_] on TypeSpec ", "Unreachable context, wrong number of args", show ctx])
-
-  propMemberSpec (Context Evidence FstW (HOLE :<> End)) es = cartesian @a @b (MemberSpec es) TrueSpec
-  propMemberSpec ctx _ =
-    ErrorSpec
-      (NE.fromList ["FstW[fst_] on MemberSpec ", "Unreachable context, wrong number of args", show ctx])
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence FstW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App FstW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence FstW (HOLE :<> End)) (TypeSpec ts cant) =
+    cartesian @a @b (TypeSpec ts cant) TrueSpec
+  propagate (Context Evidence FstW (HOLE :<> End)) (MemberSpec es) =
+    cartesian @a @b (MemberSpec es) TrueSpec
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for FstW with wrong number of arguments. " ++ show ctx)
 
   rewriteRules FstW ((pairView -> Just (x, _)) :> Nil) Evidence = Just x
   rewriteRules _ _ _ = Nothing
@@ -154,14 +157,18 @@ fst_ = appTerm FstW
 -- ========= SndW
 
 instance (HasSpec a, HasSpec b) => FunSym () "snd_" ProdW '[Prod a b] b where
-  propTypeSpec (Context _ SndW (HOLE :<> End)) ts cant = cartesian @a @b TrueSpec (TypeSpec ts cant)
-  propTypeSpec ctx _ _ =
-    ErrorSpec
-      (NE.fromList ["SndW[fst_] in MemberSpec", "Unreachable context, wrong number of args", show ctx])
-  propMemberSpec (Context _ SndW (HOLE :<> End)) es = cartesian @a @b TrueSpec (MemberSpec es)
-  propMemberSpec ctx _ =
-    ErrorSpec
-      (NE.fromList ["SndW[fst_] in MemberSpec", "Unreachable context, wrong number of args", show ctx])
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence SndW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App SndW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence SndW (HOLE :<> End)) (TypeSpec ts cant) =
+    cartesian @a @b TrueSpec (TypeSpec ts cant)
+  propagate (Context Evidence SndW (HOLE :<> End)) (MemberSpec es) =
+    cartesian @a @b TrueSpec (MemberSpec es)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for SndW with wrong number of arguments. " ++ show ctx)
 
   rewriteRules SndW ((pairView -> Just (_, y)) :> Nil) Evidence = Just y
   rewriteRules _ _ _ = Nothing
@@ -180,35 +187,38 @@ sameSnd :: Eq a1 => a1 -> [Prod a2 a1] -> [a2]
 sameSnd b ps = [a | Prod a b' <- ps, b == b']
 
 instance (HasSpec a, HasSpec b) => FunSym () "pair_" ProdW '[a, b] (Prod a b) where
-  propTypeSpec (Context _ PairW (a :|> HOLE :<> End)) (Cartesian sa sb) cant
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence PairW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App PairW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate (Context Evidence PairW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App PairW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence PairW (a :|> HOLE :<> End)) (TypeSpec (Cartesian sa sb) cant)
     | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
     | otherwise =
         ErrorSpec (NE.fromList ["propagateSpecFun (pair_ a HOLE) has conformance failure on a", show sa])
-  propTypeSpec (Context _ PairW (HOLE :<> b :<| End)) (Cartesian sa sb) cant
+  propagate (Context Evidence PairW (HOLE :<> b :<| End)) (TypeSpec (Cartesian sa sb) cant)
     | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
     | otherwise =
         ErrorSpec (NE.fromList ["propagateSpecFun (pair_ HOLE b) has conformance failure on b", show sb])
-  propTypeSpec ctx _ _ =
-    ErrorSpec
-      (NE.fromList ["PairW[pair_] on TypeSpec ", "Unreachable context, wrong number of args", show ctx])
-
-  propMemberSpec (Context _ PairW (a :|> HOLE :<> End)) es =
+  propagate (Context Evidence PairW (a :|> HOLE :<> End)) (MemberSpec es) =
     case (nub (sameFst a (NE.toList es))) of
       (w : ws) -> MemberSpec (w :| ws)
       [] ->
         ErrorSpec $
           pure
-            ("propagateSpecFun (pair_ a HOLE) on (MemberSpec " ++ show es ++ " where a does not appear in as.")
-  propMemberSpec (Context _ PairW (HOLE :<> b :<| End)) es =
+            ("propagateSpecFun (pair_ HOLE b) on (MemberSpec " ++ show es ++ " where b does not appear in bs.")
+  propagate (Context Evidence PairW (HOLE :<> b :<| End)) (MemberSpec es) =
     case (nub (sameSnd b (NE.toList es))) of
       (w : ws) -> MemberSpec (w :| ws)
       [] ->
         ErrorSpec $
           pure
             ("propagateSpecFun (pair_ HOLE b) on (MemberSpec " ++ show es ++ " where b does not appear in bs.")
-  propMemberSpec ctx _ =
-    ErrorSpec
-      (NE.fromList ["PairW[pair_] on MemberSpec ", "Unreachable context, wrong number of args", show ctx])
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for PairW with wrong number of arguments. " ++ show ctx)
 
 pair_ :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (Prod a b)
 pair_ = appTerm PairW
