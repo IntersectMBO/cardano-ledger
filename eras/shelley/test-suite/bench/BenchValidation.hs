@@ -104,7 +104,7 @@ genValidateInput n = do
 
 benchValidate ::
   forall era.
-  (API.ApplyBlock era, Era era) =>
+  API.ApplyBlock era =>
   ValidateInput era ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state (Block bh txs)) =
@@ -128,7 +128,7 @@ applyBlock (ValidateInput globals state (Block bh txs)) n =
     Left x -> error (show x)
 
 benchreValidate ::
-  (API.ApplyBlock era, Era era) =>
+  API.ApplyBlock era =>
   ValidateInput era ->
   NewEpochState era
 benchreValidate (ValidateInput globals state (Block bh txs)) =
