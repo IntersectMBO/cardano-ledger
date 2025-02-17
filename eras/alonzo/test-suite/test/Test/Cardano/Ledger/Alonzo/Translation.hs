@@ -40,10 +40,16 @@ alonzoEncodeDecodeTests :: TestTree
 alonzoEncodeDecodeTests =
   testGroup
     "encoded mary types can be decoded as alonzo types"
-    [ testProperty "decoding auxilliary" $
+    [ testProperty "decoding auxilliary (Annotator)" $
         embedTripAnnExpectation @(TxAuxData MaryEra) @(TxAuxData AlonzoEra)
           (eraProtVerLow @MaryEra)
           (eraProtVerLow @AlonzoEra)
+          (\_ _ -> pure ())
+    , testProperty "decoding auxilliary" $
+        embedTripExpectation @(TxAuxData MaryEra) @(TxAuxData AlonzoEra)
+          (eraProtVerLow @MaryEra)
+          (eraProtVerLow @AlonzoEra)
+          cborTrip
           (\_ _ -> pure ())
     , testProperty "decoding txbody" $ \txBody ->
         let hasDeprecatedField =
@@ -53,16 +59,28 @@ alonzoEncodeDecodeTests =
                   any (\ppu -> isSJust (ppu ^. ppuMinUTxOValueL)) ups
          in not hasDeprecatedField ==>
               monadicIO
-                ( run $
+                ( run $ do
                     embedTripAnnExpectation @(TxBody MaryEra) @(TxBody AlonzoEra)
                       (eraProtVerLow @MaryEra)
                       (eraProtVerLow @AlonzoEra)
                       (\_ _ -> pure ())
                       txBody
+                    embedTripExpectation @(TxBody MaryEra) @(TxBody AlonzoEra)
+                      (eraProtVerLow @MaryEra)
+                      (eraProtVerLow @AlonzoEra)
+                      cborTrip
+                      (\_ _ -> pure ())
+                      txBody
                 )
-    , testProperty "decoding witnesses" $
+    , testProperty "decoding witnesses (Annotator)" $
         embedTripAnnExpectation @(TxWits MaryEra) @(TxWits AlonzoEra)
           (eraProtVerLow @MaryEra)
           (eraProtVerLow @AlonzoEra)
+          (\_ _ -> pure ())
+    , testProperty "decoding witnesses" $
+        embedTripExpectation @(TxWits MaryEra) @(TxWits AlonzoEra)
+          (eraProtVerLow @MaryEra)
+          (eraProtVerLow @AlonzoEra)
+          cborTrip
           (\_ _ -> pure ())
     ]

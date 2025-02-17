@@ -199,6 +199,11 @@ roundTripCoreEraTypesSpec ::
   , Arbitrary (Script era)
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
+  , DecCBOR (Script era)
+  , DecCBOR (TxAuxData era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxBody era)
+  , DecCBOR (Tx era)
   , HasCallStack
   ) =>
   Spec
@@ -211,10 +216,15 @@ roundTripCoreEraTypesSpec = do
     roundTripEraSpec @era @(PParams era)
     roundTripEraSpec @era @(PParamsUpdate era)
     roundTripAnnEraSpec @era @(Script era)
+    roundTripEraSpec @era @(Script era)
     roundTripAnnEraSpec @era @(TxAuxData era)
+    roundTripEraSpec @era @(TxAuxData era)
     roundTripAnnEraSpec @era @(TxWits era)
+    roundTripEraSpec @era @(TxWits era)
     roundTripAnnEraSpec @era @(TxBody era)
+    roundTripEraSpec @era @(TxBody era)
     roundTripAnnEraSpec @era @(Tx era)
+    roundTripEraSpec @era @(Tx era)
     prop ("MemPack/CBOR Roundtrip " <> show (typeRep $ Proxy @(TxOut era))) $
       roundTripRangeExpectation @(TxOut era)
         (mkTrip encodeMemPack decNoShareCBOR)
@@ -222,6 +232,7 @@ roundTripCoreEraTypesSpec = do
         (eraProtVerHigh @era)
   describe "Core State Types" $ do
     roundTripAnnEraSpec @era @BootstrapWitness
+    roundTripEraSpec @era @BootstrapWitness
     roundTripShareEraSpec @era @SnapShots
     roundTripShareEraTypeSpec @era @DState
     roundTripShareEraTypeSpec @era @PState

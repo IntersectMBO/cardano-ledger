@@ -28,10 +28,18 @@ allegraEncodeDecodeTests =
   testGroup
     "encoded shelley types can be decoded as allegra types"
     [ testProperty
-        "decoding auxiliary data"
+        "decoding auxiliary data (Annotator)"
         ( embedTripAnnExpectation @(TxAuxData ShelleyEra) @(TxAuxData AllegraEra)
             (eraProtVerLow @ShelleyEra)
             (eraProtVerLow @AllegraEra)
+            (\_ _ -> pure ())
+        )
+    , testProperty
+        "decoding auxiliary data"
+        ( embedTripExpectation @(TxAuxData ShelleyEra) @(TxAuxData AllegraEra)
+            (eraProtVerLow @ShelleyEra)
+            (eraProtVerLow @AllegraEra)
+            cborTrip
             (\_ _ -> pure ())
         )
     ]

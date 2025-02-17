@@ -33,10 +33,18 @@ maryEncodeDecodeTests =
   testGroup
     "encoded allegra types can be decoded as mary types"
     [ testProperty
-        "decoding metadata"
+        "decoding metadata (Annotator)"
         ( embedTripAnnExpectation @(TxAuxData AllegraEra) @(TxAuxData MaryEra)
             (eraProtVerLow @AllegraEra)
             (eraProtVerLow @MaryEra)
+            (\_ _ -> pure ())
+        )
+    , testProperty
+        "decoding metadata"
+        ( embedTripExpectation @(TxAuxData AllegraEra) @(TxAuxData MaryEra)
+            (eraProtVerLow @AllegraEra)
+            (eraProtVerLow @MaryEra)
+            cborTrip
             (\_ _ -> pure ())
         )
     ]

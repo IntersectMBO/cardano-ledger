@@ -36,6 +36,7 @@ spec = do
     roundTripCborSpec @CertIx
     roundTripCborSpec @Anchor
     roundTripAnnCborSpec @BootstrapWitness
+    roundTripCborSpec @BootstrapWitness
     roundTripCborSpec @TxId
     roundTripCborSpec @GenDelegPair
     roundTripCborSpec @GenDelegs

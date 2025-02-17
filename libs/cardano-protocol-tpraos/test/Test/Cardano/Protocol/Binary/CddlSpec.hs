@@ -32,5 +32,6 @@ specForEra readCddlFiles n = do
     beforeAllCddlFile n readCddlFiles $ do
       let v = eraProtVerLow @era
       cddlRoundTripAnnCborSpec @(BHeader StandardCrypto) v "header"
+      cddlRoundTripCborSpec @(BHeader StandardCrypto) v "header"
       cddlRoundTripCborSpec @(BHBody StandardCrypto) v "header_body"
       cddlRoundTripCborSpec @(CBORGroup (OCert StandardCrypto)) v "[ operational_cert ]"

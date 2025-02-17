@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
@@ -48,6 +49,11 @@ roundTripAlonzoCommonSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , RuleListEra era
+  , DecCBOR (Script era)
+  , DecCBOR (TxAuxData era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxBody era)
+  , DecCBOR (Tx era)
   ) =>
   Spec
 roundTripAlonzoCommonSpec = do
@@ -61,6 +67,7 @@ roundTripAlonzoEraTypesSpec ::
 roundTripAlonzoEraTypesSpec = do
   describe "Alonzo era types" $ do
     roundTripAnnEraTypeSpec @era @Data
+    roundTripEraTypeSpec @era @Data
     roundTripEraTypeSpec @era @BinaryData
     -- CostModel serialization changes drastically for Conway, which requires a different
     -- QuickCheck generator, hence Arbitrary can't be reused

@@ -34,8 +34,10 @@ testCoreTypes :: TestTree
 testCoreTypes =
   testGroup
     "Core Types"
-    [ testProperty "Header" $
+    [ testProperty "Header (Annotator)" $
         roundTripAnnExpectation @(TP.BHeader StandardCrypto)
+    , testProperty "Header" $
+        roundTripCborRangeExpectation @(TP.BHeader StandardCrypto) minBound maxBound
     , testProperty "Block Header Hash" $
         roundTripExpectation @TP.HashHeader cborTrip
     , testProperty "Protocol State" $
@@ -46,8 +48,12 @@ tests :: TestTree
 tests =
   testGroup
     "Serialisation roundtrip Property Tests"
-    [ testProperty "Block" $
+    [ testProperty "Block (Annotator)" $
         roundTripAnnRangeExpectation @(Block (TP.BHeader StandardCrypto) ShelleyEra)
+          (eraProtVerLow @ShelleyEra)
+          (eraProtVerHigh @ShelleyEra)
+    , testProperty "Block" $
+        roundTripCborRangeExpectation @(Block (TP.BHeader StandardCrypto) ShelleyEra)
           (eraProtVerLow @ShelleyEra)
           (eraProtVerHigh @ShelleyEra)
     , testProperty "LEDGER Predicate Failures" $
