@@ -84,6 +84,7 @@ library
 
 library testlib
   exposed-modules:
+    Test.Cardano.Ledger.Binary
     Test.Cardano.Ledger.Binary.Arbitrary
     Test.Cardano.Ledger.Binary.Cddl
     Test.Cardano.Ledger.Binary.Cuddle

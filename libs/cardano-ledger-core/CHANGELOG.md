@@ -107,6 +107,7 @@
 
 ### `testlib`
 
+* Add `decoderEquivalenceEraSpec`
 * Converted `CertState` to a type family
 * Re-export `KeyPair`, `mkAddr` and `mkCredential` from `Test.Cardano.Ledger.Imp.Common`
 * Add `MakeStakeReference` and `MakeCredential`

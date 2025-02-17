@@ -8,11 +8,12 @@
 
 module Test.Cardano.Ledger.Core.Binary where
 
-import Cardano.Ledger.Binary (DecCBOR, decNoShareCBOR, encodeMemPack)
+import Cardano.Ledger.Binary (Annotator, DecCBOR, ToCBOR, decNoShareCBOR, encodeMemPack)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Data.Default (Default (def))
 import qualified Prettyprinter as Pretty
+import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.TreeDiff (AnsiStyle, Doc)
@@ -285,3 +286,15 @@ expectRawEqual thing expected actual =
         [ Pretty.hsep ["Expected raw representation of", thing, "to be equal:"]
         , Pretty.indent 2 $ diffExpr expected actual
         ]
+
+decoderEquivalenceEraSpec ::
+  forall era t.
+  ( Era era
+  , Eq t
+  , ToCBOR t
+  , DecCBOR (Annotator t)
+  , Arbitrary t
+  , Show t
+  ) =>
+  Spec
+decoderEquivalenceEraSpec = decoderEquivalenceSpec @t (eraProtVerLow @era) (eraProtVerHigh @era)
