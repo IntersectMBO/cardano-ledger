@@ -289,7 +289,7 @@ instance HasSpec a => Monoid (Specification a) where
 --   write this because it depends on Semigroup property of Specification.
 mapSpec ::
   forall c s t a b.
-  (FunSym c s t '[a] b, c, HasSpec a) => t c s '[a] b -> Specification a -> Specification b
+  (FunSym c s t '[a] b, c, HasSpec a, HasSpec b) => t c s '[a] b -> Specification a -> Specification b
 mapSpec f (ExplainSpec es s) = explainSpecOpt es (mapSpec f s)
 mapSpec f TrueSpec = mapTypeSpec @_ @_ @_ @'[a] @b f (emptySpec @a)
 mapSpec _ (ErrorSpec err) = ErrorSpec err
@@ -324,7 +324,7 @@ instance Witness BoolW where
 
 -- ======= FunSym instance EqualW(==.)
 
-instance (Typeable a, HasSpec Bool) => FunSym (Eq a) "==." BoolW '[a, a] Bool where
+instance (HasSpec Bool, Typeable a) => FunSym (Eq a) "==." BoolW '[a, a] Bool where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -337,7 +337,7 @@ instance (Typeable a, HasSpec Bool) => FunSym (Eq a) "==." BoolW '[a, a] Bool wh
     caseBoolSpecX spec $ \case True -> equalSpec s; False -> notEqualSpec s
   propagate (Context Evidence EqualW ((s :: a) :|> HOLE :<> End)) spec =
     caseBoolSpecX spec $ \case True -> equalSpec s; False -> notEqualSpec s
-  propagate ctx _ =
+  propagate ctx@(Context Evidence _ _) _ =
     ErrorSpec $ pure ("FunSym instance for EqualW with wrong number of arguments. " ++ show ctx)
 
 -- Note we DO NOT define (==.) here like we do for other FunSym instances. Instead (==.) is defined

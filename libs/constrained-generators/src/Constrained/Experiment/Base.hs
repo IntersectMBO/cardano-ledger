@@ -58,7 +58,6 @@ import Data.Orphans ()
 import Data.Semigroup (Max (..), getMax)
 import Data.String (fromString)
 import Data.Typeable (Proxy (..), Typeable, eqT, typeRep, (:~:) (Refl))
-import Debug.Trace
 import GHC.Stack
 import GHC.TypeLits hiding (Text)
 import Prettyprinter hiding (cat)
@@ -95,10 +94,9 @@ type FSPre c s (t :: FSType) dom rng =
   , Typeable rng
   , Witness t
   , TypeList dom
-  , All Typeable dom
   , Show (t c s dom rng)
   , Eq (t c s dom rng)
-  , HasSpec rng
+  -- , c   -- To Do Try this?
   )
 
 class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
@@ -151,7 +149,7 @@ propagateSpec spec = \case
     _ -> ErrorSpec $ pure ("function with more than 5 arguments in propagateSpec: " ++ show f)
 
 -- ========================================================================
-
+{-
 -- | Designed to make it easy to write patterns that match an App node with
 --   particular function symbol only.
 --   To be used like this
@@ -178,6 +176,7 @@ matchT (App (_fs :: t c s d r) (_xs :: List Term d)) (_x :: t' c' s' d' r') _ = 
   Refl <- eqT @r2 @r'
   Just (Evidence, c, s, t, d, r)
 matchT _ _ _ = Nothing -- A function symbol call can only match against an App
+-}
 
 sameFunSym ::
   forall c1 s1 (t1 :: FSType) d1 r1 c2 s2 (t2 :: FSType) d2 r2.
@@ -186,26 +185,24 @@ sameFunSym ::
   t2 c2 s2 d2 r2 ->
   Maybe (t1 c1 s1 d1 r1, c1 :~: c2, s1 :~: s2, t1 :~: t2, d1 :~: d2, r1 :~: r2)
 sameFunSym x y = do
-  c@Refl <- trace "C" $ eqT @c1 @c2
-  s@Refl <- trace "S" $ eqT @s1 @s2
-  t@Refl <- trace "T" $ eqT @t1 @t2
-  d@Refl <- trace "D" $ eqT @d1 @d2
-  r@Refl <- trace "R" $ eqT @r1 @r2
+  c@Refl <- eqT @c1 @c2
+  s@Refl <- eqT @s1 @s2
+  t@Refl <- eqT @t1 @t2
+  d@Refl <- eqT @d1 @d2
+  r@Refl <- eqT @r1 @r2
   if x == y
     then Just (x, c, s, t, d, r)
-    else trace "x is not equalto y" $ Nothing
+    else Nothing
 
-withDomEvidence ::
-  forall b a c1 s1 t1 d1 r1.
-  FunSym c1 s1 t1 d1 r1 =>
-  t1 c1 s1 d1 r1 ->
-  Term a ->
-  (Evidence (All HasSpec d1) -> Term a -> Maybe b) ->
-  Maybe b
-withDomEvidence t1 t@(App t2 _) f = case sameFunSym t1 t2 of
-  Just (_, Refl, Refl, Refl, Refl, Refl) -> f (Evidence @(All HasSpec d1)) t
-  Nothing -> Nothing
-withDomEvidence _ _ _ = Nothing
+-- | Here we only care about the Type 't' and the Symbol 's'
+--   The Constraint, the dom, and the rng can be anything.
+sameWitness ::
+  forall t c s d r t' c' s' d' r'.
+  (KnownSymbol s', Typeable t', FunSym c s t d r) =>
+  (t' :: FSType) c' s' d' r' -> t c s d r -> Maybe (t' c s' d r, t :~: t', s :~: s')
+sameWitness _x y = case (eqT @t' @t, eqT @s' @s) of
+  (Just m@Refl, Just n@Refl) -> Just (y, m, n)
+  _ -> Nothing
 
 -- ========================================================
 -- A Specification is tells us what constraints must hold
@@ -973,7 +970,7 @@ instance Show a => Pretty (WithPrec (Term a)) where
     App f as -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))
     To x -> parensIf (p > 10) $ "toSimpleRep_" <+> align (prettyPrec 11 x)
     From x -> parensIf (p > 10) $ "fromSimpleRep_" <+> align (prettyPrec 11 x)
-    Equal x y -> parensIf (p > 10) $ prettyPrec 11 x <+> "==." <+> prettyPrec 11 y
+    Equal x y -> parensIf (p > 10) $ prettyPrec 11 x <+> "==.(T)" <+> prettyPrec 11 y
 
 instance Show a => Pretty (Term a) where
   pretty = prettyPrec 0
