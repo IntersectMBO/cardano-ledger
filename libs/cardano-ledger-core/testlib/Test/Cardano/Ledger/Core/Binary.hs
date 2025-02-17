@@ -8,7 +8,7 @@
 
 module Test.Cardano.Ledger.Core.Binary where
 
-import Cardano.Ledger.Binary (decNoShareCBOR, encodeMemPack)
+import Cardano.Ledger.Binary (DecCBOR, decNoShareCBOR, encodeMemPack)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Data.Default (Default (def))
@@ -77,11 +77,21 @@ specTxAuxDataUpgrade ::
   , Arbitrary (TxAuxData (PreviousEra era))
   , HasCallStack
   , ToExpr (TxAuxData era)
+  , DecCBOR (TxAuxData era)
   ) =>
   Spec
-specTxAuxDataUpgrade =
-  prop "upgradeTxAuxData is preserved through serialization" $ \prevTxAuxData -> do
+specTxAuxDataUpgrade = do
+  prop "upgradeTxAuxData is preserved through serialization (Annotator)" $ \prevTxAuxData -> do
     case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTxAuxData of
+      Left err ->
+        expectationFailure $
+          "Expected to deserialize: =======================================================\n"
+            ++ show err
+      Right (curTxAuxData :: TxAuxData era) -> do
+        let upgradedTxAuxData = upgradeTxAuxData prevTxAuxData
+        expectRawEqual "TxAuxData" curTxAuxData upgradedTxAuxData
+  prop "upgradeTxAuxData is preserved through serialization" $ \prevTxAuxData -> do
+    case embedTrip (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) cborTrip prevTxAuxData of
       Left err ->
         expectationFailure $
           "Expected to deserialize: =======================================================\n"
@@ -95,12 +105,21 @@ specScriptUpgrade ::
   ( EraScript (PreviousEra era)
   , EraScript era
   , Arbitrary (Script (PreviousEra era))
+  , DecCBOR (Script era)
   , HasCallStack
   ) =>
   Spec
-specScriptUpgrade =
-  prop "upgradeScript is preserved through serialization" $ \prevScript -> do
+specScriptUpgrade = do
+  prop "upgradeScript is preserved through serialization (Annotator)" $ \prevScript -> do
     case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevScript of
+      Left err ->
+        expectationFailure $
+          "Expected to deserialize: =======================================================\n"
+            ++ show err
+      Right (curScript :: Script era) ->
+        curScript `shouldBe` upgradeScript prevScript
+  prop "upgradeScript is preserved through serialization" $ \prevScript -> do
+    case embedTrip (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) cborTrip prevScript of
       Left err ->
         expectationFailure $
           "Expected to deserialize: =======================================================\n"
@@ -115,11 +134,21 @@ specTxWitsUpgrade ::
   , Arbitrary (TxWits (PreviousEra era))
   , HasCallStack
   , ToExpr (TxWits era)
+  , DecCBOR (TxWits era)
   ) =>
   Spec
-specTxWitsUpgrade =
-  prop "upgradeTxWits is preserved through serialization" $ \prevTxWits -> do
+specTxWitsUpgrade = do
+  prop "upgradeTxWits is preserved through serialization (Annotator)" $ \prevTxWits -> do
     case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTxWits of
+      Left err ->
+        expectationFailure $
+          "Expected to deserialize: =======================================================\n"
+            ++ show err
+      Right (curTxWits :: TxWits era) -> do
+        let upgradedTxWits = upgradeTxWits prevTxWits
+        expectRawEqual "TxWits" curTxWits upgradedTxWits
+  prop "upgradeTxWits is preserved through serialization" $ \prevTxWits -> do
+    case embedTrip (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) cborTrip prevTxWits of
       Left err ->
         expectationFailure $
           "Expected to deserialize: =======================================================\n"
@@ -135,11 +164,25 @@ specTxBodyUpgrade ::
   , Arbitrary (TxBody (PreviousEra era))
   , HasCallStack
   , ToExpr (TxBody era)
+  , DecCBOR (TxBody era)
   ) =>
   Spec
-specTxBodyUpgrade =
-  prop "upgradeTxBody is preserved through serialization" $ \prevTxBody -> do
+specTxBodyUpgrade = do
+  prop "upgradeTxBody is preserved through serialization (Annotator)" $ \prevTxBody -> do
     case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTxBody of
+      Left err
+        | Right _ <- upgradeTxBody prevTxBody ->
+            -- We expect deserialization to succeed, when upgrade is possible
+            expectationFailure $
+              "Expected to deserialize: =======================================================\n"
+                ++ show err
+        | otherwise -> pure () -- Both upgrade and deserializer fail successfully
+      Right (curTxBody :: TxBody era)
+        | Right upgradedTxBody <- upgradeTxBody prevTxBody ->
+            expectRawEqual "TxBody" curTxBody upgradedTxBody
+        | otherwise -> expectationFailure "Expected upgradeTxBody to succeed"
+  prop "upgradeTxBody is preserved through serialization" $ \prevTxBody -> do
+    case embedTrip (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) cborTrip prevTxBody of
       Left err
         | Right _ <- upgradeTxBody prevTxBody ->
             -- We expect deserialization to succeed, when upgrade is possible
@@ -159,11 +202,25 @@ specTxUpgrade ::
   , Arbitrary (Tx (PreviousEra era))
   , HasCallStack
   , ToExpr (Tx era)
+  , DecCBOR (Tx era)
   ) =>
   Spec
-specTxUpgrade =
-  prop "upgradeTx is preserved through serialization" $ \prevTx -> do
+specTxUpgrade = do
+  prop "upgradeTx is preserved through serialization (Annotator)" $ \prevTx -> do
     case embedTripAnn (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) prevTx of
+      Left err
+        | Right _ <- upgradeTx prevTx ->
+            -- We expect deserialization to succeed, when upgrade is possible
+            expectationFailure $
+              "Expected to deserialize: =======================================================\n"
+                ++ show err
+        | otherwise -> pure () -- Both upgrade and deserializer fail successfully
+      Right (curTx :: Tx era)
+        | Right upgradedTx <- upgradeTx prevTx ->
+            expectRawEqual "Tx" curTx upgradedTx
+        | otherwise -> expectationFailure "Expected upgradeTx to succeed"
+  prop "upgradeTx is preserved through serialization" $ \prevTx -> do
+    case embedTrip (eraProtVerHigh @(PreviousEra era)) (eraProtVerLow @era) cborTrip prevTx of
       Left err
         | Right _ <- upgradeTx prevTx ->
             -- We expect deserialization to succeed, when upgrade is possible
@@ -192,6 +249,11 @@ specUpgrade ::
   , ToExpr (TxBody era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
+  , DecCBOR (TxAuxData era)
+  , DecCBOR (Script era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxBody era)
+  , DecCBOR (Tx era)
   ) =>
   BinaryUpgradeOpts ->
   Spec

@@ -46,6 +46,11 @@ roundTripShelleyCommonSpec ::
   , RuleListEra era
   , EraCertState era
   , Arbitrary (CertState era)
+  , DecCBOR (Script era)
+  , DecCBOR (TxAuxData era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxBody era)
+  , DecCBOR (Tx era)
   ) =>
   Spec
 roundTripShelleyCommonSpec = do

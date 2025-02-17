@@ -27,8 +27,12 @@ tests =
         roundTripCborRangeExpectation @(BabbageUtxoPredFailure BabbageEra)
           (eraProtVerLow @BabbageEra)
           (eraProtVerHigh @BabbageEra)
-    , testProperty "babbage/Block" $
+    , testProperty "babbage/Block (Annotator)" $
         roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto) BabbageEra)
+          (eraProtVerLow @BabbageEra)
+          (eraProtVerHigh @BabbageEra)
+    , testProperty "babbage/Block" $
+        roundTripCborRangeExpectation @(Block (BHeader StandardCrypto) BabbageEra)
           (eraProtVerLow @BabbageEra)
           (eraProtVerHigh @BabbageEra)
     ]
