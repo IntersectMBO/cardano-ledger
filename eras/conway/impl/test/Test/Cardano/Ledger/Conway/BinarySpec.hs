@@ -3,6 +3,7 @@
 
 module Test.Cardano.Ledger.Conway.BinarySpec (spec) where
 
+import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Genesis
 import Cardano.Ledger.Conway.Governance
@@ -13,6 +14,10 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Binary (specUpgrade)
+import Test.Cardano.Ledger.Core.Binary as Binary (
+  decoderEquivalenceCoreEraTypesSpec,
+  decoderEquivalenceEraSpec,
+ )
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
 
 spec :: Spec
@@ -29,3 +34,7 @@ spec = do
     roundTripConwayCommonSpec @ConwayEra
     -- ConwayGenesis only makes sense in Conway era
     roundTripEraSpec @ConwayEra @ConwayGenesis
+  describe "DecCBOR instances equivalence" $ do
+    Binary.decoderEquivalenceCoreEraTypesSpec @ConwayEra
+    decoderEquivalenceEraSpec @ConwayEra @(TxDats ConwayEra)
+    decoderEquivalenceEraSpec @ConwayEra @(Redeemers ConwayEra)

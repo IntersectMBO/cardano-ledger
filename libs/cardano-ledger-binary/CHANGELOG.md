@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Add `ToCBOR` instance for `PV1.Data`
 * Add `DecCBOR` instance for `Annotated a ByteString`
 * Add `originalBytesExpectedFailureMessage` needed for testing
 * Add `decodeListLikeWithCountT`
