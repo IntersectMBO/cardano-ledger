@@ -17,6 +17,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Binary.Encoding.EncCBOR (
   EncCBOR (..),
@@ -1062,8 +1063,10 @@ deriving instance EncCBOR EpochInterval
 -- Plutus
 --------------------------------------------------------------------------------
 
-instance EncCBOR PV1.Data where
-  encCBOR = fromPlainEncoding . Serialise.encode
+instance Plain.ToCBOR PV1.Data where
+  toCBOR = Serialise.encode
+
+instance EncCBOR PV1.Data
 
 instance EncCBOR PV1.ScriptContext where
   encCBOR = encCBOR . PV3.toData

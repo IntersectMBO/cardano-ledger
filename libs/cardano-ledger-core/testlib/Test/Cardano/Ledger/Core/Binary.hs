@@ -6,16 +6,23 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Core.Binary where
+module Test.Cardano.Ledger.Core.Binary (
+  BinaryUpgradeOpts (..),
+  decoderEquivalenceCoreEraTypesSpec,
+  specUpgrade,
+  decoderEquivalenceEraSpec,
+) where
 
 import Cardano.Ledger.Binary (Annotator, DecCBOR, ToCBOR, decNoShareCBOR, encodeMemPack)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
+import Cardano.Ledger.Plutus (Data)
 import Data.Default (Default (def))
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.TreeDiff (AnsiStyle, Doc)
 
 data BinaryUpgradeOpts = BinaryUpgradeOpts
@@ -298,3 +305,23 @@ decoderEquivalenceEraSpec ::
   ) =>
   Spec
 decoderEquivalenceEraSpec = decoderEquivalenceSpec @t (eraProtVerLow @era) (eraProtVerHigh @era)
+
+decoderEquivalenceCoreEraTypesSpec ::
+  forall era.
+  ( EraTx era
+  , Arbitrary (Tx era)
+  , Arbitrary (TxBody era)
+  , Arbitrary (TxWits era)
+  , Arbitrary (TxAuxData era)
+  , Arbitrary (Script era)
+  , HasCallStack
+  ) =>
+  Spec
+decoderEquivalenceCoreEraTypesSpec =
+  describe "DecCBOR instances equivalence" $ do
+    decoderEquivalenceEraSpec @era @(Data era)
+    decoderEquivalenceEraSpec @era @(Script era)
+    decoderEquivalenceEraSpec @era @(TxAuxData era)
+    decoderEquivalenceEraSpec @era @(TxWits era)
+    decoderEquivalenceEraSpec @era @(TxBody era)
+    decoderEquivalenceEraSpec @era @(Tx era)

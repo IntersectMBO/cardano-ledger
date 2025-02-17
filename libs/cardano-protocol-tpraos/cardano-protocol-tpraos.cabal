@@ -95,7 +95,10 @@ test-suite tests
   type: exitcode-stdio-1.0
   main-is: Main.hs
   hs-source-dirs: test
-  other-modules: Test.Cardano.Protocol.Binary.CddlSpec
+  other-modules:
+    Test.Cardano.Protocol.Binary.BinarySpec
+    Test.Cardano.Protocol.Binary.CddlSpec
+
   default-language: Haskell2010
   ghc-options:
     -Wall
@@ -112,7 +115,10 @@ test-suite tests
   build-depends:
     base,
     bytestring,
+    cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
+    cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-    cardano-protocol-tpraos,
+    cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
