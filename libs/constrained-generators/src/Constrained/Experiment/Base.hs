@@ -96,7 +96,6 @@ type FSPre c s (t :: FSType) dom rng =
   , TypeList dom
   , Show (t c s dom rng)
   , Eq (t c s dom rng)
-  -- , c   -- To Do Try this?
   )
 
 class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
@@ -149,34 +148,7 @@ propagateSpec spec = \case
     _ -> ErrorSpec $ pure ("function with more than 5 arguments in propagateSpec: " ++ show f)
 
 -- ========================================================================
-{-
--- | Designed to make it easy to write patterns that match an App node with
---   particular function symbol only.
---   To be used like this
---   pattern (Pat x y) <- a@(App (matchT a (EqualW @Int) -> Just(Evidence,Refl,Refl,Refl,Refl,Refl)) (x :> y :> Nil)
---   This will only match App nodes with the EqualW function symbol, and only at the Int type.
---   It recovers all the complicated type information from the 'a' which names the app node:  a@(App f xs)
-matchT ::
-  forall c1 s1 (t1 :: FSType) d1 r1 c2 s2 (t2 :: FSType) d2 r2.
-  (FunSym c1 s1 t1 d1 r1, FunSym c2 s2 t2 d2 r2) =>
-  Term r2 ->
-  t1 c1 s1 d1 r1 ->
-  t2 c2 s2 d2 r2 ->
-  Maybe (Evidence (All HasSpec d2), c1 :~: c2, s1 :~: s2, t1 :~: t2, d1 :~: d2, r1 :~: r2)
-matchT (App (_fs :: t c s d r) (_xs :: List Term d)) (_x :: t' c' s' d' r') _ = do
-  c@Refl <- eqT @c @c'
-  s@Refl <- eqT @s @s'
-  t@Refl <- eqT @t @t'
-  d@Refl <- eqT @d @d'
-  r@Refl <- eqT @r @r'
-  Refl <- eqT @c2 @c'
-  Refl <- eqT @s2 @s'
-  Refl <- eqT @t2 @t'
-  Refl <- eqT @d2 @d'
-  Refl <- eqT @r2 @r'
-  Just (Evidence, c, s, t, d, r)
-matchT _ _ _ = Nothing -- A function symbol call can only match against an App
--}
+-- 
 
 sameFunSym ::
   forall c1 s1 (t1 :: FSType) d1 r1 c2 s2 (t2 :: FSType) d2 r2.
@@ -430,8 +402,8 @@ class (Typeable a, Eq a, Show a, Show (TypeSpec a), Typeable (TypeSpec a)) => Ha
 -- That means they can be used inside (Term a)
 -- ===================================================================
 
--- The things you need to know to lift toSimpleRep and fromSimpleRep
--- to the Term level. I think they are all reasonable requirements
+-- The things you need to know to work with the generics which translates things
+-- into their SimpleRep, made of Sum and Prod
 type GenericC a =
   ( HasSpec a -- This gives Show, Eq, and Typeable instances
   , HasSimpleRep a
@@ -440,33 +412,38 @@ type GenericC a =
   )
 
 data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
+  InjLeftW :: forall a b. BaseW () "sumleft_" '[a] (Sum a b)
+  InjRightW :: forall a b. BaseW () "sumright_" '[b] (Sum a b)
+  PairW :: forall a b. BaseW () "pair_" '[a, b] (Prod a b)
+  FstW :: forall a b. BaseW () "fst_" '[Prod a b] a
+  SndW :: forall a b. BaseW () "snd_" '[Prod a b] b
   ToGenericW ::
-    GenericC a =>
-    BaseW
-      ()
-      "toGenericFn"
-      '[a]
-      (SimpleRep a)
+    GenericC a => BaseW () "toGenericFn" '[a] (SimpleRep a)
   FromGenericW ::
-    GenericC a =>
-    BaseW
-      ()
-      "fromGenericFn"
-      '[SimpleRep a]
-      a
+    GenericC a => BaseW () "fromGenericFn" '[SimpleRep a] a
 
 deriving instance Eq (BaseW c s dom rng)
 
 instance Show (BaseW c s d r) where
   show ToGenericW = "toGenericFn"
   show FromGenericW = "fromGenericFn"
+  show InjLeftW = "sumleft_"
+  show InjRightW = "sumright_"
+  show PairW = "pair_"
+  show FstW = "fst_"
+  show SndW = "snd_"
 
-baseSemW :: BaseW c s d r -> FunTy d r
-baseSemW FromGenericW = fromSimpleRep
-baseSemW ToGenericW = toSimpleRep
+baseSem :: BaseW c s d r -> FunTy d r
+baseSem FromGenericW = fromSimpleRep
+baseSem ToGenericW = toSimpleRep
+baseSem InjLeftW = SumLeft
+baseSem InjRightW = SumRight
+baseSem PairW = Prod
+baseSem FstW = prodFst
+baseSem SndW = prodSnd
 
 instance Witness BaseW where
-  semantics = baseSemW
+  semantics = baseSem
 
 -- ============== ToGenericW FunSym instance
 
@@ -590,12 +567,6 @@ data Term a where
     t c sym dom rng -> List Term dom -> Term rng
   Lit :: Literal a => a -> Term a
   V :: HasSpec a => Var a -> Term a
-  To :: GenericC a => Term a -> Term (SimpleRep a)
-  From :: GenericC a => Term (SimpleRep a) -> Term a
-  Equal :: HasSpec a => Term a -> Term a -> Term Bool
-
-(==.) :: HasSpec a => Term a -> Term a -> Term Bool
-(==.) = Equal
 
 instance Eq (Term a) where
   V x == V x' = x == x'
@@ -606,12 +577,6 @@ instance Eq (Term a) where
         w1 == w2
           && sameTerms ts ts'
       _ -> False
-  To (x :: b) == To (y :: c) = case eqT @b @c of Just Refl -> x == y; Nothing -> False
-  From (x :: Term b) == From (y :: Term c) = case eqT @b @c of Just Refl -> x == y; Nothing -> False
-  (Equal @t1 x y) == (Equal @t2 m n) =
-    case eqT @t1 @t2 of
-      Just Refl -> x == m && y == n
-      Nothing -> False
   _ == _ = False
 
 -- How to compare the args of two applications for equality
@@ -968,9 +933,7 @@ instance Show a => Pretty (WithPrec (Term a)) where
     -}
     App x Nil -> viaShow x
     App f as -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))
-    To x -> parensIf (p > 10) $ "toSimpleRep_" <+> align (prettyPrec 11 x)
-    From x -> parensIf (p > 10) $ "fromSimpleRep_" <+> align (prettyPrec 11 x)
-    Equal x y -> parensIf (p > 10) $ prettyPrec 11 x <+> "==.(T)" <+> prettyPrec 11 y
+
 
 instance Show a => Pretty (Term a) where
   pretty = prettyPrec 0
@@ -1159,4 +1122,4 @@ sameFun (Fun Evidence f) (Fun Evidence g) =
 instance Eq (Fun d r) where
   (==) = sameFun
 
--- =============================================
+

@@ -33,7 +33,7 @@ module Constrained.Experiment.Specs.ListFoldy where
 
 import Constrained.Core (Evidence (..), Var (..), eqVar, unionWithMaybe)
 import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance (conformsToSpec, mapSpec, satisfies)
+import Constrained.Experiment.Conformance (conformsToSpec, mapSpec, satisfies,(==.))
 import Constrained.Experiment.NumSpec
 import Constrained.Experiment.Specs.Size (Sized (..), genFromSizeSpec, sizeOf_)
 import Constrained.Experiment.SumList (Cost (..), Solution (No, Yes), pickAll)
@@ -419,7 +419,7 @@ instance (Typeable a, HasSpec b) => FunSym (Foldy b) "foldMap_" ListW '[[a]] b w
   mapTypeSpec (FoldMapW g) ts =
     constrained $ \x ->
       unsafeExists $ \x' ->
-        Assert (Equal x (appFun (foldMapFn g) x')) <> toPreds x' ts
+        Assert (x ==. appFun (foldMapFn g) x') <> toPreds x' ts
 
 foldMap_ :: forall a b. (Sized [a], Foldy b, HasSpec a) => (Term a -> Term b) -> Term [a] -> Term b
 foldMap_ f = appFun $ foldMapFn $ toFn $ f (V v)
@@ -471,7 +471,7 @@ instance HasSpec a => FunSym (Eq a) "elem_" ListW '[a, [a]] Bool where
     ErrorSpec $ pure ("FunSym instance for ElemW with wrong number of arguments. " ++ show ctx)
 
   rewriteRules ElemW (_ :> Lit [] :> Nil) Evidence = Just $ Lit False
-  rewriteRules ElemW (t :> Lit [a] :> Nil) Evidence = Just $ Equal t (Lit a)
+  rewriteRules ElemW (t :> Lit [a] :> Nil) Evidence = Just $ t ==. (Lit a)
   rewriteRules _ _ _ = Nothing
 
 elem_ :: (Sized [a], HasSpec a) => Term a -> Term [a] -> Term Bool

@@ -16,6 +16,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE RankNTypes #-}
 -- Semigroup (Specification a), Monoid (Specification a)
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -38,6 +39,8 @@ import Data.Semigroup (sconcat)
 import Data.Typeable (Typeable)
 import GHC.TypeLits hiding (Text)
 import Prettyprinter hiding (cat)
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 -- =========================================================================
 
@@ -289,14 +292,14 @@ instance HasSpec a => Monoid (Specification a) where
 --   write this because it depends on Semigroup property of Specification.
 mapSpec ::
   forall c s t a b.
-  (FunSym c s t '[a] b, c, HasSpec a, HasSpec b) => t c s '[a] b -> Specification a -> Specification b
+  (FunSym c s t '[a] b, c, HasSpec a, HasSpec b,HasSpec Bool) => t c s '[a] b -> Specification a -> Specification b
 mapSpec f (ExplainSpec es s) = explainSpecOpt es (mapSpec f s)
 mapSpec f TrueSpec = mapTypeSpec @_ @_ @_ @'[a] @b f (emptySpec @a)
 mapSpec _ (ErrorSpec err) = ErrorSpec err
 mapSpec f (MemberSpec as) = MemberSpec $ NE.nub $ fmap (semantics f) as
-mapSpec f (SuspendedSpec x p) =
+mapSpec f (SuspendedSpec x p) = 
   constrained $ \x' ->
-    Exists (\_ -> fatalError (pure "mapSpec")) (x :-> fold [Assert $ (Equal x' (appTerm f (V x))), p])
+    Exists (\_ -> fatalError (pure "mapSpec")) (x :-> fold [Assert $ (x' ==. appTerm f (V x)), p])
 mapSpec f (TypeSpec ts cant) = mapTypeSpec @c @s @t @'[a] @b f ts <> notMemberSpec (map (semantics f) cant)
 
 -- ================================================================================
@@ -340,13 +343,13 @@ instance (HasSpec Bool, Typeable a) => FunSym (Eq a) "==." BoolW '[a, a] Bool wh
   propagate ctx@(Context Evidence _ _) _ =
     ErrorSpec $ pure ("FunSym instance for EqualW with wrong number of arguments. " ++ show ctx)
 
--- Note we DO NOT define (==.) here like we do for other FunSym instances. Instead (==.) is defined
--- in terms of the Term constructor Equal in Constrained.Experiment.Base.
--- If we did that there would be two different representations of equality.
+infix 4 ==.
+(==.) :: (HasSpec a,HasSpec Bool) => Term a -> Term a -> Term Bool
+(==.) = appTerm EqualW
 
 -- ======= FunSym instance NotW(not_)
 
-instance HasSpec Bool => FunSym () "not_" BoolW '[Bool] Bool where
+instance (HasSpec Bool,TypeSpec Bool ~ SumSpec () ()) => FunSym () "not_" BoolW '[Bool] Bool where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -358,13 +361,12 @@ instance HasSpec Bool => FunSym () "not_" BoolW '[Bool] Bool where
   propagate ctx _ =
     ErrorSpec $ pure ("FunSym instance for NotW with wrong number of arguments. " ++ show ctx)
 
---   FIX ME undefined
--- mapTypeSpec Not (SumSpec h a b) = typeSpec $ SumSpec h b a
+  mapTypeSpec NotW (SumSpec h a b) = typeSpec $ SumSpec h b a
 
 eqFn :: forall a. (Typeable a, Eq a, HasSpec Bool) => Fun '[a, a] Bool
 eqFn = Fun (Evidence @(Eq a)) EqualW
 
-not_ :: HasSpec Bool => Term Bool -> Term Bool
+not_ :: (HasSpec Bool,TypeSpec Bool ~ SumSpec () ()) => Term Bool -> Term Bool
 not_ = appTerm NotW
 
 -- ======= FunSym instance OrW(or_)
@@ -413,3 +415,55 @@ caseBoolSpecX spec cont = case possibleValues spec of
     -- conformsToSpec on True and False takes less time than simplifying the spec.
     -- Since we are in TheKnot, we could keep the simplifySpec. Is there a good reason to?
     possibleValues s = filter (flip conformsToSpec s) [True, False]
+
+
+
+-- ==================================================================
+-- SumSpec is the TypeSpec for Sums, We will use it in TheKnot.hs
+-- ==================================================================
+
+-- | The Specification for Sums.
+data SumSpec a b
+  = SumSpecRaw
+      (Maybe String) -- A String which is the type of arg in (caseOn arg branch1 .. branchN)
+      (Maybe (Int, Int))
+      (Specification a)
+      (Specification b)
+
+pattern SumSpec ::
+  (Maybe (Int, Int)) -> (Specification a) -> (Specification b) -> SumSpec a b
+pattern SumSpec a b c <- SumSpecRaw _ a b c
+  where
+    SumSpec a b c = SumSpecRaw Nothing a b c
+
+{-# COMPLETE SumSpec #-}
+{-# COMPLETE SumSpecRaw #-}
+
+-- ============================================================================
+
+-- | Flatten nested `Let`, `Exists`, and `And` in a `Pred fn`. `Let` and
+-- `Exists` bound variables become free in the result.
+flattenPred :: HasSpec Bool => Pred -> [Pred]
+flattenPred pIn = go (freeVarNames pIn) [pIn]
+  where
+    go _ [] = []
+    go fvs (p : ps) = case p of
+      And ps' -> go fvs (ps' ++ ps)
+      -- NOTE: the order of the arguments to `==.` here are important.
+      -- The whole point of `Let` is that it allows us to solve all of `t`
+      -- before we solve the variables in `t`.
+      Let t b -> goBinder fvs b ps (\x -> (assert (t ==. (V x)) :))
+      Exists _ b -> goBinder fvs b ps (const id)
+      When b pp -> map (When b) (go fvs [pp]) ++ go fvs ps
+      Explain es pp -> map (explanation es) (go fvs [pp]) ++ go fvs ps
+      _ -> p : go fvs ps
+
+    goBinder ::
+      Set Int ->
+      Binder a ->
+      [Pred] ->
+      (HasSpec a => Var a -> [Pred] -> [Pred]) ->
+      [Pred]
+    goBinder fvs (x :-> p) ps k = k x' $ go (Set.insert (nameOf x') fvs) (p' : ps)
+      where
+        (x', p') = freshen x p fvs

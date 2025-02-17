@@ -32,15 +32,13 @@
 --    5) Syntacic only transformations
 module Constrained.Experiment.Syntax where
 
-import Constrained.Core (Rename (rename), Value (..), Var (..), eqVar, freshen, unValue)
+import Constrained.Core (Rename (rename), Value (..), Var (..), eqVar, freshen, unValue,Evidence(..))
 
 -- instances on Symbol
 
 import Constrained.Env
 import Constrained.Experiment.Base
 import Constrained.Experiment.Generic
-
--- import Constrained.Experiment.Witness
 import Constrained.GenT (GE (..), MonadGenError (..), errorGE, explain1)
 import Constrained.Graph (Graph (..))
 import Constrained.List
@@ -61,6 +59,8 @@ import Data.String (fromString)
 import Data.Typeable
 import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
+import Prelude hiding (pred)
+import GHC.Stack
 
 -- ============================================================
 -- 1) Free variables and variable names
@@ -134,30 +134,18 @@ instance HasVariables (Term a) where
     Lit {} -> mempty
     V x -> freeVar (Name x)
     App _ ts -> freeVars ts
-    To x -> freeVars x
-    From x -> freeVars x
-    Equal x y -> freeVars (x :> y :> Nil)
   freeVarSet = \case
     Lit {} -> mempty
     V x -> freeVarSet (Name x)
     App _ ts -> freeVarSet ts
-    To x -> freeVarSet x
-    From x -> freeVarSet x
-    Equal x y -> freeVarSet (x :> y :> Nil)
   countOf n = \case
     Lit {} -> 0
     V x -> countOf n (Name x)
     App _ ts -> countOf n ts
-    To x -> countOf n x
-    From x -> countOf n x
-    Equal x y -> countOf n (x :> y :> Nil)
   appearsIn n = \case
     Lit {} -> False
     V x -> appearsIn n (Name x)
     App _ ts -> appearsIn n ts
-    To x -> appearsIn n x
-    From x -> appearsIn n x
-    Equal x y -> appearsIn n (x :> y :> Nil)
 
 instance HasVariables Pred where
   freeVars = \case
@@ -289,9 +277,6 @@ backwardsSubstitution sub0 t =
       Lit a -> Lit a
       V x -> V x
       App f ts -> App f (mapListC @HasSpec (backwardsSubstitution sub0) ts)
-      To x -> To (backwardsSubstitution sub0 x)
-      From x -> From (backwardsSubstitution sub0 x)
-      Equal x y -> Equal (backwardsSubstitution sub0 x) (backwardsSubstitution sub0 y)
   where
     findMatch :: Subst -> Term a -> Maybe (Var a)
     findMatch [] _ = Nothing
@@ -312,18 +297,12 @@ fastInequality (App _ as) (App _ bs) = go as bs
     go Nil Nil = False
     go (a :> as') (b :> bs') = fastInequality a b || go as' bs'
     go _ _ = True
-fastInequality (To x) (To y) = fastInequality x y
-fastInequality (From x) (From y) = fastInequality x y
-fastInequality (Equal a b) (Equal x y) = fastInequality a x || fastInequality b y
 fastInequality _ _ = True
 
 -- ===================================================================
 
 substituteTerm :: forall a. Subst -> Term a -> Term a
 substituteTerm sub = \case
-  To x -> To $ substituteTerm sub x
-  From x -> From $ substituteTerm sub x
-  Equal x y -> Equal (substituteTerm sub x) (substituteTerm sub y)
   Lit a -> Lit a
   V x -> substVar sub x
   App f (mapList (substituteTerm sub) -> (ts :: List Term dom)) ->
@@ -339,9 +318,6 @@ substituteTerm sub = \case
 
 substituteTerm' :: forall a. Subst -> Term a -> Writer Any (Term a)
 substituteTerm' sub = \case
-  To x -> To <$> substituteTerm' sub x
-  From x -> From <$> substituteTerm' sub x
-  Equal x y -> Equal <$> substituteTerm' sub x <*> substituteTerm' sub y
   Lit a -> pure $ Lit a
   V x -> substVar sub x
   App f ts ->
@@ -384,9 +360,6 @@ substitutePred x tm = \case
 
 substTerm :: Env -> Term a -> Term a
 substTerm env = \case
-  To x -> To $ substTerm env x
-  From x -> From $ substTerm env x
-  Equal x y -> Equal (substTerm env x) (substTerm env y)
   Lit a -> Lit a
   V v
     | Just a <- lookupEnv env v -> Lit a
@@ -456,9 +429,6 @@ instance Rename (Term a) where
         Lit l -> Lit l
         V v'' -> V (rename v v' v'')
         App f a -> App f (rename v v' a)
-        To x -> To $ rename v v' x
-        From x -> From $ rename v v' x
-        Equal x y -> Equal (rename v v' x) (rename v v' y)
 
 instance Rename Pred where
   rename v v'
@@ -493,32 +463,13 @@ instance Rename (f a) => Rename (Weighted f a) where
 -- 4) Internals
 -- ============================================================================
 
-{-
--- | This extracts the semantics of a witness (i.e. a function over Terms)
---   Recall FunctionSymbols are functions that you can use when writing Terms
---   Usually the Haskel name ends in '_', i.e. not_, subset_ ,lookup_
---   And infix FunctionSymbols names end in '.', ie. ==. , <=. etc.
---   E.g  app NotW :: Term Bool -> Term Bool
---        app NotW (lit False)  ==reducesto==> not_ False
---   this functionality is embedded in the Haskel function not_
---   Note the witness (NotW) must have a FunctionSymbol instance like
---   instance FunctionSymbol "not_" BaseWitness '[Bool] Bool where ...
---             Name in Haskell^      ^  its arguments^   ^ its result
---                  The type of NotW |
-app ::
-  (HasSpec b,FunctionSymbol c sym wit as b) =>
-  wit c sym as b ->
-  FunTy (MapList Term as) (Term b)
-app fn = curryList (App fn)
--}
-
 fromLits :: List Term as -> Maybe (List Value as)
 fromLits = mapMList fromLit
 
 fromLit :: Term a -> Maybe (Value a)
 fromLit (Lit l) = pure $ Value l
-fromLit (To x) = (Value . toSimpleRep . unValue) <$> fromLit x -- MAYBE we don't want to do this?
-fromLit (From x) = (Value . fromSimpleRep . unValue) <$> fromLit x -- Why not apply unary functions to Lit ?
+-- fromLit (To x) = (Value . toSimpleRep . unValue) <$> fromLit x -- MAYBE we don't want to do this?
+-- fromLit (From x) = (Value . fromSimpleRep . unValue) <$> fromLit x -- Why not apply unary functions to Lit ?
 fromLit _ = Nothing
 
 isLit :: Term a -> Bool
@@ -851,35 +802,6 @@ envFromPred env p = case p of
     env' <- envFromPred env pp
     envFromPred env' (And ps)
 
--- ==============================================================================
-
--- | Flatten nested `Let`, `Exists`, and `And` in a `Pred fn`. `Let` and
--- `Exists` bound variables become free in the result.
-flattenPred :: Pred -> [Pred]
-flattenPred pIn = go (freeVarNames pIn) [pIn]
-  where
-    go _ [] = []
-    go fvs (p : ps) = case p of
-      And ps' -> go fvs (ps' ++ ps)
-      -- NOTE: the order of the arguments to `==.` here are important.
-      -- The whole point of `Let` is that it allows us to solve all of `t`
-      -- before we solve the variables in `t`.
-      Let t b -> goBinder fvs b ps (\x -> (assert (Equal t (V x)) :))
-      Exists _ b -> goBinder fvs b ps (const id)
-      When b pp -> map (When b) (go fvs [pp]) ++ go fvs ps
-      Explain es pp -> map (explanation es) (go fvs [pp]) ++ go fvs ps
-      _ -> p : go fvs ps
-
-    goBinder ::
-      Set Int ->
-      Binder a ->
-      [Pred] ->
-      (HasSpec a => Var a -> [Pred] -> [Pred]) ->
-      [Pred]
-    goBinder fvs (x :-> p) ps k = k x' $ go (Set.insert (nameOf x') fvs) (p' : ps)
-      where
-        (x', p') = freshen x p fvs
-
 -- ============================================================
 -- A bit more than just syntax, but it is used here
 -- Either it doesn't evaluate successfully: Left (NE.NonEmpty whatWentWrong),
@@ -894,9 +816,6 @@ runTermE env = \case
   App f (ts :: List Term dom) -> do
     vs <- mapMList (fmap Identity . runTermE env) ts
     pure $ uncurryList_ runIdentity (semantics f) vs
-  To x -> toSimpleRep <$> runTermE env x
-  From x -> fromSimpleRep <$> runTermE env x
-  Equal x y -> (==) <$> runTermE env x <*> runTermE env y
 
 runTerm :: MonadGenError m => Env -> Term a -> m a
 runTerm env x = case runTermE env x of
@@ -944,3 +863,115 @@ isTrueSpec _ = False
 
 prettyLinear :: [SolverStage] -> Doc ann
 prettyLinear = vsep' . map pretty
+
+
+-- ==========================================
+-- Regularizing
+
+regularize :: HasVariables t => Var a -> t -> Var a
+regularize v t =
+  case [nameHint v' | Name v' <- Set.toList $ freeVarSet t, nameOf v' == nameOf v, nameHint v' /= "v"] of
+    [] -> v
+    nh : _ -> v {nameHint = nh}
+
+regularizeBinder :: Binder a -> Binder a
+regularizeBinder (x :-> p) = x' :-> substitutePred x (V x') (regularizeNamesPred p)
+  where
+    x' = regularize x p
+
+regularizeNamesPred :: Pred -> Pred
+regularizeNamesPred pred = case pred of
+  ElemPred {} -> pred
+  Monitor {} -> pred
+  And ps -> And $ map regularizeNamesPred ps
+  Exists k b -> Exists k (regularizeBinder b)
+  Subst v t p -> regularizeNamesPred (substitutePred v t p)
+  Let t b -> Let t (regularizeBinder b)
+  Assert {} -> pred
+  Reifies {} -> pred
+  DependsOn {} -> pred
+  ForAll t b -> ForAll t (regularizeBinder b)
+  Case t bs -> Case t (mapList (mapWeighted regularizeBinder) bs)
+  When b p' -> When b (regularizeNamesPred p')
+  GenHint {} -> pred
+  TruePred {} -> pred
+  FalsePred {} -> pred
+  Explain es p' -> Explain es (regularizeNamesPred p')
+
+regularizeNames :: Specification a -> Specification a
+regularizeNames (ExplainSpec es x) = explainSpecOpt es (regularizeNames x)
+regularizeNames (SuspendedSpec x p) =
+  SuspendedSpec x' p'
+  where
+    x' :-> p' = regularizeBinder (x :-> p)
+regularizeNames spec = spec
+
+-- ===========================================================================
+-- | Construct a Context from a Var and a Term (which we hope has exactly
+--   one occurrence of that Var). Runs monadically, and fails with a error message
+--   if that property does not hold. Note that every FunSym like EqualW
+--   identifes needed constraints e.g. EqualW :: Typeable a => EqW (Eq a) "==." [a, a] Bool
+--                                                                 ^ -----needed constraint
+--   This constraint is required by the App constructor, so we extract in and stuff it
+--   in the Evidence parameter of Context 
+--   Context :: Evidence c -> t c s dom rng -> CtxtList Pre dom hole -> Context c s t dom rng hole
+
+
+
+toCtx ::
+  forall m v a.
+  ( MonadGenError m
+  , HasCallStack
+  , HasSpec a
+  , HasSpec v
+  ) =>
+  Var v ->
+  Term a ->
+  m (Ctx v a)
+toCtx v t
+  | countOf (Name v) t > 1 =
+      fatalError $ NE.fromList
+         ["Can't build a single-hole context from a variable " ++ show v ++ " in term " ++ show t
+         , "A context is always constructed from an (App f xs) term."]
+  | otherwise = go t
+  where
+    go :: forall b. Term b -> m (Ctx v b)
+    go (Lit i) = 
+        fatalError $ 
+           NE.fromList
+             [ "toCtx applied to literal: (Lit " ++ show i ++ ")"
+             , "A context is always constructed from an (App f xs) term."]
+    go (App f as) =  do hidden <- toCtxList v as
+                        case hidden of
+                          (Hide clist) -> pure (Ctx (Context Evidence f clist))
+    go (V v')
+      | Just Refl <- eqVar v v' = pure $ HOLE
+      | otherwise = fatalError $ NE.fromList
+            [ "A context is always constructed from an (App f xs) term,"
+            , "with a single variable "++show v ++"@("++ show (typeOf v)++")"
+            , "Instead we found an unknown variable "++show v' ++"@("++ show (typeOf v')++")" ]
+
+data HiddenClist mode ds v where
+   Hide :: CList mode ds v y -> HiddenClist mode ds v    
+
+toCtxList :: forall m v as. 
+             (All HasSpec as, HasSpec v, MonadGenError m, HasCallStack) =>
+             Var v -> List Term as -> m (HiddenClist Pre as v)
+toCtxList v l = prefix l
+  where prefix :: forall ds. All HasSpec ds => List Term ds -> m (HiddenClist Pre ds v)
+        prefix Nil = fatalError (pure $ "toCtxList without hole, for variable "++show v)
+        prefix (Lit n :> ts) = do
+           Hide ctx <- prefix ts
+           pure $ Hide (n :|> ctx)
+        prefix (t :> ts) = do
+           ctx <- toCtx v t
+           Hide suf <- suffix ts
+           pure $ Hide (ctx :<> suf)
+              
+        suffix :: forall zs . List Term zs -> m (HiddenClist Post zs v)
+        suffix Nil = pure (Hide End)
+        suffix (Lit n :> ts) = do
+          Hide ys <- suffix ts
+          pure $ Hide (n :<| ys)
+        suffix (_ :> _) = fatalError (pure "toCtxList with too many holes")
+ 

@@ -33,7 +33,7 @@ module Constrained.Experiment.Specs.Set where
 
 import Constrained.Core (Evidence (..))
 import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance (conformsToSpec, not_, satisfies)
+import Constrained.Experiment.Conformance (conformsToSpec, not_, satisfies,(==.))
 import Constrained.Experiment.NumSpec
 import Constrained.Experiment.Specs.ListFoldy (FoldSpec (..), ListSpec (..), elem_, knownUpperBound)
 import Constrained.Experiment.Specs.Size (Sized (..), maxSpec, sizeOf_)

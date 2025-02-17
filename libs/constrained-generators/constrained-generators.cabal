@@ -37,7 +37,6 @@ library
     Constrained.Experiment.Generic
     Constrained.Experiment.NumSpec
     Constrained.Experiment.Specs.ListFoldy
-    Constrained.Experiment.Specs.Pairs
     Constrained.Experiment.Specs.Set
     Constrained.Experiment.Specs.Size
     Constrained.Experiment.Specs.Sum
