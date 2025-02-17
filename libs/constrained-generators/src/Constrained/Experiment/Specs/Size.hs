@@ -26,7 +26,7 @@
 module Constrained.Experiment.Specs.Size where
 
 import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance (satisfies)
+import Constrained.Experiment.Conformance (satisfies,(==.))
 import Constrained.Experiment.Generic
 import Constrained.Experiment.NumSpec
 import Constrained.Experiment.Syntax
@@ -81,7 +81,7 @@ mapTypeSpecSize ::
 mapTypeSpecSize SizeOfW ts =
   constrained $ \x ->
     unsafeExists $ \x' ->
-      Assert (Equal x (sizeOf_ x')) <> toPreds @t x' ts
+      Assert (x ==. sizeOf_ x') <> toPreds @t x' ts
 
 sizeOfFn :: forall a. (HasSpec a, Sized a) => Fun '[a] Integer
 sizeOfFn = Fun Evidence SizeOfW

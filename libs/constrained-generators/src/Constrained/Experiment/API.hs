@@ -9,8 +9,6 @@ module Constrained.Experiment.API (
   Witness (..),
   BaseW (ToGenericW, FromGenericW),
   BoolW (NotW, OrW, EqualW),
-  ProdW (FstW, SndW, PairW),
-  SumW (InjLeftW, InjRightW),
   NumOrdW (LessOrEqualW, LessW),
   IntW (AddW, NegateW),
   SizeW (SizeOfW),
@@ -109,9 +107,14 @@ module Constrained.Experiment.API (
   subset_,
   disjoint_,
   fromList_,
-  pattern (:==.),
+  pattern Equal,
   pattern ToGeneric,
   pattern FromGeneric,
+  pattern InjLeft,
+  pattern InjRight,
+  pattern Fst,
+  pattern Snd,
+  pattern Pair,  
 )
 where
 
@@ -129,7 +132,6 @@ import Constrained.Experiment.Base (
   notEqualSpec,
   notMemberSpec,
   toGeneric_,
-  (==.),
  )
 import Constrained.Experiment.Conformance (
   BoolW (..),
@@ -137,6 +139,7 @@ import Constrained.Experiment.Conformance (
   conformsToSpecE,
   not_,
   or_,
+  (==.),
   satisfies,
  )
 import Constrained.Experiment.Generic (HasSimpleRep (..))
@@ -152,10 +155,9 @@ import Constrained.Experiment.NumSpec (
 
 -- instances only
 
-import Constrained.Experiment.Specs.Pairs (ProdW (..), fst_, pair_, snd_)
+-- import Constrained.Experiment.Specs.Pairs (ProdW (..), fst_, pair_, snd_)
 import Constrained.Experiment.Specs.Sum (
   IsNormalType,
-  SumW (..),
   branch,
   branchW,
   cJust_,
@@ -174,8 +176,6 @@ import Constrained.Experiment.Specs.Sum (
   reify',
   right_,
   sel,
-  sumleft_,
-  sumright_,
  )
 import Constrained.Experiment.TheKnot (
   debugSpec,
@@ -189,7 +189,17 @@ import Constrained.Experiment.TheKnot (
   (<=.),
   pattern FromGeneric,
   pattern ToGeneric,
-  pattern (:==.),
+  pattern Equal,
+  pattern InjLeft,
+  pattern InjRight,
+  pattern Fst,
+  pattern Snd,
+  pattern Pair,
+  fst_, 
+  pair_, 
+  snd_,
+  sumleft_,
+  sumright_,
  )
 
 import Constrained.Experiment.Syntax (
