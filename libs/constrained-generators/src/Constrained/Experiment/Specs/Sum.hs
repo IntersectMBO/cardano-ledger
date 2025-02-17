@@ -28,8 +28,8 @@
 
 module Constrained.Experiment.Specs.Sum (
   IsNormalType,
-  sumleft_,
-  sumright_,
+  -- sumleft_,
+  -- sumright_,
   left_,
   right_,
   cJust_,
@@ -48,7 +48,6 @@ module Constrained.Experiment.Specs.Sum (
   onJust,
   isJust,
   chooseSpec,
-  SumW (..),
 ) where
 
 import Constrained.Experiment.Base
@@ -56,37 +55,14 @@ import Constrained.Experiment.Conformance (conformsToSpec, satisfies)
 import Constrained.Experiment.Generic
 import Constrained.Experiment.Syntax (exists, forAll, letBind, mkCase, reify)
 import Constrained.Experiment.TheKnot
-import Data.Kind (Constraint, Type)
 import GHC.TypeLits (Symbol)
 import GHC.TypeNats
-
 -- import Test.QuickCheck (Arbitrary (..), oneof)
 import Constrained.Core
-import Constrained.Experiment.Specs.Pairs (fst_, pair_, snd_)
 import Constrained.List
 import Constrained.Spec.Pairs ()
-import Data.List.NonEmpty (NonEmpty ((:|)))
-import qualified Data.List.NonEmpty as NE
 import Data.Typeable
 
-{-
-pattern SLeft ::
-  forall a b c. (FunSym () "sumleft_" SumW '[a] (Sum a b)) =>
-              (c ~ (Sum a b)) => Term a -> Term c
-pattern SLeft a <- t@(App (matchT t (InjLeftW @a @b) -> Just(Evidence,Refl,Refl,Refl,Refl,Refl)) (a :> Nil))
-
-pattern PLeft ::
-  forall a b c. (FunSym () "sumleft_" SumW '[a] (Sum a b)) =>
-              (c ~ (Sum a b), FunSym () "sumleft_" SumW '[a] (Sum a b),HasSpec a,HasSpec c) => Term a -> Term c
-pattern PLeft a <- (App (sameFunSym (InjLeftW @a @b) -> Just(injLeftW,Refl,Refl,Refl,Refl,Refl)) (a :> Nil))
-
-foo :: Term a -> String
-foo (V _) = "VAR"
-foo (Lit _) = "LIT"
--- foo (SLeft x) = "InjLeft"
-foo (Equal _ _) = "Equal"
-foo _ = "other"
--}
 ------------------------------------------------------------------------
 -- Generics
 ------------------------------------------------------------------------
@@ -164,88 +140,9 @@ instance
   ) =>
   HasSpec (Either a b)
 
-------------------------------------------------------------------------
--- Sums
-------------------------------------------------------------------------
-
-data SumW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  InjLeftW :: forall a b. SumW () "sumleft_" '[a] (Sum a b)
-  InjRightW :: forall a b. SumW () "sumright_" '[b] (Sum a b)
-
-deriving instance Eq (SumW c s dom rng)
-
-instance Show (SumW c s dom rng) where
-  show InjLeftW = "sumleft_"
-  show InjRightW = "sumright_"
-
-sumSem :: SumW c sym dom rng -> FunTy dom rng
-sumSem InjLeftW = SumLeft
-sumSem InjRightW = SumRight
-
-instance Witness SumW where
-  semantics = sumSem
-
--- ============= InjLeftW ====
-
-instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_" SumW '[a] (Sum a b) where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context Evidence InjLeftW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App InjLeftW (v' :> Nil)) (v :-> ps)
-  propagate (Context Evidence InjLeftW (HOLE :<> End)) (TypeSpec (SumSpec _ sl _) cant) =
-    sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
-  propagate (Context Evidence InjLeftW (HOLE :<> End)) (MemberSpec es) =
-    case [a | SumLeft a <- NE.toList es] of
-      (x : xs) -> MemberSpec (x :| xs)
-      [] ->
-        ErrorSpec $
-          pure $
-            "propMemberSpec (sumleft_ HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
-  propagate ctx _ =
-    ErrorSpec $ pure ("FunSym instance for InjLeftW with wrong number of arguments. " ++ show ctx)
-
-  -- NOTE: this function over-approximates and returns a liberal spec.
-  mapTypeSpec f ts = case f of
-    InjLeftW -> typeSpec $ SumSpec Nothing (typeSpec ts) (ErrorSpec (pure "mapTypeSpec InjLeftW"))
-
-sumleft_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term a -> Term (Sum a b)
-sumleft_ = appTerm InjLeftW
-
--- ============= InjRightW ====
-
-instance
-  (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
-  FunSym () "sumright_" SumW '[b] (Sum a b)
-  where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context Evidence InjRightW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App InjRightW (v' :> Nil)) (v :-> ps)
-  propagate (Context Evidence InjRightW (HOLE :<> End)) (TypeSpec (SumSpec _ _ sr) cant) =
-    sr <> foldMap notEqualSpec [a | SumRight a <- cant]
-  propagate (Context Evidence InjRightW (HOLE :<> End)) (MemberSpec es) =
-    case [a | SumRight a <- NE.toList es] of
-      (x : xs) -> MemberSpec (x :| xs)
-      [] ->
-        ErrorSpec $
-          pure $
-            "propagate(InjRight HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
-  propagate ctx _ =
-    ErrorSpec $ pure ("FunSym instance for InjRightW with wrong number of arguments. " ++ show ctx)
-
-  -- NOTE: this function over-approximates and returns a liberal spec.
-  mapTypeSpec f ts = case f of
-    InjRightW -> typeSpec $ SumSpec Nothing (ErrorSpec (pure "mapTypeSpec InjRightW")) (typeSpec ts)
-
-sumright_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term b -> Term (Sum a b)
-sumright_ = appTerm InjRightW
 
 -- ====================================================
--- All the magic lives here
+-- All the magic for things like 'caseOn', 'match', forAll' etc. lives here
 -- Classes and type families about Sum, Prod, construtors, selectors
 -- These let us express the types of things like 'match' and 'caseOn'
 
@@ -379,35 +276,6 @@ instance
 ------------------------------------------------------------------------
 -- Syntax
 ------------------------------------------------------------------------
-{-
-fst_ ::
-  forall a b.
-  ( HasSpec a
-  , HasSpec b
-  ) =>
-  Term (a, b) ->
-  Term a
-fst_ = sel @0
-
-snd_ ::
-  forall a b.
-  ( HasSpec a
-  , HasSpec b
-  ) =>
-  Term (a, b) ->
-  Term b
-snd_ = sel @1
-
-pair_ ::
-  forall a b.
-  ( HasSpec a
-  , HasSpec b
-  ) =>
-  Term a ->
-  Term b ->
-  Term (a, b)
-pair_ a b = fromGeneric_ $ app pairFn a b
--}
 
 left_ ::
   ( HasSpec a
