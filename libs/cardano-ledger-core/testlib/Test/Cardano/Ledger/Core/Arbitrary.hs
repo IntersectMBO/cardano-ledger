@@ -138,6 +138,8 @@ import qualified Data.VMap as VMap
 import Data.Word (Word16, Word64, Word8)
 import GHC.Stack
 import Generic.Random (genericArbitraryU)
+import Numeric.Natural (Natural)
+import qualified PlutusLedgerApi.V1 as PV1
 import System.Random.Stateful (StatefulGen, uniformRM)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
@@ -897,6 +899,22 @@ instance Era era => Arbitrary (Datum era) where
       , DatumHash <$> arbitrary
       , Datum . dataToBinaryData <$> arbitrary
       ]
+
+instance Arbitrary PV1.Data where
+  arbitrary = resize 5 (sized genData)
+    where
+      genData n
+        | n > 0 =
+            oneof
+              [ PV1.I <$> arbitrary
+              , PV1.B <$> arbitrary
+              , PV1.Map <$> listOf ((,) <$> genData (n `div` 2) <*> genData (n `div` 2))
+              , PV1.Constr
+                  <$> fmap fromIntegral (arbitrary :: Gen Natural)
+                  <*> listOf (genData (n `div` 2))
+              , PV1.List <$> listOf (genData (n `div` 2))
+              ]
+        | otherwise = oneof [PV1.I <$> arbitrary, PV1.B <$> arbitrary]
 
 genValidCostModel :: Language -> Gen CostModel
 genValidCostModel lang = do

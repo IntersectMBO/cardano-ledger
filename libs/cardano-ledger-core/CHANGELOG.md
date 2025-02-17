@@ -107,6 +107,7 @@
 
 ### `testlib`
 
+* Add `Arbitrary` instance for `PV1.Data`
 * Add `Arbitrary` instances for `Data`, `BinaryData` and `Datum`
 * Add `decoderEquivalenceEraSpec`
 * Converted `CertState` to a type family
