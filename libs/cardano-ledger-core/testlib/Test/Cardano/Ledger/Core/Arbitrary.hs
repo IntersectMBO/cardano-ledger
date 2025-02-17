@@ -103,6 +103,7 @@ import Cardano.Ledger.Plutus.CostModels (
   mkCostModelsLenient,
   updateCostModels,
  )
+import Cardano.Ledger.Plutus.Data (BinaryData, Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.PoolParams (
@@ -887,6 +888,23 @@ instance Arbitrary Prices where
 
 instance Arbitrary CostModel where
   arbitrary = elements nonNativeLanguages >>= genValidCostModel
+
+instance Era era => Arbitrary (Data era) where
+  arbitrary = Data <$> arbitrary
+
+instance Era era => Arbitrary (BinaryData era) where
+  arbitrary = dataToBinaryData <$> arbitrary
+
+instance
+  Era era =>
+  Arbitrary (Datum era)
+  where
+  arbitrary =
+    oneof
+      [ pure NoDatum
+      , DatumHash <$> arbitrary
+      , Datum . dataToBinaryData <$> arbitrary
+      ]
 
 genValidCostModel :: Language -> Gen CostModel
 genValidCostModel lang = do

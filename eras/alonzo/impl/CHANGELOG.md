@@ -28,6 +28,7 @@
 
 * Add `DecCBOR` instances for `TranslationInstance`
 * Expose `alonzoFixupFees`
+* Move `Arbitrary` instances for `Data`, `BinaryData` and `Datum` to `cardano-ledger-core`
 
 ## 1.12.0.0
 
