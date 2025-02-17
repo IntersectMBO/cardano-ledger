@@ -31,6 +31,12 @@
 
 ### `testlib`
 
+* Add:
+  * `decoderEquivalenceSpec`
+  * `decoderEquivalenceExpectation`
+  * `decoderEquivalenceProp`
+  * `cddlDecoderEquivalenceSpec`
+  * `huddleDecoderEquivalenceSpec`
 * Re-export types `Doc` and `AnsiStyle` in `Test.Cardano.Ledger.Binary.TreeDiff`
 * `diffExpr` and `diffExprCompact` changed type signature
 * Add `diffExprString` and `diffExprCompactString`, which replace the old implementations

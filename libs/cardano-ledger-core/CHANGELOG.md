@@ -106,6 +106,7 @@
 
 ### `testlib`
 
+* Add `decoderEquivalenceEraSpec`
 * Re-export `KeyPair`, `mkAddr` and `mkCredential` from `Test.Cardano.Ledger.Imp.Common`
 * Add `MakeStakeReference` and `MakeCredential`
 * Deprecate `mkCred` in favor of `mkCredential` from `MakeCredential`
