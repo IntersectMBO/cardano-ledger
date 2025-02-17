@@ -1,4 +1,5 @@
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -108,6 +109,9 @@ module Constrained.Experiment.API (
   subset_,
   disjoint_,
   fromList_,
+  pattern (:==.),
+  pattern ToGeneric,
+  pattern FromGeneric,
 )
 where
 
@@ -183,6 +187,9 @@ import Constrained.Experiment.TheKnot (
   whenTrue,
   (<.),
   (<=.),
+  pattern FromGeneric,
+  pattern ToGeneric,
+  pattern (:==.),
  )
 
 import Constrained.Experiment.Syntax (

@@ -186,7 +186,7 @@ compose_ f g = appTerm $ ComposeW f g -- @b @c1 @c2 @s1 @s2 @t1 @t2 @a @r f g
 
 -- =============================================================
 
-composeFn :: HasSpec b => Fun '[b] c -> Fun '[a] b -> Fun '[a] c
+composeFn :: (HasSpec b, HasSpec a, HasSpec c) => Fun '[b] c -> Fun '[a] b -> Fun '[a] c
 composeFn (Fun (Evidence :: Evidence x) f) (Fun (Evidence :: Evidence y) g) = (Fun (Evidence @(x, y)) (ComposeW f g))
 
 -- flipFn :: forall a b r. (All HasSpec '[b, a], HasSpec r) => Fun '[a,b] r -> Fun '[b,a] r
