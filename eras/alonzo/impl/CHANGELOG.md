@@ -30,6 +30,7 @@
 * Add `DecCBOR` instances for `TranslationInstance`
 * Converted `CertState` to a type family
 * Expose `alonzoFixupFees`
+* Move `Arbitrary` instances for `Data`, `BinaryData` and `Datum` to `cardano-ledger-core`
 
 ## 1.12.0.0
 

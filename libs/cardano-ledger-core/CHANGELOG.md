@@ -107,6 +107,7 @@
 
 ### `testlib`
 
+* Add `Arbitrary` instances for `Data`, `BinaryData` and `Datum`
 * Add `decoderEquivalenceEraSpec`
 * Converted `CertState` to a type family
 * Re-export `KeyPair`, `mkAddr` and `mkCredential` from `Test.Cardano.Ledger.Imp.Common`
