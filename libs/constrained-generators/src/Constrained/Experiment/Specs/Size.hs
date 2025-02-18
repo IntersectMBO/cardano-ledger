@@ -26,11 +26,11 @@
 module Constrained.Experiment.Specs.Size where
 
 import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance (satisfies,(==.))
+import Constrained.Experiment.Conformance (satisfies)
 import Constrained.Experiment.Generic
 import Constrained.Experiment.NumSpec
 import Constrained.Experiment.Syntax
-import Constrained.Experiment.TheKnot
+import Constrained.Experiment.TheKnot (genFromSpecT, (<=.), (==.))
 
 import Constrained.Core
 import Constrained.GenT

@@ -30,7 +30,7 @@
 module Constrained.Experiment.NumSpec where
 
 import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance (caseBoolSpecX)
+import Constrained.Experiment.Conformance ()
 import Constrained.Experiment.Generic
 import Constrained.List
 
@@ -765,53 +765,3 @@ negateFn :: forall a. NumLike a => Term a -> Term a
 negateFn = appTerm NegateW
 
 -- ============================================================
-
-instance
-  (Typeable a, HasSpec Bool, HasSpec a, OrdLike a) =>
-  FunSym (OrdLike a) "<=." NumOrdW '[a, a] Bool
-  where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context Evidence LessOrEqualW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App LessOrEqualW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context Evidence LessOrEqualW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App LessOrEqualW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate (Context Evidence LessOrEqualW (HOLE :<> l :<| End)) spec =
-    caseBoolSpecX spec $ \case True -> leqSpec l; False -> gtSpec l
-  propagate (Context Evidence LessOrEqualW (l :|> HOLE :<> End)) spec =
-    caseBoolSpecX spec $ \case True -> geqSpec l; False -> ltSpec l
-  propagate ctx _ =
-    ErrorSpec $ pure ("FunSym instance for LessOrEqualW with wrong number of arguments. " ++ show ctx)
-
-{- In TheKnot, where there is a HasSpec instance
-infixr 4 <.
-(<=.) :: forall a. (HasSpec Bool,OrdLike a) => Term a -> Term a -> Term Bool
-(<=.) = appTerm LessOrEqualW
--}
-
-instance
-  (Typeable a, HasSpec Bool, HasSpec a, OrdLike a) =>
-  FunSym (OrdLike a) "<." NumOrdW '[a, a] Bool
-  where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context Evidence LessW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App LessW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context Evidence LessW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App LessW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate (Context Evidence LessW (HOLE :<> l :<| End)) spec =
-    caseBoolSpecX spec $ \case True -> ltSpec l; False -> geqSpec l
-  propagate (Context Evidence LessW (l :|> HOLE :<> End)) spec =
-    caseBoolSpecX spec $ \case True -> gtSpec l; False -> leqSpec l
-  propagate ctx _ =
-    ErrorSpec $ pure ("FunSym instance for LessW with wrong number of arguments. " ++ show ctx)
-
-{- In TheKnot, where there is a HasSpec instance
-infixr 4 <.
-(<.) :: forall a. (HasSpec Bool,OrdLike a) => Term a -> Term a -> Term Bool
-(<.) = appTerm LessW
--}

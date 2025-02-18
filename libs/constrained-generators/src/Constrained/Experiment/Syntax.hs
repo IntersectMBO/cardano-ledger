@@ -32,7 +32,15 @@
 --    5) Syntacic only transformations
 module Constrained.Experiment.Syntax where
 
-import Constrained.Core (Rename (rename), Value (..), Var (..), eqVar, freshen, unValue,Evidence(..))
+import Constrained.Core (
+  Evidence (..),
+  Rename (rename),
+  Value (..),
+  Var (..),
+  eqVar,
+  freshen,
+  unValue,
+ )
 
 -- instances on Symbol
 
@@ -57,10 +65,10 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.String (fromString)
 import Data.Typeable
+import GHC.Stack
 import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 import Prelude hiding (pred)
-import GHC.Stack
 
 -- ============================================================
 -- 1) Free variables and variable names
@@ -864,7 +872,6 @@ isTrueSpec _ = False
 prettyLinear :: [SolverStage] -> Doc ann
 prettyLinear = vsep' . map pretty
 
-
 -- ==========================================
 -- Regularizing
 
@@ -907,17 +914,15 @@ regularizeNames (SuspendedSpec x p) =
 regularizeNames spec = spec
 
 -- ===========================================================================
+
 -- | Construct a Context from a Var and a Term (which we hope has exactly
 --   one occurrence of that Var). Runs monadically, and fails with a error message
 --   if that property does not hold. Note that every FunSym like EqualW
 --   identifes needed constraints e.g. EqualW :: Typeable a => EqW (Eq a) "==." [a, a] Bool
 --                                                                 ^ -----needed constraint
 --   This constraint is required by the App constructor, so we extract in and stuff it
---   in the Evidence parameter of Context 
+--   in the Evidence parameter of Context
 --   Context :: Evidence c -> t c s dom rng -> CtxtList Pre dom hole -> Context c s t dom rng hole
-
-
-
 toCtx ::
   forall m v a.
   ( MonadGenError m
@@ -930,48 +935,56 @@ toCtx ::
   m (Ctx v a)
 toCtx v t
   | countOf (Name v) t > 1 =
-      fatalError $ NE.fromList
-         ["Can't build a single-hole context from a variable " ++ show v ++ " in term " ++ show t
-         , "A context is always constructed from an (App f xs) term."]
+      fatalError $
+        NE.fromList
+          [ "Can't build a single-hole context from a variable " ++ show v ++ " in term " ++ show t
+          , "A context is always constructed from an (App f xs) term."
+          ]
   | otherwise = go t
   where
     go :: forall b. Term b -> m (Ctx v b)
-    go (Lit i) = 
-        fatalError $ 
-           NE.fromList
-             [ "toCtx applied to literal: (Lit " ++ show i ++ ")"
-             , "A context is always constructed from an (App f xs) term."]
-    go (App f as) =  do hidden <- toCtxList v as
-                        case hidden of
-                          (Hide clist) -> pure (Ctx (Context Evidence f clist))
+    go (Lit i) =
+      fatalError $
+        NE.fromList
+          [ "toCtx applied to literal: (Lit " ++ show i ++ ")"
+          , "A context is always constructed from an (App f xs) term."
+          ]
+    go (App f as) = do
+      hidden <- toCtxList v as
+      case hidden of
+        (Hide clist) -> pure (Ctx (Context Evidence f clist))
     go (V v')
       | Just Refl <- eqVar v v' = pure $ HOLE
-      | otherwise = fatalError $ NE.fromList
-            [ "A context is always constructed from an (App f xs) term,"
-            , "with a single variable "++show v ++"@("++ show (typeOf v)++")"
-            , "Instead we found an unknown variable "++show v' ++"@("++ show (typeOf v')++")" ]
+      | otherwise =
+          fatalError $
+            NE.fromList
+              [ "A context is always constructed from an (App f xs) term,"
+              , "with a single variable " ++ show v ++ "@(" ++ show (typeOf v) ++ ")"
+              , "Instead we found an unknown variable " ++ show v' ++ "@(" ++ show (typeOf v') ++ ")"
+              ]
 
 data HiddenClist mode ds v where
-   Hide :: CList mode ds v y -> HiddenClist mode ds v    
+  Hide :: CList mode ds v y -> HiddenClist mode ds v
 
-toCtxList :: forall m v as. 
-             (All HasSpec as, HasSpec v, MonadGenError m, HasCallStack) =>
-             Var v -> List Term as -> m (HiddenClist Pre as v)
+toCtxList ::
+  forall m v as.
+  (All HasSpec as, HasSpec v, MonadGenError m, HasCallStack) =>
+  Var v -> List Term as -> m (HiddenClist Pre as v)
 toCtxList v l = prefix l
-  where prefix :: forall ds. All HasSpec ds => List Term ds -> m (HiddenClist Pre ds v)
-        prefix Nil = fatalError (pure $ "toCtxList without hole, for variable "++show v)
-        prefix (Lit n :> ts) = do
-           Hide ctx <- prefix ts
-           pure $ Hide (n :|> ctx)
-        prefix (t :> ts) = do
-           ctx <- toCtx v t
-           Hide suf <- suffix ts
-           pure $ Hide (ctx :<> suf)
-              
-        suffix :: forall zs . List Term zs -> m (HiddenClist Post zs v)
-        suffix Nil = pure (Hide End)
-        suffix (Lit n :> ts) = do
-          Hide ys <- suffix ts
-          pure $ Hide (n :<| ys)
-        suffix (_ :> _) = fatalError (pure "toCtxList with too many holes")
- 
+  where
+    prefix :: forall ds. All HasSpec ds => List Term ds -> m (HiddenClist Pre ds v)
+    prefix Nil = fatalError (pure $ "toCtxList without hole, for variable " ++ show v)
+    prefix (Lit n :> ts) = do
+      Hide ctx <- prefix ts
+      pure $ Hide (n :|> ctx)
+    prefix (t :> ts) = do
+      ctx <- toCtx v t
+      Hide suf <- suffix ts
+      pure $ Hide (ctx :<> suf)
+
+    suffix :: forall zs. List Term zs -> m (HiddenClist Post zs v)
+    suffix Nil = pure (Hide End)
+    suffix (Lit n :> ts) = do
+      Hide ys <- suffix ts
+      pure $ Hide (n :<| ys)
+    suffix (_ :> _) = fatalError (pure "toCtxList with too many holes")

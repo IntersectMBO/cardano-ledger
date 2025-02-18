@@ -33,12 +33,20 @@ module Constrained.Experiment.Specs.ListFoldy where
 
 import Constrained.Core (Evidence (..), Var (..), eqVar, unionWithMaybe)
 import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance (conformsToSpec, mapSpec, satisfies,(==.))
+import Constrained.Experiment.Conformance (conformsToSpec, satisfies)
 import Constrained.Experiment.NumSpec
+import Constrained.Experiment.Specs.Num ()
 import Constrained.Experiment.Specs.Size (Sized (..), genFromSizeSpec, sizeOf_)
 import Constrained.Experiment.SumList (Cost (..), Solution (No, Yes), pickAll)
 import Constrained.Experiment.Syntax (forAll, genHint, unsafeExists)
-import Constrained.Experiment.TheKnot (caseBoolSpec, genFromSpecT, shrinkWithSpec, simplifySpec)
+import Constrained.Experiment.TheKnot (
+  caseBoolSpec,
+  genFromSpecT,
+  mapSpec,
+  shrinkWithSpec,
+  simplifySpec,
+  (==.),
+ )
 import Constrained.GenT
 import Constrained.List
 import Control.Applicative ((<|>))
@@ -202,7 +210,7 @@ idFn = Fun (Evidence @()) IdW
 -- convenient place to put the code.
 -- =======================================================
 
-class (HasSpec a, NumLike a, FunSym (NumLike a) "addFn" IntW '[a, a] a, NumLike a) => Foldy a where
+class (HasSpec a, NumLike a, TypeSpec a ~ NumSpec a, FunSym (NumLike a) "addFn" IntW '[a, a] a) => Foldy a where
   genList ::
     MonadGenError m => Specification a -> Specification a -> GenT m [a]
   theAddFn :: IntW (NumLike a) "addFn" '[a, a] a
@@ -820,7 +828,6 @@ enumerateInterval (NumSpecInterval lo hi) =
 genNumList ::
   forall a m.
   ( MonadGenError m
-  , TypeSpec a ~ NumSpec a
   , Arbitrary a
   , Integral a
   , MaybeBounded a
@@ -1121,7 +1128,7 @@ narrowFoldSpecs specs = maybe specs narrowFoldSpecs (go specs)
 --   to 'foldSpec'. Every element in the list should conform to 'elemSpec'
 genListWithSize ::
   forall a m.
-  (Foldy a, MonadGenError m, Random a, Integral a, TypeSpec a ~ NumSpec a) =>
+  (Foldy a, MonadGenError m, Random a, Integral a) =>
   Specification Integer -> Specification a -> Specification a -> GenT m [a]
 genListWithSize sizeSpec elemSpec foldSpec
   | TrueSpec <- sizeSpec = genList elemSpec foldSpec
@@ -1158,7 +1165,7 @@ genListWithSize sizeSpec elemSpec foldSpec
 
 pickPositive ::
   forall t m.
-  (Integral t, Random t, MonadGenError m, Foldy t, TypeSpec t ~ NumSpec t) =>
+  (Integral t, Random t, MonadGenError m, Foldy t) =>
   Specification t -> t -> Integer -> GenT m [t]
 pickPositive elemspec total count = do
   sol <-
