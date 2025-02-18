@@ -7,6 +7,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
+  cddlDecoderEquivalenceSpec,
   cddlRoundTripAnnCborSpec,
   cddlRoundTripCborSpec,
  )
@@ -27,6 +28,10 @@ spec =
       cddlRoundTripCborSpec @(Script MaryEra) v "native_script"
       cddlRoundTripAnnCborSpec @(TxAuxData MaryEra) v "auxiliary_data"
       cddlRoundTripCborSpec @(TxAuxData MaryEra) v "auxiliary_data"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        cddlDecoderEquivalenceSpec @(TxBody MaryEra) v "transaction_body"
+        cddlDecoderEquivalenceSpec @(Script MaryEra) v "native_script"
+        cddlDecoderEquivalenceSpec @(TxAuxData MaryEra) v "auxiliary_data"
     describe "Huddle" $ specWithHuddle maryCDDL 100 $ do
       huddleRoundTripCborSpec @(Value MaryEra) v "value"
       huddleRoundTripAnnCborSpec @(TxBody MaryEra) v "transaction_body"
@@ -35,3 +40,7 @@ spec =
       huddleRoundTripCborSpec @(TxAuxData MaryEra) v "auxiliary_data"
       huddleRoundTripAnnCborSpec @(Script MaryEra) v "native_script"
       huddleRoundTripCborSpec @(Script MaryEra) v "native_script"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        huddleDecoderEquivalenceSpec @(TxBody MaryEra) v "transaction_body"
+        huddleDecoderEquivalenceSpec @(Script MaryEra) v "native_script"
+        huddleDecoderEquivalenceSpec @(TxAuxData MaryEra) v "auxiliary_data"

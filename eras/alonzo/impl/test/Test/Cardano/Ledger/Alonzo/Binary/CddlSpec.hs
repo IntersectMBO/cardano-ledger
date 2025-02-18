@@ -13,10 +13,12 @@ import Test.Cardano.Ledger.Alonzo.Binary.Cddl (readAlonzoCddlFiles)
 import Test.Cardano.Ledger.Alonzo.CDDL (alonzoCDDL)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
+  cddlDecoderEquivalenceSpec,
   cddlRoundTripAnnCborSpec,
   cddlRoundTripCborSpec,
  )
 import Test.Cardano.Ledger.Binary.Cuddle (
+  huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
   huddleRoundTripCborSpec,
   specWithHuddle,
@@ -46,6 +48,14 @@ spec =
       cddlRoundTripAnnCborSpec @(Tx AlonzoEra) v "transaction"
       cddlRoundTripCborSpec @(Tx AlonzoEra) v "transaction"
       cddlRoundTripCborSpec @CostModels v "cost_models"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        cddlDecoderEquivalenceSpec @(TxBody AlonzoEra) v "transaction_body"
+        cddlDecoderEquivalenceSpec @(TxAuxData AlonzoEra) v "auxiliary_data"
+        cddlDecoderEquivalenceSpec @(Timelock AlonzoEra) v "native_script"
+        cddlDecoderEquivalenceSpec @(Data AlonzoEra) v "plutus_data"
+        cddlDecoderEquivalenceSpec @(AlonzoTxWits AlonzoEra) v "transaction_witness_set"
+        cddlDecoderEquivalenceSpec @(Redeemers AlonzoEra) v "[* redeemer]"
+        cddlDecoderEquivalenceSpec @(Tx AlonzoEra) v "transaction"
     describe "Huddle" $ specWithHuddle alonzoCDDL 100 $ do
       huddleRoundTripCborSpec @(Value AlonzoEra) v "coin"
       huddleRoundTripAnnCborSpec @(TxBody AlonzoEra) v "transaction_body"
@@ -65,3 +75,11 @@ spec =
       huddleRoundTripAnnCborSpec @(Tx AlonzoEra) v "transaction"
       huddleRoundTripCborSpec @(Tx AlonzoEra) v "transaction"
       huddleRoundTripCborSpec @CostModels v "cost_models"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        huddleDecoderEquivalenceSpec @(TxBody AlonzoEra) v "transaction_body"
+        huddleDecoderEquivalenceSpec @(TxAuxData AlonzoEra) v "auxiliary_data"
+        huddleDecoderEquivalenceSpec @(Timelock AlonzoEra) v "native_script"
+        huddleDecoderEquivalenceSpec @(Data AlonzoEra) v "plutus_data"
+        huddleDecoderEquivalenceSpec @(AlonzoTxWits AlonzoEra) v "transaction_witness_set"
+        huddleDecoderEquivalenceSpec @(Redeemers AlonzoEra) v "redeemers"
+        huddleDecoderEquivalenceSpec @(Tx AlonzoEra) v "transaction"

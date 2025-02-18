@@ -12,10 +12,12 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
+  cddlDecoderEquivalenceSpec,
   cddlRoundTripAnnCborSpec,
   cddlRoundTripCborSpec,
  )
 import Test.Cardano.Ledger.Binary.Cuddle (
+  huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
   huddleRoundTripCborSpec,
   specWithHuddle,
@@ -55,6 +57,15 @@ spec = do
       cddlRoundTripCborSpec @(ProposalProcedure ConwayEra) v "proposal_procedure"
       cddlRoundTripCborSpec @(GovAction ConwayEra) v "gov_action"
       cddlRoundTripCborSpec @(TxCert ConwayEra) v "certificate"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        cddlDecoderEquivalenceSpec @(TxBody ConwayEra) v "transaction_body"
+        cddlDecoderEquivalenceSpec @(TxAuxData ConwayEra) v "auxiliary_data"
+        cddlDecoderEquivalenceSpec @(Timelock ConwayEra) v "native_script"
+        cddlDecoderEquivalenceSpec @(Data ConwayEra) v "plutus_data"
+        cddlDecoderEquivalenceSpec @(Script ConwayEra) v "script"
+        cddlDecoderEquivalenceSpec @(TxWits ConwayEra) v "transaction_witness_set"
+        cddlDecoderEquivalenceSpec @(Redeemers ConwayEra) v "redeemers"
+        cddlDecoderEquivalenceSpec @(Tx ConwayEra) v "transaction"
     describe "Huddle" $ specWithHuddle conwayCDDL 100 $ do
       huddleRoundTripCborSpec @(Value ConwayEra) v "positive_coin"
       huddleRoundTripCborSpec @(Value ConwayEra) v "value"
@@ -82,3 +93,12 @@ spec = do
       huddleRoundTripCborSpec @(ProposalProcedure ConwayEra) v "proposal_procedure"
       huddleRoundTripCborSpec @(GovAction ConwayEra) v "gov_action"
       huddleRoundTripCborSpec @(TxCert ConwayEra) v "certificate"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        huddleDecoderEquivalenceSpec @(TxBody ConwayEra) v "transaction_body"
+        huddleDecoderEquivalenceSpec @(TxAuxData ConwayEra) v "auxiliary_data"
+        huddleDecoderEquivalenceSpec @(Timelock ConwayEra) v "native_script"
+        huddleDecoderEquivalenceSpec @(Data ConwayEra) v "plutus_data"
+        huddleDecoderEquivalenceSpec @(Script ConwayEra) v "script"
+        huddleDecoderEquivalenceSpec @(TxWits ConwayEra) v "transaction_witness_set"
+        huddleDecoderEquivalenceSpec @(Redeemers ConwayEra) v "redeemers"
+        huddleDecoderEquivalenceSpec @(Tx ConwayEra) v "transaction"

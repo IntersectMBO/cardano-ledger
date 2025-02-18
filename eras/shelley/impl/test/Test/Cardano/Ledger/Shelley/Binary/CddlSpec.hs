@@ -19,10 +19,12 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.TxIn (TxIn)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
+  cddlDecoderEquivalenceSpec,
   cddlRoundTripAnnCborSpec,
   cddlRoundTripCborSpec,
  )
 import Test.Cardano.Ledger.Binary.Cuddle (
+  huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
   huddleRoundTripCborSpec,
   specWithHuddle,
@@ -56,6 +58,13 @@ spec =
       cddlRoundTripCborSpec @(PParamsUpdate ShelleyEra) v "protocol_param_update"
       cddlRoundTripAnnCborSpec @(Tx ShelleyEra) v "transaction"
       cddlRoundTripCborSpec @(Tx ShelleyEra) v "transaction"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        cddlDecoderEquivalenceSpec @BootstrapWitness v "bootstrap_witness"
+        cddlDecoderEquivalenceSpec @(TxBody ShelleyEra) v "transaction_body"
+        cddlDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
+        cddlDecoderEquivalenceSpec @(MultiSig ShelleyEra) v "multisig_script"
+        cddlDecoderEquivalenceSpec @(Tx ShelleyEra) v "transaction"
+
     describe "Huddle" $ specWithHuddle shelleyCDDL 100 $ do
       huddleRoundTripCborSpec @Addr v "address"
       huddleRoundTripAnnCborSpec @BootstrapWitness v "bootstrap_witness"
@@ -79,3 +88,9 @@ spec =
       huddleRoundTripCborSpec @(Tx ShelleyEra) v "transaction"
       huddleRoundTripAnnCborSpec @(TxWits ShelleyEra) v "transaction_witness_set"
       huddleRoundTripCborSpec @(TxWits ShelleyEra) v "transaction_witness_set"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        huddleDecoderEquivalenceSpec @BootstrapWitness v "bootstrap_witness"
+        huddleDecoderEquivalenceSpec @(TxBody ShelleyEra) v "transaction_body"
+        huddleDecoderEquivalenceSpec @(TxAuxData ShelleyEra) v "transaction_metadata"
+        huddleDecoderEquivalenceSpec @(MultiSig ShelleyEra) v "multisig_script"
+        huddleDecoderEquivalenceSpec @(Tx ShelleyEra) v "transaction"
