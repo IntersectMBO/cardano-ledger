@@ -164,7 +164,7 @@ spec = do
 
       submitAndExpireProposalToMakeReward cred
 
-      reward <- lookupReward cred
+      reward <- getReward cred
       submitFailingTx
         ( mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL .~ [UnRegDepositTxCert cred expectedDeposit]
@@ -208,7 +208,7 @@ spec = do
       expectRegisteredRewardAddress rewardAccount
       expectRegisteredRewardAddress otherRewardAccount
       submitAndExpireProposalToMakeReward otherStakeCred
-      lookupReward otherStakeCred `shouldReturn` govActionDeposit
+      getReward otherStakeCred `shouldReturn` govActionDeposit
       unRegTxCert <- genUnRegTxCert stakeCred
       submitTx_ . mkBasicTx $
         mkBasicTxBody
@@ -221,7 +221,7 @@ spec = do
                   , (otherRewardAccount, govActionDeposit)
                   ]
               )
-      lookupReward otherStakeCred `shouldReturn` Coin 0
+      getReward otherStakeCred `shouldReturn` Coin 0
       expectNotRegisteredRewardAddress rewardAccount
 
   describe "Delegate stake" $ do

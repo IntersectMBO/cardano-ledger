@@ -72,7 +72,7 @@ spec = do
     let cred = KeyHashObj kh
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
-    reward <- lookupReward cred
+    reward <- getReward cred
 
     let tx = mkBasicTx $ mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, reward)]
 
@@ -97,7 +97,7 @@ spec = do
     let cred = KeyHashObj kh
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
-    reward <- lookupReward cred
+    reward <- getReward cred
 
     (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -111,7 +111,7 @@ spec = do
               & withdrawalsTxBodyL
                 .~ Withdrawals
                   [(ra, reward)]
-    ifBootstrap (submitTx_ tx >> (lookupReward cred `shouldReturn` mempty)) $ do
+    ifBootstrap (submitTx_ tx >> (getReward cred `shouldReturn` mempty)) $ do
       submitFailingTx tx [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
 
   it "Withdraw and unregister staking credential in the same transaction" $ do
@@ -126,7 +126,7 @@ spec = do
         & ppKeyDepositL .~ Coin newDeposit
 
     submitAndExpireProposalToMakeReward cred
-    reward <- lookupReward cred
+    reward <- getReward cred
 
     (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -148,7 +148,7 @@ spec = do
     let cred = KeyHashObj kh
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
-    reward <- lookupReward cred
+    reward <- getReward cred
 
     (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -175,7 +175,7 @@ spec = do
     let cred = KeyHashObj kh
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
-    reward <- lookupReward cred
+    reward <- getReward cred
 
     (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -200,7 +200,7 @@ spec = do
     let cred = ScriptHashObj scriptHash
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
-    reward <- lookupReward cred
+    reward <- getReward cred
 
     submitTx_ $
       mkBasicTx $
