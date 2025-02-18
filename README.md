@@ -38,7 +38,7 @@ In addition, there is a formalization of the Ledger Specification in Isabelle/HO
 
 Some user documentation is published on [Read the Docs](https://cardano-ledger.readthedocs.io/en/latest)
 
-Haddock code documentation of the latest master branch is available [here](https://input-output-hk.github.io/cardano-ledger).
+Haddock code documentation of the latest master branch is available [here](https://cardano-ledger.cardano.intersectmbo.org/).
 
 # Repository structure
 
