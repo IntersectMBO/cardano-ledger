@@ -38,8 +38,6 @@ module Constrained.Experiment.Base where
 
 import Constrained.Experiment.Generic
 
--- import Constrained.Experiment.Witness
-
 import Constrained.Core (Evidence (..), Var (..))
 import Constrained.GenT (
   GE (..),
@@ -148,7 +146,7 @@ propagateSpec spec = \case
     _ -> ErrorSpec $ pure ("function with more than 5 arguments in propagateSpec: " ++ show f)
 
 -- ========================================================================
--- 
+--
 
 sameFunSym ::
   forall c1 s1 (t1 :: FSType) d1 r1 c2 s2 (t2 :: FSType) d2 r2.
@@ -417,6 +415,7 @@ data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   PairW :: forall a b. BaseW () "pair_" '[a, b] (Prod a b)
   FstW :: forall a b. BaseW () "fst_" '[Prod a b] a
   SndW :: forall a b. BaseW () "snd_" '[Prod a b] b
+  EqualW :: forall a. BaseW (Eq a) "==." '[a, a] Bool
   ToGenericW ::
     GenericC a => BaseW () "toGenericFn" '[a] (SimpleRep a)
   FromGenericW ::
@@ -432,8 +431,9 @@ instance Show (BaseW c s d r) where
   show PairW = "pair_"
   show FstW = "fst_"
   show SndW = "snd_"
+  show EqualW = "==."
 
-baseSem :: BaseW c s d r -> FunTy d r
+baseSem :: c => BaseW c s d r -> FunTy d r
 baseSem FromGenericW = fromSimpleRep
 baseSem ToGenericW = toSimpleRep
 baseSem InjLeftW = SumLeft
@@ -441,6 +441,7 @@ baseSem InjRightW = SumRight
 baseSem PairW = Prod
 baseSem FstW = prodFst
 baseSem SndW = prodSnd
+baseSem EqualW = (==)
 
 instance Witness BaseW where
   semantics = baseSem
@@ -824,6 +825,15 @@ notEqualSpec = TypeSpec (emptySpec @a) . pure
 notMemberSpec :: forall a f. (HasSpec a, Foldable f) => f a -> Specification a
 notMemberSpec = typeSpecOpt (emptySpec @a) . toList
 
+constrained ::
+  forall a p.
+  (IsPred p, HasSpec a) =>
+  (Term a -> p) ->
+  Specification a
+constrained body =
+  let x :-> p = bind body
+   in SuspendedSpec x p
+
 isErrorLike :: forall a. Specification a -> Bool
 isErrorLike (ExplainSpec _ s) = isErrorLike s
 isErrorLike ErrorSpec {} = True
@@ -933,7 +943,6 @@ instance Show a => Pretty (WithPrec (Term a)) where
     -}
     App x Nil -> viaShow x
     App f as -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))
-
 
 instance Show a => Pretty (Term a) where
   pretty = prettyPrec 0
@@ -1063,32 +1072,6 @@ instance Show (Ctx rng hole) where
 instance (Typeable c, Show (t c s d r)) => Show (Context c s t d r h) where
   show (Context _ f xs) = "(Context " ++ show f ++ " " ++ show xs ++ ")"
 
--- =================================================================
--- A simple but important HasSpec instances. The  other
--- instances usually come in a file of their own.
-
-instance HasSpec () where
-  type TypeSpec () = ()
-  emptySpec = ()
-  combineSpec _ _ = typeSpec ()
-  _ `conformsTo` _ = True
-  shrinkWithTypeSpec _ _ = []
-  genFromTypeSpec _ = pure ()
-  toPreds _ _ = TruePred
-  cardinalTypeSpec _ = MemberSpec (pure 1)
-  cardinalTrueSpec = equalSpec 1 -- there is exactly one, ()
-  typeSpecOpt _ [] = TrueSpec
-  typeSpecOpt _ (_ : _) = ErrorSpec (pure "Non null 'cant' set in typeSpecOpt @()")
-
-constrained ::
-  forall a p.
-  (IsPred p, HasSpec a) =>
-  (Term a -> p) ->
-  Specification a
-constrained body =
-  let x :-> p = bind body
-   in SuspendedSpec x p
-
 -- ====================================================
 -- The Fun type encapuslates a FunSym instance to hide
 -- everything but the domain and range. This is a way
@@ -1122,4 +1105,19 @@ sameFun (Fun Evidence f) (Fun Evidence g) =
 instance Eq (Fun d r) where
   (==) = sameFun
 
+-- =================================================================
+-- A simple but important HasSpec instances. The  other
+-- instances usually come in a file of their own.
 
+instance HasSpec () where
+  type TypeSpec () = ()
+  emptySpec = ()
+  combineSpec _ _ = typeSpec ()
+  _ `conformsTo` _ = True
+  shrinkWithTypeSpec _ _ = []
+  genFromTypeSpec _ = pure ()
+  toPreds _ _ = TruePred
+  cardinalTypeSpec _ = MemberSpec (pure 1)
+  cardinalTrueSpec = equalSpec 1 -- there is exactly one, ()
+  typeSpecOpt _ [] = TrueSpec
+  typeSpecOpt _ (_ : _) = ErrorSpec (pure "Non null 'cant' set in typeSpecOpt @()")

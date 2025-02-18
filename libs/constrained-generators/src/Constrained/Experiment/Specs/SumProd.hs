@@ -7,6 +7,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -26,10 +27,8 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 #endif
 
-module Constrained.Experiment.Specs.Sum (
+module Constrained.Experiment.Specs.SumProd (
   IsNormalType,
-  -- sumleft_,
-  -- sumright_,
   left_,
   right_,
   cJust_,
@@ -48,26 +47,262 @@ module Constrained.Experiment.Specs.Sum (
   onJust,
   isJust,
   chooseSpec,
+  fst_,
+  snd_,
+  pair_,
+  sumleft_,
+  sumright_,
 ) where
 
+import Constrained.Core (Evidence (..))
 import Constrained.Experiment.Base
 import Constrained.Experiment.Conformance (conformsToSpec, satisfies)
 import Constrained.Experiment.Generic
+import Constrained.Experiment.NumSpec (cardinality)
 import Constrained.Experiment.Syntax (exists, forAll, letBind, mkCase, reify)
 import Constrained.Experiment.TheKnot
-import GHC.TypeLits (Symbol)
-import GHC.TypeNats
--- import Test.QuickCheck (Arbitrary (..), oneof)
-import Constrained.Core
 import Constrained.List
 import Constrained.Spec.Pairs ()
-import Data.Typeable
+import Data.List (nub)
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NE
+import Data.Typeable (Typeable, (:~:) (Refl))
+import GHC.TypeLits (Symbol)
+import GHC.TypeNats
+import Prettyprinter hiding (cat)
+import Test.QuickCheck (Arbitrary (..))
 
-------------------------------------------------------------------------
+-- ========== HasSpec for Prod ==================================
+
+pairView :: forall a b. (HasSpec a, HasSpec b) => Term (Prod a b) -> Maybe (Term a, Term b)
+pairView (App (sameFunSym $ PairW @a @b -> Just (_, Refl, Refl, Refl, Refl, Refl)) (x :> y :> Nil)) = Just (x, y)
+pairView _ = Nothing
+
+cartesian ::
+  forall a b.
+  (HasSpec a, HasSpec b) =>
+  Specification a ->
+  Specification b ->
+  Specification (Prod a b)
+cartesian (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
+cartesian (ErrorSpec es) _ = ErrorSpec (NE.cons "cartesian left" es)
+cartesian _ (ErrorSpec es) = ErrorSpec (NE.cons "cartesian right" es)
+cartesian s s' = typeSpec $ Cartesian s s'
+
+data PairSpec a b = Cartesian (Specification a) (Specification b)
+
+instance (Arbitrary (Specification a), Arbitrary (Specification b)) => Arbitrary (PairSpec a b) where
+  arbitrary = Cartesian <$> arbitrary <*> arbitrary
+  shrink (Cartesian a b) = uncurry Cartesian <$> shrink (a, b)
+
+instance (HasSpec a, HasSpec b) => HasSpec (Prod a b) where
+  type TypeSpec (Prod a b) = PairSpec a b
+
+  type Prerequisites (Prod a b) = (HasSpec a, HasSpec b)
+
+  emptySpec = Cartesian mempty mempty
+
+  combineSpec (Cartesian a b) (Cartesian a' b') = cartesian (a <> a') (b <> b')
+
+  conformsTo (Prod a b) (Cartesian sa sb) = conformsToSpec a sa && conformsToSpec b sb
+
+  genFromTypeSpec (Cartesian sa sb) = Prod <$> genFromSpecT sa <*> genFromSpecT sb
+
+  shrinkWithTypeSpec (Cartesian sa sb) (Prod a b) =
+    [Prod a' b | a' <- shrinkWithSpec sa a]
+      ++ [Prod a b' | b' <- shrinkWithSpec sb b]
+
+  toPreds x (Cartesian sf ss) =
+    satisfies (fst_ x) sf
+      <> satisfies (snd_ x) ss
+
+  cardinalTypeSpec (Cartesian x y) = (cardinality x) + (cardinality y)
+
+  typeSpecHasError (Cartesian x y) =
+    case (isErrorLike x, isErrorLike y) of
+      (False, False) -> Nothing
+      (True, False) -> Just $ errorLikeMessage x
+      (False, True) -> Just $ errorLikeMessage y
+      (True, True) -> Just $ (errorLikeMessage x <> errorLikeMessage y)
+
+  alternateShow (Cartesian left right@(TypeSpec r [])) =
+    case alternateShow @b r of
+      (BinaryShow "Cartesian" ps) -> BinaryShow "Cartesian" ("," <+> viaShow left : ps)
+      (BinaryShow "SumSpec" ps) -> BinaryShow "Cartesian" ("," <+> viaShow left : ["SumSpec" /> vsep ps])
+      _ -> BinaryShow "Cartesian" ["," <+> viaShow left, "," <+> viaShow right]
+  alternateShow (Cartesian left right) = BinaryShow "Cartesian" ["," <+> viaShow left, "," <+> viaShow right]
+
+instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
+  show pair@(Cartesian l r) = case alternateShow @(Prod a b) pair of
+    (BinaryShow "Cartesian" ps) -> show $ parens ("Cartesian" /> vsep ps)
+    _ -> "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
+
+-- ==================================================
+-- FunSym instances for Pairs
+-- ==================================================
+
+-- ========= FstW
+
+instance (HasSpec a, HasSpec b) => FunSym () "fst_" BaseW '[Prod a b] a where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence FstW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App FstW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence FstW (HOLE :<> End)) (TypeSpec ts cant) =
+    cartesian @a @b (TypeSpec ts cant) TrueSpec
+  propagate (Context Evidence FstW (HOLE :<> End)) (MemberSpec es) =
+    cartesian @a @b (MemberSpec es) TrueSpec
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for FstW with wrong number of arguments. " ++ show ctx)
+
+  rewriteRules FstW ((pairView -> Just (x, _)) :> Nil) Evidence = Just x
+  rewriteRules _ _ _ = Nothing
+
+  mapTypeSpec f ts = case f of
+    FstW | Cartesian s _ <- ts -> s
+
+fst_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term a
+fst_ = appTerm FstW
+
+-- ========= SndW
+
+instance (HasSpec a, HasSpec b) => FunSym () "snd_" BaseW '[Prod a b] b where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence SndW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App SndW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence SndW (HOLE :<> End)) (TypeSpec ts cant) =
+    cartesian @a @b TrueSpec (TypeSpec ts cant)
+  propagate (Context Evidence SndW (HOLE :<> End)) (MemberSpec es) =
+    cartesian @a @b TrueSpec (MemberSpec es)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for SndW with wrong number of arguments. " ++ show ctx)
+
+  rewriteRules SndW ((pairView -> Just (_, y)) :> Nil) Evidence = Just y
+  rewriteRules _ _ _ = Nothing
+
+  mapTypeSpec f ts = case f of
+    SndW | Cartesian _ s <- ts -> s
+
+snd_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term b
+snd_ = appTerm SndW
+
+-- ========= PairW
+sameFst :: Eq a1 => a1 -> [Prod a1 a2] -> [a2]
+sameFst a ps = [b | Prod a' b <- ps, a == a']
+
+sameSnd :: Eq a1 => a1 -> [Prod a2 a1] -> [a2]
+sameSnd b ps = [a | Prod a b' <- ps, b == b']
+
+instance (HasSpec a, HasSpec b) => FunSym () "pair_" BaseW '[a, b] (Prod a b) where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence PairW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App PairW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate (Context Evidence PairW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App PairW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence PairW (a :|> HOLE :<> End)) (TypeSpec (Cartesian sa sb) cant)
+    | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
+    | otherwise =
+        ErrorSpec (NE.fromList ["propagateSpecFun (pair_ a HOLE) has conformance failure on a", show sa])
+  propagate (Context Evidence PairW (HOLE :<> b :<| End)) (TypeSpec (Cartesian sa sb) cant)
+    | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
+    | otherwise =
+        ErrorSpec (NE.fromList ["propagateSpecFun (pair_ HOLE b) has conformance failure on b", show sb])
+  propagate (Context Evidence PairW (a :|> HOLE :<> End)) (MemberSpec es) =
+    case (nub (sameFst a (NE.toList es))) of
+      (w : ws) -> MemberSpec (w :| ws)
+      [] ->
+        ErrorSpec $
+          pure
+            ("propagateSpecFun (pair_ HOLE b) on (MemberSpec " ++ show es ++ " where b does not appear in bs.")
+  propagate (Context Evidence PairW (HOLE :<> b :<| End)) (MemberSpec es) =
+    case (nub (sameSnd b (NE.toList es))) of
+      (w : ws) -> MemberSpec (w :| ws)
+      [] ->
+        ErrorSpec $
+          pure
+            ("propagateSpecFun (pair_ HOLE b) on (MemberSpec " ++ show es ++ " where b does not appear in bs.")
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for PairW with wrong number of arguments. " ++ show ctx)
+
+pair_ :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (Prod a b)
+pair_ = appTerm PairW
+
+-- ==================================================================
+-- The HasSpec instance for Sum is in TheKnot.
+-- Here are the FunSym Instances for Sum
+-- ===================================================================
+
+-- ============= InjLeftW ====
+
+instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_" BaseW '[a] (Sum a b) where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence InjLeftW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App InjLeftW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence InjLeftW (HOLE :<> End)) (TypeSpec (SumSpec _ sl _) cant) =
+    sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
+  propagate (Context Evidence InjLeftW (HOLE :<> End)) (MemberSpec es) =
+    case [a | SumLeft a <- NE.toList es] of
+      (x : xs) -> MemberSpec (x :| xs)
+      [] ->
+        ErrorSpec $
+          pure $
+            "propMemberSpec (sumleft_ HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for InjLeftW with wrong number of arguments. " ++ show ctx)
+
+  -- NOTE: this function over-approximates and returns a liberal spec.
+  mapTypeSpec f ts = case f of
+    InjLeftW -> typeSpec $ SumSpec Nothing (typeSpec ts) (ErrorSpec (pure "mapTypeSpec InjLeftW"))
+
+sumleft_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term a -> Term (Sum a b)
+sumleft_ = appTerm InjLeftW
+
+-- ============= InjRightW ====
+
+instance
+  (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
+  FunSym () "sumright_" BaseW '[b] (Sum a b)
+  where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context Evidence InjRightW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App InjRightW (v' :> Nil)) (v :-> ps)
+  propagate (Context Evidence InjRightW (HOLE :<> End)) (TypeSpec (SumSpec _ _ sr) cant) =
+    sr <> foldMap notEqualSpec [a | SumRight a <- cant]
+  propagate (Context Evidence InjRightW (HOLE :<> End)) (MemberSpec es) =
+    case [a | SumRight a <- NE.toList es] of
+      (x : xs) -> MemberSpec (x :| xs)
+      [] ->
+        ErrorSpec $
+          pure $
+            "propagate(InjRight HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for InjRightW with wrong number of arguments. " ++ show ctx)
+
+  -- NOTE: this function over-approximates and returns a liberal spec.
+  mapTypeSpec f ts = case f of
+    InjRightW -> typeSpec $ SumSpec Nothing (ErrorSpec (pure "mapTypeSpec InjRightW")) (typeSpec ts)
+
+sumright_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term b -> Term (Sum a b)
+sumright_ = appTerm InjRightW
+
+-- ==================================================================
 -- Generics
-------------------------------------------------------------------------
-
--- HasSpec for various generic types --------------------------------------
+-- HasSpec for various types that are Sums of Products
+-- ==================================================================
 
 instance (Typeable a, Typeable b) => HasSimpleRep (a, b)
 instance (Typeable a, Typeable b, Typeable c) => HasSimpleRep (a, b, c)
@@ -140,9 +375,8 @@ instance
   ) =>
   HasSpec (Either a b)
 
-
 -- ====================================================
--- All the magic for things like 'caseOn', 'match', forAll' etc. lives here
+-- All the magic for things like 'caseOn', 'match', forAll' etc. lives here.
 -- Classes and type families about Sum, Prod, construtors, selectors
 -- These let us express the types of things like 'match' and 'caseOn'
 
@@ -532,6 +766,9 @@ isJust ::
   Pred
 isJust = isCon @"Just"
 
+-- |  ChooseSpec is one of the ways we can 'Or' two Specs together
+--    This works for any kind of type that has a HasSpec instance.
+--    If your type is a Sum type. One can use CaseOn which is much easier.
 chooseSpec ::
   HasSpec a =>
   (Int, Specification a) ->

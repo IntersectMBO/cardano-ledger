@@ -7,8 +7,8 @@
 module Constrained.Experiment.API (
   FunSym (..),
   Witness (..),
-  BaseW (ToGenericW, FromGenericW),
-  BoolW (NotW, OrW, EqualW),
+  BaseW (ToGenericW, FromGenericW, EqualW, InjLeftW, InjRightW, PairW, SndW, FstW),
+  BoolW (NotW, OrW),
   NumOrdW (LessOrEqualW, LessW),
   IntW (AddW, NegateW),
   SizeW (SizeOfW),
@@ -114,7 +114,8 @@ module Constrained.Experiment.API (
   pattern InjRight,
   pattern Fst,
   pattern Snd,
-  pattern Pair,  
+  pattern Pair,
+  NumLike,
 )
 where
 
@@ -134,12 +135,8 @@ import Constrained.Experiment.Base (
   toGeneric_,
  )
 import Constrained.Experiment.Conformance (
-  BoolW (..),
   conformsToSpec,
   conformsToSpecE,
-  not_,
-  or_,
-  (==.),
   satisfies,
  )
 import Constrained.Experiment.Generic (HasSimpleRep (..))
@@ -156,7 +153,7 @@ import Constrained.Experiment.NumSpec (
 -- instances only
 
 -- import Constrained.Experiment.Specs.Pairs (ProdW (..), fst_, pair_, snd_)
-import Constrained.Experiment.Specs.Sum (
+import Constrained.Experiment.Specs.SumProd (
   IsNormalType,
   branch,
   branchW,
@@ -167,39 +164,43 @@ import Constrained.Experiment.Specs.Sum (
   con,
   constrained',
   forAll',
+  fst_,
   isCon,
   isJust,
   left_,
   match,
   onCon,
   onJust,
+  pair_,
   reify',
   right_,
   sel,
+  snd_,
+  sumleft_,
+  sumright_,
  )
 import Constrained.Experiment.TheKnot (
+  BoolW (..),
   debugSpec,
   genFromSpec,
   genFromSpecT,
   ifElse,
+  not_,
+  or_,
   simplifySpec,
   simplifyTerm,
   whenTrue,
   (<.),
   (<=.),
-  pattern FromGeneric,
-  pattern ToGeneric,
+  (==.),
   pattern Equal,
+  pattern FromGeneric,
+  pattern Fst,
   pattern InjLeft,
   pattern InjRight,
-  pattern Fst,
-  pattern Snd,
   pattern Pair,
-  fst_, 
-  pair_, 
-  snd_,
-  sumleft_,
-  sumright_,
+  pattern Snd,
+  pattern ToGeneric,
  )
 
 import Constrained.Experiment.Syntax (
@@ -231,6 +232,7 @@ import Constrained.Experiment.Specs.ListFoldy (
   sum_,
  )
 
+import Constrained.Experiment.Specs.Num (negate_, (+.), (-.), (>.), (>=.))
 import Constrained.Experiment.Specs.Set (
   SetSpec (..),
   SetW (..),
@@ -249,21 +251,3 @@ import Constrained.Experiment.Specs.Size (
   maxSpec,
   sizeOf_,
  )
-
--- =================================================
-
-(+.) :: NumLike a => Term a -> Term a -> Term a
-(+.) = addFn
-
-negate_ :: NumLike a => Term a -> Term a
-negate_ = negateFn
-
--- See  https://www.mathsisfun.com/algebra/inequality-solving.html
-(>=.) :: Numeric n => Term n -> Term n -> Term Bool
-(>=.) = flip (<=.)
-
-(>.) :: Numeric n => Term n -> Term n -> Term Bool
-(>.) = flip (<.)
-
-(-.) :: Numeric n => Term n -> Term n -> Term n
-(-.) x y = addFn x (negateFn y)

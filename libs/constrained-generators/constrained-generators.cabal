@@ -37,9 +37,10 @@ library
     Constrained.Experiment.Generic
     Constrained.Experiment.NumSpec
     Constrained.Experiment.Specs.ListFoldy
+    Constrained.Experiment.Specs.Num
     Constrained.Experiment.Specs.Set
     Constrained.Experiment.Specs.Size
-    Constrained.Experiment.Specs.Sum
+    Constrained.Experiment.Specs.SumProd
     Constrained.Experiment.SumList
     Constrained.Experiment.Syntax
     Constrained.Experiment.TheKnot
