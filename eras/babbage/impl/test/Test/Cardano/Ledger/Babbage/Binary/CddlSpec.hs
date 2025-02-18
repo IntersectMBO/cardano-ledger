@@ -13,10 +13,12 @@ import Test.Cardano.Ledger.Babbage.Binary.Cddl (readBabbageCddlFiles)
 import Test.Cardano.Ledger.Babbage.CDDL (babbageCDDL)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
+  cddlDecoderEquivalenceSpec,
   cddlRoundTripAnnCborSpec,
   cddlRoundTripCborSpec,
  )
 import Test.Cardano.Ledger.Binary.Cuddle (
+  huddleDecoderEquivalenceSpec,
   huddleRoundTripAnnCborSpec,
   huddleRoundTripCborSpec,
   specWithHuddle,
@@ -49,6 +51,15 @@ spec =
       cddlRoundTripCborSpec @(Redeemers BabbageEra) v "redeemers"
       cddlRoundTripAnnCborSpec @(Tx BabbageEra) v "transaction"
       cddlRoundTripCborSpec @(Tx BabbageEra) v "transaction"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        cddlDecoderEquivalenceSpec @(TxBody BabbageEra) v "transaction_body"
+        cddlDecoderEquivalenceSpec @(TxAuxData BabbageEra) v "auxiliary_data"
+        cddlDecoderEquivalenceSpec @(Timelock BabbageEra) v "native_script"
+        cddlDecoderEquivalenceSpec @(Data BabbageEra) v "plutus_data"
+        cddlDecoderEquivalenceSpec @(Script BabbageEra) v "script"
+        cddlDecoderEquivalenceSpec @(TxWits BabbageEra) v "transaction_witness_set"
+        cddlDecoderEquivalenceSpec @(Redeemers BabbageEra) v "redeemers"
+        cddlDecoderEquivalenceSpec @(Tx BabbageEra) v "transaction"
     describe "Huddle" $ specWithHuddle babbageCDDL 100 $ do
       huddleRoundTripCborSpec @(Value BabbageEra) v "coin"
       huddleRoundTripAnnCborSpec @(TxBody BabbageEra) v "transaction_body"
@@ -71,3 +82,12 @@ spec =
       huddleRoundTripCborSpec @(Redeemers BabbageEra) v "redeemers"
       huddleRoundTripAnnCborSpec @(Tx BabbageEra) v "transaction"
       huddleRoundTripCborSpec @(Tx BabbageEra) v "transaction"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        huddleDecoderEquivalenceSpec @(TxBody BabbageEra) v "transaction_body"
+        huddleDecoderEquivalenceSpec @(TxAuxData BabbageEra) v "auxiliary_data"
+        huddleDecoderEquivalenceSpec @(Timelock BabbageEra) v "native_script"
+        huddleDecoderEquivalenceSpec @(Data BabbageEra) v "plutus_data"
+        huddleDecoderEquivalenceSpec @(Script BabbageEra) v "script"
+        huddleDecoderEquivalenceSpec @(TxWits BabbageEra) v "transaction_witness_set"
+        huddleDecoderEquivalenceSpec @(Redeemers BabbageEra) v "redeemers"
+        huddleDecoderEquivalenceSpec @(Tx BabbageEra) v "transaction"

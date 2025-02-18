@@ -9,6 +9,7 @@ import Test.Cardano.Ledger.Allegra.Binary.Cddl (readAllegraCddlFiles)
 import Test.Cardano.Ledger.Allegra.CDDL (allegraCDDL)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
+  cddlDecoderEquivalenceSpec,
   cddlRoundTripAnnCborSpec,
   cddlRoundTripCborSpec,
  )
@@ -27,6 +28,10 @@ spec =
       cddlRoundTripCborSpec @(Script AllegraEra) v "native_script"
       cddlRoundTripAnnCborSpec @(TxAuxData AllegraEra) v "auxiliary_data"
       cddlRoundTripCborSpec @(TxAuxData AllegraEra) v "auxiliary_data"
+      describe "DecCBOR instances equivalence via CDDL" $ do
+        cddlDecoderEquivalenceSpec @(TxBody AllegraEra) v "transaction_body"
+        cddlDecoderEquivalenceSpec @(Script AllegraEra) v "native_script"
+        cddlDecoderEquivalenceSpec @(TxAuxData AllegraEra) v "auxiliary_data"
 
     describe "Huddle" $ specWithHuddle allegraCDDL 100 $ do
       huddleRoundTripCborSpec @(Value AllegraEra) v "coin"
