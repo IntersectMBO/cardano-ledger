@@ -64,7 +64,7 @@ spec = describe "UTXO" $ do
           scriptInput <- produceScript $ hashPlutusScript $ alwaysSucceedsWithDatum slang
           collateralAddr <- freshKeyAddr_
           collateralInput <- sendCoinTo collateralAddr mempty -- 0 will be changed to MinUTxO
-          collateral <- (^. coinTxOutL) <$> impLookupUTxO collateralInput
+          collateral <- (^. coinTxOutL) <$> impGetUTxO collateralInput
           -- We need to artificially blow up the fee to increase the required collateral.
           -- Unfortunately we do not have expensive enough scripts yet, so one other way
           -- to achieve the same thing is by increasing the size of the transactions by

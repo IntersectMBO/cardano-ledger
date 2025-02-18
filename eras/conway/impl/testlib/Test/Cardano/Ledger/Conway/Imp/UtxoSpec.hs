@@ -118,7 +118,7 @@ spec =
     createRefScriptsUtxos ::
       HasCallStack => [Script era] -> ImpTestM era (Map.Map TxIn (Script era))
     createRefScriptsUtxos scripts = do
-      rootOut <- snd <$> lookupImpRootTxOut
+      rootOut <- snd <$> getImpRootTxOut
       let outs =
             scripts
               <&> ( \s ->

@@ -40,6 +40,14 @@
 
 ### `testlib`
 
+* Renamed:
+  * `lookupKeyPair` -> `getKeyPair`
+  * `lookupByronKeyPair` -> `getByronKeyPair`
+  * `tryLookupReward` -> `lookupReward`
+  * `lookupReward` -> `getReward`
+  * `lookupImpRootTxOut` -> `getImpRootTxOut`
+  * `impGetNativeScript` -> `impLookupNativeScript`
+  * `impLookupUTxO` -> `impGetUTxO`
 * Add `disableImpInitExpectLedgerRuleConformance`. #4821
 
 ## 1.15.0.0

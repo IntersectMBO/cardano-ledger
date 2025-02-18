@@ -173,7 +173,7 @@ fixupRedeemerIndices ::
   Tx era ->
   ImpTestM era (Tx era)
 fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
-  (rootTxIn, _) <- lookupImpRootTxOut
+  (rootTxIn, _) <- getImpRootTxOut
   let
     txInputs = tx ^. bodyTxL . inputsTxBodyL
     rootTxIndex = toEnum $ Set.findIndex rootTxIn txInputs
@@ -285,7 +285,7 @@ fixupDatums tx = impAnn "fixupDatums" $ do
     collectDatums :: PlutusPurpose AsIxItem era -> ImpTestM era (Maybe (Data era))
     collectDatums purpose = do
       let txIn = unAsItem <$> toSpendingPurpose (hoistPlutusPurpose toAsItem purpose)
-      txOut <- traverse (impLookupUTxO @era) txIn
+      txOut <- traverse (impGetUTxO @era) txIn
       pure $ getData =<< txOut
 
     getData :: TxOut era -> Maybe (Data era)
