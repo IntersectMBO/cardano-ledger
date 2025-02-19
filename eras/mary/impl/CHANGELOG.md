@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `DecCBOR` instance for `MaryTxBody`
 * Converted `CertState` to a type family
 * Add `MemPack` instance for `CompactValue` and `CompactForm MaryValue`
 * Deprecate `Mary` type synonym
