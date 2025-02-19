@@ -410,11 +410,11 @@ type GenericC a =
   )
 
 data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  InjLeftW :: forall a b. BaseW () "sumleft_" '[a] (Sum a b)
-  InjRightW :: forall a b. BaseW () "sumright_" '[b] (Sum a b)
-  PairW :: forall a b. BaseW () "pair_" '[a, b] (Prod a b)
-  FstW :: forall a b. BaseW () "fst_" '[Prod a b] a
-  SndW :: forall a b. BaseW () "snd_" '[Prod a b] b
+  InjLeftW :: forall a b. BaseW () "leftFn" '[a] (Sum a b)
+  InjRightW :: forall a b. BaseW () "rightFn" '[b] (Sum a b)
+  PairW :: forall a b. BaseW () "pairFn" '[a, b] (Prod a b)
+  FstW :: forall a b. BaseW () "fstFn" '[Prod a b] a
+  SndW :: forall a b. BaseW () "sndFn" '[Prod a b] b
   EqualW :: forall a. BaseW (Eq a) "==." '[a, a] Bool
   ToGenericW ::
     GenericC a => BaseW () "toGenericFn" '[a] (SimpleRep a)
@@ -426,11 +426,11 @@ deriving instance Eq (BaseW c s dom rng)
 instance Show (BaseW c s d r) where
   show ToGenericW = "toGenericFn"
   show FromGenericW = "fromGenericFn"
-  show InjLeftW = "sumleft_"
-  show InjRightW = "sumright_"
-  show PairW = "pair_"
-  show FstW = "fst_"
-  show SndW = "snd_"
+  show InjLeftW = "leftFn"
+  show InjRightW = "rightFn"
+  show PairW = "pairFn"
+  show FstW = "fstFn"
+  show SndW = "sndFn"
   show EqualW = "==."
 
 baseSem :: c => BaseW c s d r -> FunTy d r

@@ -62,9 +62,12 @@ module Constrained.Experiment.API (
   fst_,
   snd_,
   pair_,
+  sndFn,
+  fstFn,
+  pairFn,
   IsNormalType,
-  sumleft_,
-  sumright_,
+  leftFn,
+  rightFn,
   left_,
   right_,
   cJust_,
@@ -116,6 +119,7 @@ module Constrained.Experiment.API (
   pattern Snd,
   pattern Pair,
   NumLike,
+  PairSpec (..),
 )
 where
 
@@ -155,6 +159,7 @@ import Constrained.Experiment.NumSpec (
 -- import Constrained.Experiment.Specs.Pairs (ProdW (..), fst_, pair_, snd_)
 import Constrained.Experiment.Specs.SumProd (
   IsNormalType,
+  PairSpec (..),
   branch,
   branchW,
   cJust_,
@@ -164,20 +169,23 @@ import Constrained.Experiment.Specs.SumProd (
   con,
   constrained',
   forAll',
+  fstFn,
   fst_,
   isCon,
   isJust,
+  leftFn,
   left_,
   match,
   onCon,
   onJust,
+  pairFn,
   pair_,
   reify',
+  rightFn,
   right_,
   sel,
+  sndFn,
   snd_,
-  sumleft_,
-  sumright_,
  )
 import Constrained.Experiment.TheKnot (
   BoolW (..),
