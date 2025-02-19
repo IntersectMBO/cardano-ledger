@@ -6,10 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.CertState (
-  ShelleyCertState (..),
-  toCertStatePairs,
-) where
+module Cardano.Ledger.Conway.CertState () where
 
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.Era (ConwayEra)

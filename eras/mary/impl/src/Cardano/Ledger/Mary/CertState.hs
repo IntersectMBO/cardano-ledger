@@ -6,10 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary.CertState (
-  ShelleyCertState (..),
-  toCertStatePairs,
-) where
+module Cardano.Ledger.Mary.CertState () where
 
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Mary.Era (MaryEra)

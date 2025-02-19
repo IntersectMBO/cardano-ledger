@@ -6,10 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.CertState (
-  ShelleyCertState (..),
-  toCertStatePairs,
-) where
+module Cardano.Ledger.Alonzo.CertState () where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.CertState

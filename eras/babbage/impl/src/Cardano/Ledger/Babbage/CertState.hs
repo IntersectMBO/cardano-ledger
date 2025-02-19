@@ -6,10 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.CertState (
-  ShelleyCertState (..),
-  toCertStatePairs,
-) where
+module Cardano.Ledger.Babbage.CertState () where
 
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.CertState

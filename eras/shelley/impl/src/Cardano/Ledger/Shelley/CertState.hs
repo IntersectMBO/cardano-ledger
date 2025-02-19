@@ -8,7 +8,6 @@
 
 module Cardano.Ledger.Shelley.CertState (
   ShelleyCertState (..),
-  toCertStatePairs,
   mkShelleyCertState,
   shelleyCertDStateL,
   shelleyCertVStateL,
@@ -69,10 +68,12 @@ shelleyCertVStateL = lens shelleyCertVState (\ds u -> ds {shelleyCertVState = u}
 {-# INLINE shelleyCertVStateL #-}
 
 toCertStatePairs :: KeyValue e a => ShelleyCertState era -> [a]
-toCertStatePairs ShelleyCertState {..} =
-  [ "dstate" .= shelleyCertDState
-  , "pstate" .= shelleyCertPState
-  ]
+toCertStatePairs certState@(ShelleyCertState _ _ _) =
+  let ShelleyCertState {..} = certState
+   in [ "dstate" .= shelleyCertDState
+      , "pstate" .= shelleyCertPState
+      , "vstate" .= shelleyCertVState
+      ]
 
 shelleyObligationCertState :: ShelleyCertState era -> Obligations
 shelleyObligationCertState (ShelleyCertState VState {vsDReps} PState {psDeposits} DState {dsUnified}) =
@@ -138,7 +139,7 @@ instance Era era => DecShareCBOR (ShelleyCertState era) where
       , Interns (Credential 'DRepRole)
       , Interns (Credential 'HotCommitteeRole)
       )
-  decSharePlusCBOR = decodeRecordNamedT "CertState" (const 3) $ do
+  decSharePlusCBOR = decodeRecordNamedT "ShelleyCertState" (const 3) $ do
     shelleyCertVState <-
       decSharePlusLensCBOR $
         lens (\(cs, _, cd, ch) -> (cs, cd, ch)) (\(_, ks, _, _) (cs, cd, ch) -> (cs, ks, cd, ch))
