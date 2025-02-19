@@ -62,6 +62,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Rules.ValidationMode (
   Test,
@@ -366,6 +367,7 @@ utxoTransition ::
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
+  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
@@ -462,6 +464,7 @@ instance
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
+  , EraCertState era
   ) =>
   STS (BabbageUTXO era)
   where

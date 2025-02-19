@@ -43,7 +43,7 @@ import Cardano.Ledger.BaseTypes (
   (==>),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum, encodeListLen)
-import Cardano.Ledger.CertState (CertState, certDState, dsGenDelegs)
+import Cardano.Ledger.CertState (EraCertState (..), dsGenDelegs)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -294,6 +294,7 @@ transitionRulesUTXOW ::
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , STS (EraRule "UTXOW" era)
+  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 transitionRulesUTXOW = do
@@ -328,7 +329,7 @@ transitionRulesUTXOW = do
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
-  let genDelegs = dsGenDelegs (certDState certState)
+  let genDelegs = dsGenDelegs (certState ^. certDStateL)
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
@@ -359,6 +360,7 @@ instance
   , EraRule "UTXOW" era ~ ShelleyUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , EraGov era
+  , EraCertState era
   ) =>
   STS (ShelleyUTXOW era)
   where

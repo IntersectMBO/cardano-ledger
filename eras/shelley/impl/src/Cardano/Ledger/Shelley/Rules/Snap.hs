@@ -19,13 +19,13 @@ module Cardano.Ledger.Shelley.Rules.Snap (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   LedgerState (..),
   UTxOState (..),
   incrementalStakeDistr,
@@ -49,6 +49,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 -- ======================================================
@@ -71,7 +72,7 @@ instance NFData (SnapEvent era)
 
 data SnapEnv era = SnapEnv (LedgerState era) (PParams era)
 
-instance EraTxOut era => STS (ShelleySNAP era) where
+instance (EraTxOut era, EraCertState era) => STS (ShelleySNAP era) where
   type State (ShelleySNAP era) = SnapShots
   type Signal (ShelleySNAP era) = ()
   type Environment (ShelleySNAP era) = SnapEnv era
@@ -91,14 +92,14 @@ instance EraTxOut era => STS (ShelleySNAP era) where
 -- where important changes were made to the source code.
 snapTransition ::
   forall era.
-  EraPParams era =>
+  (EraPParams era, EraCertState era) =>
   TransitionRule (ShelleySNAP era)
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext
 
-  let SnapEnv (LedgerState (UTxOState _utxo _ fees _ incStake _) (CertState _ pstate dstate)) pp = snapEnv
+  let SnapEnv (LedgerState (UTxOState _utxo _ fees _ incStake _) certState) pp = snapEnv
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
-      istakeSnap = incrementalStakeDistr pp incStake dstate pstate
+      istakeSnap = incrementalStakeDistr pp incStake (certState ^. certDStateL) (certState ^. certPStateL)
 
   tellEvent $
     let stMap :: Map (Credential 'Staking) (CompactForm Coin)

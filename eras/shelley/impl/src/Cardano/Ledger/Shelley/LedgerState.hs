@@ -17,7 +17,7 @@ module Cardano.Ledger.Shelley.LedgerState (
 
   -- * Others to organize
   AccountState (..),
-  CertState (..),
+  EraCertState (..),
   DState (..),
   VState (..),
   rewards,
@@ -117,9 +117,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   epochStateTreasuryL,
 
   -- * Lenses from CertState
-  certDStateL,
-  certPStateL,
-  certVStateL,
   dsUnifiedL,
   dsGenDelegsL,
   dsIRewardsL,

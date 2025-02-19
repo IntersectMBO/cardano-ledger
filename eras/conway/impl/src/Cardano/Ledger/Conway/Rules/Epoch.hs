@@ -27,8 +27,8 @@ where
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase)
 import Cardano.Ledger.CertState (
-  CertState (..),
   CommitteeState (..),
+  EraCertState (..),
   VState,
   dsUnifiedL,
   vsCommitteeStateL,
@@ -188,6 +188,7 @@ instance
   , Environment (EraRule "HARDFORK" era) ~ ()
   , State (EraRule "HARDFORK" era) ~ EpochState era
   , Signal (EraRule "HARDFORK" era) ~ ProtVer
+  , EraCertState era
   ) =>
   STS (ConwayEPOCH era)
   where
@@ -293,6 +294,7 @@ epochTransition ::
   , Environment (EraRule "HARDFORK" era) ~ ()
   , State (EraRule "HARDFORK" era) ~ EpochState era
   , Signal (EraRule "HARDFORK" era) ~ ProtVer
+  , EraCertState era
   ) =>
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
@@ -309,7 +311,10 @@ epochTransition = do
   let govState0 = utxosGovState utxoState0
       curPParams = govState0 ^. curPParamsGovStateL
       utxoState0 = lsUTxOState ledgerState0
-      CertState vState pState0 dState0 = lsCertState ledgerState0
+      certState0 = ledgerState0 ^. lsCertStateL
+      vState = certState0 ^. certVStateL
+      pState0 = certState0 ^. certPStateL
+      dState0 = certState0 ^. certDStateL
   snapshots1 <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ledgerState0 curPParams, snapshots0, ())
 
@@ -372,29 +377,28 @@ epochTransition = do
       unclaimed
 
   let
-    certState =
-      CertState
-        { certPState = pState2
-        , certDState = dState2 & dsUnifiedL .~ newUMap
-        , certVState =
-            -- Increment the dormant epoch counter
-            updateNumDormantEpochs eNo newProposals vState
-              -- Remove cold credentials of committee members that were removed or were invalid
-              & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
-        }
+    certState1 =
+      mkCertState
+        -- Increment the dormant epoch counter
+        ( updateNumDormantEpochs eNo newProposals vState
+            -- Remove cold credentials of committee members that were removed or were invalid
+            & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
+        )
+        pState2
+        (dState2 & dsUnifiedL .~ newUMap)
     accountState3 =
       accountState2
         -- Move donations and unclaimed rewards from proposals to treasury:
         & asTreasuryL <>~ (utxoState0 ^. utxosDonationL <> fold unclaimed)
     utxoState2 =
       utxoState1
-        & utxosDepositedL .~ totalObligation certState govState1
+        & utxosDepositedL .~ totalObligation certState1 govState1
         -- Clear the donations field:
         & utxosDonationL .~ zero
         & utxosGovStateL .~ govState1
     ledgerState1 =
       ledgerState0
-        & lsCertStateL .~ certState
+        & lsCertStateL .~ certState1
         & lsUTxOStateL .~ utxoState2
     epochState1 =
       epochState0
@@ -424,6 +428,7 @@ instance
   ( EraTxOut era
   , PredicateFailure (EraRule "SNAP" era) ~ ShelleySnapPredFailure era
   , Event (EraRule "SNAP" era) ~ Shelley.SnapEvent era
+  , EraCertState era
   ) =>
   Embed (ShelleySNAP era) (ConwayEPOCH era)
   where

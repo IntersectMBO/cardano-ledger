@@ -96,6 +96,7 @@ deriving instance
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
+  , Eq (CertState era)
   ) =>
   Eq (ShelleyLedgerExamples era)
 
@@ -111,6 +112,7 @@ defaultShelleyLedgerExamples ::
   , PredicateFailure (EraRule "LEDGER" era) ~ ShelleyLedgerPredFailure era
   , Default (StashedAVVMAddresses era)
   , ProtVerAtMost era 4
+  , EraCertState era
   ) =>
   (TxBody era -> [KeyPair 'Witness] -> TxWits era) ->
   (ShelleyTx era -> Tx era) ->
@@ -287,6 +289,7 @@ exampleNewEpochState ::
   ( EraTxOut era
   , EraGov era
   , Default (StashedAVVMAddresses era)
+  , EraCertState era
   ) =>
   Value era ->
   PParams era ->

@@ -30,16 +30,14 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Credential (Ptr)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
-  CertState,
   DState,
   PState,
-  certDState,
-  certPState,
  )
 import Cardano.Ledger.Shelley.Rules.Deleg (
   DelegEnv (..),
@@ -56,6 +54,7 @@ import Control.State.Transition
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 data DelplEnv era = DelplEnv
@@ -124,6 +123,7 @@ instance
 
 instance
   ( Era era
+  , EraCertState era
   , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Environment (EraRule "DELEG" era) ~ DelegEnv era
   , State (EraRule "DELEG" era) ~ DState era
@@ -197,6 +197,7 @@ delplTransition ::
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Signal (EraRule "POOL" era) ~ PoolCert
   , TxCert era ~ ShelleyTxCert era
+  , EraCertState era
   ) =>
   TransitionRule (ShelleyDELPL era)
 delplTransition = do
@@ -204,19 +205,19 @@ delplTransition = do
   case c of
     ShelleyTxCertPool poolCert -> do
       ps <-
-        trans @(EraRule "POOL" era) $ TRC (PoolEnv eNo pp, certPState d, poolCert)
-      pure $ d {certPState = ps}
+        trans @(EraRule "POOL" era) $ TRC (PoolEnv eNo pp, d ^. certPStateL, poolCert)
+      pure $ d & certPStateL .~ ps
     ShelleyTxCertGenesisDeleg GenesisDelegCert {} -> do
       ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, certDState d, c)
-      pure $ d {certDState = ds}
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, d ^. certDStateL, c)
+      pure $ d & certDStateL .~ ds
     ShelleyTxCertDelegCert _ -> do
       ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, certDState d, c)
-      pure $ d {certDState = ds}
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, d ^. certDStateL, c)
+      pure $ d & certDStateL .~ ds
     ShelleyTxCertMir _ -> do
-      ds <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, certDState d, c)
-      pure $ d {certDState = ds}
+      ds <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, d ^. certDStateL, c)
+      pure $ d & certDStateL .~ ds
 
 instance
   ( Era era

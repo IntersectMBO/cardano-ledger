@@ -57,6 +57,7 @@ import Cardano.Ledger.BaseTypes (
   (⭒),
  )
 import Cardano.Ledger.Block (Block (..), bheader)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair, GenDelegs (..))
@@ -64,7 +65,6 @@ import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  CertState (..),
   DState (..),
   EpochState (..),
   FutureGenDeleg (..),
@@ -174,7 +174,7 @@ newLab b cs =
 -- instead use 'newEpoch'.
 feesAndDeposits ::
   forall era.
-  EraPParams era =>
+  (EraPParams era, EraCertState era) =>
   PParams era ->
   Coin ->
   [Credential 'Staking] ->
@@ -186,7 +186,10 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    CertState vstate pstate dstate = lsCertState ls
+    certState = lsCertState ls
+    vstate = certState ^. certVStateL
+    pstate = certState ^. certPStateL
+    dstate = certState ^. certDStateL
     utxoSt = lsUTxOState ls
     utxoSt' =
       utxoSt
@@ -205,7 +208,7 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
       Map.fromList (map (\cred -> (cred, UM.compactCoinOrError (ppEx ^. ppKeyDepositL))) stakes)
     newPools = Map.fromList (map (\p -> (ppId p, ppEx ^. ppPoolDepositL)) pools)
     dpstate' =
-      CertState
+      mkCertState
         vstate
         pstate {psDeposits = Map.unionWith (\old _new -> old) newPools (psDeposits pstate)}
         dstate {dsUnified = UM.unionKeyDeposits (RewDepUView (dsUnified dstate)) newDeposits}
@@ -214,6 +217,7 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
 
 feesAndKeyRefund ::
   forall era.
+  EraCertState era =>
   Coin ->
   Credential 'Staking ->
   ChainState era ->
@@ -223,7 +227,9 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
-    CertState _vstate pstate dstate = lsCertState ls
+    certState = lsCertState ls
+    pstate = certState ^. certPStateL
+    dstate = certState ^. certDStateL
     refund = case UM.lookup key (RewDepUView (dsUnified dstate)) of
       Nothing -> Coin 0
       Just (RDPair _ ccoin) -> fromCompact ccoin
@@ -236,7 +242,7 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
-    dpstate' = CertState def pstate dstate {dsUnified = UM.adjust zeroD key (RewDepUView (dsUnified dstate))}
+    dpstate' = mkCertState def pstate dstate {dsUnified = UM.adjust zeroD key (RewDepUView (dsUnified dstate))}
     zeroD (RDPair x _) = RDPair x (UM.CompactCoin 0)
 
 -- | = Update the UTxO
@@ -273,6 +279,7 @@ newUTxO txb cs = cs {chainNes = nes'}
 --   The rdDeposit component of the RDPair is set by 'feesAndDeposits'
 newStakeCred ::
   forall era.
+  EraCertState era =>
   Credential 'Staking ->
   Ptr ->
   ChainState era ->
@@ -283,7 +290,7 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ds = certDState dps
+    ds = dps ^. certDStateL
     ds' =
       ds
         { dsUnified =
@@ -292,7 +299,7 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
                 um2 = (PtrUView um1 UM.∪ (ptr, cred))
              in um2
         }
-    dps' = dps {certDState = ds'}
+    dps' = dps & certDStateL .~ ds'
     ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -305,6 +312,7 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
 -- can't be used to balance the utxosDeposited field in 'feesAndKeyRefund'
 deregStakeCred ::
   forall era.
+  EraCertState era =>
   Credential 'Staking ->
   ChainState era ->
   ChainState era
@@ -314,7 +322,7 @@ deregStakeCred cred cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ds = certDState dps
+    ds = dps ^. certDStateL
     ds' =
       ds
         { dsUnified =
@@ -324,7 +332,7 @@ deregStakeCred cred cs = cs {chainNes = nes'}
                 um3 = UM.delete cred (SPoolUView um2)
              in um3
         }
-    dps' = dps {certDState = ds'}
+    dps' = dps & certDStateL .~ ds'
     ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -335,6 +343,7 @@ deregStakeCred cred cs = cs {chainNes = nes'}
 -- stake pool.
 delegation ::
   forall era.
+  EraCertState era =>
   Credential 'Staking ->
   KeyHash 'StakePool ->
   ChainState era ->
@@ -345,12 +354,12 @@ delegation cred pool cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ds = certDState dps
+    ds = dps ^. certDStateL
     ds' =
       ds
         { dsUnified = UM.insert cred pool (delegations ds)
         }
-    dps' = dps {certDState = ds'}
+    dps' = dps & certDStateL .~ ds'
     ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -360,6 +369,7 @@ delegation cred pool cs = cs {chainNes = nes'}
 -- Add a newly registered stake pool
 newPool ::
   forall era.
+  EraCertState era =>
   PoolParams ->
   ChainState era ->
   ChainState era
@@ -369,12 +379,12 @@ newPool pool cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ps = certPState dps
+    ps = dps ^. certPStateL
     ps' =
       ps
         { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
         }
-    dps' = dps {certPState = ps'}
+    dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -382,6 +392,7 @@ newPool pool cs = cs {chainNes = nes'}
 -- | = Re-Register Stake Pool
 reregPool ::
   forall era.
+  EraCertState era =>
   PoolParams ->
   ChainState era ->
   ChainState era
@@ -391,12 +402,12 @@ reregPool pool cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ps = certPState dps
+    ps = dps ^. certPStateL
     ps' =
       ps
         { psFutureStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
         }
-    dps' = dps {certPState = ps'}
+    dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -404,6 +415,7 @@ reregPool pool cs = cs {chainNes = nes'}
 -- | = Re-Register Stake Pool
 updatePoolParams ::
   forall era.
+  EraCertState era =>
   PoolParams ->
   ChainState era ->
   ChainState era
@@ -413,13 +425,13 @@ updatePoolParams pool cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ps = certPState dps
+    ps = dps ^. certPStateL
     ps' =
       ps
         { psStakePoolParams = Map.insert (ppId pool) pool (psStakePoolParams ps)
         , psFutureStakePoolParams = Map.delete (ppId pool) (psStakePoolParams ps)
         }
-    dps' = dps {certPState = ps'}
+    dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -429,6 +441,7 @@ updatePoolParams pool cs = cs {chainNes = nes'}
 -- Stage a stake pool for retirement.
 stageRetirement ::
   forall era.
+  EraCertState era =>
   KeyHash 'StakePool ->
   EpochNo ->
   ChainState era ->
@@ -439,9 +452,9 @@ stageRetirement kh e cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ps = certPState dps
+    ps = dps ^. certPStateL
     ps' = ps {psRetiring = Map.insert kh e (psRetiring ps)}
-    dps' = dps {certPState = ps'}
+    dps' = dps & certPStateL .~ ps'
     ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -451,7 +464,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 -- Remove a stake pool.
 reapPool ::
   forall era.
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   PoolParams ->
   ChainState era ->
   ChainState era
@@ -462,7 +475,7 @@ reapPool pool cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ps = certPState dps
+    ps = dps ^. certPStateL
     ps' =
       ps
         { psRetiring = Map.delete kh (psRetiring ps)
@@ -470,7 +483,7 @@ reapPool pool cs = cs {chainNes = nes'}
         , psDeposits = Map.delete kh (psDeposits ps)
         }
     pp = es ^. curPParamsEpochStateL
-    ds = certDState dps
+    ds = dps ^. certDStateL
     RewardAccount _ rewardAddr = ppRewardAccount pool
     (rewards', unclaimed) =
       case UM.lookup rewardAddr (rewards ds) of
@@ -490,7 +503,10 @@ reapPool pool cs = cs {chainNes = nes'}
     as' = as {asTreasury = asTreasury as <+> unclaimed}
     utxoSt = lsUTxOState ls
     utxoSt' = utxoSt {utxosDeposited = utxosDeposited utxoSt <-> (pp ^. ppPoolDepositL)}
-    dps' = dps {certPState = ps', certDState = ds'}
+    dps' =
+      dps
+        & certPStateL .~ ps'
+        & certDStateL .~ ds'
     ls' = ls {lsCertState = dps', lsUTxOState = utxoSt'}
     es' = es {esLState = ls', esAccountState = as'}
     nes' = nes {nesEs = es'}
@@ -500,6 +516,7 @@ reapPool pool cs = cs {chainNes = nes'}
 -- Add a credential to the MIR mapping for the given pot (reserves or treasury)
 mir ::
   forall era.
+  EraCertState era =>
   Credential 'Staking ->
   MIRPot ->
   Coin ->
@@ -511,7 +528,7 @@ mir cred pot amnt cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ds = certDState dps
+    ds = dps ^. certDStateL
     InstantaneousRewards
       { iRReserves = ir
       , iRTreasury = it
@@ -522,7 +539,7 @@ mir cred pot amnt cs = cs {chainNes = nes'}
       ReservesMIR -> InstantaneousRewards (Map.insert cred amnt ir) it dr dt
       TreasuryMIR -> InstantaneousRewards ir (Map.insert cred amnt it) dr dt
     ds' = ds {dsIRewards = irwd'}
-    dps' = dps {certDState = ds'}
+    dps' = dps & certDStateL .~ ds'
     ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -532,6 +549,7 @@ mir cred pot amnt cs = cs {chainNes = nes'}
 -- On the epoch boundary, reset the MIR mappings and augment the rewards.
 applyMIR ::
   forall era.
+  EraCertState era =>
   MIRPot ->
   Map (Credential 'Staking) Coin ->
   ChainState era ->
@@ -543,13 +561,13 @@ applyMIR pot newrewards cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ds = certDState dps
+    ds = dps ^. certDStateL
     ds' =
       ds
         { dsUnified = rewards ds UM.∪+ Map.map UM.compactCoinOrError newrewards
         , dsIRewards = emptyInstantaneousRewards
         }
-    dps' = dps {certDState = ds'}
+    dps' = dps & certDStateL .~ ds'
     ls' = ls {lsCertState = dps'}
     as = esAccountState es
     as' =
@@ -588,7 +606,7 @@ pulserUpdate p cs = cs {chainNes = nes'}
 -- Apply the given reward update to the chain state
 applyRewardUpdate ::
   forall era.
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   RewardUpdate ->
   ChainState era ->
   ChainState era
@@ -805,6 +823,7 @@ setPrevPParams pp cs = cs {chainNes = nes'}
 -- | = Set a future genesis delegation.
 setFutureGenDeleg ::
   forall era.
+  EraCertState era =>
   (FutureGenDeleg, GenDelegPair) ->
   ChainState era ->
   ChainState era
@@ -814,9 +833,9 @@ setFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ds = certDState dps
+    ds = dps ^. certDStateL
     ds' = ds {dsFutureGenDelegs = Map.insert fg gd (dsFutureGenDelegs ds)}
-    dps' = dps {certDState = ds'}
+    dps' = dps & certDStateL .~ ds'
     ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -824,6 +843,7 @@ setFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
 -- | = Set a future genesis delegation.
 adoptFutureGenDeleg ::
   forall era.
+  EraCertState era =>
   (FutureGenDeleg, GenDelegPair) ->
   ChainState era ->
   ChainState era
@@ -833,14 +853,14 @@ adoptFutureGenDeleg (fg, gd) cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     dps = lsCertState ls
-    ds = certDState dps
+    ds = dps ^. certDStateL
     gds = GenDelegs $ Map.insert (fGenDelegGenKeyHash fg) gd (unGenDelegs (dsGenDelegs ds))
     ds' =
       ds
         { dsFutureGenDelegs = Map.delete fg (dsFutureGenDelegs ds)
         , dsGenDelegs = gds
         }
-    dps' = dps {certDState = ds'}
+    dps' = dps & certDStateL .~ ds'
     ls' = ls {lsCertState = dps'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}

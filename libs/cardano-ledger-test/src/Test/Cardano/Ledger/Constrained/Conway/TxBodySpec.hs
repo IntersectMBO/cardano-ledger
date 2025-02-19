@@ -47,7 +47,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Cert (
 import Test.Cardano.Ledger.Constrained.Conway.Certs (certsEnvSpec, projectEnv)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody (fromShelleyBody)
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraSpecLedger (..))
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraSpecLedger)
 
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
@@ -59,11 +59,12 @@ import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.CertState (lookupDepositDState, lookupDepositVState)
+import Cardano.Ledger.CertState (EraCertState (..), lookupDepositDState, lookupDepositVState)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (Consumed (..), Produced (..), consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.LedgerState (CertState (..), PState (..))
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
+import Cardano.Ledger.Shelley.LedgerState (CertState, PState (..))
 import Data.Text (pack)
 import Lens.Micro
 import Prettyprinter (sep, vsep)
@@ -143,13 +144,18 @@ adjustTxOutCoin (DeltaCoin n) x = x & coinTxOutL .~ ((x ^. coinTxOutL) <+> (Coin
 --   It depends on the PParams (deposit ammounts for registering a staking key, a ppol, and registering a Drep)
 --   and on the CertState (what deposits were made in the past)
 getDepositRefund ::
-  forall era. EraTxCert era => PParams era -> CertState era -> [TxCert era] -> (DeltaCoin, DeltaCoin)
-getDepositRefund pp (CertState vs ps ds) certs =
+  forall era.
+  (EraTxCert era, EraCertState era) =>
+  PParams era -> CertState era -> [TxCert era] -> (DeltaCoin, DeltaCoin)
+getDepositRefund pp certState certs =
   ( delta $ getTotalDepositsTxCerts pp (`Map.member` psStakePoolParams ps) certs
   , delta $ getTotalRefundsTxCerts pp (lookupDepositDState ds) (lookupDepositVState vs) certs
   )
   where
     delta (Coin n) = DeltaCoin n
+    vs = certState ^. certVStateL
+    ps = certState ^. certPStateL
+    ds = certState ^. certDStateL
 
 -- | This is exactly the same as reify, except it names the existential varaible for better error messages
 reifyX ::
@@ -258,6 +264,7 @@ go2 ::
   , EraSpecCert era ConwayFn
   , EraSpecTxCert ConwayFn era
   , HasSpec ConwayFn (Tx era)
+  , HasSpec ConwayFn (CertState era)
   ) =>
   IO ()
 go2 = do
@@ -267,7 +274,7 @@ go2 = do
   certState <-
     generate $
       genFromSpec @ConwayFn @(CertState era)
-        (certStateSpec @ConwayFn @era univ delegatees wdrls) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
+        (certStateSpec @era @ConwayFn univ delegatees wdrls) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
         -- error "STOP"
   certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv era) certsEnvSpec
 
@@ -293,7 +300,7 @@ testBody = do
   certState <-
     generate $
       genFromSpec @ConwayFn @(CertState AllegraEra)
-        (certStateSpec @ConwayFn @AllegraEra univ delegatees wdrls)
+        (certStateSpec @AllegraEra @ConwayFn univ delegatees wdrls)
 
   cert <-
     generate $

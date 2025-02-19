@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.Bench.Gen (
 import Cardano.Ledger.Shelley.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
+  CertState,
   DState (..),
   LedgerState (..),
   PState (..),
@@ -146,7 +146,7 @@ profileUTxO = do
 -- Registering Stake Keys
 
 touchCertState :: CertState c -> Int
-touchCertState (CertState _x _y _z) = 1
+touchCertState _ = 1
 
 touchUTxOState :: Cardano.Ledger.Shelley.LedgerState.UTxOState cryto -> Int
 touchUTxOState (UTxOState _utxo _deposited _fees _ppups _ _) = 2

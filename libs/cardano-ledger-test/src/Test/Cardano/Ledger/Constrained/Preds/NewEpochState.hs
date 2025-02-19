@@ -1,15 +1,13 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Constrained.Preds.NewEpochState where
 
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core (Era)
-import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.State (PoolDistr (..), SnapShot (..), Stake (..), calculatePoolDistr)
 import qualified Cardano.Ledger.UMap as UMap
 import Control.Monad (when)
@@ -37,7 +35,7 @@ import Test.Tasty (TestTree, defaultMain)
 
 -- ===========================================================
 
-epochstatePreds :: EraGov era => Proof era -> [Pred era]
+epochstatePreds :: EraCertState era => Proof era -> [Pred era]
 epochstatePreds _proof =
   [ incrementalStake :=: markStake
   , delegations :=: markDelegs

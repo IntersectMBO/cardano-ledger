@@ -8,10 +8,10 @@
 module Test.Cardano.Ledger.Generic.AggPropTests where
 
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -28,6 +28,7 @@ import Data.Default (Default (def))
 import Data.Foldable as F (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Lens.Micro ((^.))
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
 import Test.Cardano.Ledger.Generic.Functions (
@@ -134,11 +135,14 @@ forAllChainTrace p@Shelley n propf =
 
 -- | Check that the sum of Key Deposits and the Pool Depoits are equal to the utxosDeposits
 depositInvariant ::
+  EraCertState era =>
   SourceSignalTarget (MOCKCHAIN era) ->
   Property
 depositInvariant SourceSignalTarget {source = mockChainSt} =
-  let LedgerState {lsUTxOState = utxost, lsCertState = CertState _vstate pstate dstate} = (esLState . nesEs . mcsNes) mockChainSt
+  let LedgerState {lsUTxOState = utxost, lsCertState = certState} = (esLState . nesEs . mcsNes) mockChainSt
       -- TODO handle VState
+      pstate = certState ^. certPStateL
+      dstate = certState ^. certDStateL
       allDeposits = utxosDeposited utxost
       sumCoin m = Map.foldl' (<+>) (Coin 0) m
       keyDeposits = fromCompact $ sumDepositUView (RewDepUView (dsUnified dstate))
@@ -156,11 +160,13 @@ depositInvariant SourceSignalTarget {source = mockChainSt} =
         (allDeposits === keyDeposits <+> poolDeposits)
 
 rewardDepositDomainInvariant ::
+  EraCertState era =>
   SourceSignalTarget (MOCKCHAIN era) ->
   Property
 rewardDepositDomainInvariant SourceSignalTarget {source = mockChainSt} =
-  let LedgerState {lsCertState = CertState _ _ dstate} = (esLState . nesEs . mcsNes) mockChainSt
+  let LedgerState {lsCertState = certState} = (esLState . nesEs . mcsNes) mockChainSt
       -- TODO VState
+      dstate = certState ^. certDStateL
       rewardDomain = domain (RewDepUView (dsUnified dstate))
       depositDomain = Map.keysSet (depositMap (dsUnified dstate))
    in counterexample

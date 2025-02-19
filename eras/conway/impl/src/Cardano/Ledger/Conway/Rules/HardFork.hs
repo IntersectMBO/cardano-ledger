@@ -51,7 +51,7 @@ newtype ConwayHardForkEvent era = ConwayHardForkEvent ProtVer
 type instance EraRuleEvent "HARDFORK" ConwayEra = ConwayHardForkEvent ConwayEra
 
 instance
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   STS (ConwayHARDFORK era)
   where
   type State (ConwayHARDFORK era) = EpochState era
@@ -63,7 +63,7 @@ instance
 
   transitionRules = [hardforkTransition @era]
 
-hardforkTransition :: TransitionRule (ConwayHARDFORK era)
+hardforkTransition :: EraCertState era => TransitionRule (ConwayHARDFORK era)
 hardforkTransition = do
   TRC (_, epochState, newPv) <-
     judgmentContext

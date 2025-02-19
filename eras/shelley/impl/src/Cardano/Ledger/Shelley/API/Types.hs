@@ -70,9 +70,9 @@ import Cardano.Ledger.Shelley.BlockChain as X (bbHash)
 import Cardano.Ledger.Shelley.Genesis as X
 import Cardano.Ledger.Shelley.LedgerState as X (
   AccountState (..),
-  CertState (..),
   DState (..),
   EpochState (..),
+  EraCertState (..),
   IncrementalStake (..),
   InstantaneousRewards (..),
   LedgerState (..),

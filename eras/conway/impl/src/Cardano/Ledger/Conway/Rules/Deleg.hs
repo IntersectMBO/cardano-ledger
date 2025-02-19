@@ -34,12 +34,10 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.CertState (
-  CertState (..),
-  DState (..),
+  EraCertState (..),
   certDStateL,
   certVStateL,
   dsUnifiedL,
-  vsDReps,
   vsDRepsL,
  )
 import Cardano.Ledger.Coin (Coin)
@@ -151,6 +149,7 @@ instance
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , EraRule "DELEG" era ~ ConwayDELEG era
+  , EraCertState era
   ) =>
   STS (ConwayDELEG era)
   where
@@ -163,15 +162,16 @@ instance
 
   transitionRules = [conwayDelegTransition @era]
 
-conwayDelegTransition :: EraPParams era => TransitionRule (ConwayDELEG era)
+conwayDelegTransition :: (EraPParams era, EraCertState era) => TransitionRule (ConwayDELEG era)
 conwayDelegTransition = do
   TRC
     ( ConwayDelegEnv pp pools
-      , certState@CertState {certDState = DState {dsUnified}}
+      , certState
       , cert
       ) <-
     judgmentContext
   let
+    dsUnified = certState ^. certDStateL . dsUnifiedL
     ppKeyDeposit = pp ^. ppKeyDepositL
     pv = pp ^. ppProtocolVersionL
     checkDepositAgainstPParams deposit =
@@ -192,7 +192,7 @@ conwayDelegTransition = do
             DRepAlwaysAbstain -> pure ()
             DRepAlwaysNoConfidence -> pure ()
             DRepCredential targetDRep -> do
-              let dReps = vsDReps (certVState certState)
+              let dReps = certState ^. certVStateL . vsDRepsL
               unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $
                 targetDRep `Map.member` dReps ?! DelegateeDRepNotRegisteredDELEG targetDRep
        in \case
@@ -241,6 +241,7 @@ conwayDelegTransition = do
 -- | Apply new delegation, while properly cleaning up older delegations. This function
 -- does not enforce that delegatee is registered, that has to be handled by the caller.
 processDelegation ::
+  EraCertState era =>
   -- | Delegator
   Credential 'Staking ->
   -- | New delegatee
@@ -250,12 +251,13 @@ processDelegation ::
 processDelegation stakeCred newDelegatee !certState = certState'
   where
     !certState' = processDelegationInternal False stakeCred mCurDelegatee newDelegatee certState
-    mUMElem = Map.lookup stakeCred (UM.umElems (dsUnified (certDState certState)))
+    mUMElem = Map.lookup stakeCred (UM.umElems (certState ^. certDStateL . dsUnifiedL))
     mCurDelegatee = mUMElem >>= umElemToDelegatee
 
 -- | Same as `processDelegation`, except it expects the current delegation supplied as an
 -- argument, because in ledger rules we already have it readily available.
 processDelegationInternal ::
+  EraCertState era =>
   -- | Preserve the buggy behavior where DRep delegations are not updated correctly (See #4772)
   Bool ->
   -- | Delegator
@@ -282,8 +284,8 @@ processDelegationInternal preserveIncorrectDelegation stakeCred mCurDelegatee ne
               & certDStateL . dsUnifiedL %~ \umap ->
                 UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
           dReps
-            | preserveIncorrectDelegation = vsDReps (certVState cState)
-            | otherwise = vsDReps (certVState cState')
+            | preserveIncorrectDelegation = cState ^. certVStateL . vsDRepsL
+            | otherwise = cState' ^. certVStateL . vsDRepsL
        in case dRep of
             DRepCredential targetDRep
               | Just dRepState <- Map.lookup targetDRep dReps ->
@@ -300,16 +302,17 @@ umElemToDelegatee (UM.UMElem _ _ mPool mDRep) =
     (SJust pool, SJust dRep) -> Just $ DelegStakeVote pool dRep
 
 processDRepUnDelegation ::
+  EraCertState era =>
   Credential 'Staking ->
   Maybe Delegatee ->
   CertState era ->
   CertState era
 processDRepUnDelegation _ Nothing cState = cState
-processDRepUnDelegation stakeCred (Just delegatee) cState@(CertState {certVState}) =
+processDRepUnDelegation stakeCred (Just delegatee) cState =
   case delegatee of
     DelegStake _ -> cState
-    DelegVote dRep -> cState {certVState = unDelegVote certVState dRep}
-    DelegStakeVote _sPool dRep -> cState {certVState = unDelegVote certVState dRep}
+    DelegVote dRep -> cState & certVStateL .~ unDelegVote (cState ^. certVStateL) dRep
+    DelegStakeVote _sPool dRep -> cState & certVStateL .~ unDelegVote (cState ^. certVStateL) dRep
   where
     unDelegVote vState = \case
       DRepCredential dRepCred ->

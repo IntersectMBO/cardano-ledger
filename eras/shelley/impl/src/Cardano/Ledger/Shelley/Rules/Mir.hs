@@ -21,6 +21,7 @@ module Cardano.Ledger.Shelley.Rules.Mir (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -30,15 +31,17 @@ import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState,
   InstantaneousRewards (..),
-  certDState,
+  certDStateL,
   curPParamsEpochStateL,
   dsIRewards,
-  dsUnified,
+  dsIRewardsL,
+  dsUnifiedL,
   esAccountState,
   esLState,
+  esLStateL,
   esNonMyopic,
   esSnapshots,
-  lsCertState,
+  lsCertStateL,
   prevPParamsEpochStateL,
   rewards,
   pattern EpochState,
@@ -85,6 +88,7 @@ instance NoThunks (ShelleyMirPredFailure era)
 instance
   ( Default (EpochState era)
   , EraGov era
+  , EraCertState era
   ) =>
   STS (ShelleyMIR era)
   where
@@ -101,14 +105,14 @@ instance
     [ PostCondition
         "MIR may not create or remove reward accounts"
         ( \(TRC (_, st, _)) st' ->
-            let r = rewards . certDState . lsCertState . esLState
+            let r esl = rewards (esl ^. esLStateL . lsCertStateL . certDStateL)
              in length (r st) == length (r st')
         )
     ]
 
 mirTransition ::
   forall era.
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   TransitionRule (ShelleyMIR era)
 mirTransition = do
   TRC
@@ -124,8 +128,8 @@ mirTransition = do
     judgmentContext
   let pr = es ^. prevPParamsEpochStateL
       pp = es ^. curPParamsEpochStateL
-      dpState = lsCertState ls
-      ds = certDState dpState
+      dpState = ls ^. lsCertStateL
+      ds = dpState ^. certDStateL
       rewards' = rewards ds
       reserves = asReserves acnt
       treasury = asTreasury acnt
@@ -146,16 +150,10 @@ mirTransition = do
             { asReserves = availableReserves <-> totR
             , asTreasury = availableTreasury <-> totT
             }
-          ls
-            { lsCertState =
-                dpState
-                  { certDState =
-                      ds
-                        { dsUnified = rewards' UM.∪+ Map.map compactCoinOrError update
-                        , dsIRewards = emptyInstantaneousRewards
-                        }
-                  }
-            }
+          ( ls
+              & lsCertStateL . certDStateL . dsUnifiedL .~ (rewards' UM.∪+ Map.map compactCoinOrError update)
+              & lsCertStateL . certDStateL . dsIRewardsL .~ emptyInstantaneousRewards
+          )
           ss
           nm
           & prevPParamsEpochStateL .~ pr
@@ -169,13 +167,9 @@ mirTransition = do
       pure $
         EpochState
           acnt
-          ls
-            { lsCertState =
-                dpState
-                  { certDState =
-                      ds {dsIRewards = emptyInstantaneousRewards}
-                  }
-            }
+          ( ls
+              & lsCertStateL . certDStateL . dsIRewardsL .~ emptyInstantaneousRewards
+          )
           ss
           nm
           & prevPParamsEpochStateL .~ pr

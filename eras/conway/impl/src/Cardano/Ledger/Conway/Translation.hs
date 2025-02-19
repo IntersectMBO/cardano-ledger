@@ -20,7 +20,8 @@ module Cardano.Ledger.Conway.Translation (
 import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
+import Cardano.Ledger.CertState (CommitteeState (..), upgradeCertState)
+import Cardano.Ledger.Conway.CertState ()
 import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -39,7 +40,6 @@ import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Plutus.Data (translateDatum)
 import Cardano.Ledger.Shelley.API (
-  CertState (..),
   DState (..),
   EpochState (..),
   NewEpochState (..),
@@ -49,6 +49,7 @@ import Cardano.Ledger.Shelley.API (
   VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
  )
@@ -157,14 +158,8 @@ instance TranslateEra ConwayEra VState where
 instance TranslateEra ConwayEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra ConwayEra CertState where
-  translateEra ctxt ls =
-    pure
-      CertState
-        { certDState = translateEra' ctxt $ certDState ls
-        , certPState = translateEra' ctxt $ certPState ls
-        , certVState = translateEra' ctxt $ certVState ls
-        }
+instance TranslateEra ConwayEra ShelleyCertState where
+  translateEra ConwayGenesis {} = pure . upgradeCertState
 
 instance TranslateEra ConwayEra API.LedgerState where
   translateEra conwayGenesis ls =

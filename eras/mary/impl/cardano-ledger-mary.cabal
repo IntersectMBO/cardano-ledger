@@ -38,6 +38,7 @@ library
 
   hs-source-dirs: src
   other-modules:
+    Cardano.Ledger.Mary.CertState
     Cardano.Ledger.Mary.Era
     Cardano.Ledger.Mary.PParams
     Cardano.Ledger.Mary.Rules

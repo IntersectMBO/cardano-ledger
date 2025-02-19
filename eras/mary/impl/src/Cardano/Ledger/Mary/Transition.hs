@@ -8,6 +8,7 @@ module Cardano.Ledger.Mary.Transition (TransitionConfig (..)) where
 import Cardano.Ledger.Allegra
 import Cardano.Ledger.Allegra.Transition
 import Cardano.Ledger.Genesis (NoGenesis (..))
+import Cardano.Ledger.Mary.CertState ()
 import Cardano.Ledger.Mary.Era
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Shelley.Transition

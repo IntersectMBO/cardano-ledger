@@ -47,6 +47,7 @@ import Cardano.Ledger.BaseTypes (
   (%?),
  )
 import Cardano.Ledger.Binary (encCBOR, hashWithEncoder, natVersion, shelleyProtVer)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (
   Coin (..),
   DeltaCoin (..),
@@ -62,17 +63,15 @@ import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
-  CertState (..),
   EpochState (..),
   FilteredRewards (..),
-  LedgerState (..),
   NewEpochState (..),
   RewardUpdate (..),
   circulation,
   completeRupd,
   createRUpd,
   filterAllRewards,
-  lsCertState,
+  lsCertStateL,
   prevPParamsEpochStateL,
   rewards,
   updateNonMyopic,
@@ -536,7 +535,7 @@ data RewardUpdateOld = RewardUpdateOld
 
 createRUpdOld ::
   forall era.
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   EpochSize ->
   BlocksMade ->
   EpochState era ->
@@ -545,7 +544,7 @@ createRUpdOld ::
 createRUpdOld slotsPerEpoch b es@(EpochState acnt ls ss nm) maxSupply =
   createRUpdOld_ @era slotsPerEpoch b ss reserves pr totalStake rs nm
   where
-    ds = certDState $ lsCertState ls
+    ds = ls ^. lsCertStateL . certDStateL
     rs = UM.domain $ rewards ds
     reserves = asReserves acnt
     totalStake = circulation es maxSupply
@@ -617,7 +616,7 @@ overrideProtocolVersionUsedInRewardCalc pv es =
 
 oldEqualsNew ::
   forall era.
-  (EraGov era, Show (NewEpochState era)) =>
+  (EraGov era, Show (NewEpochState era), EraCertState era) =>
   ProtVer ->
   NewEpochState era ->
   Property
@@ -645,7 +644,7 @@ oldEqualsNew pv newepochstate =
 
 oldEqualsNewOn ::
   forall era.
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   ProtVer ->
   NewEpochState era ->
   Property

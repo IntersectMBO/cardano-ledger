@@ -19,7 +19,7 @@ module Cardano.Ledger.Shelley.Rules.Reports (
 where
 
 import Cardano.Ledger.CertState (
-  CertState (..),
+  EraCertState (..),
   InstantaneousRewards (..),
  )
 import Cardano.Ledger.Coin (Coin)
@@ -57,7 +57,7 @@ synopsisCoinMap Nothing = "SYNOPSIS NOTHING"
 -- Printing Produced == Consumed
 
 produceEqualsConsumed ::
-  EraTxBody era =>
+  (EraTxBody era, EraCertState era) =>
   PParams era ->
   CertState era ->
   UTxO era ->

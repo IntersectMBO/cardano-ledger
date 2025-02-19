@@ -50,6 +50,7 @@ module Test.Cardano.Ledger.Generic.Proof (
   UTxOWit (..),
   ScriptWit (..),
   GovStateWit (..),
+  CertStateWit (..),
   whichValue,
   whichTxOut,
   whichTxCert,
@@ -57,6 +58,7 @@ module Test.Cardano.Ledger.Generic.Proof (
   whichUTxO,
   whichScript,
   whichGovState,
+  whichCertState,
 ) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
@@ -73,6 +75,7 @@ import Cardano.Ledger.Babbage.Core (BabbageEraPParams)
 import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..), BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (ConwayGovState, RunConwayRatify (..))
@@ -96,6 +99,7 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core (EraGov, ShelleyEraTxCert)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), ShelleyGovState (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
@@ -142,6 +146,7 @@ class
   , EraTxAuxData era
   , EraScript era
   , ShelleyEraTxCert era
+  , EraCertState era
   ) =>
   Reflect era
   where
@@ -547,3 +552,18 @@ whichGovState Mary = GovStateShelleyToBabbage
 whichGovState Alonzo = GovStateShelleyToBabbage
 whichGovState Babbage = GovStateShelleyToBabbage
 whichGovState Conway = GovStateConwayToConway
+
+data CertStateWit era where
+  CertStateShelleyToBabbage ::
+    (EraCertState era, CertState era ~ ShelleyCertState era) => CertStateWit era
+
+-- TODO: Add `CertStateConwayToConway` when Conway related fields are removed from `ShelleyCertState`
+
+whichCertState :: Proof era -> CertStateWit era
+whichCertState Shelley = CertStateShelleyToBabbage
+whichCertState Allegra = CertStateShelleyToBabbage
+whichCertState Mary = CertStateShelleyToBabbage
+whichCertState Alonzo = CertStateShelleyToBabbage
+whichCertState Babbage = CertStateShelleyToBabbage
+-- TODO: Add `CertStateConwayToConway`, see above
+whichCertState Conway = CertStateShelleyToBabbage

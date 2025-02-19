@@ -29,9 +29,6 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (
   DRepState (..),
-  certDStateL,
-  certPStateL,
-  certVStateL,
   dsUnifiedL,
   psDepositsL,
   vsDRepsL,
@@ -47,7 +44,8 @@ import Cardano.Ledger.Conway.Core (
  )
 import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
+import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
 import Cardano.Ledger.UMap (depositMap)
 import Control.DeepSeq (NFData)
 import Control.Monad.Reader (runReader)
@@ -162,6 +160,7 @@ instance
   ( EraTx era
   , NFData (TxWits era)
   , NFData (TxAuxData era)
+  , EraCertState era
   ) =>
   NFData (UtxoExecContext era)
 
@@ -172,6 +171,8 @@ instance
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
   , ToExpr (PParamsHKD Identity era)
+  , EraCertState era
+  , ToExpr (CertState era)
   ) =>
   ToExpr (UtxoExecContext era)
 
@@ -181,6 +182,7 @@ instance
   , EncCBOR (TxBody era)
   , EncCBOR (TxAuxData era)
   , EncCBOR (TxWits era)
+  , EraCertState era
   ) =>
   EncCBOR (UtxoExecContext era)
   where
@@ -192,8 +194,9 @@ instance
             !> To uecUTxO
             !> To uecUtxoEnv
 
-instance Inject (UtxoExecContext era) (CertState era) where
-  inject = ueCertState . uecUtxoEnv
+-- TODO: generalise
+instance CertState era ~ ShelleyCertState era => Inject (UtxoExecContext era) (ShelleyCertState era) where
+  inject ctx = (uecUtxoEnv ctx) ^. utxoEnvCertStateL
 
 utxoTxSpec ::
   ( IsConwayUniv fn
@@ -221,7 +224,7 @@ correctAddrAndWFCoin txOut =
         )
     ]
 
-depositsMap :: CertState era -> Proposals era -> Map.Map DepositPurpose Coin
+depositsMap :: EraCertState era => CertState era -> Proposals era -> Map.Map DepositPurpose Coin
 depositsMap certState props =
   Map.unions
     [ Map.mapKeys CredentialDeposit $ depositMap (certState ^. certDStateL . dsUnifiedL)
