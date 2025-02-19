@@ -172,7 +172,7 @@ instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
       TypeListLen -> decodeFromList
       TypeListLen64 -> decodeFromList
       TypeListLenIndef -> decodeFromList
-      _ -> error "Failed to decode AuxiliaryData"
+      _ -> fail "Failed to decode AuxiliaryDataRaw"
     where
       decodeFromMap =
         decode
