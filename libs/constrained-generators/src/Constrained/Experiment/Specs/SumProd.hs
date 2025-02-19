@@ -29,10 +29,7 @@
 
 module Constrained.Experiment.Specs.SumProd (
   IsNormalType,
-  left_,
-  right_,
-  cJust_,
-  cNothing_,
+  
   caseOn,
   branch,
   branchW,
@@ -47,11 +44,19 @@ module Constrained.Experiment.Specs.SumProd (
   onJust,
   isJust,
   chooseSpec,
+  left_,
+  right_,
+  cJust_,
+  cNothing_,
   fst_,
   snd_,
   pair_,
-  sumleft_,
-  sumright_,
+  leftFn,
+  rightFn,
+  fstFn,
+  sndFn,
+  pairFn,
+  PairSpec(..),
 ) where
 
 import Constrained.Core (Evidence (..))
@@ -113,8 +118,8 @@ instance (HasSpec a, HasSpec b) => HasSpec (Prod a b) where
       ++ [Prod a b' | b' <- shrinkWithSpec sb b]
 
   toPreds x (Cartesian sf ss) =
-    satisfies (fst_ x) sf
-      <> satisfies (snd_ x) ss
+    satisfies (fstFn x) sf
+      <> satisfies (sndFn x) ss
 
   cardinalTypeSpec (Cartesian x y) = (cardinality x) + (cardinality y)
 
@@ -143,7 +148,7 @@ instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
 
 -- ========= FstW
 
-instance (HasSpec a, HasSpec b) => FunSym () "fst_" BaseW '[Prod a b] a where
+instance (HasSpec a, HasSpec b) => FunSym () "fstFn" BaseW '[Prod a b] a where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -163,12 +168,12 @@ instance (HasSpec a, HasSpec b) => FunSym () "fst_" BaseW '[Prod a b] a where
   mapTypeSpec f ts = case f of
     FstW | Cartesian s _ <- ts -> s
 
-fst_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term a
-fst_ = appTerm FstW
+fstFn :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term a
+fstFn = appTerm FstW
 
 -- ========= SndW
 
-instance (HasSpec a, HasSpec b) => FunSym () "snd_" BaseW '[Prod a b] b where
+instance (HasSpec a, HasSpec b) => FunSym () "sndFn" BaseW '[Prod a b] b where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -188,8 +193,8 @@ instance (HasSpec a, HasSpec b) => FunSym () "snd_" BaseW '[Prod a b] b where
   mapTypeSpec f ts = case f of
     SndW | Cartesian _ s <- ts -> s
 
-snd_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term b
-snd_ = appTerm SndW
+sndFn:: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term b
+sndFn = appTerm SndW
 
 -- ========= PairW
 sameFst :: Eq a1 => a1 -> [Prod a1 a2] -> [a2]
@@ -198,7 +203,7 @@ sameFst a ps = [b | Prod a' b <- ps, a == a']
 sameSnd :: Eq a1 => a1 -> [Prod a2 a1] -> [a2]
 sameSnd b ps = [a | Prod a b' <- ps, b == b']
 
-instance (HasSpec a, HasSpec b) => FunSym () "pair_" BaseW '[a, b] (Prod a b) where
+instance (HasSpec a, HasSpec b) => FunSym () "pairFn" BaseW '[a, b] (Prod a b) where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -232,8 +237,8 @@ instance (HasSpec a, HasSpec b) => FunSym () "pair_" BaseW '[a, b] (Prod a b) wh
   propagate ctx _ =
     ErrorSpec $ pure ("FunSym instance for PairW with wrong number of arguments. " ++ show ctx)
 
-pair_ :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (Prod a b)
-pair_ = appTerm PairW
+pairFn :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (Prod a b)
+pairFn = appTerm PairW
 
 -- ==================================================================
 -- The HasSpec instance for Sum is in TheKnot.
@@ -242,7 +247,7 @@ pair_ = appTerm PairW
 
 -- ============= InjLeftW ====
 
-instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_" BaseW '[a] (Sum a b) where
+instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "leftFn" BaseW '[a] (Sum a b) where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -265,14 +270,14 @@ instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => FunSym () "sumleft_"
   mapTypeSpec f ts = case f of
     InjLeftW -> typeSpec $ SumSpec Nothing (typeSpec ts) (ErrorSpec (pure "mapTypeSpec InjLeftW"))
 
-sumleft_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term a -> Term (Sum a b)
-sumleft_ = appTerm InjLeftW
+leftFn :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term a -> Term (Sum a b)
+leftFn = appTerm InjLeftW
 
 -- ============= InjRightW ====
 
 instance
   (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
-  FunSym () "sumright_" BaseW '[b] (Sum a b)
+  FunSym () "rightFn" BaseW '[b] (Sum a b)
   where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
@@ -296,8 +301,8 @@ instance
   mapTypeSpec f ts = case f of
     InjRightW -> typeSpec $ SumSpec Nothing (ErrorSpec (pure "mapTypeSpec InjRightW")) (typeSpec ts)
 
-sumright_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term b -> Term (Sum a b)
-sumright_ = appTerm InjRightW
+rightFn :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term b -> Term (Sum a b)
+rightFn = appTerm InjRightW
 
 -- ==================================================================
 -- Generics
@@ -389,7 +394,7 @@ instance {-# OVERLAPPABLE #-} Args a ~ '[a] => IsProd a where
 
 instance IsProd b => IsProd (Prod a b) where
   toArgs (p :: Term (Prod a b))
-    | Evidence <- prerequisites @(Prod a b) = (fst_ p) :> toArgs (snd_ p)
+    | Evidence <- prerequisites @(Prod a b) = (fstFn p) :> toArgs (sndFn p)
 
 type family Args t where
   Args (Prod a b) = a : Args b
@@ -430,7 +435,7 @@ instance
   ) =>
   SOPTerm c (c ::: constr : con : sop)
   where
-  inj_ = sumleft_ -- app injLeftFn
+  inj_ = leftFn -- app injLeftFn
 
 instance
   {-# OVERLAPPABLE #-}
@@ -441,7 +446,7 @@ instance
   ) =>
   SOPTerm c ((c' ::: con) : con' : sop)
   where
-  inj_ = sumright_ . inj_ @c @(con' : sop)
+  inj_ = rightFn . inj_ @c @(con' : sop)
 
 class HasSpec (ProdOver constr) => ConstrTerm constr where
   prod_ :: List Term constr -> Term (ProdOver constr)
@@ -460,7 +465,7 @@ instance Select 0 (a : '[]) where
   select_ = id
 
 instance (HasSpec a, HasSpec (ProdOver (a' : as))) => Select 0 (a : a' : as) where
-  select_ = fst_
+  select_ = fstFn
 
 instance
   {-# OVERLAPPABLE #-}
@@ -471,7 +476,7 @@ instance
   ) =>
   Select n (a : a' : as)
   where
-  select_ = select_ @(n - 1) @(a' : as) . snd_
+  select_ = select_ @(n - 1) @(a' : as) . sndFn
 
 class IsConstrOf (c :: Symbol) b sop where
   mkCases ::
@@ -511,6 +516,38 @@ instance
 -- Syntax
 ------------------------------------------------------------------------
 
+fst_ ::
+  ( HasSpec a
+  , HasSpec b
+  , IsNormalType a
+  , IsNormalType b
+  ) =>
+  Term (a,b) ->
+  Term a
+fst_ = fstFn . toGeneric_ 
+
+snd_ ::
+  ( HasSpec a
+  , HasSpec b
+  , IsNormalType a
+  , IsNormalType b
+  ) =>
+  Term (a,b) ->
+  Term b
+snd_ = sndFn . toGeneric_
+
+pair_ ::
+  ( HasSpec a
+  , HasSpec b
+  , IsNormalType a
+  , IsNormalType b
+  ) =>
+  Term a ->
+  Term b ->
+  Term (a,b)
+pair_ x y = fromGeneric_  $ pairFn x y
+
+
 left_ ::
   ( HasSpec a
   , HasSpec b
@@ -519,7 +556,7 @@ left_ ::
   ) =>
   Term a ->
   Term (Either a b)
-left_ = fromGeneric_ . sumleft_
+left_ = fromGeneric_ . leftFn
 
 right_ ::
   ( HasSpec a
@@ -529,7 +566,7 @@ right_ ::
   ) =>
   Term b ->
   Term (Either a b)
-right_ = fromGeneric_ . sumright_
+right_ = fromGeneric_ . rightFn
 
 caseOn ::
   forall a.
@@ -701,7 +738,7 @@ instance
   ) =>
   ConstrTerm (a : b : as)
   where
-  prod_ (a :> as) = pair_ a (prod_ as)
+  prod_ (a :> as) = pairFn a (prod_ as)
 
 -- TODO: the constraints around this are horrible!! We should figure out a way to make these things nicer.
 onCon ::
