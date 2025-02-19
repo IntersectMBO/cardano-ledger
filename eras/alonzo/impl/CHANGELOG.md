@@ -15,6 +15,9 @@
 
 ### `testlib`
 
+* Renamed:
+  * `impLookupPlutusScriptMaybe` -> `impLookupPlutusScript`
+  * `impGetScriptContextMaybe` -> `impLookupScriptContext`
 * Expose `alonzoFixupFees`
 
 ## 1.12.0.0
