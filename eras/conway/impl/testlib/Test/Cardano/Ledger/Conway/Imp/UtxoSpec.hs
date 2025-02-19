@@ -92,10 +92,10 @@ spec =
           <$> replicateM 3 nativeScript
       let
         psh1 = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV2
-      ps1 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScriptMaybe psh1
+      ps1 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScript psh1
       let
         psh2 = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
-      ps2 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScriptMaybe psh2
+      ps2 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScript psh2
       let plutusScripts = [fromPlutusScript ps1, fromPlutusScript ps2]
       pure $ nativeScripts ++ plutusScripts
 

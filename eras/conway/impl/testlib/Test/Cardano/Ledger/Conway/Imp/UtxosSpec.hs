@@ -640,7 +640,7 @@ mkRefTxOut ::
   ImpTestM era (TxOut era)
 mkRefTxOut sh = do
   addr <- freshKeyAddr_
-  let mbyPlutusScript = impLookupPlutusScriptMaybe sh
+  let mbyPlutusScript = impLookupPlutusScript sh
   pure $
     mkBasicTxOut addr mempty
       & referenceScriptTxOutL .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)

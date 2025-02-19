@@ -27,6 +27,9 @@
 
 ### `testlib`
 
+* Renamed:
+  * `impLookupPlutusScriptMaybe` -> `impLookupPlutusScript`
+  * `impGetScriptContextMaybe` -> `impLookupScriptContext`
 * Add `DecCBOR` instances for `TranslationInstance`
 * Converted `CertState` to a type family
 * Expose `alonzoFixupFees`
