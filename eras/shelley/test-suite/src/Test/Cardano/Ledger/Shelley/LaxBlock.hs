@@ -30,6 +30,13 @@ import Data.Typeable (Typeable)
 newtype LaxBlock h era = LaxBlock (Block h era)
   deriving (ToCBOR)
 
+deriving newtype instance
+  ( EraSegWits era
+  , DecCBOR (TxSeq era)
+  , DecCBOR h
+  ) =>
+  DecCBOR (LaxBlock h era)
+
 blockDecoder ::
   ( EraTx era
   , TxSeq era ~ ShelleyTxSeq era

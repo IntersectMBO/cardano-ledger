@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Binary.Cddl (
+  cddlDecoderEquivalenceSpec,
   cddlRoundTripCborSpec,
   cddlRoundTripExpectation,
   cddlRoundTripAnnCborSpec,
@@ -44,6 +45,7 @@ import System.Process.Typed (
   readProcess,
   setStdin,
  )
+import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Hspec
 import UnliftIO.Temporary (withTempFile)
@@ -119,6 +121,30 @@ withCddlVarFile varName CddlData {..} roundTripTest = do
         , cddlVarData = varData
         , cddlVarDiagCbor = diagCbor
         }
+
+-- | Using the supplied `CddlData` inside the `SpecWith`, generate random data
+-- and verify that decoding with `DecCBOR (Annotator)` produces the same result
+-- as decoding with `DecCBOR`.
+cddlDecoderEquivalenceSpec ::
+  forall a.
+  ( HasCallStack
+  , Eq a
+  , Show a
+  , DecCBOR a
+  , DecCBOR (Annotator a)
+  ) =>
+  -- | Serialization version
+  Version ->
+  -- | Name of the CDDL variable to test
+  T.Text ->
+  SpecWith CddlData
+cddlDecoderEquivalenceSpec version varName =
+  let lbl = label $ Proxy @a
+   in it (T.unpack $ varName <> ": " <> lbl) $ \cddlData ->
+        withCddlVarFile varName cddlData $ \CddlVarFile {..} -> do
+          forM_ cddlVarDiagCbor $ \diagCbor -> do
+            Cbor cbor <- diagCborToCbor diagCbor
+            decoderEquivalenceExpectation @a version cbor
 
 -- | Using the supplied `CddlData` inside the `SpecWith` generate random data and run the
 -- `cddlRoundTripExpectation` for the supplied CDDL variable

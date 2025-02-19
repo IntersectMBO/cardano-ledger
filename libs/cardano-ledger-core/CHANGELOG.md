@@ -2,6 +2,12 @@
 
 ## 1.17.0.0
 
+* Add DecCBOR instances for:
+  * `PlutusData`
+  * `Data`
+  * `BootstrapWitness`
+  * `WitVKey`
+  * `Block`
 * Remove `applySTSValidateSuchThat` and `applySTSNonStatic` as redundant.
 * Move `AccountState` to `Cardano.Ledger.State` from `cardano-ledger-shelley`
 * Move `Cardano.Ledger.PoolDistr` module contents into `Cardano.Ledger.State` and deprecated the former
@@ -100,6 +106,9 @@
 
 ### `testlib`
 
+* Add `decoderEquivalenceEraSpec`
+* Add `Arbitrary` instance for `PV1.Data`
+* Add `Arbitrary` instances for `Data`, `BinaryData` and `Datum`
 * Re-export `KeyPair`, `mkAddr` and `mkCredential` from `Test.Cardano.Ledger.Imp.Common`
 * Add `MakeStakeReference` and `MakeCredential`
 * Deprecate `mkCred` in favor of `mkCredential` from `MakeCredential`

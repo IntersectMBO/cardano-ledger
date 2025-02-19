@@ -22,7 +22,7 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Allegra.TxAuxData (pattern AllegraTxAuxData)
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
-import Cardano.Ledger.Binary (ToCBOR)
+import Cardano.Ledger.Binary (DecCBOR, ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Mary (MaryEra)
@@ -124,7 +124,13 @@ testUpdate =
 -- == Golden Tests Common to Allegra and Mary ==
 -- =============================================
 
-scriptGoldenTest :: forall era. (AllegraEraScript era, ToCBOR (NativeScript era)) => TestTree
+scriptGoldenTest ::
+  forall era.
+  ( AllegraEraScript era
+  , ToCBOR (NativeScript era)
+  , DecCBOR (NativeScript era)
+  ) =>
+  TestTree
 scriptGoldenTest =
   let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash 'Witness
       kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness

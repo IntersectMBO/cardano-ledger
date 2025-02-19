@@ -105,6 +105,7 @@ import Cardano.Ledger.Binary (
   Encoding,
   ToCBOR (..),
   decodeNullMaybe,
+  decodeNullStrictMaybe,
   encodeListLen,
   encodeNullMaybe,
   serialize,
@@ -447,6 +448,23 @@ instance
           ( sequence . maybeToStrictMaybe
               <$> decodeNullMaybe decCBOR
           )
+  {-# INLINE decCBOR #-}
+
+instance
+  ( Typeable era
+  , DecCBOR (TxBody era)
+  , DecCBOR (TxWits era)
+  , DecCBOR (TxAuxData era)
+  ) =>
+  DecCBOR (AlonzoTx era)
+  where
+  decCBOR =
+    decode $
+      RecD AlonzoTx
+        <! From
+        <! From
+        <! From
+        <! D (decodeNullStrictMaybe decCBOR)
   {-# INLINE decCBOR #-}
 
 alonzoEqTxRaw :: AlonzoEraTx era => Tx era -> Tx era -> Bool

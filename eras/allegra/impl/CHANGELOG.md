@@ -2,6 +2,10 @@
 
 ## 1.7.0.0
 
+* Add `DecCBOR` instances for:
+  * `Timelock`
+  * `AllegraTxAuxData`
+  * `AllegraTxBody`
 * Made the fields of predicate failures and environments lazy
 * Add `Era era` constraint to `NoThunks` instance for `TimeLock`
 * Remove `Era era` constraint from:

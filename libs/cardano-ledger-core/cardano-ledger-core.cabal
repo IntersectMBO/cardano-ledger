@@ -288,6 +288,7 @@ test-suite tests
     containers,
     genvalidity,
     genvalidity-scientific,
+    plutus-ledger-api,
     quickcheck-instances,
     scientific,
     testlib,

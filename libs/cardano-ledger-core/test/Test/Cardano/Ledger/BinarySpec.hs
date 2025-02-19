@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.BinarySpec (spec) where
@@ -11,6 +12,8 @@ import Cardano.Ledger.Hashes (EraIndependentData, SafeHash, ScriptHash)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap (RDPair)
+import qualified PlutusLedgerApi.V1 as PV1
+import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -36,6 +39,7 @@ spec = do
     roundTripCborSpec @CertIx
     roundTripCborSpec @Anchor
     roundTripAnnCborSpec @BootstrapWitness
+    roundTripCborSpec @BootstrapWitness
     roundTripCborSpec @TxId
     roundTripCborSpec @GenDelegPair
     roundTripCborSpec @GenDelegs
@@ -44,3 +48,8 @@ spec = do
     roundTripCborSpec @RDPair
     roundTripCborSpec @ScriptHash
     roundTripCborSpec @(SafeHash EraIndependentData)
+
+  describe "DecCBOR instances equivalence" $ do
+    decoderEquivalenceSpec @BootstrapWitness minBound maxBound
+    decoderEquivalenceSpec @(WitVKey 'Witness) minBound maxBound
+    decoderEquivalenceSpec @PV1.Data minBound maxBound

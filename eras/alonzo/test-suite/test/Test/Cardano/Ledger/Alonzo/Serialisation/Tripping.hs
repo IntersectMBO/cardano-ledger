@@ -52,8 +52,12 @@ tests =
         roundTripCborExpectation @(AlonzoUtxoPredFailure AlonzoEra)
     , testProperty "alonzo/AlonzoUtxosPredFailure" $
         roundTripCborExpectation @(AlonzoUtxosPredFailure AlonzoEra)
-    , testProperty "alonzo/Block" $
+    , testProperty "alonzo/Block (Annotator)" $
         roundTripAnnRangeExpectation @(Block (BHeader StandardCrypto) AlonzoEra)
+          (eraProtVerLow @AlonzoEra)
+          (eraProtVerHigh @AlonzoEra)
+    , testProperty "alonzo/Block" $
+        roundTripCborRangeExpectation @(Block (BHeader StandardCrypto) AlonzoEra)
           (eraProtVerLow @AlonzoEra)
           (eraProtVerHigh @AlonzoEra)
     ]

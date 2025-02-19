@@ -1062,8 +1062,10 @@ deriving instance EncCBOR EpochInterval
 -- Plutus
 --------------------------------------------------------------------------------
 
-instance EncCBOR PV1.Data where
-  encCBOR = fromPlainEncoding . Serialise.encode
+instance ToCBOR PV1.Data where
+  toCBOR = Serialise.encode
+
+instance EncCBOR PV1.Data
 
 instance EncCBOR PV1.ScriptContext where
   encCBOR = encCBOR . PV3.toData

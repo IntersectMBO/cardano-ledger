@@ -246,7 +246,7 @@ class Memoized t where
     MemoBytes (RawType t)
   getMemoBytes = coerce
 
-  -- | This is a coercion from the MemoBytes to the momoized type. This implementation
+  -- | This is a coercion from the MemoBytes to the memoized type. This implementation
   -- cannot be changed since `warpMemoBytes` is not exported, therefore it will only work
   -- on newtypes around `MemoBytes`
   wrapMemoBytes :: MemoBytes (RawType t) -> t

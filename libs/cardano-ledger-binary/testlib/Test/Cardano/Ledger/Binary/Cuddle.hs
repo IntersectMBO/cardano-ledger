@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Binary.Cuddle (
+  huddleDecoderEquivalenceSpec,
   specWithHuddle,
   huddleRoundTripCborSpec,
   huddleRoundTripAnnCborSpec,
@@ -42,6 +43,7 @@ import GHC.Stack (HasCallStack)
 import Prettyprinter (Pretty (pretty))
 import Prettyprinter.Render.Text (hPutDoc)
 import System.IO (IOMode (..), hPutStrLn, withFile)
+import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
 import Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (RoundTripFailure),
   Trip (..),
@@ -77,6 +79,23 @@ instance Example (a -> Seeded Expectation) where
     let qcGen = maybe (mkQCGen 0) fst (replay $ paramsQuickCheckArgs params)
         example a = runSeeded (e a) qcGen
      in evaluateExample example params hook
+
+huddleDecoderEquivalenceSpec ::
+  forall a.
+  (HasCallStack, Eq a, Show a, DecCBOR a, DecCBOR (Annotator a)) =>
+  -- | Serialization version
+  Version ->
+  -- | Name of the CDDL rule to test
+  T.Text ->
+  SpecWith CuddleData
+huddleDecoderEquivalenceSpec version ruleName =
+  let lbl = label $ Proxy @a
+   in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
+        \cddlData ->
+          withGenTerm cddlData (Cuddle.Name ruleName) $ \term -> do
+            let encoding = CBOR.encodeTerm term
+                initCborBytes = CBOR.toLazyByteString encoding
+            decoderEquivalenceExpectation @a version initCborBytes
 
 huddleRoundTripCborSpec ::
   forall a.
