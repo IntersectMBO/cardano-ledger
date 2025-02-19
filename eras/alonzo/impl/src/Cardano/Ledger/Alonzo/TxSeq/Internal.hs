@@ -52,6 +52,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (strictMaybeToMaybe)
+import Data.Monoid (All (..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -182,37 +183,37 @@ hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
 instance AlonzoEraTx era => DecCBOR (Annotator (AlonzoTxSeq era)) where
   decCBOR = do
     (bodies, bodiesAnn) <- withSlice decCBOR
-    (ws, witsAnn) <- withSlice decCBOR
-    let b = length bodies
-        inRange x = (0 <= x) && (x <= (b - 1))
-        w = length ws
+    (wits, witsAnn) <- withSlice decCBOR
+    let bodiesLength = length bodies
+        inRange x = (0 <= x) && (x <= (bodiesLength - 1))
+        witsLength = length wits
     (auxData, auxDataAnn) <- withSlice $
       do
-        m <- decCBOR
+        auxDataMap <- decCBOR
         unless
-          (all inRange (Map.keysSet m))
+          (getAll (Map.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
           ( fail
               ( "Some Auxiliarydata index is not in the range: 0 .. "
-                  ++ show (b - 1)
+                  ++ show (bodiesLength - 1)
               )
           )
-        pure (constructMetadata b m)
+        pure (constructMetadata bodiesLength auxDataMap)
     (isValIdxs, isValAnn) <- withSlice decCBOR
-    let vs = alignedValidFlags b isValIdxs
+    let validFlags = alignedValidFlags bodiesLength isValIdxs
     unless
-      (b == w)
+      (bodiesLength == witsLength)
       ( fail $
           "different number of transaction bodies ("
-            <> show b
+            <> show bodiesLength
             <> ") and witness sets ("
-            <> show w
+            <> show witsLength
             <> ")"
       )
     unless
       (all inRange isValIdxs)
       ( fail
           ( "Some IsValid index is not in the range: 0 .. "
-              ++ show (b - 1)
+              ++ show (bodiesLength - 1)
               ++ ", "
               ++ show isValIdxs
           )
@@ -221,7 +222,7 @@ instance AlonzoEraTx era => DecCBOR (Annotator (AlonzoTxSeq era)) where
     let txns =
           sequenceA $
             StrictSeq.forceToStrict $
-              Seq.zipWith4 alonzoSegwitTx bodies ws vs auxData
+              Seq.zipWith4 alonzoSegwitTx bodies wits validFlags auxData
     pure $
       AlonzoTxSeqRaw
         <$> txns
