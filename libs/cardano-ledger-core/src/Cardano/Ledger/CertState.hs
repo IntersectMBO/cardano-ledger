@@ -382,6 +382,18 @@ instance Era era => EncCBOR (VState era) where
         !> To vsCommitteeState
         !> To vsNumDormantEpochs
 
+instance ToJSON (VState era) where
+  toJSON = object . toVStatePair
+  toEncoding = pairs . mconcat . toVStatePair
+
+toVStatePair :: KeyValue e a => VState era -> [a]
+toVStatePair vs@(VState _ _ _) =
+  let VState {..} = vs
+   in [ "dreps" .= vsDReps
+      , "committeeState" .= vsCommitteeState
+      , "numDormantEpochs" .= vsNumDormantEpochs
+      ]
+
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.
 class

@@ -169,10 +169,11 @@ instance
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
   , EraCertState era
+  , CertState era ~ ShelleyCertState era
   ) =>
   STS (ConwayGOVCERT era)
   where
-  type State (ConwayGOVCERT era) = ShelleyCertState era
+  type State (ConwayGOVCERT era) = CertState era
   type Signal (ConwayGOVCERT era) = ConwayGovCert
   type Environment (ConwayGOVCERT era) = ConwayGovCertEnv era
   type BaseM (ConwayGOVCERT era) = ShelleyBase
