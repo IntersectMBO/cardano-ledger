@@ -29,7 +29,6 @@
 
 module Constrained.Experiment.Specs.SumProd (
   IsNormalType,
-  
   caseOn,
   branch,
   branchW,
@@ -56,7 +55,7 @@ module Constrained.Experiment.Specs.SumProd (
   fstFn,
   sndFn,
   pairFn,
-  PairSpec(..),
+  PairSpec (..),
 ) where
 
 import Constrained.Core (Evidence (..))
@@ -193,7 +192,7 @@ instance (HasSpec a, HasSpec b) => FunSym () "sndFn" BaseW '[Prod a b] b where
   mapTypeSpec f ts = case f of
     SndW | Cartesian _ s <- ts -> s
 
-sndFn:: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term b
+sndFn :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term b
 sndFn = appTerm SndW
 
 -- ========= PairW
@@ -522,9 +521,9 @@ fst_ ::
   , IsNormalType a
   , IsNormalType b
   ) =>
-  Term (a,b) ->
+  Term (a, b) ->
   Term a
-fst_ = fstFn . toGeneric_ 
+fst_ = fstFn . toGeneric_
 
 snd_ ::
   ( HasSpec a
@@ -532,7 +531,7 @@ snd_ ::
   , IsNormalType a
   , IsNormalType b
   ) =>
-  Term (a,b) ->
+  Term (a, b) ->
   Term b
 snd_ = sndFn . toGeneric_
 
@@ -544,9 +543,8 @@ pair_ ::
   ) =>
   Term a ->
   Term b ->
-  Term (a,b)
-pair_ x y = fromGeneric_  $ pairFn x y
-
+  Term (a, b)
+pair_ x y = fromGeneric_ $ pairFn x y
 
 left_ ::
   ( HasSpec a

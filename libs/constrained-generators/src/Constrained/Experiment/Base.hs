@@ -1121,3 +1121,5 @@ instance HasSpec () where
   cardinalTrueSpec = equalSpec 1 -- there is exactly one, ()
   typeSpecOpt _ [] = TrueSpec
   typeSpecOpt _ (_ : _) = ErrorSpec (pure "Non null 'cant' set in typeSpecOpt @()")
+
+-- ========================================================================

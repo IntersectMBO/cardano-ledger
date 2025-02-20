@@ -120,6 +120,13 @@ module Constrained.Experiment.API (
   pattern Pair,
   NumLike,
   PairSpec (..),
+  MapSpec (..),
+  MapW (..),
+  dom_,
+  rng_,
+  lookup_,
+  fstSpec,
+  sndSpec,
 )
 where
 
@@ -240,6 +247,15 @@ import Constrained.Experiment.Specs.ListFoldy (
   sum_,
  )
 
+import Constrained.Experiment.Specs.Map (
+  MapSpec (..),
+  MapW (..),
+  dom_,
+  fstSpec,
+  lookup_,
+  rng_,
+  sndSpec,
+ )
 import Constrained.Experiment.Specs.Num (negate_, (+.), (-.), (>.), (>=.))
 import Constrained.Experiment.Specs.Set (
   SetSpec (..),

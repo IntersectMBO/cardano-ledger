@@ -41,6 +41,7 @@ library
     Constrained.Experiment.Specs.Set
     Constrained.Experiment.Specs.Size
     Constrained.Experiment.Specs.SumProd
+    Constrained.Experiment.Specs.Map
     Constrained.Experiment.SumList
     Constrained.Experiment.Syntax
     Constrained.Experiment.TheKnot
