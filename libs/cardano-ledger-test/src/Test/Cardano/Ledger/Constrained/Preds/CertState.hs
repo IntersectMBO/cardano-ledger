@@ -7,6 +7,7 @@
 module Test.Cardano.Ledger.Constrained.Preds.CertState where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..))
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
@@ -17,7 +18,7 @@ import Control.Monad (when)
 import Data.Default (Default (def))
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
-import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
+import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..), unCertStateF)
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Lenses (fGenDelegGenKeyHashL, strictMaybeToMaybeL)
 import Test.Cardano.Ledger.Constrained.Monad (generateWithSeed, monadTyped)
@@ -51,10 +52,10 @@ manyCoin size = do
 
 -- ======================================
 
-vstatePreds :: Era era => Proof era -> [Pred era]
+vstatePreds :: EraCertState era => Proof era -> [Pred era]
 vstatePreds p = vstateGenPreds p ++ vstateCheckPreds p
 
-vstateGenPreds :: forall era. Era era => Proof era -> [Pred era]
+vstateGenPreds :: forall era. EraCertState era => Proof era -> [Pred era]
 vstateGenPreds p = case whichPParams p of
   PParamsConwayToConway ->
     [ MetaSize (SzRng 5 15) currentDRepStateSize
@@ -131,10 +132,10 @@ pstateNames =
   , "poolDeposits"
   ]
 
-pstatePreds :: Era era => Proof era -> [Pred era]
+pstatePreds :: EraCertState era => Proof era -> [Pred era]
 pstatePreds p = pstateGenPreds p ++ pstateCheckPreds p
 
-pstateGenPreds :: Era era => Proof era -> [Pred era]
+pstateGenPreds :: EraCertState era => Proof era -> [Pred era]
 pstateGenPreds _ =
   [ -- These Sized constraints are needd to be ensure that regPools is bigger than retiring
     Sized (ExactSize 5) retiring
@@ -156,7 +157,7 @@ pstateGenPreds _ =
     e = var "e" EpochR
     epochs = var "epochs" (ListR EpochR)
 
-pstateCheckPreds :: Era era => Proof era -> [Pred era]
+pstateCheckPreds :: EraCertState era => Proof era -> [Pred era]
 pstateCheckPreds _ =
   [ Subset (Dom retiring) (Dom regPools) -- Note regPools must be bigger than retiring
   , Dom regPools :=: Dom poolDeposits
@@ -221,10 +222,10 @@ gdkeyL =
 
 -- ============================================================================
 
-certStatePreds :: Era era => Proof era -> [Pred era]
+certStatePreds :: EraCertState era => Proof era -> [Pred era]
 certStatePreds p = certStateGenPreds p ++ certStateCheckPreds p
 
-certStateGenPreds :: Era era => Proof era -> [Pred era]
+certStateGenPreds :: EraCertState era => Proof era -> [Pred era]
 certStateGenPreds p =
   [ MetaSize (SzExact (fromIntegral (quorumConstant + 2))) genDelegSize
   , --  , GenFrom quorum (constTarget (pure (fromIntegral quorumConstant)))
@@ -296,7 +297,7 @@ certStateGenPreds p =
     gdKeyHashSet = var "gdKeyHashSet" (SetR GenDelegPairR)
     gdKeyHashList = var "gdKeyHashList" (ListR GenDelegPairR)
 
-certStateCheckPreds :: Era era => Proof era -> [Pred era]
+certStateCheckPreds :: EraCertState era => Proof era -> [Pred era]
 certStateCheckPreds p =
   [ NotMember (Lit CoinR (Coin 0)) (Rng stakeDeposits)
   , Dom rewards :=: Dom stakeDeposits
@@ -349,8 +350,8 @@ demoC mode = do
           >>= dstateStage proof
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
-  certState <- monadTyped $ runTarget env certstateT
-  when (mode == Interactive) $ putStrLn (show (pcCertState certState))
+  certState <- monadTyped . runTarget env $ certStateT
+  when (mode == Interactive) $ putStrLn (show (pcCertState (unCertStateF certState)))
   modeRepl mode proof env ""
 
 demoTestC :: TestTree

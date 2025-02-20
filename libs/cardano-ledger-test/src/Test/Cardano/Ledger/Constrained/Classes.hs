@@ -17,6 +17,7 @@ import Cardano.Ledger.Alonzo.Scripts (AsIx, AsIxItem, PlutusPurpose)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), SlotNo (..))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Core
@@ -66,6 +67,7 @@ import Test.Cardano.Ledger.Generic.GenState (plutusPurposeTags)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   PDoc,
   PrettyA (..),
+  pcCertState,
   pcPParams,
   pcScript,
   pcScriptsNeeded,
@@ -765,6 +767,25 @@ proposedMapL =
 
 -- ====================
 
+data CertStateF era where
+  CertStateF :: Proof era -> CertState era -> CertStateF era
+
+unCertStateF :: CertStateF era -> CertState era
+unCertStateF (CertStateF _ x) = x
+
+instance Reflect era => PrettyA (CertStateF era) where
+  prettyA (CertStateF _ x) = pcCertState x
+
+instance Eq (CertStateF era) where
+  (CertStateF Shelley x) == (CertStateF Shelley y) = x == y
+  (CertStateF Allegra x) == (CertStateF Allegra y) = x == y
+  (CertStateF Mary x) == (CertStateF Mary y) = x == y
+  (CertStateF Alonzo x) == (CertStateF Alonzo y) = x == y
+  (CertStateF Babbage x) == (CertStateF Babbage y) = x == y
+  (CertStateF Conway x) == (CertStateF Conway y) = x == y
+
+-- ====================
+
 data GovState era = GovState (Proof era) (Gov.GovState era)
 
 unGovState :: GovState era -> Gov.GovState era
@@ -860,6 +881,15 @@ genProposedPPUpdates p = case p of
   Alonzo -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
   Babbage -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
   Conway -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+
+genCertState :: forall era. Reflect era => Gen (CertStateF era)
+genCertState = case reify @era of
+  p@Shelley -> CertStateF p <$> arbitrary
+  p@Allegra -> CertStateF p <$> arbitrary
+  p@Mary -> CertStateF p <$> arbitrary
+  p@Alonzo -> CertStateF p <$> arbitrary
+  p@Babbage -> CertStateF p <$> arbitrary
+  p@Conway -> CertStateF p <$> arbitrary
 
 genGovState :: Proof era -> Gen (GovState era)
 genGovState p = case p of

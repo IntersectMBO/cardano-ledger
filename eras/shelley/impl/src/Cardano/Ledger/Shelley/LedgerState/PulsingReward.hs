@@ -34,7 +34,7 @@ import Cardano.Ledger.BaseTypes (
   (%.),
  )
 import Cardano.Ledger.CertState (
-  CertState (..),
+  EraCertState (..),
   rewards,
  )
 import Cardano.Ledger.Coin (
@@ -96,7 +96,7 @@ import Lens.Micro ((^.))
 
 startStep ::
   forall era.
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   EpochSize ->
   BlocksMade ->
   EpochState era ->
@@ -123,7 +123,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
       Coin reserves = asReserves acnt
-      ds = certDState $ lsCertState ls
+      ds = ls ^. lsCertStateL . certDStateL
       -- reserves and rewards change
       pr = es ^. prevPParamsEpochStateL
       deltaR1 =
@@ -302,7 +302,7 @@ completeRupd
 --   This function is not used in the rules, so it ignores RewardEvents
 createRUpd ::
   forall era.
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   EpochSize ->
   BlocksMade ->
   EpochState era ->

@@ -91,6 +91,7 @@ initStGenesisDeleg ::
   , ProtVerAtMost era 6
   , EraGov era
   , Default (StashedAVVMAddresses era)
+  , EraCertState era
   ) =>
   ChainState era
 initStGenesisDeleg = initSt initUTxO

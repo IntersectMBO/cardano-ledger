@@ -188,6 +188,7 @@ roundTripShareEraTypeExpectation = roundTripShareEraExpectation @era @(t era)
 roundTripCoreEraTypesSpec ::
   forall era.
   ( EraTx era
+  , EraCertState era
   , Arbitrary (Tx era)
   , Arbitrary (TxBody era)
   , Arbitrary (TxOut era)
@@ -199,6 +200,7 @@ roundTripCoreEraTypesSpec ::
   , Arbitrary (Script era)
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
+  , Arbitrary (CertState era)
   , HasCallStack
   ) =>
   Spec
@@ -220,6 +222,7 @@ roundTripCoreEraTypesSpec = do
         (mkTrip encodeMemPack decNoShareCBOR)
         (eraProtVerLow @era)
         (eraProtVerHigh @era)
+    roundTripShareEraSpec @era @(CertState era)
   describe "Core State Types" $ do
     roundTripAnnEraSpec @era @BootstrapWitness
     roundTripShareEraSpec @era @SnapShots
@@ -227,7 +230,6 @@ roundTripCoreEraTypesSpec = do
     roundTripShareEraTypeSpec @era @PState
     roundTripShareEraTypeSpec @era @CommitteeState
     roundTripShareEraTypeSpec @era @VState
-    roundTripShareEraTypeSpec @era @CertState
     roundTripShareEraTypeSpec @era @UTxO
 
 data EraRuleProof era (rs :: [Symbol]) where

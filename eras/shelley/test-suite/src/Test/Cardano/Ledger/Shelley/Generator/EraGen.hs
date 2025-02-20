@@ -34,6 +34,7 @@ where
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
@@ -161,6 +162,7 @@ class
   , EraPParams era
   , MinGenTxout era
   , Default (StashedAVVMAddresses era)
+  , EraCertState era
   ) =>
   EraGen era
   where

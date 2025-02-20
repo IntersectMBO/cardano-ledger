@@ -19,6 +19,7 @@ where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..))
 import Cardano.Ledger.Binary.Plain as Plain (FromCBOR (..), decodeFullDecoder)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Genesis (
@@ -33,10 +34,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate (Complete, Pulsing),
   RewardUpdate (..),
   applyRUpdFiltered,
-  certDState,
   curPParamsEpochStateL,
+  esLStateL,
   filterAllRewards,
-  lsCertState,
+  lsCertStateL,
+  nesEsL,
   rewards,
  )
 import Cardano.Ledger.Shelley.Rewards (aggregateCompactRewards, sumRewards)
@@ -179,6 +181,7 @@ updateRewardsX globals newepochstate =
    in liftRule globals context rule
 
 adoptGenesisDelegsR ::
+  EraCertState era =>
   Cardano.Slotting.Slot.SlotNo ->
   NewEpochState era ->
   EpochState era
@@ -240,7 +243,7 @@ tickfRuleBench =
                                 )
                                 ( \registeredAggregated ->
                                     bench "union+" $
-                                      let dState = (certDState . lsCertState . esLState . nesEs) nes
+                                      let dState = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL
                                        in whnf (rewards dState UM.∪+) registeredAggregated
                                 )
                             ]

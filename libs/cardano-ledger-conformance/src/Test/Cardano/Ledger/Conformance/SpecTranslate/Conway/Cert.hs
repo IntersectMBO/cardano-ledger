@@ -21,6 +21,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Shelley.CertState
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
 import qualified Data.Foldable as Set
@@ -57,13 +58,13 @@ instance
       <*> toSpecRep withdrawals
       <*> toSpecRep ccColdCreds
 
-instance SpecTranslate ctx (CertState era) where
-  type SpecRep (CertState era) = Agda.CertState
-  toSpecRep CertState {..} =
+instance SpecTranslate ctx (ShelleyCertState era) where
+  type SpecRep (ShelleyCertState era) = Agda.CertState
+  toSpecRep ShelleyCertState {..} =
     Agda.MkCertState
-      <$> toSpecRep certDState
-      <*> toSpecRep certPState
-      <*> toSpecRep certVState
+      <$> toSpecRep shelleyCertDState
+      <*> toSpecRep shelleyCertPState
+      <*> toSpecRep shelleyCertVState
 
 instance Era era => SpecTranslate ctx (ConwayTxCert era) where
   type SpecRep (ConwayTxCert era) = Agda.DCert
@@ -77,6 +78,7 @@ instance
   , SpecRep (TxOut era) ~ Agda.TxOut
   , GovState era ~ ConwayGovState era
   , Inject ctx (CertState era)
+  , EraCertState era
   ) =>
   SpecTranslate ctx (UTxOState era)
   where
@@ -101,6 +103,9 @@ instance
   , SpecRep (TxOut era) ~ Agda.TxOut
   , GovState era ~ ConwayGovState era
   , SpecTranslate (CertState era) (TxOut era)
+  , SpecRep (CertState era) ~ Agda.CertState
+  , EraCertState era
+  , CertState era ~ ShelleyCertState era
   ) =>
   SpecTranslate ctx (LedgerState era)
   where
@@ -127,6 +132,9 @@ instance
   , SpecRep (TxOut era) ~ Agda.TxOut
   , GovState era ~ ConwayGovState era
   , SpecTranslate (CertState era) (TxOut era)
+  , SpecRep (CertState era) ~ Agda.CertState
+  , EraCertState era
+  , CertState era ~ ShelleyCertState era
   ) =>
   SpecTranslate ctx (EpochState era)
   where
@@ -204,6 +212,9 @@ instance
   , SpecRep (TxOut era) ~ Agda.TxOut
   , GovState era ~ ConwayGovState era
   , SpecTranslate (CertState era) (TxOut era)
+  , SpecRep (CertState era) ~ Agda.CertState
+  , EraCertState era
+  , CertState era ~ ShelleyCertState era
   ) =>
   SpecTranslate ctx (NewEpochState era)
   where

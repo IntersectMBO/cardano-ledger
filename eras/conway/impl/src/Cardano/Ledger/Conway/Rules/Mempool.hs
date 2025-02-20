@@ -71,6 +71,7 @@ instance
   , Show (PredicateFailure (EraRule "UTXOW" era))
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx era ~ Signal (EraRule "LEDGER" era)
+  , EraCertState era
   ) =>
   STS (ConwayMEMPOOL era)
   where
@@ -92,6 +93,7 @@ mempoolTransition ::
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx era ~ Signal (EraRule "LEDGER" era)
+  , EraCertState era
   ) =>
   TransitionRule (ConwayMEMPOOL era)
 mempoolTransition = do
@@ -136,6 +138,7 @@ instance
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , Signal (EraRule "UTXOW" era) ~ Tx era
+  , EraCertState era
   ) =>
   Embed (ConwayLEDGER era) (ConwayMEMPOOL era)
   where

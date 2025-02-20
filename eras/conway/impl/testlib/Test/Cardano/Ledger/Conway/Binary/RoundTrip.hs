@@ -43,6 +43,8 @@ roundTripConwayCommonSpec ::
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (PParamsHKD StrictMaybe era)
   , RuleListEra era
+  , EraCertState era
+  , Arbitrary (CertState era)
   ) =>
   Spec
 roundTripConwayCommonSpec = do

@@ -57,6 +57,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
@@ -65,12 +66,11 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
-  EpochState (..),
   NewEpochState (..),
-  certDState,
   curPParamsEpochStateL,
-  dsGenDelegs,
-  lsCertState,
+  dsGenDelegsL,
+  esLStateL,
+  lsCertStateL,
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo)
@@ -131,6 +131,7 @@ class
   , State (EraRule "TICKF" era) ~ NewEpochState era
   , Signal (EraRule "TICKF" era) ~ SlotNo
   , EraGov era
+  , EraCertState era
   ) =>
   GetLedgerView era
   where
@@ -177,11 +178,7 @@ instance GetLedgerView BabbageEra where
         { lvD = es ^. curPParamsEpochStateL . ppDG
         , lvExtraEntropy = error "Extra entropy is not set in the Babbage era"
         , lvPoolDistr = pd
-        , lvGenDelegs =
-            dsGenDelegs
-              . certDState
-              . lsCertState
-              $ esLState es
+        , lvGenDelegs = es ^. esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
         , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
         }
 
@@ -205,11 +202,7 @@ instance GetLedgerView ConwayEra where
         { lvD = es ^. curPParamsEpochStateL . ppDG
         , lvExtraEntropy = error "Extra entropy is not set in the Conway era"
         , lvPoolDistr = pd
-        , lvGenDelegs =
-            dsGenDelegs
-              . certDState
-              . lsCertState
-              $ esLState es
+        , lvGenDelegs = es ^. esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
         , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
         }
 
@@ -261,7 +254,7 @@ mkPrtclEnv
       lvGenDelegs
 
 view ::
-  (ProtVerAtMost era 6, EraGov era) =>
+  (ProtVerAtMost era 6, EraGov era, EraCertState era) =>
   NewEpochState era ->
   LedgerView
 view
@@ -274,11 +267,7 @@ view
           { lvD = es ^. curPParamsEpochStateL . ppDG
           , lvExtraEntropy = ee
           , lvPoolDistr = pd
-          , lvGenDelegs =
-              dsGenDelegs
-                . certDState
-                . lsCertState
-                $ esLState es
+          , lvGenDelegs = es ^. esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
           , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
           }
 
@@ -336,6 +325,7 @@ futureView ::
   , Signal (EraRule "TICKF" era) ~ SlotNo
   , ProtVerAtMost era 6
   , EraGov era
+  , EraCertState era
   ) =>
   Globals ->
   NewEpochState era ->

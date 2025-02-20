@@ -39,7 +39,7 @@ instance
   environmentSpec (univ, _) = certEnvSpec @fn @ConwayEra univ
 
   stateSpec (univ, ccec) _ =
-    certStateSpec @fn @ConwayEra univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
+    certStateSpec @ConwayEra @fn univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
 
   signalSpec (univ, _) env state = conwayTxCertSpec @fn @ConwayEra univ env state
 

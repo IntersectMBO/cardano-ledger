@@ -41,7 +41,9 @@ data Stage era = Stage OrderInfo [Pred era]
 type Pipeline era = [Stage era]
 
 -- | A pipeline for specifying the LederState
-ledgerPipeline :: Reflect era => UnivSize -> Proof era -> Pipeline era
+ledgerPipeline ::
+  Reflect era =>
+  UnivSize -> Proof era -> Pipeline era
 ledgerPipeline sizes proof =
   [ Stage standardOrderInfo (pParamsPreds proof)
   , Stage standardOrderInfo (universePreds sizes proof)

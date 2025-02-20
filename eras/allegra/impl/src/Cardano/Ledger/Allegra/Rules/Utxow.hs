@@ -14,6 +14,7 @@ import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraUTXOW)
 import Cardano.Ledger.Allegra.Rules.Utxo (AllegraUTXO, AllegraUtxoPredFailure)
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.CertState
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPpupPredFailure,
@@ -58,6 +59,7 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , EraRule "UTXOW" era ~ AllegraUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , EraCertState era
   ) =>
   STS (AllegraUTXOW era)
   where

@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Converted `CertState` to a type family
 * Remove `ConwayMempoolPredFailure` and `ConwayMempoolEvent`
 * Switch to `MEMPOOL` rule to be the entry point for `ApplyTx` instead of `LEDGER` and invert their
   ivocation.
@@ -13,6 +14,7 @@
 
 ### `testlib`
 
+* Converted `CertState` to a type family
 * Add `sendCoinTo_` and `sendValueTo_`
 * Add `genRegTxCert` and `genUnRegTxCert`. #4830
 * Add `Arbitrary` instance for `ConwayBbodyPredFailure` and `ConwayMempoolPredFailure`

@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, incrementalStakeDistr)
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsUnifiedL, incrementalStakeDistr)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv,
   ShelleyBbodyState,
@@ -50,7 +50,7 @@ import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Extras (view)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
@@ -183,7 +183,7 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   ShelleyGenesisStaking ->
   ChainState era ->
   ChainState era
@@ -225,9 +225,8 @@ registerGenesisStaking
           }
       newCertState =
         oldCertState
-          { certDState = newDState
-          , certPState = newPState
-          }
+          & certDStateL .~ newDState
+          & certPStateL .~ newPState
       -- New delegation state. Since we're using base addresses, we only care
       -- about updating the 'ssDelegations' field.
       --
@@ -235,11 +234,11 @@ registerGenesisStaking
       pairWithDepositsButNoRewards _ = UM.RDPair (UM.CompactCoin 0) keyDeposit
       newDState :: DState era
       newDState =
-        (certDState oldCertState)
+        (oldCertState ^. certDStateL)
           { dsUnified =
               UM.unify
                 (Map.map pairWithDepositsButNoRewards . Map.mapKeys KeyHashObj . LM.toMap $ sgsStake)
-                (UM.ptrMap (dsUnified (certDState oldCertState)))
+                (UM.ptrMap (oldCertState ^. certDStateL . dsUnifiedL))
                 (Map.mapKeys KeyHashObj $ LM.toMap sgsStake)
                 Map.empty
           }
@@ -248,7 +247,7 @@ registerGenesisStaking
       -- See STS POOL for details
       newPState :: PState era
       newPState =
-        (certPState oldCertState)
+        (oldCertState ^. certPStateL)
           { psStakePoolParams = LM.toMap sgsPools
           }
 

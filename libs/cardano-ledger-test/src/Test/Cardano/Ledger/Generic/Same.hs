@@ -24,6 +24,7 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
@@ -31,7 +32,6 @@ import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -113,12 +113,6 @@ eqVia pcf x y = if x == y then Nothing else Just (notEq (pcf x) (pcf y))
 class Same era t where
   same :: Proof era -> t -> t -> [(String, Maybe PDoc)]
 
-instance Same era (CertState era) where
-  same proof (CertState d1 p1 v1) (CertState d2 p2 v2) =
-    extendLabel "DState " (same proof d1 d2)
-      ++ extendLabel "PState " (same proof p1 p2)
-      ++ extendLabel "VState " (same proof v1 v2)
-
 instance Same era (PState era) where
   same _proof (PState pp1 fpp1 ret1 d1) (PState pp2 fpp2 ret2 d2) =
     [ ("PoolParams", eqByShow pp1 pp2)
@@ -182,7 +176,19 @@ instance Reflect era => Same era (UTxOState era) where
 instance Reflect era => Same era (LedgerState era) where
   same proof x1 x2 =
     extendLabel "UTxOState " (same proof (lsUTxOState x1) (lsUTxOState x2))
-      ++ extendLabel "CertState " (same proof (lsCertState x1) (lsCertState x2))
+      ++ certState
+    where
+      prettyShelley :: [(String, Maybe PDoc)]
+      prettyShelley = [("ShelleyCertState", (sameCertState (lsCertState x1) (lsCertState x2)))]
+      prettyConway :: [(String, Maybe PDoc)]
+      prettyConway = [("ConwayCertState", (sameCertState (lsCertState x1) (lsCertState x2)))]
+      certState = case reify @era of
+        Shelley -> prettyShelley
+        Mary -> prettyShelley
+        Allegra -> prettyShelley
+        Alonzo -> prettyShelley
+        Babbage -> prettyShelley
+        Conway -> prettyConway
 
 instance Reflect era => Same era (EpochState era) where
   same proof e1 e2 =
@@ -343,6 +349,16 @@ sameTransCtx Alonzo x y = eqByShow x y
 sameTransCtx Babbage x y = eqByShow x y
 sameTransCtx Conway x y = eqByShow x y
 {-# NOINLINE sameTransCtx #-}
+
+sameCertState :: forall era. Reflect era => CertState era -> CertState era -> Maybe PDoc
+sameCertState x y = case reify @era of
+  Shelley -> eqByShow x y
+  Allegra -> eqByShow x y
+  Mary -> eqByShow x y
+  Alonzo -> eqByShow x y
+  Babbage -> eqByShow x y
+  Conway -> eqByShow x y
+{-# NOINLINE sameCertState #-}
 
 -- ==========================
 -- Comparing witnesses for Sameness

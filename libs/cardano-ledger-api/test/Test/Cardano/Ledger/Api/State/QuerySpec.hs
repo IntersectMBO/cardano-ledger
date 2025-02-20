@@ -70,6 +70,7 @@ committeeMembersStateSpec ::
   , Default (EpochState era)
   , Default (StashedAVVMAddresses era)
   , GovState era ~ ConwayGovState era
+  , EraCertState era
   ) =>
   Spec
 committeeMembersStateSpec =
@@ -116,7 +117,7 @@ committeeMembersStateSpec =
 
 propEmpty ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   Expectation
 propEmpty nes = do
@@ -127,7 +128,7 @@ propEmpty nes = do
 
 propComplete ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   Expectation
 propComplete nes = do
@@ -140,7 +141,7 @@ propComplete nes = do
 
 propNotAuthorized ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   Expectation
 propNotAuthorized nes = do
@@ -158,7 +159,7 @@ propNotAuthorized nes = do
 
 propAuthorized ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   Expectation
 propAuthorized nes = do
@@ -173,7 +174,7 @@ propAuthorized nes = do
 
 propResigned ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   Expectation
 propResigned nes = do
@@ -188,7 +189,7 @@ propResigned nes = do
 
 propUnrecognized ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   Expectation
 propUnrecognized nes = do
@@ -217,7 +218,7 @@ propUnrecognized nes = do
 
 propActiveAuthorized ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   Expectation
 propActiveAuthorized nes = do
@@ -252,7 +253,7 @@ propActiveAuthorized nes = do
 
 propFilters ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   Set (Credential 'ColdCommitteeRole) ->
   Set (Credential 'HotCommitteeRole) ->
   Set MemberStatus ->
@@ -277,7 +278,7 @@ propFilters ckFilter hkFilter statusFilter nes = do
 
 propNextEpoch ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   Expectation
 propNextEpoch nes = do
@@ -334,7 +335,7 @@ propNextEpoch nes = do
 
 propNoExpiration ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   Expectation
 propNoExpiration nes =
@@ -411,7 +412,7 @@ genRetaining ret = do
   pure $ new <> take retSize ret
 
 withCommitteeInfo ::
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   ( Map.Map (Credential 'ColdCommitteeRole) EpochNo -> -- current committee members
     CommitteeState era ->
@@ -427,7 +428,7 @@ withCommitteeInfo nes expectation = expectation comMembers comState nextComMembe
 
 committeeInfo ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   ( Map.Map (Credential 'ColdCommitteeRole) EpochNo
   , CommitteeState era
@@ -445,7 +446,7 @@ committeeInfo nes =
 
 queryCommitteeMembersStateNoFilters ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, EraCertState era) =>
   NewEpochState era ->
   CommitteeMembersState
 queryCommitteeMembersStateNoFilters =

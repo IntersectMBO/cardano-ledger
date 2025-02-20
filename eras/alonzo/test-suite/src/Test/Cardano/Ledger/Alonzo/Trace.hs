@@ -18,7 +18,8 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
 import Cardano.Ledger.BaseTypes (Globals)
-import Cardano.Ledger.Shelley.LedgerState (CertState (..), UTxOState)
+import Cardano.Ledger.CertState (EraCertState)
+import Cardano.Ledger.Shelley.LedgerState (CertState, UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv,
   DelplEnv,
@@ -64,6 +65,7 @@ instance
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , Tx era ~ AlonzoTx era
   , ProtVerAtMost era 8
+  , EraCertState era
   ) =>
   TQC.HasTrace (AlonzoLEDGER era) (GenEnv era)
   where

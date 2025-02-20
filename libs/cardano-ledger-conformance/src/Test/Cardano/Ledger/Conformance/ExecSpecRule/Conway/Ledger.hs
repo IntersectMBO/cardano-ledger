@@ -18,6 +18,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Identity (Identity)
 
 import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core (
   EraPParams (..),
   EraTx,
@@ -90,6 +91,7 @@ instance
   , EraTx era
   , NFData (TxWits era)
   , NFData (TxAuxData era)
+  , EraCertState era
   ) =>
   NFData (ConwayLedgerExecContext era)
 
@@ -100,6 +102,8 @@ instance
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
   , ToExpr (PParamsHKD Identity era)
+  , EraCertState era
+  , ToExpr (CertState era)
   ) =>
   ToExpr (ConwayLedgerExecContext era)
 

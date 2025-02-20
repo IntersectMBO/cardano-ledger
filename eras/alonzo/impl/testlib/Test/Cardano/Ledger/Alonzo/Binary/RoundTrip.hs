@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
@@ -48,6 +49,8 @@ roundTripAlonzoCommonSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , RuleListEra era
+  , EraCertState era
+  , Arbitrary (CertState era)
   ) =>
   Spec
 roundTripAlonzoCommonSpec = do

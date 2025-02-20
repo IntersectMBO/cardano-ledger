@@ -52,13 +52,13 @@ vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
     ]
 
 govCertSpec ::
-  (IsConwayUniv fn, Era era) =>
+  (IsConwayUniv fn, EraCertState era) =>
   WitUniv era ->
   ConwayGovCertEnv ConwayEra ->
   CertState ConwayEra ->
   Specification fn ConwayGovCert
 govCertSpec univ ConwayGovCertEnv {..} certState =
-  let vs = certVState certState
+  let vs = certState ^. certVStateL
       reps = lit $ Map.keysSet $ vsDReps vs
       deposits = Map.map drepDeposit (vsDReps vs)
       getNewMembers = \case

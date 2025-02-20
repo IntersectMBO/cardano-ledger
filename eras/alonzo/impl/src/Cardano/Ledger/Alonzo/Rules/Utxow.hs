@@ -56,7 +56,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (certDState, dsGenDelegs)
+import Cardano.Ledger.CertState (EraCertState (..), dsGenDelegsL)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
@@ -324,6 +324,7 @@ alonzoStyleWitness ::
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
+  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 alonzoStyleWitness = do
@@ -370,7 +371,7 @@ alonzoStyleWitness = do
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
-  let genDelegs = dsGenDelegs (certDState certState)
+  let genDelegs = certState ^. certDStateL . dsGenDelegsL
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
@@ -416,6 +417,7 @@ instance
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
+  , EraCertState era
   ) =>
   STS (AlonzoUTXOW era)
   where

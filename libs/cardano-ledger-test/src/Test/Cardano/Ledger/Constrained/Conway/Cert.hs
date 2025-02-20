@@ -30,12 +30,14 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
+import Cardano.Ledger.Shelley.CertState -- (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Constrained
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
@@ -64,14 +66,14 @@ delegateeSpec univ = constrained $ \x ->
   , assert $ sizeOf_ x >=. 10
   ]
 
-certStateSpec ::
+shelleyCertStateSpec ::
   forall fn era.
   (IsConwayUniv fn, EraSpecDeleg era, Era era) =>
   WitUniv era ->
   Set (Credential 'DRepRole) ->
   Map (RewardAccount) Coin ->
-  Specification fn (CertState era)
-certStateSpec univ delegatees wdrls =
+  Specification fn (ShelleyCertState era)
+shelleyCertStateSpec univ delegatees wdrls =
   constrained $ \cs ->
     match cs $ \vState pState dState ->
       [ satisfies vState (vStateSpec @fn @era univ delegatees)
@@ -86,7 +88,7 @@ conwayTxCertSpec ::
   CertEnv era ->
   CertState era ->
   Specification fn (ConwayTxCert era)
-conwayTxCertSpec univ (CertEnv pp ce cc cp) certState@CertState {..} =
+conwayTxCertSpec univ (CertEnv pp ce cc cp) certState =
   constrained $ \txCert ->
     caseOn
       txCert
@@ -96,6 +98,7 @@ conwayTxCertSpec univ (CertEnv pp ce cc cp) certState@CertState {..} =
       (branchW 1 $ \poolCert -> satisfies poolCert $ poolCertSpec univ poolEnv certPState)
       (branchW 2 $ \govCert -> satisfies govCert $ govCertSpec univ govCertEnv certState)
   where
+    certPState = certState ^. certPStateL
     delegEnv = ConwayDelegEnv pp (psStakePoolParams certPState)
     poolEnv = PoolEnv ce pp
     govCertEnv = ConwayGovCertEnv pp ce cc cp
@@ -147,9 +150,9 @@ shelleyTxCertSpec ::
   (AtMostEra BabbageEra era, EraSpecPParams era, IsConwayUniv fn) =>
   WitUniv era ->
   CertEnv era ->
-  CertState era ->
+  ShelleyCertState era ->
   Specification fn (ShelleyTxCert era)
-shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (CertState _vstate pstate dstate) =
+shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (ShelleyCertState _vstate pstate dstate) =
   constrained $ \ [var|shelleyTxCert|] ->
     -- These weights try to make it equally likely that each of the many certs
     -- across the 3 categories are chosen at similar frequencies.
@@ -180,25 +183,36 @@ class
   where
   txCertSpec :: WitUniv era -> CertEnv era -> CertState era -> Specification fn (TxCert era)
   txCertKey :: TxCert era -> CertKey
+  certStateSpec ::
+    WitUniv era ->
+    Set (Credential 'DRepRole) ->
+    Map (RewardAccount) Coin ->
+    Specification fn (CertState era)
 
 instance IsConwayUniv fn => EraSpecCert ShelleyEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
+  certStateSpec = shelleyCertStateSpec
 instance IsConwayUniv fn => EraSpecCert AllegraEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
+  certStateSpec = shelleyCertStateSpec
 instance IsConwayUniv fn => EraSpecCert MaryEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
+  certStateSpec = shelleyCertStateSpec
 instance IsConwayUniv fn => EraSpecCert AlonzoEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
+  certStateSpec = shelleyCertStateSpec
 instance IsConwayUniv fn => EraSpecCert BabbageEra fn where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
+  certStateSpec = shelleyCertStateSpec
 instance IsConwayUniv fn => EraSpecCert ConwayEra fn where
   txCertSpec = conwayTxCertSpec
   txCertKey = conwayTxCertKey
+  certStateSpec = shelleyCertStateSpec
 
 -- | Used to aggregate the key used in registering a Certificate. Different
 --   certificates use different kinds of Keys, that allows us to use one
@@ -250,7 +264,13 @@ testGenesisCert = do
 
 testShelleyCert ::
   forall era.
-  (Era era, AtMostEra BabbageEra era, EraSpecPParams era, EraSpecDeleg era, GenScript era) =>
+  ( Era era
+  , AtMostEra BabbageEra era
+  , EraSpecPParams era
+  , EraSpecDeleg era
+  , GenScript era
+  , EraCertState era
+  ) =>
   Gen Property
 testShelleyCert = do
   univ <- genWitUniv @era 200
@@ -258,7 +278,8 @@ testShelleyCert = do
   delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
   env <- genFromSpec @ConwayFn @(CertEnv era) (certEnvSpec @ConwayFn @era univ)
   dstate <-
-    genFromSpec @ConwayFn @(CertState era) (certStateSpec @ConwayFn @era univ delegatees wdrls)
+    genFromSpec @ConwayFn @(ShelleyCertState era)
+      (shelleyCertStateSpec @ConwayFn @era univ delegatees wdrls)
   let spec = shelleyTxCertSpec univ env dstate
   ans <- genFromSpec @ConwayFn spec
   let tag = case ans of
@@ -281,7 +302,8 @@ testConwayCert = do
   delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
   dstate <-
     genFromSpec @ConwayFn @(CertState ConwayEra)
-      (certStateSpec @ConwayFn @ConwayEra univ delegatees wdrls)
+      -- TODO: change to `conwayCertStateSpec` once it's implemented
+      (shelleyCertStateSpec univ delegatees wdrls)
   let spec :: Specification ConwayFn (ConwayTxCert ConwayEra)
       spec = conwayTxCertSpec univ env dstate
   ans <- genFromSpec @ConwayFn spec

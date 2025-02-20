@@ -53,13 +53,13 @@ import Cardano.Ledger.BaseTypes (
   systemStart,
  )
 import Cardano.Ledger.Binary (EncCBOR (..))
-import Cardano.Ledger.CertState (certDState, dsGenDelegs)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Plutus.Evaluate (
   ScriptFailure (..),
   ScriptResult (..),
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), updateStakeDistribution)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), dsGenDelegsL, updateStakeDistribution)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
   PpupEnv (..),
@@ -111,6 +111,7 @@ instance
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , EraRule "UTXOS" era ~ BabbageUTXOS era
+  , EraCertState era
   ) =>
   STS (BabbageUTXOS era)
   where
@@ -154,6 +155,7 @@ utxosTransition ::
   , EraRule "UTXOS" era ~ BabbageUTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , EraCertState era
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -214,13 +216,14 @@ babbageEvalScriptsTxValid ::
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , EraRule "UTXOS" era ~ BabbageUTXOS era
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , EraCertState era
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
   TRC (UtxoEnv slot pp certState, utxos@(UTxOState utxo _ _ pup _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
-      genDelegs = dsGenDelegs (certDState certState)
+      genDelegs = certState ^. certDStateL . dsGenDelegsL
 
   -- We intentionally run the PPUP rule before evaluating any Plutus scripts.
   -- We do not want to waste computation running plutus scripts if the

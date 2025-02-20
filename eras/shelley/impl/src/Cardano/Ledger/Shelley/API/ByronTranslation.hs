@@ -166,12 +166,7 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
               , utxosStakeDistr = IStake mempty Map.empty
               , utxosDonation = mempty
               }
-        , lsCertState =
-            CertState
-              { certDState = dState
-              , certPState = def
-              , certVState = def
-              }
+        , lsCertState = mkCertState def def dState
         }
 
     dState :: DState ShelleyEra

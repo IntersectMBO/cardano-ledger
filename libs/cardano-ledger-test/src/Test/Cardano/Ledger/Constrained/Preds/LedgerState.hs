@@ -101,7 +101,10 @@ enactStateGenPreds p =
 enactStateCheckPreds :: Proof era -> [Pred era]
 enactStateCheckPreds _ = []
 
-ledgerStatePreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
+ledgerStatePreds ::
+  forall era.
+  Reflect era =>
+  UnivSize -> Proof era -> [Pred era]
 ledgerStatePreds _usize p =
   [ Subset (Dom enactWithdrawals) credsUniv
   , Random enactTreasury
@@ -182,7 +185,9 @@ ledgerStateStage usize proof subst0 = do
     Nothing -> pure subst
     Just msg -> error msg
 
-demo :: Reflect era => Proof era -> ReplMode -> IO ()
+demo ::
+  Reflect era =>
+  Proof era -> ReplMode -> IO ()
 demo proof mode = do
   env <-
     generate

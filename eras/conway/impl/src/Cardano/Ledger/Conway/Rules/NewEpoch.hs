@@ -119,6 +119,7 @@ instance
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
+  , EraCertState era
   ) =>
   STS (ConwayNEWEPOCH era)
   where
@@ -159,6 +160,7 @@ newEpochTransition ::
   , GovState era ~ ConwayGovState era
   , Eq (PredicateFailure (EraRule "RATIFY" era))
   , Show (PredicateFailure (EraRule "RATIFY" era))
+  , EraCertState era
   ) =>
   TransitionRule (ConwayNEWEPOCH era)
 newEpochTransition = do
@@ -206,7 +208,7 @@ tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
 updateRewards ::
-  EraGov era =>
+  (EraGov era, EraCertState era) =>
   EpochState era ->
   EpochNo ->
   RewardUpdate ->

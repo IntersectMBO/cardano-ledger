@@ -51,9 +51,9 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (certDState, dsGenDelegs)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), dsGenDelegsL)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPpupPredFailure,
   ShelleyUtxoPredFailure,
@@ -293,6 +293,7 @@ babbageUtxowMirTransition ::
   , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
+  , EraCertState era
   ) =>
   Rule (EraRule "UTXOW" era) 'Transition ()
 babbageUtxowMirTransition = do
@@ -300,7 +301,7 @@ babbageUtxowMirTransition = do
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum  -}
-  let genDelegs = dsGenDelegs (certDState certState)
+  let genDelegs = certState ^. certDStateL . dsGenDelegsL
       witsKeyHashes = witsFromTxWitnesses tx
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
@@ -409,6 +410,7 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
+  , EraCertState era
   ) =>
   STS (BabbageUTXOW era)
   where

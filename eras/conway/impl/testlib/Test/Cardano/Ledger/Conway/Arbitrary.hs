@@ -38,6 +38,7 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (Sized)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
@@ -625,7 +626,7 @@ genConwayPlutusPurposePointer i =
 
 -- GOV
 
-instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (GovEnv era) where
+instance (Era era, Arbitrary (PParamsHKD Identity era), Arbitrary (CertState era)) => Arbitrary (GovEnv era) where
   arbitrary =
     GovEnv
       <$> arbitrary

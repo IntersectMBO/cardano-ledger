@@ -513,8 +513,8 @@ countLedgerStateStats :: LedgerState CurrentEra -> LedgerStateStats
 countLedgerStateStats LedgerState {..} =
   LedgerStateStats
     { lssUTxOStats = countUTxOStats (utxosUtxo lsUTxOState)
-    , lssDStateStats = countDStateStats (certDState lsCertState)
-    , lssPStateStats = countPStateStats (certPState lsCertState)
+    , lssDStateStats = countDStateStats (lsCertState ^. certDStateL)
+    , lssPStateStats = countPStateStats (lsCertState ^. certPStateL)
     }
 
 data TxInStats = TxInStats

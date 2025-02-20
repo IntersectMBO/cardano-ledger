@@ -20,7 +20,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Shelley.HardForks qualified as HardForks
-import Cardano.Ledger.UMap (umElems)
+import Cardano.Ledger.UMap (umElems, umElemsL)
 import Constrained
 import Constrained.Base (Pred (..))
 import Data.Coerce
@@ -304,9 +304,9 @@ govProceduresSpec ge@GovEnv {..} ps =
         , geEpoch <= act ^. gasExpiresAfterL
         , f (gasAction act)
         ]
-      committeeState = vsCommitteeState (certVState geCertState)
-      knownDReps = Map.keysSet $ vsDReps (certVState geCertState)
-      knownStakePools = Map.keysSet $ psStakePoolParams (certPState geCertState)
+      committeeState = geCertState ^. certVStateL . vsCommitteeStateL
+      knownDReps = Map.keysSet $ geCertState ^. certVStateL . vsDRepsL
+      knownStakePools = Map.keysSet $ geCertState ^. certPStateL . psStakePoolParamsL
       knownCommitteeAuthorizations = authorizedHotCommitteeCredentials committeeState
       committeeVotableActionIds =
         actions (isCommitteeVotingAllowed geEpoch committeeState)
@@ -314,7 +314,7 @@ govProceduresSpec ge@GovEnv {..} ps =
         actions isDRepVotingAllowed
       stakepoolVotableActionIds =
         actions isStakePoolVotingAllowed
-      registeredCredentials = Map.keysSet $ umElems $ dsUnified $ certDState geCertState
+      registeredCredentials = Map.keysSet $ geCertState ^. certDStateL . dsUnifiedL . umElemsL
    in constrained $ \govSignal ->
         match govSignal $ \votingProcs proposalProcs _certificates ->
           [ match votingProcs $ \votingProcsMap ->
@@ -423,7 +423,7 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
     -- InfoAction
     (branch $ \_ -> True)
   where
-    registeredCredentials = Map.keysSet $ umElems $ dsUnified $ certDState geCertState
+    registeredCredentials = Map.keysSet $ geCertState ^. certDStateL . dsUnifiedL . umElemsL
     prevGovActionIds = ps ^. pRootsL . L.to toPrevGovActionIds
     constitutionIds =
       (prevGovActionIds ^. grConstitutionL)

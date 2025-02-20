@@ -30,6 +30,7 @@ import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (byronProtVer, decodeFull', serialize')
+import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
@@ -102,7 +103,7 @@ setMinFeeTxInternal f tx =
 -- supplied for native scripts.
 calcMinFeeTxNativeScriptWits ::
   forall era.
-  EraUTxO era =>
+  (EraUTxO era, EraCertState era) =>
   -- | All TxOuts available for this transaction. In other words `TxIn`s produced by
   -- `allInputsTxBodyF` should be present in this `UTxO` map, however this is not checked.
   UTxO era ->
@@ -133,7 +134,7 @@ calcMinFeeTxNativeScriptWits utxo pp tx nativeScriptsKeyWitsHashes =
 -- >>> calcMinFeeTx relevantUtxo pp tx 5
 calcMinFeeTx ::
   forall era.
-  EraUTxO era =>
+  (EraUTxO era, EraCertState era) =>
   -- | All TxOuts available for this transaction. In other words `TxIn`s produced by
   -- `allInputsTxBodyF` should be present in this `UTxO` map, however this is not checked.
   UTxO era ->
@@ -156,7 +157,7 @@ calcMinFeeTx utxo pp tx extraKeyWitsCount =
 
 calcMinFeeTxInternal ::
   forall era.
-  EraUTxO era =>
+  (EraUTxO era, EraCertState era) =>
   -- | All TxOuts available for this transaction. In other words `TxIn`s produced by
   -- `allInputsTxBodyF` should be present in this `UTxO` map, however this is not checked.
   UTxO era ->

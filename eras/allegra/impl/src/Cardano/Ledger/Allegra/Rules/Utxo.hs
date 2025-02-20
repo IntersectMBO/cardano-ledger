@@ -39,7 +39,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (certDState, dsGenDelegs)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -175,13 +175,14 @@ utxoTransition ::
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
   , EraRule "UTXO" era ~ AllegraUTXO era
+  , EraCertState era
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let Shelley.UTxOState utxo _ _ ppup _ _ = utxos
       txBody = tx ^. bodyTxL
-      genDelegs = dsGenDelegs (certDState certState)
+      genDelegs = certState ^. Shelley.certDStateL . Shelley.dsGenDelegsL
 
   {- ininterval slot (txvld tx) -}
   runTest $ validateOutsideValidityIntervalUTxO slot txBody
@@ -308,6 +309,7 @@ instance
   , GovState era ~ ShelleyGovState era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
+  , EraCertState era
   ) =>
   STS (AllegraUTXO era)
   where
