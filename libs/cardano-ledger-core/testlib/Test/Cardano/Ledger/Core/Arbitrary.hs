@@ -102,6 +102,7 @@ import Cardano.Ledger.Plutus.CostModels (
   mkCostModelsLenient,
   updateCostModels,
  )
+import Cardano.Ledger.Plutus.Data (BinaryData, Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
 import Cardano.Ledger.Plutus.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.PoolParams (
@@ -137,6 +138,8 @@ import qualified Data.VMap as VMap
 import Data.Word (Word16, Word64, Word8)
 import GHC.Stack
 import Generic.Random (genericArbitraryU)
+import Numeric.Natural (Natural)
+import qualified PlutusLedgerApi.V1 as PV1
 import System.Random.Stateful (StatefulGen, uniformRM)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
@@ -882,6 +885,36 @@ instance Arbitrary Prices where
 
 instance Arbitrary CostModel where
   arbitrary = elements nonNativeLanguages >>= genValidCostModel
+
+instance Era era => Arbitrary (Data era) where
+  arbitrary = Data <$> arbitrary
+
+instance Era era => Arbitrary (BinaryData era) where
+  arbitrary = dataToBinaryData <$> arbitrary
+
+instance Era era => Arbitrary (Datum era) where
+  arbitrary =
+    oneof
+      [ pure NoDatum
+      , DatumHash <$> arbitrary
+      , Datum . dataToBinaryData <$> arbitrary
+      ]
+
+instance Arbitrary PV1.Data where
+  arbitrary = resize 5 (sized genData)
+    where
+      genData n
+        | n > 0 =
+            oneof
+              [ PV1.I <$> arbitrary
+              , PV1.B <$> arbitrary
+              , PV1.Map <$> listOf ((,) <$> genData (n `div` 2) <*> genData (n `div` 2))
+              , PV1.Constr
+                  <$> fmap fromIntegral (arbitrary :: Gen Natural)
+                  <*> listOf (genData (n `div` 2))
+              , PV1.List <$> listOf (genData (n `div` 2))
+              ]
+        | otherwise = oneof [PV1.I <$> arbitrary, PV1.B <$> arbitrary]
 
 genValidCostModel :: Language -> Gen CostModel
 genValidCostModel lang = do

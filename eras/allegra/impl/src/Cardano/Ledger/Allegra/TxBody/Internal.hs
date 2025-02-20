@@ -210,7 +210,7 @@ emptyAllegraTxBodyRaw =
 -- Wrap it all up in a newtype, hiding the insides with a pattern construtor.
 
 newtype AllegraTxBody e = TxBodyConstr (MemoBytes (AllegraTxBodyRaw () e))
-  deriving newtype (SafeToHash, ToCBOR)
+  deriving newtype (SafeToHash, ToCBOR, DecCBOR)
 
 instance Memoized (AllegraTxBody era) where
   type RawType (AllegraTxBody era) = AllegraTxBodyRaw () era

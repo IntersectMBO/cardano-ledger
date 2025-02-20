@@ -20,6 +20,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
+import Cardano.Ledger.Binary (natVersion)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -29,7 +30,13 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.Sequence.Strict (fromList)
-import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation, roundTripAnnExpectation)
+import Test.Cardano.Ledger.Binary.RoundTrip (
+  cborTrip,
+  embedTripAnnExpectation,
+  embedTripExpectation,
+  roundTripAnnExpectation,
+  roundTripCborRangeExpectation,
+ )
 import Test.Cardano.Ledger.Binary.TreeDiff (HexBytes (HexBytes), expectExprEqual)
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -55,19 +62,42 @@ timelockTests :: TestTree
 timelockTests =
   testGroup
     "Timelock tests"
-    $ ( testCase "Timelock examples roundtrip - Allegra" . roundTripAnnExpectation
+    $ ( testCase "Timelock examples roundtrip - Allegra (Annotator)" . roundTripAnnExpectation
           <$> [s1 @AllegraEra, s2 @AllegraEra, s3 @AllegraEra]
       )
-      ++ ( testCase "Timelock examples roundtrip - Mary" . roundTripAnnExpectation
+      ++ ( testCase "Timelock examples roundtrip - Allegra"
+            . roundTripCborRangeExpectation (natVersion @2) maxBound
+            <$> [s1 @AllegraEra, s2 @AllegraEra, s3 @AllegraEra]
+         )
+      ++ ( testCase "Timelock examples roundtrip - Mary (Annotator)" . roundTripAnnExpectation
             <$> [s1 @MaryEra, s2 @MaryEra, s3 @MaryEra]
          )
-      ++ [ testProperty "roundtripTimelock prop - Allegra" $ roundTripAnnExpectation @(Timelock AllegraEra)
-         , testProperty "roundtripTimelock prop - Mary" $ roundTripAnnExpectation @(Timelock MaryEra)
-         , testProperty "MultiSig deserialises as Timelock" $
+      ++ ( testCase "Timelock examples roundtrip - Mary"
+            . roundTripCborRangeExpectation (natVersion @2) maxBound
+            <$> [s1 @MaryEra, s2 @MaryEra, s3 @MaryEra]
+         )
+      ++ [ testProperty "roundtripTimelock prop - Allegra (Annotator)" $
+            roundTripAnnExpectation @(Timelock AllegraEra)
+         , testProperty "roundtripTimelock prop - Allegra" $
+            roundTripCborRangeExpectation @(Timelock AllegraEra) (natVersion @2) maxBound
+         , testProperty "roundtripTimelock prop - Mary (Annotator)" $
+            roundTripAnnExpectation @(Timelock MaryEra)
+         , testProperty "roundtripTimelock prop - Mary" $
+            roundTripCborRangeExpectation @(Timelock MaryEra) (natVersion @2) maxBound
+         , testProperty "MultiSig deserialises as Timelock (Annotator)" $
             embedTripAnnExpectation @(MultiSig ShelleyEra)
               @(Timelock AllegraEra)
               (eraProtVerHigh @ShelleyEra)
               (eraProtVerLow @AllegraEra)
+              ( \timelock multiSig ->
+                  expectExprEqual (HexBytes (originalBytes timelock)) (HexBytes (originalBytes multiSig))
+              )
+         , testProperty "MultiSig deserialises as Timelock" $
+            embedTripExpectation @(MultiSig ShelleyEra)
+              @(Timelock AllegraEra)
+              (eraProtVerHigh @ShelleyEra)
+              (eraProtVerLow @AllegraEra)
+              cborTrip
               ( \timelock multiSig ->
                   expectExprEqual (HexBytes (originalBytes timelock)) (HexBytes (originalBytes multiSig))
               )

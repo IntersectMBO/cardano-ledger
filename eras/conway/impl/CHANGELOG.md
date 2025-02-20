@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `DecCBOR` instance for `ConwayTxBody`
 * Converted `CertState` to a type family
 * Remove `ConwayMempoolPredFailure` and `ConwayMempoolEvent`
 * Switch to `MEMPOOL` rule to be the entry point for `ApplyTx` instead of `LEDGER` and invert their

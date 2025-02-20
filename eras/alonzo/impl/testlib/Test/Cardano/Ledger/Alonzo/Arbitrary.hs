@@ -66,13 +66,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   TxDats (TxDats),
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Plutus.Data (
-  BinaryData,
-  Data (..),
-  Datum (..),
-  dataToBinaryData,
-  hashData,
- )
+import Cardano.Ledger.Plutus.Data (hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (
   Language (..),
@@ -92,7 +86,6 @@ import Data.Text (pack)
 import Data.Word
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
-import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (
   genValidAndUnknownCostModels,
@@ -101,28 +94,6 @@ import Test.Cardano.Ledger.Core.Arbitrary (
  )
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus)
-
-instance Era era => Arbitrary (Data era) where
-  arbitrary = Data <$> arbitrary
-
-instance Era era => Arbitrary (BinaryData era) where
-  arbitrary = dataToBinaryData <$> arbitrary
-
-instance Arbitrary PV1.Data where
-  arbitrary = resize 5 (sized gendata)
-    where
-      gendata n
-        | n > 0 =
-            oneof
-              [ PV1.I <$> arbitrary
-              , PV1.B <$> arbitrary
-              , PV1.Map <$> listOf ((,) <$> gendata (n `div` 2) <*> gendata (n `div` 2))
-              , PV1.Constr
-                  <$> fmap fromIntegral (arbitrary :: Gen Natural)
-                  <*> listOf (gendata (n `div` 2))
-              , PV1.List <$> listOf (gendata (n `div` 2))
-              ]
-      gendata _ = oneof [PV1.I <$> arbitrary, PV1.B <$> arbitrary]
 
 instance
   ( Arbitrary (AlonzoScript era)
@@ -444,17 +415,6 @@ instance
       <*> arbitrary
       -- FIXME: why singleton? We should generate empty as well as many value sets
       <*> (Set.singleton <$> (getLanguageView @era <$> arbitrary <*> arbitrary))
-
-instance
-  Era era =>
-  Arbitrary (Datum era)
-  where
-  arbitrary =
-    oneof
-      [ pure NoDatum
-      , DatumHash <$> arbitrary
-      , Datum . dataToBinaryData <$> arbitrary
-      ]
 
 deriving instance Arbitrary CoinPerWord
 

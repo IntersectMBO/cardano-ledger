@@ -310,6 +310,14 @@ deriving via
   instance
     EraTxBody era => DecCBOR (Annotator (ShelleyTxBody era))
 
+deriving newtype instance
+  ( Era era
+  , DecCBOR (PParamsUpdate era)
+  , DecCBOR (TxOut era)
+  , DecCBOR (TxCert era)
+  ) =>
+  DecCBOR (ShelleyTxBody era)
+
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::
   forall era.

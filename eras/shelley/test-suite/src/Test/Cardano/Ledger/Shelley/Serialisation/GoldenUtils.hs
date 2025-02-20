@@ -42,7 +42,7 @@ import Data.String (fromString)
 import GHC.Stack
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
-import Test.Tasty (TestTree)
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
 expectDecodingSuccess :: (HasCallStack, Show a, Eq a) => (a -> Either DecoderError a) -> a -> IO ()
@@ -139,17 +139,21 @@ checkEncodingCBOR v name x t =
    in checkEncodingWithRoundtrip v encCBOR d roundTripSuccess name x t
 
 checkEncodingCBORAnnotated ::
-  (HasCallStack, DecCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
+  (HasCallStack, DecCBOR (Annotator a), DecCBOR a, ToCBOR a, Show a, Eq a) =>
   Version ->
   String ->
   a ->
   ToTokens ->
   TestTree
 checkEncodingCBORAnnotated v name x t =
-  let d = decodeFullAnnotator v (fromString name) decCBOR
-   in checkEncodingWithRoundtrip v (fromPlainEncoding . toCBOR) d roundTripSuccess name x annTokens
-  where
-    annTokens = T $ TkEncoded $ serialize' v t
+  let dAnn = decodeFullAnnotator v (fromString name) decCBOR
+      d = decodeFullDecoder v (fromString name) decCBOR
+      annTokens = T $ TkEncoded $ serialize' v t
+   in testGroup
+        "with and without Annotator"
+        [ checkEncodingWithRoundtrip v (fromPlainEncoding . toCBOR) dAnn roundTripSuccess name x annTokens
+        , checkEncodingWithRoundtrip v (fromPlainEncoding . toCBOR) d roundTripSuccess name x annTokens
+        ]
 
 data ToTokens where
   T :: (Tokens -> Tokens) -> ToTokens

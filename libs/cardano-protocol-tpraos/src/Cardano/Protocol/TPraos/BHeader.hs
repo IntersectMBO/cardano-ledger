@@ -90,6 +90,7 @@ import Cardano.Ledger.Hashes (
   hashKey,
  )
 import Cardano.Ledger.Keys (VKey)
+import Cardano.Ledger.MemoBytes (MemoBytes (Memo), decodeMemoized)
 import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.Crypto
@@ -100,6 +101,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Short as SBS
 import Data.Typeable
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
@@ -291,6 +293,18 @@ instance Crypto c => DecCBOR (Annotator (BHeader c)) where
       bhb <- decCBOR
       sig <- decodeSignedKES
       pure $ pure $ BHeader' bhb sig . BSL.toStrict
+
+data BHeaderRaw c = BHeaderRaw !(BHBody c) !(KES.SignedKES (KES c) (BHBody c))
+
+instance Crypto c => DecCBOR (BHeaderRaw c) where
+  decCBOR =
+    decodeRecordNamed "HeaderRaw" (const 2) $
+      BHeaderRaw <$> decCBOR <*> decodeSignedKES
+
+instance Crypto c => DecCBOR (BHeader c) where
+  decCBOR = do
+    Memo (BHeaderRaw bhb sig) bs <- decodeMemoized decCBOR
+    pure $ BHeader' bhb sig (SBS.fromShort bs)
 
 -- | Hash a given block header
 bhHash :: Crypto c => BHeader c -> HashHeader

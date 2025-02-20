@@ -76,6 +76,7 @@ import Cardano.Ledger.MemoBytes (
   MemoBytes (Memo),
   Memoized (..),
   byteCountMemoBytes,
+  decodeMemoized,
   getMemoRawType,
   mkMemoBytes,
   mkMemoizedEra,
@@ -189,9 +190,8 @@ instance Era era => EncCBOR (TimelockRaw era) where
       TimeStart m -> Sum TimeStart 4 !> To m
       TimeExpire m -> Sum TimeExpire 5 !> To m
 
--- This instance allows us to derive instance DecCBOR (Annotator (Timelock crypto)).
--- Since Timelock is a newtype around (Memo (Timelock crypto)).
-
+-- This instance allows us to derive instance DecCBOR (Annotator (Timelock era)).
+-- Since Timelock is a newtype around (Memo (Timelock era)).
 instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
   decCBOR = decode (Summands "TimelockRaw" decRaw)
     where
@@ -203,6 +203,16 @@ instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
       decRaw 4 = Ann (SumD TimeStart <! From)
       decRaw 5 = Ann (SumD TimeExpire <! From)
       decRaw n = Invalid n
+
+instance Era era => DecCBOR (TimelockRaw era) where
+  decCBOR = decode $ Summands "TimelockRaw" $ \case
+    0 -> SumD Signature <! From
+    1 -> SumD AllOf <! From
+    2 -> SumD AnyOf <! From
+    3 -> SumD MOfN <! From <! From
+    4 -> SumD TimeStart <! From
+    5 -> SumD TimeExpire <! From
+    n -> Invalid n
 
 -- =================================================================
 -- Native Scripts are Memoized TimelockRaw.
@@ -221,6 +231,9 @@ instance Era era => MemPack (Timelock era) where
 
 instance Era era => NoThunks (Timelock era)
 instance Era era => EncCBOR (Timelock era)
+
+instance Era era => DecCBOR (Timelock era) where
+  decCBOR = TimelockConstr <$> decodeMemoized decCBOR
 
 instance Memoized (Timelock era) where
   type RawType (Timelock era) = TimelockRaw era

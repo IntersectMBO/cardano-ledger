@@ -60,10 +60,15 @@ import Cardano.Ledger.Keys.Internal (
   VKey (..),
   verifySignedDSIGN,
  )
-import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.MemoBytes (
+  EqRaw (..),
+  MemoBytes (Memo),
+  decodeMemoized,
+ )
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Short as SBS
 import Data.Coerce (coerce)
 import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
@@ -125,13 +130,29 @@ instance EncCBOR BootstrapWitness
 
 instance DecCBOR (Annotator BootstrapWitness) where
   decCBOR = annotatorSlice $
-    decodeRecordNamed "BootstrapWitness" (const 4) $
-      do
-        key <- decCBOR
-        sig <- decodeSignedDSIGN
-        cc <- decCBOR
-        attributes <- decCBOR
-        pure . pure $ BootstrapWitness' key sig cc attributes
+    decodeRecordNamed "BootstrapWitness" (const 4) $ do
+      key <- decCBOR
+      sig <- decodeSignedDSIGN
+      cc <- decCBOR
+      attributes <- decCBOR
+      pure . pure $ BootstrapWitness' key sig cc attributes
+
+data BootstrapWitnessRaw
+  = BootstrapWitnessRaw
+      !(VKey 'Witness)
+      !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
+      !ChainCode
+      !ByteString
+
+instance DecCBOR BootstrapWitnessRaw where
+  decCBOR =
+    decodeRecordNamed "BootstrapWitnessRaw" (const 4) $
+      BootstrapWitnessRaw <$> decCBOR <*> decodeSignedDSIGN <*> decCBOR <*> decCBOR
+
+instance DecCBOR BootstrapWitness where
+  decCBOR = do
+    Memo (BootstrapWitnessRaw k s c a) bs <- decodeMemoized (decCBOR @BootstrapWitnessRaw)
+    pure $ BootstrapWitness' k s c a (LBS.fromStrict (SBS.fromShort bs))
 
 -- | Rebuild the addrRoot of the corresponding address.
 bootstrapWitKeyHash ::

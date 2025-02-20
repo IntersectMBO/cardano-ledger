@@ -610,6 +610,18 @@ instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
       {-# INLINE decodeScript #-}
   {-# INLINE decCBOR #-}
 
+instance AlonzoEraScript era => DecCBOR (AlonzoScript era) where
+  decCBOR = decode (Summands "AlonzoScript" decodeScript)
+    where
+      decodeScript = \case
+        0 -> SumD TimelockScript <! From
+        1 -> decodePlutus SPlutusV1
+        2 -> decodePlutus SPlutusV2
+        3 -> decodePlutus SPlutusV3
+        n -> Invalid n
+      decodePlutus slang =
+        SumD PlutusScript <! D (decodePlutusScript slang)
+
 -- | Verify that every `Script` represents a valid script. Force native scripts to Normal
 -- Form, to ensure that there are no bottoms and deserialize `Plutus` scripts into a
 -- `Cardano.Ledger.Plutus.Language.PlutusRunnable`.
