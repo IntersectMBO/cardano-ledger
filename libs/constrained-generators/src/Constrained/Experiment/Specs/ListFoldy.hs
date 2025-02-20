@@ -64,7 +64,7 @@ import GHC.Stack
 import GHC.TypeLits
 import Prettyprinter hiding (cat)
 import System.Random (Random)
-import Test.QuickCheck (Arbitrary, shrinkList, shuffle)
+import Test.QuickCheck (Arbitrary (..), oneof, shrinkList, shuffle)
 
 -- =============================================================
 -- All Foldy class instances are over Numbers (so far).
@@ -75,14 +75,13 @@ import Test.QuickCheck (Arbitrary, shrinkList, shuffle)
 -- other classes as inputs. See FlipW amd ComposeW
 -- ==============================================================
 
-{-
 -- We need Arbitrary Specification to do this
-instance {-# OVERLAPPABLE #-} (Arbitrary (Specification a), Arbitrary (TypeSpec a), Foldy a) => Arbitrary (FoldSpec a) where
-  arbitrary = oneof [FoldSpec IdW <$> arbitrary, pure NoFold]
+instance {-# OVERLAPPABLE #-} (Arbitrary (Specification a {- Arbitrary (TypeSpec a), -}), Foldy a) => Arbitrary (FoldSpec a) where
+  arbitrary = oneof [FoldSpec (Fun Evidence IdW) <$> arbitrary, pure NoFold]
   shrink NoFold = []
-  shrink (FoldSpec (sameFunSym (IdW @a) -> Just(idW,Refl,Refl,Refl,Refl,Refl)) spec) = FoldSpec idW <$> shrink spec
+  -- shrink (FoldSpec (sameFunSym (IdW @a) -> Just(idW,Refl,Refl,Refl,Refl,Refl)) spec) = FoldSpec (Fun Evidence idW) <$> shrink spec
+  -- shrink (FoldSpec fun spec) = FoldSpec (fun :: Fun '[a] b) <$> shrink (spec :: Specification b)
   shrink FoldSpec {} = [NoFold]
--}
 
 data FunW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   IdW :: forall a. FunW () "id_" '[a] a
@@ -646,6 +645,9 @@ data ListSpec a = ListSpec
   , listSpecElem :: Specification a
   , listSpecFold :: FoldSpec a
   }
+
+instance (Ord a, HasSpec a, Foldy a, TypeSpec a ~ NumSpec a, Arbitrary a) => Arbitrary (ListSpec a) where
+  arbitrary = ListSpec <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance HasSpec a => Show (FoldSpec a) where
   showsPrec d = shows . prettyPrec d
