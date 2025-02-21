@@ -61,7 +61,8 @@ import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
-import Data.Map.Strict (Map)
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
 import Data.Monoid (All (..))
 import Data.Sequence (Seq)
@@ -196,12 +197,12 @@ bbHash (TxSeq' _ bodies wits md) =
 --  whose non-Nothing values correspond to the values in the mapping.
 constructMetadata ::
   Int ->
-  Map Int (Annotator (TxAuxData era)) ->
+  IntMap (Annotator (TxAuxData era)) ->
   Seq (Maybe (Annotator (TxAuxData era)))
 constructMetadata = indexLookupSeq
 
-indexLookupSeq :: Int -> Map Int a -> Seq (Maybe a)
-indexLookupSeq n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n - 1])
+indexLookupSeq :: Int -> IntMap a -> Seq (Maybe a)
+indexLookupSeq n ixMap = Seq.fromList [IntMap.lookup ix ixMap | ix <- [0 .. n - 1]]
 
 -- | The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
 --   These are exactly the parts that are SafeToHash.
@@ -222,7 +223,7 @@ txSeqDecoder lax = do
     do
       m <- decCBOR
       unless -- TODO this PR introduces this new test, That didn't used to run in the Shelley
-        (lax || all inRange (Map.keysSet m)) -- Era,  Is it possible there might be some blocks, that should have been caught on the chain?
+        (lax || getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) m)) -- Era,  Is it possible there might be some blocks, that should have been caught on the chain?
         (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b - 1)))
       pure (constructMetadata @era b m)
 
@@ -260,7 +261,7 @@ instance
     let bodiesLength = length bodies
     let inRange x = (0 <= x) && (x <= (bodiesLength - 1))
     unless
-      (getAll (Map.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
+      (getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
       (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (bodiesLength - 1)))
     let auxData = indexLookupSeq bodiesLength auxDataMap
     let witsLength = length wits

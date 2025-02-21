@@ -52,7 +52,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Builder (shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
-import qualified Data.Map.Strict as Map
+import qualified Data.IntMap as IntMap
 import Data.Maybe.Strict (maybeToStrictMaybe, strictMaybeToMaybe)
 import Data.Monoid (All (..))
 import Data.Proxy (Proxy (..))
@@ -193,7 +193,7 @@ instance AlonzoEraTx era => DecCBOR (Annotator (AlonzoTxSeq era)) where
       do
         auxDataMap <- decCBOR
         unless
-          (getAll (Map.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
+          (getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
           ( fail
               ( "Some Auxiliarydata index is not in the range: 0 .. "
                   ++ show (bodiesLength - 1)
@@ -249,7 +249,7 @@ instance
         inRange x = (0 <= x) && (x <= (bodiesLength - 1))
         witsLength = length wits
     unless
-      (getAll (Map.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
+      (getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
       ( fail
           ( "Some Auxiliarydata index is not in the range: 0 .. "
               ++ show (bodiesLength - 1)
