@@ -544,6 +544,7 @@ instance
   , Arbitrary (Value era)
   , Arbitrary (Script era)
   , Arbitrary (PParamsUpdate era)
+  , Arbitrary (TxCert era)
   ) =>
   Arbitrary (ConwayTxBody era)
   where
