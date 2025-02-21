@@ -41,7 +41,7 @@ spec = describe "UTXOW" $ do
       submitTx_ (mkBasicTx txBody)
     it "InvalidWitnessesUTXOW" $ do
       aliceBootAddr@(BootstrapAddress aliceByronAddr) <- freshBootstapAddress
-      aliceByronKeyPair <- lookupByronKeyPair aliceBootAddr
+      aliceByronKeyPair <- getByronKeyPair aliceBootAddr
       txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) mempty
       let (aliceVKey, _) = unpackByronVKey (bkpVerificationKey aliceByronKeyPair)
           txBody = mkBasicTxBody & inputsTxBodyL .~ [txIn]

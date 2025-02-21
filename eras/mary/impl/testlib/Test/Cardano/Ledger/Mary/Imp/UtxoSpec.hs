@@ -64,7 +64,7 @@ spec = describe "UTXO" $ do
             mkBasicTxBody
               & inputsTxBodyL .~ [txInAt (0 :: Int) txMinted]
               & mintTxBodyL .~ burnTooMuchMultiAsset
-      (_, rootTxOut) <- lookupImpRootTxOut
+      (_, rootTxOut) <- getImpRootTxOut
       let rootTxOutValue = rootTxOut ^. valueTxOutL
       submitFailingTx
         (mkBasicTx txBody)

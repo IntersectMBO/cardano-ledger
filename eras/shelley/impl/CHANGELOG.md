@@ -50,6 +50,14 @@
 
 ### `testlib`
 
+* Renamed:
+  * `lookupKeyPair` -> `getKeyPair`
+  * `lookupByronKeyPair` -> `getByronKeyPair`
+  * `tryLookupReward` -> `lookupReward`
+  * `lookupReward` -> `getReward`
+  * `lookupImpRootTxOut` -> `getImpRootTxOut`
+  * `impGetNativeScript` -> `impLookupNativeScript`
+  * `impLookupUTxO` -> `impGetUTxO`
 * Converted `CertState` to a type family
 * Add `disableImpInitExpectLedgerRuleConformance`. #4821
 

@@ -28,7 +28,7 @@ spec = describe "UTXO" $ do
       let txAmount = Coin 2000000
       txIn <- sendCoinTo addr1 txAmount
       addr2 <- freshKeyAddr_
-      (_, rootTxOut) <- lookupImpRootTxOut
+      (_, rootTxOut) <- getImpRootTxOut
       let extra = Coin 3
           rootTxOutValue = rootTxOut ^. valueTxOutL
           txBody =

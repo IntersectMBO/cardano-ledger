@@ -18,14 +18,14 @@
 module Test.Cardano.Ledger.Alonzo.ImpTest (
   module Test.Cardano.Ledger.Mary.ImpTest,
   AlonzoEraImp (..),
-  impLookupPlutusScriptMaybe,
+  impLookupPlutusScript,
   malformedPlutus,
   addCollateralInput,
   impGetPlutusContexts,
   alonzoFixupTx,
   plutusTestScripts,
   impGetScriptContext,
-  impGetScriptContextMaybe,
+  impLookupScriptContext,
   impPlutusWithContexts,
   impScriptPredicateFailure,
   submitPhase2Invalid_,
@@ -146,13 +146,13 @@ addCollateralInput tx
             collateralInput <- makeCollateralInput
             pure $ tx & bodyTxL . collateralInputsTxBodyL <>~ Set.singleton collateralInput
 
-impLookupPlutusScriptMaybe ::
+impLookupPlutusScript ::
   forall era.
   AlonzoEraImp era =>
   ScriptHash ->
   Maybe (PlutusScript era)
-impLookupPlutusScriptMaybe sh =
-  (\(ScriptTestContext plutus _) -> mkPlutusScript plutus) =<< impGetScriptContextMaybe @era sh
+impLookupPlutusScript sh =
+  (\(ScriptTestContext plutus _) -> mkPlutusScript plutus) =<< impLookupScriptContext @era sh
 
 impGetPlutusContexts ::
   forall era.
@@ -164,7 +164,7 @@ impGetPlutusContexts tx = do
   utxo <- getsNES utxoL
   let AlonzoScriptsNeeded asn = getScriptsNeeded utxo txBody
   mbyContexts <- forM asn $ \(prp, sh) -> do
-    pure $ (prp,sh,) <$> impGetScriptContextMaybe @era sh
+    pure $ (prp,sh,) <$> impLookupScriptContext @era sh
   pure $ catMaybes mbyContexts
 
 fixupRedeemerIndices ::
@@ -173,7 +173,7 @@ fixupRedeemerIndices ::
   Tx era ->
   ImpTestM era (Tx era)
 fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
-  (rootTxIn, _) <- lookupImpRootTxOut
+  (rootTxIn, _) <- getImpRootTxOut
   let
     txInputs = tx ^. bodyTxL . inputsTxBodyL
     rootTxIndex = toEnum $ Set.findIndex rootTxIn txInputs
@@ -285,7 +285,7 @@ fixupDatums tx = impAnn "fixupDatums" $ do
     collectDatums :: PlutusPurpose AsIxItem era -> ImpTestM era (Maybe (Data era))
     collectDatums purpose = do
       let txIn = unAsItem <$> toSpendingPurpose (hoistPlutusPurpose toAsItem purpose)
-      txOut <- traverse (impLookupUTxO @era) txIn
+      txOut <- traverse (impGetUTxO @era) txIn
       pure $ getData =<< txOut
 
     getData :: TxOut era -> Maybe (Data era)
@@ -312,7 +312,7 @@ fixupPPHash tx = impAnn "fixupPPHash" $ do
     scriptHashes :: Set ScriptHash
     scriptHashes = getScriptsHashesNeeded . getScriptsNeeded utxo $ tx ^. bodyTxL
     plutusLanguage sh = do
-      let mbyPlutus = impLookupPlutusScriptMaybe sh
+      let mbyPlutus = impLookupPlutusScript sh
       pure $ getLanguageView pp . plutusScriptLanguage @era <$> mbyPlutus
   langs <- traverse plutusLanguage $ Set.toList scriptHashes
   let
@@ -335,7 +335,7 @@ fixupOutputDatums tx = impAnn "fixupOutputDatums" $ do
     addDatum txOut =
       case txOut ^. addrTxOutL of
         Addr _ (ScriptHashObj sh) _
-          | Just (ScriptTestContext _ (PlutusArgs _ (Just spendDatum))) <- impGetScriptContextMaybe @era sh
+          | Just (ScriptTestContext _ (PlutusArgs _ (Just spendDatum))) <- impLookupScriptContext @era sh
           , NoDatum <- txOut ^. datumTxOutF ->
               txOut & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
         _ -> txOut
@@ -447,12 +447,12 @@ instance MaryEraImp AlonzoEra
 instance MaryEraImp AlonzoEra => AlonzoEraImp AlonzoEra where
   scriptTestContexts = plutusTestScripts SPlutusV1
 
-impGetScriptContextMaybe ::
+impLookupScriptContext ::
   forall era.
   AlonzoEraImp era =>
   ScriptHash ->
   Maybe ScriptTestContext
-impGetScriptContextMaybe sh = Map.lookup sh $ scriptTestContexts @era
+impLookupScriptContext sh = Map.lookup sh $ scriptTestContexts @era
 
 impGetScriptContext ::
   forall era.
@@ -462,7 +462,7 @@ impGetScriptContext ::
 impGetScriptContext sh =
   impAnn ("Getting script context for " <> show sh)
     . expectJust
-    $ impGetScriptContextMaybe @era sh
+    $ impLookupScriptContext @era sh
 
 impPlutusWithContexts ::
   (HasCallStack, AlonzoEraImp era) => Tx era -> ImpTestM era [PlutusWithContext]

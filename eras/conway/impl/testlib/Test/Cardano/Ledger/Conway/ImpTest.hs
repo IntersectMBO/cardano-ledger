@@ -381,7 +381,7 @@ unRegisterDRep ::
   Credential 'DRepRole ->
   ImpTestM era ()
 unRegisterDRep drep = do
-  drepState <- lookupDRepState drep
+  drepState <- getDRepState drep
   let refund = drepDeposit drepState
   submitTxAnn_ "UnRegister DRep" $
     mkBasicTx mkBasicTxBody
@@ -490,11 +490,11 @@ delegateToDRep cred stake dRep = do
         .~ SSeq.fromList [DelegTxCert cred (DelegVote dRep)]
   pure spendingKP
 
-lookupDRepState ::
+getDRepState ::
   (HasCallStack, EraCertState era) =>
   Credential 'DRepRole ->
   ImpTestM era DRepState
-lookupDRepState dRepCred = do
+getDRepState dRepCred = do
   drepsState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   case Map.lookup dRepCred drepsState of
     Nothing -> error $ "Expected for DRep " ++ show dRepCred ++ " to be present in the CertState"
