@@ -15,7 +15,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -98,7 +97,6 @@ import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppGovActionDepositL)
 import Cardano.Ledger.Conway.Scripts (ConwayEraScript, ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert,
-  ConwayTxCert (..),
   ConwayTxCertUpgradeError,
  )
 import Cardano.Ledger.Conway.TxOut ()
@@ -138,7 +136,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrOutputs :: !(StrictSeq (Sized (TxOut era)))
   , ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
   , ctbrTotalCollateral :: !(StrictMaybe Coin)
-  , ctbrCerts :: !(OSet.OSet (ConwayTxCert era))
+  , ctbrCerts :: !(OSet.OSet (TxCert era))
   , ctbrWithdrawals :: !Withdrawals
   , ctbrTxfee :: !Coin
   , ctbrVldt :: !ValidityInterval
@@ -154,25 +152,24 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   }
   deriving (Generic, Typeable)
 
-deriving instance (EraPParams era, Eq (TxOut era)) => Eq (ConwayTxBodyRaw era)
+deriving instance (EraPParams era, Eq (TxCert era), Eq (TxOut era)) => Eq (ConwayTxBodyRaw era)
 
 instance
-  (EraPParams era, NoThunks (TxOut era)) =>
+  (EraPParams era, NoThunks (TxCert era), NoThunks (TxOut era)) =>
   NoThunks (ConwayTxBodyRaw era)
 
 instance
-  (EraPParams era, NFData (TxOut era)) =>
+  (EraPParams era, NFData (TxCert era), NFData (TxOut era)) =>
   NFData (ConwayTxBodyRaw era)
 
 deriving instance
-  (EraPParams era, Show (TxOut era)) =>
+  (EraPParams era, Show (TxCert era), Show (TxOut era)) =>
   Show (ConwayTxBodyRaw era)
 
 instance
   ( EraPParams era
+  , EraTxCert era
   , DecCBOR (TxOut era)
-  , ShelleyEraTxCert era
-  , TxCert era ~ ConwayTxCert era
   ) =>
   DecCBOR (ConwayTxBodyRaw era)
   where
@@ -269,26 +266,25 @@ newtype ConwayTxBody era = TxBodyConstr (MemoBytes (ConwayTxBodyRaw era))
 
 deriving newtype instance
   ( EraPParams era
+  , EraTxCert era
   , DecCBOR (TxOut era)
-  , ShelleyEraTxCert era
-  , TxCert era ~ ConwayTxCert era
   ) =>
   DecCBOR (ConwayTxBody era)
 
 deriving instance
-  (EraPParams era, NoThunks (TxOut era)) =>
+  (EraPParams era, NoThunks (TxOut era), NoThunks (TxCert era)) =>
   NoThunks (ConwayTxBody era)
 
 deriving instance
-  (EraPParams era, Eq (TxOut era)) =>
+  (EraPParams era, Eq (TxOut era), Eq (TxCert era)) =>
   Eq (ConwayTxBody era)
 
 deriving newtype instance
-  (EraPParams era, NFData (TxOut era)) =>
+  (EraPParams era, NFData (TxOut era), NFData (TxCert era)) =>
   NFData (ConwayTxBody era)
 
 deriving instance
-  (EraPParams era, Show (TxOut era)) =>
+  (EraPParams era, Show (TxOut era), Show (TxCert era)) =>
   Show (ConwayTxBody era)
 
 type instance MemoHashIndex (ConwayTxBodyRaw era) = EraIndependentTxBody
@@ -298,9 +294,8 @@ instance HashAnnotated (ConwayTxBody era) EraIndependentTxBody where
 
 instance
   ( DecCBOR (TxOut era)
+  , EraTxCert era
   , EraPParams era
-  , ShelleyEraTxCert era
-  , TxCert era ~ ConwayTxCert era
   ) =>
   DecCBOR (Annotator (ConwayTxBodyRaw era))
   where
@@ -310,9 +305,8 @@ deriving via
   Mem (ConwayTxBodyRaw era)
   instance
     ( DecCBOR (TxOut era)
+    , EraTxCert era
     , EraPParams era
-    , ShelleyEraTxCert era
-    , TxCert era ~ ConwayTxCert era
     ) =>
     DecCBOR (Annotator (ConwayTxBody era))
 
@@ -561,7 +555,7 @@ pattern ConwayTxBody ::
   StrictSeq (Sized (TxOut era)) ->
   StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
-  OSet.OSet (ConwayTxCert era) ->
+  OSet.OSet (TxCert era) ->
   Withdrawals ->
   Coin ->
   ValidityInterval ->

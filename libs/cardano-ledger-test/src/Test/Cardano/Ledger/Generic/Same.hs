@@ -530,7 +530,7 @@ sameConwayTxBody
     , ("Outputs", eqVia (ppList (pcTxOut proof . sizedValue) . toList) o1 o2)
     , ("ColReturn", eqVia (ppStrictMaybe (pcTxOut proof . sizedValue)) cr1 cr2)
     , ("TotalCol", eqVia (ppStrictMaybe pcCoin) tc1 tc2)
-    , ("Certs", eqVia (ppList pcConwayTxCert . toList) c1 c2)
+    , ("Certs", eqVia (ppList (pcTxCert proof) . toList) c1 c2)
     , ("WDRL", eqVia (ppMap pcRewardAccount pcCoin) w1 w2)
     , ("Fee", eqVia pcCoin f1 f2)
     , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
