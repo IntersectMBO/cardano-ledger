@@ -53,6 +53,24 @@ data ConwayGenesis = ConwayGenesis
   }
   deriving (Eq, Generic, Show)
 
+instance EncCBOR ConwayGenesis where
+  encCBOR x@(ConwayGenesis _ _ _ _ _) =
+    let ConwayGenesis {..} = x
+     in encode $ Rec ConwayGenesis
+       !> To cgUpgradePParams
+       !> To cgConstitution
+       !> To cgCommittee
+       !> To cgDelegs
+       !> To cgInitialDReps
+
+instance DecCBOR ConwayGenesis where
+  decCBOR = decode $ RecD ConwayGenesis
+    <! From
+    <! From
+    <! From
+    <! From
+    <! From
+
 cgDelegsL :: Lens' ConwayGenesis (ListMap (Credential 'Staking) Delegatee)
 cgDelegsL = lens cgDelegs (\x y -> x {cgDelegs = y})
 

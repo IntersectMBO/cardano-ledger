@@ -7,6 +7,8 @@ module Cardano.Ledger.Genesis (
   NoGenesis (..),
 ) where
 
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode)
 import Cardano.Ledger.Core.Era (Era)
 import Data.Kind (Type)
 
@@ -16,3 +18,9 @@ class Era era => EraGenesis era where
 
 data NoGenesis era = NoGenesis
   deriving (Eq, Show)
+
+instance Era era => EncCBOR (NoGenesis era) where
+  encCBOR _ = encode $ Rec NoGenesis
+
+instance Era era => DecCBOR (NoGenesis era) where
+  decCBOR = decode $ RecD NoGenesis
