@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740095506778,
+  "lastUpdate": 1740165967662,
   "repoUrl": "https://github.com/IntersectMBO/cardano-ledger",
   "entries": {
     "Haskell Benchmark": [
@@ -26784,6 +26784,78 @@ window.BENCHMARK_DATA = {
             "value": 0.000009562828320646143,
             "unit": "Nanoseconds",
             "range": 1.3612939073030175e-7
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "alexey.kuleshevich@iohk.io",
+            "name": "Alexey Kuleshevich",
+            "username": "lehins"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "88a3f9fd23e62831bd6e8c190d64360d8a4d0243",
+          "message": "Merge pull request #4903 from IntersectMBO/lehins/switch-to-txcert\n\nSwitch to using `TxCert` type family",
+          "timestamp": "2025-02-21T12:22:33-07:00",
+          "tree_id": "64caa81a542b2a51e49daa251ed4cab2006b1b2b",
+          "url": "https://github.com/IntersectMBO/cardano-ledger/commit/88a3f9fd23e62831bd6e8c190d64360d8a4d0243"
+        },
+        "date": 1740165943715,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/ShelleyEra",
+            "value": 0.00014283906760728866,
+            "unit": "Nanoseconds",
+            "range": 0.0000018715114313690146
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/AllegraEra",
+            "value": 0.00014767530056076082,
+            "unit": "Nanoseconds",
+            "range": 0.0000013374527569851356
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/MaryEra",
+            "value": 0.00014713765002670245,
+            "unit": "Nanoseconds",
+            "range": 6.485596592376657e-7
+          },
+          {
+            "name": "applyTxBenchmarks/ApplyTxInEra/AlonzoEra",
+            "value": 0.0002362578945004529,
+            "unit": "Nanoseconds",
+            "range": 0.000006847626519641976
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/ShelleyEra",
+            "value": 0.000010244373458598673,
+            "unit": "Nanoseconds",
+            "range": 1.225917161528331e-7
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/AllegraEra",
+            "value": 0.000018291464134832935,
+            "unit": "Nanoseconds",
+            "range": 5.517799903036444e-7
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/MaryEra",
+            "value": 0.00001890800260943234,
+            "unit": "Nanoseconds",
+            "range": 0.0000011437932451330658
+          },
+          {
+            "name": "applyTxBenchmarks/Deserialise Shelley Tx/AlonzoEra",
+            "value": 0.000009421982676254603,
+            "unit": "Nanoseconds",
+            "range": 3.984421548778977e-8
           }
         ]
       }
