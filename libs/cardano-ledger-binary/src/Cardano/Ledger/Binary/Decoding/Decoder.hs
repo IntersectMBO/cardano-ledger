@@ -67,6 +67,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeVector,
   decodeSet,
   setTag,
+  decodeIntMap,
   decodeMap,
   decodeMapByKey,
   decodeMapLikeEnforceNoDuplicates,
@@ -259,6 +260,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Compose (Compose (..))
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
+import qualified Data.IntMap as IntMap
 import qualified Data.List.NonEmpty as NE (NonEmpty, nonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe)
@@ -794,15 +796,46 @@ decodeMapLikeEnforceNoDuplicates ::
   Decoder s (Maybe Int) ->
   Decoder s (k, v) ->
   Decoder s (Map.Map k v)
-decodeMapLikeEnforceNoDuplicates decodeLenOrIndef =
+decodeMapLikeEnforceNoDuplicates =
+  decodeMapLikeEnforceNoDuplicatesInternal Map.fromList Map.size
+{-# INLINE decodeMapLikeEnforceNoDuplicates #-}
+
+decodeMapLikeEnforceNoDuplicatesInternal ::
+  ([(k, v)] -> m) ->
+  (m -> Int) ->
+  Decoder s (Maybe Int) ->
+  Decoder s (k, v) ->
+  Decoder s m
+decodeMapLikeEnforceNoDuplicatesInternal fromPairs size decodeLenOrIndef =
   -- We first decode into a list because most of the time the encoded Map will be in sorted
   -- order and there is a nice optimization on the `Map.fromList` that can take advantage of
   -- that fact. In case when encoded data is not sorted the penalty of going through a list
   -- is insignificant.
   decodeListLikeEnforceNoDuplicates decodeLenOrIndef (:) $ \xs ->
-    let result = Map.fromList (reverse xs)
-     in (Map.size result, result)
-{-# INLINE decodeMapLikeEnforceNoDuplicates #-}
+    let result = fromPairs (reverse xs)
+     in (size result, result)
+
+decodeIntMap :: Decoder s v -> Decoder s (IntMap.IntMap v)
+decodeIntMap decodeValue =
+  ifDecoderVersionAtLeast
+    (natVersion @2)
+    ( ifDecoderVersionAtLeast
+        (natVersion @9)
+        ( decodeMapLikeEnforceNoDuplicatesInternal
+            IntMap.fromList
+            IntMap.size
+            decodeMapLenOrIndef
+            decodeKeyValue
+        )
+        (IntMap.fromList <$> decodeCollection decodeMapLenOrIndef decodeKeyValue)
+    )
+    ( decodeMapSkel
+        (IntMap.fromDistinctAscList . reverse)
+        decodeKeyValue
+    )
+  where
+    decodeKeyValue = (,) <$> decodeInt <*> decodeValue
+{-# INLINE decodeIntMap #-}
 
 -- | Decode `VMap`. Unlike `decodeMap` it does not behavee differently for
 -- version prior to 2.
