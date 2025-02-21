@@ -47,10 +47,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR,
-  decodeInteger,
   decodeWord64,
-  ifDecoderVersionAtLeast,
-  natVersion,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Compactible
@@ -89,12 +86,7 @@ newtype Coin = Coin {unCoin :: Integer}
 instance FromCBOR Coin where
   fromCBOR = Coin . toInteger <$> Plain.decodeWord64
 
-instance DecCBOR Coin where
-  decCBOR =
-    ifDecoderVersionAtLeast
-      (natVersion @9)
-      (Coin . fromIntegral <$> decodeWord64)
-      (Coin <$> decodeInteger)
+instance DecCBOR Coin
 
 newtype DeltaCoin = DeltaCoin Integer
   deriving (Eq, Ord, Generic, Enum, NoThunks, HeapWords)
