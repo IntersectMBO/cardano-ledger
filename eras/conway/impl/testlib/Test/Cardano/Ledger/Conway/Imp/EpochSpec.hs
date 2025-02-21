@@ -433,14 +433,14 @@ treasuryWithdrawalExpectation extraWithdrawals = do
   submitYesVoteCCs_ committeeHotCreds govActionId
   passEpoch -- 1st epoch crossing starts DRep pulser
   impAnn "Withdrawal should not be received yet" $
-    lookupReward (raCredential rewardAccount) `shouldReturn` mempty
+    getReward (raCredential rewardAccount) `shouldReturn` mempty
   passEpoch -- 2nd epoch crossing enacts all the ratified actions
   expectMissingGovActionId govActionId
   treasuryEnd <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   impAnn "Withdrawal deducted from treasury" $
     treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
   impAnn "Withdrawal received by reward account" $
-    lookupReward (raCredential rewardAccount) `shouldReturn` withdrawalAmount
+    getReward (raCredential rewardAccount) `shouldReturn` withdrawalAmount
 
 depositMovesToTreasuryWhenStakingAddressUnregisters :: ConwayEraImp era => ImpTestM era ()
 depositMovesToTreasuryWhenStakingAddressUnregisters = do

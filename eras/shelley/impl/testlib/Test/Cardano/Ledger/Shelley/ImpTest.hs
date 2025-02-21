@@ -43,10 +43,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   freshKeyAddr_,
   freshKeyHash,
   freshKeyPair,
-  lookupKeyPair,
+  getKeyPair,
   freshByronKeyHash,
   freshBootstapAddress,
-  lookupByronKeyPair,
+  getByronKeyPair,
   freshSafeHash,
   freshKeyHashVRF,
   submitTx,
@@ -71,7 +71,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   registerRewardAccount,
   registerStakeCredential,
   getRewardAccountFor,
-  tryLookupReward,
+  getReward,
   lookupReward,
   poolParams,
   registerPool,
@@ -79,7 +79,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   registerAndRetirePoolToMakeReward,
   getRewardAccountAmount,
   shelleyFixupTx,
-  lookupImpRootTxOut,
+  getImpRootTxOut,
   sendValueTo,
   sendValueTo_,
   sendCoinTo,
@@ -95,8 +95,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   fixupTxOuts,
   fixupFees,
   fixupAuxDataHash,
-  impGetNativeScript,
-  impLookupUTxO,
+  impLookupNativeScript,
+  impGetUTxO,
   defaultInitNewEpochState,
   defaultInitImpTestState,
   impEraStartEpochNo,
@@ -841,8 +841,8 @@ getRewardAccountAmount rewardAccount = do
     Nothing -> assertFailure $ "Expected a reward account: " ++ show cred
     Just RDPair {rdReward} -> pure $ fromCompact rdReward
 
-lookupImpRootTxOut :: ImpTestM era (TxIn, TxOut era)
-lookupImpRootTxOut = do
+getImpRootTxOut :: ImpTestM era (TxIn, TxOut era)
+getImpRootTxOut = do
   ImpTestState {impRootTxIn} <- get
   utxo <- getUTxO
   case txinLookup impRootTxIn utxo of
@@ -898,7 +898,7 @@ updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
   (bootAddrs, witsVKeyNeeded) <- impWitsVKeyNeeded txBody
   -- Shelley Based Addr Witnesses
   let curAddrWitHashes = Set.map witVKeyHash $ tx ^. witsTxL . addrTxWitsL
-  extraKeyPairs <- mapM lookupKeyPair $ Set.toList (witsVKeyNeeded Set.\\ curAddrWitHashes)
+  extraKeyPairs <- mapM getKeyPair $ Set.toList (witsVKeyNeeded Set.\\ curAddrWitHashes)
   let extraAddrVKeyWits = mkWitnessesVKey txBodyHash extraKeyPairs
       addrWitHashes = curAddrWitHashes <> Set.map witVKeyHash extraAddrVKeyWits
   -- Shelley Based Native Script Witnesses
@@ -915,7 +915,7 @@ updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
         , not (coerceKeyRole (bootstrapKeyHash bootAddr) `Set.member` curBootAddrWitHashes)
         ]
   extraBootAddrWits <- forM bootAddrWitsNeeded $ \bootAddr@(BootstrapAddress byronAddr) -> do
-    ByronKeyPair _ signingKey <- lookupByronKeyPair bootAddr
+    ByronKeyPair _ signingKey <- getByronKeyPair bootAddr
     let attrs = Byron.addrAttributes byronAddr
     pure $ makeBootstrapWitness (extractHash txBodyHash) signingKey attrs
   pure $
@@ -929,7 +929,7 @@ addRootTxIn ::
   Tx era ->
   ImpTestM era (Tx era)
 addRootTxIn tx = impAnn "addRootTxIn" $ do
-  rootTxIn <- fst <$> lookupImpRootTxOut
+  rootTxIn <- fst <$> getImpRootTxOut
   pure $
     tx
       & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
@@ -1320,11 +1320,11 @@ addKeyPair keyPair@(KeyPair vk _) = do
 
 -- | Looks up the `KeyPair` corresponding to the `KeyHash`. The `KeyHash` must be
 -- created with `freshKeyHash` for this to work.
-lookupKeyPair ::
+getKeyPair ::
   (HasCallStack, HasKeyPairs s, MonadState s m) =>
   KeyHash r ->
   m (KeyPair r)
-lookupKeyPair keyHash = do
+getKeyPair keyHash = do
   keyPairs <- use keyPairsL
   case Map.lookup (asWitness keyHash) keyPairs of
     Just keyPair -> pure $ coerce keyPair
@@ -1336,7 +1336,7 @@ lookupKeyPair keyHash = do
 
 -- | Generates a fresh `KeyHash` and stores the corresponding `KeyPair` in the
 -- ImpTestState. If you also need the `KeyPair` consider using `freshKeyPair` for
--- generation or `lookupKeyPair` to look up the `KeyPair` corresponding to the `KeyHash`
+-- generation or `getKeyPair` to look up the `KeyPair` corresponding to the `KeyHash`
 freshKeyHash ::
   forall r s g m.
   (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
@@ -1373,11 +1373,11 @@ freshKeyAddr = do
 
 -- | Looks up the keypair corresponding to the `BootstrapAddress`. The `BootstrapAddress`
 -- must be created with `freshBootstrapAddess` for this to work.
-lookupByronKeyPair ::
+getByronKeyPair ::
   (HasCallStack, HasKeyPairs s, MonadState s m) =>
   BootstrapAddress ->
   m ByronKeyPair
-lookupByronKeyPair bootAddr = do
+getByronKeyPair bootAddr = do
   keyPairs <- use keyPairsByronL
   case Map.lookup bootAddr keyPairs of
     Just keyPair -> pure keyPair
@@ -1389,7 +1389,7 @@ lookupByronKeyPair bootAddr = do
 
 -- | Generates a fresh `KeyHash` and stores the corresponding `ByronKeyPair` in the
 -- ImpTestState. If you also need the `ByronKeyPair` consider using `freshByronKeyPair` for
--- generation or `lookupByronKeyPair` to look up the `ByronKeyPair` corresponding to the `KeyHash`
+-- generation or `getByronKeyPair` to look up the `ByronKeyPair` corresponding to the `KeyHash`
 freshByronKeyHash ::
   (HasKeyPairs s, MonadState s m, HasStatefulGen g m) =>
   m (KeyHash r)
@@ -1498,14 +1498,14 @@ registerRewardAccount = do
   khDelegator <- freshKeyHash
   registerStakeCredential (KeyHashObj khDelegator)
 
-tryLookupReward :: EraCertState era => Credential 'Staking -> ImpTestM era (Maybe Coin)
-tryLookupReward stakingCredential = do
+lookupReward :: EraCertState era => Credential 'Staking -> ImpTestM era (Maybe Coin)
+lookupReward stakingCredential = do
   umap <- getsNES (nesEsL . epochStateUMapL)
   pure $ fromCompact . rdReward <$> UMap.lookup stakingCredential (RewDepUView umap)
 
-lookupReward :: (HasCallStack, EraCertState era) => Credential 'Staking -> ImpTestM era Coin
-lookupReward stakingCredential = do
-  mbyRwd <- tryLookupReward stakingCredential
+getReward :: (HasCallStack, EraCertState era) => Credential 'Staking -> ImpTestM era Coin
+getReward stakingCredential = do
+  mbyRwd <- lookupReward stakingCredential
   case mbyRwd of
     Just c -> pure c
     Nothing ->
@@ -1636,11 +1636,11 @@ expectTreasury c =
 disableTreasuryExpansion :: ShelleyEraImp era => ImpTestM era ()
 disableTreasuryExpansion = modifyPParams $ ppTauL .~ (0 %! 1)
 
-impGetNativeScript :: ScriptHash -> ImpTestM era (Maybe (NativeScript era))
-impGetNativeScript sh = Map.lookup sh <$> gets impNativeScripts
+impLookupNativeScript :: ScriptHash -> ImpTestM era (Maybe (NativeScript era))
+impLookupNativeScript sh = Map.lookup sh <$> gets impNativeScripts
 
-impLookupUTxO :: ShelleyEraImp era => TxIn -> ImpTestM era (TxOut era)
-impLookupUTxO txIn = impAnn "Looking up TxOut" $ do
+impGetUTxO :: ShelleyEraImp era => TxIn -> ImpTestM era (TxOut era)
+impGetUTxO txIn = impAnn "Looking up TxOut" $ do
   utxo <- getUTxO
   case txinLookup txIn utxo of
     Just txOut -> pure txOut

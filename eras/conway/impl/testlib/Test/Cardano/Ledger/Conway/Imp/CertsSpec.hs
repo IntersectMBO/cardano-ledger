@@ -111,5 +111,5 @@ spec = do
       let cred = KeyHashObj kh
       ra <- registerStakeCredential cred
       submitAndExpireProposalToMakeReward cred
-      rw <- lookupReward cred
+      rw <- getReward cred
       pure (ra, rw, kh)
