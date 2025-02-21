@@ -66,6 +66,7 @@ import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Fixed (Fixed (..))
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int16, Int32, Int64, Int8)
+import qualified Data.IntMap as IntMap
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe.Strict as SMaybe
@@ -404,6 +405,10 @@ instance (Ord a, DecCBOR a) => DecCBOR (Set.Set a) where
 
 instance (Ord k, DecCBOR k, DecCBOR v) => DecCBOR (Map.Map k v) where
   decCBOR = decodeMap decCBOR decCBOR
+  {-# INLINE decCBOR #-}
+
+instance DecCBOR v => DecCBOR (IntMap.IntMap v) where
+  decCBOR = decodeIntMap decCBOR
   {-# INLINE decCBOR #-}
 
 instance
