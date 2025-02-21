@@ -2,13 +2,14 @@
 
 ## 1.16.0.0
 
+* Add `auxDataSeqDecoder`
+* Remove `constructMetadata`
 * Add `DecCBOR` instances for:
   * `ShelleyTxWits`
   * `ShelleyTxAuxData`
   * `ShelleyTxBody`
   * `ShelleyTx`
   * `ShelleyTxSeq`
-* Add `indexLookupSeq`
 * Add `segWitTx`
 * Rename `segwitTx` to `segWitAnnTx`
 * Converted `CertState` to a type family
