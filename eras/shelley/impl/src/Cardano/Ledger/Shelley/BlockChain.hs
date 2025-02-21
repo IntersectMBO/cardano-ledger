@@ -18,8 +18,7 @@
 
 module Cardano.Ledger.Shelley.BlockChain (
   ShelleyTxSeq (ShelleyTxSeq, txSeqTxns', TxSeq'),
-  constructMetadata,
-  indexLookupSeq,
+  auxDataSeqDecoder,
   txSeqTxns,
   bbHash,
   bBodySize,
@@ -61,6 +60,7 @@ import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
+import Data.Functor.Identity (Identity (..))
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import qualified Data.Map.Strict as Map
@@ -192,18 +192,6 @@ bbHash (TxSeq' _ bodies wits md) =
     hashStrict = Hash.hashWith id
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
--- | Given a size and a mapping from indices to maybe metadata,
---  return a sequence whose size is the size parameter and
---  whose non-Nothing values correspond to the values in the mapping.
-constructMetadata ::
-  Int ->
-  IntMap (Annotator (TxAuxData era)) ->
-  Seq (Maybe (Annotator (TxAuxData era)))
-constructMetadata = indexLookupSeq
-
-indexLookupSeq :: Int -> IntMap a -> Seq (Maybe a)
-indexLookupSeq n ixMap = Seq.fromList [IntMap.lookup ix ixMap | ix <- [0 .. n - 1]]
-
 -- | The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
 --   These are exactly the parts that are SafeToHash.
 -- | Decode a TxSeq, used in decoding a Block.
@@ -216,24 +204,19 @@ txSeqDecoder ::
 txSeqDecoder lax = do
   (bodies, bodiesAnn) <- withSlice decCBOR
   (wits, witsAnn) <- withSlice decCBOR
-  let b = length bodies
-      inRange x = (0 <= x) && (x <= (b - 1))
-      w = length wits
-  (metadata, metadataAnn) <- withSlice $
-    do
-      m <- decCBOR
-      unless -- TODO this PR introduces this new test, That didn't used to run in the Shelley
-        (lax || getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) m)) -- Era,  Is it possible there might be some blocks, that should have been caught on the chain?
-        (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b - 1)))
-      pure (constructMetadata @era b m)
+  let bodiesLength = length bodies
+      witsLength = length wits
+  (metadata, metadataAnn) <- withSlice $ do
+    auxDataMap <- decCBOR
+    auxDataSeqDecoder bodiesLength auxDataMap lax
 
   unless
-    (lax || b == w)
+    (lax || bodiesLength == witsLength)
     ( fail $
         "different number of transaction bodies ("
-          <> show b
+          <> show bodiesLength
           <> ") and witness sets ("
-          <> show w
+          <> show witsLength
           <> ")"
     )
 
@@ -242,6 +225,21 @@ txSeqDecoder lax = do
           StrictSeq.forceToStrict $
             Seq.zipWith3 segWitAnnTx bodies wits metadata
   pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
+
+auxDataSeqDecoder ::
+  Int -> IntMap a -> Bool -> Decoder s (Seq (Maybe a))
+auxDataSeqDecoder bodiesLength auxDataMap lax = do
+  unless
+    (lax || getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
+    (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (bodiesLength - 1)))
+  pure (indexLookupSeq bodiesLength auxDataMap)
+  where
+    inRange x = (0 <= x) && (x <= (bodiesLength - 1))
+    -- Given a size and a mapping from indices to maybe values,
+    -- return a sequence whose size is the size parameter and
+    -- whose non-Nothing values correspond to the values in the mapping.
+    indexLookupSeq :: Int -> IntMap a -> Seq (Maybe a)
+    indexLookupSeq n ixMap = Seq.fromList [IntMap.lookup ix ixMap | ix <- [0 .. n - 1]]
 
 instance EraTx era => DecCBOR (Annotator (ShelleyTxSeq era)) where
   decCBOR = txSeqDecoder False
@@ -257,13 +255,12 @@ instance
   decCBOR = do
     Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
     Annotated wits witsBytes <- decodeAnnotated decCBOR
-    Annotated auxDataMap auxDataBytes <- decodeAnnotated decCBOR
+    Annotated (auxDataMap :: IntMap (TxAuxData era)) auxDataBytes <- decodeAnnotated decCBOR
     let bodiesLength = length bodies
-    let inRange x = (0 <= x) && (x <= (bodiesLength - 1))
-    unless
-      (getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
-      (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (bodiesLength - 1)))
-    let auxData = indexLookupSeq bodiesLength auxDataMap
+    auxData <-
+      fmap (fmap runIdentity)
+        <$> auxDataSeqDecoder bodiesLength (fmap pure auxDataMap) False
+
     let witsLength = length wits
     unless
       (bodiesLength == witsLength)

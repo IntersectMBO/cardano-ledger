@@ -46,15 +46,13 @@ import Cardano.Ledger.Binary (
   withSlice,
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.BlockChain (constructMetadata, indexLookupSeq)
+import Cardano.Ledger.Shelley.BlockChain (auxDataSeqDecoder)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
-import qualified Data.IntMap as IntMap
 import Data.Maybe.Strict (maybeToStrictMaybe, strictMaybeToMaybe)
-import Data.Monoid (All (..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -189,17 +187,10 @@ instance AlonzoEraTx era => DecCBOR (Annotator (AlonzoTxSeq era)) where
     let bodiesLength = length bodies
         inRange x = (0 <= x) && (x <= (bodiesLength - 1))
         witsLength = length wits
-    (auxData, auxDataAnn) <- withSlice $
-      do
-        auxDataMap <- decCBOR
-        unless
-          (getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
-          ( fail
-              ( "Some Auxiliarydata index is not in the range: 0 .. "
-                  ++ show (bodiesLength - 1)
-              )
-          )
-        pure (constructMetadata bodiesLength auxDataMap)
+    (auxData, auxDataAnn) <- withSlice $ do
+      auxDataMap <- decCBOR
+      auxDataSeqDecoder bodiesLength auxDataMap False
+
     (isValIdxs, isValAnn) <- withSlice decCBOR
     let validFlags = alignedValidFlags bodiesLength isValIdxs
     unless
@@ -248,14 +239,7 @@ instance
     let bodiesLength = length bodies
         inRange x = (0 <= x) && (x <= (bodiesLength - 1))
         witsLength = length wits
-    unless
-      (getAll (IntMap.foldMapWithKey (\k _ -> All (inRange k)) auxDataMap))
-      ( fail
-          ( "Some Auxiliarydata index is not in the range: 0 .. "
-              ++ show (bodiesLength - 1)
-          )
-      )
-    let auxData = indexLookupSeq bodiesLength auxDataMap
+    auxData <- auxDataSeqDecoder @(TxAuxData era) bodiesLength auxDataMap False
     Annotated isValidIdxs isValidBytes <- decodeAnnotated decCBOR
     let validFlags = alignedValidFlags bodiesLength isValidIdxs
     unless
