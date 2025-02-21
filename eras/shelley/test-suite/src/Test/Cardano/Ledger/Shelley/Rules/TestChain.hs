@@ -141,7 +141,6 @@ shortChainTrace constants f = withMaxSuccess 100 $ forAllChainTrace @era 10 cons
 ledgerTraceFromBlock ::
   forall era ledger.
   ( ChainProperty era
-  , EraSegWits era
   , TestingLedger era ledger
   ) =>
   ChainState era ->
@@ -161,7 +160,6 @@ ledgerTraceFromBlock chainSt block =
 ledgerTraceFromBlockWithRestrictedUTxO ::
   forall era ledger.
   ( ChainProperty era
-  , EraSegWits era
   , TestingLedger era ledger
   ) =>
   ChainState era ->
@@ -185,7 +183,6 @@ poolTraceFromBlock ::
   forall era.
   ( ChainProperty era
   , ShelleyEraTxBody era
-  , EraSegWits era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
@@ -210,7 +207,6 @@ delegTraceFromBlock ::
   forall era.
   ( ChainProperty era
   , ShelleyEraTxBody era
-  , EraSegWits era
   ) =>
   ChainState era ->
   Block (BHeader MockCrypto) era ->
@@ -244,8 +240,7 @@ delegTraceFromBlock chainSt block =
 -- transactions with the LEDGERS rule)
 ledgerTraceBase ::
   forall era.
-  ( EraSegWits era
-  , GetLedgerView era
+  ( GetLedgerView era
   , ApplyBlock era
   ) =>
   ChainState era ->

@@ -387,7 +387,6 @@ potsSumIncreaseWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = b
 potsSumIncreaseByRewardsPerTx ::
   forall era ledger.
   ( ChainProperty era
-  , EraSegWits era
   , TestingLedger era ledger
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -495,7 +494,6 @@ preserveBalanceRestricted ::
   forall era ledger.
   ( ChainProperty era
   , TestingLedger era ledger
-  , EraSegWits era
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -553,7 +551,6 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
 canRestrictUTxO ::
   forall era ledger.
   ( ChainProperty era
-  , EraSegWits era
   , TestingLedger era ledger
   ) =>
   SourceSignalTarget (CHAIN era) ->

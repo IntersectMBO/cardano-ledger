@@ -124,7 +124,6 @@ relevantCasesAreCovered n =
 relevantCasesAreCoveredForTrace ::
   forall era.
   ( ChainProperty era
-  , EraSegWits era
   , ShelleyEraTxBody era
   ) =>
   Trace (CHAIN era) ->

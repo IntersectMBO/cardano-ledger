@@ -2,6 +2,12 @@
 
 ## 1.16.0.0
 
+* Remove redundant supercalss constraints for `ApplyBlock`
+* Add `applyBlockEither`, `applyBlockEitherNoEvents`, `applyBlockNoValidaton`, `applyTickNoEvents`.
+* Add `applyBlock` and `applyTick` to `ApplyBlock` type class.
+* Remove `applyBlockOpts` (in favor of `applyBlockEither`), `reapplyBlock` (in favor of
+  `applyBlockNoValidation`)  and `applyTickOpts` (in favor `applyTick`).
+* Disable validation level for `applyTick`
 * Add `DecCBOR` instances for:
   * `ShelleyTxWits`
   * `ShelleyTxAuxData`
