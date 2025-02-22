@@ -34,7 +34,6 @@ import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
 import Cardano.Ledger.State (
   EraCertState (..),
   lookupDepositDState,
-  lookupDepositVState,
   psStakePoolParams,
  )
 import Control.Monad.Trans.Reader (runReaderT)
@@ -187,6 +186,8 @@ instance
   type BaseEnv (CERTS era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
+-- TODO: consider adding a generator for Conway too
+
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
 genTxCerts ::
@@ -226,7 +227,6 @@ genTxCerts
         st0 = (certState, minBound)
         certDState = certState ^. certDStateL
         certPState = certState ^. certPStateL
-        certVState = certState ^. certVStateL
 
     certsTrace <-
       QC.traceFrom @(CERTS era) testGlobals maxCertsPerTx ge env st0
@@ -241,7 +241,7 @@ genTxCerts
           getTotalRefundsTxCerts
             pp
             (lookupDepositDState certDState)
-            (lookupDepositVState certVState)
+            (const Nothing)
             certs
 
         deposits = getTotalDepositsTxCerts pp (`Map.member` psStakePoolParams certPState) certs

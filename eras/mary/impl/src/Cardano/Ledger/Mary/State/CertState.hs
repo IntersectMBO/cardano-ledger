@@ -12,15 +12,10 @@ import Data.Coerce (coerce)
 instance EraCertState MaryEra where
   type CertState MaryEra = ShelleyCertState MaryEra
 
-  mkCertState = mkShelleyCertState
-
   upgradeCertState = coerce
 
   certDStateL = shelleyCertDStateL
   {-# INLINE certDStateL #-}
-
-  certVStateL = shelleyCertVStateL
-  {-# INLINE certVStateL #-}
 
   certPStateL = shelleyCertPStateL
   {-# INLINE certPStateL #-}

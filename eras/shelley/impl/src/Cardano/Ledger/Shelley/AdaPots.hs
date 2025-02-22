@@ -32,15 +32,17 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.TxBody (unWithdrawals)
-import Cardano.Ledger.State
 import Cardano.Ledger.State (
+  AccountState (..),
   EraCertState (..),
   Obligations (..),
+  UTxO,
   certsTotalDepositsTxBody,
-  certsTotalRefundsTxBody,
-  obligationCertState,
+  coinBalance,
   rewards,
   sumObligation,
+  txInsFilter,
+  txouts,
  )
 import Cardano.Ledger.UMap (sumRewardsUView)
 import Control.DeepSeq (NFData)

@@ -237,8 +237,6 @@ instance ToExpr (PState era)
 
 instance ToExpr (DState era)
 
-instance ToExpr (VState era)
-
 instance ToExpr FutureGenDeleg
 
 instance ToExpr InstantaneousRewards

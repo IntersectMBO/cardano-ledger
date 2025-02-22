@@ -17,7 +17,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.State
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Arbitrary ()

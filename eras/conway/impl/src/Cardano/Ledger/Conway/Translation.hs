@@ -34,7 +34,10 @@ import Cardano.Ledger.Conway.Governance (
   setCompleteDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Conway.State ()
+import Cardano.Ledger.Conway.State (
+  VState (..),
+  mkConwayCertState,
+ )
 import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Plutus.Data (translateDatum)
@@ -45,14 +48,12 @@ import Cardano.Ledger.Shelley.API (
   PState (..),
   StrictMaybe (..),
   UTxOState (..),
-  VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
  )
-import Cardano.Ledger.Shelley.State (ShelleyCertState)
-import Cardano.Ledger.State (CommitteeState (..), upgradeCertState)
+import Cardano.Ledger.State (CommitteeState (..), EraCertState (..))
 import qualified Cardano.Ledger.UMap as UM
 import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
@@ -158,16 +159,26 @@ instance TranslateEra ConwayEra VState where
 instance TranslateEra ConwayEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra ConwayEra ShelleyCertState where
-  translateEra ConwayGenesis {} = pure . upgradeCertState
-
 instance TranslateEra ConwayEra API.LedgerState where
   translateEra conwayGenesis ls =
     pure
       API.LedgerState
         { API.lsUTxOState = translateEra' conwayGenesis $ API.lsUTxOState ls
-        , API.lsCertState = translateEra' conwayGenesis $ API.lsCertState ls
+        , API.lsCertState = translateCertState conwayGenesis $ API.lsCertState ls
         }
+
+-- TODO: figure out if we need to initialise VState
+-- with some ConwayGenesis fields
+translateCertState ::
+  TranslationContext ConwayEra ->
+  API.CertState BabbageEra ->
+  API.CertState ConwayEra
+translateCertState ctx scert =
+  let
+    dstate = translateEra' ctx (scert ^. certDStateL)
+    pstate = translateEra' ctx (scert ^. certPStateL)
+   in
+    mkConwayCertState def pstate dstate
 
 translateGovState ::
   TranslationContext ConwayEra ->

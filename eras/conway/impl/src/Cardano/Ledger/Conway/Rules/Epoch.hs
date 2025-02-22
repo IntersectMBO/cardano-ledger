@@ -62,6 +62,14 @@ import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
 import Cardano.Ledger.Conway.Rules.HardFork (
   ConwayHardForkEvent (..),
  )
+import Cardano.Ledger.Conway.State (
+  ConwayCertState,
+  ConwayEraCertState (..),
+  VState,
+  mkConwayCertState,
+  vsCommitteeStateL,
+  vsNumDormantEpochsL,
+ )
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DState (..),
@@ -86,7 +94,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPOOLREAP,
-  ShelleyPoolreapEnv (..),
   ShelleyPoolreapEvent,
   ShelleyPoolreapPredFailure,
   ShelleyPoolreapState (..),
@@ -101,10 +108,7 @@ import Cardano.Ledger.State (
   CommitteeState (..),
   EraCertState (..),
   SnapShots (..),
-  VState,
   dsUnifiedL,
-  vsCommitteeStateL,
-  vsNumDormantEpochsL,
  )
 import Cardano.Ledger.UMap (RDPair (..), UMap, UView (..), (∪+), (◁))
 import qualified Cardano.Ledger.UMap as UMap
@@ -174,7 +178,7 @@ instance
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
-  , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
+  , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Eq (UpecPredFailure era)
@@ -188,7 +192,8 @@ instance
   , Environment (EraRule "HARDFORK" era) ~ ()
   , State (EraRule "HARDFORK" era) ~ EpochState era
   , Signal (EraRule "HARDFORK" era) ~ ProtVer
-  , EraCertState era
+  , CertState era ~ ConwayCertState era
+  , ConwayEraCertState era
   ) =>
   STS (ConwayEPOCH era)
   where
@@ -281,7 +286,7 @@ epochTransition ::
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
-  , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
+  , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "RATIFY" era) (ConwayEPOCH era)
@@ -294,7 +299,8 @@ epochTransition ::
   , Environment (EraRule "HARDFORK" era) ~ ()
   , State (EraRule "HARDFORK" era) ~ EpochState era
   , Signal (EraRule "HARDFORK" era) ~ ProtVer
-  , EraCertState era
+  , CertState era ~ ConwayCertState era
+  , ConwayEraCertState era
   ) =>
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
@@ -327,7 +333,7 @@ epochTransition = do
           }
   PoolreapState utxoState1 accountState1 dState1 pState2 <-
     trans @(EraRule "POOLREAP" era) $
-      TRC (ShelleyPoolreapEnv vState, PoolreapState utxoState0 accountState0 dState0 pState1, eNo)
+      TRC ((), PoolreapState utxoState0 accountState0 dState0 pState1, eNo)
 
   let
     stakePoolDistr = ssStakeMarkPoolDistr snapshots1
@@ -378,7 +384,7 @@ epochTransition = do
 
   let
     certState1 =
-      mkCertState
+      mkConwayCertState
         -- Increment the dormant epoch counter
         ( updateNumDormantEpochs eNo newProposals vState
             -- Remove cold credentials of committee members that were removed or were invalid

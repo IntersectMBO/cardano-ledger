@@ -66,8 +66,14 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.State
-import Cardano.Ledger.State (CommitteeState)
+import Cardano.Ledger.State (
+  CommitteeState,
+  PoolDistr (..),
+  individualTotalPoolStake,
+  individualTotalPoolStakeL,
+  poolDistrDistrL,
+  poolDistrTotalL,
+ )
 import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)

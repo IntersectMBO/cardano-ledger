@@ -45,7 +45,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..), StashedAVVMAddresses)
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.State
 import Constrained hiding (Value)
 import Constrained.Base (Pred (..))

@@ -24,12 +24,13 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.Shelley.State -- (ShelleyCertState (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.State
 import Constrained
@@ -73,7 +74,21 @@ shelleyCertStateSpec ::
   Set (Credential 'DRepRole) ->
   Map (RewardAccount) Coin ->
   Specification fn (ShelleyCertState era)
-shelleyCertStateSpec univ delegatees wdrls =
+shelleyCertStateSpec univ _delegatees wdrls =
+  constrained $ \cs ->
+    match cs $ \pState dState ->
+      [ satisfies pState (pStateSpec @fn @era univ)
+      , satisfies dState (dStateSpec @fn @era univ wdrls)
+      ]
+
+conwayCertStateSpec ::
+  forall fn era.
+  (IsConwayUniv fn, EraSpecDeleg era, Era era) =>
+  WitUniv era ->
+  Set (Credential 'DRepRole) ->
+  Map (RewardAccount) Coin ->
+  Specification fn (ConwayCertState era)
+conwayCertStateSpec univ delegatees wdrls =
   constrained $ \cs ->
     match cs $ \vState pState dState ->
       [ satisfies vState (vStateSpec @fn @era univ delegatees)
@@ -152,7 +167,7 @@ shelleyTxCertSpec ::
   CertEnv era ->
   ShelleyCertState era ->
   Specification fn (ShelleyTxCert era)
-shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (ShelleyCertState _vstate pstate dstate) =
+shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (ShelleyCertState pstate dstate) =
   constrained $ \ [var|shelleyTxCert|] ->
     -- These weights try to make it equally likely that each of the many certs
     -- across the 3 categories are chosen at similar frequencies.
@@ -212,7 +227,7 @@ instance IsConwayUniv fn => EraSpecCert BabbageEra fn where
 instance IsConwayUniv fn => EraSpecCert ConwayEra fn where
   txCertSpec = conwayTxCertSpec
   txCertKey = conwayTxCertKey
-  certStateSpec = shelleyCertStateSpec
+  certStateSpec = conwayCertStateSpec
 
 -- | Used to aggregate the key used in registering a Certificate. Different
 --   certificates use different kinds of Keys, that allows us to use one
@@ -302,8 +317,7 @@ testConwayCert = do
   delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
   dstate <-
     genFromSpec @ConwayFn @(CertState ConwayEra)
-      -- TODO: change to `conwayCertStateSpec` once it's implemented
-      (shelleyCertStateSpec univ delegatees wdrls)
+      (conwayCertStateSpec univ delegatees wdrls)
   let spec :: Specification ConwayFn (ConwayTxCert ConwayEra)
       spec = conwayTxCertSpec univ env dstate
   ans <- genFromSpec @ConwayFn spec

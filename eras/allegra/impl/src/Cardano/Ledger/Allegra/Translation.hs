@@ -26,11 +26,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PState (..),
   UTxOState (..),
-  VState (..),
   returnRedeemAddrsToReserves,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
-import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
@@ -135,15 +134,16 @@ instance TranslateEra AllegraEra DState where
 instance TranslateEra AllegraEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance TranslateEra AllegraEra VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
-
 instance TranslateEra AllegraEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra AllegraEra ShelleyCertState
+instance TranslateEra AllegraEra ShelleyCertState where
+  translateEra ctxt ls =
+    pure
+      ShelleyCertState
+        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        }
 
 instance TranslateEra AllegraEra LedgerState where
   translateEra ctxt ls =

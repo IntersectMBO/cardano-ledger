@@ -136,6 +136,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import qualified Cardano.Ledger.Conway.Rules as ConwayRules
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.State (ConwayCertState (..), ConwayEraCertState (..), VState (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),
@@ -199,7 +200,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   RewardUpdate (..),
   UTxOState (..),
-  VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import qualified Cardano.Ledger.Shelley.PParams as PParams (Update (..))
@@ -2496,7 +2496,7 @@ pStateSummary (PState pp fpp retire deposit) =
     , ("Deposits", ppInt (Map.size deposit))
     ]
 
-dpStateSummary :: EraCertState era => CertState era -> PDoc
+dpStateSummary :: ConwayEraCertState era => CertState era -> PDoc
 dpStateSummary certState = vsep [pcVState v, pStateSummary p, dStateSummary d]
   where
     v = certState ^. certVStateL
@@ -3171,14 +3171,23 @@ instance PrettyA GenDelegPair where
 pcCertState :: forall era. Reflect era => CertState era -> PDoc
 pcCertState certState = case whichCertState (reify @era) of
   CertStateShelleyToBabbage -> pcShelleyCertState certState
+  CertStateConwayToConway -> pcConwayCertState certState
 
 pcShelleyCertState :: ShelleyCertState era -> PDoc
 pcShelleyCertState (ShelleyCertState {..}) =
   ppRecord
     "ShelleyCertState"
     [ ("pstate", pcPState shelleyCertPState)
-    , ("vstate", pcVState shelleyCertVState)
     , ("dstate", pcDState shelleyCertDState)
+    ]
+
+pcConwayCertState :: ConwayCertState era -> PDoc
+pcConwayCertState (ConwayCertState {..}) =
+  ppRecord
+    "ConwayCertState"
+    [ ("pstate", pcPState conwayCertPState)
+    , ("vstate", pcVState conwayCertVState)
+    , ("dstate", pcDState conwayCertDState)
     ]
 
 pcVState :: VState era -> PDoc
@@ -3669,6 +3678,9 @@ instance Reflect era => PrettyA (CertEnv era) where
 
 instance Reflect era => PrettyA (ShelleyCertState era) where
   prettyA = pcShelleyCertState
+
+instance Reflect era => PrettyA (ConwayCertState era) where
+  prettyA = pcConwayCertState
 
 instance PrettyA x => PrettyA (Seq x) where
   prettyA x = prettyA (toList x)

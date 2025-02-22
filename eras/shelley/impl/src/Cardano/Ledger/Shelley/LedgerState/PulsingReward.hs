@@ -69,10 +69,15 @@ import Cardano.Ledger.Shelley.Rewards (
   sumRewards,
  )
 import Cardano.Ledger.Slot (EpochSize (..))
-import Cardano.Ledger.State
 import Cardano.Ledger.State (
+  AccountState (..),
   EraCertState (..),
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
   rewards,
+  sumAllStake,
+  sumStakePerPool,
  )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
@@ -122,7 +127,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       pulseSize = max 1 (ceiling (numStakeCreds %. (knownNonZero @4 `mulNonZero` k)))
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
-      Coin reserves = asReserves acnt
+      Coin reserves = acnt ^. asReservesL
       ds = ls ^. lsCertStateL . certDStateL
       -- reserves and rewards change
       pr = es ^. prevPParamsEpochStateL

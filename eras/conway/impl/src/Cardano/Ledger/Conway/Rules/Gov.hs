@@ -91,7 +91,10 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Governance.Proposals (mapProposals)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
-import Cardano.Ledger.Conway.State ()
+import Cardano.Ledger.Conway.State (
+  ConwayEraCertState (..),
+  VState (..),
+ )
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -103,7 +106,6 @@ import Cardano.Ledger.State (
   CommitteeState (..),
   EraCertState (..),
   PState (..),
-  VState (..),
   authorizedHotCommitteeCredentials,
  )
 import Cardano.Ledger.TxIn (TxId (..))
@@ -321,6 +323,7 @@ instance
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
   , EraCertState era
+  , ConwayEraCertState era
   ) =>
   STS (ConwayGOV era)
   where
@@ -429,7 +432,7 @@ govTransition ::
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , State (EraRule "GOV" era) ~ Proposals era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   TransitionRule (EraRule "GOV" era)
 govTransition = do

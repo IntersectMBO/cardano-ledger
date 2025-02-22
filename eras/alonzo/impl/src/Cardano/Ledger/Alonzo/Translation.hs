@@ -28,13 +28,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.State (
   CommitteeState (..),
-  EraCertState (..),
   PState (..),
   UTxO (..),
-  VState (..),
  )
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
@@ -114,16 +112,16 @@ instance TranslateEra AlonzoEra DState where
 instance TranslateEra AlonzoEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance TranslateEra AlonzoEra VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
-
 instance TranslateEra AlonzoEra PState where
   translateEra _ PState {..} = pure PState {..}
 
 instance TranslateEra AlonzoEra ShelleyCertState where
-  translateEra (AlonzoGenesisWrapper _scs) = pure . upgradeCertState
+  translateEra ctxt ls =
+    pure
+      ShelleyCertState
+        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        }
 
 instance TranslateEra AlonzoEra LedgerState where
   translateEra ctxt ls =

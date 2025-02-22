@@ -25,8 +25,10 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded)
-import Cardano.Ledger.State
-import Cardano.Ledger.State (EraUTxO (..))
+import Cardano.Ledger.State (
+  EraCertState (..),
+  EraUTxO (..),
+ )
 import Control.State.Transition.Extended
 
 type instance EraRuleFailure "UTXOW" AllegraEra = ShelleyUtxowPredFailure AllegraEra

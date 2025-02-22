@@ -271,7 +271,8 @@ createInitialState tc =
                 LedgerState
                   { lsUTxOState =
                       smartUTxOState pp initialUtxo zero zero govState zero
-                  , lsCertState = mkCertState def def (dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)})
+                  , lsCertState =
+                      def & certDStateL . dsGenDelegsL .~ GenDelegs (sgGenDelegs sg)
                   }
             , esNonMyopic = def
             }
@@ -280,8 +281,6 @@ createInitialState tc =
       , stashedAVVMAddresses = def
       }
   where
-    dState :: DState era
-    dState = def
     govState :: GovState era
     govState =
       emptyGovState

@@ -29,10 +29,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PState (..),
   UTxOState (..),
-  VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.State (CommitteeState (..), UTxO (..))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -110,15 +109,16 @@ instance TranslateEra BabbageEra DState where
 instance TranslateEra BabbageEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance TranslateEra BabbageEra VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
-
 instance TranslateEra BabbageEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra BabbageEra ShelleyCertState
+instance TranslateEra BabbageEra ShelleyCertState where
+  translateEra ctxt ls =
+    pure
+      ShelleyCertState
+        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        }
 
 instance TranslateEra BabbageEra LedgerState where
   translateEra ctxt ls =

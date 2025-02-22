@@ -49,11 +49,14 @@ import Cardano.Ledger.Shelley.Rewards (
   aggregateRewards,
   filterRewards,
  )
-import Cardano.Ledger.State
 import Cardano.Ledger.State (
+  AccountState (..),
   DState (..),
   EraCertState (..),
   PState (..),
+  SnapShot (..),
+  Stake (..),
+  UTxO (..),
   delegations,
   dsUnifiedL,
   rewards,

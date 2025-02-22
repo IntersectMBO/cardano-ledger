@@ -37,6 +37,7 @@ import Cardano.Ledger.Conway.Core (
   EraTxWits (..),
  )
 import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
 import Cardano.Ledger.Shelley.State (ShelleyCertState)
@@ -44,7 +45,6 @@ import Cardano.Ledger.State (
   DRepState (..),
   dsUnifiedL,
   psDepositsL,
-  vsDRepsL,
  )
 import Cardano.Ledger.UMap (depositMap)
 import Control.DeepSeq (NFData)
@@ -224,7 +224,8 @@ correctAddrAndWFCoin txOut =
         )
     ]
 
-depositsMap :: EraCertState era => CertState era -> Proposals era -> Map.Map DepositPurpose Coin
+depositsMap ::
+  ConwayEraCertState era => CertState era -> Proposals era -> Map.Map DepositPurpose Coin
 depositsMap certState props =
   Map.unions
     [ Map.mapKeys CredentialDeposit $ depositMap (certState ^. certDStateL . dsUnifiedL)

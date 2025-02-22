@@ -83,6 +83,7 @@ import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
+import Cardano.Ledger.Conway.State (ConwayEraCertState)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
@@ -502,6 +503,7 @@ instance
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
   , EraRule "CERTS" era ~ ConwayCERTS era
   , EraCertState era
+  , ConwayEraCertState era
   ) =>
   Embed (ConwayCERTS era) (ConwayLEDGER era)
   where
@@ -546,6 +548,7 @@ instance
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
   , EraCertState era
+  , ConwayEraCertState era
   ) =>
   Embed (ConwayGOV era) (ConwayLEDGER era)
   where
@@ -560,6 +563,7 @@ instance
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
   , Event (EraRule "CERT" era) ~ ConwayCertEvent era
   , EraCertState era
+  , ConwayEraCertState era
   ) =>
   Embed (ConwayDELEG era) (ConwayLEDGER era)
   where

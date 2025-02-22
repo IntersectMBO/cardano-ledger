@@ -34,6 +34,7 @@ module Test.Cardano.Ledger.Generic.ModelState where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
+import Cardano.Ledger.Conway.State (ConwayEraCertState (..), VState (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -49,7 +50,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
-  VState (..),
   completeRupd,
   curPParamsEpochStateL,
   prevPParamsEpochStateL,
@@ -202,7 +202,10 @@ pStateZero =
     }
 
 dPStateZero :: EraCertState era => CertState era
-dPStateZero = mkCertState def pStateZero dStateZero
+dPStateZero =
+  def
+    & certPStateL .~ pStateZero
+    & certDStateL .~ dStateZero
 
 incrementalStakeZero :: IncrementalStake
 incrementalStakeZero = IStake Map.empty Map.empty
@@ -334,22 +337,28 @@ instance Reflect era => Extract (UTxOState era) era where
       emptyGovState
       mempty
 
-extractCertState :: forall era. Reflect era => ModelNewEpochState era -> CertState era
+-- TODO: consider adding ConwayEraCertState to Reflect
+extractCertState ::
+  forall era. (Reflect era, ConwayEraCertState era) => ModelNewEpochState era -> CertState era
 extractCertState x = case reify @era of
   Shelley -> cs
   Mary -> cs
   Allegra -> cs
   Alonzo -> cs
   Babbage -> cs
-  Conway -> cs -- TODO: add `conwayCertState`
+  Conway -> cs
   where
     cs :: CertState era
-    cs = mkCertState (extract x) (extract x) (extract x)
+    cs =
+      def
+        & certPStateL .~ (extract x)
+        & certDStateL .~ (extract x)
+        & certVStateL .~ (extract x)
 
-instance Reflect era => Extract (LedgerState era) era where
+instance (Reflect era, ConwayEraCertState era) => Extract (LedgerState era) era where
   extract x = LedgerState (extract x) (extractCertState x)
 
-instance Reflect era => Extract (EpochState era) era where
+instance (Reflect era, ConwayEraCertState era) => Extract (EpochState era) era where
   extract x =
     EpochState
       (mAccountState x)
@@ -359,7 +368,7 @@ instance Reflect era => Extract (EpochState era) era where
       & curPParamsEpochStateL .~ mPParams x
       & prevPParamsEpochStateL .~ mPParams x
 
-instance forall era. Reflect era => Extract (NewEpochState era) era where
+instance forall era. (Reflect era, ConwayEraCertState era) => Extract (NewEpochState era) era where
   extract x =
     NewEpochState
       (mEL x)

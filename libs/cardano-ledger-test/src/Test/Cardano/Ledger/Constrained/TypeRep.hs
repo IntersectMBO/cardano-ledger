@@ -83,6 +83,7 @@ import Cardano.Ledger.Conway.Governance (
   pPropsL,
   proposalsDeposits,
  )
+import Cardano.Ledger.Conway.State (VState (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..), Delegatee (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)
@@ -97,7 +98,6 @@ import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks (restrictPoolMeta
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.State
-import Cardano.Ledger.State (IndividualPoolStake (..), SnapShots (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val ((<+>)))

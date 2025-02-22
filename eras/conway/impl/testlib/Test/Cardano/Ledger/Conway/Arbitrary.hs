@@ -48,6 +48,7 @@ import Cardano.Ledger.Conway.PParams (
  )
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.State (ConwayCertState (..), VState (..))
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
@@ -218,6 +219,9 @@ instance
       <*> arbitrary
 
   shrink = genericShrink
+
+instance Arbitrary (VState era) where
+  arbitrary = VState <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance
   ( Era era
@@ -857,3 +861,7 @@ instance Arbitrary DRepVotingThresholds where
 
 instance Era era => Arbitrary (Constitution era) where
   arbitrary = Constitution <$> arbitrary <*> arbitrary
+
+instance Era era => Arbitrary (ConwayCertState era) where
+  arbitrary = ConwayCertState <$> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink

@@ -18,6 +18,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core (Era (..), EraPParams (..), ppKeyDepositL)
 import Cardano.Ledger.Credential (credKeyHash, credScriptHash)
@@ -157,7 +158,7 @@ dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
 
 conwayDelegCertSpec ::
   forall fn era.
-  (EraPParams era, IsConwayUniv fn, EraCertState era) =>
+  (EraPParams era, IsConwayUniv fn, ConwayEraCertState era) =>
   ConwayDelegEnv era ->
   CertState era ->
   Specification fn ConwayDelegCert

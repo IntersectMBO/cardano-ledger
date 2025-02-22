@@ -48,22 +48,23 @@ import Cardano.Ledger.Conway.Governance (
   GovPurposeId,
   ProposalProcedure (..),
  )
-import Cardano.Ledger.Conway.State ()
+import Cardano.Ledger.Conway.State (
+  ConwayEraCertState (..),
+  VState (..),
+  csCommitteeCredsL,
+  vsCommitteeStateL,
+  vsDRepsL,
+  vsNumDormantEpochsL,
+ )
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
-import Cardano.Ledger.Shelley.State (ShelleyCertState)
 import Cardano.Ledger.State (
   CommitteeAuthorization (..),
   CommitteeState (..),
   EraCertState (..),
-  VState (..),
-  csCommitteeCredsL,
   dsUnifiedL,
-  vsCommitteeStateL,
-  vsDRepsL,
-  vsNumDormantEpochsL,
  )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
@@ -168,8 +169,7 @@ instance
   , EraRule "GOVCERT" era ~ ConwayGOVCERT era
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
-  , EraCertState era
-  , CertState era ~ ShelleyCertState era
+  , ConwayEraCertState era
   ) =>
   STS (ConwayGOVCERT era)
   where
@@ -183,7 +183,9 @@ instance
   transitionRules = [conwayGovCertTransition @era]
 
 conwayGovCertTransition ::
-  (ConwayEraPParams era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  ( ConwayEraPParams era
+  , ConwayEraCertState era
+  ) =>
   TransitionRule (ConwayGOVCERT era)
 conwayGovCertTransition = do
   TRC

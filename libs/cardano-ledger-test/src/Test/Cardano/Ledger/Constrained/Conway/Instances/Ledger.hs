@@ -94,6 +94,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.Scripts ()
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
@@ -110,7 +111,6 @@ import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardPulser (RSLP))
 import Cardano.Ledger.Shelley.Rewards (LeaderOnlyReward, PoolRewardInfo, StakeShare)
 import Cardano.Ledger.Shelley.Rules
-import Cardano.Ledger.Shelley.State (ShelleyCertState)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxCert (
@@ -1007,6 +1007,9 @@ instance IsConwayUniv fn => HasSpec fn RDPair
 
 instance HasSimpleRep (ShelleyCertState era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (ShelleyCertState era)
+
+instance HasSimpleRep (ConwayCertState era)
+instance (IsConwayUniv fn, Era era) => HasSpec fn (ConwayCertState era)
 
 instance HasSimpleRep (GovRelation StrictMaybe era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (GovRelation StrictMaybe era)

@@ -211,6 +211,7 @@ import Cardano.Ledger.Conway.Governance.DRepPulser
 import Cardano.Ledger.Conway.Governance.Internal
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Conway.Governance.Proposals
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..))
@@ -233,16 +234,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   newEpochStateGovStateL,
   utxosGovStateL,
   utxosStakeDistr,
-  vsCommitteeState,
-  vsCommitteeStateL,
-  vsDReps,
  )
 import Cardano.Ledger.State (
   CommitteeAuthorization (..),
   EraCertState (..),
   Obligations (..),
   PoolDistr (..),
-  certVStateL,
   csCommitteeCreds,
  )
 import Cardano.Ledger.UMap
@@ -475,7 +472,7 @@ setFreshDRepPulsingState ::
   , Monad m
   , RunConwayRatify era
   , ConwayEraGov era
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   EpochNo ->
   PoolDistr ->
@@ -586,7 +583,7 @@ defaultStakePoolVote poolId poolParams dRepDelegations =
     toDefaultVote _ = DefaultNo
 
 authorizedElectedHotCommitteeCredentials ::
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   LedgerState era ->
   Set.Set (Credential 'HotCommitteeRole)
 authorizedElectedHotCommitteeCredentials ledgerState =

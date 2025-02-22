@@ -216,7 +216,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     emptyGovState
                     mempty
                 )
-                (mkCertState def def dState)
+                (def & certDStateL .~ dState)
             )
             emptySnapShots
             def
