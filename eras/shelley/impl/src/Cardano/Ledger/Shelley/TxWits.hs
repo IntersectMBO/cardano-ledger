@@ -56,7 +56,7 @@ import Cardano.Ledger.Core (
   hashScript,
  )
 import Cardano.Ledger.Hashes (SafeToHash (..))
-import Cardano.Ledger.Keys (BootstrapWitness, KeyRole (Witness), WitVKey (..), witVKeyHash)
+import Cardano.Ledger.Keys (BootstrapWitness, KeyRole (Witness), WitVKey (..))
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
@@ -77,7 +77,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map (fromElems)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records ()
 import Lens.Micro (Lens', (^.))
@@ -228,7 +227,7 @@ deriving via
   instance
     EraScript era => DecCBOR (Annotator (ShelleyTxWits era))
 
-instance forall era. (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWitsRaw era) where
+instance (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWitsRaw era) where
   decCBOR =
     decode $
       SparseKeyed
@@ -238,30 +237,13 @@ instance forall era. (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTx
         []
     where
       witField :: Word -> Field (ShelleyTxWitsRaw era)
-      witField 0 =
-        field
-          (\x wits -> wits {addrWits' = x})
-          (D $ withIgnoreSigOrd <$> decodeList decCBOR)
+      witField 0 = field (\x wits -> wits {addrWits' = x}) From
       witField 1 =
         field
           (\x wits -> wits {scriptWits' = x})
           (D $ Map.fromElems (hashScript @era) <$> decodeList decCBOR)
-      witField 2 =
-        field
-          (\x wits -> wits {bootWits' = x})
-          (D $ Set.fromList <$> decodeList decCBOR)
+      witField 2 = field (\x wits -> wits {bootWits' = x}) From
       witField n = field (\_ wits -> wits) (Invalid n)
-
--- | This type is only used to preserve the old buggy behavior where signature
--- was ignored in the `Ord` instance for `WitVKey`s.
-newtype IgnoreSigOrd kr = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr}
-  deriving (Eq)
-
-withIgnoreSigOrd :: Typeable kr => [WitVKey kr] -> Set (WitVKey kr)
-withIgnoreSigOrd = Set.map unIgnoreSigOrd . Set.fromList . fmap IgnoreSigOrd
-
-instance Typeable kr => Ord (IgnoreSigOrd kr) where
-  compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witVKeyHash w1) (witVKeyHash w2)
 
 decodeWits ::
   forall era s.
@@ -280,11 +262,7 @@ decodeWits =
     witField 0 =
       fieldAA
         (\x wits -> wits {addrWits' = x})
-        ( D $
-            mapTraverseableDecoderA
-              (decodeList decCBOR)
-              withIgnoreSigOrd
-        )
+        (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
     witField 1 =
       fieldAA
         (\x wits -> wits {scriptWits' = x})
