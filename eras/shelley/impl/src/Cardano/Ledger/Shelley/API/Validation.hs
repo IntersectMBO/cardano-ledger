@@ -11,13 +11,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Interface to the block validation and chain extension logic in the Shelley
 -- API.
 module Cardano.Ledger.Shelley.API.Validation (
   ApplyBlock (..),
-  applyBlock,
-  applyTick,
+  applyBlockEither,
+  applyBlockEitherNoEvents,
+  applyBlockNoValidaton,
+  applyTickNoEvents,
   TickTransitionError (..),
   BlockTransitionError (..),
   chainChecks,
@@ -26,7 +29,6 @@ where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, Version)
-import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core
@@ -38,11 +40,10 @@ import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.Rules ()
 import qualified Cardano.Ledger.Shelley.Rules as STS
 import Cardano.Ledger.Slot (SlotNo)
-import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty (..))
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -51,133 +52,135 @@ import NoThunks.Class (NoThunks (..))
   Block validation API
 -------------------------------------------------------------------------------}
 
-class
-  ( STS (EraRule "TICK" era)
-  , BaseM (EraRule "TICK" era) ~ ShelleyBase
-  , Environment (EraRule "TICK" era) ~ ()
-  , State (EraRule "TICK" era) ~ NewEpochState era
-  , Signal (EraRule "TICK" era) ~ SlotNo
-  , STS (EraRule "BBODY" era)
-  , BaseM (EraRule "BBODY" era) ~ ShelleyBase
-  , Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era
-  , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
-  , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
-  , EncCBORGroup (TxSeq era)
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
-  ) =>
-  ApplyBlock era
-  where
-  -- | Apply the header level ledger transition.
-  --
-  -- This handles checks and updates that happen on a slot tick, as well as a
-  -- few header level checks, such as size constraints.
-  applyTickOpts ::
-    ApplySTSOpts ep ->
+class (EraGov era, EraSegWits era) => ApplyBlock era where
+  -- | Run the `BBODY` rule with `globalAssertionPolicy`. This function always succeeds, but
+  -- whenever validation is turned on it is necessary to check for presence of predicate failures
+  -- before a call can be marked successful. Therefore it is recommended to call `applyBlockEither`
+  -- instead.
+  applyBlock ::
+    SingEP ep ->
+    ValidationPolicy ->
+    Globals ->
+    NewEpochState era ->
+    Block BHeaderView era ->
+    (NewEpochState era, [PredicateFailure (EraRule "BBODY" era)], [Event (EraRule "BBODY" era)])
+  default applyBlock ::
+    ( STS (EraRule "BBODY" era)
+    , BaseM (EraRule "BBODY" era) ~ ShelleyBase
+    , Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era
+    , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
+    , Signal (EraRule "BBODY" era) ~ Block BHeaderView era
+    , State (EraRule "LEDGERS" era) ~ LedgerState era
+    ) =>
+    SingEP ep ->
+    ValidationPolicy ->
+    Globals ->
+    NewEpochState era ->
+    Block BHeaderView era ->
+    (NewEpochState era, [PredicateFailure (EraRule "BBODY" era)], [Event (EraRule "BBODY" era)])
+  applyBlock eventsPolicy validationPolicy globals newEpochState block =
+    (updateNewEpochState newEpochState stsResultState, stsResultFailures, stsResultEvents)
+    where
+      opts =
+        ApplySTSOpts
+          { asoAssertions = globalAssertionPolicy
+          , asoValidation = validationPolicy
+          , asoEvents = eventsPolicy
+          }
+      STSResult {stsResultState, stsResultFailures, stsResultEvents} =
+        flip runReader globals $
+          applySTSOptsResult @(EraRule "BBODY" era) opts $
+            TRC (mkBbodyEnv newEpochState, bBodyState, block)
+      bBodyState =
+        STS.BbodyState
+          (LedgerState.esLState $ LedgerState.nesEs newEpochState)
+          (LedgerState.nesBcur newEpochState)
+
+  -- | Run the `TICK` rule with `globalAssertionPolicy` and without any validation, since it can't
+  -- fail anyways.
+  applyTick ::
+    SingEP ep ->
     Globals ->
     NewEpochState era ->
     SlotNo ->
-    EventReturnType ep (EraRule "TICK" era) (NewEpochState era)
-  applyTickOpts opts globals state hdr =
-    either err id
-      . flip runReader globals
-      . applySTSOptsEither @(EraRule "TICK" era) opts
-      $ TRC ((), state, hdr)
+    (NewEpochState era, [Event (EraRule "TICK" era)])
+  default applyTick ::
+    ( STS (EraRule "TICK" era)
+    , BaseM (EraRule "TICK" era) ~ ShelleyBase
+    , Environment (EraRule "TICK" era) ~ ()
+    , State (EraRule "TICK" era) ~ NewEpochState era
+    , Signal (EraRule "TICK" era) ~ SlotNo
+    ) =>
+    SingEP ep ->
+    Globals ->
+    NewEpochState era ->
+    SlotNo ->
+    (NewEpochState era, [Event (EraRule "TICK" era)])
+  applyTick eventsPolicy globals newEpochState slotNo = (stsResultState, stsResultEvents)
     where
-      err :: Show a => a -> b
-      err msg = error $ "Panic! applyTick failed: " <> show msg
+      opts =
+        ApplySTSOpts
+          { asoAssertions = globalAssertionPolicy
+          , asoValidation = ValidateNone
+          , asoEvents = eventsPolicy
+          }
+      STSResult {stsResultState, stsResultEvents} =
+        flip runReader globals . applySTSOptsResult @(EraRule "TICK" era) opts $
+          TRC ((), newEpochState, slotNo)
 
-  -- | Apply the block level ledger transition.
-  applyBlockOpts ::
-    forall ep m.
-    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m) =>
-    ApplySTSOpts ep ->
-    Globals ->
-    NewEpochState era ->
-    Block BHeaderView era ->
-    m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
-  default applyBlockOpts ::
-    forall ep m.
-    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m, EraGov era) =>
-    ApplySTSOpts ep ->
-    Globals ->
-    NewEpochState era ->
-    Block BHeaderView era ->
-    m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
-  applyBlockOpts opts globals state blk =
-    liftEither
-      . left BlockTransitionError
-      . right
-        ( mapEventReturn @ep @(EraRule "BBODY" era) $
-            updateNewEpochState state
-        )
-      $ res
-    where
-      res =
-        flip runReader globals
-          . applySTSOptsEither @(EraRule "BBODY" era)
-            opts
-          $ TRC (mkBbodyEnv state, bbs, blk)
-      bbs =
-        STS.BbodyState
-          (LedgerState.esLState $ LedgerState.nesEs state)
-          (LedgerState.nesBcur state)
+-- | Same as `applyBlock`, except it produces a Left when there are failures present and `Right`
+-- with result otherwise.
+applyBlockEither ::
+  ApplyBlock era =>
+  SingEP ep ->
+  ValidationPolicy ->
+  Globals ->
+  NewEpochState era ->
+  Block BHeaderView era ->
+  Either (BlockTransitionError era) (NewEpochState era, [Event (EraRule "BBODY" era)])
+applyBlockEither eventsPolicy validationPolicy globals newEpochState block =
+  case failure of
+    [] -> Right (newEpochStateResult, events)
+    f : fs -> Left $ BlockTransitionError $ f :| fs
+  where
+    (newEpochStateResult, failure, events) =
+      applyBlock eventsPolicy validationPolicy globals newEpochState block
 
-  -- | Re-apply a ledger block to the same state it has been applied to before.
-  --
-  -- This function does no validation of whether the block applies successfully;
-  -- the caller implicitly guarantees that they have previously called
-  -- 'applyBlockTransition' on the same block and that this was successful.
-  reapplyBlock ::
-    Globals ->
-    NewEpochState era ->
-    Block BHeaderView era ->
-    NewEpochState era
-  default reapplyBlock ::
-    EraGov era =>
-    Globals ->
-    NewEpochState era ->
-    Block BHeaderView era ->
-    NewEpochState era
-  reapplyBlock globals state blk =
-    updateNewEpochState state res
-    where
-      res =
-        flip runReader globals . reapplySTS @(EraRule "BBODY" era) $
-          TRC (mkBbodyEnv state, bbs, blk)
-      bbs =
-        STS.BbodyState
-          (LedgerState.esLState $ LedgerState.nesEs state)
-          (LedgerState.nesBcur state)
+applyBlockEitherNoEvents ::
+  ApplyBlock era =>
+  ValidationPolicy ->
+  Globals ->
+  NewEpochState era ->
+  Block BHeaderView era ->
+  Either (BlockTransitionError era) (NewEpochState era)
+applyBlockEitherNoEvents validationPolicy globals newEpochState block =
+  fst <$> applyBlockEither EPDiscard validationPolicy globals newEpochState block
 
-applyTick ::
+-- | Re-apply a ledger block to the same state it has been applied to before.
+--
+-- This function does no validation of whether the block applies successfully;
+-- the caller implicitly guarantees that they have previously called
+-- 'applyBlockTransition' on the same block and that this was successful.
+applyBlockNoValidaton ::
+  ApplyBlock era =>
+  Globals ->
+  NewEpochState era ->
+  Block BHeaderView era ->
+  NewEpochState era
+applyBlockNoValidaton globals newEpochState block = newEpochStateResult
+  where
+    (newEpochStateResult, _failure, _events) =
+      applyBlock EPDiscard ValidateNone globals newEpochState block
+
+-- | Same as `applyTick`, but do not retain any ledger events
+applyTickNoEvents ::
   ApplyBlock era =>
   Globals ->
   NewEpochState era ->
   SlotNo ->
   NewEpochState era
-applyTick =
-  applyTickOpts $
-    ApplySTSOpts
-      { asoAssertions = globalAssertionPolicy
-      , asoValidation = ValidateAll
-      , asoEvents = EPDiscard
-      }
-
-applyBlock ::
-  ( ApplyBlock era
-  , MonadError (BlockTransitionError era) m
-  ) =>
-  Globals ->
-  NewEpochState era ->
-  Block BHeaderView era ->
-  m (NewEpochState era)
-applyBlock =
-  applyBlockOpts $
-    ApplySTSOpts
-      { asoAssertions = globalAssertionPolicy
-      , asoValidation = ValidateAll
-      , asoEvents = EPDiscard
-      }
+applyTickNoEvents globals newEpochState slotNo =
+  fst $ applyTick EPDiscard globals newEpochState slotNo
 
 instance ApplyBlock ShelleyEra
 

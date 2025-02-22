@@ -88,7 +88,6 @@ tests =
 -- retirement.
 poolRetirement ::
   ( ChainProperty era
-  , EraSegWits era
   , ShelleyEraTxBody era
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -106,7 +105,6 @@ poolRetirement SourceSignalTarget {source = chainSt, signal = block} =
 -- in the retiring map.
 poolRegistration ::
   ( ChainProperty era
-  , EraSegWits era
   , ShelleyEraTxBody era
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -121,7 +119,6 @@ poolRegistration (SourceSignalTarget {source = chainSt, signal = block}) =
 -- POOL` transition.
 poolStateIsInternallyConsistent ::
   ( ChainProperty era
-  , EraSegWits era
   , ShelleyEraTxBody era
   ) =>
   SourceSignalTarget (CHAIN era) ->
