@@ -228,14 +228,6 @@ deriving via
   instance
     EraScript era => DecCBOR (Annotator (ShelleyTxWits era))
 
--- | This type is only used to preserve the old buggy behavior where signature
--- was ignored in the `Ord` instance for `WitVKey`s.
-newtype IgnoreSigOrd kr c = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr c}
-  deriving (Eq)
-
-instance (Typeable kr, Crypto c) => Ord (IgnoreSigOrd kr c) where
-  compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witVKeyHash w1) (witVKeyHash w2)
-
 decodeWits ::
   forall era s.
   EraScript era =>
@@ -253,11 +245,7 @@ decodeWits =
     witField 0 =
       fieldAA
         (\x wits -> wits {addrWits' = x})
-        ( D $
-            mapTraverseableDecoderA
-              (decodeList decCBOR)
-              (Set.map unIgnoreSigOrd . Set.fromList . fmap IgnoreSigOrd)
-        )
+        (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
     witField 1 =
       fieldAA
         (\x wits -> wits {scriptWits' = x})
