@@ -80,8 +80,8 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Shelley.CertState -- (ShelleyCertState (..))
-import Cardano.Ledger.Shelley.Governance (FuturePParams (..), futureProposalsL, proposalsL)
+import Cardano.Ledger.Shelley.CertState
+import Cardano.Ledger.Shelley.Governance (FuturePParams (..))
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState hiding (
@@ -420,6 +420,12 @@ futurePParams p = Var (pV p "futurePParams" (FuturePParamsR p) No)
 prevPParams :: Gov.EraGov era => Proof era -> Term era (PParamsF era)
 prevPParams p =
   Var (V "prevPParams" (PParamsR p) (Yes NewEpochStateR (nesEsL . prevPParamsEpochStateL . ppFL p)))
+
+proposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
+proposalsL = lens sgsCurProposals (\sgov x -> sgov {sgsCurProposals = x})
+
+futureProposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
+futureProposalsL = lens sgsFutureProposals (\sgov x -> sgov {sgsFutureProposals = x})
 
 ppupStateT ::
   forall era.

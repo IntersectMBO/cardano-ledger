@@ -264,8 +264,6 @@ instance EraGov BabbageEra where
   type GovState BabbageEra = ShelleyGovState BabbageEra
   emptyGovState = emptyShelleyGovState
 
-  getProposedPPUpdates = Just . sgsCurProposals
-
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL

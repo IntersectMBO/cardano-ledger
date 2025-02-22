@@ -1,7 +1,6 @@
 module Cardano.Ledger.Api.Governance (
   EraGov (GovState),
   emptyGovState,
-  getProposedPPUpdates,
   curPParamsGovStateL,
   prevPParamsGovStateL,
   futurePParamsGovStateL,
@@ -83,6 +82,5 @@ import Cardano.Ledger.Shelley.Governance (
   EraGov (..),
   ShelleyGovState (..),
   emptyGovState,
-  getProposedPPUpdates,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), emptyPPPUpdates)

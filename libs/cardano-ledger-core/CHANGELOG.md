@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Move `EraGov` to `Cardano.Ledger.State` from `cardano-ledger-shelley`
 * Add DecCBOR instances for:
   * `PlutusData`
   * `Data`

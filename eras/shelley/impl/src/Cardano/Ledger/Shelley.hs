@@ -11,6 +11,7 @@ where
 
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Genesis ()
+import Cardano.Ledger.Shelley.Governance ()
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)

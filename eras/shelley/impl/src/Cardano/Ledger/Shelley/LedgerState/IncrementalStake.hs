@@ -48,7 +48,6 @@ import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (StakeRefBase, StakeRefPtr),
  )
-import Cardano.Ledger.Shelley.Governance (EraGov (GovState))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
