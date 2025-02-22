@@ -21,11 +21,11 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovCertEnv (..),
   ConwayGovCertPredFailure,
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (
   ConwayGovCert (..),
  )
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State (
   DRepState (..),
   csCommitteeCreds,

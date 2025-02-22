@@ -52,7 +52,6 @@ import Cardano.Ledger.State (
   EraCertState (..),
   dsGenDelegs,
   lookupDepositDState,
-  lookupDepositVState,
   psStakePoolParamsL,
  )
 import Cardano.Ledger.State as UTxO (
@@ -130,7 +129,7 @@ consumed pp certState =
   getConsumedValue
     pp
     (lookupDepositDState $ certState ^. certDStateL)
-    (lookupDepositVState $ certState ^. certVStateL)
+    (const Nothing)
 
 -- | Compute the lovelace which are created by the transaction
 -- For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.

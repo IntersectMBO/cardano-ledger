@@ -239,7 +239,6 @@ roundTripCoreEraTypesSpec = do
     roundTripShareEraTypeSpec @era @DState
     roundTripShareEraTypeSpec @era @PState
     roundTripShareEraTypeSpec @era @CommitteeState
-    roundTripShareEraTypeSpec @era @VState
     roundTripShareEraTypeSpec @era @UTxO
 
 data EraRuleProof era (rs :: [Symbol]) where

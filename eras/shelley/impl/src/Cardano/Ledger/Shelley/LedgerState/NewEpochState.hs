@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
   availableAfterMIR,
@@ -19,11 +21,13 @@ import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
-import Cardano.Ledger.State
 import Cardano.Ledger.State (
+  AccountState (..),
   DState (..),
   EraCertState (..),
   InstantaneousRewards (..),
+  UTxO (..),
+  coinBalance,
   dsGenDelegsL,
  )
 import qualified Cardano.Ledger.UMap as UM
@@ -75,7 +79,9 @@ genesisState genDelegs0 utxo0 =
         (IStake mempty Map.empty)
         mempty
     )
-    (mkCertState def def dState)
+    ( def
+        & certDStateL .~ dState
+    )
   where
     dState :: DState era
     dState =

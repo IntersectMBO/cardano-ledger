@@ -78,7 +78,6 @@ import Cardano.Ledger.Slot (
   SlotNo (..),
  )
 import Cardano.Ledger.State
-import Cardano.Ledger.State (EraCertState)
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val

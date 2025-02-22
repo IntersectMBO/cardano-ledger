@@ -52,16 +52,20 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
-import Cardano.Ledger.State
 import Cardano.Ledger.State (
-  CertState,
-  DRepState,
+  AccountState (..),
+  CanGetUTxO (..),
+  CanSetUTxO (..),
   EraCertState (..),
   Obligations (..),
+  PoolDistr,
+  SnapShots,
+  UTxO (..),
   dsUnifiedL,
   psStakePoolParamsL,
+  ssStakeDistrL,
+  ssStakeMarkL,
   sumObligation,
-  vsDRepsL,
  )
 import Cardano.Ledger.UMap (UMap (..))
 import Control.DeepSeq (NFData)
@@ -698,10 +702,6 @@ epochStateTreasuryL = esAccountStateL . asTreasuryL
 epochStateIncrStakeDistrL ::
   Lens' (EpochState era) (Map (Credential 'Staking) (CompactForm Coin))
 epochStateIncrStakeDistrL = esLStateL . lsUTxOStateL . utxosStakeDistrL . credMapL
-
-epochStateRegDrepL ::
-  EraCertState era => Lens' (EpochState era) (Map (Credential 'DRepRole) DRepState)
-epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
 epochStatePoolParamsL ::
   EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)

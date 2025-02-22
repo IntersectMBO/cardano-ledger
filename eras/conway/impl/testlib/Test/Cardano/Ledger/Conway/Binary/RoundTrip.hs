@@ -17,6 +17,7 @@ import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.State (VState)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus (CostModels)
 import Cardano.Ledger.Shelley.LedgerState
@@ -80,6 +81,7 @@ roundTripConwayEraTypesSpec = do
     roundTripShareEraTypeSpec @era @DRepPulsingState
     roundTripShareEraTypeSpec @era @PulsingSnapshot
     roundTripShareEraTypeSpec @era @RatifyState
+    roundTripShareEraTypeSpec @era @VState
 
 instance RuleListEra ConwayEra where
   type

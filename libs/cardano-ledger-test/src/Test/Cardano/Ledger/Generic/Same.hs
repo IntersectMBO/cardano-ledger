@@ -26,6 +26,7 @@ import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
+import Cardano.Ledger.Conway.State (VState (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError)
@@ -38,7 +39,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
-  VState (..),
   curPParamsEpochStateL,
   prevPParamsEpochStateL,
  )

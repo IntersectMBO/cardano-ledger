@@ -824,7 +824,10 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         (gsInitialDelegations gstate)
         Map.empty
     utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovState mempty
-    dpstate = mkCertState def pstate dstate
+    dpstate =
+      def
+        & certPStateL .~ pstate
+        & certDStateL .~ dstate
     dstate =
       DState
         umap

@@ -570,12 +570,12 @@ dstatePreds _p =
   [ Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
   , Dom rewards :=: Dom stakeDeposits
   , Dom delegations :⊆: Dom rewards
-  , Random currentDRepState
   , Random drepDelegation
-  , Random currentDRepState
-  , Random committeeState
-  , Random numDormantEpochs
-  , Dom rewards :=: Rng ptrs
+  , -- TODO: these are Conway related
+    -- , Random currentDRepState
+    -- , Random committeeState
+    -- , Random numDormantEpochs
+    Dom rewards :=: Rng ptrs
   , -- This implies (Fixed (ExactSize 3) instanReserves)
     -- But it also implies that the new introduced variable instanReservesDom also has size 3
     -- ,  Sized (ExactSize 3) (Dom instanReserves)

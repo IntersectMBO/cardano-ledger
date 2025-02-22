@@ -33,6 +33,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules.Certs (CertsEnv)
 import Cardano.Ledger.Conway.Rules.Gov (GovEnv, GovSignal)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerEvent, ConwayLedgerPredFailure (..))
+import Cardano.Ledger.Conway.State (ConwayEraCertState)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv)
 import Control.State.Transition (
@@ -72,6 +73,7 @@ instance
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx era ~ Signal (EraRule "LEDGER" era)
   , EraCertState era
+  , ConwayEraCertState era
   ) =>
   STS (ConwayMEMPOOL era)
   where
@@ -93,7 +95,7 @@ mempoolTransition ::
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx era ~ Signal (EraRule "LEDGER" era)
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   TransitionRule (ConwayMEMPOOL era)
 mempoolTransition = do

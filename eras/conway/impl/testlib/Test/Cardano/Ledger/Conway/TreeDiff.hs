@@ -19,6 +19,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.Scripts
+import Cardano.Ledger.Conway.State (ConwayCertState, ConwayEraCertState, VState)
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
@@ -291,3 +292,7 @@ instance
   , ToExpr (Tx era)
   ) =>
   ToExpr (CertsEnv era)
+
+instance ToExpr (VState era)
+
+instance ConwayEraCertState era => ToExpr (ConwayCertState era)

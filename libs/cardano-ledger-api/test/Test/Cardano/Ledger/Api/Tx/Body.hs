@@ -131,11 +131,10 @@ propEvalBalanceTxBody ::
 propEvalBalanceTxBody pp certState utxo =
   property $
     forAll (genTxBodyFrom certState utxo) $ \txBody ->
-      evalBalanceTxBody pp lookupKeyDeposit lookupDRepDeposit isRegPoolId utxo txBody
+      evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalance pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
-    lookupDRepDeposit = lookupDepositVState (certState ^. certVStateL)
     isRegPoolId = (`Map.member` psStakePoolParams (certState ^. certPStateL))
 
 propEvalBalanceShelleyTxBody ::
@@ -147,11 +146,10 @@ propEvalBalanceShelleyTxBody ::
 propEvalBalanceShelleyTxBody pp certState utxo =
   property $
     forAll (genTxBodyFrom certState utxo) $ \txBody ->
-      evalBalanceTxBody pp lookupKeyDeposit lookupDRepDeposit isRegPoolId utxo txBody
+      evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalanceShelley pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
-    lookupDRepDeposit = lookupDepositVState (certState ^. certVStateL)
     isRegPoolId = (`Map.member` psStakePoolParams (certState ^. certPStateL))
 
 -- | NOTE: We cannot have this property pass for Conway and beyond because Conway changes this calculation.

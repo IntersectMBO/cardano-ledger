@@ -28,11 +28,12 @@ import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
+  -- AccountState (..),
   EpochState (..),
   IncrementalStake (..),
   LedgerState (..),
@@ -44,18 +45,10 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.State
-import Cardano.Ledger.State (
-  PoolDistr (..),
-  SnapShot (..),
-  SnapShots (..),
-  Stake (..),
-  UTxO (..),
-  calculatePoolDistr,
- )
 import Cardano.Ledger.UMap (CompactForm (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Constrained hiding (Value)
-import Constrained.Base (Pred (..))
+import Constrained.Base -- (Pred (..))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -80,10 +73,9 @@ import Test.QuickCheck hiding (forAll, witness)
 --   and the EraSpecLedger class has methods that asbtract over those changes.
 class
   ( EraSpecTxOut era fn
-  , Era era
   , HasSpec fn (GovState era)
-  , EraCertState era
   , HasSpec fn (CertState era)
+  , IsNormalType (CertState era)
   ) =>
   EraSpecLedger era fn
   where
@@ -120,7 +112,7 @@ instance IsConwayUniv fn => EraSpecLedger BabbageEra fn where
 instance IsConwayUniv fn => EraSpecLedger ConwayEra fn where
   govStateSpec pp = conwayGovStateSpec pp (testGovEnv pp)
   newEpochStateSpec = newEpochStateSpecUnit
-  certStateSpec = shelleyCertStateSpec
+  certStateSpec = conwayCertStateSpec
 
 -- This is a hack, neccessitated by the fact that conwayGovStateSpec,
 -- written for the conformance tests, requires an actual GovEnv as an input.
@@ -379,7 +371,23 @@ shelleyCertStateSpec ::
   Term fn EpochNo ->
   Specification fn (ShelleyCertState era)
 shelleyCertStateSpec univ acct epoch = constrained $ \ [var|shellCertState|] ->
-  match shellCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
+  match shellCertState $ \ [var|pState|] [var|dState|] ->
+    [ satisfies pState (pstateSpec univ epoch)
+    , reify pState psStakePoolParams $ \ [var|poolreg|] ->
+        [ dependsOn dState poolreg
+        , satisfies dState (dstateSpec univ acct poolreg)
+        ]
+    ]
+
+conwayCertStateSpec ::
+  forall fn.
+  EraSpecLedger ConwayEra fn =>
+  WitUniv ConwayEra ->
+  Term fn AccountState ->
+  Term fn EpochNo ->
+  Specification fn (ConwayCertState ConwayEra)
+conwayCertStateSpec univ acct epoch = constrained $ \ [var|convCertState|] ->
+  match convCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pstateSpec univ epoch)
     , reify pState psStakePoolParams $ \ [var|poolreg|] ->
         [ dependsOn dState poolreg
@@ -473,33 +481,9 @@ conwayGovStateSpec pp govenv =
 
 -- =========================================================================
 
--- TODO: Figure out how to keep this era parametric and make GHC happy
--- without the `CertState era ~ ShelleyCertState era` constraint.
--- When it's removed, GHC will complain with:
---     • Could not deduce: FunTy
---                          (MapList
---                             (Term fn) (Constrained.Spec.Generics.Args (CertState era)))
---                          p0
---                        ~ (Term fn (CertState era) -> [Pred fn])
--- ...
---       Expected type: FunTy
---                       (MapList
---                          (Term fn)
---                          (Constrained.Spec.Generics.ProductAsList (LedgerState era)))
---                       p0
---        Actual type: Term fn (UTxOState era)
---                     -> Term fn (CertState era) -> [Pred fn]
--- I figured that the problem might be that GHC can't establish what `Term fn (CertState era)`
--- is, since it's a type family and thus we can't `match` on it because at this point the compiler
--- doesn't know how `Term fn (CertState era)` looks like. However, this might not be the case
--- because when I try `reify`ing `@era` and pattern match on all the eras, the compiler is still
--- confused and complaining. Which would make sense, since that's why we have the `Generics` and
--- `SOP` machinery in place: so we don't have to know how things look like.
--- So maybe, it's not a matter of "don't know what it is" but rather the fact that
--- it's a type family and not a concrete type, to which the `Generics` magic might not apply.
 ledgerStateSpec ::
   forall era fn.
-  (EraSpecLedger era fn, CertState era ~ ShelleyCertState era) =>
+  EraSpecLedger era fn =>
   PParams era ->
   WitUniv era ->
   Term fn AccountState ->
@@ -555,7 +539,7 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
 
 epochStateSpec ::
   forall era fn.
-  (EraSpecLedger era fn, CertState era ~ ShelleyCertState era) =>
+  EraSpecLedger era fn =>
   PParams era ->
   WitUniv era ->
   Term fn EpochNo ->
@@ -564,7 +548,7 @@ epochStateSpec pp univ epoch =
   constrained $ \ [var|epochState|] ->
     match epochState $ \ [var|acctst|] [var|eLedgerState|] [var|snaps|] [var|nonmyopic|] ->
       Block
-        [ dependsOn eLedgerState acctst
+        [ dependsOn acctst eLedgerState
         , satisfies eLedgerState (ledgerStateSpec pp univ acctst epoch)
         , reify eLedgerState getMarkSnapShot $ \ [var|marksnap|] -> satisfies snaps (snapShotsSpec marksnap)
         , match nonmyopic $ \ [var|x|] [var|c|] -> [genHint 0 x, assert $ c ==. lit (Coin 0)]
@@ -577,7 +561,7 @@ getPoolDistr es = ssStakeMarkPoolDistr (esSnapshots es)
 -- The 'newEpochStateSpec' method (of (EraSpecLedger era fn) class) in the Shelley instance
 newEpochStateSpecUTxO ::
   forall era fn.
-  (EraSpecLedger era fn, StashedAVVMAddresses era ~ UTxO era, CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era fn, StashedAVVMAddresses era ~ UTxO era) =>
   PParams era ->
   WitUniv era ->
   Specification fn (NewEpochState era)
@@ -603,7 +587,7 @@ newEpochStateSpecUTxO pp univ =
 -- The 'newEpochStateSpec' method (of (EraSpecLedger era fn) class) in the instances for (Allegra,Mary,Alonzo,Babbage,Conway)
 newEpochStateSpecUnit ::
   forall era fn.
-  (EraSpecLedger era fn, StashedAVVMAddresses era ~ (), CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era fn, StashedAVVMAddresses era ~ ()) =>
   PParams era ->
   WitUniv era ->
   Specification fn (NewEpochState era)

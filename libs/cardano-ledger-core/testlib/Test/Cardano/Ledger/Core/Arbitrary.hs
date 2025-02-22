@@ -102,16 +102,22 @@ import Cardano.Ledger.PoolParams (
   SizeOfPoolRelays (..),
   StakePoolRelay (..),
  )
-import Cardano.Ledger.State
 import Cardano.Ledger.State (
+  AccountState (..),
   Anchor (..),
   CommitteeAuthorization (..),
   CommitteeState (..),
   DState (..),
   FutureGenDeleg (..),
+  IndividualPoolStake (..),
   InstantaneousRewards (..),
   PState (..),
-  VState (..),
+  PoolDistr (..),
+  SnapShot (..),
+  SnapShots (..),
+  Stake (..),
+  UTxO (..),
+  calculatePoolDistr,
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
@@ -803,9 +809,6 @@ instance Arbitrary CommitteeAuthorization where
       ]
 
 deriving instance Arbitrary (CommitteeState era)
-
-instance Arbitrary (VState era) where
-  arbitrary = VState <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary InstantaneousRewards where
   arbitrary = InstantaneousRewards <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary

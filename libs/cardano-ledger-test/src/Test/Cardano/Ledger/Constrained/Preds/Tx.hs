@@ -589,10 +589,12 @@ txBodyPreds sizes@UnivSize {..} p =
        , tempTx :<-: txTarget tempTxBody tempBootWits tempKeyWits
        , -- Compute the real fee, and then recompute the TxBody and the Tx
          txfee :<-: (Constr "finalFee" computeFinalFee ^$ pparams p ^$ tempTx ^$ utxo p)
-       , --  , txbodyterm :<-: txbodyTarget txfee wppHash totalCol
+         --  , txbodyterm :<-: txbodyTarget txfee wppHash totalCol
          --  , txterm :<-: txTarget txbodyterm bootWits keyWits
-         ProjM drepDepositL CoinR currentDRepState :=: drepDepositsView
        ]
+    ++ case whichCertState p of
+      CertStateShelleyToBabbage -> []
+      CertStateConwayToConway -> [ProjM drepDepositL CoinR currentDRepState :=: drepDepositsView]
     ++ case whichUTxO p of
       UTxOShelleyToMary ->
         [ -- The following have no effect in ShelleyToMary, but they need to be defined. So we make them random
@@ -992,7 +994,6 @@ oneTest sizes proof = do
       >>= pParamsStage proof
       >>= universeStage sizes proof
       >>= utxoStage sizes proof
-      >>= vstateStage proof
       >>= pstateStage proof
       >>= dstateStage proof
       >>= certsStage sizes proof
@@ -1038,7 +1039,6 @@ demo mode = do
           >>= pParamsStage proof
           >>= universeStage sizes proof
           >>= utxoStage sizes proof
-          >>= vstateStage proof
           >>= pstateStage proof
           >>= dstateStage proof
           >>= certsStage sizes proof

@@ -47,7 +47,6 @@ import Cardano.Ledger.Shelley.LedgerState.Types (prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPOOLREAP,
-  ShelleyPoolreapEnv (..),
   ShelleyPoolreapEvent,
   ShelleyPoolreapPredFailure,
   ShelleyPoolreapState (..),
@@ -71,7 +70,7 @@ import Control.State.Transition (
   judgmentContext,
   trans,
  )
-import Data.Default (Default)
+import Data.Default (Default, def)
 import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import GHC.Generics (Generic)
@@ -147,7 +146,7 @@ instance
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era)
-  , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
+  , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
@@ -182,7 +181,7 @@ epochTransition ::
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era)
-  , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
+  , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
@@ -209,7 +208,6 @@ epochTransition = do
   let pp = es ^. curPParamsEpochStateL
       utxoSt = lsUTxOState ls
       certState = ls ^. lsCertStateL
-      vstate = certState ^. certVStateL
       pstate = certState ^. certPStateL
       dstate = certState ^. certDStateL
   ss' <-
@@ -224,9 +222,12 @@ epochTransition = do
           }
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
     trans @(EraRule "POOLREAP" era) $
-      TRC (ShelleyPoolreapEnv vstate, PoolreapState utxoSt acnt dstate pstate', e)
+      TRC ((), PoolreapState utxoSt acnt dstate pstate', e)
 
-  let adjustedCertState = mkCertState vstate pstate'' dstate'
+  let adjustedCertState =
+        def
+          & certPStateL .~ pstate''
+          & certDStateL .~ dstate'
       ls' = ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState}
 
   UpecState pp' ppupSt' <-

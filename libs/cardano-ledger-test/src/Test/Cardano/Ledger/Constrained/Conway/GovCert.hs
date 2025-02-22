@@ -18,6 +18,7 @@ import Cardano.Ledger.Conway.Core (Era (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))

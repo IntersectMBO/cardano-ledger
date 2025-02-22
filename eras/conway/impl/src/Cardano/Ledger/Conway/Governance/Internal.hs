@@ -107,6 +107,7 @@ import Cardano.Ledger.Conway.PParams (
   ppDRepVotingThresholdsL,
   ppPoolVotingThresholdsL,
  )
+import Cardano.Ledger.Conway.State (epochStateRegDrepL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -114,7 +115,6 @@ import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateIncrStakeDistrL,
-  epochStateRegDrepL,
   epochStateStakeDistrL,
   epochStateUMapL,
  )

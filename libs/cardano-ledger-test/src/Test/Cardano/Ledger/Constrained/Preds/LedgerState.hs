@@ -123,11 +123,19 @@ ledgerStatePreds _usize p =
       (Right (Coin 1))
       deposits
       EQL
-      [ SumMap stakeDeposits
-      , SumMap poolDeposits
-      , One proposalDeposits
-      , ProjMap CoinR drepDepositL currentDRepState
-      ]
+      ( case whichCertState p of
+          CertStateShelleyToBabbage ->
+            [ SumMap stakeDeposits
+            , SumMap poolDeposits
+            , One proposalDeposits
+            ]
+          CertStateConwayToConway ->
+            [ SumMap stakeDeposits
+            , SumMap poolDeposits
+            , One proposalDeposits
+            , ProjMap CoinR drepDepositL currentDRepState
+            ]
+      )
   , -- Some things we might want in the future.
     -- , SumsTo (Right (Coin 1)) utxoCoin EQL [ProjMap CoinR outputCoinL (utxo p)]
     -- , SumsTo (Right (Coin 1)) totalAda EQL [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
@@ -156,7 +164,9 @@ ledgerStatePreds _usize p =
                 ]
             , futurePParams p :<-: (Constr "head" getOne ^$ futurepps)
             ]
-              ++ prevPulsingPreds p -- Constraints to generate a valid Pulser
+              -- TODO: yuck... This whole function should be refactored.
+              ++ case reify @era of
+                Conway -> prevPulsingPreds p -- Constraints to generate a valid Pulser
           GovStateShelleyToBabbage ->
             [ Sized (Range 0 1) (pparamProposals p)
             , Sized (Range 0 1) (futurePParamProposals p)

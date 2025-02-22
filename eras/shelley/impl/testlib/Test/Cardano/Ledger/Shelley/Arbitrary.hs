@@ -71,7 +71,6 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
@@ -746,5 +745,5 @@ instance Arbitrary RawSeed where
       <*> chooseAny
 
 instance Era era => Arbitrary (ShelleyCertState era) where
-  arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary
   shrink = genericShrink

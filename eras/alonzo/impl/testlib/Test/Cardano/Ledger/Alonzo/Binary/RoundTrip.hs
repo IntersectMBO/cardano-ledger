@@ -20,7 +20,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.State
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)

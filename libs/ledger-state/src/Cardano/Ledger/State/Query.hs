@@ -517,7 +517,10 @@ getLedgerState utxo LedgerState {..} dstate = do
             utxoStateFees
             utxoStateGovState -- Maintain invariant
             utxoStateDonation
-      , Shelley.lsCertState = mkCertState def ledgerStatePstateBin dstate
+      , Shelley.lsCertState =
+          def
+            & certPStateL .~ ledgerStatePstateBin
+            & certDStateL .~ dstate
       }
 
 getDStateNoSharing ::
