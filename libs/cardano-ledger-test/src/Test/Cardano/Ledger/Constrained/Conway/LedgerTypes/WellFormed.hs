@@ -22,13 +22,13 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.Rules (GovEnv (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.State
 import Cardano.Ledger.State (SnapShot (..), SnapShots (..))
 import Constrained hiding (Value)
 import Data.Map (Map)

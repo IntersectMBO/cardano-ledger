@@ -23,7 +23,6 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
  )
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -42,7 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   incrementalStakeDistr,
   ptrsMap,
  )
-import Cardano.Ledger.State (SnapShot (..), Stake (..), UTxO (..), coinBalance)
+import Cardano.Ledger.State (EraCertState (..), SnapShot (..), Stake (..), UTxO (..), coinBalance)
 import qualified Cardano.Ledger.UMap as UM
 import Control.SetAlgebra (dom, eval, (▷), (◁))
 import Data.Foldable (fold)

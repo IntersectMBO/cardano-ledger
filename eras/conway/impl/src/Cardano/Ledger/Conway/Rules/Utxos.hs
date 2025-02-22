@@ -53,7 +53,6 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
@@ -62,7 +61,7 @@ import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Plutus (PlutusWithContext)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), updateUTxOState)
-import Cardano.Ledger.State (EraUTxO (..), UTxO)
+import Cardano.Ledger.State (EraCertState (..), EraUTxO (..), UTxO)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)

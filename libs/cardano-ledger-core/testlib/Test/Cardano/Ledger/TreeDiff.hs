@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.TreeDiff (
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential

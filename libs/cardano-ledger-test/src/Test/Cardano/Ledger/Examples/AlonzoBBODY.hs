@@ -28,7 +28,6 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway (
@@ -63,6 +62,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersPredFailure (..),
   ShelleyPoolPredFailure (..),
  )
+import Cardano.Ledger.State (EraCertState (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (UView (RewDepUView))
 import qualified Cardano.Ledger.UMap as UM

@@ -27,12 +27,6 @@ import Constrained
 
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.CertState (
-  DRepState (..),
-  dsUnifiedL,
-  psDepositsL,
-  vsDRepsL,
- )
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (
   Era (..),
@@ -44,8 +38,14 @@ import Cardano.Ledger.Conway.Core (
  )
 import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.State (
+  DRepState (..),
+  dsUnifiedL,
+  psDepositsL,
+  vsDRepsL,
+ )
 import Cardano.Ledger.UMap (depositMap)
 import Control.DeepSeq (NFData)
 import Control.Monad.Reader (runReader)

@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Conway.TreeDiff (
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -24,6 +23,7 @@ import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.HKD
+import Cardano.Ledger.State (EraCertState (..))
 import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity
 import Test.Cardano.Data.TreeDiff ()

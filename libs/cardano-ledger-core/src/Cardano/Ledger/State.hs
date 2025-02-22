@@ -1,12 +1,10 @@
 module Cardano.Ledger.State (
-  module Cardano.Ledger.State.AccountState,
-  module Cardano.Ledger.State.UTxO,
-  module Cardano.Ledger.State.PoolDistr,
-  module Cardano.Ledger.State.SnapShots,
+  module X,
 )
 where
 
-import Cardano.Ledger.State.AccountState
-import Cardano.Ledger.State.PoolDistr
-import Cardano.Ledger.State.SnapShots
-import Cardano.Ledger.State.UTxO
+import Cardano.Ledger.State.AccountState as X
+import Cardano.Ledger.State.CertState as X
+import Cardano.Ledger.State.PoolDistr as X
+import Cardano.Ledger.State.SnapShots as X
+import Cardano.Ledger.State.UTxO as X

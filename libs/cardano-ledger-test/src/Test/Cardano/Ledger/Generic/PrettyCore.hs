@@ -86,8 +86,6 @@ import Cardano.Ledger.BaseTypes (
   txIxToInt,
   unboundRational,
  )
-import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
-import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
@@ -187,7 +185,6 @@ import Cardano.Ledger.Shelley.AdaPots (
   totalAdaES,
   totalAdaPotsES,
  )
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -238,6 +235,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxBodyRaw (..))
@@ -250,6 +248,8 @@ import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.State (
+  CommitteeAuthorization (..),
+  CommitteeState (..),
   IndividualPoolStake (..),
   PoolDistr (..),
   ScriptsNeeded,
@@ -258,6 +258,7 @@ import Cardano.Ledger.State (
   Stake (..),
   UTxO (..),
  )
+import qualified Cardano.Ledger.State as DP
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),

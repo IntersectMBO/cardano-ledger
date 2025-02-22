@@ -147,7 +147,6 @@ import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (Block)
-import Cardano.Ledger.CertState (EraCertState (..), dsUnifiedL)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (..), credToText)
 import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
@@ -206,9 +205,11 @@ import Cardano.Ledger.Shelley.Scripts (
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
 import Cardano.Ledger.State (
+  EraCertState (..),
   EraUTxO (..),
   ScriptsProvided (..),
   UTxO (..),
+  dsUnifiedL,
   txinLookup,
  )
 import Cardano.Ledger.Tools (

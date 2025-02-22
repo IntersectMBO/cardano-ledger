@@ -33,13 +33,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  certDStateL,
-  certVStateL,
-  dsUnifiedL,
-  vsDRepsL,
- )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra)
@@ -51,6 +44,13 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.Shelley.HardForks as HF
+import Cardano.Ledger.State (
+  EraCertState (..),
+  certDStateL,
+  certVStateL,
+  dsUnifiedL,
+  vsDRepsL,
+ )
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_, guard, unless)

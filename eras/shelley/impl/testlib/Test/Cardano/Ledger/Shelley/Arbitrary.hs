@@ -41,7 +41,6 @@ import Cardano.Ledger.Shelley.API (
   ShelleyTx (ShelleyTx),
   ShelleyTxBody (ShelleyTxBody),
  )
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -72,6 +71,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),

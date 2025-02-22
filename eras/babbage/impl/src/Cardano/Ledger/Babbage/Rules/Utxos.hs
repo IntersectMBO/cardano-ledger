@@ -53,7 +53,6 @@ import Cardano.Ledger.BaseTypes (
   systemStart,
  )
 import Cardano.Ledger.Binary (EncCBOR (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Plutus.Evaluate (
   ScriptFailure (..),
@@ -69,7 +68,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
   updateUTxOState,
  )
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.State (EraCertState (..), EraUTxO (..), UTxO (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (nonEmpty)

@@ -22,7 +22,6 @@ import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary.Decoding (mkSized, sizedSize)
 import Cardano.Ledger.Binary.Encoding (EncCBOR)
-import Cardano.Ledger.CertState (CertState, certDStateL, dsGenDelegsL)
 import Cardano.Ledger.Coin (Coin (..), rationalToCoinViaCeiling)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
@@ -35,7 +34,14 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
+import Cardano.Ledger.State (
+  CertState,
+  EraUTxO (..),
+  ScriptsProvided (..),
+  UTxO (..),
+  certDStateL,
+  dsGenDelegsL,
+ )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.Monad (when)

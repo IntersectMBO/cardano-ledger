@@ -20,7 +20,6 @@ import Cardano.Ledger.Api.State.Query (
   queryCommitteeMembersState,
  )
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (

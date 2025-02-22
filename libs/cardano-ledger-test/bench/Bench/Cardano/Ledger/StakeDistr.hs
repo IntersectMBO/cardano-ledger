@@ -19,7 +19,6 @@ where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..))
 import Cardano.Ledger.Binary.Plain as Plain (FromCBOR (..), decodeFullDecoder)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Genesis (
@@ -53,6 +52,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Slot (EpochNo, SlotNo (..))
 import Cardano.Ledger.State (
+  EraCertState (..),
   PoolDistr (..),
   SnapShot (..),
   SnapShots (..),

@@ -12,12 +12,12 @@ module Test.Cardano.Ledger.Shelley.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.Binary
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Arbitrary ()

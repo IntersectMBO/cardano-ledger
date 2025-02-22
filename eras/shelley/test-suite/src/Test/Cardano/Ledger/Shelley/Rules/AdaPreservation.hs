@@ -26,11 +26,6 @@ import Cardano.Ledger.Block (
   Block (..),
   bbody,
  )
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  certsTotalDepositsTxBody,
-  certsTotalRefundsTxBody,
- )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Shelley.Core
@@ -68,7 +63,15 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   showMap,
   showWithdrawal,
  )
-import Cardano.Ledger.State (UTxO (..), coinBalance, txInsFilter, txouts)
+import Cardano.Ledger.State (
+  EraCertState (..),
+  UTxO (..),
+  certsTotalDepositsTxBody,
+  certsTotalRefundsTxBody,
+  coinBalance,
+  txInsFilter,
+  txouts,
+ )
 import Cardano.Ledger.UMap (sumRewardsUView)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))

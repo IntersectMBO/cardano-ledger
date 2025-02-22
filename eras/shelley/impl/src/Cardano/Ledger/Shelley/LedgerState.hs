@@ -142,7 +142,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   ssPoolParamsL,
 ) where
 
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.LedgerState.NewEpochState
 import Cardano.Ledger.Shelley.LedgerState.PulsingReward

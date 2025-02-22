@@ -29,14 +29,6 @@ where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
-import Cardano.Ledger.CertState (
-  DState (..),
-  EraCertState (..),
-  PState (..),
-  delegations,
-  dsUnifiedL,
-  rewards,
- )
 import Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (CompactCoin),
@@ -58,6 +50,14 @@ import Cardano.Ledger.Shelley.Rewards (
   filterRewards,
  )
 import Cardano.Ledger.State
+import Cardano.Ledger.State (
+  DState (..),
+  EraCertState (..),
+  PState (..),
+  delegations,
+  dsUnifiedL,
+  rewards,
+ )
 import Cardano.Ledger.UMap (
   UMElem,
   UMap (..),

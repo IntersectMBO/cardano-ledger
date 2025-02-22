@@ -60,7 +60,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -99,7 +98,13 @@ import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Slot (epochInfoSize)
-import Cardano.Ledger.State (IndividualPoolStake (..), PoolDistr (..), UTxO (..), txInsFilter)
+import Cardano.Ledger.State (
+  EraCertState (..),
+  IndividualPoolStake (..),
+  PoolDistr (..),
+  UTxO (..),
+  txInsFilter,
+ )
 import qualified Cardano.Ledger.State as EB
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (EpochSize)

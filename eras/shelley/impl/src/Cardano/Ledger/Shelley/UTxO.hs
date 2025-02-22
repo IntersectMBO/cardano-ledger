@@ -30,13 +30,6 @@ where
 
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  dsGenDelegs,
-  lookupDepositDState,
-  lookupDepositVState,
-  psStakePoolParamsL,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness, credScriptHash)
@@ -46,14 +39,21 @@ import Cardano.Ledger.Keys (
   genDelegKeyHash,
  )
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.CertState ()
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
+import Cardano.Ledger.Shelley.State ()
 import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
   raCredential,
+ )
+import Cardano.Ledger.State (
+  EraCertState (..),
+  dsGenDelegs,
+  lookupDepositDState,
+  lookupDepositVState,
+  psStakePoolParamsL,
  )
 import Cardano.Ledger.State as UTxO (
   CanGetUTxO (..),

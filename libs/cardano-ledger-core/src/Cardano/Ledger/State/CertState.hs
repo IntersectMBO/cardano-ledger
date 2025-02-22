@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Cardano.Ledger.CertState (
+module Cardano.Ledger.State.CertState (
   EraCertState (..),
   CommitteeAuthorization (..),
   DState (..),

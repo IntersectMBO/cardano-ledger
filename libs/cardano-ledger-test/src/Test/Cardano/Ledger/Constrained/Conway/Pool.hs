@@ -12,9 +12,9 @@ module Test.Cardano.Ledger.Constrained.Conway.Pool where
 
 import Cardano.Crypto.Hash.Class qualified as Hash
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Shelley.API.Types
+import Cardano.Ledger.State
 import Cardano.Slotting.EpochInfo qualified as EI
 import Constrained
 import Control.Monad.Identity

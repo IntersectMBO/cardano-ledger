@@ -90,7 +90,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Conway.PParams (
@@ -119,7 +118,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   epochStateStakeDistrL,
   epochStateUMapL,
  )
-import Cardano.Ledger.State (PoolDistr (..))
+import Cardano.Ledger.State (CommitteeAuthorization (..), CommitteeState (..), PoolDistr (..))
 import Cardano.Ledger.UMap
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))

@@ -42,11 +42,11 @@ import Cardano.Ledger.Binary (
   decNoShareCBOR,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
+import Cardano.Ledger.State (Obligations)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (
   KeyValue,

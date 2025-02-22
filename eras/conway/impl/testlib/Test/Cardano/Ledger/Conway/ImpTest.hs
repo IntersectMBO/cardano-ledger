@@ -152,16 +152,6 @@ import Cardano.Ledger.BaseTypes (
   succVersion,
   textToUrl,
  )
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  EraCertState (..),
-  csCommitteeCredsL,
-  lookupDepositDState,
-  lookupDepositVState,
-  psStakePoolParamsL,
-  vsActualDRepExpiry,
-  vsNumDormantEpochsL,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -211,7 +201,21 @@ import Cardano.Ledger.Shelley.LedgerState (
   vsCommitteeStateL,
   vsDRepsL,
  )
-import Cardano.Ledger.State (EraUTxO, UTxO, balance, sumAllValue, txInsFilter)
+import Cardano.Ledger.State (
+  CommitteeAuthorization (..),
+  EraCertState (..),
+  EraUTxO,
+  UTxO,
+  balance,
+  csCommitteeCredsL,
+  lookupDepositDState,
+  lookupDepositVState,
+  psStakePoolParamsL,
+  sumAllValue,
+  txInsFilter,
+  vsActualDRepExpiry,
+  vsNumDormantEpochsL,
+ )
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.UMap (dRepMap)
 import qualified Cardano.Ledger.UMap as UMap

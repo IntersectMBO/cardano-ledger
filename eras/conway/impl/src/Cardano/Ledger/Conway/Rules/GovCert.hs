@@ -37,19 +37,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  CommitteeState (..),
-  EraCertState (..),
-  VState (..),
-  csCommitteeCredsL,
-  dsUnifiedL,
-  vsCommitteeStateL,
-  vsDRepsL,
-  vsNumDormantEpochsL,
- )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.CertState ()
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT)
 import Cardano.Ledger.Conway.Governance (
@@ -60,11 +48,23 @@ import Cardano.Ledger.Conway.Governance (
   GovPurposeId,
   ProposalProcedure (..),
  )
+import Cardano.Ledger.Conway.State ()
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.State (
+  CommitteeAuthorization (..),
+  CommitteeState (..),
+  EraCertState (..),
+  VState (..),
+  csCommitteeCredsL,
+  dsUnifiedL,
+  vsCommitteeStateL,
+  vsDRepsL,
+  vsNumDormantEpochsL,
+ )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
 import Control.DeepSeq (NFData)

@@ -19,7 +19,6 @@ module Test.Cardano.Ledger.Shelley.Examples.Init (
 where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Nonce (..))
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
@@ -28,7 +27,7 @@ import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
  )
-import Cardano.Ledger.State (UTxO (..), balance)
+import Cardano.Ledger.State (EraCertState, UTxO (..), balance)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (

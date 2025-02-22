@@ -61,7 +61,6 @@ import Cardano.Ledger.BaseTypes (
   mkTxIxPartial,
  )
 import Cardano.Ledger.Binary.Version (Version)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -97,6 +96,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks (restrictPoolMetadataHash)
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.State (IndividualPoolStake (..), SnapShots (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMap as UM

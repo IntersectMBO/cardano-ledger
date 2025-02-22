@@ -39,7 +39,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), serialize)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -50,7 +49,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPpupPredFailure,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..), txouts)
+import Cardano.Ledger.State (EraCertState (..), EraUTxO (..), UTxO (..), txouts)
 import Cardano.Ledger.TxIn (TxIn)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)

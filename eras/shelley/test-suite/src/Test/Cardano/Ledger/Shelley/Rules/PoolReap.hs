@@ -20,7 +20,6 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
 import Cardano.Ledger.Block (
   Block (..),
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
@@ -31,6 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   psStakePoolParams,
  )
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.State (EraCertState (..))
 import Cardano.Protocol.TPraos.BHeader (
   bhbody,
   bheaderSlotNo,

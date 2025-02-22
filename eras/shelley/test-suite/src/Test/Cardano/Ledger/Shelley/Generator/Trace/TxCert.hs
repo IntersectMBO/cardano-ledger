@@ -19,12 +19,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (
 where
 
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, SlotNo (..), TxIx)
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  lookupDepositDState,
-  lookupDepositVState,
-  psStakePoolParams,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
@@ -37,6 +31,12 @@ import Cardano.Ledger.Shelley.API (
   ShelleyDELPL,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
+import Cardano.Ledger.State (
+  EraCertState (..),
+  lookupDepositDState,
+  lookupDepositVState,
+  psStakePoolParams,
+ )
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition (
   BaseM,

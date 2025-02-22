@@ -86,7 +86,6 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (ConwayEra)
@@ -106,12 +105,12 @@ import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.PoolParams
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardPulser (RSLP))
 import Cardano.Ledger.Shelley.Rewards (LeaderOnlyReward, PoolRewardInfo, StakeShare)
 import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum, ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxCert (

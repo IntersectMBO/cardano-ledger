@@ -7,13 +7,13 @@
 module Test.Cardano.Ledger.Constrained.Preds.CertState where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..))
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
+import Cardano.Ledger.State (EraCertState)
 import Control.Monad (when)
 import Data.Default (Default (def))
 import Lens.Micro

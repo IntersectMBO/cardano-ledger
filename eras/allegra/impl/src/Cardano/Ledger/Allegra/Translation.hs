@@ -12,14 +12,12 @@
 
 module Cardano.Ledger.Allegra.Translation (shelleyToAllegraAVVMsToDelete) where
 
-import Cardano.Ledger.Allegra.CertState ()
 import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.State ()
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
@@ -32,10 +30,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   returnRedeemAddrsToReserves,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (CommitteeState (..), UTxO (..))
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 

@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.Constrained.Conway.Deleg where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
 import Cardano.Ledger.Conway.TxCert
@@ -25,6 +24,7 @@ import Cardano.Ledger.Credential (credKeyHash, credScriptHash)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
 import Constrained
 import Data.Map (Map)

@@ -11,12 +11,12 @@ module Test.Cardano.Ledger.Api.Tx.Body (spec) where
 
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Body
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.UTxO hiding (consumed, produced)
+import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val
 import Data.Foldable

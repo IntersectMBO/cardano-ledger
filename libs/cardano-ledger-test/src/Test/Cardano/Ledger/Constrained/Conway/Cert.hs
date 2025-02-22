@@ -22,7 +22,6 @@ module Test.Cardano.Ledger.Constrained.Conway.Cert where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
@@ -30,8 +29,9 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.Shelley.CertState -- (ShelleyCertState (..))
+import Cardano.Ledger.Shelley.State -- (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
+import Cardano.Ledger.State
 import Constrained
 import Data.Map (Map)
 import qualified Data.Map as Map

@@ -36,7 +36,6 @@ import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   CertState,
@@ -48,6 +47,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   VState (..),
  )
+import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.State (EraUTxO (..), UTxO (..), coinBalance, unScriptsProvided)
 import Cardano.Ledger.TxIn (TxIn (..))

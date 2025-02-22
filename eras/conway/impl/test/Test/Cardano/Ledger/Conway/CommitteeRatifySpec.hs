@@ -13,7 +13,6 @@
 module Test.Cardano.Ledger.Conway.CommitteeRatifySpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
-import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -31,6 +30,7 @@ import Cardano.Ledger.Conway.Rules (
   committeeAcceptedRatio,
  )
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.State (CommitteeAuthorization (..), CommitteeState (..))
 import Data.Functor.Identity (Identity)
 import Data.List ((\\))
 import Data.Map.Strict (Map)

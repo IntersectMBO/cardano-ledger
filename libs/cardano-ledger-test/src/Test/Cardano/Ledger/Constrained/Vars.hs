@@ -31,12 +31,6 @@ import Cardano.Ledger.BaseTypes (
   (%.),
  )
 import qualified Cardano.Ledger.BaseTypes as Base (EpochInterval (..), Globals (..))
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  CommitteeState (..),
-  csCommitteeCredsL,
-  vsNumDormantEpochsL,
- )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Conway.PParams (
@@ -80,7 +74,6 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Shelley.CertState -- (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Governance (FuturePParams (..), futureProposalsL, proposalsL)
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
@@ -97,15 +90,20 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
 import Cardano.Ledger.State (
+  CommitteeAuthorization (..),
+  CommitteeState (..),
   IndividualPoolStake (..),
   PoolDistr (..),
   SnapShot (..),
   SnapShots (..),
   Stake (..),
+  csCommitteeCredsL,
   poolDistrDistrL,
+  vsNumDormantEpochsL,
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, sPoolMap, unify)

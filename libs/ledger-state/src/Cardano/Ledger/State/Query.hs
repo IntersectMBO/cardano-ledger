@@ -11,12 +11,12 @@ module Cardano.Ledger.State.Query where
 
 import Cardano.Ledger.Babbage.TxOut (internBabbageTxOut)
 import Cardano.Ledger.Binary
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core (TxOut, emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.Keys as Keys
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, prevPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import Cardano.Ledger.State (EraCertState (..))
 import qualified Cardano.Ledger.State as State
 import Cardano.Ledger.State.Orphans
 import Cardano.Ledger.State.Schema

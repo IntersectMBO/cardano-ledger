@@ -33,10 +33,6 @@ import Cardano.Ledger.BaseTypes (
   toIntegerNonZero,
   (%.),
  )
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  rewards,
- )
 import Cardano.Ledger.Coin (
   Coin (..),
   DeltaCoin (..),
@@ -74,6 +70,10 @@ import Cardano.Ledger.Shelley.Rewards (
  )
 import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Ledger.State
+import Cardano.Ledger.State (
+  EraCertState (..),
+  rewards,
+ )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Data.Group (invert)

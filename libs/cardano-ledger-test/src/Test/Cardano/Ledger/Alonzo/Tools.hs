@@ -15,7 +15,6 @@ import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
 import Cardano.Ledger.Api.Tx (RedeemerReport, TransactionScriptFailure (..), evalTxExUnits)
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, inject)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Plutus (
   Data (..),
@@ -27,6 +26,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.State (EraCertState (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)

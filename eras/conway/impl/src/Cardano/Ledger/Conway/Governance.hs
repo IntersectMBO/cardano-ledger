@@ -205,13 +205,6 @@ import Cardano.Ledger.Binary.Plain (
   decodeWord8,
   encodeWord8,
  )
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  EraCertState (..),
-  Obligations (..),
-  certVStateL,
-  csCommitteeCreds,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.DRepPulser
@@ -244,7 +237,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   vsCommitteeStateL,
   vsDReps,
  )
-import Cardano.Ledger.State (PoolDistr (..))
+import Cardano.Ledger.State (
+  CommitteeAuthorization (..),
+  EraCertState (..),
+  Obligations (..),
+  PoolDistr (..),
+  certVStateL,
+  csCommitteeCreds,
+ )
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))

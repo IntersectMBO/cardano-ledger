@@ -35,7 +35,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Chain (
   ChainPredicateFailure (..),
   chainChecks,
@@ -76,7 +75,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTickPredFailure,
  )
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.State (PoolDistr (..), UTxO (..), emptySnapShots)
+import Cardano.Ledger.State (EraCertState (..), PoolDistr (..), UTxO (..), emptySnapShots)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,

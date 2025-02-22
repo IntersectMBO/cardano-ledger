@@ -16,7 +16,6 @@
 module Test.Cardano.Ledger.Generic.MockChain where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -37,6 +36,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTickEvent,
   ShelleyTickPredFailure,
  )
+import Cardano.Ledger.State (EraCertState (..))
 import Cardano.Slotting.Slot (EpochNo, SlotNo)
 import Control.State.Transition (
   Embed (..),

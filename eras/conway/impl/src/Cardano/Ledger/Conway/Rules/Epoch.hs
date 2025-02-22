@@ -26,14 +26,6 @@ where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase)
-import Cardano.Ledger.CertState (
-  CommitteeState (..),
-  EraCertState (..),
-  VState,
-  dsUnifiedL,
-  vsCommitteeStateL,
-  vsNumDormantEpochsL,
- )
 import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayHARDFORK, ConwayRATIFY)
@@ -105,7 +97,15 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.State (SnapShots (..))
+import Cardano.Ledger.State (
+  CommitteeState (..),
+  EraCertState (..),
+  SnapShots (..),
+  VState,
+  dsUnifiedL,
+  vsCommitteeStateL,
+  vsNumDormantEpochsL,
+ )
 import Cardano.Ledger.UMap (RDPair (..), UMap, UView (..), (∪+), (◁))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (zero, (<->))

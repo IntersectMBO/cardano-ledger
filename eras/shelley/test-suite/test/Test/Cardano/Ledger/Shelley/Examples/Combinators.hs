@@ -57,7 +57,6 @@ import Cardano.Ledger.BaseTypes (
   (⭒),
  )
 import Cardano.Ledger.Block (Block (..), bheader)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair, GenDelegs (..))
@@ -86,6 +85,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards, votedFuturePParams)
 import Cardano.Ledger.State (
+  EraCertState (..),
   PoolDistr (..),
   SnapShot,
   SnapShots (..),

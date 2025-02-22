@@ -57,15 +57,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (
-  CommitteeState (..),
-  EraCertState (..),
-  PState (..),
-  VState (..),
-  authorizedHotCommitteeCredentials,
- )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.CertState ()
 import Cardano.Ledger.Conway.Core (ppGovActionDepositL, ppGovActionLifetimeL)
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
@@ -99,6 +91,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Governance.Proposals (mapProposals)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..))
+import Cardano.Ledger.Conway.State ()
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -106,6 +99,13 @@ import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (dsUnifiedL)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
+import Cardano.Ledger.State (
+  CommitteeState (..),
+  EraCertState (..),
+  PState (..),
+  VState (..),
+  authorizedHotCommitteeCredentials,
+ )
 import Cardano.Ledger.TxIn (TxId (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)

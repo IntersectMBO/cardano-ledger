@@ -26,13 +26,11 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -44,6 +42,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertStateL,
   updateStakeDistribution,
  )
+import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.State (
   PoolDistr (..),
   SnapShot (..),

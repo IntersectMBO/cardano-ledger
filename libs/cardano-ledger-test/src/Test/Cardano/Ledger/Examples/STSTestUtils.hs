@@ -48,7 +48,6 @@ import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes (mkTxIxPartial)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
@@ -67,6 +66,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.State (EraCertState)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))

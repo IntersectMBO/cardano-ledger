@@ -15,14 +15,13 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert () where
 
 import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Shelley.CertState
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.State
 import qualified Data.Foldable as Set
 import Data.Functor.Identity (Identity)

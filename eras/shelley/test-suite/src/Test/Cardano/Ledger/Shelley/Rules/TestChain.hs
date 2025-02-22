@@ -28,7 +28,6 @@ import Cardano.Ledger.Block (
   bheader,
   neededTxInsForBlock,
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG)
@@ -47,7 +46,7 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEnv (..),
   ShelleyPOOL,
  )
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (EraCertState (..), UTxO (..))
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (
   BHeader (..),

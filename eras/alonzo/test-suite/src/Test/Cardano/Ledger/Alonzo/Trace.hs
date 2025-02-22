@@ -18,7 +18,6 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
 import Cardano.Ledger.BaseTypes (Globals)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.LedgerState (CertState, UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv,
@@ -27,7 +26,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyDelplPredFailure,
   UtxoEnv,
  )
-import Cardano.Ledger.State (EraUTxO)
+import Cardano.Ledger.State (EraCertState, EraUTxO)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition

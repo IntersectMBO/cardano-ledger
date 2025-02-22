@@ -45,7 +45,15 @@ import Cardano.Ledger.Binary (
   natVersion,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.CertState (
+import Cardano.Ledger.Coin (Coin (..), CompactForm)
+import Cardano.Ledger.Credential (Credential (..), Ptr (..))
+import Cardano.Ledger.PoolParams
+import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
+import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
+import Cardano.Ledger.State
+import Cardano.Ledger.State (
   CertState,
   DRepState,
   EraCertState (..),
@@ -55,14 +63,6 @@ import Cardano.Ledger.CertState (
   sumObligation,
   vsDRepsL,
  )
-import Cardano.Ledger.Coin (Coin (..), CompactForm)
-import Cardano.Ledger.Credential (Credential (..), Ptr (..))
-import Cardano.Ledger.PoolParams
-import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
-import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
-import Cardano.Ledger.State
 import Cardano.Ledger.UMap (UMap (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)

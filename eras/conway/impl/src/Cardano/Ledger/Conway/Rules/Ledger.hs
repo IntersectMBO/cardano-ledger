@@ -47,7 +47,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
@@ -108,7 +107,7 @@ import Cardano.Ledger.Shelley.Rules (
   shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
-import Cardano.Ledger.State (EraUTxO (..))
+import Cardano.Ledger.State (EraCertState (..), EraUTxO (..))
 import Cardano.Ledger.UMap (UView (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)

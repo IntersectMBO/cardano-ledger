@@ -2,15 +2,15 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.CertState () where
+module Cardano.Ledger.Mary.State.CertState () where
 
-import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.CertState
-import Cardano.Ledger.Shelley.CertState
+import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Shelley.State
+import Cardano.Ledger.State
 import Data.Coerce (coerce)
 
-instance EraCertState BabbageEra where
-  type CertState BabbageEra = ShelleyCertState BabbageEra
+instance EraCertState MaryEra where
+  type CertState MaryEra = ShelleyCertState MaryEra
 
   mkCertState = mkShelleyCertState
 

@@ -15,17 +15,17 @@ import Cardano.Ledger.Address (isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
  )
-import Cardano.Ledger.CertState (
-  DState (..),
-  EraCertState (..),
-  InstantaneousRewards (..),
-  dsGenDelegsL,
- )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.State
+import Cardano.Ledger.State (
+  DState (..),
+  EraCertState (..),
+  InstantaneousRewards (..),
+  dsGenDelegsL,
+ )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Default (def)

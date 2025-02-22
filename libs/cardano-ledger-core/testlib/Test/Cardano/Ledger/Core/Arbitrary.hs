@@ -76,16 +76,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as NZ
 import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
-import Cardano.Ledger.CertState (
-  Anchor (..),
-  CommitteeAuthorization (..),
-  CommitteeState (..),
-  DState (..),
-  FutureGenDeleg (..),
-  InstantaneousRewards (..),
-  PState (..),
-  VState (..),
- )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
@@ -113,6 +103,16 @@ import Cardano.Ledger.PoolParams (
   StakePoolRelay (..),
  )
 import Cardano.Ledger.State
+import Cardano.Ledger.State (
+  Anchor (..),
+  CommitteeAuthorization (..),
+  CommitteeState (..),
+  DState (..),
+  FutureGenDeleg (..),
+  InstantaneousRewards (..),
+  PState (..),
+  VState (..),
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),

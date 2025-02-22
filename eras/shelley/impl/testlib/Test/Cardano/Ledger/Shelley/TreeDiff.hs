@@ -10,22 +10,22 @@ module Test.Cardano.Ledger.Shelley.TreeDiff (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.AdaPots (AdaPots)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.Scripts
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
 import Cardano.Ledger.Shelley.Tx
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.Shelley.TxOut
 import Cardano.Ledger.Shelley.TxWits
+import Cardano.Ledger.State (Obligations)
 import Test.Cardano.Ledger.TreeDiff
 
 -- PParams

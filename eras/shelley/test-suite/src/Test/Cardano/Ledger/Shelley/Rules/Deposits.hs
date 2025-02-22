@@ -16,7 +16,6 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   shortChainTrace,
  )
 
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -30,6 +29,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules.Reports (
   synopsisCoinMap,
  )
+import Cardano.Ledger.State (EraCertState (..))
 import Cardano.Ledger.UMap (depositMap)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>))

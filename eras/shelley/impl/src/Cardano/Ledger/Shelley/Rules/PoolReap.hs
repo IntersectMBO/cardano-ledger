@@ -24,7 +24,6 @@ where
 
 import Cardano.Ledger.Address (RewardAccount, raCredential)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState (..), VState)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -42,6 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (potEqualsObligation)
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.State (EraCertState (..), VState)
 import Cardano.Ledger.UMap (UView (RewDepUView, SPoolUView), compactCoinOrError)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))

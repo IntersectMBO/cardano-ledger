@@ -14,16 +14,14 @@ module Cardano.Ledger.Babbage.Translation where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import Cardano.Ledger.Babbage.CertState ()
 import Cardano.Ledger.Babbage.Core hiding (Tx)
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
+import Cardano.Ledger.Babbage.State ()
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.Core as Core (Tx)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   EpochState (..),
@@ -34,7 +32,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.State (CommitteeState (..), UTxO (..))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 

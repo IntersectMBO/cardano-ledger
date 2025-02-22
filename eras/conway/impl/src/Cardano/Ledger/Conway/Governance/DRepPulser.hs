@@ -58,7 +58,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (CommitteeState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance.Internal
@@ -68,6 +67,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.State
+import Cardano.Ledger.State (CommitteeState)
 import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)

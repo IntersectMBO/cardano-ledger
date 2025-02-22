@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.CertState (
+module Cardano.Ledger.Shelley.State.CertState (
   ShelleyCertState (..),
   mkShelleyCertState,
   shelleyCertDStateL,
@@ -25,11 +25,11 @@ import Cardano.Ledger.Binary (
   decodeRecordNamedT,
   encodeListLen,
  )
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))

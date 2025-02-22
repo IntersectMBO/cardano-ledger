@@ -12,9 +12,9 @@ module Cardano.Ledger.Mary.UTxO (
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Mary.CertState ()
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.State ()
 import Cardano.Ledger.Mary.Value (MaryValue (..), filterMultiAsset, mapMaybeMultiAsset, policyID)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),

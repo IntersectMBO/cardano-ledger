@@ -17,7 +17,6 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
 
 import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -38,7 +37,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv,
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Cardano.Ledger.State (EraUTxO)
+import Cardano.Ledger.State (EraCertState, EraUTxO)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition

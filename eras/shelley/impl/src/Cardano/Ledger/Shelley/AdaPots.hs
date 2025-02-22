@@ -19,15 +19,6 @@ module Cardano.Ledger.Shelley.AdaPots (
   sumAdaPots,
 ) where
 
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  Obligations (..),
-  certsTotalDepositsTxBody,
-  certsTotalRefundsTxBody,
-  obligationCertState,
-  rewards,
-  sumObligation,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -42,6 +33,15 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
  )
 import Cardano.Ledger.Shelley.TxBody (unWithdrawals)
 import Cardano.Ledger.State
+import Cardano.Ledger.State (
+  EraCertState (..),
+  Obligations (..),
+  certsTotalDepositsTxBody,
+  certsTotalRefundsTxBody,
+  obligationCertState,
+  rewards,
+  sumObligation,
+ )
 import Cardano.Ledger.UMap (sumRewardsUView)
 import Control.DeepSeq (NFData)
 import Data.Foldable (fold)

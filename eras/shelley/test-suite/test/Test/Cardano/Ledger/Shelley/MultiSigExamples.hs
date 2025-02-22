@@ -25,7 +25,6 @@ import Cardano.Ledger.BaseTypes (
   maybeToStrictMaybe,
   mkTxIxPartial,
  )
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (
   pattern KeyHashObj,
@@ -54,6 +53,7 @@ import Cardano.Ledger.Shelley.TxAuxData (ShelleyTxAuxData)
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.State (EraCertState)
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition

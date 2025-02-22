@@ -30,7 +30,6 @@ library
     Cardano.Ledger.Shelley.API.Wallet
     Cardano.Ledger.Shelley.AdaPots
     Cardano.Ledger.Shelley.BlockChain
-    Cardano.Ledger.Shelley.CertState
     Cardano.Ledger.Shelley.Core
     Cardano.Ledger.Shelley.Genesis
     Cardano.Ledger.Shelley.Governance
@@ -47,6 +46,8 @@ library
     Cardano.Ledger.Shelley.Scripts
     Cardano.Ledger.Shelley.SoftForks
     Cardano.Ledger.Shelley.StabilityWindow
+    Cardano.Ledger.Shelley.State
+    Cardano.Ledger.Shelley.State.CertState
     Cardano.Ledger.Shelley.Transition
     Cardano.Ledger.Shelley.Translation
     Cardano.Ledger.Shelley.Tx

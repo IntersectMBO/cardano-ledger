@@ -32,7 +32,6 @@ module Cardano.Ledger.Shelley.Transition (
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential

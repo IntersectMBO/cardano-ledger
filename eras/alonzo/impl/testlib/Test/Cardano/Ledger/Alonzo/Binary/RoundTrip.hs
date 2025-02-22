@@ -15,12 +15,12 @@ module Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Binary (DecCBOR)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)

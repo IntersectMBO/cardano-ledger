@@ -38,7 +38,6 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (Sized)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
@@ -54,6 +53,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.HKD (HKD, NoUpdate (..))
 import Cardano.Ledger.Plutus (Language (PlutusV3))
+import Cardano.Ledger.State (EraCertState (..))
 import Control.State.Transition.Extended (STS (Event))
 import Data.Default (def)
 import Data.Foldable (toList)

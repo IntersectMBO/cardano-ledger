@@ -12,17 +12,17 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
   UTxOState (..),
  )
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.State
 import Cardano.Ledger.State (SnapShots (..), UTxO (..))
 import Constrained hiding (Value)
 import Data.Kind (Type)

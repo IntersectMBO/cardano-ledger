@@ -41,7 +41,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (EraCertState (..), VState, vsDRepsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS, ConwayEra)
 import Cardano.Ledger.Conway.Governance (
@@ -65,6 +64,7 @@ import Cardano.Ledger.Shelley.Rules (
   drainWithdrawals,
   validateZeroRewards,
  )
+import Cardano.Ledger.State (EraCertState (..), VState, vsDRepsL, vsNumDormantEpochsL)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (

@@ -12,16 +12,14 @@
 
 module Cardano.Ledger.Alonzo.Translation where
 
-import Cardano.Ledger.Alonzo.CertState ()
 import Cardano.Ledger.Alonzo.Core hiding (Tx)
 import qualified Cardano.Ledger.Alonzo.Core as Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
+import Cardano.Ledger.Alonzo.State ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..), EraCertState (..), PState (..), VState (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   EpochState (..),
@@ -30,7 +28,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.State (
+  CommitteeState (..),
+  EraCertState (..),
+  PState (..),
+  UTxO (..),
+  VState (..),
+ )
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))

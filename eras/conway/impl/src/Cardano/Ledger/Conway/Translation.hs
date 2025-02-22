@@ -20,8 +20,6 @@ module Cardano.Ledger.Conway.Translation (
 import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..), upgradeCertState)
-import Cardano.Ledger.Conway.CertState ()
 import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -36,6 +34,7 @@ import Cardano.Ledger.Conway.Governance (
   setCompleteDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Scripts ()
+import Cardano.Ledger.Conway.State ()
 import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Plutus.Data (translateDatum)
@@ -49,10 +48,11 @@ import Cardano.Ledger.Shelley.API (
   VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
  )
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.State (CommitteeState (..), upgradeCertState)
 import qualified Cardano.Ledger.UMap as UM
 import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map

@@ -71,7 +71,6 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   NextEpochChange (..),
  )
 import Cardano.Ledger.BaseTypes (EpochNo, strictMaybeToMaybe)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
@@ -100,6 +99,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), FuturePParams (..))
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (
   StakeCredentials (scRewards, scSPools),
   UMap,

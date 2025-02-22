@@ -13,7 +13,6 @@
 -- for the GOVCERT rule
 module Test.Cardano.Ledger.Constrained.Conway.GovCert where
 
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (Era (..))
 import Cardano.Ledger.Conway.Governance
@@ -22,6 +21,7 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.State
 import Constrained
 import qualified Data.Map as Map
 import Data.Set (Set)

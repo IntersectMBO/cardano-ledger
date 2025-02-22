@@ -8,7 +8,6 @@
 -- | Generate a Simple Tx with 1 inout, 1 output, and 1 DRep related Cert
 module Test.Cardano.Ledger.Constrained.Trace.DrepCertTx where
 
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
@@ -42,7 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
   vsDRepsL,
  )
-import Cardano.Ledger.State (ssStakeMarkPoolDistrL)
+import Cardano.Ledger.State (EraCertState (..), ssStakeMarkPoolDistrL)
 import qualified Cardano.Ledger.UMap as UMap
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
