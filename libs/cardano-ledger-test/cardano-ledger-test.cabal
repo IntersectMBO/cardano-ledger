@@ -162,6 +162,7 @@ library
     nothunks,
     plutus-ledger-api >=1.0 && <2.0,
     prettyprinter,
+    pretty-simple,
     random,
     set-algebra,
     small-steps:{small-steps, testlib},

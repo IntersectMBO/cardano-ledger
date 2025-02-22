@@ -268,6 +268,10 @@ import Test.ImpSpec
 import Type.Reflection (Typeable, typeOf)
 import UnliftIO (evaluateDeep)
 
+import Text.Pretty.Simple (pShowNoColor)
+
+import qualified Data.Text.Lazy.IO as TL
+
 type ImpTestM era = ImpM (LedgerSpec era)
 
 -- TODO remove this once we get rid of the CPP directives
@@ -1059,6 +1063,7 @@ trySubmitTx ::
 trySubmitTx tx = do
   txFixed <- asks iteFixup >>= ($ tx)
   logToExpr txFixed
+  liftIO $ TL.writeFile "tx.txt" $ pShowNoColor txFixed
   st <- gets impNES
   lEnv <- impLedgerEnv st
   ImpTestState {impRootTxIn} <- get

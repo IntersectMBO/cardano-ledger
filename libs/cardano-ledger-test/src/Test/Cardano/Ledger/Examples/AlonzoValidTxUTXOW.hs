@@ -71,6 +71,9 @@ import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
+import Text.Pretty.Simple (pShowNoColor)
+
+import qualified Data.Text.Lazy.IO as TL
 
 tests :: TestTree
 tests =
@@ -346,7 +349,9 @@ testU ::
   Tx era ->
   Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
   Assertion
-testU pf = testUTXOW (UTXOW pf) (initUTxO pf) (pp pf)
+testU pf tx expect = do
+  TL.writeFile "tx.txt" $ pShowNoColor tx
+  testUTXOW (UTXOW pf) (initUTxO pf) (pp pf) tx expect
 
 scriptStakeCredSuceed :: Scriptic era => Proof era -> StakeCredential
 scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
