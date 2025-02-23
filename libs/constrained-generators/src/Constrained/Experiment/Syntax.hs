@@ -938,7 +938,7 @@ toCtx v t
       fatalError $
         NE.fromList
           [ "Can't build a single-hole context from a variable " ++ show v ++ " in term " ++ show t
-          , "A context is always constructed from an (App f xs) term."
+          , "A context is always constructed from an (App f xs) term with just a single occurence."
           ]
   | otherwise = go t
   where
@@ -959,7 +959,7 @@ toCtx v t
           fatalError $
             NE.fromList
               [ "A context is always constructed from an (App f xs) term,"
-              , "with a single variable " ++ show v ++ "@(" ++ show (typeOf v) ++ ")"
+              , "with a single occurence of the variable " ++ show v ++ "@(" ++ show (typeOf v) ++ ")"
               , "Instead we found an unknown variable " ++ show v' ++ "@(" ++ show (typeOf v') ++ ")"
               ]
 

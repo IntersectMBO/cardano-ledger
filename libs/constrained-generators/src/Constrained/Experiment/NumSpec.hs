@@ -58,27 +58,32 @@ import Test.QuickCheck (Arbitrary (arbitrary, shrink), choose, frequency)
 -- ====================================================================
 -- NumOrdW  witnesses for comparison operations (<=. and <.) on numbers
 -- The other operations are defined in terms of these. These things
--- will eventually get FiunctionSymbol instances
+-- will eventually get FunSym instances
 -- =====================================================================
 
 data NumOrdW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   LessOrEqualW :: OrdLike a => NumOrdW (OrdLike a) "<=." '[a, a] Bool
   LessW :: OrdLike a => NumOrdW (OrdLike a) "<." '[a, a] Bool
+  GreaterOrEqualW :: OrdLike a => NumOrdW (OrdLike a) ">=." '[a, a] Bool
+  GreaterW :: OrdLike a => NumOrdW (OrdLike a) ">." '[a, a] Bool
 
-instance Eq (NumOrdW c s ds r) where
-  LessOrEqualW == LessOrEqualW = True
-  LessW == LessW = True
+deriving instance Eq (NumOrdW c s ds r)
 
 instance Show (NumOrdW c s ds r) where
   show LessOrEqualW = "<=."
   show LessW = "<."
+  show GreaterOrEqualW = ">=."
+  show GreaterW = ">."
 
 instance Witness NumOrdW where
   semantics LessOrEqualW = (<=)
   semantics LessW = (<)
-
--- getevidence (LessOrEqualW @a) = Evidence @(OrdLike a)
--- getevidence (LessW @a) = Evidence @(OrdLike a)
+  semantics GreaterW = (>)
+  semantics GreaterOrEqualW = (>=)
+  inFix LessOrEqualW = True
+  inFix LessW = True
+  inFix GreaterOrEqualW = True
+  inFix GreaterW = True
 
 -- =============================================
 -- OrdLike. Ord for Numbers in the Logic

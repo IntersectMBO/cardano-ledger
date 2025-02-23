@@ -49,6 +49,8 @@ module Constrained.Experiment.Specs.SumProd (
   cNothing_,
   fst_,
   snd_,
+  fstW,
+  sndW,
   pair_,
   leftFn,
   rightFn,
@@ -63,6 +65,7 @@ import Constrained.Experiment.Base
 import Constrained.Experiment.Conformance (conformsToSpec, satisfies)
 import Constrained.Experiment.Generic
 import Constrained.Experiment.NumSpec (cardinality)
+import Constrained.Experiment.Specs.ListFoldy
 import Constrained.Experiment.Syntax (exists, forAll, letBind, mkCase, reify)
 import Constrained.Experiment.TheKnot
 import Constrained.List
@@ -164,8 +167,7 @@ instance (HasSpec a, HasSpec b) => FunSym () "fstFn" BaseW '[Prod a b] a where
   rewriteRules FstW ((pairView -> Just (x, _)) :> Nil) Evidence = Just x
   rewriteRules _ _ _ = Nothing
 
-  mapTypeSpec f ts = case f of
-    FstW | Cartesian s _ <- ts -> s
+  mapTypeSpec FstW (Cartesian s _) = s
 
 fstFn :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term a
 fstFn = appTerm FstW
@@ -189,8 +191,7 @@ instance (HasSpec a, HasSpec b) => FunSym () "sndFn" BaseW '[Prod a b] b where
   rewriteRules SndW ((pairView -> Just (_, y)) :> Nil) Evidence = Just y
   rewriteRules _ _ _ = Nothing
 
-  mapTypeSpec f ts = case f of
-    SndW | Cartesian _ s <- ts -> s
+  mapTypeSpec SndW (Cartesian _ s) = s
 
 sndFn :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term b
 sndFn = appTerm SndW
@@ -211,14 +212,16 @@ instance (HasSpec a, HasSpec b) => FunSym () "pairFn" BaseW '[a, b] (Prod a b) w
     constrained $ \v' -> Let (App PairW (v' :> Lit x :> Nil)) (v :-> ps)
   propagate (Context Evidence PairW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App PairW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate (Context Evidence PairW (a :|> HOLE :<> End)) (TypeSpec (Cartesian sa sb) cant)
+  propagate (Context Evidence PairW (a :|> HOLE :<> End)) ts@(TypeSpec (Cartesian sa sb) cant)
     | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
     | otherwise =
-        ErrorSpec (NE.fromList ["propagateSpecFun (pair_ a HOLE) has conformance failure on a", show sa])
-  propagate (Context Evidence PairW (HOLE :<> b :<| End)) (TypeSpec (Cartesian sa sb) cant)
+        ErrorSpec
+          (NE.fromList ["propagateSpecFun (pair_ " ++ show a ++ " HOLE) has conformance failure on a", show ts])
+  propagate (Context Evidence PairW (HOLE :<> b :<| End)) ts@(TypeSpec (Cartesian sa sb) cant)
     | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
     | otherwise =
-        ErrorSpec (NE.fromList ["propagateSpecFun (pair_ HOLE b) has conformance failure on b", show sb])
+        ErrorSpec
+          (NE.fromList ["propagateSpecFun (pair_ HOLE " ++ show b ++ ") has conformance failure on b", show ts])
   propagate (Context Evidence PairW (a :|> HOLE :<> End)) (MemberSpec es) =
     case (nub (sameFst a (NE.toList es))) of
       (w : ws) -> MemberSpec (w :| ws)
@@ -515,6 +518,39 @@ instance
 -- Syntax
 ------------------------------------------------------------------------
 
+fst_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term x
+fst_ = appTerm (ComposeW FstW ToGenericW)
+
+fstW :: (HasSpec a, HasSpec b) => FunW ((), ()) "composeFn" '[(a, b)] a
+fstW = (ComposeW FstW ToGenericW)
+
+snd_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term y
+snd_ = appTerm (ComposeW SndW ToGenericW)
+
+sndW :: (HasSpec a, HasSpec b) => FunW ((), ()) "composeFn" '[(a, b)] b
+sndW = (ComposeW SndW ToGenericW)
+
+{-
+fst_ ::
+  forall a b.
+  ( HasSpec a
+  , HasSpec b
+  ) =>
+  Term (a, b) ->
+  Term a
+fst_ = sel @0
+
+snd_ ::
+  forall a b.
+  ( HasSpec a
+  , HasSpec b
+  ) =>
+  Term (a, b) ->
+  Term b
+snd_ = sel @1
+-}
+
+{-
 fst_ ::
   ( HasSpec a
   , HasSpec b
@@ -534,6 +570,7 @@ snd_ ::
   Term (a, b) ->
   Term b
 snd_ = sndFn . toGeneric_
+-}
 
 pair_ ::
   ( HasSpec a

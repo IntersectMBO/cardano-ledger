@@ -106,9 +106,9 @@ instance Witness FunW where
   semantics = funSem
 
 instance KnownSymbol s => Show (FunW c s dom rng) where
-  show IdW = "IdW[id_]"
-  show (FlipW f) = "(FlipW " ++ show f ++ ")[flip_]"
-  show (ComposeW x y) = "(ComposeW " ++ show x ++ " " ++ show y ++ ")[composeFn]"
+  show IdW = "id_"
+  show (FlipW f) = "(flip_ " ++ show f ++ ")"
+  show (ComposeW x y) = "(compose_ " ++ show x ++ " " ++ show y ++ ")"
 
 instance Eq (FunW c s dom rng) where
   IdW == IdW = True
@@ -329,19 +329,24 @@ genFromFold must (simplifySpec -> size) elemS fun@(Fun Evidence fn) foldS
                     )
                 )
       $ do
-        let elemS' = mapSpec fn elemS
+        let elemS' :: Specification b
+            elemS' = mapSpec fn elemS
             mustVal = adds (map (semantics fn) must)
+            foldS' :: Specification b
             foldS' = propagate (Context Evidence theAddFn (HOLE :<> mustVal :<| End)) foldS
+            sizeSpec' :: Specification Integer
             sizeSpec' = propagate (Context Evidence AddW (HOLE :<> (sizeOf must) :<| End)) size
         when (isErrorLike sizeSpec') $ genError1 "Inconsistent size spec"
-        results0 <- genSizedList sizeSpec' (simplifySpec elemS') (simplifySpec foldS')
+        results0 <- case sizeSpec' of
+          TrueSpec -> genList (simplifySpec elemS') (simplifySpec foldS')
+          _ -> genSizedList sizeSpec' (simplifySpec elemS') (simplifySpec foldS')
         results <-
           explain
             ( NE.fromList
                 [ "genInverse"
                 , "  fun = " ++ show fun
                 , "  results0 = " ++ show results0
-                , show $ "  elemS =" <+> pretty elemS
+                , show $ "  elemS' =" <+> pretty elemS'
                 ]
             )
             $ mapM (genInverse fun elemS) results0
@@ -466,12 +471,12 @@ instance HasSpec a => FunSym (Eq a) "elem_" ListW '[a, [a]] Bool where
     constrained $ \v' -> Let (App ElemW (v' :> Lit x :> Nil)) (v :-> ps)
   propagate (Context Evidence ElemW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App ElemW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate (Context Evidence ElemW (HOLE :<> es :<| End)) (TypeSpec ts cant) =
-    caseBoolSpec (TypeSpec ts cant) $ \case
+  propagate (Context Evidence ElemW (HOLE :<> es :<| End)) spec =
+    caseBoolSpec spec $ \case
       True -> memberSpecList (nub es) (pure "propagate on (elem_ x []), The empty list, [], has no solution")
       False -> notMemberSpec es
-  propagate (Context Evidence ElemW (e :|> HOLE :<> End)) (TypeSpec ts cant) =
-    caseBoolSpec (TypeSpec ts cant) $ \case
+  propagate (Context Evidence ElemW (e :|> HOLE :<> End)) spec =
+    caseBoolSpec spec $ \case
       True -> typeSpec (ListSpec Nothing [e] mempty mempty NoFold)
       False -> typeSpec (ListSpec Nothing mempty mempty (notEqualSpec e) NoFold)
   propagate ctx _ =
@@ -481,6 +486,7 @@ instance HasSpec a => FunSym (Eq a) "elem_" ListW '[a, [a]] Bool where
   rewriteRules ElemW (t :> Lit [a] :> Nil) Evidence = Just $ t ==. (Lit a)
   rewriteRules _ _ _ = Nothing
 
+infix 4 `elem_`
 elem_ :: (Sized [a], HasSpec a) => Term a -> Term [a] -> Term Bool
 elem_ = appTerm ElemW
 

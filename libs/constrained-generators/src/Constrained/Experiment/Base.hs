@@ -79,6 +79,8 @@ import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 -- =====================================================================
 class Witness (t :: Constraint -> Symbol -> [Type] -> Type -> Type) where
   semantics :: forall c s d r. c => t c s d r -> FunTy d r -- e.g. FunTy '[a,Int] Bool == a -> Int -> Bool
+  inFix :: forall c s d r. c => t c s d r -> Bool
+  inFix _ = False
 
 -- The kind of a type, that is a candidate for a FunSym instance
 type FSType = Constraint -> Symbol -> [Type] -> Type -> Type
@@ -99,9 +101,9 @@ type FSPre c s (t :: FSType) dom rng =
 class FSPre c s t dom rng => FunSym c s t dom rng | s -> t where
   {-# MINIMAL (propagate) #-}
 
-  -- name :: String -- For documentation about what constructor of 't' implements 's'
-  name :: t c s dom rng -> String
-  name x = show x ++ " " ++ showType @c ++ " " ++ showType @s
+  -- info :: String -- For documentation about what constructor of 't' implements 's'
+  info :: t c s dom rng -> String
+  info x = show x ++ " " ++ showType @c ++ " " ++ showType @s
 
   propagate :: Context c s t dom rng hole -> Specification rng -> Specification hole
 
@@ -424,8 +426,8 @@ data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
 deriving instance Eq (BaseW c s dom rng)
 
 instance Show (BaseW c s d r) where
-  show ToGenericW = "toGenericFn"
-  show FromGenericW = "fromGenericFn"
+  show ToGenericW = "toSimpleRep"
+  show FromGenericW = "fromSimpleRep"
   show InjLeftW = "leftFn"
   show InjRightW = "rightFn"
   show PairW = "pairFn"
@@ -445,6 +447,8 @@ baseSem EqualW = (==)
 
 instance Witness BaseW where
   semantics = baseSem
+  inFix EqualW = True
+  inFix _ = False
 
 -- ============== ToGenericW FunSym instance
 
@@ -468,6 +472,14 @@ instance
   propagate ctx _ =
     ErrorSpec $ pure ("FunSym instance for ToGenericFn with wrong number of arguments. " ++ show ctx)
 
+  mapTypeSpec ToGenericW ts = typeSpec ts
+
+  rewriteRules ToGenericW ((App (_fromgeneric :: t c s d r) (x :> Nil)) :> Nil) Evidence =
+    case (eqT @t @BaseW, eqT @s @"fromGenericFn", eqT @d @'[SimpleRep a], eqT @r @a) of
+      (Just Refl, Just Refl, Just Refl, Just Refl) -> Just x
+      _ -> Nothing
+  rewriteRules _ _ _ = Nothing
+
 toGeneric_ ::
   forall a.
   GenericC a =>
@@ -488,6 +500,14 @@ instance (GenericC a, dom ~ SimpleRep a) => FunSym () "fromGenericFn" BaseW '[do
   propagate (Context Evidence FromGenericW (HOLE :<> End)) (MemberSpec es) = MemberSpec (fmap toSimpleRep es)
   propagate ctx _ =
     ErrorSpec $ pure ("FunSym instance for FromGenericFn with wrong number of arguments. " ++ show ctx)
+
+  mapTypeSpec FromGenericW ts = typeSpec ts
+
+  rewriteRules FromGenericW ((App (_togeneric :: t c s d r) (x :> Nil)) :> Nil) Evidence =
+    case (eqT @t @BaseW, eqT @s @"toGenericFn", eqT @d @'[a], eqT @r @(SimpleRep a)) of
+      (Just Refl, Just Refl, Just Refl, Just Refl) -> Just x
+      _ -> Nothing
+  rewriteRules _ _ _ = Nothing
 
 fromGeneric_ ::
   forall a.
@@ -611,6 +631,16 @@ appTerm ::
   AppRequires c sym t ds r =>
   t c sym ds r -> FunTy (MapList Term ds) (Term r)
 appTerm sym = curryList @ds (App @c @sym @t @ds @r sym)
+
+name :: String -> Term a -> Term a
+name nh (V (Var i _)) = V (Var i nh)
+name _ _ = error "applying name to non-var thing! Shame on you!"
+
+-- | Give a Term a nameHint, if its a Var, and doesn't already have one,
+--  otherwise return the Term unchanged.
+named :: String -> Term a -> Term a
+named nh t@(V (Var i x)) = if x /= "v" then t else V (Var i nh)
+named _ t = t
 
 -- ===========================================
 -- Binder
@@ -942,7 +972,11 @@ instance Show a => Pretty (WithPrec (Term a)) where
     AppendPat y (Lit n) -> parensIf (p > 10) $ "append_" <+> prettyPrec 10 y <+> short n
     -}
     App x Nil -> viaShow x
-    App f as -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))
+    App f as
+      | inFix f
+      , a :> b :> Nil <- as ->
+          parensIf (p > 9) $ prettyPrec 10 a <+> viaShow f <+> prettyPrec 10 b
+      | otherwise -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))
 
 instance Show a => Pretty (Term a) where
   pretty = prettyPrec 0

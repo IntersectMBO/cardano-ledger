@@ -15,20 +15,14 @@ import GHC.Int
 import GHC.Natural
 
 -- =================================================
-
+infix 4 +.
 (+.) :: NumLike a => Term a -> Term a -> Term a
 (+.) = addFn
 
 negate_ :: NumLike a => Term a -> Term a
 negate_ = negateFn
 
--- See  https://www.mathsisfun.com/algebra/inequality-solving.html
-(>=.) :: Numeric n => Term n -> Term n -> Term Bool
-(>=.) = flip (<=.)
-
-(>.) :: Numeric n => Term n -> Term n -> Term Bool
-(>.) = flip (<.)
-
+infix 4 -.
 (-.) :: Numeric n => Term n -> Term n -> Term n
 (-.) x y = addFn x (negateFn y)
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -24,7 +25,7 @@
 module Constrained.Experiment.Specs.Map where
 
 import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance (conformsToSpec, satisfies)
+import Constrained.Experiment.Conformance -- (conformsToSpec, satisfies)
 import Constrained.Experiment.Generic (Prod (..))
 import Constrained.Experiment.NumSpec (cardinality, geqSpec, leqSpec, nubOrd)
 import Constrained.Experiment.Specs.ListFoldy (
@@ -39,7 +40,7 @@ import Constrained.Experiment.Specs.ListFoldy (
  )
 import Constrained.Experiment.Specs.Set
 import Constrained.Experiment.Specs.Size (Sized (..), maxSpec, sizeOf_)
-import Constrained.Experiment.Specs.SumProd (IsNormalType, PairSpec (Cartesian), fst_, pair_, snd_)
+import Constrained.Experiment.Specs.SumProd -- (IsNormalType, PairSpec (Cartesian), forAll', fst_, pair_, snd_)
 import Constrained.Experiment.Syntax (forAll, genHint, letBind, unsafeExists)
 import Constrained.Experiment.TheKnot
 
@@ -59,7 +60,7 @@ import qualified Data.Set as Set
 import GHC.Generics
 import GHC.TypeLits
 import Prettyprinter
-import Test.QuickCheck (Arbitrary (..), frequency, genericShrink, shrinkList)
+import Test.QuickCheck hiding (Fun, Witness, forAll) -- (Arbitrary (..), generate, frequency, genericShrink, shrinkList)
 
 ------------------------------------------------------------------------
 -- HasSpec
@@ -239,10 +240,10 @@ instance
                     )
         explain1 ("  n = " ++ show n) $ go n kvs mempty
   genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
-    mustMap <- explain1 "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
+    !mustMap <- explain1 "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (pair_ (Lit k) v) kvs
       v <- explain1 (show $ "vSpec =" <+> pretty vSpec) $ genFromSpecT vSpec
-      pure (k, v)
+      pure $ (k, v)
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
         size' = simplifySpec $ constrained $ \sz ->

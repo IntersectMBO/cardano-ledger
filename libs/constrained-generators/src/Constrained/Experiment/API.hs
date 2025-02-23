@@ -7,6 +7,7 @@
 module Constrained.Experiment.API (
   FunSym (..),
   Witness (..),
+  Foldy (..),
   BaseW (ToGenericW, FromGenericW, EqualW, InjLeftW, InjRightW, PairW, SndW, FstW),
   BoolW (NotW, OrW),
   NumOrdW (LessOrEqualW, LessW),
@@ -15,9 +16,12 @@ module Constrained.Experiment.API (
   FunW (IdW, ComposeW, FlipW),
   Specification (..),
   Term (..),
+  name,
+  named,
   Pred (..),
   HasSpec (..),
   HasSimpleRep (..),
+  OrdLike (..),
   conformsToSpecE,
   conformsToSpec,
   satisfies,
@@ -49,8 +53,10 @@ module Constrained.Experiment.API (
   (>=.),
   (>.),
   (==.),
+  (/=.),
   not_,
   or_,
+  (||.),
   toGeneric_,
   fromGeneric_,
   (+.),
@@ -97,8 +103,10 @@ module Constrained.Experiment.API (
   elem_,
   singletonList_,
   append_,
+  (++.),
   sizeOf,
   sizeOf_,
+  length_,
   genFromSizeSpec,
   between,
   maxSpec,
@@ -118,6 +126,7 @@ module Constrained.Experiment.API (
   pattern Fst,
   pattern Snd,
   pattern Pair,
+  printPlan,
   NumLike,
   PairSpec (..),
   MapSpec (..),
@@ -127,6 +136,7 @@ module Constrained.Experiment.API (
   lookup_,
   fstSpec,
   sndSpec,
+  var,
 )
 where
 
@@ -141,6 +151,8 @@ import Constrained.Experiment.Base (
   constrained,
   equalSpec,
   fromGeneric_,
+  name,
+  named,
   notEqualSpec,
   notMemberSpec,
   toGeneric_,
@@ -156,6 +168,7 @@ import Constrained.Experiment.NumSpec (
   NumLike,
   NumOrdW (..),
   Numeric,
+  OrdLike (..),
   addFn,
   cardinality,
   negateFn,
@@ -202,12 +215,15 @@ import Constrained.Experiment.TheKnot (
   ifElse,
   not_,
   or_,
+  printPlan,
   simplifySpec,
   simplifyTerm,
   whenTrue,
   (<.),
   (<=.),
   (==.),
+  (>.),
+  (>=.),
   pattern Equal,
   pattern FromGeneric,
   pattern Fst,
@@ -236,6 +252,7 @@ import Constrained.Experiment.Syntax (
  )
 
 import Constrained.Experiment.Specs.ListFoldy (
+  Foldy (..),
   FunW (..),
   append_,
   compose_,
@@ -256,7 +273,7 @@ import Constrained.Experiment.Specs.Map (
   rng_,
   sndSpec,
  )
-import Constrained.Experiment.Specs.Num (negate_, (+.), (-.), (>.), (>=.))
+import Constrained.Experiment.Specs.Num (negate_, (+.), (-.))
 import Constrained.Experiment.Specs.Set (
   SetSpec (..),
   SetW (..),
@@ -275,3 +292,22 @@ import Constrained.Experiment.Specs.Size (
   maxSpec,
   sizeOf_,
  )
+import Constrained.Syntax (var)
+
+infix 4 /=.
+(/=.) :: HasSpec a => Term a -> Term a -> Term Bool
+a /=. b = not_ (a ==. b)
+
+length_ :: HasSpec a => Term [a] -> Term Integer
+length_ = sizeOf_
+
+infixr 2 ||.
+(||.) ::
+  Term Bool ->
+  Term Bool ->
+  Term Bool
+(||.) = or_
+
+infixr 5 ++.
+(++.) :: HasSpec a => Term [a] -> Term [a] -> Term [a]
+(++.) = append_

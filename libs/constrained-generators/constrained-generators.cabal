@@ -34,6 +34,10 @@ library
     Constrained.Experiment.API
     Constrained.Experiment.Base
     Constrained.Experiment.Conformance
+    Constrained.Experiment.Examples.Basic
+    Constrained.Experiment.Examples.Either    
+    Constrained.Experiment.Examples.List       
+    Constrained.Experiment.Examples.Fold          
     Constrained.Experiment.Generic
     Constrained.Experiment.NumSpec
     Constrained.Experiment.Specs.ListFoldy
