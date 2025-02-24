@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,6 +22,10 @@ module Cardano.Ledger.Binary.Plain (
   encodeEnum,
   decodeEnumBounded,
   withHexText,
+  assertTag,
+  decodeTagMaybe,
+  decodeRationalWithTag,
+  encodeRatioWithTag,
 
   -- * DSIGN
   C.encodeVerKeyDSIGN,
@@ -56,14 +62,16 @@ import qualified Cardano.Crypto.DSIGN.Class as C
 import qualified Cardano.Crypto.KES.Class as C
 import qualified Cardano.Crypto.VRF.Class as C
 import Codec.CBOR.Term
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 as B16
+import Data.Ratio (Ratio, denominator, numerator, (%))
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import Data.Typeable
+import Data.Word (Word64)
 import Formatting (build, formatToString)
 import qualified Formatting.Buildable as B (Buildable (..))
 
@@ -142,3 +150,47 @@ decodeEnumBounded = do
     then pure $ toEnum n
     else fail $ "Failed to decode an Enum: " <> show n <> " for TypeRep: " <> show (typeRep (Proxy @a))
 {-# INLINE decodeEnumBounded #-}
+
+-- | Enforces tag 30 to indicate a rational number, as per tag assignment:
+-- <https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml>
+--
+-- <https://peteroupc.github.io/CBOR/rational.html>
+decodeRationalWithTag :: Decoder s Rational
+decodeRationalWithTag = do
+  assertTag 30
+  (numValues, values) <- decodeCollectionWithLen decodeListLenOrIndef decodeInteger
+  case values of
+    [n, d] -> do
+      when (d == 0) (fail "Denominator cannot be zero")
+      pure $! n % d
+    _ -> cborError $ DecoderErrorSizeMismatch "Rational" 2 numValues
+{-# INLINE decodeRationalWithTag #-}
+
+-- <https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml>
+--
+-- <https://peteroupc.github.io/CBOR/rational.html>
+encodeRatioWithTag :: (t -> Encoding) -> Ratio t -> Encoding
+encodeRatioWithTag encodeNumeric r =
+  encodeTag 30
+    <> encodeListLen 2
+    <> encodeNumeric (numerator r)
+    <> encodeNumeric (denominator r)
+
+assertTag :: Word -> Decoder s ()
+assertTag tagExpected = do
+  tagReceived <-
+    decodeTagMaybe >>= \case
+      Just tag -> pure tag
+      Nothing -> fail "Expected tag"
+  unless (tagReceived == (fromIntegral tagExpected :: Word64)) $
+    fail $
+      "Expecteg tag " <> show tagExpected <> " but got tag " <> show tagReceived
+{-# INLINE assertTag #-}
+
+decodeTagMaybe :: Decoder s (Maybe Word64)
+decodeTagMaybe =
+  peekTokenType >>= \case
+    TypeTag -> Just . fromIntegral <$> decodeTag
+    TypeTag64 -> Just <$> decodeTag64
+    _ -> pure Nothing
+{-# INLINE decodeTagMaybe #-}
