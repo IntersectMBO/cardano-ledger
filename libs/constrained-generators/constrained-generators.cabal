@@ -35,17 +35,19 @@ library
     Constrained.Experiment.Base
     Constrained.Experiment.Conformance
     Constrained.Experiment.Examples.Basic
-    Constrained.Experiment.Examples.Either    
-    Constrained.Experiment.Examples.List       
-    Constrained.Experiment.Examples.Fold          
+    Constrained.Experiment.Examples.Either
+    Constrained.Experiment.Examples.Fold
+    Constrained.Experiment.Examples.List
+    Constrained.Experiment.Examples.Set
     Constrained.Experiment.Generic
     Constrained.Experiment.NumSpec
     Constrained.Experiment.Specs.ListFoldy
+    Constrained.Experiment.Specs.Map
     Constrained.Experiment.Specs.Num
     Constrained.Experiment.Specs.Set
     Constrained.Experiment.Specs.Size
     Constrained.Experiment.Specs.SumProd
-    Constrained.Experiment.Specs.Map
+    Constrained.Experiment.Specs.Tree
     Constrained.Experiment.SumList
     Constrained.Experiment.Syntax
     Constrained.Experiment.TheKnot
