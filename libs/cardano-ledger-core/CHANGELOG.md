@@ -2,6 +2,12 @@
 
 ## 1.17.0.0
 
+* Add `ToCBOR` and `FromCBOR` instances for:
+  * `BoundedRatio`
+  * `PositiveUnitInterval`
+  * `ActiveSlotCoeff`
+  * `Network`
+  * `NoGenesis`
 * Move `EraGov` to `Cardano.Ledger.State` from `cardano-ledger-shelley`
 * Add DecCBOR instances for:
   * `PlutusData`

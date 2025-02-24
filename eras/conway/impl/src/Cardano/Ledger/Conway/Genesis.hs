@@ -16,16 +16,21 @@ module Cardano.Ledger.Conway.Genesis (
 )
 where
 
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+ )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams, toUpgradeConwayPParamsUpdatePairs)
 import Cardano.Ledger.Conway.TxCert (Delegatee)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Genesis (EraGenesis (..))
-import Cardano.Ledger.Keys (KeyRole (..))
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
@@ -53,24 +58,6 @@ data ConwayGenesis = ConwayGenesis
   }
   deriving (Eq, Generic, Show)
 
-instance EncCBOR ConwayGenesis where
-  encCBOR x@(ConwayGenesis _ _ _ _ _) =
-    let ConwayGenesis {..} = x
-     in encode $ Rec ConwayGenesis
-       !> To cgUpgradePParams
-       !> To cgConstitution
-       !> To cgCommittee
-       !> To cgDelegs
-       !> To cgInitialDReps
-
-instance DecCBOR ConwayGenesis where
-  decCBOR = decode $ RecD ConwayGenesis
-    <! From
-    <! From
-    <! From
-    <! From
-    <! From
-
 cgDelegsL :: Lens' ConwayGenesis (ListMap (Credential 'Staking) Delegatee)
 cgDelegsL = lens cgDelegs (\x y -> x {cgDelegs = y})
 
@@ -80,18 +67,25 @@ instance EraGenesis ConwayEra where
 instance NoThunks ConwayGenesis
 
 -- | Genesis are always encoded with the version of era they are defined in.
-instance DecCBOR ConwayGenesis where
-  decCBOR = decode $ RecD ConwayGenesis <! From <! From <! From <! From <! From
+instance FromCBOR ConwayGenesis where
+  fromCBOR =
+    eraDecoder @ConwayEra $
+      decode $
+        RecD ConwayGenesis <! From <! From <! From <! From <! From
 
-instance EncCBOR ConwayGenesis where
-  encCBOR (ConwayGenesis pparams constitution committee delegs initialDReps) =
-    encode $
-      Rec ConwayGenesis
-        !> To pparams
-        !> To constitution
-        !> To committee
-        !> To delegs
-        !> To initialDReps
+instance ToCBOR ConwayGenesis where
+  toCBOR x@(ConwayGenesis _ _ _ _ _) =
+    let ConwayGenesis {..} = x
+     in toEraCBOR @ConwayEra . encode $
+          Rec ConwayGenesis
+            !> To cgUpgradePParams
+            !> To cgConstitution
+            !> To cgCommittee
+            !> To cgDelegs
+            !> To cgInitialDReps
+
+instance DecCBOR ConwayGenesis
+instance EncCBOR ConwayGenesis
 
 instance ToJSON ConwayGenesis where
   toJSON = object . toConwayGenesisPairs

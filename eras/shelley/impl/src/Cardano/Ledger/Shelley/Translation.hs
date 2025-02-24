@@ -13,8 +13,16 @@ module Cardano.Ledger.Shelley.Translation (
 )
 where
 
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
-import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>), decode, Decode (..), (<!))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  shelleyProtVer,
+  toPlainDecoder,
+  toPlainEncoding,
+ )
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Core (PParams, TranslationContext, emptyPParams)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -33,22 +41,28 @@ data FromByronTranslationContext = FromByronTranslationContext
   }
   deriving (Eq, Show, Generic)
 
-instance EncCBOR FromByronTranslationContext where
-  encCBOR x@(FromByronTranslationContext _ _ _) =
+instance ToCBOR FromByronTranslationContext where
+  toCBOR x@(FromByronTranslationContext _ _ _) =
     let FromByronTranslationContext {..} = x
-     in encode $
-          Rec FromByronTranslationContext
-            !> To fbtcGenDelegs
-            !> To fbtcProtocolParams
-            !> To fbtcMaxLovelaceSupply
+     in toPlainEncoding shelleyProtVer $
+          encode $
+            Rec FromByronTranslationContext
+              !> To fbtcGenDelegs
+              !> To fbtcProtocolParams
+              !> To fbtcMaxLovelaceSupply
 
-instance DecCBOR FromByronTranslationContext where
-  decCBOR =
-    decode $
-      RecD FromByronTranslationContext
-        <! From
-        <! From
-        <! From
+instance FromCBOR FromByronTranslationContext where
+  fromCBOR =
+    toPlainDecoder Nothing shelleyProtVer $
+      decode $
+        RecD FromByronTranslationContext
+          <! From
+          <! From
+          <! From
+
+instance EncCBOR FromByronTranslationContext
+
+instance DecCBOR FromByronTranslationContext
 
 -- | Trivial FromByronTranslationContext value, for use in cases where we do not need
 -- to translate from Byron to Shelley.

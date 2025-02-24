@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `ToCBOR` and `FromCBOR` instance for `ConwayGenesis`
 * Switch `ctbrCerts` to use `TxCert` instead of `ConwayTxCert`
 * Add `DecCBOR` instance for `ConwayTxBody`
 * Converted `CertState` to a type family
