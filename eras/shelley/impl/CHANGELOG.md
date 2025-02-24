@@ -2,6 +2,8 @@
 
 ## 1.16.0.0
 
+* Add `auxDataSeqDecoder`
+* Remove `constructMetadata`
 * Remove `getProposedPPUpdates` as no longer relevant
 * Remove `proposalsL` and `futureProposalsL` as unused
 * Remove redundant supercalss constraints for `ApplyBlock`
@@ -16,7 +18,6 @@
   * `ShelleyTxBody`
   * `ShelleyTx`
   * `ShelleyTxSeq`
-* Add `indexLookupSeq`
 * Add `segWitTx`
 * Rename `segwitTx` to `segWitAnnTx`
 * Converted `CertState` to a type family

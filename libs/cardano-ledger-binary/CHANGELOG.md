@@ -2,6 +2,8 @@
 
 ## 1.6.0.0
 
+* Add `DecCBOR` instance for `Data.IntMap`
+* Add `decodeIntMap`
 * Add `ToCBOR` instance for `PV1.Data`
 * Add `DecCBOR` instance for `Annotated a ByteString`
 * Add `originalBytesExpectedFailureMessage` needed for testing
