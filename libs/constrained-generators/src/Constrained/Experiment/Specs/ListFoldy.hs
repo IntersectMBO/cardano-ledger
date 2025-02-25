@@ -9,6 +9,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -392,7 +393,6 @@ data ListW (c :: Constraint) (s :: Symbol) (args :: [Type]) (res :: Type) where
   FoldMapW :: forall a b. HasSpec a => Fun '[a] b -> ListW (Foldy b) "foldMap_" '[[a]] b
   SingletonListW :: ListW () "singeltonList_" '[a] [a]
   AppendW :: (Typeable a, Show a) => ListW () "append_" '[[a], [a]] [a]
-  ElemW :: forall a. ListW (Eq a) "elem_" '[a, [a]] Bool
 
 -- ====================== Witness for ListW
 
@@ -403,13 +403,12 @@ listSem :: c => ListW c s dom rng -> FunTy dom rng
 listSem (FoldMapW (Fun Evidence f)) = adds . map (semantics f)
 listSem SingletonListW = (: [])
 listSem AppendW = (++)
-listSem ElemW = elem
 
 instance Show (ListW c s d r) where
   show AppendW = "append_"
   show SingletonListW = "singletonList_"
   show (FoldMapW n) = "(FoldMapW  " ++ show n ++ ")"
-  show ElemW = "elem_"
+
 deriving instance (Eq (ListW c s d r))
 
 -- ============= FunSymbol for FoldMapW
@@ -462,7 +461,7 @@ toPredsFoldSpec x (FoldSpec funAB sspec) =
 
 -- ============ FunSymbol for ElemW
 
-instance HasSpec a => FunSym (Eq a) "elem_" ListW '[a, [a]] Bool where
+instance HasSpec a => FunSym (Eq a) "elem_" BaseW '[a, [a]] Bool where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -474,6 +473,10 @@ instance HasSpec a => FunSym (Eq a) "elem_" ListW '[a, [a]] Bool where
   propagate (Context Evidence ElemW (HOLE :<> es :<| End)) spec =
     caseBoolSpec spec $ \case
       True -> memberSpecList (nub es) (pure "propagate on (elem_ x []), The empty list, [], has no solution")
+      {-
+      True -> case (nub es) of
+                [] -> ErrorSpec (pure "propagate on (elem_ x []), The empty list, [], has no solution")
+                (x : xs) -> constrained $ \ t -> ElemPred True t (x :| xs) -}
       False -> notMemberSpec es
   propagate (Context Evidence ElemW (e :|> HOLE :<> End)) spec =
     caseBoolSpec spec $ \case

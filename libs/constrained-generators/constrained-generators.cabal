@@ -39,6 +39,7 @@ library
     Constrained.Experiment.Examples.Fold
     Constrained.Experiment.Examples.List
     Constrained.Experiment.Examples.Set
+    Constrained.Experiment.Examples.Tree  
     Constrained.Experiment.Generic
     Constrained.Experiment.NumSpec
     Constrained.Experiment.Specs.ListFoldy

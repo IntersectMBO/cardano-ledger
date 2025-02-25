@@ -33,7 +33,10 @@ import GHC.Generics
 ------------------------------------------------------------------------
 
 data Prod a b = Prod {prodFst :: a, prodSnd :: b}
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
+
+instance (Show a, Show b) => Show (Prod a b) where
+  show (Prod x y) = "(Prod " ++ show x ++ " " ++ show y ++ ")"
 
 type family ProdOver as where
   ProdOver '[] = ()

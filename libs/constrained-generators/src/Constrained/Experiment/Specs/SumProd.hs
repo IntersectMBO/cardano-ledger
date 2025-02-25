@@ -216,26 +216,30 @@ instance (HasSpec a, HasSpec b) => FunSym () "pairFn" BaseW '[a, b] (Prod a b) w
     | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
     | otherwise =
         ErrorSpec
-          (NE.fromList ["propagateSpecFun (pair_ " ++ show a ++ " HOLE) has conformance failure on a", show ts])
+          (NE.fromList ["propagate (pair_ " ++ show a ++ " HOLE) has conformance failure on a", show ts])
   propagate (Context Evidence PairW (HOLE :<> b :<| End)) ts@(TypeSpec (Cartesian sa sb) cant)
     | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
     | otherwise =
         ErrorSpec
-          (NE.fromList ["propagateSpecFun (pair_ HOLE " ++ show b ++ ") has conformance failure on b", show ts])
+          (NE.fromList ["propagate (pair_ HOLE " ++ show b ++ ") has conformance failure on b", show ts])
   propagate (Context Evidence PairW (a :|> HOLE :<> End)) (MemberSpec es) =
     case (nub (sameFst a (NE.toList es))) of
       (w : ws) -> MemberSpec (w :| ws)
       [] ->
         ErrorSpec $
-          pure
-            ("propagateSpecFun (pair_ HOLE b) on (MemberSpec " ++ show es ++ " where b does not appear in bs.")
+          NE.fromList
+            [ "propagate (pair_ HOLE " ++ show a ++ ") on (MemberSpec " ++ show (NE.toList es)
+            , "Where " ++ show a ++ " does not appear as the fst component of anything in the MemberSpec."
+            ]
   propagate (Context Evidence PairW (HOLE :<> b :<| End)) (MemberSpec es) =
     case (nub (sameSnd b (NE.toList es))) of
       (w : ws) -> MemberSpec (w :| ws)
       [] ->
         ErrorSpec $
-          pure
-            ("propagateSpecFun (pair_ HOLE b) on (MemberSpec " ++ show es ++ " where b does not appear in bs.")
+          NE.fromList
+            [ "propagate (pair_ HOLE " ++ show b ++ ") on (MemberSpec " ++ show (NE.toList es)
+            , "Where " ++ show b ++ " does not appear as the snd component of anything in the MemberSpec."
+            ]
   propagate ctx _ =
     ErrorSpec $ pure ("FunSym instance for PairW with wrong number of arguments. " ++ show ctx)
 
