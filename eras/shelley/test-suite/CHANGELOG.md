@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Add crypto type-parameter to `KeySpace` and `GenEnv` #4908
 * Add `DecCBOR` instance for `LaxBlock`
 * Add `genCoreNodeKeys` and `genIssuerKeys`
 * Move `VRFNatVal` into `cardano-protocol-tpraos:testlib`
