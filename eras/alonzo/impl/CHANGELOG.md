@@ -27,6 +27,7 @@
 
 ### `testlib`
 
+* Add `genNonEmptyTxDats` and `genNonEmptyRedeemers` to `Arbitrary`
 * Renamed:
   * `impLookupPlutusScriptMaybe` -> `impLookupPlutusScript`
   * `impGetScriptContextMaybe` -> `impLookupScriptContext`

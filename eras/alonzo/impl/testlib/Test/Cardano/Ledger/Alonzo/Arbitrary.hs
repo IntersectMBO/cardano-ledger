@@ -23,6 +23,8 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   genEraLanguage,
   genAlonzoScript,
   genNativeScript,
+  genNonEmptyRedeemers,
+  genNonEmptyTxDats,
   genPlutusScript,
   genScripts,
   genValidCostModel,
@@ -86,6 +88,7 @@ import Data.Text (pack)
 import Data.Word
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
+import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (
   genValidAndUnknownCostModels,
@@ -108,6 +111,10 @@ instance
   Arbitrary (Redeemers era)
   where
   arbitrary = Redeemers <$> arbitrary
+
+genNonEmptyRedeemers ::
+  (AlonzoEraScript era, Arbitrary (PlutusPurpose AsIx era)) => Gen (Redeemers era)
+genNonEmptyRedeemers = Redeemers <$> genNonEmptyMap arbitrary arbitrary
 
 instance
   ( Era era
@@ -135,6 +142,9 @@ genScripts = Map.fromElems (hashScript @era) <$> (arbitrary :: Gen [Script era])
 
 instance Era era => Arbitrary (TxDats era) where
   arbitrary = TxDats . Map.fromElems @[] hashData <$> arbitrary
+
+genNonEmptyTxDats :: Era era => Gen (TxDats era)
+genNonEmptyTxDats = TxDats . Map.fromElems @[] hashData <$> listOf1 arbitrary
 
 instance
   ( EraTxOut era
