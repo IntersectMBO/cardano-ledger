@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -96,7 +97,7 @@ import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData (..), deepseq)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
@@ -176,6 +177,8 @@ instance Crypto c => SignableRepresentation (BHBody c) where
   getSignableRepresentation bh = serialize' (pvMajor (bprotver bh)) bh
 
 instance Crypto c => NoThunks (BHBody c)
+
+instance NFData (VRF.CertifiedVRF (VRF c) Nonce) => NFData (BHBody c)
 
 instance Crypto c => EncCBOR (BHBody c) where
   encCBOR bhBody =
@@ -259,6 +262,9 @@ deriving via
 deriving instance Crypto c => Eq (BHeader c)
 
 deriving instance Crypto c => Show (BHeader c)
+
+instance NFData (BHeader c) where
+  rnf (BHeader' body sig bytes) = body `deepseq` sig `deepseq` rnf bytes
 
 pattern BHeader ::
   Crypto c =>
@@ -457,8 +463,8 @@ mkSeed ucNonce (SlotNo slot) eNonce =
     . runByteBuilder (8 + 32)
     $ BS.word64BE slot
       <> ( case eNonce of
-            NeutralNonce -> mempty
-            Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
+             NeutralNonce -> mempty
+             Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
          )
 
 data LastAppliedBlock = LastAppliedBlock

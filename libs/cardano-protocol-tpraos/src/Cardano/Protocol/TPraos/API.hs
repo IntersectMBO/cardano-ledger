@@ -90,6 +90,7 @@ import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS.Prtcl
 import Cardano.Protocol.TPraos.Rules.Tickn as STS.Tickn
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Control.Arrow (left, right)
+import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (
@@ -355,6 +356,9 @@ data ChainDepState = ChainDepState
   -- ^ Nonce constructed from the hash of the last applied block header.
   }
   deriving (Eq, Show, Generic)
+
+instance NFData ChainDepState where
+  rnf (ChainDepState p t n) = p `deepseq` t `deepseq` rnf n
 
 -- | Construct an initial chain state given an initial nonce and a set of
 -- genesis delegates.

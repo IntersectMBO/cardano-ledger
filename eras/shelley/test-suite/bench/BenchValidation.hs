@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-binds #-}
 
@@ -49,7 +50,7 @@ import Cardano.Protocol.TPraos.BHeader (BHeader (..), LastAppliedBlock (..), mak
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (withOriginToMaybe)
-import Control.DeepSeq (NFData (rnf))
+import Control.DeepSeq (NFData (rnf), deepseq)
 import Control.Monad.Except ()
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
@@ -69,8 +70,8 @@ data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block (BHead
 sizes :: ValidateInput era -> String
 sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocksMade (nesBcur ss)))
 
-instance NFData (ValidateInput era) where
-  rnf (ValidateInput a b c) = seq a (seq b (seq c ()))
+instance (EraTxOut era, NFData (NewEpochState era)) => NFData (ValidateInput era) where
+  rnf (ValidateInput a b c) = a `deepseq` b `deepseq` rnf c
 
 validateInput ::
   ( EraGen era
@@ -114,7 +115,7 @@ applyBlock ::
 applyBlock (ValidateInput globals state (Block bh txs)) n =
   let block = UnsafeUnserialisedBlock (makeHeaderView bh) txs
    in case API.applyBlockEitherNoEvents ValidateAll globals state block of
-        Right x -> seq (rnf x) (n + 1)
+        Right x -> x `deepseq` n + 1
         Left x -> error (show x)
 
 benchreValidate ::
@@ -152,7 +153,7 @@ instance NFData (ChainTransitionError c) where
 
 instance NFData UpdateInputs where
   rnf (UpdateInputs g lv bh st) =
-    seq (rnf g) (seq (rnf lv) (seq (rnf bh) (rnf st)))
+    g `deepseq` lv `deepseq` bh `deepseq` rnf st
 
 genUpdateInputs ::
   forall era.
@@ -169,9 +170,9 @@ genUpdateInputs ::
 genUpdateInputs utxoSize = do
   let ge = genEnv (Proxy :: Proxy era) defaultConstants
   chainstate <- genChainState utxoSize ge
-  (Block blockheader _) <- genBlock ge chainstate
+  Block blockheader _ <- genBlock ge chainstate
   let ledgerview = currentLedgerView (chainNes chainstate)
-  let (ChainState _newepochState keys eta0 etaV etaC etaH slot) = chainstate
+  let ChainState _newepochState keys eta0 etaV etaC etaH slot = chainstate
   let prtclState = PrtclState keys eta0 etaV
   let ticknState = TicknState etaC etaH
   let nonce = case withOriginToMaybe slot of

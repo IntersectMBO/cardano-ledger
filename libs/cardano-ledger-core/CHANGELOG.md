@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `NFData` instance for `Block`
 * Add `ToCBOR` and `FromCBOR` instances for:
   * `BoundedRatio`
   * `PositiveUnitInterval`

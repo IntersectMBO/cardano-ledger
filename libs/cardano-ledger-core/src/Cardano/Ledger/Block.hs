@@ -36,6 +36,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (MemoBytes (Memo), decodeMemoized)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import Data.Foldable (toList)
@@ -58,12 +59,12 @@ deriving stock instance
   (Era era, Eq (TxSeq era), Eq h) =>
   Eq (Block h era)
 
-deriving anyclass instance
-  ( Era era
-  , NoThunks (TxSeq era)
-  , NoThunks h
-  ) =>
+instance
+  (Era era, NoThunks (TxSeq era), NoThunks h) =>
   NoThunks (Block h era)
+
+instance (NFData (TxSeq era), NFData h) => NFData (Block h era) where
+  rnf (Block' h txSeq bytes) = h `deepseq` txSeq `deepseq` rnf bytes
 
 pattern Block ::
   forall era h.
