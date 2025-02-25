@@ -173,6 +173,7 @@ import Cardano.Ledger.Binary.Plain (
   showDecoderError,
   toCborError,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain (assertTag, decodeTagMaybe)
 import Cardano.Ledger.Binary.Version (Version, mkVersion64, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
 import Codec.CBOR.ByteArray (ByteArray (..))
@@ -1204,11 +1205,7 @@ decodeIPv6 =
 --------------------------------------------------------------------------------
 
 decodeTagMaybe :: Decoder s (Maybe Word64)
-decodeTagMaybe =
-  peekTokenType >>= \case
-    C.TypeTag -> Just . fromIntegral <$> decodeTag
-    C.TypeTag64 -> Just <$> decodeTag64
-    _ -> pure Nothing
+decodeTagMaybe = fromPlainDecoder Plain.decodeTagMaybe
 {-# INLINE decodeTagMaybe #-}
 
 allowTag :: Word -> Decoder s ()
@@ -1221,14 +1218,7 @@ allowTag tagExpected = do
 {-# INLINE allowTag #-}
 
 assertTag :: Word -> Decoder s ()
-assertTag tagExpected = do
-  tagReceived <-
-    decodeTagMaybe >>= \case
-      Just tag -> pure tag
-      Nothing -> fail "Expected tag"
-  unless (tagReceived == (fromIntegral tagExpected :: Word64)) $
-    fail $
-      "Expecteg tag " <> show tagExpected <> " but got tag " <> show tagReceived
+assertTag = fromPlainDecoder . Plain.assertTag
 {-# INLINE assertTag #-}
 
 -- | Enforces that the input size is the same as the decoded one, failing in

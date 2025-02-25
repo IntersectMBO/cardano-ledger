@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -12,6 +13,16 @@ module Cardano.Ledger.Shelley.Translation (
 )
 where
 
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+  FromCBOR (..),
+  ToCBOR (..),
+  shelleyProtVer,
+  toPlainDecoder,
+  toPlainEncoding,
+ )
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Core (PParams, TranslationContext, emptyPParams)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -29,6 +40,29 @@ data FromByronTranslationContext = FromByronTranslationContext
   , fbtcMaxLovelaceSupply :: !Word64
   }
   deriving (Eq, Show, Generic)
+
+instance ToCBOR FromByronTranslationContext where
+  toCBOR x@(FromByronTranslationContext _ _ _) =
+    let FromByronTranslationContext {..} = x
+     in toPlainEncoding shelleyProtVer $
+          encode $
+            Rec FromByronTranslationContext
+              !> To fbtcGenDelegs
+              !> To fbtcProtocolParams
+              !> To fbtcMaxLovelaceSupply
+
+instance FromCBOR FromByronTranslationContext where
+  fromCBOR =
+    toPlainDecoder Nothing shelleyProtVer $
+      decode $
+        RecD FromByronTranslationContext
+          <! From
+          <! From
+          <! From
+
+instance EncCBOR FromByronTranslationContext
+
+instance DecCBOR FromByronTranslationContext
 
 -- | Trivial FromByronTranslationContext value, for use in cases where we do not need
 -- to translate from Byron to Shelley.

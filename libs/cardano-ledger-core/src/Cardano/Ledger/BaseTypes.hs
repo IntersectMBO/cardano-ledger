@@ -102,8 +102,6 @@ import Cardano.Ledger.Binary (
   FromCBOR,
   ToCBOR,
   cborError,
-  decodeRationalWithTag,
-  encodeRatioWithTag,
   encodedSizeExpr,
   ifDecoderVersionAtLeast,
  )
@@ -119,9 +117,11 @@ import Cardano.Ledger.Binary.Plain (
   FromCBOR (..),
   ToCBOR (..),
   decodeRecordSum,
+  decodeWord8,
   encodeListLen,
   invalidKey,
  )
+import qualified Cardano.Ledger.Binary.Plain as Plain (decodeRationalWithTag, encodeRatioWithTag)
 import Cardano.Ledger.Binary.Version
 import Cardano.Ledger.Hashes (HashAnnotated (hashAnnotated), SafeHash, SafeToHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -344,19 +344,23 @@ fromRatioBoundedRatio ratio
     lowerBound = minBound :: BoundedRatio b a
     upperBound = maxBound :: BoundedRatio b a
 
-instance (EncCBOR a, Integral a, Bounded a, Typeable b) => EncCBOR (BoundedRatio b a) where
-  encCBOR (BoundedRatio u) = encodeRatioWithTag encCBOR u
+instance (ToCBOR a, Integral a, Bounded a, Typeable b) => ToCBOR (BoundedRatio b a) where
+  toCBOR (BoundedRatio u) = Plain.encodeRatioWithTag toCBOR u
 
 instance
-  (DecCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Show a) =>
-  DecCBOR (BoundedRatio b a)
+  (FromCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Show a) =>
+  FromCBOR (BoundedRatio b a)
   where
-  decCBOR = do
-    r <- decodeRationalWithTag
+  fromCBOR = do
+    r <- Plain.decodeRationalWithTag
     case boundRational r of
       Nothing ->
         cborError $ DecoderErrorCustom "BoundedRatio" (Text.pack $ show r)
       Just u -> pure u
+
+instance (ToCBOR (BoundedRatio b a), Typeable b, Typeable a) => EncCBOR (BoundedRatio b a)
+
+instance (FromCBOR (BoundedRatio b a), Typeable b, Typeable a) => DecCBOR (BoundedRatio b a)
 
 instance Bounded (BoundedRatio b Word64) => ToJSON (BoundedRatio b Word64) where
   toJSON :: BoundedRatio b Word64 -> Value
@@ -450,6 +454,8 @@ newtype PositiveUnitInterval
     , BoundedRational
     , EncCBOR
     , DecCBOR
+    , ToCBOR
+    , FromCBOR
     , ToJSON
     , FromJSON
     , NoThunks
@@ -632,16 +638,18 @@ instance NoThunks ActiveSlotCoeff
 
 instance NFData ActiveSlotCoeff
 
-instance DecCBOR ActiveSlotCoeff where
-  decCBOR = mkActiveSlotCoeff <$> decCBOR
+instance FromCBOR ActiveSlotCoeff where
+  fromCBOR = mkActiveSlotCoeff <$> fromCBOR
 
-instance EncCBOR ActiveSlotCoeff where
-  encCBOR
-    ActiveSlotCoeff
-      { unActiveSlotVal = slotVal
-      , unActiveSlotLog = _logVal
-      } =
-      encCBOR slotVal
+instance ToCBOR ActiveSlotCoeff where
+  toCBOR x@(ActiveSlotCoeff _ _) =
+    let ActiveSlotCoeff {..} = x
+     in -- `unActiveSlotLog` is not encoded, since it can be derived from `unActiveSlotVal`
+        toCBOR unActiveSlotVal
+
+instance DecCBOR ActiveSlotCoeff
+
+instance EncCBOR ActiveSlotCoeff
 
 mkActiveSlotCoeff :: PositiveUnitInterval -> ActiveSlotCoeff
 mkActiveSlotCoeff v =
@@ -792,15 +800,20 @@ word8ToNetwork e
   | fromEnum e < fromEnum (minBound :: Network) = Nothing
   | otherwise = Just $ toEnum (fromEnum e)
 
-instance EncCBOR Network where
-  encCBOR = encCBOR . networkToWord8
-
-instance DecCBOR Network where
-  decCBOR =
-    word8ToNetwork <$> decCBOR >>= \case
+instance FromCBOR Network where
+  fromCBOR = do
+    w8 <- decodeWord8
+    case word8ToNetwork w8 of
       Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
       Just n -> pure n
-  {-# INLINE decCBOR #-}
+  {-# INLINE fromCBOR #-}
+
+instance ToCBOR Network where
+  toCBOR = toCBOR . networkToWord8
+
+instance EncCBOR Network
+
+instance DecCBOR Network
 
 -- | Number of blocks which have been created by stake pools in the current epoch.
 newtype BlocksMade = BlocksMade

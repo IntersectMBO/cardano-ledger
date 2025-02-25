@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `ToCBOR` and `FromCBOR` instance for `FromByronTranslationContext`
 * Add `auxDataSeqDecoder`
 * Remove `constructMetadata`
 * Remove `getProposedPPUpdates` as no longer relevant

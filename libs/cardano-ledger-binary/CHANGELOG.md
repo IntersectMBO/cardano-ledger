@@ -2,6 +2,10 @@
 
 ## 1.6.0.0
 
+* Add to `Plain`:
+  * `assertTag`
+  * `decodeTagMaybe`
+  * `encodeRatioWithTag`,
 * Add `DecCBOR` instance for `Data.IntMap`
 * Add `decodeIntMap`
 * Add `ToCBOR` instance for `PV1.Data`
