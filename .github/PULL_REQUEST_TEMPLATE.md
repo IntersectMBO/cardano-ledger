@@ -6,15 +6,15 @@ to the issue. -->
 
 # Checklist
 
-- [ ] Commits in meaningful sequence and with useful messages
-- [ ] Tests added or updated when needed
-- [ ] `CHANGELOG.md` files updated for packages with externally visible changes<br>
-      **_New section is never added with the code changes._** (See [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd))
+- [ ] Commits in meaningful sequence and with useful messages.
+- [ ] Tests added or updated when needed.
+- [ ] `CHANGELOG.md` files updated for packages with externally visible changes.  
+      **NOTE: _New section is never added with the code changes._** (See [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd)).
 - [ ] Versions updated in `.cabal` and `CHANGELOG.md` files when necessary, according to the
       [versioning process](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#versioning-process).
-- [ ] Version bounds in `.cabal` files updated when necessary<br>
-      **_If you change the bounds in a cabal file, that package itself must have a version increase._** (See [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#versioning-process))
-- [x] Code formatted (use `scripts/fourmolize.sh`)
-- [x] Cabal files formatted (use `scripts/cabal-format.sh`)
-- [x] [`hie.yaml`](https://github.com/intersectmbo/cardano-ledger/blob/master/hie.yaml) updated (use `scripts/gen-hie.sh`)
-- [ ] Self-reviewed the diff
+- [ ] Version bounds in `.cabal` files updated when necessary.  
+      **NOTE: _If bounds change in a cabal file, that package itself must have a version increase._** (See [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#versioning-process)).
+- [x] Code formatted (use `scripts/fourmolize.sh`).
+- [x] Cabal files formatted (use `scripts/cabal-format.sh`).
+- [x] [`hie.yaml`](https://github.com/intersectmbo/cardano-ledger/blob/master/hie.yaml) updated (use `scripts/gen-hie.sh`).
+- [ ] Self-reviewed the diff.
