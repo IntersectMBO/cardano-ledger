@@ -24,7 +24,6 @@ import Test.Cardano.Data
 import Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripCborExpectation,
   roundTripCborFailureExpectation,
-  roundTripCborRangeExpectation,
   roundTripCborRangeFailureExpectation,
  )
 import Test.Cardano.Ledger.Common
@@ -47,10 +46,8 @@ spec = do
     context "Coin" $ do
       prop "Non-negative Coin succeeds for all eras" $
         \(NonNegative i) -> roundTripCborExpectation (Coin i)
-      prop "Negative Coin succeeds for pre-Conway" $
-        \(Negative i) -> roundTripCborRangeExpectation minBound (natVersion @8) (Coin i)
-      prop "Negative Coin fails to deserialise for Conway" $
-        \(Negative i) -> roundTripCborRangeFailureExpectation (natVersion @9) (natVersion @9) (Coin i)
+      prop "Negative Coin fails to deserialise for all eras" $
+        \(Negative i) -> roundTripCborRangeFailureExpectation (natVersion @0) maxBound (Coin i)
     context "MultiAsset" $ do
       prop "Non-zero-valued MultiAsset succeeds for all eras" $
         roundTripCborExpectation @MultiAsset
