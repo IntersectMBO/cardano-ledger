@@ -81,6 +81,7 @@ import Cardano.Ledger.Slot (
  )
 import Cardano.Ledger.State (UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId, TxIn (TxIn))
+import Cardano.Protocol.Crypto (Crypto)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Codec.Serialise (serialise)
 import Control.Monad (replicateM)
@@ -94,7 +95,6 @@ import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, mkAddr, mkCredential, vKey)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
   ScriptClass,
@@ -183,8 +183,8 @@ data ScriptSpace era = ScriptSpace
 deriving instance Show (Script era) => Show (ScriptSpace era)
 
 -- | Generator environment.
-data GenEnv era = GenEnv
-  { geKeySpace :: KeySpace era
+data GenEnv c era = GenEnv
+  { geKeySpace :: KeySpace c era
   , geScriptSpapce :: ScriptSpace era
   , geConstants :: Constants
   }
@@ -192,11 +192,11 @@ data GenEnv era = GenEnv
 -- | Collection of all keys which are required to generate a trace.
 --
 --   These are the _only_ keys which should be involved in the trace.
-data KeySpace era = KeySpace_
-  { ksCoreNodes :: [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)]
-  , ksGenesisDelegates :: [AllIssuerKeys MockCrypto 'GenesisDelegate]
+data KeySpace c era = KeySpace_
+  { ksCoreNodes :: [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)]
+  , ksGenesisDelegates :: [AllIssuerKeys c 'GenesisDelegate]
   -- ^ Bag of keys to be used for future genesis delegates
-  , ksStakePools :: [AllIssuerKeys MockCrypto 'StakePool]
+  , ksStakePools :: [AllIssuerKeys c 'StakePool]
   -- ^ Bag of keys to be used for future stake pools
   , ksKeyPairs :: KeyPairs
   -- ^ Bag of keys to be used for future payment/staking addresses
@@ -206,7 +206,7 @@ data KeySpace era = KeySpace_
   , ksIndexedStakingKeys :: Map (KeyHash 'Staking) (KeyPair 'Staking)
   -- ^ Index over the staking keys in 'ksKeyPairs'
   , ksIndexedGenDelegates ::
-      Map (KeyHash 'GenesisDelegate) (AllIssuerKeys MockCrypto 'GenesisDelegate)
+      Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate)
   -- ^ Index over the cold key hashes in Genesis Delegates
   , ksIndexedPayScripts :: Map ScriptHash (Script era, Script era)
   -- ^ Index over the pay script hashes in Script pairs
@@ -214,17 +214,17 @@ data KeySpace era = KeySpace_
   -- ^ Index over the stake script hashes in Script pairs
   }
 
-deriving instance (Era era, Show (Script era)) => Show (KeySpace era)
+deriving instance (Era era, Show (Script era), Crypto c) => Show (KeySpace c era)
 
 pattern KeySpace ::
-  forall era.
+  forall c era.
   ScriptClass era =>
-  [(GenesisKeyPair MockCrypto, AllIssuerKeys MockCrypto 'GenesisDelegate)] ->
-  [AllIssuerKeys MockCrypto 'GenesisDelegate] ->
-  [AllIssuerKeys MockCrypto 'StakePool] ->
+  [(GenesisKeyPair c, AllIssuerKeys c 'GenesisDelegate)] ->
+  [AllIssuerKeys c 'GenesisDelegate] ->
+  [AllIssuerKeys c 'StakePool] ->
   KeyPairs ->
   [(Script era, Script era)] ->
-  KeySpace era
+  KeySpace c era
 pattern KeySpace
   ksCoreNodes
   ksGenesisDelegates
@@ -469,8 +469,8 @@ genPlutus (GenEnv _ (ScriptSpace scripts _) _) = gettriple <$> oneof (pure <$> s
 
 -- | Find the preallocated Script from its Hash.
 findPlutus ::
-  forall era.
-  GenEnv era ->
+  forall era c.
+  GenEnv c era ->
   ScriptHash ->
   (Script era, StrictMaybe DataHash)
 findPlutus (GenEnv keyspace (ScriptSpace _ _ mp3 mp2) _) hsh =

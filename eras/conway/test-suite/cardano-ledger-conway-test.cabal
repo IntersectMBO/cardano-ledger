@@ -39,7 +39,7 @@ library
     cardano-ledger-mary >=1.4,
     cardano-ledger-shelley >=1.16,
     cardano-ledger-shelley-ma-test >=1.1,
-    cardano-ledger-shelley-test >=1.1,
+    cardano-ledger-shelley-test >=1.6,
     cardano-strict-containers,
     containers,
     data-default,

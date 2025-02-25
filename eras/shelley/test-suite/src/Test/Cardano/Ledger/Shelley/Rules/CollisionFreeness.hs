@@ -27,6 +27,7 @@ import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro hiding (ix)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -63,7 +64,7 @@ tests ::
   ( EraGen era
   , ChainProperty era
   , TestingLedger era ledger
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   TestTree
 tests =

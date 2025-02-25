@@ -24,6 +24,7 @@ import Control.State.Transition (Environment, Signal, State)
 import Data.Proxy (Proxy)
 import GHC.Generics (Generic)
 import Test.Cardano.Ledger.AllegraEraGen ()
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
@@ -70,7 +71,7 @@ instance NFData (ApplyTxEnv era) where
 generateApplyTxEnvForEra ::
   forall era.
   ( EraGen era
-  , HasTrace (EraRule "LEDGER" era) (GenEnv era)
+  , HasTrace (EraRule "LEDGER" era) (GenEnv MockCrypto era)
   , BaseEnv (EraRule "LEDGER" era) ~ Globals
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
@@ -81,7 +82,7 @@ generateApplyTxEnvForEra ::
   Int ->
   ApplyTxEnv era
 generateApplyTxEnvForEra eraProxy seed =
-  let ge = genEnv eraProxy defaultConstants
+  let ge = genEnv @era @MockCrypto eraProxy defaultConstants
       qcSeed = mkQCGen seed
       traceGen =
         traceFromInitState

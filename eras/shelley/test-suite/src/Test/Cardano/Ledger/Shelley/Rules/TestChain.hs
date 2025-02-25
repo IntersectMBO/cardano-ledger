@@ -125,7 +125,7 @@ type TestingLedger era ledger =
 shortChainTrace ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , EraGov era
   ) =>
   Constants ->
@@ -293,7 +293,7 @@ forAllChainTrace ::
   forall era prop.
   ( Testable prop
   , EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , EraGov era
   ) =>
   Word64 -> -- trace length
@@ -305,8 +305,8 @@ forAllChainTrace n constants prop =
     forAllTraceFromInitState
       testGlobals
       n
-      (Preset.genEnv p constants)
-      (Just $ mkGenesisChainState (Preset.genEnv p constants))
+      (Preset.genEnv @era @MockCrypto p constants)
+      (Just $ mkGenesisChainState (Preset.genEnv @era @MockCrypto p constants))
       prop
   where
     p :: Proxy era
@@ -317,8 +317,8 @@ forEachEpochTrace ::
   forall era prop.
   ( EraGen era
   , Testable prop
-  , QC.HasTrace (CHAIN era) (GenEnv era)
   , EraGov era
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   Int ->
   Word64 ->

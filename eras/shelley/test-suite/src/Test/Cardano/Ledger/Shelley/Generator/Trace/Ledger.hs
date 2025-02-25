@@ -39,6 +39,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.State (EraUTxO)
+import Cardano.Protocol.Crypto (Crypto)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -93,8 +94,9 @@ instance
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , ProtVerAtMost era 8
   , EraCertState era
+  , Crypto c
   ) =>
-  TQC.HasTrace (ShelleyLEDGER era) (GenEnv era)
+  TQC.HasTrace (ShelleyLEDGER era) (GenEnv c era)
   where
   envGen GenEnv {geConstants} =
     LedgerEnv (SlotNo 0) Nothing minBound
@@ -109,7 +111,7 @@ instance
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 instance
-  forall era.
+  forall era c.
   ( EraGen era
   , EraGov era
   , EraUTxO era
@@ -123,8 +125,9 @@ instance
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , ProtVerAtMost era 8
   , EraCertState era
+  , Crypto c
   ) =>
-  TQC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
+  TQC.HasTrace (ShelleyLEDGERS era) (GenEnv c era)
   where
   envGen GenEnv {geConstants} =
     LedgersEnv (SlotNo 0) (EpochNo 0)
@@ -173,11 +176,11 @@ instance
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
-  forall a era ledger.
+  forall a era ledger c.
   ( EraGen era
   , EraGov era
   ) =>
-  GenEnv era ->
+  GenEnv c era ->
   IRC ledger ->
   Gen (Either a (LedgerState era))
 mkGenesisLedgerState ge@(GenEnv _ _ c) _ =

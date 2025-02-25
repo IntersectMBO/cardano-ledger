@@ -32,6 +32,7 @@ import Data.Foldable as F (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (MockCrypto)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -64,7 +65,7 @@ import Test.Tasty.QuickCheck (testProperty)
 tests ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv era)
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , ChainProperty era
   ) =>
   TestTree

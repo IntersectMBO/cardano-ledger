@@ -148,7 +148,7 @@ type MinUTXO_STS era =
 class Show (TxOut era) => MinGenTxout era where
   calcEraMinUTxO :: TxOut era -> PParams era -> Coin
   addValToTxOut :: Value era -> TxOut era -> TxOut era
-  genEraTxOut :: GenEnv era -> Gen (Value era) -> [Addr] -> Gen [TxOut era]
+  genEraTxOut :: GenEnv c era -> Gen (Value era) -> [Addr] -> Gen [TxOut era]
 
 -- ======================================================================================
 -- The EraGen class. Generally one method for each type family in Cardano.Ledger.Core
@@ -167,7 +167,7 @@ class
   EraGen era
   where
   -- | Generate a genesis value for the Era
-  genGenesisValue :: GenEnv era -> Gen (Value era)
+  genGenesisValue :: GenEnv c era -> Gen (Value era)
 
   -- | A list of three-phase scripts that can be chosen for payment when building a transaction
   genEraTwoPhase3Arg :: [TwoPhase3ArgInfo era]
@@ -181,7 +181,7 @@ class
   -- and a list of additional scripts for eras that sometimes require
   -- additional script witnessing.
   genEraTxBody ::
-    GenEnv era ->
+    GenEnv c era ->
     UTxO era ->
     PParams era ->
     SlotNo ->
@@ -270,7 +270,7 @@ class
 someKeyPairs :: Constants -> (Int, Int) -> Gen KeyPairs
 someKeyPairs c range = take <$> choose range <*> shuffle (keyPairs c)
 
-genUtxo0 :: forall era. EraGen era => GenEnv era -> Gen (UTxO era)
+genUtxo0 :: forall era c. EraGen era => GenEnv c era -> Gen (UTxO era)
 genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
   let range = (minGenesisUTxOouts `div` 2, maxGenesisUTxOouts `div` 2)
   genesisKeys <- someKeyPairs c range
