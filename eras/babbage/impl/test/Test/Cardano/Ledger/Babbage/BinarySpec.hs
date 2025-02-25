@@ -17,13 +17,15 @@ import Test.Cardano.Ledger.Core.Binary as Binary (
   decoderEquivalenceCoreEraTypesSpec,
   decoderEquivalenceEraSpec,
  )
-import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra (..))
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra (..), roundTripEraTypeSpec)
 
 spec :: Spec
 spec = do
   specUpgrade @BabbageEra def
   describe "RoundTrip" $ do
     roundTripAlonzoCommonSpec @BabbageEra
+    roundTripEraTypeSpec @BabbageEra @TxDats
+    roundTripEraTypeSpec @BabbageEra @Redeemers
   describe "DecCBOR instances equivalence" $ do
     Binary.decoderEquivalenceCoreEraTypesSpec @BabbageEra
     decoderEquivalenceEraSpec @BabbageEra @(TxDats BabbageEra)
