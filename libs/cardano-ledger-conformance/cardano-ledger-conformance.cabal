@@ -79,7 +79,7 @@ library
     cardano-ledger-core:testlib,
     cardano-ledger-executable-spec,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-    cardano-ledger-shelley-test >=1.6,
+    cardano-ledger-shelley-test,
     cardano-ledger-test,
     cardano-strict-containers,
     constrained-generators,
