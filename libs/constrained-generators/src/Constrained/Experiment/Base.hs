@@ -417,9 +417,9 @@ type GenericC a =
 data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   InjLeftW :: forall a b. BaseW () "leftFn" '[a] (Sum a b)
   InjRightW :: forall a b. BaseW () "rightFn" '[b] (Sum a b)
-  PairW :: forall a b. BaseW () "pairFn" '[a, b] (Prod a b)
-  FstW :: forall a b. BaseW () "fstFn" '[Prod a b] a
-  SndW :: forall a b. BaseW () "sndFn" '[Prod a b] b
+  PairW :: forall a b. BaseW () "prod_" '[a, b] (Prod a b)
+  FstW :: forall a b. BaseW () "prodFst_" '[Prod a b] a
+  SndW :: forall a b. BaseW () "prodSnd_" '[Prod a b] b
   EqualW :: forall a. BaseW (Eq a) "==." '[a, a] Bool
   ToGenericW ::
     GenericC a => BaseW () "toGenericFn" '[a] (SimpleRep a)
@@ -434,9 +434,9 @@ instance Show (BaseW c s d r) where
   show FromGenericW = "fromSimpleRep"
   show InjLeftW = "leftFn"
   show InjRightW = "rightFn"
-  show PairW = "pairFn"
-  show FstW = "fstFn"
-  show SndW = "sndFn"
+  show PairW = "prod_"
+  show FstW = "prodFst_"
+  show SndW = "prodSnd_"
   show EqualW = "==."
   show ElemW = "elem_"
 
@@ -456,8 +456,8 @@ instance Witness BaseW where
   inFix EqualW = True
   inFix _ = False
   prettyWit ElemW (y :> Lit n :> Nil) prec = Just $ parensIf (prec > 10) $ "elem_" <+> prettyPrec 10 y <+> short n
-  prettyWit ToGenericW (x :> Nil) p = Just $ parens $ pretty (WithPrec p x)
-  prettyWit FromGenericW (x :> Nil) p = Just $ parens $ pretty (WithPrec p x)
+  prettyWit ToGenericW (x :> Nil) p = Just $ "to" <+> pretty (WithPrec p x)
+  prettyWit FromGenericW (x :> Nil) p = Just $ "from" <+> pretty (WithPrec p x)
   prettyWit _ _ _ = Nothing
 
 -- ============== ToGenericW FunSym instance
@@ -521,7 +521,7 @@ instance (GenericC a, dom ~ SimpleRep a) => FunSym () "fromGenericFn" BaseW '[do
 
 fromGeneric_ ::
   forall a.
-  GenericC a =>
+  (GenericC a, AppRequires () "fromGenericFn" BaseW '[SimpleRep a] a) =>
   Term (SimpleRep a) ->
   Term a
 fromGeneric_ = appTerm FromGenericW
@@ -1180,7 +1180,9 @@ instance HasSpec () where
   typeSpecOpt _ (_ : _) = ErrorSpec (pure "Non null 'cant' set in typeSpecOpt @()")
 
 -- ========================================================================
--- Bi-directional patterns for the Function Symbols in BaseW
+-- Uni-directional, Match only patterns for the Function Symbols in BaseW
+-- The commented out Constructor patterns , work but have such convoluted types
+-- with out a monomorphic typing, are basically useless. Use the xxx_ functions instead.
 
 pattern Equal ::
   forall b.
@@ -1202,7 +1204,7 @@ pattern Elem ::
   Term a -> Term [a] -> Term b
 pattern Elem x y <-
   ( App
-      (sameWitness (ElemW @()) -> Just (ElemW, Refl, Refl))
+      (sameWitness (ElemW @_) -> Just (ElemW, Refl, Refl))
       (x :> y :> Nil)
     )
 
@@ -1212,9 +1214,10 @@ pattern FromGeneric ::
   forall a.
   (rng ~ a, GenericC a, AppRequires () "fromGenericFn" BaseW '[SimpleRep a] rng) =>
   Term (SimpleRep a) -> Term rng
-pattern FromGeneric x <- (App (sameWitness (FromGenericW @()) -> Just (FromGenericW, Refl, Refl)) (x :> Nil))
-  where
-    FromGeneric x = App FromGenericW (x :> Nil)
+pattern FromGeneric x <-
+  (App (sameWitness (FromGenericW @()) -> Just (FromGenericW, Refl, Refl)) (x :> Nil))
+
+-- where FromGeneric x = App FromGenericW (x :> Nil)
 
 pattern ToGeneric ::
   forall rng.
@@ -1223,8 +1226,8 @@ pattern ToGeneric ::
   (rng ~ SimpleRep a, GenericC a, AppRequires () "toGenericFn" BaseW '[a] rng) =>
   Term a -> Term rng
 pattern ToGeneric x <- (App (sameWitness (ToGenericW @()) -> Just (ToGenericW, Refl, Refl)) (x :> Nil))
-  where
-    ToGeneric x = App ToGenericW (x :> Nil)
+
+-- where ToGeneric x = App ToGenericW (x :> Nil)
 
 pattern InjRight ::
   forall c.
@@ -1234,9 +1237,9 @@ pattern InjRight ::
   , AppRequires () "rightFn" BaseW '[b] c
   ) =>
   Term b -> Term c
-pattern InjRight x <- (App (sameWitness (InjRightW @() @()) -> Just (InjRightW, Refl, Refl)) (x :> Nil))
-  where
-    InjRight x = App InjRightW (x :> Nil)
+pattern InjRight x <- (App (sameWitness (InjRightW @_ @_) -> Just (InjRightW, Refl, Refl)) (x :> Nil))
+
+-- whereInjRight x = App InjRightW (x :> Nil)
 
 pattern InjLeft ::
   forall c.
@@ -1247,41 +1250,41 @@ pattern InjLeft ::
   ) =>
   Term a -> Term c
 pattern InjLeft x <- (App (sameWitness (InjLeftW @() @()) -> Just (InjLeftW, Refl, Refl)) (x :> Nil))
-  where
-    InjLeft x = App InjLeftW (x :> Nil)
+
+-- where InjLeft x = App InjLeftW (x :> Nil)
 
 pattern Fst ::
   forall c.
   () =>
   forall a b.
   ( c ~ a
-  , AppRequires () "fstFn" BaseW '[Prod a b] a
+  , AppRequires () "prodFst_" BaseW '[Prod a b] a
   ) =>
   Term (Prod a b) -> Term c
 pattern Fst x <- (App (sameWitness (FstW @() @()) -> Just (FstW, Refl, Refl)) (x :> Nil))
-  where
-    Fst x = App FstW (x :> Nil)
+
+-- where Fst x = App FstW (x :> Nil)
 
 pattern Snd ::
   forall c.
   () =>
   forall a b.
   ( c ~ b
-  , AppRequires () "sndFn" BaseW '[Prod a b] b
+  , AppRequires () "prodSnd_" BaseW '[Prod a b] b
   ) =>
   Term (Prod a b) -> Term c
 pattern Snd x <- (App (sameWitness (SndW @() @()) -> Just (SndW, Refl, Refl)) (x :> Nil))
-  where
-    Snd x = App SndW (x :> Nil)
+
+-- where Snd x = App SndW (x :> Nil)
 
 pattern Pair ::
   forall c.
   () =>
   forall a b.
   ( c ~ Prod a b
-  , AppRequires () "pairFn" BaseW '[a, b] c
+  , AppRequires () "prod_" BaseW '[a, b] c
   ) =>
   Term a -> Term b -> Term c
-pattern Pair x y <- (App (sameWitness (PairW @() @()) -> Just (PairW, Refl, Refl)) (x :> y :> Nil))
-  where
-    Pair x y = App PairW (x :> y :> Nil)
+pattern Pair x y <- (App (sameWitness (PairW @_ @_) -> Just (PairW, Refl, Refl)) (x :> y :> Nil))
+
+-- where Pair x y = App PairW (x :> y :> Nil)

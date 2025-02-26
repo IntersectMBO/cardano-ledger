@@ -8,7 +8,9 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -54,9 +56,9 @@ module Constrained.Experiment.Specs.SumProd (
   pair_,
   leftFn,
   rightFn,
-  fstFn,
-  sndFn,
-  pairFn,
+  prodFst_,
+  prodSnd_,
+  prod_,
   PairSpec (..),
 ) where
 
@@ -120,8 +122,8 @@ instance (HasSpec a, HasSpec b) => HasSpec (Prod a b) where
       ++ [Prod a b' | b' <- shrinkWithSpec sb b]
 
   toPreds x (Cartesian sf ss) =
-    satisfies (fstFn x) sf
-      <> satisfies (sndFn x) ss
+    satisfies (prodFst_ x) sf
+      <> satisfies (prodSnd_ x) ss
 
   cardinalTypeSpec (Cartesian x y) = (cardinality x) + (cardinality y)
 
@@ -144,13 +146,65 @@ instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
     (BinaryShow "Cartesian" ps) -> show $ parens ("Cartesian" /> vsep ps)
     _ -> "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
 
+{-
+
+p1 :: Term (SimpleRep (Bool,Bool))
+p1 = prod_ (Lit True) (Lit False)
+
+p2 :: Term (Bool,Bool)
+p2 = fromGeneric_ p1
+
+pp :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (a,b)
+pp x y = fromGeneric_ (prod_ x y)
+
+qq x y = toGeneric_ (pp x y)
+
+baz :: Term a -> Maybe String
+baz (ToGeneric (FromGeneric x)) = Just $ "BINGO! To From " ++ show x
+baz (ToGeneric x) = Just $ "To " ++ show x
+baz (Fst (ToGeneric x)) = Just $ "BONGO! Fst To "++show x
+baz (Fst x) = Just $ "Fst "++show x
+baz (Lit _) = Just $ "Lit "
+baz (V _) = Just $ "Var "
+baz (App f _) = Just $ "App "++show f
+-- baz _ = Nothing
+
+_foo :: (HasSpec a, HasSpec b) => Term(a,b) -> Term a
+_foo ab = prodFst_ (toGeneric_ ab)
+
+tuple :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (a,b)
+tuple x y = fromGeneric_ (prod_ x y)
+
+-}
+
+{-
+pattern Tuple ::
+   forall rng. () =>
+   forall a b. ( AppRequires () "fromGenericFn" BaseW '[Prod a b] rng
+               , AppRequires () "prod_" BaseW [a, b] (Prod a b) ) =>
+               -- , HasSimpleRep rng, SimpleRep rng ~ Prod a b,TypeSpec rng ~ PairSpec a b ) =>
+   Term a -> Term b -> Term rng
+pattern Tuple x y <- FromGeneric (Pair x y)
+   -- where Tuple x y =  FromGeneric (Pair x y)
+-}
+
+{-
+pattern FstTuple ::
+  forall c.   () =>
+  forall b d. ( AppRequires () "prodFst_" BaseW '[Prod c b] c
+                , SimpleRep d ~ Prod c b
+                , AppRequires () "toGenericFn" BaseW '[d] (SimpleRep d)
+                ) => Term d -> Term c
+pattern FstTuple x <- Fst (ToGeneric x)
+-}
+
 -- ==================================================
 -- FunSym instances for Pairs
 -- ==================================================
 
 -- ========= FstW
 
-instance (HasSpec a, HasSpec b) => FunSym () "fstFn" BaseW '[Prod a b] a where
+instance (HasSpec a, HasSpec b) => FunSym () "prodFst_" BaseW '[Prod a b] a where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -169,12 +223,12 @@ instance (HasSpec a, HasSpec b) => FunSym () "fstFn" BaseW '[Prod a b] a where
 
   mapTypeSpec FstW (Cartesian s _) = s
 
-fstFn :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term a
-fstFn = appTerm FstW
+prodFst_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term a
+prodFst_ = appTerm FstW
 
 -- ========= SndW
 
-instance (HasSpec a, HasSpec b) => FunSym () "sndFn" BaseW '[Prod a b] b where
+instance (HasSpec a, HasSpec b) => FunSym () "prodSnd_" BaseW '[Prod a b] b where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -193,8 +247,8 @@ instance (HasSpec a, HasSpec b) => FunSym () "sndFn" BaseW '[Prod a b] b where
 
   mapTypeSpec SndW (Cartesian _ s) = s
 
-sndFn :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term b
-sndFn = appTerm SndW
+prodSnd_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term b
+prodSnd_ = appTerm SndW
 
 -- ========= PairW
 sameFst :: Eq a1 => a1 -> [Prod a1 a2] -> [a2]
@@ -203,7 +257,7 @@ sameFst a ps = [b | Prod a' b <- ps, a == a']
 sameSnd :: Eq a1 => a1 -> [Prod a2 a1] -> [a2]
 sameSnd b ps = [a | Prod a b' <- ps, b == b']
 
-instance (HasSpec a, HasSpec b) => FunSym () "pairFn" BaseW '[a, b] (Prod a b) where
+instance (HasSpec a, HasSpec b) => FunSym () "prod_" BaseW '[a, b] (Prod a b) where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -243,8 +297,8 @@ instance (HasSpec a, HasSpec b) => FunSym () "pairFn" BaseW '[a, b] (Prod a b) w
   propagate ctx _ =
     ErrorSpec $ pure ("FunSym instance for PairW with wrong number of arguments. " ++ show ctx)
 
-pairFn :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (Prod a b)
-pairFn = appTerm PairW
+prod_ :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (Prod a b)
+prod_ = appTerm PairW
 
 -- ==================================================================
 -- The HasSpec instance for Sum is in TheKnot.
@@ -400,7 +454,7 @@ instance {-# OVERLAPPABLE #-} Args a ~ '[a] => IsProd a where
 
 instance IsProd b => IsProd (Prod a b) where
   toArgs (p :: Term (Prod a b))
-    | Evidence <- prerequisites @(Prod a b) = (fstFn p) :> toArgs (sndFn p)
+    | Evidence <- prerequisites @(Prod a b) = (prodFst_ p) :> toArgs (prodSnd_ p)
 
 type family Args t where
   Args (Prod a b) = a : Args b
@@ -455,10 +509,10 @@ instance
   inj_ = rightFn . inj_ @c @(con' : sop)
 
 class HasSpec (ProdOver constr) => ConstrTerm constr where
-  prod_ :: List Term constr -> Term (ProdOver constr)
+  prodOver_ :: List Term constr -> Term (ProdOver constr)
 
 instance HasSpec a => ConstrTerm '[a] where
-  prod_ (a :> Nil) = a
+  prodOver_ (a :> Nil) = a
 
 type family At n as where
   At 0 (a : as) = a
@@ -471,7 +525,7 @@ instance Select 0 (a : '[]) where
   select_ = id
 
 instance (HasSpec a, HasSpec (ProdOver (a' : as))) => Select 0 (a : a' : as) where
-  select_ = fstFn
+  select_ = prodFst_
 
 instance
   {-# OVERLAPPABLE #-}
@@ -482,7 +536,7 @@ instance
   ) =>
   Select n (a : a' : as)
   where
-  select_ = select_ @(n - 1) @(a' : as) . sndFn
+  select_ = select_ @(n - 1) @(a' : as) . prodSnd_
 
 class IsConstrOf (c :: Symbol) b sop where
   mkCases ::
@@ -563,7 +617,7 @@ fst_ ::
   ) =>
   Term (a, b) ->
   Term a
-fst_ = fstFn . toGeneric_
+fst_ = prodFst_ . toGeneric_
 
 snd_ ::
   ( HasSpec a
@@ -573,7 +627,7 @@ snd_ ::
   ) =>
   Term (a, b) ->
   Term b
-snd_ = sndFn . toGeneric_
+snd_ = prodSnd_ . toGeneric_
 -}
 
 pair_ ::
@@ -585,7 +639,7 @@ pair_ ::
   Term a ->
   Term b ->
   Term (a, b)
-pair_ x y = fromGeneric_ $ pairFn x y
+pair_ x y = fromGeneric_ $ prod_ x y
 
 left_ ::
   ( HasSpec a
@@ -692,7 +746,7 @@ con ::
   r
 con =
   curryList @(ConstrOf c (TheSop a)) @Term
-    (fromGeneric_ @a . inj_ @c @(TheSop a) . prod_)
+    (fromGeneric_ @a . inj_ @c @(TheSop a) . prodOver_)
 
 cJust_ :: (HasSpec a, IsNormalType a) => Term a -> Term (Maybe a)
 cJust_ = con @"Just"
@@ -777,7 +831,7 @@ instance
   ) =>
   ConstrTerm (a : b : as)
   where
-  prod_ (a :> as) = pairFn a (prod_ as)
+  prodOver_ (a :> as) = prod_ a (prodOver_ as)
 
 -- TODO: the constraints around this are horrible!! We should figure out a way to make these things nicer.
 onCon ::
