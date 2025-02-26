@@ -506,10 +506,12 @@ transTxBodyWithdrawals :: EraTxBody era => TxBody era -> PV3.Map PV3.Credential 
 transTxBodyWithdrawals txBody =
   transMap transRewardAccount transCoinToLovelace (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
 
--- | In version 9, a bug in `RegTxCert` and `UnRegTxCert` pattern definitions
--- was causing the deposit in `RegDepositTxCert` and `UnRegDepositTxCert` to be omitted.
--- We need to keep this behavior for version 9, so, now that the bug in the patterns has been fixed,
--- we are explicitly omitting the deposit in these cases.
+-- | In protocol version 9, a bug in `RegTxCert` and `UnRegTxCert` pattern definitions was causing
+-- the deposit in `RegDepositTxCert` and `UnRegDepositTxCert` to be omitted.  We need to keep this
+-- behavior for version 9, so, now that the bug in the patterns has been fixed, we are explicitly
+-- omitting the deposit in these cases. It has been confirmed that this buggy behavior for protocol
+-- version 9 has been exercised on Mainnet, therefore this conditional translation can never be
+-- removed for Conway era (#4863)
 transTxCert :: ConwayEraTxCert era => ProtVer -> TxCert era -> PV3.TxCert
 transTxCert pv = \case
   RegPoolTxCert PoolParams {ppId, ppVrf} ->
