@@ -155,10 +155,10 @@ instance Ord k => Forallable (Map k v) (k, v) where
 -- We will need to take projections on (Specification (a,b))
 
 fstSpec :: forall k v. (HasSpec k, HasSpec v) => Specification (k, v) -> Specification k
-fstSpec s = mapSpec FstW (mapSpec ToGenericW s)
+fstSpec s = mapSpec ProdFstW (mapSpec ToGenericW s)
 
 sndSpec :: forall k v. (HasSpec k, HasSpec v) => Specification (k, v) -> Specification v
-sndSpec s = mapSpec SndW (mapSpec ToGenericW s)
+sndSpec s = mapSpec ProdSndW (mapSpec ToGenericW s)
 
 -- ======================================================================
 -- The HasSpec instance for Maps

@@ -603,7 +603,7 @@ prefixedBy ys xss = [drop (length ys) xs | xs <- xss, ys `isPrefixOf` xs]
 suffixedBy :: Eq a => [a] -> [[a]] -> [[a]]
 suffixedBy ys xss = [take (length xs - length ys) xs | xs <- xss, ys `isSuffixOf` xs]
 
-alreadyHave :: (Eq a, Typeable a, Show a) => [a] -> ListSpec a -> ListSpec a
+alreadyHave {- (Eq a, Typeable a, Show a) -} :: Eq a => [a] -> ListSpec a -> ListSpec a
 alreadyHave ys (ListSpec h m sz e f) =
   ListSpec
     -- Reduce the hint
@@ -618,7 +618,7 @@ alreadyHave ys (ListSpec h m sz e f) =
     -- we have fewer things to sum now
     (alreadyHaveFold ys f)
 
-alreadyHaveFold :: (Typeable a, Show a) => [a] -> FoldSpec a -> FoldSpec a
+alreadyHaveFold {- (Typeable a, Show a) => -} :: [a] -> FoldSpec a -> FoldSpec a
 alreadyHaveFold _ NoFold = NoFold
 alreadyHaveFold ys (FoldSpec fn spec) =
   FoldSpec

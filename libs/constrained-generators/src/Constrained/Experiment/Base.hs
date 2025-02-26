@@ -417,9 +417,9 @@ type GenericC a =
 data BaseW (c :: Constraint) (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   InjLeftW :: forall a b. BaseW () "leftFn" '[a] (Sum a b)
   InjRightW :: forall a b. BaseW () "rightFn" '[b] (Sum a b)
-  PairW :: forall a b. BaseW () "prod_" '[a, b] (Prod a b)
-  FstW :: forall a b. BaseW () "prodFst_" '[Prod a b] a
-  SndW :: forall a b. BaseW () "prodSnd_" '[Prod a b] b
+  ProdW :: forall a b. BaseW () "prod_" '[a, b] (Prod a b)
+  ProdFstW :: forall a b. BaseW () "prodFst_" '[Prod a b] a
+  ProdSndW :: forall a b. BaseW () "prodSnd_" '[Prod a b] b
   EqualW :: forall a. BaseW (Eq a) "==." '[a, a] Bool
   ToGenericW ::
     GenericC a => BaseW () "toGenericFn" '[a] (SimpleRep a)
@@ -434,9 +434,9 @@ instance Show (BaseW c s d r) where
   show FromGenericW = "fromSimpleRep"
   show InjLeftW = "leftFn"
   show InjRightW = "rightFn"
-  show PairW = "prod_"
-  show FstW = "prodFst_"
-  show SndW = "prodSnd_"
+  show ProdW = "prod_"
+  show ProdFstW = "prodFst_"
+  show ProdSndW = "prodSnd_"
   show EqualW = "==."
   show ElemW = "elem_"
 
@@ -445,9 +445,9 @@ baseSem FromGenericW = fromSimpleRep
 baseSem ToGenericW = toSimpleRep
 baseSem InjLeftW = SumLeft
 baseSem InjRightW = SumRight
-baseSem PairW = Prod
-baseSem FstW = prodFst
-baseSem SndW = prodSnd
+baseSem ProdW = Prod
+baseSem ProdFstW = prodFst
+baseSem ProdSndW = prodSnd
 baseSem EqualW = (==)
 baseSem ElemW = elem
 
@@ -596,7 +596,7 @@ data Term a where
     forall c sym t dom rng.
     AppRequires c sym t dom rng =>
     t c sym dom rng -> List Term dom -> Term rng
-  Lit :: Literal a => a -> Term a
+  Lit :: HasSpec a => a -> Term a
   V :: HasSpec a => Var a -> Term a
 
 instance Eq (Term a) where
@@ -1212,7 +1212,7 @@ pattern FromGeneric ::
   forall rng.
   () =>
   forall a.
-  (rng ~ a, GenericC a, AppRequires () "fromGenericFn" BaseW '[SimpleRep a] rng) =>
+  (rng ~ a, GenericC a, HasSpec a, AppRequires () "fromGenericFn" BaseW '[SimpleRep a] rng) =>
   Term (SimpleRep a) -> Term rng
 pattern FromGeneric x <-
   (App (sameWitness (FromGenericW @()) -> Just (FromGenericW, Refl, Refl)) (x :> Nil))
@@ -1223,7 +1223,7 @@ pattern ToGeneric ::
   forall rng.
   () =>
   forall a.
-  (rng ~ SimpleRep a, GenericC a, AppRequires () "toGenericFn" BaseW '[a] rng) =>
+  (rng ~ SimpleRep a, GenericC a, HasSpec a, AppRequires () "toGenericFn" BaseW '[a] rng) =>
   Term a -> Term rng
 pattern ToGeneric x <- (App (sameWitness (ToGenericW @()) -> Just (ToGenericW, Refl, Refl)) (x :> Nil))
 
@@ -1253,31 +1253,35 @@ pattern InjLeft x <- (App (sameWitness (InjLeftW @() @()) -> Just (InjLeftW, Ref
 
 -- where InjLeft x = App InjLeftW (x :> Nil)
 
-pattern Fst ::
+pattern ProdFst ::
   forall c.
   () =>
   forall a b.
   ( c ~ a
+  , Typeable (Prod a b)
+  , HasSpec a
   , AppRequires () "prodFst_" BaseW '[Prod a b] a
   ) =>
   Term (Prod a b) -> Term c
-pattern Fst x <- (App (sameWitness (FstW @() @()) -> Just (FstW, Refl, Refl)) (x :> Nil))
+pattern ProdFst x <- (App (sameWitness (ProdFstW @() @()) -> Just (ProdFstW, Refl, Refl)) (x :> Nil))
 
--- where Fst x = App FstW (x :> Nil)
+-- where Fst x = App ProdFstW (x :> Nil)
 
-pattern Snd ::
+pattern ProdSnd ::
   forall c.
   () =>
   forall a b.
   ( c ~ b
+  , Typeable (Prod a b)
+  , HasSpec b
   , AppRequires () "prodSnd_" BaseW '[Prod a b] b
   ) =>
   Term (Prod a b) -> Term c
-pattern Snd x <- (App (sameWitness (SndW @() @()) -> Just (SndW, Refl, Refl)) (x :> Nil))
+pattern ProdSnd x <- (App (sameWitness (ProdSndW @() @()) -> Just (ProdSndW, Refl, Refl)) (x :> Nil))
 
--- where Snd x = App SndW (x :> Nil)
+-- where Snd x = App ProdSndW (x :> Nil)
 
-pattern Pair ::
+pattern Product ::
   forall c.
   () =>
   forall a b.
@@ -1285,6 +1289,6 @@ pattern Pair ::
   , AppRequires () "prod_" BaseW '[a, b] c
   ) =>
   Term a -> Term b -> Term c
-pattern Pair x y <- (App (sameWitness (PairW @_ @_) -> Just (PairW, Refl, Refl)) (x :> y :> Nil))
+pattern Product x y <- (App (sameWitness (ProdW @_ @_) -> Just (ProdW, Refl, Refl)) (x :> y :> Nil))
 
--- where Pair x y = App PairW (x :> y :> Nil)
+-- where Pair x y = App ProdW (x :> y :> Nil)

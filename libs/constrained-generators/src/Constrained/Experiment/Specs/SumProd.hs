@@ -66,239 +66,16 @@ import Constrained.Core (Evidence (..))
 import Constrained.Experiment.Base
 import Constrained.Experiment.Conformance (conformsToSpec, satisfies)
 import Constrained.Experiment.Generic
-import Constrained.Experiment.NumSpec (cardinality)
 import Constrained.Experiment.Specs.ListFoldy
 import Constrained.Experiment.Syntax (exists, forAll, letBind, mkCase, reify)
 import Constrained.Experiment.TheKnot
 import Constrained.List
 import Constrained.Spec.Pairs ()
-import Data.List (nub)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
-import Data.Typeable (Typeable, (:~:) (Refl))
+import Data.Typeable (Typeable)
 import GHC.TypeLits (Symbol)
 import GHC.TypeNats
-import Prettyprinter hiding (cat)
-import Test.QuickCheck (Arbitrary (..))
-
--- ========== HasSpec for Prod ==================================
-
-pairView :: forall a b. (HasSpec a, HasSpec b) => Term (Prod a b) -> Maybe (Term a, Term b)
-pairView (App (sameFunSym $ PairW @a @b -> Just (_, Refl, Refl, Refl, Refl, Refl)) (x :> y :> Nil)) = Just (x, y)
-pairView _ = Nothing
-
-cartesian ::
-  forall a b.
-  (HasSpec a, HasSpec b) =>
-  Specification a ->
-  Specification b ->
-  Specification (Prod a b)
-cartesian (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
-cartesian (ErrorSpec es) _ = ErrorSpec (NE.cons "cartesian left" es)
-cartesian _ (ErrorSpec es) = ErrorSpec (NE.cons "cartesian right" es)
-cartesian s s' = typeSpec $ Cartesian s s'
-
-data PairSpec a b = Cartesian (Specification a) (Specification b)
-
-instance (Arbitrary (Specification a), Arbitrary (Specification b)) => Arbitrary (PairSpec a b) where
-  arbitrary = Cartesian <$> arbitrary <*> arbitrary
-  shrink (Cartesian a b) = uncurry Cartesian <$> shrink (a, b)
-
-instance (HasSpec a, HasSpec b) => HasSpec (Prod a b) where
-  type TypeSpec (Prod a b) = PairSpec a b
-
-  type Prerequisites (Prod a b) = (HasSpec a, HasSpec b)
-
-  emptySpec = Cartesian mempty mempty
-
-  combineSpec (Cartesian a b) (Cartesian a' b') = cartesian (a <> a') (b <> b')
-
-  conformsTo (Prod a b) (Cartesian sa sb) = conformsToSpec a sa && conformsToSpec b sb
-
-  genFromTypeSpec (Cartesian sa sb) = Prod <$> genFromSpecT sa <*> genFromSpecT sb
-
-  shrinkWithTypeSpec (Cartesian sa sb) (Prod a b) =
-    [Prod a' b | a' <- shrinkWithSpec sa a]
-      ++ [Prod a b' | b' <- shrinkWithSpec sb b]
-
-  toPreds x (Cartesian sf ss) =
-    satisfies (prodFst_ x) sf
-      <> satisfies (prodSnd_ x) ss
-
-  cardinalTypeSpec (Cartesian x y) = (cardinality x) + (cardinality y)
-
-  typeSpecHasError (Cartesian x y) =
-    case (isErrorLike x, isErrorLike y) of
-      (False, False) -> Nothing
-      (True, False) -> Just $ errorLikeMessage x
-      (False, True) -> Just $ errorLikeMessage y
-      (True, True) -> Just $ (errorLikeMessage x <> errorLikeMessage y)
-
-  alternateShow (Cartesian left right@(TypeSpec r [])) =
-    case alternateShow @b r of
-      (BinaryShow "Cartesian" ps) -> BinaryShow "Cartesian" ("," <+> viaShow left : ps)
-      (BinaryShow "SumSpec" ps) -> BinaryShow "Cartesian" ("," <+> viaShow left : ["SumSpec" /> vsep ps])
-      _ -> BinaryShow "Cartesian" ["," <+> viaShow left, "," <+> viaShow right]
-  alternateShow (Cartesian left right) = BinaryShow "Cartesian" ["," <+> viaShow left, "," <+> viaShow right]
-
-instance (HasSpec a, HasSpec b) => Show (PairSpec a b) where
-  show pair@(Cartesian l r) = case alternateShow @(Prod a b) pair of
-    (BinaryShow "Cartesian" ps) -> show $ parens ("Cartesian" /> vsep ps)
-    _ -> "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
-
-{-
-
-p1 :: Term (SimpleRep (Bool,Bool))
-p1 = prod_ (Lit True) (Lit False)
-
-p2 :: Term (Bool,Bool)
-p2 = fromGeneric_ p1
-
-pp :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (a,b)
-pp x y = fromGeneric_ (prod_ x y)
-
-qq x y = toGeneric_ (pp x y)
-
-baz :: Term a -> Maybe String
-baz (ToGeneric (FromGeneric x)) = Just $ "BINGO! To From " ++ show x
-baz (ToGeneric x) = Just $ "To " ++ show x
-baz (Fst (ToGeneric x)) = Just $ "BONGO! Fst To "++show x
-baz (Fst x) = Just $ "Fst "++show x
-baz (Lit _) = Just $ "Lit "
-baz (V _) = Just $ "Var "
-baz (App f _) = Just $ "App "++show f
--- baz _ = Nothing
-
-_foo :: (HasSpec a, HasSpec b) => Term(a,b) -> Term a
-_foo ab = prodFst_ (toGeneric_ ab)
-
-tuple :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (a,b)
-tuple x y = fromGeneric_ (prod_ x y)
-
--}
-
-{-
-pattern Tuple ::
-   forall rng. () =>
-   forall a b. ( AppRequires () "fromGenericFn" BaseW '[Prod a b] rng
-               , AppRequires () "prod_" BaseW [a, b] (Prod a b) ) =>
-               -- , HasSimpleRep rng, SimpleRep rng ~ Prod a b,TypeSpec rng ~ PairSpec a b ) =>
-   Term a -> Term b -> Term rng
-pattern Tuple x y <- FromGeneric (Pair x y)
-   -- where Tuple x y =  FromGeneric (Pair x y)
--}
-
-{-
-pattern FstTuple ::
-  forall c.   () =>
-  forall b d. ( AppRequires () "prodFst_" BaseW '[Prod c b] c
-                , SimpleRep d ~ Prod c b
-                , AppRequires () "toGenericFn" BaseW '[d] (SimpleRep d)
-                ) => Term d -> Term c
-pattern FstTuple x <- Fst (ToGeneric x)
--}
-
--- ==================================================
--- FunSym instances for Pairs
--- ==================================================
-
--- ========= FstW
-
-instance (HasSpec a, HasSpec b) => FunSym () "prodFst_" BaseW '[Prod a b] a where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context Evidence FstW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App FstW (v' :> Nil)) (v :-> ps)
-  propagate (Context Evidence FstW (HOLE :<> End)) (TypeSpec ts cant) =
-    cartesian @a @b (TypeSpec ts cant) TrueSpec
-  propagate (Context Evidence FstW (HOLE :<> End)) (MemberSpec es) =
-    cartesian @a @b (MemberSpec es) TrueSpec
-  propagate ctx _ =
-    ErrorSpec $ pure ("FunSym instance for FstW with wrong number of arguments. " ++ show ctx)
-
-  rewriteRules FstW ((pairView -> Just (x, _)) :> Nil) Evidence = Just x
-  rewriteRules _ _ _ = Nothing
-
-  mapTypeSpec FstW (Cartesian s _) = s
-
-prodFst_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term a
-prodFst_ = appTerm FstW
-
--- ========= SndW
-
-instance (HasSpec a, HasSpec b) => FunSym () "prodSnd_" BaseW '[Prod a b] b where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context Evidence SndW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App SndW (v' :> Nil)) (v :-> ps)
-  propagate (Context Evidence SndW (HOLE :<> End)) (TypeSpec ts cant) =
-    cartesian @a @b TrueSpec (TypeSpec ts cant)
-  propagate (Context Evidence SndW (HOLE :<> End)) (MemberSpec es) =
-    cartesian @a @b TrueSpec (MemberSpec es)
-  propagate ctx _ =
-    ErrorSpec $ pure ("FunSym instance for SndW with wrong number of arguments. " ++ show ctx)
-
-  rewriteRules SndW ((pairView -> Just (_, y)) :> Nil) Evidence = Just y
-  rewriteRules _ _ _ = Nothing
-
-  mapTypeSpec SndW (Cartesian _ s) = s
-
-prodSnd_ :: (HasSpec a, HasSpec b) => Term (Prod a b) -> Term b
-prodSnd_ = appTerm SndW
-
--- ========= PairW
-sameFst :: Eq a1 => a1 -> [Prod a1 a2] -> [a2]
-sameFst a ps = [b | Prod a' b <- ps, a == a']
-
-sameSnd :: Eq a1 => a1 -> [Prod a2 a1] -> [a2]
-sameSnd b ps = [a | Prod a b' <- ps, b == b']
-
-instance (HasSpec a, HasSpec b) => FunSym () "prod_" BaseW '[a, b] (Prod a b) where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context Evidence PairW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App PairW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context Evidence PairW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App PairW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate (Context Evidence PairW (a :|> HOLE :<> End)) ts@(TypeSpec (Cartesian sa sb) cant)
-    | a `conformsToSpec` sa = sb <> foldMap notEqualSpec (sameFst a cant)
-    | otherwise =
-        ErrorSpec
-          (NE.fromList ["propagate (pair_ " ++ show a ++ " HOLE) has conformance failure on a", show ts])
-  propagate (Context Evidence PairW (HOLE :<> b :<| End)) ts@(TypeSpec (Cartesian sa sb) cant)
-    | b `conformsToSpec` sb = sa <> foldMap notEqualSpec (sameSnd b cant)
-    | otherwise =
-        ErrorSpec
-          (NE.fromList ["propagate (pair_ HOLE " ++ show b ++ ") has conformance failure on b", show ts])
-  propagate (Context Evidence PairW (a :|> HOLE :<> End)) (MemberSpec es) =
-    case (nub (sameFst a (NE.toList es))) of
-      (w : ws) -> MemberSpec (w :| ws)
-      [] ->
-        ErrorSpec $
-          NE.fromList
-            [ "propagate (pair_ HOLE " ++ show a ++ ") on (MemberSpec " ++ show (NE.toList es)
-            , "Where " ++ show a ++ " does not appear as the fst component of anything in the MemberSpec."
-            ]
-  propagate (Context Evidence PairW (HOLE :<> b :<| End)) (MemberSpec es) =
-    case (nub (sameSnd b (NE.toList es))) of
-      (w : ws) -> MemberSpec (w :| ws)
-      [] ->
-        ErrorSpec $
-          NE.fromList
-            [ "propagate (pair_ HOLE " ++ show b ++ ") on (MemberSpec " ++ show (NE.toList es)
-            , "Where " ++ show b ++ " does not appear as the snd component of anything in the MemberSpec."
-            ]
-  propagate ctx _ =
-    ErrorSpec $ pure ("FunSym instance for PairW with wrong number of arguments. " ++ show ctx)
-
-prod_ :: (HasSpec a, HasSpec b) => Term a -> Term b -> Term (Prod a b)
-prod_ = appTerm PairW
 
 -- ==================================================================
 -- The HasSpec instance for Sum is in TheKnot.
@@ -577,58 +354,16 @@ instance
 ------------------------------------------------------------------------
 
 fst_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term x
-fst_ = appTerm (ComposeW FstW ToGenericW)
+fst_ = appTerm (ComposeW ProdFstW ToGenericW)
 
 fstW :: (HasSpec a, HasSpec b) => FunW ((), ()) "composeFn" '[(a, b)] a
-fstW = (ComposeW FstW ToGenericW)
+fstW = (ComposeW ProdFstW ToGenericW)
 
 snd_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term y
-snd_ = appTerm (ComposeW SndW ToGenericW)
+snd_ = appTerm (ComposeW ProdSndW ToGenericW)
 
 sndW :: (HasSpec a, HasSpec b) => FunW ((), ()) "composeFn" '[(a, b)] b
-sndW = (ComposeW SndW ToGenericW)
-
-{-
-fst_ ::
-  forall a b.
-  ( HasSpec a
-  , HasSpec b
-  ) =>
-  Term (a, b) ->
-  Term a
-fst_ = sel @0
-
-snd_ ::
-  forall a b.
-  ( HasSpec a
-  , HasSpec b
-  ) =>
-  Term (a, b) ->
-  Term b
-snd_ = sel @1
--}
-
-{-
-fst_ ::
-  ( HasSpec a
-  , HasSpec b
-  , IsNormalType a
-  , IsNormalType b
-  ) =>
-  Term (a, b) ->
-  Term a
-fst_ = prodFst_ . toGeneric_
-
-snd_ ::
-  ( HasSpec a
-  , HasSpec b
-  , IsNormalType a
-  , IsNormalType b
-  ) =>
-  Term (a, b) ->
-  Term b
-snd_ = prodSnd_ . toGeneric_
--}
+sndW = (ComposeW ProdSndW ToGenericW)
 
 pair_ ::
   ( HasSpec a

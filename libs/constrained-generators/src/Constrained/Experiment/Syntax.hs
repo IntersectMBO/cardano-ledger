@@ -762,7 +762,8 @@ reifies = Reifies
 dependsOn :: (HasSpec a, HasSpec b) => Term a -> Term b -> Pred
 dependsOn = DependsOn
 
-lit :: (Typeable a, Eq a, Show a) => a -> Term a
+-- lit :: (Typeable a, Eq a, Show a) => a -> Term a
+lit :: HasSpec a => a -> Term a
 lit = Lit
 
 genHint :: forall t. HasGenHint t => Hint t -> Term t -> Pred
