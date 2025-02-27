@@ -14,7 +14,7 @@ import Test.Cardano.Ledger.Core.Binary as Binary (
   decoderEquivalenceCoreEraTypesSpec,
   decoderEquivalenceEraSpec,
  )
-import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec, roundTripEraTypeSpec)
 
 spec :: Spec
 spec = do
@@ -25,6 +25,10 @@ spec = do
   specUpgrade @AlonzoEra (BinaryUpgradeOpts False False)
   describe "RoundTrip" $ do
     roundTripAlonzoCommonSpec @AlonzoEra
+    -- TxDats and Redeemers do not roundtrip in Conway, because empty lists are generated
+    -- by the `Arbitrary` instance, which do not deserialize successfuly in Conway
+    roundTripEraTypeSpec @AlonzoEra @TxDats
+    roundTripEraTypeSpec @AlonzoEra @Redeemers
     -- AlonzoGenesis only makes sense in Alonzo era
     roundTripEraSpec @AlonzoEra @AlonzoGenesis
   describe "DecCBOR instances equivalence" $ do
