@@ -1,0 +1,130 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Ledger.Shelley.HardForks</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#aggregatedRewards"><span class="hs-identifier">aggregatedRewards</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#allowMIRTransfer"><span class="hs-identifier">allowMIRTransfer</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#bootstrapPhase"><span class="hs-identifier">bootstrapPhase</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#validatePoolRewardAccountNetID"><span class="hs-identifier">validatePoolRewardAccountNetID</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#forgoRewardPrefilter"><span class="hs-identifier">forgoRewardPrefilter</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#translateUpperBoundForPlutusScripts"><span class="hs-identifier">translateUpperBoundForPlutusScripts</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#forgoPointerAddressResolution"><span class="hs-identifier">forgoPointerAddressResolution</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">ProtVer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier">natVersion</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#aggregatedRewards"><span class="hs-identifier hs-type">aggregatedRewards</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">ProtVer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-21"></span><span id="aggregatedRewards"><span class="annot"><span class="annottext">aggregatedRewards :: ProtVer -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.HardForks.html#aggregatedRewards"><span class="hs-identifier hs-var hs-var">aggregatedRewards</span></a></span></span><span> </span><span id="local-6989586621679529512"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529512"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">pvMajor</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529512"><span class="hs-identifier hs-var">pv</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">2</span></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- | Starting with protocol version 5, the MIR certs will also be</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- able to transfer funds between the reserves and the treasury.</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- Additionally, the semantics for the pervious functionality will</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- change a bit. Before version 5 redundancies in the instantaneous</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- reward mapping were handled by overriding. Now they are handled</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- by adding the values and allowing for negatives updates, provided</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- the sum for each key remains positive.</span><span>
+</span><span id="line-30"></span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#allowMIRTransfer"><span class="hs-identifier hs-type">allowMIRTransfer</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">ProtVer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-33"></span><span id="allowMIRTransfer"><span class="annot"><span class="annottext">allowMIRTransfer :: ProtVer -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.HardForks.html#allowMIRTransfer"><span class="hs-identifier hs-var hs-var">allowMIRTransfer</span></a></span></span><span> </span><span id="local-6989586621679529509"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529509"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">pvMajor</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529509"><span class="hs-identifier hs-var">pv</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">4</span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- | Starting with protocol version 5, we will validate the network ID</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- for the reward account listed in stake pool registration certificates.</span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#validatePoolRewardAccountNetID"><span class="hs-identifier hs-type">validatePoolRewardAccountNetID</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">ProtVer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-40"></span><span id="validatePoolRewardAccountNetID"><span class="annot"><span class="annottext">validatePoolRewardAccountNetID :: ProtVer -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.HardForks.html#validatePoolRewardAccountNetID"><span class="hs-identifier hs-var hs-var">validatePoolRewardAccountNetID</span></a></span></span><span> </span><span id="local-6989586621679529508"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529508"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">pvMajor</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529508"><span class="hs-identifier hs-var">pv</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">4</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- | Starting with protocol version 7, the reward calculation no longer</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- filters out unregistered stake addresses at the moment the calculation begins.</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- See the Shelley Ledger Errata 17.2.</span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#forgoRewardPrefilter"><span class="hs-identifier hs-type">forgoRewardPrefilter</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">ProtVer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-48"></span><span id="forgoRewardPrefilter"><span class="annot"><span class="annottext">forgoRewardPrefilter :: ProtVer -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.HardForks.html#forgoRewardPrefilter"><span class="hs-identifier hs-var hs-var">forgoRewardPrefilter</span></a></span></span><span> </span><span id="local-6989586621679529507"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529507"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">pvMajor</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529507"><span class="hs-identifier hs-var">pv</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">6</span></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- | Starting with protocol version 9, we translate the upper bound of validity interval</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- correctly for Plutus scripts.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- TODO - After mainnet has successfully moved to protocol version 9, we can check</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- to see if the semantic difference here has even been exercised.</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- (We probably also need to check preprod and potentially preview.)</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- If it has not been exercised by version 9, we can safely remove this check</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- and always use the correct semantics (which cleans up the code).</span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#translateUpperBoundForPlutusScripts"><span class="hs-identifier hs-type">translateUpperBoundForPlutusScripts</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">ProtVer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-61"></span><span id="translateUpperBoundForPlutusScripts"><span class="annot"><span class="annottext">translateUpperBoundForPlutusScripts :: ProtVer -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.HardForks.html#translateUpperBoundForPlutusScripts"><span class="hs-identifier hs-var hs-var">translateUpperBoundForPlutusScripts</span></a></span></span><span> </span><span id="local-6989586621679529506"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529506"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">pvMajor</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529506"><span class="hs-identifier hs-var">pv</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">8</span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- | Starting with protocol version 9, we no longer resolve pointer addresses.</span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#forgoPointerAddressResolution"><span class="hs-identifier hs-type">forgoPointerAddressResolution</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">ProtVer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-67"></span><span id="forgoPointerAddressResolution"><span class="annot"><span class="annottext">forgoPointerAddressResolution :: ProtVer -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.HardForks.html#forgoPointerAddressResolution"><span class="hs-identifier hs-var hs-var">forgoPointerAddressResolution</span></a></span></span><span> </span><span id="local-6989586621679529505"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529505"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">pvMajor</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529505"><span class="hs-identifier hs-var">pv</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">8</span></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- | Bootstrap phase</span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Cardano.Ledger.Shelley.HardForks.html#bootstrapPhase"><span class="hs-identifier hs-type">bootstrapPhase</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">ProtVer</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-73"></span><span id="bootstrapPhase"><span class="annot"><span class="annottext">bootstrapPhase :: ProtVer -&gt; Bool
+</span><a href="Cardano.Ledger.Shelley.HardForks.html#bootstrapPhase"><span class="hs-identifier hs-var hs-var">bootstrapPhase</span></a></span></span><span> </span><span id="local-6989586621679529504"><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529504"><span class="hs-identifier hs-var">pv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtVer -&gt; Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.17.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">pvMajor</span></a></span><span> </span><span class="annot"><span class="annottext">ProtVer
+</span><a href="#local-6989586621679529504"><span class="hs-identifier hs-var">pv</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">forall (v :: Natural).
+(KnownNat v, MinVersion &lt;= v, v &lt;= MaxVersion) =&gt;
+Version
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-binary-1.6.0.0/doc/html/cardano-ledger-binary/src"><span class="hs-identifier hs-var">natVersion</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">9</span></span><span>
+</span><span id="line-74"></span></pre></body></html>
