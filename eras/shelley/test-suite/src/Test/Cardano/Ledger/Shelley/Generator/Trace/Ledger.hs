@@ -20,7 +20,6 @@ import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
 import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   CertState,
   LedgerState (..),
   UTxOState,
@@ -37,8 +36,8 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersEnv (..),
   UtxoEnv,
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Cardano.Ledger.State (EraUTxO)
 import Cardano.Protocol.Crypto (Crypto)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
@@ -111,10 +110,12 @@ instance
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
 instance
-  forall era c.
-  ( EraGen era
+  ( Crypto c
+  , EraGen era
   , EraGov era
   , EraUTxO era
+  , EraStake era
+  , EraCertState era
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -124,8 +125,6 @@ instance
   , Embed (EraRule "DELEG" era) (ShelleyDELPL era)
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , ProtVerAtMost era 8
-  , EraCertState era
-  , Crypto c
   ) =>
   TQC.HasTrace (ShelleyLEDGERS era) (GenEnv c era)
   where
@@ -179,6 +178,7 @@ mkGenesisLedgerState ::
   forall a era ledger c.
   ( EraGen era
   , EraGov era
+  , EraStake era
   ) =>
   GenEnv c era ->
   IRC ledger ->

@@ -23,12 +23,12 @@ import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (
   BlockNo (..),
   EpochNo (..),
   SlotNo (..),
  )
-import Cardano.Ledger.State (UTxO (..), balance)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (
@@ -85,11 +85,12 @@ nonce0 = hashHeaderToNonce lastByronHeaderHash
 initSt ::
   forall era.
   ( EraTxOut era
+  , EraGov era
+  , EraStake era
+  , EraCertState era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
   , Default (StashedAVVMAddresses era)
-  , EraGov era
-  , EraCertState era
   ) =>
   UTxO era ->
   ChainState era

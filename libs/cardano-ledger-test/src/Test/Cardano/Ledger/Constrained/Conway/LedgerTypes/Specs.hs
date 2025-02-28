@@ -8,7 +8,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -34,24 +33,14 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   EpochState (..),
-  IncrementalStake (..),
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
   UTxOState (..),
   lsCertStateL,
-  updateStakeDistribution,
  )
-import Cardano.Ledger.State (
-  PoolDistr (..),
-  SnapShot (..),
-  SnapShots (..),
-  Stake (..),
-  UTxO (..),
-  calculatePoolDistr,
- )
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (CompactForm (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Constrained hiding (Value)
@@ -129,8 +118,7 @@ instance IsConwayUniv fn => EraSpecLedger ConwayEra fn where
 -- the PParams passed to conwayGovStateSpec.
 testGovEnv :: PParams ConwayEra -> GovEnv ConwayEra
 testGovEnv pp = unsafePerformIO $ generate $ do
-  env <- genFromSpec @ConwayFn @(GovEnv ConwayEra) (govEnvSpec @ConwayFn pp)
-  pure env
+  genFromSpec @ConwayFn @(GovEnv ConwayEra) (govEnvSpec @ConwayFn pp)
 
 -- ================================================================================
 -- Specifications for types that appear in the EraSpecLedger Ledger
@@ -407,7 +395,7 @@ utxoSpecWit univ delegs = constrained $ \ [var|utxo|] ->
 
 utxoStateSpec ::
   forall era fn.
-  EraSpecLedger era fn =>
+  (EraSpecLedger era fn, HasSpec fn (InstantStake era)) =>
   PParams era ->
   WitUniv era ->
   Term fn (CertState era) ->
@@ -423,7 +411,7 @@ utxoStateSpec pp univ certstate =
       , assert $ lit (Coin 0) <=. fees
       , reify certstate getDelegs (\ [var|delegs|] -> satisfies utxo (utxoSpecWit univ delegs))
       , satisfies gov (govStateSpec @era @fn pp)
-      , reify utxo (updateStakeDistribution pp mempty mempty) (\ [var|i|] -> distr ==. i)
+      , reify utxo (`addInstantStake` mempty) (\ [var|i|] -> distr ==. i)
       ]
 
 getDelegs ::
@@ -499,7 +487,7 @@ conwayGovStateSpec pp govenv =
 -- it's a type family and not a concrete type, to which the `Generics` magic might not apply.
 ledgerStateSpec ::
   forall era fn.
-  (EraSpecLedger era fn, CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era fn, HasSpec fn (InstantStake era), CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->
   Term fn AccountState ->
@@ -538,11 +526,11 @@ snapShotsSpec marksnap =
         ]
 
 -- | The Mark SnapShot (at the epochboundary) is a pure function of the LedgerState
-getMarkSnapShot :: forall era. EraCertState era => LedgerState era -> SnapShot
+getMarkSnapShot :: forall era. (EraCertState era, EraStake era) => LedgerState era -> SnapShot
 getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
   where
     markStake :: VMap VB VP (Credential 'Staking) (CompactForm Coin)
-    markStake = VMap.fromMap (credMap (utxosStakeDistr (lsUTxOState ls)))
+    markStake = VMap.fromMap (ls ^. instantStakeL . instantStakeCredentialsL)
     markDelegations ::
       VMap VB VB (Credential 'Staking) (KeyHash 'StakePool)
     markDelegations = VMap.fromMap (UMap.sPoolMap (ls ^. lsCertStateL . certDStateL . dsUnifiedL))
@@ -555,7 +543,7 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
 
 epochStateSpec ::
   forall era fn.
-  (EraSpecLedger era fn, CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era fn, HasSpec fn (InstantStake era), CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->
   Term fn EpochNo ->
@@ -577,7 +565,11 @@ getPoolDistr es = ssStakeMarkPoolDistr (esSnapshots es)
 -- The 'newEpochStateSpec' method (of (EraSpecLedger era fn) class) in the Shelley instance
 newEpochStateSpecUTxO ::
   forall era fn.
-  (EraSpecLedger era fn, StashedAVVMAddresses era ~ UTxO era, CertState era ~ ShelleyCertState era) =>
+  ( EraSpecLedger era fn
+  , HasSpec fn (InstantStake era)
+  , StashedAVVMAddresses era ~ UTxO era
+  , CertState era ~ ShelleyCertState era
+  ) =>
   PParams era ->
   WitUniv era ->
   Specification fn (NewEpochState era)
@@ -603,7 +595,11 @@ newEpochStateSpecUTxO pp univ =
 -- The 'newEpochStateSpec' method (of (EraSpecLedger era fn) class) in the instances for (Allegra,Mary,Alonzo,Babbage,Conway)
 newEpochStateSpecUnit ::
   forall era fn.
-  (EraSpecLedger era fn, StashedAVVMAddresses era ~ (), CertState era ~ ShelleyCertState era) =>
+  ( EraSpecLedger era fn
+  , HasSpec fn (InstantStake era)
+  , StashedAVVMAddresses era ~ ()
+  , CertState era ~ ShelleyCertState era
+  ) =>
   PParams era ->
   WitUniv era ->
   Specification fn (NewEpochState era)

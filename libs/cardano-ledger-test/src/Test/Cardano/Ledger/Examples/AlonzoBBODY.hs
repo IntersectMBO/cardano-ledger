@@ -50,7 +50,6 @@ import Cardano.Ledger.Shelley.API (
   LedgerState (..),
   PoolParams (..),
   ProtVer (..),
-  UTxO (..),
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
@@ -63,6 +62,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersPredFailure (..),
   ShelleyPoolPredFailure (..),
  )
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (UView (RewDepUView))
 import qualified Cardano.Ledger.UMap as UM
@@ -165,6 +165,7 @@ initialBBodyState ::
   ( EraTxOut era
   , PostShelley era
   , EraGov era
+  , EraStake era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraCertState era
   ) =>
@@ -599,6 +600,7 @@ testBBodyState ::
   , EraTxBody era
   , Value era ~ MaryValue
   , EraGov era
+  , EraStake era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , ShelleyEraTxCert era
   , EraCertState era

@@ -36,6 +36,7 @@ import Cardano.Ledger.Conway.Governance (
   setCompleteDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Scripts ()
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Plutus.Data (translateDatum)
@@ -192,7 +193,7 @@ instance TranslateEra ConwayEra UTxOState where
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
         , API.utxosGovState = translateGovState ctxt $ API.utxosGovState us
-        , API.utxosStakeDistr = (API.utxosStakeDistr us) {API.ptrMap = mempty}
+        , API.utxosInstantStake = ConwayInstantStake . sisCredentialStake $ API.utxosInstantStake us
         , API.utxosDonation = API.utxosDonation us
         }
 

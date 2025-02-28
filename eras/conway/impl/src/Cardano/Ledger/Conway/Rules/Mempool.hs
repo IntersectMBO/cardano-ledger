@@ -1,11 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -33,6 +31,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules.Certs (CertsEnv)
 import Cardano.Ledger.Conway.Rules.Gov (GovEnv, GovSignal)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerEvent, ConwayLedgerPredFailure (..))
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv)
 import Control.State.Transition (
@@ -61,6 +60,8 @@ instance
   ( EraTx era
   , ConwayEraTxBody era
   , ConwayEraGov era
+  , EraStake era
+  , EraCertState era
   , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Eq (PredicateFailure (EraRule "CERTS" era))
@@ -71,7 +72,6 @@ instance
   , Show (PredicateFailure (EraRule "UTXOW" era))
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx era ~ Signal (EraRule "LEDGER" era)
-  , EraCertState era
   ) =>
   STS (ConwayMEMPOOL era)
   where
@@ -89,11 +89,11 @@ mempoolTransition ::
   ( EraTx era
   , ConwayEraTxBody era
   , ConwayEraGov era
+  , EraCertState era
   , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Tx era ~ Signal (EraRule "LEDGER" era)
-  , EraCertState era
   ) =>
   TransitionRule (ConwayMEMPOOL era)
 mempoolTransition = do

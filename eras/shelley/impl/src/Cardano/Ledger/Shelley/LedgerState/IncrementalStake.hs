@@ -17,8 +17,6 @@
 --    done in the NewEpoch rules.
 
 module Cardano.Ledger.Shelley.LedgerState.IncrementalStake (
-  updateStakeDistribution,
-  incrementalStakeDistr,
   applyRUpd,
   applyRUpdFiltered,
   smartUTxOState,
@@ -27,28 +25,16 @@ module Cardano.Ledger.Shelley.LedgerState.IncrementalStake (
 )
 where
 
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.CertState (
   DState (..),
   EraCertState (..),
-  PState (..),
-  delegations,
   dsUnifiedL,
   rewards,
  )
-import Cardano.Ledger.Coin (
-  Coin (..),
-  CompactForm (CompactCoin),
-  addDeltaCoin,
- )
-import Cardano.Ledger.Compactible
+import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (
-  Credential (..),
-  StakeReference (StakeRefBase, StakeRefPtr),
- )
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rewards (
@@ -57,80 +43,14 @@ import Cardano.Ledger.Shelley.Rewards (
   filterRewards,
  )
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (
-  UMElem,
-  UMap (..),
-  member,
- )
+import Cardano.Ledger.UMap (member)
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (rnf), deepseq)
-import Control.Exception (assert)
-import Data.Coerce (coerce)
 import Data.Foldable (fold)
-import Data.Map.Internal.Debug as Map (valid)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Data.VMap as VMap
-import Data.Word
 import Lens.Micro
-
--- =======================================================================
--- Part 1, Incrementally updating the IncrementalStake in Utxo rule
--- =======================================================================
-
--- | Incrementally add the inserts 'utxoAdd' and the deletes 'utxoDel' to the IncrementalStake.
-updateStakeDistribution ::
-  EraTxOut era =>
-  PParams era ->
-  IncrementalStake ->
-  UTxO era ->
-  UTxO era ->
-  IncrementalStake
-updateStakeDistribution pp incStake0 utxoDel utxoAdd = incStake2
-  where
-    incStake1 = incAggUtxoCoinByCred pp (coerce ((+) @Word64)) utxoAdd incStake0
-    incStake2 = incAggUtxoCoinByCred pp (coerce ((-) @Word64)) utxoDel incStake1
-
--- | Incrementally sum up all the Coin, for each staking Credential, in the outputs of the UTxO, and
---   "add" them to the IncrementalStake. "add" has different meaning depending on if we are inserting
---   or deleting the UtxO entries. For inserts (the mode is to add (+)) and for deletes (the mode is
---   to subtract (-)).
---   Never store a (Coin 0) balance, since these do not occur in the non-incremental style that
---   works directly from the whole UTxO.
---   This function has a non-incremental analog 'aggregateUtxoCoinByCredential' . In this incremental
---   version we expect the size of the UTxO to be fairly small. I.e the number of inputs and outputs
---   in a transaction, which is aways < 4096, not millions, and very often < 10).
-incAggUtxoCoinByCred ::
-  forall era.
-  EraTxOut era =>
-  PParams era ->
-  (CompactForm Coin -> CompactForm Coin -> CompactForm Coin) ->
-  UTxO era ->
-  IncrementalStake ->
-  IncrementalStake
-incAggUtxoCoinByCred pp f (UTxO u) initial =
-  Map.foldl' accum initial u
-  where
-    keepOrDeleteCompact new = \case
-      Nothing ->
-        case new of
-          CompactCoin 0 -> Nothing
-          final -> Just final
-      Just old ->
-        case old `f` new of
-          CompactCoin 0 -> Nothing
-          final -> Just final
-    ignorePtrs = HardForks.forgoPointerAddressResolution (pp ^. ppProtocolVersionL)
-    accum ans@(IStake stake ptrs) out =
-      let cc = out ^. compactCoinTxOutL
-       in case out ^. addrTxOutL of
-            Addr _ _ (StakeRefPtr p)
-              | not ignorePtrs ->
-                  IStake stake (Map.alter (keepOrDeleteCompact cc) p ptrs)
-            Addr _ _ (StakeRefBase hk) ->
-              IStake (Map.alter (keepOrDeleteCompact cc) hk stake) ptrs
-            _other -> ans
 
 -- ================================================
 
@@ -145,7 +65,7 @@ incAggUtxoCoinByCred pp f (UTxO u) initial =
 --
 --   TO IncrementalStake
 smartUTxOState ::
-  EraTxOut era =>
+  EraStake era =>
   PParams era ->
   UTxO era ->
   Coin ->
@@ -153,101 +73,13 @@ smartUTxOState ::
   GovState era ->
   Coin ->
   UTxOState era
-smartUTxOState pp utxo c1 c2 st =
+smartUTxOState _pp utxo c1 c2 st =
   UTxOState
     utxo
     c1
     c2
     st
-    (updateStakeDistribution pp mempty mempty utxo)
-
--- =======================================================================
--- Part 2. Compute a Snapshot using the IncrementalStake in Snap rule
--- =======================================================================
-
--- | This computes a Snapshot using IncrementalStake (which is an
---   aggregate of the current UTxO) and UMap (which tracks Coin,
---   SPoolUView, and Ptrs simultaneously).  Note that logically:
---   1) IncrementalStake = (credStake, ptrStake)
---   2) UMap = (rewards, activeDelegs, ptrmap :: Map ptr cred)
---
---   Using this scheme the logic can do 3 things in one go, without touching the UTxO.
---   1) Resolve Pointers
---   2) Throw away things not actively delegated
---   3) Add up the coin
---
---   The Stake distribution function (Map cred coin) (the first component of a SnapShot)
---   is defined by this SetAlgebra expression:
---   (dom activeDelegs) ◁ (aggregate+ (credStake ∪ ptrStake ∪ rewards))
---
---   We can apply meaning preserving operations to get equivalent expressions
---
---   (dom activeDelegs) ◁ (aggregate+ (credStake ∪ ptrStake ∪ rewards))
---   aggregate+ (dom activeDelegs ◁ (credStake ∪ ptrStake ∪ rewards))
---   aggregate+ ((dom activeDelegs ◁ credStake) ∪ (dom activeDelegs ◁ ptrStake) ∪ (dom activeDelegs ◁ rewards))
---
---   We will compute this in several steps
---   step1 = (dom activeDelegs ◁ credStake) ∪ (dom activeDelegs ◁ ptrStake)
---   step2 =  aggregate (dom activeDelegs ◁ rewards) step1
---   This function has a non-incremental analog, 'stakeDistr', mosty used in tests, which does use the UTxO.
-incrementalStakeDistr ::
-  forall era.
-  EraPParams era =>
-  PParams era ->
-  IncrementalStake ->
-  DState era ->
-  PState era ->
-  SnapShot
-incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
-  SnapShot
-    (Stake $ VMap.fromMap step2)
-    delegs_
-    (VMap.fromMap poolParams)
-  where
-    UMap triplesMap ptrsMap = dsUnified ds
-    PState {psStakePoolParams = poolParams} = ps
-    delegs_ = UM.unUnifyToVMap (delegations ds)
-    -- A credential is active, only if it is being delegated
-    activeCreds = Map.filterWithKey (\k _ -> VMap.member k delegs_) credStake
-    ignorePtrs = HardForks.forgoPointerAddressResolution (pp ^. ppProtocolVersionL)
-    -- pre Conway: (dom activeDelegs ◁ credStake) ∪ (dom activeDelegs ◁ ptrStake)
-    -- afterwards we forgo ptr resolution: (dom activeDelegs ◁ credStake)
-    step1 =
-      if ignorePtrs
-        then activeCreds
-        else -- Resolve inserts and deletes which were indexed by ptrs, by looking them up
-        -- in the ptrsMap and combining the result of the lookup with the ordinary
-        -- stake, keeping only the active credentials
-          Map.foldlWithKey' addResolvedPointer activeCreds ptrStake
-    step2 = aggregateActiveStake triplesMap step1
-    addResolvedPointer ans ptr ccoin =
-      case Map.lookup ptr ptrsMap of -- map of ptrs to credentials
-        Just cred | VMap.member cred delegs_ -> Map.insertWith (<>) cred ccoin ans
-        _ -> ans
-
--- | Aggregate active stake by merging two maps. The triple map from the
---   UMap, and the IncrementalStake. Only keep the active stake. Active can
---   be determined if there is a (SJust deleg) in the Tuple.  This is step2 =
---   aggregate (dom activeDelegs ◁ rewards) step1
-aggregateActiveStake ::
-  Ord k => Map k UMElem -> Map k (CompactForm Coin) -> Map k (CompactForm Coin)
-aggregateActiveStake m1 m2 = assert (Map.valid m) m
-  where
-    m =
-      Map.mergeWithKey
-        -- How to merge the ranges of the two maps where they have a common key. Below
-        -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
-        (\_k trip coin2 -> extractAndAdd coin2 <$> UM.umElemRDActive trip)
-        -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
-        (Map.mapMaybe (\trip -> UM.rdReward <$> UM.umElemRDActive trip))
-        -- what to do when a key is only in 'incremental', keep everything, because at
-        -- the call site of aggregateActiveStake, the arg 'incremental' is filtered by
-        -- 'resolveActiveIncrementalPtrs' which guarantees that only active stake is included.
-        id
-        m1
-        m2
-    extractAndAdd :: CompactForm Coin -> UM.RDPair -> CompactForm Coin
-    extractAndAdd coin (UM.RDPair rew _dep) = coin <> rew
+    (addInstantStake utxo mempty)
 
 -- =====================================================
 -- Part 3 Apply a reward update, in NewEpoch rule

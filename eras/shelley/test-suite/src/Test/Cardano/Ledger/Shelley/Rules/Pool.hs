@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,9 +12,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Pool (
 where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..))
-import Cardano.Ledger.Block (
-  bheader,
- )
+import Cardano.Ledger.Block (bheader)
 import Cardano.Ledger.Core
 import Cardano.Ledger.PoolParams (ppId)
 import Cardano.Ledger.Shelley.Core
@@ -27,11 +24,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   psStakePoolParams,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyPOOL)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Protocol.TPraos.BHeader (
-  bhbody,
-  bheaderSlotNo,
- )
+import Cardano.Protocol.TPraos.BHeader (bhbody, bheaderSlotNo)
 import Control.SetAlgebra (dom, eval, (∈), (∉))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -71,6 +66,7 @@ import Test.Tasty.QuickCheck (testProperty)
 tests ::
   forall era.
   ( EraGen era
+  , EraStake era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>

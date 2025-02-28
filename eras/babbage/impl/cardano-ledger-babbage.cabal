@@ -33,6 +33,7 @@ library
     Cardano.Ledger.Babbage.PParams
     Cardano.Ledger.Babbage.Rules
     Cardano.Ledger.Babbage.Scripts
+    Cardano.Ledger.Babbage.State
     Cardano.Ledger.Babbage.Transition
     Cardano.Ledger.Babbage.Translation
     Cardano.Ledger.Babbage.Tx
@@ -58,6 +59,7 @@ library
     Cardano.Ledger.Babbage.Rules.Utxo
     Cardano.Ledger.Babbage.Rules.Utxos
     Cardano.Ledger.Babbage.Rules.Utxow
+    Cardano.Ledger.Babbage.State.Stake
     Cardano.Ledger.Babbage.TxAuxData
     Cardano.Ledger.Babbage.TxCert
 

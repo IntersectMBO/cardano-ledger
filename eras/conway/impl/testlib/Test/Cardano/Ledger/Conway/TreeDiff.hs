@@ -20,6 +20,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.Scripts
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
@@ -100,6 +101,8 @@ instance ToExpr (ConwayPParams Identity era)
 
 instance ToExpr (ConwayPParams StrictMaybe era)
 
+instance ToExpr (ConwayInstantStake era)
+
 -- Governance
 instance (EraPParams era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (PulsingSnapshot era)
 
@@ -113,11 +116,11 @@ instance
   ToExpr (RatifyState era)
 
 instance
-  (EraPParams era, ToExpr (PParams era), ToExpr (PParamsHKD StrictMaybe era)) =>
+  (EraStake era, EraPParams era, ToExpr (PParams era), ToExpr (PParamsHKD StrictMaybe era)) =>
   ToExpr (ConwayGovState era)
 
 instance
-  (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (PParams era)) =>
+  (EraStake era, EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (PParams era)) =>
   ToExpr (DRepPulsingState era)
   where
   toExpr (DRComplete x y) = App "DRComplete" [toExpr x, toExpr y]
@@ -125,7 +128,7 @@ instance
     where
       (a, b) = finishDRepPulser x
 
-instance ToExpr (RatifyEnv era) where
+instance ToExpr (InstantStake era) => ToExpr (RatifyEnv era) where
   toExpr (RatifyEnv stake pool drep dstate ep cs delegatees poolps) =
     App
       "RatifyEnv"

@@ -14,7 +14,7 @@ import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Shelley.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Shelley.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Shelley.ImpTest (LedgerSpec, ShelleyEraImp)
-import qualified Test.Cardano.Ledger.Shelley.UnitTests.IncrementalStakeTest as Incremental
+import qualified Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest as Instant
 
 spec ::
   forall era.
@@ -31,4 +31,4 @@ spec = do
     Utxow.spec
     Utxo.spec
   describe "ShelleyPureTests" $ do
-    Incremental.spec @era
+    Instant.spec @era

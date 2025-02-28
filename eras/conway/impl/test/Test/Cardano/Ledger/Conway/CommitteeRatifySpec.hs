@@ -30,6 +30,7 @@ import Cardano.Ledger.Conway.Rules (
   committeeAccepted,
   committeeAcceptedRatio,
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Data.Functor.Identity (Identity)
 import Data.List ((\\))
@@ -83,6 +84,8 @@ acceptedProp ::
   ( ConwayEraPParams era
   , Arbitrary (PParamsHKD Identity era)
   , Arbitrary (PParamsHKD StrictMaybe era)
+  , Arbitrary (InstantStake era)
+  , Show (InstantStake era)
   ) =>
   Spec
 acceptedProp =

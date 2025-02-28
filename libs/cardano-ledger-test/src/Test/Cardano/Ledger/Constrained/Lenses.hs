@@ -17,6 +17,7 @@ import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), KeyHash, KeyRole 
 import Cardano.Ledger.Shelley.LedgerState hiding (deltaReserves, deltaTreasury, rewards)
 import qualified Cardano.Ledger.Shelley.LedgerState as LS (deltaReserves, deltaTreasury)
 import Cardano.Ledger.Shelley.PoolRank (Likelihood (..), LogWeight (..), NonMyopic (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (
   RDPair (..),
@@ -78,11 +79,14 @@ fGenDelegGenKeyHashL = lens fGenDelegGenKeyHash (\ds u -> ds {fGenDelegGenKeyHas
 
 -- IncrementalStake
 
-isCredMapL :: Lens' IncrementalStake (Map (Credential 'Staking) Coin)
-isCredMapL = lens (fmap fromCompact . credMap) (\ds u -> ds {credMap = fmap compactCoinOrError u})
+isCredMapL :: EraStake era => Lens' (InstantStake era) (Map (Credential 'Staking) Coin)
+isCredMapL =
+  lens
+    (\is -> fmap fromCompact (is ^. instantStakeCredentialsL))
+    (\is m -> is & instantStakeCredentialsL .~ fmap compactCoinOrError m)
 
-isPtrMapL :: Lens' IncrementalStake (Map Ptr Coin)
-isPtrMapL = lens (fmap fromCompact . ptrMap) (\ds u -> ds {ptrMap = fmap compactCoinOrError u})
+isPtrMapL :: Lens' (ShelleyInstantStake era) (Map Ptr Coin)
+isPtrMapL = lens (fmap fromCompact . sisPtrStake) (\ds u -> ds {sisPtrStake = fmap compactCoinOrError u})
 
 -- ===============================================
 -- NonMyopic
@@ -93,7 +97,7 @@ nmLikelihoodsL =
     (fmap fromLikelihood . likelihoodsNM)
     (\ds u -> ds {likelihoodsNM = fmap toLikelihood u})
   where
-    fromLikelihood (Likelihood ls) = fmap unLogWeight $ toList ls
+    fromLikelihood (Likelihood ls) = unLogWeight <$> toList ls
     toLikelihood = Likelihood . fromList . fmap LogWeight
 
 nmRewardPotL :: Lens' NonMyopic Coin
@@ -188,7 +192,7 @@ strictMaybeToMaybeL = lens ff gg
     gg _ Nothing = SNothing
 
 idLens :: Lens' a a
-idLens = lens (\x -> x) (\_ y -> y)
+idLens = lens id (\_ y -> y)
 
 strictSeqListL :: Lens' (StrictSeq a) [a]
 strictSeqListL = lens toList (\_ y -> fromList y)
@@ -207,7 +211,7 @@ pairL xy ab = lens getter setter
 --   with the UtxO constructor. Note the getter is 'liftUTxO' from Test.Cardano.Ledger.Constrained.Classes
 --   liftUTxO :: Map (TxIn ) (TxOutF era) -> UTxO era
 utxoFL :: Proof era -> Lens' (Map TxIn (TxOutF era)) (UTxO era)
-utxoFL p = lens liftUTxO (\_ (UTxO new) -> (Map.map (TxOutF p) new))
+utxoFL p = lens liftUTxO (\_ (UTxO new) -> Map.map (TxOutF p) new)
 
 -- ======================================================================
 -- Don't tell me that these have impementations in Lens.Micro( _1, _2 )

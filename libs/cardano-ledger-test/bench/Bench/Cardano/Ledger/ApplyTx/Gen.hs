@@ -10,7 +10,6 @@
 module Bench.Cardano.Ledger.ApplyTx.Gen (generateApplyTxEnvForEra, ApplyTxEnv (..)) where
 
 import Cardano.Ledger.Shelley.API (
-  AccountState (..),
   Coin (..),
   Globals,
   LedgerEnv (..),
@@ -19,6 +18,7 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
+import Cardano.Ledger.State
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
 import Data.Proxy (Proxy)
@@ -76,6 +76,7 @@ generateApplyTxEnvForEra ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , State (EraRule "LEDGER" era) ~ LedgerState era
+  , EraStake era
   , EraGov era
   ) =>
   Proxy era ->

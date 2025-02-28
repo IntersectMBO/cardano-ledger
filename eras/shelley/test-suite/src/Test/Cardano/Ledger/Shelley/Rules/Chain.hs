@@ -52,7 +52,6 @@ import Cardano.Ledger.Shelley.AdaPots (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -75,8 +74,8 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTickEvent,
   ShelleyTickPredFailure,
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.State (PoolDistr (..), UTxO (..), emptySnapShots)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Protocol.TPraos.BHeader (
   BHeader,
@@ -187,10 +186,10 @@ instance
 -- | Creates a valid initial chain state
 initialShelleyState ::
   forall era.
-  ( EraTxOut era
-  , EraGov era
-  , Default (StashedAVVMAddresses era)
+  ( EraGov era
+  , EraStake era
   , EraCertState era
+  , Default (StashedAVVMAddresses era)
   ) =>
   WithOrigin LastAppliedBlock ->
   EpochNo ->
@@ -446,6 +445,7 @@ instance
   , ToExpr (StashedAVVMAddresses era)
   , ToExpr (GovState era)
   , ToExpr (CertState era)
+  , ToExpr (InstantStake era)
   ) =>
   ToExpr (ChainState era)
 

@@ -46,7 +46,7 @@ module Cardano.Ledger.Conway.TxCert (
 where
 
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), invalidKey, kindObject)
+import Cardano.Ledger.BaseTypes (Anchor, StrictMaybe (..), invalidKey, kindObject)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
@@ -63,7 +63,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Governance (Anchor)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL)
 import Cardano.Ledger.Credential (
   Credential (..),

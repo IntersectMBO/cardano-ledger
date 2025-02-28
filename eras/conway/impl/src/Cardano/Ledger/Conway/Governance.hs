@@ -136,7 +136,6 @@ module Cardano.Ledger.Conway.Governance (
   newEpochStateDRepPulsingStateL,
   epochStateDRepPulsingStateL,
   epochStateStakeDistrL,
-  epochStateIncrStakeDistrL,
   epochStateRegDrepL,
   epochStateUMapL,
   pulseDRepPulsingState,
@@ -159,8 +158,6 @@ module Cardano.Ledger.Conway.Governance (
   govStatePrevGovActionIds,
   mkEnactState,
   ratifySignalL,
-  reStakeDistrL,
-  reStakePoolDistrL,
   reDRepDistrL,
   reDRepStateL,
   reCurrentEpochL,
@@ -218,16 +215,15 @@ import Cardano.Ledger.Conway.Governance.DRepPulser
 import Cardano.Ledger.Conway.Governance.Internal
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Conway.Governance.Proposals
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppRewardAccount))
-import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState,
   NewEpochState (..),
-  credMap,
   dsUnified,
   epochStateGovStateL,
   epochStatePoolParamsL,
@@ -239,12 +235,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
   newEpochStateGovStateL,
   utxosGovStateL,
-  utxosStakeDistr,
   vsCommitteeState,
   vsCommitteeStateL,
   vsDReps,
  )
-import Cardano.Ledger.State (PoolDistr (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
@@ -282,7 +276,7 @@ data ConwayGovState era = ConwayGovState
   }
   deriving (Generic, Show)
 
-deriving instance EraPParams era => Eq (ConwayGovState era)
+deriving instance (EraPParams era, EraStake era) => Eq (ConwayGovState era)
 
 cgsProposalsL :: Lens' (ConwayGovState era) (Proposals era)
 cgsProposalsL = lens cgsProposals (\x y -> x {cgsProposals = y})
@@ -310,16 +304,16 @@ govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation Stri
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
 conwayGovStateDRepDistrG ::
-  SimpleGetter (ConwayGovState era) (Map DRep (CompactForm Coin))
+  EraStake era => SimpleGetter (ConwayGovState era) (Map DRep (CompactForm Coin))
 conwayGovStateDRepDistrG = to (psDRepDistr . fst . finishDRepPulser . cgsDRepPulsingState)
 
-getRatifyState :: ConwayGovState era -> RatifyState era
+getRatifyState :: EraStake era => ConwayGovState era -> RatifyState era
 getRatifyState (ConwayGovState {cgsDRepPulsingState}) = snd $ finishDRepPulser cgsDRepPulsingState
 
 -- | This function updates the thunk, which will contain new PParams once evaluated or
 -- Nothing when there was no update. At the same time if we already know the future of
 -- PParams, then it will act as an identity function.
-predictFuturePParams :: ConwayGovState era -> ConwayGovState era
+predictFuturePParams :: EraStake era => ConwayGovState era -> ConwayGovState era
 predictFuturePParams govState =
   case cgsFuturePParams govState of
     NoPParamsUpdate -> govState
@@ -376,7 +370,7 @@ instance EraPParams era => DecShareCBOR (ConwayGovState era) where
 instance EraPParams era => DecCBOR (ConwayGovState era) where
   decCBOR = decNoShareCBOR
 
-instance EraPParams era => EncCBOR (ConwayGovState era) where
+instance (EraPParams era, EraStake era) => EncCBOR (ConwayGovState era) where
   encCBOR ConwayGovState {..} =
     encode $
       Rec ConwayGovState
@@ -388,7 +382,7 @@ instance EraPParams era => EncCBOR (ConwayGovState era) where
         !> To cgsFuturePParams
         !> To cgsDRepPulsingState
 
-instance EraPParams era => ToCBOR (ConwayGovState era) where
+instance (EraPParams era, EraStake era) => ToCBOR (ConwayGovState era) where
   toCBOR = toEraCBOR @era
 
 instance EraPParams era => FromCBOR (ConwayGovState era) where
@@ -397,15 +391,15 @@ instance EraPParams era => FromCBOR (ConwayGovState era) where
 instance EraPParams era => Default (ConwayGovState era) where
   def = ConwayGovState def def def def def def (DRComplete def def)
 
-instance EraPParams era => NFData (ConwayGovState era)
+instance (EraPParams era, NFData (InstantStake era)) => NFData (ConwayGovState era)
 
-instance EraPParams era => NoThunks (ConwayGovState era)
+instance (EraPParams era, NoThunks (InstantStake era)) => NoThunks (ConwayGovState era)
 
-instance EraPParams era => ToJSON (ConwayGovState era) where
+instance (EraPParams era, EraStake era) => ToJSON (ConwayGovState era) where
   toJSON = object . toConwayGovPairs
   toEncoding = pairs . mconcat . toConwayGovPairs
 
-toConwayGovPairs :: (KeyValue e a, EraPParams era) => ConwayGovState era -> [a]
+toConwayGovPairs :: EraStake era => (KeyValue e a, EraPParams era) => ConwayGovState era -> [a]
 toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _ _) =
   let ConwayGovState {..} = cg
    in [ "proposals" .= cgsProposals
@@ -434,7 +428,7 @@ instance EraPParams ConwayEra => EraGov ConwayEra where
       , oblPool = Coin 0
       }
 
-class EraGov era => ConwayEraGov era where
+class (EraGov era, EraStake era) => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)
   proposalsGovStateL :: Lens' (GovState era) (Proposals era)
   drepPulsingStateGovStateL :: Lens' (GovState era) (DRepPulsingState era)
@@ -494,7 +488,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
   globals <- ask
   let ledgerState = epochState ^. esLStateL
       utxoState = lsUTxOState ledgerState
-      stakeDistr = credMap $ utxosStakeDistr utxoState
+      instantStake = utxoState ^. instantStakeG
       certState = lsCertState ledgerState
       dState = certState ^. certDStateL
       vState = certState ^. certVStateL
@@ -514,7 +508,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
                     { dpPulseSize = floor pulseSize
                     , dpUMap = dsUnified dState
                     , dpIndex = 0 -- used as the index of the remaining UMap
-                    , dpStakeDistr = stakeDistr -- used as part of the snapshot
+                    , dpInstantStake = instantStake -- used as part of the snapshot
                     , dpStakePoolDistr = stakePoolDistr
                     , dpDRepDistr = Map.empty -- The partial result starts as the empty map
                     , dpDRepState = vsDReps vState

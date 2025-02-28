@@ -162,7 +162,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           stakePerPool
           totalStake
           activeStake
-      -- We map over the registered stake pools to compute the revelant
+      -- We map over the registered stake pools to compute the relevant
       -- stake pool specific values.
       allPoolInfo = VMap.map mkPoolRewardInfoCurry poolParams
 

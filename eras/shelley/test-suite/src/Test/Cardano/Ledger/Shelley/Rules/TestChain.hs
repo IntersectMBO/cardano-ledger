@@ -47,7 +47,7 @@ import Cardano.Ledger.Shelley.Rules (
   PoolEnv (..),
   ShelleyPOOL,
  )
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (
   BHeader (..),
@@ -125,8 +125,9 @@ type TestingLedger era ledger =
 shortChainTrace ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , EraGov era
+  , EraStake era
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   Constants ->
   (SourceSignalTarget (CHAIN era) -> Property) ->
@@ -291,10 +292,11 @@ chainSstWithTick ledgerTr =
 
 forAllChainTrace ::
   forall era prop.
-  ( Testable prop
-  , EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
+  ( EraGen era
   , EraGov era
+  , EraStake era
+  , Testable prop
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   Word64 -> -- trace length
   Constants ->
@@ -316,8 +318,9 @@ forAllChainTrace n constants prop =
 forEachEpochTrace ::
   forall era prop.
   ( EraGen era
-  , Testable prop
   , EraGov era
+  , EraStake era
+  , Testable prop
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   Int ->

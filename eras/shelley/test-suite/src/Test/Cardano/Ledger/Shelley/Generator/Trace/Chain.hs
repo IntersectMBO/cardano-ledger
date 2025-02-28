@@ -19,11 +19,12 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsUnifiedL, incrementalStakeDistr)
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsUnifiedL)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv,
   ShelleyBbodyState,
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (
   BlockNo (..),
   EpochNo (..),
@@ -131,6 +132,7 @@ mkGenesisChainState ::
   forall era a c.
   ( EraGen era
   , EraGov era
+  , EraStake era
   ) =>
   GenEnv c era ->
   IRC (CHAIN era) ->
@@ -183,8 +185,7 @@ mkOCertIssueNos (GenDelegs delegs0) =
 --
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
-  forall era.
-  (EraGov era, EraCertState era) =>
+  (EraGov era, EraStake era, EraCertState era) =>
   ShelleyGenesisStaking ->
   ChainState era ->
   ChainState era
@@ -233,7 +234,6 @@ registerGenesisStaking
       --
       -- See STS DELEG for details
       pairWithDepositsButNoRewards _ = UM.RDPair (UM.CompactCoin 0) keyDeposit
-      newDState :: DState era
       newDState =
         (oldCertState ^. certDStateL)
           { dsUnified =
@@ -246,7 +246,6 @@ registerGenesisStaking
 
       -- We consider pools as having been registered in slot 0
       -- See STS POOL for details
-      newPState :: PState era
       newPState =
         (oldCertState ^. certPStateL)
           { psStakePoolParams = LM.toMap sgsPools
@@ -256,8 +255,4 @@ registerGenesisStaking
       -- during the previous epoch. We create a "fake" snapshot in order to
       -- establish an initial stake distribution.
       initSnapShot =
-        incrementalStakeDistr
-          (newEpochState ^. curPParamsEpochStateL)
-          (utxosStakeDistr . lsUTxOState . esLState $ oldEpochState)
-          newDState
-          newPState
+        snapShotFromInstantStake (oldEpochState ^. instantStakeG) newDState newPState

@@ -34,6 +34,7 @@ library
     Cardano.Ledger.Alonzo.Plutus.TxInfo
     Cardano.Ledger.Alonzo.Rules
     Cardano.Ledger.Alonzo.Scripts
+    Cardano.Ledger.Alonzo.State
     Cardano.Ledger.Alonzo.Transition
     Cardano.Ledger.Alonzo.Translation
     Cardano.Ledger.Alonzo.Tx
@@ -61,6 +62,7 @@ library
     Cardano.Ledger.Alonzo.Rules.Utxo
     Cardano.Ledger.Alonzo.Rules.Utxos
     Cardano.Ledger.Alonzo.Rules.Utxow
+    Cardano.Ledger.Alonzo.State.Stake
     Cardano.Ledger.Alonzo.TxCert
 
   default-language: Haskell2010

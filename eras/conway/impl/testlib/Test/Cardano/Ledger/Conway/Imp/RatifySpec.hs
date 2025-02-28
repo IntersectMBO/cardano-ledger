@@ -600,7 +600,7 @@ votingSpec =
         (pp ^. ppMinFeeAL) `shouldBe` initMinFeeA
         submitYesVote_ (StakePoolVoter khPool) gaidMinFee
       passEpoch
-      logStakeDistr
+      logInstantStake
       logAcceptedRatio gaidMinFee
       logRatificationChecks gaidMinFee
       passEpoch

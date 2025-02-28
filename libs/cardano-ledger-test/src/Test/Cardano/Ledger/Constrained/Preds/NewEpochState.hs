@@ -37,7 +37,7 @@ import Test.Tasty (TestTree, defaultMain)
 
 epochstatePreds :: EraCertState era => Proof era -> [Pred era]
 epochstatePreds _proof =
-  [ incrementalStake :=: markStake
+  [ instantStakeTerm :=: markStake
   , delegations :=: markDelegs
   , regPools :=: markPools
   , Dom setStake `Subset` credsUniv

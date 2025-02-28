@@ -17,22 +17,16 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Shelley as S (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  EpochState (..),
-  LedgerState (..),
-  NewEpochState (..),
-  UTxOState (..),
-  updateStakeDistribution,
- )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Coerce (coerce)
 import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
+import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
@@ -286,13 +280,13 @@ tracePreserveAda numTx gensize =
     ]
 
 adaIsPreservedBabbage :: Int -> GenSize -> TestTree
-adaIsPreservedBabbage numTx gensize = adaIsPreserved Babbage numTx gensize
+adaIsPreservedBabbage = adaIsPreserved Babbage
 
 -- | The incremental Stake invaraint is preserved over a trace of length 100=
-stakeInvariant :: EraTxOut era => MockChainState era -> MockChainState era -> Property
-stakeInvariant (MockChainState _ _ _ _) (MockChainState nes _ _ _) =
-  case (lsUTxOState . esLState . nesEs) nes of
-    (UTxOState utxo _ _ _ istake _) -> istake === updateStakeDistribution def mempty mempty utxo
+stakeInvariant :: EraStake era => MockChainState era -> MockChainState era -> Property
+stakeInvariant (MockChainState {}) (MockChainState nes _ _ _) =
+  let utxo = nes ^. utxoL
+   in nes ^. instantStakeL === addInstantStake utxo mempty
 
 incrementStakeInvariant ::
   ( Reflect era

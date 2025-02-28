@@ -54,6 +54,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
+import Cardano.Ledger.Shelley.State ()
 import Cardano.Ledger.Slot (SlotNo)
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (Except)

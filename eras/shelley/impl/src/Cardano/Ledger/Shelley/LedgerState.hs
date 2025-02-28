@@ -34,7 +34,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   RewardSnapShot (..),
   UTxOState (..),
   smartUTxOState,
-  IncrementalStake (..),
 
   -- * Genesis State
   genesisState,
@@ -50,8 +49,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   allObligations,
 
   -- * Epoch boundary
-  incrementalStakeDistr,
-  updateStakeDistribution,
   applyRUpd,
   applyRUpdFiltered,
   filterAllRewards,
@@ -104,14 +101,12 @@ module Cardano.Ledger.Shelley.LedgerState (
   utxosDepositedL,
   utxosFeesL,
   utxosGovStateL,
-  utxosStakeDistrL,
   utxosDonationL,
   epochStateGovStateL,
   epochStateStakeDistrL,
   epochStateUMapL,
   epochStatePoolParamsL,
   epochStateRegDrepL,
-  epochStateIncrStakeDistrL,
   epochStateDonationL,
   newEpochStateGovStateL,
   epochStateTreasuryL,
@@ -127,8 +122,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   psDepositsL,
   vsDRepsL,
   vsCommitteeStateL,
-  credMapL,
-  ptrMapL,
 
   -- * Lenses from SnapShot(s)
   ssStakeMarkL,

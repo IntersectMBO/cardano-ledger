@@ -32,17 +32,14 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   EpochState (..),
-  IncrementalStake (..),
   LedgerState (..),
   NewEpochState (..),
   PState (..),
   UTxOState (..),
-  credMap,
   curPParamsEpochStateL,
-  incrementalStakeDistr,
   ptrsMap,
  )
-import Cardano.Ledger.State (SnapShot (..), Stake (..), UTxO (..), coinBalance)
+import Cardano.Ledger.Shelley.State
 import qualified Cardano.Ledger.UMap as UM
 import Control.SetAlgebra (dom, eval, (▷), (◁))
 import Data.Foldable (fold)
@@ -78,6 +75,7 @@ import Test.Tasty.QuickCheck (testProperty)
 incrStakeComputationTest ::
   forall era ledger.
   ( EraGen era
+  , EraStake era
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
@@ -95,7 +93,7 @@ incrStakeComputationTest =
 
 incrStakeComp ::
   forall era ledger.
-  (ChainProperty era, TestingLedger era ledger) =>
+  (ChainProperty era, EraStake era, TestingLedger era ledger) =>
   SourceSignalTarget (CHAIN era) ->
   Property
 incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
@@ -107,44 +105,44 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
     checkIncrStakeComp :: SourceSignalTarget ledger -> Property
     checkIncrStakeComp
       SourceSignalTarget
-        { source = LedgerState UTxOState {utxosUtxo = u, utxosStakeDistr = sd} dp
+        { source = LedgerState UTxOState {utxosUtxo = u, utxosInstantStake = is} dp
         , signal = tx
-        , target = LedgerState UTxOState {utxosUtxo = u', utxosStakeDistr = sd'} dp'
+        , target = LedgerState UTxOState {utxosUtxo = u', utxosInstantStake = is'} dp'
         } =
         counterexample
-          ( mconcat
-              ( [ "\nDetails:\n"
-                , "\ntx\n"
-                , show tx
-                , "\nsize original utxo\n"
-                , show (Map.size $ unUTxO u)
-                , "\noriginal utxo\n"
-                , show u
-                , "\noriginal sd\n"
-                , show sd
-                , "\nfinal utxo\n"
-                , show u'
-                , "\nfinal sd\n"
-                , show sd'
-                , "\noriginal ptrs\n"
-                , show ptrs
-                , "\nfinal ptrs\n"
-                , show ptrs'
-                ]
-              )
+          ( unlines
+              [ "\nDetails:"
+              , "\ntx"
+              , show tx
+              , "size original utxo"
+              , show (Map.size $ unUTxO u)
+              , "original utxo"
+              , show u
+              , "original instantStake"
+              , show is
+              , "final utxo"
+              , show u'
+              , "final instantStake"
+              , show is'
+              , "original ptrs"
+              , show ptrs
+              , "final ptrs"
+              , show ptrs'
+              ]
           )
           $ utxoBal === fromCompact incrStakeBal
         where
           utxoBal = coinBalance u'
-          incrStakeBal = fold (credMap sd') <> fold (ptrMap sd')
+          incrStakeBal = fold (is' ^. instantStakeCredentialsL) <> fold (is' ^. instantStakeCredentialsL)
           ptrs = ptrsMap $ dp ^. certDStateL
           ptrs' = ptrsMap $ dp' ^. certDStateL
 
 incrStakeComparisonTest ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   , EraGov era
+  , EraStake era
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   Proxy era ->
   TestTree
@@ -160,22 +158,23 @@ incrStakeComparisonTest Proxy =
 
 checkIncrementalStake ::
   forall era.
-  (EraTxOut era, EraGov era, EraCertState era) =>
+  (EraGov era, EraTxOut era, EraStake era, EraCertState era) =>
   EpochState era ->
   Property
 checkIncrementalStake es =
   let
-    (LedgerState (UTxOState utxo _ _ _ incStake _) certState) = esLState es
+    LedgerState (UTxOState utxo _ _ _ instantStake _) certState = esLState es
     dstate = certState ^. certDStateL
     pstate = certState ^. certPStateL
     stake = stakeDistr @era utxo dstate pstate
-    istake = incrementalStakeDistr (es ^. curPParamsEpochStateL) incStake dstate pstate
+    snapShot = snapShotFromInstantStake instantStake dstate pstate
+    _pp = es ^. curPParamsEpochStateL
    in
     counterexample
       ( "\nIncremental stake distribution does not match old style stake distribution"
-          ++ tersediffincremental "differences: Old vs Incremental" (ssStake stake) (ssStake istake)
+          ++ tersediffincremental "differences: Old vs Incremental" (ssStake stake) (ssStake snapShot)
       )
-      (stake === istake)
+      (stake === snapShot)
 
 tersediffincremental :: String -> Stake -> Stake -> String
 tersediffincremental message (Stake a) (Stake c) =

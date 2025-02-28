@@ -3,11 +3,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.Deleg (
   tests,
@@ -25,6 +23,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   rewards,
  )
 import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
+import Cardano.Ledger.Shelley.State
 import qualified Cardano.Ledger.UMap as UM
 import Control.SetAlgebra (eval, rng, (∈))
 import Data.Foldable (fold)
@@ -65,8 +64,9 @@ import Test.Tasty.QuickCheck (testProperty)
 tests ::
   forall era.
   ( EraGen era
-  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
+  , EraStake era
   , ChainProperty era
+  , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   TestTree
 tests =

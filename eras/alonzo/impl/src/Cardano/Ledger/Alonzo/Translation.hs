@@ -18,6 +18,7 @@ import qualified Cardano.Ledger.Alonzo.Core as Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
+import Cardano.Ledger.Alonzo.State
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..), EraCertState (..), PState (..), VState (..))
@@ -30,7 +31,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.State (UTxO (..))
+import Data.Coerce (coerce)
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
@@ -136,9 +137,12 @@ instance TranslateEra AlonzoEra UTxOState where
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
         , utxosGovState = translateEra' ctxt $ utxosGovState us
-        , utxosStakeDistr = utxosStakeDistr us
+        , utxosInstantStake = translateEra' ctxt $ utxosInstantStake us
         , utxosDonation = utxosDonation us
         }
+
+instance TranslateEra AlonzoEra ShelleyInstantStake where
+  translateEra _ = pure . coerce
 
 instance TranslateEra AlonzoEra UTxO where
   translateEra _ctxt utxo =

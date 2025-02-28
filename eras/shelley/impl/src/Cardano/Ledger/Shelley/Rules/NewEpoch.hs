@@ -114,6 +114,7 @@ type instance EraRuleEvent "NEWEPOCH" ShelleyEra = ShelleyNewEpochEvent ShelleyE
 instance
   ( EraTxOut era
   , EraGov era
+  , EraStake era
   , EraCertState era
   , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
   , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)
@@ -159,6 +160,7 @@ newEpochTransition ::
   forall era.
   ( EraTxOut era
   , EraGov era
+  , EraStake era
   , EraCertState era
   , Embed (EraRule "MIR" era) (ShelleyNEWEPOCH era)
   , Embed (EraRule "EPOCH" era) (ShelleyNEWEPOCH era)

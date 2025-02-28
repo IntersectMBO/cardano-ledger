@@ -195,7 +195,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   EraCertState (..),
   FutureGenDeleg (..),
-  IncrementalStake (IStake),
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
@@ -3347,14 +3346,13 @@ psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (
     ]
 
 pcUTxOState :: Proof era -> UTxOState era -> PDoc
-pcUTxOState proof (UTxOState u dep fs gs (IStake m _) don) =
+pcUTxOState proof (UTxOState u dep fs gs _ don) =
   ppRecord
     "UTxOState"
     [ ("utxo", pcUTxO proof u)
     , ("deposited", pcCoin dep)
     , ("fees", pcCoin fs)
     , ("govState", pcGovState proof gs)
-    , ("incremental stake distr", ppString ("size = " ++ show (Map.size m))) -- This is not part of the model
     , ("donation", pcCoin don)
     ]
 
@@ -3363,14 +3361,13 @@ instance Reflect era => PrettyA (UTxOState era) where
 
 -- | Like pcUTxOState, except it prints only a summary of the UTxO
 psUTxOState :: forall era. Reflect era => Proof era -> UTxOState era -> PDoc
-psUTxOState proof (UTxOState (UTxO u) dep fs gs (IStake m _) don) =
+psUTxOState proof (UTxOState (UTxO u) dep fs gs _ don) =
   ppRecord
     "UTxOState"
     [ ("utxo", summaryMapCompact (Map.map (\x -> x ^. compactCoinTxOutL) u))
     , ("deposited", pcCoin dep)
     , ("fees", pcCoin fs)
     , ("govState", pcGovState proof gs)
-    , ("incremental stake distr", ppString ("size = " ++ show (Map.size m))) -- This is not part of the model
     , ("donation", pcCoin don)
     ]
 
@@ -3558,7 +3555,6 @@ pcDRepPulser x =
     [ ("pulseSize", ppInt (dpPulseSize x))
     , ("DRepUView Map", ppMap pcCredential pcDRep (dRepMap (dpUMap x)))
     , ("index", ppInt (dpIndex x))
-    , ("stakeDistr", summaryMapCompact (dpStakeDistr x))
     , ("poolDistr", pcPoolDistr (dpStakePoolDistr x))
     , ("partialDrepDistr", summaryMapCompact (dpDRepDistr x))
     , ("drepState", ppMap pcCredential pcDRepState (dpDRepState x))
@@ -3614,8 +3610,7 @@ pcRatifyEnv rs@(RatifyEnv {}) =
   let RatifyEnv {..} = rs
    in ppRecord
         "RatifyEnv"
-        [ ("StakeDistr", ppMap pcCredential (pcCoin . fromCompact) reStakeDistr)
-        , ("StakePoolDistr", pcPoolDistr reStakePoolDistr)
+        [ ("StakePoolDistr", pcPoolDistr reStakePoolDistr)
         , ("DRepDistr", ppMap pcDRep (pcCoin . fromCompact) reDRepDistr)
         , ("DRepState", ppMap pcCredential pcDRepState reDRepState)
         , ("CurrentEpoch", ppEpochNo reCurrentEpoch)
