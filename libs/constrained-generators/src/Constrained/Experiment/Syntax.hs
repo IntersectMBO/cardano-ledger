@@ -980,12 +980,15 @@ toCtxList v l = prefix l
       pure $ Hide (n :|> ctx)
     prefix (t :> ts) = do
       ctx <- toCtx v t
-      Hide suf <- suffix ts
+      Poly suf <- suffix ts
       pure $ Hide (ctx :<> suf)
 
-    suffix :: forall zs. List Term zs -> m (HiddenClist Post zs v)
-    suffix Nil = pure (Hide End)
+    suffix :: forall zs. List Term zs -> m (PolyCList zs)
+    suffix Nil = pure (Poly End)
     suffix (Lit n :> ts) = do
-      Hide ys <- suffix ts
-      pure $ Hide (n :<| ys)
+      Poly ys <- suffix ts
+      pure $ Poly (n :<| ys)
     suffix (_ :> _) = fatalError (pure "toCtxList with too many holes")
+
+data PolyCList as where
+  Poly :: (forall i j. CList Post as i j) -> PolyCList as

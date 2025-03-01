@@ -36,13 +36,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Maybe
 import Data.Semigroup (sconcat)
 import Prettyprinter hiding (cat)
-
--- import Data.Set (Set)
--- import qualified Data.Set as Set
--- import Data.Foldable (fold)
--- import Data.Kind (Constraint, Type)
--- import Data.Typeable (Typeable)
--- import GHC.TypeLits hiding (Text)
+import Test.QuickCheck (Property, Testable, property)
 
 -- =========================================================================
 
@@ -288,3 +282,49 @@ instance HasSpec a => Semigroup (Specification a) where
 
 instance HasSpec a => Monoid (Specification a) where
   mempty = TrueSpec
+
+-- =========================================================================
+
+-- | Collect the 'monitor' calls from a specification instantiated to the given value. Typically,
+--
+--   >>> quickCheck $ forAll (genFromSpec spec) $ \ x -> monitorSpec spec x $ ...
+monitorSpec :: Testable p => Specification a -> a -> p -> Property
+monitorSpec (SuspendedSpec x p) a =
+  errorGE (monitorPred (singletonEnv x a) p) . property
+monitorSpec _ _ = property
+
+monitorPred ::
+  forall m. MonadGenError m => Env -> Pred -> m (Property -> Property)
+monitorPred env = \case
+  ElemPred {} -> pure id -- Not sure about this, but ElemPred is a lot like Assert, so ...
+  Monitor m -> pure (m $ errorGE . explain1 "monitorPred: Monitor" . runTerm env)
+  Subst x t p -> monitorPred env $ substitutePred x t p
+  Assert {} -> pure id
+  GenHint {} -> pure id
+  Reifies {} -> pure id
+  ForAll t (x :-> p) -> do
+    set <- runTerm env t
+    foldr (.) id
+      <$> sequence
+        [ monitorPred env' p
+        | v <- forAllToList set
+        , let env' = extendEnv x v env
+        ]
+  Case t bs -> do
+    v <- runTerm env t
+    runCaseOn v (mapList thing bs) (\x val ps -> monitorPred (extendEnv x val env) ps)
+  When b p -> do
+    v <- runTerm env b
+    if v then monitorPred env p else pure id
+  TruePred -> pure id
+  FalsePred {} -> pure id
+  DependsOn {} -> pure id
+  And ps -> foldr (.) id <$> mapM (monitorPred env) ps
+  Let t (x :-> p) -> do
+    val <- runTerm env t
+    monitorPred (extendEnv x val env) p
+  Exists k (x :-> p) -> do
+    case k (errorGE . explain1 "monitorPred: Exists" . runTerm env) of
+      Result a -> monitorPred (extendEnv x a env) p
+      _ -> pure id
+  Explain es p -> explain es $ monitorPred env p

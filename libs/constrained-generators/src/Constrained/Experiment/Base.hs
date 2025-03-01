@@ -596,7 +596,7 @@ data Term a where
     forall c sym t dom rng.
     AppRequires c sym t dom rng =>
     t c sym dom rng -> List Term dom -> Term rng
-  Lit :: HasSpec a => a -> Term a
+  Lit :: Literal a => a -> Term a
   V :: HasSpec a => Var a -> Term a
 
 instance Eq (Term a) where
@@ -1084,7 +1084,8 @@ data
     Evidence c -> t c s dom rng -> CList Pre dom hole y -> Context c s t dom rng hole
 
 data Ctx hole rng where
-  Ctx :: (HasSpec hole, FunSym c s t dom rng) => Context c s t dom rng hole -> Ctx hole rng
+  Ctx ::
+    (HasSpec hole, HasSpec rng, FunSym c s t dom rng) => Context c s t dom rng hole -> Ctx hole rng
   HOLE :: HasSpec a => Ctx a a
 
 data Mode = Pre | Post
@@ -1095,9 +1096,9 @@ infixr 5 :<>
 
 data CList (x :: Mode) (as :: [Type]) (hole :: Type) (y :: Type) where
   End :: CList Post '[] h y
-  (:<|) :: (Typeable a, Show a) => a -> CList Post as h y -> CList Post (a ': as) h y
-  (:<>) :: HasSpec y => Ctx x y -> CList Post as i j -> CList Pre (y ': as) x y
-  (:|>) :: (Typeable a, Show a) => a -> CList Pre as h y -> CList Pre (a ': as) h y
+  (:<|) :: Literal a => a -> CList Post as h y -> CList Post (a ': as) h y
+  (:<>) :: HasSpec y => Ctx x y -> (forall i j. CList Post as i j) -> CList Pre (y ': as) x y
+  (:|>) :: Literal a => a -> CList Pre as h y -> CList Pre (a ': as) h y
 
 instance Show (CList mode as hole y) where
   show clist = "(" ++ showCList clist
@@ -1180,9 +1181,9 @@ instance HasSpec () where
   typeSpecOpt _ (_ : _) = ErrorSpec (pure "Non null 'cant' set in typeSpecOpt @()")
 
 -- ========================================================================
--- Uni-directional, Match only patterns for the Function Symbols in BaseW
--- The commented out Constructor patterns , work but have such convoluted types
--- with out a monomorphic typing, are basically useless. Use the xxx_ functions instead.
+-- Uni-directional, Match only patterns, for the Function Symbols in BaseW.
+-- The commented out Constructor patterns , work but have such convoluted types,
+-- that without a monomorphic typing, are basically useless. Use the xxx_ functions instead.
 
 pattern Equal ::
   forall b.

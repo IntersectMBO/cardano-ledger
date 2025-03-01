@@ -8,12 +8,14 @@ module Constrained.Experiment.API (
   FunSym (..),
   Witness (..),
   Foldy (..),
-  BaseW (ToGenericW, FromGenericW, EqualW, InjLeftW, InjRightW, ProdW, ProdSndW, ProdFstW),
+  BaseW (ToGenericW, FromGenericW, EqualW, InjLeftW, InjRightW, ProdW, ProdSndW, ProdFstW, ElemW),
   BoolW (NotW, OrW),
-  NumOrdW (LessOrEqualW, LessW),
+  NumOrdW (LessOrEqualW, LessW, GreaterW, GreaterOrEqualW),
   IntW (AddW, NegateW),
   SizeW (SizeOfW),
   FunW (IdW, ComposeW, FlipW),
+  ListW (FoldMapW, SingletonListW, AppendW),
+  MapW (DomW, RngW, LookupW),
   Specification (..),
   Term (..),
   name,
@@ -131,13 +133,13 @@ module Constrained.Experiment.API (
   NumLike,
   PairSpec (..),
   MapSpec (..),
-  MapW (..),
   dom_,
   rng_,
   lookup_,
   fstSpec,
   sndSpec,
   var,
+  Prod (..),
 )
 where
 
@@ -172,7 +174,7 @@ import Constrained.Experiment.Conformance (
   conformsToSpecE,
   satisfies,
  )
-import Constrained.Experiment.Generic (HasSimpleRep (..))
+import Constrained.Experiment.Generic (HasSimpleRep (..), Prod (..))
 import Constrained.Experiment.NumSpec (
   IntW (..),
   NumLike,
@@ -256,6 +258,7 @@ import Constrained.Experiment.Syntax (
 import Constrained.Experiment.Specs.ListFoldy (
   Foldy (..),
   FunW (..),
+  ListW (..),
   append_,
   compose_,
   elem_,
