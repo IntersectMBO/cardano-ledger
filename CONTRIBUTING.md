@@ -304,6 +304,15 @@ To update the version of the Agda spec that the conformance tests are using:
 
 If the commit you need in `formal-ledger-specifications` is not on master, open a PR for your branch in the `formal-ledger-specifications` repository. This will create a branch with the updated generated code, which you can then use as described above. You will not be able to merge in `cardano-leder` master a reference to a commit not yet merged in `formal-ledger-specifications`.
 
+### To run conformance testing against a local build of the Agda ledger spec
+
+1. Enter the `nix develop` shell
+2. Comment out the `source-repository-package` section in `cabal.project`
+3. Add the path to the local build directory (containing the `cardano-ledger-executable-spec.cabal` file) to `packages` in `cabal.project`
+4. Execute the tests, e.g., running `cabal test cardano-ledger-conformance`
+
+To change the local build directory, redo step 3 _without leaving_ the `nix develop` shell.
+
 ### Additional documentation
 
 You can find additional documentation on the nix infrastructure used in this
