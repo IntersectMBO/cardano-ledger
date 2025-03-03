@@ -6,13 +6,14 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
   spec,
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval, ProtVer (..), mkVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -36,6 +37,7 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (evenRedeemerNoDatum)
+import Data.Maybe (fromJust)
 
 spec ::
   forall era.
@@ -475,6 +477,66 @@ spec = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [UnRegDepositTxCert cred expectedDeposit]
+      expectNotRegistered cred
+      expectNotDelegatedVote cred
+    disableImpInitExpectLedgerRuleConformance $
+      it "Delegate vote and unregister after hardfork" $ do
+        (_, ccCred, _) <- electBasicCommittee
+        let bootstrapVer = ProtVer (fromJust $ mkVersion @Int 9) 0
+        setProtVer bootstrapVer
+        (khSPO, _, _) <- setupPoolWithStake $ Coin 10_000_000
+        passNEpochs 3
+        expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+        cred <- KeyHashObj <$> freshKeyHash
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ [RegDepositDelegTxCert cred (DelegVote DRepAlwaysAbstain) expectedDeposit]
+        registerAndRetirePoolToMakeReward cred
+        expectRegistered cred
+        expectDelegatedVote cred DRepAlwaysAbstain
+        getProtVer `shouldReturn` bootstrapVer
+        let postBootstrapVer = ProtVer (fromJust $ mkVersion @Int 10) 0
+        hfGaid <- submitGovAction $ HardForkInitiation SNothing postBootstrapVer
+        submitVote_ VoteYes (StakePoolVoter khSPO) hfGaid
+        submitVote_ VoteYes (CommitteeVoter ccCred) hfGaid
+        passNEpochs 3
+        getProtVer `shouldReturn` postBootstrapVer
+        withdrawalAmount <- getsPParams ppPoolDepositL
+        rewardAccount <- getRewardAccountFor cred
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ [UnRegTxCert cred]
+            & bodyTxL . withdrawalsTxBodyL
+              .~ Withdrawals (Map.singleton rewardAccount withdrawalAmount)
+        expectNotRegistered cred
+        expectNotDelegatedVote cred
+    it "Delegate vote and undelegate after delegating to some stake pools" $ do
+      (khSPO, _, _) <- setupPoolWithStake $ Coin 1_000_000
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      cred <- KeyHashObj <$> freshKeyHash
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [RegDepositDelegTxCert cred (DelegVote DRepAlwaysAbstain) expectedDeposit]
+      registerAndRetirePoolToMakeReward cred
+      expectRegistered cred
+      expectDelegatedVote cred DRepAlwaysAbstain
+      forM_ @[] [1..3 :: Int] $ \_ -> do
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL
+              .~ [DelegTxCert cred (DelegStake khSPO)]
+      passNEpochs 3
+      withdrawalAmount <- getsPParams ppPoolDepositL
+      rewardAccount <- getRewardAccountFor cred
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [UnRegTxCert cred]
+          & bodyTxL . withdrawalsTxBodyL
+            .~ Withdrawals (Map.singleton rewardAccount withdrawalAmount)
       expectNotRegistered cred
       expectNotDelegatedVote cred
 
