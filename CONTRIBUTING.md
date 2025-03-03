@@ -308,10 +308,36 @@ If the commit you need in `formal-ledger-specifications` is not on master, open 
 
 1. Enter the `nix develop` shell
 2. Comment out the `source-repository-package` section in `cabal.project`
-3. Add the path to the local build directory (containing the `cardano-ledger-executable-spec.cabal` file) to `packages` in `cabal.project`
+3. Add the path to the local build directory (containing the `cardano-ledger-executable-spec.cabal` file, see below for examples) to `packages` in `cabal.project`
 4. Execute the tests, e.g., running `cabal test cardano-ledger-conformance`
 
 To change the local build directory, redo step 3 _without leaving_ the `nix develop` shell.
+
+#### Examples
+
+- As an absolute path:
+
+    Compiling the `formal-ledger-specifications` to Haskell via:
+    ```shell
+    nix-build -A ledger.hsSrc
+    ```
+    returns a path to the nix store, e.g., `/nix/store/9pv3x44dfnwrz0jjrh9mlxa9y143i987-hs-src-0.1`, that can be used as:
+    ```
+    /nix/store/9pv3x44dfnwrz0jjrh9mlxa9y143i987-hs-src-0.1/haskell/Ledger
+    ```
+    in the `cabal.project` file.
+
+- As a relative path:
+
+    Cloning the `formal-ledger-specifications` repo on a `MAlonzo` branch as a sibling folder, e.g., `spec`, of `cardano-leder`:
+    ```shell
+    git clone -b MAlonzo-code git@github.com:IntersectMBO/formal-ledger-specifications.git spec
+    ```
+    and using:
+    ```
+    ../spec/generated/
+    ```
+    in the `cabal.project` file.
 
 ### Additional documentation
 
