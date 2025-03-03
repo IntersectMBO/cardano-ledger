@@ -8,6 +8,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -97,6 +98,7 @@ import Cardano.Ledger.Binary.Coders (
   decode,
   encode,
   field,
+  invalidField,
   (!>),
  )
 import Cardano.Ledger.Coin (Coin (..))
@@ -663,31 +665,32 @@ instance Era era => EncCBOR (AlonzoPParams StrictMaybe era) where
   encCBOR ppup = encode (encodePParamsUpdate ppup)
 
 updateField :: Word -> Field (AlonzoPParams StrictMaybe era)
-updateField 0 = field (\x up -> up {appMinFeeA = SJust x}) From
-updateField 1 = field (\x up -> up {appMinFeeB = SJust x}) From
-updateField 2 = field (\x up -> up {appMaxBBSize = SJust x}) From
-updateField 3 = field (\x up -> up {appMaxTxSize = SJust x}) From
-updateField 4 = field (\x up -> up {appMaxBHSize = SJust x}) From
-updateField 5 = field (\x up -> up {appKeyDeposit = SJust x}) From
-updateField 6 = field (\x up -> up {appPoolDeposit = SJust x}) From
-updateField 7 = field (\x up -> up {appEMax = SJust x}) From
-updateField 8 = field (\x up -> up {appNOpt = SJust x}) From
-updateField 9 = field (\x up -> up {appA0 = SJust x}) From
-updateField 10 = field (\x up -> up {appRho = SJust x}) From
-updateField 11 = field (\x up -> up {appTau = SJust x}) From
-updateField 12 = field (\x up -> up {appD = SJust x}) From
-updateField 13 = field (\x up -> up {appExtraEntropy = SJust x}) From
-updateField 14 = field (\x up -> up {appProtocolVersion = SJust x}) From
-updateField 16 = field (\x up -> up {appMinPoolCost = SJust x}) From
-updateField 17 = field (\x up -> up {appCoinsPerUTxOWord = SJust x}) From
-updateField 18 = field (\x up -> up {appCostModels = SJust x}) From
-updateField 19 = field (\x up -> up {appPrices = SJust x}) From
-updateField 20 = field (\x up -> up {appMaxTxExUnits = SJust x}) From
-updateField 21 = field (\x up -> up {appMaxBlockExUnits = SJust x}) From
-updateField 22 = field (\x up -> up {appMaxValSize = SJust x}) From
-updateField 23 = field (\x up -> up {appCollateralPercentage = SJust x}) From
-updateField 24 = field (\x up -> up {appMaxCollateralInputs = SJust x}) From
-updateField k = field (\_x up -> up) (Invalid k)
+updateField = \case
+  0 -> field (\x up -> up {appMinFeeA = SJust x}) From
+  1 -> field (\x up -> up {appMinFeeB = SJust x}) From
+  2 -> field (\x up -> up {appMaxBBSize = SJust x}) From
+  3 -> field (\x up -> up {appMaxTxSize = SJust x}) From
+  4 -> field (\x up -> up {appMaxBHSize = SJust x}) From
+  5 -> field (\x up -> up {appKeyDeposit = SJust x}) From
+  6 -> field (\x up -> up {appPoolDeposit = SJust x}) From
+  7 -> field (\x up -> up {appEMax = SJust x}) From
+  8 -> field (\x up -> up {appNOpt = SJust x}) From
+  9 -> field (\x up -> up {appA0 = SJust x}) From
+  10 -> field (\x up -> up {appRho = SJust x}) From
+  11 -> field (\x up -> up {appTau = SJust x}) From
+  12 -> field (\x up -> up {appD = SJust x}) From
+  13 -> field (\x up -> up {appExtraEntropy = SJust x}) From
+  14 -> field (\x up -> up {appProtocolVersion = SJust x}) From
+  16 -> field (\x up -> up {appMinPoolCost = SJust x}) From
+  17 -> field (\x up -> up {appCoinsPerUTxOWord = SJust x}) From
+  18 -> field (\x up -> up {appCostModels = SJust x}) From
+  19 -> field (\x up -> up {appPrices = SJust x}) From
+  20 -> field (\x up -> up {appMaxTxExUnits = SJust x}) From
+  21 -> field (\x up -> up {appMaxBlockExUnits = SJust x}) From
+  22 -> field (\x up -> up {appMaxValSize = SJust x}) From
+  23 -> field (\x up -> up {appCollateralPercentage = SJust x}) From
+  24 -> field (\x up -> up {appMaxCollateralInputs = SJust x}) From
+  k -> invalidField k
 
 instance Era era => DecCBOR (AlonzoPParams StrictMaybe era) where
   decCBOR =

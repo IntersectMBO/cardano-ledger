@@ -665,7 +665,8 @@ encFail NoCollateralInputs =
   Sum NoCollateralInputs 20
 
 decFail ::
-  ( DecCBOR (TxOut era)
+  ( Era era
+  , DecCBOR (TxOut era)
   , DecCBOR (Value era)
   , DecCBOR (PredicateFailure (EraRule "UTXOS" era))
   ) =>

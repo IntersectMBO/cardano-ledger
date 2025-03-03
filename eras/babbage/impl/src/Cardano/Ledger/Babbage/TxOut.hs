@@ -646,7 +646,7 @@ decodeTxOut decAddr = do
       ofield
         (\x txo -> txo {decodingTxOutScript = x})
         (D $ decodeCIC "Script")
-    bodyFields n = field (\_ t -> t) (Invalid n)
+    bodyFields n = invalidField n
     {-# INLINE bodyFields #-}
     requiredFields =
       [ (0, "addr")

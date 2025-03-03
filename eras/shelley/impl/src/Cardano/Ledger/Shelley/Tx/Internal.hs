@@ -309,6 +309,9 @@ instance Era era => EncCBOR (ShelleyTx era)
 
 instance
   ( Era era
+  , Typeable (TxBody era)
+  , Typeable (TxWits era)
+  , Typeable (TxAuxData era)
   , DecCBOR (Annotator (TxBody era))
   , DecCBOR (Annotator (TxWits era))
   , DecCBOR (Annotator (TxAuxData era))

@@ -88,6 +88,7 @@ import Cardano.Ledger.Binary.Coders (
   decode,
   encode,
   field,
+  invalidField,
   (!>),
  )
 import Cardano.Ledger.Coin (Coin (..))
@@ -495,7 +496,7 @@ updateField 21 = field (\x up -> up {bppMaxBlockExUnits = SJust x}) From
 updateField 22 = field (\x up -> up {bppMaxValSize = SJust x}) From
 updateField 23 = field (\x up -> up {bppCollateralPercentage = SJust x}) From
 updateField 24 = field (\x up -> up {bppMaxCollateralInputs = SJust x}) From
-updateField k = field (\_x up -> up) (Invalid k)
+updateField k = invalidField k
 
 instance Era era => DecCBOR (BabbagePParams StrictMaybe era) where
   decCBOR =

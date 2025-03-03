@@ -839,7 +839,7 @@ instance
       bodyFields 11 = ofield (\x tx -> tx {btbrScriptIntegrityHash = x}) From
       bodyFields 14 = field (\x tx -> tx {btbrReqSignerHashes = x}) From
       bodyFields 15 = ofield (\x tx -> tx {btbrTxNetworkId = x}) From
-      bodyFields n = field (\_ t -> t) (Invalid n)
+      bodyFields n = invalidField n
       {-# INLINE bodyFields #-}
       requiredFields :: [(Word, String)]
       requiredFields =

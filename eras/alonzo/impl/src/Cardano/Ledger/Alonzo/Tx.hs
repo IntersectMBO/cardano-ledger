@@ -432,6 +432,9 @@ instance
 
 instance
   ( Typeable era
+  , Typeable (TxBody era)
+  , Typeable (TxWits era)
+  , Typeable (TxAuxData era)
   , DecCBOR (Annotator (TxBody era))
   , DecCBOR (Annotator (TxWits era))
   , DecCBOR (Annotator (TxAuxData era))

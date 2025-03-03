@@ -272,7 +272,7 @@ instance
     2 -> SumD ConwayCertsFailure <! From
     3 -> SumD ConwayGovFailure <! From
     4 -> SumD ConwayWdrlNotDelegatedToDRep <! From
-    5 -> SumD ConwayTreasuryValueMismatch <! (unswapMismatch <$> FromGroup)
+    5 -> SumD ConwayTreasuryValueMismatch <! mapCoder unswapMismatch FromGroup
     6 -> SumD ConwayTxRefScriptsSizeTooBig <! FromGroup
     7 -> SumD ConwayMempoolFailure <! From
     n -> Invalid n

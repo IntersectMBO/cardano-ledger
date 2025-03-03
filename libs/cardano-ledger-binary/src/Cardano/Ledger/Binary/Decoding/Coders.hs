@@ -24,6 +24,7 @@ module Cardano.Ledger.Binary.Decoding.Coders (
   (<?),
   decode,
   decodeSparse,
+  mapCoder,
 
   -- * Index types for well-formed Coders.
 
@@ -130,11 +131,12 @@ data Field t where
   Field :: (x -> t -> t) -> (forall s. Decoder s x) -> Field t
 
 {-# INLINE field #-}
-field :: (x -> t -> t) -> Decode ('Closed d) x -> Field t
+field :: Typeable x => (x -> t -> t) -> Decode ('Closed d) x -> Field t
 field update dec = Field update (decode dec)
 
 {-# INLINE fieldGuarded #-}
 fieldGuarded ::
+  Typeable x =>
   -- | The message to use if the condition fails
   String ->
   -- | The condition to guard against
@@ -150,7 +152,7 @@ fieldGuarded failMsg check update dec =
     )
 
 {-# INLINE ofield #-}
-ofield :: (StrictMaybe x -> t -> t) -> Decode ('Closed d) x -> Field t
+ofield :: Typeable x => (StrictMaybe x -> t -> t) -> Decode ('Closed d) x -> Field t
 ofield update dec = Field update (SJust <$> decode dec)
 
 {-# INLINE invalidField #-}
@@ -159,13 +161,13 @@ invalidField n = field (flip $ const @t @Void) (Invalid n)
 
 -- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 -- A special case of 'field'
-fieldA :: Applicative ann => (x -> t -> t) -> Decode ('Closed d) x -> Field (ann t)
+fieldA :: (Typeable x, Applicative ann) => (x -> t -> t) -> Decode ('Closed d) x -> Field (ann t)
 fieldA update dec = Field (liftA2 update) (pure <$> decode dec)
 {-# INLINE fieldA #-}
 
 -- | Sparse decode something with a (DecCBOR (Annotator t)) instance
 fieldAA ::
-  Applicative ann =>
+  (Typeable x, Typeable ann, Applicative ann) =>
   (x -> t -> t) ->
   Decode ('Closed d) (ann x) ->
   Field (ann t)
@@ -366,12 +368,12 @@ data Decode (w :: Wrapped) t where
   D :: (forall s. Decoder s t) -> Decode ('Closed 'Dense) t
   -- | Apply a functional decoding (arising from 'RecD' or 'SumD') to get (type wise)
   -- smaller decoding.
-  ApplyD :: Decode w1 (a -> t) -> Decode ('Closed d) a -> Decode w1 t
+  ApplyD :: Typeable a => Decode w1 (a -> t) -> Decode ('Closed d) a -> Decode w1 t
   -- | Mark a Word as a Decoding which is not a valid Decoding. Used when decoding sums
   -- that are tagged out of range.
   Invalid :: Word -> Decode w t
   -- | Used to make (Decode w) an instance of Functor.
-  Map :: (a -> b) -> Decode w a -> Decode w b
+  Map :: Typeable a => (a -> b) -> Decode w a -> Decode w b
   -- | Assert that the next thing decoded must be tagged with the given word.
   TagD :: Word -> Decode ('Closed x) t -> Decode ('Closed x) t
   -- | Decode the next thing, not by inspecting the bytes, but pulled out of thin air,
@@ -382,17 +384,18 @@ data Decode (w :: Wrapped) t where
   -- | Lift a @(Decode w t)@ to a @(Decode w (Annotator t))@. Used on a (component, field,
   -- argument) that was not Annotator encoded, but contained in Record or Sum which is
   -- Annotator encoded.
-  Ann :: Decode w t -> Decode w (Annotator t)
+  Ann :: Typeable t => Decode w t -> Decode w (Annotator t)
   -- | Apply a functional decoding (arising from 'RecD' or 'SumD' that needs to be
   -- Annotator decoded) to get (type wise) smaller decoding.
   ApplyAnn ::
+    (Typeable a, Typeable t) =>
     -- | A functional Decode
     Decode w1 (Annotator (a -> t)) ->
     -- | An Decoder for an Annotator
     Decode ('Closed d) (Annotator a) ->
     Decode w1 (Annotator t)
   -- | the function to Either can raise an error when applied by returning (Left errorMessage)
-  ApplyErr :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
+  ApplyErr :: Typeable a => Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
 
 infixl 4 <!
 
@@ -401,18 +404,19 @@ infixl 4 <*!
 infixl 4 <?
 
 -- | Infix form of @ApplyD@ with the same infixity and precedence as @($)@.
-(<!) :: Decode w1 (a -> t) -> Decode ('Closed w) a -> Decode w1 t
+(<!) :: Typeable a => Decode w1 (a -> t) -> Decode ('Closed w) a -> Decode w1 t
 x <! y = ApplyD x y
 {-# INLINE (<!) #-}
 
 -- | Infix form of @ApplyAnn@ with the same infixity and precedence as @($)@.
 (<*!) ::
+  (Typeable a, Typeable t) =>
   Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
 x <*! y = ApplyAnn x y
 {-# INLINE (<*!) #-}
 
 -- | Infix form of @ApplyErr@ with the same infixity and precedence as @($)@.
-(<?) :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
+(<?) :: Typeable a => Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
 f <? y = ApplyErr f y
 {-# INLINE (<?) #-}
 
@@ -435,15 +439,15 @@ hsize (ApplyAnn f x) = hsize f + hsize x
 hsize (ApplyErr f x) = hsize f + hsize x
 {-# INLINE hsize #-}
 
-decode :: Decode w t -> Decoder s t
+decode :: Typeable t => Decode w t -> Decoder s t
 decode x = fmap snd (decodE x)
 {-# INLINE decode #-}
 
-decodE :: Decode w t -> Decoder s (Int, t)
+decodE :: Typeable t => Decode w t -> Decoder s (Int, t)
 decodE x = decodeCount x 0
 {-# INLINE decodE #-}
 
-decodeCount :: forall (w :: Wrapped) s t. Decode w t -> Int -> Decoder s (Int, t)
+decodeCount :: forall (w :: Wrapped) s t. Typeable t => Decode w t -> Int -> Decoder s (Int, t)
 decodeCount (Summands nm f) n = (n + 1,) <$> decodeRecordSum nm (decodE . f)
 decodeCount (SumD cn) n = pure (n + 1, cn)
 decodeCount (KeyedD cn) n = pure (n + 1, cn)
@@ -478,7 +482,7 @@ decodeCount (ApplyErr cn g) n = do
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
 
-decodeClosed :: Decode ('Closed d) t -> Decoder s t
+decodeClosed :: Typeable t => Decode ('Closed d) t -> Decoder s t
 decodeClosed (Summands nm f) = decodeRecordSum nm (decodE . f)
 decodeClosed (KeyedD cn) = pure cn
 decodeClosed (RecD cn) = pure cn
@@ -559,21 +563,10 @@ getSparseBlockIndef initial pick seen name =
       getSparseBlockIndef (transform initial) pick seen2 name
 {-# INLINE getSparseBlockIndef #-}
 
--- ======================================================
--- (Decode ('Closed 'Dense)) and (Decode ('Closed 'Sparse)) are applicative
--- (Decode 'Open) is not applicative since there is no
--- (Applys 'Open 'Open) instance. And there should never be one.
-
-instance Functor (Decode w) where
-  fmap f (Map g x) = Map (f . g) x
-  fmap f x = Map f x
-  {-# INLINE fmap #-}
-
-instance Applicative (Decode ('Closed d)) where
-  pure = Emit
-  {-# INLINE pure #-}
-  f <*> x = ApplyD f x
-  {-# INLINE (<*>) #-}
+mapCoder :: Typeable a => (a -> b) -> Decode w a -> Decode w b
+mapCoder f (Map g x) = Map (f . g) x
+mapCoder f x = Map f x
+{-# INLINE mapCoder #-}
 
 -- | Use `Cardano.Ledger.Binary.Coders.encodeDual` and `decodeDual`, when you want to
 -- guarantee that a type has both `EncCBOR` and `FromCBR` instances.
@@ -586,19 +579,20 @@ decodeDual = D decCBOR
 
 -- =============================================================================
 
-listDecodeA :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator [x])
+listDecodeA ::
+  Typeable x => Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator [x])
 listDecodeA dx = D (sequence <$> decodeList (decode dx))
 {-# INLINE listDecodeA #-}
 
 setDecodeA ::
-  Ord x =>
+  (Ord x, Typeable x) =>
   Decode ('Closed 'Dense) (Annotator x) ->
   Decode ('Closed 'Dense) (Annotator (Set x))
 setDecodeA dx = D (decodeAnnSet (decode dx))
 {-# INLINE setDecodeA #-}
 
 mapDecodeA ::
-  Ord k =>
+  (Ord k, Typeable k, Typeable v) =>
   Decode ('Closed 'Dense) (Annotator k) ->
   Decode ('Closed 'Dense) (Annotator v) ->
   Decode ('Closed 'Dense) (Annotator (Map.Map k v))

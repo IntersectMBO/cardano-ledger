@@ -54,6 +54,7 @@ import Cardano.Ledger.Binary.Coders (
   Encode (..),
   decode,
   encode,
+  mapCoder,
   (!>),
   (<!),
  )
@@ -319,7 +320,7 @@ instance
     2 -> SumD OutsideValidityIntervalUTxO <! From <! From
     3 -> SumD MaxTxSizeUTxO <! FromGroup
     4 -> SumD InputSetEmptyUTxO
-    5 -> SumD FeeTooSmallUTxO <! (unswapMismatch <$> FromGroup)
+    5 -> SumD FeeTooSmallUTxO <! mapCoder unswapMismatch FromGroup
     6 -> SumD ValueNotConservedUTxO <! FromGroup
     7 -> SumD WrongNetwork <! From <! From
     8 -> SumD WrongNetworkWithdrawal <! From <! From
@@ -328,11 +329,11 @@ instance
     11 -> SumD OutputTooBigUTxO <! From
     12 -> SumD InsufficientCollateral <! From <! From
     13 -> SumD ScriptsNotPaidUTxO <! D (UTxO <$> decCBOR)
-    14 -> SumD ExUnitsTooBigUTxO <! (unswapMismatch <$> FromGroup)
+    14 -> SumD ExUnitsTooBigUTxO <! mapCoder unswapMismatch FromGroup
     15 -> SumD CollateralContainsNonADA <! From
-    16 -> SumD WrongNetworkInTxBody <! (unswapMismatch <$> FromGroup)
+    16 -> SumD WrongNetworkInTxBody <! mapCoder unswapMismatch FromGroup
     17 -> SumD OutsideForecast <! From
-    18 -> SumD TooManyCollateralInputs <! (unswapMismatch <$> FromGroup)
+    18 -> SumD TooManyCollateralInputs <! mapCoder unswapMismatch FromGroup
     19 -> SumD NoCollateralInputs
     20 -> SumD IncorrectTotalCollateralField <! From <! From
     21 -> SumD BabbageOutputTooSmallUTxO <! From

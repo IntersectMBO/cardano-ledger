@@ -148,6 +148,7 @@ instance
 
 instance
   ( Typeable era
+  , Typeable (Tx era)
   , DecCBOR (PParams era)
   , DecCBOR (UTxO era)
   , DecCBOR (Annotator (Core.Tx era))
@@ -183,6 +184,7 @@ instance
 deserializeTranslationInstances ::
   forall era.
   ( Era era
+  , Typeable (Tx era)
   , DecCBOR (PParams era)
   , DecCBOR (UTxO era)
   , DecCBOR (Annotator (Core.Tx era))
