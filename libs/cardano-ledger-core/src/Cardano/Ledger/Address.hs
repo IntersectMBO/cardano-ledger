@@ -7,9 +7,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -427,15 +425,25 @@ fromCborCompactAddr = snd <$> fromCborBothAddr
 -- that it was encoded as.
 fromCborBothAddr :: Decoder s (Addr, CompactAddr)
 fromCborBothAddr = do
-  ifDecoderVersionAtLeast (natVersion @7) fromCborRigorousBothAddr fromCborBackwardsBothAddr
+  ifDecoderVersionAtLeast
+    (natVersion @7)
+    ( ifDecoderVersionAtLeast
+        (natVersion @9)
+        (fromCborRigorousBothAddr False)
+        (fromCborRigorousBothAddr True)
+    )
+    fromCborBackwardsBothAddr
 {-# INLINE fromCborBothAddr #-}
 
 -- | Starting with Babbage we no longer allow addresses with garbage in them.
-fromCborRigorousBothAddr :: Decoder s (Addr, CompactAddr)
-fromCborRigorousBothAddr = do
+fromCborRigorousBothAddr ::
+  -- | Should there be a hard failure for garbage pointers (`False`) or should they be normalized instead (`True`)
+  Bool ->
+  Decoder s (Addr, CompactAddr)
+fromCborRigorousBothAddr isPtrLenient = do
   sbs <- decCBOR
   flip evalStateT 0 $ do
-    addr <- decodeAddrStateLenientT False False sbs
+    addr <- decodeAddrStateLenientT isPtrLenient False sbs
     pure (addr, UnsafeCompactAddr sbs)
 {-# INLINE fromCborRigorousBothAddr #-}
 
