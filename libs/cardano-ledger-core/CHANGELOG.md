@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add boolean argument to `fromCborRigorousBothAddr` for lenient `Ptr` decoding
 * Add `ToCBOR` and `FromCBOR` instances for:
   * `BoundedRatio`
   * `PositiveUnitInterval`

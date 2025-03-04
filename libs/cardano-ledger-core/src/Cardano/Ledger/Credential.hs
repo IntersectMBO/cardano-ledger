@@ -320,4 +320,4 @@ instance DecCBORGroup Ptr where
   decCBORGroup = do
     let decPtrStrict = Ptr <$> decCBOR <*> decCBOR <*> decCBOR
         decPtrNormalized = mkPtrNormalized <$> decCBOR <*> decCBOR <*> decCBOR
-    ifDecoderVersionAtLeast (natVersion @7) decPtrStrict decPtrNormalized
+    ifDecoderVersionAtLeast (natVersion @9) decPtrStrict decPtrNormalized
