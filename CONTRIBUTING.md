@@ -331,7 +331,7 @@ To change the local build directory, redo step 3 _without leaving_ the `nix deve
     ```
     /nix/store/9pv3x44dfnwrz0jjrh9mlxa9y143i987-hs-src-0.1/haskell/Ledger
     ```
-    in the `cabal.project` file.
+    in the packages section of the `cabal.project` file.
 
 - As a relative path:
 
