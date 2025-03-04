@@ -289,6 +289,12 @@ from [the Shelley ledger spec](./eras/shelley/formal-spec)).
 4. Add a link to the package near the bottom of [flake.nix](./flake.nix),
    following the existing examples.
 
+### To build the Haskell code from the Agda ledger spec
+
+See [Build the spec using nix-build](https://github.com/IntersectMBO/formal-ledger-specifications/tree/master?tab=readme-ov-file#build-the-spec-using-nix-build)
+and [Contributing](https://github.com/IntersectMBO/formal-ledger-specifications/blob/master/CONTRIBUTING.md)
+in the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications).
+
 ### To update the referenced Agda ledger spec
 
 To update the version of the Agda spec that the conformance tests are using:
@@ -329,7 +335,7 @@ To change the local build directory, redo step 3 _without leaving_ the `nix deve
 
 - As a relative path:
 
-    Cloning the `formal-ledger-specifications` repo on a `MAlonzo` branch as a sibling folder, e.g., `spec`, of `cardano-leder`:
+    Cloning the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications) on a `MAlonzo` branch as a sibling folder, e.g., `spec`, of `cardano-leder`:
     ```shell
     git clone -b MAlonzo-code git@github.com:IntersectMBO/formal-ledger-specifications.git spec
     ```
