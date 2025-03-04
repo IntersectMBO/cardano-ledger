@@ -18,21 +18,9 @@ source-repository-package
   -- MAKE SURE THIS POINTS TO A COMMIT IN `MAlonzo-code` BEFORE MERGE!
   tag: 9b706ae8c332d5ad10def54aa51d4a66836df363
 
--- NOTE: If you would like to update the above, look for the `MAlonzo-code`
--- branch in the `formal-ledger-specifications` repo and copy the SHA of
--- the commit you need. The `MAlonzo-code` branch functions like an alternative
--- `master / main` branch for the generated code, see the details here:
--- https://github.com/IntersectMBO/formal-ledger-specifications/pull/530
--- If you are working on something in `formal-ledger-specifications`
--- and would like to see how they reflect here, just open a PR / draft PR
--- in `formal-ledger-specifications` for your branch and that will
--- automatically create a branch for the generated code that you can try here
--- by editing the above SRP.
--- Once your changes are merged in `formal-ledger-specifications`, the branch
--- for the generated code will be merged into `MAlonzo-code` automatically.
--- Before merging a PR in `cardano-ledger`, make sure that the above SRP
--- points to a commit in `MAlonzo-code` if you were fiddling with the SRP
--- as part of your PR.
+-- NOTE: If you would like to update the above,
+-- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec
+
 index-state:
   , hackage.haskell.org 2025-01-14T00:25:08Z
   , cardano-haskell-packages 2025-01-08T16:35:32Z
