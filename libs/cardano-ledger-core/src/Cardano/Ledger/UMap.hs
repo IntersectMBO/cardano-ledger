@@ -121,7 +121,7 @@ import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), compactCoinOrError)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Credential (Credential (..), Ptr)
+import Cardano.Ledger.Credential (Credential (..), Ptr, mkPtrNormalized)
 import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Control.DeepSeq (NFData (..))
@@ -469,11 +469,18 @@ instance DecShareCBOR UMap where
           decodeRecordNamed "UMap" (const 2) $ do
             umElems <- decodeMap (interns a <$> decCBOR) (decShareCBOR (b, c))
             let a' = internsFromMap umElems <> a
+                decodePtrNormalized =
+                  decodeRecordNamed "Ptr" (const 3) $
+                    mkPtrNormalized <$> decCBOR <*> decCBOR <*> decCBOR
+                decDropPtrMap = do
+                  m <- decodeMap decodePtrNormalized decCBOR
+                  -- ensure that we are dropping the same type as needed for decoding
+                  let idConst :: a -> a -> a
+                      idConst = const
+                  pure $ idConst mempty m
             umPtrs <-
-              ifDecoderVersionAtLeast
-                (natVersion @9)
-                (mempty <$ dropCBOR (Proxy @(Map (Credential 'Staking) (Set Ptr))))
-                $ decodeMap decCBOR (interns a' <$> decCBOR)
+              ifDecoderVersionAtLeast (natVersion @9) decDropPtrMap $
+                decodeMap decCBOR (interns a' <$> decCBOR)
             pure (UMap {umElems, umPtrs}, (a', b, c))
       )
 
