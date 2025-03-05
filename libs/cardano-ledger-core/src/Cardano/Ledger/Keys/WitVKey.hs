@@ -44,6 +44,7 @@ import Cardano.Ledger.Hashes (
 import Cardano.Ledger.Keys.Internal (DSIGN, KeyRole (..), VKey, asWitness)
 import Cardano.Ledger.MemoBytes (EqRaw (..), MemoBytes (Memo), decodeMemoized)
 import Control.DeepSeq
+import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import Data.Ord (comparing)
@@ -60,7 +61,16 @@ data WitVKey kr = WitVKeyInternal
   --   when used in ordering.
   , wvkBytes :: BSL.ByteString
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Eq)
+
+instance Show (WitVKey kr) where
+  showsPrec _ WitVKeyInternal {wvkKey, wvkSig, wvkKeyHash, wvkBytes} =
+    showString "WitVKeyInternal"
+      . (showString " {wvkKey = " . shows wvkKey)
+      . (showString ", wvkSig = " . shows wvkSig)
+      . (showString ", wvkKeyHash = " . shows wvkKeyHash)
+      . (showString ", wvkBytes = " . shows (Base16.encode wvkBytes))
+      . showString "}"
 
 deriving via
   AllowThunksIn '["wvkBytes", "wvkKeyHash"] (WitVKey kr)
