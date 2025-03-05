@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Add `DecCBOR` instance for `OCert`
 * Add `DecCBOR` instance for `BHeader`
 * Converted `CertState` to a type family
 * Made the fields of predicate failures and environments lazy
