@@ -125,3 +125,4 @@ test-suite tests
     cardano-ledger-mary:{cardano-ledger-mary, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
+    cuddle,
