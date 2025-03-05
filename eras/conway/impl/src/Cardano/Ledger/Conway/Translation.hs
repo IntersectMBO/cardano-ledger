@@ -20,7 +20,7 @@ module Cardano.Ledger.Conway.Translation (
 import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..), upgradeCertState)
+import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.CertState ()
 import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -47,12 +47,12 @@ import Cardano.Ledger.Shelley.API (
   PState (..),
   StrictMaybe (..),
   UTxOState (..),
-  VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
+  lsCertStateL,
  )
 import qualified Cardano.Ledger.UMap as UM
 import Data.Default (Default (def))
@@ -148,26 +148,20 @@ instance TranslateEra ConwayEra DState where
           , UM.umPtrs = mempty
           }
 
-instance TranslateEra ConwayEra CommitteeState where
-  translateEra _ CommitteeState {..} = pure CommitteeState {..}
-
-instance TranslateEra ConwayEra VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
-
 instance TranslateEra ConwayEra PState where
   translateEra _ PState {..} = pure PState {..}
-
-instance TranslateEra ConwayEra ShelleyCertState where
-  translateEra ConwayGenesis {} = pure . upgradeCertState
 
 instance TranslateEra ConwayEra API.LedgerState where
   translateEra conwayGenesis ls =
     pure
       API.LedgerState
         { API.lsUTxOState = translateEra' conwayGenesis $ API.lsUTxOState ls
-        , API.lsCertState = translateEra' conwayGenesis $ API.lsCertState ls
+        , API.lsCertState =
+            ShelleyCertState
+              { shelleyCertDState = translateEra' conwayGenesis (ls ^. lsCertStateL . certDStateL)
+              , shelleyCertPState = translateEra' conwayGenesis (ls ^. lsCertStateL . certPStateL)
+              , shelleyCertVState = def
+              }
         }
 
 translateGovState ::
