@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Binary.Cuddle (
+  CuddleData,
   huddleDecoderEquivalenceSpec,
   specWithHuddle,
   huddleRoundTripCborSpec,

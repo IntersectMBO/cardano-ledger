@@ -7,7 +7,9 @@
 
 module Test.Cardano.Protocol.Binary.Cddl (
   cddlEraSpec,
+  huddleEraSpec,
   postBabbageCddlSpec,
+  postBabbageHuddleSpec,
 ) where
 
 import Cardano.Ledger.Babbage (BabbageEra)
@@ -21,6 +23,7 @@ import Test.Cardano.Ledger.Binary.Cddl (
   cddlRoundTripAnnCborSpec,
   cddlRoundTripCborSpec,
  )
+import Test.Cardano.Ledger.Binary.Cuddle
 import Test.Cardano.Ledger.Common
 
 cddlEraSpec ::
@@ -65,3 +68,46 @@ postBabbageCddlSpec = do
   let v = eraProtVerLow @era
   cddlEraSpec @era @c @bh @bhbody
   cddlRoundTripCborSpec @(OCert StandardCrypto) v "operational_cert"
+
+huddleEraSpec ::
+  forall era c bh bhbody.
+  ( Era era
+  , Eq (bh c)
+  , Show (bh c)
+  , DecCBOR (bh c)
+  , EncCBOR (bh c)
+  , DecCBOR (Annotator (bh c))
+  , Eq (bhbody c)
+  , Show (bhbody c)
+  , DecCBOR (bhbody c)
+  , EncCBOR (bhbody c)
+  ) =>
+  SpecWith CuddleData
+huddleEraSpec = do
+  let v = eraProtVerLow @era
+  huddleRoundTripAnnCborSpec @(bh c) v "header"
+  huddleRoundTripCborSpec @(bh c) v "header"
+  huddleRoundTripCborSpec @(bhbody c) v "header_body"
+  describe "DecCBOR instances equivalence via CDDL - Huddle" $ do
+    huddleDecoderEquivalenceSpec @(bh c) v "header"
+
+-- To be used in Consensus with the appropriate new header types
+postBabbageHuddleSpec ::
+  forall era c bh bhbody.
+  ( Era era
+  , AtLeastEra BabbageEra era
+  , Eq (bh c)
+  , Show (bh c)
+  , DecCBOR (bh c)
+  , EncCBOR (bh c)
+  , DecCBOR (Annotator (bh c))
+  , Eq (bhbody c)
+  , Show (bhbody c)
+  , DecCBOR (bhbody c)
+  , EncCBOR (bhbody c)
+  ) =>
+  SpecWith CuddleData
+postBabbageHuddleSpec = do
+  let v = eraProtVerLow @era
+  huddleEraSpec @era @c @bh @bhbody
+  huddleRoundTripCborSpec @(OCert StandardCrypto) v "operational_cert"
