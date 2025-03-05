@@ -298,10 +298,9 @@ To update the version of the Agda spec that the conformance tests are using:
 3. In the `cardano-ledger` repository:
     - Update the `cabal.project` file by replacing the `tag` field in the `source-repository-package` stanza with SHA.
     - Update the `flake.lock`:
-
-          ```shell
-          nix flake update formal-ledger-specifications --override-input formal-ledger-specifications github:IntersectMBO/formal-ledger-specifications/SHA
-          ```
+        ```shell
+        nix flake update formal-ledger-specifications --override-input formal-ledger-specifications github:IntersectMBO/formal-ledger-specifications/SHA
+        ```
 
 If the commit you need in `formal-ledger-specifications` is not on master, open a PR for your branch in the `formal-ledger-specifications` repository. This will create a branch with the updated generated code, which you can then use as described above. You will not be able to merge in `cardano-leder` master a reference to a commit not yet merged in `formal-ledger-specifications`.
 
