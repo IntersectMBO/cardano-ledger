@@ -218,7 +218,7 @@ instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
       auxDataField 2 = fieldA (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
       auxDataField 3 = fieldA (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
       auxDataField 4 = fieldA (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
-      auxDataField n = field (\_ t -> t) (Invalid n)
+      auxDataField n = invalidField n
 
 instance Era era => DecCBOR (AlonzoTxAuxDataRaw era) where
   decCBOR =
@@ -244,7 +244,7 @@ instance Era era => DecCBOR (AlonzoTxAuxDataRaw era) where
       auxDataField 2 = field (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
       auxDataField 3 = field (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
       auxDataField 4 = field (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
-      auxDataField n = field (\_ t -> t) (Invalid n)
+      auxDataField n = invalidField n
 
 decodeTxAuxDataByTokenType :: forall t s. Decoder s t -> Decoder s t -> Decoder s t -> Decoder s t
 decodeTxAuxDataByTokenType decodeShelley decodeAllegra decodeAlonzo =

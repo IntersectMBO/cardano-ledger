@@ -87,6 +87,7 @@ import Cardano.Ledger.Binary.Coders (
   encodeKeyedStrictMaybe,
   field,
   fieldGuarded,
+  invalidField,
   ofield,
   (!>),
  )
@@ -251,7 +252,7 @@ instance
         ofield
           (\x tx -> tx {ctbrTreasuryDonation = fromSMaybe zero x})
           (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
-      bodyFields n = field (\_ t -> t) (Invalid n)
+      bodyFields n = invalidField n
       requiredFields :: [(Word, String)]
       requiredFields =
         [ (0, "inputs")

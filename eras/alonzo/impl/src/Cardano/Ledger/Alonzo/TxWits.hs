@@ -707,7 +707,7 @@ instance
       txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
       txWitnessField 6 = fieldA addScripts (decodePlutus SPlutusV2)
       txWitnessField 7 = fieldA addScripts (decodePlutus SPlutusV3)
-      txWitnessField n = field (\_ t -> t) (Invalid n)
+      txWitnessField n = invalidField n
       {-# INLINE txWitnessField #-}
 
       nativeScriptsDecoder :: Decoder s (Annotator (Map ScriptHash (Script era)))
@@ -766,7 +766,7 @@ instance
       txWitnessField 5 = field (\x wits -> wits {atwrRdmrsTxWits = x}) From
       txWitnessField 6 = field addScripts (decodePlutus SPlutusV2)
       txWitnessField 7 = field addScripts (decodePlutus SPlutusV3)
-      txWitnessField n = field (\_ t -> t) (Invalid n)
+      txWitnessField n = invalidField n
 
       nativeScriptsDecoder :: Decoder s (Map ScriptHash (Script era))
       nativeScriptsDecoder =

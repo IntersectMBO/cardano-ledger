@@ -622,7 +622,7 @@ instance
       bodyFields 11 = ofield (\x tx -> tx {atbrScriptIntegrityHash = x}) From
       bodyFields 14 = field (\x tx -> tx {atbrReqSignerHashes = x}) From
       bodyFields 15 = ofield (\x tx -> tx {atbrTxNetworkId = x}) From
-      bodyFields n = field (\_ t -> t) (Invalid n)
+      bodyFields n = invalidField n
       requiredFields =
         [ (0, "inputs")
         , (1, "outputs")

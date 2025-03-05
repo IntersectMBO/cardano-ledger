@@ -1086,7 +1086,7 @@ updateField = \case
   31 -> field (\x up -> up {cppDRepDeposit = THKD (SJust x)}) From
   32 -> field (\x up -> up {cppDRepActivity = THKD (SJust x)}) From
   33 -> field (\x up -> up {cppMinFeeRefScriptCostPerByte = THKD (SJust x)}) From
-  k -> field (\_x up -> up) (Invalid k)
+  k -> invalidField k
 
 instance Era era => DecCBOR (ConwayPParams StrictMaybe era) where
   decCBOR = decode (SparseKeyed "PParamsUpdate" emptyConwayPParamsUpdate updateField [])

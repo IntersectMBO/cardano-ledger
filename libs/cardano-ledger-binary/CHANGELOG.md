@@ -2,6 +2,12 @@
 
 ## 1.6.0.0
 
+* Add `Typeable` constraint to `invalidKey`
+* Add `Typeable` constraint to various Coders functions and types: `field`, `fieldGuarded`,
+  `ofield`, `fieldA`, `fieldAA`, `ApplyD`, `Map`, `Ann`, `ApplyAnn`, `ApplyErr`, `<!`, `<*!`, `<?`,
+  `decode`, `decodE`, `decodeCount`, `decodeClosed`, `listDecodeA`, `setDecodeA`, `mapDecodeA`
+* Add `mapCoder` as a replacement for `fmap`
+* Remove `Functor` and `Applicative` instance for `Decode`
 * Add to `Plain`:
   * `assertTag`
   * `decodeTagMaybe`

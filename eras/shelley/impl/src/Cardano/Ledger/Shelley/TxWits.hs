@@ -77,6 +77,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map (fromElems)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Void
 import GHC.Generics (Generic)
 import GHC.Records ()
 import Lens.Micro (Lens', (^.))
@@ -243,7 +244,7 @@ instance (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWitsRaw era)
           (\x wits -> wits {scriptWits' = x})
           (D $ Map.fromElems (hashScript @era) <$> decodeList decCBOR)
       witField 2 = field (\x wits -> wits {bootWits' = x}) From
-      witField n = field (\_ wits -> wits) (Invalid n)
+      witField n = invalidField n
 
 decodeWits ::
   forall era s.
@@ -275,7 +276,7 @@ decodeWits =
       fieldAA
         (\x wits -> wits {bootWits' = x})
         (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
-    witField n = fieldAA (\_ wits -> wits) (Invalid n)
+    witField n = fieldAA (\(_ :: Void) wits -> wits) (Invalid n)
 
 mapTraverseableDecoderA ::
   Traversable f =>

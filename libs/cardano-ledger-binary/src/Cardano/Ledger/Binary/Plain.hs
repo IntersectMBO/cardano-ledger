@@ -93,8 +93,10 @@ decodeFullFromHexText :: FromCBOR a => Text.Text -> Either DecoderError a
 decodeFullFromHexText = withHexText decodeFull'
 
 -- | Report an error when a numeric key of the type constructor doesn't match.
-invalidKey :: MonadFail m => Word -> m a
-invalidKey k = cborError $ DecoderErrorCustom "Not a valid key:" (Text.pack $ show k)
+invalidKey :: forall a m. (Typeable a, MonadFail m) => Word -> m a
+invalidKey k = cborError $ DecoderErrorCustom msg (Text.pack $ show k)
+  where
+    msg = Text.pack (show (typeRep (Proxy @a))) <> " not a valid key:"
 
 decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder =
