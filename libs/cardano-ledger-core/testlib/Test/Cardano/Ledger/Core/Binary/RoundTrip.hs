@@ -38,7 +38,6 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.State
 import Control.State.Transition.Extended (STS (..))
 import Data.Typeable
@@ -234,8 +233,6 @@ roundTripCoreEraTypesSpec = do
         (eraProtVerHigh @era)
     roundTripShareEraSpec @era @(CertState era)
   describe "Core State Types" $ do
-    roundTripAnnEraSpec @era @BootstrapWitness
-    roundTripEraSpec @era @BootstrapWitness
     roundTripShareEraSpec @era @SnapShots
     roundTripShareEraTypeSpec @era @DState
     roundTripShareEraTypeSpec @era @PState
