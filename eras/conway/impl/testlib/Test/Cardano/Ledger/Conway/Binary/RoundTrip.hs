@@ -12,6 +12,10 @@ module Test.Cardano.Ledger.Conway.Binary.RoundTrip (
   roundTripConwayEraTypesSpec,
 ) where
 
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript (..),
+  AsIx (..),
+ )
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.Compactible
@@ -29,6 +33,7 @@ roundTripConwayCommonSpec ::
   forall era.
   ( EraTx era
   , EraGov era
+  , AlonzoEraScript era
   , StashedAVVMAddresses era ~ ()
   , Arbitrary (Tx era)
   , Arbitrary (TxBody era)
@@ -40,6 +45,7 @@ roundTripConwayCommonSpec ::
   , Arbitrary (CompactForm (Value era))
   , Arbitrary (Script era)
   , Arbitrary (GovState era)
+  , Arbitrary (PlutusPurpose AsIx era)
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (PParamsHKD StrictMaybe era)

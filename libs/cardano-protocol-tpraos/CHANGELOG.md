@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Add `DecCBOR` instance for `OCert`
 * Add `DecCBOR` instance for `BHeader`
 * Converted `CertState` to a type family
 * Made the fields of predicate failures and environments lazy
@@ -16,6 +17,7 @@
 
 ### `testlib`
 
+* Add `RoundTrip` module with `roundTripBlockSpec`
 * Add `genAllIssuerKeys`
 * Add `Arbitrary` instances for `KESKeyPair` and `VRFKeyPair`
 * Move `VRFNatVal` from `cardano-ledger-shelley-test` in here.

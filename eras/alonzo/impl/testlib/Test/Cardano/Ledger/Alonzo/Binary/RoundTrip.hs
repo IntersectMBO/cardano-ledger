@@ -14,6 +14,11 @@ module Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript (..),
+  AsIx (..),
+ )
+import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats)
 import Cardano.Ledger.Binary (DecCBOR)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
@@ -21,13 +26,14 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
-import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genNonEmptyRedeemers, genNonEmptyTxDats)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (
   RuleListEra (..),
   roundTripAnnEraTypeSpec,
   roundTripEraExpectation,
+  roundTripEraTypeExpectation,
   roundTripEraTypeSpec,
  )
 import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)
@@ -36,6 +42,7 @@ roundTripAlonzoCommonSpec ::
   forall era.
   ( EraTx era
   , EraGov era
+  , AlonzoEraScript era
   , StashedAVVMAddresses era ~ ()
   , Arbitrary (Tx era)
   , Arbitrary (TxBody era)
@@ -47,6 +54,7 @@ roundTripAlonzoCommonSpec ::
   , Arbitrary (CompactForm (Value era))
   , Arbitrary (Script era)
   , Arbitrary (GovState era)
+  , Arbitrary (PlutusPurpose AsIx era)
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , RuleListEra era
@@ -65,7 +73,7 @@ roundTripAlonzoCommonSpec = do
 
 roundTripAlonzoEraTypesSpec ::
   forall era.
-  Era era =>
+  (AlonzoEraScript era, Arbitrary (PlutusPurpose AsIx era)) =>
   Spec
 roundTripAlonzoEraTypesSpec = do
   describe "Alonzo era types" $ do
@@ -82,6 +90,12 @@ roundTripAlonzoEraTypesSpec = do
       -- It doesn't roundtrip because we do not en/decode NoDatum
       -- Possibly use peekAvailable, but haven't looked into the issue too deeply
       roundTripEraTypeSpec @era @Datum
+    prop "TxDats" $
+      forAll genNonEmptyTxDats $
+        roundTripEraTypeExpectation @era @TxDats
+    prop "Redeemers" $
+      forAll genNonEmptyRedeemers $
+        roundTripEraTypeExpectation @era @Redeemers
 
 instance RuleListEra AlonzoEra where
   type

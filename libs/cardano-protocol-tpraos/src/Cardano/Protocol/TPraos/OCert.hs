@@ -94,6 +94,7 @@ data OCert c = OCert
   }
   deriving (Generic)
   deriving (EncCBOR) via (CBORGroup (OCert c))
+  deriving (DecCBOR) via (CBORGroup (OCert c))
 
 deriving instance Crypto c => Eq (OCert c)
 

@@ -38,7 +38,6 @@ import Test.Cardano.Ledger.Babbage.CDDL hiding (
   native_script,
   next_major_protocol_version,
   nonempty_set,
-  operational_cert,
   plutus_v1_script,
   plutus_v2_script,
   pool_metadata,
@@ -135,16 +134,6 @@ header_body =
       , "block_body_hash" ==> hash32
       , a operational_cert
       , a protocol_version
-      ]
-
-operational_cert :: Rule
-operational_cert =
-  "operational_cert"
-    =:= arr
-      [ "hot_vkey" ==> kes_vkey
-      , "sequence_number" ==> (VUInt `sized` (8 :: Word64))
-      , "kes_period" ==> VUInt
-      , "sigma" ==> signature
       ]
 
 protocol_version :: Rule
