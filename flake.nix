@@ -24,6 +24,11 @@
     };
 
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
+
+    formal-ledger-specifications = {
+      url = "github:IntersectMBO/formal-ledger-specifications";
+      flake = false;
+    };
   };
 
   outputs = inputs: let
@@ -71,6 +76,7 @@
           #
           inputMap = {
             "https://chap.intersectmbo.org/" = inputs.CHaP;
+            "https://github.com/IntersectMBO/formal-ledger-specifications.git" = inputs.formal-ledger-specifications;
           };
           cabalProjectLocal = ''
             repository cardano-haskell-packages-local

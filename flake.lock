@@ -201,6 +201,22 @@
         "type": "github"
       }
     },
+    "formal-ledger-specifications": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1739273763,
+        "narHash": "sha256-vrxKI3I1kwt+XiHk+UAWm49veRPTWkVPOvwNzVxuFs8=",
+        "owner": "IntersectMBO",
+        "repo": "formal-ledger-specifications",
+        "rev": "9b706ae8c332d5ad10def54aa51d4a66836df363",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IntersectMBO",
+        "repo": "formal-ledger-specifications",
+        "type": "github"
+      }
+    },
     "ghc-8.6.5-iohk": {
       "flake": false,
       "locked": {
@@ -843,6 +859,7 @@
         "cardano-mainnet-mirror": "cardano-mainnet-mirror",
         "flake-compat": "flake-compat",
         "flake-utils": "flake-utils",
+        "formal-ledger-specifications": "formal-ledger-specifications",
         "haskellNix": "haskellNix",
         "iohkNix": "iohkNix",
         "nixpkgs": [
