@@ -114,6 +114,8 @@ module Constrained.Experiment.API (
   (++.),
   sizeOf,
   sizeOf_,
+  hasSize,
+  rangeSize,
   length_,
   genFromSizeSpec,
   between,
@@ -306,7 +308,9 @@ import Constrained.Experiment.Specs.Size (
   Sized (sizeOf),
   between,
   genFromSizeSpec,
+  hasSize,
   maxSpec,
+  rangeSize,
   sizeOf_,
  )
 import Constrained.Syntax (var)

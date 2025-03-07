@@ -413,7 +413,10 @@ data ListW (s :: Symbol) (args :: [Type]) (res :: Type) where
 instance Semantics ListW where
   semantics = listSem
 
-instance Syntax ListW
+instance Syntax ListW where
+  prettyWit AppendW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> short n <+> prettyPrec 10 y
+  prettyWit AppendW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> prettyPrec 10 y <+> short n
+  prettyWit _ _ _ = Nothing
 
 listSem :: ListW s dom rng -> FunTy dom rng
 listSem (FoldMapW (Fun f)) = adds . map (semantics f)

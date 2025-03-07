@@ -49,7 +49,6 @@ import Data.List ((\\))
 import qualified Data.List.NonEmpty as NE
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (eqT, (:~:) (Refl))
 import GHC.TypeLits
 import Prettyprinter hiding (cat)
 import Test.QuickCheck (Arbitrary (..), shrinkList, shuffle)
@@ -213,11 +212,11 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
 
 data SetW (s :: Symbol) (d :: [Type]) (r :: Type) where
   SingletonW :: Ord a => SetW "singleton_" '[a] (Set a)
-  UnionW :: Ord a => SetW "union_" '[Set a, Set a] (Set a)
-  SubsetW :: Ord a => SetW "subset_" '[Set a, Set a] Bool
-  MemberW :: Ord a => SetW "member_" '[a, Set a] Bool
-  DisjointW :: Ord a => SetW "disjoint_" '[Set a, Set a] Bool
-  FromListW :: (HasSpec a, Ord a) => SetW "fromList_" '[[a]] (Set a)
+  UnionW :: (Literal a, Ord a) => SetW "union_" '[Set a, Set a] (Set a)
+  SubsetW :: (Literal a, Ord a) => SetW "subset_" '[Set a, Set a] Bool
+  MemberW :: (Literal a, Ord a) => SetW "member_" '[a, Set a] Bool
+  DisjointW :: (Literal a, Ord a) => SetW "disjoint_" '[Set a, Set a] Bool
+  FromListW :: forall a. (HasSpec a, Ord a) => SetW "fromList_" '[[a]] (Set a)
 
 deriving instance Eq (SetW s dom rng)
 
@@ -240,7 +239,15 @@ setSem FromListW = Set.fromList
 instance Semantics SetW where
   semantics = setSem
 
-instance Syntax SetW -- TO DO add prettyWit methods
+instance Syntax SetW where
+  prettyWit SubsetW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> short (Set.toList n) <+> prettyPrec 10 y
+  prettyWit SubsetW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "subset_" <+> prettyPrec 10 y <+> short (Set.toList n)
+  prettyWit DisjointW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> short (Set.toList n) <+> prettyPrec 10 y
+  prettyWit DisjointW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "disjoint_" <+> prettyPrec 10 y <+> short (Set.toList n)
+  prettyWit UnionW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> short (Set.toList n) <+> prettyPrec 10 y
+  prettyWit UnionW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "union_" <+> prettyPrec 10 y <+> short (Set.toList n)
+  prettyWit MemberW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "member_" <+> prettyPrec 10 y <+> short (Set.toList n)
+  prettyWit _ _ _ = Nothing
 
 instance (Ord a, HasSpec a, HasSpec (Set a)) => Semigroup (Term (Set a)) where
   (<>) = union_
@@ -499,14 +506,9 @@ instance (HasSpec a, Ord a) => Logic "fromList_" SetW '[[a]] (Set a) where
                 ]
   propagate ctx _ = ErrorSpec $ pure ("Logic instance for FromListW with wrong number of arguments. " ++ show ctx)
 
-  mapTypeSpec funsym ts = case funsym of
-    FromListW @b
-      | Evidence <- prerequisites @(Set a)
-      , Just Refl <- eqT @a @b ->
-          constrained $ \x ->
-            unsafeExists $ \x' ->
-              Assert (x ==. fromList_ @a x') <> toPreds x' ts
-    _ -> error "No more cases"
+  mapTypeSpec FromListW ts =
+    constrained $ \x ->
+      unsafeExists $ \x' -> Assert (x ==. fromList_ x') <> toPreds x' ts
 
 fromList_ :: forall a. (Ord a, HasSpec a) => Term [a] -> Term (Set a)
 fromList_ = appTerm FromListW

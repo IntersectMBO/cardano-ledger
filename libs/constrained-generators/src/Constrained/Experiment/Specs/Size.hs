@@ -34,7 +34,6 @@ import Constrained.GenT
 import Constrained.List
 import Data.Kind
 import qualified Data.List.NonEmpty as NE
-import Data.Typeable (eqT, (:~:) (Refl))
 import GHC.TypeLits
 
 -- ======================================================================
@@ -73,10 +72,9 @@ instance (Sized t, HasSpec t) => Logic "sizeOf_" SizeW '[t] Integer where
   propagate ctx _ =
     ErrorSpec $ pure ("Logic instance for SizeOfW with wrong number of arguments. " ++ show ctx)
 
-  mapTypeSpec (SizeOfW @b) ts
-    | Just Refl <- eqT @t @b = constrained $ \x ->
-        unsafeExists $ \x' -> Assert (x ==. sizeOf_ x') <> toPreds @b x' ts
-  mapTypeSpec _ _ = error "No more cases"
+  mapTypeSpec (SizeOfW @a) ts =
+    constrained $ \x ->
+      unsafeExists $ \x' -> Assert (x ==. sizeOf_ x') <> toPreds @a x' ts
 
 sizeOfFn :: forall a. (HasSpec a, Sized a) => Fun '[a] Integer
 sizeOfFn = Fun SizeOfW

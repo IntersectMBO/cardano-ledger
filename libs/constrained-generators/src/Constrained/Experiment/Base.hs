@@ -73,7 +73,7 @@ import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 -- The Syntax, Semantics, and Logic classes implement new function symbols in
 -- the first order logic. Note that a function symbol is first order
 -- data, that uniquely identifies a higher order function. The three classes
--- supply varying levels of functionality, realting to the Syntax, Semantics, and
+-- supply varying levels of functionality, relating to the Syntax, Semantics, and
 -- Logical operations of the function symbol.
 
 -- The kind of a type, that is a candidate for a Function Symbol, and hence
@@ -616,8 +616,8 @@ sameTerms (x :> xs) (y :> ys) = x == y && sameTerms xs ys
 --   E.g  appTerm NotW :: Term Bool -> Term Bool
 --        (appTerm NotW (lit False)) builds the Term  (not_ False)
 --   Note the witness (NotW) must have a Logic instance like:
---   instance Logic "not_"            BaseW       '[Bool]         Bool where ...
---             Name in Haskell^    type of NotW^   arg types^   result type^
+--   instance Logic "not_"            BaseW       '[Bool]           Bool where ...
+--        Name in Haskell^    type of NotW^    arg types^   result type^
 --   The Logic instance does not demand any of these things have any properties at all.
 --   It is here, where we actually build the App node, that we demand the properties App terms require.
 --   App :: AppRequires s t ds r => t s ds r -> List Term dom -> Term rng
@@ -963,22 +963,9 @@ instance Show a => Pretty (WithPrec (Term a)) where
   pretty (WithPrec p t) = case t of
     Lit n -> fromString $ showsPrec p n ""
     V x -> viaShow x
-    {-
-    -- These should be replaced by using Syntax instances
-    SubsetPat (Lit n) y -> parensIf (p > 10) $ "subset_" <+> short (Set.toList n) <+> prettyPrec 10 y
-    SubsetPat y (Lit n) -> parensIf (p > 10) $ "subset_" <+> prettyPrec 10 y <+> short (Set.toList n)
-    DisjointPat (Lit n) y -> parensIf (p > 10) $ "disjoint_" <+> short (Set.toList n) <+> prettyPrec 10 y
-    DisjointPat y (Lit n) -> parensIf (p > 10) $ "disjoint_" <+> prettyPrec 10 y <+> short (Set.toList n)
-    UnionPat (Lit n) y -> parensIf (p > 10) $ "union_" <+> short (Set.toList n) <+> prettyPrec 10 y
-    UnionPat y (Lit n) -> parensIf (p > 10) $ "union_" <+> prettyPrec 10 y <+> short (Set.toList n)
-    MemberPat y (Lit n) -> parensIf (p > 10) $ "member_" <+> prettyPrec 10 y <+> short (Set.toList n)
-    ElemPat y (Lit n) -> parensIf (p > 10) $ "elem_" <+> prettyPrec 10 y <+> short n
-    AppendPat (Lit n) y -> parensIf (p > 10) $ "append_" <+> short n <+> prettyPrec 10 y
-    AppendPat y (Lit n) -> parensIf (p > 10) $ "append_" <+> prettyPrec 10 y <+> short n
-    -}
     App x Nil -> viaShow x
     App f as
-      | Just doc <- prettyWit f as p -> doc
+      | Just doc <- prettyWit f as p -> doc -- Use Function Symbol specific pretty printers
     App f as
       | inFix f
       , a :> b :> Nil <- as ->

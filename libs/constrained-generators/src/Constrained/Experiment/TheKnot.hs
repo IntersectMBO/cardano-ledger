@@ -500,7 +500,7 @@ simplifySpec spec = case regularizeNames spec of
     let optP = optimisePred p
      in fromGESpec $
           explain
-            (pure ("\nWhile calling simplifySpec on var " ++ show x ++ "\noptP=\n" ++ show optP))
+            (pure ("\nWhile calling simplifySpec on var " ++ show x ++ "\noptP=\n" ++ show optP ++ "\n"))
             (computeSpecSimplified x optP)
   MemberSpec xs -> MemberSpec xs
   ErrorSpec es -> ErrorSpec es
@@ -747,11 +747,11 @@ simplifyBinder (x :-> p) = x :-> simplifyPred p
 -- --------------------------------------------------------------------
 -- Turning Preds into Specifications. Here is where Propagation occurs
 
--- | Precondition: the `Pred fn` defines the `Var a`
+-- | Precondition: the `Pred` defines the `Var a`
 -- Runs in `GE` in order for us to have detailed context on failure.
 computeSpecSimplified ::
   forall a. (HasSpec a, HasCallStack) => Var a -> Pred -> GE (Specification a)
-computeSpecSimplified x pred3 = localGESpec $ case pred3 of
+computeSpecSimplified x pred3 = localGESpec $ case simplifyPred pred3 of
   ElemPred True t xs -> propagateSpec (MemberSpec xs) <$> toCtx x t
   ElemPred False (t :: Term b) xs -> propagateSpec (TypeSpec @b (emptySpec @b) (NE.toList xs)) <$> toCtx x t
   Monitor {} -> pure mempty
@@ -1380,8 +1380,7 @@ saturatePred p =
     Assert (Elem x (Lit (y : ys))) -> [satisfies x (MemberSpec (y :| ys))]
     -- ElemPred True x ys -> [satisfies x (MemberSpec ys)]
     -}
-    Assert ((App (sym :: t s dom rng) xs) :: Term Bool)
-      | Just Refl <- eqT @rng @Bool -> saturate @s @t @dom @rng sym xs
+    Assert ((App (sym :: t s dom Bool) xs) :: Term Bool) -> saturate @s @t @dom @Bool sym xs
     -- TODO: e.g. `elem (pair x y) (lit zs) -> elem x (lit $ map fst zs)` etc.
     _ -> []
 

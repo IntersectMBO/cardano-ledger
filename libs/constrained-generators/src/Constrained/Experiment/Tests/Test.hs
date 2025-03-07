@@ -36,7 +36,6 @@ import Constrained.Experiment.Examples.Set
 import Constrained.Experiment.Examples.Tree
 import Constrained.Experiment.Properties hiding (main)
 import Constrained.Experiment.Specs.ListFoldy (narrowByFuelAndSize)
-import Constrained.Experiment.Specs.Size (hasSize, rangeSize)
 import Constrained.Experiment.TheKnot ()
 import Control.Monad
 import Data.Int
