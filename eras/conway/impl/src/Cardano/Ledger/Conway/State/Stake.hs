@@ -24,13 +24,15 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   Interns,
+  TokenType (..),
+  peekTokenType,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
-import Cardano.Ledger.State
+import Cardano.Ledger.Shelley.State
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
@@ -50,7 +52,15 @@ newtype ConwayInstantStake era = ConwayInstantStake
 
 instance DecShareCBOR (ConwayInstantStake era) where
   type Share (ConwayInstantStake era) = Interns (Credential 'Staking)
-  decShareCBOR credInterns = ConwayInstantStake <$> decShareCBOR (credInterns, mempty)
+  decShareCBOR credInterns = do
+    peekTokenType >>= \case
+      TypeListLen -> toConwayInstantStake <$> decShareCBOR credInterns
+      TypeListLen64 -> toConwayInstantStake <$> decShareCBOR credInterns
+      TypeListLenIndef -> toConwayInstantStake <$> decShareCBOR credInterns
+      _ -> ConwayInstantStake <$> decShareCBOR (credInterns, mempty)
+    where
+      toConwayInstantStake :: ShelleyInstantStake era -> ConwayInstantStake era
+      toConwayInstantStake = ConwayInstantStake . sisCredentialStake
 
 instance Semigroup (ConwayInstantStake era) where
   ConwayInstantStake cs1 <> ConwayInstantStake cs2 =
