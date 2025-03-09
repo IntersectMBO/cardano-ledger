@@ -112,7 +112,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   logText,
   logString,
   logToExpr,
-  logStakeDistr,
+  logInstantStake,
   logFeeMismatch,
 
   -- * Combinators
@@ -171,14 +171,12 @@ import Cardano.Ledger.Shelley.Genesis (
   validateGenesis,
  )
 import Cardano.Ledger.Shelley.LedgerState (
-  CanSetUTxO (..),
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
   asTreasuryL,
   consumed,
   curPParamsEpochStateL,
-  epochStateIncrStakeDistrL,
   epochStateUMapL,
   esAccountStateL,
   esLStateL,
@@ -205,12 +203,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
-import Cardano.Ledger.State (
-  EraUTxO (..),
-  ScriptsProvided (..),
-  UTxO (..),
-  txinLookup,
- )
+import Cardano.Ledger.State
 import Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
   setMinCoinTxOut,
@@ -410,6 +403,7 @@ class
   ( EraGov era
   , EraUTxO era
   , EraTxOut era
+  , EraStake era
   , EraPParams era
   , ShelleyEraTxCert era
   , ShelleyEraScript era
@@ -466,6 +460,7 @@ class
   , NFData (EraRuleEvent "TICK" era)
   , Typeable (EraRuleEvent "TICK" era)
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
+  , ToExpr (InstantStake era)
   , ToExpr (CertState era)
   , EraCertState era
   ) =>
@@ -671,10 +666,10 @@ modifyPrevPParams ::
 modifyPrevPParams f = modifyNES $ nesEsL . prevPParamsEpochStateL %~ f
 
 -- | Logs the current stake distribution
-logStakeDistr :: HasCallStack => ImpTestM era ()
-logStakeDistr = do
-  stakeDistr <- getsNES $ nesEsL . epochStateIncrStakeDistrL
-  logDoc $ "Stake distr: " <> ansiExpr stakeDistr
+logInstantStake :: ToExpr (InstantStake era) => HasCallStack => ImpTestM era ()
+logInstantStake = do
+  stakeDistr <- getsNES instantStakeG
+  logDoc $ "Instant Stake: " <> ansiExpr stakeDistr
 
 mkTxId :: Int -> TxId
 mkTxId idx = TxId (mkDummySafeHash idx)

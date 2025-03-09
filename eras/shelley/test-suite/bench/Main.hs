@@ -30,11 +30,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   PState (..),
   UTxOState (..),
-  incrementalStakeDistr,
-  updateStakeDistribution,
  )
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
-import Cardano.Ledger.State
+import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (compile, compute, run)
@@ -114,7 +112,7 @@ eqf name f n = bgroup (name ++ " " ++ show n) (map runat [n, n * 10, n * 100, n 
 
 mainEq :: IO ()
 mainEq =
-  defaultMain $
+  defaultMain
     [ bgroup "KeysEqual tests" $
         [ eqf "keysEqual" keysEqual (100 :: Int)
         , eqf
@@ -196,14 +194,11 @@ profileEpochBoundary =
 
 epochAt :: Int -> Benchmark
 epochAt x =
-  env (QC.generate (genTestCase x n)) $ \ ~arg@(dstate, pstate, utxo) ->
+  env (QC.generate (genTestCase x n)) $ \arg ->
     bgroup
       ("UTxO=" ++ show x ++ ",  address=" ++ show n)
       [ bench "stakeDistr" (nf action2m arg)
-      , bench "incrementalStakeDistr" (nf action2im arg)
-      , env (pure (updateStakeDistribution emptyPParams mempty mempty utxo)) $ \incStake ->
-          bench "incrementalStakeDistr (no update)" $
-            nf (incrementalStakeDistr (emptyPParams @ShelleyEra) incStake dstate) pstate
+      , bench "instantStake" (nf benchInstantStake arg)
       ]
   where
     n = 10000 :: Int
@@ -214,15 +209,14 @@ action2m ::
   SnapShot
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
-action2im ::
+benchInstantStake ::
   forall era.
-  EraTxOut era =>
+  EraStake era =>
   (DState era, PState era, UTxO era) ->
   SnapShot
-action2im (dstate, pstate, utxo) =
-  let pp = emptyPParams @era
-      incStake = updateStakeDistribution pp mempty mempty utxo
-   in incrementalStakeDistr pp incStake dstate pstate
+benchInstantStake (dstate, pstate, utxo) =
+  let instantStake = addInstantStake utxo mempty
+   in snapShotFromInstantStake instantStake dstate pstate
 
 -- =================================================================
 

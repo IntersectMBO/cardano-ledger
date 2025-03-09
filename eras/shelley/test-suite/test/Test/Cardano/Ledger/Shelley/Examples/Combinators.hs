@@ -64,7 +64,6 @@ import Cardano.Ledger.Hashes (GenDelegPair, GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   DState (..),
   EpochState (..),
   FutureGenDeleg (..),
@@ -81,19 +80,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   futurePParamsEpochStateL,
   prevPParamsEpochStateL,
   rewards,
-  updateStakeDistribution,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards, votedFuturePParams)
-import Cardano.Ledger.State (
-  PoolDistr (..),
-  SnapShot,
-  SnapShots (..),
-  UTxO (..),
-  calculatePoolDistr,
-  txins,
-  txouts,
- )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.UMap (
   RDPair (..),
   UView (PtrUView, RewDepUView, SPoolUView),
@@ -250,7 +240,7 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
 -- Update the UTxO for given transaction body.
 newUTxO ::
   forall era.
-  (EraTx era, EraGov era) =>
+  (EraTx era, EraStake era) =>
   TxBody era ->
   ChainState era ->
   ChainState era
@@ -266,9 +256,8 @@ newUTxO txb cs = cs {chainNes = nes'}
     utxoWithout = Map.withoutKeys utxo (txins @era txb)
     utxoDel = UTxO utxoToDel
     utxo' = UTxO (utxoWithout `Map.union` unUTxO utxoAdd)
-    sd' =
-      updateStakeDistribution @era (es ^. curPParamsEpochStateL) (utxosStakeDistr utxoSt) utxoDel utxoAdd
-    utxoSt' = utxoSt {utxosUtxo = utxo', utxosStakeDistr = sd'}
+    is' = deleteInstantStake utxoDel (addInstantStake utxoAdd (utxoSt ^. instantStakeL))
+    utxoSt' = utxoSt {utxosUtxo = utxo', utxosInstantStake = is'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}

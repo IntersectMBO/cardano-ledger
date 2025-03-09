@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
-  DecCBOR (decCBOR, dropCBOR),
+  DecCBOR (decCBOR),
   DecShareCBOR (Share, decShareCBOR, decSharePlusCBOR),
   EncCBOR (encCBOR),
   FromCBOR (..),
@@ -40,9 +40,6 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   encodeMap,
   encodeMemPack,
-  enforceDecoderVersion,
-  ifDecoderVersionAtLeast,
-  natVersion,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (
@@ -56,7 +53,7 @@ import Cardano.Ledger.CertState (
   vsDRepsL,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
-import Cardano.Ledger.Credential (Credential (..), Ptr (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
@@ -69,10 +66,7 @@ import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default (Default, def)
-import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Proxy
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -102,10 +96,16 @@ instance CanSetUTxO EpochState where
   utxoL = (lens esLState $ \s ls -> s {esLState = ls}) . utxoL
   {-# INLINE utxoL #-}
 
+instance CanGetInstantStake EpochState
+instance CanSetInstantStake EpochState where
+  instantStakeL = (lens esLState $ \s ls -> s {esLState = ls}) . instantStakeL
+  {-# INLINE instantStakeL #-}
+
 deriving stock instance
   ( EraTxOut era
   , Show (GovState era)
   , Show (CertState era)
+  , Show (InstantStake era)
   ) =>
   Show (EpochState era)
 
@@ -113,6 +113,7 @@ deriving stock instance
   ( EraTxOut era
   , Eq (GovState era)
   , Eq (CertState era)
+  , Eq (InstantStake era)
   ) =>
   Eq (EpochState era)
 
@@ -120,6 +121,7 @@ instance
   ( EraTxOut era
   , NoThunks (GovState era)
   , NoThunks (CertState era)
+  , NoThunks (InstantStake era)
   ) =>
   NoThunks (EpochState era)
 
@@ -127,11 +129,13 @@ instance
   ( EraTxOut era
   , NFData (GovState era)
   , NFData (CertState era)
+  , NFData (InstantStake era)
   ) =>
   NFData (EpochState era)
 
 instance
   ( EraTxOut era
+  , EraStake era
   , EncCBOR (GovState era)
   , EncCBOR (CertState era)
   ) =>
@@ -148,6 +152,7 @@ instance
 instance
   ( EraTxOut era
   , EraGov era
+  , EraStake era
   , EraCertState era
   ) =>
   DecCBOR (EpochState era)
@@ -163,19 +168,20 @@ instance
         esNonMyopic <- decShareLensCBOR _2
         pure EpochState {esAccountState, esSnapshots, esLState, esNonMyopic}
 
-instance (EraTxOut era, EraGov era, EraCertState era) => ToCBOR (EpochState era) where
+instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToCBOR (EpochState era) where
   toCBOR = toEraCBOR @era
 
-instance (EraTxOut era, EraGov era, EraCertState era) => FromCBOR (EpochState era) where
+instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => FromCBOR (EpochState era) where
   fromCBOR = fromEraCBOR @era
 
-instance (EraTxOut era, EraGov era, EraCertState era) => ToJSON (EpochState era) where
+instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToJSON (EpochState era) where
   toJSON = object . toEpochStatePairs
   toEncoding = pairs . mconcat . toEpochStatePairs
 
 toEpochStatePairs ::
   ( EraTxOut era
   , EraGov era
+  , EraStake era
   , KeyValue e a
   , EraCertState era
   ) =>
@@ -191,64 +197,8 @@ toEpochStatePairs es@(EpochState _ _ _ _) =
 
 -- =============================
 
--- | Incremental Stake, Stake along with possible missed coins from danging Ptrs.
---   Transactions can use Ptrs to refer to a stake credential in a TxOut. The Ptr
---   does not have to point to anything until the epoch boundary, when we compute
---   rewards and aggregate staking information for ranking. This is unusual but legal.
---   In a non incremental system, we use whatever 'legal' Ptrs exist at the epoch
---   boundary. Here we are computing things incrementally, so we need to remember Ptrs
---   that might point to something by the time the epoch boundary is reached. When
---   the epoch boundary is reached we 'resolve' these pointers, to see if any have
---   become non-dangling since the time they were first used in the incremental computation.
-data IncrementalStake = IStake
-  { credMap :: !(Map (Credential 'Staking) (CompactForm Coin))
-  , ptrMap :: !(Map Ptr (CompactForm Coin))
-  }
-  deriving (Generic, Show, Eq, Ord, NoThunks, NFData)
-
-instance EncCBOR IncrementalStake where
-  encCBOR (IStake st dangle) =
-    encodeListLen 2 <> encCBOR st <> encCBOR dangle
-
-instance DecShareCBOR IncrementalStake where
-  type Share IncrementalStake = Interns (Credential 'Staking)
-  decShareCBOR credInterns =
-    decodeRecordNamed "Stake" (const 2) $ do
-      stake <- decShareCBOR (credInterns, mempty)
-      let dropPtrs =
-            mempty
-              <$ enforceDecoderVersion (natVersion @8) (dropCBOR (Proxy @(Map Ptr (CompactForm Coin))))
-      ptrs <- ifDecoderVersionAtLeast (natVersion @9) dropPtrs decCBOR
-      pure $ IStake stake ptrs
-
-instance Semigroup IncrementalStake where
-  (IStake a b) <> (IStake c d) = IStake (Map.unionWith (<>) a c) (Map.unionWith (<>) b d)
-
-instance Monoid IncrementalStake where
-  mempty = IStake Map.empty Map.empty
-
-instance Data.Group.Group IncrementalStake where
-  invert (IStake m1 m2) = IStake (Map.map invert m1) (Map.map invert m2)
-
-instance Default IncrementalStake where
-  def = IStake Map.empty Map.empty
-
-instance ToJSON IncrementalStake where
-  toJSON = object . toIncrementalStakePairs
-  toEncoding = pairs . mconcat . toIncrementalStakePairs
-
-toIncrementalStakePairs :: KeyValue e a => IncrementalStake -> [a]
-toIncrementalStakePairs iStake@(IStake _ _) =
-  let IStake {..} = iStake -- guard against addition or removal of fields
-   in [ "credentials" .= credMap
-      , "pointers" .= ptrMap
-      ]
-
--- =============================
-
 -- | There is a serious invariant that we must maintain in the UTxOState.
 --   Given (UTxOState utxo _ _ _ istake) it must be the case that
---   istake == (updateStakeDistribution (UTxO Map.empty) (UTxO Map.empty) utxo)
 --   Of course computing the RHS of the above equality can be very expensive, so we only
 --   use this route in the testing function smartUTxO. But we are very careful, wherever
 --   we update the UTxO, we carefully make INCREMENTAL changes to istake to maintain
@@ -258,7 +208,7 @@ data UTxOState era = UTxOState
   , utxosDeposited :: !Coin
   , utxosFees :: !Coin
   , utxosGovState :: !(GovState era)
-  , utxosStakeDistr :: !IncrementalStake
+  , utxosInstantStake :: !(InstantStake era)
   , utxosDonation :: !Coin
   }
   deriving (Generic)
@@ -268,45 +218,60 @@ instance CanSetUTxO UTxOState where
   utxoL = lens utxosUtxo $ \s u -> s {utxosUtxo = u}
   {-# INLINE utxoL #-}
 
+instance CanGetInstantStake UTxOState
+instance CanSetInstantStake UTxOState where
+  instantStakeL = lens utxosInstantStake $ \s is -> s {utxosInstantStake = is}
+  {-# INLINE instantStakeL #-}
+
 instance
   ( EraTxOut era
   , NFData (GovState era)
+  , NFData (InstantStake era)
   ) =>
   NFData (UTxOState era)
 
 deriving stock instance
   ( EraTxOut era
   , Show (GovState era)
+  , Show (InstantStake era)
   ) =>
   Show (UTxOState era)
 
 deriving stock instance
   ( EraTxOut era
   , Eq (GovState era)
+  , Eq (InstantStake era)
   ) =>
   Eq (UTxOState era)
 
-instance (NoThunks (UTxO era), NoThunks (GovState era)) => NoThunks (UTxOState era)
+instance
+  ( NoThunks (UTxO era)
+  , NoThunks (GovState era)
+  , NoThunks (InstantStake era)
+  ) =>
+  NoThunks (UTxOState era)
 
 instance
   ( EraTxOut era
+  , EraStake era
   , EncCBOR (GovState era)
   ) =>
   EncCBOR (UTxOState era)
   where
-  encCBOR (UTxOState utxo dp fs us sd don) =
-    encode $
-      Rec UTxOState
-        -- We need to define encoder with MemPack manually here instead of changing the `EncCBOR`
-        -- instance for `UTxO` in order to not affect some of the ledger state queries.
-        !> E (encodeMap encodeMemPack encodeMemPack . unUTxO) utxo
-        !> To dp
-        !> To fs
-        !> To us
-        !> To sd
-        !> To don
+  encCBOR utxos@(UTxOState _ _ _ _ _ _) =
+    let UTxOState {..} = utxos
+     in encode $
+          Rec UTxOState
+            -- We need to define encoder with MemPack manually here instead of changing the `EncCBOR`
+            -- instance for `UTxO` in order to not affect some of the ledger state queries.
+            !> E (encodeMap encodeMemPack encodeMemPack . unUTxO) utxosUtxo
+            !> To utxosDeposited
+            !> To utxosFees
+            !> To utxosGovState
+            !> To utxosInstantStake
+            !> To utxosDonation
 
-instance (EraTxOut era, EraGov era) => DecShareCBOR (UTxOState era) where
+instance (EraTxOut era, EraGov era, EraStake era) => DecShareCBOR (UTxOState era) where
   type
     Share (UTxOState era) =
       ( Interns (Credential 'Staking)
@@ -320,29 +285,29 @@ instance (EraTxOut era, EraGov era) => DecShareCBOR (UTxOState era) where
       utxosDeposited <- decCBOR
       utxosFees <- decCBOR
       utxosGovState <- decShareCBOR is
-      utxosStakeDistr <- decShareCBOR cs
+      utxosInstantStake <- decShareCBOR cs
       utxosDonation <- decCBOR
       pure UTxOState {..}
 
-instance (EraTxOut era, EraGov era) => ToCBOR (UTxOState era) where
+instance (EraTxOut era, EraGov era, EraStake era) => ToCBOR (UTxOState era) where
   toCBOR = toEraCBOR @era
 
-instance (EraTxOut era, EraGov era) => FromCBOR (UTxOState era) where
+instance (EraTxOut era, EraGov era, EraStake era) => FromCBOR (UTxOState era) where
   fromCBOR = fromEraShareCBOR @era
 
-instance (EraTxOut era, EraGov era) => ToJSON (UTxOState era) where
+instance (EraTxOut era, EraGov era, EraStake era) => ToJSON (UTxOState era) where
   toJSON = object . toUTxOStatePairs
   toEncoding = pairs . mconcat . toUTxOStatePairs
 
 toUTxOStatePairs ::
-  (EraTxOut era, EraGov era, KeyValue e a) => UTxOState era -> [a]
+  (EraTxOut era, EraGov era, EraStake era, KeyValue e a) => UTxOState era -> [a]
 toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _) =
   let UTxOState {..} = utxoState
    in [ "utxo" .= utxosUtxo
       , "deposited" .= utxosDeposited
       , "fees" .= utxosFees
       , "ppups" .= utxosGovState
-      , "stake" .= utxosStakeDistr
+      , "stake" .= utxosInstantStake
       ]
 
 -- | New Epoch state and environment
@@ -382,6 +347,11 @@ instance CanSetUTxO NewEpochState where
   utxoL = (lens nesEs $ \s es -> s {nesEs = es}) . utxoL
   {-# INLINE utxoL #-}
 
+instance CanGetInstantStake NewEpochState
+instance CanSetInstantStake NewEpochState where
+  instantStakeL = (lens nesEs $ \s es -> s {nesEs = es}) . instantStakeL
+  {-# INLINE instantStakeL #-}
+
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses ShelleyEra = UTxO ShelleyEra
   StashedAVVMAddresses _ = ()
@@ -391,6 +361,7 @@ deriving stock instance
   , Show (StashedAVVMAddresses era)
   , Show (GovState era)
   , Show (CertState era)
+  , Show (InstantStake era)
   ) =>
   Show (NewEpochState era)
 
@@ -399,6 +370,7 @@ deriving stock instance
   , Eq (StashedAVVMAddresses era)
   , Eq (GovState era)
   , Eq (CertState era)
+  , Eq (InstantStake era)
   ) =>
   Eq (NewEpochState era)
 
@@ -407,11 +379,13 @@ instance
   , NFData (StashedAVVMAddresses era)
   , NFData (GovState era)
   , NFData (CertState era)
+  , NFData (InstantStake era)
   ) =>
   NFData (NewEpochState era)
 
 instance
   ( EraTxOut era
+  , EraStake era
   , EncCBOR (StashedAVVMAddresses era)
   , EncCBOR (GovState era)
   , EncCBOR (CertState era)
@@ -431,6 +405,7 @@ instance
 instance
   ( EraTxOut era
   , EraGov era
+  , EraStake era
   , DecCBOR (StashedAVVMAddresses era)
   , EraCertState era
   ) =>
@@ -448,13 +423,13 @@ instance
         <! From
 
 instance
-  (EraTxOut era, EraGov era, EncCBOR (StashedAVVMAddresses era), EraCertState era) =>
+  (EraTxOut era, EraGov era, EraStake era, EraCertState era, EncCBOR (StashedAVVMAddresses era)) =>
   ToCBOR (NewEpochState era)
   where
   toCBOR = toEraCBOR @era
 
 instance
-  (EraTxOut era, EraGov era, DecCBOR (StashedAVVMAddresses era), EraCertState era) =>
+  (EraTxOut era, EraGov era, EraStake era, EraCertState era, DecCBOR (StashedAVVMAddresses era)) =>
   FromCBOR (NewEpochState era)
   where
   fromCBOR = fromEraCBOR @era
@@ -479,10 +454,16 @@ instance CanSetUTxO LedgerState where
   utxoL = (lens lsUTxOState $ \s us -> s {lsUTxOState = us}) . utxoL
   {-# INLINE utxoL #-}
 
+instance CanGetInstantStake LedgerState
+instance CanSetInstantStake LedgerState where
+  instantStakeL = (lens lsUTxOState $ \s us -> s {lsUTxOState = us}) . instantStakeL
+  {-# INLINE instantStakeL #-}
+
 deriving stock instance
   ( EraTxOut era
   , Show (GovState era)
   , Show (CertState era)
+  , Show (InstantStake era)
   ) =>
   Show (LedgerState era)
 
@@ -490,6 +471,7 @@ deriving stock instance
   ( EraTxOut era
   , Eq (GovState era)
   , Eq (CertState era)
+  , Eq (InstantStake era)
   ) =>
   Eq (LedgerState era)
 
@@ -497,6 +479,7 @@ instance
   ( EraTxOut era
   , NoThunks (GovState era)
   , NoThunks (CertState era)
+  , NoThunks (InstantStake era)
   ) =>
   NoThunks (LedgerState era)
 
@@ -504,11 +487,13 @@ instance
   ( EraTxOut era
   , NFData (GovState era)
   , NFData (CertState era)
+  , NFData (InstantStake era)
   ) =>
   NFData (LedgerState era)
 
 instance
   ( EraTxOut era
+  , EraStake era
   , EncCBOR (GovState era)
   , EncCBOR (CertState era)
   ) =>
@@ -522,6 +507,7 @@ instance
 instance
   ( EraTxOut era
   , EraGov era
+  , EraStake era
   , EraCertState era
   ) =>
   DecShareCBOR (LedgerState era)
@@ -539,18 +525,18 @@ instance
       lsUTxOState <- decSharePlusCBOR
       pure LedgerState {lsUTxOState, lsCertState}
 
-instance (EraTxOut era, EraGov era, EraCertState era) => ToCBOR (LedgerState era) where
+instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToCBOR (LedgerState era) where
   toCBOR = toEraCBOR @era
 
-instance (EraTxOut era, EraGov era, EraCertState era) => FromCBOR (LedgerState era) where
+instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => FromCBOR (LedgerState era) where
   fromCBOR = fromEraShareCBOR @era
 
-instance (EraTxOut era, EraGov era, EraCertState era) => ToJSON (LedgerState era) where
+instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToJSON (LedgerState era) where
   toJSON = object . toLedgerStatePairs
   toEncoding = pairs . mconcat . toLedgerStatePairs
 
 toLedgerStatePairs ::
-  (EraTxOut era, EraGov era, KeyValue e a, EraCertState era) => LedgerState era -> [a]
+  (EraTxOut era, EraGov era, KeyValue e a, EraStake era, EraCertState era) => LedgerState era -> [a]
 toLedgerStatePairs ls@(LedgerState _ _) =
   let LedgerState {..} = ls
    in [ "utxoState" .= lsUTxOState
@@ -563,7 +549,7 @@ toLedgerStatePairs ls@(LedgerState _ _) =
 -- Default instances
 --------------------------------------------------------------------------------
 
-instance EraGov era => Default (UTxOState era) where
+instance (EraGov era, EraStake era) => Default (UTxOState era) where
   def = UTxOState mempty mempty mempty def mempty mempty
 
 instance
@@ -667,19 +653,8 @@ utxosFeesL = lens utxosFees (\x y -> x {utxosFees = y})
 utxosGovStateL :: Lens' (UTxOState era) (GovState era)
 utxosGovStateL = lens utxosGovState (\x y -> x {utxosGovState = y})
 
-utxosStakeDistrL :: Lens' (UTxOState era) IncrementalStake
-utxosStakeDistrL = lens utxosStakeDistr (\x y -> x {utxosStakeDistr = y})
-
 utxosDonationL :: Lens' (UTxOState era) Coin
 utxosDonationL = lens utxosDonation (\x y -> x {utxosDonation = y})
-
--- ================ IncremetalStake ===========================
-
-credMapL :: Lens' IncrementalStake (Map (Credential 'Staking) (CompactForm Coin))
-credMapL = lens credMap (\x y -> x {credMap = y})
-
-ptrMapL :: Lens' IncrementalStake (Map Ptr (CompactForm Coin))
-ptrMapL = lens ptrMap (\x y -> x {ptrMap = y})
 
 -- ====================  Compound Lenses =======================
 
@@ -694,10 +669,6 @@ epochStateDonationL = esLStateL . lsUTxOStateL . utxosDonationL
 
 epochStateTreasuryL :: Lens' (EpochState era) Coin
 epochStateTreasuryL = esAccountStateL . asTreasuryL
-
-epochStateIncrStakeDistrL ::
-  Lens' (EpochState era) (Map (Credential 'Staking) (CompactForm Coin))
-epochStateIncrStakeDistrL = esLStateL . lsUTxOStateL . utxosStakeDistrL . credMapL
 
 epochStateRegDrepL ::
   EraCertState era => Lens' (EpochState era) (Map (Credential 'DRepRole) DRepState)

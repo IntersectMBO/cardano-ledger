@@ -18,6 +18,7 @@ import Cardano.Ledger.Babbage.CertState ()
 import Cardano.Ledger.Babbage.Core hiding (Tx)
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
+import Cardano.Ledger.Babbage.State
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
@@ -34,7 +35,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Cardano.Ledger.State (UTxO (..))
+import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 
@@ -137,9 +138,12 @@ instance TranslateEra BabbageEra UTxOState where
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
         , utxosGovState = translateEra' ctxt $ utxosGovState us
-        , utxosStakeDistr = utxosStakeDistr us
+        , utxosInstantStake = translateEra' ctxt $ utxosInstantStake us
         , utxosDonation = utxosDonation us
         }
+
+instance TranslateEra BabbageEra ShelleyInstantStake where
+  translateEra _ = pure . coerce
 
 instance TranslateEra BabbageEra UTxO where
   translateEra _ctxt utxo =

@@ -70,8 +70,8 @@ import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
 import Cardano.Ledger.Conway.Rules.HardFork (
   ConwayHardForkEvent (..),
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
@@ -105,7 +105,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.State (SnapShots (..))
 import Cardano.Ledger.UMap (RDPair (..), UMap, UView (..), (∪+), (◁))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (zero, (<->))
@@ -169,6 +168,8 @@ instance
   ( EraTxOut era
   , RunConwayRatify era
   , ConwayEraGov era
+  , EraStake era
+  , EraCertState era
   , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots
@@ -188,7 +189,6 @@ instance
   , Environment (EraRule "HARDFORK" era) ~ ()
   , State (EraRule "HARDFORK" era) ~ EpochState era
   , Signal (EraRule "HARDFORK" era) ~ ProtVer
-  , EraCertState era
   ) =>
   STS (ConwayEPOCH era)
   where
@@ -273,13 +273,14 @@ applyEnactedWithdrawals accountState dState enactedState =
 epochTransition ::
   forall era.
   ( RunConwayRatify era
-  , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
   , EraTxOut era
+  , EraCertState era
   , Eq (UpecPredFailure era)
   , Show (UpecPredFailure era)
   , Environment (EraRule "SNAP" era) ~ SnapEnv era
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
+  , Embed (EraRule "SNAP" era) (ConwayEPOCH era)
   , Embed (EraRule "POOLREAP" era) (ConwayEPOCH era)
   , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
@@ -294,7 +295,6 @@ epochTransition ::
   , Environment (EraRule "HARDFORK" era) ~ ()
   , State (EraRule "HARDFORK" era) ~ EpochState era
   , Signal (EraRule "HARDFORK" era) ~ ProtVer
-  , EraCertState era
   ) =>
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
@@ -426,9 +426,10 @@ instance
 
 instance
   ( EraTxOut era
+  , EraStake era
+  , EraCertState era
   , PredicateFailure (EraRule "SNAP" era) ~ ShelleySnapPredFailure era
   , Event (EraRule "SNAP" era) ~ Shelley.SnapEvent era
-  , EraCertState era
   ) =>
   Embed (ShelleySNAP era) (ConwayEPOCH era)
   where

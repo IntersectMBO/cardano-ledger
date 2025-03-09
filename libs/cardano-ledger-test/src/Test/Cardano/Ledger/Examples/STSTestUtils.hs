@@ -57,7 +57,6 @@ import Cardano.Ledger.Shelley.API (
   Block (..),
   LedgerEnv (..),
   LedgerState (..),
-  UTxO (..),
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
@@ -67,6 +66,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -293,6 +293,7 @@ testUTXOWwith ::
   forall era.
   ( EraTx era
   , EraGov era
+  , EraStake era
   , EraCertState era
   ) =>
   WitRule "UTXOW" era ->
