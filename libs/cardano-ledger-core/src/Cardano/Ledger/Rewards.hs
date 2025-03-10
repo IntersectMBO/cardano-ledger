@@ -29,6 +29,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import GHC.TypeLits (TypeError, ErrorMessage (..))
 
 -- | The staking rewards in Cardano are all either:
 --
@@ -79,7 +80,7 @@ data Reward = Reward
 --  with the Allegra reward aggregation, as given by the
 --  function 'aggregateRewards' so that 'Set.findMax' returns
 --  the expected value.
-instance Ord Reward where
+instance TypeError ('Text "Using a bad implementation of Ord") => Ord Reward where
   compare (Reward MemberReward _ _) (Reward LeaderReward _ _) = GT
   compare (Reward LeaderReward _ _) (Reward MemberReward _ _) = LT
   compare (Reward _ pool1 _) (Reward _ pool2 _) = compare pool1 pool2

@@ -68,14 +68,14 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.VMap as VMap
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), allNoThunks)
+import Cardano.Ledger.Val (Val(..))
 
 -- ===============================================================
 
-type RewardEvent = Map (Credential 'Staking) (Set Reward)
+type RewardEvent = Map (Credential 'Staking) PoolRewards
 
 -- | The result of reward calculation is a pair of aggregate Maps.
 --   One for the accumulated answer, and one for the answer since the last pulse
@@ -104,7 +104,7 @@ type Pulser = RewardPulser ShelleyBase RewardAns
 data RewardUpdate = RewardUpdate
   { deltaT :: !DeltaCoin
   , deltaR :: !DeltaCoin
-  , rs :: !(Map (Credential 'Staking) (Set Reward))
+  , rs :: !(Map (Credential 'Staking) PoolRewards)
   , deltaF :: !DeltaCoin
   , nonMyopic :: !NonMyopic
   }
@@ -162,7 +162,7 @@ data RewardSnapShot = RewardSnapShot
   , rewR :: !Coin -- r
   , rewDeltaT1 :: !Coin -- deltaT1
   , rewLikelihoods :: !(Map (KeyHash 'StakePool) Likelihood)
-  , rewLeaders :: !(Map (Credential 'Staking) (Set Reward))
+  , rewLeaders :: !(Map (Credential 'Staking) PoolRewards)
   }
   deriving (Show, Eq, Generic)
 
@@ -268,8 +268,7 @@ rewardStakePoolMember
     poolRI <- Map.lookup poolID fvPoolRewardInfo
     r <- rewardOnePoolMember fvProtVer fvTotalStake fvAddrsRew poolRI cred (fromCompact c)
     let ans = Reward MemberReward poolID r
-    -- There is always just 1 member reward, so Set.singleton is appropriate
-    pure $ RewardAns (Map.insert cred ans accum) (Map.insert cred (Set.singleton ans) recent)
+    pure $ RewardAns (Map.insert cred ans accum) (Map.insert cred (PoolRewards poolID zero r) recent)
 
 -- ================================================================
 

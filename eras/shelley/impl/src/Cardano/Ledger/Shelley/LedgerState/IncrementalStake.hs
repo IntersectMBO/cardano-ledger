@@ -36,7 +36,7 @@ import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState.Types
-import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
+import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..), PoolRewards)
 import Cardano.Ledger.Shelley.Rewards (
   aggregateCompactRewards,
   aggregateRewards,
@@ -160,7 +160,7 @@ instance NFData (FilteredRewards era) where
 --   'prevPParams' is the ProtocolParams of the previous Epoch
 --   'rs' is the rewards mapping of the RewardUpdate from that previous Epoch
 filterAllRewards' ::
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential 'Staking) PoolRewards ->
   ProtVer ->
   DState era ->
   FilteredRewards era

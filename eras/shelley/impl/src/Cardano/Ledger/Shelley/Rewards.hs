@@ -2,11 +2,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Cardano.Ledger.Shelley.Rewards (
+  PoolRewards (..),
   StakeShare (..),
   PoolRewardInfo (..),
   mkApparentPerformance,
@@ -67,6 +69,20 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
+import Data.Aeson (ToJSON)
+
+data PoolRewards = PoolRewards
+  { prPoolKeyHash :: KeyHash 'StakePool
+  , prLeaderRewards :: !Coin
+  , prMemberRewards :: !Coin
+  }
+  deriving (Show, Eq, Generic, NFData, NoThunks, ToJSON)
+
+instance EncCBOR PoolRewards where
+  encCBOR PoolRewards {..} = undefined
+
+instance DecCBOR PoolRewards where
+  decCBOR = undefined
 
 -- | StakeShare type
 newtype StakeShare = StakeShare {unStakeShare :: Rational}
@@ -126,7 +142,7 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
 
 sumRewards ::
   ProtVer ->
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential 'Staking) PoolRewards ->
   Coin
 sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 
@@ -137,9 +153,9 @@ sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 -- both of the domains of the returned maps are a subset of the the domain of the input map 'rewards'
 filterRewards ::
   ProtVer ->
-  Map (Credential 'Staking) (Set Reward) ->
-  ( Map (Credential 'Staking) (Set Reward) -- delivered
-  , Map (Credential 'Staking) (Set Reward) -- ignored in Shelley Era
+  Map (Credential 'Staking) PoolRewards ->
+  ( Map (Credential 'Staking) PoolRewards -- delivered
+  , Map (Credential 'Staking) PoolRewards -- ignored in Shelley Era
   )
 filterRewards pv rewards =
   if HardForks.aggregatedRewards pv
@@ -153,7 +169,7 @@ filterRewards pv rewards =
 --   Note that domain of the returned map is a subset of the input map 'rewards'
 aggregateRewards ::
   ProtVer ->
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential 'Staking) PoolRewards ->
   Map (Credential 'Staking) Coin
 aggregateRewards pv rewards =
   Map.map (foldMap' rewardAmount) $ fst $ filterRewards pv rewards
@@ -163,7 +179,7 @@ aggregateRewards pv rewards =
 
 sumCompactRewards ::
   ProtVer ->
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential 'Staking) PoolRewards ->
   CompactForm Coin
 sumCompactRewards protocolVersion rs = fold $ aggregateCompactRewards protocolVersion rs
 
@@ -172,7 +188,7 @@ sumCompactRewards protocolVersion rs = fold $ aggregateCompactRewards protocolVe
 --   Note that the domain of the output map is a subset of the domain of the input rewards.
 aggregateCompactRewards ::
   ProtVer ->
-  Map (Credential 'Staking) (Set Reward) ->
+  Map (Credential 'Staking) PoolRewards ->
   Map (Credential 'Staking) (CompactForm Coin)
 aggregateCompactRewards pv rewards =
   Map.map (foldMap' (compactCoinOrError . rewardAmount)) $ fst $ filterRewards pv rewards
