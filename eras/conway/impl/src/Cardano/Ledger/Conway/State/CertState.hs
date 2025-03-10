@@ -165,13 +165,9 @@ epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
 class EraCertState era => ConwayEraCertState era where
   certVStateL :: Lens' (CertState era) (VState era)
 
-mkConwayCertState :: VState era -> PState era -> DState era -> ConwayCertState era
+mkConwayCertState :: ConwayEraCertState era => VState era -> PState era -> DState era -> CertState era
 mkConwayCertState v p d =
-  ConwayCertState
-    { conwayCertVState = v
-    , conwayCertPState = p
-    , conwayCertDState = d
-    }
+  mkShelleyCertState p d & certVStateL .~ v
 
 conwayCertDStateL :: Lens' (ConwayCertState era) (DState era)
 conwayCertDStateL = lens conwayCertDState (\ds u -> ds {conwayCertDState = u})
@@ -193,14 +189,11 @@ toCertStatePairs certState@(ConwayCertState _ _ _) =
       , "vstate" .= conwayCertVState
       ]
 
-conwayObligationCertState :: ConwayCertState era -> Obligations
-conwayObligationCertState (ConwayCertState VState {vsDReps} PState {psDeposits} DState {dsUnified}) =
+conwayObligationCertState :: ConwayEraCertState era => CertState era -> Obligations
+conwayObligationCertState certState =
   let accum ans drepState = ans <> drepDeposit drepState
-   in Obligations
-        { oblStake = UM.fromCompact (UM.sumDepositUView (UM.RewDepUView dsUnified))
-        , oblPool = F.foldl' (<>) (Coin 0) psDeposits
-        , oblDRep = F.foldl' accum (Coin 0) vsDReps
-        , oblProposal = Coin 0
+   in (shelleyObligationCertState certState)
+        { oblDRep = F.foldl' accum (Coin 0) (certState ^. certVStateL)
         }
 
 conwayCertsTotalDepositsTxBody ::
