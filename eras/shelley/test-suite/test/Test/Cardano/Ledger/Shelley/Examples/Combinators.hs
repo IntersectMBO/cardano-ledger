@@ -166,8 +166,6 @@ newLab b cs =
     bn = bheaderBlockNo $ bhbody bh
     sn = bheaderSlotNo $ bhbody bh
 
--- TODO: consider adding a version for Conway
-
 -- | = Update Fees and Deposits
 --
 -- Update the fee pot and deposit pot with the new fees and deposits

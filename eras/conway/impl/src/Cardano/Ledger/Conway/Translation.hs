@@ -167,8 +167,6 @@ instance TranslateEra ConwayEra API.LedgerState where
         , API.lsCertState = translateCertState conwayGenesis $ API.lsCertState ls
         }
 
--- TODO: figure out if we need to initialise VState
--- with some ConwayGenesis fields
 translateCertState ::
   TranslationContext ConwayEra ->
   API.CertState BabbageEra ->

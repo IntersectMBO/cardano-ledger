@@ -186,8 +186,6 @@ instance
   type BaseEnv (CERTS era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
--- TODO: consider adding a generator for Conway too
-
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
 genTxCerts ::
