@@ -5,17 +5,20 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Block (
-  Block (Block, Block', UnserialisedBlock, UnsafeUnserialisedBlock),
+  Block (Block, UnserialisedBlock, UnsafeUnserialisedBlock),
   bheader,
   bbody,
   neededTxInsForBlock,
@@ -27,17 +30,20 @@ import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   EncCBOR (..),
   EncCBORGroup (..),
-  annotatorSlice,
   decodeRecordNamed,
   encodeListLen,
-  serialize,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
-import Cardano.Ledger.MemoBytes (MemoBytes (Memo), decodeMemoized)
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes (Memo),
+  Memoized (..),
+  decodeMemoized,
+  getMemoRawType,
+  mkMemoized,
+ )
 import Cardano.Ledger.TxIn (TxIn (..))
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Short as SBS
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -46,96 +52,34 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
-data Block h era
-  = Block' !h !(TxSeq era) BSL.ByteString
+data BlockRaw h era = BlockRaw
+  { brHeader :: !h
+  , brTxSeq :: !(TxSeq era)
+  }
   deriving (Generic)
 
 deriving stock instance
   (Era era, Show (TxSeq era), Show h) =>
-  Show (Block h era)
+  Show (BlockRaw h era)
 
 deriving stock instance
   (Era era, Eq (TxSeq era), Eq h) =>
-  Eq (Block h era)
+  Eq (BlockRaw h era)
 
 deriving anyclass instance
-  ( Era era
-  , NoThunks (TxSeq era)
-  , NoThunks h
-  ) =>
-  NoThunks (Block h era)
-
-pattern Block ::
-  forall era h.
-  ( Era era
-  , EncCBORGroup (TxSeq era)
-  , EncCBOR h
-  ) =>
-  h ->
-  TxSeq era ->
-  Block h era
-pattern Block h txns <-
-  Block' h txns _
-  where
-    Block h txns =
-      let bytes =
-            serialize (eraProtVerLow @era) $
-              encodeListLen (1 + listLen txns) <> encCBOR h <> encCBORGroup txns
-       in Block' h txns bytes
-
-{-# COMPLETE Block #-}
-
--- | Access a block without its serialised bytes. This is often useful when
--- we're using a 'BHeaderView' in place of the concrete header.
-pattern UnserialisedBlock ::
-  h ->
-  TxSeq era ->
-  Block h era
-pattern UnserialisedBlock h txns <- Block' h txns _
-
-{-# COMPLETE UnserialisedBlock #-}
-
--- | Unsafely construct a block without the ability to serialise its bytes.
---
---   Anyone calling this pattern must ensure that the resulting block is never
---   serialised. Any uses of this pattern outside of testing code should be
---   regarded with suspicion.
-pattern UnsafeUnserialisedBlock ::
-  h ->
-  TxSeq era ->
-  Block h era
-pattern UnsafeUnserialisedBlock h txns <-
-  Block' h txns _
-  where
-    UnsafeUnserialisedBlock h txns =
-      let bytes = error "`UnsafeUnserialisedBlock` used to construct a block which was later serialised."
-       in Block' h txns bytes
-
-{-# COMPLETE UnsafeUnserialisedBlock #-}
-
-instance (EraTx era, Typeable h) => EncCBOR (Block h era)
-
-instance (EraTx era, Typeable h) => Plain.ToCBOR (Block h era) where
-  toCBOR (Block' _ _ blockBytes) = Plain.encodePreEncoded $ BSL.toStrict blockBytes
+  (Era era, NoThunks (TxSeq era), NoThunks h) =>
+  NoThunks (BlockRaw h era)
 
 instance
-  ( EraSegWits era
-  , DecCBOR (Annotator h)
-  , Typeable h
+  ( Era era
+  , EncCBOR h
+  , EncCBORGroup (TxSeq era)
   ) =>
-  DecCBOR (Annotator (Block h era))
+  EncCBOR (BlockRaw h era)
   where
-  decCBOR = annotatorSlice $
-    decodeRecordNamed "Block" (const blockSize) $ do
-      header <- decCBOR
-      txns <- decCBOR
-      pure $ Block' <$> header <*> txns
-    where
-      blockSize =
-        1 -- header
-          + fromIntegral (numSegComponents @era)
-
-data BlockRaw h era = BlockRaw !h !(TxSeq era)
+  encCBOR cr@(BlockRaw _ _) =
+    let BlockRaw {..} = cr
+     in encodeListLen (1 + listLen brTxSeq) <> encCBOR brHeader <> encCBORGroup brTxSeq
 
 instance
   ( EraSegWits era
@@ -157,19 +101,114 @@ instance
   , DecCBOR h
   , DecCBOR (TxSeq era)
   ) =>
+  DecCBOR (Annotator (BlockRaw h era))
+  where
+  decCBOR = pure <$> decCBOR
+
+newtype Block h era = BlockConstr (MemoBytes (BlockRaw h era))
+  deriving (Generic)
+
+instance Memoized (Block h era) where
+  type RawType (Block h era) = BlockRaw h era
+
+deriving newtype instance
+  (Era era, Show (TxSeq era), Show h) =>
+  Show (Block h era)
+
+deriving newtype instance
+  (Era era, Eq (TxSeq era), Eq h) =>
+  Eq (Block h era)
+
+deriving newtype instance
+  (Era era, NoThunks (TxSeq era), NoThunks h, Typeable h) =>
+  NoThunks (Block h era)
+
+deriving newtype instance
+  (EraTx era, Typeable h) =>
+  Plain.ToCBOR (Block h era)
+
+instance (EraTx era, Typeable h) => EncCBOR (Block h era)
+
+deriving via
+  Mem (BlockRaw h era)
+  instance
+    (EraSegWits era, DecCBOR h, DecCBOR (TxSeq era)) =>
+    DecCBOR (Annotator (Block h era))
+
+instance
+  (EraSegWits era, DecCBOR h, DecCBOR (TxSeq era)) =>
   DecCBOR (Block h era)
   where
-  decCBOR = do
-    Memo (BlockRaw h txSeq) bs <- decodeMemoized (decCBOR @(BlockRaw h era))
-    pure $ Block' h txSeq (BSL.fromStrict (SBS.fromShort bs))
+  decCBOR = BlockConstr <$> decodeMemoized decCBOR
+
+pattern Block ::
+  forall era h.
+  ( Era era
+  , EncCBORGroup (TxSeq era)
+  , EncCBOR h
+  ) =>
+  h ->
+  TxSeq era ->
+  Block h era
+pattern Block h txSeq <-
+  (getMemoRawType -> BlockRaw h txSeq)
+  where
+    Block h txSeq =
+      mkMemoized (eraProtVerLow @era) $ BlockRaw h txSeq
+{-# COMPLETE Block #-}
+
+-- | Access a block without its serialised bytes. This is often useful when
+-- we're using a 'BHeaderView' in place of the concrete header.
+pattern UnserialisedBlock ::
+  ( Era era
+  , EncCBORGroup (TxSeq era)
+  , EncCBOR h
+  ) =>
+  h ->
+  TxSeq era ->
+  Block h era
+pattern UnserialisedBlock h txns <- Block h txns
+
+{-# COMPLETE UnserialisedBlock #-}
+
+-- | Unsafely construct a block without the ability to serialise its bytes.
+--
+--   Anyone calling this pattern must ensure that the resulting block is never
+--   serialised. Any uses of this pattern outside of testing code should be
+--   regarded with suspicion.
+pattern UnsafeUnserialisedBlock ::
+  ( Era era
+  , EncCBORGroup (TxSeq era)
+  , EncCBOR h
+  ) =>
+  h ->
+  TxSeq era ->
+  Block h era
+pattern UnsafeUnserialisedBlock h txns <-
+  Block h txns
+  where
+    UnsafeUnserialisedBlock h txns =
+      let bytes = error "`UnsafeUnserialisedBlock` used to construct a block which was later serialised."
+       in BlockConstr (Memo (BlockRaw h txns) bytes)
+
+{-# COMPLETE UnsafeUnserialisedBlock #-}
 
 bheader ::
+  ( Era era
+  , EncCBORGroup (TxSeq era)
+  , EncCBOR h
+  ) =>
   Block h era ->
   h
-bheader (Block' bh _ _) = bh
+bheader (Block bh _) = bh
 
-bbody :: Block h era -> TxSeq era
-bbody (Block' _ txs _) = txs
+bbody ::
+  ( Era era
+  , EncCBORGroup (TxSeq era)
+  , EncCBOR h
+  ) =>
+  Block h era -> TxSeq era
+bbody (Block _ txs) = txs
 
 -- | The validity of any individual block depends only on a subset
 -- of the UTxO stored in the ledger state. This function returns
@@ -182,10 +221,12 @@ bbody (Block' _ txs _) = txs
 -- and present only those to the ledger.
 neededTxInsForBlock ::
   forall h era.
-  EraSegWits era =>
+  ( EraSegWits era
+  , EncCBOR h
+  ) =>
   Block h era ->
   Set TxIn
-neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
+neededTxInsForBlock (Block _ txsSeq) = Set.filter isNotNewInput allTxIns
   where
     txBodies = map (^. bodyTxL) $ toList $ fromTxSeq txsSeq
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies

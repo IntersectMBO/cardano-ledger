@@ -2,6 +2,10 @@
 
 ## 1.17.0.0
 
+* Remove `Block'` constructor
+* Add constraints: `Era era`, `EncCBORGroup (TxSeq era)`, `EncCBOR h` to:
+  * `UnserialisedBlock` and `UnsafeUnserializedBlock` patterns
+  * `bheader`, `bbody` and `neededTxInsForBlock` functions
 * Add `BoootstrapWitnessRaw` type
 * Add `EraStake`, `CanGetInstantStake`,  `CanSetInstantStake` , `snapShotFromInstantStake`, `resolveActiveInstantStakeCredentials`
 * Add boolean argument to `fromCborRigorousBothAddr` for lenient `Ptr` decoding
