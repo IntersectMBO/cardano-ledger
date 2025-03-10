@@ -29,7 +29,7 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 #endif
 
-module Constrained.Experiment.Specs.SumProd (
+module Constrained.Spec.SumProd (
   IsNormalType,
   caseOn,
   branch,
@@ -63,14 +63,13 @@ module Constrained.Experiment.Specs.SumProd (
 ) where
 
 import Constrained.Core (Evidence (..), NonEmpty ((:|)))
-import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance (conformsToSpec, satisfies)
-import Constrained.Experiment.Generic
-import Constrained.Experiment.Specs.ListFoldy
-import Constrained.Experiment.Syntax (exists, forAll, letBind, mkCase, reify)
-import Constrained.Experiment.TheKnot
+import Constrained.Base
+import Constrained.Conformance (conformsToSpec, satisfies)
+import Constrained.Generic
+import Constrained.Spec.ListFoldy
+import Constrained.Syntax (exists, forAll, letBind, mkCase, reify)
+import Constrained.TheKnot
 import Constrained.List
-import Constrained.Spec.Pairs ()
 import qualified Data.List.NonEmpty as NE
 import Data.Typeable (Typeable)
 import GHC.TypeLits (Symbol)

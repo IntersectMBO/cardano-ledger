@@ -14,7 +14,8 @@ import Data.Set qualified as Set
 import GHC.Generics
 import Test.QuickCheck (Property, label)
 
-import Constrained
+import Constrained.API
+import Constrained.Properties(forAllSpec)
 
 -- The `constrained-generators` library allows us to write
 -- constraints that give us random generators, shrinkers, and checkers
@@ -22,7 +23,7 @@ import Constrained
 --
 -- Every first order logic has 4 parts, as does our DSL.
 -- 1) Terms :  e.g. x, 5, (member_ x set) (x ==. y)
---    Implemented as (Term fn a). We have variables like 'x', and constants like '5'.
+--    Implemented as (Term a). We have variables like 'x', and constants like '5'.
 --    'member_' and '==.' are function symbols, and build Terms from other terms.
 --    By convention, a name followed by '_' or an infix operator followed by '.' are function symbols.
 -- 2) Predicates (over terms). Predicates commonly used are
@@ -34,13 +35,13 @@ import Constrained
 -- 3) Combinators (combining predicates). In general, And, Or, Not, Implies, True, False
 --    But in the DSL, we are limited to
 --      'And' using Block :: [Pred] -> Pred
---      'Not' using the function symbol not_ :: Term fn Bool -> Term fn Bool
+--      'Not' using the function symbol not_ :: Term Bool -> Term Bool
 --            for example:  assert $ not_ (x ==. y)
 --      limited form of 'Or' using
---         chooseSpec :: (Int, Specification fn a)- > (Int, Specification fn a) -> Specification fn a
+--         chooseSpec :: (Int, Specification a)- > (Int, Specification a) -> Specification a
 -- 4) Quantifiers (applying constraints to many things) :
---    forAll: Term fn t -> (Term fn a -> p) -> Pred fn
---    exists: ((forall b. Term fn b -> b) -> GE a) -> (Term fn a -> p) -> Pred fn
+--    forAll: Term t -> (Term a -> p) -> Pred fn
+--    exists: ((forall b. Term b -> b) -> GE a) -> (Term a -> p) -> Pred fn
 --    These are explained in detail below
 
 -- In case you are interested, here is a list of supported function symbols (note the use of the '_' and '.' convention)
@@ -49,27 +50,27 @@ import Constrained
 -- You may also use the methods of Num (+) (-) (*), since there is a (Num (Term fn)) instance.
 
 -- The first order logic DSL is used to build Specifications
--- A specifcation with type (Specification fn x) has two uses
+-- A specifcation with type (Specification x) has two uses
 -- 1) To generate a random values of type 'x', subject to the constraints in the specifications definition.
---    This is implemented by   genFromSpec :: Specification fn x -> Gen x (Gen is the QuickCheck Gen)
+--    This is implemented by   genFromSpec :: Specification x -> Gen x (Gen is the QuickCheck Gen)
 -- 2) To test if a value of type 'x' meets all of the constraints given in the specifications definition.
---     This is implemented by  conformsToSpec :: HasSpec fn a => a -> Specification fn a -> Bool
+--     This is implemented by  conformsToSpec :: HasSpec a => a -> Specification a -> Bool
 
 -- Lets get started. We can talk about numbers:
 
-specInt :: Specification BaseFn Int
+specInt :: Specification Int
 specInt = constrained $ \i ->
   [ assert $ i <. 10
   , assert $ 0 <. i
   ]
 
 -- What's going on here? In short:
---    `constrained :: (HasSpec fn a, IsPred p fn) => (Term fn a -> p) -> Specification fn a`
+--    `constrained :: (HasSpec a, IsPred p fn) => (Term a -> p) -> Specification a`
 --    Introduces the variable `i` over which we can write constraints of type `p` over something
---    of type `a` to produce a `Specifcation fn a` using a list of
---    `assert :: Term fn Bool -> Pred fn` with `Term fn`-level versions (function symbols) of familiar functions like
---    `(<.) :: OrdLike fn a => Term fn a -> Term fn a -> Term fn Bool`, `null_ :: Term fn [a] -> Term fn Bool`,
---    `rng_ :: (HasSpec fn k, HasSpec fn v, Ord k) => Term fn (Map k v) -> Term fn (Set k)` etc.
+--    of type `a` to produce a `Specifcation a` using a list of
+--    `assert :: Term Bool -> Pred  with `Term -level versions (function symbols) of familiar functions like
+--    `(<.) :: OrdLike a => Term a -> Term a -> Term Bool`, `null_ :: Term [a] -> Term Bool`,
+--    `rng_ :: (HasSpec k, HasSpec v, Ord k) => Term (Map k v) -> Term (Set k)` etc.
 -- We get a generator from `genFromSpec :: Specification BaseFn a -> Gen a`:
 -- λ> sample $ genFromSpec specInt
 -- 1
@@ -101,26 +102,26 @@ specInt = constrained $ \i ->
 -- λ> 5 `conformsToSpec` specInt
 -- True
 
--- Note that the type of `constrained` says the binding function of type `Term fn a -> p` doesn't
--- have to produce a `Pred fn` (which is the return type of `assert`), but can produce something of type `p`
--- that satisfies `IsPred p fn`. This basically just means something that can be readily turned into a
--- `Pred fn`, like e.g. `Pred fn`, `Bool`, `Term fn Bool`, `[p]` for `IsPred p fn`. Consequently, we could
+-- Note that the type of `constrained` says the binding function of type `Term a -> p` doesn't
+-- have to produce a `Pred  (which is the return type of `assert`), but can produce something of type `p`
+-- that satisfies `IsPred p`. This basically just means something that can be readily turned into a
+-- `Pred`, like e.g. `Pred`, `Bool`, `Term Bool`, `[p]` for `IsPred p`. Consequently, we could
 -- have written `specInt` as:
 
-specInt' :: Specification BaseFn Int
+specInt' :: Specification Int
 specInt' = constrained $ \i ->
   [ i <. 10
   , 0 <. i
   ]
 
--- However, beware that when we start mixing `Term fn Bool` and `Pred fn` in these lists we can end
+-- However, beware that when we start mixing `Term Bool` and `Pred` in these lists we can end
 -- up getting some inscrutable error messages. So, if a call to `constrained` or another function that
 -- has `IsPred` as a constraint, starts giving you strange error messages, double check that you have
--- used `assert` instead of raw `Term fn Bool` everywhere relevant.
+-- used `assert` instead of raw `Term Bool` everywhere relevant.
 
 -- We also have support for product types with functions like `fst_`, `snd_`, and `pair_`:
 
-specProd :: Specification BaseFn (Int, Int)
+specProd :: Specification (Int, Int)
 specProd = constrained $ \p ->
   [ fst_ p <. 10
   , snd_ p <. 100
@@ -128,7 +129,7 @@ specProd = constrained $ \p ->
 
 -- However, product types can also be a bit finicky:
 
-specProd0 :: Specification BaseFn (Int, Int)
+specProd0 :: Specification (Int, Int)
 specProd0 = constrained $ \p -> assert $ fst_ p <. snd_ p
 
 -- λ> sample $ genFromSpec specProd0
@@ -151,16 +152,16 @@ specProd0 = constrained $ \p -> assert $ fst_ p <. snd_ p
 
 -- To overcome the fundamental restriction we can use `match`:
 -- match ::
---   forall fn p a.
---   ( HasSpec fn a
---   , IsProductType fn a
+--   forall p a.
+--   ( HasSpec a
+--   , IsProductType a
 --   , IsPred p fn
 --   ) =>
---   Term fn a ->
+--   Term a ->
 --   FunTy (MapList (Term fn) (ProductAsList a)) p ->
 --   Pred fn
 
-specProd1 :: Specification BaseFn (Int, Int)
+specProd1 :: Specification (Int, Int)
 specProd1 = constrained $ \p ->
   match p $ \x y ->
     x <. y
@@ -180,10 +181,10 @@ specProd1 = constrained $ \p ->
 
 -- Bringing variables into scope.
 -- 'constrained' and 'match' are the ways we bring variable into scope, And they are often nested.
--- Consider writing a specification for pair of nested pairs: Specification fn ((Int,Int),(Int,Int))
+-- Consider writing a specification for pair of nested pairs: Specification ((Int,Int),(Int,Int))
 -- How do we name the four different Int's ?
 
-nested :: Specification BaseFn ((Int, Int), (Int, Int))
+nested :: Specification ((Int, Int), (Int, Int))
 nested =
   constrained $ \pp ->
     match pp $ \p1 p2 ->
@@ -221,14 +222,14 @@ nested =
 -- This pattern of `constrained $ \ p -> match p $ \ x y -> ...` is very common
 -- and has a shorthand in the form of `constrained'`:
 
-specProd2 :: Specification BaseFn (Int, Int)
+specProd2 :: Specification (Int, Int)
 specProd2 = constrained' $ \x y -> x <. y
 
 -- How does generation actually work when we have multiple variables? For example,
 -- it is not obvious (to the computer) what the best way of generating values satisfying
 -- this constraint is:
 
-solverOrder :: Specification BaseFn (Int, Int)
+solverOrder :: Specification (Int, Int)
 solverOrder = constrained' $ \x y ->
   [ x <. y
   , y <. 10
@@ -301,7 +302,7 @@ solverOrder = constrained' $ \x y ->
 -- As an aside, the frustrating thing about making sense of the output of `printPlan` is the `v0`, `v1`, etc. naming.
 -- To introduce proper names we can use the `var` quasi-quoter:
 
-solverOrder' :: Specification BaseFn (Int, Int)
+solverOrder' :: Specification (Int, Int)
 solverOrder' = constrained' $ \ [var|x|] [var|y|] ->
   [ x <. y
   , y <. 10
@@ -330,7 +331,7 @@ solverOrder' = constrained' $ \ [var|x|] [var|y|] ->
 -- A consequence of the default dependency order approach is that it's possible
 -- to write constraints that put you in a tricky situation:
 
-tightFit0 :: Specification BaseFn (Int, Int)
+tightFit0 :: Specification (Int, Int)
 tightFit0 = constrained' $ \x y ->
   [ 0 <. x
   , x <. y
@@ -381,7 +382,7 @@ tightFit0 = constrained' $ \x y ->
 
 -- The solution to this issue is to introduce `dependsOn`, which lets us override the dependency order in constraints:
 
-tightFit1 :: Specification BaseFn (Int, Int)
+tightFit1 :: Specification (Int, Int)
 tightFit1 = constrained' $ \x y ->
   [ assert $ 0 <. x
   , assert $ x <. y
@@ -424,10 +425,10 @@ tightFit1 = constrained' $ \x y ->
 -- (21,46)
 -- (28,49)
 
--- We also support booleans with `ifElse :: Term fn Bool -> Pred fn -> Pred fn -> Pred fn`
+-- We also support booleans with `ifElse :: Term Bool -> Pred -> Pred -> Pred`
 -- where the branches of the `ifElse` depend on the scrutinee.
 
-booleanExample :: Specification BaseFn (Int, Int)
+booleanExample :: Specification (Int, Int)
 booleanExample = constrained' $ \x y ->
   ifElse
     (0 <. x)
@@ -452,14 +453,14 @@ booleanExample = constrained' $ \x y ->
 
 -- Because we will need to re-use this multiple times we start by defining a valid
 -- PVP constraint as any constraint that has non-negative major and minor version number.
-validPVPVersion :: Specification BaseFn (Int, Int)
+validPVPVersion :: Specification (Int, Int)
 validPVPVersion = constrained' $ \ma mi -> [0 <=. ma, 0 <=. mi]
 
 -- Now we are ready to define the constraints for valid PVP succession. Note here that
--- we use the `satisfies :: Term fn a -> Specification BaseFn a -> Pred fn` combinator
+-- we use the `satisfies :: Term a -> Specification BaseFn a -> Pred` combinator
 -- to re-use the `validPVPVersion` constraint.
 
-canFollowExample :: Specification BaseFn ((Int, Int), (Int, Int))
+canFollowExample :: Specification ((Int, Int), (Int, Int))
 canFollowExample = constrained' $ \p q ->
   [ match p $ \ma mi ->
       match q $ \ma' mi' ->
@@ -496,7 +497,7 @@ canFollowExample = constrained' $ \p q ->
 
 -- We have native support for sum types using `caseOn` and `branch`:
 
-sumExample :: Specification BaseFn (Either Int Bool)
+sumExample :: Specification (Either Int Bool)
 sumExample = constrained $ \e ->
   (caseOn e)
     (branch $ \i -> i <. 0)
@@ -504,7 +505,7 @@ sumExample = constrained $ \e ->
 
 -- Furthermore, cases are solved _inside-out_ by default:
 
-sumExampleTwo :: Specification BaseFn (Int, Either Int Bool)
+sumExampleTwo :: Specification (Int, Either Int Bool)
 sumExampleTwo = constrained' $ \i e ->
   [ caseOn
       e
@@ -515,7 +516,7 @@ sumExampleTwo = constrained' $ \i e ->
 
 -- We can work with sets with operations like `subset_`, `union_` (or `<>`), `disjoint_`, and `singleton_`:
 
-setExample :: Specification BaseFn (Set Int, Set Int, Set Int)
+setExample :: Specification (Set Int, Set Int, Set Int)
 setExample = constrained' $ \xs ys zs ->
   [ xs `subset_` (ys <> zs)
   , sizeOf_ ys <=. 10
@@ -523,7 +524,7 @@ setExample = constrained' $ \xs ys zs ->
 
 -- We can also quantify over things like sets with `forAll`:
 
-forAllFollow0 :: Specification BaseFn ((Int, Int), Set (Int, Int))
+forAllFollow0 :: Specification ((Int, Int), Set (Int, Int))
 forAllFollow0 = constrained' $ \p qs ->
   [ forAll qs $ \q -> pair_ p q `satisfies` canFollowExample
   ]
@@ -547,7 +548,7 @@ forAllFollow0 = constrained' $ \p qs ->
 -- it needs to be a valid PVP version _if `qs` is non-empty!_. This is easily fixed
 -- by specifying that `p` is _always_ a valid PVP version!
 
-forAllFollow :: Specification BaseFn ((Int, Int), Set (Int, Int))
+forAllFollow :: Specification ((Int, Int), Set (Int, Int))
 forAllFollow = constrained' $ \p qs ->
   [ forAll qs $ \q -> pair_ p q `satisfies` canFollowExample
   , p `satisfies` validPVPVersion
@@ -569,7 +570,7 @@ forAllFollow = constrained' $ \p qs ->
 -- We also have existential quantification in the language. The first argument to
 -- `exists` tells you how to reconstruct the value from known values.
 
-existentials :: Specification BaseFn (Set Int, Set Int)
+existentials :: Specification (Set Int, Set Int)
 existentials = constrained' $ \xs ys ->
   exists (\eval -> pure $ Set.intersection (eval xs) (eval ys)) $ \zs ->
     [ assert $ not_ $ null_ zs
@@ -587,9 +588,9 @@ data FooBarBaz = Foo Int Int | Bar Bool | Baz deriving (Eq, Show, Generic)
 -- All you need to do is introduce instances for `HasSimpleRep` and `HasSpec`:
 
 instance HasSimpleRep FooBarBaz
-instance BaseUniverse fn => HasSpec fn FooBarBaz
+instance HasSpec FooBarBaz
 
-fooBarBaz :: Specification BaseFn FooBarBaz
+fooBarBaz :: Specification FooBarBaz
 fooBarBaz = constrained $ \fbb ->
   caseOn
     fbb
@@ -611,10 +612,10 @@ fooBarBaz = constrained $ \fbb ->
 -- Foo (-4) 7
 
 -- Some functions don't exist on the term level. In this case we can use
--- `reifies :: (HasSpec fn a, HasSpec fn b) => Term fn b -> Term fn a -> (a -> b) -> Pred fn`
+-- `reifies :: (HasSpec a, HasSpec b) => Term b -> Term a -> (a -> b) -> Pred`
 -- to introduce a one-way evaluation of a Haskell function:
 
-reifyExample :: Specification BaseFn (Int, Int)
+reifyExample :: Specification (Int, Int)
 reifyExample = constrained' $ \ [var|a|] [var|b|] ->
   reifies b a $ \x -> mod x 10
 
@@ -623,13 +624,13 @@ reifyExample = constrained' $ \ [var|a|] [var|b|] ->
 -- cryptic code means is to imagine there was a `mod_` function, in that case this code would be equivalent
 -- to:
 
-reifyExample' :: Specification BaseFn (Int, Int)
+reifyExample' :: Specification (Int, Int)
 reifyExample' = constrained' $ \a b ->
   [ assert $ b ==. mod_ a 10
   , b `dependsOn` a
   ]
   where
-    mod_ :: Term fn Int -> Term fn Int -> Term fn Int
+    mod_ :: Term Int -> Term Int -> Term Int
     mod_ = error "This doesn't exist"
 
 -- When we look at the plan we get from `reifyExample` we get what we'd expect:
@@ -652,20 +653,20 @@ reifyExample' = constrained' $ \a b ->
 
 -- Sometimes it is convenient to introduce an auxilliary variable to represent the result of applying the
 -- haskell-level function to the term, for this purpose we have
--- `reify :: (HasSpec fn a, HasSpec fn b, IsPred p fn) => Term fn a -> (a -> b) -> (Term fn b -> p) -> Pred fn`.
+-- `reify :: (HasSpec a, HasSpec b, IsPred p fn) => Term a -> (a -> b) -> (Term b -> p) -> Pred`.
 
 -- We have tools to control the distribution of test cases and monitor those distributions. Using `branchW` we can
--- attach weights to branches in a `caseOn` and using `monitor :: ((forall. Term fn a -> a) -> Property -> Property) -> Pred fn`
+-- attach weights to branches in a `caseOn` and using `monitor :: ((forall. Term a -> a) -> Property -> Property) -> Pred`
 -- we can use the normal QuickCheck functions for monitoring distributions of generators to see the effects of this.
 
-monitorExample :: Specification BaseFn (Either Int Int)
+monitorExample :: Specification (Either Int Int)
 monitorExample = constrained $ \e ->
   caseOn
     e
     (branchW 1 $ \_ -> monitor $ \_ -> label "Left")
     (branchW 2 $ \_ -> monitor $ \_ -> label "Right")
 
--- The `forAllSpec :: (Testable p, HasSpec fn a) => Specification fn a -> (a -> p) -> Property` we
+-- The `forAllSpec :: (Testable p, HasSpec a) => Specification a -> (a -> p) -> Property` we
 -- automatically get the monitoring from the spec in our property:
 
 prop_monitoring :: Property
@@ -677,11 +678,11 @@ prop_monitoring = forAllSpec monitorExample $ \_ -> True
 -- 36% Left
 
 -- Other tools for controlling distributions of specifications are available too, for example
--- `chooseSpec :: HasSpec fn a => (Int, Specification fn a) -> (Int, Specification fn a) -> Specification fn a`,
+-- `chooseSpec :: HasSpec a => (Int, Specification a) -> (Int, Specification a) -> Specification a`,
 -- the definition of which constitutes a useful object of study to better understand how to use the compositional
 -- nature of the system to build powerful features.
 
-chooseSpecExample :: Specification BaseFn Int
+chooseSpecExample :: Specification Int
 chooseSpecExample =
   chooseSpec
     (1, constrained $ \i -> i <. 0)

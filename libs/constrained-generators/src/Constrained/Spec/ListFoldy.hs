@@ -30,17 +30,17 @@
 
 -- | Code for the Foldy class, the FunW witness (compose_,id_,flip_) and
 --   HasSpec instance for List. These things are all mutually recursive.
-module Constrained.Experiment.Specs.ListFoldy where
+module Constrained.Spec.ListFoldy where
 
 import Constrained.Core (Evidence (..), NonEmpty ((:|)), Var (..), eqVar, unionWithMaybe)
-import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance (conformsToSpec, satisfies)
-import Constrained.Experiment.NumSpec
-import Constrained.Experiment.Specs.Num ()
-import Constrained.Experiment.Specs.Size (Sized (..), genFromSizeSpec, sizeOf_)
-import Constrained.Experiment.SumList (Cost (..), Solution (No, Yes), pickAll)
-import Constrained.Experiment.Syntax (forAll, genHint, unsafeExists)
-import Constrained.Experiment.TheKnot (
+import Constrained.Base
+import Constrained.Conformance (conformsToSpec, satisfies)
+import Constrained.NumSpec
+import Constrained.Spec.Num ()
+import Constrained.Spec.Size (Sized (..), genFromSizeSpec, sizeOf_)
+import Constrained.SumList (Cost (..), Solution (No, Yes), pickAll)
+import Constrained.Syntax (forAll, genHint, unsafeExists)
+import Constrained.TheKnot (
   caseBoolSpec,
   genFromSpecT,
   mapSpec,
