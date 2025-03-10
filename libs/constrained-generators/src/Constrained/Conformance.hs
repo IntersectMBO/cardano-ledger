@@ -22,12 +22,12 @@
 
 module Constrained.Conformance where
 
+import Constrained.Base
 import Constrained.Core (NonEmpty ((:|)), Rename (rename))
 import Constrained.Env
-import Constrained.Base
-import Constrained.Syntax
 import Constrained.GenT
 import Constrained.List
+import Constrained.Syntax
 import Data.List (intersect, nub)
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe

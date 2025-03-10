@@ -10,13 +10,13 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.Ledgers () where
 
 import Cardano.Ledger.Conway.Core (EraPParams (..))
 import Cardano.Ledger.Shelley.Rules (Identity, ShelleyLedgersEnv)
-import Constrained (HasSimpleRep, HasSpec)
-import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger (EraSpecPParams, IsConwayUniv)
+import Constrained.API
+import Data.Typeable
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger (EraSpecPParams)
 
-instance HasSimpleRep (ShelleyLedgersEnv era)
+instance Typeable era => HasSimpleRep (ShelleyLedgersEnv era)
 instance
   ( EraSpecPParams era
-  , IsConwayUniv fn
   , Eq (PParamsHKD Identity era)
   ) =>
-  HasSpec fn (ShelleyLedgersEnv era)
+  HasSpec (ShelleyLedgersEnv era)

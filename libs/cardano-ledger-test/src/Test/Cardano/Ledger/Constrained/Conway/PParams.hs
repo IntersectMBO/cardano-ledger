@@ -9,12 +9,12 @@
 module Test.Cardano.Ledger.Constrained.Conway.PParams where
 
 import Cardano.Ledger.Core (PParams (..))
-import Constrained
+import Constrained.API
 import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams (
   EraSpecPParams (..),
   simplePParamsSpec,
  )
 
 pparamsSpec ::
-  forall fn era. (EraSpecPParams era, BaseUniverse fn) => Specification fn (PParams era)
-pparamsSpec = constrained' $ \simplepp -> satisfies simplepp (simplePParamsSpec @fn @era)
+  forall era. EraSpecPParams era => Specification (PParams era)
+pparamsSpec = constrained' $ \simplepp -> satisfies simplepp (simplePParamsSpec @era)

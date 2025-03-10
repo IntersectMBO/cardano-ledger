@@ -32,9 +32,11 @@
 --   HasSpec instance for List. These things are all mutually recursive.
 module Constrained.Spec.ListFoldy where
 
-import Constrained.Core (Evidence (..), NonEmpty ((:|)), Var (..), eqVar, unionWithMaybe)
 import Constrained.Base
 import Constrained.Conformance (conformsToSpec, satisfies)
+import Constrained.Core (Evidence (..), NonEmpty ((:|)), Var (..), eqVar, unionWithMaybe)
+import Constrained.GenT
+import Constrained.List
 import Constrained.NumSpec
 import Constrained.Spec.Num ()
 import Constrained.Spec.Size (Sized (..), genFromSizeSpec, sizeOf_)
@@ -48,8 +50,6 @@ import Constrained.TheKnot (
   simplifySpec,
   (==.),
  )
-import Constrained.GenT
-import Constrained.List
 import Control.Applicative ((<|>))
 import Control.Monad (guard, when)
 import Data.Int

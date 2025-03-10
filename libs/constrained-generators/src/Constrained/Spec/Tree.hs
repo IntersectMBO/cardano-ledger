@@ -15,15 +15,15 @@
 
 module Constrained.Spec.Tree (BinTree (..), TreeW (..), rootLabel_, TreeSpec (..)) where
 
-import Constrained.Core (unionWithMaybe)
 import Constrained.Base
 import Constrained.Conformance (conformsToSpec, satisfies)
+import Constrained.Core (unionWithMaybe)
+import Constrained.GenT (oneofT)
+import Constrained.List (List (..))
 import Constrained.Spec.ListFoldy (FoldSpec (..), ListSpec (..))
 import Constrained.Spec.SumProd (PairSpec (Cartesian), match)
 import Constrained.Syntax (forAll, genHint)
 import Constrained.TheKnot (genFromSpecT, shrinkWithSpec)
-import Constrained.GenT (oneofT)
-import Constrained.List (List (..))
 import Data.Kind
 import Data.Tree
 import GHC.Generics

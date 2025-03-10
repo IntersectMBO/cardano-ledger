@@ -25,18 +25,21 @@ import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
-import Constrained hiding (Sized, Value)
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Sequence.Strict as SS (fromList)
 import Data.Set (Set)
 import Lens.Micro
+
+import Constrained.API
+import Constrained.Generic
+import Data.Typeable
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 
 -- ==============================================================================
 
-instance HasSimpleRep (Update era)
-instance (EraSpecPParams era, IsConwayUniv fn) => HasSpec fn (Update era)
+instance Typeable era => HasSimpleRep (Update era)
+instance EraSpecPParams era => HasSpec (Update era)
 
 -- =========================================
 -- ShelleyTxBody
@@ -91,11 +94,10 @@ instance
 
 instance
   ( EraSpecPParams era
-  , IsConwayUniv fn
-  , HasSpec fn (TxOut era)
-  , HasSpec fn (TxCert era)
+  , HasSpec (TxOut era)
+  , HasSpec (TxCert era)
   ) =>
-  HasSpec fn (ShelleyTxBody era)
+  HasSpec (ShelleyTxBody era)
 
 fromShelleyBody :: forall era. EraTxBody era => ShelleyTxBody era -> TxBody era
 fromShelleyBody (ShelleyTxBody inputs outputs certs withdrawals coin _slot _up aux) =
@@ -159,11 +161,10 @@ instance
       )
 instance
   ( EraSpecPParams era
-  , IsConwayUniv fn
-  , HasSpec fn (TxOut era)
-  , HasSpec fn (TxCert era)
+  , HasSpec (TxOut era)
+  , HasSpec (TxCert era)
   ) =>
-  HasSpec fn (AllegraTxBody era)
+  HasSpec (AllegraTxBody era)
 
 fromAllegraBody :: forall era. AllegraEraTxBody era => AllegraTxBody era -> TxBody era
 fromAllegraBody (AllegraTxBody inputs outputs certs withdrawals coin vi _up aux) =
@@ -231,11 +232,10 @@ instance
       )
 instance
   ( EraSpecPParams era
-  , IsConwayUniv fn
-  , HasSpec fn (TxOut era)
-  , HasSpec fn (TxCert era)
+  , HasSpec (TxOut era)
+  , HasSpec (TxCert era)
   ) =>
-  HasSpec fn (MaryTxBody era)
+  HasSpec (MaryTxBody era)
 
 fromMaryBody :: forall era. MaryEraTxBody era => MaryTxBody era -> TxBody era
 fromMaryBody (MaryTxBody inputs outputs certs withdrawals coin vi _up aux ma) =
@@ -317,11 +317,10 @@ instance
 
 instance
   ( EraSpecPParams era
-  , IsConwayUniv fn
-  , HasSpec fn (TxOut era)
-  , HasSpec fn (TxCert era)
+  , HasSpec (TxOut era)
+  , HasSpec (TxCert era)
   ) =>
-  HasSpec fn (AlonzoTxBody era)
+  HasSpec (AlonzoTxBody era)
 
 fromAlonzoBody :: forall era. AlonzoEraTxBody era => AlonzoTxBody era -> TxBody era
 fromAlonzoBody (AlonzoTxBody colinputs inputs outputs certs withdrawals coin vi _up kh ma ihash aux nw) =
@@ -416,11 +415,10 @@ instance
 instance
   ( EraSpecPParams era
   , BabbageEraTxBody era
-  , IsConwayUniv fn
-  , HasSpec fn (TxOut era)
-  , HasSpec fn (TxCert era)
+  , HasSpec (TxOut era)
+  , HasSpec (TxCert era)
   ) =>
-  HasSpec fn (BabbageTxBody era)
+  HasSpec (BabbageTxBody era)
 
 fromBabbageBody :: forall era. BabbageEraTxBody era => BabbageTxBody era -> TxBody era
 fromBabbageBody (BabbageTxBody inputs colinputs refinputs os colret totalcol certs w fee vi _up kh ma ihash aux nw) =
