@@ -4,11 +4,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | All the HasSpec instances for a few types with Num instances
-module Constrained.Experiment.Specs.Num ((+.), negate_, (>=.), (>.), (-.)) where
+module Constrained.Spec.Num ((+.), negate_, (>=.), (>.), (-.)) where
 
-import Constrained.Experiment.Base
-import Constrained.Experiment.NumSpec
-import Constrained.Experiment.TheKnot
+import Constrained.Base
+import Constrained.NumSpec
+import Constrained.TheKnot
 import Data.Ratio
 import Data.Word
 import GHC.Int

@@ -18,8 +18,6 @@ source-repository head
 
 library
   exposed-modules:
-    Constrained
-    Constrained.Base
     Constrained.Core
     Constrained.Env
     Constrained.Examples
@@ -31,45 +29,26 @@ library
     Constrained.Examples.Map
     Constrained.Examples.Set
     Constrained.Examples.Tree
-    Constrained.Experiment.API
-    Constrained.Experiment.Base
-    Constrained.Experiment.Conformance
-    Constrained.Experiment.Examples.Basic
-    Constrained.Experiment.Examples.Either
-    Constrained.Experiment.Examples.Fold
-    Constrained.Experiment.Examples.List
-    Constrained.Experiment.Examples.Map
-    Constrained.Experiment.Examples.Set
-    Constrained.Experiment.Examples.Tree
-    Constrained.Experiment.Generic
-    Constrained.Experiment.NumSpec
-    Constrained.Experiment.Properties
-    Constrained.Experiment.Specs.ListFoldy
-    Constrained.Experiment.Specs.Map
-    Constrained.Experiment.Specs.Num
-    Constrained.Experiment.Specs.Set
-    Constrained.Experiment.Specs.Size
-    Constrained.Experiment.Specs.SumProd
-    Constrained.Experiment.Specs.Tree
-    Constrained.Experiment.SumList
-    Constrained.Experiment.Syntax
-    Constrained.Experiment.Tests.Test
-    Constrained.Experiment.TheKnot
+    Constrained.Base
+    Constrained.Conformance
+    Constrained.Generic
+    Constrained.NumSpec
+    Constrained.TheKnot    
     Constrained.GenT
     Constrained.Graph
-    Constrained.Instances
-    Constrained.Internals
     Constrained.List
     Constrained.Properties
-    Constrained.Spec
-    Constrained.Spec.Generics
     Constrained.Spec.Map
-    Constrained.Spec.Pairs
     Constrained.Spec.Tree
+    Constrained.Spec.ListFoldy
+    Constrained.Spec.Num
+    Constrained.Spec.Set
+    Constrained.Spec.Size
+    Constrained.Spec.SumProd
     Constrained.SumList
     Constrained.Syntax
-    Constrained.Univ
-
+    Constrained.API
+  
   hs-source-dirs: src
   default-language: Haskell2010
   ghc-options:
@@ -86,11 +65,11 @@ library
     base >=4.14 && <5,
     base-orphans,
     containers,
-    hspec,
     mtl,
     prettyprinter,
     random,
     template-haskell,
+
 
 test-suite constrained
   type: exitcode-stdio-1.0

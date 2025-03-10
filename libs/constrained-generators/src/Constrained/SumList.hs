@@ -138,6 +138,15 @@ pickAll smallest largest (pName, _) total count cost
             , "  count = " ++ show count
             ]
         )
+pickAll smallest largest (pName, p) total 0 cost = 
+  if total==0 && p total
+     then pure(cost,Yes $ pure [])
+     else pure (cost, No ["We are trying to find list of length 0."
+                         ,"  Whose sum is "++show total++"."
+                         ,"  That is only possible if the sum == 0."
+                         ,"  All elements have to satisfy " ++ pName
+                         ,"  smallest = " ++ show smallest
+                         ,"  largest = " ++ show largest ])
 pickAll smallest largest (pName, p) total 1 cost =
   if p total
     then pure (cost, Yes $ pure [total])
@@ -161,7 +170,6 @@ pickAll smallest largest (pName, _) total count cost
             ]
         )
 pickAll smallest largest (pName, p) total 2 cost = do
-  -- for small things, enumerate all possibilities
   -- for large things, use a fair sample.
   choices <- smallSample smallest largest total 1000 100
   case filter (\(x, y) -> p x && p y) choices of
@@ -282,7 +290,7 @@ smallSample smallest largest total bound size
 --   isLarge==True   means be biased towards the large end of the range,
 --   isLArge==False  means be biased towards the small end of the range,
 fair :: (Random a, Integral a) => a -> a -> Int -> Int -> Bool -> Gen [a]
-fair smallest largest size precision isLarge =
+fair smallest largest size precision isLarge = 
   concat <$> mapM oneRange (if isLarge then largePrecision else smallPrecision)
   where
     raw = map logRange [logish smallest .. logish largest]

@@ -9,11 +9,11 @@
 
 module Constrained.Examples.Fold where
 
-import Constrained
-import Constrained.Base (Pred (..), genListWithSize, predSpecPair)
+import Constrained.API
 import Constrained.Examples.List (Numbery)
+import Constrained.Spec.ListFoldy (genListWithSize, predSpecPair)
+import Constrained.GenT (GE (..), catMessages, genFromGenT, inspect)
 import Constrained.SumList
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.String (fromString)
 import Prettyprinter (fillSep, punctuate, space)
 import System.Random (Random)
@@ -22,7 +22,7 @@ import Test.QuickCheck hiding (forAll, total)
 -- ========================================================
 -- Specifications we use in the examples and in the tests
 
-oddSpec :: Specification BaseFn Int
+oddSpec :: Specification Int
 oddSpec = ExplainSpec ["odd via (y+y+1)"] $
   constrained $ \ [var|oddx|] ->
     exists
@@ -31,15 +31,15 @@ oddSpec = ExplainSpec ["odd via (y+y+1)"] $
 
 evenSpec ::
   forall n.
-  (TypeSpec BaseFn n ~ NumSpec BaseFn n, Integral n, HasSpec BaseFn n, MaybeBounded n) =>
-  Specification BaseFn n
+  (TypeSpec n ~ NumSpec n, Integral n, HasSpec n, MaybeBounded n) =>
+  Specification n
 evenSpec = ExplainSpec ["even via (x+x)"] $
   constrained $ \ [var|evenx|] ->
     exists
       (\eval -> pure (div (eval evenx) 2))
       (\ [var|somey|] -> [Assert $ evenx ==. somey + somey])
 
-sum3WithLength :: Integer -> Specification BaseFn ([Int], Int, Int, Int)
+sum3WithLength :: Integer -> Specification ([Int], Int, Int, Int)
 sum3WithLength n =
   constrained $ \ [var|quad|] ->
     match quad $ \ [var|l|] [var|n1|] [var|n2|] [var|n3|] ->
@@ -49,23 +49,23 @@ sum3WithLength n =
       , Assert $ n1 + n2 + n3 >=. lit (fromInteger n)
       ]
 
-sum3 :: Specification BaseFn [Int]
+sum3 :: Specification [Int]
 sum3 = constrained $ \ [var|xs|] -> [sum_ xs ==. lit 6 + lit 9 + lit 5, sizeOf_ xs ==. 5]
 
-listSumPair :: Numbery a => Specification BaseFn [(a, Int)]
+listSumPair :: Numbery a => Specification [(a, Int)]
 listSumPair = constrained $ \xs ->
   [ assert $ foldMap_ fst_ xs ==. 100
   , forAll' xs $ \x y -> [20 <. x, x <. 30, y <. 100]
   ]
 
-listSumForall :: Numbery a => Specification BaseFn [a]
+listSumForall :: Numbery a => Specification [a]
 listSumForall = constrained $ \xs ->
   [ forAll xs $ \x -> 1 <. x
   , assert $ sum_ xs ==. 20
   ]
 
 -- | Complicated, because if 'a' is too large, the spec is unsatisfiable.
-listSumComplex :: Numbery a => a -> Specification BaseFn [a]
+listSumComplex :: Numbery a => a -> Specification [a]
 listSumComplex a = constrained $ \xs ->
   [ forAll xs $ \x -> 1 <. x
   , assert $ sum_ xs ==. 20
@@ -130,10 +130,10 @@ pickProp = do
 -- | Build properties about calls to 'genListWithSize'
 testFoldSpec ::
   forall a.
-  (Foldy BaseFn a, Random a, Integral a, TypeSpec BaseFn a ~ NumSpec BaseFn a) =>
-  Specification BaseFn Integer ->
-  Specification BaseFn a ->
-  Specification BaseFn a ->
+  (Foldy a, Random a, Integral a, TypeSpec a ~ NumSpec a) =>
+  Specification Integer ->
+  Specification a ->
+  Specification a ->
   Outcome ->
   Gen Property
 testFoldSpec size elemSpec total outcome = do
@@ -152,8 +152,8 @@ testFoldSpec size elemSpec total outcome = do
 
 -- | Generate a property from a call to 'pickAll'. We can test for success or failure using 'outcome'
 sumProp ::
-  (Integral t, Random t, HasSpec BaseFn t) =>
-  t -> t -> Specification BaseFn t -> t -> Int -> Outcome -> Gen Property
+  (Integral t, Random t, HasSpec t) =>
+  t -> t -> Specification t -> t -> Int -> Outcome -> Gen Property
 sumProp smallest largest spec total count outcome = sumProp2 smallest largest (predSpecPair spec) total count outcome
 
 -- | Like SumProp, but instead of using a (Specification fn n) for the element predicate

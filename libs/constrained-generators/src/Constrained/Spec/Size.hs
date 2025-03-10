@@ -22,14 +22,14 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 #endif
 
-module Constrained.Experiment.Specs.Size where
+module Constrained.Spec.Size where
 
-import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance (satisfies)
-import Constrained.Experiment.Generic
-import Constrained.Experiment.NumSpec
-import Constrained.Experiment.Syntax
-import Constrained.Experiment.TheKnot (genFromSpecT, (<=.), (==.))
+import Constrained.Base
+import Constrained.Conformance (satisfies)
+import Constrained.Generic
+import Constrained.NumSpec
+import Constrained.Syntax
+import Constrained.TheKnot (genFromSpecT, (<=.), (==.))
 import Constrained.GenT
 import Constrained.List
 import Data.Kind

@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Constrained.Experiment.API (
+module Constrained.API (
   Logic (..),
   Semantics (..),
   Syntax (..),
@@ -36,6 +36,7 @@ module Constrained.Experiment.API (
   genFromSpecT,
   genFromSpec,
   debugSpec,
+  genFromSpecWithSeed,
   simplifySpec,
   cardinality,
   ifElse,
@@ -56,6 +57,7 @@ module Constrained.Experiment.API (
   dependsOn,
   lit,
   genHint,
+  giveHint,
   (<.),
   (<=.),
   (>=.),
@@ -114,6 +116,7 @@ module Constrained.Experiment.API (
   (++.),
   sizeOf,
   sizeOf_,
+  null_,
   hasSize,
   rangeSize,
   length_,
@@ -152,7 +155,7 @@ module Constrained.Experiment.API (
 where
 
 import Constrained.Core (NonEmpty ((:|)))
-import Constrained.Experiment.Base (
+import Constrained.Base (
   BaseW (..),
   Fun (..),
   HasSpec (..),
@@ -180,14 +183,15 @@ import Constrained.Experiment.Base (
   pattern ProdSnd,
   pattern Product,
   pattern ToGeneric,
+  giveHint,
  )
-import Constrained.Experiment.Conformance (
+import Constrained.Conformance (
   conformsToSpec,
   conformsToSpecE,
   satisfies,
  )
-import Constrained.Experiment.Generic (HasSimpleRep (..), Prod (..))
-import Constrained.Experiment.NumSpec (
+import Constrained.Generic (HasSimpleRep (..), Prod (..))
+import Constrained.NumSpec (
   IntW (..),
   MaybeBounded (..),
   NumLike,
@@ -200,10 +204,7 @@ import Constrained.Experiment.NumSpec (
   negateFn,
  )
 
--- instances only
-
--- import Constrained.Experiment.Specs.Pairs (ProdW (..), fst_, pair_, snd_)
-import Constrained.Experiment.Specs.SumProd (
+import Constrained.Spec.SumProd (
   IsNormalType,
   PairSpec (..),
   branch,
@@ -233,7 +234,7 @@ import Constrained.Experiment.Specs.SumProd (
   sel,
   snd_,
  )
-import Constrained.Experiment.TheKnot (
+import Constrained.TheKnot (
   BoolW (..),
   debugSpec,
   genFromSpec,
@@ -250,9 +251,10 @@ import Constrained.Experiment.TheKnot (
   (==.),
   (>.),
   (>=.),
+  genFromSpecWithSeed,
  )
 
-import Constrained.Experiment.Syntax (
+import Constrained.Syntax (
   assert,
   assertExplain,
   assertReified,
@@ -269,7 +271,7 @@ import Constrained.Experiment.Syntax (
   unsafeExists,
  )
 
-import Constrained.Experiment.Specs.ListFoldy (
+import Constrained.Spec.ListFoldy (
   Foldy (..),
   FunW (..),
   ListW (..),
@@ -283,7 +285,7 @@ import Constrained.Experiment.Specs.ListFoldy (
   sum_,
  )
 
-import Constrained.Experiment.Specs.Map (
+import Constrained.Spec.Map (
   MapSpec (..),
   MapW (..),
   dom_,
@@ -292,8 +294,8 @@ import Constrained.Experiment.Specs.Map (
   rng_,
   sndSpec,
  )
-import Constrained.Experiment.Specs.Num (negate_, (+.), (-.))
-import Constrained.Experiment.Specs.Set (
+import Constrained.Spec.Num (negate_, (+.), (-.))
+import Constrained.Spec.Set (
   SetSpec (..),
   SetW (..),
   disjoint_,
@@ -303,7 +305,7 @@ import Constrained.Experiment.Specs.Set (
   subset_,
   union_,
  )
-import Constrained.Experiment.Specs.Size (
+import Constrained.Spec.Size (
   SizeW (..),
   Sized (sizeOf),
   between,
@@ -332,3 +334,6 @@ infixr 2 ||.
 infixr 5 ++.
 (++.) :: HasSpec a => Term [a] -> Term [a] -> Term [a]
 (++.) = append_
+
+null_ :: (HasSpec a, Sized a) => Term a -> Term Bool
+null_ xs = sizeOf_ xs ==. 0

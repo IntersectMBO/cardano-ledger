@@ -11,11 +11,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | How can we automatically inject normal Haskell types into the logic, using GHC.Generics
-module Constrained.Experiment.Generic where
+module Constrained.Generic where
 
 import GHC.TypeLits (Symbol)
-
--- import Data.Orphans -- instances on Symbol
 
 import Constrained.List
 import Data.Functor.Const
