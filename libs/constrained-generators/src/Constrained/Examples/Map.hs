@@ -9,7 +9,7 @@
 
 module Constrained.Examples.Map where
 
-import Constrained
+import Constrained.API
 import Constrained.Examples.Basic
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -17,50 +17,48 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word
 
--- import Constrained.Base(debugSpec)
-
-mapElemSpec :: Specification BaseFn (Map Int (Bool, Int))
+mapElemSpec :: Specification (Map Int (Bool, Int))
 mapElemSpec = constrained $ \m ->
   [ assert $ m /=. lit mempty
   , forAll' (rng_ m) $ \_ b ->
       [0 <. b, b <. 10]
   ]
 
-mapPairSpec :: Specification BaseFn (Map Int Int, Set Int)
+mapPairSpec :: Specification (Map Int Int, Set Int)
 mapPairSpec = constrained' $ \m s ->
   subset_ (dom_ m) s
 
-mapEmptyDomainSpec :: Specification BaseFn (Map Int Int)
+mapEmptyDomainSpec :: Specification (Map Int Int)
 mapEmptyDomainSpec = constrained $ \m ->
   subset_ (dom_ m) mempty -- mempty in the Monoid instance (Term fn (Set a))
 
-mapSubSize :: Specification BaseFn (Map Int Int)
+mapSubSize :: Specification (Map Int Int)
 mapSubSize = constrained $ \s ->
   2 ==. 12 - (sizeOf_ s)
 
-knownDomainMap :: Specification BaseFn (Map Int Int)
+knownDomainMap :: Specification (Map Int Int)
 knownDomainMap = constrained $ \m ->
   [ dom_ m ==. lit (Set.fromList [1, 2])
   , not_ $ 0 `elem_` rng_ m
   ]
 
-mapSizeConstrained :: Specification BaseFn (Map Three Int)
-mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3
+mapSizeConstrained :: Specification (Map Three Int)
+mapSizeConstrained = constrained $ \m -> sizeOf_ (dom_ m) <=. 3
 
-sumRange :: Specification BaseFn (Map Word64 Word64)
+sumRange :: Specification (Map Word64 Word64)
 sumRange = constrained $ \m -> sum_ (rng_ m) ==. lit 10
 
-fixedRange :: Specification BaseFn (Map Int Int)
+fixedRange :: Specification (Map Int Int)
 fixedRange = constrained $ \m ->
   [ forAll (rng_ m) (\x -> x ==. 5)
   , assert $ (sizeOf_ m) ==. 1
   ]
 
-rangeHint :: Specification BaseFn (Map Int Int)
+rangeHint :: Specification (Map Int Int)
 rangeHint = constrained $ \m ->
   genHint 10 (rng_ m)
 
-rangeSumSize :: Specification BaseFn (Map Int Int)
+rangeSumSize :: Specification (Map Int Int)
 rangeSumSize = constrained $ \m ->
   [ assert $ sizeOf_ m <=. 0
   , assert $ sum_ (rng_ m) <=. 0
@@ -71,21 +69,21 @@ rangeSumSize = constrained $ \m ->
       ]
   ]
 
-elemSpec :: Specification BaseFn (Int, Int, Map Int Int)
-elemSpec = constrained' $ \k v m ->
-  [ assert $ k `member_` dom_ m
-  , forAll' m $ \k' v' ->
-      whenTrue (k' ==. k) (v' ==. v)
-  , m `dependsOn` k
+elemSpec :: Specification (Int, Int, Map Int Int)
+elemSpec = constrained' $ \ [var|key|] [var|val|] [var|mapp|] ->
+  [ assert $ key `member_` dom_ mapp
+  , forAll' mapp $ \ [var|k'|] [var|v'|] ->
+      whenTrue (k' ==. key) (v' ==. val)
+  , mapp `dependsOn` key
   ]
 
-lookupSpecific :: Specification BaseFn (Int, Int, Map Int Int)
-lookupSpecific = constrained' $ \k v m ->
+lookupSpecific :: Specification (Int, Int, Map Int Int)
+lookupSpecific = constrained' $ \ [var|k|] [var|v|] [var|m|] ->
   [ m `dependsOn` k
   , assert $ lookup_ k m ==. cJust_ v
   ]
 
-mapRestrictedValues :: Specification BaseFn (Map (Either Int ()) Int)
+mapRestrictedValues :: Specification (Map (Either Int ()) Int)
 mapRestrictedValues = constrained $ \m ->
   [ assert $ sizeOf_ (dom_ m) ==. 6
   , forAll' m $ \k v ->
@@ -102,7 +100,7 @@ mapRestrictedValues = constrained $ \m ->
 -- you take satisfiability of the whole elem constraint into account. This can't be fixed
 -- with a `dependsOn v k` because the issue is that we've generated a bunch of values
 -- before we ever go to generate the keys.
-mapRestrictedValuesThree :: Specification BaseFn (Map Three Int)
+mapRestrictedValuesThree :: Specification (Map Three Int)
 mapRestrictedValuesThree = constrained $ \m ->
   [ assert $ sizeOf_ (dom_ m) ==. 3
   , forAll' m $ \k v ->
@@ -117,18 +115,18 @@ mapRestrictedValuesThree = constrained $ \m ->
       ]
   ]
 
-mapRestrictedValuesBool :: Specification BaseFn (Map Bool Int)
+mapRestrictedValuesBool :: Specification (Map Bool Int)
 mapRestrictedValuesBool = constrained $ \m ->
   [ assert $ sizeOf_ (dom_ m) ==. 2
   , forAll' m $ \k v -> [v `dependsOn` k, whenTrue k (100 <=. v)]
   ]
 
-mapSetSmall :: Specification BaseFn (Map (Set Int) Int)
+mapSetSmall :: Specification (Map (Set Int) Int)
 mapSetSmall = constrained $ \x ->
   forAll (dom_ x) $ \d ->
     assert $ subset_ d $ lit (Set.fromList [3 .. 4])
 
 -- | this tests the function saturatePred
-mapIsJust :: Specification BaseFn (Int, Int)
+mapIsJust :: Specification (Int, Int)
 mapIsJust = constrained' $ \ [var| x |] [var| y |] ->
   cJust_ x ==. lookup_ y (lit $ Map.fromList [(z, z) | z <- [100 .. 102]])

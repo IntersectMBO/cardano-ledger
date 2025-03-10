@@ -27,12 +27,12 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 #endif
 
-module Constrained.Experiment.NumSpec where
+module Constrained.NumSpec where
 
 import Constrained.Core (NonEmpty ((:|)), unionWithMaybe)
-import Constrained.Experiment.Base
-import Constrained.Experiment.Conformance ()
-import Constrained.Experiment.Generic
+import Constrained.Base
+import Constrained.Conformance ()
+import Constrained.Generic
 import Constrained.GenT (GenT, MonadGenError (..), pureGen, sizeT)
 import Constrained.List
 import Control.Applicative ((<|>))

@@ -32,6 +32,9 @@
 --    5) Syntacic only transformations
 module Constrained.Experiment.Syntax where
 
+import qualified Language.Haskell.TH as TH
+import qualified Language.Haskell.TH.Quote as TH   
+
 import Constrained.Core (
   Rename (rename),
   Value (..),
@@ -68,6 +71,37 @@ import GHC.Stack
 import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 import Prelude hiding (pred)
+
+-- ==========================================================
+-- Variables
+-- ==========================================================
+
+mkNamed :: String -> TH.Q TH.Pat
+mkNamed x =
+  pure $
+    TH.ViewP (TH.AppE (TH.VarE $ TH.mkName "name") (TH.LitE $ TH.StringL x)) (TH.VarP $ TH.mkName x)
+
+mkNamedExpr :: String -> TH.Q TH.Exp
+mkNamedExpr x =
+  pure $
+    TH.AppE (TH.AppE (TH.VarE $ TH.mkName "name") (TH.LitE $ TH.StringL x)) (TH.VarE $ TH.mkName x)
+
+var :: TH.QuasiQuoter
+var =
+  TH.QuasiQuoter
+    { -- Parses variables e.g. `constrained $ \ [var| x |] [var| y |] -> ...` from the strings " x " and " y "
+      -- and replaces them with `name "x" -> x` and `name "y" -> y`
+      TH.quotePat = mkNamed . varName
+    , -- Parses variables in expressions like `assert $ [var| x |] + 3 <. 10` and replaces them with `name "x" x`
+      TH.quoteExp = mkNamedExpr . varName
+    , TH.quoteDec = const $ fail "var should only be used at binding sites and in expressions"
+    , TH.quoteType = const $ fail "var should only be used at binding sites and in expressions"
+    }
+  where
+    varName s = case words s of
+      [w] -> w
+      _ -> fail "expected a single var name"
+
 
 -- ============================================================
 -- 1) Free variables and variable names

@@ -20,12 +20,12 @@
 -- Semigroup (Specification a), Monoid (Specification a)
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.Experiment.Conformance where
+module Constrained.Conformance where
 
 import Constrained.Core (NonEmpty ((:|)), Rename (rename))
 import Constrained.Env
-import Constrained.Experiment.Base
-import Constrained.Experiment.Syntax
+import Constrained.Base
+import Constrained.Syntax
 import Constrained.GenT
 import Constrained.List
 import Data.List (intersect, nub)
