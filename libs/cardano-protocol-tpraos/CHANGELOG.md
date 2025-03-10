@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Add `SafeToHash` and `HashAnnotated` instances for `BHeader`
 * Add `DecCBOR` instance for `OCert`
 * Add `DecCBOR` instance for `BHeader`
 * Converted `CertState` to a type family
