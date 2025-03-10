@@ -15,7 +15,6 @@
 -- | Useful properties for debugging custom @HasSpec@ instances.
 module Constrained.Properties where
 
-import Constrained.Core (Value (..), Var (..), unValue)
 import Constrained.API
 import Constrained.Base (
   AppRequires,
@@ -27,9 +26,7 @@ import Constrained.Base (
   (/>),
  )
 import Constrained.Conformance (monitorSpec)
-import Constrained.Spec.ListFoldy (genInverse)
-import Constrained.Syntax (PolyCList (..))
-import Constrained.TheKnot
+import Constrained.Core (Value (..), Var (..), unValue)
 import Constrained.GenT (GE (..), errorGE, fromGEDiscard, fromGEProp, strictGen)
 import Constrained.List (
   All,
@@ -41,6 +38,9 @@ import Constrained.List (
   uncurryList,
   uncurryList_,
  )
+import Constrained.Spec.ListFoldy (genInverse)
+import Constrained.Syntax (PolyCList (..))
+import Constrained.TheKnot
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import Data.Typeable (Typeable, typeOf)

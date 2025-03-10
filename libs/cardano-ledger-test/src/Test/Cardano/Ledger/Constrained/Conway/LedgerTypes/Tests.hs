@@ -22,20 +22,20 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   UTxOState (..),
  )
-import Constrained hiding (Value)
+import Cardano.Ledger.State
+import Constrained.API
 import Data.Kind (Type)
 import Data.Map (Map)
 import Data.Typeable
-import Test.Cardano.Ledger.Constrained.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway.Cert (
   testConwayCert,
   testGenesisCert,
   testShelleyCert,
  )
-import Test.Cardano.Ledger.Constrained.Conway.Instances hiding (certStateSpec)
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
+import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (irewardSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (prettyA))
 import Test.Hspec
@@ -50,47 +50,46 @@ import Test.QuickCheck (
 
 -- ====================================================================================
 -- Some Specifications are constrained by types (say 'x') that do not appear in the type being
--- specified. We use the strategy of passing (Term fn x) as inputs to those specifcations.
+-- specified. We use the strategy of passing (Term x) as inputs to those specifcations.
 -- For example, the AccountState must have sufficient capacity to support the InstantaneousRewards
--- So we pass a (Term fn AccountState) as input to 'instantaneousRewardsSpec' which then
+-- So we pass a (Term AccountState) as input to 'instantaneousRewardsSpec' which then
 -- constrains both the AccountState Term and the 'instantaneousRewardsSpec' so that they are consistent.
 -- In order to create tests, we need specifications that are fully applied, so we write combinators
 -- to lift (Term a -> Spec b) functions to (Specification a -> Gen(Specification b))
 -- The idea is to combine several Specifications to get a Gen(composed specifations)
 -- For example (dstateSpec @Shelley !$! accountStateSpec !*! poolMapSpec)
--- is a (Gen (Specification ConwayFn (DState Shelley)))
--- If a Specification takes an actual PParams (not a (Term fn PParams)), like
+-- is a (Gen (Specification (DState Shelley)))
+-- If a Specification takes an actual PParams (not a (Term PParams)), like
 -- lederstateSpec, we can combine it like this using the Functor <$>, rather than our !$!
 -- (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)
 -- ====================================================================================
 
--- GenFromSpec fixed at ConwayFn
-genConwayFn :: (HasCallStack, HasSpec ConwayFn a) => Specification ConwayFn a -> Gen a
-genConwayFn = genFromSpec @ConwayFn
+-- GenFromSpec fixed at
+genConwayFn :: (HasCallStack, HasSpec a) => Specification a -> Gen a
+genConwayFn = genFromSpec
 
--- Analagous to <$> except the function to be applied takes a (Term fn a -> t) instead of (a -> t)
+-- Analagous to <$> except the function to be applied takes a (Term a -> t) instead of (a -> t)
 infixr 6 !$!
 (!$!) ::
-  forall fn t a.
-  HasSpec fn a =>
-  (Term fn a -> t) -> Specification fn a -> Gen t
-(!$!) bf specA = do a <- genFromSpec @fn @a specA; pure (bf (lit a))
+  forall t a.
+  HasSpec a =>
+  (Term a -> t) -> Specification a -> Gen t
+(!$!) bf specA = do a <- genFromSpec @a specA; pure (bf (lit a))
 
--- Analagous to <*> except the function to be applied takes a Gen (Term fn a -> t) instead of F (a -> t)
+-- Analagous to <*> except the function to be applied takes a Gen (Term a -> t) instead of F (a -> t)
 infixl 4 !*!
 (!*!) ::
-  forall fn t a.
-  HasSpec fn a =>
-  Gen (Term fn a -> t) -> Specification fn a -> Gen t
-(!*!) gentf specA = do a <- genFromSpec @fn @a specA; f <- gentf; pure (f (lit a))
+  forall t a.
+  HasSpec a =>
+  Gen (Term a -> t) -> Specification a -> Gen t
+(!*!) gentf specA = do a <- genFromSpec @a specA; f <- gentf; pure (f (lit a))
 
 poolMapSpec ::
-  Specification ConwayFn (Map (KeyHash 'StakePool) PoolParams)
+  Specification (Map (KeyHash 'StakePool) PoolParams)
 poolMapSpec = hasSize (rangeSize 8 8)
 
 delegationsSpec ::
   Specification
-    ConwayFn
     (Map (Credential 'Staking) (KeyHash 'StakePool))
 delegationsSpec = (hasSize (rangeSize 8 12))
 
@@ -99,7 +98,7 @@ delegationsSpec = (hasSize (rangeSize 8 12))
 -- ===================================================================
 
 soundSpec ::
-  forall t. (HasSpec ConwayFn t, PrettyA t) => Gen (Specification ConwayFn t) -> Gen Property
+  forall t. (HasSpec t, PrettyA t) => Gen (Specification t) -> Gen Property
 soundSpec specGen = do
   spect <- specGen
   x <- genConwayFn @t spect
@@ -109,15 +108,15 @@ soundSpec specGen = do
 
 soundSpecWith ::
   forall t.
-  (HasSpec ConwayFn t, PrettyA t) =>
-  Int -> Gen (Specification ConwayFn t) -> SpecWith (Arg Property)
+  (HasSpec t, PrettyA t) =>
+  Int -> Gen (Specification t) -> SpecWith (Arg Property)
 soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ property $ (soundSpec @t specx)
 
 -- | A bunch of soundness tests on different LederTypes, all in the same Era.
 --   The idea is to run this suite on every era.
 specSuite ::
   forall (era :: Type).
-  ( EraSpecLedger era ConwayFn
+  ( EraSpecLedger era
   , PrettyA (GovState era)
   , HasSpec ConwayFn (InstantStake era)
   , PrettyA (CertState era)
@@ -127,7 +126,7 @@ specSuite ::
 specSuite n = do
   let universe = genWitUniv @era 200
 
-  soundSpecWith @(PState era) (5 * n) (pstateSpec @ConwayFn @era <$> universe !*! epochNoSpec)
+  soundSpecWith @(PState era) (5 * n) (pstateSpec @era <$> universe !*! epochNoSpec)
 
   soundSpecWith @(DState era)
     (5 * n)
@@ -139,13 +138,16 @@ specSuite n = do
     (10 * n)
     $ do
       univ <- genWitUniv @era 25
-      vstateSpec @_ @era univ
-        !$! epochNoSpec
-        !*! goodDrep @era univ
+      ( vstateSpec @era univ
+          !$! epochNoSpec
+          !*! (goodDrep @era univ)
+        )
 
-  soundSpecWith @(CertState era) (5 * n) $ do
-    univ <- genWitUniv @era 50
-    certStateSpec @era @ConwayFn univ {- (lit drepRoleCredSet) -} !$! accountStateSpec !*! epochNoSpec
+  soundSpecWith @(CertState era)
+    (5 * n)
+    $ do
+      univ <- genWitUniv @era 50
+      (certStateSpec @era univ {- (lit drepRoleCredSet) -} !$! accountStateSpec !*! epochNoSpec)
 
   soundSpecWith @(UTxO era) (5 * n) (utxoSpecWit @era <$> universe !*! delegationsSpec)
 
@@ -153,7 +155,7 @@ specSuite n = do
 
   soundSpecWith @(GovState era)
     (2 * n)
-    (govStateSpec @era <$> genFromSpec (pparamsSpec @ConwayFn))
+    (govStateSpec @era <$> genFromSpec pparamsSpec)
 
   soundSpecWith @(LedgerState era)
     (2 * n)
@@ -190,11 +192,10 @@ spec = do
 
 utxoStateGen ::
   forall era.
-  ( EraSpecLedger era ConwayFn
-  , HasSpec ConwayFn (InstantStake era)
-  , WellFormed (CertState era) era
+  ( EraSpecLedger era, HasSpec (InstantStake era) )
+  , CertState era ~ ShelleyCertState era
   ) =>
-  Gen (Specification ConwayFn (UTxOState era))
+  Gen (Specification (UTxOState era))
 utxoStateGen =
   utxoStateSpec @era
     <$> genConwayFn @(PParams era) pparamsSpec

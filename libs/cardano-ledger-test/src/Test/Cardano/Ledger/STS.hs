@@ -18,14 +18,14 @@ import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
 import Control.Monad.Reader
 import Control.State.Transition.Extended
 
-import Constrained hiding (forAll)
+import Constrained.API hiding (forAll)
+import Constrained.TheKnot (shrinkWithSpec)
 
 import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
-import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.Pool
 
 import Test.Cardano.Ledger.Generic.PrettyCore
@@ -33,7 +33,8 @@ import Test.Cardano.Ledger.Shelley.Utils
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential)
-import Constrained.Base (conformsToSpecE)
+
+-- import Constrained.Conformance(conformsToSpecE)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import Data.Set (Set)
@@ -53,8 +54,8 @@ genContext ::
     )
 genContext = do
   univ <- genWitUniv @ConwayEra 200
-  delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
-  wdrls <- genFromSpec @ConwayFn (constrained $ \x -> (witness univ x))
+  delegatees <- genFromSpec (delegateeSpec univ)
+  wdrls <- genFromSpec (constrained $ \x -> (witness univ x))
   pure (univ, delegatees, wdrls)
 
 ------------------------------------------------------------------------
@@ -63,11 +64,11 @@ genContext = do
 
 type GenShrink a = (Gen a, a -> [a])
 
-genShrinkFromSpec :: forall fn a. HasSpec fn a => Specification fn a -> GenShrink a
-genShrinkFromSpec spec = (genFromSpec @fn spec, shrinkWithSpec @fn spec)
+genShrinkFromSpec :: forall a. HasSpec a => Specification a -> GenShrink a
+genShrinkFromSpec spec = (genFromSpec spec, shrinkWithSpec spec)
 
 stsPropertyV2 ::
-  forall r fn era env st sig fail p.
+  forall r era env st sig fail p.
   ( era ~ ConwayEra
   , Environment (EraRule r era) ~ env
   , State (EraRule r era) ~ st
@@ -80,20 +81,20 @@ stsPropertyV2 ::
   , PrettyA env
   , PrettyA fail
   , Testable p
-  , HasSpec fn env
-  , HasSpec fn st
-  , HasSpec fn sig
+  , HasSpec env
+  , HasSpec st
+  , HasSpec sig
   ) =>
-  Specification fn env ->
-  (env -> Specification fn st) ->
-  (env -> st -> Specification fn sig) ->
+  Specification env ->
+  (env -> Specification st) ->
+  (env -> st -> Specification sig) ->
   (env -> st -> sig -> st -> p) ->
   Property
 stsPropertyV2 specEnv specState specSig prop =
   stsPropertyV2' @r specEnv specState specSig (\env _ _ -> specState env) prop
 
 stsPropertyV2' ::
-  forall r fn env st sig fail p.
+  forall r env st sig fail p.
   ( Environment (EraRule r ConwayEra) ~ env
   , State (EraRule r ConwayEra) ~ st
   , Signal (EraRule r ConwayEra) ~ sig
@@ -105,16 +106,16 @@ stsPropertyV2' ::
   , PrettyA env
   , PrettyA fail
   , Testable p
-  , HasSpec fn env
-  , HasSpec fn st
-  , HasSpec fn sig
+  , HasSpec env
+  , HasSpec st
+  , HasSpec sig
   ) =>
-  Specification fn env ->
-  (env -> Specification fn st) ->
-  (env -> st -> Specification fn sig) ->
+  Specification env ->
+  (env -> Specification st) ->
+  (env -> st -> Specification sig) ->
   -- This allows you to write a separate spec for the state after the transition
   -- and thus e.g. loosening requirements set only for the sake of generation
-  (env -> st -> sig -> Specification fn st) ->
+  (env -> st -> sig -> Specification st) ->
   (env -> st -> sig -> st -> p) ->
   Property
 stsPropertyV2' specEnv specState specSig specPostState prop =
@@ -129,7 +130,7 @@ stsPropertyV2' specEnv specState specSig specPostState prop =
                 pure $ case res of
                   Left pfailures -> counterexample (show $ prettyA pfailures) $ property False
                   Right st' ->
-                    case conformsToSpecE @fn
+                    case conformsToSpecE
                       st
                       (specPostState env st sig)
                       (pure "conformsToSpecE fails in STS tests") of
@@ -147,7 +148,7 @@ stsPropertyV2' specEnv specState specSig specPostState prop =
 
 prop_GOV :: Property
 prop_GOV =
-  stsPropertyV2 @"GOV" @ConwayFn
+  stsPropertyV2 @"GOV"
     govEnvSpec
     govProposalsSpec
     govProceduresSpec
@@ -156,7 +157,7 @@ prop_GOV =
 
 -- prop_NEWEPOCH :: Property
 -- prop_NEWEPOCH =
---   stsPropertyV2 @"NEWEPOCH" @ConwayFn
+--   stsPropertyV2 @"NEWEPOCH"
 --     TrueSpec
 --     (\_env -> TrueSpec)
 --     (\_env _st -> TrueSpec)
@@ -164,7 +165,7 @@ prop_GOV =
 
 prop_EPOCH :: EpochNo -> Property
 prop_EPOCH epochNo =
-  stsPropertyV2' @"EPOCH" @ConwayFn
+  stsPropertyV2' @"EPOCH"
     TrueSpec
     (\_env -> epochStateSpec (lit epochNo))
     (\_env _st -> epochSignalSpec epochNo)
@@ -174,7 +175,7 @@ prop_EPOCH epochNo =
 
 prop_ENACT :: Property
 prop_ENACT =
-  stsPropertyV2 @"ENACT" @ConwayFn
+  stsPropertyV2 @"ENACT"
     TrueSpec
     (\_env -> TrueSpec)
     -- TODO: this is a bit suspect, there are preconditions on these signals in the spec so we
@@ -184,7 +185,7 @@ prop_ENACT =
 
 prop_UTXOS :: Property
 prop_UTXOS =
-  stsPropertyV2 @"UTXOS" @ConwayFn
+  stsPropertyV2 @"UTXOS"
     TrueSpec
     (\_env -> TrueSpec)
     (\_env _st -> TrueSpec)
@@ -192,7 +193,7 @@ prop_UTXOS =
 
 -- prop_LEDGER :: Property
 -- prop_LEDGER = property $ do
---  pure $ stsPropertyV2 @"LEDGER" @ConwayFn
+--  pure $ stsPropertyV2 @"LEDGER"
 --    TrueSpec
 --    (\_env -> TrueSpec)
 --    -- TODO: the `GenDelegs` don't appear to be used (?!) so we just give an
@@ -202,7 +203,7 @@ prop_UTXOS =
 
 -- prop_TICKF :: Property
 -- prop_TICKF =
---   stsPropertyV2 @"TICKF" @ConwayFn
+--   stsPropertyV2 @"TICKF"
 --     TrueSpec
 --     (\_env -> TrueSpec)
 --     (\_env _st -> TrueSpec)
@@ -210,7 +211,7 @@ prop_UTXOS =
 
 prop_RATIFY :: Property
 prop_RATIFY =
-  stsPropertyV2 @"RATIFY" @ConwayFn
+  stsPropertyV2 @"RATIFY"
     TrueSpec
     (\_env -> TrueSpec)
     (\_env _st -> TrueSpec)
@@ -219,7 +220,7 @@ prop_RATIFY =
 
 -- prop_CERTS :: Property
 -- prop_CERTS =
---   stsPropertyV2 @"CERTS" @ConwayFn
+--   stsPropertyV2 @"CERTS"
 --     TrueSpec
 --     (\_env -> TrueSpec)
 --     (\_env _st -> TrueSpec)
@@ -231,7 +232,7 @@ prop_CERT =
   forAll
     genContext
     ( \(conwayWitUniv, conwayDelegatees, conwayWdrls) ->
-        stsPropertyV2 @"CERT" @ConwayFn
+        stsPropertyV2 @"CERT"
           (certEnvSpec conwayWitUniv)
           (\_env -> certStateSpec conwayWitUniv conwayDelegatees conwayWdrls)
           (\env st -> conwayTxCertSpec conwayWitUniv env st)
@@ -244,7 +245,7 @@ prop_DELEG =
   forAll
     genContext
     ( \(conwayWitUniv, conwayDelegatees, conwayWdrls) ->
-        stsPropertyV2 @"DELEG" @ConwayFn
+        stsPropertyV2 @"DELEG"
           delegEnvSpec
           (\_env -> certStateSpec conwayWitUniv conwayDelegatees conwayWdrls)
           conwayDelegCertSpec
@@ -256,10 +257,10 @@ prop_POOL =
   forAll
     genContext
     ( \(conwayWitUniv, _, _) ->
-        stsPropertyV2 @"POOL" @ConwayFn
+        stsPropertyV2 @"POOL"
           (poolEnvSpec conwayWitUniv)
           (\_env -> pStateSpec conwayWitUniv)
-          (\env st -> poolCertSpec @ConwayFn @ConwayEra conwayWitUniv env st)
+          (\env st -> poolCertSpec @ConwayEra conwayWitUniv env st)
           $ \_env _st _sig _st' -> True
     )
 
@@ -268,7 +269,7 @@ prop_GOVCERT =
   forAll
     genContext
     ( \(conwayWitUniv, conwayDelegatees, conwayWdrls) ->
-        stsPropertyV2 @"GOVCERT" @ConwayFn
+        stsPropertyV2 @"GOVCERT"
           (govCertEnvSpec conwayWitUniv)
           (\_env -> certStateSpec conwayWitUniv conwayDelegatees conwayWdrls)
           (\env st -> govCertSpec conwayWitUniv env st)
@@ -277,7 +278,7 @@ prop_GOVCERT =
 
 prop_UTXOW :: Property
 prop_UTXOW =
-  stsPropertyV2 @"UTXOW" @ConwayFn
+  stsPropertyV2 @"UTXOW"
     TrueSpec
     (\_env -> TrueSpec)
     (\_env _st -> TrueSpec)
@@ -286,7 +287,7 @@ prop_UTXOW =
 -- prop_UTXO :: Property
 -- prop_UTXO = property $ do
 --  ctx <- arbitrary
---  pure $ stsPropertyV2 @"UTXO" @ConwayFn
+--  pure $ stsPropertyV2 @"UTXO"
 --    utxoEnvSpec
 --    utxoStateSpec
 --    (utxoTxSpec ctx)
@@ -294,7 +295,7 @@ prop_UTXOW =
 
 -- prop_BBODY :: Property
 -- prop_BBODY =
---   stsPropertyV2 @"BBODY" @ConwayFn
+--   stsPropertyV2 @"BBODY"
 --     TrueSpec
 --     (\_env -> TrueSpec)
 --     (\_env _st -> TrueSpec)
@@ -302,7 +303,7 @@ prop_UTXOW =
 
 -- prop_LEDGERS :: Property
 -- prop_LEDGERS =
---   stsPropertyV2 @"LEDGERS" @ConwayFn
+--   stsPropertyV2 @"LEDGERS"
 --     TrueSpec
 --     (\_env -> TrueSpec)
 --     (\_env _st -> TrueSpec)
@@ -310,7 +311,7 @@ prop_UTXOW =
 
 -- prop_RUPD :: Property
 -- prop_RUPD =
---   stsPropertyV2 @"RUPD" @ConwayFn
+--   stsPropertyV2 @"RUPD"
 --     TrueSpec
 --     (\_env -> TrueSpec)
 --     (\_env _st -> TrueSpec)
@@ -318,7 +319,7 @@ prop_UTXOW =
 
 -- prop_SNAP :: Property
 -- prop_SNAP =
---   stsPropertyV2 @"SNAP" @ConwayFn
+--   stsPropertyV2 @"SNAP"
 --     TrueSpec
 --     (\_env -> TrueSpec)
 --     (\_env _st -> TrueSpec)
@@ -326,7 +327,7 @@ prop_UTXOW =
 
 -- prop_TICK :: Property
 -- prop_TICK =
---   stsPropertyV2 @"TICK" @ConwayFn
+--   stsPropertyV2 @"TICK"
 --     TrueSpec
 --     (\_env -> TrueSpec)
 --     (\_env _st -> TrueSpec)

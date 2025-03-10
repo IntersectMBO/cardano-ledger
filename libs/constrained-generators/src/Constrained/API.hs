@@ -154,7 +154,6 @@ module Constrained.API (
 )
 where
 
-import Constrained.Core (NonEmpty ((:|)))
 import Constrained.Base (
   BaseW (..),
   Fun (..),
@@ -169,6 +168,7 @@ import Constrained.Base (
   constrained,
   equalSpec,
   fromGeneric_,
+  giveHint,
   name,
   named,
   notEqualSpec,
@@ -183,13 +183,13 @@ import Constrained.Base (
   pattern ProdSnd,
   pattern Product,
   pattern ToGeneric,
-  giveHint,
  )
 import Constrained.Conformance (
   conformsToSpec,
   conformsToSpecE,
   satisfies,
  )
+import Constrained.Core (NonEmpty ((:|)))
 import Constrained.Generic (HasSimpleRep (..), Prod (..))
 import Constrained.NumSpec (
   IntW (..),
@@ -239,6 +239,7 @@ import Constrained.TheKnot (
   debugSpec,
   genFromSpec,
   genFromSpecT,
+  genFromSpecWithSeed,
   ifElse,
   not_,
   or_,
@@ -251,7 +252,6 @@ import Constrained.TheKnot (
   (==.),
   (>.),
   (>=.),
-  genFromSpecWithSeed,
  )
 
 import Constrained.Syntax (

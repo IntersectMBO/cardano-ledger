@@ -33,7 +33,7 @@
 module Constrained.Syntax where
 
 import qualified Language.Haskell.TH as TH
-import qualified Language.Haskell.TH.Quote as TH  
+import qualified Language.Haskell.TH.Quote as TH
 
 import Constrained.Core (
   Rename (rename),
@@ -46,10 +46,10 @@ import Constrained.Core (
 
 -- instances on Symbol
 
-import Constrained.Env
 import Constrained.Base
-import Constrained.Generic
+import Constrained.Env
 import Constrained.GenT (GE (..), MonadGenError (..), errorGE, explain1)
+import Constrained.Generic
 import Constrained.Graph (Graph (..))
 import Constrained.List
 import Control.Monad.Identity
@@ -101,7 +101,6 @@ var =
     varName s = case words s of
       [w] -> w
       _ -> fail "expected a single var name"
-
 
 -- ============================================================
 -- 1) Free variables and variable names

@@ -25,29 +25,6 @@ library
     Test.Cardano.Ledger.Constrained.Conway.Certs
     Test.Cardano.Ledger.Constrained.Conway.Deleg
     Test.Cardano.Ledger.Constrained.Conway.Epoch
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Cert
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Certs
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Deleg
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Gov
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.GovCert
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances.Basic
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances.Ledger
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances.Ledgers
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances.PParams
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Instances.TxBody
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Ledger
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.LedgerTypes.Specs
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.LedgerTypes.Tests
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.LedgerTypes.WellFormed
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Ledgers
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.NewEpoch
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.PParams
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.ParametricSpec
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Pool
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.TxBodySpec
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.Utxo
-    Test.Cardano.Ledger.Constrained.Conway.Experiment.WitnessUniverse
     Test.Cardano.Ledger.Constrained.Conway.Gov
     Test.Cardano.Ledger.Constrained.Conway.GovCert
     Test.Cardano.Ledger.Constrained.Conway.Instances

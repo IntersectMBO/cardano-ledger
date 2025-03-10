@@ -15,7 +15,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Slotting.EpochInfo qualified as EI
-import Constrained
+import Constrained.API
 import Control.Monad.Identity
 import Data.Map.Strict qualified as Map
 import Lens.Micro
@@ -29,20 +29,20 @@ currentEpoch :: SlotNo -> EpochNo
 currentEpoch = runIdentity . EI.epochInfoEpoch (epochInfoPure testGlobals)
 
 poolEnvSpec ::
-  forall fn era.
-  (EraSpecPParams era, IsConwayUniv fn) =>
+  forall era.
+  EraSpecPParams era =>
   WitUniv era ->
-  Specification fn (PoolEnv era)
+  Specification (PoolEnv era)
 poolEnvSpec _univ =
   constrained $ \pe ->
     match pe $ \_ pp ->
-      satisfies pp (pparamsSpec @fn @era)
+      satisfies pp (pparamsSpec @era)
 
 pStateSpec ::
-  forall fn era.
-  (Era era, IsConwayUniv fn) =>
+  forall era.
+  Era era =>
   WitUniv era ->
-  Specification fn (PState era)
+  Specification (PState era)
 pStateSpec univ = constrained $ \ps ->
   match ps $ \stakePoolParams futureStakePoolParams retiring deposits ->
     [ witness univ (dom_ stakePoolParams)
@@ -62,12 +62,12 @@ pStateSpec univ = constrained $ \ps ->
     ]
 
 poolCertSpec ::
-  forall fn era.
-  (EraSpecPParams era, IsConwayUniv fn) =>
+  forall era.
+  EraSpecPParams era =>
   WitUniv era ->
   PoolEnv era ->
   PState era ->
-  Specification fn PoolCert
+  Specification PoolCert
 poolCertSpec univ (PoolEnv e pp) ps =
   constrained $ \pc ->
     (caseOn pc)

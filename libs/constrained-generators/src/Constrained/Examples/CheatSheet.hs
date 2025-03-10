@@ -15,7 +15,7 @@ import GHC.Generics
 import Test.QuickCheck (Property, label)
 
 import Constrained.API
-import Constrained.Properties(forAllSpec)
+import Constrained.Properties (forAllSpec)
 
 -- The `constrained-generators` library allows us to write
 -- constraints that give us random generators, shrinkers, and checkers

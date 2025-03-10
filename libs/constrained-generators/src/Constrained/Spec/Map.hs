@@ -24,10 +24,12 @@
 
 module Constrained.Spec.Map where
 
-import Constrained.Core (Evidence (..), NonEmpty ((:|)), unionWithMaybe)
 import Constrained.Base
 import Constrained.Conformance
+import Constrained.Core (Evidence (..), NonEmpty ((:|)), unionWithMaybe)
+import Constrained.GenT
 import Constrained.Generic (Prod (..))
+import Constrained.List
 import Constrained.NumSpec (cardinality, geqSpec, leqSpec, nubOrd)
 import Constrained.Spec.ListFoldy (
   FoldSpec (..),
@@ -44,8 +46,6 @@ import Constrained.Spec.Size (Sized (..), maxSpec, sizeOf_)
 import Constrained.Spec.SumProd
 import Constrained.Syntax (forAll, genHint, letBind, unsafeExists)
 import Constrained.TheKnot
-import Constrained.GenT
-import Constrained.List
 import Control.Monad
 import Data.Foldable
 import Data.Kind

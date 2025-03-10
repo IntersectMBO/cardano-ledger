@@ -22,7 +22,7 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
-import Constrained
+import Constrained.API
 import qualified Data.Map as Map
 import Data.Set (Set)
 import Lens.Micro
@@ -33,11 +33,11 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 -- | There are no hard constraints on VState, other than witnessing, and delegatee conformance
 --   which must align with the conwayCertExecContextSpec
 vStateSpec ::
-  forall fn era.
-  (IsConwayUniv fn, Era era) =>
+  forall era.
+  Era era =>
   WitUniv era ->
   Set (Credential 'DRepRole) ->
-  Specification fn (VState era)
+  Specification (VState era)
 vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
   match vstate $ \ [var|dreps|] [var|committeestate|] [var|_numdormant|] ->
     [ match committeestate $ \ [var|committeemap|] -> witness univ (dom_ committeemap)
@@ -52,11 +52,11 @@ vStateSpec univ delegatees = constrained $ \ [var|vstate|] ->
     ]
 
 govCertSpec ::
-  (IsConwayUniv fn, EraCertState era) =>
+  EraCertState era =>
   WitUniv era ->
   ConwayGovCertEnv ConwayEra ->
   CertState ConwayEra ->
-  Specification fn ConwayGovCert
+  Specification ConwayGovCert
 govCertSpec univ ConwayGovCertEnv {..} certState =
   let vs = certState ^. certVStateL
       reps = lit $ Map.keysSet $ vsDReps vs
@@ -111,10 +111,10 @@ govCertSpec univ ConwayGovCertEnv {..} certState =
 -- | Operations for authenticating a HotKey, or resigning a ColdKey are illegal
 --   if that key has already resigned.
 notYetResigned ::
-  (HasSpec fn x, Ord x, IsConwayUniv fn) =>
+  (HasSpec x, Ord x, IsNormalType x) =>
   Map.Map x CommitteeAuthorization ->
-  Term fn x ->
-  Pred fn
+  Term x ->
+  Pred
 notYetResigned committeeStatus coldcred =
   ( caseOn
       (lookup_ coldcred (lit committeeStatus))
@@ -132,10 +132,8 @@ notYetResigned committeeStatus coldcred =
   )
 
 govCertEnvSpec ::
-  forall fn.
-  IsConwayUniv fn =>
   WitUniv ConwayEra ->
-  Specification fn (ConwayGovCertEnv ConwayEra)
+  Specification (ConwayGovCertEnv ConwayEra)
 govCertEnvSpec univ =
   constrained $ \ [var|gce|] ->
     match gce $ \ [var|pp|] _ [var|committee|] [var|proposalmap|] ->

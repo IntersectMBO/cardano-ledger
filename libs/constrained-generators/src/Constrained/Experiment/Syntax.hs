@@ -33,7 +33,7 @@
 module Constrained.Experiment.Syntax where
 
 import qualified Language.Haskell.TH as TH
-import qualified Language.Haskell.TH.Quote as TH   
+import qualified Language.Haskell.TH.Quote as TH
 
 import Constrained.Core (
   Rename (rename),
@@ -101,7 +101,6 @@ var =
     varName s = case words s of
       [w] -> w
       _ -> fail "expected a single var name"
-
 
 -- ============================================================
 -- 1) Free variables and variable names
@@ -880,11 +879,11 @@ instance Pretty SolverStage where
   pretty SolverStage {..} =
     viaShow stageVar
       <+> "<-"
-        /> vsep'
-          ( [pretty stageSpec | not $ isTrueSpec stageSpec]
-              ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
-              ++ map pretty stagePreds
-          )
+      /> vsep'
+        ( [pretty stageSpec | not $ isTrueSpec stageSpec]
+            ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
+            ++ map pretty stagePreds
+        )
 
 data SolverPlan = SolverPlan
   { solverPlan :: [SolverStage]

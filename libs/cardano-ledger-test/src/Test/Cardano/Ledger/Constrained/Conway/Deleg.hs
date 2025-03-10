@@ -26,7 +26,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
-import Constrained
+import Constrained.API
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -41,7 +41,7 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 --   without this in the DState, it is hard to generate the ConwayUnRegCert
 --   certificate, since it requires a rewards balance of 0.
 --   We also specify that both reward and deposit are greater than (Coin 0)
-someZeros :: forall fn. IsConwayUniv fn => Specification fn RDPair
+someZeros :: Specification RDPair
 someZeros = constrained $ \ [var| someRdpair |] ->
   match someRdpair $ \ [var| rewardx |] [var|deposit|] ->
     [ satisfies rewardx (chooseSpec (1, constrained $ \ [var| x |] -> assert $ x ==. lit 0) (3, gtSpec 0))
@@ -52,10 +52,10 @@ someZeros = constrained $ \ [var| someRdpair |] ->
 --   It must be witnessed, and conform to some properties relating to the
 --   withdrawals map, which is part of the context, so passed as an arg.
 rewDepMapSpec ::
-  (Era era, IsConwayUniv fn) =>
+  Era era =>
   WitUniv era ->
   Map RewardAccount Coin ->
-  Specification fn (Map (Credential 'Staking) RDPair)
+  Specification (Map (Credential 'Staking) RDPair)
 rewDepMapSpec univ wdrl =
   let n = wvSize univ
       m = Map.size wdrl
@@ -72,11 +72,11 @@ rewDepMapSpec univ wdrl =
         ]
 
 rewDepMapSpec2 ::
-  forall fn era.
-  (Era era, IsConwayUniv fn) =>
+  forall era.
+  Era era =>
   WitUniv era ->
   Map RewardAccount Coin ->
-  Specification fn (Map (Credential 'Staking) RDPair)
+  Specification (Map (Credential 'Staking) RDPair)
 rewDepMapSpec2 univ wdrl =
   let n = wvSize univ
       m = Map.size wdrl
@@ -119,11 +119,11 @@ keyHashWdrl m = Set.filter isKeyHash (wdrlCredentials m)
     isKeyHash (ScriptHashObj _) = False
 
 dStateSpec ::
-  forall fn era.
-  (IsConwayUniv fn, EraSpecDeleg era) =>
+  forall era.
+  EraSpecDeleg era =>
   WitUniv era ->
   Map (RewardAccount) Coin ->
-  Specification fn (DState era)
+  Specification (DState era)
 dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
   match dstate $ \ [var| uMap |] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     [ -- futureGenDelegs
@@ -156,11 +156,11 @@ dStateSpec univ wdrls = constrained $ \ [var| dstate |] ->
     ]
 
 conwayDelegCertSpec ::
-  forall fn era.
-  (EraPParams era, IsConwayUniv fn, ConwayEraCertState era) =>
+  forall era.
+  (EraPParams era, ConwayEraCertState era) =>
   ConwayDelegEnv era ->
   CertState era ->
-  Specification fn ConwayDelegCert
+  Specification ConwayDelegCert
 conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
   let ds = certState ^. certDStateL
       vs = certState ^. certVStateL
@@ -172,7 +172,7 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
         case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
           Just d | d > 0 -> SJust d
           _ -> SNothing
-      delegateeInPools :: Term fn Delegatee -> Pred fn
+      delegateeInPools :: Term Delegatee -> Pred
       delegateeInPools delegatee =
         (caseOn delegatee)
           (branch $ \kh -> isInPools kh)
@@ -181,7 +181,7 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
         where
           isInPools = (`member_` lit (Map.keysSet pools))
           drepsSet f drepsMap = Set.fromList [k' | k <- Map.keys drepsMap, Just k' <- [f k]]
-          isInDReps :: Term fn DRep -> Pred fn
+          isInDReps :: Term DRep -> Pred
           isInDReps drep =
             (caseOn drep)
               ( branch $ \drepKeyHash ->
@@ -227,8 +227,8 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) certState =
           )
 
 delegEnvSpec ::
-  (EraSpecPParams era, IsConwayUniv fn) =>
-  Specification fn (ConwayDelegEnv era)
+  EraSpecPParams era =>
+  Specification (ConwayDelegEnv era)
 delegEnvSpec = constrained $ \env ->
   match env $ \pp _ ->
     pp `satisfies` pparamsSpec
@@ -237,12 +237,12 @@ delegEnvSpec = constrained $ \env ->
 -- Pre-Conway Deleg Certs
 
 shelleyDelegCertSpec ::
-  forall fn era.
-  (EraPParams era, IsConwayUniv fn) =>
+  forall era.
+  EraPParams era =>
   WitUniv era ->
   ConwayDelegEnv era ->
   DState era ->
-  Specification fn (ShelleyDelegCert)
+  Specification (ShelleyDelegCert)
 shelleyDelegCertSpec univ (ConwayDelegEnv _pp pools) ds =
   let rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds

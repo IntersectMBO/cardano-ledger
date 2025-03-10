@@ -26,12 +26,12 @@ module Constrained.Spec.Size where
 
 import Constrained.Base
 import Constrained.Conformance (satisfies)
+import Constrained.GenT
 import Constrained.Generic
+import Constrained.List
 import Constrained.NumSpec
 import Constrained.Syntax
 import Constrained.TheKnot (genFromSpecT, (<=.), (==.))
-import Constrained.GenT
-import Constrained.List
 import Data.Kind
 import qualified Data.List.NonEmpty as NE
 import GHC.TypeLits
