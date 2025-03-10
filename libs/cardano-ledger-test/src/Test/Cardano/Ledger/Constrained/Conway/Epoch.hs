@@ -16,7 +16,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Shelley.API.Types
-import Constrained
+import Constrained.API
 import Data.Foldable
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
@@ -30,12 +30,12 @@ data EpochExecEnv era = EpochExecEnv
   }
   deriving (Generic, Eq, Show)
 
-epochEnvSpec :: Specification fn (EpochExecEnv ConwayEra)
+epochEnvSpec :: Specification (EpochExecEnv ConwayEra)
 epochEnvSpec = TrueSpec
 
 epochStateSpec ::
-  Term ConwayFn EpochNo ->
-  Specification ConwayFn (EpochState ConwayEra)
+  Term EpochNo ->
+  Specification (EpochState ConwayEra)
 epochStateSpec epochNo = constrained $ \es ->
   match es $ \_accountState ledgerState _snapShots _nonMyopic ->
     match ledgerState $ \utxoState certState ->
@@ -59,7 +59,8 @@ epochStateSpec epochNo = constrained $ \es ->
               -- DRComplete
               ( branch $ \_snap ratifyState ->
                   match ratifyState $ \enactState [var| enacted |] expired _delayed ->
-                    [ forAll expired $ \ [var| gasId |] ->
+                    [ Assert $ sizeOf_ expired <=. 5 -- If this gets too large, we can't find enough things Not in it.
+                    , forAll expired $ \ [var| gasId |] ->
                         proposalExists gasId proposals
                     , -- TODO: this isn't enough, we need to ensure it's at most
                       -- one of each type of action that's being enacted
@@ -77,14 +78,14 @@ epochStateSpec epochNo = constrained $ \es ->
           ]
 
 proposalExists ::
-  Term ConwayFn GovActionId ->
-  Term ConwayFn (Proposals ConwayEra) ->
-  Pred ConwayFn
+  Term GovActionId ->
+  Term (Proposals ConwayEra) ->
+  Pred
 proposalExists gasId proposals =
   reify proposals proposalsActionsMap $ \actionMap ->
     gasId `member_` dom_ actionMap
 
-epochSignalSpec :: EpochNo -> Specification ConwayFn EpochNo
+epochSignalSpec :: EpochNo -> Specification EpochNo
 epochSignalSpec curEpoch = constrained $ \e ->
   elem_ e (lit [curEpoch, succ curEpoch])
 

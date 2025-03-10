@@ -29,11 +29,11 @@
 
 module Constrained.NumSpec where
 
-import Constrained.Core (NonEmpty ((:|)), unionWithMaybe)
 import Constrained.Base
 import Constrained.Conformance ()
-import Constrained.Generic
+import Constrained.Core (NonEmpty ((:|)), unionWithMaybe)
 import Constrained.GenT (GenT, MonadGenError (..), pureGen, sizeT)
+import Constrained.Generic
 import Constrained.List
 import Control.Applicative ((<|>))
 import Control.Arrow (first)

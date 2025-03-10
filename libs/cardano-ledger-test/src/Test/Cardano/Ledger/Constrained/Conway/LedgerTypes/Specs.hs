@@ -41,8 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.UMap (CompactForm (..))
 import qualified Cardano.Ledger.UMap as UMap
-import Constrained hiding (Value)
-import Constrained.Base -- (Pred (..))
+import Constrained.API
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -52,8 +51,13 @@ import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
 import Lens.Micro ((^.))
 import System.IO.Unsafe (unsafePerformIO)
+import Test.Cardano.Ledger.Constrained.Conway.Deleg (EraSpecDeleg (hasGenDelegs))
 import Test.Cardano.Ledger.Constrained.Conway.Gov (govProposalsSpec)
-import Test.Cardano.Ledger.Constrained.Conway.Instances hiding (certStateSpec)
+import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (
+  EraSpecTxOut (..),
+  txOutSpec,
+ )
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.QuickCheck hiding (forAll, witness)
 
@@ -66,44 +70,45 @@ import Test.QuickCheck hiding (forAll, witness)
 --   It is these components that change from one Era to another.
 --   and the EraSpecLedger class has methods that asbtract over those changes.
 class
-  ( EraSpecTxOut era fn
-  , HasSpec fn (GovState era)
-  , HasSpec fn (CertState era)
+  ( EraSpecTxOut era
+  , HasSpec (GovState era)
+  , HasSpec (CertState era)
   , IsNormalType (CertState era)
+  , EraCertState era
   ) =>
-  EraSpecLedger era fn
+  EraSpecLedger era
   where
-  govStateSpec :: PParams era -> Specification fn (GovState era)
-  newEpochStateSpec :: PParams era -> WitUniv era -> Specification fn (NewEpochState era)
+  govStateSpec :: PParams era -> Specification (GovState era)
+  newEpochStateSpec :: PParams era -> WitUniv era -> Specification (NewEpochState era)
   certStateSpec ::
-    WitUniv era -> Term fn AccountState -> Term fn EpochNo -> Specification fn (CertState era)
+    WitUniv era -> Term AccountState -> Term EpochNo -> Specification (CertState era)
 
-instance IsConwayUniv fn => EraSpecLedger ShelleyEra fn where
+instance EraSpecLedger ShelleyEra where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUTxO
   certStateSpec = shelleyCertStateSpec
 
-instance IsConwayUniv fn => EraSpecLedger AllegraEra fn where
+instance EraSpecLedger AllegraEra where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
   certStateSpec = shelleyCertStateSpec
 
-instance IsConwayUniv fn => EraSpecLedger MaryEra fn where
+instance EraSpecLedger MaryEra where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
   certStateSpec = shelleyCertStateSpec
 
-instance IsConwayUniv fn => EraSpecLedger AlonzoEra fn where
+instance EraSpecLedger AlonzoEra where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
   certStateSpec = shelleyCertStateSpec
 
-instance IsConwayUniv fn => EraSpecLedger BabbageEra fn where
+instance EraSpecLedger BabbageEra where
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
   certStateSpec = shelleyCertStateSpec
 
-instance IsConwayUniv fn => EraSpecLedger ConwayEra fn where
+instance EraSpecLedger ConwayEra where
   govStateSpec pp = conwayGovStateSpec pp (testGovEnv pp)
   newEpochStateSpec = newEpochStateSpecUnit
   certStateSpec = conwayCertStateSpec
@@ -115,7 +120,7 @@ instance IsConwayUniv fn => EraSpecLedger ConwayEra fn where
 -- the PParams passed to conwayGovStateSpec.
 testGovEnv :: PParams ConwayEra -> GovEnv ConwayEra
 testGovEnv pp = unsafePerformIO $ generate $ do
-  genFromSpec @ConwayFn @(GovEnv ConwayEra) (govEnvSpec @ConwayFn pp)
+  genFromSpec @(GovEnv ConwayEra) (govEnvSpec pp)
 
 -- ================================================================================
 -- Specifications for types that appear in the EraSpecLedger Ledger
@@ -126,18 +131,20 @@ testGovEnv pp = unsafePerformIO $ generate $ do
 
 -- | Want (Rng v3) == (Dom v0), except the Rng is List and the Dom is a Set.
 domEqualRng ::
-  ( IsConwayUniv fn
-  , Ord ptr
+  ( Ord ptr
   , Ord cred
-  , HasSpec fn cred
-  , HasSpec fn ptr
-  , HasSpec fn ume
+  , HasSpec cred
+  , HasSpec ptr
+  , HasSpec ume
+  , IsNormalType cred
+  , IsNormalType ptr
+  , IsNormalType ume
   ) =>
-  Term fn (Map ptr cred) ->
-  Term fn (Map cred ume) ->
-  Pred fn
+  Term (Map ptr cred) ->
+  Term (Map cred ume) ->
+  Pred
 domEqualRng [var|mapXCred|] [var|mapCredY|] =
-  Block
+  And
     [ assert $ sizeOf_ mapCredY <=. sizeOf_ mapXCred
     , assert $ sizeOf_ mapXCred >=. lit 0
     , assert $ sizeOf_ mapCredY >=. lit 0
@@ -146,7 +153,7 @@ domEqualRng [var|mapXCred|] [var|mapCredY|] =
     ]
 
 -- | The constraint for ProtVer always relates one ProtVer to another one that can follow it.
-canFollow :: IsConwayUniv fn => Term fn ProtVer -> Term fn ProtVer -> Pred fn
+canFollow :: Term ProtVer -> Term ProtVer -> Pred
 canFollow pv pv' =
   match pv $ \ [var|major1|] [var|minor1|] ->
     match pv' $ \ [var|major2|] [var|minor2|] ->
@@ -162,7 +169,7 @@ canFollow pv pv' =
           (minor2 ==. 0)
       ]
 
-protVersCanfollow :: Specification ConwayFn (ProtVer, ProtVer)
+protVersCanfollow :: Specification (ProtVer, ProtVer)
 protVersCanfollow =
   constrained $ \ [var|pair|] ->
     match pair $ \ [var|protver1|] [var|protver2|] -> canFollow protver1 protver2
@@ -180,7 +187,6 @@ goodDrep ::
   forall era.
   WitUniv era ->
   Specification
-    ConwayFn
     ( Map
         (Credential 'DRepRole)
         (Set.Set (Credential 'Staking))
@@ -188,9 +194,9 @@ goodDrep ::
 goodDrep univ =
   constrained $ \dRepMap ->
     [ forAll dRepMap $ \pair ->
-        [ satisfies (fst_ pair) (witCredSpec @ConwayFn @era univ)
+        [ satisfies (fst_ pair) (witCredSpec @era univ)
         , satisfies (snd_ pair) (hasSize (rangeSize 1 5))
-        , forAll (snd_ pair) (`satisfies` (witCredSpec @ConwayFn @era univ))
+        , forAll (snd_ pair) (`satisfies` (witCredSpec @era univ))
         ]
     , satisfies (dom_ dRepMap) (hasSize (rangeSize 6 10))
     ]
@@ -200,19 +206,19 @@ goodDrep univ =
 -- ========================================================================
 
 -- | BE SURE the parameter
---   delegated :: Term fn (Map (Credential 'DRepRole c) (Set (Credential 'Staking c))
+--   delegated :: Term (Map (Credential 'DRepRole c) (Set (Credential 'Staking c))
 --   has been witnessed with the same WitUniv as the parameter 'univ', or this will fail
 --   For a standalone test of vstateSpec one may use goodDrep above, and pass
 --   'eraUniv' as the actual parameter for the formal parameter 'univ'
 --   Note, that in certStateSpec, the call to vstateSpec is passed a witnessed 'delegated'
 --   that comes from the dstateSpec.
 vstateSpec ::
-  forall fn era.
-  (IsConwayUniv fn, Era era) =>
+  forall era.
+  Era era =>
   WitUniv era ->
-  Term fn EpochNo ->
-  Term fn (Map (Credential 'DRepRole) (Set (Credential 'Staking))) ->
-  Specification fn (VState era)
+  Term EpochNo ->
+  Term (Map (Credential 'DRepRole) (Set (Credential 'Staking))) ->
+  Specification (VState era)
 vstateSpec univ epoch delegated = constrained $ \ [var|vstate|] ->
   match vstate $ \ [var|dreps|] [var|comstate|] [var|numdormant|] ->
     [ dependsOn dreps delegated
@@ -255,12 +261,12 @@ aggregateDRep m = Map.foldlWithKey accum Map.empty m
     accum ans _ _ = ans
 
 dstateSpec ::
-  forall era fn.
-  EraSpecLedger era fn =>
+  forall era.
+  EraSpecLedger era =>
   WitUniv era ->
-  Term fn AccountState ->
-  Term fn (Map (KeyHash 'StakePool) PoolParams) ->
-  Specification fn (DState era)
+  Term AccountState ->
+  Term (Map (KeyHash 'StakePool) PoolParams) ->
+  Specification (DState era)
 dstateSpec univ acct poolreg = constrained $ \ [var| ds |] ->
   match ds $ \ [var|umap|] [var|futureGenDelegs|] [var|genDelegs|] [var|irewards|] ->
     match umap $ \ [var|rdMap|] [var|ptrmap|] [var|sPoolMap|] [var|dRepMap|] ->
@@ -310,14 +316,14 @@ dstateSpec univ acct poolreg = constrained $ \ [var| ds |] ->
           ]
       ]
 
-epochNoSpec :: IsConwayUniv fn => Specification fn EpochNo
+epochNoSpec :: Specification EpochNo
 epochNoSpec = constrained $ \epoch -> epoch >=. 99
 
 pstateSpec ::
-  (IsConwayUniv fn, Era era) =>
+  Era era =>
   WitUniv era ->
-  Term fn EpochNo ->
-  Specification fn (PState era)
+  Term EpochNo ->
+  Specification (PState era)
 pstateSpec univ currepoch = constrained $ \ [var|pState|] ->
   match pState $ \ [var|stakePoolParams|] [var|futureStakePoolParams|] [var|retiring|] [var|pooldeposits|] ->
     [ witness univ (dom_ stakePoolParams)
@@ -342,7 +348,7 @@ pstateSpec univ currepoch = constrained $ \ [var|pState|] ->
     , assert $ sizeOf_ (dom_ stakePoolParams) <=. 8
     ]
 
-accountStateSpec :: IsConwayUniv fn => Specification fn AccountState
+accountStateSpec :: Specification AccountState
 accountStateSpec =
   constrained
     ( \ [var|accountState|] ->
@@ -357,12 +363,12 @@ accountStateSpec =
 --   and parts of the DState are passed as an argument to the spec for VState
 --   (every voting delegation is to a registered DRep)
 shelleyCertStateSpec ::
-  forall era fn.
-  EraSpecLedger era fn =>
+  forall era.
+  EraSpecLedger era =>
   WitUniv era ->
-  Term fn AccountState ->
-  Term fn EpochNo ->
-  Specification fn (ShelleyCertState era)
+  Term AccountState ->
+  Term EpochNo ->
+  Specification (ShelleyCertState era)
 shelleyCertStateSpec univ acct epoch = constrained $ \ [var|shellCertState|] ->
   match shellCertState $ \ [var|pState|] [var|dState|] ->
     [ satisfies pState (pstateSpec univ epoch)
@@ -395,24 +401,24 @@ conwayCertStateSpec univ acct epoch = constrained $ \ [var|convCertState|] ->
 -- ==============================================================
 
 utxoSpecWit ::
-  forall era fn.
-  -- EraSpecLedger era fn =>
-  EraSpecTxOut era fn =>
+  forall era.
+  -- EraSpecLedger era =>
+  EraSpecTxOut era =>
   WitUniv era ->
-  Term fn (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
-  Specification fn (UTxO era)
+  Term (Map (Credential 'Staking) (KeyHash 'StakePool)) ->
+  Specification (UTxO era)
 utxoSpecWit univ delegs = constrained $ \ [var|utxo|] ->
   match utxo $ \ [var|utxomap|] ->
     [ forAll (rng_ utxomap) (\ [var|out|] -> txOutSpec univ delegs out)
     ]
 
 utxoStateSpec ::
-  forall era fn.
-  (EraSpecLedger era fn, HasSpec fn (InstantStake era)) =>
+  forall era 
+  (EraSpecLedger era, HasSpec (InstantStake era)) =>
   PParams era ->
   WitUniv era ->
-  Term fn (CertState era) ->
-  Specification fn (UTxOState era)
+  Term (CertState era) ->
+  Specification (UTxOState era)
 utxoStateSpec pp univ certstate =
   constrained $ \ [var|utxoState|] ->
     match utxoState $ \ [var|utxo|] [var|deposits|] [var|fees|] [var|gov|] [var|distr|] [var|donation|] ->
@@ -423,7 +429,7 @@ utxoStateSpec pp univ certstate =
           (\ [var|depositsum|] -> assert $ deposits ==. depositsum)
       , assert $ lit (Coin 0) <=. fees
       , reify certstate getDelegs (\ [var|delegs|] -> satisfies utxo (utxoSpecWit univ delegs))
-      , satisfies gov (govStateSpec @era @fn pp)
+      , satisfies gov (govStateSpec @era pp)
       , reify utxo (`addInstantStake` mempty) (\ [var|i|] -> distr ==. i)
       ]
 
@@ -439,7 +445,7 @@ getDelegs cs = UMap.sPoolMap $ cs ^. certDStateL . dsUnifiedL
 -- ====================================================================
 
 shelleyGovStateSpec ::
-  forall era fn. EraSpecLedger era fn => PParams era -> Specification fn (ShelleyGovState era)
+  forall era. EraSpecLedger era => PParams era -> Specification (ShelleyGovState era)
 shelleyGovStateSpec pp =
   constrained $ \ [var|shellGovState|] ->
     match shellGovState $ \ [var|curpro|] [var|futpro|] [var|curpp|] _prevpp _futpp ->
@@ -451,18 +457,16 @@ shelleyGovStateSpec pp =
         ]
 
 govEnvSpec ::
-  IsConwayUniv fn =>
   PParams ConwayEra ->
-  Specification fn (GovEnv ConwayEra)
+  Specification (GovEnv ConwayEra)
 govEnvSpec pp = constrained $ \ [var|govEnv|] ->
   match govEnv $ \_ _ [var|cppx|] _ _ -> [assert $ lit pp ==. cppx]
 
 conwayGovStateSpec ::
-  forall fn.
-  EraSpecLedger ConwayEra fn =>
+  EraSpecLedger ConwayEra =>
   PParams ConwayEra ->
   GovEnv ConwayEra ->
-  Specification fn (ConwayGovState ConwayEra)
+  Specification (ConwayGovState ConwayEra)
 conwayGovStateSpec pp govenv =
   constrained $ \ [var|conwaygovstate|] ->
     match conwaygovstate $ \ [var|proposals|] _mcommittee _consti [var|curpp|] _prevpp _futurepp _derepPulstate ->
@@ -475,24 +479,24 @@ conwayGovStateSpec pp govenv =
 -- =========================================================================
 
 ledgerStateSpec ::
-  forall era fn.
-  (EraSpecLedger era fn, HasSpec fn (InstantStake era)) =>
+  forall era.
+  (EraSpecLedger era, HasSpec (InstantStake era),CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->
-  Term fn AccountState ->
-  Term fn EpochNo ->
-  Specification fn (LedgerState era)
+  Term AccountState ->
+  Term EpochNo ->
+  Specification (LedgerState era)
 ledgerStateSpec pp univ acct epoch =
   constrained $ \ [var|ledgerState|] ->
     match ledgerState $ \ [var|utxoS|] [var|csg|] ->
-      [ satisfies csg (certStateSpec @era @fn univ acct epoch)
-      , reify csg id (\ [var|certstate|] -> satisfies utxoS (utxoStateSpec @era @fn pp univ certstate))
+      [ satisfies csg (certStateSpec @era univ acct epoch)
+      , reify csg id (\ [var|certstate|] -> satisfies utxoS (utxoStateSpec @era pp univ certstate))
       ]
 
 -- ===========================================================
 
 -- TODO make this more realistic
-snapShotSpec :: IsConwayUniv fn => Specification fn SnapShot
+snapShotSpec :: Specification SnapShot
 snapShotSpec =
   constrained $ \ [var|snap|] ->
     match snap $ \ [var|stake|] [var|delegs|] [var|poolparams|] ->
@@ -503,11 +507,11 @@ snapShotSpec =
         ]
 
 snapShotsSpec ::
-  IsConwayUniv fn => Term fn SnapShot -> Specification fn SnapShots
+  Term SnapShot -> Specification SnapShots
 snapShotsSpec marksnap =
   constrained $ \ [var|snap|] ->
     match snap $ \ [var|mark|] [var|pooldistr|] [var|set|] [var|go|] _fee ->
-      Block
+      And
         [ assert $ mark ==. marksnap
         , satisfies set snapShotSpec
         , satisfies go snapShotSpec
@@ -531,17 +535,17 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
 -- ====================================================================
 
 epochStateSpec ::
-  forall era fn.
-  (EraSpecLedger era fn, HasSpec fn (InstantStake era)) =>
+  forall era.
+  (EraSpecLedger era, HasSpec (InstantStake era), CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->
-  Term fn EpochNo ->
-  Specification fn (EpochState era)
+  Term EpochNo ->
+  Specification (EpochState era)
 epochStateSpec pp univ epoch =
   constrained $ \ [var|epochState|] ->
     match epochState $ \ [var|acctst|] [var|eLedgerState|] [var|snaps|] [var|nonmyopic|] ->
-      Block
-        [ dependsOn acctst eLedgerState
+      And
+        [ dependsOn eLedgerState acctst
         , satisfies eLedgerState (ledgerStateSpec pp univ acctst epoch)
         , reify eLedgerState getMarkSnapShot $ \ [var|marksnap|] -> satisfies snaps (snapShotsSpec marksnap)
         , match nonmyopic $ \ [var|x|] [var|c|] -> [genHint 0 x, assert $ c ==. lit (Coin 0)]
@@ -551,26 +555,26 @@ getPoolDistr :: forall era. EpochState era -> PoolDistr
 getPoolDistr es = ssStakeMarkPoolDistr (esSnapshots es)
 
 -- | Used for Eras where StashedAVVMAddresses era ~ UTxO era (Shelley)
--- The 'newEpochStateSpec' method (of (EraSpecLedger era fn) class) in the Shelley instance
+-- The 'newEpochStateSpec' method (of (EraSpecLedger) class) in the Shelley instance
 newEpochStateSpecUTxO ::
-  forall era fn.
-  ( EraSpecLedger era fn
-  , HasSpec fn (InstantStake era)
+  forall era.
+  ( EraSpecLedger era
+  , HasSpec (InstantStake era)
   , StashedAVVMAddresses era ~ UTxO era
   ) =>
   PParams era ->
   WitUniv era ->
-  Specification fn (NewEpochState era)
+  Specification (NewEpochState era)
 newEpochStateSpecUTxO pp univ =
   constrained
     ( \ [var|newEpochStateUTxO|] ->
         match
-          (newEpochStateUTxO :: Term fn (NewEpochState era))
+          (newEpochStateUTxO :: Term (NewEpochState era))
           ( \ [var|eno|] [var|blocksPrev|] [var|blocksCurr|] [var|epochstate|] _mpulser [var|pooldistr|] [var|stashAvvm|] ->
-              Block
-                [ -- reify eno id (\ [var|epoch|] -> satisfies epochstate (epochStateSpec @era @fn pp epoch))
+              And
+                [ -- reify eno id (\ [var|epoch|] -> satisfies epochstate (epochStateSpec @era pp epoch))
                   -- dependsOn eno epochstate
-                  satisfies epochstate (epochStateSpec @era @fn pp univ eno)
+                  satisfies epochstate (epochStateSpec @era pp univ eno)
                 , satisfies stashAvvm (constrained (\ [var|u|] -> u ==. lit (UTxO @era Map.empty)))
                 , reify epochstate getPoolDistr $ \ [var|pd|] -> pooldistr ==. pd
                 , match blocksPrev (genHint 3)
@@ -580,24 +584,24 @@ newEpochStateSpecUTxO pp univ =
     )
 
 -- | Used for Eras where StashedAVVMAddresses era ~ () (Allegra,Mary,Alonzo,Babbage,Conway)
--- The 'newEpochStateSpec' method (of (EraSpecLedger era fn) class) in the instances for (Allegra,Mary,Alonzo,Babbage,Conway)
+-- The 'newEpochStateSpec' method (of (EraSpecLedger era) class) in the instances for (Allegra,Mary,Alonzo,Babbage,Conway)
 newEpochStateSpecUnit ::
-  forall era fn.
-  ( EraSpecLedger era fn
-  , HasSpec fn (InstantStake era)
+  forall era.
+  ( EraSpecLedger era
+  , HasSpec (InstantStake era)
   , StashedAVVMAddresses era ~ ()
   ) =>
   PParams era ->
   WitUniv era ->
-  Specification fn (NewEpochState era)
+  Specification (NewEpochState era)
 newEpochStateSpecUnit pp univ =
   constrained
     ( \ [var|newEpochStateUnit|] ->
         match
-          (newEpochStateUnit :: Term fn (NewEpochState era))
+          (newEpochStateUnit :: Term (NewEpochState era))
           ( \ [var|eno|] [var|blocksPrev|] [var|blocksCurr|] [var|epochstate|] _mpulser [var|pooldistr|] [var|stashAvvm|] ->
-              Block
-                [ satisfies epochstate (epochStateSpec @era @fn pp univ eno)
+              And
+                [ satisfies epochstate (epochStateSpec @era pp univ eno)
                 , satisfies stashAvvm (constrained (\ [var|x|] -> x ==. lit ()))
                 , reify epochstate getPoolDistr $ \ [var|pd|] -> pooldistr ==. pd
                 , match blocksPrev (genHint 3)

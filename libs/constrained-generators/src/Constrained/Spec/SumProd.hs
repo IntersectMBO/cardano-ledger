@@ -62,14 +62,14 @@ module Constrained.Spec.SumProd (
   PairSpec (..),
 ) where
 
-import Constrained.Core (Evidence (..), NonEmpty ((:|)))
 import Constrained.Base
 import Constrained.Conformance (conformsToSpec, satisfies)
+import Constrained.Core (Evidence (..), NonEmpty ((:|)))
 import Constrained.Generic
+import Constrained.List
 import Constrained.Spec.ListFoldy
 import Constrained.Syntax (exists, forAll, letBind, mkCase, reify)
 import Constrained.TheKnot
-import Constrained.List
 import qualified Data.List.NonEmpty as NE
 import Data.Typeable (Typeable)
 import GHC.TypeLits (Symbol)

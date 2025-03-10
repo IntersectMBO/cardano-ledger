@@ -402,10 +402,11 @@ hasSizeMap = hasSize (rangeSize 1 3)
 prop_noNarrowLoop :: Int -> Int -> Specification Int -> Specification Int -> Property
 prop_noNarrowLoop f s eSpec fSpec =
   -- Make sure the fuel is non-negative
-  f >= 0 ==>
-    discardAfter 100_000 $
-      narrowByFuelAndSize f s (eSpec, fSpec) `seq`
-        property True
+  f
+    >= 0
+      ==> discardAfter 100_000
+    $ narrowByFuelAndSize f s (eSpec, fSpec)
+    `seq` property True
 
 -- | The test succeeds if conformsToSpec and conformsToSpecE both conform, or both fail to conform.
 --   We collect answers by specType (ErrorSpec, MemberSpec, SuspendedSpec, ...) and whether

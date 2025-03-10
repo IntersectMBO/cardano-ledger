@@ -21,14 +21,13 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (CertsEnv (..))
 import Cardano.Ledger.Core
-
--- import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.State (UTxO (..), coinBalance)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
-import Constrained hiding (Value)
-import Constrained.Base
+import Constrained.API
+import Constrained.Base (IsPred (..))
+import Constrained.Spec.Size (hasSize, rangeSize)
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -47,7 +46,8 @@ import Test.Cardano.Ledger.Constrained.Conway.Cert (
 import Test.Cardano.Ledger.Constrained.Conway.Certs (certsEnvSpec, projectEnv)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody (fromShelleyBody)
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraSpecLedger)
+
+-- FIXME import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraSpecLedger)
 
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
@@ -92,8 +92,8 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 -- Move these to the MapSpec
 
 subMap ::
-  (Ord k, IsNormalType v, HasSpec fn k, HasSpec fn v) =>
-  Specification fn (Map k v, Map k v)
+  (Ord k, IsNormalType v, IsNormalType k, HasSpec k, HasSpec v) =>
+  Specification (Map k v, Map k v)
 subMap = constrained $ \ [var|pair|] ->
   match pair $ \ [var|sub|] [var|super|] ->
     [ dependsOn sub super
@@ -104,12 +104,12 @@ subMap = constrained $ \ [var|pair|] ->
     ]
 
 subMapSubDependsOnSuper ::
-  (Ord k, IsNormalType v, HasSpec fn k, HasSpec fn v) =>
-  Term fn (Map k v) ->
-  Term fn (Map k v) ->
-  Pred fn
+  (Ord k, IsNormalType v, IsNormalType k, HasSpec k, HasSpec v) =>
+  Term (Map k v) ->
+  Term (Map k v) ->
+  Pred
 subMapSubDependsOnSuper sub super =
-  Block
+  And
     [ dependsOn sub super
     , assert $ super /=. lit (Map.empty)
     , assert $ subset_ (dom_ sub) (dom_ super)
@@ -118,12 +118,12 @@ subMapSubDependsOnSuper sub super =
     ]
 
 subMapSuperDependsOnSub ::
-  (Ord k, IsNormalType v, HasSpec fn k, HasSpec fn v) =>
-  Term fn (Map k v) ->
-  Term fn (Map k v) ->
-  Pred fn
+  (Ord k, IsNormalType v, IsNormalType k, HasSpec k, HasSpec v) =>
+  Term (Map k v) ->
+  Term (Map k v) ->
+  Pred
 subMapSuperDependsOnSub sub super =
-  Block
+  And
     [ dependsOn super sub
     , assert $ super /=. lit (Map.empty)
     , assert $ subset_ (dom_ sub) (dom_ super)
@@ -131,10 +131,10 @@ subMapSuperDependsOnSub sub super =
         match kvpair $ \k v -> [onJust (lookup_ k super) (\a -> v ==. a)]
     ]
 
-sumTxOut_ :: forall fn era. EraSpecTxOut era fn => Term fn [TxOut era] -> Term fn Coin
-sumTxOut_ x = foldMap_ (txOutCoin_ @era @fn) x
+sumTxOut_ :: forall era. EraSpecTxOut era => Term [TxOut era] -> Term Coin
+sumTxOut_ x = foldMap_ (txOutCoin_ @era) x
 
-sumCoin_ :: forall fn. IsConwayUniv fn => Term fn [Coin] -> Term fn Coin
+sumCoin_ :: Term [Coin] -> Term Coin
 sumCoin_ x = foldMap_ id x
 
 adjustTxOutCoin :: EraTxOut era => DeltaCoin -> TxOut era -> TxOut era
@@ -160,19 +160,19 @@ getDepositRefund pp certState certs =
 
 -- | This is exactly the same as reify, except it names the existential varaible for better error messages
 reifyX ::
-  ( HasSpec fn a
-  , HasSpec fn b
-  , IsPred p fn
+  ( HasSpec a
+  , HasSpec b
+  , IsPred p
   ) =>
-  Term fn a ->
+  Term a ->
   (a -> b) ->
-  (Term fn b -> p) ->
-  Pred fn
+  (Term b -> p) ->
+  Pred
 reifyX t f body =
   exists (\eval -> pure $ f (eval t)) $ \ [var|reifyvar|] ->
     -- NOTE we name the existenital variable 'reifyvar'
     [ reifies reifyvar t f
-    , toPredExplain (pure ("reifies " ++ show reifyvar)) $ body reifyvar
+    , Explain (pure ("reifies " ++ show reifyvar)) $ toPred $ body reifyvar
     ]
 
 -- =======================================================================
@@ -188,19 +188,18 @@ reifyX t f body =
 --      using complicated Haskell functions to extract one random value, from a previous solved variable
 --      using a pure function. Examples of this are 'getDepositRefund' and 'adjustTxOutCoin'
 --   4) How complicated balancing constraints can be solved declaratively, rather than algorithmically
---      i.e.  toDelta_ (sumTxOut_ @fn @era outputs) ==. inputS + with + refund - deposit - f
+--      i.e.  toDelta_ (sumTxOut_ @era outputs) ==. inputS + with + refund - deposit - f
 bodyspec ::
-  forall era fn.
-  ( EraSpecTxOut era fn
-  , EraSpecCert era fn
-  , EraSpecTxCert fn era
+  forall era.
+  ( EraSpecTxOut era
+  , EraSpecCert era
+  , EraSpecTxCert era
   , ConwayEraCertState era
   ) =>
   WitUniv era ->
   CertsEnv era ->
   CertState era ->
   Specification
-    fn
     ( ShelleyTxBody era
     , Map TxIn (TxOut era)
     , TxIn
@@ -213,18 +212,18 @@ bodyspec univ certsenv certstate =
           exists (\eval -> pure $ Map.adjust (adjustTxOutCoin (DeltaCoin 0)) (eval feeInput) (eval utxo)) $ \ [var|tempUtxo|] ->
             [ assert $ update ==. lit Nothing
             , satisfies utxosubset (hasSize (rangeSize 3 4))
-            , forAll' utxosubset $ \_ [var|out|] -> assert $ txOutCoin_ @era @fn out >. lit (Coin 0)
+            , forAll' utxosubset $ \_ [var|out|] -> assert $ txOutCoin_ @era out >. lit (Coin 0)
             , dependsOn feeInput utxosubset
             , assert $ member_ feeInput (dom_ utxosubset)
             , dependsOn fee feeInput
-            , onJust (lookup_ feeInput utxosubset) (\ [var|feeTxout|] -> fee ==. txOutCoin_ @era @fn feeTxout)
+            , onJust (lookup_ feeInput utxosubset) (\ [var|feeTxout|] -> fee ==. txOutCoin_ @era feeTxout)
             , dependsOn inputs utxosubset
             , assert $ inputs ==. dom_ utxosubset
             , assert $ member_ feeInput inputs
             , dependsOn tempUtxo utxosubset
             , satisfies (dom_ tempUtxo) (hasSize (rangeSize 8 10))
             , subMapSuperDependsOnSub utxosubset tempUtxo
-            , forAll' tempUtxo $ \_ [var|out|] -> assert $ txOutCoin_ @era @fn out >. lit (Coin 0)
+            , forAll' tempUtxo $ \_ [var|out|] -> assert $ txOutCoin_ @era out >. lit (Coin 0)
             , -- Certs has no dependencies
               forAll certs $ \ [var|oneCert|] -> satisfies oneCert (witTxCert univ)
             , assert $ sizeOf_ certs ==. 4
@@ -240,13 +239,13 @@ bodyspec univ certsenv certstate =
             , dependsOn outputs withdrawals
             , dependsOn outputs utxosubset
             , assert $ sizeOf_ outputs ==. 4
-            , forAll outputs $ \ [var|oneoutput|] -> txOutCoin_ @era @fn oneoutput >=. lit (Coin 0)
+            , forAll outputs $ \ [var|oneoutput|] -> txOutCoin_ @era oneoutput >=. lit (Coin 0)
             , reifyX (toDelta_ fee) id $ \ [var|f|] ->
-                reifyX (toDelta_ (sumTxOut_ @fn @era (rng_ utxosubset))) id $ \ [var|inputS|] ->
-                  reifyX (toDelta_ (sumCoin_ @fn (rng_ withdrawals))) id $ \ [var|with|] ->
+                reifyX (toDelta_ (sumTxOut_ @era (rng_ utxosubset))) id $ \ [var|inputS|] ->
+                  reifyX (toDelta_ (sumCoin_ (rng_ withdrawals))) id $ \ [var|with|] ->
                     reify' certs (getDepositRefund @era (certsPParams certsenv) certstate) $
                       \ [var|deposit|] [var|refund|] ->
-                        toDelta_ (sumTxOut_ @fn @era outputs) ==. inputS + with + refund - deposit - f
+                        toDelta_ (sumTxOut_ @era outputs) ==. inputS + with + refund - deposit - f
             , dependsOn utxo tempUtxo
             , reifyX
                 (pair_ tempUtxo feeInput)
@@ -262,27 +261,27 @@ putPretty nm x = putStrLn (nm ++ "\n" ++ show (prettyA x))
 
 go2 ::
   forall era.
-  ( EraSpecTxOut era ConwayFn
-  , EraSpecCert era ConwayFn
-  , EraSpecTxCert ConwayFn era
-  , HasSpec ConwayFn (Tx era)
-  , HasSpec ConwayFn (CertState era)
+  ( EraSpecTxOut era
+  , EraSpecCert era
+  , EraSpecTxCert era
+  , HasSpec (Tx era)
+  , HasSpec (CertState era)
   , ConwayEraCertState era
   ) =>
   IO ()
 go2 = do
   univ <- generate $ genWitUniv 25
-  wdrls <- generate $ genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
-  delegatees <- generate $ genFromSpec @ConwayFn (delegateeSpec univ)
+  wdrls <- generate $ genFromSpec (constrained $ \x -> witness univ x)
+  delegatees <- generate $ genFromSpec (delegateeSpec univ)
   certState <-
     generate $
-      genFromSpec @ConwayFn @(CertState era)
-        (certStateSpec @era @ConwayFn univ delegatees wdrls) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
+      genFromSpec @(CertState era)
+        (certStateSpec @era univ delegatees wdrls) -- (lit (AccountState (Coin 1000) (Coin 100))) (lit (EpochNo 100)))
         -- error "STOP"
-  certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv era) certsEnvSpec
+  certsEnv <- generate $ genFromSpec @(CertsEnv era) certsEnvSpec
 
   (body, utxomap, feeinput) <-
-    generate $ genFromSpec (bodyspec @era @ConwayFn univ certsEnv certState)
+    generate $ genFromSpec (bodyspec @era univ certsEnv certState)
   let utxo = UTxO utxomap
       txbody = fromShelleyBody body
 
@@ -297,18 +296,18 @@ go2 = do
 testBody :: IO ()
 testBody = do
   univ <- generate $ genWitUniv @AllegraEra 5
-  wdrls <- generate $ genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
-  delegatees <- generate $ genFromSpec @ConwayFn (delegateeSpec univ)
-  certsEnv <- generate $ genFromSpec @ConwayFn @(CertsEnv AllegraEra) certsEnvSpec
+  wdrls <- generate $ genFromSpec (constrained $ \x -> witness univ x)
+  delegatees <- generate $ genFromSpec (delegateeSpec univ)
+  certsEnv <- generate $ genFromSpec @(CertsEnv AllegraEra) certsEnvSpec
   certState <-
     generate $
-      genFromSpec @ConwayFn @(CertState AllegraEra)
-        (certStateSpec @AllegraEra @ConwayFn univ delegatees wdrls)
+      genFromSpec @(CertState AllegraEra)
+        (certStateSpec @AllegraEra univ delegatees wdrls)
 
   cert <-
     generate $
-      genFromSpec @ConwayFn @(TxCert AllegraEra) $
-        (shelleyTxCertSpec @ConwayFn @AllegraEra univ (projectEnv certsEnv) certState)
+      genFromSpec @(TxCert AllegraEra) $
+        (shelleyTxCertSpec @AllegraEra univ (projectEnv certsEnv) certState)
           <> (witShelleyTxCert univ)
   -- The problem with this is that the CertState does not have any
   -- thing from the universe, so any Cert that requires a member_ of someting

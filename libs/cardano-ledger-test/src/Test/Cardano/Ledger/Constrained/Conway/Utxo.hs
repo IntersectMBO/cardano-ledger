@@ -23,7 +23,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Shelley.API.Types
 import Data.Word
 
-import Constrained
+import Constrained.API
 
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -51,19 +51,18 @@ import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common (Arbitrary (..), ToExpr, oneof)
 import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec)
-import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
 
 instance HasSimpleRep DepositPurpose
-instance IsConwayUniv fn => HasSpec fn DepositPurpose
+instance HasSpec DepositPurpose
 
 witnessDepositPurpose ::
-  forall fn era.
-  (Era era, IsConwayUniv fn) =>
-  WitUniv era -> Specification fn DepositPurpose
+  forall era.
+  Era era =>
+  WitUniv era -> Specification DepositPurpose
 witnessDepositPurpose univ = constrained $ \ [var|depPurpose|] ->
   (caseOn depPurpose)
     -- CredentialDeposit !(Credential 'Staking c)
@@ -114,18 +113,16 @@ instance NFData DepositPurpose
 instance ToExpr DepositPurpose
 
 utxoEnvSpec ::
-  IsConwayUniv fn =>
   UtxoExecContext ConwayEra ->
-  Specification fn (UtxoEnv ConwayEra)
+  Specification (UtxoEnv ConwayEra)
 utxoEnvSpec UtxoExecContext {..} =
   constrained $ \utxoEnv ->
     utxoEnv ==. lit uecUtxoEnv
 
 utxoStateSpec ::
-  IsConwayUniv fn =>
   UtxoExecContext ConwayEra ->
   UtxoEnv ConwayEra ->
-  Specification fn (UTxOState ConwayEra)
+  Specification (UTxOState ConwayEra)
 utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, ueCertState} =
   constrained $ \utxoState ->
     match utxoState $
@@ -192,18 +189,15 @@ instance CertState era ~ ConwayCertState era => Inject (UtxoExecContext era) (Co
   inject ctx = (uecUtxoEnv ctx) ^. utxoEnvCertStateL
 
 utxoTxSpec ::
-  ( IsConwayUniv fn
-  , HasSpec fn (AlonzoTx era)
-  ) =>
+  HasSpec (AlonzoTx era) =>
   UtxoExecContext era ->
-  Specification fn (AlonzoTx era)
+  Specification (AlonzoTx era)
 utxoTxSpec UtxoExecContext {uecTx} =
   constrained $ \tx -> tx ==. lit uecTx
 
 correctAddrAndWFCoin ::
-  IsConwayUniv fn =>
-  Term fn (TxOut ConwayEra) ->
-  Pred fn
+  Term (TxOut ConwayEra) ->
+  Pred
 correctAddrAndWFCoin txOut =
   match txOut $ \addr v _ _ ->
     [ match v $ \c -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
