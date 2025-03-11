@@ -244,20 +244,20 @@ dRepSpec =
         -- the ppDRepActivity parameter
         offDRepActivity offset =
           addEpochInterval startEpochNo $ EpochInterval (drepActivity + offset)
-      (drep1, _, _) <- setupSingleDRep 1_000_000 -- Receives an expiry update transaction certificate
-      (drep2, _, _) <- setupSingleDRep 1_000_000 -- Turns inactive due to natural expiry
-      (drep3, _, _) <- setupSingleDRep 1_000_000 -- Unregisters and gets deleted
+      (drep1, _, _) <- impAnn "Setting up drep1" $ setupSingleDRep 1_000_000 -- Receives an expiry update transaction certificate
+      (drep2, _, _) <- impAnn "Setting up drep2" $ setupSingleDRep 1_000_000 -- Turns inactive due to natural expiry
+      (drep3, _, _) <- impAnn "Setting up drep3" $ setupSingleDRep 1_000_000 -- Unregisters and gets deleted
       expectNumDormantEpochs 0
 
       -- epoch 0: we submit a proposal
       _ <- submitGovAction InfoAction
-      passNEpochsChecking 2 $ do
+      impAnn "Passing 2 epochs from epoch 0" . passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
         expectDRepExpiry drep1 $ offDRepActivity 0
         expectDRepExpiry drep2 $ offDRepActivity 0
         expectDRepExpiry drep3 $ offDRepActivity 0
 
-      passEpoch -- entering epoch 3
+      impAnn "Entering epoch 3" passEpoch
       -- proposal has expired
       expectCurrentProposals
       expectPulserProposals
@@ -266,7 +266,7 @@ dRepSpec =
       expectDRepExpiry drep2 $ offDRepActivity 0
       expectDRepExpiry drep3 $ offDRepActivity 0
 
-      passEpoch -- entering epoch 4
+      impAnn "Entering epoch 4" passEpoch
       expectNumDormantEpochs 2
       expectDRepExpiry drep1 $ offDRepActivity 0
       expectDRepExpiry drep2 $ offDRepActivity 0
@@ -274,8 +274,8 @@ dRepSpec =
 
       updateDRep drep1 -- DRep expiry becomes (current epoch (4) + drep activity (4) - dormant epochs (2))
       expectDRepExpiry drep1 $ offDRepActivity 2
-      unRegisterDRep drep3
-      passEpoch -- entering epoch 5
+      impAnn "Unregistering drep3" $ unRegisterDRep drep3
+      impAnn "entering epoch 5" $ passEpoch
       -- Updated drep1 shows their new expiry
       -- numDormantEpochs bumps up further
       -- drep3 has unregistered
@@ -287,7 +287,7 @@ dRepSpec =
       expectActualDRepExpiry drep2 $ offDRepActivity 3
       expectDRepNotRegistered drep3
 
-      _ <- submitGovAction InfoAction
+      _ <- impAnn "Submitting 1st InfoAction" $ submitGovAction InfoAction
       -- number of dormant epochs is added to the dreps expiry, and reset to 0
       expectNumDormantEpochs 0
       expectDRepExpiry drep1 $ offDRepActivity 5 -- 6 + 3
@@ -304,7 +304,7 @@ dRepSpec =
       expectDRepExpiry drep2 $ offDRepActivity 3
       expectActualDRepExpiry drep2 $ offDRepActivity 4
 
-      gai <- submitGovAction InfoAction
+      gai <- impAnn "Submitting 2nd InfoAction" $ submitGovAction InfoAction
 
       passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
@@ -313,7 +313,7 @@ dRepSpec =
         expectDRepExpiry drep2 $ offDRepActivity 4
         expectActualDRepExpiry drep2 $ offDRepActivity 4
 
-      submitYesVote_ (DRepVoter drep2) gai
+      impAnn "Submitting vote for 2nd InfoAction" $ submitYesVote_ (DRepVoter drep2) gai
 
       passEpoch
       expectNumDormantEpochs 1
