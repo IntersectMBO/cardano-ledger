@@ -34,6 +34,7 @@ import Control.Monad
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty ((:|)), (<|))
 import Data.List.NonEmpty qualified as NE
+import Debug.Trace
 import GHC.Stack
 import System.Random
 import Test.QuickCheck hiding (Args, Fun)
@@ -274,15 +275,16 @@ infixl 2 `suchThatT`
 suchThatT :: MonadGenError m => GenT m a -> (a -> Bool) -> GenT m a
 suchThatT g p = suchThatWithTryT 100 g p
 
-suchThatWithTryT :: MonadGenError m => Int -> GenT m a -> (a -> Bool) -> GenT m a
+suchThatWithTryT :: forall a m. MonadGenError m => Int -> GenT m a -> (a -> Bool) -> GenT m a
 suchThatWithTryT tries g p = do
   mode <- getMode
   let (n, cont) = case mode of
-        Strict -> (tries, fatalError)
+        Strict -> (tries, fatalError @m)
         Loose -> (1 :: Int, genError) -- TODO: Maybe 1 is not the right number here!
   go n cont
   where
-    go 0 cont = cont (pure ("Ran out of tries (" ++ show tries ++ ") on suchThatWithTryT"))
+    go 0 _cont = pureGen (trace ("Discard suchThatWithTryT " ++ show tries) discard)
+    -- _cont (pure ("Ran out of tries (" ++ show tries ++ ") on suchThatWithTryT"))
     go n cont = do
       a <- g
       if p a then pure a else scaleT (+ 1) $ go (n - 1) cont

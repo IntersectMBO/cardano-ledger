@@ -57,4 +57,4 @@ import Test.ImpSpec
 
 import Test.QuickCheck
 
-import Constrained
+import Constrained.API

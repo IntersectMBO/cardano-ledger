@@ -41,7 +41,6 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   ConwayRatifyExecContext (..),
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (ExecSpecRule (..), runConformance)
-import Test.Cardano.Ledger.Constrained.Conway (ConwayFn)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
@@ -70,7 +69,7 @@ spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitPr
     passNEpochs 2
     getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId noConfidence)
     pure $
-      testConformance @ConwayFn @"RATIFY" @ConwayEra
+      testConformance @"RATIFY" @ConwayEra
         execCtx
         ratEnv
         ratSt
@@ -136,7 +135,7 @@ spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitPr
       ratSt = getRatifyState govSt
       ratSig = RatifySignal (constitutionGAS SSeq.:<| mempty)
     (implRes, agdaRes, implRes') <-
-      runConformance @"RATIFY" @ConwayFn @ConwayEra
+      runConformance @"RATIFY" @ConwayEra
         execCtx
         ratEnv
         ratSt
@@ -156,7 +155,7 @@ spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitPr
     logString "Extra information:"
     globals <- use impGlobalsL
     logDoc $
-      extraInfo @ConwayFn @"RATIFY" @ConwayEra
+      extraInfo @"RATIFY" @ConwayEra
         globals
         execCtx
         ratEnv

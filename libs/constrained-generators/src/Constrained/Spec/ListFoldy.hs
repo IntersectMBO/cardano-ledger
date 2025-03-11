@@ -504,7 +504,7 @@ instance HasSpec a => Logic "elem_" BaseW '[a, [a]] Bool where
   rewriteRules ElemW (t :> Lit [a] :> Nil) Evidence = Just $ t ==. (Lit a)
   rewriteRules _ _ _ = Nothing
 
-  saturate ElemW (FromGeneric (Product @n @m x y) :> Lit zs :> Nil)
+  saturate ElemW (FromGeneric (Product (x :: Term m) (y :: Term n)) :> Lit zs :> Nil)
     | Just Refl <- eqT @a @(m, n) = case zs of
         (w : ws) -> [ElemPred True x (fmap fst (w :| ws))]
         [] -> [FalsePred (pure $ "empty list, zs , in elem_ " ++ show (x, y) ++ " zs")]

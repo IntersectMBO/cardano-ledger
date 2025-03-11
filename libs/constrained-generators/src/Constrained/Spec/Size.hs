@@ -11,7 +11,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
--- This seems sketchy, as it complains about the (FunSym "sizeOf_" SizeW '[t] Integer)
+-- This seems sketchy, as it complains about the (Logic "sizeOf_" SizeW '[t] Integer)
 -- but 'data SizeW', is defined in the same file as the instance
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -72,7 +72,7 @@ instance (Sized t, HasSpec t) => Logic "sizeOf_" SizeW '[t] Integer where
   propagate ctx _ =
     ErrorSpec $ pure ("Logic instance for SizeOfW with wrong number of arguments. " ++ show ctx)
 
-  mapTypeSpec (SizeOfW @a) ts =
+  mapTypeSpec (SizeOfW :: SizeW "sizeOf_" '[a] b) ts =
     constrained $ \x ->
       unsafeExists $ \x' -> Assert (x ==. sizeOf_ x') <> toPreds @a x' ts
 

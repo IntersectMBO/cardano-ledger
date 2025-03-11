@@ -89,7 +89,7 @@ import Cardano.Ledger.State (
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (fromCompact)
 import Cardano.Ledger.Val (Val (..))
-import Constrained (HasSimpleRep, HasSpec)
+import Constrained.API (HasSimpleRep, HasSpec)
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (MonadError (..))
 import Control.State.Transition.Extended (STS (..))
@@ -126,7 +126,7 @@ import Test.Cardano.Ledger.Conformance (
   showOpaqueErrorString,
   withCtx,
  )
-import Test.Cardano.Ledger.Constrained.Conway (DepositPurpose (..), IsConwayUniv)
+import Test.Cardano.Ledger.Constrained.Conway (DepositPurpose (..))
 import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
@@ -1174,7 +1174,7 @@ instance ToExpr (EpochExecEnv era)
 instance Era era => NFData (EpochExecEnv era)
 
 instance HasSimpleRep (EpochExecEnv era)
-instance (IsConwayUniv fn, Era era) => HasSpec fn (EpochExecEnv era)
+instance Era era => HasSpec (EpochExecEnv era)
 
 instance SpecTranslate ctx (EpochExecEnv era) where
   type SpecRep (EpochExecEnv era) = ()
@@ -1197,7 +1197,7 @@ instance ToExpr (ConwayExecEnactEnv era)
 instance Era era => NFData (ConwayExecEnactEnv era)
 
 instance HasSimpleRep (ConwayExecEnactEnv era)
-instance (IsConwayUniv fn, Era era) => HasSpec fn (ConwayExecEnactEnv era)
+instance Era era => HasSpec (ConwayExecEnactEnv era)
 
 instance SpecTranslate ctx (ConwayExecEnactEnv era) where
   type SpecRep (ConwayExecEnactEnv era) = Agda.EnactEnv

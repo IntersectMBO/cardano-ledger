@@ -42,7 +42,7 @@ import Data.List (nub)
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromJust, mapMaybe)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable, typeOf) -- (:~:)(Refl), eqT)
+import Data.Typeable (typeOf)
 import Data.Word
 import GHC.Int
 import GHC.Natural
@@ -719,7 +719,7 @@ instance NumLike a => Num (Term a) where
 -- | Just a note that these instances won't work until we are in a context where
 --   there is a HasSpec instance of 'a', which (NumLike a) demands.
 --   This happens in Constrained.Experiment.TheKnot
-instance (Typeable a, NumLike a) => Logic "addFn" IntW '[a, a] a where
+instance NumLike a => Logic "addFn" IntW '[a, a] a where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
@@ -747,7 +747,7 @@ instance (Typeable a, NumLike a) => Logic "addFn" IntW '[a, a] a where
 addFn :: forall a. NumLike a => Term a -> Term a -> Term a
 addFn = appTerm AddW
 
-instance (Typeable a, NumLike a) => Logic "negateFn" IntW '[a] a where
+instance NumLike a => Logic "negateFn" IntW '[a] a where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec

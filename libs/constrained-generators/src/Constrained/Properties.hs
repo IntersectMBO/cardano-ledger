@@ -199,7 +199,7 @@ showCtxWith fn (TestableCtx ctx) = show $ pretty tm
 runOnCtx ::
   forall s t as b x.
   (AppRequires s t as b, Fill as) =>
-  CList Pre as x x ->
+  CList 'Pre as x x ->
   t s as b ->
   x ->
   b
@@ -256,7 +256,7 @@ data TestableCtx as where
     ( HasSpec a
     , All HasSpec as
     ) =>
-    CList Pre as a a -> -- This is a Clist with only HOLE Ctx inside, the final 'a a' ensure this.
+    CList 'Pre as a a -> -- This is a Clist with only HOLE Ctx inside, the final 'a a' ensure this.
     TestableCtx as
 
 -- ===========================================================
