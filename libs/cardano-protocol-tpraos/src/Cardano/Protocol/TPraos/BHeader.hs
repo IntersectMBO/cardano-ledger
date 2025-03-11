@@ -330,8 +330,9 @@ prevHashToNonce = \case
 issuerIDfromBHBody :: BHBody c -> KeyHash 'BlockIssuer
 issuerIDfromBHBody = hashKey . bheaderVk
 
+{-# DEPRECATED bHeaderSize "In favor of `originalBytesSize`" #-}
 bHeaderSize :: BHeader c -> Int
-bHeaderSize (BHeaderConstr mb) = originalBytesSize mb
+bHeaderSize = originalBytesSize
 
 bhbody ::
   Crypto c =>
@@ -499,6 +500,6 @@ makeHeaderView bh@(BHeader bhb _) =
   BHeaderView
     (hashKey . bheaderVk $ bhb)
     (bsize bhb)
-    (bHeaderSize bh)
+    (originalBytesSize bh)
     (bhash bhb)
     (bheaderSlotNo bhb)
