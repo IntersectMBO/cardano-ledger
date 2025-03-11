@@ -62,7 +62,6 @@ import Cardano.Ledger.BaseTypes (
   mkTxIxPartial,
  )
 import Cardano.Ledger.Binary.Version (Version)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -85,6 +84,7 @@ import Cardano.Ledger.Conway.Governance (
   pPropsL,
   proposalsDeposits,
  )
+import Cardano.Ledger.Conway.State (VState (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..), Delegatee (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr)

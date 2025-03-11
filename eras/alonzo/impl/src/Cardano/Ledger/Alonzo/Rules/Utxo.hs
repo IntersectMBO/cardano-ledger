@@ -78,7 +78,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (unCoin), DeltaCoin, rationalToCoinViaCeiling, toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
@@ -90,7 +89,14 @@ import Cardano.Ledger.Rules.ValidationMode (
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (utxosUtxo))
 import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..), areAllAdaOnly, coinBalance, sumAllValue)
+import Cardano.Ledger.State (
+  EraCertState,
+  EraUTxO (..),
+  UTxO (..),
+  areAllAdaOnly,
+  coinBalance,
+  sumAllValue,
+ )
 import Cardano.Ledger.TxIn (TxIn)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (EpochInfo, epochInfoSlotToUTCTime)

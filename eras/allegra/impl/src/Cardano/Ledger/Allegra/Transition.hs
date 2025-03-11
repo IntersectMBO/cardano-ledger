@@ -5,8 +5,8 @@
 
 module Cardano.Ledger.Allegra.Transition (TransitionConfig (..)) where
 
-import Cardano.Ledger.Allegra.CertState ()
 import Cardano.Ledger.Allegra.Era
+import Cardano.Ledger.Allegra.State ()
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley

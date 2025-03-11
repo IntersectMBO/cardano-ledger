@@ -18,7 +18,6 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Identity (Identity)
 
 import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core (
   EraPParams (..),
   EraTx,
@@ -29,6 +28,7 @@ import Cardano.Ledger.Conway.Core (
   ScriptHash,
  )
 import Cardano.Ledger.Conway.Rules (EnactState)
+import Cardano.Ledger.State (EraCertState (..))
 
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),

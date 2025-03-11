@@ -202,13 +202,6 @@ import Cardano.Ledger.Binary.Plain (
   decodeWord8,
   encodeWord8,
  )
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  EraCertState (..),
-  Obligations (..),
-  certVStateL,
-  csCommitteeCreds,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.DRepPulser
@@ -218,13 +211,11 @@ import Cardano.Ledger.Conway.Governance.Proposals
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppRewardAccount))
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState,
   NewEpochState (..),
-  dsUnified,
   epochStateGovStateL,
   epochStatePoolParamsL,
   epochStateTreasuryL,
@@ -235,9 +226,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsUTxOStateL,
   newEpochStateGovStateL,
   utxosGovStateL,
-  vsCommitteeState,
-  vsCommitteeStateL,
-  vsDReps,
  )
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val (..))
@@ -469,7 +457,7 @@ setFreshDRepPulsingState ::
   , Monad m
   , RunConwayRatify era
   , ConwayEraGov era
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   EpochNo ->
   PoolDistr ->
@@ -580,7 +568,7 @@ defaultStakePoolVote poolId poolParams dRepDelegations =
     toDefaultVote _ = DefaultNo
 
 authorizedElectedHotCommitteeCredentials ::
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   LedgerState era ->
   Set.Set (Credential 'HotCommitteeRole)
 authorizedElectedHotCommitteeCredentials ledgerState =

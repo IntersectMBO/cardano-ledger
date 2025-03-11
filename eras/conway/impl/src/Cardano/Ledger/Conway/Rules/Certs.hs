@@ -41,7 +41,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (EraCertState (..), VState, vsDRepsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS, ConwayEra)
 import Cardano.Ledger.Conway.Governance (
@@ -55,6 +54,12 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure, computeDRepExpiry)
+import Cardano.Ledger.Conway.State (
+  ConwayEraCertState (..),
+  VState,
+  vsDRepsL,
+  vsNumDormantEpochsL,
+ )
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Shelley.API (
   Coin,
@@ -65,6 +70,7 @@ import Cardano.Ledger.Shelley.Rules (
   drainWithdrawals,
   validateZeroRewards,
  )
+import Cardano.Ledger.State (EraCertState (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
@@ -189,6 +195,7 @@ instance
   , Environment (EraRule "CERT" era) ~ CertEnv era
   , Embed (EraRule "CERT" era) (ConwayCERTS era)
   , EraCertState era
+  , ConwayEraCertState era
   ) =>
   STS (ConwayCERTS era)
   where
@@ -207,11 +214,11 @@ conwayCertsTransition ::
   forall era.
   ( EraTx era
   , ConwayEraTxBody era
+  , ConwayEraCertState era
   , State (EraRule "CERT" era) ~ CertState era
   , Embed (EraRule "CERT" era) (ConwayCERTS era)
   , Environment (EraRule "CERT" era) ~ CertEnv era
   , Signal (EraRule "CERT" era) ~ TxCert era
-  , EraCertState era
   ) =>
   TransitionRule (ConwayCERTS era)
 conwayCertsTransition = do

@@ -24,9 +24,9 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
+import Cardano.Ledger.Conway.State (VState (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError)
@@ -39,7 +39,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
-  VState (..),
   curPParamsEpochStateL,
   prevPParamsEpochStateL,
  )
@@ -48,7 +47,7 @@ import Cardano.Ledger.Shelley.Translation ()
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (EraCertState (..), UTxO (..))
 import Data.Foldable (toList)
 import Lens.Micro ((^.))
 import Prettyprinter (Doc, indent, viaShow, vsep)

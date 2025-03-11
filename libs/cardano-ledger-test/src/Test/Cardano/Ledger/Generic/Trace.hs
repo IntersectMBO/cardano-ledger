@@ -24,7 +24,6 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (body))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -48,6 +47,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
  )
 import Cardano.Ledger.State (
+  EraCertState (..),
   IndividualPoolStake (..),
   PoolDistr (..),
   SnapShots (..),

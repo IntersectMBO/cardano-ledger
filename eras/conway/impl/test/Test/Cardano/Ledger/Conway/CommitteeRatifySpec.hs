@@ -13,7 +13,6 @@
 module Test.Cardano.Ledger.Conway.CommitteeRatifySpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
-import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (

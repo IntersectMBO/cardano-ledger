@@ -6,9 +6,9 @@
 
 module Cardano.Ledger.Allegra.UTxO () where
 
-import Cardano.Ledger.Allegra.CertState ()
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.State ()
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getConsumedCoin,

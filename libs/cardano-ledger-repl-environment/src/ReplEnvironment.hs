@@ -17,7 +17,6 @@ import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Api
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.Binary
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core

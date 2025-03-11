@@ -2,6 +2,10 @@
 
 ## 1.17.0.0
 
+* Removed from `EraCertState` type family:
+  * `mkCertState`
+  * `certVStateL`
+* Moved `CertState` to `State` module
 * Add `BoootstrapWitnessRaw` type
 * Add `EraStake`, `CanGetInstantStake`,  `CanSetInstantStake` , `snapShotFromInstantStake`, `resolveActiveInstantStakeCredentials`
 * Add boolean argument to `fromCborRigorousBothAddr` for lenient `Ptr` decoding

@@ -8,7 +8,6 @@
 -- | Generate a Simple Tx with 1 inout, 1 output, and 1 DRep related Cert
 module Test.Cardano.Ledger.Constrained.Trace.DrepCertTx where
 
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
@@ -22,24 +21,21 @@ import Cardano.Ledger.Conway.Governance (
   proposalsDeposits,
   proposalsGovStateL,
  )
+import Cardano.Ledger.Conway.State hiding (drepDeposit)
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.DRep hiding (drepDeposit)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
   UTxOState (..),
   allObligations,
-  dsUnifiedL,
   esLStateL,
   esSnapshotsL,
   lsUTxOStateL,
   nesEsL,
   utxosGovStateL,
-  vsDRepsL,
  )
-import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UMap
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
@@ -106,14 +102,16 @@ fixOutput delta@(Coin n) (Outputs' (txout : more) : others) =
 fixOutput delta (x : xs) = (x :) <$> fixOutput delta xs
 
 -- | Compute a valid Cert, and the change in the stored Deposits from that Cert.
-drepCert :: Reflect era => Proof era -> TraceM era (Coin, [TxBodyField era])
+drepCert :: forall era. Reflect era => Proof era -> TraceM era (Coin, [TxBodyField era])
 drepCert proof = case whichTxCert proof of
   TxCertShelleyToBabbage -> pure (mempty, [])
   TxCertConwayToConway -> do
     plutusmap <- getTerm plutusUniv
     drepCreds <- Set.filter (plutusFreeCredential plutusmap) <$> getTerm voteUniv
     (cred, _) <- liftGen (itemFromSet [] drepCreds)
-    mdrepstate <- getTarget (Constr "mapMember" (Map.lookup cred) ^$ currentDRepState)
+    -- TODO: Refactor
+    mdrepstate <- case reify @era of
+      Conway -> getTarget (Constr "mapMember" (Map.lookup cred) ^$ currentDRepState)
     deposit@(Coin m) <- getTerm (drepDeposit proof)
     case mdrepstate of
       Nothing -> pure (Coin (-m), [Certs' [ConwayTxCertGov $ ConwayRegDRep cred deposit SNothing]])
@@ -207,7 +205,7 @@ allValidSignals p (MockChainState nes _ slot count) (MockBlock _ _ _txs) _stateN
     (property True)
 
 pulserWorks ::
-  (ConwayEraGov era, EraCertState era) => MockChainState era -> MockChainState era -> Property
+  (ConwayEraGov era, ConwayEraCertState era) => MockChainState era -> MockChainState era -> Property
 pulserWorks mcsfirst mcslast =
   counterexample
     ( "\nFirst "
@@ -219,7 +217,7 @@ pulserWorks mcsfirst mcslast =
 
 bruteForceDRepDistr ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   Map.Map DRep (CompactForm Coin)
 bruteForceDRepDistr nes =

@@ -2,6 +2,9 @@
 
 ## 1.19.0.0
 
+* Added `ConwayEraCertState` class
+* Added `ConwayCertState` and related functions
+* Moved `CertState` to `State` module
 * Add `ConwayInstantStake`, `conwayInstantStakeCredentialsL`, `addConwayInstantStake`, `deleteConwayInstantStake`, `resolveConwayInstantStake`
 * Replace `IncrementalStake` with `InstantStake` in `DrepPuser`, `RatifyEnv`
 * Replace stake-map with `InstantStake` in `computeDRepDistr`

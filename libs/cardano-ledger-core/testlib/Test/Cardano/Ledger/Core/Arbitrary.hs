@@ -76,20 +76,9 @@ import Cardano.Ledger.BaseTypes (
  )
 import qualified Cardano.Ledger.BaseTypes as NZ
 import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
-import Cardano.Ledger.CertState (
-  Anchor (..),
-  CommitteeAuthorization (..),
-  CommitteeState (..),
-  DState (..),
-  FutureGenDeleg (..),
-  InstantaneousRewards (..),
-  PState (..),
-  VState (..),
- )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), SlotNo32 (..), StakeReference (..))
-import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..), unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (BootstrapWitness (..), ChainCode (..), VKey (..), WitVKey (..))
@@ -803,9 +792,6 @@ instance Arbitrary CommitteeAuthorization where
       ]
 
 deriving instance Arbitrary (CommitteeState era)
-
-instance Arbitrary (VState era) where
-  arbitrary = VState <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary InstantaneousRewards where
   arbitrary = InstantaneousRewards <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary

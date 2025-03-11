@@ -19,15 +19,6 @@ module Cardano.Ledger.Shelley.AdaPots (
   sumAdaPots,
 ) where
 
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  Obligations (..),
-  certsTotalDepositsTxBody,
-  certsTotalRefundsTxBody,
-  obligationCertState,
-  rewards,
-  sumObligation,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core

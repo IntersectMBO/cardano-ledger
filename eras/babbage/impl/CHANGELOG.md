@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Moved `CertState` to `State` module
 * Add `DecCBOR` instance for `BabbageTxBody`
 * Converted `CertState` to a type family
 * Made the fields of predicate failures and environments lazy

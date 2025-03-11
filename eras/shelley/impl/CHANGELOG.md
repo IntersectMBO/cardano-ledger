@@ -2,6 +2,10 @@
 
 ## 1.16.0.0
 
+* Replaced `prDState` and `prPState` with `prCertState` in `ShelleyPoolreapState`
+* Removed `ShelleyPoolreapEnv` (became obsolete)
+* Removed `shelleyCertVState` from `ShelleyCertState`
+* Moved `CertState` to `State` module
 * Add `ShelleyInstantStake`, `shelleyInstantStakeCredentialsL`, `addShelleyInstantStake`, `deleteShelleyInstantStake`, `resolveShelleyInstantStake`
 * Remove  `IncrementalStake` type, `incrementalStakeDistr`, `updateStakeDistribution`, `utxosStakeDistrL`
 * Replace `IncrementalStake` with `InstantStake` in `UTxOState`

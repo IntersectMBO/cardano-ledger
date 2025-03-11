@@ -12,8 +12,7 @@ import Cardano.Ledger.Core (EraTxOut, mkCoinTxOut)
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.LedgerState (dsUnifiedL, psStakePoolParamsL)
-import Cardano.Ledger.State
+import Cardano.Ledger.State hiding (delegations, rewards)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UMap (RDPair (..), rdRewardCoin)
 import qualified Cardano.Ledger.UMap as UM
