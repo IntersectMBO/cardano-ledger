@@ -37,7 +37,6 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxow ()
 import Test.Cardano.Ledger.Constrained.Conway (
-  IsConwayUniv,
   UtxoExecContext,
   utxoEnvSpec,
   utxoStateSpec,
@@ -48,12 +47,10 @@ import Test.Cardano.Ledger.Shelley.Utils (runSTS)
 import Test.Cardano.Ledger.TreeDiff (showExpr)
 
 instance
-  ( IsConwayUniv fn
-  , SpecTranslate ConwayTxBodyTransContext (ConwayTxCert ConwayEra)
-  ) =>
-  ExecSpecRule fn "UTXOW" ConwayEra
+  SpecTranslate ConwayTxBodyTransContext (ConwayTxCert ConwayEra) =>
+  ExecSpecRule "UTXOW" ConwayEra
   where
-  type ExecContext fn "UTXOW" ConwayEra = UtxoExecContext ConwayEra
+  type ExecContext "UTXOW" ConwayEra = UtxoExecContext ConwayEra
 
   genExecContext = genUtxoExecContext
   environmentSpec = utxoEnvSpec
@@ -70,7 +67,7 @@ instance
             <*> toSpecRep st
             <*> toSpecRep sig
       stFinal = first showOpaqueErrorString $ runSTS @"UTXO" @ConwayEra globals env st sig
-      utxoInfo = extraInfo @fn @"UTXO" @ConwayEra globals ctx env st sig stFinal
+      utxoInfo = extraInfo @"UTXO" @ConwayEra globals ctx env st sig stFinal
      in
       PP.vcat
         [ "UTXOW"

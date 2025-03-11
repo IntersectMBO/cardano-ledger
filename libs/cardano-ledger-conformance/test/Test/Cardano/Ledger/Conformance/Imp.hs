@@ -52,17 +52,17 @@ import UnliftIO (evaluateDeep)
 testImpConformance ::
   forall era.
   ( ConwayEraImp era
-  , ExecSpecRule ConwayFn "LEDGER" era
-  , ExecContext ConwayFn "LEDGER" era ~ ConwayLedgerExecContext era
-  , ExecSignal ConwayFn "LEDGER" era ~ AlonzoTx era
-  , ExecState ConwayFn "LEDGER" era ~ LedgerState era
-  , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (ExecState ConwayFn "LEDGER" era)
-  , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (ExecEnvironment ConwayFn "LEDGER" era)
-  , SpecTranslate (ExecContext ConwayFn "LEDGER" era) (TxWits era)
+  , ExecSpecRule "LEDGER" era
+  , ExecContext "LEDGER" era ~ ConwayLedgerExecContext era
+  , ExecSignal "LEDGER" era ~ AlonzoTx era
+  , ExecState "LEDGER" era ~ LedgerState era
+  , SpecTranslate (ExecContext "LEDGER" era) (ExecState "LEDGER" era)
+  , SpecTranslate (ExecContext "LEDGER" era) (ExecEnvironment "LEDGER" era)
+  , SpecTranslate (ExecContext "LEDGER" era) (TxWits era)
   , HasCallStack
   , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecRep (TxBody era) ~ Agda.TxBody
-  , ExecEnvironment ConwayFn "LEDGER" era ~ LedgerEnv era
+  , ExecEnvironment "LEDGER" era ~ LedgerEnv era
   , Tx era ~ AlonzoTx era
   , SpecTranslate ConwayTxBodyTransContext (TxBody era)
   , ToExpr (SpecRep (PredicateFailure (EraRule "LEDGER" era)))
@@ -71,9 +71,9 @@ testImpConformance ::
   Either
     (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
     (State (EraRule "LEDGER" era), [Event (EraRule "LEDGER" era)]) ->
-  ExecEnvironment ConwayFn "LEDGER" era ->
-  ExecState ConwayFn "LEDGER" era ->
-  ExecSignal ConwayFn "LEDGER" era ->
+  ExecEnvironment "LEDGER" era ->
+  ExecState "LEDGER" era ->
+  ExecSignal "LEDGER" era ->
   BaseImpM ()
 testImpConformance _globals impRuleResult env state signal = do
   let ctx =
@@ -103,14 +103,14 @@ testImpConformance _globals impRuleResult env state signal = do
   agdaResponse <-
     fmap (second fixup) $
       evaluateDeep $
-        runAgdaRule @ConwayFn @"LEDGER" @era specEnv specState specSignal
+        runAgdaRule @"LEDGER" @era specEnv specState specSignal
   -- translate imp response
   impResponse <-
     expectRightExpr $
       runSpecTransM ctx $
         bimapM
           (pure . showOpaqueErrorString)
-          (toTestRep . inject @_ @(ExecState ConwayFn "LEDGER" era) . fst)
+          (toTestRep . inject @_ @(ExecState "LEDGER" era) . fst)
           impRuleResult
 
 #if __GLASGOW_HASKELL__ >= 906
@@ -128,7 +128,7 @@ testImpConformance _globals impRuleResult env state signal = do
   logToExpr specSignal
   logString "Extra info:"
   logDoc $
-    extraInfo @ConwayFn @"LEDGER" @era
+    extraInfo @"LEDGER" @era
       _globals
       ctx
       env

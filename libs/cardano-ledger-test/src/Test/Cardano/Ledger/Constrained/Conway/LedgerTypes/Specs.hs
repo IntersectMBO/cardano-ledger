@@ -413,7 +413,7 @@ utxoSpecWit univ delegs = constrained $ \ [var|utxo|] ->
     ]
 
 utxoStateSpec ::
-  forall era 
+  forall era.
   (EraSpecLedger era, HasSpec (InstantStake era)) =>
   PParams era ->
   WitUniv era ->
@@ -480,7 +480,7 @@ conwayGovStateSpec pp govenv =
 
 ledgerStateSpec ::
   forall era.
-  (EraSpecLedger era, HasSpec (InstantStake era),CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era, HasSpec (InstantStake era), CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->
   Term AccountState ->

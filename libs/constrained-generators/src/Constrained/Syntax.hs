@@ -955,7 +955,7 @@ regularizeNames spec = spec
 --                                                                 ^ -----needed constraint
 --   This constraint is required by the App constructor, so we extract in and stuff it
 --   in the Evidence parameter of Context
---   Context :: Evidence c -> t c s dom rng -> CtxtList Pre dom hole -> Context c s t dom rng hole
+--   Context :: Evidence c -> t c s dom rng -> CtxtList 'Pre dom hole -> Context c s t dom rng hole
 toCtx ::
   forall m v a.
   ( MonadGenError m
@@ -1002,10 +1002,10 @@ data HiddenClist mode ds v where
 toCtxList ::
   forall m v as.
   (All HasSpec as, HasSpec v, MonadGenError m, HasCallStack) =>
-  Var v -> List Term as -> m (HiddenClist Pre as v)
+  Var v -> List Term as -> m (HiddenClist 'Pre as v)
 toCtxList v l = prefix l
   where
-    prefix :: forall ds. All HasSpec ds => List Term ds -> m (HiddenClist Pre ds v)
+    prefix :: forall ds. All HasSpec ds => List Term ds -> m (HiddenClist 'Pre ds v)
     prefix Nil = fatalError (pure $ "toCtxList without hole, for variable " ++ show v)
     prefix (Lit n :> ts) = do
       Hide ctx <- prefix ts
@@ -1023,4 +1023,4 @@ toCtxList v l = prefix l
     suffix (_ :> _) = fatalError (pure "toCtxList with too many holes")
 
 data PolyCList as where
-  Poly :: (forall i j. CList Post as i j) -> PolyCList as
+  Poly :: (forall i j. CList 'Post as i j) -> PolyCList as

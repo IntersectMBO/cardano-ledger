@@ -40,11 +40,11 @@ import Test.Cardano.Ledger.Conformance (
   unComputationResult,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
-import Test.Cardano.Ledger.Constrained.Conway (IsConwayUniv, UtxoExecContext (..), utxoStateSpec)
+import Test.Cardano.Ledger.Constrained.Conway (UtxoExecContext (..), utxoStateSpec)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 
 import Cardano.Ledger.Conway (ConwayEra)
-import Constrained (
+import Constrained.API (
   Specification (..),
   assert,
   constrained,
@@ -114,19 +114,15 @@ instance EraPParams era => EncCBOR (ConwayLedgerExecContext era) where
         !> To clecPolicyHash
         !> To clecEnactState
 
-instance
-  forall fn.
-  IsConwayUniv fn =>
-  ExecSpecRule fn "LEDGER" ConwayEra
-  where
-  type ExecContext fn "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
+instance ExecSpecRule "LEDGER" ConwayEra where
+  type ExecContext "LEDGER" ConwayEra = ConwayLedgerExecContext ConwayEra
 
   genExecContext = do
     ctx <- arbitrary
-    env <- genFromSpec @fn TrueSpec
+    env <- genFromSpec TrueSpec
     ConwayLedgerExecContext
       <$> arbitrary
-      <*> genFromSpec @fn (enactStateSpec ctx env)
+      <*> genFromSpec (enactStateSpec ctx env)
       <*> genUtxoExecContext
 
   environmentSpec ConwayLedgerExecContext {..} =
@@ -156,7 +152,7 @@ instance
     LedgerState {..}
     sig
     _ =
-      extraInfo @fn @"UTXOW" @ConwayEra
+      extraInfo @"UTXOW" @ConwayEra
         globals
         clecUtxoExecContext
         utxoEnv
@@ -172,7 +168,7 @@ instance
   testConformance ctx env st sig = property $ do
     (specEnv, specSt, specSig) <-
       impAnn "Translating the inputs" $
-        translateInputs @fn @"LEDGER" @ConwayEra env st sig ctx
+        translateInputs @"LEDGER" @ConwayEra env st sig ctx
     logDoc $ "ctx:\n" <> ansiExpr ctx
     logDoc $ "implEnv:\n" <> ansiExpr env
     logDoc $ "implSt:\n" <> ansiExpr st
@@ -184,7 +180,7 @@ instance
       fmap (second fixup) $
         impAnn "Deep evaluating Agda output" $
           evaluateDeep $
-            runAgdaRule @fn @"LEDGER" @ConwayEra specEnv specSt specSig
+            runAgdaRule @"LEDGER" @ConwayEra specEnv specSt specSig
     -- TODO figure out why assertions are failing and then we can remove this
     -- whole method
     implRes <- tryRunImpRuleNoAssertions @"LEDGER" @ConwayEra (inject env) (inject st) (inject sig)
@@ -194,11 +190,11 @@ instance
           runSpecTransM ctx $
             bimapM
               (fmap showOpaqueErrorString . traverse toTestRep)
-              (toTestRep . inject @_ @(ExecState fn "LEDGER" ConwayEra) . fst)
+              (toTestRep . inject @_ @(ExecState "LEDGER" ConwayEra) . fst)
               implRes
     globals <- use impGlobalsL
     let extra =
-          extraInfo @fn @"LEDGER" @ConwayEra
+          extraInfo @"LEDGER" @ConwayEra
             globals
             ctx
             (inject env)
@@ -206,7 +202,7 @@ instance
             (inject sig)
             (first showOpaqueErrorString implRes)
     logDoc extra
-    checkConformance @"LEDGER" @ConwayEra @fn
+    checkConformance @"LEDGER" @ConwayEra
       ctx
       (inject env)
       (inject st)

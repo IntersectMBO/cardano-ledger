@@ -322,7 +322,7 @@ instance (HasSpec Bool, TypeSpec Bool ~ SumSpec () ()) => Logic "not_" BoolW '[B
 
   mapTypeSpec NotW (SumSpec h a b) = typeSpec $ SumSpec h b a
 
-not_ :: TypeSpec Bool ~ SumSpec () () => Term Bool -> Term Bool
+not_ :: Term Bool -> Term Bool
 not_ = appTerm NotW
 
 -- ======= Logic instance OrW(or_)
