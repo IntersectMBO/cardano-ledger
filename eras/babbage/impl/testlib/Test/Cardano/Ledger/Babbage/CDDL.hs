@@ -27,6 +27,7 @@ import Test.Cardano.Ledger.Alonzo.CDDL hiding (
   major_protocol_version,
   multiasset,
   next_major_protocol_version,
+  operational_cert,
   plutus_data,
   plutus_script,
   proposed_protocol_parameter_updates,
@@ -106,6 +107,16 @@ next_major_protocol_version = 9
 
 major_protocol_version :: Rule
 major_protocol_version = "major_protocol_version" =:= (1 :: Integer) ... next_major_protocol_version
+
+operational_cert :: Rule
+operational_cert =
+  "operational_cert"
+    =:= arr
+      [ "hot_vkey" ==> kes_vkey
+      , "sequence_number" ==> (VUInt `sized` (8 :: Word64))
+      , "kes_period" ==> VUInt
+      , "sigma" ==> signature
+      ]
 
 protocol_version :: Rule
 protocol_version = "protocol_version" =:= arr [a major_protocol_version, a VUInt]

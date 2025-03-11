@@ -228,6 +228,11 @@ network_id = 0 / 1
 
 nonnegative_interval = #6.30([uint, positive_int])
 
+operational_cert = [hot_vkey : $kes_vkey
+                   , sequence_number : uint .size 8
+                   , kes_period : uint
+                   , sigma : $signature]
+
 plutus_data = constr<plutus_data>
                / {* plutus_data => plutus_data}
                / [* plutus_data]
@@ -512,13 +517,6 @@ move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
 ; dns_name: An SRV DNS record
 ; 
 multi_host_name = (2, dns_name)
-
-;  kes_vkey: hot_vkey
-;      uint: sequence_number
-;      uint: key_period
-; signature: sigma
-; 
-operational_cert = ($kes_vkey, uint, uint, $signature)
 
 ;         pool_keyhash: operator
 ;                 coin: pledge
