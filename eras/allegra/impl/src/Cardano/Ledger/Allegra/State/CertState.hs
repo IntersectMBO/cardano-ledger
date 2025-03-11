@@ -2,25 +2,19 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.CertState () where
+module Cardano.Ledger.Allegra.State.CertState () where
 
-import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.CertState
-import Cardano.Ledger.Shelley.CertState
+import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Shelley.State
 import Data.Coerce (coerce)
 
-instance EraCertState BabbageEra where
-  type CertState BabbageEra = ShelleyCertState BabbageEra
-
-  mkCertState = mkShelleyCertState
+instance EraCertState AllegraEra where
+  type CertState AllegraEra = ShelleyCertState AllegraEra
 
   upgradeCertState = coerce
 
   certDStateL = shelleyCertDStateL
   {-# INLINE certDStateL #-}
-
-  certVStateL = shelleyCertVStateL
-  {-# INLINE certVStateL #-}
 
   certPStateL = shelleyCertPStateL
   {-# INLINE certPStateL #-}

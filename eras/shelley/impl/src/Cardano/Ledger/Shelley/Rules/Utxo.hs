@@ -56,12 +56,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  certsTotalDepositsTxBody,
-  certsTotalRefundsTxBody,
-  dsGenDelegs,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)

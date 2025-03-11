@@ -33,8 +33,8 @@
 module Test.Cardano.Ledger.Generic.ModelState where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin))
+import Cardano.Ledger.Conway.State (ConwayEraCertState (..), VState (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -49,7 +49,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   StashedAVVMAddresses,
   UTxOState (..),
-  VState (..),
   completeRupd,
   curPParamsEpochStateL,
   prevPParamsEpochStateL,
@@ -59,6 +58,7 @@ import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State (
+  EraCertState (..),
   IndividualPoolStake (..),
   PoolDistr (..),
   SnapShots,
@@ -100,8 +100,10 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
  )
 import Test.Cardano.Ledger.Generic.Proof (
   BabbageEra,
+  CertStateWit (..),
   Proof (..),
   Reflect (..),
+  whichCertState,
  )
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 
@@ -201,7 +203,10 @@ pStateZero =
     }
 
 dPStateZero :: EraCertState era => CertState era
-dPStateZero = mkCertState def pStateZero dStateZero
+dPStateZero =
+  def
+    & certPStateL .~ pStateZero
+    & certDStateL .~ dStateZero
 
 nonMyopicZero :: NonMyopic
 nonMyopicZero = NonMyopic Map.empty mempty
@@ -330,17 +335,18 @@ instance Reflect era => Extract (UTxOState era) era where
       emptyGovState
       mempty
 
-extractCertState :: forall era. Reflect era => ModelNewEpochState era -> CertState era
-extractCertState x = case reify @era of
-  Shelley -> cs
-  Mary -> cs
-  Allegra -> cs
-  Alonzo -> cs
-  Babbage -> cs
-  Conway -> cs -- TODO: add `conwayCertState`
-  where
-    cs :: CertState era
-    cs = mkCertState (extract x) (extract x) (extract x)
+extractCertState ::
+  forall era. Reflect era => ModelNewEpochState era -> CertState era
+extractCertState x = case whichCertState (reify @era) of
+  CertStateShelleyToBabbage ->
+    def
+      & (certPStateL .~ extract x)
+      & (certDStateL .~ extract x)
+  CertStateConwayToConway ->
+    def
+      & (certPStateL .~ extract x)
+      & (certDStateL .~ extract x)
+      & (certVStateL .~ extract x)
 
 instance Reflect era => Extract (LedgerState era) era where
   extract x = LedgerState (extract x) (extractCertState x)

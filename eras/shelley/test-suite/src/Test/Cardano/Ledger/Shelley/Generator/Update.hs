@@ -37,7 +37,6 @@ import Cardano.Ledger.BaseTypes (
   succVersion,
   unsafeNonZero,
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
@@ -60,6 +59,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import Cardano.Ledger.State (EraCertState (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)

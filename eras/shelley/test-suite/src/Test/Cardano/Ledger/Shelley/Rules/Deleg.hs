@@ -16,12 +16,6 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.API (ShelleyDELEG)
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
-import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
-  InstantaneousRewards (..),
-  delegations,
-  rewards,
- )
 import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
 import Cardano.Ledger.Shelley.State
 import qualified Cardano.Ledger.UMap as UM

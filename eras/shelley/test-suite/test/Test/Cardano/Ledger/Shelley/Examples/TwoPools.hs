@@ -82,7 +82,7 @@ import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
  )
-import Cardano.Ledger.State
+import Cardano.Ledger.State (IndividualPoolStake (..), PoolDistr (..), SnapShot (..), UTxO, maxPool)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val

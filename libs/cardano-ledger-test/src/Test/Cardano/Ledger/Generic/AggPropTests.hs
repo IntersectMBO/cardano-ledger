@@ -8,7 +8,6 @@
 module Test.Cardano.Ledger.Generic.AggPropTests where
 
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -20,7 +19,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State (EraCertState (..), UTxO (..))
 import Cardano.Ledger.UMap (UView (RewDepUView), depositMap, domain, fromCompact, sumDepositUView)
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))

@@ -12,11 +12,11 @@
 module Test.Cardano.Ledger.Constrained.Conway.Certs where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHash, credScriptHash)
+import Cardano.Ledger.State
 import Constrained
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)

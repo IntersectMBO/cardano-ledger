@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.8.0.1
+## 1.9.0.0
 
-*
+* Moved `CertState` to `State` module
 
 ## 1.8.0.0
 

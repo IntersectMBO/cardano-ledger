@@ -12,7 +12,6 @@
 module Test.Cardano.Ledger.Conway.DRepRatifySpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
-import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Conway
@@ -33,7 +32,6 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)

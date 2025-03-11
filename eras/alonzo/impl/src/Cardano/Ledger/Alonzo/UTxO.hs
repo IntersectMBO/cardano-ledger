@@ -33,13 +33,12 @@ module Cardano.Ledger.Alonzo.UTxO (
 )
 where
 
-import Cardano.Ledger.Alonzo.CertState ()
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
+import Cardano.Ledger.Alonzo.State ()
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
@@ -51,6 +50,7 @@ import Cardano.Ledger.Shelley.UTxO (
   getShelleyWitsVKeyNeeded,
  )
 import Cardano.Ledger.State (
+  EraCertState (..),
   EraUTxO (..),
   ScriptsProvided (..),
   UTxO (..),

@@ -20,8 +20,6 @@ module Cardano.Ledger.Conway.Translation (
 import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (EraCertState (..))
-import Cardano.Ledger.Conway.CertState ()
 import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -41,18 +39,16 @@ import Cardano.Ledger.Conway.Tx ()
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Plutus.Data (translateDatum)
 import Cardano.Ledger.Shelley.API (
-  DState (..),
   EpochState (..),
   NewEpochState (..),
-  PState (..),
   StrictMaybe (..),
   UTxOState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
   lsCertStateL,
+  lsUTxOStateL,
  )
 import qualified Cardano.Ledger.UMap as UM
 import Data.Default (Default (def))
@@ -155,14 +151,18 @@ instance TranslateEra ConwayEra API.LedgerState where
   translateEra conwayGenesis ls =
     pure
       API.LedgerState
-        { API.lsUTxOState = translateEra' conwayGenesis $ API.lsUTxOState ls
-        , API.lsCertState =
-            ShelleyCertState
-              { shelleyCertDState = translateEra' conwayGenesis (ls ^. lsCertStateL . certDStateL)
-              , shelleyCertPState = translateEra' conwayGenesis (ls ^. lsCertStateL . certPStateL)
-              , shelleyCertVState = def
-              }
+        { API.lsUTxOState = translateEra' conwayGenesis $ ls ^. lsUTxOStateL
+        , API.lsCertState = translateCertState conwayGenesis $ ls ^. lsCertStateL
         }
+
+translateCertState ::
+  TranslationContext ConwayEra ->
+  API.CertState BabbageEra ->
+  API.CertState ConwayEra
+translateCertState ctx scert =
+  def
+    & certDStateL .~ translateEra' ctx (scert ^. certDStateL)
+    & certPStateL .~ translateEra' ctx (scert ^. certPStateL)
 
 translateGovState ::
   TranslationContext ConwayEra ->

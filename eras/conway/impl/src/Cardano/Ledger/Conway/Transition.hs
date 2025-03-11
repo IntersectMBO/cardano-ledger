@@ -20,6 +20,10 @@ import Cardano.Ledger.Babbage.Transition (TransitionConfig (BabbageTransitionCon
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..), toConwayGenesisPairs)
 import Cardano.Ledger.Conway.Rules.Deleg (processDelegation)
+import Cardano.Ledger.Conway.State (
+  ConwayEraCertState (..),
+  vsDRepsL,
+ )
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.TxCert (Delegatee)
 import Cardano.Ledger.Credential (Credential)
@@ -27,11 +31,9 @@ import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
-  certVStateL,
   esLStateL,
   lsCertStateL,
   nesEsL,
-  vsDRepsL,
  )
 import Cardano.Ledger.Shelley.Transition
 import Data.Aeson (
@@ -50,7 +52,7 @@ import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
-class EraTransition era => ConwayEraTransition era where
+class (EraTransition era, ConwayEraCertState era) => ConwayEraTransition era where
   tcDelegsL :: Lens' (TransitionConfig era) (ListMap (Credential 'Staking) Delegatee)
 
   tcInitialDRepsL :: Lens' (TransitionConfig era) (ListMap (Credential 'DRepRole) DRepState)

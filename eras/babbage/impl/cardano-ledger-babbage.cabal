@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-babbage
-version: 1.11.0.1
+version: 1.12.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -46,7 +46,6 @@ library
 
   hs-source-dirs: src
   other-modules:
-    Cardano.Ledger.Babbage.CertState
     Cardano.Ledger.Babbage.Era
     Cardano.Ledger.Babbage.Rules.Bbody
     Cardano.Ledger.Babbage.Rules.Deleg
@@ -59,6 +58,7 @@ library
     Cardano.Ledger.Babbage.Rules.Utxo
     Cardano.Ledger.Babbage.Rules.Utxos
     Cardano.Ledger.Babbage.Rules.Utxow
+    Cardano.Ledger.Babbage.State.CertState
     Cardano.Ledger.Babbage.State.Stake
     Cardano.Ledger.Babbage.TxAuxData
     Cardano.Ledger.Babbage.TxCert

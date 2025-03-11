@@ -47,7 +47,6 @@ import Cardano.Ledger.BaseTypes (
   (%?),
  )
 import Cardano.Ledger.Binary (encCBOR, hashWithEncoder, natVersion, shelleyProtVer)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (
   Coin (..),
   DeltaCoin (..),
@@ -101,6 +100,7 @@ import Cardano.Ledger.Shelley.Rules (
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.State (
+  EraCertState (..),
   Stake (..),
   maxPool,
   poolStake,

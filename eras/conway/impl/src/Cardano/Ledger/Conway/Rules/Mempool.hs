@@ -60,6 +60,7 @@ instance
   ( EraTx era
   , ConwayEraTxBody era
   , ConwayEraGov era
+  , ConwayEraCertState era
   , EraStake era
   , EraCertState era
   , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
@@ -89,7 +90,7 @@ mempoolTransition ::
   ( EraTx era
   , ConwayEraTxBody era
   , ConwayEraGov era
-  , EraCertState era
+  , ConwayEraCertState era
   , Embed (EraRule "LEDGER" era) (ConwayMEMPOOL era)
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era

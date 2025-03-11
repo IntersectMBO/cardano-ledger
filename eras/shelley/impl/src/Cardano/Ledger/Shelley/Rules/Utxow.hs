@@ -43,7 +43,6 @@ import Cardano.Ledger.BaseTypes (
   (==>),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum, encodeListLen)
-import Cardano.Ledger.CertState (EraCertState (..), dsGenDelegs)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
@@ -79,6 +78,7 @@ import Cardano.Ledger.Shelley.UTxO (
   UTxO,
   verifyWitVKey,
  )
+import Cardano.Ledger.State (EraCertState (..), dsGenDelegs)
 import Control.DeepSeq
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)

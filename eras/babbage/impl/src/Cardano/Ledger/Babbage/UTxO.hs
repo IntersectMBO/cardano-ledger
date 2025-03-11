@@ -19,9 +19,9 @@ import Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsNeeded,
   getAlonzoWitsVKeyNeeded,
  )
-import Cardano.Ledger.Babbage.CertState ()
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.State ()
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)

@@ -30,7 +30,6 @@ import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)
 import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (byronProtVer, decodeFull', serialize')
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (
@@ -41,6 +40,7 @@ import Cardano.Ledger.Keys (
   WitVKey (..),
   asWitness,
  )
+import Cardano.Ledger.State (EraCertState)
 import Cardano.Ledger.State.UTxO (EraUTxO (..), UTxO (..))
 import Data.Bits (Bits (..), shiftR)
 import Data.ByteString (ByteString)

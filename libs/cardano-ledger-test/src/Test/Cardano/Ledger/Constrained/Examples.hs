@@ -14,11 +14,11 @@ module Test.Cardano.Ledger.Constrained.Examples where
 
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (EpochNo (..))
-import Cardano.Ledger.CertState (EraCertState (..), FutureGenDeleg (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Keys (GenDelegPair)
+import Cardano.Ledger.State (EraCertState (..), FutureGenDeleg (..))
 import Control.DeepSeq (deepseq)
 import Control.Exception (ErrorCall (..))
 import Control.Monad (when)
@@ -570,12 +570,12 @@ dstatePreds _p =
   [ Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
   , Dom rewards :=: Dom stakeDeposits
   , Dom delegations :⊆: Dom rewards
-  , Random currentDRepState
   , Random drepDelegation
-  , Random currentDRepState
-  , Random committeeState
-  , Random numDormantEpochs
-  , Dom rewards :=: Rng ptrs
+  , -- TODO: these are Conway related
+    -- , Random currentDRepState
+    -- , Random committeeState
+    -- , Random numDormantEpochs
+    Dom rewards :=: Rng ptrs
   , -- This implies (Fixed (ExactSize 3) instanReserves)
     -- But it also implies that the new introduced variable instanReservesDom also has size 3
     -- ,  Sized (ExactSize 3) (Dom instanReserves)

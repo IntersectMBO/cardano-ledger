@@ -80,7 +80,7 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   RewardUpdate (..),
   ShelleyGovState (..),
   UTxOState (..),
-  VState (..),
+  mkShelleyCertState,
  )
 import Cardano.Ledger.Shelley.PParams as X (
   ProposedPPUpdates (..),

@@ -23,7 +23,6 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
@@ -54,6 +53,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   renderDepositEqualsObligationViolation,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
+import Cardano.Ledger.State (EraCertState)
 import Control.State.Transition (
   Embed (..),
   STS (..),

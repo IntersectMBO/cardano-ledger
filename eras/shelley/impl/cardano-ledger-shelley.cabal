@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-shelley
-version: 1.16.0.1
+version: 1.17.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -30,7 +30,6 @@ library
     Cardano.Ledger.Shelley.API.Wallet
     Cardano.Ledger.Shelley.AdaPots
     Cardano.Ledger.Shelley.BlockChain
-    Cardano.Ledger.Shelley.CertState
     Cardano.Ledger.Shelley.Core
     Cardano.Ledger.Shelley.Genesis
     Cardano.Ledger.Shelley.Governance
@@ -85,6 +84,7 @@ library
     Cardano.Ledger.Shelley.Rules.Upec
     Cardano.Ledger.Shelley.Rules.Utxo
     Cardano.Ledger.Shelley.Rules.Utxow
+    Cardano.Ledger.Shelley.State.CertState
     Cardano.Ledger.Shelley.State.Stake
 
   default-language: Haskell2010

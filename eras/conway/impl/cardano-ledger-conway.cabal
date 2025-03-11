@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-conway
-version: 1.19.0.1
+version: 1.20.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -51,7 +51,6 @@ library
 
   hs-source-dirs: src
   other-modules:
-    Cardano.Ledger.Conway.CertState
     Cardano.Ledger.Conway.Era
     Cardano.Ledger.Conway.Governance.Internal
     Cardano.Ledger.Conway.Governance.Procedures
@@ -75,6 +74,7 @@ library
     Cardano.Ledger.Conway.Rules.Utxo
     Cardano.Ledger.Conway.Rules.Utxos
     Cardano.Ledger.Conway.Rules.Utxow
+    Cardano.Ledger.Conway.State.CertState
     Cardano.Ledger.Conway.State.Stake
     Cardano.Ledger.Conway.TxAuxData
     Cardano.Ledger.Conway.TxOut

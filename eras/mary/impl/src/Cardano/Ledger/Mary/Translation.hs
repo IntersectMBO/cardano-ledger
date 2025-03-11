@@ -14,23 +14,17 @@
 module Cardano.Ledger.Mary.Translation where
 
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
-import Cardano.Ledger.Mary.CertState ()
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Mary.State
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   UTxOState (..),
-  VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx)
@@ -101,15 +95,16 @@ instance TranslateEra MaryEra DState where
 instance TranslateEra MaryEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance TranslateEra MaryEra VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
-
 instance TranslateEra MaryEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra MaryEra ShelleyCertState
+instance TranslateEra MaryEra ShelleyCertState where
+  translateEra ctxt ls =
+    pure
+      ShelleyCertState
+        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        }
 
 instance TranslateEra MaryEra LedgerState where
   translateEra ctxt ls =

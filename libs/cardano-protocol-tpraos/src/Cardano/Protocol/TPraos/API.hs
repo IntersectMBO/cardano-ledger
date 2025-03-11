@@ -57,7 +57,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Binary.Plain (FromCBOR (..), ToCBOR (..), decodeRecordNamed, encodeListLen)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
@@ -74,7 +73,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Ledger.State (PoolDistr (..), individualPoolStake)
+import Cardano.Ledger.State (EraCertState (..), PoolDistr (..), individualPoolStake)
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.BHeader (
   BHBody,

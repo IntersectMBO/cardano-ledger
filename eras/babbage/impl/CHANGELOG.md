@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.11.0.1
+## 1.12.0.0
 
-*
+* Moved `CertState` to `State` module
 
 ## 1.11.0.0
 

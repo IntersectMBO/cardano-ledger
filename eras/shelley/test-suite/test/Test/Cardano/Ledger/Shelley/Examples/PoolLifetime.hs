@@ -33,7 +33,6 @@ import Cardano.Ledger.BaseTypes (
   (⭒),
  )
 import Cardano.Ledger.Block (Block, bheader)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (
   Coin (..),
   CompactForm (CompactCoin),

@@ -54,13 +54,12 @@ import Cardano.Ledger.BaseTypes (
   systemStart,
  )
 import Cardano.Ledger.Binary (EncCBOR (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Plutus.Evaluate (
   ScriptFailure (..),
   ScriptResult (..),
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), dsGenDelegsL)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
   PpupEnv (..),

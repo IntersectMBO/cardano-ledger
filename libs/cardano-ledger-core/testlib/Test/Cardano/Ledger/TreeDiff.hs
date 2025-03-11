@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.TreeDiff (
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
@@ -237,8 +236,6 @@ deriving newtype instance ToExpr Stake
 instance ToExpr (PState era)
 
 instance ToExpr (DState era)
-
-instance ToExpr (VState era)
 
 instance ToExpr FutureGenDeleg
 

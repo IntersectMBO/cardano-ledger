@@ -42,16 +42,6 @@ import Cardano.Ledger.Binary (
   encodeMemPack,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.CertState (
-  CertState,
-  DRepState,
-  EraCertState (..),
-  Obligations (..),
-  dsUnifiedL,
-  psStakePoolParamsL,
-  sumObligation,
-  vsDRepsL,
- )
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.PoolParams
@@ -669,10 +659,6 @@ epochStateDonationL = esLStateL . lsUTxOStateL . utxosDonationL
 
 epochStateTreasuryL :: Lens' (EpochState era) Coin
 epochStateTreasuryL = esAccountStateL . asTreasuryL
-
-epochStateRegDrepL ::
-  EraCertState era => Lens' (EpochState era) (Map (Credential 'DRepRole) DRepState)
-epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
 epochStatePoolParamsL ::
   EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)

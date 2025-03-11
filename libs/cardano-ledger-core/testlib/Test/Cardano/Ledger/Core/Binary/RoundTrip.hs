@@ -35,7 +35,6 @@ module Test.Cardano.Ledger.Core.Binary.RoundTrip (
 ) where
 
 import Cardano.Ledger.Binary
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.State
@@ -237,7 +236,6 @@ roundTripCoreEraTypesSpec = do
     roundTripShareEraTypeSpec @era @DState
     roundTripShareEraTypeSpec @era @PState
     roundTripShareEraTypeSpec @era @CommitteeState
-    roundTripShareEraTypeSpec @era @VState
     roundTripShareEraTypeSpec @era @UTxO
 
 data EraRuleProof era (rs :: [Symbol]) where

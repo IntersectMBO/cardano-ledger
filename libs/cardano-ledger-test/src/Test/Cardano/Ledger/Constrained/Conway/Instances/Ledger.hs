@@ -86,7 +86,6 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (ConwayEra)
@@ -107,7 +106,6 @@ import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.PoolParams
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardPulser (RSLP))
@@ -1007,7 +1005,10 @@ instance HasSimpleRep RDPair where
 instance IsConwayUniv fn => HasSpec fn RDPair
 
 instance HasSimpleRep (ShelleyCertState era)
-instance (IsConwayUniv fn, Era era) => HasSpec fn (ShelleyCertState era)
+instance (IsConwayUniv fn, EraCertState era) => HasSpec fn (ShelleyCertState era)
+
+instance HasSimpleRep (ConwayCertState ConwayEra)
+instance (IsConwayUniv fn, ConwayEraCertState ConwayEra) => HasSpec fn (ConwayCertState ConwayEra)
 
 instance HasSimpleRep (GovRelation StrictMaybe era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (GovRelation StrictMaybe era)
@@ -1303,7 +1304,7 @@ instance
 instance HasSimpleRep SnapShots
 instance IsConwayUniv fn => HasSpec fn SnapShots
 
-instance EraTxOut era => HasSimpleRep (LedgerState era)
+instance HasSimpleRep (LedgerState era)
 instance
   ( EraTxOut era
   , IsConwayUniv fn
@@ -1314,6 +1315,7 @@ instance
   , EraCertState era
   , HasSpec fn (InstantStake era)
   , HasSpec fn (CertState era)
+  , IsNormalType (CertState era)
   ) =>
   HasSpec fn (LedgerState era)
 
@@ -1617,6 +1619,7 @@ instance
   , EraCertState era
   , HasSpec fn (InstantStake era)
   , HasSpec fn (CertState era)
+  , IsNormalType (CertState era)
   ) =>
   HasSpec fn (EpochState era)
 
@@ -1660,6 +1663,7 @@ instance
   , EraCertState era
   , HasSpec fn (CertState era)
   , HasSpec fn (InstantStake era)
+  , IsNormalType (CertState era)
   ) =>
   HasSpec fn (NewEpochState era)
 

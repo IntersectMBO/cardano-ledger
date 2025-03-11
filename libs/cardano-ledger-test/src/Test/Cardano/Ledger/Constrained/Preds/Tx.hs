@@ -22,7 +22,6 @@ import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary.Decoding (mkSized, sizedSize)
 import Cardano.Ledger.Binary.Encoding (EncCBOR)
-import Cardano.Ledger.CertState (CertState, certDStateL, dsGenDelegsL)
 import Cardano.Ledger.Coin (Coin (..), rationalToCoinViaCeiling)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.DRep (drepDepositL)
@@ -36,7 +35,7 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
-import Cardano.Ledger.State
+import Cardano.Ledger.State hiding (delegations, rewards)
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (Val (..), inject)
@@ -580,10 +579,12 @@ txBodyPreds sizes@UnivSize {..} p =
        , tempTx :<-: txTarget tempTxBody tempBootWits tempKeyWits
        , -- Compute the real fee, and then recompute the TxBody and the Tx
          txfee :<-: (Constr "finalFee" computeFinalFee ^$ pparams p ^$ tempTx ^$ utxo p)
-       , --  , txbodyterm :<-: txbodyTarget txfee wppHash totalCol
+         --  , txbodyterm :<-: txbodyTarget txfee wppHash totalCol
          --  , txterm :<-: txTarget txbodyterm bootWits keyWits
-         ProjM drepDepositL CoinR currentDRepState :=: drepDepositsView
        ]
+    ++ case whichCertState p of
+      CertStateShelleyToBabbage -> []
+      CertStateConwayToConway -> [ProjM drepDepositL CoinR currentDRepState :=: drepDepositsView]
     ++ case whichUTxO p of
       UTxOShelleyToMary ->
         [ -- The following have no effect in ShelleyToMary, but they need to be defined. So we make them random
@@ -981,7 +982,6 @@ oneTest sizes proof = do
       >>= pParamsStage proof
       >>= universeStage sizes proof
       >>= utxoStage sizes proof
-      >>= vstateStage proof
       >>= pstateStage proof
       >>= dstateStage proof
       >>= certsStage sizes proof
@@ -1027,7 +1027,6 @@ demo mode = do
           >>= pParamsStage proof
           >>= universeStage sizes proof
           >>= utxoStage sizes proof
-          >>= vstateStage proof
           >>= pstateStage proof
           >>= dstateStage proof
           >>= certsStage sizes proof

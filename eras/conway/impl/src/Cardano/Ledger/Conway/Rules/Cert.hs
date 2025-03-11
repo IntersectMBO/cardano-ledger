@@ -25,7 +25,6 @@ module Cardano.Ledger.Conway.Rules.Cert (
 import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
   ConwayCERT,
@@ -57,6 +56,7 @@ import Cardano.Ledger.Shelley.API (
   PoolEnv (PoolEnv),
  )
 import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPOOL, ShelleyPoolPredFailure)
+import Cardano.Ledger.State (EraCertState (..))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Embed,

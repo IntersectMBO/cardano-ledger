@@ -38,7 +38,6 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (Sized)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
@@ -220,6 +219,9 @@ instance
       <*> arbitrary
 
   shrink = genericShrink
+
+instance Arbitrary (VState era) where
+  arbitrary = VState <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance
   ( Era era
@@ -859,3 +861,7 @@ instance Arbitrary DRepVotingThresholds where
 
 instance Era era => Arbitrary (Constitution era) where
   arbitrary = Constitution <$> arbitrary <*> arbitrary
+
+instance Era era => Arbitrary (ConwayCertState era) where
+  arbitrary = ConwayCertState <$> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
