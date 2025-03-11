@@ -1225,8 +1225,22 @@ instance EraSpecPParams era => HasSpec (EnactState era)
 instance HasSimpleRep (Committee era)
 instance Era era => HasSpec (Committee era)
 
-instance Typeable era => HasSimpleRep (RatifyEnv era)
-instance Era era => HasSpec (RatifyEnv era)
+instance
+  ( Typeable (InstantStake era)
+  , Eq (InstantStake era)
+  , Show (InstantStake era)
+  , HasSpec (InstantStake era)
+  , Typeable era
+  ) =>
+  HasSimpleRep (RatifyEnv era)
+instance
+  ( Typeable (InstantStake era)
+  , Eq (InstantStake era)
+  , Show (InstantStake era)
+  , HasSpec (InstantStake era)
+  , Era era
+  ) =>
+  HasSpec (RatifyEnv era)
 
 instance HasSimpleRep (RatifyState ConwayEra)
 instance EraSpecPParams ConwayEra => HasSpec (RatifyState ConwayEra)
@@ -1302,7 +1316,7 @@ instance
   ) =>
   HasSpec (LedgerState era)
 
-instance (Typeable (GovState era), Typeable era) => HasSimpleRep (UTxOState era)
+instance (Typeable (InstantStake era), Typeable (GovState era), Typeable era) => HasSimpleRep (UTxOState era)
 instance
   ( EraTxOut era
   , HasSpec (TxOut era)
@@ -1312,12 +1326,11 @@ instance
   ) =>
   HasSpec (UTxOState era)
 
-
 instance HasSimpleRep (ShelleyInstantStake era)
-instance (Typeable era, IsConwayUniv fn) => HasSpec fn (ShelleyInstantStake era)
+instance Typeable era => HasSpec (ShelleyInstantStake era)
 
 instance HasSimpleRep (ConwayInstantStake era)
-instance (Typeable era, IsConwayUniv fn) => HasSpec fn (ConwayInstantStake era)
+instance Typeable era => HasSpec (ConwayInstantStake era)
 
 instance Typeable (TxOut era) => HasSimpleRep (UTxO era)
 instance

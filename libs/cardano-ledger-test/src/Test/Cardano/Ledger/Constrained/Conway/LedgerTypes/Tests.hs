@@ -119,7 +119,7 @@ specSuite ::
   forall (era :: Type).
   ( EraSpecLedger era
   , PrettyA (GovState era)
-  , HasSpec ConwayFn (InstantStake era)
+  , HasSpec (InstantStake era)
   , CertState era ~ ShelleyCertState era
   ) =>
   Int -> Spec
@@ -192,7 +192,8 @@ spec = do
 
 utxoStateGen ::
   forall era.
-  ( EraSpecLedger era, HasSpec (InstantStake era) )
+  ( EraSpecLedger era
+  , HasSpec (InstantStake era)
   , CertState era ~ ShelleyCertState era
   ) =>
   Gen (Specification (UTxOState era))

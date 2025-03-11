@@ -120,7 +120,7 @@ utxostateX ::
   ( EraSpecLedger era
   , -- TODO: this is temporary, remove once `utxoStateSpec` is general enough
     CertState era ~ ShelleyCertState era
-  , HasSpec ConwayFn (InstantStake era)
+  , HasSpec (InstantStake era)
   ) =>
   PParams era -> Gen (UTxOState era)
 utxostateX pp = do
@@ -138,7 +138,7 @@ conwaygovX pp = do
 
 lsX ::
   forall era.
-  ( EraSpecLedger era 
+  ( EraSpecLedger era
   , HasSpec (InstantStake era)
   , -- TODO: remove once `ledgerStateSpec` is general enough
     CertState era ~ ShelleyCertState era
@@ -152,7 +152,7 @@ lsX pp = do
 
 esX ::
   forall era.
-  (EraSpecLedger era, , HasSpec (InstantStake era), CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era, HasSpec (InstantStake era), CertState era ~ ShelleyCertState era) =>
   PParams era -> Gen (EpochState era)
 esX pp = do
   univ <- genWitUniv @era 50
@@ -161,7 +161,7 @@ esX pp = do
 
 nesX ::
   forall era.
-  (EraSpecLedger era, (InstantStake era)) =>
+  (EraSpecLedger era, HasSpec (InstantStake era)) =>
   PParams era -> Gen (NewEpochState era)
 nesX pp = do
   univ <- genWitUniv @era 50
@@ -216,30 +216,30 @@ class
 -- The WellFormed instances
 -- ==============================================================
 
-instance (EraSpecPParams era, HasSpec ConwayFn (InstantStake era)) => WellFormed (PParams era) era where
+instance (EraSpecPParams era, HasSpec (InstantStake era)) => WellFormed (PParams era) era where
   wff = ppX @era
   wffWithPP = pure
 
-instance (EraSpecPParams era, HasSpec ConwayFn (InstantStake era)) => WellFormed AccountState era where
+instance (EraSpecPParams era, HasSpec (InstantStake era)) => WellFormed AccountState era where
   wff = acctX
   wffWithPP _ = acctX
 
 instance
-  (GenScript era, HasSpec ConwayFn (InstantStake era), EraSpecPParams era) =>
+  (GenScript era, HasSpec (InstantStake era), EraSpecPParams era) =>
   WellFormed (PState era) era
   where
   wff = psX
   wffWithPP _ = psX
 
 instance
-  (EraSpecPParams era, HasSpec(InstantStake era), EraSpecLedger era ConwayFn) =>
+  (EraSpecPParams era, HasSpec (InstantStake era), EraSpecLedger era) =>
   WellFormed (DState era) era
   where
   wff = dsX
   wffWithPP _ = dsX
 
 instance
-  (GenScript era, HasSpec ConwayFn (InstantStake era), EraSpecPParams era) =>
+  (GenScript era, HasSpec (InstantStake era), EraSpecPParams era) =>
   WellFormed (VState era) era
   where
   wff = vsX
@@ -260,12 +260,17 @@ instance
   , EraSpecLedger era
   , HasSpec (InstantStake era)
   , CertState era ~ ShelleyCertState era
-  ) => WellFormed (UTxO era) era 
+  ) =>
+  WellFormed (UTxO era) era
   where
   wff = utxoX
 
 instance
-  (EraSpecPParams era, EraSpecLedger era, CertState era ~ ShelleyCertState era, HasSpec (InstantStake era)) =>
+  ( EraSpecPParams era
+  , EraSpecLedger era
+  , CertState era ~ ShelleyCertState era
+  , HasSpec (InstantStake era)
+  ) =>
   WellFormed (UTxOState era) era
   where
   wffWithPP = utxostateX
@@ -278,16 +283,20 @@ instance WellFormed (ConwayGovState ConwayEra) ConwayEra where
 
 instance
   ( EraSpecPParams era
-  , EraSpecLedger era ConwayFn
-  , HasSpec ConwayFn (InstantStake era)
+  , EraSpecLedger era
+  , HasSpec (InstantStake era)
   , CertState era ~ ShelleyCertState era
   ) =>
-  WellFormed (ShelleyGovState era) era 
+  WellFormed (ShelleyGovState era) era
   where
   wffWithPP pp = genFromSpec @(ShelleyGovState era) (shelleyGovStateSpec pp)
 
 instance
-  (EraSpecPParams era, EraSpecLedger era, CertState era ~ ShelleyCertState era) =>
+  ( EraSpecPParams era
+  , HasSpec (InstantStake era)
+  , EraSpecLedger era
+  , CertState era ~ ShelleyCertState era
+  ) =>
   WellFormed (LedgerState era) era
   where
   wffWithPP = lsX
@@ -303,17 +312,17 @@ instance
   wffWithPP = esX
 
 instance
-  (EraSpecPParams era, HasSpec (InstantStake era), EraSpecLedger era ConwayFn) =>
+  (EraSpecPParams era, HasSpec (InstantStake era), EraSpecLedger era) =>
   WellFormed (NewEpochState era) era
   where
   wffWithPP = nesX
 
-instance (EraSpecPParams era, HasSpec ConwayFn (InstantStake era)) => WellFormed SnapShot era where
+instance (EraSpecPParams era, HasSpec (InstantStake era)) => WellFormed SnapShot era where
   wff = snapX
 
 instance
   ( EraSpecPParams era
-  , EraSpecLedger era 
+  , EraSpecLedger era
   , HasSpec (InstantStake era)
   , CertState era ~ ShelleyCertState era
   ) =>

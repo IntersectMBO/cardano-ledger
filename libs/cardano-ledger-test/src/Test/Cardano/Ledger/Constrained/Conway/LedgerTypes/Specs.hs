@@ -399,7 +399,7 @@ utxoSpecWit univ delegs = constrained $ \ [var|utxo|] ->
     ]
 
 utxoStateSpec ::
-  forall era 
+  forall era.
   (EraSpecLedger era, HasSpec (InstantStake era)) =>
   PParams era ->
   WitUniv era ->
@@ -489,7 +489,7 @@ conwayGovStateSpec pp govenv =
 -- So maybe, it's not a matter of "don't know what it is" but rather the fact that
 -- it's a type family and not a concrete type, to which the `Generics` magic might not apply.
 ledgerStateSpec ::
-  forall era .
+  forall era.
   (EraSpecLedger era, HasSpec (InstantStake era), CertState era ~ ShelleyCertState era) =>
   PParams era ->
   WitUniv era ->

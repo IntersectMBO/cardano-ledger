@@ -948,8 +948,9 @@ short xs =
 showType :: forall t. Typeable t => String
 showType = show (typeRep (Proxy @t))
 
-ppSymbol :: KnownSymbol a => (SSymbol a) -> Doc ann
-ppSymbol (_ :: SSymbol z) = fromString (symbolVal (Proxy @z))
+-- Seems to cause GHC 8.107 to fail because it doesn't know about SSymbol
+-- ppSymbol :: KnownSymbol a => (SSymbol a) -> Doc ann
+-- ppSymbol (_ :: SSymbol z) = fromString (symbolVal (Proxy @z))
 
 instance forall (c :: Constraint). Typeable c => Show (Evidence c) where
   show _ = "Evidence@(" ++ showType @c ++ ")"
@@ -1051,7 +1052,7 @@ data
   where
   Context ::
     (All HasSpec dom, HasSpec rng) =>
-    t s dom rng -> CList Pre dom hole y -> Context s t dom rng hole
+    t s dom rng -> CList 'Pre dom hole y -> Context s t dom rng hole
 
 data Ctx hole rng where
   Ctx ::
@@ -1065,10 +1066,10 @@ infixr 5 :|>
 infixr 5 :<>
 
 data CList (x :: Mode) (as :: [Type]) (hole :: Type) (y :: Type) where
-  End :: CList Post '[] h y
-  (:<|) :: Literal a => a -> CList Post as h y -> CList Post (a ': as) h y
-  (:<>) :: HasSpec y => Ctx x y -> (forall i j. CList Post as i j) -> CList Pre (y ': as) x y
-  (:|>) :: Literal a => a -> CList Pre as h y -> CList Pre (a ': as) h y
+  End :: CList 'Post '[] h y
+  (:<|) :: Literal a => a -> CList 'Post as h y -> CList 'Post (a ': as) h y
+  (:<>) :: HasSpec y => Ctx x y -> (forall i j. CList 'Post as i j) -> CList 'Pre (y ': as) x y
+  (:|>) :: Literal a => a -> CList 'Pre as h y -> CList 'Pre (a ': as) h y
 
 instance Show (CList mode as hole y) where
   show clist = "(" ++ showCList clist
@@ -1080,7 +1081,7 @@ instance Show (CList mode as hole y) where
       showCList (x :|> y) = show x ++ " :|> " ++ showCList y
 
 -- Examples
-c6 :: HasSpec b => CList Pre [Bool, String, b, Bool, ()] b b
+c6 :: HasSpec b => CList 'Pre [Bool, String, b, Bool, ()] b b
 c6 = True :|> ("abc" :: String) :|> HOLE :<> True :<| () :<| End
 
 val6 :: List [] [Bool, String, Int, Bool, ()]
