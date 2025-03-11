@@ -28,7 +28,6 @@ import Cardano.Ledger.Block (
   bheader,
   neededTxInsForBlock,
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Shelley.API (ApplyBlock, ShelleyDELEG)

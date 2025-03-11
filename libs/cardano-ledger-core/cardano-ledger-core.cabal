@@ -32,7 +32,6 @@ library
     Cardano.Ledger.BaseTypes
     Cardano.Ledger.BaseTypes.NonZero
     Cardano.Ledger.Block
-    Cardano.Ledger.CertState
     Cardano.Ledger.Coin
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
@@ -80,6 +79,7 @@ library
     Cardano.Ledger.Core.TxCert
     Cardano.Ledger.Keys.Internal
     Cardano.Ledger.State.AccountState
+    Cardano.Ledger.State.CertState
     Cardano.Ledger.State.Governance
     Cardano.Ledger.State.PoolDistr
     Cardano.Ledger.State.SnapShots

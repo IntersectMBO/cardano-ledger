@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, dsUnifiedL)
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv,
   ShelleyBbodyState,

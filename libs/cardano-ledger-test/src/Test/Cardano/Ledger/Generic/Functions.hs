@@ -31,12 +31,12 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.State (VState (..))
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   CertState,
@@ -46,8 +46,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PState (..),
   UTxOState (..),
-  VState (..),
  )
+import Cardano.Ledger.Shelley.State (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.State (EraUTxO (..), UTxO (..), coinBalance, unScriptsProvided)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -422,7 +422,7 @@ instance TotalAda (VState era) where
   totalAda _ = mempty
 
 instance TotalAda (ShelleyCertState era) where
-  totalAda (ShelleyCertState vs ps ds) = totalAda ds <> totalAda ps <> totalAda vs
+  totalAda (ShelleyCertState ps ds) = totalAda ds <> totalAda ps
 
 instance TotalAda (ShelleyGovState era) where
   totalAda _ = mempty

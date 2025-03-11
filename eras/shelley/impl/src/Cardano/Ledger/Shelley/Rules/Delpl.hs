@@ -30,7 +30,6 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Credential (Ptr)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL, ShelleyEra)
@@ -49,6 +48,7 @@ import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPool
 import qualified Cardano.Ledger.Shelley.Rules.Pool as Pool
 import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.State (EraCertState (..))
 import Control.DeepSeq
 import Control.State.Transition
 import Data.Typeable (Typeable)

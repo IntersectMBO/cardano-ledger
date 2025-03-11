@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
   availableAfterMIR,
@@ -14,12 +16,6 @@ module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
 import Cardano.Ledger.Address (isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
- )
-import Cardano.Ledger.CertState (
-  DState (..),
-  EraCertState (..),
-  InstantaneousRewards (..),
-  dsGenDelegsL,
  )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
@@ -75,7 +71,9 @@ genesisState genDelegs0 utxo0 =
         mempty
         mempty
     )
-    (mkCertState def def dState)
+    ( def
+        & certDStateL .~ dState
+    )
   where
     dState :: DState era
     dState =

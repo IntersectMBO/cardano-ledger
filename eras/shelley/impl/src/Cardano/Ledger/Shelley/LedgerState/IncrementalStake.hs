@@ -26,13 +26,10 @@ module Cardano.Ledger.Shelley.LedgerState.IncrementalStake (
 where
 
 import Cardano.Ledger.BaseTypes (ProtVer)
-import Cardano.Ledger.CertState (
-  DState (..),
-  EraCertState (..),
-  dsUnifiedL,
-  rewards,
+import Cardano.Ledger.Coin (
+  Coin (..),
+  addDeltaCoin,
  )
-import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState.Types
@@ -43,7 +40,9 @@ import Cardano.Ledger.Shelley.Rewards (
   filterRewards,
  )
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (member)
+import Cardano.Ledger.UMap (
+  member,
+ )
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.Foldable (fold)

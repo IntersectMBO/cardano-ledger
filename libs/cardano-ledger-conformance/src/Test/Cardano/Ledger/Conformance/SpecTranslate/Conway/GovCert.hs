@@ -14,11 +14,6 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert () where
 
 import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (
-  DRepState (..),
-  csCommitteeCreds,
-  drepExpiry,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -26,11 +21,11 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovCertEnv (..),
   ConwayGovCertPredFailure,
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.TxCert (
   ConwayGovCert (..),
  )
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Shelley.LedgerState
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map, keysSet)

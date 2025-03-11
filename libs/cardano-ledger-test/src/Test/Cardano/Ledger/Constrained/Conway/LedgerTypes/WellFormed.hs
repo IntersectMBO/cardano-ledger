@@ -22,14 +22,12 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.Rules (GovEnv (..))
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.State
 import Constrained hiding (Value)
 import Data.Map (Map)
 import Test.Cardano.Ledger.Constrained.Conway ()
@@ -114,8 +112,6 @@ utxoX = do
 utxostateX ::
   forall era.
   ( EraSpecLedger era ConwayFn
-  , -- TODO: this is temporary, remove once `utxoStateSpec` is general enough
-    CertState era ~ ShelleyCertState era
   , HasSpec ConwayFn (InstantStake era)
   ) =>
   PParams era -> Gen (UTxOState era)
@@ -136,8 +132,6 @@ lsX ::
   forall era.
   ( EraSpecLedger era ConwayFn
   , HasSpec ConwayFn (InstantStake era)
-  , -- TODO: remove once `ledgerStateSpec` is general enough
-    CertState era ~ ShelleyCertState era
   ) =>
   PParams era -> Gen (LedgerState era)
 lsX pp = do
@@ -150,7 +144,6 @@ esX ::
   forall era.
   ( EraSpecLedger era ConwayFn
   , HasSpec ConwayFn (InstantStake era)
-  , CertState era ~ ShelleyCertState era
   ) =>
   PParams era -> Gen (EpochState era)
 esX pp = do
@@ -173,7 +166,6 @@ snapsX ::
   forall era.
   ( EraSpecLedger era ConwayFn
   , HasSpec ConwayFn (InstantStake era)
-  , CertState era ~ ShelleyCertState era
   ) =>
   PParams era -> Gen SnapShots
 snapsX pp = do
@@ -255,6 +247,16 @@ instance
   wff = csX
 
 instance
+  ( EraSpecPParams era
+  , EraSpecLedger era ConwayFn
+  , HasSpec ConwayFn (InstantStake era)
+  , CertState era ~ ConwayCertState era
+  ) =>
+  WellFormed (ConwayCertState era) era
+  where
+  wff = csX
+
+instance
   (EraSpecPParams era, HasSpec ConwayFn (InstantStake era), EraSpecLedger era ConwayFn) =>
   WellFormed (UTxO era) era
   where
@@ -264,7 +266,6 @@ instance
   ( EraSpecPParams era
   , EraSpecLedger era ConwayFn
   , HasSpec ConwayFn (InstantStake era)
-  , CertState era ~ ShelleyCertState era
   ) =>
   WellFormed (UTxOState era) era
   where
@@ -286,7 +287,6 @@ instance
   ( EraSpecPParams era
   , EraSpecLedger era ConwayFn
   , HasSpec ConwayFn (InstantStake era)
-  , CertState era ~ ShelleyCertState era
   ) =>
   WellFormed (LedgerState era) era
   where
@@ -296,7 +296,6 @@ instance
   ( EraSpecPParams era
   , EraSpecLedger era ConwayFn
   , HasSpec ConwayFn (InstantStake era)
-  , CertState era ~ ShelleyCertState era
   ) =>
   WellFormed (EpochState era) era
   where
@@ -315,7 +314,6 @@ instance
   ( EraSpecPParams era
   , EraSpecLedger era ConwayFn
   , HasSpec ConwayFn (InstantStake era)
-  , CertState era ~ ShelleyCertState era
   ) =>
   WellFormed SnapShots era
   where

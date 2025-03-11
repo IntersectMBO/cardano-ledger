@@ -26,7 +26,6 @@ import Cardano.Ledger.Babbage.Rules.Delegs ()
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPredFailure)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   LedgerState (..),
@@ -55,6 +54,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgersPredFailure (LedgerFailure),
   renderDepositEqualsObligationViolation,
  )
+import Cardano.Ledger.State (EraCertState)
 import Control.State.Transition (
   Embed (..),
   STS (..),

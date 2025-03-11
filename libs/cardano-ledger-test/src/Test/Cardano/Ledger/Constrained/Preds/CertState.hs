@@ -7,8 +7,8 @@
 module Test.Cardano.Ledger.Constrained.Preds.CertState where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..))
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Conway.State (ConwayEraCertState, EraCertState)
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness, coerceKeyRole)
@@ -52,10 +52,12 @@ manyCoin size = do
 
 -- ======================================
 
-vstatePreds :: EraCertState era => Proof era -> [Pred era]
-vstatePreds p = vstateGenPreds p ++ vstateCheckPreds p
+vstatePreds :: Proof era -> [Pred era]
+vstatePreds p = case whichCertState p of
+  CertStateShelleyToBabbage -> []
+  CertStateConwayToConway -> vstateGenPreds p ++ vstateCheckPreds p
 
-vstateGenPreds :: forall era. EraCertState era => Proof era -> [Pred era]
+vstateGenPreds :: forall era. ConwayEraCertState era => Proof era -> [Pred era]
 vstateGenPreds p = case whichPParams p of
   PParamsConwayToConway ->
     [ MetaSize (SzRng 5 15) currentDRepStateSize

@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.Rules.Snap (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core

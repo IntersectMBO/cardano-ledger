@@ -34,7 +34,6 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.PoolParams (PoolParams, ppId, ppRewardAccount)
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Val ((<+>), (<->))

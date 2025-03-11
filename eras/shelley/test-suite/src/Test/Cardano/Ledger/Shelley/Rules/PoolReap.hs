@@ -12,15 +12,12 @@ module Test.Cardano.Ledger.Shelley.Rules.PoolReap (
 where
 
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
-  PState (..),
   esLStateL,
   lsCertStateL,
   nesEsL,
-  psStakePoolParams,
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))

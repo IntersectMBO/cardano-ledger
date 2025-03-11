@@ -32,7 +32,6 @@ module Cardano.Ledger.Shelley.Transition (
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
@@ -273,7 +272,8 @@ createInitialState tc =
                 LedgerState
                   { lsUTxOState =
                       smartUTxOState pp initialUtxo zero zero govState zero
-                  , lsCertState = mkCertState def def (dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)})
+                  , lsCertState =
+                      def & certDStateL . dsGenDelegsL .~ GenDelegs (sgGenDelegs sg)
                   }
             , esNonMyopic = def
             }
@@ -282,8 +282,6 @@ createInitialState tc =
       , stashedAVVMAddresses = def
       }
   where
-    dState :: DState era
-    dState = def
     govState :: GovState era
     govState =
       emptyGovState

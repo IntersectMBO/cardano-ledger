@@ -12,18 +12,16 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.CertState
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.State
 import Constrained hiding (Value)
 import Data.Kind (Type)
 import Data.Map (Map)
@@ -122,7 +120,8 @@ specSuite ::
   ( EraSpecLedger era ConwayFn
   , PrettyA (GovState era)
   , HasSpec ConwayFn (InstantStake era)
-  , CertState era ~ ShelleyCertState era
+  , PrettyA (CertState era)
+  , WellFormed (CertState era) era
   ) =>
   Int -> Spec
 specSuite n = do
@@ -193,11 +192,11 @@ utxoStateGen ::
   forall era.
   ( EraSpecLedger era ConwayFn
   , HasSpec ConwayFn (InstantStake era)
-  , CertState era ~ ShelleyCertState era
+  , WellFormed (CertState era) era
   ) =>
   Gen (Specification ConwayFn (UTxOState era))
 utxoStateGen =
   utxoStateSpec @era
     <$> genConwayFn @(PParams era) pparamsSpec
     <*> genWitUniv @era 25
-    <*> (lit <$> wff @(ShelleyCertState era) @era) -- TODO: revisit once we have `ConwayCertState`
+    <*> (lit <$> wff @(CertState era) @era)
