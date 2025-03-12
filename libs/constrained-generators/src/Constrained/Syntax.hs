@@ -763,7 +763,7 @@ reify ::
 reify t f body =
   exists (\eval -> pure $ f (eval t)) $ \x ->
     [ reifies x t f
-    , Explain (pure ("reifies " ++ show x)) $ toPred (body x)
+    , Explain (pure ("reify " ++ show t ++ " somef $")) $ toPred (body x)
     ]
 
 -- | requires (HasSpec Bool)

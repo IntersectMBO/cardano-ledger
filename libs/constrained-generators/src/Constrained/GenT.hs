@@ -34,7 +34,7 @@ import Control.Monad
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty ((:|)), (<|))
 import Data.List.NonEmpty qualified as NE
-import Debug.Trace
+import Data.Typeable
 import GHC.Stack
 import System.Random
 import Test.QuickCheck hiding (Args, Fun)
@@ -254,7 +254,7 @@ listOfT gen = do
 -- to get that many elements so long as `validLen` is true.
 -- TODO: possibly one could return "more, fewer, ok" in the `validLen` instead
 -- of `Bool`
-listOfUntilLenT :: MonadGenError m => GenT GE a -> Int -> (Int -> Bool) -> GenT m [a]
+listOfUntilLenT :: (Typeable a, MonadGenError m) => GenT GE a -> Int -> (Int -> Bool) -> GenT m [a]
 listOfUntilLenT gen goalLen validLen =
   genList `suchThatT` validLen . length
   where
@@ -272,19 +272,23 @@ vectorOfT i gen = GenT $ \mode _ -> do
       _ -> pure $ runGE res
 
 infixl 2 `suchThatT`
-suchThatT :: MonadGenError m => GenT m a -> (a -> Bool) -> GenT m a
+suchThatT :: (Typeable a, MonadGenError m) => GenT m a -> (a -> Bool) -> GenT m a
 suchThatT g p = suchThatWithTryT 100 g p
 
-suchThatWithTryT :: forall a m. MonadGenError m => Int -> GenT m a -> (a -> Bool) -> GenT m a
+suchThatWithTryT ::
+  forall a m. (Typeable a, MonadGenError m) => Int -> GenT m a -> (a -> Bool) -> GenT m a
 suchThatWithTryT tries g p = do
   mode <- getMode
   let (n, cont) = case mode of
-        Strict -> (tries, fatalError @m)
+        Strict -> (tries, fatalError)
         Loose -> (1 :: Int, genError) -- TODO: Maybe 1 is not the right number here!
   go n cont
   where
-    go 0 _cont = pureGen (trace ("Discard suchThatWithTryT " ++ show tries) discard)
-    -- _cont (pure ("Ran out of tries (" ++ show tries ++ ") on suchThatWithTryT"))
+    go 0 cont =
+      cont
+        ( pure
+            ("Ran out of tries (" ++ show tries ++ ") on suchThatWithTryT at type " ++ show (typeRep (Proxy @a)))
+        )
     go n cont = do
       a <- g
       if p a then pure a else scaleT (+ 1) $ go (n - 1) cont
@@ -301,7 +305,7 @@ getMessages = GenT $ \_ msgs -> pure (pure msgs)
 withMode :: GenMode -> GenT m a -> GenT m a
 withMode mode gen = GenT $ \_ msgs -> runGenT gen mode msgs
 
-oneofT :: MonadGenError m => [GenT GE a] -> GenT m a
+oneofT :: (Typeable a, MonadGenError m) => [GenT GE a] -> GenT m a
 oneofT gs = do
   mode <- getMode
   msgs <- getMessages
@@ -310,7 +314,7 @@ oneofT gs = do
       pureGen (oneof [runGenT g mode msgs | g <- gs]) `suchThatT` isOk
   runGE r
 
-frequencyT :: MonadGenError m => [(Int, GenT GE a)] -> GenT m a
+frequencyT :: (Typeable a, MonadGenError m) => [(Int, GenT GE a)] -> GenT m a
 frequencyT gs = do
   mode <- getMode
   msgs <- getMessages
