@@ -35,7 +35,7 @@ where
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext (..), LedgerTxInfo (..))
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage, toAsItem, toAsIx)
-import Cardano.Ledger.Alonzo.TxWits (lookupRedeemer, unRedeemers)
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -178,7 +178,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
 
     getScriptWithRedeemer ((plutusScriptHash, plutusPurpose), plutusScript) =
       let redeemerIndex = hoistPlutusPurpose toAsIx plutusPurpose
-       in case lookupRedeemer redeemerIndex $ tx ^. witsTxL . rdmrsTxWitsL of
+       in case Map.lookup redeemerIndex $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL of
             Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash)
             Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
     apply (plutusScript, plutusPurpose, redeemerData, exUnits, plutusScriptHash) = do
@@ -372,7 +372,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
     maxBudget = pp ^. ppMaxTxExUnitsL
     txBody = tx ^. bodyTxL
     wits = tx ^. witsTxL
-    rdmrs = unRedeemers $ wits ^. rdmrsTxWitsL
+    rdmrs = wits ^. rdmrsTxWitsL . unRedeemersL
     protVer = pp ^. ppProtocolVersionL
     costModels = costModelsValid $ pp ^. ppCostModelsL
     ScriptsProvided scriptsProvided = getScriptsProvided utxo tx

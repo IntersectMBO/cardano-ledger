@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
@@ -83,12 +83,8 @@ spec = describe "UTXOS" $
             mkBasicTx mkBasicTxBody
               & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
               & isValidTxL .~ IsValid False
-              & witsTxL . rdmrsTxWitsL
-                .~ Redeemers
-                  ( Map.singleton
-                      (mkSpendingPurpose $ AsIx 0)
-                      (Data $ P.I 32, exUnits)
-                  )
+              & witsTxL . rdmrsTxWitsL . unRedeemersL
+                .~ Map.singleton (mkSpendingPurpose $ AsIx 0) (Data $ P.I 32, exUnits)
 
         describe "Scripts pass in phase 2" $ do
           let scripts' = drop 1 scripts

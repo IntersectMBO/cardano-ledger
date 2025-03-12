@@ -43,7 +43,7 @@ import Cardano.Ledger.Alonzo.Plutus.TxInfo (
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import Cardano.Ledger.Alonzo.Tx (Data)
-import Cardano.Ledger.Alonzo.TxWits (unRedeemers)
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
@@ -218,8 +218,8 @@ transTxRedeemers ::
 transTxRedeemers proxy pv tx =
   PV2.unsafeFromList
     <$> mapM
-      (transRedeemerPtr proxy pv (tx ^. bodyTxL))
-      (Map.toList (unRedeemers $ tx ^. witsTxL . rdmrsTxWitsL))
+      (transRedeemerPtr proxy pv $ tx ^. bodyTxL)
+      (Map.toList $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
 
 instance EraPlutusContext BabbageEra where
   type ContextError BabbageEra = BabbageContextError BabbageEra

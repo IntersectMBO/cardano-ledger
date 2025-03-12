@@ -54,7 +54,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (..),
   Redeemers (..),
   TxDats (..),
-  nullRedeemers,
+  unRedeemersL,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes
@@ -407,7 +407,7 @@ instance EraGen AlonzoEra where
       takeUntilSum s = map fst . takeUntil ((s >=) . snd) . scanl1 (\(_, s') (x, n) -> (x, s' + n))
       takeUntil p xs = let (y, n) = span p xs in y ++ take 1 n
       newCollaterals =
-        if nullRedeemers (wits ^. rdmrsTxWitsL)
+        if null $ wits ^. rdmrsTxWitsL . unRedeemersL
           then mempty
           else Set.fromList . takeUntilSum requiredCollateral $ txInAmounts potentialCollateral
       newInputs = atbInputs txb <> txin

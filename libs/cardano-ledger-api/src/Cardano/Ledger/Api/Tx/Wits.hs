@@ -29,6 +29,7 @@ module Cardano.Ledger.Api.Tx.Wits (
   rdmrsTxWitsL,
   Redeemers (..),
   unRedeemers,
+  unRedeemersL,
   PlutusPurpose,
   AlonzoPlutusPurpose (..),
   AsIx (..),
@@ -53,6 +54,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   hashDataTxWitsL,
   rdmrsTxWitsL,
   unRedeemers,
+  unRedeemersL,
   unTxDats,
  )
 import Cardano.Ledger.Api.Era ()

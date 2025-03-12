@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowPredFailure (..),
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unRedeemers)
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..), unRedeemersL)
 import Cardano.Ledger.BaseTypes (Mismatch (..), StrictMaybe (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -37,7 +37,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import qualified Data.Set as Set
-import Lens.Micro (Lens', lens, (%~), (&), (.~), (<>~), (^.))
+import Lens.Micro ((%~), (&), (.~), (<>~), (^.))
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.ImpTest
@@ -67,8 +67,6 @@ spec = describe "Invalid transactions" $ do
 
   let resetAddrWits tx = updateAddrTxWits $ tx & witsTxL . addrTxWitsL .~ []
       fixupResetAddrWits = fixupPPHash >=> resetAddrWits
-      redeemersL :: Lens' (Redeemers era) (Map.Map (PlutusPurpose AsIx era) (Data era, ExUnits))
-      redeemersL = lens unRedeemers (const $ Redeemers @era)
       -- PlutusPurpose serialization wasn't fixed until Conway
       withPlutusPurposeRoundTripFailures =
         if eraProtVerLow @era < natVersion @9
@@ -176,7 +174,7 @@ spec = describe "Invalid transactions" $ do
                 , mkUnRegTxCert cred
                 ]
           tx <- submitTx $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ certs)
-          let redeemers = tx ^. witsTxL . rdmrsTxWitsL . redeemersL
+          let redeemers = tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
           Map.keys redeemers
             `shouldBe` [ mkCertifyingPurpose $ AsIx 1
                        , mkCertifyingPurpose $ AsIx 2
@@ -201,11 +199,11 @@ spec = describe "Invalid transactions" $ do
           let tx =
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . inputsTxBodyL .~ [txIn]
-                  & witsTxL . rdmrsTxWitsL . redeemersL .~ mintingRedeemers
+                  & witsTxL . rdmrsTxWitsL . unRedeemersL .~ mintingRedeemers
               mintingRedeemers = Map.singleton (mkMintingPurpose $ AsIx 0) (Data $ P.I 32, ExUnits 0 0)
               isSpender = isJust . toSpendingPurpose @era @AsIx
               removeSpenders = Map.filterWithKey (const . not . isSpender)
-              dropSpendingRedeemers = pure . (witsTxL . rdmrsTxWitsL . redeemersL %~ removeSpenders)
+              dropSpendingRedeemers = pure . (witsTxL . rdmrsTxWitsL . unRedeemersL %~ removeSpenders)
           withPostFixup (dropSpendingRedeemers >=> fixupPPHash >=> resetAddrWits) $
             withPlutusPurposeRoundTripFailures $
               submitFailingTx
@@ -245,10 +243,10 @@ spec = describe "Invalid transactions" $ do
                     tx =
                       mkBasicTx mkBasicTxBody
                         & bodyTxL . inputsTxBodyL <>~ [txIn]
-                        & witsTxL . rdmrsTxWitsL . redeemersL <>~ Map.singleton purpose redeemer
+                        & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert purpose redeemer
                 txFixed <- fixupTx tx
                 -- The `Ix` of the redeemer may have been changed by `fixupRedeemerIndices`
-                let fixedRedeemers = txFixed ^. witsTxL . rdmrsTxWitsL . redeemersL
+                let fixedRedeemers = txFixed ^. witsTxL . rdmrsTxWitsL . unRedeemersL
                     extraRedeemers = Map.keys $ Map.filter (== redeemer) fixedRedeemers
                 withNoFixup $
                   withPlutusPurposeRoundTripFailures $
@@ -278,7 +276,7 @@ spec = describe "Invalid transactions" $ do
                   tx =
                     mkBasicTx mkBasicTxBody
                       & bodyTxL . certsTxBodyL <>~ certs
-                      & witsTxL . rdmrsTxWitsL . redeemersL <>~ redeemers
+                      & witsTxL . rdmrsTxWitsL . unRedeemersL <>~ redeemers
               withPlutusPurposeRoundTripFailures $
                 submitFailingTx
                   tx

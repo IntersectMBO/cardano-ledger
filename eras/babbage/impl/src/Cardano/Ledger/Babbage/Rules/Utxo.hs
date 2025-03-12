@@ -46,7 +46,7 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   validateWrongNetworkInTxBody,
  )
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
-import Cardano.Ledger.Alonzo.TxWits (nullRedeemers)
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXO)
@@ -218,7 +218,7 @@ feesOK pp tx u@(UTxO utxo) =
             (minFee <= theFee)
             (injectFailure $ FeeTooSmallUTxO Mismatch {mismatchSupplied = theFee, mismatchExpected = minFee})
         , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
-          unless (nullRedeemers $ tx ^. witsTxL . rdmrsTxWitsL) $
+          unless (null $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL) $
             validateTotalCollateral pp txBody utxoCollateral
         ]
 

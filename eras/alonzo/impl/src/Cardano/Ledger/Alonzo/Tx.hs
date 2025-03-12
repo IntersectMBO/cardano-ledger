@@ -94,9 +94,8 @@ import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
   TxDats (..),
   nullDats,
-  nullRedeemers,
   txrdmrs,
-  unRedeemers,
+  unRedeemersL,
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -124,14 +123,12 @@ import Control.Arrow (left)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (
   StrictMaybe (..),
   maybeToStrictMaybe,
   strictMaybeToMaybe,
  )
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -308,7 +305,7 @@ hashScriptIntegrity ::
   TxDats era ->
   StrictMaybe ScriptIntegrityHash
 hashScriptIntegrity langViews rdmrs dats =
-  if nullRedeemers rdmrs && Set.null langViews && nullDats dats
+  if null (rdmrs ^. unRedeemersL) && null langViews && nullDats dats
     then SNothing
     else SJust (hashAnnotated (ScriptIntegrity rdmrs dats langViews))
 
@@ -351,8 +348,7 @@ totExUnits ::
   (EraTx era, AlonzoEraTxWits era) =>
   Tx era ->
   ExUnits
-totExUnits tx =
-  foldMap snd . Map.elems . unRedeemers $ tx ^. witsTxL . rdmrsTxWitsL
+totExUnits tx = foldMap snd $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
 
 --------------------------------------------------------------------------------
 -- Serialisation

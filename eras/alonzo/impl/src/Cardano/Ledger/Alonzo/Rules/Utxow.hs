@@ -39,7 +39,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (
-  unRedeemers,
+  unRedeemersL,
   unTxDats,
  )
 import Cardano.Ledger.Alonzo.UTxO (
@@ -274,7 +274,7 @@ hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded
         ]
       (extraRdmrs, missingRdmrs) =
         extSymmetricDifference
-          (Map.keys $ unRedeemers $ tx ^. witsTxL . rdmrsTxWitsL)
+          (Map.keys $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL)
           id
           redeemersNeeded
           fst

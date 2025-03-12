@@ -25,6 +25,7 @@
 module Cardano.Ledger.Alonzo.TxWits (
   Redeemers (Redeemers),
   RedeemersRaw,
+  unRedeemersL,
   unRedeemers,
   nullRedeemers,
   lookupRedeemer,
@@ -202,8 +203,16 @@ pattern Redeemers rs <-
 unRedeemers :: Redeemers era -> Map (PlutusPurpose AsIx era) (Data era, ExUnits)
 unRedeemers = unRedeemersRaw . getMemoRawType
 
+-- Conceptually, this is an Iso' but vanilla microlens doesn't have Iso's
+unRedeemersL ::
+  forall era.
+  AlonzoEraScript era => Lens' (Redeemers era) (Map.Map (PlutusPurpose AsIx era) (Data era, ExUnits))
+unRedeemersL f = fmap Redeemers . f . unRedeemers
+{-# INLINE unRedeemersL #-}
+
 nullRedeemers :: Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
+{-# DEPRECATED nullRedeemers "In favor of `unRedeemersL`" #-}
 
 emptyTxWitness :: AlonzoEraScript era => AlonzoTxWitsRaw era
 emptyTxWitness = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
@@ -217,6 +226,7 @@ lookupRedeemer ::
   Redeemers era ->
   Maybe (Data era, ExUnits)
 lookupRedeemer key = Map.lookup key . unRedeemers
+{-# DEPRECATED lookupRedeemer "In favor of `unRedeemersL`" #-}
 
 -- | Upgrade redeemers from one era to another. The underlying data structure
 -- will remain identical, but the memoised serialisation may change to reflect
@@ -548,7 +558,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
         !> Omit null (Key 6 $ encodePlutus SPlutusV2)
         !> Omit null (Key 7 $ encodePlutus SPlutusV3)
         !> Omit nullDats (Key 4 $ To dats)
-        !> Omit nullRedeemers (Key 5 $ To rdmrs)
+        !> Omit (null . unRedeemers) (Key 5 $ To rdmrs)
     where
       encodePlutus ::
         PlutusLanguage l =>

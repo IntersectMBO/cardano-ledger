@@ -60,7 +60,7 @@ import Cardano.Ledger.Alonzo.Rules (
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..), unRedeemersL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -180,10 +180,7 @@ fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
     updateIndex (SpendingPurpose (AsIx i))
       | i >= rootTxIndex = SpendingPurpose . AsIx $ succ i
     updateIndex x = x
-  pure $
-    tx
-      & witsTxL . rdmrsTxWitsL
-        %~ (\(Redeemers m) -> Redeemers $ Map.mapKeys updateIndex m)
+  pure $ tx & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.mapKeys updateIndex
 
 fixupRedeemers ::
   forall era.
@@ -193,9 +190,9 @@ fixupRedeemers ::
 fixupRedeemers tx = impAnn "fixupRedeemers" $ do
   contexts <- impGetPlutusContexts tx
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  let Redeemers oldRedeemers = tx ^. witsTxL . rdmrsTxWitsL
+  let oldRedeemers = tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
   txWithMaxExUnits <- txWithMaxRedeemers tx
-  let Redeemers newMaxRedeemers = txWithMaxExUnits ^. witsTxL . rdmrsTxWitsL
+  let newMaxRedeemers = txWithMaxExUnits ^. witsTxL . rdmrsTxWitsL . unRedeemersL
   utxo <- getUTxO
   Globals {systemStart, epochInfo} <- use impGlobalsL
   let reports = evalTxExUnits pp txWithMaxExUnits utxo epochInfo systemStart
@@ -221,7 +218,7 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
   newRedeemers <- Map.fromList . catMaybes <$> mapM mkNewRedeemers contexts
   pure $
     tx
-      & witsTxL . rdmrsTxWitsL .~ Redeemers (Map.unions [oldRedeemers, newRedeemers, newMaxRedeemers])
+      & witsTxL . rdmrsTxWitsL . unRedeemersL .~ Map.unions [oldRedeemers, newRedeemers, newMaxRedeemers]
 
 txWithMaxRedeemers ::
   forall era.
@@ -236,7 +233,7 @@ txWithMaxRedeemers tx = do
     mkNewMaxRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
       (hoistPlutusPurpose @era toAsIx prpIdx, (Data dat, maxExUnit))
     newMaxRedeemers = Map.fromList (mkNewMaxRedeemers <$> contexts)
-  pure $ tx & witsTxL . rdmrsTxWitsL .~ Redeemers newMaxRedeemers
+  pure $ tx & witsTxL . rdmrsTxWitsL . unRedeemersL .~ newMaxRedeemers
 
 fixupScriptWits ::
   forall era.
