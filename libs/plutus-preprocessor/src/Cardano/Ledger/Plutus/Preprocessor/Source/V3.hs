@@ -4,8 +4,10 @@ module Cardano.Ledger.Plutus.Preprocessor.Source.V3 where
 
 import Language.Haskell.TH
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.Data.V3 as PV3D
 import PlutusTx (fromBuiltinData, unsafeFromBuiltinData)
 import qualified PlutusTx.AssocMap as PAM
+import qualified PlutusTx.Data.List as PLD
 import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Prelude as P
 
@@ -16,10 +18,10 @@ alwaysSucceedsNoDatumQ =
     alwaysSucceedsNoDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo ->
+          PV3D.ScriptContext _txInfo (PV3D.Redeemer _redeemer) scriptInfo ->
             case scriptInfo of
               -- We fail if this is a spending script with a Datum
-              PV3.SpendingScript _ (Just _) -> False
+              PV3D.SpendingScript _ (Just _) -> False
               _ -> True
     |]
 
@@ -31,7 +33,7 @@ alwaysSucceedsWithDatumQ =
       P.check $
         case unsafeFromBuiltinData arg of
           -- Expecting a spending script with a Datum, thus failing when it is not
-          PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _ (Just _)) -> True
+          PV3D.ScriptContext _txInfo (PV3D.Redeemer _redeemer) (PV3D.SpendingScript _ (Just _)) -> True
           _ -> False
     |]
 
@@ -42,10 +44,10 @@ alwaysFailsNoDatumQ =
     alwaysFailsNoDatum arg =
       P.check $
         case fromBuiltinData arg of
-          Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo) ->
+          Just (PV3D.ScriptContext _txInfo (PV3D.Redeemer _redeemer) scriptInfo) ->
             case scriptInfo of
               -- We fail only if this is not a spending script with a Datum
-              PV3.SpendingScript _ (Just _) -> True
+              PV3D.SpendingScript _ (Just _) -> True
               _ -> False
           Nothing -> True
     |]
@@ -57,10 +59,10 @@ alwaysFailsWithDatumQ =
     alwaysFailsWithDatum arg =
       P.check $
         case fromBuiltinData arg of
-          Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo) ->
+          Just (PV3D.ScriptContext _txInfo (PV3D.Redeemer _redeemer) scriptInfo) ->
             case scriptInfo of
               -- We fail only if this is a spending script with a Datum
-              PV3.SpendingScript _ (Just _) -> False
+              PV3D.SpendingScript _ (Just _) -> False
               _ -> True
           Nothing -> True
     |]
@@ -72,7 +74,7 @@ redeemerSameAsDatumQ =
     redeemerSameAsDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) (PV3.SpendingScript _ (Just (PV3.Datum datum))) ->
+          PV3D.ScriptContext _txInfo (PV3D.Redeemer redeemer) (PV3D.SpendingScript _ (Just (PV3D.Datum datum))) ->
             -- Expecting a spending script with a Datum, thus failing when it is not
             datum P.== redeemer
           _ -> False
@@ -85,7 +87,7 @@ evenDatumQ =
     evenDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _ (Just (PV3.Datum datum))) ->
+          PV3D.ScriptContext _txInfo _redeemer (PV3D.SpendingScript _ (Just (PV3D.Datum datum))) ->
             -- Expecting a spending script with a Datum, thus failing when it is not
             P.modulo (P.unsafeDataAsI datum) 2 P.== 0
     |]
@@ -97,10 +99,10 @@ evenRedeemerNoDatumQ =
     evenRedeemerNoDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) scriptInfo ->
+          PV3D.ScriptContext _txInfo (PV3D.Redeemer redeemer) scriptInfo ->
             case scriptInfo of
               -- Expecting No Datum, therefore should fail when it is supplied
-              PV3.SpendingScript _ (Just _) -> False
+              PV3D.SpendingScript _ (Just _) -> False
               _ -> P.modulo (P.unsafeDataAsI redeemer) 2 P.== 0
     |]
 
@@ -111,7 +113,7 @@ evenRedeemerWithDatumQ =
     evenRedeemerWithDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) (PV3.SpendingScript _ (Just _)) ->
+          PV3D.ScriptContext _txInfo (PV3D.Redeemer redeemer) (PV3D.SpendingScript _ (Just _)) ->
             -- Expecting a spending script with a Datum, thus failing when it is not
             P.modulo (P.unsafeDataAsI redeemer) 2 P.== 0
           _ -> False
@@ -155,8 +157,8 @@ purposeIsWellformedWithDatumQ =
     purposeIsWellformedWithDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext txInfo _redeemer (PV3.SpendingScript txOutRef (Just _)) ->
-            not $ null $ P.filter ((txOutRef P.==) . PV3.txInInfoOutRef) $ PV3.txInfoInputs txInfo
+          PV3D.ScriptContext txInfo _redeemer (PV3D.SpendingScript txOutRef (Just _)) ->
+            not $ PLD.null $ PLD.filter ((txOutRef P.==) . PV3D.txInInfoOutRef) $ PV3D.txInfoInputs txInfo
           _ -> False
     |]
 
@@ -180,9 +182,9 @@ inputsOutputsAreNotEmptyNoDatumQ =
       P.check $
         case unsafeFromBuiltinData arg of
           -- When there is a datum supplied, we need to fail.
-          PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _txOutRef (Just _)) -> False
-          PV3.ScriptContext txInfo _redeemer _scriptPurpose ->
-            not $ null (PV3.txInfoInputs txInfo) || null (PV3.txInfoOutputs txInfo)
+          PV3D.ScriptContext _txInfo _redeemer (PV3D.SpendingScript _txOutRef (Just _)) -> False
+          PV3D.ScriptContext txInfo _redeemer _scriptPurpose ->
+            not $ PLD.null (PV3D.txInfoInputs txInfo) || PLD.null (PV3D.txInfoOutputs txInfo)
     |]
 
 inputsOutputsAreNotEmptyWithDatumQ :: Q [Dec]
@@ -192,7 +194,7 @@ inputsOutputsAreNotEmptyWithDatumQ =
     inputsOutputsAreNotEmptyWithDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _txOutRef Nothing) -> False
-          PV3.ScriptContext txInfo _redeemer _scriptPurpose ->
-            not $ null (PV3.txInfoInputs txInfo) || null (PV3.txInfoOutputs txInfo)
+          PV3D.ScriptContext _txInfo _redeemer (PV3D.SpendingScript _txOutRef Nothing) -> False
+          PV3D.ScriptContext txInfo _redeemer _scriptPurpose ->
+            not $ PLD.null (PV3D.txInfoInputs txInfo) || PLD.null (PV3D.txInfoOutputs txInfo)
     |]
