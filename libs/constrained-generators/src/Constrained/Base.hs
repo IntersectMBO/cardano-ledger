@@ -123,7 +123,9 @@ class LogicRequires s t dom rng => Logic s t dom rng | s -> t where
     t s dom rng -> List Term dom -> Evidence (AppRequires s t dom rng) -> Maybe (Term rng)
   rewriteRules _ _ _ = Nothing
 
-  mapTypeSpec :: (HasSpec a, HasSpec b) => t s '[a] b -> TypeSpec a -> Specification b
+  mapTypeSpec ::
+    forall a b.
+    (dom ~ '[a], rng ~ b, HasSpec a, HasSpec b) => t s '[a] b -> TypeSpec a -> Specification b
   mapTypeSpec _ts _spec = TrueSpec
 
   saturate :: t s dom Bool -> List Term dom -> [Pred]
@@ -985,7 +987,12 @@ instance Pretty Pred where
   pretty = \case
     ElemPred True term vs ->
       align $
-        sep ["memberPred", pretty term, brackets (fillSep (punctuate "," (map viaShow (NE.toList vs))))]
+        sep
+          [ "memberPred"
+          , pretty term
+          , "(" <> viaShow (length vs) <> " items)"
+          , brackets (fillSep (punctuate "," (map viaShow (NE.toList vs))))
+          ]
     ElemPred False term vs -> align $ sep ["notMemberPred", pretty term, fillSep (punctuate "," (map viaShow (NE.toList vs)))]
     Exists _ (x :-> p) -> align $ sep ["exists" <+> viaShow x <+> "in", pretty p]
     Let t (x :-> p) -> align $ sep ["let" <+> viaShow x <+> "=" /> pretty t <+> "in", pretty p]

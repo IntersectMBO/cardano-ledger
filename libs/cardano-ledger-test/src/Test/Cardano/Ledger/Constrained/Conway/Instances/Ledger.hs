@@ -769,10 +769,7 @@ instance (Typeable s, StringLike s) => Logic "strLen_" StringW '[s] Int where
   propagate ctx _ =
     ErrorSpec $ pure ("Logic instance for StrLenW with wrong number of arguments. " ++ show ctx)
 
-  -- mapTypeSpec StrLenW ss = getLengthSpec @s ss
-  mapTypeSpec (StrLenW @b) ss
-    | Just Refl <- eqT @s @b = getLengthSpec @s ss
-  mapTypeSpec _ _ = error "No more cases"
+  mapTypeSpec StrLenW ss = getLengthSpec @s ss
 
 class StringLike s where
   lengthSpec :: Specification Int -> TypeSpec s
@@ -1779,10 +1776,7 @@ instance (Typeable a, Typeable b, CoercibleLike a b, Coercible a b) => Logic "co
   propagate ctx _ =
     ErrorSpec $ pure ("Logic instance for CoerceW with wrong number of arguments. " ++ show ctx)
 
-  -- FIX ME mapTypeSpec CoerceW ss = getCoerceSpec @a ss
-  mapTypeSpec (CoerceW @c) ss
-    | Just Refl <- eqT @c @a = getCoerceSpec @a ss
-  mapTypeSpec _ _ = error "No more cases"
+  mapTypeSpec CoerceW ss = getCoerceSpec @a ss
 
 coerce_ ::
   forall a b.

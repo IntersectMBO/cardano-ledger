@@ -477,6 +477,3 @@ foldWithSizeTests = do
 
 -- TODO Needs to sample like this: OR [pick t c | t <- total, c <- count]
 -- prop "count =0, total is 0,1,2" $ testFoldSpec @Int (between 0 1) evenSpec (between 0 2) Succeed
-
-main :: IO ()
-main = testAll
