@@ -167,7 +167,15 @@ spec = describe "Valid transactions" $ do
                 & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
           expectTxSuccess =<< submitTx tx
 
-  it "Multiple identical certificates" $ do
-    const $ pendingWith "not implemented yet"
+        it "Multiple identical certificates" $ do
+          let
+            scriptHash = alwaysSucceedsNoDatumHash
+          void . registerStakeCredential $ ScriptHashObj scriptHash
+          let
+            txBody =
+              mkBasicTxBody
+                & certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> replicate 2 scriptHash)
+          expectTxSuccess <=< submitTx $ mkBasicTx txBody
+
   it "Non-script output with datum" $ do
     const $ pendingWith "not implemented yet"
