@@ -188,7 +188,6 @@ instanRewX = do
 
 class
   ( EraSpecPParams era
-  , HasSpec ConwayFn (InstantStake era)
   , HasSpec ConwayFn t
   ) =>
   WellFormed t era
@@ -207,30 +206,30 @@ class
 -- The WellFormed instances
 -- ==============================================================
 
-instance (EraSpecPParams era, HasSpec ConwayFn (InstantStake era)) => WellFormed (PParams era) era where
+instance EraSpecPParams era => WellFormed (PParams era) era where
   wff = ppX @era
   wffWithPP = pure
 
-instance (EraSpecPParams era, HasSpec ConwayFn (InstantStake era)) => WellFormed AccountState era where
+instance EraSpecPParams era => WellFormed AccountState era where
   wff = acctX
   wffWithPP _ = acctX
 
 instance
-  (GenScript era, HasSpec ConwayFn (InstantStake era), EraSpecPParams era) =>
+  (GenScript era, EraSpecPParams era) =>
   WellFormed (PState era) era
   where
   wff = psX
   wffWithPP _ = psX
 
 instance
-  (EraSpecPParams era, HasSpec ConwayFn (InstantStake era), EraSpecLedger era ConwayFn) =>
+  (EraSpecPParams era, EraSpecLedger era ConwayFn) =>
   WellFormed (DState era) era
   where
   wff = dsX
   wffWithPP _ = dsX
 
 instance
-  (GenScript era, HasSpec ConwayFn (InstantStake era), EraSpecPParams era) =>
+  (GenScript era, EraSpecPParams era) =>
   WellFormed (VState era) era
   where
   wff = vsX
@@ -247,12 +246,12 @@ instance
   wff = csX
 
 instance
-  ( EraSpecPParams era
-  , EraSpecLedger era ConwayFn
-  , HasSpec ConwayFn (InstantStake era)
-  , CertState era ~ ConwayCertState era
+  ( EraSpecPParams ConwayEra
+  , EraSpecLedger ConwayEra ConwayFn
+  , HasSpec ConwayFn (InstantStake ConwayEra)
+  , CertState ConwayEra ~ ConwayCertState ConwayEra
   ) =>
-  WellFormed (ConwayCertState era) era
+  WellFormed (ConwayCertState ConwayEra) ConwayEra
   where
   wff = csX
 
