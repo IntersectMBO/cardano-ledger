@@ -93,9 +93,9 @@ import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (..),
   Redeemers (..),
   TxDats (..),
-  nullDats,
   txrdmrs,
   unRedeemersL,
+  unTxDatsL,
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -289,7 +289,7 @@ deriving instance AlonzoEraScript era => NoThunks (ScriptIntegrity era)
 -- Instead, we must use a reproducable serialization
 instance Era era => SafeToHash (ScriptIntegrity era) where
   originalBytes (ScriptIntegrity m d l) =
-    let dBytes = if nullDats d then mempty else originalBytes d
+    let dBytes = if null (d ^. unTxDatsL) then mempty else originalBytes d
         lBytes = serialize' (eraProtVerLow @era) (encodeLangViews l)
      in originalBytes m <> dBytes <> lBytes
 
@@ -305,7 +305,7 @@ hashScriptIntegrity ::
   TxDats era ->
   StrictMaybe ScriptIntegrityHash
 hashScriptIntegrity langViews rdmrs dats =
-  if null (rdmrs ^. unRedeemersL) && null langViews && nullDats dats
+  if null (rdmrs ^. unRedeemersL) && null langViews && null (dats ^. unTxDatsL)
     then SNothing
     else SJust (hashAnnotated (ScriptIntegrity rdmrs dats langViews))
 

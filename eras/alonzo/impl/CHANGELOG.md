@@ -24,8 +24,8 @@
 * Stop re-exporting deprecated `AuxiliaryDataHash` from `Cardano.Ledger.Alonzo.TxAuxData`
 * Deprecate `Alonzo` type synonym
 * Remove crypto parametrization from `AlonzoEra`
-* Add `unRedeemersL`
-* Deprecate `lookupRedeemer`, `nullRedeemers`
+* Add `unRedeemersL`, `unTxDatsL`
+* Deprecate `lookupRedeemer`, `nullRedeemers`, `nullDats`
 
 ### `testlib`
 

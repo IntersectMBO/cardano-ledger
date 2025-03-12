@@ -40,7 +40,7 @@ import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (
   unRedeemersL,
-  unTxDats,
+  unTxDatsL,
  )
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
@@ -237,7 +237,7 @@ missingRequiredDatums utxo tx = do
   let txBody = tx ^. bodyTxL
       scriptsProvided = getScriptsProvided utxo tx
       (inputHashes, txInsNoDataHash) = getInputDataHashesTxBody utxo txBody scriptsProvided
-      txHashes = domain (unTxDats $ tx ^. witsTxL . datsTxWitsL)
+      txHashes = domain (tx ^. witsTxL . datsTxWitsL . unTxDatsL)
       unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
       allowedSupplementalDataHashes = getSupplementalDataHashes utxo txBody
       supplimentalDatumHashes = eval (txHashes ➖ inputHashes)

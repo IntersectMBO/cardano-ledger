@@ -56,6 +56,7 @@ module Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
   hashDataTxWitsL,
   unTxDats,
+  unTxDatsL,
   nullDats,
   alonzoEqTxWitsRaw,
 )
@@ -304,7 +305,7 @@ deriving instance
 
 isEmptyTxWitness :: AlonzoEraScript era => AlonzoTxWits era -> Bool
 isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e)) =
-  Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
+  Set.null a && Set.null b && Map.null c && Map.null (d ^. unTxDatsL) && Map.null e
 
 -- =====================================================
 newtype TxDatsRaw era = TxDatsRaw {unTxDatsRaw :: Map DataHash (Data era)}
@@ -331,8 +332,14 @@ pattern TxDats m <- (getMemoRawType -> TxDatsRaw m)
 unTxDats :: TxDats era -> Map DataHash (Data era)
 unTxDats (TxDats' m) = m
 
+-- Conceptually, this is an Iso' but vanilla microlens doesn't have Iso's
+unTxDatsL :: forall era. Era era => Lens' (TxDats era) (Map DataHash (Data era))
+unTxDatsL f = fmap TxDats . f . unTxDats
+{-# INLINE unTxDatsL #-}
+
 nullDats :: TxDats era -> Bool
 nullDats (TxDats' d) = Map.null d
+{-# DEPRECATED nullDats "In favor of `unTxDatsL`" #-}
 
 instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
   decCBOR =
@@ -557,7 +564,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
         !> Omit null (Key 3 $ encodePlutus SPlutusV1)
         !> Omit null (Key 6 $ encodePlutus SPlutusV2)
         !> Omit null (Key 7 $ encodePlutus SPlutusV3)
-        !> Omit nullDats (Key 4 $ To dats)
+        !> Omit (null . unTxDats) (Key 4 $ To dats)
         !> Omit (null . unRedeemers) (Key 5 $ To rdmrs)
     where
       encodePlutus ::
