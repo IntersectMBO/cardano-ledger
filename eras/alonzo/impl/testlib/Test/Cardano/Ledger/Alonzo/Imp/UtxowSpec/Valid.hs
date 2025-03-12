@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
@@ -167,7 +167,15 @@ spec = describe "Valid transactions" $ do
                 & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
           expectTxSuccess =<< submitTx tx
 
-  it "Multiple identical certificates" $ do
-    const $ pendingWith "not implemented yet"
+        -- Conway fixed the bug that was causing this to fail
+        when (eraProtVerLow @era >= natVersion @9) $ do
+          it "Multiple identical certificates" $ do
+            let scriptHash = alwaysSucceedsNoDatumHash
+            void . registerStakeCredential $ ScriptHashObj scriptHash
+            let tx =
+                  mkBasicTx mkBasicTxBody
+                    & bodyTxL . certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> replicate 2 scriptHash)
+            expectTxSuccess =<< submitTx tx
+
   it "Non-script output with datum" $ do
     const $ pendingWith "not implemented yet"

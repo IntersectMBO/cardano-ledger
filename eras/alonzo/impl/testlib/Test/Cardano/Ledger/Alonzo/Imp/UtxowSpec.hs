@@ -14,7 +14,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
   AlonzoUtxowPredFailure,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
+import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure, ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid as Invalid
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid as Valid
 import Test.Cardano.Ledger.Alonzo.ImpTest
@@ -23,6 +23,7 @@ import Test.Cardano.Ledger.Common
 spec ::
   forall era.
   ( AlonzoEraImp era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
