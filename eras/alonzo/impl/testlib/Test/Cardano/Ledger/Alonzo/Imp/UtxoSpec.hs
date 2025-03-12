@@ -11,7 +11,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.BaseTypes (Mismatch (..), Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import qualified Cardano.Ledger.Metadata as M
@@ -20,7 +20,7 @@ import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Control.Monad (forM)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
-import Lens.Micro (to, (&), (.~), (<>~), (^.))
+import Lens.Micro (to, (%~), (&), (.~), (<>~), (^.))
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -53,7 +53,7 @@ spec = describe "UTXO" $ do
             tx =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . inputsTxBodyL .~ [txIn]
-                & witsTxL . rdmrsTxWitsL <>~ Redeemers (Map.singleton prp (dat, txExUnits))
+                & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert prp (dat, txExUnits)
           submitFailingTx
             tx
             [ injectFailure $

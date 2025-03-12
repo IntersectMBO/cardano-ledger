@@ -10,6 +10,7 @@
   * `HotCredAuthStatus` and `CommitteeMemberState`
   * `DecAddr`
   * Many other re-exported types. See individual packages for changelog
+* Add `unRedeemersL`, `unTxDatsL`
 
 ## 1.10.0.0
 

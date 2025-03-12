@@ -11,7 +11,7 @@ module Cardano.Ledger.Babbage.UTxO (
   getReferenceScriptsNonDistinct,
 ) where
 
-import Cardano.Ledger.Alonzo.TxWits (unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded,
@@ -87,7 +87,7 @@ getBabbageSpendingDatum (UTxO utxo) tx sp = do
   txOut <- Map.lookup txIn utxo
   let txOutDataFromWits = do
         dataHash <- strictMaybeToMaybe (txOut ^. dataHashTxOutL)
-        Map.lookup dataHash (unTxDats (tx ^. witsTxL . datsTxWitsL))
+        Map.lookup dataHash (tx ^. witsTxL . datsTxWitsL . unTxDatsL)
   strictMaybeToMaybe (txOut ^. dataTxOutL) <|> txOutDataFromWits
 
 -- Figure 3 of the Specification

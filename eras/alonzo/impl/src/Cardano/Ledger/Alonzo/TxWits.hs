@@ -25,6 +25,7 @@
 module Cardano.Ledger.Alonzo.TxWits (
   Redeemers (Redeemers),
   RedeemersRaw,
+  unRedeemersL,
   unRedeemers,
   nullRedeemers,
   lookupRedeemer,
@@ -55,6 +56,7 @@ module Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits (..),
   hashDataTxWitsL,
   unTxDats,
+  unTxDatsL,
   nullDats,
   alonzoEqTxWitsRaw,
 )
@@ -202,8 +204,16 @@ pattern Redeemers rs <-
 unRedeemers :: Redeemers era -> Map (PlutusPurpose AsIx era) (Data era, ExUnits)
 unRedeemers = unRedeemersRaw . getMemoRawType
 
+-- Conceptually, this is an Iso' but vanilla microlens doesn't have Iso's
+unRedeemersL ::
+  forall era.
+  AlonzoEraScript era => Lens' (Redeemers era) (Map.Map (PlutusPurpose AsIx era) (Data era, ExUnits))
+unRedeemersL f = fmap Redeemers . f . unRedeemers
+{-# INLINE unRedeemersL #-}
+
 nullRedeemers :: Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
+{-# DEPRECATED nullRedeemers "In favor of `unRedeemersL`" #-}
 
 emptyTxWitness :: AlonzoEraScript era => AlonzoTxWitsRaw era
 emptyTxWitness = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
@@ -217,6 +227,7 @@ lookupRedeemer ::
   Redeemers era ->
   Maybe (Data era, ExUnits)
 lookupRedeemer key = Map.lookup key . unRedeemers
+{-# DEPRECATED lookupRedeemer "In favor of `unRedeemersL`" #-}
 
 -- | Upgrade redeemers from one era to another. The underlying data structure
 -- will remain identical, but the memoised serialisation may change to reflect
@@ -294,7 +305,7 @@ deriving instance
 
 isEmptyTxWitness :: AlonzoEraScript era => AlonzoTxWits era -> Bool
 isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e)) =
-  Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
+  Set.null a && Set.null b && Map.null c && Map.null (d ^. unTxDatsL) && Map.null e
 
 -- =====================================================
 newtype TxDatsRaw era = TxDatsRaw {unTxDatsRaw :: Map DataHash (Data era)}
@@ -321,8 +332,14 @@ pattern TxDats m <- (getMemoRawType -> TxDatsRaw m)
 unTxDats :: TxDats era -> Map DataHash (Data era)
 unTxDats (TxDats' m) = m
 
+-- Conceptually, this is an Iso' but vanilla microlens doesn't have Iso's
+unTxDatsL :: forall era. Era era => Lens' (TxDats era) (Map DataHash (Data era))
+unTxDatsL f = fmap TxDats . f . unTxDats
+{-# INLINE unTxDatsL #-}
+
 nullDats :: TxDats era -> Bool
 nullDats (TxDats' d) = Map.null d
+{-# DEPRECATED nullDats "In favor of `unTxDatsL`" #-}
 
 instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
   decCBOR =
@@ -547,8 +564,8 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
         !> Omit null (Key 3 $ encodePlutus SPlutusV1)
         !> Omit null (Key 6 $ encodePlutus SPlutusV2)
         !> Omit null (Key 7 $ encodePlutus SPlutusV3)
-        !> Omit nullDats (Key 4 $ To dats)
-        !> Omit nullRedeemers (Key 5 $ To rdmrs)
+        !> Omit (null . unTxDats) (Key 4 $ To dats)
+        !> Omit (null . unRedeemers) (Key 5 $ To rdmrs)
     where
       encodePlutus ::
         PlutusLanguage l =>

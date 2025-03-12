@@ -201,8 +201,8 @@ exampleTx pf ptr =
           .~ Set.fromList [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
         & hashScriptTxWitsL .~ [always 3 pf]
         & hashDataTxWitsL .~ [Data (PV1.I 123)]
-        & rdmrsTxWitsL
-          .~ Redeemers (Map.singleton ptr (Data (PV1.I 42), ExUnits 5000 5000))
+        & rdmrsTxWitsL . unRedeemersL
+          %~ Map.insert ptr (Data (PV1.I 42), ExUnits 5000 5000)
 
 validatingBody ::
   forall era.
@@ -268,23 +268,18 @@ updateTxExUnits ::
 updateTxExUnits tx utxo ei ss err =
   let res :: RedeemerReport era
       res = evalTxExUnits testPParams tx utxo ei ss
-   in replaceRdmrs tx <$> traverse (failLeft err) res
+   in updateRdmrUnits tx <$> traverse (failLeft err) res
 
-replaceRdmrs ::
+updateRdmrUnits ::
   forall era.
   (AlonzoEraTxWits era, EraTx era) =>
   Tx era ->
   Map (PlutusPurpose AsIx era) ExUnits ->
   Tx era
-replaceRdmrs tx rdmrs = tx & witsTxL . rdmrsTxWitsL .~ newRdmrs
+updateRdmrUnits tx rdmrs = tx & witsTxL . rdmrsTxWitsL . unRedeemersL %~ updateFrom rdmrs
   where
-    newRdmrs = Map.foldrWithKey replaceRdmr (tx ^. witsTxL . rdmrsTxWitsL) rdmrs
-
-    replaceRdmr :: PlutusPurpose AsIx era -> ExUnits -> Redeemers era -> Redeemers era
-    replaceRdmr ptr ex x@(Redeemers r) =
-      case Map.lookup ptr r of
-        Just (dat, _ex) -> Redeemers $ Map.insert ptr (dat, ex) r
-        Nothing -> x
+    -- Update only the keys that are already in the old map
+    updateFrom new old = Map.foldrWithKey (\k eu -> Map.adjust (eu <$) k) old new
 
 failLeft :: (Monad m, Show e) => (String -> m a) -> Either e a -> m a
 failLeft _ (Right a) = pure a

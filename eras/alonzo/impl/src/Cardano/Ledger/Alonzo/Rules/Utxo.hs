@@ -54,7 +54,7 @@ import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxOut (..),
   MaryEraTxBody (..),
  )
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), nullRedeemers)
+import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unRedeemersL)
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
   Network,
@@ -285,7 +285,7 @@ feesOK pp tx u@(UTxO utxo) =
             (minFee <= theFee)
             (FeeTooSmallUTxO Mismatch {mismatchSupplied = theFee, mismatchExpected = minFee})
         , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
-          unless (nullRedeemers (tx ^. witsTxL . rdmrsTxWitsL)) $
+          unless (null $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL) $
             validateCollateral pp txBody utxoCollateral
         ]
 
@@ -367,7 +367,7 @@ validateOutsideForecast ei slotNo sysSt tx =
   {-   (_,i_f) := txvldt tx   -}
   case tx ^. bodyTxL . vldtTxBodyL of
     ValidityInterval _ (SJust ifj)
-      | not (nullRedeemers (tx ^. witsTxL . rdmrsTxWitsL)) ->
+      | not . null $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL ->
           let ei' = unsafeLinearExtendEpochInfo slotNo ei
            in -- ◇ ∉ { txrdmrs tx, i_f } ⇒
               failureUnless (isRight (epochInfoSlotToUTCTime ei' sysSt ifj)) $ OutsideForecast ifj

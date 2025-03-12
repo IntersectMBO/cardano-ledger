@@ -14,7 +14,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
@@ -24,6 +24,7 @@ import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.Scripts (pattern RequireAnyOf)
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import Data.Either (isRight)
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
@@ -79,7 +80,7 @@ spec = describe "UTXOW" $ do
       let tx =
             mkBasicTx mkBasicTxBody
               & bodyTxL . inputsTxBodyL .~ [txIn]
-              & witsTxL . rdmrsTxWitsL <>~ Redeemers [(prp, (dt, ExUnits 0 0))]
+              & witsTxL . rdmrsTxWitsL . unRedeemersL %~ Map.insert prp (dt, ExUnits 0 0)
       let submit =
             submitFailingTx
               tx

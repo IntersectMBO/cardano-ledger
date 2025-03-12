@@ -37,7 +37,7 @@ import Cardano.Ledger.Alonzo.CertState ()
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage)
-import Cardano.Ledger.Alonzo.TxWits (unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Credential (credScriptHash)
@@ -144,7 +144,7 @@ getAlonzoSpendingDatum (UTxO m) tx sp = do
   AsItem txIn <- toSpendingPurpose sp
   txOut <- Map.lookup txIn m
   SJust hash <- Just $ txOut ^. dataHashTxOutL
-  Map.lookup hash (unTxDats $ tx ^. witsTxL . datsTxWitsL)
+  Map.lookup hash $ tx ^. witsTxL . datsTxWitsL . unTxDatsL
 
 getAlonzoScriptsHashesNeeded :: AlonzoScriptsNeeded era -> Set.Set ScriptHash
 getAlonzoScriptsHashesNeeded (AlonzoScriptsNeeded sn) = Set.fromList (map snd sn)

@@ -50,7 +50,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), PlutusScript (..), toAsItem)
-import Cardano.Ledger.Alonzo.TxWits (unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -288,7 +288,7 @@ transTxBodyReqSignerHashes txBody = transKeyHash <$> Set.toList (txBody ^. reqSi
 
 -- | Translate all `TxDats`s from within `TxWits`
 transTxWitsDatums :: AlonzoEraTxWits era => TxWits era -> [(PV1.DatumHash, PV1.Datum)]
-transTxWitsDatums txWits = transDataPair <$> Map.toList (unTxDats $ txWits ^. datsTxWitsL)
+transTxWitsDatums txWits = transDataPair <$> Map.toList (txWits ^. datsTxWitsL . unTxDatsL)
 
 -- ==================================
 -- translate Values
