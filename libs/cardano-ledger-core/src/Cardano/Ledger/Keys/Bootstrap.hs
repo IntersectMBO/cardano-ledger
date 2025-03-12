@@ -7,12 +7,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Keys.Bootstrap (
   BootstrapWitness (
@@ -22,6 +23,7 @@ module Cardano.Ledger.Keys.Bootstrap (
     bwChainCode,
     bwAttributes
   ),
+  BootstrapWitnessRaw,
   ChainCode (..),
   bootstrapWitKeyHash,
   unpackByronVKey,
@@ -41,11 +43,9 @@ import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
   EncCBOR (..),
-  annotatorSlice,
   byronProtVer,
   decodeRecordNamed,
   encodeListLen,
-  serialize,
   serialize',
  )
 import Cardano.Ledger.Binary.Crypto (
@@ -62,19 +62,20 @@ import Cardano.Ledger.Keys.Internal (
  )
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
-  MemoBytes (Memo),
-  decodeMemoized,
+  Mem,
+  MemoBytes,
+  Memoized (..),
+  getMemoRawType,
+  mkMemoized,
  )
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Short as SBS
 import Data.Coerce (coerce)
 import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
-import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import NoThunks.Class (NoThunks (..))
 import Quiet
 
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
@@ -82,21 +83,47 @@ newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Show) via Quiet ChainCode
   deriving newtype (NoThunks, EncCBOR, DecCBOR, NFData)
 
-data BootstrapWitness = BootstrapWitness'
-  { bwKey' :: !(VKey 'Witness)
-  , bwSig' :: !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
-  , bwChainCode' :: !ChainCode
-  , bwAttributes' :: !ByteString
-  , bwBytes :: LBS.ByteString
+data BootstrapWitnessRaw = BootstrapWitnessRaw
+  { bwrKey :: !(VKey 'Witness)
+  , bwrSignature :: !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
+  , bwrChainCode :: !ChainCode
+  , bwrAttributes :: !ByteString
   }
   deriving (Generic, Show, Eq)
 
-instance NFData BootstrapWitness
+instance NFData BootstrapWitnessRaw
+instance NoThunks BootstrapWitnessRaw
+
+instance EncCBOR BootstrapWitnessRaw where
+  encCBOR cwr@(BootstrapWitnessRaw _ _ _ _) =
+    let BootstrapWitnessRaw {..} = cwr
+     in encodeListLen 4
+          <> encCBOR bwrKey
+          <> encodeSignedDSIGN bwrSignature
+          <> encCBOR bwrChainCode
+          <> encCBOR bwrAttributes
+
+instance DecCBOR BootstrapWitnessRaw where
+  decCBOR =
+    decodeRecordNamed "BootstrapWitnessRaw" (const 4) $
+      BootstrapWitnessRaw <$> decCBOR <*> decodeSignedDSIGN <*> decCBOR <*> decCBOR
+
+instance DecCBOR (Annotator BootstrapWitnessRaw) where
+  decCBOR = pure <$> decCBOR
+
+newtype BootstrapWitness = BootstrapWitnessConstr (MemoBytes BootstrapWitnessRaw)
+  deriving (Generic)
+  deriving newtype (Show, Eq, NFData, NoThunks, Plain.ToCBOR, DecCBOR)
+
+instance Memoized BootstrapWitness where
+  type RawType BootstrapWitness = BootstrapWitnessRaw
+
+instance EncCBOR BootstrapWitness
 
 deriving via
-  (AllowThunksIn '["bwBytes"] BootstrapWitness)
+  Mem BootstrapWitnessRaw
   instance
-    NoThunks BootstrapWitness
+    DecCBOR (Annotator BootstrapWitness)
 
 pattern BootstrapWitness ::
   VKey 'Witness ->
@@ -105,54 +132,16 @@ pattern BootstrapWitness ::
   ByteString ->
   BootstrapWitness
 pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes} <-
-  BootstrapWitness' bwKey bwSig bwChainCode bwAttributes _
+  ( getMemoRawType ->
+      BootstrapWitnessRaw bwKey bwSig bwChainCode bwAttributes
+    )
   where
-    BootstrapWitness key sig cc attributes =
-      let bytes =
-            serialize byronProtVer $
-              encodeListLen 4
-                <> encCBOR key
-                <> encodeSignedDSIGN sig
-                <> encCBOR cc
-                <> encCBOR attributes
-       in BootstrapWitness' key sig cc attributes bytes
-
+    BootstrapWitness bwKey bwSig bwChainCode bwAttributes =
+      mkMemoized minBound $ BootstrapWitnessRaw bwKey bwSig bwChainCode bwAttributes
 {-# COMPLETE BootstrapWitness #-}
 
 instance Ord BootstrapWitness where
   compare = comparing bootstrapWitKeyHash
-
-instance Plain.ToCBOR BootstrapWitness where
-  toCBOR = Plain.encodePreEncoded . LBS.toStrict . bwBytes
-
--- | Encodes memoized bytes created upon construction.
-instance EncCBOR BootstrapWitness
-
-instance DecCBOR (Annotator BootstrapWitness) where
-  decCBOR = annotatorSlice $
-    decodeRecordNamed "BootstrapWitness" (const 4) $ do
-      key <- decCBOR
-      sig <- decodeSignedDSIGN
-      cc <- decCBOR
-      attributes <- decCBOR
-      pure . pure $ BootstrapWitness' key sig cc attributes
-
-data BootstrapWitnessRaw
-  = BootstrapWitnessRaw
-      !(VKey 'Witness)
-      !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
-      !ChainCode
-      !ByteString
-
-instance DecCBOR BootstrapWitnessRaw where
-  decCBOR =
-    decodeRecordNamed "BootstrapWitnessRaw" (const 4) $
-      BootstrapWitnessRaw <$> decCBOR <*> decodeSignedDSIGN <*> decCBOR <*> decCBOR
-
-instance DecCBOR BootstrapWitness where
-  decCBOR = do
-    Memo (BootstrapWitnessRaw k s c a) bs <- decodeMemoized (decCBOR @BootstrapWitnessRaw)
-    pure $ BootstrapWitness' k s c a (LBS.fromStrict (SBS.fromShort bs))
 
 -- | Rebuild the addrRoot of the corresponding address.
 bootstrapWitKeyHash ::

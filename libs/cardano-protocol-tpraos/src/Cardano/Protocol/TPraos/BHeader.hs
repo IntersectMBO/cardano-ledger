@@ -4,13 +4,17 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Protocol.TPraos.BHeader (
   HashHeader (..),
@@ -63,14 +67,11 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   EncCBORGroup (..),
   TokenType (TypeNull),
-  annotatorSlice,
   decodeNull,
   decodeRecordNamed,
   encodeListLen,
   encodeNull,
-  encodedSigKESSizeExpr,
   encodedVerKeyVRFSizeExpr,
-  hashEncCBOR,
   listLenInt,
   peekTokenType,
   runByteBuilder,
@@ -85,27 +86,36 @@ import Cardano.Ledger.Hashes (
   EraIndependentBlockHeader,
   HASH,
   Hash,
+  HashAnnotated (..),
   KeyHash,
   KeyRole (..),
+  SafeToHash,
+  extractHash,
   hashKey,
+  originalBytesSize,
  )
 import Cardano.Ledger.Keys (VKey)
-import Cardano.Ledger.MemoBytes (MemoBytes (Memo), decodeMemoized)
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes,
+  MemoHashIndex,
+  Memoized (..),
+  getMemoRawType,
+  getMemoSafeHash,
+  mkMemoized,
+ )
 import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.Crypto
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Short as SBS
 import Data.Typeable
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
-import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | The hash of a Block Header
@@ -244,21 +254,46 @@ instance Crypto c => DecCBOR (BHBody c) where
     where
       bhBodySize body = 9 + listLenInt (bheaderOCert body) + listLenInt (bprotver body)
 
-data BHeader c = BHeader'
-  { bHeaderBody' :: !(BHBody c)
-  , bHeaderSig' :: !(KES.SignedKES (KES c) (BHBody c))
-  , bHeaderBytes :: BS.ByteString -- Lazy on purpose. Constructed on demand
+data BHeaderRaw c = BHeaderRaw
+  { bhrBody :: !(BHBody c)
+  , bhrSignature :: !(KES.SignedKES (KES c) (BHBody c))
   }
+  deriving (Generic, Eq, Show)
+
+instance Crypto c => NoThunks (BHeaderRaw c)
+
+instance Crypto c => EncCBOR (BHeaderRaw c) where
+  encCBOR bh@(BHeaderRaw _ _) =
+    let BHeaderRaw {..} = bh
+     in encodeListLen 2
+          <> encCBOR bhrBody
+          <> encodeSignedKES bhrSignature
+
+instance Crypto c => DecCBOR (BHeaderRaw c) where
+  decCBOR =
+    decodeRecordNamed "BHeaderRaw" (const 2) $
+      BHeaderRaw <$> decCBOR <*> decodeSignedKES
+
+instance Crypto c => DecCBOR (Annotator (BHeaderRaw c)) where
+  decCBOR = pure <$> decCBOR
+
+newtype BHeader c = BHeaderConstr (MemoBytes (BHeaderRaw c))
   deriving (Generic)
+  deriving newtype (Eq, Show, NoThunks, Plain.ToCBOR, DecCBOR, SafeToHash)
+
+type instance MemoHashIndex (BHeaderRaw c) = EraIndependentBlockHeader
+instance HashAnnotated (BHeader c) EraIndependentBlockHeader where
+  hashAnnotated = getMemoSafeHash
+
+instance Crypto c => EncCBOR (BHeader c)
+
+instance Memoized (BHeader c) where
+  type RawType (BHeader c) = BHeaderRaw c
 
 deriving via
-  AllowThunksIn '["bHeaderBytes"] (BHeader c)
+  Mem (BHeaderRaw c)
   instance
-    Crypto c => NoThunks (BHeader c)
-
-deriving instance Crypto c => Eq (BHeader c)
-
-deriving instance Crypto c => Show (BHeader c)
+    Crypto c => DecCBOR (Annotator (BHeader c))
 
 pattern BHeader ::
   Crypto c =>
@@ -266,51 +301,15 @@ pattern BHeader ::
   KES.SignedKES (KES c) (BHBody c) ->
   BHeader c
 pattern BHeader bHeaderBody' bHeaderSig' <-
-  BHeader' {bHeaderBody', bHeaderSig'}
+  (getMemoRawType -> BHeaderRaw bHeaderBody' bHeaderSig')
   where
-    BHeader body sig =
-      let mkBytes bhBody kESig =
-            serialize' (pvMajor (bprotver bhBody)) $
-              encodeListLen 2
-                <> encCBOR bhBody
-                <> encodeSignedKES kESig
-       in BHeader' body sig (mkBytes body sig)
-
+    BHeader bHeaderBody bHeaderSig =
+      mkMemoized (pvMajor (bprotver bHeaderBody)) $ BHeaderRaw bHeaderBody bHeaderSig
 {-# COMPLETE BHeader #-}
 
-instance Crypto c => Plain.ToCBOR (BHeader c) where
-  toCBOR (BHeader' _ _ bytes) = Plain.encodePreEncoded bytes
-
-instance Crypto c => EncCBOR (BHeader c) where
-  encodedSizeExpr size proxy =
-    1
-      + encodedSizeExpr size (bHeaderBody' <$> proxy)
-      + encodedSigKESSizeExpr (KES.getSig . bHeaderSig' <$> proxy)
-
-instance Crypto c => DecCBOR (Annotator (BHeader c)) where
-  decCBOR = annotatorSlice $
-    decodeRecordNamed "Header" (const 2) $ do
-      bhb <- decCBOR
-      sig <- decodeSignedKES
-      pure $ pure $ BHeader' bhb sig . BSL.toStrict
-
-data BHeaderRaw c = BHeaderRaw !(BHBody c) !(KES.SignedKES (KES c) (BHBody c))
-
-instance Crypto c => DecCBOR (BHeaderRaw c) where
-  decCBOR =
-    decodeRecordNamed "HeaderRaw" (const 2) $
-      BHeaderRaw <$> decCBOR <*> decodeSignedKES
-
-instance Crypto c => DecCBOR (BHeader c) where
-  decCBOR = do
-    Memo (BHeaderRaw bhb sig) bs <- decodeMemoized decCBOR
-    pure $ BHeader' bhb sig (SBS.fromShort bs)
-
 -- | Hash a given block header
-bhHash :: Crypto c => BHeader c -> HashHeader
-bhHash bh = HashHeader . Hash.castHash . hashEncCBOR version $ bh
-  where
-    version = pvMajor (bprotver (bHeaderBody' bh))
+bhHash :: BHeader c -> HashHeader
+bhHash = HashHeader . extractHash . hashAnnotated
 
 -- | HashHeader to Nonce
 hashHeaderToNonce :: HashHeader -> Nonce
@@ -331,8 +330,9 @@ prevHashToNonce = \case
 issuerIDfromBHBody :: BHBody c -> KeyHash 'BlockIssuer
 issuerIDfromBHBody = hashKey . bheaderVk
 
-bHeaderSize :: forall c. BHeader c -> Int
-bHeaderSize = BS.length . bHeaderBytes
+{-# DEPRECATED bHeaderSize "In favor of `originalBytesSize`" #-}
+bHeaderSize :: BHeader c -> Int
+bHeaderSize = originalBytesSize
 
 bhbody ::
   Crypto c =>
@@ -495,13 +495,11 @@ lastAppliedHash (At lab) = BlockHash $ labHash lab
 bnonce :: BHBody c -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
 
-makeHeaderView :: BHeader c -> BHeaderView
-makeHeaderView bh =
+makeHeaderView :: Crypto c => BHeader c -> BHeaderView
+makeHeaderView bh@(BHeader bhb _) =
   BHeaderView
     (hashKey . bheaderVk $ bhb)
-    (bsize $ bhb)
-    (bHeaderSize bh)
+    (bsize bhb)
+    (originalBytesSize bh)
     (bhash bhb)
     (bheaderSlotNo bhb)
-  where
-    bhb = bHeaderBody' bh
