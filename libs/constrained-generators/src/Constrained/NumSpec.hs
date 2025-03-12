@@ -25,6 +25,7 @@
 -- versions.
 #if __GLASGOW_HASKELL__ < 900
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}  -- Somehow in GHC 8.10.7, Natural can only be imported from GHC.Natural
 #endif
 
 module Constrained.NumSpec where

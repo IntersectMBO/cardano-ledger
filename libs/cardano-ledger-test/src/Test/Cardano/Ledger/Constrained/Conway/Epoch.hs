@@ -40,7 +40,7 @@ epochStateSpec epochNo = constrained $ \es ->
   match es $ \_accountState ledgerState _snapShots _nonMyopic ->
     match ledgerState $ \utxoState certState ->
       match utxoState $ \_utxo _deposited _fees govState _stakeDistr _donation ->
-        match govState $ \ [var| proposals |] _committee constitution _curPParams _prevPParams _futPParams drepPulsingState ->
+        match govState $ \ [var|proposals|] _committee constitution _curPParams _prevPParams _futPParams drepPulsingState ->
           [ match constitution $ \_ policy ->
               proposals `satisfies` proposalsSpec epochNo policy certState
           , caseOn
@@ -58,14 +58,21 @@ epochStateSpec epochNo = constrained $ \es ->
               )
               -- DRComplete
               ( branch $ \_snap ratifyState ->
-                  match ratifyState $ \enactState [var| enacted |] expired _delayed ->
-                    [ Assert $ sizeOf_ expired <=. 5 -- If this gets too large, we can't find enough things Not in it.
+                  match ratifyState $ \enactState [var|enacted|] [var|expired|] _delayed ->
+                    [ -- This may seem strange, but if expired is too big, the 'forAll expired' will fail
+                      -- There can't exist more expired proposals, than there are proposals.
+                      reify proposals (toInteger . proposalsSize) $ \ [var|sz|] ->
+                        [ ifElse
+                            (sz <=. 0)
+                            (expired ==. (Lit mempty))
+                            (sizeOf_ expired <. sz)
+                        ]
                     , forAll expired $ \ [var| gasId |] ->
                         proposalExists gasId proposals
                     , -- TODO: this isn't enough, we need to ensure it's at most
                       -- one of each type of action that's being enacted
-                      forAll enacted $ \govact ->
-                        [ reify proposals enactableProposals $ \enactable -> govact `elem_` enactable
+                      forAll enacted $ \ [var|govact|] ->
+                        [ reify proposals enactableProposals $ \ [var|enactable|] -> govact `elem_` enactable
                         , assert $ not_ $ gasId_ govact `member_` expired
                         ]
                     , -- TODO: this is a hack to get around the todo above!
@@ -82,7 +89,7 @@ proposalExists ::
   Term (Proposals ConwayEra) ->
   Pred
 proposalExists gasId proposals =
-  reify proposals proposalsActionsMap $ \actionMap ->
+  reify proposals proposalsActionsMap $ \ [var|actionMap|] ->
     gasId `member_` dom_ actionMap
 
 epochSignalSpec :: EpochNo -> Specification EpochNo

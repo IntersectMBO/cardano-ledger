@@ -414,7 +414,7 @@ instance HasSpec Integer where
 
 -- Logic instances for (<=.) and (<.)
 instance
-  (Typeable a, HasSpec a, OrdLike a) =>
+  OrdLike a =>
   Logic "<=." NumOrdW '[a, a] Bool
   where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
@@ -437,7 +437,7 @@ infixr 4 <=.
 (<=.) = appTerm LessOrEqualW
 
 instance
-  (Typeable a, HasSpec a, OrdLike a) =>
+  OrdLike a =>
   Logic "<." NumOrdW '[a, a] Bool
   where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
@@ -461,7 +461,7 @@ infixr 4 <.
 
 -- See  https://www.mathsisfun.com/algebra/inequality-solving.html
 instance
-  (Typeable a, HasSpec a, OrdLike a) =>
+  OrdLike a =>
   Logic ">=." NumOrdW '[a, a] Bool
   where
   propagate (Context GreaterOrEqualW (HOLE :<> x :<| End)) spec =
@@ -476,7 +476,7 @@ infixr 4 >=.
 (>=.) = appTerm GreaterOrEqualW
 
 instance
-  (Typeable a, HasSpec a, OrdLike a) =>
+  OrdLike a =>
   Logic ">." NumOrdW '[a, a] Bool
   where
   propagate (Context GreaterW (HOLE :<> x :<| End)) spec =

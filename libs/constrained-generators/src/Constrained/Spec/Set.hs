@@ -35,10 +35,16 @@ module Constrained.Spec.Set where
 import Constrained.Base
 import Constrained.Conformance (conformsToSpec, satisfies)
 import Constrained.NumSpec
-import Constrained.Spec.ListFoldy (FoldSpec (..), ListSpec (..), elem_, knownUpperBound)
+import Constrained.Spec.ListFoldy (
+  FoldSpec (..),
+  ListSpec (..),
+  elem_,
+  knownUpperBound,
+  maxFromSpec,
+ )
 import Constrained.Spec.Size (Sized (..), maxSpec, sizeOf_)
 import Constrained.Syntax (exists, forAll, unsafeExists)
-import Constrained.TheKnot (caseBoolSpec, genFromSpecT, not_, shrinkWithSpec, (==.))
+import Constrained.TheKnot (caseBoolSpec, genFromSpecT, not_, shrinkWithSpec, simplifySpec, (==.))
 
 import Constrained.Core (Evidence (..), NonEmpty ((:|)))
 import Constrained.GenT
@@ -161,6 +167,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
     count <-
       explain1 ("Choose a size for the Set to be generated") $
         genFromSpecT szSpec'
+    let targetSize = count - sizeOf must
     explain
       ( NE.fromList
           [ "Choose size count = " ++ show count
@@ -170,17 +177,25 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
           , "  " ++ show elemS
           ]
       )
-      $ go 100 (count - sizeOf must) must
+      $ case theMostWeCanExpect of
+        -- 0 means TrueSpec or SuspendedSpec so we can't rule anything out
+        0 -> go 100 targetSize must
+        n -> case compare n targetSize of
+          LT -> fatalError (pure "The number of things that meet the element test is too small.")
+          GT -> go 100 targetSize must
+          EQ -> go 100 targetSize must
     where
+      theMostWeCanExpect = maxFromSpec 0 (cardinality (simplifySpec elemS))
       go _ n s | n <= 0 = pure s
       go tries n s = do
         e <-
           explain
             ( NE.fromList
-                [ "Generate set member:"
+                [ "Generate set member at type " ++ showType @a
                 , "  number of items starting with  = " ++ show (Set.size must)
                 , "  number of items left to pick   = " ++ show n
                 , "  number of items already picked = " ++ show (Set.size s)
+                , "  the most items we can expect is " ++ show theMostWeCanExpect ++ " (a SuspendedSpec)"
                 ]
             )
             $ withMode Strict

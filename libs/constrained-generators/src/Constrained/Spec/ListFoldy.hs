@@ -20,6 +20,8 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+-- Natural
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
 -- cases and turning off the overlap check in newer ghc versions we disable the check for old
@@ -60,6 +62,7 @@ import Data.Maybe
 import qualified Data.Set as Set
 import Data.Typeable
 import Data.Word
+import GHC.Natural (Natural)
 import GHC.Stack
 import GHC.TypeLits
 import Prettyprinter hiding (cat)
@@ -432,7 +435,7 @@ deriving instance (Eq (ListW s d r))
 
 -- ============= Logicbol for FoldMapW
 
-instance (Typeable a, Foldy b, HasSpec b) => Logic "foldMap_" ListW '[[a]] b where
+instance (Typeable a, Foldy b) => Logic "foldMap_" ListW '[[a]] b where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec

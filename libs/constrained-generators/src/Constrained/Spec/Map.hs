@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -370,10 +371,8 @@ instance
   propagate ctx _ =
     ErrorSpec $ pure ("Logic instance for DomW with wrong number of arguments. " ++ show ctx)
 
-  mapTypeSpec (DomW @k1 @v1) ts
-    | MapSpec _ mustSet _ sz kvSpec _ <- ts
-    , Evidence <- prerequisites @(Map k1 v1) =
-        typeSpec $ SetSpec mustSet (fstSpec @k1 @v1 kvSpec) sz
+  mapTypeSpec DomW (MapSpec _ mustSet _ sz kvSpec _)
+    | Evidence <- prerequisites @(Map k v) = typeSpec $ SetSpec mustSet (fstSpec @k @v kvSpec) sz
 
 -- ============ RngW
 
@@ -407,9 +406,9 @@ instance
   propagate ctx _ =
     ErrorSpec $ pure ("Logic instance for RngW with wrong number of arguments. " ++ show ctx)
 
-  mapTypeSpec (RngW @k1 @v1) (MapSpec _ _ mustList sz kvSpec foldSpec)
-    | Evidence <- prerequisites @(Map k1 v1) =
-        typeSpec $ ListSpec Nothing mustList sz (sndSpec @k1 @v1 kvSpec) foldSpec
+  mapTypeSpec RngW (MapSpec _ _ mustList sz kvSpec foldSpec)
+    | Evidence <- prerequisites @(Map k v) =
+        typeSpec $ (ListSpec Nothing mustList sz (sndSpec @k @v kvSpec) foldSpec)
 
 -- ============ LookupW
 
