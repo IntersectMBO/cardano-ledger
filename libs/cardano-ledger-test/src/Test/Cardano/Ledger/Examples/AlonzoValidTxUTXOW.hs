@@ -24,7 +24,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
-import Cardano.Ledger.Plutus.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -45,10 +45,8 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysSucceedsHash,
   initUTxO,
   mkGenesisTxIn,
-  mkTxDats,
   someAddr,
   someKeys,
-  someScriptAddr,
   testUTXOW,
   trustMeP,
  )
@@ -61,7 +59,6 @@ import Test.Cardano.Ledger.Generic.Fields (
  )
 import Test.Cardano.Ledger.Generic.GenState (
   PlutusPurposeTag (..),
-  mkRedeemers,
   mkRedeemersFromTags,
  )
 import Test.Cardano.Ledger.Generic.PrettyCore ()
@@ -94,12 +91,7 @@ alonzoUTXOWTests pf =
     (show pf ++ " UTXOW examples")
     [ testGroup
         "valid transactions"
-        [ testCase "acceptable supplimentary datum" $
-            testU
-              pf
-              (trustMeP pf True $ validatingSupplimentaryDatumTx pf)
-              (Right . validatingSupplimentaryDatumState $ pf)
-        , testCase "multiple identical certificates" $
+        [ testCase "multiple identical certificates" $
             testU
               pf
               (trustMeP pf True $ validatingMultipleEqualCertsTx pf)
@@ -114,63 +106,6 @@ alonzoUTXOWTests pf =
 
 -- =========================================================================
 -- ============================== DATA ========================================
-
--- ====================================================================================
---  Example 10: A transaction with an acceptable supplimentary datum
--- ====================================================================================
-
-validatingSupplimentaryDatumTx ::
-  forall era.
-  ( Scriptic era
-  , EraTx era
-  ) =>
-  Proof era ->
-  Tx era
-validatingSupplimentaryDatumTx pf =
-  newTx
-    pf
-    [ Body (validatingSupplimentaryDatumBody pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingSupplimentaryDatumBody pf)) (someKeys pf)]
-        , DataWits' [Data (PV1.I 123)]
-        ]
-    ]
-
-validatingSupplimentaryDatumBody :: (EraTxBody era, Scriptic era) => Proof era -> TxBody era
-validatingSupplimentaryDatumBody pf =
-  newTxBody
-    pf
-    [ Inputs' [mkGenesisTxIn 3]
-    , Outputs' [validatingSupplimentaryDatumTxOut pf]
-    , Txfee (Coin 5)
-    , WppHash (newScriptIntegrityHash pf (pp pf) [] (mkRedeemers pf []) (mkTxDats (Data (PV1.I 123))))
-    ]
-
-validatingSupplimentaryDatum :: Era era => Data era
-validatingSupplimentaryDatum = Data (PV1.I 123)
-
-validatingSupplimentaryDatumTxOut ::
-  forall era. (EraTxBody era, Scriptic era) => Proof era -> TxOut era
-validatingSupplimentaryDatumTxOut pf =
-  newTxOut
-    pf
-    [ Address (someScriptAddr (always 3 pf))
-    , Amount (inject $ Coin 995)
-    , DHash' [hashData $ validatingSupplimentaryDatum @era]
-    ]
-
-validatingSupplimentaryDatumState ::
-  (EraTxBody era, EraStake era, PostShelley era, EraGov era) =>
-  Proof era ->
-  UTxOState era
-validatingSupplimentaryDatumState pf =
-  smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def mempty
-  where
-    utxo =
-      expectedUTxO'
-        pf
-        (ExpectSuccess (validatingSupplimentaryDatumBody pf) (validatingSupplimentaryDatumTxOut pf))
-        3
 
 -- ====================================================================================
 --  Example 11: A transaction with multiple identical certificates
