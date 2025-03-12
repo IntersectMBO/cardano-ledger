@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
@@ -29,6 +29,7 @@ import Cardano.Ledger.Plutus (
   hashPlutusScript,
   withSLanguage,
  )
+import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireSignature,
@@ -47,6 +48,7 @@ import qualified PlutusLedgerApi.Common as P
 spec ::
   forall era.
   ( AlonzoEraImp era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -167,7 +169,21 @@ spec = describe "Valid transactions" $ do
                 & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
           expectTxSuccess =<< submitTx tx
 
-  it "Multiple identical certificates" $ do
-    const $ pendingWith "not implemented yet"
+        it "Multiple identical certificates" $ do
+          let scriptHash = alwaysSucceedsNoDatumHash
+          void . registerStakeCredential $ ScriptHashObj scriptHash
+          let tx =
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> replicate 2 scriptHash)
+          if eraProtVerLow @era < natVersion @9
+            then
+              -- This passes UTXOW rules but not DELEG rules; however, we care about only UTXOW rules here
+              submitFailingTx
+                tx
+                [injectFailure $ StakeKeyNotRegisteredDELEG (ScriptHashObj scriptHash)]
+            else
+              -- Conway fixed the bug that was causing DELEG to fail
+              expectTxSuccess =<< submitTx tx
+
   it "Non-script output with datum" $ do
     const $ pendingWith "not implemented yet"

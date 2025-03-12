@@ -13,7 +13,11 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
   AlonzoUtxowPredFailure,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyDelegPredFailure,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
+ )
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
@@ -25,6 +29,7 @@ spec ::
   forall era.
   ( Arbitrary (TxAuxData era)
   , AlonzoEraImp era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
