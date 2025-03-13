@@ -71,7 +71,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.TxBody (RewardAccount)
-import Cardano.Ledger.Shelley.UTxO (consumed, produced)
+import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)

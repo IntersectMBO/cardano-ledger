@@ -48,6 +48,7 @@ import Cardano.Ledger.Shelley.TxBody (raCredential)
 import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
+  shelleyConsumed,
  )
 import Cardano.Ledger.State (
   EraCertState (..),
@@ -76,6 +77,8 @@ deriving instance AlonzoEraScript era => Show (AlonzoScriptsNeeded era)
 
 instance EraUTxO AlonzoEra where
   type ScriptsNeeded AlonzoEra = AlonzoScriptsNeeded AlonzoEra
+
+  consumed = shelleyConsumed
 
   getConsumedValue = getConsumedMaryValue
 

@@ -15,6 +15,7 @@ import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyScriptsNeeded,
   getShelleyWitsVKeyNeeded,
+  shelleyConsumed,
   shelleyProducedValue,
  )
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
@@ -22,6 +23,8 @@ import Lens.Micro
 
 instance EraUTxO AllegraEra where
   type ScriptsNeeded AllegraEra = ShelleyScriptsNeeded AllegraEra
+
+  consumed = shelleyConsumed
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 
