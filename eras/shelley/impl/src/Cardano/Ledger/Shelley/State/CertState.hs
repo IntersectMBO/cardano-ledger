@@ -92,8 +92,6 @@ shelleyCertsTotalRefundsTxBody pp ShelleyCertState {shelleyCertDState} =
 instance EraCertState ShelleyEra where
   type CertState ShelleyEra = ShelleyCertState ShelleyEra
 
-  upgradeCertState = error "Impossible: ByronEra does not have `EraCertState` instance"
-
   certDStateL = shelleyCertDStateL
   {-# INLINE certDStateL #-}
 

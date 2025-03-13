@@ -40,7 +40,6 @@ import Cardano.Ledger.Shelley.LedgerState (EpochState (..), esLStateL, lsCertSta
 import Cardano.Ledger.Shelley.State
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import Data.Coerce (coerce)
 import Data.Default (Default (def))
 import qualified Data.Foldable as F
 import Data.Map.Strict (Map)
@@ -117,9 +116,6 @@ conwayCertsTotalRefundsTxBody pp ConwayCertState {conwayCertDState, conwayCertVS
 
 instance EraCertState ConwayEra where
   type CertState ConwayEra = ConwayCertState ConwayEra
-
-  -- TODO: use the Translation interface instead
-  upgradeCertState (ShelleyCertState p d) = ConwayCertState def (coerce p) (coerce d)
 
   certDStateL = conwayCertDStateL
   {-# INLINE certDStateL #-}

@@ -6,12 +6,9 @@ module Cardano.Ledger.Allegra.State.CertState () where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Shelley.State
-import Data.Coerce (coerce)
 
 instance EraCertState AllegraEra where
   type CertState AllegraEra = ShelleyCertState AllegraEra
-
-  upgradeCertState = coerce
 
   certDStateL = shelleyCertDStateL
   {-# INLINE certDStateL #-}
