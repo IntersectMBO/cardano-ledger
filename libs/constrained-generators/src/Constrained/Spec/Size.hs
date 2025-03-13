@@ -11,8 +11,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
--- This seems sketchy, as it complains about the (Logic "sizeOf_" SizeW '[t] Integer)
--- but 'data SizeW', is defined in the same file as the instance
+-- Not sure why (Logic "sizeOf_" SizeW '[t] Integer) is an orphan instance
+-- 'data SizeW', is defined in the same file as the instance.
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant

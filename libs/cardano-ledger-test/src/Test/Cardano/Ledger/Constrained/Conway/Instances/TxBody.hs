@@ -25,15 +25,14 @@ import Cardano.Ledger.Mary.Value (MultiAsset (..))
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+import Constrained.API
+import Constrained.Generic
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Sequence.Strict as SS (fromList)
 import Data.Set (Set)
-import Lens.Micro
-
-import Constrained.API
-import Constrained.Generic
 import Data.Typeable
+import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 
 -- ==============================================================================

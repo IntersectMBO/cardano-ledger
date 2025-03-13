@@ -108,7 +108,7 @@ import Prelude hiding (cycle, pred)
 --                     simplifySpec
 --
 -- ===============================================================================
--- STUBS
+-- Things left TODO
 -- 1) Use of UnionPat below requires HasSpec(Set a) instance
 
 -- ==================================================================
@@ -929,7 +929,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
 genFromSpec :: forall a. (HasCallStack, HasSpec a) => Specification a -> Gen a
 genFromSpec spec = do
   res <- catchGen $ genFromSpecT @a @GE spec
-  either (error . show . catMessages) pure res
+  either (error . ('\n' :) . catMessages) pure res
 
 -- | A version of `genFromSpecT` that takes a seed and a size and gives you a result
 genFromSpecWithSeed ::
@@ -1370,7 +1370,8 @@ saturatePred p =
   --  v
   p : case p of
     Explain _es x -> saturatePred x -- Note that the Explain is still on the original 'p', so it is not lost
-    {-
+    {- We want rules like this. But because the patterns can not be in scope, we implement these in
+    -- the 'saturate' method of the Logic class
     Assert (Equal (FromGeneric (InjLeft _)) t) -> [toPreds t (SumSpec Nothing TrueSpec (ErrorSpec (pure "saturatePred")))]
     Assert (Equal (FromGeneric (InjRight _)) t) -> [toPreds t (SumSpec Nothing (ErrorSpec (pure "saturatePred")) TrueSpec)]
     Assert (Elem @Bool @a (FromGeneric (Product @n @m x y)) (Lit zs))
@@ -1380,6 +1381,7 @@ saturatePred p =
     Assert (Elem x (Lit (y : ys))) -> [satisfies x (MemberSpec (y :| ys))]
     -- ElemPred True x ys -> [satisfies x (MemberSpec ys)]
     -}
+    -- Note how the saturation is done by the 'saturate' method of the Logic class
     Assert ((App (sym :: t s dom Bool) xs) :: Term Bool) -> saturate @s @t @dom @Bool sym xs
     -- TODO: e.g. `elem (pair x y) (lit zs) -> elem x (lit $ map fst zs)` etc.
     _ -> []

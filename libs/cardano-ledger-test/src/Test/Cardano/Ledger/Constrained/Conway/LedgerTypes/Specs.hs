@@ -65,7 +65,7 @@ import Test.QuickCheck hiding (forAll, witness)
 
 -- ===========================================================
 
--- | The class (EraSpecLedger era) supports Era parametric Specs over types that appear in the Cardano Ledger.223
+-- | The class (EraSpecLedger era) supports Era parametric Specs over types that appear in the Cardano Ledger
 --   It uses methods (see Test.Cardano.Ledger.Constrained.Conway.ParametricSpec)
 --   that navigate the differences in types parameterized by 'era' that are
 --   embeded as type Families in types that appear in the Cardano Ledger Types.
@@ -464,33 +464,9 @@ conwayGovStateSpec pp govenv =
 
 -- =========================================================================
 
--- TODO: Figure out how to keep this era parametric and make GHC happy
--- without the `CertState era ~ ShelleyCertState era` constraint.
--- When it's removed, GHC will complain with:
---     • Could not deduce: FunTy
---                          (MapList
---                             (Term ) (Constrained.Spec.Generics.Args (CertState era)))
---                          p0
---                        ~ (Term (CertState era) -> [Pred ])
--- ...
---       Expected type: FunTy
---                       (MapList
---                          (Term )
---                          (Constrained.Spec.Generics.ProductAsList (LedgerState era)))
---                       p0
---        Actual type: Term (UTxOState era)
---                     -> Term (CertState era) -> [Pred ]
--- I figured that the problem might be that GHC can't establish what `Term (CertState era)`
--- is, since it's a type family and thus we can't `match` on it because at this point the compiler
--- doesn't know how `Term (CertState era)` looks like. However, this might not be the case
--- because when I try `reify`ing `@era` and pattern match on all the eras, the compiler is still
--- confused and complaining. Which would make sense, since that's why we have the `Generics` and
--- `SOP` machinery in place: so we don't have to know how things look like.
--- So maybe, it's not a matter of "don't know what it is" but rather the fact that
--- it's a type family and not a concrete type, to which the `Generics` magic might not apply.
 ledgerStateSpec ::
   forall era.
-  (EraSpecLedger era, HasSpec (InstantStake era), CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era, HasSpec (InstantStake era), IsNormalType (CertState era)) =>
   PParams era ->
   WitUniv era ->
   Term AccountState ->
@@ -546,7 +522,7 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
 
 epochStateSpec ::
   forall era.
-  (EraSpecLedger era, HasSpec (InstantStake era), CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era, HasSpec (InstantStake era), IsNormalType (CertState era)) =>
   PParams era ->
   WitUniv era ->
   Term EpochNo ->
@@ -571,7 +547,7 @@ newEpochStateSpecUTxO ::
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
   , StashedAVVMAddresses era ~ UTxO era
-  , CertState era ~ ShelleyCertState era
+  , IsNormalType (CertState era)
   ) =>
   PParams era ->
   WitUniv era ->
@@ -601,7 +577,7 @@ newEpochStateSpecUnit ::
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
   , StashedAVVMAddresses era ~ ()
-  , CertState era ~ ShelleyCertState era
+  , IsNormalType (CertState era)
   ) =>
   PParams era ->
   WitUniv era ->
