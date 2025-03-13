@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Removed `upgradeCertState`
 * Removed `VState` (moved to `cardano-ledger-conway`) and related functions
 * Removed from `EraCertState` type family:
   * `mkCertState`

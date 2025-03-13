@@ -342,8 +342,6 @@ class
   where
   type CertState era = (r :: Type) | r -> era
 
-  upgradeCertState :: EraCertState (PreviousEra era) => CertState (PreviousEra era) -> CertState era
-
   certDStateL :: Lens' (CertState era) (DState era)
 
   certPStateL :: Lens' (CertState era) (PState era)
