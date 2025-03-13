@@ -82,8 +82,8 @@ import Test.QuickCheck (Arbitrary (..), oneof, shrinkList, shuffle)
 instance {-# OVERLAPPABLE #-} (Arbitrary (Specification a {- Arbitrary (TypeSpec a), -}), Foldy a) => Arbitrary (FoldSpec a) where
   arbitrary = oneof [FoldSpec (Fun IdW) <$> arbitrary, pure NoFold]
   shrink NoFold = []
-  -- shrink (FoldSpec (sameFunSym (IdW @a) -> Just(idW,Refl,Refl,Refl,Refl,Refl)) spec) = FoldSpec (Fun Evidence idW) <$> shrink spec
-  -- shrink (FoldSpec fun spec) = FoldSpec (fun :: Fun '[a] b) <$> shrink (spec :: Specification b)
+  shrink (FoldSpec (Fun wit) spec)
+    | Just (idW, Refl, Refl, Refl, Refl) <- sameFunSym (IdW @a) wit = FoldSpec (Fun idW) <$> shrink spec
   shrink FoldSpec {} = [NoFold]
 
 data FunW (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
@@ -198,10 +198,6 @@ compose_ f g = appTerm $ ComposeW f g -- @b @c1 @c2 @s1 @s2 @t1 @t2 @a @r f g
 
 composeFn :: (HasSpec b, HasSpec a, HasSpec c) => Fun '[b] c -> Fun '[a] b -> Fun '[a] c
 composeFn (Fun f) (Fun g) = (Fun (ComposeW f g))
-
--- flipFn :: forall a b r. (All HasSpec '[b, a], HasSpec r) => Fun '[a,b] r -> Fun '[b,a] r
--- flipFn (Fun (f :: t c s '[a',b'] r')) = Fun (FlipW (f :: t c s '[a',b'] r'))
--- flipFn (Fun f) = Fun (FlipW f)
 
 idFn :: HasSpec a => Fun '[a] a
 idFn = Fun IdW
@@ -386,21 +382,6 @@ combineFoldSpec (FoldSpec (Fun f) s) (FoldSpec (Fun g) s') =
 conformsToFoldSpec :: forall a. [a] -> FoldSpec a -> Bool
 conformsToFoldSpec _ NoFold = True
 conformsToFoldSpec xs (FoldSpec (Fun f) s) = adds (map (semantics f) xs) `conformsToSpec` s
-
-{- This must appear in sumProd where the Generic Instances for Prod and PairSpec are in scope
-instance
-  (HasSpec a, HasSpec b, Arbitrary (FoldSpec a), Arbitrary (FoldSpec b)) =>
-  Arbitrary (FoldSpec (a, b))
-  where
-  arbitrary =
-    oneof
-      [ preMapFoldSpec (composeFn (Fun ProdFstW) (Fun ToGenericW)) <$> arbitrary
-      , preMapFoldSpec (composeFn (Fun ProdSndW) (Fun ToGenericW)) <$> arbitrary
-      , pure NoFold
-      ]
-  shrink NoFold = []
-  shrink FoldSpec {} = [NoFold]
--}
 
 -- =============================================================================
 -- Lists and Foldy are mutually recursive
@@ -679,11 +660,6 @@ data ListSpec a = ListSpec
   , listSpecElem :: Specification a
   , listSpecFold :: FoldSpec a
   }
-
-{-
-instance (Ord a, HasSpec a, Foldy a, TypeSpec a ~ NumSpec a, Arbitrary a) => Arbitrary (ListSpec a) where
-  arbitrary = ListSpec <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
--}
 
 instance
   ( Arbitrary a

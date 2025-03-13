@@ -20,11 +20,6 @@ module Test.Cardano.Ledger.Constrained.Conway.Utxo where
 
 import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Shelley.API.Types
-import Data.Word
-
-import Constrained.API
-
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Conway (ConwayEra)
@@ -39,13 +34,17 @@ import Cardano.Ledger.Conway.Core (
 import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
+import Cardano.Ledger.Shelley.API.Types
+import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
 import Cardano.Ledger.UMap (depositMap)
+import Constrained.API
 import Control.DeepSeq (NFData)
 import Control.Monad.Reader (runReader)
 import Data.Bifunctor (Bifunctor (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
+import Data.Word
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Babbage.Arbitrary ()

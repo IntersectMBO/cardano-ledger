@@ -316,7 +316,7 @@ instance
   giveHint h = typeSpec $ defaultMapSpec {mapSpecHint = Just h}
 
 ------------------------------------------------------------------------
--- FunSym instances for
+-- Logic instances for
 ------------------------------------------------------------------------
 
 data MapW (sym :: Symbol) (dom :: [Type]) (rng :: Type) where

@@ -13,32 +13,26 @@ module Test.Cardano.Ledger.STS where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
-import Control.Monad.Reader
-import Control.State.Transition.Extended
-
 import Constrained.API hiding (forAll)
 import Constrained.TheKnot (shrinkWithSpec)
-
+import Control.Monad.Reader
+import Control.State.Transition.Extended
+import qualified Data.List.NonEmpty as NE
+import Data.Map (Map)
+import Data.Set (Set)
 import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Pool
-
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv, genWitUniv, witness)
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Shelley.Utils
-
-import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Credential (Credential)
-
--- import Constrained.Conformance(conformsToSpecE)
-import qualified Data.List.NonEmpty as NE
-import Data.Map (Map)
-import Data.Set (Set)
-import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv, genWitUniv, witness)
 import Test.QuickCheck hiding (witness)
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (witness)

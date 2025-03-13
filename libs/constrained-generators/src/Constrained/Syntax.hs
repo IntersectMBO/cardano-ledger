@@ -32,9 +32,7 @@
 --    5) Syntacic only transformations
 module Constrained.Syntax where
 
-import qualified Language.Haskell.TH as TH
-import qualified Language.Haskell.TH.Quote as TH
-
+import Constrained.Base
 import Constrained.Core (
   Rename (rename),
   Value (..),
@@ -43,10 +41,6 @@ import Constrained.Core (
   freshen,
   unValue,
  )
-
--- instances on Symbol
-
-import Constrained.Base
 import Constrained.Env
 import Constrained.GenT (GE (..), MonadGenError (..), errorGE, explain1)
 import Constrained.Generic
@@ -68,6 +62,8 @@ import qualified Data.Set as Set
 import Data.String (fromString)
 import Data.Typeable
 import GHC.Stack
+import qualified Language.Haskell.TH as TH
+import qualified Language.Haskell.TH.Quote as TH
 import Prettyprinter hiding (cat)
 import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 import Prelude hiding (pred)
@@ -555,7 +551,7 @@ runCaseOn s ((x :-> ps) :> bs@(_ :> _)) f = case s of
 -- ================================================
 -- 5) Simple Syntax only transformation of terms.
 -- There are other transformation that involve simplifying
--- but they are in the SimplifyExperiment module
+-- but they are in module TheKnot
 -- ==================================================
 
 -- Common subexpression elimination but only on terms that are already let-bound.
@@ -950,12 +946,7 @@ regularizeNames spec = spec
 
 -- | Construct a Context from a Var and a Term (which we hope has exactly
 --   one occurrence of that Var). Runs monadically, and fails with a error message
---   if that property does not hold. Note that every FunSym like EqualW
---   identifes needed constraints e.g. EqualW :: Typeable a => EqW (Eq a) "==." [a, a] Bool
---                                                                 ^ -----needed constraint
---   This constraint is required by the App constructor, so we extract in and stuff it
---   in the Evidence parameter of Context
---   Context :: Evidence c -> t c s dom rng -> CtxtList 'Pre dom hole -> Context c s t dom rng hole
+--   if that property does not hold.
 toCtx ::
   forall m v a.
   ( MonadGenError m

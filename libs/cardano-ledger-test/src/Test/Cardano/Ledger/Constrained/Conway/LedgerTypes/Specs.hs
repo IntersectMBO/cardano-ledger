@@ -63,7 +63,7 @@ import Test.QuickCheck hiding (forAll, witness)
 
 -- ===========================================================
 
--- | The class (EraSpecLedger era) supports Era parametric Specs over types that appear in the Cardano Ledger.223
+-- | The class (EraSpecLedger era) supports Era parametric Specs over types that appear in the Cardano Ledger
 --   It uses methods (see Test.Cardano.Ledger.Constrained.Conway.ParametricSpec)
 --   that navigate the differences in types parameterized by 'era' that are
 --   embeded as type Families in types that appear in the Cardano Ledger Types.
@@ -480,7 +480,7 @@ conwayGovStateSpec pp govenv =
 
 ledgerStateSpec ::
   forall era.
-  (EraSpecLedger era, HasSpec (InstantStake era), CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era, HasSpec (InstantStake era), IsNormalType (CertState era)) =>
   PParams era ->
   WitUniv era ->
   Term AccountState ->
@@ -536,7 +536,7 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
 
 epochStateSpec ::
   forall era.
-  (EraSpecLedger era, HasSpec (InstantStake era), CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era, HasSpec (InstantStake era), IsNormalType (CertState era)) =>
   PParams era ->
   WitUniv era ->
   Term EpochNo ->
@@ -561,6 +561,7 @@ newEpochStateSpecUTxO ::
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
   , StashedAVVMAddresses era ~ UTxO era
+  , IsNormalType (CertState era)
   ) =>
   PParams era ->
   WitUniv era ->
@@ -590,6 +591,7 @@ newEpochStateSpecUnit ::
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
   , StashedAVVMAddresses era ~ ()
+  , IsNormalType (CertState era)
   ) =>
   PParams era ->
   WitUniv era ->

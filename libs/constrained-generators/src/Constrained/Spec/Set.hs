@@ -28,12 +28,13 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 #endif
 
--- | Code for the Foldy class, the FunW witness (compose_,id_,flip_) and
---   HasSpec instance for List. These things are all mutually recursive.
 module Constrained.Spec.Set where
 
 import Constrained.Base
 import Constrained.Conformance (conformsToSpec, satisfies)
+import Constrained.Core (Evidence (..), NonEmpty ((:|)))
+import Constrained.GenT
+import Constrained.List
 import Constrained.NumSpec
 import Constrained.Spec.ListFoldy (
   FoldSpec (..),
@@ -45,10 +46,6 @@ import Constrained.Spec.ListFoldy (
 import Constrained.Spec.Size (Sized (..), maxSpec, sizeOf_)
 import Constrained.Syntax (exists, forAll, unsafeExists)
 import Constrained.TheKnot (caseBoolSpec, genFromSpecT, not_, shrinkWithSpec, simplifySpec, (==.))
-
-import Constrained.Core (Evidence (..), NonEmpty ((:|)))
-import Constrained.GenT
-import Constrained.List
 import Data.Foldable
 import Data.Kind
 import Data.List ((\\))

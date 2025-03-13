@@ -75,7 +75,7 @@ noChoices cost p smallest largest total count samp =
 
 -- =====================================================
 
--- | Given 'count', return a list if pairs, that add to 'count'
+-- | Given 'count', return a list of pairs, that add to 'count'
 --   splitsOf 6 --> [(1,5),(2,4),(3,3)].
 --   Note we don't return reflections like (5,1) and (4,2),
 --   as they have the same information as (1,5) and (2,4).
@@ -93,7 +93,6 @@ splitsOf count = [(i, j) | i <- [1 .. div count 2], let j = count - i]
 --   Here is a picture of the graph of all paths for i==5. A path goes from the root '5'
 --   to one of the leaves. Note all leaves are count == '1 (where the solution is '[total]').
 --   To solve for 5, we could solve either of the sub problems rooted at 5: [1,4] or [2,3].
---   In 'pickAll' we will try to solve both, but in pick1, we only attempt 1 of those sub problems.
 --   5
 --   |
 --   [1,4]

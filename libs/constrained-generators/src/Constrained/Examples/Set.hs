@@ -7,15 +7,13 @@
 
 module Constrained.Examples.Set where
 
-import GHC.Generics
-
-import Data.Set (Set)
-import qualified Data.Set as Set
-
 import Constrained.API
 import Constrained.Base (Forallable)
 import Constrained.Examples.Basic
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable
+import GHC.Generics
 
 -- =============================================================
 

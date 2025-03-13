@@ -27,8 +27,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains the most basic parts the implementation. Essentially
---   everything to define Specification, HasSpec, HasSimpleRep, Term, Pred,
---   and the FunSym class. It also has a few HasSpec, HasSimpleRep, and FunSym
+--   everything to define Specification, HasSpec, HasSimpleRep, Term, Pred, and the Syntax,
+--   Semantics, and Logic class. It also has a few HasSpec, HasSimpleRep, and Logic
 --   instances for basic types needed to define the default types and methods of HasSpec.
 --   It also supplies Eq, Pretty, and Show instances on the syntax (Term, Pred, Binder etc.)
 --   because many functions require these instances. It exports functions that define the
@@ -184,7 +184,7 @@ sameWitness _x y = case (eqT @t' @t, eqT @s' @s) of
   _ -> Nothing
 
 -- ========================================================
--- A Specification is tells us what constraints must hold
+-- A Specification tells us what constraints must hold
 -- ========================================================
 
 -- | A `Specification a` denotes a set of `a`s
@@ -411,6 +411,10 @@ type GenericRequires a =
   , TypeSpec a ~ TypeSpec (SimpleRep a)
   )
 
+-- The constructors of BaseW, are first order data (i.e Function Symbols) that describe functions.
+-- The Base functions are just the functions neccessary to define Specification, and the classes
+-- HasSimpleRep, HasSpec, Syntax, Semantics, and Logic. We call BaseW a 'witness type', and use
+-- the convention that all witness types (and their constructors) have "W" as thrit last character.
 data BaseW (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
   InjLeftW :: forall a b. BaseW "leftFn" '[a] (Sum a b)
   InjRightW :: forall a b. BaseW "rightFn" '[b] (Sum a b)
@@ -437,6 +441,14 @@ instance Show (BaseW s d r) where
   show EqualW = "==."
   show ElemW = "elem_"
 
+instance Syntax BaseW where
+  inFix EqualW = True
+  inFix _ = False
+  prettyWit ElemW (y :> Lit n :> Nil) prec = Just $ parensIf (prec > 10) $ "elem_" <+> prettyPrec 10 y <+> short n
+  prettyWit ToGenericW (x :> Nil) p = Just $ "to" <+> pretty (WithPrec p x)
+  prettyWit FromGenericW (x :> Nil) p = Just $ "from" <+> pretty (WithPrec p x)
+  prettyWit _ _ _ = Nothing
+
 instance Semantics BaseW where
   semantics FromGenericW = fromSimpleRep
   semantics ToGenericW = toSimpleRep
@@ -447,14 +459,6 @@ instance Semantics BaseW where
   semantics ProdSndW = prodSnd
   semantics EqualW = (==)
   semantics ElemW = elem
-
-instance Syntax BaseW where
-  inFix EqualW = True
-  inFix _ = False
-  prettyWit ElemW (y :> Lit n :> Nil) prec = Just $ parensIf (prec > 10) $ "elem_" <+> prettyPrec 10 y <+> short n
-  prettyWit ToGenericW (x :> Nil) p = Just $ "to" <+> pretty (WithPrec p x)
-  prettyWit FromGenericW (x :> Nil) p = Just $ "from" <+> pretty (WithPrec p x)
-  prettyWit _ _ _ = Nothing
 
 -- ============== ToGenericW Logic instance
 

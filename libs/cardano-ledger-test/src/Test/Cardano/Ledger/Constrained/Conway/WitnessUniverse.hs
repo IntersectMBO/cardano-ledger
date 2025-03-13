@@ -28,6 +28,8 @@ module Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse where
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto (SigningKey)
 import Cardano.Crypto.Signing (toVerification)
+import qualified Cardano.Crypto.Signing as Byron
+import qualified Cardano.Crypto.Wallet as Byron (generate)
 import Cardano.Ledger.Address (BootstrapAddress (..), RewardAccount (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (
@@ -66,13 +68,13 @@ import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxCert
-
 import Constrained.API
 import Constrained.Base (toPred)
 import Constrained.GenT (pureGen)
 import Constrained.Spec.Size (hasSize, rangeSize)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (replicateM)
+import Data.ByteString (ByteString)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -89,6 +91,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
+import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
 import Test.Cardano.Ledger.Common (ToExpr (..))
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (cSJust_)
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
@@ -97,11 +100,6 @@ import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.QuickCheck hiding (forAll, witness)
-
-import qualified Cardano.Crypto.Signing as Byron
-import qualified Cardano.Crypto.Wallet as Byron (generate)
-import Data.ByteString (ByteString)
-import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
 
 -- ======================================================
 -- BootstrapAddress are specific to the Byron Era.
@@ -164,8 +162,6 @@ instance
 -- i.e. (TypeHashed hashtype era). The witness (WitnessType hashtype era)
 -- is NOT ALWAYS the same as the (ProofType hashtype era), since it can depend on
 -- the Tx. All the strange class preconditions are required by conformance testing.
-
--- deriving instance Typeable r => Generic (KeyHash r c)
 
 class
   ( Eq (ProofType hashtype era)
