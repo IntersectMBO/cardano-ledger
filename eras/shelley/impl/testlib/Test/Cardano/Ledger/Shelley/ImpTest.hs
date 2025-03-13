@@ -175,7 +175,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   StashedAVVMAddresses,
   asTreasuryL,
-  consumed,
   curPParamsEpochStateL,
   epochStateUMapL,
   esAccountStateL,

@@ -26,7 +26,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Plutus.Data (Data)
-import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
+import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo, shelleyConsumed)
 import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Applicative
@@ -39,6 +39,8 @@ import Lens.Micro
 
 instance EraUTxO BabbageEra where
   type ScriptsNeeded BabbageEra = AlonzoScriptsNeeded BabbageEra
+
+  consumed = shelleyConsumed
 
   getConsumedValue = getConsumedMaryValue
 

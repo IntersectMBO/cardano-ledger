@@ -19,7 +19,7 @@ module Cardano.Ledger.Shelley.UTxO (
   getShelleyScriptsNeeded,
   getConsumedCoin,
   shelleyProducedValue,
-  consumed,
+  shelleyConsumed,
   produced,
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
@@ -118,14 +118,14 @@ getShelleyScriptsNeeded u txBody =
     certificates = toList (txBody ^. certsTxBodyL)
 
 -- | For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
-consumed ::
+shelleyConsumed ::
   (EraUTxO era, EraCertState era) =>
   PParams era ->
   CertState era ->
   UTxO era ->
   TxBody era ->
   Value era
-consumed pp certState =
+shelleyConsumed pp certState =
   getConsumedValue
     pp
     (lookupDepositDState $ certState ^. certDStateL)
@@ -177,6 +177,8 @@ newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set ScriptHash)
 
 instance EraUTxO ShelleyEra where
   type ScriptsNeeded ShelleyEra = ShelleyScriptsNeeded ShelleyEra
+
+  consumed = shelleyConsumed
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 

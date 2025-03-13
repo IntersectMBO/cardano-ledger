@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Added `consumed` to `EraUTxO`
 * Removed `upgradeCertState`
 * Removed `VState` (moved to `cardano-ledger-conway`) and related functions
 * Removed from `EraCertState` type family:

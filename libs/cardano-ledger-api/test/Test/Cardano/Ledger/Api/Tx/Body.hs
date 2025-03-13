@@ -2,8 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -16,7 +14,7 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.UTxO hiding (consumed, produced)
-import Cardano.Ledger.State
+import Cardano.Ledger.State hiding (consumed)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val
 import Data.Foldable

@@ -185,7 +185,6 @@ import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
-  consumed,
   curPParamsEpochStateL,
   epochStateGovStateL,
   epochStatePoolParamsL,

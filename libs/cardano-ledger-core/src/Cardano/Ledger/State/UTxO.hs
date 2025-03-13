@@ -231,6 +231,8 @@ class EraTx era => EraUTxO era where
   -- scripts needed for the transaction.
   type ScriptsNeeded era = (r :: Type) | r -> era
 
+  consumed :: PParams era -> CertState era -> UTxO era -> TxBody era -> Value era
+
   -- | Calculate all the value that is being consumed by the transaction.
   getConsumedValue ::
     PParams era ->
