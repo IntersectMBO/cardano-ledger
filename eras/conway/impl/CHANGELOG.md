@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Added `VState` (moved from `cardano-ledger-core`) and related functions
 * Added `ConwayEraCertState` class
 * Added `ConwayCertState` and related functions
 * Moved `CertState` to `State` module
