@@ -120,8 +120,6 @@ import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val)
-import GHC.TypeLits hiding (Text)
-
 import Constrained.API
 import Constrained.Base
 import Constrained.GenT (pureGen, vectorOfT)
@@ -131,6 +129,7 @@ import Constrained.Spec.ListFoldy (genListWithSize)
 import Constrained.Spec.Map
 import Constrained.Spec.Size qualified as C
 import Constrained.Spec.Tree ()
+import GHC.TypeLits hiding (Text)
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
 
 import Cardano.Crypto.Hash hiding (Blake2b_224)
@@ -173,7 +172,6 @@ import Test.Cardano.Slotting.Numeric ()
 import Test.QuickCheck hiding (Args, Fun, NonZero, forAll)
 
 -- ==========================================================
-
 -- TxBody HasSpec instance ------------------------------------------------
 
 -- NOTE: this is a representation of the `ConwayTxBody` type. You can't
@@ -247,6 +245,7 @@ instance Foldy DeltaCoin where
 
 deriving via Integer instance Num DeltaCoin
 
+-- since TxCert is a type family, we need this Typeable constraint
 instance (Typeable (TxCert era), Typeable era) => HasSimpleRep (GovSignal era)
 instance (EraTxCert ConwayEra, EraSpecPParams ConwayEra) => HasSpec (GovSignal ConwayEra)
 
@@ -550,15 +549,6 @@ instance HasSimpleRep BootstrapAddress where
       \root magic typ ->
         BootstrapAddress
           (Address root (Attributes (AddrAttributes Nothing magic) (UnparsedFields mempty)) typ)
-
-{-
-instance HasSimpleRep BootstrapAddress where
-  type SimpleRep BootstrapAddress = (AbstractHash Blake2b_224 Address', NetworkMagic, AddrType)
-  toSimpleRep (BootstrapAddress (Address root (Attributes (AddrAttributes _ magic) _) typ)) = (root, magic, typ)
-  fromSimpleRep (root, magic, typ) =
-    BootstrapAddress
-      (Address root (Attributes (AddrAttributes Nothing magic) (UnparsedFields mempty)) typ)
--}
 
 instance HasSpec BootstrapAddress
 
@@ -1224,7 +1214,7 @@ instance HasSimpleRep (Committee era)
 instance Era era => HasSpec (Committee era)
 
 instance
-  ( Typeable (InstantStake era)
+  ( Typeable (InstantStake era) -- type families need constraints
   , Eq (InstantStake era)
   , Show (InstantStake era)
   , HasSpec (InstantStake era)
@@ -1409,6 +1399,7 @@ instance
 -- All the Tx instances
 
 -- Unlike ShelleyTx, AlonzoTx is just a data type, and the generic instances work fine
+-- BUT, all the type families inside need constraints
 
 instance
   ( Typeable (TxAuxData era)

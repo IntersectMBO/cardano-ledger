@@ -31,8 +31,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State
 import Constrained.API
 import Data.Map (Map)
-
--- import Test.Cardano.Ledger.Constrained.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (
   EraSpecLedger (..),
@@ -117,8 +115,6 @@ utxoX = do
 utxostateX ::
   forall era.
   ( EraSpecLedger era
-  , -- TODO: this is temporary, remove once `utxoStateSpec` is general enough
-    CertState era ~ ShelleyCertState era
   , HasSpec (InstantStake era)
   ) =>
   PParams era -> Gen (UTxOState era)
@@ -140,7 +136,7 @@ lsX ::
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
   , -- TODO: remove once `ledgerStateSpec` is general enough
-    CertState era ~ ShelleyCertState era
+    IsNormalType (CertState era)
   ) =>
   PParams era -> Gen (LedgerState era)
 lsX pp = do
@@ -151,7 +147,7 @@ lsX pp = do
 
 esX ::
   forall era.
-  (EraSpecLedger era, HasSpec (InstantStake era), CertState era ~ ShelleyCertState era) =>
+  (EraSpecLedger era, HasSpec (InstantStake era), IsNormalType (CertState era)) =>
   PParams era -> Gen (EpochState era)
 esX pp = do
   univ <- genWitUniv @era 50
@@ -173,7 +169,7 @@ snapsX ::
   forall era.
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
-  , CertState era ~ ShelleyCertState era
+  , IsNormalType (CertState era) --  ~ ShelleyCertState era
   ) =>
   PParams era -> Gen SnapShots
 snapsX pp = do
@@ -258,7 +254,7 @@ instance
   ( EraSpecPParams era
   , EraSpecLedger era
   , HasSpec (InstantStake era)
-  , CertState era ~ ConwayCertState era
+  , IsNormalType (CertState era)
   ) =>
   WellFormed (UTxO era) era
   where
@@ -267,7 +263,7 @@ instance
 instance
   ( EraSpecPParams era
   , EraSpecLedger era
-  , CertState era ~ ShelleyCertState era
+  , IsNormalType (CertState era)
   , HasSpec (InstantStake era)
   ) =>
   WellFormed (UTxOState era) era
@@ -284,7 +280,7 @@ instance
   ( EraSpecPParams era
   , EraSpecLedger era
   , HasSpec (InstantStake era)
-  , CertState era ~ ShelleyCertState era
+  , IsNormalType (CertState era)
   ) =>
   WellFormed (ShelleyGovState era) era
   where
@@ -294,7 +290,7 @@ instance
   ( EraSpecPParams era
   , HasSpec (InstantStake era)
   , EraSpecLedger era
-  , CertState era ~ ShelleyCertState era
+  , IsNormalType (CertState era)
   ) =>
   WellFormed (LedgerState era) era
   where
@@ -304,7 +300,7 @@ instance
   ( EraSpecPParams era
   , EraSpecLedger era
   , HasSpec (InstantStake era)
-  , CertState era ~ ShelleyCertState era
+  , IsNormalType (CertState era)
   ) =>
   WellFormed (EpochState era) era
   where
@@ -323,7 +319,7 @@ instance
   ( EraSpecPParams era
   , EraSpecLedger era
   , HasSpec (InstantStake era)
-  , CertState era ~ ShelleyCertState era
+  , IsNormalType (CertState era)
   ) =>
   WellFormed SnapShots era
   where
