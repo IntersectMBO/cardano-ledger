@@ -22,7 +22,6 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   LedgerState (..),
-  UTxOState,
   genesisState,
  )
 import Cardano.Ledger.Shelley.Rules (

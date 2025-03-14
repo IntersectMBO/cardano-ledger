@@ -34,7 +34,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState.Types (
   EpochState (..),
   LedgerState (..),
-  UTxOState (..),
   lsCertStateL,
   lsUTxOStateL,
   utxosGovStateL,

@@ -37,7 +37,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
-  UTxOState (..),
   lsCertStateL,
  )
 import Cardano.Ledger.State

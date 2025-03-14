@@ -46,7 +46,6 @@ import Cardano.Ledger.Shelley.API (
   NewEpochState (..),
   PState (..),
   StrictMaybe (..),
-  UTxOState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))

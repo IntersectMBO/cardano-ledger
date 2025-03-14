@@ -36,7 +36,6 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
-  UTxOState,
   genesisState,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyUTXOW, UtxoEnv (..))

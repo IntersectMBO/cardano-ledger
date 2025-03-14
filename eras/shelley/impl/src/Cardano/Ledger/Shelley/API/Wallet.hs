@@ -77,7 +77,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   RewardUpdate,
-  UTxOState (..),
   circulation,
   createRUpd,
   curPParamsEpochStateL,

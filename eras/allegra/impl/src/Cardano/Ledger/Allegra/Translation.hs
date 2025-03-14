@@ -28,7 +28,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   PState (..),
-  UTxOState (..),
   VState (..),
   returnRedeemAddrsToReserves,
  )

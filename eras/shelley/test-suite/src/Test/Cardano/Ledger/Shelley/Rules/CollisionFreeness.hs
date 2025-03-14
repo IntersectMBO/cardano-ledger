@@ -14,10 +14,7 @@ module Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness (
 import Cardano.Ledger.Block (bbody)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (witVKeyHash)
-import Cardano.Ledger.Shelley.LedgerState (
-  LedgerState (..),
-  UTxOState (..),
- )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.SetAlgebra (eval, (∩))

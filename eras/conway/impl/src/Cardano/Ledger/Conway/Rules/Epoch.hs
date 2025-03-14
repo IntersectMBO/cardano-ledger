@@ -76,7 +76,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   PState (..),
-  UTxOState (..),
   asTreasuryL,
   curPParamsEpochStateL,
   esAccountState,

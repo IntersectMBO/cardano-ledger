@@ -24,7 +24,6 @@ import Cardano.Ledger.Plutus (
   exBudgetToExUnits,
   transExUnits,
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.Shelley.State
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)

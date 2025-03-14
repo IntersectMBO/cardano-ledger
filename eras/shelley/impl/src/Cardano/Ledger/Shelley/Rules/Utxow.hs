@@ -61,7 +61,6 @@ import Cardano.Ledger.Rules.ValidationMode (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXOW)
-import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (
   ShelleyUTXO,
@@ -70,14 +69,11 @@ import Cardano.Ledger.Shelley.Rules.Utxo (
   UtxoEvent,
  )
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.Shelley.UTxO (
-  EraUTxO (..),
-  ScriptsProvided (..),
   ShelleyScriptsNeeded (..),
-  UTxO,
-  verifyWitVKey,
  )
 import Control.DeepSeq
 import Control.Monad (when)

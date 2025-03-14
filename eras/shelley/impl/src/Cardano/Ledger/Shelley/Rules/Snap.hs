@@ -25,10 +25,7 @@ import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
-import Cardano.Ledger.Shelley.LedgerState (
-  LedgerState (..),
-  UTxOState (..),
- )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.State
 import Control.DeepSeq (NFData)
 import Control.State.Transition (

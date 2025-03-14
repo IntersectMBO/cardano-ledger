@@ -60,7 +60,7 @@ import Cardano.Ledger.Plutus.Evaluate (
   ScriptFailure (..),
   ScriptResult (..),
  )
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), dsGenDelegsL)
+import Cardano.Ledger.Shelley.LedgerState (dsGenDelegsL)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
   PpupEnv (..),

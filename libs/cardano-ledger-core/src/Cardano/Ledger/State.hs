@@ -1,5 +1,6 @@
 module Cardano.Ledger.State (
   module Cardano.Ledger.State.AccountState,
+  module Cardano.Ledger.State.UtxoState,
   module Cardano.Ledger.State.UTxO,
   module Cardano.Ledger.State.PoolDistr,
   module Cardano.Ledger.State.SnapShots,
@@ -14,3 +15,4 @@ import Cardano.Ledger.State.PoolDistr
 import Cardano.Ledger.State.SnapShots
 import Cardano.Ledger.State.Stake
 import Cardano.Ledger.State.UTxO
+import Cardano.Ledger.State.UtxoState

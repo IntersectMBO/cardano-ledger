@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Move `UTxOState` into `Cardano.Ledger.State` from `cardano-ledger-shelley`
 * Add `BoootstrapWitnessRaw` type
 * Add `EraStake`, `CanGetInstantStake`,  `CanSetInstantStake` , `snapShotFromInstantStake`, `resolveActiveInstantStakeCredentials`
 * Add boolean argument to `fromCborRigorousBothAddr` for lenient `Ptr` decoding

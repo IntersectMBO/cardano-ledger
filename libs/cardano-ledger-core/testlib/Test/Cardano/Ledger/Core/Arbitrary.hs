@@ -502,6 +502,24 @@ instance Arbitrary AccountState where
   arbitrary = AccountState <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
+instance
+  ( EraTxOut era
+  , Arbitrary (TxOut era)
+  , Arbitrary (GovState era)
+  , Arbitrary (InstantStake era)
+  ) =>
+  Arbitrary (UTxOState era)
+  where
+  arbitrary =
+    UTxOState
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+  shrink = recursivelyShrink
+
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.State.PoolDistr --------------------------------------------------------
 ------------------------------------------------------------------------------------------

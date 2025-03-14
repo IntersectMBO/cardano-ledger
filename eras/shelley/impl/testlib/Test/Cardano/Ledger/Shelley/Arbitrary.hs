@@ -182,36 +182,6 @@ instance
         <$> (lsUTxOState : shrink lsUTxOState)
         <*> (lsCertState : shrink lsCertState)
 
-instance
-  ( EraTxOut era
-  , Arbitrary (TxOut era)
-  , Arbitrary (GovState era)
-  , Arbitrary (InstantStake era)
-  ) =>
-  Arbitrary (UTxOState era)
-  where
-  arbitrary =
-    UTxOState
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-  -- The 'genericShrink' function returns first the immediate subterms of a
-  -- value (in case it is a recursive data-type), and then shrinks the value
-  -- itself. Since 'UTxOState' is not a recursive data-type, there are no
-  -- subterms, and we can use `recursivelyShrink` directly. This is particularly
-  -- important when abstracting away the different fields of the ledger state,
-  -- since the generic subterms instances will overlap due to GHC not having
-  -- enough context to infer if 'a' and 'b' are the same types (since in this
-  -- case this will depend on the definition of 'era').
-  --
-  -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) a where
-  -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
-  shrink = recursivelyShrink
-
 instance Arbitrary (ShelleyInstantStake era) where
   arbitrary = ShelleyInstantStake <$> arbitrary <*> arbitrary
   shrink = genericShrink
