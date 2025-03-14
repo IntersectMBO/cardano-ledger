@@ -15,39 +15,28 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Block (
-  Block (Block, Block', UnserialisedBlock, UnsafeUnserialisedBlock),
+  Block (Block),
   bheader,
   bbody,
   neededTxInsForBlock,
 )
 where
 
-import Cardano.Ledger.Binary (
-  Annotator (..),
-  DecCBOR (decCBOR),
-  EncCBOR (..),
-  EncCBORGroup (..),
-  annotatorSlice,
-  decodeRecordNamed,
-  encodeListLen,
-  serialize,
- )
+import Cardano.Ledger.Binary (DecCBOR (..), decodeRecordNamed, toPlainEncoding)
+import Cardano.Ledger.Binary.Encoding (EncCBOR (encCBOR), encodeListLen)
+import Cardano.Ledger.Binary.Group (EncCBORGroup (encCBORGroup, listLen))
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
-import Cardano.Ledger.MemoBytes (MemoBytes (Memo), decodeMemoized)
 import Cardano.Ledger.TxIn (TxIn (..))
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Short as SBS
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era
-  = Block' !h !(TxSeq era) BSL.ByteString
+  = Block !h !(TxSeq era)
   deriving (Generic)
 
 deriving stock instance
@@ -65,92 +54,26 @@ deriving anyclass instance
   ) =>
   NoThunks (Block h era)
 
-pattern Block ::
+instance
   forall era h.
   ( Era era
   , EncCBORGroup (TxSeq era)
   , EncCBOR h
   ) =>
-  h ->
-  TxSeq era ->
-  Block h era
-pattern Block h txns <-
-  Block' h txns _
+  EncCBOR (Block h era)
   where
-    Block h txns =
-      let bytes =
-            serialize (eraProtVerLow @era) $
-              encodeListLen (1 + listLen txns) <> encCBOR h <> encCBORGroup txns
-       in Block' h txns bytes
-
-{-# COMPLETE Block #-}
-
--- | Access a block without its serialised bytes. This is often useful when
--- we're using a 'BHeaderView' in place of the concrete header.
-pattern UnserialisedBlock ::
-  h ->
-  TxSeq era ->
-  Block h era
-pattern UnserialisedBlock h txns <- Block' h txns _
-
-{-# COMPLETE UnserialisedBlock #-}
-
--- | Unsafely construct a block without the ability to serialise its bytes.
---
---   Anyone calling this pattern must ensure that the resulting block is never
---   serialised. Any uses of this pattern outside of testing code should be
---   regarded with suspicion.
-pattern UnsafeUnserialisedBlock ::
-  h ->
-  TxSeq era ->
-  Block h era
-pattern UnsafeUnserialisedBlock h txns <-
-  Block' h txns _
-  where
-    UnsafeUnserialisedBlock h txns =
-      let bytes = error "`UnsafeUnserialisedBlock` used to construct a block which was later serialised."
-       in Block' h txns bytes
-
-{-# COMPLETE UnsafeUnserialisedBlock #-}
-
-instance (EraTx era, Typeable h) => EncCBOR (Block h era)
-
-instance (EraTx era, Typeable h) => Plain.ToCBOR (Block h era) where
-  toCBOR (Block' _ _ blockBytes) = Plain.encodePreEncoded $ BSL.toStrict blockBytes
+  encCBOR (Block h txns) =
+    encodeListLen (1 + listLen txns) <> encCBOR h <> encCBORGroup txns
 
 instance
-  ( EraSegWits era
-  , DecCBOR (Annotator h)
-  , Typeable h
+  forall era h.
+  ( Era era
+  , EncCBORGroup (TxSeq era)
+  , EncCBOR h
   ) =>
-  DecCBOR (Annotator (Block h era))
+  Plain.ToCBOR (Block h era)
   where
-  decCBOR = annotatorSlice $
-    decodeRecordNamed "Block" (const blockSize) $ do
-      header <- decCBOR
-      txns <- decCBOR
-      pure $ Block' <$> header <*> txns
-    where
-      blockSize =
-        1 -- header
-          + fromIntegral (numSegComponents @era)
-
-data BlockRaw h era = BlockRaw !h !(TxSeq era)
-
-instance
-  ( EraSegWits era
-  , DecCBOR h
-  , DecCBOR (TxSeq era)
-  ) =>
-  DecCBOR (BlockRaw h era)
-  where
-  decCBOR =
-    decodeRecordNamed "Block" (const blockSize) $ do
-      header <- decCBOR
-      txns <- decCBOR
-      pure $ BlockRaw header txns
-    where
-      blockSize = 1 + fromIntegral (numSegComponents @era)
+  toCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
 
 instance
   ( EraSegWits era
@@ -159,17 +82,21 @@ instance
   ) =>
   DecCBOR (Block h era)
   where
-  decCBOR = do
-    Memo (BlockRaw h txSeq) bs <- decodeMemoized (decCBOR @(BlockRaw h era))
-    pure $ Block' h txSeq (BSL.fromStrict (SBS.fromShort bs))
+  decCBOR =
+    decodeRecordNamed "Block" (const blockSize) $ do
+      header <- decCBOR
+      txns <- decCBOR
+      pure $ Block header txns
+    where
+      blockSize = 1 + fromIntegral (numSegComponents @era)
 
 bheader ::
   Block h era ->
   h
-bheader (Block' bh _ _) = bh
+bheader (Block bh _) = bh
 
 bbody :: Block h era -> TxSeq era
-bbody (Block' _ txs _) = txs
+bbody (Block _ txs) = txs
 
 -- | The validity of any individual block depends only on a subset
 -- of the UTxO stored in the ledger state. This function returns
@@ -185,7 +112,7 @@ neededTxInsForBlock ::
   EraSegWits era =>
   Block h era ->
   Set TxIn
-neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
+neededTxInsForBlock (Block _ txsSeq) = Set.filter isNotNewInput allTxIns
   where
     txBodies = map (^. bodyTxL) $ toList $ fromTxSeq txsSeq
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
