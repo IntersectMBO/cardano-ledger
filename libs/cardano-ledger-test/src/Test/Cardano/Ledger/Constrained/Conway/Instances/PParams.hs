@@ -23,7 +23,7 @@
 -- | This module provides the necessary instances of `HasSpec`
 --   and `HasSimpleRep` for the components of PParams. It hides
 --   the fact that (PParams era) can have different underlying 'data' types
---   in each era, and provides (Term fn) selector functions
+--   in each era, and provides Term selector functions
 --   (e.g. minFeeA_, minFeeB_, etc.) for every PParam field (in every era).
 --   The class EraSpecPParams provides this era parametric abstraction.
 --   and instances of EraSpecPParams are defined here.
@@ -86,8 +86,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Constrained hiding (Value)
-import Constrained.Univ ()
+import Constrained.API
 import Data.Word
 import Lens.Micro
 import Numeric.Natural (Natural)
@@ -408,127 +407,127 @@ uLiftConway pps pp =
 -- ============================================================================
 -- Term Selectors for SimplePParams
 
-minFeeA_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Coin
+minFeeA_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 minFeeA_ simplepp = sel @0 simplepp
 
-minFeeB_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Coin
+minFeeB_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 minFeeB_ simplepp = sel @1 simplepp
 
-maxBBSize_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Word32
+maxBBSize_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Word32
 maxBBSize_ simplepp = sel @2 simplepp
 
-maxTxSize_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Word32
+maxTxSize_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Word32
 maxTxSize_ simplepp = sel @3 simplepp
 
-maxBHSize_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Word32
+maxBHSize_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Word32
 maxBHSize_ simplepp = sel @4 simplepp
 
-keyDeposit_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Coin
+keyDeposit_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 keyDeposit_ simplepp = sel @5 simplepp
 
-poolDeposit_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Coin
+poolDeposit_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 poolDeposit_ simplepp = sel @6 simplepp
 
 eMax_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn EpochInterval
+  EraSpecPParams era => Term (SimplePParams era) -> Term EpochInterval
 eMax_ simplepp = sel @7 simplepp
 
-nOpt_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Word16
+nOpt_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Word16
 nOpt_ simplepp = sel @8 simplepp
 
 a0_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn NonNegativeInterval
+  EraSpecPParams era => Term (SimplePParams era) -> Term NonNegativeInterval
 a0_ simplepp = sel @9 simplepp
 
-rho_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn UnitInterval
+rho_ :: EraSpecPParams era => Term (SimplePParams era) -> Term UnitInterval
 rho_ simplepp = sel @10 simplepp
 
-tau_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn UnitInterval
+tau_ :: EraSpecPParams era => Term (SimplePParams era) -> Term UnitInterval
 tau_ simplepp = sel @11 simplepp
 
 decentral_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn UnitInterval
+  EraSpecPParams era => Term (SimplePParams era) -> Term UnitInterval
 decentral_ simplepp = sel @12 simplepp
 
 protocolVersion_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn ProtVer
+  EraSpecPParams era => Term (SimplePParams era) -> Term ProtVer
 protocolVersion_ simplepp = sel @13 simplepp
 
 minUTxOValue_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Coin
+  EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 minUTxOValue_ simplepp = sel @14 simplepp
 
-minPoolCost_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Coin
+minPoolCost_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 minPoolCost_ simplepp = sel @15 simplepp
 
 coinsPerUTxOWord_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Coin
+  EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 coinsPerUTxOWord_ simplepp = sel @16 simplepp
 
 costModels_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn CostModels
+  EraSpecPParams era => Term (SimplePParams era) -> Term CostModels
 costModels_ simplepp = sel @17 simplepp
 
-prices_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Prices
+prices_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Prices
 prices_ simplepp = sel @18 simplepp
 
 maxTxExUnits_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn ExUnits
+  EraSpecPParams era => Term (SimplePParams era) -> Term ExUnits
 maxTxExUnits_ simplepp = sel @19 simplepp
 
 maxBlockExUnits_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn ExUnits
+  EraSpecPParams era => Term (SimplePParams era) -> Term ExUnits
 maxBlockExUnits_ simplepp = sel @20 simplepp
 
 maxValSize_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Natural
+  EraSpecPParams era => Term (SimplePParams era) -> Term Natural
 maxValSize_ simplepp = sel @21 simplepp
 
 collateralPercentage_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Natural
+  EraSpecPParams era => Term (SimplePParams era) -> Term Natural
 collateralPercentage_ simplepp = sel @22 simplepp
 
 maxCollateralInputs_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Natural
+  EraSpecPParams era => Term (SimplePParams era) -> Term Natural
 maxCollateralInputs_ simplepp = sel @23 simplepp
 
 coinsPerUTxOByte_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Coin
+  EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 coinsPerUTxOByte_ simplepp = sel @24 simplepp
 
 poolVotingThresholds_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn PoolVotingThresholds
+  EraSpecPParams era => Term (SimplePParams era) -> Term PoolVotingThresholds
 poolVotingThresholds_ simplepp = sel @25 simplepp
 
 drepVotingThresholds_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn DRepVotingThresholds
+  EraSpecPParams era => Term (SimplePParams era) -> Term DRepVotingThresholds
 drepVotingThresholds_ simplepp = sel @26 simplepp
 
 committeeMinSize_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Natural
+  EraSpecPParams era => Term (SimplePParams era) -> Term Natural
 committeeMinSize_ simplepp = sel @27 simplepp
 
 committeeMaxTermLength_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn EpochInterval
+  EraSpecPParams era => Term (SimplePParams era) -> Term EpochInterval
 committeeMaxTermLength_ simplepp = sel @28 simplepp
 
 govActionLifetime_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn EpochInterval
+  EraSpecPParams era => Term (SimplePParams era) -> Term EpochInterval
 govActionLifetime_ simplepp = sel @29 simplepp
 
 govActionDeposit_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Coin
+  EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 govActionDeposit_ simplepp = sel @30 simplepp
 
-dRepDeposit_ :: (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Coin
+dRepDeposit_ :: EraSpecPParams era => Term (SimplePParams era) -> Term Coin
 dRepDeposit_ simplepp = sel @31 simplepp
 
 dRepActivity_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn EpochInterval
+  EraSpecPParams era => Term (SimplePParams era) -> Term EpochInterval
 dRepActivity_ simplepp = sel @32 simplepp
 
 minFeeRefScriptCostPerByte_ ::
-  (EraSpecPParams era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn NonNegativeInterval
+  EraSpecPParams era => Term (SimplePParams era) -> Term NonNegativeInterval
 minFeeRefScriptCostPerByte_ simplepp = sel @33 simplepp
 
 -- =======================================================================
@@ -538,7 +537,7 @@ minFeeRefScriptCostPerByte_ simplepp = sel @33 simplepp
 --   Missing fields are left unconstrained and will appear as random values in the result.
 --   This can easily be lifted to PParams: see Test.Cardano.Ledger.Constrained.Conway.PParams(pparamsSpec)
 simplePParamsSpec ::
-  forall fn era. (EraSpecPParams era, BaseUniverse fn) => Specification fn (SimplePParams era)
+  forall era. EraSpecPParams era => Specification (SimplePParams era)
 simplePParamsSpec = constrained $ \pp ->
   [ assert $ protocolVersion_ pp ==. lit (ProtVer (natVersion @10) 0)
   , assert $ maxBBSize_ pp /=. lit 0

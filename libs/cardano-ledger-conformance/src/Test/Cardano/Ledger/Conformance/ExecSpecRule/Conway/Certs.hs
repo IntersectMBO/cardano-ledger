@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs (nameCerts) whe
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert
-import Constrained
+import Constrained.API
 import Data.Bifunctor (first)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
@@ -26,15 +26,12 @@ import Test.Cardano.Ledger.Constrained.Conway
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.Cardano.Ledger.Imp.Common hiding (context)
 
-instance
-  IsConwayUniv fn =>
-  ExecSpecRule fn "CERTS" ConwayEra
-  where
-  type ExecContext fn "CERTS" ConwayEra = (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
+instance ExecSpecRule "CERTS" ConwayEra where
+  type ExecContext "CERTS" ConwayEra = (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
 
   genExecContext = do
     univ <- genWitUniv @ConwayEra 300
-    ccec <- genFromSpec @fn (conwayCertExecContextSpec univ 5)
+    ccec <- genFromSpec (conwayCertExecContextSpec univ 5)
     pure (univ, ccec)
 
   environmentSpec _ = certsEnvSpec
@@ -42,13 +39,13 @@ instance
   stateSpec (univ, context) _ =
     constrained $ \x ->
       match x $ \vstate pstate dstate ->
-        [ satisfies vstate (vStateSpec @_ @ConwayEra univ (ccecDelegatees context))
-        , satisfies pstate (pStateSpec @_ @ConwayEra univ)
+        [ satisfies vstate (vStateSpec @ConwayEra univ (ccecDelegatees context))
+        , satisfies pstate (pStateSpec @ConwayEra univ)
         , -- temporary workaround because Spec does some extra tests, that the implementation does not, in the bootstrap phase.
           satisfies dstate (bootstrapDStateSpec univ (ccecDelegatees context) (ccecWithdrawals context))
         ]
 
-  signalSpec (univ, _) env state = txCertsSpec @ConwayEra @fn univ env state
+  signalSpec (univ, _) env state = txCertsSpec @ConwayEra univ env state
 
   runAgdaRule env st sig = unComputationResult $ Agda.certsStep env st sig
   classOf = Just . nameCerts
@@ -57,10 +54,10 @@ instance
     -- The results of runConformance are Agda types, the `ctx` is a Haskell type, we extract and translate the Withdrawal keys.
     specWithdrawalCredSet <-
       translateWithContext () (Map.keysSet (Map.mapKeys raCredential (ccecWithdrawals ccec)))
-    (implResTest, agdaResTest, _) <- runConformance @"CERTS" @fn @ConwayEra ctx env st sig
+    (implResTest, agdaResTest, _) <- runConformance @"CERTS" @ConwayEra ctx env st sig
     case (implResTest, agdaResTest) of
       (Right haskell, Right spec) ->
-        checkConformance @"CERTS" @ConwayEra @fn
+        checkConformance @"CERTS" @ConwayEra
           ctx
           env
           st
@@ -77,7 +74,7 @@ instance
               zeroRewards (Agda.MkHSMap pairs) =
                 Agda.MkHSMap (map (\(c, r) -> if c `Set.member` credsSet then (c, 0) else (c, r)) pairs)
       _ ->
-        checkConformance @"CERTS" @ConwayEra @fn
+        checkConformance @"CERTS" @ConwayEra
           ctx
           env
           st

@@ -32,7 +32,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.CertState -- (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
-import Constrained
+import Constrained.API
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -47,9 +47,9 @@ import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.QuickCheck hiding (forAll, witness)
 
 certEnvSpec ::
-  forall fn era.
-  (EraSpecPParams era, IsConwayUniv fn) =>
-  WitUniv era -> Specification fn (CertEnv era)
+  forall era.
+  EraSpecPParams era =>
+  WitUniv era -> Specification (CertEnv era)
 certEnvSpec _univ =
   constrained $ \ce ->
     match ce $ \pp _currEpoch _currCommittee _proposals ->
@@ -57,9 +57,9 @@ certEnvSpec _univ =
       ]
 
 delegateeSpec ::
-  (IsConwayUniv fn, Era era) =>
+  Era era =>
   WitUniv era ->
-  Specification fn (Set (Credential 'DRepRole))
+  Specification (Set (Credential 'DRepRole))
 delegateeSpec univ = constrained $ \x ->
   [ witness univ x
   , assert $ sizeOf_ x <=. 20
@@ -67,27 +67,27 @@ delegateeSpec univ = constrained $ \x ->
   ]
 
 shelleyCertStateSpec ::
-  forall fn era.
-  (IsConwayUniv fn, EraSpecDeleg era, Era era) =>
+  forall era.
+  (EraSpecDeleg era, Era era) =>
   WitUniv era ->
   Set (Credential 'DRepRole) ->
   Map (RewardAccount) Coin ->
-  Specification fn (ShelleyCertState era)
+  Specification (ShelleyCertState era)
 shelleyCertStateSpec univ delegatees wdrls =
   constrained $ \cs ->
     match cs $ \vState pState dState ->
-      [ satisfies vState (vStateSpec @fn @era univ delegatees)
-      , satisfies pState (pStateSpec @fn @era univ)
-      , satisfies dState (dStateSpec @fn @era univ wdrls)
+      [ satisfies vState (vStateSpec @era univ delegatees)
+      , satisfies pState (pStateSpec @era univ)
+      , satisfies dState (dStateSpec @era univ wdrls)
       ]
 
 conwayTxCertSpec ::
-  forall fn era.
-  (IsConwayUniv fn, era ~ ConwayEra) =>
+  forall era.
+  era ~ ConwayEra =>
   WitUniv era ->
   CertEnv era ->
   CertState era ->
-  Specification fn (ConwayTxCert era)
+  Specification (ConwayTxCert era)
 conwayTxCertSpec univ (CertEnv pp ce cc cp) certState =
   constrained $ \txCert ->
     caseOn
@@ -108,9 +108,9 @@ conwayTxCertSpec univ (CertEnv pp ce cc cp) certState =
 
 -- | Genesis delegations only work through the Babbage era. Hence the (AtMostEra BabbageEra era)
 genesisDelegCertSpec ::
-  forall fn era.
-  (AtMostEra BabbageEra era, IsConwayUniv fn, Era era) =>
-  DState era -> Specification fn GenesisDelegCert
+  forall era.
+  (AtMostEra BabbageEra era, Era era) =>
+  DState era -> Specification GenesisDelegCert
 genesisDelegCertSpec ds =
   let (vrfKeyHashes, coldKeyHashes) = computeSets ds
       GenDelegs genDelegs = dsGenDelegs ds
@@ -146,12 +146,12 @@ computeSets ds =
 -- =======================================
 
 shelleyTxCertSpec ::
-  forall fn era.
-  (AtMostEra BabbageEra era, EraSpecPParams era, IsConwayUniv fn) =>
+  forall era.
+  (AtMostEra BabbageEra era, EraSpecPParams era) =>
   WitUniv era ->
   CertEnv era ->
   ShelleyCertState era ->
-  Specification fn (ShelleyTxCert era)
+  Specification (ShelleyTxCert era)
 shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (ShelleyCertState _vstate pstate dstate) =
   constrained $ \ [var|shelleyTxCert|] ->
     -- These weights try to make it equally likely that each of the many certs
@@ -160,7 +160,7 @@ shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (ShelleyCertState _vstate psta
       ( branchW 5 $ \ [var|deleg|] ->
           satisfies
             deleg
-            ( shelleyDelegCertSpec @fn @era
+            ( shelleyDelegCertSpec @era
                 univ
                 (ConwayDelegEnv pp (psStakePoolParams pstate))
                 dstate
@@ -168,48 +168,47 @@ shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (ShelleyCertState _vstate psta
       )
       ( branchW 3 $ \ [var|poolCert|] -> satisfies poolCert $ poolCertSpec univ (PoolEnv currEpoch pp) pstate
       )
-      (branchW 1 $ \ [var|genesis|] -> satisfies genesis (genesisDelegCertSpec @fn @era dstate))
+      (branchW 1 $ \ [var|genesis|] -> satisfies genesis (genesisDelegCertSpec @era dstate))
       (branchW 1 $ \ [var|_mir|] -> False) -- By design, we never generate a MIR cert
 
 -- =========================================================================
 -- Making Cert Era parametric with the EraSpecCert class
 
 class
-  ( IsConwayUniv fn
-  , HasSpec fn (TxCert era)
+  ( HasSpec (TxCert era)
   , Era era
   ) =>
-  EraSpecCert era fn
+  EraSpecCert era
   where
-  txCertSpec :: WitUniv era -> CertEnv era -> CertState era -> Specification fn (TxCert era)
+  txCertSpec :: WitUniv era -> CertEnv era -> CertState era -> Specification (TxCert era)
   txCertKey :: TxCert era -> CertKey
   certStateSpec ::
     WitUniv era ->
     Set (Credential 'DRepRole) ->
     Map (RewardAccount) Coin ->
-    Specification fn (CertState era)
+    Specification (CertState era)
 
-instance IsConwayUniv fn => EraSpecCert ShelleyEra fn where
+instance EraSpecCert ShelleyEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
   certStateSpec = shelleyCertStateSpec
-instance IsConwayUniv fn => EraSpecCert AllegraEra fn where
+instance EraSpecCert AllegraEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
   certStateSpec = shelleyCertStateSpec
-instance IsConwayUniv fn => EraSpecCert MaryEra fn where
+instance EraSpecCert MaryEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
   certStateSpec = shelleyCertStateSpec
-instance IsConwayUniv fn => EraSpecCert AlonzoEra fn where
+instance EraSpecCert AlonzoEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
   certStateSpec = shelleyCertStateSpec
-instance IsConwayUniv fn => EraSpecCert BabbageEra fn where
+instance EraSpecCert BabbageEra where
   txCertSpec = shelleyTxCertSpec
   txCertKey = shelleyTxCertKey
   certStateSpec = shelleyCertStateSpec
-instance IsConwayUniv fn => EraSpecCert ConwayEra fn where
+instance EraSpecCert ConwayEra where
   txCertSpec = conwayTxCertSpec
   txCertKey = conwayTxCertKey
   certStateSpec = shelleyCertStateSpec
@@ -256,10 +255,10 @@ testGenesisCert ::
   (AtMostEra BabbageEra era, EraSpecDeleg era, EraSpecPParams era, GenScript era) => Gen Property
 testGenesisCert = do
   univ <- genWitUniv @era 200
-  wdrls <- genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
-  dstate <- genFromSpec @ConwayFn @(DState era) (dStateSpec @ConwayFn @era univ wdrls)
-  let spec = genesisDelegCertSpec @ConwayFn dstate
-  ans <- genFromSpec @ConwayFn spec
+  wdrls <- genFromSpec (constrained $ \x -> witness univ x)
+  dstate <- genFromSpec @(DState era) (dStateSpec @era univ wdrls)
+  let spec = genesisDelegCertSpec dstate
+  ans <- genFromSpec spec
   pure $ property (conformsToSpec ans spec)
 
 testShelleyCert ::
@@ -274,14 +273,14 @@ testShelleyCert ::
   Gen Property
 testShelleyCert = do
   univ <- genWitUniv @era 200
-  wdrls <- genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
-  delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
-  env <- genFromSpec @ConwayFn @(CertEnv era) (certEnvSpec @ConwayFn @era univ)
+  wdrls <- genFromSpec (constrained $ \x -> witness univ x)
+  delegatees <- genFromSpec (delegateeSpec univ)
+  env <- genFromSpec @(CertEnv era) (certEnvSpec @era univ)
   dstate <-
-    genFromSpec @ConwayFn @(ShelleyCertState era)
-      (shelleyCertStateSpec @ConwayFn @era univ delegatees wdrls)
+    genFromSpec @(ShelleyCertState era)
+      (shelleyCertStateSpec @era univ delegatees wdrls)
   let spec = shelleyTxCertSpec univ env dstate
-  ans <- genFromSpec @ConwayFn spec
+  ans <- genFromSpec spec
   let tag = case ans of
         ShelleyTxCertDelegCert x -> case x of
           ShelleyRegCert {} -> "Register"
@@ -297,16 +296,16 @@ testShelleyCert = do
 testConwayCert :: Gen Property
 testConwayCert = do
   univ <- genWitUniv @ConwayEra 200
-  env <- genFromSpec @ConwayFn @(CertEnv ConwayEra) (certEnvSpec @ConwayFn @ConwayEra univ)
-  wdrls <- genFromSpec @ConwayFn (constrained $ \x -> witness univ x)
-  delegatees <- genFromSpec @ConwayFn (delegateeSpec univ)
+  env <- genFromSpec @(CertEnv ConwayEra) (certEnvSpec @ConwayEra univ)
+  wdrls <- genFromSpec (constrained $ \x -> witness univ x)
+  delegatees <- genFromSpec (delegateeSpec univ)
   dstate <-
-    genFromSpec @ConwayFn @(CertState ConwayEra)
+    genFromSpec @(CertState ConwayEra)
       -- TODO: change to `conwayCertStateSpec` once it's implemented
       (shelleyCertStateSpec univ delegatees wdrls)
-  let spec :: Specification ConwayFn (ConwayTxCert ConwayEra)
+  let spec :: Specification (ConwayTxCert ConwayEra)
       spec = conwayTxCertSpec univ env dstate
-  ans <- genFromSpec @ConwayFn spec
+  ans <- genFromSpec spec
   let tag = case ans of
         (ConwayTxCertDeleg (ConwayRegCert _ _)) -> "Register"
         (ConwayTxCertDeleg (ConwayUnRegCert _ _)) -> "UnRegister"
