@@ -17,12 +17,13 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
 
 import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
-import Cardano.Ledger.CertState (EraCertState)
+import Cardano.Ledger.CertState (DState (..), EraCertState, mkCertState)
+import Cardano.Ledger.Coin
+import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   LedgerState (..),
-  genesisState,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv,
@@ -37,11 +38,14 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Protocol.Crypto (Crypto)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
+import Data.Default (def)
 import Data.Functor.Identity (runIdentity)
+import Data.Map.Strict (Map)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import GHC.Stack
@@ -184,3 +188,31 @@ mkGenesisLedgerState ::
   Gen (Either a (LedgerState era))
 mkGenesisLedgerState ge@(GenEnv _ _ c) _ =
   Right . genesisState (genesisDelegs0 c) <$> genUtxo0 ge
+
+-- | Creates the ledger state for an empty ledger which
+--  contains the specified transaction outputs.
+genesisState ::
+  forall era.
+  (EraGov era, EraCertState era, EraStake era) =>
+  Map (KeyHash 'Genesis) GenDelegPair ->
+  UTxO era ->
+  LedgerState era
+genesisState genDelegs0 utxo0 =
+  LedgerState
+    ( mkUtxoState
+        utxo0
+        (Coin 0)
+        (Coin 0)
+        emptyGovState
+        mempty
+    )
+    (mkCertState def def dState)
+  where
+    dState :: DState era
+    dState =
+      DState
+        { dsUnified = UM.empty
+        , dsFutureGenDelegs = mempty
+        , dsGenDelegs = GenDelegs genDelegs0 :: GenDelegs
+        , dsIRewards = def
+        }

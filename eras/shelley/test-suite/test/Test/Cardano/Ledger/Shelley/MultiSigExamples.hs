@@ -34,10 +34,7 @@ import Cardano.Ledger.Credential (
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (
-  LedgerState (..),
-  genesisState,
- )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUTXOW, UtxoEnv (..))
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
@@ -70,6 +67,7 @@ import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Generator.Core (genesisCoins)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (genesisState)
 import Test.Cardano.Ledger.Shelley.Utils
 
 -- Multi-Signature tests

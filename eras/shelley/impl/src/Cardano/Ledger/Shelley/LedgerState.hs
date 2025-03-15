@@ -35,9 +35,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   smartUTxOState,
 
-  -- * Genesis State
-  genesisState,
-
   -- * Validation
   consumed,
   produced,

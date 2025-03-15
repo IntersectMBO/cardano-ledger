@@ -6,7 +6,6 @@
 module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
   availableAfterMIR,
   getGKeys,
-  genesisState,
   updateNES,
   returnRedeemAddrsToReserves,
 ) where
@@ -16,21 +15,17 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
  )
 import Cardano.Ledger.CertState (
-  DState (..),
   EraCertState (..),
   InstantaneousRewards (..),
   dsGenDelegsL,
  )
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
-import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
+import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.State
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
-import Data.Default (def)
 import Data.Foldable (fold)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Lens.Micro ((&), (.~), (^.))
@@ -57,34 +52,6 @@ getGKeys nes = Map.keysSet $ unGenDelegs (ls ^. lsCertStateL . certDStateL . dsG
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ ls _ _ = es
 
--- | Creates the ledger state for an empty ledger which
---  contains the specified transaction outputs.
-genesisState ::
-  forall era.
-  (EraGov era, EraCertState era, EraStake era) =>
-  Map (KeyHash 'Genesis) GenDelegPair ->
-  UTxO era ->
-  LedgerState era
-genesisState genDelegs0 utxo0 =
-  LedgerState
-    ( mkUtxoState
-        utxo0
-        (Coin 0)
-        (Coin 0)
-        emptyGovState
-        mempty
-    )
-    (mkCertState def def dState)
-  where
-    dState :: DState era
-    dState =
-      DState
-        { dsUnified = UM.empty
-        , dsFutureGenDelegs = Map.empty
-        , dsGenDelegs = GenDelegs genDelegs0 :: GenDelegs
-        , dsIRewards = def
-        }
-
 -- Functions for stake delegation model
 
 -- A TxOut has 4 different shapes, depending on the shape of its embedded Addr.
@@ -103,14 +70,14 @@ updateNES ::
   NewEpochState era
 updateNES
   oldNes@( NewEpochState
-            _eL
-            _bprev
-            _
-            es@(EpochState acnt _ ss nm)
-            _ru
-            _pd
-            _avvm
-          )
+             _eL
+             _bprev
+             _
+             es@(EpochState acnt _ ss nm)
+             _ru
+             _pd
+             _avvm
+           )
   bcur
   ls =
     let

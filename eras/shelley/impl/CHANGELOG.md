@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Move `genesisState` into the `cardano-ledger-shelley-test` suite
 * Add `ShelleyInstantStake`, `shelleyInstantStakeCredentialsL`, `addShelleyInstantStake`, `deleteShelleyInstantStake`, `resolveShelleyInstantStake`
 * Remove  `IncrementalStake` type, `incrementalStakeDistr`, `updateStakeDistribution`, `utxosStakeDistrL`
 * Replace `IncrementalStake` with `InstantStake` in `UTxOState`

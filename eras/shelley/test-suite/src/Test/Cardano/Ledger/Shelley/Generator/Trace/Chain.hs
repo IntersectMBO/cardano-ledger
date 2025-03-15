@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -110,9 +109,9 @@ instance
   where
   envGen _ = pure ()
 
-  sigGen ge _env st = genBlock ge st
+  sigGen ge _env = genBlock ge
 
-  shrinkSignal = (\_x -> []) -- shrinkBlock -- TO DO FIX ME
+  shrinkSignal = const [] -- shrinkBlock -- TO DO FIX ME
 
   type BaseEnv (CHAIN era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
