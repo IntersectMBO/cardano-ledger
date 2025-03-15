@@ -79,7 +79,7 @@ import Cardano.Ledger.Shelley.LedgerState as X (
   PState (..),
   RewardUpdate (..),
   ShelleyGovState (..),
-  UTxOState (..),
+  UTxOState,
   VState (..),
  )
 import Cardano.Ledger.Shelley.PParams as X (
@@ -138,6 +138,7 @@ import Cardano.Ledger.State as X (
   SnapShots (..),
   Stake (..),
   UTxO (..),
+  UtxoState (..),
   balance,
   individualPoolStake,
  )

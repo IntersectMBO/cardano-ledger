@@ -14,8 +14,13 @@ import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary.State as S
 import Cardano.Ledger.Mary.Translation ()
-import qualified Cardano.Ledger.Shelley.API as S
+import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.PParams
+import Cardano.Ledger.Shelley.Tx
+import Cardano.Ledger.Shelley.TxOut
+import Cardano.Ledger.Shelley.TxWits
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Mary.Arbitrary ()
@@ -54,22 +59,22 @@ maryTranslationTests =
   testGroup
     "Mary translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" $
-        translateEraEncoding @MaryEra @S.ShelleyTx NoGenesis toCBOR toCBOR
-    , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
+        translateEraEncoding @MaryEra @ShelleyTx NoGenesis toCBOR toCBOR
+    , testProperty "ProposedPPUpdates compatibility" (test @ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" $
-        translateEraEncoding @MaryEra @S.ShelleyGovState NoGenesis toCBOR toCBOR
-    , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)
+        translateEraEncoding @MaryEra @ShelleyGovState NoGenesis toCBOR toCBOR
+    , testProperty "TxOut compatibility" (test @ShelleyTxOut)
     , testProperty "UTxO compatibility" $
-        translateEraEncoding @MaryEra @S.UTxO NoGenesis toCBOR toCBOR
-    , testProperty "UTxOState compatibility" $
-        translateEraEncoding @MaryEra @S.UTxOState NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @UTxO NoGenesis toCBOR toCBOR
+    , testProperty "UtxoState compatibility" $
+        translateEraEncoding @MaryEra @UtxoState NoGenesis toCBOR toCBOR
     , testProperty "LedgerState compatibility" $
-        translateEraEncoding @MaryEra @S.LedgerState NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @LedgerState NoGenesis toCBOR toCBOR
     , testProperty "EpochState compatibility" $
-        translateEraEncoding @MaryEra @S.EpochState NoGenesis toCBOR toCBOR
+        translateEraEncoding @MaryEra @EpochState NoGenesis toCBOR toCBOR
     , testProperty "ShelleyTxWits compatibility" $
-        translateEraEncoding @MaryEra @S.ShelleyTxWits NoGenesis toCBOR toCBOR
-    , testProperty "Update compatibility" (test @S.Update)
+        translateEraEncoding @MaryEra @ShelleyTxWits NoGenesis toCBOR toCBOR
+    , testProperty "Update compatibility" (test @Update)
     ]
 
 test ::

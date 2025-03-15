@@ -83,7 +83,7 @@ roundTripStateEraTypesSpec = do
   describe "State Types Families" $ do
     roundTripShareEraSpec @era @(GovState era)
   describe "State Types" $ do
-    roundTripShareEraTypeSpec @era @UTxOState
+    roundTripShareEraTypeSpec @era @UtxoState
     roundTripEraTypeSpec @era @EpochState
     roundTripEraTypeSpec @era @NewEpochState
 

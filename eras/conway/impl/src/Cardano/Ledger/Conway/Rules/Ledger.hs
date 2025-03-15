@@ -89,10 +89,8 @@ import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
-  UTxOState (..),
   asTreasuryL,
   dsUnifiedL,
-  utxoL,
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -108,7 +106,7 @@ import Cardano.Ledger.Shelley.Rules (
   shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
-import Cardano.Ledger.State (EraUTxO (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (UView (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)

@@ -10,11 +10,16 @@ module Test.Cardano.Ledger.Allegra.Translation (
 where
 
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra.State
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
-import qualified Cardano.Ledger.Shelley.API as S
+import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.PParams
+import Cardano.Ledger.Shelley.Tx
+import Cardano.Ledger.Shelley.TxOut
+import Cardano.Ledger.Shelley.TxWits
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
@@ -49,22 +54,22 @@ allegraTranslationTests =
   testGroup
     "Allegra translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" $
-        translateEraEncoding @AllegraEra @S.ShelleyTx NoGenesis toCBOR toCBOR
-    , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
+        translateEraEncoding @AllegraEra @ShelleyTx NoGenesis toCBOR toCBOR
+    , testProperty "ProposedPPUpdates compatibility" (testTranslation @ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" $
-        translateEraEncoding @AllegraEra @S.ShelleyGovState NoGenesis toCBOR toCBOR
-    , testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut)
+        translateEraEncoding @AllegraEra @ShelleyGovState NoGenesis toCBOR toCBOR
+    , testProperty "TxOut compatibility" (testTranslation @ShelleyTxOut)
     , testProperty "UTxO compatibility" $
-        translateEraEncoding @AllegraEra @S.UTxO NoGenesis toCBOR toCBOR
-    , testProperty "UTxOState compatibility" $
-        translateEraEncoding @AllegraEra @S.UTxOState NoGenesis toCBOR toCBOR
+        translateEraEncoding @AllegraEra @UTxO NoGenesis toCBOR toCBOR
+    , testProperty "UtxoState compatibility" $
+        translateEraEncoding @AllegraEra @UtxoState NoGenesis toCBOR toCBOR
     , testProperty "LedgerState compatibility" $
-        translateEraEncoding @AllegraEra @S.LedgerState NoGenesis toCBOR toCBOR
+        translateEraEncoding @AllegraEra @LedgerState NoGenesis toCBOR toCBOR
     , testProperty "EpochState compatibility" $
-        translateEraEncoding @AllegraEra @S.EpochState NoGenesis toCBOR toCBOR
+        translateEraEncoding @AllegraEra @EpochState NoGenesis toCBOR toCBOR
     , testProperty "ShelleyTxWits compatibility" $
-        translateEraEncoding @AllegraEra @S.ShelleyTxWits NoGenesis toCBOR toCBOR
-    , testProperty "Update compatibility" (testTranslation @S.Update)
+        translateEraEncoding @AllegraEra @ShelleyTxWits NoGenesis toCBOR toCBOR
+    , testProperty "Update compatibility" (testTranslation @Update)
     ]
 
 testTranslation ::

@@ -55,10 +55,10 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   DState (..),
-  UTxOState (..),
   dsGenDelegsL,
  )
 import Cardano.Ledger.Shelley.PParams
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

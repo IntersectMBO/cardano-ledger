@@ -30,17 +30,15 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.PoolParams (ppRewardAccount)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOLREAP)
-import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   DState (..),
   PState (..),
-  UTxOState (..),
   allObligations,
   rewards,
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (potEqualsObligation)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.UMap (UView (RewDepUView, SPoolUView), compactCoinOrError)
 import qualified Cardano.Ledger.UMap as UM

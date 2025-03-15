@@ -30,7 +30,6 @@ import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   LedgerState (..),
-  UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
@@ -55,6 +54,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgersPredFailure (LedgerFailure),
   renderDepositEqualsObligationViolation,
  )
+import Cardano.Ledger.State
 import Control.State.Transition (
   Embed (..),
   STS (..),

@@ -117,7 +117,7 @@ instance TranslateEra AllegraEra UTxO where
   translateEra ctxt utxo =
     return $ UTxO (translateEra' ctxt `Map.map` unUTxO utxo)
 
-instance TranslateEra AllegraEra UTxOState where
+instance TranslateEra AllegraEra UtxoState where
   translateEra ctxt us =
     return
       UTxOState

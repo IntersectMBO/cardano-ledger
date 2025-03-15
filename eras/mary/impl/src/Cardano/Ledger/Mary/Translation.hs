@@ -133,7 +133,7 @@ instance TranslateEra MaryEra ShelleyGovState where
         , sgsFuturePParams = translateEra' ctxt $ sgsFuturePParams ps
         }
 
-instance TranslateEra MaryEra UTxOState where
+instance TranslateEra MaryEra UtxoState where
   translateEra ctxt us =
     return
       UTxOState

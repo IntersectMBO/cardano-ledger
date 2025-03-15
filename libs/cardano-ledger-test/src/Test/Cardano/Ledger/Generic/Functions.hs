@@ -38,18 +38,16 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   CertState,
   DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
   PState (..),
-  UTxOState (..),
   VState (..),
  )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.State (EraUTxO (..), UTxO (..), coinBalance, unScriptsProvided)
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val ((<+>), (<->)), inject)
@@ -395,8 +393,8 @@ class TotalAda t where
 instance TotalAda AccountState where
   totalAda (AccountState treasury reserves) = treasury <+> reserves
 
-instance Reflect era => TotalAda (UTxOState era) where
-  totalAda (UTxOState utxo _deposits fees gs _ donations) =
+instance Reflect era => TotalAda (UtxoState era) where
+  totalAda (UtxoState utxo _deposits fees gs _ donations) =
     totalAda utxo <+> fees <+> govStateTotalAda gs <+> donations
 
 -- we don't add in the _deposits, because it is invariant that this

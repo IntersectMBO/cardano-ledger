@@ -129,7 +129,7 @@ instance TranslateEra BabbageEra LedgerState where
         , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
-instance TranslateEra BabbageEra UTxOState where
+instance TranslateEra BabbageEra UtxoState where
   translateEra ctxt us =
     pure
       UTxOState

@@ -178,7 +178,7 @@ translateGovState ctxt@ConwayGenesis {..} sgov =
         & cgsCommitteeL .~ SJust cgCommittee
         & cgsConstitutionL .~ cgConstitution
 
-instance TranslateEra ConwayEra UTxOState where
+instance TranslateEra ConwayEra UtxoState where
   translateEra ctxt us =
     pure
       UTxOState

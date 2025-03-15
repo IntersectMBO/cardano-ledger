@@ -28,12 +28,10 @@ import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
-  UTxOState (..),
   curPParamsEpochStateL,
   dsUnifiedL,
   esLStateL,
@@ -47,13 +45,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersPredFailure (..),
   ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
  )
-import Cardano.Ledger.State (
-  IndividualPoolStake (..),
-  PoolDistr (..),
-  SnapShots (..),
-  UTxO (..),
-  calculatePoolDistr,
- )
+import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)

@@ -44,11 +44,11 @@ import Cardano.Ledger.Shelley.API (
   LedgerState,
   ShelleyLedgersEnv,
  )
-import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody, Withdrawals)
-import Cardano.Ledger.State (UTxO)
 import Cardano.Ledger.TxIn (TxId (TxId), TxIn)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Slotting.Slot (SlotNo)

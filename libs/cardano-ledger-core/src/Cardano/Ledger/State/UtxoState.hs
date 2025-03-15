@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -10,7 +11,17 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.State.UtxoState (
-  UTxOState (..),
+  UTxOState,
+  UtxoState (
+    ..,
+    UTxOState,
+    utxosUtxo,
+    utxosDeposited,
+    utxosFees,
+    utxosGovState,
+    utxosInstantStake,
+    utxosDonation
+  ),
   mkUtxoState,
 ) where
 
@@ -29,21 +40,45 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
-data UTxOState era = UTxOState
-  { utxosUtxo :: !(UTxO era)
-  , utxosDeposited :: !Coin
+data UtxoState era = UtxoState
+  { usUTxO :: !(UTxO era)
+  , usDeposited :: !Coin
   -- ^ Total amount of deposits in the system
-  , utxosFees :: !Coin
+  , usFees :: !Coin
   -- ^ Amount of fees accrued this epoch
-  , utxosGovState :: !(GovState era)
-  , utxosInstantStake :: !(InstantStake era)
+  , usGovState :: !(GovState era)
+  , usInstantStake :: !(InstantStake era)
   -- ^ There is an invariant in this `InstantStake` that it must match what is in the `UTxO` that is
   -- in this type. In the ledger rules it is updated incrementally, but in various testing scenarios
   -- it is possible to construct this type with the smart constructor `UtxoState`
-  , utxosDonation :: !Coin
+  , usDonations :: !Coin
   -- ^ Amount of donations accrued this epoch
   }
   deriving (Generic)
+
+type UTxOState era = UtxoState era
+
+pattern UTxOState ::
+  UTxO era ->
+  Coin ->
+  Coin ->
+  GovState era ->
+  InstantStake era ->
+  Coin ->
+  UTxOState era
+pattern UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosGovState, utxosInstantStake, utxosDonation} <-
+  UtxoState
+    { usUTxO = utxosUtxo
+    , usDeposited = utxosDeposited
+    , usFees = utxosFees
+    , usGovState = utxosGovState
+    , usInstantStake = utxosInstantStake
+    , usDonations = utxosDonation
+    }
+  where
+    UTxOState utxo deposits fees govState instantStake donations =
+      UtxoState utxo deposits fees govState instantStake donations
+{-# COMPLETE UTxOState #-}
 
 -- | Construct `UtxoState` in a way that invariant for `InstantStake` is not violated.
 --
@@ -61,49 +96,49 @@ mkUtxoState ::
   GovState era ->
   -- | Amount of donations accrued this epoch
   Coin ->
-  UTxOState era
+  UtxoState era
 mkUtxoState utxo deposits fees govState =
-  UTxOState utxo deposits fees govState (addInstantStake utxo mempty)
+  UtxoState utxo deposits fees govState (addInstantStake utxo mempty)
 
 instance
   ( EraTxOut era
   , NFData (GovState era)
   , NFData (InstantStake era)
   ) =>
-  NFData (UTxOState era)
+  NFData (UtxoState era)
 
 deriving instance
   ( EraTxOut era
   , Show (GovState era)
   , Show (InstantStake era)
   ) =>
-  Show (UTxOState era)
+  Show (UtxoState era)
 
 deriving instance
   ( EraTxOut era
   , Eq (GovState era)
   , Eq (InstantStake era)
   ) =>
-  Eq (UTxOState era)
+  Eq (UtxoState era)
 
 instance
   ( NoThunks (UTxO era)
   , NoThunks (GovState era)
   , NoThunks (InstantStake era)
   ) =>
-  NoThunks (UTxOState era)
+  NoThunks (UtxoState era)
 
-instance (EraGov era, EraStake era) => Default (UTxOState era) where
-  def = UTxOState mempty mempty mempty def mempty mempty
+instance (EraGov era, EraStake era) => Default (UtxoState era) where
+  def = UtxoState mempty mempty mempty def mempty mempty
 
-instance CanGetUTxO UTxOState
-instance CanSetUTxO UTxOState where
-  utxoL = lens utxosUtxo $ \s u -> s {utxosUtxo = u}
+instance CanGetUTxO UtxoState
+instance CanSetUTxO UtxoState where
+  utxoL = lens usUTxO $ \s u -> s {usUTxO = u}
   {-# INLINE utxoL #-}
 
-instance CanGetInstantStake UTxOState
-instance CanSetInstantStake UTxOState where
-  instantStakeL = lens utxosInstantStake $ \s is -> s {utxosInstantStake = is}
+instance CanGetInstantStake UtxoState
+instance CanSetInstantStake UtxoState where
+  instantStakeL = lens usInstantStake $ \s is -> s {usInstantStake = is}
   {-# INLINE instantStakeL #-}
 
 instance
@@ -111,57 +146,57 @@ instance
   , EraStake era
   , EncCBOR (GovState era)
   ) =>
-  EncCBOR (UTxOState era)
+  EncCBOR (UtxoState era)
   where
-  encCBOR utxos@(UTxOState _ _ _ _ _ _) =
-    let UTxOState {..} = utxos
+  encCBOR utxos@(UtxoState _ _ _ _ _ _) =
+    let UtxoState {..} = utxos
      in encode $
-          Rec UTxOState
+          Rec UtxoState
             -- We need to define encoder with MemPack manually here instead of changing the `EncCBOR`
             -- instance for `UTxO` in order to not affect some of the ledger state queries.
-            !> E (encodeMap encodeMemPack encodeMemPack . unUTxO) utxosUtxo
-            !> To utxosDeposited
-            !> To utxosFees
-            !> To utxosGovState
-            !> To utxosInstantStake
-            !> To utxosDonation
+            !> E (encodeMap encodeMemPack encodeMemPack . unUTxO) usUTxO
+            !> To usDeposited
+            !> To usFees
+            !> To usGovState
+            !> To usInstantStake
+            !> To usDonations
 
-instance (EraTxOut era, EraGov era, EraStake era) => DecShareCBOR (UTxOState era) where
+instance (EraTxOut era, EraGov era, EraStake era) => DecShareCBOR (UtxoState era) where
   type
-    Share (UTxOState era) =
+    Share (UtxoState era) =
       ( Interns (Credential 'Staking)
       , Interns (KeyHash 'StakePool)
       , Interns (Credential 'DRepRole)
       , Interns (Credential 'HotCommitteeRole)
       )
   decShareCBOR is@(cs, _, _, _) =
-    decodeRecordNamed "UTxOState" (const 6) $ do
-      utxosUtxo <- decShareCBOR cs
-      utxosDeposited <- decCBOR
-      utxosFees <- decCBOR
-      utxosGovState <- decShareCBOR is
-      utxosInstantStake <- decShareCBOR cs
-      utxosDonation <- decCBOR
-      pure UTxOState {..}
+    decodeRecordNamed "UtxoState" (const 6) $ do
+      usUTxO <- decShareCBOR cs
+      usDeposited <- decCBOR
+      usFees <- decCBOR
+      usGovState <- decShareCBOR is
+      usInstantStake <- decShareCBOR cs
+      usDonations <- decCBOR
+      pure UtxoState {..}
 
-instance (EraTxOut era, EraGov era, EraStake era) => ToCBOR (UTxOState era) where
+instance (EraTxOut era, EraGov era, EraStake era) => ToCBOR (UtxoState era) where
   toCBOR = toEraCBOR @era
 
-instance (EraTxOut era, EraGov era, EraStake era) => FromCBOR (UTxOState era) where
+instance (EraTxOut era, EraGov era, EraStake era) => FromCBOR (UtxoState era) where
   fromCBOR = fromEraShareCBOR @era
 
-instance (EraTxOut era, EraGov era, EraStake era) => ToJSON (UTxOState era) where
-  toJSON = object . toUTxOStatePairs
-  toEncoding = pairs . mconcat . toUTxOStatePairs
+instance (EraTxOut era, EraGov era, EraStake era) => ToJSON (UtxoState era) where
+  toJSON = object . toUtxoStatePairs
+  toEncoding = pairs . mconcat . toUtxoStatePairs
 
-toUTxOStatePairs ::
-  (EraTxOut era, EraGov era, EraStake era, KeyValue e a) => UTxOState era -> [a]
-toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _) =
-  let UTxOState {..} = utxoState
-   in [ "utxo" .= utxosUtxo
-      , "deposited" .= utxosDeposited
-      , "fees" .= utxosFees
-      , "ppups" .= utxosGovState
-      , "stake" .= utxosInstantStake
-      , "donations" .= utxosDonation
+toUtxoStatePairs ::
+  (EraTxOut era, EraGov era, EraStake era, KeyValue e a) => UtxoState era -> [a]
+toUtxoStatePairs utxoState@(UtxoState _ _ _ _ _ _) =
+  let UtxoState {..} = utxoState
+   in [ "utxo" .= usUTxO
+      , "deposited" .= usDeposited
+      , "fees" .= usFees
+      , "ppups" .= usGovState
+      , "stake" .= usInstantStake
+      , "donations" .= usDonations
       ]

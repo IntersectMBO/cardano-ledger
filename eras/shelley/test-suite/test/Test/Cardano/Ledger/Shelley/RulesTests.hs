@@ -24,12 +24,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  UTxOState (..),
   totalObligation,
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.API (GetLedgerView (..))

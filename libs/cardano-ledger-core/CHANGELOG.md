@@ -2,6 +2,13 @@
 
 ## 1.17.0.0
 
+* Rename `UTxOState` -> `UtxoState`:
+  * `utxosUtxo` -> `usUTxO`
+  * `utxosDeposited` -> `usDeposited`
+  * `utxosFees` -> `usFees`
+  * `utxosGovState` -> `usGovState`
+  * `utxosInstantStake` -> `usInstantStake`
+  * `utxosDonation` -> `usDonations`
 * Move `UTxOState` into `Cardano.Ledger.State` from `cardano-ledger-shelley`
 * Add `BoootstrapWitnessRaw` type
 * Add `EraStake`, `CanGetInstantStake`,  `CanSetInstantStake` , `snapShotFromInstantStake`, `resolveActiveInstantStakeCredentials`

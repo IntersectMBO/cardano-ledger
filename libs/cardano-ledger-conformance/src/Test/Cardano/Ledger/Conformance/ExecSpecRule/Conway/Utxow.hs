@@ -16,7 +16,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
 import Cardano.Ledger.Core (EraTx (..))
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.State
 import Data.Bifunctor (Bifunctor (..))
 import qualified Data.Text as T
 import Lens.Micro ((^.))

@@ -17,8 +17,9 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo (
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (EraPParams (..), ppMaxTxSizeL, sizeTxF)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
+import Cardano.Ledger.State
 import qualified Data.Text as T
 import Lens.Micro ((&), (.~), (^.))
 import qualified Lib as Agda

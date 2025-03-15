@@ -38,7 +38,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PState (..),
   StashedAVVMAddresses,
-  UTxOState (..),
   VState (..),
   curPParamsEpochStateL,
   prevPParamsEpochStateL,
@@ -48,7 +47,7 @@ import Cardano.Ledger.Shelley.Translation ()
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.State
 import Data.Foldable (toList)
 import Lens.Micro ((^.))
 import Prettyprinter (Doc, indent, viaShow, vsep)

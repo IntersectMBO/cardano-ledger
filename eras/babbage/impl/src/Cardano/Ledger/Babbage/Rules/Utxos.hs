@@ -223,7 +223,7 @@ babbageEvalScriptsTxValid ::
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
-  TRC (UtxoEnv slot pp certState, utxos@(UTxOState utxo _ _ pup _ _), tx) <-
+  TRC (UtxoEnv slot pp certState, utxos@(UtxoState utxo _ _ pup _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
       genDelegs = certState ^. certDStateL . dsGenDelegsL
@@ -266,7 +266,7 @@ babbageEvalScriptsTxInvalid ::
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 babbageEvalScriptsTxInvalid = do
-  TRC (UtxoEnv _ pp _, utxos@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
+  TRC (UtxoEnv _ pp _, utxos@(UtxoState utxo _ fees _ _ _), tx) <- judgmentContext
   {- txb := txbody tx -}
   let txBody = tx ^. bodyTxL
   sysSt <- liftSTS $ asks systemStart

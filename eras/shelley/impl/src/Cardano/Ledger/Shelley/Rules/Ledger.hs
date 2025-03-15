@@ -47,9 +47,7 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState,
   LedgerState (..),
-  UTxOState (..),
   utxosDepositedL,
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (allObligations, potEqualsObligation)
@@ -66,6 +64,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochFromSlot)
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (

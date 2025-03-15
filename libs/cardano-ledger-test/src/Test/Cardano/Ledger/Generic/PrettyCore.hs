@@ -200,7 +200,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PState (..),
   RewardUpdate (..),
-  UTxOState (..),
+  UtxoState (..),
   VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
@@ -3345,10 +3345,10 @@ psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (
     , ("EpochNo", ppEpochNo en)
     ]
 
-pcUTxOState :: Proof era -> UTxOState era -> PDoc
-pcUTxOState proof (UTxOState u dep fs gs _ don) =
+pcUtxoState :: Proof era -> UtxoState era -> PDoc
+pcUtxoState proof (UtxoState u dep fs gs _ don) =
   ppRecord
-    "UTxOState"
+    "UtxoState"
     [ ("utxo", pcUTxO proof u)
     , ("deposited", pcCoin dep)
     , ("fees", pcCoin fs)
@@ -3356,14 +3356,14 @@ pcUTxOState proof (UTxOState u dep fs gs _ don) =
     , ("donation", pcCoin don)
     ]
 
-instance Reflect era => PrettyA (UTxOState era) where
-  prettyA = pcUTxOState reify
+instance Reflect era => PrettyA (UtxoState era) where
+  prettyA = pcUtxoState reify
 
--- | Like pcUTxOState, except it prints only a summary of the UTxO
-psUTxOState :: forall era. Reflect era => Proof era -> UTxOState era -> PDoc
-psUTxOState proof (UTxOState (UTxO u) dep fs gs _ don) =
+-- | Like pcUtxoState, except it prints only a summary of the UTxO
+psUtxoState :: forall era. Reflect era => Proof era -> UtxoState era -> PDoc
+psUtxoState proof (UtxoState (UTxO u) dep fs gs _ don) =
   ppRecord
-    "UTxOState"
+    "UtxoState"
     [ ("utxo", summaryMapCompact (Map.map (\x -> x ^. compactCoinTxOutL) u))
     , ("deposited", pcCoin dep)
     , ("fees", pcCoin fs)
@@ -3375,7 +3375,7 @@ pcLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
 pcLedgerState proof ls =
   ppRecord
     "LedgerState"
-    [ ("utxoState", pcUTxOState proof (lsUTxOState ls))
+    [ ("utxoState", pcUtxoState proof (lsUTxOState ls))
     , ("certState", pcCertState (lsCertState ls))
     ]
 
@@ -3387,7 +3387,7 @@ psLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
 psLedgerState proof ls =
   ppRecord
     "LedgerState"
-    [ ("utxoState", psUTxOState proof (lsUTxOState ls))
+    [ ("utxoState", psUtxoState proof (lsUTxOState ls))
     , ("certState", pcCertState (lsCertState ls))
     ]
 

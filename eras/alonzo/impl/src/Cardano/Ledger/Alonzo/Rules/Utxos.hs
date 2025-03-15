@@ -252,7 +252,7 @@ alonzoEvalScriptsTxValid ::
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxValid = do
-  TRC (UtxoEnv slot pp certState, utxos@(UTxOState utxo _ _ pup _ _), tx) <-
+  TRC (UtxoEnv slot pp certState, utxos@(UtxoState utxo _ _ pup _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
       genDelegs = certState ^. certDStateL . Shelley.dsGenDelegsL
@@ -293,7 +293,7 @@ alonzoEvalScriptsTxInvalid ::
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxInvalid = do
-  TRC (UtxoEnv slot pp _, utxos@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
+  TRC (UtxoEnv slot pp _, utxos@(UtxoState utxo _ fees _ _ _), tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
   () <- pure $! Debug.traceEvent invalidBegin ()

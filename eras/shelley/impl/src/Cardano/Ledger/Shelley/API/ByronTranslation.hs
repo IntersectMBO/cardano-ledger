@@ -159,13 +159,14 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
     ledgerState =
       LedgerState
         { lsUTxOState =
-            UTxOState
-              { utxosUtxo = utxoShelley
-              , utxosDeposited = Coin 0
-              , utxosFees = Coin 0
-              , utxosGovState = emptyGovState
-              , utxosInstantStake = mempty
-              , utxosDonation = mempty
+            UtxoState
+              { usUTxO = utxoShelley
+              , usDeposited = Coin 0
+              , usFees = Coin 0
+              , usGovState = emptyGovState
+              , -- It is OK to set InstantStake to empty here, because `utxoShelley` has no Stake Credentials
+                usInstantStake = mempty
+              , usDonations = mempty
               }
         , lsCertState = mkCertState def def dState
         }

@@ -50,12 +50,9 @@ import Cardano.Ledger.PoolParams (
  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  LedgerState (..),
-  UTxOState (..),
- )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLEDGER)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -112,12 +109,11 @@ injcoins n = fmap (\_ -> ShelleyTxOut aliceAddr (inject $ Coin 100)) [0 .. n]
 -- Cretae an initial UTxO set with n-many transaction outputs
 initUTxO :: Integer -> UTxOState ShelleyEra
 initUTxO n =
-  UTxOState
+  mkUtxoState
     (genesisCoins genesisId (injcoins n))
     (Coin 0)
     (Coin 0)
     def
-    mempty
     mempty
 
 -- Protocal Parameters used for the benchmarknig tests.

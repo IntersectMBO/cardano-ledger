@@ -36,18 +36,12 @@ import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   LedgerState (..),
-  UTxOState (..),
   ptrsMap,
   rewards,
  )
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
-import Cardano.Ledger.State (
-  EraUTxO,
-  UTxO (..),
-  getMinFeeTxUtxo,
-  sumAllValue,
- )
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))

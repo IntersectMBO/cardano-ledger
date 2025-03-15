@@ -128,7 +128,7 @@ instance TranslateEra AlonzoEra LedgerState where
         , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
-instance TranslateEra AlonzoEra UTxOState where
+instance TranslateEra AlonzoEra UtxoState where
   translateEra ctxt us =
     return
       UTxOState

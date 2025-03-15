@@ -70,14 +70,14 @@ updateNES ::
   NewEpochState era
 updateNES
   oldNes@( NewEpochState
-             _eL
-             _bprev
-             _
-             es@(EpochState acnt _ ss nm)
-             _ru
-             _pd
-             _avvm
-           )
+            _eL
+            _bprev
+            _
+            es@(EpochState acnt _ ss nm)
+            _ru
+            _pd
+            _avvm
+          )
   bcur
   ls =
     let

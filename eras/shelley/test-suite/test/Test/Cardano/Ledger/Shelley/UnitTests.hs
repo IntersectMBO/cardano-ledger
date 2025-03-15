@@ -41,9 +41,7 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   LedgerState (..),
-  UTxOState (..),
   dsUnifiedL,
   rewards,
  )
@@ -55,6 +53,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure (..),
   ShelleyUtxowPredFailure (..),
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))

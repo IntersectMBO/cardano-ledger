@@ -58,7 +58,6 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (EraCertState (..), dsGenDelegsL)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPpupPredFailure,
   ShelleyUtxoPredFailure,
@@ -70,7 +69,7 @@ import Cardano.Ledger.Shelley.Rules (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..), UTxO (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)

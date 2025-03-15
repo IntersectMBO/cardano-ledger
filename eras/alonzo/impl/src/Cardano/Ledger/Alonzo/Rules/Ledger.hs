@@ -28,7 +28,6 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   LedgerState (..),
-  UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
@@ -54,6 +53,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   renderDepositEqualsObligationViolation,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
+import Cardano.Ledger.State
 import Control.State.Transition (
   Embed (..),
   STS (..),

@@ -32,7 +32,8 @@ module Cardano.Ledger.Shelley.LedgerState (
   RewardAccounts,
   RewardUpdate (..),
   RewardSnapShot (..),
-  UTxOState (..),
+  UTxOState,
+  UtxoState (..),
   smartUTxOState,
 
   -- * Validation
