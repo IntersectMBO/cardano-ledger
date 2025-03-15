@@ -152,16 +152,6 @@ import Cardano.Ledger.BaseTypes (
   succVersion,
   textToUrl,
  )
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  EraCertState (..),
-  csCommitteeCredsL,
-  lookupDepositDState,
-  lookupDepositVState,
-  psStakePoolParamsL,
-  vsActualDRepExpiry,
-  vsNumDormantEpochsL,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -190,7 +180,6 @@ import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
-  consumed,
   curPParamsEpochStateL,
   epochStateGovStateL,
   epochStatePoolParamsL,
@@ -206,8 +195,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   produced,
   unifiedL,
   utxosGovStateL,
-  vsCommitteeStateL,
-  vsDRepsL,
  )
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.UMap (dRepMap)
@@ -327,6 +314,7 @@ class
   , ConwayEraTxBody era
   , ConwayEraTxCert era
   , ConwayEraPParams era
+  , ConwayEraCertState era
   , STS (EraRule "ENACT" era)
   , BaseM (EraRule "ENACT" era) ~ ShelleyBase
   , State (EraRule "ENACT" era) ~ EnactState era
@@ -374,6 +362,7 @@ unRegisterDRep ::
   forall era.
   ( ShelleyEraImp era
   , ConwayEraTxCert era
+  , ConwayEraCertState era
   ) =>
   Credential 'DRepRole ->
   ImpTestM era ()
@@ -488,7 +477,7 @@ delegateToDRep cred stake dRep = do
   pure spendingKP
 
 getDRepState ::
-  (HasCallStack, EraCertState era) =>
+  (HasCallStack, ConwayEraCertState era) =>
   Credential 'DRepRole ->
   ImpTestM era DRepState
 getDRepState dRepCred = do
@@ -987,7 +976,7 @@ expectMissingGovActionId govActionId =
       Nothing -> pure ()
 
 -- | Builds a RatifyEnv from the current state
-getRatifyEnv :: (ConwayEraGov era, EraCertState era) => ImpTestM era (RatifyEnv era)
+getRatifyEnv :: (ConwayEraGov era, ConwayEraCertState era) => ImpTestM era (RatifyEnv era)
 getRatifyEnv = do
   eNo <- getsNES nesELL
   instantStake <- getsNES instantStakeG
@@ -1042,7 +1031,7 @@ getCCExpiry coldC = do
 
 -- | Test the resignation status for a CC cold key to be resigned
 ccShouldBeResigned ::
-  (HasCallStack, EraCertState era) => Credential 'ColdCommitteeRole -> ImpTestM era ()
+  (HasCallStack, ConwayEraCertState era) => Credential 'ColdCommitteeRole -> ImpTestM era ()
 ccShouldBeResigned coldK = do
   committeeCreds <-
     getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
@@ -1050,7 +1039,7 @@ ccShouldBeResigned coldK = do
 
 -- | Test the resignation status for a CC cold key to not be resigned
 ccShouldNotBeResigned ::
-  (HasCallStack, EraCertState era) => Credential 'ColdCommitteeRole -> ImpTestM era ()
+  (HasCallStack, ConwayEraCertState era) => Credential 'ColdCommitteeRole -> ImpTestM era ()
 ccShouldNotBeResigned coldK = do
   committeeCreds <-
     getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
@@ -1063,7 +1052,7 @@ authHk _ = Nothing
 -- | Calculates the ratio of DReps that have voted for the governance action
 calculateDRepAcceptedRatio ::
   forall era.
-  (HasCallStack, ConwayEraGov era, EraCertState era) =>
+  (HasCallStack, ConwayEraGov era, ConwayEraCertState era) =>
   GovActionId ->
   ImpTestM era Rational
 calculateDRepAcceptedRatio gaId = do
@@ -1079,7 +1068,7 @@ calculateDRepAcceptedRatio gaId = do
 -- action
 calculateCommitteeAcceptedRatio ::
   forall era.
-  (HasCallStack, ConwayEraGov era, EraCertState era) =>
+  (HasCallStack, ConwayEraGov era, ConwayEraCertState era) =>
   GovActionId ->
   ImpTestM era Rational
 calculateCommitteeAcceptedRatio gaId = do
@@ -1097,7 +1086,7 @@ calculateCommitteeAcceptedRatio gaId = do
       eNo
 
 calculatePoolAcceptedRatio ::
-  (ConwayEraGov era, EraCertState era) => GovActionId -> ImpTestM era Rational
+  (ConwayEraGov era, ConwayEraCertState era) => GovActionId -> ImpTestM era Rational
 calculatePoolAcceptedRatio gaId = do
   ratEnv <- getRatifyEnv
   gas <- getGovActionState gaId
@@ -1106,7 +1095,7 @@ calculatePoolAcceptedRatio gaId = do
 
 -- | Logs the ratios of accepted votes per category
 logAcceptedRatio ::
-  (HasCallStack, ConwayEraGov era, EraCertState era) => GovActionId -> ImpTestM era ()
+  (HasCallStack, ConwayEraGov era, ConwayEraCertState era) => GovActionId -> ImpTestM era ()
 logAcceptedRatio aId = do
   dRepRatio <- calculateDRepAcceptedRatio aId
   committeeRatio <- calculateCommitteeAcceptedRatio aId
@@ -1120,7 +1109,7 @@ logAcceptedRatio aId = do
       ]
 
 getRatifyEnvAndState ::
-  (ConwayEraGov era, EraCertState era) => ImpTestM era (RatifyEnv era, RatifyState era)
+  (ConwayEraGov era, ConwayEraCertState era) => ImpTestM era (RatifyEnv era, RatifyState era)
 getRatifyEnvAndState = do
   ratifyEnv <- getRatifyEnv
   enactState <- getEnactState
@@ -1136,7 +1125,7 @@ getRatifyEnvAndState = do
 -- | Checks whether the governance action has enough DRep votes to be accepted in the next
 -- epoch. (Note that no other checks except DRep votes are used)
 isDRepAccepted ::
-  (HasCallStack, ConwayEraGov era, ConwayEraPParams era, EraCertState era) =>
+  (HasCallStack, ConwayEraGov era, ConwayEraPParams era, ConwayEraCertState era) =>
   GovActionId ->
   ImpTestM era Bool
 isDRepAccepted gaId = do
@@ -1145,7 +1134,7 @@ isDRepAccepted gaId = do
   pure $ dRepAccepted ratifyEnv ratifyState action
 
 isSpoAccepted ::
-  (HasCallStack, ConwayEraGov era, ConwayEraPParams era, EraCertState era) =>
+  (HasCallStack, ConwayEraGov era, ConwayEraPParams era, ConwayEraCertState era) =>
   GovActionId ->
   ImpTestM era Bool
 isSpoAccepted gaId = do
@@ -1154,7 +1143,7 @@ isSpoAccepted gaId = do
   pure $ spoAccepted ratifyEnv ratifyState action
 
 isCommitteeAccepted ::
-  (HasCallStack, ConwayEraGov era, ConwayEraPParams era, EraCertState era) =>
+  (HasCallStack, ConwayEraGov era, ConwayEraPParams era, ConwayEraCertState era) =>
   GovActionId ->
   ImpTestM era Bool
 isCommitteeAccepted gaId = do
@@ -1164,7 +1153,7 @@ isCommitteeAccepted gaId = do
 
 -- | Logs the results of each check required to make the governance action pass
 logRatificationChecks ::
-  (ConwayEraGov era, ConwayEraPParams era, HasCallStack, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraPParams era, HasCallStack, ConwayEraCertState era) =>
   GovActionId ->
   ImpTestM era ()
 logRatificationChecks gaId = do
@@ -1253,7 +1242,7 @@ registerCommitteeHotKeys genHotCred coldKeys = do
 -- | Submits a transaction that resigns the cold key. Prior to resignation if there was
 -- hot credential authorization for this committee member it will be returned.
 resignCommitteeColdKey ::
-  (ShelleyEraImp era, ConwayEraTxCert era) =>
+  (ShelleyEraImp era, ConwayEraTxCert era, ConwayEraCertState era) =>
   Credential 'ColdCommitteeRole ->
   StrictMaybe Anchor ->
   ImpTestM era (Maybe (Credential 'HotCommitteeRole))
@@ -1462,7 +1451,7 @@ enactConstitution prevGovId constitution dRep committeeMembers = impAnn "Enactin
   enactedConstitution `shouldBe` constitution
   pure govId
 
-expectNumDormantEpochs :: (HasCallStack, EraCertState era) => EpochNo -> ImpTestM era ()
+expectNumDormantEpochs :: (HasCallStack, ConwayEraCertState era) => EpochNo -> ImpTestM era ()
 expectNumDormantEpochs expected = do
   nd <-
     getsNES $
@@ -1487,7 +1476,7 @@ submitConstitution prevGovId = do
   submitProposal proposal
 
 expectDRepNotRegistered ::
-  (HasCallStack, EraCertState era) =>
+  (HasCallStack, ConwayEraCertState era) =>
   Credential 'DRepRole ->
   ImpTestM era ()
 expectDRepNotRegistered drep = do
@@ -1495,7 +1484,7 @@ expectDRepNotRegistered drep = do
   Map.lookup drep dsMap `shouldBe` Nothing
 
 isDRepExpired ::
-  (HasCallStack, EraCertState era) =>
+  (HasCallStack, ConwayEraCertState era) =>
   Credential 'DRepRole ->
   ImpTestM era Bool
 isDRepExpired drep = do
@@ -1509,7 +1498,7 @@ isDRepExpired drep = do
           < currentEpoch
 
 expectDRepExpiry ::
-  (HasCallStack, EraCertState era) =>
+  (HasCallStack, ConwayEraCertState era) =>
   Credential 'DRepRole ->
   EpochNo ->
   ImpTestM era ()
@@ -1519,7 +1508,7 @@ expectDRepExpiry drep expected = do
   drepExpiry ds `shouldBe` expected
 
 expectActualDRepExpiry ::
-  (HasCallStack, EraCertState era) =>
+  (HasCallStack, ConwayEraCertState era) =>
   Credential 'DRepRole ->
   EpochNo ->
   ImpTestM era ()
@@ -1695,7 +1684,7 @@ showConwayTxBalance ::
   ( EraUTxO era
   , ConwayEraTxBody era
   , Tx era ~ AlonzoTx era
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   PParams era ->
   CertState era ->
@@ -1734,7 +1723,7 @@ logConwayTxBalance ::
   , EraGov era
   , ConwayEraTxBody era
   , Tx era ~ AlonzoTx era
-  , EraCertState era
+  , ConwayEraCertState era
   ) =>
   AlonzoTx era ->
   ImpTestM era ()

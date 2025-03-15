@@ -24,10 +24,10 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   Interns,
  )
-import Cardano.Ledger.CertState (DState (..), PState (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
+import Cardano.Ledger.State.CertState (DState (..), PState (..))
 import Cardano.Ledger.State.SnapShots
 import Cardano.Ledger.State.UTxO
 import qualified Cardano.Ledger.UMap as UM

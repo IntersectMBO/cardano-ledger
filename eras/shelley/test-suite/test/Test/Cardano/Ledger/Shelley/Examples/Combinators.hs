@@ -57,29 +57,22 @@ import Cardano.Ledger.BaseTypes (
   (⭒),
  )
 import Cardano.Ledger.Block (Block (..), bheader)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair, GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
-  FutureGenDeleg (..),
-  InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   PulsingRewUpdate (..),
   RewardUpdate (..),
   UTxOState (..),
   applyRUpd,
   curPParamsEpochStateL,
-  delegations,
   futurePParamsEpochStateL,
   prevPParamsEpochStateL,
-  rewards,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards, votedFuturePParams)
@@ -177,7 +170,6 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     certState = lsCertState ls
-    vstate = certState ^. certVStateL
     pstate = certState ^. certPStateL
     dstate = certState ^. certDStateL
     utxoSt = lsUTxOState ls
@@ -198,10 +190,9 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
       Map.fromList (map (\cred -> (cred, UM.compactCoinOrError (ppEx ^. ppKeyDepositL))) stakes)
     newPools = Map.fromList (map (\p -> (ppId p, ppEx ^. ppPoolDepositL)) pools)
     dpstate' =
-      mkCertState
-        vstate
-        pstate {psDeposits = Map.unionWith (\old _new -> old) newPools (psDeposits pstate)}
-        dstate {dsUnified = UM.unionKeyDeposits (RewDepUView (dsUnified dstate)) newDeposits}
+      def
+        & certPStateL . psDepositsL %~ Map.unionWith (\old _new -> old) newPools
+        & certDStateL . dsUnifiedL .~ UM.unionKeyDeposits (RewDepUView (dstate ^. dsUnifiedL)) newDeposits
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
 
@@ -218,7 +209,6 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     certState = lsCertState ls
-    pstate = certState ^. certPStateL
     dstate = certState ^. certDStateL
     refund = case UM.lookup key (RewDepUView (dsUnified dstate)) of
       Nothing -> Coin 0
@@ -232,7 +222,7 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
-    dpstate' = mkCertState def pstate dstate {dsUnified = UM.adjust zeroD key (RewDepUView (dsUnified dstate))}
+    dpstate' = def & certDStateL . dsUnifiedL %~ (UM.adjust zeroD key . RewDepUView)
     zeroD (RDPair x _) = RDPair x (UM.CompactCoin 0)
 
 -- | = Update the UTxO

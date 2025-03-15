@@ -8,7 +8,6 @@
 module Test.Cardano.Ledger.Conway.Genesis (expectedConwayGenesis) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), textToUrl)
-import Cardano.Ledger.CertState (DRep (..), DRepState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -18,6 +17,7 @@ import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.State (DRep (..), DRepState (..))
 import Data.Default (Default (def))
 import qualified Data.ListMap as ListMap
 import Data.Map as Map

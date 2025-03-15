@@ -58,7 +58,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXO, ConwayUTXOS)
@@ -69,7 +68,7 @@ import Cardano.Ledger.Plutus (ExUnits)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (UtxoEnv)
-import Cardano.Ledger.State (EraUTxO, UTxO (..))
+import Cardano.Ledger.State (EraCertState (..), EraUTxO, UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (Embed (..), STS (..))

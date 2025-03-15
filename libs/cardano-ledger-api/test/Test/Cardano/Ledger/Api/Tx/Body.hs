@@ -2,8 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -11,12 +9,12 @@ module Test.Cardano.Ledger.Api.Tx.Body (spec) where
 
 import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.Tx.Body
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.UTxO hiding (consumed, produced)
+import Cardano.Ledger.State hiding (consumed)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val
 import Data.Foldable
@@ -131,11 +129,10 @@ propEvalBalanceTxBody ::
 propEvalBalanceTxBody pp certState utxo =
   property $
     forAll (genTxBodyFrom certState utxo) $ \txBody ->
-      evalBalanceTxBody pp lookupKeyDeposit lookupDRepDeposit isRegPoolId utxo txBody
+      evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalance pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
-    lookupDRepDeposit = lookupDepositVState (certState ^. certVStateL)
     isRegPoolId = (`Map.member` psStakePoolParams (certState ^. certPStateL))
 
 propEvalBalanceShelleyTxBody ::
@@ -147,11 +144,10 @@ propEvalBalanceShelleyTxBody ::
 propEvalBalanceShelleyTxBody pp certState utxo =
   property $
     forAll (genTxBodyFrom certState utxo) $ \txBody ->
-      evalBalanceTxBody pp lookupKeyDeposit lookupDRepDeposit isRegPoolId utxo txBody
+      evalBalanceTxBody pp lookupKeyDeposit (const Nothing) isRegPoolId utxo txBody
         `shouldBe` evaluateTransactionBalanceShelley pp certState utxo txBody
   where
     lookupKeyDeposit = lookupDepositDState (certState ^. certDStateL)
-    lookupDRepDeposit = lookupDepositVState (certState ^. certVStateL)
     isRegPoolId = (`Map.member` psStakePoolParams (certState ^. certPStateL))
 
 -- | NOTE: We cannot have this property pass for Conway and beyond because Conway changes this calculation.

@@ -13,12 +13,12 @@
 module Test.Cardano.Ledger.Constrained.Conway.Gov where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.HardForks qualified as HardForks
 import Cardano.Ledger.UMap (umElems, umElemsL)
 import Constrained

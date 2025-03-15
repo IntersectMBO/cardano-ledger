@@ -35,7 +35,6 @@ import Cardano.Ledger.BaseTypes (
   addEpochInterval,
   (%?),
  )
-import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (csCommitteeCreds))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
@@ -69,7 +68,12 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.State (PoolDistr (..), individualTotalPoolStake)
+import Cardano.Ledger.State (
+  CommitteeAuthorization (..),
+  CommitteeState (csCommitteeCreds),
+  PoolDistr (..),
+  individualTotalPoolStake,
+ )
 import Cardano.Ledger.Val (Val (..), (<+>))
 import Control.State.Transition.Extended (
   Embed (..),

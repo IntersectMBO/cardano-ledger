@@ -23,21 +23,17 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
  )
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (StakeRefBase, StakeRefPtr))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   UTxOState (..),
   curPParamsEpochStateL,
-  ptrsMap,
  )
 import Cardano.Ledger.Shelley.State
 import qualified Cardano.Ledger.UMap as UM

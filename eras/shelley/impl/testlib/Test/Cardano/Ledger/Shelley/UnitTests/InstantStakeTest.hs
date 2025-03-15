@@ -12,7 +12,6 @@ import Cardano.Ledger.Core (EraTxOut, mkCoinTxOut)
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.LedgerState (dsUnifiedL, psStakePoolParamsL)
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UMap (RDPair (..), rdRewardCoin)
@@ -51,8 +50,8 @@ instantStakeIncludesRewards = do
       ronAddr = mkAddr ronPay ron
       -- maryAddr is omitted on purpose. Mary will not have a UTxO entry
 
-      rewards :: Map (Credential 'Staking) RDPair
-      rewards =
+      rewards' :: Map (Credential 'Staking) RDPair
+      rewards' =
         Map.fromList
           [ (tom, tomRD)
           , (john, johnRD)
@@ -61,8 +60,8 @@ instantStakeIncludesRewards = do
           , (mary, maryRD)
           ]
 
-      delegations :: Map (Credential 'Staking) (KeyHash 'StakePool)
-      delegations =
+      delegations' :: Map (Credential 'Staking) (KeyHash 'StakePool)
+      delegations' =
         Map.fromList
           [ (tom, pool1) -- since every one is delegated
           , (ann, pool2) -- no one's stake should be left out
@@ -92,7 +91,7 @@ instantStakeIncludesRewards = do
         )
 
     instantStake = addInstantStake utxo1 mempty
-    umap = UM.unify rewards Map.empty delegations Map.empty
+    umap = UM.unify rewards' Map.empty delegations' Map.empty
     poolparamMap = Map.fromList [(pool1, pool1Params), (pool2, pool2Params)]
   -- We can either use an emptyDstate with just the umap, like this
   -- dState = (emptyDState {dsUnified = umap}) :: DState era
