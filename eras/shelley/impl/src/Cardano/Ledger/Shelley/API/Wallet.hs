@@ -184,7 +184,7 @@ getPoolParameters = Map.restrictKeys . f
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
-  (EraGov era, EraStake era, EraCertState era) =>
+  (EraStake era, EraCertState era) =>
   Globals ->
   NewEpochState era ->
   PoolDistr
@@ -276,11 +276,10 @@ sumPoolOwnersStake pool stake =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot :: (EraGov era, EraStake era, EraCertState era) => NewEpochState era -> EB.SnapShot
+currentSnapshot :: (EraStake era, EraCertState era) => NewEpochState era -> EB.SnapShot
 currentSnapshot ss =
   snapShotFromInstantStake instantStake dstate pstate
   where
-    _pp = nesEs ss ^. curPParamsEpochStateL
     ledgerState = esLState $ nesEs ss
     instantStake = ledgerState ^. instantStakeG
     dstate = ledgerState ^. lsCertStateL . certDStateL

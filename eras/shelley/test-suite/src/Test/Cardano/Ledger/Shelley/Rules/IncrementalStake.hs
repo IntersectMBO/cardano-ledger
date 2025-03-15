@@ -35,7 +35,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   PState (..),
-  curPParamsEpochStateL,
   ptrsMap,
  )
 import Cardano.Ledger.Shelley.State
@@ -157,7 +156,7 @@ incrStakeComparisonTest Proxy =
 
 checkIncrementalStake ::
   forall era.
-  (EraGov era, EraTxOut era, EraStake era, EraCertState era) =>
+  (EraTxOut era, EraStake era, EraCertState era) =>
   EpochState era ->
   Property
 checkIncrementalStake es =
@@ -167,7 +166,6 @@ checkIncrementalStake es =
     pstate = certState ^. certPStateL
     stake = stakeDistr @era utxo dstate pstate
     snapShot = snapShotFromInstantStake instantStake dstate pstate
-    _pp = es ^. curPParamsEpochStateL
    in
     counterexample
       ( "\nIncremental stake distribution does not match old style stake distribution"

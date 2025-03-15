@@ -372,8 +372,6 @@ registerInitialStaking tc nes =
         { psStakePoolParams = ListMap.toMap sgsPools
         }
 
-    _pp = nes ^. nesEsL . curPParamsEpochStateL
-
     -- The new stake distribution is made on the basis of a snapshot taken
     -- during the previous epoch. We create a "fake" snapshot in order to
     -- establish an initial stake distribution.
