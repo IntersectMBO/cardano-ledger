@@ -163,4 +163,5 @@ toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _) =
       , "fees" .= utxosFees
       , "ppups" .= utxosGovState
       , "stake" .= utxosInstantStake
+      , "donations" .= utxosDonation
       ]
