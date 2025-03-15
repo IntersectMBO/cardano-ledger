@@ -67,12 +67,11 @@ genesisState ::
   LedgerState era
 genesisState genDelegs0 utxo0 =
   LedgerState
-    ( UTxOState
+    ( mkUtxoState
         utxo0
         (Coin 0)
         (Coin 0)
         emptyGovState
-        mempty
         mempty
     )
     (mkCertState def def dState)
