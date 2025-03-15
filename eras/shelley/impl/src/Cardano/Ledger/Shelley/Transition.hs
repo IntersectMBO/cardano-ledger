@@ -271,8 +271,7 @@ createInitialState tc =
             , esSnapshots = emptySnapShots
             , esLState =
                 LedgerState
-                  { lsUTxOState =
-                      smartUTxOState pp initialUtxo zero zero govState zero
+                  { lsUTxOState = mkUtxoState initialUtxo zero zero govState zero
                   , lsCertState = mkCertState def def (dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)})
                   }
             , esNonMyopic = def

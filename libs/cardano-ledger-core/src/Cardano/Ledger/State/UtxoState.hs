@@ -11,6 +11,7 @@
 
 module Cardano.Ledger.State.UtxoState (
   UTxOState (..),
+  mkUtxoState,
 ) where
 
 import Cardano.Ledger.Binary
@@ -31,15 +32,38 @@ import NoThunks.Class (NoThunks)
 data UTxOState era = UTxOState
   { utxosUtxo :: !(UTxO era)
   , utxosDeposited :: !Coin
+  -- ^ Total amount of deposits in the system
   , utxosFees :: !Coin
+  -- ^ Amount of fees accrued this epoch
   , utxosGovState :: !(GovState era)
   , utxosInstantStake :: !(InstantStake era)
   -- ^ There is an invariant in this `InstantStake` that it must match what is in the `UTxO` that is
   -- in this type. In the ledger rules it is updated incrementally, but in various testing scenarios
-  -- it is possible to construct this type with the smart constructor `mkUtxoState`
+  -- it is possible to construct this type with the smart constructor `UtxoState`
   , utxosDonation :: !Coin
+  -- ^ Amount of donations accrued this epoch
   }
   deriving (Generic)
+
+-- | Construct `UtxoState` in a way that invariant for `InstantStake` is not violated.
+--
+-- /Warning/ - It is important to note that it is an expensive operation to construct `UtxoState`
+-- using this function, therefore it must not be used in any of the rules.
+mkUtxoState ::
+  EraStake era =>
+  -- | All of the unspent outputs
+  UTxO era ->
+  -- | Total amount of deposits in the system
+  Coin ->
+  -- | Amount of fees accrued this epoch
+  Coin ->
+  -- | Governance state
+  GovState era ->
+  -- | Amount of donations accrued this epoch
+  Coin ->
+  UTxOState era
+mkUtxoState utxo deposits fees govState =
+  UTxOState utxo deposits fees govState (addInstantStake utxo mempty)
 
 instance
   ( EraTxOut era

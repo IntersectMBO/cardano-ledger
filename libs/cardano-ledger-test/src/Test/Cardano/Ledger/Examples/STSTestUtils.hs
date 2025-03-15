@@ -59,7 +59,6 @@ import Cardano.Ledger.Shelley.API (
   LedgerState (..),
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
-import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   ShelleyBbodyState,
@@ -277,7 +276,7 @@ testUTXOWsubset (UTXOW other) _ = error ("Cannot use testUTXOW in era " ++ show 
 -- | Use a test where any two (ValidationTagMismatch x y) failures match regardless of 'x' and 'y'
 testUTXOspecialCase wit@(UTXOW proof) utxo pparam tx expected =
   let env = UtxoEnv (SlotNo 0) pparam def
-      state = smartUTxOState pparam utxo (Coin 0) (Coin 0) def mempty
+      state = mkUtxoState utxo (Coin 0) (Coin 0) def mempty
    in case proof of
         Alonzo -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         Babbage -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
@@ -305,7 +304,7 @@ testUTXOWwith ::
   Assertion
 testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
   let env = UtxoEnv (SlotNo 0) pparams def
-      state = smartUTxOState pparams utxo (Coin 0) (Coin 0) def mempty
+      state = mkUtxoState utxo (Coin 0) (Coin 0) def mempty
    in case proof of
         Conway -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Babbage -> runSTS wit (TRC (env, state, tx)) (cont expected)

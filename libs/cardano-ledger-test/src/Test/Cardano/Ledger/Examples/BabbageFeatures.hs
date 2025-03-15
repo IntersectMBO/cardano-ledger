@@ -61,9 +61,8 @@ import Cardano.Ledger.Plutus.Language (
   PlutusBinary (..),
   PlutusLanguage,
  )
-import Cardano.Ledger.Shelley.API (UTxO (..))
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -1109,7 +1108,7 @@ testExpectSuccessValid
 
         initUtxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
         expectedUtxo = UTxO $ Map.fromList (newTxInOut ++ refInputs' ++ collateral')
-        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) fees def mempty
+        expectedState = mkUtxoState expectedUtxo (Coin 0) fees def mempty
         assumedValidTx = trustMeP pf True tx'
      in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedValidTx (Right expectedState)
 
@@ -1145,7 +1144,7 @@ testExpectSuccessInvalid
         initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
         DeltaCoin colBallance = Collateral.collAdaBalance txBody' (Map.fromList collateral')
         expectedUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ newColReturn txBody')
-        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) (Coin colBallance) def mempty
+        expectedState = mkUtxoState expectedUtxo (Coin 0) (Coin colBallance) def mempty
         assumedInvalidTx = trustMeP pf False tx'
      in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedInvalidTx (Right expectedState)
 
@@ -1341,7 +1340,7 @@ testExpectUTXOFailure pf@Conway tc failure =
       initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
       pparams = newPParams pf (defaultPPs pf)
       env = Shelley.UtxoEnv (SlotNo 0) pparams def
-      state = smartUTxOState pparams initUtxo (Coin 0) (Coin 0) def mempty
+      state = mkUtxoState initUtxo (Coin 0) (Coin 0) def mempty
    in goSTS
         (UTXO pf)
         env

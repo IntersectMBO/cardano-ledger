@@ -105,7 +105,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   LedgerState (..),
   PState (..),
-  smartUTxOState,
   totalObligation,
   utxosGovStateL,
  )
@@ -117,7 +116,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.State (IndividualPoolStake (..), UTxO (..))
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..))
@@ -824,7 +823,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         Map.empty
         (gsInitialDelegations gstate)
         Map.empty
-    utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovState mempty
+    utxostate = mkUtxoState (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovState mempty
     dpstate = mkCertState def pstate dstate
     dstate =
       DState

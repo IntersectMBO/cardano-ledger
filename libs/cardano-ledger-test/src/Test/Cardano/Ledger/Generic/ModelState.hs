@@ -40,7 +40,6 @@ import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   DState (..),
   EpochState (..),
   InstantaneousRewards (..),
@@ -48,23 +47,15 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PState (..),
   StashedAVVMAddresses,
-  UTxOState (..),
   VState (..),
   completeRupd,
   curPParamsEpochStateL,
   prevPParamsEpochStateL,
-  smartUTxOState,
  )
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Ledger.State (
-  IndividualPoolStake (..),
-  PoolDistr (..),
-  SnapShots,
-  UTxO (..),
-  emptySnapShots,
- )
+import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.Monad.Trans ()
@@ -216,8 +207,7 @@ pParamsZeroByProof Shelley = def
 
 uTxOStateZero :: forall era. Reflect era => UTxOState era
 uTxOStateZero =
-  smartUTxOState
-    pParamsZero
+  mkUtxoState
     utxoZero
     mempty
     mempty
@@ -322,8 +312,7 @@ instance Extract (VState era) era where
 
 instance Reflect era => Extract (UTxOState era) era where
   extract x =
-    smartUTxOState
-      (mPParams x)
+    mkUtxoState
       (UTxO (mUTxO x))
       (mDeposited x)
       (mFees x)

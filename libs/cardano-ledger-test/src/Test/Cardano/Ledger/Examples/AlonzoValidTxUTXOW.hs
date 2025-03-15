@@ -27,7 +27,6 @@ import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.State
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
@@ -161,7 +160,7 @@ validatingSupplimentaryDatumState ::
   Proof era ->
   UTxOState era
 validatingSupplimentaryDatumState pf =
-  smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def mempty
+  mkUtxoState utxo (Coin 0) (Coin 5) def mempty
   where
     utxo =
       expectedUTxO'
@@ -226,7 +225,7 @@ validatingMultipleEqualCertsState ::
   Proof era ->
   UTxOState era
 validatingMultipleEqualCertsState pf =
-  smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def mempty
+  mkUtxoState utxo (Coin 0) (Coin 5) def mempty
   where
     utxo =
       expectedUTxO'
@@ -279,7 +278,7 @@ validatingNonScriptOutWithDatumState ::
   Proof era ->
   UTxOState era
 validatingNonScriptOutWithDatumState pf =
-  smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def mempty
+  mkUtxoState utxo (Coin 0) (Coin 5) def mempty
   where
     utxo =
       expectedUTxO'

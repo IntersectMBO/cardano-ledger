@@ -54,6 +54,7 @@ import Cardano.Ledger.Conway.State (
   SnapShots (..),
   Stake (..),
   instantStakeL,
+  mkUtxoState,
   poolDistrDistrL,
  )
 import Cardano.Ledger.Core (
@@ -1046,9 +1047,9 @@ ledgerState = Var $ V "ledgerState" (LedgerStateR reify) No
 
 -- | Target for UTxOState
 utxoStateT ::
-  forall era. Gov.EraGov era => Proof era -> RootTarget era (UTxOState era) (UTxOState era)
+  forall era. EraStake era => Proof era -> RootTarget era (UTxOState era) (UTxOState era)
 utxoStateT p =
-  Invert "UTxOState" (typeRep @(UTxOState era)) (unReflect utxofun p)
+  Invert "UTxOState" (typeRep @(UTxOState era)) utxofun
     :$ Lensed (utxo p) (utxoL . unUtxoL p)
     :$ Lensed deposits utxosDepositedL
     :$ Lensed fees utxosFeesL
@@ -1056,18 +1057,16 @@ utxoStateT p =
     :$ Lensed donation utxosDonationL
   where
     utxofun ::
-      Reflect era =>
-      Proof era ->
       Map TxIn (TxOutF era) ->
       Coin ->
       Coin ->
       GovState era ->
       Coin ->
       UTxOState era
-    utxofun proof u c1 c2 (GovState _ x) = smartUTxOState (justProtocolVersion proof) (liftUTxO u) c1 c2 x
+    utxofun u c1 c2 (GovState _ x) = mkUtxoState (liftUTxO u) c1 c2 x
 
 unGovL :: Proof era -> Lens' (Gov.GovState era) (GovState era)
-unGovL p = lens (\x -> GovState p x) (\_ (GovState _ y) -> y)
+unGovL p = lens (GovState p) (\_ (GovState _ y) -> y)
 
 justProtocolVersion :: forall era. Reflect era => Proof era -> PParams era
 justProtocolVersion proof = newPParams proof [Fields.ProtocolVersion $ protocolVersion proof]
@@ -1104,9 +1103,9 @@ certStateT = case reify @era of
     shelleyCertStateT :: RootTarget era (ShelleyCertState era) (ShelleyCertState era)
     shelleyCertStateT =
       Invert "ShelleyCertState" (typeRep @(ShelleyCertState era)) ShelleyCertState
-        :$ (Shift vstateT shelleyCertVStateL)
-        :$ (Shift pstateT shelleyCertPStateL)
-        :$ (Shift dstateT shelleyCertDStateL)
+        :$ Shift vstateT shelleyCertVStateL
+        :$ Shift pstateT shelleyCertPStateL
+        :$ Shift dstateT shelleyCertDStateL
 
 -- | Target for VState
 vstateT :: forall era. EraCertState era => RootTarget era (VState era) (VState era)

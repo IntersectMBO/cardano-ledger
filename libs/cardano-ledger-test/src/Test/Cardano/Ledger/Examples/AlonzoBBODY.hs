@@ -52,7 +52,6 @@ import Cardano.Ledger.Shelley.API (
   ProtVer (..),
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
-import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyBbodyPredFailure (..),
   ShelleyBbodyState (..),
@@ -162,8 +161,7 @@ alonzoBBODYexamplesP proof =
 
 initialBBodyState ::
   forall era.
-  ( EraTxOut era
-  , PostShelley era
+  ( PostShelley era
   , EraGov era
   , EraStake era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
@@ -176,7 +174,7 @@ initialBBodyState pf utxo =
   BbodyState (LedgerState initialUtxoSt dpstate) (BlocksMade mempty)
   where
     initialUtxoSt =
-      smartUTxOState (pp pf) utxo (UM.fromCompact successDeposit) (Coin 0) def mempty
+      mkUtxoState utxo (UM.fromCompact successDeposit) (Coin 0) def mempty
     dpstate =
       def
         & certDStateL
@@ -662,8 +660,7 @@ testBBodyState pf =
           , DHash' [hashData $ someDatum @era]
           ]
       poolID = hashKey . vKey . coerceKeyRole $ coldKeys
-      example1UtxoSt =
-        smartUTxOState (pp pf) utxo totalDeposits (Coin 40) def mempty
+      example1UtxoSt = mkUtxoState utxo totalDeposits (Coin 40) def mempty
       -- the default CertState 'def' means that the 'totalDeposits' must be 0
       totalDeposits = Coin 0
    in BbodyState

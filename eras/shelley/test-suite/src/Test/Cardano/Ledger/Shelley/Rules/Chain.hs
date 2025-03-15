@@ -62,7 +62,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   futurePParamsEpochStateL,
   nesEpochStateL,
   prevPParamsEpochStateL,
-  smartUTxOState,
   updateNES,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -208,8 +207,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         ( EpochState
             (AccountState (Coin 0) reserves)
             ( LedgerState
-                ( smartUTxOState
-                    pp
+                ( mkUtxoState
                     utxo
                     (Coin 0)
                     (Coin 0)

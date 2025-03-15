@@ -10,9 +10,9 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.State (UTxO)
+import Cardano.Ledger.State
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default (def)
 import Data.List.NonEmpty (NonEmpty)
@@ -37,19 +37,19 @@ testMaryNoDelegLEDGER ::
   Assertion
 testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
   checkTrace @(ShelleyLEDGER MaryEra) runShelleyBase env $
-    pure (LedgerState (smartUTxOState (ledgerPp env) utxo (Coin 0) (Coin 0) def mempty) def)
+    pure (LedgerState (mkUtxoState utxo (Coin 0) (Coin 0) def mempty) def)
       .- tx
       .->> expectedSt'
   where
     txFee = tx ^. bodyTxL . feeTxBodyL
-    expectedSt' = LedgerState (smartUTxOState (ledgerPp env) expectedUTxO (Coin 0) txFee def mempty) def
+    expectedSt' = LedgerState (mkUtxoState expectedUTxO (Coin 0) txFee def mempty) def
 testMaryNoDelegLEDGER utxo tx env predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
           applySTSTest @(ShelleyLEDGER MaryEra)
             ( TRC
                 ( env
-                , LedgerState (smartUTxOState (ledgerPp env) utxo (Coin 0) (Coin 0) def mempty) def
+                , LedgerState (mkUtxoState utxo (Coin 0) (Coin 0) def mempty) def
                 , tx
                 )
             )

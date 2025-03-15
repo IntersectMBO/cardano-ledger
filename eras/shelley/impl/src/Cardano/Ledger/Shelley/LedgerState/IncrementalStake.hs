@@ -71,13 +71,8 @@ smartUTxOState ::
   GovState era ->
   Coin ->
   UTxOState era
-smartUTxOState _pp utxo c1 c2 st =
-  UTxOState
-    utxo
-    c1
-    c2
-    st
-    (addInstantStake utxo mempty)
+smartUTxOState _pp = mkUtxoState
+{-# DEPRECATED smartUTxOState "In favor of `mkUtxoState`" #-}
 
 -- =====================================================
 -- Part 3 Apply a reward update, in NewEpoch rule
