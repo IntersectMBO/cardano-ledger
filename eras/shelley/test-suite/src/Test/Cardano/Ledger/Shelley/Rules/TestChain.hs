@@ -254,7 +254,7 @@ ledgerTraceBase chainSt block =
   , txs
   )
   where
-    (UnserialisedBlock (BHeader bhb _) txSeq) = block
+    (Block (BHeader bhb _) txSeq) = block
     slot = bheaderSlotNo bhb
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt

@@ -278,7 +278,7 @@ conwayBbodyTransition = do
     >>= \( TRC
             ( _
               , state@(BbodyState ls _)
-              , UnserialisedBlock _ txsSeq
+              , Block _ txsSeq
               )
           ) -> do
         let utxo = utxosUtxo (lsUTxOState ls)
