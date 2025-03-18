@@ -94,7 +94,7 @@ benchValidate ::
   ValidateInput era ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state (Block bh txs)) =
-  let block = UnsafeUnserialisedBlock (makeHeaderView bh) txs
+  let block = Block (makeHeaderView bh) txs
    in case API.applyBlockEitherNoEvents ValidateAll globals state block of
         Right x -> pure x
         Left x -> error (show x)
@@ -112,7 +112,7 @@ applyBlock ::
   Int ->
   Int
 applyBlock (ValidateInput globals state (Block bh txs)) n =
-  let block = UnsafeUnserialisedBlock (makeHeaderView bh) txs
+  let block = Block (makeHeaderView bh) txs
    in case API.applyBlockEitherNoEvents ValidateAll globals state block of
         Right x -> seq (rnf x) (n + 1)
         Left x -> error (show x)
@@ -122,7 +122,7 @@ benchreValidate ::
   ValidateInput era ->
   NewEpochState era
 benchreValidate (ValidateInput globals state (Block bh txs)) =
-  API.applyBlockNoValidaton globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs)
+  API.applyBlockNoValidaton globals state (Block (makeHeaderView bh) txs)
 
 -- ==============================================================
 

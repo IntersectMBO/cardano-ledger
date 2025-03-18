@@ -80,7 +80,7 @@ tests =
     poolState target = (chainNes target) ^. nesEsL . esLStateL . lsCertStateL . certPStateL
 
     removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
-    removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (UnserialisedBlock bh _)}) =
+    removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (Block bh _)}) =
       let e = (epochFromSlotNo . bheaderSlotNo . bhbody) bh
        in removedAfterPoolreap (poolState source) (poolState target) e
 

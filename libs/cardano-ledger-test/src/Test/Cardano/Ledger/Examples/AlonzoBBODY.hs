@@ -705,7 +705,7 @@ coldKeys = KeyPair vk sk
 
 makeNaiveBlock ::
   forall era. EraSegWits era => [Tx era] -> Block BHeaderView era
-makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txSeq
+makeNaiveBlock txs = Block bhView txSeq
   where
     bhView =
       BHeaderView

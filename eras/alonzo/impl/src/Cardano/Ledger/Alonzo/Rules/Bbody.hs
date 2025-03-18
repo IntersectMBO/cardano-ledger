@@ -193,7 +193,7 @@ alonzoBbodyTransition =
     >>= \( TRC
             ( BbodyEnv pp account
               , BbodyState ls b
-              , UnserialisedBlock bh txsSeq
+              , Block bh txsSeq
               )
           ) -> do
         let txs = txSeqTxns txsSeq
