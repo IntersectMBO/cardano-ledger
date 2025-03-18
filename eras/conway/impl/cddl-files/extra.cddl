@@ -13,7 +13,7 @@ nonempty_oset<a> = #6.258([+ a]) / [+ a]
 
 positive_int = 1 .. 18446744073709551615
 
-unit_interval = #6.30([1, 2])
+unit_interval = #6.30([uint, uint])
   ; unit_interval = #6.30([uint, uint])
   ;
   ; Comment above depicts the actual definition for `unit_interval`.

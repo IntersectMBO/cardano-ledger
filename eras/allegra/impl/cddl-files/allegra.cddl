@@ -268,7 +268,7 @@ transaction_witness_set = {? 0 : [* vkeywitness]
 ; our encoders/decoders. Which means we cannot use the actual
 ; definition here and we hard code the value to 1/2
 ; 
-unit_interval = #6.30([1, 2])
+unit_interval = #6.30([uint, uint])
 
 update = [proposed_protocol_parameter_updates, epoch]
 
