@@ -2,21 +2,21 @@
 ; Pseudo-rule introduced by Cuddle to collect root elements
 huddle_root_defs = [block, transaction, $kes_signature, language, signkeyKES]
 
-$hash28 = bytes .size 28
+$hash28 /= bytes .size 28
 
-$hash32 = bytes .size 32
+$hash32 /= bytes .size 32
 
-$kes_signature = bytes .size 448
+$kes_signature /= bytes .size 448
 
-$kes_vkey = bytes .size 32
+$kes_vkey /= bytes .size 32
 
-$signature = bytes .size 64
+$signature /= bytes .size 64
 
-$vkey = bytes .size 32
+$vkey /= bytes .size 32
 
-$vrf_cert = [bytes, bytes .size 80]
+$vrf_cert /= [bytes, bytes .size 80]
 
-$vrf_vkey = bytes .size 32
+$vrf_vkey /= bytes .size 32
 
 addr_keyhash = $hash28
 
