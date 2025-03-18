@@ -205,7 +205,7 @@ relay = [single_host_addr // single_host_name // multi_host_name]
 
 ; reward_account = bytes
 ; 
-reward_account = h'E090000000000000000000000000000000000000000000000000000000'
+reward_account = bytes / h'E090000000000000000000000000000000000000000000000000000000'
                   / h'F0A0000000000000000000000000000000000000000000000000000000'
 
 ; To compute a script hash, note that you must prepend

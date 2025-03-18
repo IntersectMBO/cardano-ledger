@@ -326,7 +326,7 @@ required_signers = set<addr_keyhash>
 
 ; reward_account = bytes
 ; 
-reward_account = h'E090000000000000000000000000000000000000000000000000000000'
+reward_account = bytes / h'E090000000000000000000000000000000000000000000000000000000'
                   / h'F0A0000000000000000000000000000000000000000000000000000000'
 
 script = [0, native_script // 1, plutus_v1_script // 2, plutus_v2_script]

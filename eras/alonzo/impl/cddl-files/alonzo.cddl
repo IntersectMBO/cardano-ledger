@@ -316,7 +316,7 @@ required_signers = set<addr_keyhash>
 
 ; reward_account = bytes
 ; 
-reward_account = h'E090000000000000000000000000000000000000000000000000000000'
+reward_account = bytes / h'E090000000000000000000000000000000000000000000000000000000'
                   / h'F0A0000000000000000000000000000000000000000000000000000000'
 
 ; This is a hash of data which may affect evaluation of a script.
