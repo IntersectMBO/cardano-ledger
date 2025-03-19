@@ -38,12 +38,13 @@ import Cardano.Ledger.Babbage.Rules (
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
+  Globals (..),
   Mismatch (..),
   Relation (..),
   ShelleyBase,
   StrictMaybe (..),
   swapMismatch,
-  unswapMismatch, Globals (..),
+  unswapMismatch,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
@@ -104,8 +105,10 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
+  drainWithdrawals,
   renderDepositEqualsObligationViolation,
-  shelleyLedgerAssertions, validateZeroRewards, drainWithdrawals,
+  shelleyLedgerAssertions,
+  validateZeroRewards,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
 import Cardano.Ledger.State (EraUTxO (..))
@@ -113,6 +116,7 @@ import Cardano.Ledger.UMap (UView (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
+import Control.Monad.RWS (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
@@ -122,7 +126,8 @@ import Control.State.Transition.Extended (
   judgmentContext,
   liftSTS,
   trans,
-  (?!), validateTrans,
+  validateTrans,
+  (?!),
  )
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
@@ -134,7 +139,6 @@ import Data.Text (Text)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
-import Control.Monad.RWS (asks)
 
 data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
@@ -437,9 +441,11 @@ ledgerTransition = do
           dState = certState ^. certDStateL
 
         -- Validate withdrawals and rewards and drain withdrawals
-        validateTrans (ConwayCertsFailure . WithdrawalsNotInRewardsCERTS) $ validateZeroRewards dState withdrawals network
-        let certStateDrained = certStateAfterCERTS
-              & certDStateL .~ drainWithdrawals dState withdrawals
+        validateTrans (ConwayCertsFailure . WithdrawalsNotInRewardsCERTS) $
+          validateZeroRewards dState withdrawals network
+        let certStateDrained =
+              certStateAfterCERTS
+                & certDStateL .~ drainWithdrawals dState withdrawals
 
         -- Votes and proposals from signal tx
         let govSignal =
