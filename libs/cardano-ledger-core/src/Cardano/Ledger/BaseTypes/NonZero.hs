@@ -38,7 +38,7 @@ module Cardano.Ledger.BaseTypes.NonZero (
   (%?),
 ) where
 
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR)
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR, FromCBOR (..), ToCBOR (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON)
 import Data.Maybe (fromMaybe)
@@ -76,7 +76,7 @@ type WithinBounds n a = (MinBound a <= n, n <= MaxBound a)
 
 newtype NonZero a = NonZero {unNonZero :: a}
   deriving (Eq, Ord, Show, NoThunks, NFData)
-  deriving newtype (EncCBOR, ToJSON)
+  deriving newtype (EncCBOR, ToCBOR, ToJSON)
 
 class HasZero a where
   isZero :: a -> Bool
@@ -102,6 +102,9 @@ instance HasZero a => HasZero (Ratio a) where
 
 instance (Typeable a, DecCBOR a, HasZero a) => DecCBOR (NonZero a) where
   decCBOR = decCBOR >>= nonZeroM
+
+instance (HasZero a, FromCBOR a) => FromCBOR (NonZero a) where
+  fromCBOR = nonZeroM =<< fromCBOR
 
 instance (FromJSON a, HasZero a) => FromJSON (NonZero a) where
   parseJSON v = parseJSON v >>= nonZeroM
