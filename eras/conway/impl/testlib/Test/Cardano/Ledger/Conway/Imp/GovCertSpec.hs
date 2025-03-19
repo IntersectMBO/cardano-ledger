@@ -1,21 +1,24 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE NumericUnderscores #-}
 
 module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
+import Cardano.Ledger.CertState (DRep (..), EraCertState (..), dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..), ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL, esLStateL, lsCertStateL)
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, esLStateL, lsCertStateL, nesEsL)
+import Cardano.Ledger.UMap (umElemDRep, umElemsL)
 import Cardano.Ledger.Val (Val (..))
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro ((&), (.~))
@@ -23,9 +26,6 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
-import Cardano.Ledger.CertState (DRep(..), EraCertState (..), dsUnifiedL)
-import Cardano.Ledger.UMap (umElemsL, umElemDRep)
-import qualified Data.Map.Strict as Map
 
 spec ::
   forall era.
