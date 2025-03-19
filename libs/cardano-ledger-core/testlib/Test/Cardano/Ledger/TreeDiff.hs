@@ -109,6 +109,7 @@ instance ToExpr CostModel where
 instance ToExpr CostModels
 
 -- Keys/WitVKey
+instance ToExpr (WitVKeyRaw kr)
 instance ToExpr (WitVKey kr)
 
 -- Keys/Bootstrap

@@ -2,6 +2,8 @@
 
 ## 1.17.0.0
 
+* Add `WitVKeyRaw` type
+* Remove `eqWitVKeyRaw` from `WitVKey` module
 * Add `BoootstrapWitnessRaw` type
 * Add `EraStake`, `CanGetInstantStake`,  `CanSetInstantStake` , `snapShotFromInstantStake`, `resolveActiveInstantStakeCredentials`
 * Add boolean argument to `fromCborRigorousBothAddr` for lenient `Ptr` decoding
