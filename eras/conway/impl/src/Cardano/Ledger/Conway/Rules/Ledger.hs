@@ -427,25 +427,24 @@ ledgerTransition = do
                 Set.filter (not . (`UMap.member` delegatedAddrs) . KeyHashObj) wdrlsKeyHashes
           failOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
 
-        certStateAfterCERTS <-
-          trans @(EraRule "CERTS" era) $
-            TRC
-              ( CertsEnv tx pp curEpochNo committee committeeProposals
-              , certState
-              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
-              )
-
+        -- Validate withdrawals and rewards and drain withdrawals
         network <- liftSTS $ asks networkId
         let
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
           dState = certState ^. certDStateL
-
-        -- Validate withdrawals and rewards and drain withdrawals
         validateTrans (ConwayCertsFailure . WithdrawalsNotInRewardsCERTS) $
           validateZeroRewards dState withdrawals network
         let certStateDrained =
-              certStateAfterCERTS
+              certState
                 & certDStateL .~ drainWithdrawals dState withdrawals
+
+        certStateAfterCERTS <-
+          trans @(EraRule "CERTS" era) $
+            TRC
+              ( CertsEnv tx pp curEpochNo committee committeeProposals
+              , certStateDrained
+              , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
+              )
 
         -- Votes and proposals from signal tx
         let govSignal =
@@ -462,14 +461,14 @@ ledgerTransition = do
                   curEpochNo
                   pp
                   (govState ^. constitutionGovStateL . constitutionScriptL)
-                  certStateDrained
+                  certStateAfterCERTS
               , proposals
               , govSignal
               )
         let utxoState' =
               utxoState
                 & utxosGovStateL . proposalsGovStateL .~ proposalsState
-        pure (utxoState', certStateDrained)
+        pure (utxoState', certStateAfterCERTS)
       else pure (utxoState, certState)
 
   utxoState'' <-
