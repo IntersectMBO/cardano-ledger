@@ -210,7 +210,7 @@ spec = do
       submitAndExpireProposalToMakeReward otherStakeCred
       getReward otherStakeCred `shouldReturn` govActionDeposit
       unRegTxCert <- genUnRegTxCert stakeCred
-      submitTx_ . mkBasicTx $
+      impAnn "Deregister staking credential and withdraw" . submitTx_ . mkBasicTx $
         mkBasicTxBody
           & certsTxBodyL
             .~ SSeq.fromList [unRegTxCert]

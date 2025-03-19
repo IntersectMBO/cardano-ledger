@@ -27,7 +27,6 @@ module Cardano.Ledger.Conway.Rules.Certs (
 
 import Cardano.Ledger.BaseTypes (
   EpochNo (EpochNo),
-  Globals (..),
   ShelleyBase,
   StrictMaybe,
   binOpEpochNo,
@@ -62,20 +61,15 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPoolPredFailure,
-  drainWithdrawals,
-  validateZeroRewards,
  )
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
   TRC (..),
   TransitionRule,
   judgmentContext,
-  liftSTS,
   trans,
-  validateTrans,
  )
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -221,7 +215,6 @@ conwayCertsTransition = do
       , certificates
       ) <-
     judgmentContext
-  network <- liftSTS $ asks networkId
 
   case certificates of
     Empty -> do
@@ -259,13 +252,8 @@ conwayCertsTransition = do
 
       -- Final CertState with updates to DRep expiry based on new proposals and votes on existing proposals
       let certStateWithDRepExpiryUpdated = certState' & certVStateL . vsDRepsL %~ updateVSDReps
-          dState = certStateWithDRepExpiryUpdated ^. certDStateL
-          withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
 
-      -- Validate withdrawals and rewards and drain withdrawals
-      validateTrans WithdrawalsNotInRewardsCERTS $ validateZeroRewards dState withdrawals network
-
-      pure $ certStateWithDRepExpiryUpdated & certDStateL .~ drainWithdrawals dState withdrawals
+      pure certStateWithDRepExpiryUpdated
     gamma :|> txCert -> do
       certState' <-
         trans @(ConwayCERTS era) $ TRC (env, certState, gamma)

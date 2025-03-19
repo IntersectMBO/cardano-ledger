@@ -43,7 +43,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
   swapMismatch,
-  unswapMismatch,
+  unswapMismatch, Globals (..),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
@@ -105,7 +105,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
   renderDepositEqualsObligationViolation,
-  shelleyLedgerAssertions,
+  shelleyLedgerAssertions, validateZeroRewards, drainWithdrawals,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
 import Cardano.Ledger.State (EraUTxO (..))
@@ -122,7 +122,7 @@ import Control.State.Transition.Extended (
   judgmentContext,
   liftSTS,
   trans,
-  (?!),
+  (?!), validateTrans,
  )
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
@@ -134,6 +134,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
+import Control.Monad.RWS (asks)
 
 data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
@@ -315,6 +316,7 @@ instance
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , EraCertState era
+  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
   ) =>
   STS (ConwayLEDGER era)
   where
@@ -359,6 +361,7 @@ ledgerTransition ::
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
   , EraCertState era
+  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -428,6 +431,16 @@ ledgerTransition = do
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
 
+        network <- liftSTS $ asks networkId
+        let
+          withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+          dState = certState ^. certDStateL
+
+        -- Validate withdrawals and rewards and drain withdrawals
+        validateTrans (ConwayCertsFailure . WithdrawalsNotInRewardsCERTS) $ validateZeroRewards dState withdrawals network
+        let certStateDrained = certStateAfterCERTS
+              & certDStateL .~ drainWithdrawals dState withdrawals
+
         -- Votes and proposals from signal tx
         let govSignal =
               GovSignal
@@ -443,14 +456,14 @@ ledgerTransition = do
                   curEpochNo
                   pp
                   (govState ^. constitutionGovStateL . constitutionScriptL)
-                  certStateAfterCERTS
+                  certStateDrained
               , proposals
               , govSignal
               )
         let utxoState' =
               utxoState
                 & utxosGovStateL . proposalsGovStateL .~ proposalsState
-        pure (utxoState', certStateAfterCERTS)
+        pure (utxoState', certStateDrained)
       else pure (utxoState, certState)
 
   utxoState'' <-
@@ -532,6 +545,7 @@ instance
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era
   , EraCertState era
+  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
   ) =>
   Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
   where
