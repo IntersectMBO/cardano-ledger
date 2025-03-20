@@ -390,6 +390,83 @@ jobs:
     - name: Run fourmolu
       run: ./scripts/fourmolize.sh
 
+  gen-cddl:
+    needs: build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Free up disk space
+      run: |
+        # Remove software and language runtimes we're not using
+        sudo rm -rf \
+          "$AGENT_TOOLSDIRECTORY" \
+          /opt/google/chrome \
+          /opt/microsoft/msedge \
+          /opt/microsoft/powershell \
+          /opt/pipx \
+          /usr/lib/mono \
+          /usr/local/julia* \
+          /usr/local/lib/android \
+          /usr/local/lib/node_modules \
+          /usr/local/share/chromium \
+          /usr/local/share/powershell \
+          /usr/share/dotnet \
+          /usr/share/swift
+        df -h /
+
+    - name: Install Haskell
+      id: install-haskell
+      uses: input-output-hk/actions/haskell@latest
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: 3.14
+
+    # Retrieve working directory from build jobs
+    - name: Download working directory archive
+      uses: actions/download-artifact@v4
+      with:
+        name: state-9.10.1-ubuntu-latest
+
+    - name: Unarchive working directory
+      run: tar -xf state.tzst --use-compress-program unzstd && rm state.tzst
+
+    - name: Cabal update
+      run: cabal update
+
+    # A dependencies.txt file should have been created by the build job, so we
+    # check if it exists and is not empty.
+    - name: Check dependencies to be used as cache keys
+      id: check-deps
+      run: |
+        ./scripts/file-not-null.sh dependencies.txt
+
+    - name: Restore cache
+      uses: actions/cache/restore@v4
+      id: restore-cabal-cache
+      env:
+        cache-name: cache-cabal-build
+        CABAL_CACHE_VERSION: "2024-09-23"
+      with:
+        path: |
+          ${{ steps.install-haskell.outputs.cabal-store }}
+        key: ${{ env.cache-name }}-${{ runner.os }}-9.10.1-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
+        # The cache with this specific key should have been created by the build
+        # job. If the cache is missing, something is terribly wrong! We fail the
+        # test job, or otherwise we would start rebuilding all the dependencies.
+        fail-on-cache-miss: true
+
+    - name: Run gen-cddl
+      run: ./scripts/gen-cddl.sh
+
   cabal-format:
     runs-on: ubuntu-latest
 
