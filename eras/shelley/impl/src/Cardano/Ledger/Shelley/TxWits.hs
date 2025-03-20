@@ -218,7 +218,7 @@ shelleyEqTxWitsRaw :: EraTxWits era => TxWits era -> TxWits era -> Bool
 shelleyEqTxWitsRaw txWits1 txWits2 =
   txWits1 ^. addrTxWitsL == txWits2 ^. addrTxWitsL
     && liftEq eqRaw (txWits1 ^. scriptTxWitsL) (txWits2 ^. scriptTxWitsL)
-    && liftEq eqRaw (txWits1 ^. bootAddrTxWitsL) (txWits2 ^. bootAddrTxWitsL)
+    && txWits1 ^. bootAddrTxWitsL == txWits2 ^. bootAddrTxWitsL
 
 instance EraScript era => DecCBOR (Annotator (ShelleyTxWitsRaw era)) where
   decCBOR = decodeWits
