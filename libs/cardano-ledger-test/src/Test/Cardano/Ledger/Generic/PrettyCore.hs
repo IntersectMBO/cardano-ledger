@@ -2861,15 +2861,14 @@ pcPair pp1 pp2 (x, y) = parens (hsep [pp1 x, ppString ",", pp2 y])
 
 pcWitVKey ::
   forall era keyrole.
-  Typeable keyrole =>
   Proof era ->
   WitVKey keyrole ->
   PDoc
 pcWitVKey _p (WitVKey vk@(VKey x) sig) =
   ppSexp
     "WitVKey"
-    [ ppString (" VerKey=" ++ (take 10 (drop 19 keystring)))
-    , ppString (" SignKey=" ++ (take 10 (drop 29 sigstring)))
+    [ ppString (" VerKey=" ++ take 10 (drop 19 keystring))
+    , ppString (" SignKey=" ++ take 10 (drop 29 sigstring))
     , " VerKeyHash=" <> hash
     ]
   where
@@ -2878,7 +2877,6 @@ pcWitVKey _p (WitVKey vk@(VKey x) sig) =
     sigstring = show sig
 
 instance
-  forall era keyrole.
   ( Reflect era
   , Typeable keyrole
   ) =>
@@ -2899,12 +2897,12 @@ pcShelleyGovState :: Proof era -> ShelleyGovState era -> PDoc
 pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp futurepp) =
   ppRecord
     "ShelleyGovState"
-    $ [ ("proposals", ppString "(Proposals ...)")
-      , ("futureProposals", ppString "(Proposals ...)")
-      , ("pparams", pcPParamsSynopsis p pp)
-      , ("prevParams", pcPParamsSynopsis p prevpp)
-      , ("futureParams", pcFuturePParams p futurepp)
-      ]
+    [ ("proposals", ppString "(Proposals ...)")
+    , ("futureProposals", ppString "(Proposals ...)")
+    , ("pparams", pcPParamsSynopsis p pp)
+    , ("prevParams", pcPParamsSynopsis p prevpp)
+    , ("futureParams", pcFuturePParams p futurepp)
+    ]
 
 pcFuturePParams :: Proof era -> FuturePParams era -> PDoc
 pcFuturePParams p = \case

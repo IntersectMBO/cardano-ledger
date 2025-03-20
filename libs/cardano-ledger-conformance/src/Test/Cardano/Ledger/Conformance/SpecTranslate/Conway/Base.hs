@@ -90,7 +90,6 @@ import Control.Monad.Except (MonadError (..))
 import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
-import Data.Data (Typeable)
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.List (sortOn)
@@ -460,7 +459,7 @@ instance DSIGNAlgorithm v => SpecTranslate ctx (SignedDSIGN v a) where
 
   toSpecRep (SignedDSIGN x) = pure $ signatureToInteger x
 
-instance Typeable k => SpecTranslate ctx (WitVKey k) where
+instance SpecTranslate ctx (WitVKey k) where
   type SpecRep (WitVKey k) = (SpecRep (VKey k), Integer)
 
   toSpecRep (WitVKey vk sk) = toSpecRep (vk, sk)

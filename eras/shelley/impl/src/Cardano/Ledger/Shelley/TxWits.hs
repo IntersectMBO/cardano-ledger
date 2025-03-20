@@ -216,7 +216,7 @@ pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
 
 shelleyEqTxWitsRaw :: EraTxWits era => TxWits era -> TxWits era -> Bool
 shelleyEqTxWitsRaw txWits1 txWits2 =
-  liftEq eqRaw (txWits1 ^. addrTxWitsL) (txWits2 ^. addrTxWitsL)
+  txWits1 ^. addrTxWitsL == txWits2 ^. addrTxWitsL
     && liftEq eqRaw (txWits1 ^. scriptTxWitsL) (txWits2 ^. scriptTxWitsL)
     && liftEq eqRaw (txWits1 ^. bootAddrTxWitsL) (txWits2 ^. bootAddrTxWitsL)
 
