@@ -69,7 +69,6 @@ import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Set (Set)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, (^.))
 import NoThunks.Class (NoThunks (..))
@@ -170,7 +169,6 @@ txInsFilter (UTxO utxo') txIns = UTxO (utxo' `Map.restrictKeys` txIns)
 
 -- | Verify a transaction body witness
 verifyWitVKey ::
-  Typeable kr =>
   Hash HASH EraIndependentTxBody ->
   WitVKey kr ->
   Bool

@@ -2,12 +2,16 @@
 
 ## 1.18.0.0
 
+* Remove `witVKeyBytes` and `eqWitVKeyRaw`
+* Remove `EqRaw` instance for `WitVKey`
 * Replace `Block'` constructor with `Block`
 * Remove patterns: `Block`, `UnserialisedBlock` and `UnsafeUnserialisedBlock`
 * Add ` EncCBORGroup (TxSeq era)` and `EncCBOR h` constraints to `EncCBOR` and `ToCBOR` instances for `Block`
 
 ## 1.17.0.0
 
+* Remove `eqBootstrapWitnessRaw` and `BootstrapWitnessRaw`
+* Rename `bwSig` to `bwSignature` for `BootstrapWitness`
 * Add `BoootstrapWitnessRaw` type
 * Add `EraStake`, `CanGetInstantStake`,  `CanSetInstantStake` , `snapShotFromInstantStake`, `resolveActiveInstantStakeCredentials`
 * Add boolean argument to `fromCborRigorousBothAddr` for lenient `Ptr` decoding

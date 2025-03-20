@@ -9,7 +9,6 @@ module Cardano.Ledger.Api.Tx.Wits (
 
   -- *** WitVKey
   WitVKey (WitVKey),
-  witVKeyBytes,
   witVKeyHash,
 
   -- ** Byron address witness
@@ -64,4 +63,4 @@ import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Core (EraTxWits (..), hashScriptTxWitsL)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.Keys.WitVKey (WitVKey (WitVKey), witVKeyBytes, witVKeyHash)
+import Cardano.Ledger.Keys.WitVKey (WitVKey (WitVKey), witVKeyHash)
