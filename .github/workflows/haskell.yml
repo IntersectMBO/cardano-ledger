@@ -91,7 +91,7 @@ jobs:
 
     - name: Configure to use libsodium
       run: |
-        cat >> cabal.project <<EOF
+        cat >> cabal.project.local <<EOF
         package cardano-crypto-praos
           flags: -external-libsodium-vrf
         EOF
@@ -99,7 +99,7 @@ jobs:
     - name: Configure to limit the heap size for ghc 8
       if: startsWith(${{ matrix.ghc }}, 8)
       run: |
-        cat >> cabal.project <<EOF
+        cat >> cabal.project.local <<EOF
         with-compiler: $PWD/scripts/ghc-limited
         with-hc-pkg: ghc-pkg
         EOF
@@ -332,9 +332,6 @@ jobs:
         path: |
           ${{ steps.install-haskell.outputs.cabal-store }}
         key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
-        # The cache with this specific key should have been created by the build
-        # job. If the cache is missing, something is terribly wrong! We fail the
-        # test job, or otherwise we would start rebuilding all the dependencies.
         fail-on-cache-miss: true
 
     - name: Run tests
@@ -389,6 +386,93 @@ jobs:
 
     - name: Run fourmolu
       run: ./scripts/fourmolize.sh
+
+  gen-cddl:
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2024-09-23"
+
+      # current ref from: 27.02.2022
+      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+
+      SECP_CACHE_VERSION: "2022-12-30"
+      ghc-version: "9.10.1"
+      os: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Free up disk space
+      run: |
+        # Remove software and language runtimes we're not using
+        sudo rm -rf \
+          "$AGENT_TOOLSDIRECTORY" \
+          /opt/google/chrome \
+          /opt/microsoft/msedge \
+          /opt/microsoft/powershell \
+          /opt/pipx \
+          /usr/lib/mono \
+          /usr/local/julia* \
+          /usr/local/lib/android \
+          /usr/local/lib/node_modules \
+          /usr/local/share/chromium \
+          /usr/local/share/powershell \
+          /usr/share/dotnet \
+          /usr/share/swift
+        df -h /
+
+    - name: Install system dependencies
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: false # default is true
+
+    - name: Install Haskell
+      id: install-haskell
+      uses: input-output-hk/actions/haskell@latest
+      with:
+        ghc-version: ${{ env.ghc-version }}
+        cabal-version: 3.14
+
+    # Retrieve working directory from build jobs
+    - name: Download working directory archive
+      uses: actions/download-artifact@v4
+      with:
+        name: state-${{ env.ghc-version }}-${{ env.os }}
+
+    - name: Unarchive working directory
+      run: tar -xf state.tzst --use-compress-program unzstd && rm state.tzst
+
+    - name: Cabal update
+      run: cabal update
+
+    # A dependencies.txt file should have been created by the build job, so we
+    # check if it exists and is not empty.
+    - name: Check dependencies to be used as cache keys
+      id: check-deps
+      run: |
+        ./scripts/file-not-null.sh dependencies.txt
+
+    - name: Restore cache
+      uses: actions/cache/restore@v4
+      id: restore-cabal-cache
+      env:
+        cache-name: cache-cabal-build
+      with:
+        path: |
+          ${{ steps.install-haskell.outputs.cabal-store }}
+        key: ${{ env.cache-name }}-${{ runner.os }}-${{ env.ghc-version }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
+        fail-on-cache-miss: true
+
+    - name: Run gen-cddl
+      run: ./scripts/gen-cddl.sh
 
   cabal-format:
     runs-on: ubuntu-latest
