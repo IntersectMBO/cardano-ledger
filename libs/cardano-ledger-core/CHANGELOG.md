@@ -2,6 +2,8 @@
 
 ## 1.18.0.0
 
+* Remove `eqBootstrapWitnessRaw` and `BootstrapWitnessRaw`
+* Rename `bwSig` to `bwSignature` for `BootstrapWitness`
 * Remove `witVKeyBytes` and `eqWitVKeyRaw`
 * Remove `EqRaw` instance for `WitVKey`
 * Replace `Block'` constructor with `Block`
@@ -10,8 +12,6 @@
 
 ## 1.17.0.0
 
-* Remove `eqBootstrapWitnessRaw` and `BootstrapWitnessRaw`
-* Rename `bwSig` to `bwSignature` for `BootstrapWitness`
 * Add `BoootstrapWitnessRaw` type
 * Add `EraStake`, `CanGetInstantStake`,  `CanSetInstantStake` , `snapShotFromInstantStake`, `resolveActiveInstantStakeCredentials`
 * Add boolean argument to `fromCborRigorousBothAddr` for lenient `Ptr` decoding

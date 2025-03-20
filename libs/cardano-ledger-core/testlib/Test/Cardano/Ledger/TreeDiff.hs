@@ -112,7 +112,6 @@ instance ToExpr CostModels
 instance ToExpr (WitVKey kr)
 
 -- Keys/Bootstrap
-instance ToExpr BootstrapWitnessRaw
 instance ToExpr BootstrapWitness
 
 instance ToExpr ChainCode

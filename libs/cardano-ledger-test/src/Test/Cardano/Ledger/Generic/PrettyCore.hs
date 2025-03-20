@@ -285,7 +285,6 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
-import Data.Typeable (Typeable)
 import qualified Data.VMap as VMap
 import Data.Void (Void, absurd)
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -2876,12 +2875,7 @@ pcWitVKey _p (WitVKey vk@(VKey x) sig) =
     hash = pcKeyHash (hashKey vk)
     sigstring = show sig
 
-instance
-  ( Reflect era
-  , Typeable keyrole
-  ) =>
-  PrettyA (WitVKey keyrole)
-  where
+instance Reflect era => PrettyA (WitVKey keyrole) where
   prettyA = pcWitVKey @era reify
 
 -- =====================================
