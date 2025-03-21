@@ -38,6 +38,7 @@ import Cardano.Ledger.Babbage.Rules (
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
+  Globals (..),
   Mismatch (..),
   Relation (..),
   ShelleyBase,
@@ -104,8 +105,10 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
+  drainWithdrawals,
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
+  validateZeroRewards,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
 import Cardano.Ledger.State (EraUTxO (..))
@@ -113,6 +116,7 @@ import Cardano.Ledger.UMap (UView (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
+import Control.Monad.RWS (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
@@ -122,6 +126,7 @@ import Control.State.Transition.Extended (
   judgmentContext,
   liftSTS,
   trans,
+  validateTrans,
   (?!),
  )
 import Data.Kind (Type)
@@ -315,6 +320,7 @@ instance
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
   , EraCertState era
+  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
   ) =>
   STS (ConwayLEDGER era)
   where
@@ -359,6 +365,7 @@ ledgerTransition ::
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
   , EraCertState era
+  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
@@ -420,11 +427,22 @@ ledgerTransition = do
                 Set.filter (not . (`UMap.member` delegatedAddrs) . KeyHashObj) wdrlsKeyHashes
           failOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
 
+        -- Validate withdrawals and rewards and drain withdrawals
+        network <- liftSTS $ asks networkId
+        let
+          withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
+          dState = certState ^. certDStateL
+        validateTrans (ConwayCertsFailure . WithdrawalsNotInRewardsCERTS) $
+          validateZeroRewards dState withdrawals network
+        let certStateDrained =
+              certState
+                & certDStateL .~ drainWithdrawals dState withdrawals
+
         certStateAfterCERTS <-
           trans @(EraRule "CERTS" era) $
             TRC
               ( CertsEnv tx pp curEpochNo committee committeeProposals
-              , certState
+              , certStateDrained
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
 
@@ -532,6 +550,7 @@ instance
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era
   , EraCertState era
+  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
   ) =>
   Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
   where
