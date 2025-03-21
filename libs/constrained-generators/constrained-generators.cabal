@@ -18,8 +18,9 @@ source-repository head
 
 library
   exposed-modules:
-    Constrained
+    Constrained.API
     Constrained.Base
+    Constrained.Conformance
     Constrained.Core
     Constrained.Env
     Constrained.Examples
@@ -32,19 +33,21 @@ library
     Constrained.Examples.Set
     Constrained.Examples.Tree
     Constrained.GenT
+    Constrained.Generic
     Constrained.Graph
-    Constrained.Instances
-    Constrained.Internals
     Constrained.List
+    Constrained.NumSpec
     Constrained.Properties
-    Constrained.Spec
-    Constrained.Spec.Generics
+    Constrained.Spec.ListFoldy
     Constrained.Spec.Map
-    Constrained.Spec.Pairs
+    Constrained.Spec.Num
+    Constrained.Spec.Set
+    Constrained.Spec.Size
+    Constrained.Spec.SumProd
     Constrained.Spec.Tree
     Constrained.SumList
     Constrained.Syntax
-    Constrained.Univ
+    Constrained.TheKnot
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -60,6 +63,7 @@ library
   build-depends:
     QuickCheck >=2.14,
     base >=4.14 && <5,
+    base-orphans,
     containers,
     mtl,
     prettyprinter,

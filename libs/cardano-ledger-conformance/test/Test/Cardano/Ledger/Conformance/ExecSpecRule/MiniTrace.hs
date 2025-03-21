@@ -21,7 +21,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules (GovSignal (..))
 import Cardano.Ledger.Core
-import Constrained hiding (inject)
+import Constrained.API
 import Control.State.Transition.Extended (STS (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -29,7 +29,6 @@ import qualified Data.OSet.Strict as OSet
 import Data.Proxy
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance
-import Test.Cardano.Ledger.Constrained.Conway.Instances (ConwayFn)
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), WitRule (..), goSTS)
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
@@ -49,26 +48,25 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
 
 -- | Generate either a list of signals, or a list of error messages
 minitraceEither ::
-  forall fn s e.
-  ( ExecSpecRule fn s e
-  , ExecState fn s e ~ State (EraRule s e)
+  forall s e.
+  ( ExecSpecRule s e
+  , ExecState s e ~ State (EraRule s e)
   , PrettyA (Signal (EraRule s e))
   , PrettyA (State (EraRule s e))
   ) =>
   WitRule s e ->
-  Proxy fn ->
   Int ->
   Gen (Either [String] [Signal (EraRule s e)])
-minitraceEither witrule Proxy n0 = do
-  ctxt <- genExecContext @fn @s @e
-  env <- genFromSpec @fn @(ExecEnvironment fn s e) (environmentSpec @fn @s @e ctxt)
+minitraceEither witrule n0 = do
+  ctxt <- genExecContext @s @e
+  env <- genFromSpec @(ExecEnvironment s e) (environmentSpec @s @e ctxt)
   let env2 :: Environment (EraRule s e)
       env2 = inject env
-  !state0 <- genFromSpec @fn @(ExecState fn s e) (stateSpec @fn @s @e ctxt env)
+  !state0 <- genFromSpec @(ExecState s e) (stateSpec @s @e ctxt env)
   let go :: State (EraRule s e) -> Int -> Gen (Either [String] [Signal (EraRule s e)])
       go _ 0 = pure (Right [])
       go state n = do
-        signal <- genFromSpec @fn @(ExecSignal fn s e) (signalSpec @fn @s @e ctxt env state)
+        signal <- genFromSpec @(ExecSignal s e) (signalSpec @s @e ctxt env state)
         let signal2 :: Signal (EraRule s e)
             signal2 = inject signal
         goSTS @s @e @(Gen (Either [String] [Signal (EraRule s e)]))
@@ -96,26 +94,25 @@ minitraceEither witrule Proxy n0 = do
   go state0 n0
 
 minitrace ::
-  forall fn s e.
-  ( ExecSpecRule fn s e
-  , ExecState fn s e ~ State (EraRule s e)
+  forall s e.
+  ( ExecSpecRule s e
+  , ExecState s e ~ State (EraRule s e)
   , PrettyA (Signal (EraRule s e))
   , PrettyA (State (EraRule s e))
   ) =>
   WitRule s e ->
-  Proxy fn ->
   Int ->
   Gen [Signal (EraRule s e)]
-minitrace witrule Proxy n0 = do
-  ans <- minitraceEither @fn @s @e witrule Proxy n0
+minitrace witrule n0 = do
+  ans <- minitraceEither @s @e witrule n0
   case ans of
     Left zs -> pure $ error (unlines zs)
     Right zs -> pure zs
 
 minitraceProp ::
   forall s e.
-  ( ExecSpecRule ConwayFn s e
-  , ExecState ConwayFn s e ~ State (EraRule s e)
+  ( ExecSpecRule s e
+  , ExecState s e ~ State (EraRule s e)
   , PrettyA (Signal (EraRule s e))
   , PrettyA (State (EraRule s e))
   ) =>
@@ -124,7 +121,7 @@ minitraceProp ::
   (Signal (EraRule s e) -> String) ->
   Gen Property
 minitraceProp witrule n0 namef = do
-  ans <- minitraceEither @ConwayFn @s @e witrule (Proxy @ConwayFn) n0
+  ans <- minitraceEither @s @e witrule n0
   case ans of
     Left zs -> pure $ counterexample (unlines zs) (property False)
     Right sigs -> pure $ classifyFirst namef sigs $ property True

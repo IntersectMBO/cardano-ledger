@@ -6,15 +6,15 @@ module Bench.Constrained.STS where
 
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Rules
-import Constrained
+import Constrained.API
 import Control.DeepSeq
 import Criterion
 import Test.Cardano.Ledger.Constrained.Conway
 
 govEnv :: GovEnv ConwayEra
-govEnv = genFromSpecWithSeed 10 30 (govEnvSpec @ConwayFn)
+govEnv = genFromSpecWithSeed 10 30 govEnvSpec
 
-singleProposalTreeSpec :: Specification ConwayFn (ProposalTree ConwayEra)
+singleProposalTreeSpec :: Specification (ProposalTree ConwayEra)
 singleProposalTreeSpec = constrained $ \ppupTree ->
   [ wellFormedChildren ppupTree
   , satisfies
@@ -31,15 +31,15 @@ stsBenchmarks :: Benchmark
 stsBenchmarks =
   bgroup
     "constrainedSTS"
-    [ benchSpec 10 30 "govEnvSpec" (govEnvSpec @ConwayFn)
+    [ benchSpec 10 30 "govEnvSpec" govEnvSpec
     , benchSpec 13 30 "govProposalsSpec" govPropSpec
     , benchSpec 13 30 "singleProposalTreeSpec" singleProposalTreeSpec
-    , bench "theProposalSpec" (nf (show . govProposalsSpec @ConwayFn) govEnv)
+    , bench "theProposalSpec" (nf (show . govProposalsSpec) govEnv)
     ]
   where
-    govPropSpec = govProposalsSpec @ConwayFn govEnv
+    govPropSpec = govProposalsSpec govEnv
 
-benchSpec :: (HasSpec fn a, NFData a) => Int -> Int -> String -> Specification fn a -> Benchmark
+benchSpec :: (HasSpec a, NFData a) => Int -> Int -> String -> Specification a -> Benchmark
 benchSpec seed size nm spec =
   bench (unlines [nm, show (genFromSpecWithSeed seed size spec)]) $
     nf (genFromSpecWithSeed seed size) spec

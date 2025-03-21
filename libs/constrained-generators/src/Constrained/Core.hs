@@ -7,16 +7,32 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
+-- Arbitrary NonEmpty
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.Core where
+module Constrained.Core (
+  Var (..),
+  eqVar,
+  Rename (rename),
+  freshVar,
+  freshen,
+  Value (..),
+  unValue,
+  NonEmpty ((:|)),
+  Evidence (..),
+  unionWithMaybe,
+)
+where
 
+import Constrained.List
 import Control.Applicative
 import Data.Function
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.List.NonEmpty qualified as NE
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Typeable
-
-import Constrained.List
+import Test.QuickCheck (Arbitrary (..), NonEmptyList (NonEmpty))
 
 -- Variables --------------------------------------------------------------
 
@@ -94,3 +110,8 @@ data Evidence c where
 
 unionWithMaybe :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
 unionWithMaybe f ma ma' = (f <$> ma <*> ma') <|> ma <|> ma'
+
+instance Arbitrary a => Arbitrary (NonEmpty a) where
+  arbitrary = do
+    NonEmpty xs <- arbitrary
+    pure (NE.fromList xs)

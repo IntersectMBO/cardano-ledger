@@ -4,17 +4,17 @@
 
 module Constrained.Examples.Tree where
 
+import Constrained.API
+import Constrained.Spec.Tree (BinTree (..), rootLabel_)
 import Data.Tree
 
-import Constrained
-
-allZeroTree :: Specification BaseFn (BinTree Int)
+allZeroTree :: Specification (BinTree Int)
 allZeroTree = constrained $ \t ->
   [ forAll' t $ \_ a _ -> a ==. 0
   , genHint 10 t
   ]
 
-isBST :: Specification BaseFn (BinTree Int)
+isBST :: Specification (BinTree Int)
 isBST = constrained $ \t ->
   [ forAll' t $ \left a right ->
       -- TODO: if there was a `binTreeRoot` function on trees
@@ -27,7 +27,7 @@ isBST = constrained $ \t ->
   , genHint 10 t
   ]
 
-noChildrenSameTree :: Specification BaseFn (BinTree Int)
+noChildrenSameTree :: Specification (BinTree Int)
 noChildrenSameTree = constrained $ \t ->
   [ forAll' t $ \left a right ->
       [ forAll' left $ \_ l _ -> l /=. a
@@ -36,9 +36,7 @@ noChildrenSameTree = constrained $ \t ->
   , genHint 8 t
   ]
 
-type RoseFn = Fix (OneofL (TreeFn : BaseFns))
-
-isAllZeroTree :: Specification RoseFn (Tree Int)
+isAllZeroTree :: Specification (Tree Int)
 isAllZeroTree = constrained $ \t ->
   [ forAll' t $ \a cs ->
       [ a ==. 0
@@ -47,7 +45,7 @@ isAllZeroTree = constrained $ \t ->
   , genHint (Just 2, 30) t
   ]
 
-noSameChildrenTree :: Specification RoseFn (Tree Int)
+noSameChildrenTree :: Specification (Tree Int)
 noSameChildrenTree = constrained $ \t ->
   [ forAll' t $ \a cs ->
       [ assert $ a `elem_` lit [1 .. 8]
@@ -58,7 +56,7 @@ noSameChildrenTree = constrained $ \t ->
   , genHint (Just 2, 30) t
   ]
 
-successiveChildren :: Specification RoseFn (Tree Int)
+successiveChildren :: Specification (Tree Int)
 successiveChildren = constrained $ \t ->
   [ forAll' t $ \a cs ->
       [ forAll cs $ \t' ->
@@ -67,13 +65,13 @@ successiveChildren = constrained $ \t ->
   , genHint (Just 2, 10) t
   ]
 
-successiveChildren8 :: Specification RoseFn (Tree Int)
+successiveChildren8 :: Specification (Tree Int)
 successiveChildren8 = constrained $ \t ->
   [ t `satisfies` successiveChildren
   , forAll' t $ \a _ -> a `elem_` lit [1 .. 5]
   ]
 
-roseTreeList :: Specification RoseFn [Tree Int]
+roseTreeList :: Specification [Tree Int]
 roseTreeList = constrained $ \ts ->
   [ assert $ length_ ts <=. 10
   , forAll ts $ \t ->
@@ -81,7 +79,7 @@ roseTreeList = constrained $ \ts ->
       ]
   ]
 
-roseTreePairs :: Specification RoseFn (Tree ([Int], [Int]))
+roseTreePairs :: Specification (Tree ([Int], [Int]))
 roseTreePairs = constrained $ \t ->
   [ assert $ rootLabel_ t ==. lit ([1 .. 10], [1 .. 10])
   , forAll' t $ \p ts ->
@@ -90,7 +88,7 @@ roseTreePairs = constrained $ \t ->
   , genHint (Nothing, 10) t
   ]
 
-roseTreeMaybe :: Specification RoseFn (Tree (Maybe (Int, Int)))
+roseTreeMaybe :: Specification (Tree (Maybe (Int, Int)))
 roseTreeMaybe = constrained $ \t ->
   [ forAll' t $ \mp ts ->
       forAll ts $ \t' ->
@@ -101,7 +99,7 @@ roseTreeMaybe = constrained $ \t ->
   , genHint (Nothing, 10) t
   ]
 
-badTreeInteraction :: Specification RoseFn (Tree (Either Int Int))
+badTreeInteraction :: Specification (Tree (Either Int Int))
 badTreeInteraction = constrained $ \t ->
   [ forAll' t $ \n ts' ->
       [ isCon @"Right" n

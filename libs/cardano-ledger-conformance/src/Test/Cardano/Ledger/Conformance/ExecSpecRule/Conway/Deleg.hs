@@ -14,7 +14,7 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
-import Constrained
+import Constrained.API
 import Data.Bifunctor (second)
 import Data.Set (Set)
 import qualified Lib as Agda
@@ -37,12 +37,12 @@ instance
   where
   inject (_, x) = ccecDelegatees x
 
-instance IsConwayUniv fn => ExecSpecRule fn "DELEG" ConwayEra where
-  type ExecContext fn "DELEG" ConwayEra = (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
+instance ExecSpecRule "DELEG" ConwayEra where
+  type ExecContext "DELEG" ConwayEra = (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
 
   genExecContext = do
     univ <- genWitUniv @ConwayEra 300
-    ccec <- genFromSpec @ConwayFn (conwayCertExecContextSpec univ 5)
+    ccec <- genFromSpec (conwayCertExecContextSpec univ 5)
     pure (univ, ccec)
 
   environmentSpec _ = delegEnvSpec
