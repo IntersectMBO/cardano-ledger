@@ -1,0 +1,288 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Preds.UTxO</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">when</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-0.8.0.0-5f8752817ef4cf8c2fb5f2350ad1630e38840f0c0c971504d8b26fc63b50de08/share/doc/html/src"><span class="hs-identifier">Data.Default</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-0.8.0.0-5f8752817ef4cf8c2fb5f2350ad1630e38840f0c0c971504d8b26fc63b50de08/share/doc/html/src"><span class="hs-identifier">Default</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-0.8.0.0-5f8752817ef4cf8c2fb5f2350ad1630e38840f0c0c971504d8b26fc63b50de08/share/doc/html/src"><span class="hs-identifier">def</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Ast.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Ast</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Env.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Env</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Monad.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Monad.html#monadTyped"><span class="hs-identifier">monadTyped</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.PParams.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Preds.PParams</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.PParams.html#pParamsStage"><span class="hs-identifier">pParamsStage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.Repl.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Preds.Repl</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.Repl.html#ReplMode"><span class="hs-identifier">ReplMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.Repl.html#modeRepl"><span class="hs-identifier">modeRepl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.Universes.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Preds.Universes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.Universes.html#UnivSize"><span class="hs-identifier">UnivSize</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.Universes.html#universeStage"><span class="hs-identifier">universeStage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Rewrite.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Rewrite</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Rewrite.html#standardOrderInfo"><span class="hs-identifier">standardOrderInfo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Size.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Size</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Size.html#Size"><span class="hs-identifier">Size</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Solver.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Solver</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Solver.html#toolChainSub"><span class="hs-identifier">toolChainSub</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.TypeRep.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.TypeRep</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Vars.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Vars</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.PrettyCore.html"><span class="hs-identifier">Test.Cardano.Ledger.Generic.PrettyCore</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Generic.PrettyCore.html#pcUTxO"><span class="hs-identifier">pcUTxO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.Proof.html"><span class="hs-identifier">Test.Cardano.Ledger.Generic.Proof</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier">Test.QuickCheck</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- ===========================================================</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.UTxO.html#utxoPreds"><span class="hs-identifier hs-type">utxoPreds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621684539953"><span class="annot"><a href="#local-6989586621684539953"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.Proof.html#Reflect"><span class="hs-identifier hs-type">Reflect</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684539953"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.Universes.html#UnivSize"><span class="hs-identifier hs-type">UnivSize</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.Proof.html#Proof"><span class="hs-identifier hs-type">Proof</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684539953"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Ast.html#Pred"><span class="hs-identifier hs-type">Pred</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684539953"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-32"></span><span id="utxoPreds"><span class="annot"><span class="annottext">utxoPreds :: forall era. Reflect era =&gt; UnivSize -&gt; Proof era -&gt; [Pred era]
+</span><a href="Test.Cardano.Ledger.Constrained.Preds.UTxO.html#utxoPreds"><span class="hs-identifier hs-var hs-var">utxoPreds</span></a></span></span><span> </span><span id="local-6989586621684539769"><span class="annot"><span class="annottext">UnivSize
+</span><a href="#local-6989586621684539769"><span class="hs-identifier hs-var">usize</span></a></span></span><span> </span><span id="local-6989586621684539768"><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539768"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall era. Size -&gt; Term era Size -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#MetaSize"><span class="hs-identifier hs-var">MetaSize</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Size
+</span><a href="Test.Cardano.Ledger.Constrained.Size.html#SzExact"><span class="hs-identifier hs-var">SzExact</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UnivSize -&gt; Int
+</span><a href="Test.Cardano.Ledger.Constrained.Preds.Universes.html#usNumPreUtxo"><span class="hs-identifier hs-var">usNumPreUtxo</span></a></span><span> </span><span class="annot"><span class="annottext">UnivSize
+</span><a href="#local-6989586621684539769"><span class="hs-identifier hs-var">usize</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term era Size
+</span><a href="#local-6989586621684539764"><span class="hs-identifier hs-var">utxoSize</span></a></span><span> </span><span class="hs-comment">-- must be bigger than sum of (maxsize inputs 10) and (maxsize collateral 3)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall t era. Sizeable t =&gt; Term era Size -&gt; Term era t -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Sized"><span class="hs-identifier hs-var">Sized</span></a></span><span> </span><span class="annot"><span class="annottext">Term era Size
+</span><a href="#local-6989586621684539764"><span class="hs-identifier hs-var">utxoSize</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539762"><span class="hs-identifier hs-var">preUtxo</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall t era. Sizeable t =&gt; Term era Size -&gt; Term era t -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Sized"><span class="hs-identifier hs-var">Sized</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Int -&gt; Term era Size
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#AtLeast"><span class="hs-identifier hs-var">AtLeast</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">6</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539760"><span class="hs-identifier hs-var">colUtxo</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall k v era.
+(Ord k, Eq v, Ord v) =&gt;
+Term era k -&gt; Term era v -&gt; Direct (Term era (Map k v)) -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#MapMember"><span class="hs-identifier hs-var">MapMember</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Term era TxIn
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#feeTxIn"><span class="hs-identifier hs-var">feeTxIn</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Reflect era =&gt; Term era (TxOutF era)
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#feeTxOut"><span class="hs-identifier hs-var">feeTxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539762"><span class="hs-identifier hs-var">preUtxo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a era.
+Ord a =&gt;
+Term era (Set a) -&gt; Term era (Set a) -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Subset"><span class="hs-identifier hs-var">Subset</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a era b. Ord a =&gt; Term era (Map a b) -&gt; Term era (Set a)
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Dom"><span class="hs-identifier hs-var">Dom</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539762"><span class="hs-identifier hs-var">preUtxo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Term era (Set TxIn)
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#txinUniv"><span class="hs-identifier hs-var">txinUniv</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a era.
+Ord a =&gt;
+Term era (Set a) -&gt; Term era (Set a) -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Subset"><span class="hs-identifier hs-var">Subset</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b era.
+(Ord a, Ord b) =&gt;
+Term era (Map a b) -&gt; Term era (Set b)
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Rng"><span class="hs-identifier hs-var">Rng</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539762"><span class="hs-identifier hs-var">preUtxo</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Proof era -&gt; Term era (Set (TxOutF era))
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#txoutUniv"><span class="hs-identifier hs-var">txoutUniv</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539768"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall era.
+Era era =&gt;
+Proof era -&gt; Term era (Map TxIn (TxOutF era))
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#utxo"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539768"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">forall era t r. Term era t -&gt; RootTarget era r t -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#%3A%3C-%3A"><span class="hs-operator hs-var">:&lt;-:</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b era. String -&gt; (a -&gt; b) -&gt; RootTarget era Void (a -&gt; b)
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Constr"><span class="hs-identifier hs-var">Constr</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;mapunion&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall k a. Ord k =&gt; Map k a -&gt; Map k a -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.union</span></span><span> </span><span class="annot"><span class="annottext">forall era a t. Target era (a -&gt; t) -&gt; Term era a -&gt; Target era t
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#%5E%24"><span class="hs-operator hs-var">^$</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539762"><span class="hs-identifier hs-var">preUtxo</span></a></span><span> </span><span class="annot"><span class="annottext">forall era a t. Target era (a -&gt; t) -&gt; Term era a -&gt; Target era t
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#%5E%24"><span class="hs-operator hs-var">^$</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539760"><span class="hs-identifier hs-var">colUtxo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a era.
+Ord a =&gt;
+Term era (Set a) -&gt; Term era (Set a) -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Disjoint"><span class="hs-identifier hs-var">Disjoint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a era b. Ord a =&gt; Term era (Map a b) -&gt; Term era (Set a)
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Dom"><span class="hs-identifier hs-var">Dom</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539762"><span class="hs-identifier hs-var">preUtxo</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a era b. Ord a =&gt; Term era (Map a b) -&gt; Term era (Set a)
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Dom"><span class="hs-identifier hs-var">Dom</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539760"><span class="hs-identifier hs-var">colUtxo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a era.
+Ord a =&gt;
+Term era (Set a) -&gt; Term era (Set a) -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Subset"><span class="hs-identifier hs-var">Subset</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a era b. Ord a =&gt; Term era (Map a b) -&gt; Term era (Set a)
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Dom"><span class="hs-identifier hs-var">Dom</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539760"><span class="hs-identifier hs-var">colUtxo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Term era (Set TxIn)
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#txinUniv"><span class="hs-identifier hs-var">txinUniv</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a era.
+Ord a =&gt;
+Term era (Set a) -&gt; Term era (Set a) -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Subset"><span class="hs-identifier hs-var">Subset</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b era.
+(Ord a, Ord b) =&gt;
+Term era (Map a b) -&gt; Term era (Set b)
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Rng"><span class="hs-identifier hs-var">Rng</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539760"><span class="hs-identifier hs-var">colUtxo</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Proof era -&gt; Term era (Set (TxOutF era))
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#colTxoutUniv"><span class="hs-identifier hs-var">colTxoutUniv</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539768"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a era. Ord a =&gt; Term era a -&gt; Term era (Set a) -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#NotMember"><span class="hs-identifier hs-var">NotMember</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Term era TxIn
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#feeTxIn"><span class="hs-identifier hs-var">feeTxIn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a era b. Ord a =&gt; Term era (Map a b) -&gt; Term era (Set a)
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Dom"><span class="hs-identifier hs-var">Dom</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539760"><span class="hs-identifier hs-var">colUtxo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a era. Ord a =&gt; Term era a -&gt; Term era (Set a) -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#NotMember"><span class="hs-identifier hs-var">NotMember</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Reflect era =&gt; Term era (TxOutF era)
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#feeTxOut"><span class="hs-identifier hs-var">feeTxOut</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a b era.
+(Ord a, Ord b) =&gt;
+Term era (Map a b) -&gt; Term era (Set b)
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Rng"><span class="hs-identifier hs-var">Rng</span></a></span><span> </span><span class="annot"><span class="annottext">Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539760"><span class="hs-identifier hs-var">colUtxo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Term era (Map (Credential 'Staking) Coin)
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#instantStakeTerm"><span class="hs-identifier hs-var">instantStakeTerm</span></a></span><span> </span><span class="annot"><span class="annottext">forall era t r. Term era t -&gt; RootTarget era r t -&gt; Pred era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#%3A%3C-%3A"><span class="hs-operator hs-var">:&lt;-:</span></a></span><span> </span><span class="annot"><span class="annottext">forall era.
+Reflect era =&gt;
+Proof era -&gt; Target era (Map (Credential 'Staking) Coin)
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#instantStakeTarget"><span class="hs-identifier hs-var">instantStakeTarget</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539768"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="hs-comment">-- Computes instantStake from the Term 'utxo' and the proof 'p'</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>    </span><span id="local-6989586621684539760"><span class="annot"><span class="annottext">colUtxo :: Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539760"><span class="hs-identifier hs-var hs-var">colUtxo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era t. V era t -&gt; Term era t
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era t s.
+Era era =&gt;
+String -&gt; Rep era t -&gt; Access era s t -&gt; V era t
+</span><a href="Test.Cardano.Ledger.Constrained.Env.html#V"><span class="hs-identifier hs-var">V</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;colUtxo&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a era b.
+Ord a =&gt;
+Rep era a -&gt; Rep era b -&gt; Rep era (Map a b)
+</span><a href="Test.Cardano.Ledger.Constrained.TypeRep.html#MapR"><span class="hs-identifier hs-var">MapR</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Rep era TxIn
+</span><a href="Test.Cardano.Ledger.Constrained.TypeRep.html#TxInR"><span class="hs-identifier hs-var">TxInR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Proof era -&gt; Rep era (TxOutF era)
+</span><a href="Test.Cardano.Ledger.Constrained.TypeRep.html#TxOutR"><span class="hs-identifier hs-var">TxOutR</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539768"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall era s t. Access era s t
+</span><a href="Test.Cardano.Ledger.Constrained.Env.html#No"><span class="hs-identifier hs-var">No</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>    </span><span id="local-6989586621684539764"><span class="annot"><span class="annottext">utxoSize :: Term era Size
+</span><a href="#local-6989586621684539764"><span class="hs-identifier hs-var hs-var">utxoSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era t. V era t -&gt; Term era t
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era t s.
+Era era =&gt;
+String -&gt; Rep era t -&gt; Access era s t -&gt; V era t
+</span><a href="Test.Cardano.Ledger.Constrained.Env.html#V"><span class="hs-identifier hs-var">V</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;utxoSize&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall era. Rep era Size
+</span><a href="Test.Cardano.Ledger.Constrained.TypeRep.html#SizeR"><span class="hs-identifier hs-var">SizeR</span></a></span><span> </span><span class="annot"><span class="annottext">forall era s t. Access era s t
+</span><a href="Test.Cardano.Ledger.Constrained.Env.html#No"><span class="hs-identifier hs-var">No</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>    </span><span id="local-6989586621684539762"><span class="annot"><span class="annottext">preUtxo :: Term era (Map TxIn (TxOutF era))
+</span><a href="#local-6989586621684539762"><span class="hs-identifier hs-var hs-var">preUtxo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era t. V era t -&gt; Term era t
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#Var"><span class="hs-identifier hs-var">Var</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era t s.
+Era era =&gt;
+String -&gt; Rep era t -&gt; Access era s t -&gt; V era t
+</span><a href="Test.Cardano.Ledger.Constrained.Env.html#V"><span class="hs-identifier hs-var">V</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;preUtxo&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a era b.
+Ord a =&gt;
+Rep era a -&gt; Rep era b -&gt; Rep era (Map a b)
+</span><a href="Test.Cardano.Ledger.Constrained.TypeRep.html#MapR"><span class="hs-identifier hs-var">MapR</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Era era =&gt; Rep era TxIn
+</span><a href="Test.Cardano.Ledger.Constrained.TypeRep.html#TxInR"><span class="hs-identifier hs-var">TxInR</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Era era =&gt; Proof era -&gt; Rep era (TxOutF era)
+</span><a href="Test.Cardano.Ledger.Constrained.TypeRep.html#TxOutR"><span class="hs-identifier hs-var">TxOutR</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539768"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall era s t. Access era s t
+</span><a href="Test.Cardano.Ledger.Constrained.Env.html#No"><span class="hs-identifier hs-var">No</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span id="local-6989586621684539880"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.UTxO.html#utxoStage"><span class="hs-identifier hs-type">utxoStage</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.Proof.html#Reflect"><span class="hs-identifier hs-type">Reflect</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684539880"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.Universes.html#UnivSize"><span class="hs-identifier hs-type">UnivSize</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.Proof.html#Proof"><span class="hs-identifier hs-type">Proof</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684539880"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Ast.html#Subst"><span class="hs-identifier hs-type">Subst</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684539880"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-type">Gen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Ast.html#Subst"><span class="hs-identifier hs-type">Subst</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684539880"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-58"></span><span id="utxoStage"><span class="annot"><span class="annottext">utxoStage :: forall era.
+Reflect era =&gt;
+UnivSize -&gt; Proof era -&gt; Subst era -&gt; Gen (Subst era)
+</span><a href="Test.Cardano.Ledger.Constrained.Preds.UTxO.html#utxoStage"><span class="hs-identifier hs-var hs-var">utxoStage</span></a></span></span><span> </span><span id="local-6989586621684539717"><span class="annot"><span class="annottext">UnivSize
+</span><a href="#local-6989586621684539717"><span class="hs-identifier hs-var">usize</span></a></span></span><span> </span><span id="local-6989586621684539716"><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539716"><span class="hs-identifier hs-var">proof</span></a></span></span><span> </span><span id="local-6989586621684539715"><span class="annot"><span class="annottext">Subst era
+</span><a href="#local-6989586621684539715"><span class="hs-identifier hs-var">subst0</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621684539714"><span class="annot"><span class="annottext">preds :: [Pred era]
+</span><a href="#local-6989586621684539714"><span class="hs-identifier hs-var hs-var">preds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. Reflect era =&gt; UnivSize -&gt; Proof era -&gt; [Pred era]
+</span><a href="Test.Cardano.Ledger.Constrained.Preds.UTxO.html#utxoPreds"><span class="hs-identifier hs-var">utxoPreds</span></a></span><span> </span><span class="annot"><span class="annottext">UnivSize
+</span><a href="#local-6989586621684539717"><span class="hs-identifier hs-var">usize</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539716"><span class="hs-identifier hs-var">proof</span></a></span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621684539713"><span class="annot"><span class="annottext">Subst era
+</span><a href="#local-6989586621684539713"><span class="hs-identifier hs-var">subst</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+Era era =&gt;
+Proof era
+-&gt; OrderInfo -&gt; [Pred era] -&gt; Subst era -&gt; Gen (Subst era)
+</span><a href="Test.Cardano.Ledger.Constrained.Solver.html#toolChainSub"><span class="hs-identifier hs-var">toolChainSub</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539716"><span class="hs-identifier hs-var">proof</span></a></span><span> </span><span class="annot"><span class="annottext">OrderInfo
+</span><a href="Test.Cardano.Ledger.Constrained.Rewrite.html#standardOrderInfo"><span class="hs-identifier hs-var">standardOrderInfo</span></a></span><span> </span><span class="annot"><span class="annottext">[Pred era]
+</span><a href="#local-6989586621684539714"><span class="hs-identifier hs-var">preds</span></a></span><span> </span><span class="annot"><span class="annottext">Subst era
+</span><a href="#local-6989586621684539715"><span class="hs-identifier hs-var">subst0</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621684539712"><span class="annot"><span class="annottext">Any
+</span><a href="#local-6989586621684539712"><span class="hs-identifier hs-var">_env</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621684539711"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621684539711"><span class="hs-identifier hs-var">status</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;not used in utxoStage&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- monadTyped $ checkForSoundness preds subst</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621684539711"><span class="hs-identifier hs-var">status</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">Maybe String
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Subst era
+</span><a href="#local-6989586621684539713"><span class="hs-identifier hs-var">subst</span></a></span><span>
+</span><span id="line-64"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621684539709"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621684539709"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621684539709"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span id="local-6989586621684539868"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.UTxO.html#demoUTxO"><span class="hs-identifier hs-type">demoUTxO</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.Proof.html#Reflect"><span class="hs-identifier hs-type">Reflect</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684539868"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Generic.Proof.html#Proof"><span class="hs-identifier hs-type">Proof</span></a></span><span> </span><span class="annot"><a href="#local-6989586621684539868"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Preds.Repl.html#ReplMode"><span class="hs-identifier hs-type">ReplMode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-67"></span><span id="demoUTxO"><span class="annot"><span class="annottext">demoUTxO :: forall era. Reflect era =&gt; Proof era -&gt; ReplMode -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Constrained.Preds.UTxO.html#demoUTxO"><span class="hs-identifier hs-var hs-var">demoUTxO</span></a></span></span><span> </span><span id="local-6989586621684539676"><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539676"><span class="hs-identifier hs-var">proof</span></a></span></span><span> </span><span id="local-6989586621684539675"><span class="annot"><span class="annottext">ReplMode
+</span><a href="#local-6989586621684539675"><span class="hs-identifier hs-var">mode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621684539674"><span class="annot"><span class="annottext">Env era
+</span><a href="#local-6989586621684539674"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><span class="annottext">forall a. Gen a -&gt; IO a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/QuickCheck-2.15.0.1-c054979271a76a125243889313a0ca9fd1d2f92af4c7d736ad9b439392c87e21/share/doc/html/src"><span class="hs-identifier hs-var">generate</span></a></span><span>
+</span><span id="line-70"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">forall era. Subst era
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#emptySubst"><span class="hs-identifier hs-var">emptySubst</span></a></span><span>
+</span><span id="line-71"></span><span>          </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">forall era.
+Reflect era =&gt;
+Proof era -&gt; Subst era -&gt; Gen (Subst era)
+</span><a href="Test.Cardano.Ledger.Constrained.Preds.PParams.html#pParamsStage"><span class="hs-identifier hs-var">pParamsStage</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539676"><span class="hs-identifier hs-var">proof</span></a></span><span>
+</span><span id="line-72"></span><span>          </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">forall era.
+Reflect era =&gt;
+UnivSize -&gt; Proof era -&gt; Subst era -&gt; Gen (Subst era)
+</span><a href="Test.Cardano.Ledger.Constrained.Preds.Universes.html#universeStage"><span class="hs-identifier hs-var">universeStage</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Default a =&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-0.8.0.0-5f8752817ef4cf8c2fb5f2350ad1630e38840f0c0c971504d8b26fc63b50de08/share/doc/html/src"><span class="hs-identifier hs-var">def</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539676"><span class="hs-identifier hs-var">proof</span></a></span><span>
+</span><span id="line-73"></span><span>          </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">forall era.
+Reflect era =&gt;
+UnivSize -&gt; Proof era -&gt; Subst era -&gt; Gen (Subst era)
+</span><a href="Test.Cardano.Ledger.Constrained.Preds.UTxO.html#utxoStage"><span class="hs-identifier hs-var">utxoStage</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Default a =&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-0.8.0.0-5f8752817ef4cf8c2fb5f2350ad1630e38840f0c0c971504d8b26fc63b50de08/share/doc/html/src"><span class="hs-identifier hs-var">def</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539676"><span class="hs-identifier hs-var">proof</span></a></span><span>
+</span><span id="line-74"></span><span>          </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621684539671"><span class="annot"><span class="annottext">Subst era
+</span><a href="#local-6989586621684539671"><span class="hs-identifier hs-var">subst</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) t. (HasCallStack, Monad m) =&gt; Typed t -&gt; m t
+</span><a href="Test.Cardano.Ledger.Constrained.Monad.html#monadTyped"><span class="hs-identifier hs-var">monadTyped</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall era. Subst era -&gt; Env era -&gt; Typed (Env era)
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#substToEnv"><span class="hs-identifier hs-var">substToEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Subst era
+</span><a href="#local-6989586621684539671"><span class="hs-identifier hs-var">subst</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Env era
+</span><a href="Test.Cardano.Ledger.Constrained.Env.html#emptyEnv"><span class="hs-identifier hs-var">emptyEnv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>      </span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621684539668"><span class="annot"><span class="annottext">Map TxIn (TxOutF era)
+</span><a href="#local-6989586621684539668"><span class="hs-identifier hs-var">utx</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) t. (HasCallStack, Monad m) =&gt; Typed t -&gt; m t
+</span><a href="Test.Cardano.Ledger.Constrained.Monad.html#monadTyped"><span class="hs-identifier hs-var">monadTyped</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall era t. Env era -&gt; Term era t -&gt; Typed t
+</span><a href="Test.Cardano.Ledger.Constrained.Ast.html#runTerm"><span class="hs-identifier hs-var">runTerm</span></a></span><span> </span><span class="annot"><span class="annottext">Env era
+</span><a href="#local-6989586621684539674"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era.
+Era era =&gt;
+Proof era -&gt; Term era (Map TxIn (TxOutF era))
+</span><a href="Test.Cardano.Ledger.Constrained.Vars.html#utxo"><span class="hs-identifier hs-var">utxo</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539676"><span class="hs-identifier hs-var">proof</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">when</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ReplMode
+</span><a href="#local-6989586621684539675"><span class="hs-identifier hs-var">mode</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">ReplMode
+</span><a href="Test.Cardano.Ledger.Constrained.Preds.Repl.html#Interactive"><span class="hs-identifier hs-var">Interactive</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO ()
+</span><span class="hs-identifier hs-var">putStrLn</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Show a =&gt; a -&gt; String
+</span><span class="hs-identifier hs-var">show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Proof era -&gt; UTxO era -&gt; PDoc
+</span><a href="Test.Cardano.Ledger.Generic.PrettyCore.html#pcUTxO"><span class="hs-identifier hs-var">pcUTxO</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539676"><span class="hs-identifier hs-var">proof</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era. Map TxIn (TxOutF era) -&gt; UTxO era
+</span><a href="Test.Cardano.Ledger.Constrained.Classes.html#liftUTxO"><span class="hs-identifier hs-var">liftUTxO</span></a></span><span> </span><span class="annot"><span class="annottext">Map TxIn (TxOutF era)
+</span><a href="#local-6989586621684539668"><span class="hs-identifier hs-var">utx</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><span class="annottext">forall era. ReplMode -&gt; Proof era -&gt; Env era -&gt; String -&gt; IO ()
+</span><a href="Test.Cardano.Ledger.Constrained.Preds.Repl.html#modeRepl"><span class="hs-identifier hs-var">modeRepl</span></a></span><span> </span><span class="annot"><span class="annottext">ReplMode
+</span><a href="#local-6989586621684539675"><span class="hs-identifier hs-var">mode</span></a></span><span> </span><span class="annot"><span class="annottext">Proof era
+</span><a href="#local-6989586621684539676"><span class="hs-identifier hs-var">proof</span></a></span><span> </span><span class="annot"><span class="annottext">Env era
+</span><a href="#local-6989586621684539674"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-79"></span></pre></body></html>
