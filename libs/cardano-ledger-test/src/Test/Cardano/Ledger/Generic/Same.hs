@@ -247,7 +247,7 @@ instance
   Same era (ShelleyLedgerExamples era)
   where
   same proof x1 x2 = case (sleBlock x1, sleBlock x2) of
-    (Block' h1 a1 _, Block' h2 a2 _) ->
+    (Block h1 a1, Block h2 a2) ->
       sameWithDependency
         [ SomeM "Tx" (sameTx proof) (sleTx x1) (sleTx x2)
         , SomeM "TxSeq" (sameTxSeq proof) a1 a2

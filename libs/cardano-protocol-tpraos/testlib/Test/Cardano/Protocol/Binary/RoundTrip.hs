@@ -6,7 +6,7 @@
 
 module Test.Cardano.Protocol.Binary.RoundTrip (roundTripBlockSpec) where
 
-import Cardano.Ledger.Binary (Annotator, DecCBOR)
+import Cardano.Ledger.Binary (Annotator, DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Core
 import Data.Typeable
@@ -20,6 +20,7 @@ roundTripBlockSpec ::
   , Show h
   , DecCBOR h
   , DecCBOR (Annotator h)
+  , EncCBOR h
   , EraSegWits era
   , DecCBOR (TxSeq era)
   , Arbitrary (Block h era)

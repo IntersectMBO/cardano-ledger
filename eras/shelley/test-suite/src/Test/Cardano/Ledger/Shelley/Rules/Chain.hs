@@ -301,7 +301,6 @@ chainTransition ::
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL MockCrypto) (CHAIN era)
-  , EncCBORGroup (TxSeq era)
   , ProtVerAtMost era 6
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraGov era
@@ -370,10 +369,9 @@ chainTransition =
               , bh
               )
 
-        let thouShaltNot = error "A block with a header view should never be hashed"
         BbodyState ls' bcur' <-
           trans @(EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, Block' bhView txs thouShaltNot)
+            TRC (BbodyEnv pp' account, BbodyState ls bcur, Block bhView txs)
 
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh
