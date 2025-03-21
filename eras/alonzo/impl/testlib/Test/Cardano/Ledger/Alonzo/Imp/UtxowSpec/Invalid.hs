@@ -32,13 +32,11 @@ import Cardano.Ledger.Plutus (
   withSLanguage,
  )
 import Cardano.Ledger.Shelley.LedgerState (epochStatePoolParamsL, nesEsL)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
-import qualified Data.Map.Strict as Map
+import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..), ShelleyUtxowPredFailure (..))
 import Data.Maybe (isJust)
 import Data.Sequence.Strict (StrictSeq ((:<|)))
-import qualified Data.Set as Set
+import GHC.Exts (fromList)
 import Lens.Micro ((%~), (&), (.~), (<>~), (^.))
-import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Core.Utils (txInAt)
@@ -49,9 +47,14 @@ import Test.Cardano.Ledger.Plutus.Examples (
   redeemerSameAsDatum,
  )
 
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import qualified PlutusLedgerApi.Common as P
+
 spec ::
   forall era.
   ( AlonzoEraImp era
+  , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
@@ -233,6 +236,18 @@ spec = describe "Invalid transactions" $ do
               tx
               [injectFailure $ MissingVKeyWitnessesUTXOW [asWitness collateralHash]]
 
+        -- Conway fixed the bug that was causing this to fail
+        unless (eraProtVerLow @era >= natVersion @9) $ do
+          it "Multiple identical certificates" $ do
+            let scriptHash = alwaysSucceedsNoDatumHash
+            void . registerStakeCredential $ ScriptHashObj scriptHash
+            let tx =
+                  mkBasicTx mkBasicTxBody
+                    & bodyTxL . certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> replicate 2 scriptHash)
+            submitFailingTx
+              tx
+              [injectFailure $ StakeKeyNotRegisteredDELEG (ScriptHashObj scriptHash)]
+
         -- Post-Alonzo eras produce additional post-Alonzo predicate failures that we can't include here
         unless (lang > eraMaxLanguage @AlonzoEra) $ do
           describe "Extra Redeemer" $ do
@@ -272,7 +287,7 @@ spec = describe "Invalid transactions" $ do
                     , mkDelegStakeTxCert cred poolId -- 2: Duplicate, ignored, no redeemer needed
                     ]
                   redeemer = (Data (P.I 32), ExUnits 5000 1_000_000)
-                  redeemers = Map.fromList [(mkCertifyingPurpose (AsIx i), redeemer) | i <- [1 .. 2]]
+                  redeemers = fromList [(mkCertifyingPurpose (AsIx i), redeemer) | i <- [1 .. 2]]
                   tx =
                     mkBasicTx mkBasicTxBody
                       & bodyTxL . certsTxBodyL <>~ certs

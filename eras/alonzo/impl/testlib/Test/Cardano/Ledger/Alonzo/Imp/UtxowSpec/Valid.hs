@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -17,10 +18,14 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), natVersion)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus (
+  Data (..),
+  hashData,
   hashPlutusScript,
   withSLanguage,
  )
@@ -30,12 +35,14 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Control.Monad ((<=<))
 import GHC.Exts (fromList)
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((%~), (&), (.~))
 import Lens.Micro.Mtl (use)
-import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
+
+import qualified Data.Map.Strict as Map
+import qualified PlutusLedgerApi.Common as P
 
 spec ::
   forall era.
@@ -139,9 +146,36 @@ spec = describe "Valid transactions" $ do
                 & outputsTxBodyL .~ [txOut]
           expectTxSuccess <=< submitTx $ mkBasicTx txBody
 
-  it "Acceptable supplimentary datum" $ do
-    const $ pendingWith "not implemented yet"
-  it "Multiple identical certificates" $ do
-    const $ pendingWith "not implemented yet"
+        it "Acceptable supplementary datum" $ do
+          inputAddr <- freshKeyHash @'Payment
+          amount <- Coin <$> choose (2_000_000, 8_000_000)
+          txIn <- sendCoinTo (mkAddr inputAddr StakeRefNull) amount
+          let
+            datum = Data (P.I 123)
+            datumHash = hashData datum
+            txOut =
+              mkBasicTxOut
+                (mkAddr alwaysSucceedsWithDatumHash StakeRefNull)
+                (MaryValue amount mempty)
+                & dataHashTxOutL .~ SJust datumHash
+            txBody =
+              mkBasicTxBody
+                & inputsTxBodyL .~ [txIn]
+                & outputsTxBodyL .~ [txOut]
+            tx =
+              mkBasicTx txBody
+                & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
+          expectTxSuccess =<< submitTx tx
+
+        -- Conway fixed the bug that was causing this to fail
+        when (eraProtVerLow @era >= natVersion @9) $ do
+          it "Multiple identical certificates" $ do
+            let scriptHash = alwaysSucceedsNoDatumHash
+            void . registerStakeCredential $ ScriptHashObj scriptHash
+            let tx =
+                  mkBasicTx mkBasicTxBody
+                    & bodyTxL . certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> replicate 2 scriptHash)
+            expectTxSuccess =<< submitTx tx
+
   it "Non-script output with datum" $ do
     const $ pendingWith "not implemented yet"

@@ -23,8 +23,7 @@ import Cardano.Ledger.BaseTypes (
   natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Credential (Credential (..), StakeCredential)
-import Cardano.Ledger.Plutus.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -39,16 +38,12 @@ import Data.Default (Default (..))
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import GHC.Stack
-import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
-  alwaysSucceedsHash,
   initUTxO,
   mkGenesisTxIn,
-  mkTxDats,
   someAddr,
   someKeys,
-  someScriptAddr,
   testUTXOW,
   trustMeP,
  )
@@ -61,7 +56,6 @@ import Test.Cardano.Ledger.Generic.Fields (
  )
 import Test.Cardano.Ledger.Generic.GenState (
   PlutusPurposeTag (..),
-  mkRedeemers,
   mkRedeemersFromTags,
  )
 import Test.Cardano.Ledger.Generic.PrettyCore ()
@@ -94,17 +88,7 @@ alonzoUTXOWTests pf =
     (show pf ++ " UTXOW examples")
     [ testGroup
         "valid transactions"
-        [ testCase "acceptable supplimentary datum" $
-            testU
-              pf
-              (trustMeP pf True $ validatingSupplimentaryDatumTx pf)
-              (Right . validatingSupplimentaryDatumState $ pf)
-        , testCase "multiple identical certificates" $
-            testU
-              pf
-              (trustMeP pf True $ validatingMultipleEqualCertsTx pf)
-              (Right . validatingMultipleEqualCertsState $ pf)
-        , testCase "non-script output with datum" $
+        [ testCase "non-script output with datum" $
             testU
               pf
               (trustMeP pf True $ validatingNonScriptOutWithDatumTx pf)
@@ -114,128 +98,6 @@ alonzoUTXOWTests pf =
 
 -- =========================================================================
 -- ============================== DATA ========================================
-
--- ====================================================================================
---  Example 10: A transaction with an acceptable supplimentary datum
--- ====================================================================================
-
-validatingSupplimentaryDatumTx ::
-  forall era.
-  ( Scriptic era
-  , EraTx era
-  ) =>
-  Proof era ->
-  Tx era
-validatingSupplimentaryDatumTx pf =
-  newTx
-    pf
-    [ Body (validatingSupplimentaryDatumBody pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingSupplimentaryDatumBody pf)) (someKeys pf)]
-        , DataWits' [Data (PV1.I 123)]
-        ]
-    ]
-
-validatingSupplimentaryDatumBody :: (EraTxBody era, Scriptic era) => Proof era -> TxBody era
-validatingSupplimentaryDatumBody pf =
-  newTxBody
-    pf
-    [ Inputs' [mkGenesisTxIn 3]
-    , Outputs' [validatingSupplimentaryDatumTxOut pf]
-    , Txfee (Coin 5)
-    , WppHash (newScriptIntegrityHash pf (pp pf) [] (mkRedeemers pf []) (mkTxDats (Data (PV1.I 123))))
-    ]
-
-validatingSupplimentaryDatum :: Era era => Data era
-validatingSupplimentaryDatum = Data (PV1.I 123)
-
-validatingSupplimentaryDatumTxOut ::
-  forall era. (EraTxBody era, Scriptic era) => Proof era -> TxOut era
-validatingSupplimentaryDatumTxOut pf =
-  newTxOut
-    pf
-    [ Address (someScriptAddr (always 3 pf))
-    , Amount (inject $ Coin 995)
-    , DHash' [hashData $ validatingSupplimentaryDatum @era]
-    ]
-
-validatingSupplimentaryDatumState ::
-  (EraTxBody era, EraStake era, PostShelley era, EraGov era) =>
-  Proof era ->
-  UTxOState era
-validatingSupplimentaryDatumState pf =
-  smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def mempty
-  where
-    utxo =
-      expectedUTxO'
-        pf
-        (ExpectSuccess (validatingSupplimentaryDatumBody pf) (validatingSupplimentaryDatumTxOut pf))
-        3
-
--- ====================================================================================
---  Example 11: A transaction with multiple identical certificates
--- ====================================================================================
-
-validatingMultipleEqualCertsTx ::
-  forall era.
-  ( Scriptic era
-  , EraTx era
-  , ShelleyEraTxCert era
-  ) =>
-  Proof era ->
-  Tx era
-validatingMultipleEqualCertsTx pf =
-  newTx
-    pf
-    [ Body (validatingMultipleEqualCertsBody pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingMultipleEqualCertsBody pf)) (someKeys pf)]
-        , ScriptWits' [always 2 pf]
-        , RdmrWits $ validatingMultipleEqualCertsRedeemers pf
-        ]
-    ]
-
-validatingMultipleEqualCertsBody ::
-  (EraTxBody era, Scriptic era, ShelleyEraTxCert era) => Proof era -> TxBody era
-validatingMultipleEqualCertsBody pf =
-  newTxBody
-    pf
-    [ Inputs' [mkGenesisTxIn 3]
-    , Collateral' [mkGenesisTxIn 13]
-    , Outputs' [validatingMultipleEqualCertsOut pf]
-    , Certs'
-        [ UnRegTxCert (scriptStakeCredSuceed pf)
-        , UnRegTxCert (scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
-        ]
-    , Txfee (Coin 5)
-    , WppHash
-        ( newScriptIntegrityHash
-            pf
-            (pp pf)
-            [PlutusV1]
-            (validatingMultipleEqualCertsRedeemers pf)
-            mempty
-        )
-    ]
-
-validatingMultipleEqualCertsRedeemers :: Era era => Proof era -> Redeemers era
-validatingMultipleEqualCertsRedeemers pf = mkSingleRedeemer pf Certifying (Data (PV1.I 42))
-
-validatingMultipleEqualCertsOut :: EraTxOut era => Proof era -> TxOut era
-validatingMultipleEqualCertsOut pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]
-
-validatingMultipleEqualCertsState ::
-  (EraTxBody era, EraStake era, PostShelley era, EraGov era, ShelleyEraTxCert era) =>
-  Proof era ->
-  UTxOState era
-validatingMultipleEqualCertsState pf =
-  smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def mempty
-  where
-    utxo =
-      expectedUTxO'
-        pf
-        (ExpectSuccess (validatingMultipleEqualCertsBody pf) (validatingMultipleEqualCertsOut pf))
-        3
 
 -- ====================================================================================
 --  Example 12: Attaching a datum (hash) to a non-script output.
@@ -347,9 +209,6 @@ testU ::
   Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
   Assertion
 testU pf = testUTXOW (UTXOW pf) (initUTxO pf) (pp pf)
-
-scriptStakeCredSuceed :: Scriptic era => Proof era -> StakeCredential
-scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 
 -- ============================== PPARAMS ===============================
 

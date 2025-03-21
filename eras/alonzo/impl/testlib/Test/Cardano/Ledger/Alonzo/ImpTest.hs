@@ -60,7 +60,7 @@ import Cardano.Ledger.Alonzo.Rules (
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
-import Cardano.Ledger.Alonzo.TxWits (TxDats (..), unRedeemersL)
+import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -272,12 +272,10 @@ fixupDatums tx = impAnn "fixupDatums" $ do
   contexts <- impGetPlutusContexts tx
   let purposes = (^. _1) <$> contexts
   datums <- traverse collectDatums purposes
-  let TxDats prevDats = tx ^. witsTxL . datsTxWitsL
   pure $
     tx
-      & witsTxL . datsTxWitsL
-        .~ TxDats
-          (Map.union prevDats $ fromElems hashData (catMaybes datums))
+      & witsTxL . datsTxWitsL . unTxDatsL
+        <>~ fromElems hashData (catMaybes datums)
   where
     collectDatums :: PlutusPurpose AsIxItem era -> ImpTestM era (Maybe (Data era))
     collectDatums purpose = do
