@@ -242,7 +242,7 @@ library
     bytestring,
     canonical-json,
     cardano-crypto,
-    cardano-crypto-wrapper,
+    cardano-crypto-wrapper >=1.6,
     cardano-ledger-binary >=1.5,
     cardano-prelude,
     cborg,
