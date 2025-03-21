@@ -285,7 +285,6 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
-import Data.Typeable (Typeable)
 import qualified Data.VMap as VMap
 import Data.Void (Void, absurd)
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -2861,15 +2860,14 @@ pcPair pp1 pp2 (x, y) = parens (hsep [pp1 x, ppString ",", pp2 y])
 
 pcWitVKey ::
   forall era keyrole.
-  Typeable keyrole =>
   Proof era ->
   WitVKey keyrole ->
   PDoc
 pcWitVKey _p (WitVKey vk@(VKey x) sig) =
   ppSexp
     "WitVKey"
-    [ ppString (" VerKey=" ++ (take 10 (drop 19 keystring)))
-    , ppString (" SignKey=" ++ (take 10 (drop 29 sigstring)))
+    [ ppString (" VerKey=" ++ take 10 (drop 19 keystring))
+    , ppString (" SignKey=" ++ take 10 (drop 29 sigstring))
     , " VerKeyHash=" <> hash
     ]
   where
@@ -2877,13 +2875,7 @@ pcWitVKey _p (WitVKey vk@(VKey x) sig) =
     hash = pcKeyHash (hashKey vk)
     sigstring = show sig
 
-instance
-  forall era keyrole.
-  ( Reflect era
-  , Typeable keyrole
-  ) =>
-  PrettyA (WitVKey keyrole)
-  where
+instance Reflect era => PrettyA (WitVKey keyrole) where
   prettyA = pcWitVKey @era reify
 
 -- =====================================
@@ -2899,12 +2891,12 @@ pcShelleyGovState :: Proof era -> ShelleyGovState era -> PDoc
 pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp futurepp) =
   ppRecord
     "ShelleyGovState"
-    $ [ ("proposals", ppString "(Proposals ...)")
-      , ("futureProposals", ppString "(Proposals ...)")
-      , ("pparams", pcPParamsSynopsis p pp)
-      , ("prevParams", pcPParamsSynopsis p prevpp)
-      , ("futureParams", pcFuturePParams p futurepp)
-      ]
+    [ ("proposals", ppString "(Proposals ...)")
+    , ("futureProposals", ppString "(Proposals ...)")
+    , ("pparams", pcPParamsSynopsis p pp)
+    , ("prevParams", pcPParamsSynopsis p prevpp)
+    , ("futureParams", pcFuturePParams p futurepp)
+    ]
 
 pcFuturePParams :: Proof era -> FuturePParams era -> PDoc
 pcFuturePParams p = \case
