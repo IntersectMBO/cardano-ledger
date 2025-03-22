@@ -14,10 +14,10 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Gov () where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (EraCertState (..), dsUnifiedL)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.State (EraCertState (..), dsUnifiedL)
 import Cardano.Ledger.UMap (umElemsL)
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map

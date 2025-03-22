@@ -17,7 +17,6 @@ module Test.Cardano.Ledger.Shelley.Generator.TxCert (
 where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.API (
@@ -42,6 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   rewards,
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import Cardano.Ledger.State (EraCertState (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Protocol.Crypto (Crypto, hashVerKeyVRF)
 import Control.Monad (replicateM)

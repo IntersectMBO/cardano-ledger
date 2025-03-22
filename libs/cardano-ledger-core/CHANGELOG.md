@@ -2,6 +2,13 @@
 
 ## 1.17.0.0
 
+* Added `consumed` to `EraUTxO`
+* Removed `upgradeCertState`
+* Removed `VState` (moved to `cardano-ledger-conway`) and related functions
+* Removed from `EraCertState` type family:
+  * `mkCertState`
+  * `certVStateL`
+* Moved `CertState` to `State` module
 * Add `BoootstrapWitnessRaw` type
 * Add `EraStake`, `CanGetInstantStake`,  `CanSetInstantStake` , `snapShotFromInstantStake`, `resolveActiveInstantStakeCredentials`
 * Add boolean argument to `fromCborRigorousBothAddr` for lenient `Ptr` decoding

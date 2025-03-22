@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Conway.TreeDiff (
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -294,3 +293,7 @@ instance
   , ToExpr (Tx era)
   ) =>
   ToExpr (CertsEnv era)
+
+instance ToExpr (VState era)
+
+instance ConwayEraCertState era => ToExpr (ConwayCertState era)

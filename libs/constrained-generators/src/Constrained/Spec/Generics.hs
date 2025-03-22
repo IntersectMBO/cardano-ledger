@@ -24,6 +24,7 @@
 #endif
 
 module Constrained.Spec.Generics (
+  Args,
   GenericsFn,
   IsNormalType,
   fst_,

@@ -4,4 +4,5 @@ module Cardano.Ledger.Babbage.State (
 
 import Cardano.Ledger.Alonzo.State
 
+import Cardano.Ledger.Babbage.State.CertState ()
 import Cardano.Ledger.Babbage.State.Stake ()

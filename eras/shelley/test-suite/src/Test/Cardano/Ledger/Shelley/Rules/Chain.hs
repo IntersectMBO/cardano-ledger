@@ -35,7 +35,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Chain (
   ChainPredicateFailure (..),
   chainChecks,
@@ -52,13 +51,11 @@ import Cardano.Ledger.Shelley.AdaPots (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
   curPParamsEpochStateL,
-  dsGenDelegsL,
   futurePParamsEpochStateL,
   nesEpochStateL,
   prevPParamsEpochStateL,
@@ -216,7 +213,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
                     emptyGovState
                     mempty
                 )
-                (mkCertState def def dState)
+                (def & certDStateL .~ dState)
             )
             emptySnapShots
             def

@@ -12,15 +12,16 @@ module Test.Cardano.Ledger.Shelley.Rules.Deposits (
 )
 where
 
-import Cardano.Ledger.CertState (EraCertState (..))
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (
+  shortChainTrace,
+ )
+
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)
@@ -36,7 +37,6 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
-import Test.Cardano.Ledger.Shelley.Rules.TestChain (shortChainTrace)
 import Test.Control.State.Transition.Trace (SourceSignalTarget (..))
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 

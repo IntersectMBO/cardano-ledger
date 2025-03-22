@@ -93,7 +93,6 @@ import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (Testnet), inject)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
@@ -117,7 +116,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.State (IndividualPoolStake (..), UTxO (..))
+import Cardano.Ledger.State (EraCertState (..), IndividualPoolStake (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..))
@@ -825,7 +824,10 @@ initialLedgerState gstate = LedgerState utxostate dpstate
         (gsInitialDelegations gstate)
         Map.empty
     utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovState mempty
-    dpstate = mkCertState def pstate dstate
+    dpstate =
+      def
+        & certPStateL .~ pstate
+        & certDStateL .~ dstate
     dstate =
       DState
         umap

@@ -6,11 +6,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Shelley.CertState (
+module Cardano.Ledger.Shelley.State.CertState (
   ShelleyCertState (..),
   mkShelleyCertState,
   shelleyCertDStateL,
-  shelleyCertVStateL,
   shelleyCertPStateL,
   shelleyObligationCertState,
   shelleyCertsTotalDepositsTxBody,
@@ -25,11 +24,11 @@ import Cardano.Ledger.Binary (
   decodeRecordNamedT,
   encodeListLen,
  )
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
+import Cardano.Ledger.State
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
@@ -37,23 +36,20 @@ import Data.Default (Default (..))
 import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens, _2)
+import Lens.Micro (Lens', lens, (&), (.~), (^.), _2)
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyCertState era = ShelleyCertState
-  { shelleyCertVState :: !(VState era)
-  , shelleyCertPState :: !(PState era)
+  { shelleyCertPState :: !(PState era)
   , shelleyCertDState :: !(DState era)
   }
   deriving (Show, Eq, Generic)
 
-mkShelleyCertState :: VState era -> PState era -> DState era -> ShelleyCertState era
-mkShelleyCertState v p d =
-  ShelleyCertState
-    { shelleyCertVState = v
-    , shelleyCertPState = p
-    , shelleyCertDState = d
-    }
+mkShelleyCertState :: EraCertState era => PState era -> DState era -> CertState era
+mkShelleyCertState p d =
+  def
+    & certPStateL .~ p
+    & certDStateL .~ d
 
 shelleyCertDStateL :: Lens' (ShelleyCertState era) (DState era)
 shelleyCertDStateL = lens shelleyCertDState (\ds u -> ds {shelleyCertDState = u})
@@ -63,27 +59,22 @@ shelleyCertPStateL :: Lens' (ShelleyCertState era) (PState era)
 shelleyCertPStateL = lens shelleyCertPState (\ds u -> ds {shelleyCertPState = u})
 {-# INLINE shelleyCertPStateL #-}
 
-shelleyCertVStateL :: Lens' (ShelleyCertState era) (VState era)
-shelleyCertVStateL = lens shelleyCertVState (\ds u -> ds {shelleyCertVState = u})
-{-# INLINE shelleyCertVStateL #-}
-
 toCertStatePairs :: KeyValue e a => ShelleyCertState era -> [a]
-toCertStatePairs certState@(ShelleyCertState _ _ _) =
+toCertStatePairs certState@(ShelleyCertState _ _) =
   let ShelleyCertState {..} = certState
    in [ "dstate" .= shelleyCertDState
       , "pstate" .= shelleyCertPState
-      , "vstate" .= shelleyCertVState
       ]
 
-shelleyObligationCertState :: ShelleyCertState era -> Obligations
-shelleyObligationCertState (ShelleyCertState VState {vsDReps} PState {psDeposits} DState {dsUnified}) =
-  let accum ans drepState = ans <> drepDeposit drepState
-   in Obligations
-        { oblStake = UM.fromCompact (UM.sumDepositUView (UM.RewDepUView dsUnified))
-        , oblPool = F.foldl' (<>) (Coin 0) psDeposits
-        , oblDRep = F.foldl' accum (Coin 0) vsDReps
-        , oblProposal = Coin 0
-        }
+shelleyObligationCertState :: EraCertState era => CertState era -> Obligations
+shelleyObligationCertState certState =
+  Obligations
+    { oblStake =
+        UM.fromCompact (UM.sumDepositUView (UM.RewDepUView (certState ^. certDStateL . dsUnifiedL)))
+    , oblPool = F.foldl' (<>) (Coin 0) (certState ^. certPStateL . psDepositsL)
+    , oblDRep = Coin 0
+    , oblProposal = Coin 0
+    }
 
 shelleyCertsTotalDepositsTxBody ::
   EraTxBody era => PParams era -> ShelleyCertState era -> TxBody era -> Coin
@@ -92,24 +83,17 @@ shelleyCertsTotalDepositsTxBody pp ShelleyCertState {shelleyCertPState} =
 
 shelleyCertsTotalRefundsTxBody ::
   EraTxBody era => PParams era -> ShelleyCertState era -> TxBody era -> Coin
-shelleyCertsTotalRefundsTxBody pp ShelleyCertState {shelleyCertDState, shelleyCertVState} =
+shelleyCertsTotalRefundsTxBody pp ShelleyCertState {shelleyCertDState} =
   getTotalRefundsTxBody
     pp
     (lookupDepositDState shelleyCertDState)
-    (lookupDepositVState shelleyCertVState)
+    (const Nothing)
 
 instance EraCertState ShelleyEra where
   type CertState ShelleyEra = ShelleyCertState ShelleyEra
 
-  mkCertState = mkShelleyCertState
-
-  upgradeCertState = error "Impossible: ByronEra does not have `EraCertState` instance"
-
   certDStateL = shelleyCertDStateL
   {-# INLINE certDStateL #-}
-
-  certVStateL = shelleyCertVStateL
-  {-# INLINE certVStateL #-}
 
   certPStateL = shelleyCertPStateL
   {-# INLINE certPStateL #-}
@@ -125,9 +109,8 @@ instance ToJSON (ShelleyCertState era) where
   toEncoding = pairs . mconcat . toCertStatePairs
 
 instance Era era => EncCBOR (ShelleyCertState era) where
-  encCBOR ShelleyCertState {shelleyCertPState, shelleyCertDState, shelleyCertVState} =
-    encodeListLen 3
-      <> encCBOR shelleyCertVState
+  encCBOR ShelleyCertState {shelleyCertPState, shelleyCertDState} =
+    encodeListLen 2
       <> encCBOR shelleyCertPState
       <> encCBOR shelleyCertDState
 
@@ -139,10 +122,7 @@ instance Era era => DecShareCBOR (ShelleyCertState era) where
       , Interns (Credential 'DRepRole)
       , Interns (Credential 'HotCommitteeRole)
       )
-  decSharePlusCBOR = decodeRecordNamedT "ShelleyCertState" (const 3) $ do
-    shelleyCertVState <-
-      decSharePlusLensCBOR $
-        lens (\(cs, _, cd, ch) -> (cs, cd, ch)) (\(_, ks, _, _) (cs, cd, ch) -> (cs, ks, cd, ch))
+  decSharePlusCBOR = decodeRecordNamedT "ShelleyCertState" (const 2) $ do
     shelleyCertPState <- decSharePlusLensCBOR _2
     shelleyCertDState <-
       decSharePlusLensCBOR $
@@ -150,7 +130,7 @@ instance Era era => DecShareCBOR (ShelleyCertState era) where
     pure ShelleyCertState {..}
 
 instance Default (ShelleyCertState era) where
-  def = ShelleyCertState def def def
+  def = ShelleyCertState def def
 
 instance Era era => NoThunks (ShelleyCertState era)
 
