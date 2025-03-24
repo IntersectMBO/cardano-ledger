@@ -106,7 +106,7 @@ library
     cardano-data ^>=1.2.2,
     cardano-ledger-binary ^>=1.6,
     cardano-ledger-byron,
-    cardano-ledger-core ^>=1.17,
+    cardano-ledger-core ^>=1.18,
     cardano-slotting,
     cardano-strict-containers,
     containers,
