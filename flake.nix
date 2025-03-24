@@ -127,6 +127,7 @@
               [
                 (python3.withPackages (ps: with ps; [sphinx sphinx_rtd_theme recommonmark sphinx-markdown-tables sphinxemoji]))
                 haskellPackages.implicit-hie
+                shellcheck
               ];
             # disable Hoogle until someone request it
             withHoogle = false;
