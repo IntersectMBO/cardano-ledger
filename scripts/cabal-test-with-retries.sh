@@ -10,7 +10,7 @@ for TRY in $(seq "$TRIES"); do
   echo ">>>>> Testing $PACKAGE ... attempt $TRY of $TRIES <<<<<"
   if cabal test "$PACKAGE"; then
     exit 0
-  elif ! find dist-newstyle -path '*/t/*' -name "$PACKAGE*.log" | xargs grep -h "$CONDITION"; then
+  elif ! find dist-newstyle -path '*/t/*' -name "$PACKAGE*.log" -print0 | xargs -0 grep -h "$CONDITION"; then
     echo "The test failure isn't retryable - aborting"
     exit 1
   fi

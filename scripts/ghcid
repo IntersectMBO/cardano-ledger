@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euC
+set -euCo pipefail
 
 SNAME=cardano-ledger-ghcid
 
@@ -13,35 +13,36 @@ PACKAGES=(
 )
 
 ghcid_for_package () {
-  local wd="$(pwd)/$1"
-  PACKAGE_NAME=$(get_package_name $wd | xargs basename | sed -e "s/.cabal//")
-  echo $PACKAGE_NAME
-  tmux new-window -d -t "=$SNAME" -n $PACKAGE_NAME -c "$wd"
+  local WD=$PWD/$1
+  PACKAGE_NAME=$(get_package_name "$WD" | xargs basename | sed -e "s/.cabal//")
+  echo "$PACKAGE_NAME"
+  tmux new-window -d -t "=$SNAME" -n "$PACKAGE_NAME" -c "$WD"
   tmux send-keys -t "=$SNAME:=$PACKAGE_NAME" 'ghcid' Enter
 }
 
 # Get the package name for a given directory
 get_package_name () {
-  CABAL_FILE=$(find $1 -maxdepth 1 -name "*.cabal")
-  echo $CABAL_FILE
+  find "$1" -maxdepth 1 -name "*.cabal"
 }
 
-att() {
+attach() {
     [ -n "${TMUX:-}" ] &&
-        tmux switch-client -t "=$SNAME" ||
-        tmux attach-session -t "=$SNAME"
+        {
+          tmux switch-client -t "=$SNAME" ||
+          tmux attach-session -t "=$SNAME"
+        }
 }
 
 if tmux has-session -t "=$SNAME" 2> /dev/null; then
-    att
+    attach
     exit 0
 fi
 
 tmux new-session -d -s $SNAME
 tmux rename-window -t "=$SNAME:0" "cls"
 
-for t in ${PACKAGES[@]}; do
-  ghcid_for_package $t
+for P in "${PACKAGES[@]}"; do
+  ghcid_for_package "$P"
 done
 
-att
+attach
