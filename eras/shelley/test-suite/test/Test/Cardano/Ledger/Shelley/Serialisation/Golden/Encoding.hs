@@ -987,7 +987,7 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "empty_block"
-            (Block @C bh txns)
+            (Block @(BHeader MockCrypto) @C bh txns)
             ( (T $ TkListLen 4)
                 <> S bh
                 <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
@@ -1048,7 +1048,7 @@ tests =
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "rich_block"
-            (Block @C bh txns)
+            (Block @(BHeader MockCrypto) @C bh txns)
             ( (T $ TkListLen 4)
                 -- header
                 <> S bh

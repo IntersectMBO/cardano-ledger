@@ -179,7 +179,7 @@ bbodyTransition =
     >>= \( TRC
             ( BbodyEnv pp account
               , BbodyState ls b
-              , UnserialisedBlock bhview txsSeq
+              , Block bhview txsSeq
               )
           ) -> do
         let txs = fromTxSeq txsSeq

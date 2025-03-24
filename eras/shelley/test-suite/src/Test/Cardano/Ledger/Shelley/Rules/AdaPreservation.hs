@@ -581,7 +581,7 @@ withdrawals ::
   EraGen era =>
   Block (BHeader MockCrypto) era ->
   Coin
-withdrawals (UnserialisedBlock _ txseq) =
+withdrawals (Block _ txseq) =
   F.foldl'
     ( \c tx ->
         let wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL

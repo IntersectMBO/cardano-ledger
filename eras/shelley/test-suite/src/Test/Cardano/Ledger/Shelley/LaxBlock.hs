@@ -11,14 +11,7 @@
 
 module Test.Cardano.Ledger.Shelley.LaxBlock where
 
-import Cardano.Ledger.Binary (
-  Annotator (..),
-  DecCBOR (decCBOR),
-  Decoder,
-  ToCBOR,
-  annotatorSlice,
-  decodeRecordNamed,
- )
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core (Era, EraSegWits (TxSeq), EraTx)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq, txSeqDecoder)
@@ -28,7 +21,13 @@ import Data.Typeable (Typeable)
 --   encoding of parts of the segwit.
 --   This is only for testing.
 newtype LaxBlock h era = LaxBlock (Block h era)
-  deriving (ToCBOR)
+
+deriving newtype instance
+  ( Era era
+  , EncCBORGroup (TxSeq era)
+  , EncCBOR h
+  ) =>
+  ToCBOR (LaxBlock h era)
 
 deriving newtype instance
   ( EraSegWits era
@@ -45,11 +44,11 @@ blockDecoder ::
   Bool ->
   forall s.
   Decoder s (Annotator (Block h era))
-blockDecoder lax = annotatorSlice $
+blockDecoder lax =
   decodeRecordNamed "Block" (const 4) $ do
     header <- decCBOR
     txns <- txSeqDecoder lax
-    pure $ Block' <$> header <*> txns
+    pure $ Block <$> header <*> txns
 
 deriving stock instance (Era era, Show (TxSeq era), Show h) => Show (LaxBlock h era)
 

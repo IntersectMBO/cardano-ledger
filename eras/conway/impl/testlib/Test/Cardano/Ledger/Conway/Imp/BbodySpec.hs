@@ -92,7 +92,7 @@ spec = describe "BBODY" $ do
       tryRunImpRule @"BBODY"
         (BbodyEnv pp account)
         (BbodyState ls (BlocksMade Map.empty))
-        (UnsafeUnserialisedBlock bhView txSeq)
+        (Block bhView txSeq)
     predFailures
       `shouldBe` NE.fromList
         [ injectFailure
