@@ -1,10 +1,13 @@
 # Version history for `cardano-ledger-core`
 
-## 1.17.0.0
+## 1.18.0.0
 
 * Replace `Block'` constructor with `Block`
 * Remove patterns: `Block`, `UnserialisedBlock` and `UnsafeUnserialisedBlock`
 * Add ` EncCBORGroup (TxSeq era)` and `EncCBOR h` constraints to `EncCBOR` and `ToCBOR` instances for `Block`
+
+## 1.17.0.0
+
 * Add `BoootstrapWitnessRaw` type
 * Add `EraStake`, `CanGetInstantStake`,  `CanSetInstantStake` , `snapShotFromInstantStake`, `resolveActiveInstantStakeCredentials`
 * Add boolean argument to `fromCborRigorousBothAddr` for lenient `Ptr` decoding

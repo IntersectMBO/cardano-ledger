@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.8.0.1
+
+*
+
 ## 1.8.0.0
 
 * Add `DecCBOR` instance for `MaryTxBody`

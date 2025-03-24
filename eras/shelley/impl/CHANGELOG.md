@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.16.0.1
+
+*
+
 ## 1.16.0.0
 
 * Add `ShelleyInstantStake`, `shelleyInstantStakeCredentialsL`, `addShelleyInstantStake`, `deleteShelleyInstantStake`, `resolveShelleyInstantStake`

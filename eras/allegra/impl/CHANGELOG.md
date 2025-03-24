@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.7.0.1
+
+*
+
 ## 1.7.0.0
 
 * Add `DecCBOR` instances for:

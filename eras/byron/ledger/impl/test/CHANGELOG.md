@@ -1,12 +1,12 @@
 # Version history for `cardano-ledger-byron-test`
 
-## 1.6.0.0
+## 1.5.2.2
 
-* Depend on libraries that use crypton instead of cryptonite
+*
 
 ## 1.5.2.1
 
-*
+* Depend on libraries that use crypton instead of cryptonite
 
 ## 1.5.2.0
 
