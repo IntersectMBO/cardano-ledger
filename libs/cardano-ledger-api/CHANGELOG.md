@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.11.0.1
+
+*
+
 ## 1.11.0.0
 
 * Converted `CertState` to a type family

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley-test`
 
+## 1.6.0.1
+
+*
+
 ## 1.6.0.0
 
 * Add crypto type-parameter to `KeySpace` and `GenEnv` #4908

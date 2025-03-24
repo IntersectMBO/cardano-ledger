@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley-ma-test`
 
+## 1.3.0.1
+
+*
+
 ## 1.3.0.0
 
 * Remove `TestCrypto`

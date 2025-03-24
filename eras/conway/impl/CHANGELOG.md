@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.19.0.1
+
+*
+
 ## 1.19.0.0
 
 * Add `ConwayInstantStake`, `conwayInstantStakeCredentialsL`, `addConwayInstantStake`, `deleteConwayInstantStake`, `resolveConwayInstantStake`
