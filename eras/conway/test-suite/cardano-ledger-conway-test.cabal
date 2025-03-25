@@ -34,7 +34,7 @@ library
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.12,
     cardano-ledger-babbage >=1.10.1,
     cardano-ledger-binary >=1.0,
-    cardano-ledger-conway:{cardano-ledger-conway, testlib} ^>=1.19,
+    cardano-ledger-conway:{cardano-ledger-conway, testlib} ^>=1.20,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
     cardano-ledger-mary >=1.4,
     cardano-ledger-shelley >=1.16,
