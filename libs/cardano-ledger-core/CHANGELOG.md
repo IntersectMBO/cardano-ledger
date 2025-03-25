@@ -2,6 +2,11 @@
 
 ## 1.18.0.0
 
+* Rename `wvkSig` to `wvkSignature`
+* Remove `eqBootstrapWitnessRaw` and `BootstrapWitnessRaw`
+* Rename `bwSig` to `bwSignature` for `BootstrapWitness`
+* Remove `witVKeyBytes` and `eqWitVKeyRaw`
+* Remove `EqRaw` instance for `WitVKey`
 * Replace `Block'` constructor with `Block`
 * Remove patterns: `Block`, `UnserialisedBlock` and `UnsafeUnserialisedBlock`
 * Add ` EncCBORGroup (TxSeq era)` and `EncCBOR h` constraints to `EncCBOR` and `ToCBOR` instances for `Block`

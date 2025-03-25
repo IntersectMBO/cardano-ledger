@@ -370,10 +370,10 @@ instance Arbitrary ChainCode where
 instance Arbitrary BootstrapWitness where
   arbitrary = do
     bwKey <- arbitrary
-    bwSig <- arbitrary
+    bwSignature <- arbitrary
     bwChainCode <- arbitrary
     bwAttributes <- arbitrary
-    pure $ BootstrapWitness {bwKey, bwSig, bwChainCode, bwAttributes}
+    pure $ BootstrapWitness {bwKey, bwSignature, bwChainCode, bwAttributes}
 
 instance Arbitrary GenDelegPair where
   arbitrary = GenDelegPair <$> arbitrary <*> arbitrary

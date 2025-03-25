@@ -57,7 +57,7 @@ spec =
             BootstrapWitness
               { bwKey = shelleyVKey
               , bwChainCode = chainCode
-              , bwSig = sig
+              , bwSignature = sig
               , bwAttributes = serialize' byronProtVer $ Byron.addrAttributes byronAddr
               }
       pure $
