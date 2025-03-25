@@ -180,7 +180,7 @@ released. Therefore, it safe to use this command to release all packages from th
 from a sepecific `<SHA>` that had a version bump when compared to CHaP:
 
 ```shell
-$ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <SHA> \
+$ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <COMMIT_HASH> \
   eras/allegra/impl \
   eras/alonzo/impl \
   eras/alonzo/test-suite \
@@ -188,10 +188,8 @@ $ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <S
   eras/babbage/test-suite \
   eras/byron/chain/executable-spec \
   eras/byron/crypto \
-  eras/byron/crypto/test \
   eras/byron/ledger/executable-spec \
   eras/byron/ledger/impl \
-  eras/byron/ledger/impl/test \
   eras/conway/impl \
   eras/conway/test-suite \
   eras/mary/impl \
