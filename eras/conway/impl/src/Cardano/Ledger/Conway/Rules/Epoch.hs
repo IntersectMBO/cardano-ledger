@@ -179,7 +179,6 @@ instance
   , Environment (EraRule "HARDFORK" era) ~ ()
   , State (EraRule "HARDFORK" era) ~ EpochState era
   , Signal (EraRule "HARDFORK" era) ~ ProtVer
-  , CertState era ~ ConwayCertState era
   ) =>
   STS (ConwayEPOCH era)
   where
@@ -286,7 +285,6 @@ epochTransition ::
   , Environment (EraRule "HARDFORK" era) ~ ()
   , State (EraRule "HARDFORK" era) ~ EpochState era
   , Signal (EraRule "HARDFORK" era) ~ ProtVer
-  , CertState era ~ ConwayCertState era
   ) =>
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
