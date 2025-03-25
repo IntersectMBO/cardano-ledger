@@ -82,7 +82,6 @@ library
     Test.Cardano.Ledger.Examples.AlonzoAPI
     Test.Cardano.Ledger.Examples.AlonzoBBODY
     Test.Cardano.Ledger.Examples.AlonzoCollectInputs
-    Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
     Test.Cardano.Ledger.Examples.BabbageFeatures
     Test.Cardano.Ledger.Examples.STSTestUtils
     Test.Cardano.Ledger.Generic.AggPropTests

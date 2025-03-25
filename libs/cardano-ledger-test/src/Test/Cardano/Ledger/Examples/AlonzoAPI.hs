@@ -24,9 +24,9 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Tools (estimateMinFeeTx)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
-import Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (mkSingleRedeemer)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkGenesisTxIn,
+  mkSingleRedeemer,
   mkTxDats,
   someAddr,
   someKeys,
