@@ -11,6 +11,7 @@
 module Cardano.Ledger.Keys.WitVKey (
   WitVKey (WitVKey),
   witVKeyHash,
+  wvkSig,
 )
 where
 
@@ -43,12 +44,16 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 -- | Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey kr = WitVKeyInternal
   { wvkKey :: !(VKey kr)
-  , wvkSig :: !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
+  , wvkSignature :: !(SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody))
   , wvkKeyHash :: KeyHash 'Witness
   -- ^ Hash of the witness vkey. We store this here to avoid repeated hashing
   --   when used in ordering.
   }
   deriving (Generic, Show, Eq)
+
+wvkSig :: WitVKey kr -> SignedDSIGN DSIGN (Hash HASH EraIndependentTxBody)
+wvkSig = wvkSignature
+{-# DEPRECATED wvkSig "In favor of `wvkSignature`" #-}
 
 deriving via
   AllowThunksIn '["wvkKeyHash"] (WitVKey kr)
@@ -68,13 +73,13 @@ instance Typeable kr => Ord (WitVKey kr) where
     -- have two WitVKeys in a same Set for different transactions. Therefore
     -- comparison on signatures is unlikely to happen and is only needed for
     -- compliance with Ord laws.
-    comparing wvkKeyHash x y <> comparing (hashTxBodySignature . wvkSig) x y
+    comparing wvkKeyHash x y <> comparing (hashTxBodySignature . wvkSignature) x y
 
 instance Typeable kr => Plain.ToCBOR (WitVKey kr) where
-  toCBOR WitVKeyInternal {wvkKey, wvkSig} =
+  toCBOR WitVKeyInternal {wvkKey, wvkSignature} =
     Plain.encodeListLen 2
       <> Plain.toCBOR wvkKey
-      <> encodeSignedDSIGN wvkSig
+      <> encodeSignedDSIGN wvkSignature
 
 instance Typeable kr => Plain.FromCBOR (WitVKey kr) where
   fromCBOR =
