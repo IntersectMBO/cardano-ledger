@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -169,6 +170,10 @@ import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
 import Cardano.Ledger.Conway.Rules (
+  ConwayCertPredFailure (..),
+  ConwayCertsPredFailure (..),
+  ConwayDelegPredFailure (..),
+  ConwayLedgerPredFailure (..),
   EnactSignal,
   committeeAccepted,
   committeeAcceptedRatio,
@@ -209,6 +214,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   vsCommitteeStateL,
   vsDRepsL,
  )
+import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.UMap (dRepMap)
 import qualified Cardano.Ledger.UMap as UMap
@@ -1817,3 +1824,16 @@ delegateSPORewardAddressToDRep_ kh stake drep = do
       (raCredential . ppRewardAccount $ pp)
       stake
       drep
+
+-- Partial implementation used for checking predicate failures
+instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure ConwayEra where
+  injectFailure = ConwayCertsFailure . injectFailure
+instance InjectRuleFailure "CERTS" ShelleyDelegPredFailure ConwayEra where
+  injectFailure = CertFailure . injectFailure
+instance InjectRuleFailure "CERT" ShelleyDelegPredFailure ConwayEra where
+  injectFailure = DelegFailure . injectFailure
+instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure ConwayEra where
+  injectFailure (Shelley.StakeKeyAlreadyRegisteredDELEG c) = StakeKeyRegisteredDELEG c
+  injectFailure (Shelley.StakeKeyNotRegisteredDELEG c) = StakeKeyNotRegisteredDELEG c
+  injectFailure (Shelley.StakeKeyNonZeroAccountBalanceDELEG c) = StakeKeyHasNonZeroRewardAccountBalanceDELEG c
+  injectFailure _ = error "Cannot inject ShelleyDelegPredFailure into ConwayEra"
