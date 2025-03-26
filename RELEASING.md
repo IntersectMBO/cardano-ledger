@@ -335,7 +335,6 @@ but the changelog _only_ needs to indicate if breaking changes have been made:
 * `cardano-ledger-babbage-test`
 * `cardano-ledger-conway-test`
 * `cardano-crypto-test`
-* `cardano-ledger-byron-test`
 
 A changelog which indicates that no changes have been made will have the form:
 

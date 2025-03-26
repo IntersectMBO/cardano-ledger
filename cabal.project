@@ -29,7 +29,6 @@ packages:
   -- byron-spec-chain:
   -- byron-spec-ledger:
   -- cardano-ledger-byron:
-  -- cardano-ledger-byron-test:
   -- cardano-crypto-wrapper:
   -- cardano-crypto-test:
   -- Packages used during development and are not released to CHaPs:
@@ -56,7 +55,6 @@ packages:
   eras/byron/chain/executable-spec
   eras/byron/ledger/executable-spec
   eras/byron/ledger/impl
-  eras/byron/ledger/impl/test
   eras/byron/crypto
   eras/byron/crypto/test
   libs/cardano-ledger-conformance

@@ -93,14 +93,14 @@ cradle:
     - path: "eras/byron/ledger/impl/src"
       component: "lib:cardano-ledger-byron"
 
+    - path: "eras/byron/ledger/impl/testlib"
+      component: "cardano-ledger-byron:lib:testlib"
+
     - path: "eras/byron/ledger/impl/test"
-      component: "cardano-ledger-byron:test:cardano-ledger-byron-test"
+      component: "cardano-ledger-byron:test:tests"
 
     - path: "eras/byron/ledger/impl/test"
       component: "cardano-ledger-byron:test:epoch-validation-normal-form-test"
-
-    - path: "eras/byron/ledger/impl/test/./"
-      component: "lib:cardano-ledger-byron-test"
 
     - path: "eras/conway/impl/src"
       component: "lib:cardano-ledger-conway"
