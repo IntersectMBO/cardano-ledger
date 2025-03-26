@@ -399,7 +399,6 @@ test-suite epoch-validation-normal-form-test
     base,
     bytestring,
     cardano-crypto-wrapper,
-    cardano-ledger,
     cardano-ledger-binary,
     cardano-prelude,
     cardano-prelude-test,
