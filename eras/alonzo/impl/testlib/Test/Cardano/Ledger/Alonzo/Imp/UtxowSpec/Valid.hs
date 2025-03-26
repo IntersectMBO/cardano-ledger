@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), natVersion)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
@@ -39,6 +39,7 @@ import GHC.Exts (fromList)
 import Lens.Micro ((%~), (&), (.~))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Alonzo.ImpTest
+import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
 
@@ -53,6 +54,21 @@ spec ::
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Valid transactions" $ do
+  it "Non-script output with datum" $ do
+    -- Attach a datum (hash) to a non-script output and then spend it.
+    -- Note that the datum cannot be supplied when spending the output,
+    -- because it's considered extraneous.
+    addr <- mkAddr <$> freshKeyHash @'Payment <*> pure StakeRefNull
+    amount <- Coin <$> choose (2_000_000, 8_000_000)
+    let
+      datumHash = hashData @era $ Data (P.I 123)
+      txOut = mkBasicTxOut addr (inject amount) & dataHashTxOutL .~ SJust datumHash
+      tx1 = mkBasicTx mkBasicTxBody & bodyTxL . outputsTxBodyL .~ [txOut]
+    txIn <- txInAt (0 :: Int) <$> submitTx tx1
+    let
+      tx2 = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
+    expectTxSuccess =<< submitTx tx2
+
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
@@ -184,6 +200,3 @@ spec = describe "Valid transactions" $ do
             else
               -- Conway fixed the bug that was causing DELEG to fail
               expectTxSuccess =<< submitTx tx
-
-  it "Non-script output with datum" $ do
-    const $ pendingWith "not implemented yet"

@@ -78,12 +78,12 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkWitnessVKey)
-import Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (mkSingleRedeemer)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysFailsHash,
   alwaysSucceedsHash,
   initUTxO,
   mkGenesisTxIn,
+  mkSingleRedeemer,
   mkTxDats,
   someAddr,
   someKeys,

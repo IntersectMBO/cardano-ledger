@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
   initUTxO,
   mkGenesisTxIn,
   mkTxDats,
+  mkSingleRedeemer,
   someAddr,
   someKeys,
   someScriptAddr,
@@ -39,11 +40,12 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (..),
   AlonzoUtxowPredFailure (..),
  )
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (..),
   IsValid (..),
  )
-import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
@@ -80,6 +82,7 @@ import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag, mkRedeemersFromTags)
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..), after, matchkey)
@@ -209,6 +212,10 @@ mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 mkTxDats :: Era era => Data era -> TxDats era
 mkTxDats d = TxDats $ Map.singleton (hashData d) d
+
+mkSingleRedeemer :: Proof era -> PlutusPurposeTag -> Data era -> Redeemers era
+mkSingleRedeemer proof tag datum =
+  mkRedeemersFromTags proof [((tag, 0), (datum, ExUnits 5000 5000))]
 
 trustMeP :: Proof era -> Bool -> Tx era -> Tx era
 trustMeP Alonzo iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
