@@ -55,15 +55,15 @@ encodedSizeTest encode encodedSize gen = eachOfTS
     -- we can assume that lo ≤ size ≤ hi
     classifySize :: Range Natural -> Natural -> LabelName
     classifySize Range {lo, hi} size =
-      fromString $
-        "lo: "
-          ++ show lo
-          ++ " hi: "
-          ++ show hi
-          ++ " size: "
-          ++ show s
-          ++ " - "
-          ++ show (s + bucket)
+      fromString
+        $ "lo: "
+        ++ show lo
+        ++ " hi: "
+        ++ show hi
+        ++ " size: "
+        ++ show s
+        ++ " - "
+        ++ show (s + bucket)
       where
         bucket =
           if hi - lo >= 5
@@ -113,9 +113,9 @@ ts_prop_sizeVerificationKey = encodedSizeTestEncCBOR Crypto.genVerificationKey
 
 ts_prop_sizeToSign :: TSProperty
 ts_prop_sizeToSign =
-  encodedSizeTestEncCBOR $
-    ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
-      >>= uncurry genToSign
+  encodedSizeTestEncCBOR
+    $ ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
+    >>= uncurry genToSign
 
 ts_prop_sizeBlockVersions :: TSProperty
 ts_prop_sizeBlockVersions =
@@ -131,22 +131,22 @@ ts_prop_sizeEpochNumber =
 -- | test @Signature EpochNumber@ which is a part of 'ACertificate'
 ts_prop_sizeEpochNumberSignature :: TSProperty
 ts_prop_sizeEpochNumberSignature =
-  encodedSizeTestEncCBOR $
-    Crypto.genProtocolMagicId >>= flip Crypto.genSignature Slotting.genEpochSlots
+  encodedSizeTestEncCBOR
+    $ Crypto.genProtocolMagicId
+    >>= flip Crypto.genSignature Slotting.genEpochSlots
 
 ts_prop_sizeToSignSignature :: TSProperty
 ts_prop_sizeToSignSignature =
-  encodedSizeTestEncCBOR $
-    do
-      pm <- Crypto.genProtocolMagicId
-      es <- Slotting.genEpochSlots
-      Crypto.genSignature pm (genToSign pm es)
+  encodedSizeTestEncCBOR $ do
+    pm <- Crypto.genProtocolMagicId
+    es <- Slotting.genEpochSlots
+    Crypto.genSignature pm (genToSign pm es)
 
 ts_prop_sizeBlockSignature :: TSProperty
 ts_prop_sizeBlockSignature =
-  encodedSizeTestEncCBOR $
-    ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
-      >>= uncurry genBlockSignature
+  encodedSizeTestEncCBOR
+    $ ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
+    >>= uncurry genBlockSignature
 
 --
 -- Header
@@ -190,7 +190,7 @@ ts_prop_sizeABlockOrBoundaryHdr =
     encCBORABlockOrBoundaryHdr
     encCBORABlockOrBoundaryHdrSize
     $ ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
-      >>= uncurry genABlockOrBoundaryHdr
+    >>= uncurry genABlockOrBoundaryHdr
 
 --
 -- Utils

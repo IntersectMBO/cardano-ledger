@@ -21,7 +21,7 @@ import Paths_cardano_ledger_byron (getDataFileName)
 -- We use `RequiresNoMagic`, as it indicates mainnet
 readMainetCfg :: MonadIO m => m Genesis.Config
 readMainetCfg = do
-  mainnetGenesisJson <- liftIO $ getDataFileName "mainnet-genesis.json"
+  mainnetGenesisJson <- liftIO $ getDataFileName "test/mainnet-genesis.json"
   let genHash =
         either
           (panic . show . Genesis.GenesisHashDecodeError)
