@@ -73,7 +73,6 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/byron-spec-ledger/1.0.0.2"' \
    '.#"ghc96/cardano-ledger-byron/1.0.0.4"' \
    '.#"ghc96/cardano-crypto-wrapper/1.5.1.1"' \
-   '.#"ghc96/cardano-crypto-test/1.5.0.1"' \
    '.#"ghc96/cardano-ledger-conway/1.12.0.0"' \
    '.#"ghc96/cardano-ledger-conway-test/1.2.1.3"' \
    '.#"ghc96/cardano-ledger-mary/1.5.0.0"' \
@@ -120,7 +119,6 @@ Next, you will add the actual revisions and test if you can build your packages 
    '.#"ghc96/byron-spec-ledger/1.0.0.2"' \
    '.#"ghc96/cardano-ledger-byron/1.0.0.4"' \
    '.#"ghc96/cardano-crypto-wrapper/1.5.1.1"' \
-   '.#"ghc96/cardano-crypto-test/1.5.0.1"' \
    '.#"ghc96/cardano-ledger-conway/1.12.0.0"' \
    '.#"ghc96/cardano-ledger-conway-test/1.2.1.3"' \
    '.#"ghc96/cardano-ledger-mary/1.5.0.0"' \
@@ -168,7 +166,6 @@ extra-packages:
   byron-spec-ledger-1.0.0.2,
   cardano-ledger-byron-1.0.0.4,
   cardano-crypto-wrapper-1.5.1.1,
-  cardano-crypto-test-1.5.0.1,
   cardano-ledger-conway-1.12.0.0,
   cardano-ledger-conway-test-1.2.1.3,
   cardano-ledger-mary-1.5.0.0,
@@ -209,7 +206,6 @@ library
    byron-spec-ledger \
    cardano-ledger-byron \
    cardano-crypto-wrapper \
-   cardano-crypto-test \
    cardano-ledger-conway \
    cardano-ledger-conway-test \
    cardano-ledger-mary \
@@ -257,7 +253,6 @@ library
    byron-spec-ledger \
    cardano-ledger-byron \
    cardano-crypto-wrapper \
-   cardano-crypto-test \
    cardano-ledger-conway \
    cardano-ledger-conway-test \
    cardano-ledger-mary \

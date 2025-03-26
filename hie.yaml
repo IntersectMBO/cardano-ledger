@@ -78,11 +78,11 @@ cradle:
     - path: "eras/byron/crypto/src"
       component: "lib:cardano-crypto-wrapper"
 
+    - path: "eras/byron/crypto/testlib"
+      component: "cardano-crypto-wrapper:lib:testlib"
+
     - path: "eras/byron/crypto/test"
       component: "cardano-crypto-wrapper:test:test"
-
-    - path: "eras/byron/crypto/test/./"
-      component: "lib:cardano-crypto-test"
 
     - path: "eras/byron/ledger/executable-spec/src"
       component: "lib:byron-spec-ledger"
