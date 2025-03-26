@@ -39,6 +39,7 @@ instance ShelleyEraImp AllegraEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
   fixupTx = shelleyFixupTx
+  expectTxSuccess = impShelleyExpectTxSuccess
 
 impAllegraSatisfyNativeScript ::
   ( AllegraEraScript era

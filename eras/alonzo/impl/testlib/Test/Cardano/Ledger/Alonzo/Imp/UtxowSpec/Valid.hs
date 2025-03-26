@@ -34,7 +34,6 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
   pattern RequireSignature,
  )
-import Control.Monad ((<=<))
 import GHC.Exts (fromList)
 import Lens.Micro ((%~), (&), (.~))
 import Lens.Micro.Mtl (use)
@@ -67,7 +66,7 @@ spec = describe "Valid transactions" $ do
     txIn <- txInAt (0 :: Int) <$> submitTx tx1
     let
       tx2 = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
-    expectTxSuccess =<< submitTx tx2
+    submitTx_ tx2
 
   forM_ (eraLanguages @era) $ \lang ->
     withSLanguage lang $ \slang ->
@@ -80,20 +79,20 @@ spec = describe "Valid transactions" $ do
 
         it "Validating SPEND script" $ do
           txIn <- produceScript alwaysSucceedsWithDatumHash
-          expectTxSuccess <=< submitTx $
+          submitTx_ $
             mkBasicTx $
               mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
         it "Not validating SPEND script" $ do
           txIn <- produceScript alwaysFailsWithDatumHash
-          expectTxSuccess <=< submitPhase2Invalid $
+          submitPhase2Invalid_ $
             mkBasicTx $
               mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
         it "Validating CERT script" $ do
           txIn <- produceScript alwaysSucceedsWithDatumHash
           let txCert = RegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
-          expectTxSuccess <=< submitTx $
+          submitTx_ $
             mkBasicTx $
               mkBasicTxBody
                 & inputsTxBodyL .~ [txIn]
@@ -102,7 +101,7 @@ spec = describe "Valid transactions" $ do
         it "Not validating CERT script" $ do
           txIn <- produceScript alwaysFailsWithDatumHash
           let txCert = RegTxCert $ ScriptHashObj alwaysSucceedsNoDatumHash
-          expectTxSuccess <=< submitPhase2Invalid $
+          submitPhase2Invalid_ $
             mkBasicTx $
               mkBasicTxBody
                 & inputsTxBodyL .~ [txIn]
@@ -110,21 +109,21 @@ spec = describe "Valid transactions" $ do
 
         it "Validating WITHDRAWAL script" $ do
           account <- registerStakeCredential $ ScriptHashObj alwaysSucceedsNoDatumHash
-          expectTxSuccess <=< submitTx $
+          submitTx_ $
             mkBasicTx $
               mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
 
         it "Not validating WITHDRAWAL script" $ do
           account <- registerStakeCredential $ ScriptHashObj alwaysFailsNoDatumHash
-          expectTxSuccess <=< submitPhase2Invalid $
+          submitPhase2Invalid_ $
             mkBasicTx $
               mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(account, mempty)]
 
         it "Validating MINT script" $ do
-          expectTxSuccess <=< submitTx <=< mkTokenMintingTx $ alwaysSucceedsNoDatumHash
+          submitTx_ =<< mkTokenMintingTx alwaysSucceedsNoDatumHash
 
         it "Not validating MINT script" $ do
-          expectTxSuccess <=< submitPhase2Invalid <=< mkTokenMintingTx $ alwaysFailsNoDatumHash
+          submitPhase2Invalid_ =<< mkTokenMintingTx alwaysFailsNoDatumHash
 
         --  Process a transaction with a succeeding script in every place possible,
         --  and also with succeeding timelock scripts.
@@ -162,7 +161,7 @@ spec = describe "Valid transactions" $ do
                 & withdrawalsTxBodyL .~ Withdrawals (fromList [(acct, mempty) | acct <- rewardAccounts])
                 & certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> rewardScriptHashes)
                 & outputsTxBodyL .~ [txOut]
-          expectTxSuccess <=< submitTx $ mkBasicTx txBody
+          submitTx_ $ mkBasicTx txBody
 
         it "Acceptable supplementary datum" $ do
           inputAddr <- freshKeyHash @'Payment
@@ -183,7 +182,7 @@ spec = describe "Valid transactions" $ do
             tx =
               mkBasicTx txBody
                 & witsTxL . datsTxWitsL . unTxDatsL %~ Map.insert datumHash datum
-          expectTxSuccess =<< submitTx tx
+          submitTx_ tx
 
         it "Multiple identical certificates" $ do
           let scriptHash = alwaysSucceedsNoDatumHash
@@ -199,4 +198,4 @@ spec = describe "Valid transactions" $ do
                 [injectFailure $ StakeKeyNotRegisteredDELEG (ScriptHashObj scriptHash)]
             else
               -- Conway fixed the bug that was causing DELEG to fail
-              expectTxSuccess =<< submitTx tx
+              submitTx_ tx

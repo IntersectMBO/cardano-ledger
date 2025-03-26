@@ -319,6 +319,7 @@ instance ShelleyEraImp ConwayEra where
   modifyPParams = conwayModifyPParams
 
   fixupTx = babbageFixupTx
+  expectTxSuccess = impBabbageExpectTxSuccess
 
 instance MaryEraImp ConwayEra
 
