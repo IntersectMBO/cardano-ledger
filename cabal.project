@@ -13,10 +13,10 @@ repository cardano-haskell-packages
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/formal-ledger-specifications.git
-  subdir: generated
+  subdir: hs
   -- !WARNING!:
-  -- MAKE SURE THIS POINTS TO A COMMIT IN `MAlonzo-code` BEFORE MERGE!
-  tag: 9b706ae8c332d5ad10def54aa51d4a66836df363
+  -- MAKE SURE THIS POINTS TO A COMMIT IN `*-artifacts` BEFORE MERGE!
+  tag: b10541e6b623fd2e987c249a7434a16fd6d8ce14
 
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec

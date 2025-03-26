@@ -510,9 +510,9 @@ jobs:
           echo "Error: IntersectMBO/formal-ledger-specifications SRP tag not found."
           exit 1
         fi
-        git fetch https://github.com/intersectmbo/formal-ledger-specifications.git MAlonzo-code
+        git fetch https://github.com/intersectmbo/formal-ledger-specifications.git master-artifacts
 
         git show -s "$TAG" || { \
-          echo "Commit $TAG was not found on the MAlonzo-code branch of formal-ledger-specifications."
+          echo "Commit $TAG was not found on the master-artifacts branch of formal-ledger-specifications."
           exit 1
         }
