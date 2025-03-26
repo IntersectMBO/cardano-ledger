@@ -269,7 +269,6 @@ test-suite cardano-ledger-byron-test
   main-is: test.hs
   hs-source-dirs: test
   other-modules:
-    GetDataFileName
     Paths_cardano_ledger_byron
     Test.Cardano.Chain.Block.CBOR
     Test.Cardano.Chain.Block.Gen

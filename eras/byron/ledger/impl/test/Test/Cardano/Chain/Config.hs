@@ -11,12 +11,7 @@ import Cardano.Crypto.Hashing (Hash, decodeHash)
 import Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import Cardano.Crypto.Raw (Raw)
 import Cardano.Prelude
-
-#ifdef CARDANO_LEDGER_BYRON_TEST
-import Paths_cardano_ledger_byron_test (getDataFileName)
-#else
 import Paths_cardano_ledger_byron (getDataFileName)
-#endif
 
 -- | Read the test mainnet configuration file from the @test@ directory.
 --
