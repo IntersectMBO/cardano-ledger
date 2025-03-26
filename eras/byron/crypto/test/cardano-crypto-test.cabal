@@ -39,7 +39,6 @@ library
 
   cpp-options: -DCARDANO_CRYPTO_TEST
   other-modules:
-    GetDataFileName
     Paths_cardano_crypto_test
 
   default-language: Haskell2010

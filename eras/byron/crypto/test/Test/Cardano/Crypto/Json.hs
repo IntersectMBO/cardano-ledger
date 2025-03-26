@@ -6,7 +6,6 @@ module Test.Cardano.Crypto.Json (
 where
 
 import Cardano.Prelude
-import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import qualified Hedgehog as H
 import Test.Cardano.Crypto.Example (
@@ -26,13 +25,13 @@ goldenProtocolMagic3AesonDec_NMMustBeJust :: Property
 goldenProtocolMagic3AesonDec_NMMustBeJust =
   goldenTestJSONDec
     exampleProtocolMagic3
-    <:< "golden/json/ProtocolMagic_Legacy_NMMustBeJust"
+    "golden/json/ProtocolMagic_Legacy_NMMustBeJust"
 
 goldenProtocolMagic4AesonDec_NMMustBeNothing :: Property
 goldenProtocolMagic4AesonDec_NMMustBeNothing =
   goldenTestJSONDec
     exampleProtocolMagic4
-    <:< "golden/json/ProtocolMagic_Legacy_NMMustBeNothing"
+    "golden/json/ProtocolMagic_Legacy_NMMustBeNothing"
 
 tests :: IO Bool
 tests = H.checkSequential $$discoverGolden
