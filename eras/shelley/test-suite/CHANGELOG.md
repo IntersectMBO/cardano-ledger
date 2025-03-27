@@ -2,7 +2,6 @@
 
 ## 1.6.0.1
 
-* Adjusted `LedgerState` serialisation golden test (`VState` was removed from Shelley era `CertState`)
 
 ## 1.6.0.0
 

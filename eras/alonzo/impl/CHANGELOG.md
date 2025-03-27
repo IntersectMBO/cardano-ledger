@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.14.0.0
+## 1.13.0.1
 
-* Moved `CertState` to `State` module
+*
 
 ## 1.13.0.0
 

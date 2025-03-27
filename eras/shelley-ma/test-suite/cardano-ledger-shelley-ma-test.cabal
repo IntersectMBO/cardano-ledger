@@ -49,7 +49,7 @@ library
     cardano-ledger-allegra:{cardano-ledger-allegra, testlib} ^>=1.7,
     cardano-ledger-binary:{cardano-ledger-binary, testlib} ^>=1.6,
     cardano-ledger-core:{cardano-ledger-core, testlib} >=1.17,
-    cardano-ledger-mary:{cardano-ledger-mary, testlib} ^>=1.9,
+    cardano-ledger-mary:{cardano-ledger-mary, testlib} ^>=1.8,
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib} >=1.12,
     cardano-ledger-shelley-test >=1.6,
     cardano-slotting,

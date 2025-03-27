@@ -200,11 +200,8 @@ renderPoolReapViolation ::
   String
 renderPoolReapViolation
   AssertionViolation {avSTS, avMsg, avCtx = TRC (_, poolreapst, _)} =
-    let certst =
-          def
-            & certPStateL .~ (prCertState poolreapst ^. certPStateL)
-            & certDStateL .~ (prCertState poolreapst ^. certDStateL)
-        obligations = allObligations certst (prUTxOSt poolreapst ^. utxosGovStateL)
+    let obligations =
+          allObligations (prCertState poolreapst) (prUTxOSt poolreapst ^. utxosGovStateL)
      in "\n\nAssertionViolation ("
           <> avSTS
           <> ")\n   "

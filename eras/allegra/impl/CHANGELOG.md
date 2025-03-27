@@ -6,7 +6,6 @@
 
 ## 1.7.0.0
 
-* Moved `CertState` to `State` module
 * Add `DecCBOR` instances for:
   * `Timelock`
   * `AllegraTxAuxData`
