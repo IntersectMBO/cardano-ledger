@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests where
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Core (PParamsHKD)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -25,7 +24,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   UTxOState (..),
  )
-import Cardano.Ledger.State
 import Constrained.API
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
@@ -196,7 +194,7 @@ spec = do
   specSuite @MaryEra 10
   specSuite @AlonzoEra 10
   specSuite @BabbageEra 10
-  specSuite @ConwayEra 10
+  specSuite @ShelleyEra 10
 
 utxoStateGen ::
   forall era.

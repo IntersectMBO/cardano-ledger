@@ -45,7 +45,11 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..), StashedAVVMAddresses)
+import Cardano.Ledger.Shelley.LedgerState (
+  AccountState (..),
+  InstantaneousRewards,
+  StashedAVVMAddresses,
+ )
 import Constrained.API
 import Data.Map (Map)
 import qualified Data.Map as Map

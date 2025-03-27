@@ -35,7 +35,6 @@ import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPr
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot, utxoEnvCertStateL)
 import Cardano.Ledger.UMap (depositMap)
 import Constrained.API

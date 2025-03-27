@@ -380,12 +380,11 @@ shelleyCertStateSpec univ acct epoch = constrained $ \ [var|shellCertState|] ->
     ]
 
 conwayCertStateSpec ::
-  forall fn.
-  EraSpecLedger ConwayEra fn =>
+  EraSpecLedger ConwayEra =>
   WitUniv ConwayEra ->
-  Term fn AccountState ->
-  Term fn EpochNo ->
-  Specification fn (ConwayCertState ConwayEra)
+  Term AccountState ->
+  Term EpochNo ->
+  Specification (ConwayCertState ConwayEra)
 conwayCertStateSpec univ acct epoch = constrained $ \ [var|convCertState|] ->
   match convCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies pState (pstateSpec univ epoch)
@@ -481,7 +480,7 @@ conwayGovStateSpec pp govenv =
 
 ledgerStateSpec ::
   forall era.
-  (EraSpecLedger era, HasSpec (InstantStake era), IsNormalType (CertState era)) =>
+  (EraSpecLedger era, HasSpec (InstantStake era)) =>
   PParams era ->
   WitUniv era ->
   Term AccountState ->
@@ -537,7 +536,7 @@ getMarkSnapShot ls = SnapShot (Stake markStake) markDelegations markPoolParams
 
 epochStateSpec ::
   forall era.
-  (EraSpecLedger era, HasSpec (InstantStake era), IsNormalType (CertState era)) =>
+  (EraSpecLedger era, HasSpec (InstantStake era)) =>
   PParams era ->
   WitUniv era ->
   Term EpochNo ->
@@ -562,7 +561,6 @@ newEpochStateSpecUTxO ::
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
   , StashedAVVMAddresses era ~ UTxO era
-  , IsNormalType (CertState era)
   ) =>
   PParams era ->
   WitUniv era ->
@@ -592,7 +590,6 @@ newEpochStateSpecUnit ::
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
   , StashedAVVMAddresses era ~ ()
-  , IsNormalType (CertState era)
   ) =>
   PParams era ->
   WitUniv era ->
