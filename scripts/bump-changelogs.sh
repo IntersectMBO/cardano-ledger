@@ -41,3 +41,6 @@ do
 done
 
 rm -rf $CHAP
+printf "\n!!!!!!\n%s %s\n!!!!!!\n" \
+  "WARNING! DO NOT BUMP THE VERSION NUMBER IN THE CABAL FILES" \
+  "(unless its dependencies were bumped)!"
