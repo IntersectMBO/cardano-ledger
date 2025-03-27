@@ -230,7 +230,7 @@ instance {-# OVERLAPPABLE #-} Args a ~ '[a] => IsProd a where
 
 instance IsProd b => IsProd (Prod a b) where
   toArgs (p :: Term (Prod a b))
-    | Evidence <- prerequisites @(Prod a b) = (prodFst_ p) :> toArgs (prodSnd_ p)
+    | Evidence <- prerequisites @(Prod a b) = prodFst_ p :> toArgs (prodSnd_ p)
 
 type family Args t where
   Args (Prod a b) = a : Args b

@@ -20,8 +20,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-
--- {-# OPTIONS_GHC -Wno-redundant-constraints #-}
+-- GHC9.2.8 needs this
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- RecordWildCards cause name shadowing warnings in ghc-8.10.
 #if __GLASGOW_HASKELL__ < 900
@@ -1754,6 +1754,7 @@ instance Semantics CoercibleW where
     CoerceW -> coerce
 
 instance (Typeable a, Typeable b, CoercibleLike a b) => Logic "coerce_" CoercibleW '[a] b where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
   propagate _ (ErrorSpec msgs) = ErrorSpec msgs
