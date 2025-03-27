@@ -71,6 +71,7 @@ import Test.QuickCheck hiding (forAll, witness)
 --   and the EraSpecLedger class has methods that asbtract over those changes.
 class
   ( EraSpecTxOut era
+  , EraStake era
   , HasSpec (GovState era)
   , HasSpec (CertState era)
   , IsNormalType (CertState era)

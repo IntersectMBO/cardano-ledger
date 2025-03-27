@@ -12,51 +12,38 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Test.Cardano.Ledger.Constrained.Conway.TxBodySpec where
 
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.BaseTypes (Network (..))
+import Cardano.Ledger.CertState (EraCertState (..), lookupDepositDState, lookupDepositVState)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Rules (CertsEnv (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
+import Cardano.Ledger.Shelley.LedgerState (PState (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.State (UTxO (..), coinBalance)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
 import Constrained.API
 import Constrained.Base (IsPred (..))
-import Constrained.Spec.Size (hasSize, rangeSize)
-import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
-import Data.Word (Word64)
-
-import Data.Sequence.Internal (Seq)
+import Data.TreeDiff
 import Lens.Micro
-
 import Test.Cardano.Ledger.Constrained.Conway.Cert (
-  EraSpecCert (..),
-  certStateSpec,
   delegateeSpec,
   shelleyTxCertSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.Certs (certsEnvSpec, projectEnv)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
-import Test.Cardano.Ledger.Constrained.Conway.Instances.TxBody (fromShelleyBody)
-
--- FIXME import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs (EraSpecLedger)
-
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec
-import Test.Cardano.Ledger.Generic.Proof (Reflect)
-import qualified Test.Cardano.Ledger.Generic.Proof as Proof
+import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.QuickCheck hiding (forAll, witness)
 import Prelude hiding (seq)
-
 import Cardano.Ledger.Address (Withdrawals (..))
-import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Conway.State
@@ -68,24 +55,6 @@ import Cardano.Ledger.Shelley.State (ShelleyCertState)
 import Cardano.Ledger.State (EraCertState (..), lookupDepositDState)
 import Data.Text (pack)
 import Lens.Micro
-import Prettyprinter (sep, vsep)
-import Test.Cardano.Ledger.Generic.Fields (
-  TxBodyField (..),
-  abstractTxBody,
- )
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  pcTxBodyField,
-  pcTxBodyWithUTxO,
-  pcTxIn,
-  pcTxOut,
-  ppList,
-  ppMap,
-  ppRecord,
-  ppString,
- )
-
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
 -- =================================
@@ -256,12 +225,13 @@ bodyspec univ certsenv certstate =
 -- ==============================================================================
 -- Some code to visualize what is happening, this code will disappear eventually
 
-putPretty :: PrettyA t => [Char] -> t -> IO ()
-putPretty nm x = putStrLn (nm ++ "\n" ++ show (prettyA x))
+putPretty :: ToExpr t => [Char] -> t -> IO ()
+putPretty nm x = putStrLn (nm ++ "\n" ++ show (prettyE x))
 
 go2 ::
   forall era.
-  ( EraSpecTxOut era
+  ( ToExpr (TxOut era)
+  , EraSpecTxOut era
   , EraSpecCert era
   , EraSpecTxCert era
   , HasSpec (Tx era)
@@ -289,7 +259,8 @@ go2 = do
     ("Input UTxO, total " ++ show (coinBalance @era utxo) ++ ", size = " ++ show (Map.size utxomap))
   putPretty "UTxO" utxo
   putPretty "\nfeeInput" feeinput
-  putStrLn (show (pcTxBodyWithUTxO utxo txbody))
+  -- We need to reproduce this without using PrettyCore, without this we can not tell if the TxBody Balances
+  -- putStrLn (show (pcTxBodyWithUTxO utxo txbody))
   print (consumedTxBody txbody (certsPParams certsEnv) certState utxo)
   print (producedTxBody txbody (certsPParams certsEnv) certState)
 
@@ -315,4 +286,4 @@ testBody = do
   -- between the CertState and the Universe. So those certs with member_
   -- always fail, so the only ones that are ever generated are RegCert and RegPool
   print univ
-  putStrLn (show (prettyA cert))
+  putStrLn (show (prettyE cert))

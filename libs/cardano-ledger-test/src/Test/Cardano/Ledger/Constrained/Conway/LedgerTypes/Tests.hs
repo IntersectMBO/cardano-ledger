@@ -13,6 +13,8 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests where
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.CertState
+import Cardano.Ledger.Core (PParamsHKD)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -20,24 +22,27 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
+  StashedAVVMAddresses,
   UTxOState (..),
  )
 import Cardano.Ledger.State
 import Constrained.API
+import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.Map (Map)
+import Data.TreeDiff
 import Data.Typeable
 import Test.Cardano.Ledger.Constrained.Conway.Cert (
   testConwayCert,
   testGenesisCert,
   testShelleyCert,
  )
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (prettyE)
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (irewardSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (prettyA))
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (
@@ -98,17 +103,17 @@ delegationsSpec = (hasSize (rangeSize 8 12))
 -- ===================================================================
 
 soundSpec ::
-  forall t. (HasSpec t, PrettyA t) => Gen (Specification t) -> Gen Property
+  forall t. (HasSpec t, ToExpr t) => Gen (Specification t) -> Gen Property
 soundSpec specGen = do
   spect <- specGen
   x <- genConwayFn @t spect
   pure $
     property $
-      counterexample (show ("Does not meet spec\n" <> prettyA x)) (conformsToSpec x spect)
+      counterexample (show ("Does not meet spec\n" <> prettyE x)) (conformsToSpec x spect)
 
 soundSpecWith ::
   forall t.
-  (HasSpec t, PrettyA t) =>
+  (HasSpec t, ToExpr t) =>
   Int -> Gen (Specification t) -> SpecWith (Arg Property)
 soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ property $ (soundSpec @t specx)
 
@@ -117,9 +122,11 @@ soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ prop
 specSuite ::
   forall (era :: Type).
   ( EraSpecLedger era
-  , PrettyA (GovState era)
-  , PrettyA (CertState era)
-  , WellFormed (CertState era) era
+  , ToExpr (GovState era)
+  , ToExpr (TxOut era)
+  , ToExpr (InstantStake era)
+  , ToExpr (PParamsHKD Identity era)
+  , ToExpr (StashedAVVMAddresses era)
   , HasSpec (InstantStake era)
   , CertState era ~ ShelleyCertState era
   ) =>
