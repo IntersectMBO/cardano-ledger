@@ -1,8 +1,14 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.16.0.1
+## 1.17.0.0
 
-*
+* Replaced `prDState` and `prPState` with `prCertState` in `ShelleyPoolreapState`
+* Removed `ShelleyPoolreapEnv` (became obsolete)
+* Removed `shelleyCertVState` from `ShelleyCertState`
+* Moved `CertState` to `State` module:
+  * `epochStateRegDRepL` moved to Conway
+  * `vsDRepsL` moved to Conway
+  * `vsCommitteeStateL` moved to Conway
 
 ## 1.16.0.0
 

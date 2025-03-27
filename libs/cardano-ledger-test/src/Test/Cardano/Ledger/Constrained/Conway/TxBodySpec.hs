@@ -59,12 +59,13 @@ import Cardano.Ledger.Address (Withdrawals (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.CertState (EraCertState (..), lookupDepositDState, lookupDepositVState)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (Consumed (..), Produced (..), consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (CertState, PState (..))
+import Cardano.Ledger.Shelley.State (ShelleyCertState)
+import Cardano.Ledger.State (EraCertState (..), lookupDepositDState)
 import Data.Text (pack)
 import Lens.Micro
 import Prettyprinter (sep, vsep)
@@ -145,7 +146,7 @@ adjustTxOutCoin (DeltaCoin n) x = x & coinTxOutL .~ ((x ^. coinTxOutL) <+> (Coin
 --   and on the CertState (what deposits were made in the past)
 getDepositRefund ::
   forall era.
-  (EraTxCert era, EraCertState era) =>
+  (EraTxCert era, ConwayEraCertState era) =>
   PParams era -> CertState era -> [TxCert era] -> (DeltaCoin, DeltaCoin)
 getDepositRefund pp certState certs =
   ( delta $ getTotalDepositsTxCerts pp (`Map.member` psStakePoolParams ps) certs
@@ -193,6 +194,7 @@ bodyspec ::
   ( EraSpecTxOut era fn
   , EraSpecCert era fn
   , EraSpecTxCert fn era
+  , ConwayEraCertState era
   ) =>
   WitUniv era ->
   CertsEnv era ->
@@ -265,6 +267,7 @@ go2 ::
   , EraSpecTxCert ConwayFn era
   , HasSpec ConwayFn (Tx era)
   , HasSpec ConwayFn (CertState era)
+  , ConwayEraCertState era
   ) =>
   IO ()
 go2 = do

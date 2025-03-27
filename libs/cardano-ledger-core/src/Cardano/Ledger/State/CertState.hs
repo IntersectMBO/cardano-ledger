@@ -16,12 +16,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Cardano.Ledger.CertState (
+module Cardano.Ledger.State.CertState (
   EraCertState (..),
   CommitteeAuthorization (..),
   DState (..),
   PState (..),
-  VState (..),
   InstantaneousRewards (..),
   FutureGenDeleg (..),
   Anchor (..),
@@ -48,16 +47,10 @@ module Cardano.Ledger.CertState (
   psFutureStakePoolParamsL,
   psRetiringL,
   psDepositsL,
-  vsDRepsL,
-  vsCommitteeStateL,
-  vsNumDormantEpochsL,
-  vsActualDRepExpiry,
-  csCommitteeCredsL,
-  lookupDepositVState,
 )
 where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData, StrictMaybe, binOpEpochNo)
+import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData, StrictMaybe)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -67,11 +60,9 @@ import Cardano.Ledger.Binary (
   decNoShareCBOR,
   decSharePlusCBOR,
   decSharePlusLensCBOR,
-  decodeMap,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
-  interns,
   internsFromSet,
   toMemptyLens,
  )
@@ -328,72 +319,6 @@ instance Era era => DecCBOR (CommitteeState era) where
 instance Era era => ToCBOR (CommitteeState era) where
   toCBOR = toEraCBOR @era
 
--- | The state that tracks the voting entities (DReps and Constitutional Committee
--- members). In the formal ledger specification this type is called @GState@
-data VState era = VState
-  { vsDReps :: !(Map (Credential 'DRepRole) DRepState)
-  , vsCommitteeState :: !(CommitteeState era)
-  , vsNumDormantEpochs :: !EpochNo
-  -- ^ Number of contiguous epochs in which there are exactly zero
-  -- active governance proposals to vote on. It is incremented in every
-  -- EPOCH rule if the number of active governance proposals to vote on
-  -- continues to be zero. It is reset to zero when a new governance
-  -- action is successfully proposed. We need this counter in order to
-  -- bump DRep expiries through dormant periods when DReps do not have
-  -- an opportunity to vote on anything.
-  }
-  deriving (Show, Eq, Generic)
-
--- | Function that looks up the deposit for currently registered DRep
-lookupDepositVState :: VState era -> Credential 'DRepRole -> Maybe Coin
-lookupDepositVState vstate = fmap drepDeposit . flip Map.lookup (vstate ^. vsDRepsL)
-
-instance Default (VState era) where
-  def = VState def def (EpochNo 0)
-
-instance NoThunks (VState era)
-
-instance NFData (VState era)
-
-instance Era era => DecShareCBOR (VState era) where
-  type
-    Share (VState era) =
-      ( Interns (Credential 'Staking)
-      , Interns (Credential 'DRepRole)
-      , Interns (Credential 'HotCommitteeRole)
-      )
-  getShare VState {vsDReps, vsCommitteeState} =
-    (internsFromSet (foldMap drepDelegs vsDReps), fst (getShare vsDReps), getShare vsCommitteeState)
-  decShareCBOR (cs, cd, _) =
-    decode $
-      RecD VState
-        <! D (decodeMap (interns cd <$> decCBOR) (decShareCBOR cs))
-        <! D decNoShareCBOR
-        <! From
-
-instance Era era => DecCBOR (VState era) where
-  decCBOR = decNoShareCBOR
-
-instance Era era => EncCBOR (VState era) where
-  encCBOR VState {..} =
-    encode $
-      Rec (VState @era)
-        !> To vsDReps
-        !> To vsCommitteeState
-        !> To vsNumDormantEpochs
-
-instance ToJSON (VState era) where
-  toJSON = object . toVStatePair
-  toEncoding = pairs . mconcat . toVStatePair
-
-toVStatePair :: KeyValue e a => VState era -> [a]
-toVStatePair vs@(VState _ _ _) =
-  let VState {..} = vs
-   in [ "dreps" .= vsDReps
-      , "committeeState" .= vsCommitteeState
-      , "numDormantEpochs" .= vsNumDormantEpochs
-      ]
-
 -- | The state associated with the DELPL rule, which combines the DELEG rule
 -- and the POOL rule.
 class
@@ -412,21 +337,14 @@ class
   , NFData (CertState era)
   , Show (CertState era)
   , Eq (CertState era)
-  , Generic (CertState era)
   ) =>
   EraCertState era
   where
   type CertState era = (r :: Type) | r -> era
 
-  mkCertState :: VState era -> PState era -> DState era -> CertState era
-
-  upgradeCertState :: EraCertState (PreviousEra era) => CertState (PreviousEra era) -> CertState era
-
   certDStateL :: Lens' (CertState era) (DState era)
 
   certPStateL :: Lens' (CertState era) (PState era)
-
-  certVStateL :: Lens' (CertState era) (VState era)
 
   -- | Calculate total possible refunds in the system that are related to certificates
   --
@@ -585,23 +503,3 @@ psRetiringL = lens psRetiring (\ds u -> ds {psRetiring = u})
 
 psDepositsL :: Lens' (PState era) (Map (KeyHash 'StakePool) Coin)
 psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
-
--- ===================================
--- VState
-
-vsDRepsL :: Lens' (VState era) (Map (Credential 'DRepRole) DRepState)
-vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
-
-vsCommitteeStateL :: Lens' (VState era) (CommitteeState era)
-vsCommitteeStateL = lens vsCommitteeState (\vs u -> vs {vsCommitteeState = u})
-
-vsNumDormantEpochsL :: Lens' (VState era) EpochNo
-vsNumDormantEpochsL = lens vsNumDormantEpochs (\vs u -> vs {vsNumDormantEpochs = u})
-
-vsActualDRepExpiry :: Credential 'DRepRole -> VState era -> Maybe EpochNo
-vsActualDRepExpiry cred vs =
-  binOpEpochNo (+) (vsNumDormantEpochs vs) . drepExpiry <$> Map.lookup cred (vsDReps vs)
-
-csCommitteeCredsL ::
-  Lens' (CommitteeState era) (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
-csCommitteeCredsL = lens csCommitteeCreds (\cs u -> cs {csCommitteeCreds = u})

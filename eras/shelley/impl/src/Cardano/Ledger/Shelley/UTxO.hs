@@ -19,7 +19,7 @@ module Cardano.Ledger.Shelley.UTxO (
   getShelleyScriptsNeeded,
   getConsumedCoin,
   shelleyProducedValue,
-  consumed,
+  shelleyConsumed,
   produced,
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
@@ -30,13 +30,6 @@ where
 
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  dsGenDelegs,
-  lookupDepositDState,
-  lookupDepositVState,
-  psStakePoolParamsL,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness, credScriptHash)
@@ -46,14 +39,20 @@ import Cardano.Ledger.Keys (
   genDelegKeyHash,
  )
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Shelley.CertState ()
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
+import Cardano.Ledger.Shelley.State ()
 import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
   raCredential,
+ )
+import Cardano.Ledger.State (
+  EraCertState (..),
+  dsGenDelegs,
+  lookupDepositDState,
+  psStakePoolParamsL,
  )
 import Cardano.Ledger.State as UTxO (
   CanGetUTxO (..),
@@ -119,18 +118,18 @@ getShelleyScriptsNeeded u txBody =
     certificates = toList (txBody ^. certsTxBodyL)
 
 -- | For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
-consumed ::
+shelleyConsumed ::
   (EraUTxO era, EraCertState era) =>
   PParams era ->
   CertState era ->
   UTxO era ->
   TxBody era ->
   Value era
-consumed pp certState =
+shelleyConsumed pp certState =
   getConsumedValue
     pp
     (lookupDepositDState $ certState ^. certDStateL)
-    (lookupDepositVState $ certState ^. certVStateL)
+    (const Nothing)
 
 -- | Compute the lovelace which are created by the transaction
 -- For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
@@ -178,6 +177,8 @@ newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set ScriptHash)
 
 instance EraUTxO ShelleyEra where
   type ScriptsNeeded ShelleyEra = ShelleyScriptsNeeded ShelleyEra
+
+  consumed = shelleyConsumed
 
   getConsumedValue pp lookupKeyDeposit _ = getConsumedCoin pp lookupKeyDeposit
 

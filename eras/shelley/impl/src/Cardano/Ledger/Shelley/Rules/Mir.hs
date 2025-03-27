@@ -21,7 +21,6 @@ module Cardano.Ledger.Shelley.Rules.Mir (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -46,6 +45,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   rewards,
   pattern EpochState,
  )
+import Cardano.Ledger.State (EraCertState)
 import Cardano.Ledger.UMap (compactCoinOrError)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))

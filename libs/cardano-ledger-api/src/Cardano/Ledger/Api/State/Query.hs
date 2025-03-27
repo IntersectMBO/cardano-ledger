@@ -71,7 +71,6 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   NextEpochChange (..),
  )
 import Cardano.Ledger.BaseTypes (EpochNo, strictMaybeToMaybe)
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
@@ -96,6 +95,11 @@ import Cardano.Ledger.Conway.Governance (
   rsEnactStateL,
  )
 import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
+import Cardano.Ledger.Conway.State (
+  ConwayEraCertState (..),
+  vsCommitteeStateL,
+  vsDRepsL,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Shelley.LedgerState
@@ -160,7 +164,7 @@ queryGovState nes = nes ^. nesEpochStateL . epochStateGovStateL
 
 -- | Query DRep state.
 queryDRepState ::
-  EraCertState era =>
+  ConwayEraCertState era =>
   NewEpochState era ->
   -- | Specify a set of DRep credentials whose state should be returned. When this set is
   -- empty, states for all of the DReps will be returned.
@@ -192,7 +196,7 @@ queryDRepStakeDistr nes creds
 -- | Query the stake distribution of the registered DReps. This does not
 -- include the @AlwaysAbstain@ and @NoConfidence@ DReps.
 queryRegisteredDRepStakeDistr ::
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   NewEpochState era ->
   -- | Specify DRep Ids whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the registered DReps will be returned.
@@ -230,7 +234,7 @@ querySPOStakeDistr nes keys
     distr = psPoolDistr . fst $ finishedPulserState nes
 
 -- | Query committee members
-queryCommitteeState :: EraCertState era => NewEpochState era -> CommitteeState era
+queryCommitteeState :: ConwayEraCertState era => NewEpochState era -> CommitteeState era
 queryCommitteeState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
 {-# DEPRECATED queryCommitteeState "In favor of `queryCommitteeMembersState`" #-}
 
@@ -238,7 +242,7 @@ queryCommitteeState nes = nes ^. nesEsL . esLStateL . lsCertStateL . certVStateL
 -- return `Nothing`.
 queryCommitteeMembersState ::
   forall era.
-  (ConwayEraGov era, EraCertState era) =>
+  (ConwayEraGov era, ConwayEraCertState era) =>
   -- | filter by cold credentials (don't filter when empty)
   Set (Credential 'ColdCommitteeRole) ->
   -- | filter by hot credentials (don't filter when empty)

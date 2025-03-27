@@ -45,10 +45,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (encCBOR))
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  CommitteeState (..),
- )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -78,7 +74,11 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.State (IndividualPoolStake (..))
+import Cardano.Ledger.State (
+  CommitteeAuthorization (..),
+  CommitteeState (..),
+  IndividualPoolStake (..),
+ )
 import Constrained hiding (inject)
 import Data.Either (isRight)
 import Data.Foldable (Foldable (..))

@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EraCertState (..),
   DState (..),
-  VState (..),
   rewards,
   delegations,
   ptrsMap,
@@ -34,6 +33,8 @@ module Cardano.Ledger.Shelley.LedgerState (
   RewardSnapShot (..),
   UTxOState (..),
   smartUTxOState,
+  mkShelleyCertState,
+  ShelleyCertState (..),
 
   -- * Genesis State
   genesisState,
@@ -106,7 +107,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   epochStateStakeDistrL,
   epochStateUMapL,
   epochStatePoolParamsL,
-  epochStateRegDrepL,
   epochStateDonationL,
   newEpochStateGovStateL,
   epochStateTreasuryL,
@@ -120,8 +120,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   psFutureStakePoolParamsL,
   psRetiringL,
   psDepositsL,
-  vsDRepsL,
-  vsCommitteeStateL,
 
   -- * Lenses from SnapShot(s)
   ssStakeMarkL,
@@ -135,7 +133,6 @@ module Cardano.Ledger.Shelley.LedgerState (
   ssPoolParamsL,
 ) where
 
-import Cardano.Ledger.CertState
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.LedgerState.NewEpochState
 import Cardano.Ledger.Shelley.LedgerState.PulsingReward
@@ -143,5 +140,5 @@ import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyGovState (..))
-import Cardano.Ledger.Shelley.UTxO (consumed, produced)
-import Cardano.Ledger.State
+import Cardano.Ledger.Shelley.State
+import Cardano.Ledger.Shelley.UTxO (produced)

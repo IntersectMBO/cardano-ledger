@@ -31,12 +31,6 @@ import Cardano.Ledger.BaseTypes (
   (%.),
  )
 import qualified Cardano.Ledger.BaseTypes as Base (EpochInterval (..), Globals (..))
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  CommitteeState (..),
-  csCommitteeCredsL,
-  vsNumDormantEpochsL,
- )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Conway.PParams (
@@ -46,6 +40,10 @@ import Cardano.Ledger.Conway.PParams (
   ppGovActionDepositL,
  )
 import Cardano.Ledger.Conway.State (
+  CommitteeAuthorization,
+  CommitteeState (..),
+  ConwayCertState (..),
+  ConwayEraCertState (..),
   EraStake (..),
   IndividualPoolStake (..),
   PoolDistr (..),
@@ -53,8 +51,18 @@ import Cardano.Ledger.Conway.State (
   SnapShot (..),
   SnapShots (..),
   Stake (..),
+  VState (..),
+  conwayCertDStateL,
+  conwayCertPStateL,
+  conwayCertVStateL,
+  csCommitteeCredsL,
   instantStakeL,
   poolDistrDistrL,
+  shelleyCertDStateL,
+  shelleyCertPStateL,
+  vsCommitteeStateL,
+  vsDRepsL,
+  vsNumDormantEpochsL,
  )
 import Cardano.Ledger.Core (
   Era,
@@ -91,7 +99,6 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Shelley.CertState
 import Cardano.Ledger.Shelley.Governance (FuturePParams (..))
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
@@ -256,10 +263,10 @@ ptrsL :: EraCertState era => NELens era (Map Ptr (Credential 'Staking))
 ptrsL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . ptrsUMapL
 
 currentDRepState ::
-  EraCertState era => Term era (Map (Credential 'DRepRole) DRepState)
+  ConwayEraCertState era => Term era (Map (Credential 'DRepRole) DRepState)
 currentDRepState = Var $ V "currentDRepState" (MapR VCredR DRepStateR) (Yes NewEpochStateR drepsL)
 
-drepsL :: EraCertState era => NELens era (Map (Credential 'DRepRole) DRepState)
+drepsL :: ConwayEraCertState era => NELens era (Map (Credential 'DRepRole) DRepState)
 drepsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
 drepDelegation ::
@@ -347,20 +354,20 @@ poolDepositsL :: EraCertState era => NELens era (Map (KeyHash 'StakePool) Coin)
 poolDepositsL = nesEsL . esLStateL . lsCertStateL . certPStateL . psDepositsL
 
 committeeState ::
-  EraCertState era =>
+  ConwayEraCertState era =>
   Term era (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
 committeeState =
   Var $
     V "committeeState" (MapR CommColdCredR CommitteeAuthorizationR) (Yes NewEpochStateR committeeStateL)
 
 committeeStateL ::
-  EraCertState era => NELens era (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
+  ConwayEraCertState era => NELens era (Map (Credential 'ColdCommitteeRole) CommitteeAuthorization)
 committeeStateL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
 
-numDormantEpochs :: EraCertState era => Term era EpochNo
+numDormantEpochs :: ConwayEraCertState era => Term era EpochNo
 numDormantEpochs = Var $ V "numDormantEpochs" EpochR (Yes NewEpochStateR numDormantEpochsL)
 
-numDormantEpochsL :: EraCertState era => NELens era EpochNo
+numDormantEpochsL :: ConwayEraCertState era => NELens era EpochNo
 numDormantEpochsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsNumDormantEpochsL
 
 -- UTxOState
@@ -1096,20 +1103,25 @@ certStateT = case reify @era of
   Babbage ->
     Invert "CertState" (typeRep @(CertStateF era)) (CertStateF reify)
       :$ Shift shelleyCertStateT certStateFL
-  -- TODO: Add `conwayCertStateT`
   Conway ->
     Invert "CertState" (typeRep @(CertStateF era)) (CertStateF reify)
-      :$ Shift shelleyCertStateT certStateFL
+      :$ Shift conwayCertStateT certStateFL
   where
     shelleyCertStateT :: RootTarget era (ShelleyCertState era) (ShelleyCertState era)
     shelleyCertStateT =
       Invert "ShelleyCertState" (typeRep @(ShelleyCertState era)) ShelleyCertState
-        :$ (Shift vstateT shelleyCertVStateL)
         :$ (Shift pstateT shelleyCertPStateL)
         :$ (Shift dstateT shelleyCertDStateL)
+    conwayCertStateT ::
+      ConwayEraCertState era => RootTarget era (ConwayCertState era) (ConwayCertState era)
+    conwayCertStateT =
+      Invert "ConwayCertState" (typeRep @(ConwayCertState era)) ConwayCertState
+        :$ (Shift vstateT conwayCertVStateL)
+        :$ (Shift pstateT conwayCertPStateL)
+        :$ (Shift dstateT conwayCertDStateL)
 
 -- | Target for VState
-vstateT :: forall era. EraCertState era => RootTarget era (VState era) (VState era)
+vstateT :: forall era. ConwayEraCertState era => RootTarget era (VState era) (VState era)
 vstateT =
   Invert "VState" (typeRep @(VState era)) (\x y z -> VState x (CommitteeState y) z)
     :$ Lensed currentDRepState vsDRepsL
@@ -1777,7 +1789,7 @@ utxoPulse p = Var $ V "utxoPulse" (PairR (MapR TxInR (TxOutR p)) DRepPulserR) No
 -- | an invertable RootTarget to compute a (UtxoPulse era)
 pulsingPairT ::
   forall era.
-  (RunConwayRatify era, Reflect era) =>
+  (RunConwayRatify era, Reflect era, ConwayEraCertState era) =>
   Proof era ->
   RootTarget era (UtxoPulse era) (UtxoPulse era)
 pulsingPairT proof =
@@ -1800,7 +1812,7 @@ pulsingPairT proof =
 
 justPulser ::
   forall era.
-  (Reflect era, RunConwayRatify era) =>
+  (Reflect era, RunConwayRatify era, ConwayEraCertState era) =>
   Proof era ->
   RootTarget
     era
@@ -1827,7 +1839,8 @@ drepPulser = Var $ V "drepPulser" DRepPulserR No
 
 -- | Predicates that constrain the DRepPuser and all its 'prevXXX' snapshots
 --   These ensure we generate state just passing the epoch boundary
-prevPulsingPreds :: (RunConwayRatify era, Reflect era) => Proof era -> [Pred era]
+prevPulsingPreds ::
+  (RunConwayRatify era, Reflect era, ConwayEraCertState era) => Proof era -> [Pred era]
 prevPulsingPreds p =
   [ Sized (ExactSize 0) (Dom enactWithdrawals)
   , Lit CoinR (Coin 0) :=: enactTreasury
@@ -1854,7 +1867,7 @@ prevPulsingPreds p =
 --   from 'drepPulser' :: forall era. Term era (DRepPulser era Identity (RatifyState era))
 pulsingPulsingStateT ::
   forall era.
-  (RunConwayRatify era, Reflect era) =>
+  (RunConwayRatify era, Reflect era, ConwayEraCertState era) =>
   RootTarget era (DRepPulsingState era) (DRepPulsingState era)
 pulsingPulsingStateT =
   Invert "DRPulsing" (typeRep @(DRepPulsingState era)) DRPulsing
@@ -2102,7 +2115,7 @@ prevRegPoolsL =
 
 conwayGovStateT ::
   forall era.
-  (RunConwayRatify era, Reflect era) =>
+  (RunConwayRatify era, Reflect era, ConwayEraCertState era) =>
   Proof era ->
   RootTarget era (ConwayGovState era) (ConwayGovState era)
 conwayGovStateT p =

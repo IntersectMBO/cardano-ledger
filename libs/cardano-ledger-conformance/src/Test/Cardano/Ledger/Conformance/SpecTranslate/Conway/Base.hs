@@ -48,7 +48,6 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecShareCBOR (..), Interns, Sized (..))
-import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Compactible (Compactible)
 import Cardano.Ledger.Conway.Core
@@ -80,7 +79,13 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.State (IndividualPoolStake (..), PoolDistr (..), UTxO (..))
+import Cardano.Ledger.State (
+  CommitteeAuthorization (..),
+  CommitteeState (..),
+  IndividualPoolStake (..),
+  PoolDistr (..),
+  UTxO (..),
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (fromCompact)
 import Cardano.Ledger.Val (Val (..))

@@ -22,13 +22,11 @@ module Cardano.Ledger.Shelley.Rules.Epoch (
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   LedgerState,
-  PState (..),
   UTxOState (utxosDeposited, utxosGovState),
   curPParamsEpochStateL,
   esAccountState,
@@ -48,7 +46,6 @@ import Cardano.Ledger.Shelley.LedgerState.Types (prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPOOLREAP,
-  ShelleyPoolreapEnv (..),
   ShelleyPoolreapEvent,
   ShelleyPoolreapPredFailure,
   ShelleyPoolreapState (..),
@@ -149,7 +146,7 @@ instance
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era)
-  , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
+  , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
@@ -184,7 +181,7 @@ epochTransition ::
   , State (EraRule "SNAP" era) ~ SnapShots
   , Signal (EraRule "SNAP" era) ~ ()
   , Embed (EraRule "POOLREAP" era) (ShelleyEPOCH era)
-  , Environment (EraRule "POOLREAP" era) ~ ShelleyPoolreapEnv era
+  , Environment (EraRule "POOLREAP" era) ~ ()
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
@@ -211,9 +208,7 @@ epochTransition = do
   let pp = es ^. curPParamsEpochStateL
       utxoSt = lsUTxOState ls
       certState = ls ^. lsCertStateL
-      vstate = certState ^. certVStateL
       pstate = certState ^. certPStateL
-      dstate = certState ^. certDStateL
   ss' <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, ())
 
@@ -224,12 +219,11 @@ epochTransition = do
           { psStakePoolParams = ppp
           , psFutureStakePoolParams = Map.empty
           }
-  PoolreapState utxoSt' acnt' dstate' pstate'' <-
+  PoolreapState utxoSt' acnt' adjustedCertState <-
     trans @(EraRule "POOLREAP" era) $
-      TRC (ShelleyPoolreapEnv vstate, PoolreapState utxoSt acnt dstate pstate', e)
+      TRC ((), PoolreapState utxoSt acnt (certState & certPStateL .~ pstate'), e)
 
-  let adjustedCertState = mkCertState vstate pstate'' dstate'
-      ls' = ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState}
+  let ls' = ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState}
 
   UpecState pp' ppupSt' <-
     trans @(EraRule "UPEC" era) $

@@ -12,15 +12,16 @@ module Cardano.Ledger.Mary.UTxO (
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Mary.CertState ()
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.State ()
 import Cardano.Ledger.Mary.Value (MaryValue (..), filterMultiAsset, mapMaybeMultiAsset, policyID)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getShelleyMinFeeTxUtxo,
   getShelleyScriptsNeeded,
   getShelleyWitsVKeyNeeded,
+  shelleyConsumed,
   shelleyProducedValue,
  )
 import Cardano.Ledger.State (
@@ -37,6 +38,8 @@ import Lens.Micro
 
 instance EraUTxO MaryEra where
   type ScriptsNeeded MaryEra = ShelleyScriptsNeeded MaryEra
+
+  consumed = shelleyConsumed
 
   getConsumedValue = getConsumedMaryValue
 

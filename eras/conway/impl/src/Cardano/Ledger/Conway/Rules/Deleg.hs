@@ -33,16 +33,13 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  certDStateL,
-  certVStateL,
-  dsUnifiedL,
-  vsDRepsL,
- )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra)
+import Cardano.Ledger.Conway.State (
+  ConwayEraCertState (..),
+  vsDRepsL,
+ )
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (ConwayDelegCert, ConwayRegCert, ConwayRegDelegCert, ConwayUnRegCert),
   Delegatee (DelegStake, DelegStakeVote, DelegVote),
@@ -51,6 +48,10 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.Shelley.HardForks as HF
+import Cardano.Ledger.State (
+  EraCertState (..),
+  dsUnifiedL,
+ )
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_, guard, unless)
@@ -150,6 +151,7 @@ instance
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , EraRule "DELEG" era ~ ConwayDELEG era
   , EraCertState era
+  , ConwayEraCertState era
   ) =>
   STS (ConwayDELEG era)
   where
@@ -162,7 +164,8 @@ instance
 
   transitionRules = [conwayDelegTransition @era]
 
-conwayDelegTransition :: (EraPParams era, EraCertState era) => TransitionRule (ConwayDELEG era)
+conwayDelegTransition ::
+  (EraPParams era, ConwayEraCertState era) => TransitionRule (ConwayDELEG era)
 conwayDelegTransition = do
   TRC
     ( ConwayDelegEnv pp pools
@@ -241,7 +244,7 @@ conwayDelegTransition = do
 -- | Apply new delegation, while properly cleaning up older delegations. This function
 -- does not enforce that delegatee is registered, that has to be handled by the caller.
 processDelegation ::
-  EraCertState era =>
+  ConwayEraCertState era =>
   -- | Delegator
   Credential 'Staking ->
   -- | New delegatee
@@ -257,7 +260,7 @@ processDelegation stakeCred newDelegatee !certState = certState'
 -- | Same as `processDelegation`, except it expects the current delegation supplied as an
 -- argument, because in ledger rules we already have it readily available.
 processDelegationInternal ::
-  EraCertState era =>
+  ConwayEraCertState era =>
   -- | Preserve the buggy behavior where DRep delegations are not updated correctly (See #4772)
   Bool ->
   -- | Delegator
@@ -302,7 +305,7 @@ umElemToDelegatee (UM.UMElem _ _ mPool mDRep) =
     (SJust pool, SJust dRep) -> Just $ DelegStakeVote pool dRep
 
 processDRepUnDelegation ::
-  EraCertState era =>
+  ConwayEraCertState era =>
   Credential 'Staking ->
   Maybe Delegatee ->
   CertState era ->

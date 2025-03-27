@@ -24,7 +24,6 @@ module BenchValidation (
 
 import Cardano.Ledger.BaseTypes (Globals (..), unBlocksMade)
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (EraCertState)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
 import Cardano.Ledger.Shelley.BlockChain (slotToNonce)

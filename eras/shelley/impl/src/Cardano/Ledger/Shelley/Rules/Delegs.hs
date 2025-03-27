@@ -43,7 +43,6 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
@@ -71,6 +70,7 @@ import Cardano.Ledger.Shelley.TxBody (
  )
 import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert)
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.State (EraCertState (..))
 import Cardano.Ledger.UMap (UMElem (..), UMap (..), UView (..), fromCompact)
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq

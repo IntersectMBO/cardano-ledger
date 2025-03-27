@@ -15,7 +15,6 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   Block,
-  CertState,
   DelplEnv,
   ShelleyLEDGERS,
   ShelleyTx,

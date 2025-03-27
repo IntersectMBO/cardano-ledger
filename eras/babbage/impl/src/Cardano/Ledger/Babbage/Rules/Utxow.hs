@@ -51,7 +51,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), dsGenDelegsL)
 import Cardano.Ledger.Shelley.Rules (
@@ -64,7 +63,7 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
-import Cardano.Ledger.State (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.State (EraCertState (..), EraUTxO (..), ScriptsProvided (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (

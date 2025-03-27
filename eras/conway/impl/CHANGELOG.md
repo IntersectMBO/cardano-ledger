@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.19.0.1
+## 1.20.0.0
 
-*
+* Added `VState` (moved from `cardano-ledger-core`) and related functions
+* Added `ConwayEraCertState` class
+* Added `ConwayCertState` and related functions
+* Moved `CertState` to `State` module
 
 ## 1.19.0.0
 

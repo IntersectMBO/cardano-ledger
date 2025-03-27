@@ -51,13 +51,13 @@ import Cardano.Ledger.Binary (
   decNoShareCBOR,
   decodeMap,
  )
-import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (verifySignedDSIGN)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
+import Cardano.Ledger.State.CertState (CertState)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
@@ -230,6 +230,8 @@ class EraTx era => EraUTxO era where
   -- | A customizable type on per era basis for the information required to find all
   -- scripts needed for the transaction.
   type ScriptsNeeded era = (r :: Type) | r -> era
+
+  consumed :: PParams era -> CertState era -> UTxO era -> TxBody era -> Value era
 
   -- | Calculate all the value that is being consumed by the transaction.
   getConsumedValue ::

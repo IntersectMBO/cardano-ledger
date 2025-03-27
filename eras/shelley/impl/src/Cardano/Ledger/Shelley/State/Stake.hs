@@ -144,12 +144,12 @@ applyUTxOShelleyInstantStake f (UTxO u) instantStake =
 resolveShelleyInstantStake ::
   (EraStake era, InstantStake era ~ ShelleyInstantStake era) =>
   ShelleyInstantStake era -> UM.UMap -> Stake
-resolveShelleyInstantStake instantStake@ShelleyInstantStake {sisPtrStake} umap@(UM.UMap triplesMap ptrsMap) =
+resolveShelleyInstantStake instantStake@ShelleyInstantStake {sisPtrStake} umap@(UM.UMap triplesMap ptrMap) =
   Stake $ VMap.fromMap $ Map.foldlWithKey' addPtrStake credentialStakeMap sisPtrStake
   where
     !credentialStakeMap = resolveActiveInstantStakeCredentials instantStake umap
     addPtrStake !acc ptr ptrStake = fromMaybe acc $ do
-      cred <- Map.lookup ptr ptrsMap
+      cred <- Map.lookup ptr ptrMap
       -- Ensure only active staking credential receive Ptr delegations
       _ <- UM.umElemRDActive =<< Map.lookup cred triplesMap
       let plusPtrStake =

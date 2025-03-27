@@ -41,7 +41,6 @@ import Cardano.Ledger.Shelley.API (
   ShelleyTx (ShelleyTx),
   ShelleyTxBody (ShelleyTxBody),
  )
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -751,5 +750,5 @@ instance Arbitrary RawSeed where
       <*> chooseAny
 
 instance Era era => Arbitrary (ShelleyCertState era) where
-  arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = ShelleyCertState <$> arbitrary <*> arbitrary
   shrink = genericShrink

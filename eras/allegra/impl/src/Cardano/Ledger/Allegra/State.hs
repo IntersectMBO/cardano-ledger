@@ -4,4 +4,5 @@ module Cardano.Ledger.Allegra.State (
 
 import Cardano.Ledger.Shelley.State
 
+import Cardano.Ledger.Allegra.State.CertState ()
 import Cardano.Ledger.Allegra.State.Stake ()

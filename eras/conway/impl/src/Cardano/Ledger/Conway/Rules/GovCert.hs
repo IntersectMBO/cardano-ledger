@@ -37,19 +37,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
-  CommitteeState (..),
-  EraCertState (..),
-  VState (..),
-  csCommitteeCredsL,
-  dsUnifiedL,
-  vsCommitteeStateL,
-  vsDRepsL,
-  vsNumDormantEpochsL,
- )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.CertState ()
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT)
 import Cardano.Ledger.Conway.Governance (
@@ -60,11 +48,24 @@ import Cardano.Ledger.Conway.Governance (
   GovPurposeId,
   ProposalProcedure (..),
  )
+import Cardano.Ledger.Conway.State (
+  ConwayEraCertState (..),
+  VState (..),
+  csCommitteeCredsL,
+  vsCommitteeStateL,
+  vsDRepsL,
+  vsNumDormantEpochsL,
+ )
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
+import Cardano.Ledger.State (
+  CommitteeAuthorization (..),
+  CommitteeState (..),
+  EraCertState (..),
+  dsUnifiedL,
+ )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
 import Control.DeepSeq (NFData)
@@ -168,8 +169,7 @@ instance
   , EraRule "GOVCERT" era ~ ConwayGOVCERT era
   , Eq (PredicateFailure (EraRule "GOVCERT" era))
   , Show (PredicateFailure (EraRule "GOVCERT" era))
-  , EraCertState era
-  , CertState era ~ ShelleyCertState era
+  , ConwayEraCertState era
   ) =>
   STS (ConwayGOVCERT era)
   where
@@ -183,7 +183,9 @@ instance
   transitionRules = [conwayGovCertTransition @era]
 
 conwayGovCertTransition ::
-  (ConwayEraPParams era, EraCertState era, CertState era ~ ShelleyCertState era) =>
+  ( ConwayEraPParams era
+  , ConwayEraCertState era
+  ) =>
   TransitionRule (ConwayGOVCERT era)
 conwayGovCertTransition = do
   TRC

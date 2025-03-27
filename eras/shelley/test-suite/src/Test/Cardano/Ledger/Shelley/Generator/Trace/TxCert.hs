@@ -19,24 +19,18 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (
 where
 
 import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, SlotNo (..), TxIx)
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  lookupDepositDState,
-  lookupDepositVState,
-  psStakePoolParams,
- )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (SlotNo32 (..))
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Cardano.Ledger.Shelley.API (
-  AccountState,
   DelplEnv (..),
   Ptr (..),
   ShelleyDELPL,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyDelplEvent, ShelleyDelplPredFailure)
+import Cardano.Ledger.State
 import Cardano.Protocol.Crypto (Crypto)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition (
@@ -229,7 +223,6 @@ genTxCerts
         st0 = (certState, minBound)
         certDState = certState ^. certDStateL
         certPState = certState ^. certPStateL
-        certVState = certState ^. certVStateL
 
     certsTrace <-
       QC.traceFrom @(CERTS era) testGlobals maxCertsPerTx ge env st0
@@ -244,7 +237,7 @@ genTxCerts
           getTotalRefundsTxCerts
             pp
             (lookupDepositDState certDState)
-            (lookupDepositVState certVState)
+            (const Nothing)
             certs
 
         deposits = getTotalDepositsTxCerts pp (`Map.member` psStakePoolParams certPState) certs

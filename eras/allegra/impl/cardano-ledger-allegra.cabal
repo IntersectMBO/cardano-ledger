@@ -35,7 +35,6 @@ library
 
   hs-source-dirs: src
   other-modules:
-    Cardano.Ledger.Allegra.CertState
     Cardano.Ledger.Allegra.Era
     Cardano.Ledger.Allegra.PParams
     Cardano.Ledger.Allegra.Rules.Bbody
@@ -48,6 +47,7 @@ library
     Cardano.Ledger.Allegra.Rules.Ppup
     Cardano.Ledger.Allegra.Rules.Utxo
     Cardano.Ledger.Allegra.Rules.Utxow
+    Cardano.Ledger.Allegra.State.CertState
     Cardano.Ledger.Allegra.State.Stake
     Cardano.Ledger.Allegra.TxCert
     Cardano.Ledger.Allegra.TxOut
@@ -71,7 +71,7 @@ library
     bytestring,
     cardano-ledger-binary >=1.4,
     cardano-ledger-core >=1.17,
-    cardano-ledger-shelley ^>=1.16,
+    cardano-ledger-shelley ^>=1.17,
     cardano-slotting,
     cardano-strict-containers,
     cborg,

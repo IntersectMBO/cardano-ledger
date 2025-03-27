@@ -12,15 +12,12 @@ module Test.Cardano.Ledger.Shelley.Rules.Deposits (
 )
 where
 
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules.Reports (synopsisCoinMap)

@@ -18,10 +18,7 @@ import Cardano.Ledger.PoolParams (ppId)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
-  PState (..),
   curPParamsEpochStateL,
-  psFutureStakePoolParams,
-  psStakePoolParams,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyPOOL)
 import Cardano.Ledger.Shelley.State

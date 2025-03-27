@@ -47,7 +47,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
@@ -84,6 +83,7 @@ import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
+import Cardano.Ledger.Conway.State (ConwayEraCertState)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
@@ -108,7 +108,7 @@ import Cardano.Ledger.Shelley.Rules (
   shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
-import Cardano.Ledger.State (EraUTxO (..))
+import Cardano.Ledger.State (EraCertState (..), EraUTxO (..))
 import Cardano.Ledger.UMap (UView (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)
@@ -503,6 +503,7 @@ instance
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
   , EraRule "CERTS" era ~ ConwayCERTS era
   , EraCertState era
+  , ConwayEraCertState era
   ) =>
   Embed (ConwayCERTS era) (ConwayLEDGER era)
   where
@@ -547,6 +548,7 @@ instance
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
   , EraCertState era
+  , ConwayEraCertState era
   ) =>
   Embed (ConwayGOV era) (ConwayLEDGER era)
   where
@@ -561,6 +563,7 @@ instance
   , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
   , Event (EraRule "CERT" era) ~ ConwayCertEvent era
   , EraCertState era
+  , ConwayEraCertState era
   ) =>
   Embed (ConwayDELEG era) (ConwayLEDGER era)
   where

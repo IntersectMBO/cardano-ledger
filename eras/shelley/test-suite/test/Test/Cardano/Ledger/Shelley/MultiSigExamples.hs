@@ -24,7 +24,6 @@ import Cardano.Ledger.BaseTypes (
   maybeToStrictMaybe,
   mkTxIxPartial,
  )
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (
   pattern KeyHashObj,

@@ -91,6 +91,7 @@ roundTripConwayEraTypesSpec = do
     roundTripShareEraTypeSpec @era @DRepPulsingState
     roundTripShareEraTypeSpec @era @PulsingSnapshot
     roundTripShareEraTypeSpec @era @RatifyState
+    roundTripShareEraTypeSpec @era @VState
 
 instance RuleListEra ConwayEra where
   type

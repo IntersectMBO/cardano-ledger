@@ -20,7 +20,6 @@ module Cardano.Ledger.Shelley.Internal (
 )
 where
 
-import Cardano.Ledger.CertState (Obligations (..))
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
   consumedTxBody,
@@ -38,6 +37,7 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   showWithdrawal,
   synopsisCoinMap,
  )
+import Cardano.Ledger.State (Obligations (..))
 import Cardano.Ledger.Val ((<->))
 import Debug.Trace (trace)
 

@@ -33,7 +33,6 @@ import Cardano.Ledger.BaseTypes (
   randomnessStabilisationWindow,
   securityParameter,
  )
-import Cardano.Ledger.CertState (EraCertState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -55,6 +54,7 @@ import Cardano.Ledger.Slot (
   epochInfoSize,
   (+*),
  )
+import Cardano.Ledger.State (EraCertState)
 import Cardano.Slotting.EpochInfo.API (epochInfoRange)
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity (..))

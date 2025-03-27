@@ -12,7 +12,6 @@
 
 module Cardano.Ledger.Alonzo.Translation where
 
-import Cardano.Ledger.Alonzo.CertState ()
 import Cardano.Ledger.Alonzo.Core hiding (Tx)
 import qualified Cardano.Ledger.Alonzo.Core as Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
@@ -21,10 +20,7 @@ import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.State
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..), EraCertState (..), PState (..), VState (..))
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
@@ -110,16 +106,16 @@ instance TranslateEra AlonzoEra DState where
 instance TranslateEra AlonzoEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance TranslateEra AlonzoEra VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
-
 instance TranslateEra AlonzoEra PState where
   translateEra _ PState {..} = pure PState {..}
 
 instance TranslateEra AlonzoEra ShelleyCertState where
-  translateEra (AlonzoGenesisWrapper _scs) = pure . upgradeCertState
+  translateEra ctxt ls =
+    pure
+      ShelleyCertState
+        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        }
 
 instance TranslateEra AlonzoEra LedgerState where
   translateEra ctxt ls =

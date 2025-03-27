@@ -49,7 +49,6 @@ library
 
   hs-source-dirs: src
   other-modules:
-    Cardano.Ledger.Alonzo.CertState
     Cardano.Ledger.Alonzo.Era
     Cardano.Ledger.Alonzo.Rules.Bbody
     Cardano.Ledger.Alonzo.Rules.Deleg
@@ -62,6 +61,7 @@ library
     Cardano.Ledger.Alonzo.Rules.Utxo
     Cardano.Ledger.Alonzo.Rules.Utxos
     Cardano.Ledger.Alonzo.Rules.Utxow
+    Cardano.Ledger.Alonzo.State.CertState
     Cardano.Ledger.Alonzo.State.Stake
     Cardano.Ledger.Alonzo.TxCert
 
@@ -86,7 +86,7 @@ library
     cardano-ledger-binary ^>=1.6,
     cardano-ledger-core ^>=1.18,
     cardano-ledger-mary ^>=1.8,
-    cardano-ledger-shelley ^>=1.16,
+    cardano-ledger-shelley ^>=1.17,
     cardano-slotting,
     cardano-strict-containers,
     containers,

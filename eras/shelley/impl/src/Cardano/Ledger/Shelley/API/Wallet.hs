@@ -60,7 +60,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..))
@@ -84,7 +83,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   esLStateL,
   lsCertStateL,
   nesEsL,
-  psStakePoolParamsL,
  )
 import Cardano.Ledger.Shelley.PoolRank (
   NonMyopic (..),

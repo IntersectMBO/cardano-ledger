@@ -28,7 +28,6 @@ import Cardano.Ledger.BaseTypes (
   maybeToStrictMaybe,
  )
 import Cardano.Ledger.Binary (EncCBOR, serialize)
-import Cardano.Ledger.CertState (EraCertState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -43,6 +42,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (DelplEnv, LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
 import Cardano.Ledger.State (
+  EraCertState (..),
   EraUTxO,
   UTxO (..),
   getMinFeeTxUtxo,

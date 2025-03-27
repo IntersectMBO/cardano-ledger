@@ -18,11 +18,6 @@ import Cardano.Ledger.Block (
   Block (..),
   bbody,
  )
-import Cardano.Ledger.CertState (
-  EraCertState (..),
-  certsTotalDepositsTxBody,
-  certsTotalRefundsTxBody,
- )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Shelley.Core
@@ -37,17 +32,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   deltaF,
   deltaR,
   deltaT,
-  dsIRewardsL,
-  dsUnifiedL,
   esLStateL,
-  iRReserves,
-  iRTreasury,
   lsCertStateL,
   nesEsL,
   prevPParamsEpochStateL,
-  psDepositsL,
-  psRetiringL,
-  rewards,
   rs,
  )
 import Cardano.Ledger.Shelley.Rewards (sumRewards)

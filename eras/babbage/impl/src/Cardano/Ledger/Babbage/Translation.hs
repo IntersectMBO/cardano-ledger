@@ -14,7 +14,6 @@ module Cardano.Ledger.Babbage.Translation where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import Cardano.Ledger.Babbage.CertState ()
 import Cardano.Ledger.Babbage.Core hiding (Tx)
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
@@ -22,17 +21,12 @@ import Cardano.Ledger.Babbage.State
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.Core as Core (Tx)
-import Cardano.Ledger.Shelley.CertState (ShelleyCertState)
 import Cardano.Ledger.Shelley.LedgerState (
-  DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  PState (..),
   UTxOState (..),
-  VState (..),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Data.Coerce (coerce)
@@ -112,15 +106,16 @@ instance TranslateEra BabbageEra DState where
 instance TranslateEra BabbageEra CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
 
-instance TranslateEra BabbageEra VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
-
 instance TranslateEra BabbageEra PState where
   translateEra _ PState {..} = pure PState {..}
 
-instance TranslateEra BabbageEra ShelleyCertState
+instance TranslateEra BabbageEra ShelleyCertState where
+  translateEra ctxt ls =
+    pure
+      ShelleyCertState
+        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        }
 
 instance TranslateEra BabbageEra LedgerState where
   translateEra ctxt ls =

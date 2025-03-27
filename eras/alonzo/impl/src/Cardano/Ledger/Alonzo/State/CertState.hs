@@ -2,25 +2,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.CertState () where
+module Cardano.Ledger.Alonzo.State.CertState () where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.CertState
-import Cardano.Ledger.Shelley.CertState
-import Data.Coerce (coerce)
+import Cardano.Ledger.Shelley.State
 
 instance EraCertState AlonzoEra where
   type CertState AlonzoEra = ShelleyCertState AlonzoEra
 
-  mkCertState = mkShelleyCertState
-
-  upgradeCertState = coerce
-
   certDStateL = shelleyCertDStateL
   {-# INLINE certDStateL #-}
-
-  certVStateL = shelleyCertVStateL
-  {-# INLINE certVStateL #-}
 
   certPStateL = shelleyCertPStateL
   {-# INLINE certPStateL #-}
