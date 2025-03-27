@@ -28,7 +28,6 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.State
 import Constrained.API
 import Data.Map (Map)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
@@ -135,8 +134,6 @@ lsX ::
   forall era.
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
-  , -- TODO: remove once `ledgerStateSpec` is general enough
-    IsNormalType (CertState era)
   ) =>
   PParams era -> Gen (LedgerState era)
 lsX pp = do
@@ -147,7 +144,7 @@ lsX pp = do
 
 esX ::
   forall era.
-  (EraSpecLedger era, HasSpec (InstantStake era), IsNormalType (CertState era)) =>
+  (EraSpecLedger era, HasSpec (InstantStake era)) =>
   PParams era -> Gen (EpochState era)
 esX pp = do
   univ <- genWitUniv @era 50
@@ -169,7 +166,6 @@ snapsX ::
   forall era.
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
-  , IsNormalType (CertState era) --  ~ ShelleyCertState era
   ) =>
   PParams era -> Gen SnapShots
 snapsX pp = do

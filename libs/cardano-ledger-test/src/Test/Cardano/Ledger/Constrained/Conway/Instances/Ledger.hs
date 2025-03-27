@@ -20,8 +20,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-
--- {-# OPTIONS_GHC -Wno-redundant-constraints #-}
+-- GHC9.2.8 needs this
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- RecordWildCards cause name shadowing warnings in ghc-8.10.
 #if __GLASGOW_HASKELL__ < 900
@@ -972,10 +972,10 @@ instance HasSimpleRep RDPair where
 instance HasSpec RDPair
 
 instance Typeable era => HasSimpleRep (ShelleyCertState era)
-instance EraCertState era => HasSpec fn (ShelleyCertState era)
+instance EraCertState era => HasSpec (ShelleyCertState era)
 
 instance Typeable era => HasSimpleRep (ConwayCertState era)
-instance (ConwayEraCertState era) => HasSpec (ConwayCertState era)
+instance ConwayEraCertState era => HasSpec (ConwayCertState era)
 
 instance Typeable era => HasSimpleRep (GovRelation StrictMaybe era)
 instance Era era => HasSpec (GovRelation StrictMaybe era)
@@ -1285,11 +1285,7 @@ instance
 instance HasSimpleRep SnapShots
 instance HasSpec SnapShots
 
-<<<<<<< HEAD
-instance HasSimpleRep (LedgerState era)
-=======
 instance (Typeable (CertState era), EraTxOut era) => HasSimpleRep (LedgerState era)
->>>>>>> 8c35aed04 (Applied the changes to the cardano-ledger-test module)
 instance
   ( EraTxOut era
   , HasSpec (TxOut era)
@@ -1297,14 +1293,9 @@ instance
   , HasSpec (GovState era)
   , EraStake era
   , EraCertState era
-<<<<<<< HEAD
-  , HasSpec fn (InstantStake era)
-  , HasSpec fn (CertState era)
   , IsNormalType (CertState era)
-=======
   , HasSpec (InstantStake era)
   , HasSpec (CertState era)
->>>>>>> 8c35aed04 (Applied the changes to the cardano-ledger-test module)
   ) =>
   HasSpec (LedgerState era)
 
@@ -1608,14 +1599,9 @@ instance
   , HasSpec (GovState era)
   , EraStake era
   , EraCertState era
-<<<<<<< HEAD
-  , HasSpec fn (InstantStake era)
-  , HasSpec fn (CertState era)
   , IsNormalType (CertState era)
-=======
   , HasSpec (InstantStake era)
   , HasSpec (CertState era)
->>>>>>> 8c35aed04 (Applied the changes to the cardano-ledger-test module)
   ) =>
   HasSpec (EpochState era)
 
@@ -1656,14 +1642,9 @@ instance
   , HasSpec (StashedAVVMAddresses era)
   , EraStake era
   , EraCertState era
-<<<<<<< HEAD
-  , HasSpec fn (CertState era)
-  , HasSpec fn (InstantStake era)
   , IsNormalType (CertState era)
-=======
   , HasSpec (CertState era)
   , HasSpec (InstantStake era)
->>>>>>> 8c35aed04 (Applied the changes to the cardano-ledger-test module)
   ) =>
   HasSpec (NewEpochState era)
 
@@ -1754,6 +1735,7 @@ instance Semantics CoercibleW where
     CoerceW -> coerce
 
 instance (Typeable a, Typeable b, CoercibleLike a b) => Logic "coerce_" CoercibleW '[a] b where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
   propagate _ (ErrorSpec msgs) = ErrorSpec msgs

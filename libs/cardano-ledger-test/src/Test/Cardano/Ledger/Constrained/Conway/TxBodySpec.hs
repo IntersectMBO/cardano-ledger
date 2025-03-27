@@ -17,14 +17,18 @@ module Test.Cardano.Ledger.Constrained.Conway.TxBodySpec where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.BaseTypes (Network (..))
-import Cardano.Ledger.CertState (EraCertState (..), lookupDepositDState, lookupDepositVState)
+
+-- import Cardano.Ledger.State (EraCertState (..), lookupDepositDState)
+-- import Cardano.Ledger.Conway.State(lookupDepositVState)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Rules (CertsEnv (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.LedgerState (PState (..))
+
+-- import Cardano.Ledger.Shelley.LedgerState (PState (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
-import Cardano.Ledger.State (UTxO (..), coinBalance)
+
+-- import Cardano.Ledger.State (UTxO (..), coinBalance)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
 import Constrained.API
@@ -43,19 +47,21 @@ import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 import Test.QuickCheck hiding (forAll, witness)
 import Prelude hiding (seq)
-import Cardano.Ledger.Address (Withdrawals (..))
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Babbage (BabbageEra)
+
+-- import Cardano.Ledger.Address (Withdrawals (..))
+-- import Cardano.Ledger.Alonzo (AlonzoEra)
+-- import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.AdaPots (Consumed (..), Produced (..), consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.LedgerState (CertState, PState (..))
-import Cardano.Ledger.Shelley.State (ShelleyCertState)
-import Cardano.Ledger.State (EraCertState (..), lookupDepositDState)
-import Data.Text (pack)
-import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
+
+-- import Cardano.Ledger.Mary (MaryEra)
+-- import Cardano.Ledger.Shelley (ShelleyEra)
+-- import Cardano.Ledger.Shelley.AdaPots (Consumed (..), Produced (..), consumedTxBody, producedTxBody)
+-- import Cardano.Ledger.Shelley.LedgerState (CertState, PState (..))
+-- import Cardano.Ledger.Shelley.State (ShelleyCertState)
+-- import Cardano.Ledger.State (EraCertState (..), lookupDepositDState)
+-- import Data.Text (pack)
+-- import Lens.Micro
+-- import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
 -- =================================
 -- Move these to the MapSpec

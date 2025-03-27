@@ -72,12 +72,26 @@ shelleyCertStateSpec ::
   Set (Credential 'DRepRole) ->
   Map (RewardAccount) Coin ->
   Specification (ShelleyCertState era)
-shelleyCertStateSpec univ delegatees wdrls =
+shelleyCertStateSpec univ _delegatees wdrls =
+  constrained $ \cs ->
+    match cs $ \pState dState ->
+      [ satisfies pState (pStateSpec @era univ)
+      , satisfies dState (dStateSpec @era univ wdrls)
+      ]
+
+conwayCertStateSpec ::
+  forall era.
+  (EraSpecDeleg era, EraCertState era, ConwayEraCertState era) =>
+  WitUniv era ->
+  Set (Credential 'DRepRole) ->
+  Map (RewardAccount) Coin ->
+  Specification (ConwayCertState era)
+conwayCertStateSpec univ delegatees wdrls =
   constrained $ \cs ->
     match cs $ \vState pState dState ->
-      [ satisfies vState (vStateSpec @era univ delegatees)
-      , satisfies pState (pStateSpec @era univ)
+      [ satisfies pState (pStateSpec @era univ)
       , satisfies dState (dStateSpec @era univ wdrls)
+      , satisfies vState (vStateSpec univ delegatees)
       ]
 
 conwayTxCertSpec ::
@@ -317,3 +331,21 @@ testConwayCert = do
         (ConwayTxCertGov (ConwayAuthCommitteeHotKey _ _)) -> "AuthCommittee"
         (ConwayTxCertGov (ConwayResignCommitteeColdKey _ _)) -> "ResignCommittee"
   pure (classify True tag (conformsToSpec ans spec))
+
+{-
+conwayCertStateSpec ::
+  WitUniv ConwayEra ->
+  Term AccountState ->
+  Term EpochNo ->
+  Specification (ConwayCertState ConwayEra)
+conwayCertStateSpec univ acct epoch = constrained $ \ [var|convCertState|] ->
+  match convCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
+    [ satisfies pState (pstateSpec univ epoch)
+    , reify pState psStakePoolParams $ \ [var|poolreg|] ->
+        [ dependsOn dState poolreg
+        , satisfies dState (dstateSpec univ acct poolreg)
+        ]
+    , reify dState getDelegatees $ \ [var|delegatees|] ->
+        satisfies vState (vstateSpec univ epoch delegatees)
+    ]
+-}

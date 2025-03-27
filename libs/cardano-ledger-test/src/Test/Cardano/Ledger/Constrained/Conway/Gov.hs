@@ -172,7 +172,7 @@ proposalsSpec geEpoch gePPolicy geCertState =
       , genHint listSizeHint unorderedProposals
       ]
   where
-    treeGenHint = (Just 2, 6 {- 10 -})
+    treeGenHint = (Just 2, 6)
     listSizeHint = 5
 
 allGASInTree ::
