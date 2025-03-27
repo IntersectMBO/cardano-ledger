@@ -30,7 +30,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   impScriptPredicateFailure,
   submitPhase2Invalid_,
   submitPhase2Invalid,
-  expectTxSuccess,
+  impAlonzoExpectTxSuccess,
   -- Fixup
   fixupDatums,
   fixupOutputDatums,
@@ -436,6 +436,7 @@ instance ShelleyEraImp AlonzoEra where
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = alonzoFixupTx
+  expectTxSuccess = impAlonzoExpectTxSuccess
 
 instance MaryEraImp AlonzoEra
 
@@ -516,25 +517,25 @@ submitPhase2Invalid tx = do
   impAnn "Submit tx with IsValid False" $ do
     withNoFixup $ submitTx $ fixedUpTx & isValidTxL .~ IsValid False
 
-expectTxSuccess ::
+impAlonzoExpectTxSuccess ::
   ( HasCallStack
   , AlonzoEraImp era
   ) =>
   Tx era -> ImpTestM era ()
-expectTxSuccess tx
-  | tx ^. isValidTxL == IsValid True = do
-      utxo <- getsNES utxoL
-      let inputs = Set.toList $ tx ^. bodyTxL . inputsTxBodyL
-          outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL
+impAlonzoExpectTxSuccess tx = do
+  utxo <- getsNES utxoL
+  let inputs = tx ^. bodyTxL . inputsTxBodyL
+      collaterals = tx ^. bodyTxL . collateralInputsTxBodyL
+      outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL
+  if tx ^. isValidTxL == IsValid True
+    then do
       impAnn "Inputs should be gone from UTxO" $
-        expectUTxOContent utxo [(txIn, isNothing) | txIn <- inputs]
+        expectUTxOContent utxo [(txIn, isNothing) | txIn <- Set.toList inputs]
+      impAnn "Collateral inputs should still be in UTxO" $
+        expectUTxOContent utxo [(txIn, isJust) | txIn <- Set.toList $ collaterals \\ inputs]
       impAnn "Outputs should be in UTxO" $
         expectUTxOContent utxo [(txIn, (== Just txOut)) | (txIn, txOut) <- outputs]
-  | otherwise = do
-      utxo <- getsNES utxoL
-      let inputs = tx ^. bodyTxL . inputsTxBodyL
-          collaterals = tx ^. bodyTxL . collateralInputsTxBodyL
-          outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL
+    else do
       impAnn "Non-collateral inputs should still be in UTxO" $
         expectUTxOContent utxo [(txIn, isJust) | txIn <- Set.toList $ inputs \\ collaterals]
       impAnn "Collateral inputs should not be in UTxO" $

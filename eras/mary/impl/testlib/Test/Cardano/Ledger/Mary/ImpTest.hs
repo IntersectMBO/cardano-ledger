@@ -25,6 +25,7 @@ import Test.Cardano.Ledger.Mary.TreeDiff ()
 instance ShelleyEraImp MaryEra where
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = shelleyFixupTx
+  expectTxSuccess = impShelleyExpectTxSuccess
 
 class
   ( ShelleyEraImp era

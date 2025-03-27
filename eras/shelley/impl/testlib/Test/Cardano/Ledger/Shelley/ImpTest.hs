@@ -56,6 +56,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   submitFailingTx,
   submitFailingTxM,
   trySubmitTx,
+  impShelleyExpectTxSuccess,
   modifyNES,
   getProtVer,
   getsNES,
@@ -237,7 +238,7 @@ import Data.Functor.Identity (Identity (..))
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, mapMaybe)
+import Data.Maybe (catMaybes, isNothing, mapMaybe)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
@@ -519,6 +520,8 @@ class
 
   fixupTx :: HasCallStack => Tx era -> ImpTestM era (Tx era)
 
+  expectTxSuccess :: HasCallStack => Tx era -> ImpTestM era ()
+
 defaultInitNewEpochState ::
   forall era g s m.
   ( MonadState s m
@@ -751,6 +754,7 @@ instance
     pure $ satisfyScript script
 
   fixupTx = shelleyFixupTx
+  expectTxSuccess = impShelleyExpectTxSuccess
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -1031,6 +1035,20 @@ shelleyFixupTx =
     >=> updateAddrTxWits
     >=> (\tx -> logFeeMismatch tx $> tx)
 
+impShelleyExpectTxSuccess ::
+  forall era.
+  (ShelleyEraImp era, HasCallStack) =>
+  Tx era ->
+  ImpTestM era ()
+impShelleyExpectTxSuccess tx = do
+  utxo <- getsNES utxoL
+  let inputs = tx ^. bodyTxL . inputsTxBodyL
+      outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL
+  impAnn "Inputs should be gone from UTxO" $
+    expectUTxOContent utxo [(txIn, isNothing) | txIn <- Set.toList inputs]
+  impAnn "Outputs should be in UTxO" $
+    expectUTxOContent utxo [(txIn, (== Just txOut)) | (txIn, txOut) <- outputs]
+
 logFeeMismatch :: (EraGov era, EraUTxO era, HasCallStack) => Tx era -> ImpTestM era ()
 logFeeMismatch tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -1105,6 +1123,7 @@ trySubmitTx tx = do
             | Map.member impRootTxIn utxo = impRootTxIn
             | otherwise = error "Root not found in UTxO"
       impRootTxInL .= newRoot
+      expectTxSuccess txFixed
       pure $ Right txFixed
 {- FOURMOLU_ENABLE -}
 

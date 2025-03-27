@@ -12,21 +12,31 @@
 
 module Test.Cardano.Ledger.Babbage.ImpTest (
   babbageFixupTx,
+  impBabbageExpectTxSuccess,
   module Test.Cardano.Ledger.Alonzo.ImpTest,
   produceRefScript,
   produceRefScripts,
 ) where
 
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
+import Cardano.Ledger.Shelley.LedgerState (
+  UTxO (..),
+  curPParamsEpochStateL,
+  nesEsL,
+  utxoL,
+ )
 import Cardano.Ledger.Tools (ensureMinCoinTxOut, setMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
 import Control.Monad (forM, (>=>))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
+import Data.Maybe (isNothing)
 import qualified Data.Sequence.Strict as SSeq
 import GHC.Stack (HasCallStack)
 import Lens.Micro
@@ -40,6 +50,7 @@ instance ShelleyEraImp BabbageEra where
       (nesEsL . curPParamsEpochStateL . ppCostModelsL <>~ testingCostModels [PlutusV2])
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = babbageFixupTx
+  expectTxSuccess = impBabbageExpectTxSuccess
 
 babbageFixupTx ::
   ( HasCallStack
@@ -73,6 +84,25 @@ fixupCollateralReturn ::
 fixupCollateralReturn tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   pure $ tx & bodyTxL . collateralReturnTxBodyL %~ fmap (ensureMinCoinTxOut pp)
+
+impBabbageExpectTxSuccess ::
+  ( HasCallStack
+  , AlonzoEraImp era
+  , BabbageEraTxBody era
+  ) =>
+  Tx era -> ImpTestM era ()
+impBabbageExpectTxSuccess tx = do
+  impAlonzoExpectTxSuccess tx
+  -- Check that the balance of the collateral was returned
+  let returns = Map.toList . unUTxO . collOuts $ tx ^. bodyTxL
+  utxo <- getsNES utxoL
+  if tx ^. isValidTxL == IsValid True
+    then do
+      impAnn "Collateral return should not be in UTxO" $
+        expectUTxOContent utxo [(txIn, isNothing) | (txIn, _txOut) <- returns]
+    else do
+      impAnn "Collateral return should be in UTxO" $
+        expectUTxOContent utxo [(txIn, (== Just txOut)) | (txIn, txOut) <- returns]
 
 instance ShelleyEraImp BabbageEra => MaryEraImp BabbageEra
 
