@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -9,12 +10,15 @@
 module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Mismatch (..))
+import Cardano.Ledger.CertState (DRep (..), EraCertState (..), dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..), ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, esLStateL, lsCertStateL, nesEsL)
+import Cardano.Ledger.UMap (umElemDRep, umElemsL)
 import Cardano.Ledger.Val (Val (..))
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro ((&), (.~))
@@ -43,6 +47,15 @@ spec = do
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton (ResignCommitteeColdTxCert ccColdCred SNothing)
         )
+  it "Cleans up delegations after a DRep is deregistered" $ do
+    dRep <- KeyHashObj <$> registerDRep
+    stakeCred <- KeyHashObj <$> freshKeyHash
+    _ <- registerStakeCredential stakeCred
+    _ <- delegateToDRep stakeCred (Coin 1_000_000) (DRepCredential dRep)
+    unRegisterDRep dRep
+    _ <- registerStakeCredential . KeyHashObj =<< freshKeyHash
+    uMapElems <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . umElemsL
+    (umElemDRep =<< Map.lookup stakeCred uMapElems) `shouldBeExpr` Nothing
   describe "succeeds for" $ do
     it "registering and unregistering a DRep" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
