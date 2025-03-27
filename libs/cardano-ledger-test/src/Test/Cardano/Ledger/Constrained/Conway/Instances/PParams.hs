@@ -13,7 +13,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- RecordWildCards cause name shadowing warnings in ghc-8.10.
 #if __GLASGOW_HASKELL__ < 900

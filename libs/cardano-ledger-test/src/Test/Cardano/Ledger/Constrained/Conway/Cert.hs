@@ -175,7 +175,7 @@ shelleyTxCertSpec univ (CertEnv pp currEpoch _ _) (ShelleyCertState pstate dstat
 
 class
   ( HasSpec (TxCert era)
-  , Era era
+  , EraCertState era
   ) =>
   EraSpecCert era
   where

@@ -15,7 +15,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- RecordWildCards cause name shadowing warnings in ghc-8.10.
 #if __GLASGOW_HASKELL__ < 900
@@ -30,6 +29,7 @@
 --   because SimplePParams, needs these instances but not the 100's of other
 --   ones defined in Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 --   And too many instances causes GHC 8.10.7 to blow up.
+--   It also defines
 module Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (
   cSNothing_,
   cSJust_,
@@ -40,6 +40,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (
   SimplePParams (..),
   SimplePPUpdate (..),
   EraSpecPParams (..),
+  prettyE,
 ) where
 
 import Cardano.Ledger.Alonzo.PParams
@@ -50,18 +51,17 @@ import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-
 import Constrained.API
 import Constrained.Base
 import Constrained.GenT
 import Constrained.NumSpec
 import Constrained.Spec.ListFoldy (genListWithSize)
 import Constrained.TheKnot
-
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Fail.String
 import Data.Maybe
 import Data.Ratio ((%))
+import Data.TreeDiff
 import Data.Typeable
 import Data.Word
 import GHC.Generics (Generic)
@@ -69,9 +69,14 @@ import Numeric.Natural (Natural)
 import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
-import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
 import Test.QuickCheck hiding (Args, Fun, NonZero, forAll)
+import Text.PrettyPrint.HughesPJ (Doc)
+
+-- ===============================================
+-- Pretty printing via TreeDiff Expr
+
+prettyE :: ToExpr x => x -> Doc
+prettyE x = prettyExpr (toExpr x)
 
 -- ============================================================================
 -- Making Intervals based on Ratios, These can fail, so be careful using them.
@@ -282,13 +287,13 @@ data SimplePParams era = SimplePParams
   }
   deriving (Eq, Generic)
 
-instance (EraSpecPParams era, Reflect era) => Show (SimplePParams era) where
-  show x = show (prettyA (subsetToPP @era x))
+instance (EraSpecPParams era, EraGov era, EraTxOut era) => Show (SimplePParams era) where
+  show x = show (subsetToPP @era x)
 
 -- | Use then generic HasSimpleRep and HasSpec instances for SimplePParams
 instance HasSimpleRep (SimplePParams era)
 
-instance (EraSpecPParams era, Reflect era) => HasSpec (SimplePParams era)
+instance (EraSpecPParams era, EraGov era, EraTxOut era) => HasSpec (SimplePParams era)
 
 -- | Use this as the SimpleRep of (PParamsUpdate era)
 data SimplePPUpdate = SimplePPUpdate
@@ -358,7 +363,7 @@ instance EraSpecPParams era => HasSimpleRep (PParams era) where
   fromSimpleRep = subsetToPP
 
 -- | HasSpec instance for PParams
-instance (EraSpecPParams era, HasSpec Coin) => HasSpec (PParams era) where
+instance (EraSpecPParams era, EraTxOut era, EraGov era, HasSpec Coin) => HasSpec (PParams era) where
   genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
 
 -- =======================================
@@ -367,7 +372,7 @@ instance EraSpecPParams era => HasSimpleRep (ProposedPPUpdates era)
 instance EraSpecPParams era => HasSpec (ProposedPPUpdates era)
 
 instance EraSpecPParams era => HasSimpleRep (FuturePParams era)
-instance EraSpecPParams era => HasSpec (FuturePParams era)
+instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (FuturePParams era)
 
 -- =============================================================
 
@@ -375,12 +380,14 @@ instance EraSpecPParams era => HasSpec (FuturePParams era)
 --   This allow us to use (SimplePParams era) as the (SimpleRep (PParams era))
 --   Much easier to constrain (SimplePParams era) than (PParams era) with all the THKD stuff.
 class
-  ( Reflect era
-  , Eq (PParamsHKD Identity era)
+  ( Eq (PParamsHKD Identity era)
   , Show (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , EraPParams era
+  , EraTxOut era
+  , EraGov era
+  , EraTx era
   ) =>
   EraSpecPParams era
   where

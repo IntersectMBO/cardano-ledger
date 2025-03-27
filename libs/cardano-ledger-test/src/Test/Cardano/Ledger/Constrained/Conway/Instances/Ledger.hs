@@ -20,7 +20,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+
+-- {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- RecordWildCards cause name shadowing warnings in ghc-8.10.
 #if __GLASGOW_HASKELL__ < 900
@@ -382,7 +383,6 @@ txOutVal_ = sel @1
 instance
   ( Compactible a
   , HasSimpleRep a
-  , Typeable (SimpleRep a)
   , Show (SimpleRep a)
   ) =>
   HasSimpleRep (CompactForm a)
@@ -394,11 +394,11 @@ instance
       err = error $ "toCompact @" ++ show (typeOf x) ++ " " ++ show x
 instance
   ( Compactible a
+  , Typeable (TypeSpec (SimpleRep a))
+  , Show (TypeSpec (SimpleRep a))
   , HasSpec a
   , HasSimpleRep a
   , HasSpec (SimpleRep a)
-  , Typeable (TypeSpec (SimpleRep a))
-  , Show (TypeSpec (SimpleRep a))
   ) =>
   HasSpec (CompactForm a)
 
@@ -982,7 +982,7 @@ instance Era era => HasSpec (GovRelation StrictMaybe era)
 
 instance (Typeable (CertState era), Era era) => HasSimpleRep (GovEnv era)
 instance
-  (EraSpecPParams era, EraCertState era, HasSpec (CertState era)) =>
+  (EraSpecPParams era, EraTxOut era, EraCertState era, EraGov era, HasSpec (CertState era)) =>
   HasSpec (GovEnv era)
 
 instance Typeable era => HasSimpleRep (GovActionState era)
@@ -1208,24 +1208,18 @@ instance HasSimpleRep (EnactSignal ConwayEra)
 instance EraSpecPParams ConwayEra => HasSpec (EnactSignal ConwayEra)
 
 instance Typeable era => HasSimpleRep (EnactState era)
-instance EraSpecPParams era => HasSpec (EnactState era)
+instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (EnactState era)
 
 instance HasSimpleRep (Committee era)
 instance Era era => HasSpec (Committee era)
 
 instance
-  ( Typeable (InstantStake era) -- type families need constraints
-  , Eq (InstantStake era)
-  , Show (InstantStake era)
-  , HasSpec (InstantStake era)
+  ( HasSpec (InstantStake era)
   , Typeable era
   ) =>
   HasSimpleRep (RatifyEnv era)
 instance
-  ( Typeable (InstantStake era)
-  , Eq (InstantStake era)
-  , Show (InstantStake era)
-  , HasSpec (InstantStake era)
+  ( HasSpec (InstantStake era)
   , Era era
   ) =>
   HasSpec (RatifyEnv era)
@@ -1246,10 +1240,10 @@ instance HasSimpleRep (ConwayGovCertEnv ConwayEra)
 instance EraSpecPParams ConwayEra => HasSpec (ConwayGovCertEnv ConwayEra)
 
 instance Typeable era => HasSimpleRep (PoolEnv era)
-instance EraSpecPParams era => HasSpec (PoolEnv era)
+instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (PoolEnv era)
 
 instance Era era => HasSimpleRep (CertEnv era)
-instance EraSpecPParams era => HasSpec (CertEnv era)
+instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (CertEnv era)
 
 instance HasSimpleRep NonMyopic
 instance HasSpec NonMyopic
@@ -1392,7 +1386,7 @@ instance
 
 instance (Typeable (CertState era), Era era) => HasSimpleRep (UtxoEnv era)
 instance
-  (EraSpecPParams era, EraCertState era, HasSpec (CertState era)) =>
+  (EraGov era, EraTxOut era, EraSpecPParams era, EraCertState era, HasSpec (CertState era)) =>
   HasSpec (UtxoEnv era)
 
 -- ================================================================
@@ -1427,7 +1421,9 @@ type ShelleyTxTypes era =
    , Maybe (TxAuxData era)
    ]
 instance
-  ( EraSpecPParams era
+  ( EraTxOut era
+  , EraTx era
+  , EraSpecPParams era
   , HasSpec (TxBody era)
   , HasSpec (TxWits era)
   , HasSpec (TxAuxData era)
@@ -1435,7 +1431,7 @@ instance
   ) =>
   HasSpec (ShelleyTx era)
 
-instance EraSpecPParams era => HasSimpleRep (ShelleyTx era) where
+instance (EraTx era, EraTxOut era, EraSpecPParams era) => HasSimpleRep (ShelleyTx era) where
   type TheSop (ShelleyTx era) = '["ShelleyTx" ::: ShelleyTxTypes era]
   toSimpleRep (ShelleyTx body wits auxdata) =
     inject @"ShelleyTx" @'["ShelleyTx" ::: ShelleyTxTypes era]
@@ -1701,7 +1697,7 @@ instance HasSimpleRep Pulser where
 instance HasSpec Pulser
 
 instance (Typeable (Tx era), Typeable era) => HasSimpleRep (CertsEnv era)
-instance (EraSpecPParams era, HasSpec (Tx era)) => HasSpec (CertsEnv era)
+instance (EraGov era, EraTx era, EraSpecPParams era, HasSpec (Tx era)) => HasSpec (CertsEnv era)
 
 -- CompactForm
 
@@ -1757,7 +1753,7 @@ instance Semantics CoercibleW where
   semantics = \case
     CoerceW -> coerce
 
-instance (Typeable a, Typeable b, CoercibleLike a b, Coercible a b) => Logic "coerce_" CoercibleW '[a] b where
+instance (Typeable a, Typeable b, CoercibleLike a b) => Logic "coerce_" CoercibleW '[a] b where
   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
   propagate _ TrueSpec = TrueSpec
   propagate _ (ErrorSpec msgs) = ErrorSpec msgs
@@ -1794,7 +1790,7 @@ instance Semantics CoinW where
     ToDeltaW -> DeltaCoin . unCoin
 
 toDelta_ ::
-  (HasSpec Coin, HasSpec DeltaCoin) =>
+  HasSpec DeltaCoin =>
   Term Coin ->
   Term DeltaCoin
 toDelta_ = appTerm ToDeltaW
@@ -1820,7 +1816,7 @@ deltaToCoin :: DeltaCoin -> Coin
 deltaToCoin (DeltaCoin i) = Coin i
 
 instance Typeable era => HasSimpleRep (ShelleyGovState era)
-instance EraSpecPParams era => HasSpec (ShelleyGovState era)
+instance (EraTxOut era, EraGov era, EraSpecPParams era) => HasSpec (ShelleyGovState era)
 
 instance HasSimpleRep ShelleyDelegCert
 instance HasSpec ShelleyDelegCert
