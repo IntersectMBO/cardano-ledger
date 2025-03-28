@@ -299,7 +299,7 @@ in the [formal-ledger-specifications repo](https://github.com/IntersectMBO/forma
 
 To update the version of the Agda spec that the conformance tests are using:
 
-1. Locate the `MAlonzo-code` branch in the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications)
+1. Locate the `master-artifacts` branch in the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications)
 2. Identify the SHA of the commit that you need, belonging to that branch
 3. In the `cardano-ledger` repository:
     - Update the `cabal.project` file by replacing the `tag` field in the `source-repository-package` stanza with SHA.
@@ -335,13 +335,13 @@ To change the local build directory, redo step 3 _without leaving_ the `nix deve
 
 - As a relative path:
 
-    Cloning the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications) on a `MAlonzo` branch as a sibling folder, e.g., `spec`, of `cardano-leder`:
+    Cloning the [formal-ledger-specifications repo](https://github.com/IntersectMBO/formal-ledger-specifications) on a `*-artifacts` branch as a sibling folder, e.g., `spec`, of `cardano-leder`:
     ```shell
-    git clone -b MAlonzo-code git@github.com:IntersectMBO/formal-ledger-specifications.git spec
+    git clone -b master-artifacts git@github.com:IntersectMBO/formal-ledger-specifications.git spec
     ```
     and using:
     ```
-    ../spec/generated/
+    ../spec/hs
     ```
     in the `cabal.project` file.
 
