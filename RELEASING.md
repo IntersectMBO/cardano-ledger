@@ -238,16 +238,19 @@ More on that command in the section below.
    ```
 
 4. Create a PR to `master` that updates `CHANGELOG.md` files for all of the packages that
-   have just been released. The only addition to the file should be a markdown header
-   section with the next patch version bumped, which must bring the `CHANGELOG.md` to the
-   state of the top level section containing a version higher than the highest one ever
-   released. Due to concurrent nature of editing the repository it is possible that
+   have just been released. When done manually, the only addition to the file should be a markdown header
+   section with the next patch version bumped but prefer to use the provided convenience script `./scripts/bump-changelogs.sh`
+   to do this automatically. This will fetch a shallow copy of [CHaP](https://github.com/intersectmbo/cardano-haskell-packages)
+   and check if any of our most recent package versions had a release. If so, the script
+   will bump the corresponding `CHANGELOG`s with the next patch version, which brings
+   the state of the top level section containing a version higher than the highest one ever released.
+   Due to concurrent nature of editing the repository it is possible that
    `CHANGELOG.md` have already received a version bump with a section that fits the
-   higher version criteria, in which case nothing needs to be added. The body of the
-   section, if added, must be empty with just one single asterisk `*`.
+   higher version criteria, in which case nothing will be nor should be added. The body of the
+   section, when added, should be empty with just one single asterisk `*`.
 
    For example, if `cardano-ledger-core-1.20.1.1` was just released, then a new empty
-   `1.20.1.2` section in the `CHANGELOG.md` must be added:
+   `1.20.1.2` section in the `CHANGELOG.md` will be added by the script:
 
    ```markdown
    # Version history for `cardano-ledger-core`
