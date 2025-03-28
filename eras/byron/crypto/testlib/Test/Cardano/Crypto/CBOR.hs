@@ -32,7 +32,6 @@ import Cardano.Prelude
 import Crypto.Hash (Blake2b_224, Blake2b_256, Blake2b_384, Blake2b_512, SHA1)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS
-import GetDataFileName ((<:<))
 import Hedgehog (Gen, Property)
 import qualified Hedgehog as H
 import Test.Cardano.Crypto.Gen
@@ -65,7 +64,7 @@ roundTripRequiresNetworkMagicCBOR =
 --------------------------------------------------------------------------------
 
 goldenVerificationKey :: Property
-goldenVerificationKey = goldenTestCBOR vkey <:< "golden/VerificationKey"
+goldenVerificationKey = goldenTestCBOR vkey "golden/VerificationKey"
   where
     Right vkey = VerificationKey <$> xpub (getBytes 0 64)
 
@@ -87,7 +86,7 @@ roundTripCompactRedeemVerificationKeyCBOR = eachOf 1000 genCompactRedeemVerifica
 --------------------------------------------------------------------------------
 
 goldenSigningKey :: Property
-goldenSigningKey = goldenTestCBOR skey <:< "golden/SigningKey"
+goldenSigningKey = goldenTestCBOR skey "golden/SigningKey"
   where
     Right skey = SigningKey <$> xprv (getBytes 10 128)
 
@@ -99,7 +98,7 @@ roundTripSigningKeyCBOR = eachOf 1000 genSigningKey roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 goldenSignature :: Property
-goldenSignature = goldenTestCBOR sig <:< "golden/Signature"
+goldenSignature = goldenTestCBOR sig "golden/Signature"
   where
     Right skey = SigningKey <$> xprv (getBytes 10 128)
     sig = sign (ProtocolMagicId 0) SignForTestingOnly skey ()
@@ -120,7 +119,7 @@ roundTripSignatureAeson = eachOf 1000 genUnitSignature roundTripsAesonBuildable
 --------------------------------------------------------------------------------
 
 goldenRedeemVerificationKey :: Property
-goldenRedeemVerificationKey = goldenTestCBOR rvk <:< "golden/RedeemVerificationKey"
+goldenRedeemVerificationKey = goldenTestCBOR rvk "golden/RedeemVerificationKey"
   where
     Just rvk = fst <$> redeemDeterministicKeyGen (getBytes 0 32)
 
@@ -137,7 +136,7 @@ roundTripRedeemVerificationKeyAeson =
 --------------------------------------------------------------------------------
 
 goldenRedeemSigningKey :: Property
-goldenRedeemSigningKey = goldenTestCBOR rsk <:< "golden/RedeemSigningKey"
+goldenRedeemSigningKey = goldenTestCBOR rsk "golden/RedeemSigningKey"
   where
     Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
 
@@ -150,7 +149,7 @@ roundTripRedeemSigningKeyCBOR =
 --------------------------------------------------------------------------------
 
 goldenRedeemSignature :: Property
-goldenRedeemSignature = goldenTestCBOR rsig <:< "golden/RedeemSignature"
+goldenRedeemSignature = goldenTestCBOR rsig "golden/RedeemSignature"
   where
     Just rsk = snd <$> redeemDeterministicKeyGen (getBytes 0 32)
     rsig = redeemSign (ProtocolMagicId 0) SignForTestingOnly rsk ()
@@ -174,7 +173,7 @@ roundTripRedeemSignatureAeson =
 
 goldenDeprecatedVssPublicKey :: Property
 goldenDeprecatedVssPublicKey =
-  deprecatedGoldenDecode "VssPublicKey" dropBytes <:< "golden/VssPublicKey"
+  deprecatedGoldenDecode "VssPublicKey" dropBytes "golden/VssPublicKey"
 
 --------------------------------------------------------------------------------
 -- DecShare
@@ -182,7 +181,7 @@ goldenDeprecatedVssPublicKey =
 
 goldenDeprecatedDecShare :: Property
 goldenDeprecatedDecShare =
-  deprecatedGoldenDecode "DecShare" dropBytes <:< "golden/DecShare"
+  deprecatedGoldenDecode "DecShare" dropBytes "golden/DecShare"
 
 --------------------------------------------------------------------------------
 -- EncShare
@@ -190,7 +189,7 @@ goldenDeprecatedDecShare =
 
 goldenDeprecatedEncShare :: Property
 goldenDeprecatedEncShare =
-  deprecatedGoldenDecode "EncShare" dropBytes <:< "golden/EncShare"
+  deprecatedGoldenDecode "EncShare" dropBytes "golden/EncShare"
 
 --------------------------------------------------------------------------------
 -- Secret
@@ -198,7 +197,7 @@ goldenDeprecatedEncShare =
 
 goldenDeprecatedSecret :: Property
 goldenDeprecatedSecret =
-  deprecatedGoldenDecode "Secret" dropBytes <:< "golden/Secret"
+  deprecatedGoldenDecode "Secret" dropBytes "golden/Secret"
 
 --------------------------------------------------------------------------------
 -- SecretProof
@@ -209,7 +208,7 @@ goldenDeprecatedSecretProof =
   deprecatedGoldenDecode
     "SecretProof"
     dropSecretProof
-    <:< "golden/SecretProof"
+    "golden/SecretProof"
   where
     dropSecretProof :: Dropper s
     dropSecretProof = do
@@ -222,7 +221,7 @@ goldenDeprecatedSecretProof =
 --------------------------------------------------------------------------------
 
 goldenAbstractHash :: Property
-goldenAbstractHash = goldenTestCBOR (serializeCborHash ()) <:< "golden/AbstractHash"
+goldenAbstractHash = goldenTestCBOR (serializeCborHash ()) "golden/AbstractHash"
 
 genUnitAbstractHash :: Gen (AbstractHash Blake2b_256 ())
 genUnitAbstractHash = genAbstractHash $ pure ()
@@ -240,7 +239,7 @@ roundTripAbstractHashAeson =
 --------------------------------------------------------------------------------
 
 goldenPassPhrase :: Property
-goldenPassPhrase = goldenTestCBOR passphrase <:< "golden/PassPhrase"
+goldenPassPhrase = goldenTestCBOR passphrase "golden/PassPhrase"
   where
     -- PassPhrase has to be 32 bytes in length
     passphrase = ByteArray.pack (BS.unpack $ getBytes 3 32) :: PassPhrase

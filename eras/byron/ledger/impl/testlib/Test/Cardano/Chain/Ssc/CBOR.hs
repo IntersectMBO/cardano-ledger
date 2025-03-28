@@ -22,7 +22,6 @@ import Cardano.Chain.Ssc (
  )
 import Cardano.Ledger.Binary (dropBytes)
 import Cardano.Prelude
-import GetDataFileName ((<:<))
 import Hedgehog (Group (..), Property)
 import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (
   deprecatedGoldenDecode,
@@ -37,10 +36,7 @@ import Test.Options (concatGroups)
 
 goldenDeprecatedCommitment :: Property
 goldenDeprecatedCommitment =
-  deprecatedGoldenDecode
-    "Commitment"
-    dropCommitment
-    <:< "golden/cbor/ssc/Commitment"
+  deprecatedGoldenDecode "Commitment" dropCommitment "golden/cbor/ssc/Commitment"
 
 --------------------------------------------------------------------------------
 -- CommitmentsMap
@@ -48,10 +44,7 @@ goldenDeprecatedCommitment =
 
 goldenDeprecatedCommitmentsMap :: Property
 goldenDeprecatedCommitmentsMap =
-  deprecatedGoldenDecode
-    "CommitmentsMap"
-    dropCommitmentsMap
-    <:< "golden/cbor/ssc/CommitmentsMap"
+  deprecatedGoldenDecode "CommitmentsMap" dropCommitmentsMap "golden/cbor/ssc/CommitmentsMap"
 
 --------------------------------------------------------------------------------
 -- InnerSharesMap
@@ -59,18 +52,14 @@ goldenDeprecatedCommitmentsMap =
 
 goldenDeprecatedInnerSharesMap :: Property
 goldenDeprecatedInnerSharesMap =
-  deprecatedGoldenDecode
-    "InnerSharesMap"
-    dropInnerSharesMap
-    <:< "golden/cbor/ssc/InnerSharesMap"
+  deprecatedGoldenDecode "InnerSharesMap" dropInnerSharesMap "golden/cbor/ssc/InnerSharesMap"
 
 --------------------------------------------------------------------------------
 -- Opening
 --------------------------------------------------------------------------------
 
 goldenDeprecatedOpening :: Property
-goldenDeprecatedOpening =
-  deprecatedGoldenDecode "Opening" dropBytes <:< "golden/cbor/ssc/Opening"
+goldenDeprecatedOpening = deprecatedGoldenDecode "Opening" dropBytes "golden/cbor/ssc/Opening"
 
 --------------------------------------------------------------------------------
 -- OpeningsMap
@@ -78,10 +67,7 @@ goldenDeprecatedOpening =
 
 goldenDeprecatedOpeningsMap :: Property
 goldenDeprecatedOpeningsMap =
-  deprecatedGoldenDecode
-    "OpeningsMap"
-    dropOpeningsMap
-    <:< "golden/cbor/ssc/OpeningsMap"
+  deprecatedGoldenDecode "OpeningsMap" dropOpeningsMap "golden/cbor/ssc/OpeningsMap"
 
 --------------------------------------------------------------------------------
 -- SignedCommitment
@@ -89,10 +75,7 @@ goldenDeprecatedOpeningsMap =
 
 goldenDeprecatedSignedCommitment :: Property
 goldenDeprecatedSignedCommitment =
-  deprecatedGoldenDecode
-    "SignedCommitment"
-    dropSignedCommitment
-    <:< "golden/cbor/ssc/SignedCommitment"
+  deprecatedGoldenDecode "SignedCommitment" dropSignedCommitment "golden/cbor/ssc/SignedCommitment"
 
 --------------------------------------------------------------------------------
 -- SharesMap
@@ -100,10 +83,7 @@ goldenDeprecatedSignedCommitment =
 
 goldenDeprecatedSharesMap :: Property
 goldenDeprecatedSharesMap =
-  deprecatedGoldenDecode
-    "SharesMap"
-    dropSharesMap
-    <:< "golden/cbor/ssc/SharesMap"
+  deprecatedGoldenDecode "SharesMap" dropSharesMap "golden/cbor/ssc/SharesMap"
 
 --------------------------------------------------------------------------------
 -- SscPayload
@@ -114,28 +94,28 @@ goldenDeprecatedSscPayload_CommitmentsPayload =
   deprecatedGoldenDecode
     "SscPayload_CommitmentsPayload"
     dropSscPayload
-    <:< "golden/cbor/ssc/SscPayload_CommitmentsPayload"
+    "golden/cbor/ssc/SscPayload_CommitmentsPayload"
 
 goldenDeprecatedSscPayload_OpeningsPayload :: Property
 goldenDeprecatedSscPayload_OpeningsPayload =
   deprecatedGoldenDecode
     "SscPayload_OpeningsPayload"
     dropSscPayload
-    <:< "golden/cbor/ssc/SscPayload_OpeningsPayload"
+    "golden/cbor/ssc/SscPayload_OpeningsPayload"
 
 goldenDeprecatedSscPayload_SharesPayload :: Property
 goldenDeprecatedSscPayload_SharesPayload =
   deprecatedGoldenDecode
     "SscPayload_SharesPayload"
     dropSscPayload
-    <:< "golden/cbor/ssc/SscPayload_SharesPayload"
+    "golden/cbor/ssc/SscPayload_SharesPayload"
 
 goldenDeprecatedSscPayload_CertificatesPayload :: Property
 goldenDeprecatedSscPayload_CertificatesPayload =
   deprecatedGoldenDecode
     "SscPayload_CertificatesPayload"
     dropSscPayload
-    <:< "golden/cbor/ssc/SscPayload_CertificatesPayload"
+    "golden/cbor/ssc/SscPayload_CertificatesPayload"
 
 roundTripSscPayload :: Property
 roundTripSscPayload = eachOf 1 (pure SscPayload) roundTripsCBORShow
@@ -149,28 +129,28 @@ goldenDeprecatedSscProof_CommitmentsProof =
   deprecatedGoldenDecode
     "SscProof_CommitmentsProof"
     dropSscProof
-    <:< "golden/cbor/ssc/SscProof_CommitmentsProof"
+    "golden/cbor/ssc/SscProof_CommitmentsProof"
 
 goldenDeprecatedSscProof_OpeningsProof :: Property
 goldenDeprecatedSscProof_OpeningsProof =
   deprecatedGoldenDecode
     "SscProof_OpeningsProof"
     dropSscProof
-    <:< "golden/cbor/ssc/SscProof_OpeningsProof"
+    "golden/cbor/ssc/SscProof_OpeningsProof"
 
 goldenDeprecatedSscProof_SharesProof :: Property
 goldenDeprecatedSscProof_SharesProof =
   deprecatedGoldenDecode
     "SscProof_SharesProof"
     dropSscProof
-    <:< "golden/cbor/ssc/SscProof_SharesProof"
+    "golden/cbor/ssc/SscProof_SharesProof"
 
 goldenDeprecatedSscProof_CertificatesProof :: Property
 goldenDeprecatedSscProof_CertificatesProof =
   deprecatedGoldenDecode
     "SscProof_CertificatesProof"
     dropSscProof
-    <:< "golden/cbor/ssc/SscProof_CertificatesProof"
+    "golden/cbor/ssc/SscProof_CertificatesProof"
 
 roundTripSscProof :: Property
 roundTripSscProof = eachOf 1 (pure SscProof) roundTripsCBORShow
@@ -184,7 +164,7 @@ goldenDeprecatedVssCertificate =
   deprecatedGoldenDecode
     "VssCertificate"
     dropVssCertificate
-    <:< "golden/cbor/ssc/VssCertificate"
+    "golden/cbor/ssc/VssCertificate"
 
 --------------------------------------------------------------------------------
 -- VssCertificatesHash
@@ -195,7 +175,7 @@ goldenDeprecatedVssCertificatesHash =
   deprecatedGoldenDecode
     "VssCertiificatesHash"
     dropBytes
-    <:< "golden/cbor/ssc/VssCertificatesHash"
+    "golden/cbor/ssc/VssCertificatesHash"
 
 --------------------------------------------------------------------------------
 -- VssCertificatesMap
@@ -206,7 +186,7 @@ goldenDeprecatedVssCertificatesMap =
   deprecatedGoldenDecode
     "VssCertificatesMap"
     dropVssCertificatesMap
-    <:< "golden/cbor/ssc/VssCertificatesMap"
+    "golden/cbor/ssc/VssCertificatesMap"
 
 --------------------------------------------------------------------------------
 -- Main test export

@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-crypto-wrapper
-version: 1.6.0.0
+version: 1.6.1.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -13,24 +13,24 @@ description:
 category: Currency
 build-type: Simple
 data-files:
-  test/golden/AbstractHash
-  test/golden/DecShare
-  test/golden/EncShare
-  test/golden/PassPhrase
-  test/golden/RedeemSignature
-  test/golden/RedeemSigningKey
-  test/golden/RedeemVerificationKey
-  test/golden/Secret
-  test/golden/SecretProof
-  test/golden/Signature
-  test/golden/SigningKey
-  test/golden/VerificationKey
-  test/golden/VssPublicKey
-  test/golden/json/ProtocolMagic0_Legacy_HasNetworkMagic
-  test/golden/json/ProtocolMagic1_Legacy_HasNetworkMagic
-  test/golden/json/ProtocolMagic2_Legacy_HasNetworkMagic
-  test/golden/json/ProtocolMagic_Legacy_NMMustBeJust
-  test/golden/json/ProtocolMagic_Legacy_NMMustBeNothing
+  golden/AbstractHash
+  golden/DecShare
+  golden/EncShare
+  golden/PassPhrase
+  golden/RedeemSignature
+  golden/RedeemSigningKey
+  golden/RedeemVerificationKey
+  golden/Secret
+  golden/SecretProof
+  golden/Signature
+  golden/SigningKey
+  golden/VerificationKey
+  golden/VssPublicKey
+  golden/json/ProtocolMagic0_Legacy_HasNetworkMagic
+  golden/json/ProtocolMagic1_Legacy_HasNetworkMagic
+  golden/json/ProtocolMagic2_Legacy_HasNetworkMagic
+  golden/json/ProtocolMagic_Legacy_NMMustBeJust
+  golden/json/ProtocolMagic_Legacy_NMMustBeNothing
 
 extra-source-files:
   CHANGELOG.md
@@ -98,22 +98,54 @@ library
     nothunks,
     text,
 
+library testlib
+  exposed-modules:
+    Test.Cardano.Crypto.CBOR
+    Test.Cardano.Crypto.Dummy
+    Test.Cardano.Crypto.Example
+    Test.Cardano.Crypto.Gen
+    Test.Cardano.Crypto.Json
+    Test.Cardano.Crypto.Orphans
+
+  visibility: public
+  hs-source-dirs: testlib
+  other-modules:
+    Paths_cardano_crypto_wrapper
+
+  default-language: Haskell2010
+  default-extensions: NoImplicitPrelude
+  ghc-options:
+    -Weverything
+    -Wno-all-missed-specialisations
+    -Wno-missing-deriving-strategies
+    -Wno-missing-import-lists
+    -Wno-missing-safe-haskell-mode
+    -Wno-prepositive-qualified-module
+    -Wno-safe
+    -Wno-unsafe
+    -Wunused-packages
+
+  build-depends:
+    base,
+    bytestring,
+    cardano-crypto,
+    cardano-crypto-wrapper,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-prelude,
+    cardano-prelude-test,
+    crypton,
+    hedgehog >=1.0.4,
+    memory,
+
 test-suite test
   type: exitcode-stdio-1.0
   main-is: test.hs
   hs-source-dirs: test
   other-modules:
-    GetDataFileName
     Paths_cardano_crypto_wrapper
-    Test.Cardano.Crypto.CBOR
-    Test.Cardano.Crypto.Dummy
-    Test.Cardano.Crypto.Example
-    Test.Cardano.Crypto.Gen
     Test.Cardano.Crypto.Hashing
-    Test.Cardano.Crypto.Json
     Test.Cardano.Crypto.Keys
     Test.Cardano.Crypto.Limits
-    Test.Cardano.Crypto.Orphans
     Test.Cardano.Crypto.Random
     Test.Cardano.Crypto.Signing.Redeem
     Test.Cardano.Crypto.Signing.Redeem.Compact
@@ -140,11 +172,10 @@ test-suite test
     bytestring,
     cardano-crypto,
     cardano-crypto-wrapper,
-    cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-binary,
     cardano-prelude,
     cardano-prelude-test,
     crypton,
-    filepath,
     formatting,
     hedgehog >=1.0.4,
-    memory,
+    testlib,

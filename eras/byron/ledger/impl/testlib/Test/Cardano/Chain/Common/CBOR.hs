@@ -46,7 +46,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Prelude hiding (check)
 import qualified Data.Map as M
-import GetDataFileName ((<:<))
 import Hedgehog (Gen, Property, cover, forAll, property, (===))
 import qualified Hedgehog as H
 import Test.Cardano.Chain.Common.Example (
@@ -100,24 +99,19 @@ prop_roundTripCrcProtected = property $ do
 -- Address
 --------------------------------------------------------------------------------
 golden_Address0 :: Property
-golden_Address0 =
-  goldenTestCBOR exampleAddress <:< "golden/cbor/common/Address0"
+golden_Address0 = goldenTestCBOR exampleAddress "golden/cbor/common/Address0"
 
 golden_Address1 :: Property
-golden_Address1 =
-  goldenTestCBOR exampleAddress1 <:< "golden/cbor/common/Address1"
+golden_Address1 = goldenTestCBOR exampleAddress1 "golden/cbor/common/Address1"
 
 golden_Address2 :: Property
-golden_Address2 =
-  goldenTestCBOR exampleAddress2 <:< "golden/cbor/common/Address2"
+golden_Address2 = goldenTestCBOR exampleAddress2 "golden/cbor/common/Address2"
 
 golden_Address3 :: Property
-golden_Address3 =
-  goldenTestCBOR exampleAddress3 <:< "golden/cbor/common/Address3"
+golden_Address3 = goldenTestCBOR exampleAddress3 "golden/cbor/common/Address3"
 
 golden_Address4 :: Property
-golden_Address4 =
-  goldenTestCBOR exampleAddress4 <:< "golden/cbor/common/Address4"
+golden_Address4 = goldenTestCBOR exampleAddress4 "golden/cbor/common/Address4"
 
 golden_isRedeemAddrees :: Property
 golden_isRedeemAddrees =
@@ -140,13 +134,10 @@ ts_roundTripAddress =
 --------------------------------------------------------------------------------
 golden_AddrSpendingData_VerKey :: Property
 golden_AddrSpendingData_VerKey =
-  goldenTestCBOR
-    exampleAddrSpendingData_VerKey
-    <:< "golden/cbor/common/AddrSpendingData_VerKey"
+  goldenTestCBOR exampleAddrSpendingData_VerKey "golden/cbor/common/AddrSpendingData_VerKey"
 
 golden_AddrSpendingData_Redeem :: Property
-golden_AddrSpendingData_Redeem =
-  goldenTestCBOR asd <:< "golden/cbor/common/AddrSpendingData_Redeem"
+golden_AddrSpendingData_Redeem = goldenTestCBOR asd "golden/cbor/common/AddrSpendingData_Redeem"
   where
     asd = RedeemASD redeemVerificationKey
     redeemVerificationKey =
@@ -162,10 +153,10 @@ ts_roundTripAddrSpendingDataCBOR =
 -- AddrType
 --------------------------------------------------------------------------------
 golden_AddrType_VK :: Property
-golden_AddrType_VK = goldenTestCBOR ATVerKey <:< "golden/cbor/common/AddrType_VK"
+golden_AddrType_VK = goldenTestCBOR ATVerKey "golden/cbor/common/AddrType_VK"
 
 golden_AddrType_R :: Property
-golden_AddrType_R = goldenTestCBOR ATRedeem <:< "golden/cbor/common/AddrType_R"
+golden_AddrType_R = goldenTestCBOR ATRedeem "golden/cbor/common/AddrType_R"
 
 ts_roundTripAddrTypeCBOR :: TSProperty
 ts_roundTripAddrTypeCBOR = eachOfTS 1000 genAddrType roundTripsCBORShow
@@ -174,7 +165,7 @@ ts_roundTripAddrTypeCBOR = eachOfTS 1000 genAddrType roundTripsCBORShow
 -- BlockCount
 --------------------------------------------------------------------------------
 golden_BlockCount :: Property
-golden_BlockCount = goldenTestCBOR bc <:< "golden/cbor/common/BlockCount"
+golden_BlockCount = goldenTestCBOR bc "golden/cbor/common/BlockCount"
   where
     bc = BlockCount 999
 
@@ -185,8 +176,7 @@ ts_roundTripBlockCountCBOR = eachOfTS 1000 genBlockCount roundTripsCBORBuildable
 -- ChainDifficulty
 --------------------------------------------------------------------------------
 golden_ChainDifficulty :: Property
-golden_ChainDifficulty =
-  goldenTestCBOR cd <:< "golden/cbor/common/ChainDifficulty"
+golden_ChainDifficulty = goldenTestCBOR cd "golden/cbor/common/ChainDifficulty"
   where
     cd = ChainDifficulty 9999
 
@@ -198,7 +188,7 @@ ts_roundTripChainDifficultyCBOR =
 -- Lovelace
 --------------------------------------------------------------------------------
 golden_Lovelace :: Property
-golden_Lovelace = goldenTestCBOR c <:< "golden/cbor/common/Lovelace"
+golden_Lovelace = goldenTestCBOR c "golden/cbor/common/Lovelace"
   where
     c = mkKnownLovelace @9732
 
@@ -216,8 +206,7 @@ ts_roundTripLovelaceErrorCBOR =
 -- LovelacePortion
 --------------------------------------------------------------------------------
 golden_LovelacePortion :: Property
-golden_LovelacePortion =
-  goldenTestCBOR c <:< "golden/cbor/common/LovelacePortion"
+golden_LovelacePortion = goldenTestCBOR c "golden/cbor/common/LovelacePortion"
   where
     c = rationalToLovelacePortion 9702e-15
 
@@ -229,8 +218,7 @@ ts_roundTripLovelacePortionCBOR =
 -- KeyHash
 --------------------------------------------------------------------------------
 golden_KeyHash :: Property
-golden_KeyHash =
-  goldenTestCBOR exampleKeyHash <:< "golden/cbor/common/KeyHash"
+golden_KeyHash = goldenTestCBOR exampleKeyHash "golden/cbor/common/KeyHash"
 
 ts_roundTripKeyHashCBOR :: TSProperty
 ts_roundTripKeyHashCBOR =
@@ -240,8 +228,7 @@ ts_roundTripKeyHashCBOR =
 -- TxFeePolicy
 --------------------------------------------------------------------------------
 golden_TxFeePolicy_Linear :: Property
-golden_TxFeePolicy_Linear =
-  goldenTestCBOR tfp <:< "golden/cbor/common/TxFeePolicy_Linear"
+golden_TxFeePolicy_Linear = goldenTestCBOR tfp "golden/cbor/common/TxFeePolicy_Linear"
   where
     tfp = TxFeePolicyTxSizeLinear (TxSizeLinear c1 c2)
     c1 = mkKnownLovelace @99
@@ -255,8 +242,7 @@ ts_roundTripTxFeePolicyCBOR =
 -- TxSizeLinear
 --------------------------------------------------------------------------------
 golden_TxSizeLinear :: Property
-golden_TxSizeLinear =
-  goldenTestCBOR tsl <:< "golden/cbor/common/TxSizeLinear"
+golden_TxSizeLinear = goldenTestCBOR tsl "golden/cbor/common/TxSizeLinear"
   where
     tsl = TxSizeLinear c1 c2
     c1 = mkKnownLovelace @99
@@ -270,7 +256,7 @@ ts_roundTripTxSizeLinearCBOR =
 -- Attributes
 --------------------------------------------------------------------------------
 golden_Attributes :: Property
-golden_Attributes = goldenTestCBOR attrib <:< "golden/cbor/common/Attributes"
+golden_Attributes = goldenTestCBOR attrib "golden/cbor/common/Attributes"
   where
     attrib = mkAttributes ()
 
@@ -282,7 +268,7 @@ ts_roundTripAttributes =
 -- MerkleTree
 --------------------------------------------------------------------------------
 golden_MerkleTree :: Property
-golden_MerkleTree = goldenTestCBOR mTree <:< "golden/cbor/common/MerkleTree"
+golden_MerkleTree = goldenTestCBOR mTree "golden/cbor/common/MerkleTree"
   where
     mTree = mkMerkleTree [(abstractHash $ Raw ("9") :: Hash Raw)]
 
@@ -294,7 +280,7 @@ ts_roundTripMerkleTree =
 -- MerkleRoot
 --------------------------------------------------------------------------------
 golden_MerkleRoot :: Property
-golden_MerkleRoot = goldenTestCBOR mTree <:< "golden/cbor/common/MerkleRoot"
+golden_MerkleRoot = goldenTestCBOR mTree "golden/cbor/common/MerkleRoot"
   where
     mTree = mtRoot $ mkMerkleTree [(abstractHash $ Raw ("9") :: Hash Raw)]
 

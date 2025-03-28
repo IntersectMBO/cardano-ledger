@@ -150,7 +150,7 @@
               packages.cardano-ledger-byron = {
                 configureFlags = ["--ghc-option=-Werror"];
                 components = {
-                  tests.cardano-ledger-byron-test = {
+                  tests.tests = {
                     preCheck = ''
                       export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
                     '';

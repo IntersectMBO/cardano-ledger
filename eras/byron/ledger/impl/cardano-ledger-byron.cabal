@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-byron
-version: 1.1.0.0
+version: 1.2.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -110,9 +110,8 @@ data-files:
   golden/cbor/utxo/TxSigData
   golden/cbor/utxo/TxWitness
   golden/json/genesis/GenesisData0_Legacy_HasNetworkMagic
-  mainnet-genesis.json
+  test/mainnet-genesis.json
 
-data-dir: test
 extra-source-files:
   CHANGELOG.md
   README.md
@@ -264,13 +263,8 @@ library
     time,
     vector,
 
-test-suite cardano-ledger-byron-test
-  type: exitcode-stdio-1.0
-  main-is: test.hs
-  hs-source-dirs: test
-  other-modules:
-    GetDataFileName
-    Paths_cardano_ledger_byron
+library testlib
+  exposed-modules:
     Test.Cardano.Chain.Block.CBOR
     Test.Cardano.Chain.Block.Gen
     Test.Cardano.Chain.Block.Model
@@ -325,6 +319,11 @@ test-suite cardano-ledger-byron-test
     Test.Cardano.Mirror
     Test.Options
 
+  visibility: public
+  hs-source-dirs: testlib
+  other-modules:
+    Paths_cardano_ledger_byron
+
   default-language: Haskell2010
   default-extensions: NoImplicitPrelude
   ghc-options:
@@ -337,21 +336,17 @@ test-suite cardano-ledger-byron-test
     -Wno-safe
     -Wno-unsafe
     -Wunused-packages
-    -rtsopts
-    "-with-rtsopts=-K450K -M500M"
 
   build-depends:
-    base,
+    base >=4.14 && <5,
     base16-bytestring >=1,
     bimap,
     byron-spec-chain,
     byron-spec-ledger,
     bytestring,
     cardano-crypto,
-    cardano-crypto-test,
-    cardano-crypto-wrapper,
-    cardano-ledger-binary,
-    cardano-ledger-binary:testlib,
+    cardano-crypto-wrapper:{cardano-crypto-wrapper, testlib},
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-byron,
     cardano-prelude,
     cardano-prelude-test,
@@ -363,7 +358,7 @@ test-suite cardano-ledger-byron-test
     hedgehog >=1.0.4,
     microlens,
     resourcet,
-    small-steps:{small-steps, testlib} >=1.1,
+    small-steps:{small-steps, testlib},
     streaming,
     tasty,
     tasty-hedgehog,
@@ -371,15 +366,12 @@ test-suite cardano-ledger-byron-test
     time,
     vector,
 
-test-suite epoch-validation-normal-form-test
+test-suite tests
   type: exitcode-stdio-1.0
-  main-is: NormalFormTest.hs
+  main-is: test.hs
   hs-source-dirs: test
   other-modules:
-    Test.Cardano.Chain.Block.Validation
-    Test.Cardano.Chain.Config
-    Test.Cardano.Mirror
-    Test.Options
+    Paths_cardano_ledger_byron
 
   default-language: Haskell2010
   default-extensions: NoImplicitPrelude
@@ -398,20 +390,33 @@ test-suite epoch-validation-normal-form-test
 
   build-depends:
     base,
-    bytestring,
-    cardano-crypto-wrapper,
-    cardano-ledger,
-    cardano-ledger-binary,
     cardano-prelude,
-    cardano-prelude-test,
-    directory,
-    filepath,
-    hedgehog >=1.0.4,
-    resourcet,
-    silently,
-    streaming,
     tasty,
-    tasty-hedgehog,
+    testlib,
+
+test-suite epoch-validation-normal-form-test
+  type: exitcode-stdio-1.0
+  main-is: NormalFormTest.hs
+  hs-source-dirs: test
+  default-language: Haskell2010
+  default-extensions: NoImplicitPrelude
+  ghc-options:
+    -Wall
+    -Wno-all-missed-specialisations
+    -Wno-missing-deriving-strategies
+    -Wno-missing-import-lists
+    -Wno-missing-safe-haskell-mode
+    -Wno-prepositive-qualified-module
+    -Wno-safe
+    -Wno-unsafe
+    -Wunused-packages
+    -rtsopts
+    "-with-rtsopts=-K450K -M500M"
+
+  build-depends:
+    cardano-prelude,
+    silently,
+    testlib,
 
   if !flag(test-normal-form)
     buildable: False

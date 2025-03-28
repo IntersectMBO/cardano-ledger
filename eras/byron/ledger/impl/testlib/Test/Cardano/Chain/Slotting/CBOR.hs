@@ -7,7 +7,6 @@ where
 
 import Cardano.Chain.Slotting (EpochSlots (..), SlotNumber)
 import Cardano.Prelude
-import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import Test.Cardano.Chain.Slotting.Example (
   exampleEpochAndSlotCount,
@@ -31,8 +30,7 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 -- EpochNumber
 --------------------------------------------------------------------------------
 golden_EpochNumber :: Property
-golden_EpochNumber =
-  goldenTestCBOR exampleEpochNumber <:< "golden/cbor/slotting/EpochNumber"
+golden_EpochNumber = goldenTestCBOR exampleEpochNumber "golden/cbor/slotting/EpochNumber"
 
 ts_roundTripEpochNumberCBOR :: TSProperty
 ts_roundTripEpochNumberCBOR = eachOfTS 1000 genEpochNumber roundTripsCBORBuildable
@@ -41,7 +39,7 @@ ts_roundTripEpochNumberCBOR = eachOfTS 1000 genEpochNumber roundTripsCBORBuildab
 -- SlotNumber
 --------------------------------------------------------------------------------
 golden_SlotNumber :: Property
-golden_SlotNumber = goldenTestCBOR fsi <:< "golden/cbor/slotting/SlotNumber"
+golden_SlotNumber = goldenTestCBOR fsi "golden/cbor/slotting/SlotNumber"
   where
     fsi = 5001 :: SlotNumber
 
@@ -52,7 +50,7 @@ ts_roundTripSlotNumberCBOR = eachOfTS 1000 genSlotNumber roundTripsCBORBuildable
 -- EpochSlots
 --------------------------------------------------------------------------------
 golden_EpochSlots :: Property
-golden_EpochSlots = goldenTestCBOR sc <:< "golden/cbor/slotting/EpochSlots"
+golden_EpochSlots = goldenTestCBOR sc "golden/cbor/slotting/EpochSlots"
   where
     sc = EpochSlots 474747
 
@@ -64,9 +62,7 @@ ts_roundTripEpochSlotsCBOR = eachOfTS 1000 genEpochSlots roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 golden_EpochAndSlotCount :: Property
 golden_EpochAndSlotCount =
-  goldenTestCBOR
-    exampleEpochAndSlotCount
-    <:< "golden/cbor/slotting/EpochAndSlotCount"
+  goldenTestCBOR exampleEpochAndSlotCount "golden/cbor/slotting/EpochAndSlotCount"
 
 ts_roundTripEpochAndSlotCountCBOR :: TSProperty
 ts_roundTripEpochAndSlotCountCBOR = eachOfTS 1000 gen roundTripsCBORBuildable

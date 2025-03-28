@@ -1,8 +1,10 @@
 # Revision history for `cardano-crypto-wrapper`
 
-## 1.6.0.1
+## 1.6.1.0
 
-*
+### `testlib`
+
+* Added `testlib` sublibrary as replacement of `cardano-crypto-test` package
 
 ## 1.6.0.0
 
