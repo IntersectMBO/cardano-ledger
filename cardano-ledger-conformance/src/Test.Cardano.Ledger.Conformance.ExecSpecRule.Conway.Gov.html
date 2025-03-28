@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Gov</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">Cardano.Ledger.Conway.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">EraPParams</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">Cardano.Ledger.Conway.Rules</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-8b2bea885eb8212a3ebcb31d917de3abc20fe0aa9e677bbb15eac33f7b96228a/share/doc/html/src"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-operator">(&amp;)</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-8b2bea885eb8212a3ebcb31d917de3abc20fe0aa9e677bbb15eac33f7b96228a/share/doc/html/src"><span class="hs-operator">(.~)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-8b2bea885eb8212a3ebcb31d917de3abc20fe0aa9e677bbb15eac33f7b96228a/share/doc/html/src"><span class="hs-operator">(^.)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-ledger-executable-spec-0.1.0.0-ec4f3e926eb21ce1b4f03c4707674ccf4c78d8abe123080f2e93ba27852e5446/share/doc/html/src"><span class="hs-identifier">Lib</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Agda</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base.html"><span class="hs-identifier">Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/l/testlib/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">Test.Cardano.Ledger.Conway.Arbitrary</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.18.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Test.Cardano.Ledger.Imp.Common</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-27"></span><span>  </span><span id="local-6989586621679864906"><span id="local-6989586621679864908"><span id="local-6989586621679864912"><span id="local-6989586621679864914"><span id="local-6989586621679865110"><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#SpecRep"><span class="hs-identifier hs-type">SpecRep</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayGovPredFailure</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src"><span class="hs-identifier hs-type">IsConwayUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679865110"><span class="hs-identifier hs-type">fn</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-30"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecSpecRule"><span class="hs-identifier hs-type">ExecSpecRule</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679865110"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;GOV&quot;</span></span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayEra</span></a></span></span></span></span></span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="ExecContext"><span class="annot"><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#ExecContext"><span class="hs-identifier hs-var">ExecContext</span></a></span></span><span> </span><span id="local-6989586621679865110"><span class="annot"><a href="#local-6989586621679865110"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;GOV&quot;</span></span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayEra</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">EnactState</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679864816"><span class="annot"><span class="annottext">environmentSpec :: HasCallStack =&gt;
+ExecContext fn &quot;GOV&quot; ConwayEra
+-&gt; Specification fn (ExecEnvironment fn &quot;GOV&quot; ConwayEra)
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#environmentSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">environmentSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">ExecContext fn &quot;GOV&quot; ConwayEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+Specification fn (GovEnv ConwayEra)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src"><span class="hs-identifier hs-var">govEnvSpec</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679864811"><span class="annot"><span class="annottext">stateSpec :: HasCallStack =&gt;
+ExecContext fn &quot;GOV&quot; ConwayEra
+-&gt; ExecEnvironment fn &quot;GOV&quot; ConwayEra
+-&gt; Specification fn (ExecState fn &quot;GOV&quot; ConwayEra)
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#stateSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">stateSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">ExecContext fn &quot;GOV&quot; ConwayEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+GovEnv ConwayEra -&gt; Specification fn (Proposals ConwayEra)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src"><span class="hs-identifier hs-var">govProposalsSpec</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679864806"><span class="annot"><span class="annottext">signalSpec :: HasCallStack =&gt;
+ExecContext fn &quot;GOV&quot; ConwayEra
+-&gt; ExecEnvironment fn &quot;GOV&quot; ConwayEra
+-&gt; ExecState fn &quot;GOV&quot; ConwayEra
+-&gt; Specification fn (ExecSignal fn &quot;GOV&quot; ConwayEra)
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#signalSpec"><span class="hs-identifier hs-var hs-var hs-var hs-var">signalSpec</span></a></span></span><span> </span><span class="annot"><span class="annottext">ExecContext fn &quot;GOV&quot; ConwayEra
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+GovEnv ConwayEra
+-&gt; Proposals ConwayEra -&gt; Specification fn (GovSignal ConwayEra)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-test-9.9.9.9/doc/html/cardano-ledger-test/src"><span class="hs-identifier hs-var">govProceduresSpec</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679864802"><span class="annot"><span class="annottext">runAgdaRule :: HasCallStack =&gt;
+SpecRep (ExecEnvironment fn &quot;GOV&quot; ConwayEra)
+-&gt; SpecRep (ExecState fn &quot;GOV&quot; ConwayEra)
+-&gt; SpecRep (ExecSignal fn &quot;GOV&quot; ConwayEra)
+-&gt; Either
+     OpaqueErrorString (SpecRep (ExecState fn &quot;GOV&quot; ConwayEra))
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#runAgdaRule"><span class="hs-identifier hs-var hs-var hs-var hs-var">runAgdaRule</span></a></span></span><span> </span><span id="local-6989586621679864800"><span class="annot"><span class="annottext">SpecRep (ExecEnvironment fn &quot;GOV&quot; ConwayEra)
+</span><a href="#local-6989586621679864800"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679864799"><span class="annot"><span class="annottext">SpecRep (ExecState fn &quot;GOV&quot; ConwayEra)
+</span><a href="#local-6989586621679864799"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span id="local-6989586621679864798"><span class="annot"><span class="annottext">SpecRep (ExecSignal fn &quot;GOV&quot; ConwayEra)
+</span><a href="#local-6989586621679864798"><span class="hs-identifier hs-var">sig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. ComputationResult Text a -&gt; Either OpaqueErrorString a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#unComputationResult"><span class="hs-identifier hs-var">unComputationResult</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">GovEnv
+-&gt; GovState
+-&gt; [Either GovVote GovProposal]
+-&gt; T_ComputationResult_46 Text GovState
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-ledger-executable-spec-0.1.0.0-ec4f3e926eb21ce1b4f03c4707674ccf4c78d8abe123080f2e93ba27852e5446/share/doc/html/src"><span class="hs-identifier hs-var">Agda.govStep</span></a></span><span> </span><span class="annot"><span class="annottext">SpecRep (ExecEnvironment fn &quot;GOV&quot; ConwayEra)
+</span><a href="#local-6989586621679864800"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">SpecRep (ExecState fn &quot;GOV&quot; ConwayEra)
+</span><a href="#local-6989586621679864799"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">SpecRep (ExecSignal fn &quot;GOV&quot; ConwayEra)
+</span><a href="#local-6989586621679864798"><span class="hs-identifier hs-var">sig</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679864740"><span class="annot"><span class="annottext">translateInputs :: HasCallStack =&gt;
+ExecEnvironment fn &quot;GOV&quot; ConwayEra
+-&gt; ExecState fn &quot;GOV&quot; ConwayEra
+-&gt; ExecSignal fn &quot;GOV&quot; ConwayEra
+-&gt; ExecContext fn &quot;GOV&quot; ConwayEra
+-&gt; ImpTestM
+     ConwayEra
+     (SpecRep (ExecEnvironment fn &quot;GOV&quot; ConwayEra),
+      SpecRep (ExecState fn &quot;GOV&quot; ConwayEra),
+      SpecRep (ExecSignal fn &quot;GOV&quot; ConwayEra))
+</span><a href="Test.Cardano.Ledger.Conformance.ExecSpecRule.Core.html#translateInputs"><span class="hs-identifier hs-var hs-var hs-var hs-var">translateInputs</span></a></span></span><span> </span><span id="local-6989586621679864738"><span class="annot"><span class="annottext">env :: ExecEnvironment fn &quot;GOV&quot; ConwayEra
+</span><a href="#local-6989586621679864738"><span class="hs-identifier hs-var">env</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">GovEnv</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679864736"><span class="annot"><span class="annottext">PParams ConwayEra
+gePParams :: forall era. GovEnv era -&gt; PParams era
+gePParams :: PParams ConwayEra
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var hs-var">gePParams</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679864734"><span class="annot"><span class="annottext">ExecState fn &quot;GOV&quot; ConwayEra
+</span><a href="#local-6989586621679864734"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span id="local-6989586621679864733"><span class="annot"><span class="annottext">ExecSignal fn &quot;GOV&quot; ConwayEra
+</span><a href="#local-6989586621679864733"><span class="hs-identifier hs-var">sig</span></a></span></span><span> </span><span id="local-6989586621679864732"><span class="annot"><span class="annottext">ExecContext fn &quot;GOV&quot; ConwayEra
+</span><a href="#local-6989586621679864732"><span class="hs-identifier hs-var">enactState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>    </span><span id="local-6989586621679864731"><span class="annot"><span class="annottext">GovEnv
+</span><a href="#local-6989586621679864731"><span class="hs-identifier hs-var">agdaEnv</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *) b.
+(HasCallStack, Show a, MonadIO m) =&gt;
+Either a b -&gt; m b
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/ImpSpec-0.1.0.0-981d40f254f75fb5aa38611592d9c06423e5c8098dc5390b2f07d695f68bf7b8/share/doc/html/src"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall ctx a. ctx -&gt; SpecTransM ctx a -&gt; Either Text a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#runSpecTransM"><span class="hs-identifier hs-var">runSpecTransM</span></a></span><span> </span><span class="annot"><span class="annottext">EnactState ConwayEra
+</span><a href="#local-6989586621679864728"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">ExecEnvironment fn &quot;GOV&quot; ConwayEra
+</span><a href="#local-6989586621679864738"><span class="hs-identifier hs-var">env</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span id="local-6989586621679864726"><span class="annot"><span class="annottext">GovState
+</span><a href="#local-6989586621679864726"><span class="hs-identifier hs-var">agdaSt</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *) b.
+(HasCallStack, Show a, MonadIO m) =&gt;
+Either a b -&gt; m b
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/ImpSpec-0.1.0.0-981d40f254f75fb5aa38611592d9c06423e5c8098dc5390b2f07d695f68bf7b8/share/doc/html/src"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall ctx a. ctx -&gt; SpecTransM ctx a -&gt; Either Text a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#runSpecTransM"><span class="hs-identifier hs-var">runSpecTransM</span></a></span><span> </span><span class="annot"><span class="annottext">EnactState ConwayEra
+</span><a href="#local-6989586621679864728"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">ExecState fn &quot;GOV&quot; ConwayEra
+</span><a href="#local-6989586621679864734"><span class="hs-identifier hs-var">st</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span id="local-6989586621679864725"><span class="annot"><span class="annottext">[Either GovVote GovProposal]
+</span><a href="#local-6989586621679864725"><span class="hs-identifier hs-var">agdaSig</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *) b.
+(HasCallStack, Show a, MonadIO m) =&gt;
+Either a b -&gt; m b
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/ImpSpec-0.1.0.0-981d40f254f75fb5aa38611592d9c06423e5c8098dc5390b2f07d695f68bf7b8/share/doc/html/src"><span class="hs-identifier hs-var">expectRight</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall ctx a. ctx -&gt; SpecTransM ctx a -&gt; Either Text a
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#runSpecTransM"><span class="hs-identifier hs-var">runSpecTransM</span></a></span><span> </span><span class="annot"><span class="annottext">EnactState ConwayEra
+</span><a href="#local-6989586621679864728"><span class="hs-identifier hs-var">ctx</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">forall ctx a.
+SpecTranslate ctx a =&gt;
+a -&gt; SpecTransM ctx (SpecRep a)
+</span><a href="Test.Cardano.Ledger.Conformance.SpecTranslate.Core.html#toSpecRep"><span class="hs-identifier hs-var">toSpecRep</span></a></span><span> </span><span class="annot"><span class="annottext">ExecSignal fn &quot;GOV&quot; ConwayEra
+</span><a href="#local-6989586621679864733"><span class="hs-identifier hs-var">sig</span></a></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">GovEnv
+</span><a href="#local-6989586621679864731"><span class="hs-identifier hs-var">agdaEnv</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GovState
+</span><a href="#local-6989586621679864726"><span class="hs-identifier hs-var">agdaSt</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Either GovVote GovProposal]
+</span><a href="#local-6989586621679864725"><span class="hs-identifier hs-var">agdaSig</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-48"></span><span>      </span><span id="local-6989586621679864728"><span class="annot"><span class="annottext">ctx :: EnactState ConwayEra
+</span><a href="#local-6989586621679864728"><span class="hs-identifier hs-var hs-var">ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>        </span><span class="annot"><span class="annottext">ExecContext fn &quot;GOV&quot; ConwayEra
+</span><a href="#local-6989586621679864732"><span class="hs-identifier hs-var">enactState</span></a></span><span>
+</span><span id="line-50"></span><span>          </span><span class="annot"><span class="annottext">forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall era. Lens' (EnactState era) (GovRelation StrictMaybe era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ensPrevGovActionIdsL</span></a></span><span>
+</span><span id="line-51"></span><span>            </span><span class="annot"><span class="annottext">forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-8b2bea885eb8212a3ebcb31d917de3abc20fe0aa9e677bbb15eac33f7b96228a/share/doc/html/src"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. GovRelation PRoot era -&gt; GovRelation StrictMaybe era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">toPrevGovActionIds</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ExecState fn &quot;GOV&quot; ConwayEra
+</span><a href="#local-6989586621679864734"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="annot"><span class="annottext">forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-8b2bea885eb8212a3ebcb31d917de3abc20fe0aa9e677bbb15eac33f7b96228a/share/doc/html/src"><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Lens' (Proposals era) (GovRelation PRoot era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">pRootsL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>          </span><span class="annot"><span class="annottext">forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall era. EraPParams era =&gt; Lens' (EnactState era) ProtVer
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.20.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ensProtVerL</span></a></span><span>
+</span><span id="line-53"></span><span>            </span><span class="annot"><span class="annottext">forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-8b2bea885eb8212a3ebcb31d917de3abc20fe0aa9e677bbb15eac33f7b96228a/share/doc/html/src"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PParams ConwayEra
+</span><a href="#local-6989586621679864736"><span class="hs-identifier hs-var">gePParams</span></a></span><span> </span><span class="annot"><span class="annottext">forall s a. s -&gt; Getting a s a -&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-8b2bea885eb8212a3ebcb31d917de3abc20fe0aa9e677bbb15eac33f7b96228a/share/doc/html/src"><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. EraPParams era =&gt; Lens' (PParams era) ProtVer
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.18.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">ppProtocolVersionL</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span></pre></body></html>
