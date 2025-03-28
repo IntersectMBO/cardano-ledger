@@ -17,16 +17,21 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), credKeyHash, credScriptHash)
 import Cardano.Ledger.State
-import Constrained
+import Constrained.API
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import Data.Sequence (Seq, fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Constrained.Conway.Cert
-import Test.Cardano.Ledger.Constrained.Conway.Deleg (keyHashWdrl, rewDepMapSpec2)
+import Test.Cardano.Ledger.Constrained.Conway.Deleg (
+  hasGenDelegs,
+  keyHashWdrl,
+  rewDepMapSpec2,
+ )
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
+import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (EraSpecTxOut (..))
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 
 -- =======================================================
@@ -44,14 +49,14 @@ setMapMaybe f set = Set.foldr' (\x s -> maybe s (`Set.insert` s) $ f x) mempty s
 -- The implementation does not test these, so the extra refinement has no effect here, the Spec will test them so refinement does matter there.
 -- Note that only the keyhash credentials need be delegated to a DRep.
 bootstrapDStateSpec ::
-  forall fn era.
-  EraSpecTxOut era fn =>
+  forall era.
+  EraSpecTxOut era =>
   WitUniv era ->
   -- Set of credentials, each uniquely identifying a DRep,
   -- Every delegation of a stake credential to a DRep should be in this set.
   Set (Credential 'DRepRole) ->
   Map RewardAccount Coin ->
-  Specification fn (DState era)
+  Specification (DState era)
 bootstrapDStateSpec univ delegatees withdrawals =
   constrained $ \ [var| dstate |] ->
     match dstate $ \ [var| uMap |] futureGenDelegs genDelegs [var|irewards|] ->
@@ -98,8 +103,8 @@ txZero :: EraTx era => Tx era
 txZero = mkBasicTx mkBasicTxBody
 
 certsEnvSpec ::
-  (EraSpecPParams era, HasSpec fn (Tx era), IsConwayUniv fn) =>
-  Specification fn (CertsEnv era)
+  (EraSpecPParams era, HasSpec (Tx era)) =>
+  Specification (CertsEnv era)
 certsEnvSpec = constrained $ \ce ->
   match ce $ \tx pp _currepoch _currcommittee commproposals ->
     [ satisfies pp pparamsSpec
@@ -118,34 +123,34 @@ projectEnv x =
     }
 
 txCertsSpec ::
-  forall era fn.
-  EraSpecCert era fn =>
+  forall era.
+  EraSpecCert era =>
   WitUniv era ->
   CertsEnv era ->
   CertState era ->
-  Specification fn (Seq (TxCert era))
+  Specification (Seq (TxCert era))
 txCertsSpec univ env state =
   constrained $ \seqs ->
     exists
       (\eval -> pure $ toList (eval seqs))
-      (\list -> satisfies (pair_ list seqs) (listSeqCertPairSpec @era @fn univ (projectEnv @era env) state))
+      (\list -> satisfies (pair_ list seqs) (listSeqCertPairSpec @era univ (projectEnv @era env) state))
 
-noSameKeys :: forall era fn. EraSpecCert era fn => [TxCert era] -> [TxCert era]
+noSameKeys :: forall era. EraSpecCert era => [TxCert era] -> [TxCert era]
 noSameKeys [] = []
-noSameKeys (x : xs) = x : noSameKeys @era @fn (filter (\y -> txCertKey @era @fn x /= txCertKey @era @fn y) xs)
+noSameKeys (x : xs) = x : noSameKeys @era (filter (\y -> txCertKey @era x /= txCertKey @era y) xs)
 
 -- | Specify a pair of List and Seq, where they have essentially the same elements
 --   EXCEPT, the Seq has duplicate keys filtered out.
 listSeqCertPairSpec ::
-  forall era fn.
-  EraSpecCert era fn =>
+  forall era.
+  EraSpecCert era =>
   WitUniv era ->
   CertEnv era ->
   CertState era ->
-  Specification fn ([TxCert era], Seq (TxCert era))
+  Specification ([TxCert era], Seq (TxCert era))
 listSeqCertPairSpec univ env state =
   constrained' $ \list seqs ->
     [ assert $ sizeOf_ list <=. 5
-    , forAll list $ \x -> satisfies x (txCertSpec @era @fn univ env state)
-    , reify list (fromList . noSameKeys @era @fn) (\x -> seqs ==. x)
+    , forAll list $ \x -> satisfies x (txCertSpec @era univ env state)
+    , reify list (fromList . noSameKeys @era) (\x -> seqs ==. x)
     ]
