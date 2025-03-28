@@ -41,6 +41,7 @@ module Cardano.Ledger.Core (
   Value,
   EraPParams (..),
   mkCoinTxOut,
+  txSize,
 
   -- * Era
   module Cardano.Ledger.Core.Era,
@@ -70,7 +71,7 @@ import Cardano.Ledger.Address (
   decompactAddr,
   isBootstrapCompactAddr,
  )
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), fromSMaybe)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR,
@@ -612,3 +613,11 @@ txIdTx tx = txIdTxBody (tx ^. bodyTxL)
 
 txIdTxBody :: EraTxBody era => TxBody era -> TxId
 txIdTxBody = TxId . hashAnnotated
+
+txSize :: (EraTx era, SafeToHash (TxWits era)) => Tx era -> Integer
+txSize tx =
+  fromIntegral $
+    originalBytesSize (tx ^. bodyTxL)
+      + originalBytesSize (tx ^. witsTxL)
+      + fromSMaybe 1 (originalBytesSize <$> (tx ^. auxDataTxL))
+      + 1

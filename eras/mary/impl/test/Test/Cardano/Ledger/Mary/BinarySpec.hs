@@ -9,7 +9,7 @@ import Cardano.Ledger.Mary
 import Data.Default (def)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary (specUpgrade)
-import Test.Cardano.Ledger.Core.Binary as Binary (decoderEquivalenceCoreEraTypesSpec)
+import Test.Cardano.Ledger.Core.Binary as Binary (decoderEquivalenceCoreEraTypesSpec, txSizeSpec)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra (..))
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Mary.TreeDiff ()
@@ -22,6 +22,7 @@ spec = do
     roundTripShelleyCommonSpec @MaryEra
   describe "DecCBOR instances equivalence" $ do
     Binary.decoderEquivalenceCoreEraTypesSpec @MaryEra
+  Binary.txSizeSpec @MaryEra
 
 instance RuleListEra MaryEra where
   type
