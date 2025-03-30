@@ -133,6 +133,7 @@ library
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Shelley.Arbitrary
+    Test.Cardano.Ledger.Shelley.Binary.Annotator
     Test.Cardano.Ledger.Shelley.Binary.Cddl
     Test.Cardano.Ledger.Shelley.Binary.Golden
     Test.Cardano.Ledger.Shelley.Binary.RoundTrip

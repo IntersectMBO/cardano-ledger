@@ -59,7 +59,6 @@ instance
     where
       blockSize = 1 + fromIntegral (numSegComponents @era)
 
-
 instance DecCBOR (Annotator PlutusBinary) where
   decCBOR = pure <$> decCBOR
 
