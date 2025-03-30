@@ -233,7 +233,7 @@ benchmark bench
     bytestring,
     cardano-crypto-class,
     cardano-ledger-allegra,
-    cardano-ledger-alonzo,
+    cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
     cardano-ledger-alonzo-test,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-conway,

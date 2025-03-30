@@ -5,7 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks (
   timelockTests,
@@ -39,6 +38,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
  )
 import Test.Cardano.Ledger.Binary.TreeDiff (HexBytes (HexBytes), expectExprEqual)
 import Test.Cardano.Ledger.Mary.Arbitrary ()
+import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)

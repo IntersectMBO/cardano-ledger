@@ -12,7 +12,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -42,7 +41,6 @@ module Cardano.Ledger.Shelley.TxBody (
 import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
-  Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (..),
   ToCBOR (..),
@@ -65,7 +63,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
-  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
@@ -146,16 +143,6 @@ instance
           boxBody
           [(0, "inputs"), (1, "outputs"), (2, "fee"), (3, "ttl")]
       )
-
-instance
-  ( Era era
-  , DecCBOR (PParamsUpdate era)
-  , DecCBOR (TxOut era)
-  , DecCBOR (TxCert era)
-  ) =>
-  DecCBOR (Annotator (ShelleyTxBodyRaw era))
-  where
-  decCBOR = pure <$> decCBOR
 
 -- =================================================================
 -- Composable components for building TxBody optional sparse serialisers.
@@ -304,11 +291,6 @@ deriving instance EraTxBody era => Show (ShelleyTxBody era)
 deriving instance
   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
   Eq (ShelleyTxBody era)
-
-deriving via
-  Mem (ShelleyTxBodyRaw era)
-  instance
-    EraTxBody era => DecCBOR (Annotator (ShelleyTxBody era))
 
 deriving newtype instance
   ( Era era

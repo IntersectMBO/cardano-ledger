@@ -56,7 +56,6 @@ import Cardano.Ledger.Mary.TxOut ()
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.MemoBytes (
   EqRaw,
-  Mem,
   MemoBytes (Memo),
   MemoHashIndex,
   Memoized (RawType),
@@ -142,11 +141,6 @@ deriving newtype instance
 deriving newtype instance
   (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (MaryTxBody era)
-
-deriving via
-  Mem (MaryTxBodyRaw era)
-  instance
-    MaryEraTxBody era => DecCBOR (Annotator (MaryTxBody era))
 
 deriving newtype instance MaryEraTxBody era => DecCBOR (MaryTxBody era)
 

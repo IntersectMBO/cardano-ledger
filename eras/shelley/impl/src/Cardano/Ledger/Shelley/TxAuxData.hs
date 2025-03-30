@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -12,15 +11,14 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxAuxData (
-  ShelleyTxAuxData (ShelleyTxAuxData),
-  ShelleyTxAuxDataRaw,
+  ShelleyTxAuxData (ShelleyTxAuxData, ..),
+  ShelleyTxAuxDataRaw (..),
   hashShelleyTxAuxData,
 
   -- * Re-exports
@@ -29,12 +27,11 @@ module Cardano.Ledger.Shelley.TxAuxData (
 )
 where
 
-import Cardano.Ledger.Binary (Annotator (..), DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
-  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (RawType),
@@ -66,18 +63,10 @@ deriving newtype instance Era era => EncCBOR (ShelleyTxAuxDataRaw era)
 
 deriving newtype instance Era era => DecCBOR (ShelleyTxAuxDataRaw era)
 
-instance Era era => DecCBOR (Annotator (ShelleyTxAuxDataRaw era)) where
-  decCBOR = pure <$> decCBOR
-
 deriving via
   InspectHeapNamed "ShelleyTxAuxDataRaw" (ShelleyTxAuxData era)
   instance
     NoThunks (ShelleyTxAuxData era)
-
-deriving via
-  Mem (ShelleyTxAuxDataRaw era)
-  instance
-    Era era => DecCBOR (Annotator (ShelleyTxAuxData era))
 
 newtype ShelleyTxAuxData era
   = AuxiliaryDataConstr (MemoBytes (ShelleyTxAuxDataRaw era))

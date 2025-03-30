@@ -17,6 +17,7 @@ import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Binary.Annotator ()
 
 spec :: Spec
 spec = do

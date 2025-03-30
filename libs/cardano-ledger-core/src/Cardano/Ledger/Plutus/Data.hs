@@ -14,7 +14,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 -- This is needed for the `HeapWords (StrictMaybe (DataHash c))` instance
@@ -22,7 +21,7 @@
 
 module Cardano.Ledger.Plutus.Data (
   PlutusData (..),
-  Data (Data),
+  Data (Data, DataConstr),
   unData,
   DataHash,
   upgradeData,
@@ -43,12 +42,11 @@ where
 import Cardano.HeapWords (HeapWords (..), heapWords0, heapWords1)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
-  Annotator (..),
   DecCBOR (..),
   DecoderError (..),
   EncCBOR (..),
   ToCBOR (..),
-  decodeFullAnnotator,
+  decodeFull',
   decodeNestedCborBytes,
   encodeTag,
   fromPlainDecoder,
@@ -57,20 +55,17 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
-  Mem,
   MemoBytes (..),
   MemoHashIndex,
   Memoized (RawType),
   getMemoRawType,
   getMemoSafeHash,
-  mkMemoBytes,
+  mkMemoBytesStrict,
   mkMemoizedEra,
-  shortToLazy,
  )
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value (Null))
-import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coerce (coerce)
 import Data.MemPack
@@ -91,9 +86,6 @@ newtype PlutusData era = PlutusData PV1.Data
 instance Typeable era => EncCBOR (PlutusData era) where
   encCBOR (PlutusData d) = fromPlainEncoding $ Cborg.encode d
 
-instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
-  decCBOR = pure <$> fromPlainDecoder Cborg.decode
-
 instance Typeable era => DecCBOR (PlutusData era) where
   decCBOR = fromPlainDecoder Cborg.decode
 
@@ -108,8 +100,6 @@ instance Memoized (Data era) where
   type RawType (Data era) = PlutusData era
 
 deriving instance Show (Data era)
-
-deriving via Mem (PlutusData era) instance Era era => DecCBOR (Annotator (Data era))
 
 type instance MemoHashIndex (PlutusData era) = EraIndependentData
 
@@ -169,8 +159,9 @@ makeBinaryData sbs = do
 
 decodeBinaryData :: forall era. Era era => BinaryData era -> Either DecoderError (Data era)
 decodeBinaryData (BinaryData sbs) = do
-  plutusData <- decodeFullAnnotator (eraProtVerLow @era) "Data" decCBOR (fromStrict (fromShort sbs))
-  pure (DataConstr (mkMemoBytes plutusData $ shortToLazy sbs))
+  let bs = fromShort sbs
+  plutusData <- decodeFull' (eraProtVerLow @era) bs
+  pure (DataConstr (mkMemoBytesStrict plutusData bs))
 
 -- | It is safe to convert `BinaryData` to `Data` because the only way to
 -- construct `BinaryData` is through the smart constructor `makeBinaryData` that

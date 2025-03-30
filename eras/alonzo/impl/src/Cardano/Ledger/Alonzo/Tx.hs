@@ -58,8 +58,6 @@ module Cardano.Ledger.Alonzo.Tx (
   alonzoMinFeeTx,
   --  Figure 5
   Shelley.txouts,
-  -- Segwit
-  alonzoSegwitTx,
   -- Other
   toCBORForSizeComputation,
   toCBORForMempoolSubmission,
@@ -98,12 +96,10 @@ import Cardano.Ledger.Alonzo.TxWits (
   unTxDatsL,
  )
 import Cardano.Ledger.Binary (
-  Annotator (..),
   DecCBOR (..),
   EncCBOR (encCBOR),
   Encoding,
   ToCBOR (..),
-  decodeNullMaybe,
   decodeNullStrictMaybe,
   encodeListLen,
   encodeNullMaybe,
@@ -125,7 +121,6 @@ import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe.Strict (
   StrictMaybe (..),
-  maybeToStrictMaybe,
   strictMaybeToMaybe,
  )
 import Data.Set (Set)
@@ -354,23 +349,6 @@ totExUnits tx = foldMap snd $ tx ^. witsTxL . rdmrsTxWitsL . unRedeemersL
 -- Serialisation
 --------------------------------------------------------------------------------
 
--- | Construct an annotated Alonzo style transaction.
-alonzoSegwitTx ::
-  AlonzoEraTx era =>
-  Annotator (TxBody era) ->
-  Annotator (TxWits era) ->
-  IsValid ->
-  Maybe (Annotator (TxAuxData era)) ->
-  Annotator (Tx era)
-alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
-  let txBody = runAnnotator txBodyAnn bytes
-      txWits = runAnnotator txWitsAnn bytes
-      txAuxData = maybeToStrictMaybe (flip runAnnotator bytes <$> auxDataAnn)
-   in mkBasicTx txBody
-        & witsTxL .~ txWits
-        & auxDataTxL .~ txAuxData
-        & isValidTxL .~ isValid
-
 --------------------------------------------------------------------------------
 -- Mempool Serialisation
 --
@@ -425,29 +403,6 @@ instance
   ToCBOR (AlonzoTx era)
   where
   toCBOR = toEraCBOR @era
-
-instance
-  ( Typeable era
-  , Typeable (TxBody era)
-  , Typeable (TxWits era)
-  , Typeable (TxAuxData era)
-  , DecCBOR (Annotator (TxBody era))
-  , DecCBOR (Annotator (TxWits era))
-  , DecCBOR (Annotator (TxAuxData era))
-  ) =>
-  DecCBOR (Annotator (AlonzoTx era))
-  where
-  decCBOR =
-    decode $
-      Ann (RecD AlonzoTx)
-        <*! From
-        <*! From
-        <*! Ann From
-        <*! D
-          ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe decCBOR
-          )
-  {-# INLINE decCBOR #-}
 
 instance
   ( Typeable era

@@ -72,7 +72,6 @@ import Cardano.Ledger.Address (
  )
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (
-  Annotator,
   DecCBOR,
   DecShareCBOR (Share),
   EncCBOR,
@@ -124,7 +123,7 @@ class
   , EraPParams era
   , -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
     NoThunks (Tx era)
-  , DecCBOR (Annotator (Tx era))
+  , DecCBOR (Tx era)
   , EncCBOR (Tx era)
   , ToCBOR (Tx era)
   , Show (Tx era)
@@ -183,7 +182,7 @@ class
   , EraTxCert era
   , EraPParams era
   , HashAnnotated (TxBody era) EraIndependentTxBody
-  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (TxBody era)
   , EncCBOR (TxBody era)
   , ToCBOR (TxBody era)
   , NoThunks (TxBody era)
@@ -451,7 +450,7 @@ class
   , NoThunks (TxAuxData era)
   , ToCBOR (TxAuxData era)
   , EncCBOR (TxAuxData era)
-  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (TxAuxData era)
   , HashAnnotated (TxAuxData era) EraIndependentTxAuxData
   ) =>
   EraTxAuxData era
@@ -485,7 +484,7 @@ class
   , NoThunks (TxWits era)
   , ToCBOR (TxWits era)
   , EncCBOR (TxWits era)
-  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (TxWits era)
   ) =>
   EraTxWits era
   where
@@ -508,7 +507,7 @@ hashScriptTxWitsL ::
   Lens (TxWits era) (TxWits era) (Map ScriptHash (Script era)) [Script era]
 hashScriptTxWitsL =
   lens
-    (\wits -> wits ^. scriptTxWitsL)
+    (^. scriptTxWitsL)
     (\wits ss -> wits & scriptTxWitsL .~ Map.fromList [(hashScript s, s) | s <- ss])
 {-# INLINEABLE hashScriptTxWitsL #-}
 
@@ -529,7 +528,7 @@ class
   , EqRaw (Script era)
   , ToCBOR (Script era)
   , EncCBOR (Script era)
-  , DecCBOR (Annotator (Script era))
+  , DecCBOR (Script era)
   , NoThunks (Script era)
   , SafeToHash (Script era)
   , Eq (NativeScript era)
@@ -537,7 +536,7 @@ class
   , NFData (NativeScript era)
   , NoThunks (NativeScript era)
   , EncCBOR (NativeScript era)
-  , DecCBOR (Annotator (NativeScript era))
+  , DecCBOR (NativeScript era)
   ) =>
   EraScript era
   where
@@ -597,7 +596,7 @@ class
   , Eq (TxSeq era)
   , Show (TxSeq era)
   , EncCBORGroup (TxSeq era)
-  , DecCBOR (Annotator (TxSeq era))
+  , DecCBOR (TxSeq era)
   ) =>
   EraSegWits era
   where

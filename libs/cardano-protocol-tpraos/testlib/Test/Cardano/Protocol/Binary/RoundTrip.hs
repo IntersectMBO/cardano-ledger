@@ -12,6 +12,7 @@ import Cardano.Ledger.Core
 import Data.Typeable
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
+import Test.Cardano.Protocol.Binary.Annotator ()
 import Test.Cardano.Protocol.TPraos.Arbitrary ()
 
 roundTripBlockSpec ::
@@ -22,7 +23,7 @@ roundTripBlockSpec ::
   , DecCBOR (Annotator h)
   , EncCBOR h
   , EraSegWits era
-  , DecCBOR (TxSeq era)
+  , DecCBOR (Annotator (TxSeq era))
   , Arbitrary (Block h era)
   ) =>
   Spec

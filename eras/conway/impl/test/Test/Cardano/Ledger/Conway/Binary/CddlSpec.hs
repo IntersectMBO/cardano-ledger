@@ -23,6 +23,7 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Conway.Binary.Annotator ()
 import Test.Cardano.Ledger.Conway.Binary.Cddl (readConwayCddlFiles)
 import Test.Cardano.Ledger.Conway.CDDL (conwayCDDL)
 

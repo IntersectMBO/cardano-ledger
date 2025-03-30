@@ -20,6 +20,7 @@ import Cardano.Ledger.Shelley.State
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
+import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
 
 roundTripShelleyCommonSpec ::
   forall era.
@@ -47,11 +48,11 @@ roundTripShelleyCommonSpec ::
   , RuleListEra era
   , EraCertState era
   , Arbitrary (CertState era)
-  , DecCBOR (Script era)
-  , DecCBOR (TxAuxData era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
+  , DecCBOR (Annotator (Script era))
+  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (Tx era))
   ) =>
   Spec
 roundTripShelleyCommonSpec = do

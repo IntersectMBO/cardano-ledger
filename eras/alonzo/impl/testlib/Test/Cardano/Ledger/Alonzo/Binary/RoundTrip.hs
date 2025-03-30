@@ -20,12 +20,13 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.Alonzo.State
 import Cardano.Ledger.Alonzo.TxWits (Redeemers, TxDats)
-import Cardano.Ledger.Binary (DecCBOR)
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.LedgerState
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genNonEmptyRedeemers, genNonEmptyTxDats)
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (
@@ -60,11 +61,11 @@ roundTripAlonzoCommonSpec ::
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (CertState era)
   , Arbitrary (InstantStake era)
-  , DecCBOR (Script era)
-  , DecCBOR (TxAuxData era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
+  , DecCBOR (Annotator (Script era))
+  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (Tx era))
   , RuleListEra era
   ) =>
   Spec

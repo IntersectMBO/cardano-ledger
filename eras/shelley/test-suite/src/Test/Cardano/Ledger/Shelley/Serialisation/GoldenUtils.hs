@@ -24,7 +24,6 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   Tokens (..),
   Version,
-  decodeFullAnnotator,
   decodeFullDecoder,
   decodeTerm,
   encCBOR,
@@ -33,7 +32,6 @@ import Cardano.Ledger.Binary (
   serialize',
  )
 
--- ToExpr (CBOR.Term) instance
 import qualified Codec.CBOR.Encoding as CBOR (Encoding (..))
 import Control.Exception (throwIO)
 import Control.Monad (unless)
@@ -42,6 +40,7 @@ import Data.String (fromString)
 import GHC.Stack
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
+import Test.Cardano.Ledger.Shelley.Binary.Annotator (decodeFullAnnotator)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
