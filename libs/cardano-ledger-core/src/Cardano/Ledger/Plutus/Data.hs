@@ -14,7 +14,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 -- This is needed for the `HeapWords (StrictMaybe (DataHash c))` instance
@@ -48,7 +47,7 @@ import Cardano.Ledger.Binary (
   DecoderError (..),
   EncCBOR (..),
   ToCBOR (..),
-  decodeFullAnnotator,
+  decodeFull',
   decodeNestedCborBytes,
   encodeTag,
   fromPlainDecoder,
@@ -63,14 +62,12 @@ import Cardano.Ledger.MemoBytes (
   Memoized (RawType),
   getMemoRawType,
   getMemoSafeHash,
-  mkMemoBytes,
+  mkMemoBytesStrict,
   mkMemoizedEra,
-  shortToLazy,
  )
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value (Null))
-import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coerce (coerce)
 import Data.MemPack
@@ -169,8 +166,9 @@ makeBinaryData sbs = do
 
 decodeBinaryData :: forall era. Era era => BinaryData era -> Either DecoderError (Data era)
 decodeBinaryData (BinaryData sbs) = do
-  plutusData <- decodeFullAnnotator (eraProtVerLow @era) "Data" decCBOR (fromStrict (fromShort sbs))
-  pure (DataConstr (mkMemoBytes plutusData $ shortToLazy sbs))
+  let bs = fromShort sbs
+  plutusData <- decodeFull' (eraProtVerLow @era) bs
+  pure (DataConstr (mkMemoBytesStrict plutusData bs))
 
 -- | It is safe to convert `BinaryData` to `Data` because the only way to
 -- construct `BinaryData` is through the smart constructor `makeBinaryData` that

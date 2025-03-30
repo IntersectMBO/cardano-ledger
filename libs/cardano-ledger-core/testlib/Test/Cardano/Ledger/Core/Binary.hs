@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Core.Binary (
   txSizeSpec,
 ) where
 
-import Cardano.Ledger.Binary (Annotator, DecCBOR, ToCBOR, decNoShareCBOR, encodeMemPack)
+import Cardano.Ledger.Binary (DecCBOR, ToCBOR, decNoShareCBOR, encodeMemPack)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Cardano.Ledger.Plutus (Data)
@@ -22,6 +22,7 @@ import Data.Default (Default (def))
 import Lens.Micro
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
+import Test.Cardano.Ledger.Binary.Annotator
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()

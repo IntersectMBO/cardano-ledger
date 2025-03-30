@@ -33,6 +33,7 @@ module Cardano.Ledger.MemoBytes.Internal (
   MemoHashIndex,
   Mem,
   mkMemoBytes,
+  mkMemoBytesStrict,
   getMemoBytesType,
   getMemoBytesHash,
   memoBytes,
@@ -76,7 +77,7 @@ import Cardano.Ledger.Binary (
   EncCBOR,
   Version,
   decodeAnnotated,
-  decodeFullAnnotator,
+  decodeFull',
   serialize,
   withSlice,
  )
@@ -93,7 +94,6 @@ import qualified Data.ByteString.Short as SBS (length)
 import Data.Coerce
 import Data.MemPack
 import Data.MemPack.Buffer (Buffer)
-import qualified Data.Text as T
 import Data.Typeable
 import GHC.Base (Type)
 import GHC.Generics (Generic)
@@ -130,23 +130,11 @@ byteCountMemoBytes = packedByteCount . mbBytes
 packMemoBytesM :: MemoBytes t -> Pack s ()
 packMemoBytesM = packM . mbBytes
 
-unpackMemoBytesM ::
-  forall t b.
-  (Typeable t, DecCBOR (Annotator t), Buffer b) =>
-  Version ->
-  Unpack b (MemoBytes t)
+unpackMemoBytesM :: (DecCBOR t, Buffer b) => Version -> Unpack b (MemoBytes t)
 unpackMemoBytesM v = unpackM >>= decodeMemoBytes v
 
-decodeMemoBytes ::
-  forall t m.
-  (Typeable t, DecCBOR (Annotator t), MonadFail m) => Version -> ByteString -> m (MemoBytes t)
-decodeMemoBytes v bs =
-  either (fail . show) pure $
-    decodeFullAnnotator
-      v
-      (T.pack (show (typeRep (Proxy @t))))
-      decCBOR
-      (BSL.fromStrict bs)
+decodeMemoBytes :: (DecCBOR t, MonadFail m) => Version -> ByteString -> m (MemoBytes t)
+decodeMemoBytes v = either (fail . show) pure . decodeFull' v
 
 type family MemoHashIndex (t :: Type) :: Type
 
@@ -192,14 +180,15 @@ shorten x = toShort (toStrict x)
 type Mem t = Annotator (MemoBytes t)
 
 -- | Smart constructor
-mkMemoBytes :: forall t. t -> BSL.ByteString -> MemoBytes t
-mkMemoBytes t bsl =
+mkMemoBytes :: t -> BSL.ByteString -> MemoBytes t
+mkMemoBytes t = mkMemoBytesStrict t . toStrict
+
+mkMemoBytesStrict :: forall t. t -> ByteString -> MemoBytes t
+mkMemoBytesStrict t bs =
   Memo'
     t
     (toShort bs)
     (makeHashWithExplicitProxys (Proxy @(MemoHashIndex t)) bs)
-  where
-    bs = toStrict bsl
 
 -- | Turn a MemoBytes into a string, Showing both its internal structure and its original bytes.
 --   Useful since the Show instance of MemoBytes does not display the original bytes.
