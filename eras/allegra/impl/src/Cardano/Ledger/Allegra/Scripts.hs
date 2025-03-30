@@ -34,11 +34,10 @@ module Cardano.Ledger.Allegra.Scripts (
   getTimeStartTimelock,
   mkTimeExpireTimelock,
   getTimeExpireTimelock,
-  Timelock,
+  Timelock (..),
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
-  TimelockRaw,
-  pattern TimelockConstr,
+  TimelockRaw (..),
   inInterval,
   showTimelock,
   evalTimelock,
@@ -54,7 +53,6 @@ where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary (
-  Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (encCBOR),
   ToCBOR (..),
@@ -68,7 +66,6 @@ import Cardano.Ledger.Binary.Coders (
   encode,
   (!>),
   (<!),
-  (<*!),
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
@@ -190,20 +187,6 @@ instance Era era => EncCBOR (TimelockRaw era) where
       TimeStart m -> Sum TimeStart 4 !> To m
       TimeExpire m -> Sum TimeExpire 5 !> To m
 
--- This instance allows us to derive instance DecCBOR (Annotator (Timelock era)).
--- Since Timelock is a newtype around (Memo (Timelock era)).
-instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
-  decCBOR = decode (Summands "TimelockRaw" decRaw)
-    where
-      decRaw :: Word -> Decode 'Open (Annotator (TimelockRaw era))
-      decRaw 0 = Ann (SumD Signature <! From)
-      decRaw 1 = Ann (SumD AllOf) <*! D (sequence <$> decCBOR)
-      decRaw 2 = Ann (SumD AnyOf) <*! D (sequence <$> decCBOR)
-      decRaw 3 = Ann (SumD MOfN) <*! Ann From <*! D (sequence <$> decCBOR)
-      decRaw 4 = Ann (SumD TimeStart <! From)
-      decRaw 5 = Ann (SumD TimeExpire <! From)
-      decRaw n = Invalid n
-
 instance Era era => DecCBOR (TimelockRaw era) where
   decCBOR = decode $ Summands "TimelockRaw" $ \case
     0 -> SumD Signature <! From
@@ -242,9 +225,6 @@ deriving instance Show (Timelock era)
 
 instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
-
-instance Era era => DecCBOR (Annotator (Timelock era)) where
-  decCBOR = fmap TimelockConstr <$> decCBOR
 
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
