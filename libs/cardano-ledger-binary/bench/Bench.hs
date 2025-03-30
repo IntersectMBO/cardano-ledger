@@ -18,6 +18,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import System.Random.Stateful
+import Test.Cardano.Ledger.Binary.Annotator (decodeFullAnnotator)
 
 data Serialized a = Serialized !Version !BS.ByteString
 

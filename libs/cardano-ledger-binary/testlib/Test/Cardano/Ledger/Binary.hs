@@ -17,6 +17,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Proxy
 import qualified Data.Text as T
 import Data.Typeable
+import Test.Cardano.Ledger.Binary.Annotator (decodeFullAnnotator)
 import Test.Cardano.Ledger.Binary.RoundTrip (embedTripAnnExpectation)
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
