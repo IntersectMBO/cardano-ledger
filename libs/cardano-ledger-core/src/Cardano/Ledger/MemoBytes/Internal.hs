@@ -31,7 +31,6 @@
 module Cardano.Ledger.MemoBytes.Internal (
   MemoBytes (.., Memo),
   MemoHashIndex,
-  Mem,
   mkMemoBytes,
   mkMemoBytesStrict,
   getMemoBytesType,
@@ -71,7 +70,6 @@ where
 import Cardano.Crypto.Hash (HashAlgorithm (hashAlgorithmName))
 import Cardano.Ledger.Binary (
   Annotated (..),
-  Annotator (..),
   DecCBOR (decCBOR),
   Decoder,
   EncCBOR,
@@ -79,7 +77,6 @@ import Cardano.Ledger.Binary (
   decodeAnnotated,
   decodeFull',
   serialize,
-  withSlice,
  )
 import Cardano.Ledger.Binary.Coders (Encode, encode, runE)
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -143,14 +140,6 @@ deriving instance NFData t => NFData (MemoBytes t)
 instance Typeable t => Plain.ToCBOR (MemoBytes t) where
   toCBOR (Memo' _ bytes _hash) = Plain.encodePreEncoded (fromShort bytes)
 
-instance
-  (Typeable t, DecCBOR (Annotator t)) =>
-  DecCBOR (Annotator (MemoBytes t))
-  where
-  decCBOR = do
-    (Annotator getT, Annotator getBytes) <- withSlice decCBOR
-    pure (Annotator (\fullbytes -> mkMemoBytes (getT fullbytes) (getBytes fullbytes)))
-
 instance DecCBOR t => DecCBOR (MemoBytes t) where
   decCBOR = decodeMemoized decCBOR
 
@@ -174,10 +163,6 @@ instance SafeToHash (MemoBytes t) where
 -- | Turn a lazy bytestring into a short bytestring.
 shorten :: BSL.ByteString -> ShortByteString
 shorten x = toShort (toStrict x)
-
--- | Useful when deriving DecCBOR(Annotator T)
--- deriving via (Mem T) instance DecCBOR (Annotator T)
-type Mem t = Annotator (MemoBytes t)
 
 -- | Smart constructor
 mkMemoBytes :: t -> BSL.ByteString -> MemoBytes t
