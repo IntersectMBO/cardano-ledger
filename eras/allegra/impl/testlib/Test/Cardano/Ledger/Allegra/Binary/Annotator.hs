@@ -6,7 +6,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -22,6 +21,7 @@ import Cardano.Ledger.Core
 import qualified Data.Sequence.Strict as StrictSeq
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Core.Binary.Annotator
+import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
 
 instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
   decCBOR =
