@@ -10,9 +10,7 @@ module Cardano.Ledger.Binary.Decoding (
   decodeFull',
   decodeFullDecoder,
   decodeFullDecoder',
-  decodeFullAnnotator,
-  decodeFullAnnotatedBytes,
-  decodeFullAnnotatorFromHexText,
+  decodeFullFromHexText,
   module Cardano.Ledger.Binary.Version,
   module Cardano.Ledger.Binary.Decoding.DecCBOR,
   module Cardano.Ledger.Binary.Decoding.Sharing,
@@ -46,7 +44,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder hiding (getOriginalBytes)
 import Cardano.Ledger.Binary.Decoding.Drop
 import Cardano.Ledger.Binary.Decoding.Sharing
 import Cardano.Ledger.Binary.Decoding.Sized
-import Cardano.Ledger.Binary.Plain (withHexText)
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary.Version
 import Codec.CBOR.Read as Read (DeserialiseFailure, IDecode (..), deserialiseIncremental)
 import Codec.CBOR.Write (toStrictByteString)
@@ -99,6 +97,10 @@ decodeFull version = decodeFullDecoder version (label $ Proxy @a) decCBOR
 decodeFull' :: forall a. DecCBOR a => Version -> BS.ByteString -> Either DecoderError a
 decodeFull' version = decodeFull version . BSL.fromStrict
 {-# INLINE decodeFull' #-}
+
+-- | Try decoding base16 encoded bytes and then try decoding them as CBOR
+decodeFullFromHexText :: DecCBOR a => Version -> Text -> Either DecoderError a
+decodeFullFromHexText v = Plain.withHexText (decodeFull' v)
 
 -- | Same as `decodeFull`, except instead of relying on the `DecCBOR` instance
 -- the `Decoder` must be suplied manually.
@@ -157,47 +159,6 @@ supplyAllInput bs (Read.Partial k) = case bs of
   BSL.Empty -> k Nothing >>= supplyAllInput BSL.Empty
 supplyAllInput _ (Read.Fail bs _ exn) = return (Left (exn, bs))
 {-# INLINE supplyAllInput #-}
-
---------------------------------------------------------------------------------
--- Annotator
---------------------------------------------------------------------------------
-
--- | Same as `decodeFullDecoder`, except it provdes the means of passing portion or all
--- of the `BSL.ByteString` input argument to the decoding `Annotator`.
-decodeFullAnnotator ::
-  Version ->
-  Text ->
-  (forall s. Decoder s (Annotator a)) ->
-  BSL.ByteString ->
-  Either DecoderError a
-decodeFullAnnotator v lbl decoder bytes =
-  (\x -> runAnnotator x (Full bytes)) <$> decodeFullDecoder v lbl decoder bytes
-{-# INLINE decodeFullAnnotator #-}
-
--- | Same as `decodeFullDecoder`, decodes a Haskell value from a lazy
--- `BSL.ByteString`, requiring that the full ByteString is consumed, and
--- replaces `ByteSpan` annotations with the corresponding slice of the input as
--- a strict `BS.ByteString`.
-decodeFullAnnotatedBytes ::
-  Functor f =>
-  Version ->
-  Text ->
-  (forall s. Decoder s (f ByteSpan)) ->
-  BSL.ByteString ->
-  Either DecoderError (f BS.ByteString)
-decodeFullAnnotatedBytes v lbl decoder bytes =
-  annotationBytes bytes <$> decodeFullDecoder v lbl decoder bytes
-{-# INLINE decodeFullAnnotatedBytes #-}
-
-decodeFullAnnotatorFromHexText ::
-  Version ->
-  Text ->
-  (forall s. Decoder s (Annotator a)) ->
-  Text ->
-  Either DecoderError a
-decodeFullAnnotatorFromHexText v desc dec =
-  withHexText $ decodeFullAnnotator v desc dec . BSL.fromStrict
-{-# INLINE decodeFullAnnotatorFromHexText #-}
 
 --------------------------------------------------------------------------------
 -- Nested CBOR-in-CBOR

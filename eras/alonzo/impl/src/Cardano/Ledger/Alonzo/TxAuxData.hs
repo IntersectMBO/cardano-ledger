@@ -42,6 +42,9 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   metadataAlonzoTxAuxDataL,
   timelockScriptsAlonzoTxAuxDataL,
   plutusScriptsAllegraTxAuxDataL,
+  addPlutusScripts,
+  decodeTxAuxDataByTokenType,
+  emptyAlonzoTxAuxDataRaw,
 )
 where
 
@@ -58,20 +61,17 @@ import Cardano.Ledger.Alonzo.Scripts (
  )
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
-  Annotator (..),
   DecCBOR (..),
   Decoder,
   EncCBOR (..),
   ToCBOR,
   TokenType (..),
-  decodeStrictSeq,
   peekTokenType,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw,
-  Mem,
   MemoBytes (..),
   MemoHashIndex,
   Memoized (RawType),
@@ -183,44 +183,6 @@ getAlonzoTxAuxDataScripts AlonzoTxAuxData {atadTimelock = timelocks, atadPlutus 
         , Just plutusScripts <- [Map.lookup lang plutus]
         ]
 
-instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
-  decCBOR =
-    decodeTxAuxDataByTokenType @(Annotator (AlonzoTxAuxDataRaw era))
-      decodeShelley
-      decodeAllegra
-      decodeAlonzo
-    where
-      decodeShelley =
-        decode
-          ( Ann (Emit AlonzoTxAuxDataRaw)
-              <*! Ann From
-              <*! Ann (Emit StrictSeq.empty)
-              <*! Ann (Emit Map.empty)
-          )
-      decodeAllegra =
-        decode
-          ( Ann (RecD AlonzoTxAuxDataRaw)
-              <*! Ann From
-              <*! D
-                (sequence <$> decodeStrictSeq decCBOR)
-              <*! Ann (Emit Map.empty)
-          )
-      decodeAlonzo =
-        decode $
-          TagD 259 $
-            SparseKeyed "AlonzoTxAuxData" (pure emptyAuxData) auxDataField []
-
-      auxDataField :: Word -> Field (Annotator (AlonzoTxAuxDataRaw era))
-      auxDataField 0 = fieldA (\x ad -> ad {atadrMetadata = x}) From
-      auxDataField 1 =
-        fieldAA
-          (\x ad -> ad {atadrTimelock = atadrTimelock ad <> x})
-          (D (sequence <$> decodeStrictSeq decCBOR))
-      auxDataField 2 = fieldA (addPlutusScripts PlutusV1) (D (guardPlutus PlutusV1 >> decCBOR))
-      auxDataField 3 = fieldA (addPlutusScripts PlutusV2) (D (guardPlutus PlutusV2 >> decCBOR))
-      auxDataField 4 = fieldA (addPlutusScripts PlutusV3) (D (guardPlutus PlutusV3 >> decCBOR))
-      auxDataField n = invalidField n
-
 instance Era era => DecCBOR (AlonzoTxAuxDataRaw era) where
   decCBOR =
     decodeTxAuxDataByTokenType @(AlonzoTxAuxDataRaw era)
@@ -237,7 +199,7 @@ instance Era era => DecCBOR (AlonzoTxAuxDataRaw era) where
       decodeAlonzo =
         decode $
           TagD 259 $
-            SparseKeyed "AlonzoTxAuxData" emptyAuxData auxDataField []
+            SparseKeyed "AlonzoTxAuxData" emptyAlonzoTxAuxDataRaw auxDataField []
 
       auxDataField :: Word -> Field (AlonzoTxAuxDataRaw era)
       auxDataField 0 = field (\x ad -> ad {atadrMetadata = x}) From
@@ -268,8 +230,8 @@ addPlutusScripts lang scripts ad =
       -- Avoid leaks by deepseq, since non empty list is lazy.
       neScripts `deepseq` ad {atadrPlutus = Map.insert lang neScripts $ atadrPlutus ad}
 
-emptyAuxData :: AlonzoTxAuxDataRaw era
-emptyAuxData = AlonzoTxAuxDataRaw mempty mempty mempty
+emptyAlonzoTxAuxDataRaw :: AlonzoTxAuxDataRaw era
+emptyAlonzoTxAuxDataRaw = AlonzoTxAuxDataRaw mempty mempty mempty
 
 -- ================================================================================
 -- Version with serialized bytes.
@@ -355,11 +317,6 @@ deriving via
   InspectHeapNamed "AlonzoTxAuxDataRaw" (AlonzoTxAuxData era)
   instance
     NoThunks (AlonzoTxAuxData era)
-
-deriving via
-  Mem (AlonzoTxAuxDataRaw era)
-  instance
-    Era era => DecCBOR (Annotator (AlonzoTxAuxData era))
 
 -- | Construct auxiliary data. Make sure not to supply plutus script versions that are not
 -- supported in this era, because it will result in a runtime exception. Use

@@ -2,8 +2,9 @@
 
 ## 1.8.0.0
 
-* Expose access to `AllegraTxBodyRaw` and `TimelockRaw`
-* Expose constructor `MkAllegraTxBody` and `MkTimelock`
+* Move `Annotator` instances to `testlib`
+* Expose access to `AllegraTxBodyRaw`, `AllegraTxAuxData` and `TimelockRaw`
+* Expose constructor `MkAllegraTxBody`, `MkTxAuxData` and `MkTimelock`
 * Deprecate `TimelockConstr`
 * Rename `atbrTxFee` to `atbrFee` for consistency
 

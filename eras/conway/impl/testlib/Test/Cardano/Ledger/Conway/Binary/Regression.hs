@@ -13,9 +13,8 @@ module Test.Cardano.Ledger.Conway.Binary.Regression where
 import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..), TxIx (..))
 import Cardano.Ledger.Binary (
   EncCBOR (..),
-  decCBOR,
   decodeFull,
-  decodeFullAnnotatorFromHexText,
+  decodeFullFromHexText,
   mkVersion,
   serialize,
  )
@@ -46,7 +45,7 @@ spec ::
 spec = describe "Regression" $ do
   it "DeserialiseFailure on resubmitting Conway Tx with invalid plutus script #4198" $ do
     io . expectRightDeep_ $
-      decodeFullAnnotatorFromHexText @(Tx era) (eraProtVerLow @era) "Unwitnessed Tx" decCBOR $
+      decodeFullFromHexText @(Tx era) (eraProtVerLow @era) $
         mconcat
           [ "84a700d9010282825820745f04573e7429be1404f9b936d208b81159f3fc4b300"
           , "37b9d630187eec1875600825820745f04573e7429be1404f9b936d208b81159f3"
@@ -61,7 +60,7 @@ spec = describe "Regression" $ do
           , "799f182aff0581840000d8799f182aff820000f4f6"
           ]
     expectRightDeep_ $
-      decodeFullAnnotatorFromHexText @(Tx era) (eraProtVerLow @era) "Witnessed Tx" decCBOR $
+      decodeFullFromHexText @(Tx era) (eraProtVerLow @era) $
         mconcat
           [ "84a700d9010282825820745f04573e7429be1404f9b936d208b81159f3fc4b300"
           , "37b9d630187eec1875600825820745f04573e7429be1404f9b936d208b81159f3"

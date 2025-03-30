@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-babbage
-version: 1.11.1.0
+version: 1.12.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -76,13 +76,12 @@ library
   build-depends:
     aeson >=2.2,
     base >=4.14 && <5,
-    bytestring,
     cardano-data >=1.2,
     cardano-ledger-allegra ^>=1.8,
-    cardano-ledger-alonzo >=1.13,
-    cardano-ledger-binary >=1.4,
+    cardano-ledger-alonzo ^>=1.14,
+    cardano-ledger-binary >=1.6,
     cardano-ledger-core >=1.17,
-    cardano-ledger-mary ^>=1.8.1,
+    cardano-ledger-mary ^>=1.9,
     cardano-ledger-shelley ^>=1.17,
     cardano-strict-containers,
     containers,
@@ -100,6 +99,7 @@ library
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Babbage.Arbitrary
+    Test.Cardano.Ledger.Babbage.Binary.Annotator
     Test.Cardano.Ledger.Babbage.Binary.Cddl
     Test.Cardano.Ledger.Babbage.CDDL
     Test.Cardano.Ledger.Babbage.Imp

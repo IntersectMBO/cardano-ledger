@@ -14,7 +14,6 @@ import Cardano.Ledger.Binary (
   Version,
   decNoShareCBOR,
   decodeFull',
-  decodeFullAnnotator,
   decodeFullDecoder',
  )
 import Cardano.Ledger.Binary.Encoding (serialize')
@@ -23,6 +22,7 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad.IO.Class (MonadIO (..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import Test.Cardano.Ledger.Binary.Annotator (decodeFullAnnotator)
 
 readCBORWith ::
   (MonadIO m, Exception e) => (Version -> BS.ByteString -> Either e a) -> Version -> FilePath -> m a

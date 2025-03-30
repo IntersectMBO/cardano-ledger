@@ -13,15 +13,14 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra.TxAuxData (
-  AllegraTxAuxData (AllegraTxAuxData),
-  AllegraTxAuxDataRaw,
+  AllegraTxAuxData (AllegraTxAuxData, MkAlegraTxAuxData),
+  AllegraTxAuxDataRaw (..),
   metadataAllegraTxAuxDataL,
   AllegraEraTxAuxData (..),
   timelockScriptsAllegraTxAuxDataL,
@@ -31,7 +30,6 @@ where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Binary (
-  Annotator (..),
   DecCBOR (..),
   EncCBOR (..),
   ToCBOR,
@@ -40,7 +38,6 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.MemoBytes (
   EqRaw,
-  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (RawType),
@@ -109,7 +106,8 @@ instance AllegraEraTxAuxData AllegraEra where
 
 timelockScriptsAllegraTxAuxDataL ::
   forall era.
-  Era era => Lens' (AllegraTxAuxData era) (StrictSeq (Timelock era))
+  Era era =>
+  Lens' (AllegraTxAuxData era) (StrictSeq (Timelock era))
 timelockScriptsAllegraTxAuxDataL =
   lensMemoRawType @era atadrTimelock $
     \txAuxDataRaw ts -> txAuxDataRaw {atadrTimelock = ts}
@@ -120,7 +118,7 @@ deriving instance Era era => NoThunks (AllegraTxAuxDataRaw era)
 
 instance NFData (AllegraTxAuxDataRaw era)
 
-newtype AllegraTxAuxData era = AuxiliaryDataWithBytes (MemoBytes (AllegraTxAuxDataRaw era))
+newtype AllegraTxAuxData era = MkAlegraTxAuxData (MemoBytes (AllegraTxAuxDataRaw era))
   deriving (Generic)
   deriving newtype (Eq, ToCBOR, SafeToHash, DecCBOR)
 
@@ -163,30 +161,6 @@ instance Era era => EncCBOR (AllegraTxAuxDataRaw era) where
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (AllegraTxAuxData era)
 
-instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
-  decCBOR =
-    peekTokenType >>= \case
-      TypeMapLen -> decodeFromMap
-      TypeMapLen64 -> decodeFromMap
-      TypeMapLenIndef -> decodeFromMap
-      TypeListLen -> decodeFromList
-      TypeListLen64 -> decodeFromList
-      TypeListLenIndef -> decodeFromList
-      _ -> fail "Failed to decode AuxiliaryDataRaw"
-    where
-      decodeFromMap =
-        decode
-          ( Ann (Emit AllegraTxAuxDataRaw)
-              <*! Ann From
-              <*! Ann (Emit StrictSeq.empty)
-          )
-      decodeFromList =
-        decode
-          ( Ann (RecD AllegraTxAuxDataRaw)
-              <*! Ann From
-              <*! D (sequence <$> decCBOR)
-          )
-
 instance Era era => DecCBOR (AllegraTxAuxDataRaw era) where
   decCBOR =
     peekTokenType >>= \case
@@ -210,8 +184,3 @@ instance Era era => DecCBOR (AllegraTxAuxDataRaw era) where
               <! From
               <! From
           )
-
-deriving via
-  (Mem (AllegraTxAuxDataRaw era))
-  instance
-    Era era => DecCBOR (Annotator (AllegraTxAuxData era))

@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.11.1.0
+## 1.12.0.0
 
+* Move `Annotator` instances to `testlib`
 * Expose access to `BabbageTxBodyRaw`
 * Expose constructor `MkBabbageTxBody`
 * Deprecate `spendInputs'`, `collateralInputs'`, `referenceInputs'`, `outputs'`, `collateralReturn'`, `totalCollateral'`, `certs'`, `txfee'`, `withdrawals'`, `vldt'`, `update'`, `reqSignerHashes'`, `adHash'`, `mint'`, `scriptIntegrityHash'`, `spendInputs'`, `txnetworkid'`.

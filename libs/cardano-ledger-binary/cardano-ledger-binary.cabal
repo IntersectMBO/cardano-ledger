@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-binary
-version: 1.6.0.0
+version: 1.7.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -85,6 +85,7 @@ library
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Binary
+    Test.Cardano.Ledger.Binary.Annotator
     Test.Cardano.Ledger.Binary.Arbitrary
     Test.Cardano.Ledger.Binary.Cddl
     Test.Cardano.Ledger.Binary.Cuddle
@@ -130,12 +131,15 @@ library testlib
     hspec,
     hspec-core,
     iproute,
+    mtl,
+    plutus-ledger-api,
     pretty-show,
     prettyprinter,
     prettyprinter-ansi-terminal,
     primitive,
     quickcheck-instances >=0.3.32,
     random >=1.2,
+    serialise,
     tasty-hunit,
     text,
     tree-diff,
@@ -214,7 +218,7 @@ benchmark bench
   build-depends:
     base,
     bytestring,
-    cardano-ledger-binary,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     containers,
     criterion,
     deepseq,

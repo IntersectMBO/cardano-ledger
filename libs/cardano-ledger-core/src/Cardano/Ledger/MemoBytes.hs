@@ -7,7 +7,6 @@
 module Cardano.Ledger.MemoBytes (
   MemoBytes (Memo),
   MemoHashIndex,
-  Mem,
   getMemoBytesType,
   getMemoBytesHash,
   shorten,

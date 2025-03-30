@@ -106,7 +106,6 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
-  Annotator,
   DecCBOR (..),
   EncCBOR (..),
   ToCBOR (..),
@@ -123,7 +122,6 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.MemoBytes (
   EqRaw,
-  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
@@ -391,12 +389,6 @@ deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (AlonzoTxBody era)
 
-deriving via
-  Mem (AlonzoTxBodyRaw era)
-  instance
-    (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-    DecCBOR (Annotator (AlonzoTxBody era))
-
 deriving newtype instance
   (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
   DecCBOR (AlonzoTxBody era)
@@ -641,12 +633,6 @@ emptyAlonzoTxBodyRaw =
     SNothing
     SNothing
     SNothing
-
-instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-  DecCBOR (Annotator (AlonzoTxBodyRaw era))
-  where
-  decCBOR = pure <$> decCBOR
 
 alonzoRedeemerPointer ::
   forall era.

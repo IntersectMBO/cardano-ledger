@@ -79,9 +79,9 @@ instance TranslateEra AlonzoEra Tx where
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
-    txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
-    txAuxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
+    txBody <- translateEraThroughCBOR $ tx ^. bodyTxL
+    txWits <- translateEraThroughCBOR $ tx ^. witsTxL
+    txAuxData <- mapM translateEraThroughCBOR (tx ^. auxDataTxL)
     -- transactions from Mary era always pass script ("phase 2") validation
     let validating = IsValid True
     pure $ Tx $ AlonzoTx txBody txWits validating txAuxData

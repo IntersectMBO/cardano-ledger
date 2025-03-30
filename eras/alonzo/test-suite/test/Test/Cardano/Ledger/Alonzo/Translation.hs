@@ -18,6 +18,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams
 import Lens.Micro
 import Test.Cardano.Ledger.AllegraEraGen ()
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()

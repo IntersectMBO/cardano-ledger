@@ -74,7 +74,7 @@ instance TranslateEra AllegraEra NewEpochState where
 
 instance TranslateEra AllegraEra ShelleyTx where
   type TranslationError AllegraEra ShelleyTx = DecoderError
-  translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
+  translateEra _ctx = translateEraThroughCBOR
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
@@ -164,7 +164,7 @@ instance TranslateEra AllegraEra EpochState where
 
 instance TranslateEra AllegraEra ShelleyTxWits where
   type TranslationError AllegraEra ShelleyTxWits = DecoderError
-  translateEra _ctx = translateEraThroughCBOR "ShelleyTxWits"
+  translateEra _ctx = translateEraThroughCBOR
 
 instance TranslateEra AllegraEra Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en

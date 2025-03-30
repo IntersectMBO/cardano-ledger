@@ -26,7 +26,6 @@ module Cardano.Ledger.Shelley.BlockChain (
   --
   incrBlocks,
   coreAuxDataBytes,
-  txSeqDecoder,
 )
 where
 
@@ -40,7 +39,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotated (..),
-  Annotator (..),
   DecCBOR (decCBOR),
   Decoder,
   EncCBOR (..),
@@ -50,11 +48,10 @@ import Cardano.Ledger.Binary (
   encodeFoldableMapEncoder,
   encodePreEncoded,
   serialize,
-  withSlice,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitAnnTx, segWitTx)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx, segWitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -192,40 +189,6 @@ bbHash (TxSeq' _ bodies wits md) =
     hashStrict = Hash.hashWith id
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
--- | The parts of the Tx in Blocks that have to have DecCBOR(Annotator x) instances.
---   These are exactly the parts that are SafeToHash.
--- | Decode a TxSeq, used in decoding a Block.
-txSeqDecoder ::
-  forall era.
-  EraTx era =>
-  Bool ->
-  forall s.
-  Decoder s (Annotator (ShelleyTxSeq era))
-txSeqDecoder lax = do
-  (bodies, bodiesAnn) <- withSlice decCBOR
-  (wits, witsAnn) <- withSlice decCBOR
-  let bodiesLength = length bodies
-      witsLength = length wits
-  (metadata, metadataAnn) <- withSlice $ do
-    auxDataMap <- decCBOR
-    auxDataSeqDecoder bodiesLength auxDataMap lax
-
-  unless
-    (lax || bodiesLength == witsLength)
-    ( fail $
-        "different number of transaction bodies ("
-          <> show bodiesLength
-          <> ") and witness sets ("
-          <> show witsLength
-          <> ")"
-    )
-
-  let txns =
-        sequenceA $
-          StrictSeq.forceToStrict $
-            Seq.zipWith3 segWitAnnTx bodies wits metadata
-  pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
-
 auxDataSeqDecoder ::
   Int -> IntMap a -> Bool -> Decoder s (Seq (Maybe a))
 auxDataSeqDecoder bodiesLength auxDataMap lax = do
@@ -241,17 +204,7 @@ auxDataSeqDecoder bodiesLength auxDataMap lax = do
     indexLookupSeq :: Int -> IntMap a -> Seq (Maybe a)
     indexLookupSeq n ixMap = Seq.fromList [IntMap.lookup ix ixMap | ix <- [0 .. n - 1]]
 
-instance EraTx era => DecCBOR (Annotator (ShelleyTxSeq era)) where
-  decCBOR = txSeqDecoder False
-
-instance
-  ( EraTx era
-  , DecCBOR (TxBody era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  DecCBOR (ShelleyTxSeq era)
-  where
+instance EraTx era => DecCBOR (ShelleyTxSeq era) where
   decCBOR = do
     Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
     Annotated wits witsBytes <- decodeAnnotated decCBOR

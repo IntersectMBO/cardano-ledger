@@ -10,10 +10,11 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, LedgerTxInfo (..), toPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
-import Cardano.Ledger.Binary.Encoding (serialize)
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
   TxInfoLanguage (..),

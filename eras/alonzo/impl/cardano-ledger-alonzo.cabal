@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-alonzo
-version: 1.13.0.1
+version: 1.14.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -83,9 +83,9 @@ library
     cardano-crypto-class,
     cardano-data ^>=1.2.1,
     cardano-ledger-allegra ^>=1.8,
-    cardano-ledger-binary ^>=1.6,
+    cardano-ledger-binary ^>=1.7,
     cardano-ledger-core ^>=1.18,
-    cardano-ledger-mary ^>=1.8.1,
+    cardano-ledger-mary ^>=1.9,
     cardano-ledger-shelley ^>=1.17,
     cardano-slotting,
     cardano-strict-containers,
@@ -108,6 +108,7 @@ library
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Arbitrary
+    Test.Cardano.Ledger.Alonzo.Binary.Annotator
     Test.Cardano.Ledger.Alonzo.Binary.Cddl
     Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec
     Test.Cardano.Ledger.Alonzo.Binary.RoundTrip

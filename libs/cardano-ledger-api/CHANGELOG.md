@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Moved `Annotator` instances to `testlib` for all respective packages
 * Rename `queryAccountState` to `queryChainAccountState`
 
 ## 1.11.0.0
