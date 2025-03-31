@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Core.Binary.Annotator (
   decoderEquivalenceEraSpec,
   decoderEquivalenceCoreEraTypesSpec,
   Mem,
+  module Test.Cardano.Ledger.Binary.Annotator,
 ) where
 
 import Cardano.Ledger.Binary
@@ -23,6 +24,7 @@ import Cardano.Ledger.MemoBytes (MemoBytes, mkMemoBytes)
 import Cardano.Ledger.Plutus
 import Data.Typeable
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
+import Test.Cardano.Ledger.Binary.Annotator
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 

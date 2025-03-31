@@ -3,13 +3,13 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Mary.Binary.Annotator () where
+module Test.Cardano.Ledger.Mary.Binary.Annotator (
+  module Test.Cardano.Ledger.Allegra.Binary.Annotator,
+) where
 
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Mary.TxBody.Internal
-import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
-import Test.Cardano.Ledger.Binary.Annotator ()
-import Test.Cardano.Ledger.Core.Binary.Annotator
+import Test.Cardano.Ledger.Allegra.Binary.Annotator
 
 deriving via
   Mem (MaryTxBodyRaw era)

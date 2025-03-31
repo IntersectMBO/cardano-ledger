@@ -25,15 +25,15 @@
 module Cardano.Ledger.Alonzo.TxSeq.Internal (
   AlonzoTxSeq (.., AlonzoTxSeq),
   hashAlonzoTxSeq,
+  alignedValidFlags,
 )
 where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Era
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), alonzoSegwitTx)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
 import Cardano.Ledger.Binary (
   Annotated (..),
-  Annotator,
   DecCBOR (..),
   EncCBORGroup (..),
   decodeAnnotated,
@@ -43,7 +43,6 @@ import Cardano.Ledger.Binary (
   encodePreEncoded,
   encodedSizeExpr,
   serialize,
-  withSlice,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.BlockChain (auxDataSeqDecoder)
@@ -179,50 +178,6 @@ hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
     hashStrict :: ByteString -> Hash HASH ByteString
     hashStrict = Hash.hashWith id
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
-
-instance AlonzoEraTx era => DecCBOR (Annotator (AlonzoTxSeq era)) where
-  decCBOR = do
-    (bodies, bodiesAnn) <- withSlice decCBOR
-    (wits, witsAnn) <- withSlice decCBOR
-    let bodiesLength = length bodies
-        inRange x = (0 <= x) && (x <= (bodiesLength - 1))
-        witsLength = length wits
-    (auxData, auxDataAnn) <- withSlice $ do
-      auxDataMap <- decCBOR
-      auxDataSeqDecoder bodiesLength auxDataMap False
-
-    (isValIdxs, isValAnn) <- withSlice decCBOR
-    let validFlags = alignedValidFlags bodiesLength isValIdxs
-    unless
-      (bodiesLength == witsLength)
-      ( fail $
-          "different number of transaction bodies ("
-            <> show bodiesLength
-            <> ") and witness sets ("
-            <> show witsLength
-            <> ")"
-      )
-    unless
-      (all inRange isValIdxs)
-      ( fail
-          ( "Some IsValid index is not in the range: 0 .. "
-              ++ show (bodiesLength - 1)
-              ++ ", "
-              ++ show isValIdxs
-          )
-      )
-
-    let txns =
-          sequenceA $
-            StrictSeq.forceToStrict $
-              Seq.zipWith4 alonzoSegwitTx bodies wits validFlags auxData
-    pure $
-      AlonzoTxSeqRaw
-        <$> txns
-        <*> bodiesAnn
-        <*> witsAnn
-        <*> auxDataAnn
-        <*> isValAnn
 
 instance
   ( AlonzoEraTx era

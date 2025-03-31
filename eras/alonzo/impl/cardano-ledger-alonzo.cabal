@@ -108,6 +108,7 @@ library
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Arbitrary
+    Test.Cardano.Ledger.Alonzo.Binary.Annotator
     Test.Cardano.Ledger.Alonzo.Binary.Cddl
     Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec
     Test.Cardano.Ledger.Alonzo.Binary.RoundTrip

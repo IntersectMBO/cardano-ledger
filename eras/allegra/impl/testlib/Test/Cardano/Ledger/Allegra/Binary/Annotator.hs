@@ -10,7 +10,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Allegra.Binary.Annotator () where
+module Test.Cardano.Ledger.Allegra.Binary.Annotator (
+  module Test.Cardano.Ledger.Shelley.Binary.Annotator,
+) where
 
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
@@ -21,7 +23,7 @@ import Cardano.Ledger.Core
 import qualified Data.Sequence.Strict as StrictSeq
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Core.Binary.Annotator
-import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
+import Test.Cardano.Ledger.Shelley.Binary.Annotator
 
 instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
   decCBOR =

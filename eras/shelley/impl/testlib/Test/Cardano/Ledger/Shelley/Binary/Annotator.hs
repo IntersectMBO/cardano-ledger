@@ -10,7 +10,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Shelley.Binary.Annotator () where
+module Test.Cardano.Ledger.Shelley.Binary.Annotator (
+  mapTraverseableDecoderA,
+  module Test.Cardano.Ledger.Core.Binary.Annotator,
+) where
 
 import Cardano.Ledger.BaseTypes (maybeToStrictMaybe)
 import Cardano.Ledger.Binary

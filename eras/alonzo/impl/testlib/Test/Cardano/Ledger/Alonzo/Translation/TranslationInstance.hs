@@ -20,11 +20,9 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
 
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
-  Annotator,
   DecCBOR (..),
   DecoderError,
   EncCBOR (..),
-  decodeFullAnnotator,
   decodeList,
   fromPlainDecoder,
   fromPlainEncoding,
@@ -48,6 +46,7 @@ import GHC.Generics (Generic)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator
 
 data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo

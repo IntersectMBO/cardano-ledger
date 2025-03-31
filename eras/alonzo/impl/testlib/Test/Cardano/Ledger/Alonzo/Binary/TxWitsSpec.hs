@@ -23,6 +23,7 @@ import Data.List (isPrefixOf)
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe (mapMaybe)
 import Test.Cardano.Ledger.Alonzo.Arbitrary
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Common
 
 spec ::
@@ -41,7 +42,7 @@ spec = do
 
 emptyFieldsProps ::
   forall era.
-  AlonzoEraScript era =>
+  (AlonzoEraScript era, DecCBOR (Annotator (NativeScript era))) =>
   Spec
 emptyFieldsProps = do
   prop "fails to deserialize if fields contain an empty collection" $
@@ -60,6 +61,7 @@ emptyFieldsProps = do
 plutusScriptsProp ::
   forall era.
   ( AlonzoEraScript era
+  , DecCBOR (Annotator (NativeScript era))
   , Script era ~ AlonzoScript era
   ) =>
   Spec
@@ -135,7 +137,7 @@ nativeScriptsProp = do
 
 expectDeserialiseSuccess ::
   forall era.
-  (AlonzoEraScript era, HasCallStack) =>
+  (AlonzoEraScript era, DecCBOR (Annotator (NativeScript era)), HasCallStack) =>
   Encoding ->
   IO ()
 expectDeserialiseSuccess enc =
@@ -144,7 +146,7 @@ expectDeserialiseSuccess enc =
 
 expectDeserialiseFailureFromVersion ::
   forall era.
-  (AlonzoEraScript era, HasCallStack) =>
+  (AlonzoEraScript era, DecCBOR (Annotator (NativeScript era)), HasCallStack) =>
   Version ->
   Encoding ->
   String ->
@@ -170,7 +172,7 @@ expectDeserialiseFailure e errMsgPrefix = do
 
 encodeAndCheckDecoded ::
   forall era.
-  AlonzoEraScript era =>
+  (AlonzoEraScript era, DecCBOR (Annotator (NativeScript era))) =>
   Encoding ->
   (Either DecoderError (Annotator (AlonzoTxWits era)) -> IO ()) ->
   IO ()

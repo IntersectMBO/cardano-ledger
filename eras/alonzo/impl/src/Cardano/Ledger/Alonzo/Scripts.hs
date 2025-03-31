@@ -66,7 +66,6 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxCert ()
 import Cardano.Ledger.BaseTypes (ProtVer (..), kindObject)
 import Cardano.Ledger.Binary (
-  Annotator,
   DecCBOR (decCBOR),
   DecCBORGroup (..),
   Decoder,
@@ -78,14 +77,13 @@ import Cardano.Ledger.Binary (
   encodeWord8,
  )
 import Cardano.Ledger.Binary.Coders (
-  Decode (Ann, D, From, Invalid, SumD, Summands),
+  Decode (D, From, Invalid, SumD, Summands),
   Encode (Sum, To),
   Wrapped (..),
   decode,
   encode,
   (!>),
   (<!),
-  (<*!),
  )
 import Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import Cardano.Ledger.Core
@@ -593,22 +591,6 @@ encodeScript = \case
       SPlutusV1 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV1) 1 !> To pb
       SPlutusV2 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV2) 2 !> To pb
       SPlutusV3 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV3) 3 !> To pb
-
-instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
-  decCBOR = decode (Summands "AlonzoScript" decodeScript)
-    where
-      decodeAnnPlutus slang =
-        Ann (SumD PlutusScript) <*! Ann (D (decodePlutusScript slang))
-      {-# INLINE decodeAnnPlutus #-}
-      decodeScript :: Word -> Decode 'Open (Annotator (AlonzoScript era))
-      decodeScript = \case
-        0 -> Ann (SumD TimelockScript) <*! From
-        1 -> decodeAnnPlutus SPlutusV1
-        2 -> decodeAnnPlutus SPlutusV2
-        3 -> decodeAnnPlutus SPlutusV3
-        n -> Invalid n
-      {-# INLINE decodeScript #-}
-  {-# INLINE decCBOR #-}
 
 instance AlonzoEraScript era => DecCBOR (AlonzoScript era) where
   decCBOR = decode (Summands "AlonzoScript" decodeScript)
