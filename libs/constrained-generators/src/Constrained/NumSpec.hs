@@ -79,10 +79,10 @@ instance Semantics NumOrdW where
   semantics GreaterOrEqualW = (>=)
 
 instance Syntax NumOrdW where
-  inFix LessOrEqualW = True
-  inFix LessW = True
-  inFix GreaterOrEqualW = True
-  inFix GreaterW = True
+  isInFix LessOrEqualW = True
+  isInFix LessW = True
+  isInFix GreaterOrEqualW = True
+  isInFix GreaterW = True
 
 -- =============================================
 -- OrdLike. Ord for Numbers in the Logic

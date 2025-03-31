@@ -239,10 +239,10 @@ instance
                     )
         explain1 ("  n = " ++ show n) $ go n kvs mempty
   genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
-    !mustMap <- explain1 "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
+    mustMap <- explain1 "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (pair_ (Lit k) v) kvs
       v <- explain1 (show $ "vSpec =" <+> pretty vSpec) $ genFromSpecT vSpec
-      pure $ (k, v)
+      pure (k, v)
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
         size' = simplifySpec $ constrained $ \sz ->
@@ -254,12 +254,12 @@ instance
                 <> maxSpec (cardinality (fstSpec kvs)) -- (mapSpec FstW $ mapSpec ToGenericW kvs))
                 <> maxSpec (cardinalTrueSpec @k)
             )
-        !foldSpec' = case foldSpec of
+        foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn@(Fun symbol) sumSpec -> FoldSpec fn $ propagate (Context theAddFn (HOLE :<> mustSum :<| End)) sumSpec
             where
               mustSum = adds (map (semantics symbol) haveVals)
-    let !valsSpec =
+    let valsSpec =
           ListSpec
             Nothing
             mustVals'
@@ -267,7 +267,7 @@ instance
             (simplifySpec $ constrained $ \v -> unsafeExists $ \k -> pair_ k v `satisfies` kvs)
             foldSpec'
 
-    !restVals <-
+    restVals <-
       explain
         ( NE.fromList
             [ "Make the restVals"

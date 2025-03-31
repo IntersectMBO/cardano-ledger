@@ -132,6 +132,7 @@ import Constrained.Spec.Size qualified as C
 import Constrained.Spec.Tree ()
 import GHC.TypeLits hiding (Text)
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
+import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
 
 import Cardano.Crypto.Hash hiding (Blake2b_224)
 import Control.DeepSeq (NFData)
@@ -200,7 +201,7 @@ type ConwayTxBodyTypes =
    , StrictMaybe Coin
    , Coin
    ]
-instance EraSpecPParams ConwayEra => HasSpec (ConwayTxBody ConwayEra)
+instance HasSpec (ConwayTxBody ConwayEra)
 
 instance HasSimpleRep (ConwayTxBody ConwayEra) where
   type TheSop (ConwayTxBody ConwayEra) = '["ConwayTxBody" ::: ConwayTxBodyTypes]
@@ -246,9 +247,8 @@ instance Foldy DeltaCoin where
 
 deriving via Integer instance Num DeltaCoin
 
--- since TxCert is a type family, we need this Typeable constraint
 instance (Typeable (TxCert era), Typeable era) => HasSimpleRep (GovSignal era)
-instance (EraTxCert ConwayEra, EraSpecPParams ConwayEra) => HasSpec (GovSignal ConwayEra)
+instance HasSpec (GovSignal ConwayEra)
 
 instance HasSimpleRep SlotNo
 instance OrdLike SlotNo
@@ -690,10 +690,10 @@ newtype StringSpec = StringSpec {strSpecLen :: Specification Int}
 
 deriving instance Show StringSpec
 
-instance HasSpec Int => Semigroup StringSpec where
+instance Semigroup StringSpec where
   StringSpec len <> StringSpec len' = StringSpec (len <> len')
 
-instance HasSpec Int => Monoid StringSpec where
+instance Monoid StringSpec where
   mempty = StringSpec TrueSpec
 
 instance HasSpec ByteString where
@@ -737,7 +737,6 @@ deriving instance Show (StringW s as b)
 deriving instance Eq (StringW s as b)
 
 strLen_ ::
-  forall s.
   (StringLike s, HasSpec s) =>
   Term s ->
   Term Int
@@ -897,13 +896,11 @@ instance Typeable era => HasSimpleRep (ProposalProcedure era)
 instance EraSpecPParams era => HasSpec (ProposalProcedure era)
 
 pProcDeposit_ ::
-  EraSpecPParams ConwayEra =>
   Term (ProposalProcedure ConwayEra) ->
   Term Coin
 pProcDeposit_ = sel @0
 
 pProcGovAction_ ::
-  EraSpecPParams ConwayEra =>
   Term (ProposalProcedure ConwayEra) ->
   Term (GovAction ConwayEra)
 pProcGovAction_ = sel @2
@@ -989,25 +986,21 @@ instance Typeable era => HasSimpleRep (GovActionState era)
 instance (Era era, EraSpecPParams era) => HasSpec (GovActionState era)
 
 gasId_ ::
-  EraSpecPParams ConwayEra =>
   Term (GovActionState ConwayEra) ->
   Term (GovActionId)
 gasId_ = sel @0
 
 gasCommitteeVotes_ ::
-  EraSpecPParams ConwayEra =>
   Term (GovActionState ConwayEra) ->
   Term (Map (Credential 'HotCommitteeRole) Vote)
 gasCommitteeVotes_ = sel @1
 
 gasDRepVotes_ ::
-  EraSpecPParams ConwayEra =>
   Term (GovActionState ConwayEra) ->
   Term (Map (Credential 'DRepRole) Vote)
 gasDRepVotes_ = sel @2
 
 gasProposalProcedure_ ::
-  EraSpecPParams ConwayEra =>
   Term (GovActionState ConwayEra) ->
   Term (ProposalProcedure ConwayEra)
 gasProposalProcedure_ = sel @4
@@ -1186,7 +1179,7 @@ instance
   , HasSpec (Proposals era)
   , HasSimpleRep (Proposals era)
   , era ~ ConwayEra
-  , EraSpecPParams ConwayEra
+  , EraSpecPParams era
   ) =>
   HasGenHint (Proposals era)
   where
@@ -1205,7 +1198,7 @@ instance
         ]
 
 instance HasSimpleRep (EnactSignal ConwayEra)
-instance EraSpecPParams ConwayEra => HasSpec (EnactSignal ConwayEra)
+instance HasSpec (EnactSignal ConwayEra)
 
 instance Typeable era => HasSimpleRep (EnactState era)
 instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (EnactState era)
@@ -1225,10 +1218,10 @@ instance
   HasSpec (RatifyEnv era)
 
 instance HasSimpleRep (RatifyState ConwayEra)
-instance EraSpecPParams ConwayEra => HasSpec (RatifyState ConwayEra)
+instance HasSpec (RatifyState ConwayEra)
 
 instance HasSimpleRep (RatifySignal ConwayEra)
-instance EraSpecPParams ConwayEra => HasSpec (RatifySignal ConwayEra)
+instance HasSpec (RatifySignal ConwayEra)
 
 instance HasSimpleRep PoolDistr
 instance HasSpec PoolDistr
@@ -1237,7 +1230,7 @@ instance HasSimpleRep IndividualPoolStake
 instance HasSpec IndividualPoolStake
 
 instance HasSimpleRep (ConwayGovCertEnv ConwayEra)
-instance EraSpecPParams ConwayEra => HasSpec (ConwayGovCertEnv ConwayEra)
+instance HasSpec (ConwayGovCertEnv ConwayEra)
 
 instance Typeable era => HasSimpleRep (PoolEnv era)
 instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (PoolEnv era)
@@ -1321,13 +1314,13 @@ instance
   HasSpec (UTxO era)
 
 instance HasSimpleRep (ConwayGovState ConwayEra)
-instance EraSpecPParams ConwayEra => HasSpec (ConwayGovState ConwayEra)
+instance HasSpec (ConwayGovState ConwayEra)
 
 instance HasSimpleRep (DRepPulsingState ConwayEra)
-instance EraSpecPParams ConwayEra => HasSpec (DRepPulsingState ConwayEra)
+instance HasSpec (DRepPulsingState ConwayEra)
 
 instance HasSimpleRep (PulsingSnapshot ConwayEra)
-instance EraSpecPParams ConwayEra => HasSpec (PulsingSnapshot ConwayEra)
+instance HasSpec (PulsingSnapshot ConwayEra)
 
 type DRepPulserTypes =
   '[ Int
@@ -1371,9 +1364,7 @@ instance
       rep
       $ \ps um b sd spd dd ds ce cs es p pds poolps ->
         DRepPulser ps um b sd spd dd ds ce cs es p pds testGlobals poolps
-instance
-  EraSpecPParams ConwayEra =>
-  HasSpec (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
+instance HasSpec (DRepPulser ConwayEra Identity (RatifyState ConwayEra))
 
 instance (Typeable (CertState era), Era era) => HasSimpleRep (UtxoEnv era)
 instance
@@ -1772,7 +1763,6 @@ instance Semantics CoinW where
     ToDeltaW -> DeltaCoin . unCoin
 
 toDelta_ ::
-  HasSpec DeltaCoin =>
   Term Coin ->
   Term DeltaCoin
 toDelta_ = appTerm ToDeltaW

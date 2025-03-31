@@ -202,7 +202,7 @@ instance Semantics TreeW where
   semantics RootLabelW = \(Node a _) -> a
 
 instance Syntax TreeW where
-  inFix _ = False
+  isInFix _ = False
 
 instance HasSpec a => Logic "rootLabel_" TreeW '[Tree a] a where
   propagate ctxt (ExplainSpec [] s) = propagate ctxt s

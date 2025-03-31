@@ -331,21 +331,3 @@ testConwayCert = do
         (ConwayTxCertGov (ConwayAuthCommitteeHotKey _ _)) -> "AuthCommittee"
         (ConwayTxCertGov (ConwayResignCommitteeColdKey _ _)) -> "ResignCommittee"
   pure (classify True tag (conformsToSpec ans spec))
-
-{-
-conwayCertStateSpec ::
-  WitUniv ConwayEra ->
-  Term AccountState ->
-  Term EpochNo ->
-  Specification (ConwayCertState ConwayEra)
-conwayCertStateSpec univ acct epoch = constrained $ \ [var|convCertState|] ->
-  match convCertState $ \ [var|vState|] [var|pState|] [var|dState|] ->
-    [ satisfies pState (pstateSpec univ epoch)
-    , reify pState psStakePoolParams $ \ [var|poolreg|] ->
-        [ dependsOn dState poolreg
-        , satisfies dState (dstateSpec univ acct poolreg)
-        ]
-    , reify dState getDelegatees $ \ [var|delegatees|] ->
-        satisfies vState (vstateSpec univ epoch delegatees)
-    ]
--}

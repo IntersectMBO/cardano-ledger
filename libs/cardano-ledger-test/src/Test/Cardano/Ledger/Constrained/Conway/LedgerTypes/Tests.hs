@@ -198,9 +198,8 @@ spec = do
 
 utxoStateGen ::
   forall era.
-  ( EraSpecLedger era
-  , HasSpec (InstantStake era)
-  , CertState era ~ ShelleyCertState era
+  ( WellFormed (CertState era) era
+  , EraSpecLedger era
   ) =>
   Gen (Specification (UTxOState era))
 utxoStateGen =

@@ -81,9 +81,9 @@ import Test.QuickCheck hiding (Args, Fun, Witness, forAll, witness)
 type FSType = Symbol -> [Type] -> Type -> Type
 
 -- | Syntactic operations are ones that have to do with the structure and appearence of the type.
-class Syntax (t :: Symbol -> [Type] -> Type -> Type) where
-  inFix :: forall s dom rng. t s dom rng -> Bool
-  inFix _ = False
+class Syntax (t :: FSType) where
+  isInFix :: forall s dom rng. t s dom rng -> Bool
+  isInFix _ = False
   prettyWit ::
     forall s dom rng ann.
     (All HasSpec dom, HasSpec rng) => t s dom rng -> List Term dom -> Int -> Maybe (Doc ann)
@@ -442,8 +442,8 @@ instance Show (BaseW s d r) where
   show ElemW = "elem_"
 
 instance Syntax BaseW where
-  inFix EqualW = True
-  inFix _ = False
+  isInFix EqualW = True
+  isInFix _ = False
   prettyWit ElemW (y :> Lit n :> Nil) prec = Just $ parensIf (prec > 10) $ "elem_" <+> prettyPrec 10 y <+> short n
   prettyWit ToGenericW (x :> Nil) p = Just $ "to" <+> pretty (WithPrec p x)
   prettyWit FromGenericW (x :> Nil) p = Just $ "from" <+> pretty (WithPrec p x)
@@ -974,7 +974,7 @@ instance Show a => Pretty (WithPrec (Term a)) where
     App f as
       | Just doc <- prettyWit f as p -> doc -- Use Function Symbol specific pretty printers
     App f as
-      | inFix f
+      | isInFix f
       , a :> b :> Nil <- as ->
           parensIf (p > 9) $ prettyPrec 10 a <+> viaShow f <+> prettyPrec 10 b
       | otherwise -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList (prettyPrec 11) as))

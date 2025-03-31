@@ -29,7 +29,6 @@
 --   because SimplePParams, needs these instances but not the 100's of other
 --   ones defined in Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 --   And too many instances causes GHC 8.10.7 to blow up.
---   It also defines
 module Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (
   cSNothing_,
   cSJust_,
@@ -363,7 +362,7 @@ instance EraSpecPParams era => HasSimpleRep (PParams era) where
   fromSimpleRep = subsetToPP
 
 -- | HasSpec instance for PParams
-instance (EraSpecPParams era, EraTxOut era, EraGov era, HasSpec Coin) => HasSpec (PParams era) where
+instance (EraSpecPParams era, EraTxOut era, EraGov era) => HasSpec (PParams era) where
   genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
 
 -- =======================================
