@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Mary.Binary.Annotator (
 ) where
 
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.TxBody.Internal
 import Test.Cardano.Ledger.Allegra.Binary.Annotator
 
@@ -15,3 +16,6 @@ deriving via
   Mem (MaryTxBodyRaw era)
   instance
     MaryEraTxBody era => DecCBOR (Annotator (MaryTxBody era))
+
+instance AllegraEraTxBody era => DecCBOR (Annotator (MaryTxBodyRaw era)) where
+  decCBOR = pure <$> decCBOR

@@ -48,7 +48,7 @@ where
 
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.TxBody
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxCert ()
@@ -115,9 +115,6 @@ instance Era era => EncCBOR (MaryTxBody era)
 instance
   (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
   EqRaw (MaryTxBody era)
-
-instance AllegraEraTxBody era => DecCBOR (Annotator (MaryTxBodyRaw era)) where
-  decCBOR = pure <$> decCBOR
 
 deriving newtype instance (EraTxOut era, EraTxCert era) => EncCBOR (MaryTxBodyRaw era)
 
