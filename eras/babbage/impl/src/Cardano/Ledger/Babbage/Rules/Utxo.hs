@@ -464,6 +464,7 @@ instance
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , EraCertState era
+  , SafeToHash (TxWits era)
   ) =>
   STS (BabbageUTXO era)
   where
@@ -476,6 +477,7 @@ instance
 
   initialRules = []
   transitionRules = [utxoTransition @era]
+  assertions = [Shelley.validSizeComputationCheck]
 
 instance
   ( Era era

@@ -23,6 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   ShelleyUtxoPredFailure (..),
   UtxoEvent (..),
   PredicateFailure,
+  validSizeComputationCheck,
   updateUTxOState,
 
   -- * Validations
@@ -282,6 +283,7 @@ instance
   , EraRule "UTXO" era ~ ShelleyUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , EraCertState era
+  , SafeToHash (TxWits era)
   ) =>
   STS (ShelleyUTXO era)
   where
@@ -333,6 +335,7 @@ instance
             ( \(TRC (_, us, tx)) us' ->
                 utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us'
             )
+    , validSizeComputationCheck @era
     ]
 
 utxoInductive ::
@@ -628,3 +631,16 @@ instance
   where
   wrapFailed = UpdateFailure
   wrapEvent = UpdateEvent
+
+validSizeComputationCheck ::
+  ( EraTx era
+  , SafeToHash (TxWits era)
+  , Signal (rule era) ~ Tx era
+  ) =>
+  Assertion (rule era)
+validSizeComputationCheck =
+  PreCondition
+    "Tx size should be the length of the serialization bytestring"
+    ( \(TRC (_, _, tx)) ->
+        tx ^. sizeTxF == sizeTxForFeeCalculation tx
+    )
