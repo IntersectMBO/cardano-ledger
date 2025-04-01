@@ -34,7 +34,6 @@ import Cardano.Ledger.BaseTypes (
   textToUrl,
  )
 import Cardano.Ledger.Binary (
-  Annotator,
   DecCBOR (..),
   DecCBORGroup (..),
   Decoder,
@@ -43,7 +42,6 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   Tokens (..),
   byronProtVer,
-  decodeFullAnnotator,
   decodeFullDecoder,
   decodeMapTraverse,
   encCBOR,
@@ -154,6 +152,7 @@ import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils (
   checkEncodingCBORAnnotated,
  )
 import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Protocol.Binary.Annotator
 import Test.Cardano.Protocol.Crypto.VRF.Fake (WithResult (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
