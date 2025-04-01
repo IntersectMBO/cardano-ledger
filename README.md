@@ -20,7 +20,7 @@ following links:
 
 Era | Design Documents | Formal Specification | CDDL
 ----|------------------|----------------------|-----
-Byron | | [Chain Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-blockchain.pdf "Specification of the Blockchain Layer"), [Ledger Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-ledger.pdf "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/byron/cddl-spec/byron.cddl), [PDF](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-binary.pdf)
+Byron | | [Chain Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-blockchain.pdf "Specification of the Blockchain Layer"), [Ledger Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-ledger.pdf "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/byron/ledger/impl/cddl-spec/byron.cddl), [PDF](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-binary.pdf)
 Shelley | [Design](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-delegation.pdf "Design Specification for Delegation and Incentives in Cardano") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/shelley/impl/cddl-files)
 Allegra | Same as Mary era below | Same as Mary era below | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/allegra/impl/cddl-files)
 Mary | [Multi-Currency](https://eprint.iacr.org/2020/895 "Multi-Currency Ledgers"), [UTXOma](https://iohk.io/en/research/library/papers/utxoma-utxo-with-multi-asset-support/ "UTXOma:UTXO with Multi-Asset Support") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/mary-ledger.pdf "A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/mary/impl/cddl-files)
@@ -49,10 +49,10 @@ The directory structure of this repository is as follows:
     - [formal-spec](./eras/byron/ledger/formal-spec)
     - [executable-spec](./eras/byron/ledger/executable-spec)
     - [implementation](./eras/byron/ledger/impl)
+    - [cddl](./eras/byron/ledger/impl/cddl-spec)
   - [chain](./eras/byron/chain)
     - [formal-spec](./eras/byron/chain/formal-spec)
     - [executable-spec](./eras/byron/chain/executable-spec)
-  - [cddl](./eras/byron/cddl-spec)
 - [Shelley](./eras/shelley)
   - [design-spec](./eras/shelley/design-spec)
   - [formal-spec](./eras/shelley/formal-spec)
