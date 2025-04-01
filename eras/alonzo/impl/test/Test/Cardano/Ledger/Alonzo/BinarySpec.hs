@@ -13,6 +13,7 @@ import Test.Cardano.Ledger.Core.Binary (BinaryUpgradeOpts (..), specUpgrade)
 import Test.Cardano.Ledger.Core.Binary as Binary (
   decoderEquivalenceCoreEraTypesSpec,
   decoderEquivalenceEraSpec,
+  txSizeSpec,
  )
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
 
@@ -31,3 +32,4 @@ spec = do
     Binary.decoderEquivalenceCoreEraTypesSpec @AlonzoEra
     decoderEquivalenceEraSpec @AlonzoEra @(TxDats AlonzoEra)
     decoderEquivalenceEraSpec @AlonzoEra @(Redeemers AlonzoEra)
+  Binary.txSizeSpec @AlonzoEra

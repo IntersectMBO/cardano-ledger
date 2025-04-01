@@ -22,7 +22,7 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Binary (specUpgrade)
-import Test.Cardano.Ledger.Core.Binary as Binary (decoderEquivalenceCoreEraTypesSpec)
+import Test.Cardano.Ledger.Core.Binary as Binary (decoderEquivalenceCoreEraTypesSpec, txSizeSpec)
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraSpec)
 
 spec :: Spec
@@ -43,6 +43,7 @@ spec = do
     Binary.decoderEquivalenceCoreEraTypesSpec @ConwayEra
     decoderEquivalenceLenientSpec @(TxDats ConwayEra)
     decoderEquivalenceLenientSpec @(Redeemers ConwayEra)
+  Binary.txSizeSpec @ConwayEra
   where
     -- The expectation used in this spec allows for the deserialization to fail, in which case
     -- it only checks that it fails for both decoders.

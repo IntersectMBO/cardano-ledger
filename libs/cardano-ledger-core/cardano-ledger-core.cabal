@@ -206,6 +206,7 @@ library testlib
     hedgehog-quickcheck,
     heredoc,
     hspec,
+    microlens,
     mtl,
     nothunks,
     plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
