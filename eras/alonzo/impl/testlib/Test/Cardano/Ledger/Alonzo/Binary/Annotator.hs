@@ -30,9 +30,12 @@ import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras as Map (fromElems)
+import Data.Maybe.Strict (maybeToStrictMaybe)
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
+import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.Binary.Annotator
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
@@ -296,3 +299,43 @@ instance
         <*> witsAnn
         <*> auxDataAnn
         <*> isValAnn
+
+instance
+  ( Typeable era
+  , Typeable (TxBody era)
+  , Typeable (TxWits era)
+  , Typeable (TxAuxData era)
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (Annotator (TxAuxData era))
+  ) =>
+  DecCBOR (Annotator (AlonzoTx era))
+  where
+  decCBOR =
+    decode $
+      Ann (RecD AlonzoTx)
+        <*! From
+        <*! From
+        <*! Ann From
+        <*! D
+          ( sequence . maybeToStrictMaybe
+              <$> decodeNullMaybe decCBOR
+          )
+  {-# INLINE decCBOR #-}
+
+-- | Construct an annotated Alonzo style transaction.
+alonzoSegwitTx ::
+  AlonzoEraTx era =>
+  Annotator (TxBody era) ->
+  Annotator (TxWits era) ->
+  IsValid ->
+  Maybe (Annotator (TxAuxData era)) ->
+  Annotator (Tx era)
+alonzoSegwitTx txBodyAnn txWitsAnn txIsValid auxDataAnn = Annotator $ \bytes ->
+  let txBody = runAnnotator txBodyAnn bytes
+      txWits = runAnnotator txWitsAnn bytes
+      txAuxData = maybeToStrictMaybe (flip runAnnotator bytes <$> auxDataAnn)
+   in mkBasicTx txBody
+        & witsTxL .~ txWits
+        & auxDataTxL .~ txAuxData
+        & isValidTxL .~ txIsValid
