@@ -76,7 +76,6 @@ library
   build-depends:
     aeson >=2.2,
     base >=4.14 && <5,
-    bytestring,
     cardano-data >=1.2,
     cardano-ledger-allegra ^>=1.7,
     cardano-ledger-alonzo >=1.13,
@@ -100,6 +99,7 @@ library
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Babbage.Arbitrary
+    Test.Cardano.Ledger.Babbage.Binary.Annotator
     Test.Cardano.Ledger.Babbage.Binary.Cddl
     Test.Cardano.Ledger.Babbage.CDDL
     Test.Cardano.Ledger.Babbage.Imp

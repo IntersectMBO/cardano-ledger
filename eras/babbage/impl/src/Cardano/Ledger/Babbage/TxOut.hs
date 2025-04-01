@@ -72,7 +72,6 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
-  Annotator (..),
   DecCBOR (..),
   DecShareCBOR (..),
   Decoder,
@@ -86,7 +85,7 @@ import Cardano.Ledger.Binary (
   TokenType (..),
   cborError,
   decodeBreakOr,
-  decodeFullAnnotator,
+  decodeFull',
   decodeListLenOrIndef,
   decodeMemPack,
   decodeNestedCborBytes,
@@ -110,7 +109,6 @@ import Cardano.Ledger.Plutus.Data (
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import Data.MemPack
 import qualified Data.Text as T
@@ -765,11 +763,11 @@ txOutScript :: BabbageTxOut era -> Maybe (Script era)
 txOutScript = strictMaybeToMaybe . getScriptBabbageTxOut
 {-# DEPRECATED txOutScript "In favor of `dataTxOutL` or `getScriptBabbageTxOut`" #-}
 
-decodeCIC :: DecCBOR (Annotator b) => T.Text -> Decoder s b
+decodeCIC :: DecCBOR b => T.Text -> Decoder s b
 decodeCIC s = do
   version <- getDecoderVersion
-  lbs <- decodeNestedCborBytes
-  case decodeFullAnnotator version s decCBOR (LBS.fromStrict lbs) of
+  bs <- decodeNestedCborBytes
+  case decodeFull' version bs of
     Left e -> fail $ T.unpack s <> ": " <> show e
     Right x -> pure x
 {-# INLINEABLE decodeCIC #-}
