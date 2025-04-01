@@ -243,7 +243,7 @@
                 "docs/small-step-semantics"
                 "docs/pool-ranking"
                 "docs/non-integer-calculations"
-                "eras/byron/cddl-spec"
+                "eras/byron/ledger/impl/cddl-spec"
               ];
             };
           };

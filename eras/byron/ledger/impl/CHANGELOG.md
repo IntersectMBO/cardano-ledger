@@ -2,6 +2,8 @@
 
 ## 1.2.0.0
 
+* Added `Test.Cardano.Chain.Binary.Cddl` module
+
 ### `testlib`
 
 * Added `testlib` sublibrary as replacement of `cardano-ledger-byron-test` package
