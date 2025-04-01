@@ -9,6 +9,7 @@ description: The blockchain layer of Cardano during the Byron era
 category: Currency
 build-type: Simple
 data-files:
+  cddl-spec/byron.cddl
   golden/cbor/block/BlockSignature
   golden/cbor/block/Body
   golden/cbor/block/BoundaryBlockHeader
@@ -262,6 +263,12 @@ library
     text,
     time,
     vector,
+
+library paths
+  exposed-modules: Paths_cardano_ledger_byron
+  visibility: public
+  default-language: Haskell2010
+  build-depends: base
 
 library testlib
   exposed-modules:

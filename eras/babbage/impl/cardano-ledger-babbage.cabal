@@ -97,6 +97,12 @@ library
     transformers,
     validation-selective,
 
+library paths
+  exposed-modules: Paths_cardano_ledger_babbage
+  visibility: public
+  default-language: Haskell2010
+  build-depends: base
+
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Babbage.Arbitrary

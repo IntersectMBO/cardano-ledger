@@ -105,6 +105,12 @@ library
   if !impl(ghc >=9.2)
     ghc-options: -Wno-name-shadowing
 
+library paths
+  exposed-modules: Paths_cardano_ledger_alonzo
+  visibility: public
+  default-language: Haskell2010
+  build-depends: base
+
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Arbitrary
