@@ -10,6 +10,7 @@ module Cardano.Ledger.Binary.Decoding (
   decodeFull',
   decodeFullDecoder,
   decodeFullDecoder',
+  decodeFullFromHexText,
   module Cardano.Ledger.Binary.Version,
   module Cardano.Ledger.Binary.Decoding.DecCBOR,
   module Cardano.Ledger.Binary.Decoding.Sharing,
@@ -43,6 +44,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder hiding (getOriginalBytes)
 import Cardano.Ledger.Binary.Decoding.Drop
 import Cardano.Ledger.Binary.Decoding.Sharing
 import Cardano.Ledger.Binary.Decoding.Sized
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Binary.Version
 import Codec.CBOR.Read as Read (DeserialiseFailure, IDecode (..), deserialiseIncremental)
 import Codec.CBOR.Write (toStrictByteString)
@@ -95,6 +97,10 @@ decodeFull version = decodeFullDecoder version (label $ Proxy @a) decCBOR
 decodeFull' :: forall a. DecCBOR a => Version -> BS.ByteString -> Either DecoderError a
 decodeFull' version = decodeFull version . BSL.fromStrict
 {-# INLINE decodeFull' #-}
+
+-- | Try decoding base16 encode bytes and then try to decoding them as CBOR
+decodeFullFromHexText :: DecCBOR a => Version -> Text -> Either DecoderError a
+decodeFullFromHexText v = Plain.withHexText (decodeFull' v)
 
 -- | Same as `decodeFull`, except instead of relying on the `DecCBOR` instance
 -- the `Decoder` must be suplied manually.

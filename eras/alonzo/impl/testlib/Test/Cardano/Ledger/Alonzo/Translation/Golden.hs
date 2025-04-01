@@ -50,7 +50,6 @@ assertTranslationResultsMatchGolden ::
   forall era.
   ( TranslatableGen era
   , Show (ContextError era)
-  , DecCBOR (Annotator (Tx era))
   , HasCallStack
   ) =>
   IO FilePath ->

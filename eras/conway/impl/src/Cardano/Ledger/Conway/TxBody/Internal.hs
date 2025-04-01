@@ -69,7 +69,6 @@ import Cardano.Ledger.Babbage.TxBody (
  )
 import Cardano.Ledger.BaseTypes (Network, fromSMaybe, isSJust)
 import Cardano.Ledger.Binary (
-  Annotator,
   DecCBOR (..),
   EncCBOR (..),
   Sized (..),
@@ -104,7 +103,6 @@ import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
-  Mem,
   MemoBytes (..),
   MemoHashIndex,
   Memoized (..),
@@ -292,24 +290,6 @@ type instance MemoHashIndex (ConwayTxBodyRaw era) = EraIndependentTxBody
 
 instance HashAnnotated (ConwayTxBody era) EraIndependentTxBody where
   hashAnnotated = getMemoSafeHash
-
-instance
-  ( DecCBOR (TxOut era)
-  , EraTxCert era
-  , EraPParams era
-  ) =>
-  DecCBOR (Annotator (ConwayTxBodyRaw era))
-  where
-  decCBOR = pure <$> decCBOR
-
-deriving via
-  Mem (ConwayTxBodyRaw era)
-  instance
-    ( DecCBOR (TxOut era)
-    , EraTxCert era
-    , EraPParams era
-    ) =>
-    DecCBOR (Annotator (ConwayTxBody era))
 
 mkConwayTxBody :: forall era. ConwayEraTxBody era => ConwayTxBody era
 mkConwayTxBody = mkMemoizedEra @era basicConwayTxBodyRaw

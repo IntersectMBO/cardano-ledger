@@ -19,7 +19,6 @@ module Test.Cardano.Ledger.Babbage.GoldenTranslation (
 )
 where
 
-import Test.Cardano.Ledger.Babbage.Binary.Annotator ()
 import Cardano.Ledger.Babbage (BabbageEra)
 import Paths_cardano_ledger_babbage (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
