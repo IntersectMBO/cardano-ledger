@@ -592,16 +592,19 @@ instance AlonzoEraScript era => DecCBOR (RedeemersRaw era) where
           case NE.nonEmpty xs of
             Nothing -> fail "Expected redeemers map to be non-empty"
             Just neList -> pure $ NE.reverse neList
+      {-# INLINE decodeMapRedeemers #-}
       decodeListRedeemers :: Decoder s (RedeemersRaw era)
       decodeListRedeemers =
         RedeemersRaw . Map.fromList . NE.toList
           <$> decodeNonEmptyList decodeElement
+      {-# INLINE decodeListRedeemers #-}
       decodeElement :: Decoder s (PlutusPurpose AsIx era, (Data era, ExUnits))
       decodeElement = do
-        decodeRecordNamed
-          "Redeemer"
-          (\(rdmrPtr, _) -> fromIntegral (listLen rdmrPtr) + 2)
-          $ (,) <$> decCBORGroup <*> ((,) <$> decCBOR <*> decCBOR)
+        decodeRecordNamed "Redeemer" (\(redeemerPtr, _) -> fromIntegral (listLen redeemerPtr) + 2) $ do
+          redeemerPtr <- decCBORGroup
+          redeemerData <- decCBOR
+          redeemerExUnits <- decCBOR
+          pure (redeemerPtr, (redeemerData, redeemerExUnits))
       {-# INLINE decodeElement #-}
   {-# INLINE decCBOR #-}
 
@@ -652,6 +655,7 @@ instance
       txWitnessField 6 = field addScripts (decodeAlonzoPlutusScript SPlutusV2)
       txWitnessField 7 = field addScripts (decodeAlonzoPlutusScript SPlutusV3)
       txWitnessField n = invalidField n
+      {-# INLINE txWitnessField #-}
 
       nativeScriptsDecoder :: Decoder s (Map ScriptHash (Script era))
       nativeScriptsDecoder =
@@ -664,6 +668,8 @@ instance
         where
           pairDecoder :: Decoder s (ScriptHash, Script era)
           pairDecoder = asHashedScriptPair @era . fromNativeScript <$> decCBOR
+          {-# INLINE pairDecoder #-}
+      {-# INLINE nativeScriptsDecoder #-}
 
 deriving newtype instance
   ( AlonzoEraScript era
