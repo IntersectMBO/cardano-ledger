@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Added `sizeTxForFeeCalculation` to `EraTx` with a default implementation
 * Added `consumed` to `EraUTxO`
 * Removed `upgradeCertState`
 * Removed `VState` (moved to `cardano-ledger-conway`) and related functions
