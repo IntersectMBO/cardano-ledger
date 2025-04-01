@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `eraDecoderWithBytes`
 * Move `Annotator` instances to `testlib`
 * Expose `MkData` constructor.
 * Remove `Text` parameter from `translateEraThroughCBOR`
