@@ -11,6 +11,7 @@ module Test.Cardano.Ledger.Core.Binary (
   decoderEquivalenceCoreEraTypesSpec,
   specUpgrade,
   decoderEquivalenceEraSpec,
+  txSizeSpec,
 ) where
 
 import Cardano.Ledger.Binary (Annotator, DecCBOR, ToCBOR, decNoShareCBOR, encodeMemPack)
@@ -18,6 +19,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Cardano.Ledger.Plutus (Data)
 import Data.Default (Default (def))
+import Lens.Micro
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -325,3 +327,16 @@ decoderEquivalenceCoreEraTypesSpec =
     decoderEquivalenceEraSpec @era @(TxWits era)
     decoderEquivalenceEraSpec @era @(TxBody era)
     decoderEquivalenceEraSpec @era @(Tx era)
+
+txSizeSpec ::
+  forall era.
+  ( EraTx era
+  , Arbitrary (Tx era)
+  , SafeToHash (TxWits era)
+  ) =>
+  Spec
+txSizeSpec =
+  describe "Transaction size" $ do
+    prop "should match the size of the cbor encoding" $ \(tx :: Tx era) -> do
+      let txSize = sizeTxForFeeCalculation tx
+      txSize `shouldBe` tx ^. sizeTxF

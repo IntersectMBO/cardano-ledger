@@ -176,6 +176,7 @@ utxoTransition ::
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
   , EraRule "UTXO" era ~ AllegraUTXO era
+  , SafeToHash (TxWits era)
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
@@ -310,6 +311,7 @@ instance
   , GovState era ~ ShelleyGovState era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
+  , SafeToHash (TxWits era)
   ) =>
   STS (AllegraUTXO era)
   where
@@ -322,6 +324,7 @@ instance
 
   initialRules = []
   transitionRules = [utxoTransition]
+  assertions = [Shelley.validSizeComputationCheck]
 
 instance
   ( Era era

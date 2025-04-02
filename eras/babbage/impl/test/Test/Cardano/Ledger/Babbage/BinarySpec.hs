@@ -16,6 +16,7 @@ import Test.Cardano.Ledger.Core.Binary (specUpgrade)
 import Test.Cardano.Ledger.Core.Binary as Binary (
   decoderEquivalenceCoreEraTypesSpec,
   decoderEquivalenceEraSpec,
+  txSizeSpec,
  )
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (RuleListEra (..))
 
@@ -28,6 +29,7 @@ spec = do
     Binary.decoderEquivalenceCoreEraTypesSpec @BabbageEra
     decoderEquivalenceEraSpec @BabbageEra @(TxDats BabbageEra)
     decoderEquivalenceEraSpec @BabbageEra @(Redeemers BabbageEra)
+  Binary.txSizeSpec @BabbageEra
 
 instance RuleListEra BabbageEra where
   type

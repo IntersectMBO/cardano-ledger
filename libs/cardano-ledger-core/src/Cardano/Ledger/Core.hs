@@ -106,7 +106,7 @@ import Data.Kind (Type)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, isJust)
-import Data.Maybe.Strict (StrictMaybe)
+import Data.Maybe.Strict (StrictMaybe, strictMaybe)
 import Data.MemPack
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -151,6 +151,16 @@ class
 
   -- | For end use by eg. diffusion layer in transaction submission protocol
   wireSizeTxF :: SimpleGetter (Tx era) Word32
+
+  -- | For fee calculation and estimations of impact on block space
+  -- To replace `sizeTxF` after it has been proved equivalent to it .
+  sizeTxForFeeCalculation :: SafeToHash (TxWits era) => Tx era -> Integer
+  sizeTxForFeeCalculation tx =
+    fromIntegral $
+      originalBytesSize (tx ^. bodyTxL)
+        + originalBytesSize (tx ^. witsTxL)
+        + strictMaybe 1 originalBytesSize (tx ^. auxDataTxL)
+        + 1 -- account for the top-level CBOR encoding tag
 
   -- | Using information from the transaction validate the supplied native script.
   validateNativeScript :: Tx era -> NativeScript era -> Bool
