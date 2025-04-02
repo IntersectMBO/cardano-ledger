@@ -73,18 +73,6 @@ import Test.Cardano.Ledger.Generic.Fields (
   TxBodyField (..),
   abstractTxBody,
  )
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  pcTxBodyField,
-  pcTxBodyWithUTxO,
-  pcTxIn,
-  pcTxOut,
-  ppList,
-  ppMap,
-  ppRecord,
-  ppString,
- )
 
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
 

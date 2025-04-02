@@ -58,7 +58,6 @@ import Test.Cardano.Ledger.Constrained.TypeRep (
   testEql,
   (:~:) (Refl),
  )
-import Test.Cardano.Ledger.Generic.PrettyCore (PDoc, ppRecord, ppString)
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import Test.QuickCheck (Gen, oneof)
 import Type.Reflection (TypeRep, Typeable, typeRep)

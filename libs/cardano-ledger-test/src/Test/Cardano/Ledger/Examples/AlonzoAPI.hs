@@ -39,7 +39,6 @@ import Test.Cardano.Ledger.Generic.Fields (
   WitnessesField (..),
  )
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..))
-import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters

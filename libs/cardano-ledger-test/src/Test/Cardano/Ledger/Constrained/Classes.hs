@@ -63,24 +63,6 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.GenState (plutusPurposeTags)
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  pcCertState,
-  pcPParams,
-  pcScript,
-  pcScriptsNeeded,
-  pcTx,
-  pcTxBody,
-  pcTxCert,
-  pcTxOut,
-  pcVal,
-  pcWitnesses,
-  ppPlutusPurposeAsIx,
-  ppPlutusPurposeAsIxItem,
-  ppProposedPPUpdates,
-  ppString,
- )
 import Test.Cardano.Ledger.Generic.Proof (
   Proof (..),
   Reflect (..),

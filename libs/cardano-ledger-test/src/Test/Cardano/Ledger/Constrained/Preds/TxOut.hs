@@ -57,15 +57,6 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxOutField (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  pcData,
-  pcDataHash,
-  pcScript,
-  pcScriptHash,
-  pcTxOut,
-  ppList,
-  ppMap,
- )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody, newTxOut)
 import Test.QuickCheck
