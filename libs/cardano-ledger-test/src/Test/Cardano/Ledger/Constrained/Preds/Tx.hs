@@ -96,27 +96,6 @@ import Test.Cardano.Ledger.Generic.Fields (
  )
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), protocolVersion)
 import Test.Cardano.Ledger.Generic.GenState (mkRedeemers)
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  pcGenDelegPair,
-  pcKeyHash,
-  pcLedgerState,
-  pcScript,
-  pcScriptHash,
-  pcTx,
-  pcTxBody,
-  pcTxBodyField,
-  pcTxField,
-  pcTxIn,
-  pcTxOut,
-  ppMap,
-  ppRecord,
-  ppSafeHash,
-  ppString,
-  psNewEpochState,
-  putDoc,
- )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.TxGen (applySTSByProof)
 import Test.Cardano.Ledger.Generic.Updaters (newScriptIntegrityHash)

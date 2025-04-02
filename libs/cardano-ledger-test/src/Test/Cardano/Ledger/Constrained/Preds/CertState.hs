@@ -32,12 +32,6 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  pcCertState,
-  pcDState,
-  pcPState,
-  pcVState,
- )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)

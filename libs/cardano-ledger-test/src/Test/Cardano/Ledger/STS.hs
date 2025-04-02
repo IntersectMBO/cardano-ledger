@@ -30,8 +30,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Pool
-import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse (WitUniv, genWitUniv, witness)
-import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck hiding (witness)
 import Test.Tasty

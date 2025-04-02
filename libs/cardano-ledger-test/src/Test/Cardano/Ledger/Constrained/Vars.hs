@@ -183,7 +183,6 @@ import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), Witne
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.GenState (mkRedeemers)
-import Test.Cardano.Ledger.Generic.PrettyCore (ppString, withEraPParams)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (merge, newPParams, newTx, newTxBody, newWitnesses)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
