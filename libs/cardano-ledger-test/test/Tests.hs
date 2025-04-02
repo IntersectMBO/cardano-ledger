@@ -22,7 +22,6 @@ import qualified Test.Cardano.Ledger.Examples.AlonzoBBODY as AlonzoBBODY (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoCollectInputs as AlonzoCollectInputs (tests)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
 import Test.Cardano.Ledger.Generic.AggPropTests (aggTests, depositTests)
-import qualified Test.Cardano.Ledger.Generic.PrettyTest as Pretty
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import qualified Test.Cardano.Ledger.NoThunks as NoThunks
 import qualified Test.Cardano.Ledger.STS as ConstraintSTS
@@ -41,8 +40,7 @@ main = do
 
 defaultTests :: [TestTree]
 defaultTests =
-  [ Pretty.prettyTest
-  , allSpecTests
+  [ allSpecTests
   , allExampleTests
   , conwayTrace
   , predsTests

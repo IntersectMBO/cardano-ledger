@@ -7,16 +7,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Code which defines a class that encapsulates what it means to be a Spec
 --   Eventually this will repace the most of the tests in Spec.hs
 module Test.Cardano.Ledger.Constrained.SpecClass where
 
-import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
-import Cardano.Ledger.Core (Era)
 import Data.Kind
 import Data.Map.Strict (Map)
 import Data.Set (Set)
@@ -67,6 +64,8 @@ import Test.Cardano.Ledger.Constrained.Spec (
   word64CoinL,
  )
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..))
+import Test.Cardano.Ledger.Era
+import Test.Cardano.Ledger.Generic.Proof
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -152,7 +151,7 @@ instance Specification Size Int where
   genFromS _ _ _ = genFromSize
 
 instance
-  (Era era, Ord dom {- HasRep dom, HasRep rng, HasRep c, -}, Ord rng, Adds rng) =>
+  (Ord dom {- HasRep dom, HasRep rng, HasRep c, -}, Ord rng, Adds rng, EraTest era, Reflect era) =>
   Specification (MapSpec era dom rng) (Map dom rng)
   where
   type Count (MapSpec era dom rng) = Int
@@ -165,7 +164,7 @@ instance
   genFromS msgs _count (genD, genR) spec = genFromMapSpec "genFromMapSpec" msgs genD genR spec
 
 instance
-  (Era era, Ord dom, Eq rng, HasRep dom, HasRep rng) =>
+  (Ord dom, Eq rng, HasRep dom, HasRep rng, EraTest era, Reflect era) =>
   Specification (PairSpec era dom rng) (Map dom rng)
   where
   type Count (PairSpec era dom rng) = Int
@@ -178,7 +177,7 @@ instance
   genFromS msgs _count () spec = genFromPairSpec msgs spec
 
 instance
-  (Era era, Ord dom, HasRep dom) =>
+  (Ord dom, HasRep dom, EraTest era, Reflect era) =>
   Specification (RelSpec era dom) (Set dom)
   where
   type Count (RelSpec era dom) = Int
@@ -191,7 +190,7 @@ instance
   genFromS msgs count g spec = genFromRelSpec msgs g count spec
 
 instance
-  (Era era, Adds rng, Ord rng) =>
+  (Adds rng, Ord rng, EraTest era, Reflect era) =>
   Specification (RngSpec era rng) [rng]
   where
   type Count (RngSpec era rng) = Int
@@ -204,7 +203,7 @@ instance
   genFromS msgs count g spec = genFromRngSpec msgs g count spec
 
 instance
-  (Era era, Ord a, HasRep a) =>
+  (Ord a, HasRep a, EraTest era, Reflect era) =>
   Specification (SetSpec era a) (Set a)
   where
   type Count (SetSpec era a) = Int
@@ -217,7 +216,7 @@ instance
   genFromS msgs _count g spec = genFromSetSpec msgs g spec
 
 instance
-  (Era era, HasRep a, Adds a) =>
+  (HasRep a, Adds a, EraTest era, Reflect era) =>
   Specification (ElemSpec era a) [a]
   where
   type Count (ElemSpec era a) = Size
@@ -230,7 +229,7 @@ instance
   genFromS msgs count g spec = genFromElemSpec msgs g count spec
 
 instance
-  (Era era, HasRep a, Adds a) =>
+  (HasRep a, Adds a, EraTest era, Reflect era) =>
   Specification (ListSpec era a) [a]
   where
   type Count (ListSpec era a) = Size

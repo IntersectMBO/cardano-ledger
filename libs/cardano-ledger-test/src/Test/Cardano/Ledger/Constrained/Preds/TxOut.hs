@@ -42,6 +42,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.String (IsString (..))
 import Lens.Micro
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Combinators (genFromMap, itemFromSet)
@@ -57,15 +58,6 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxOutField (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  pcData,
-  pcDataHash,
-  pcScript,
-  pcScriptHash,
-  pcTxOut,
-  ppList,
-  ppMap,
- )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody, newTxOut)
 import Test.QuickCheck
@@ -122,7 +114,8 @@ isBootstrapAddr (Addr _ _ _) = False
 -- ================================================================================
 
 txOutPreds ::
-  Reflect era => UnivSize -> Proof era -> Term era Coin -> Term era [TxOutF era] -> [Pred era]
+  (EraTest era, Reflect era) =>
+  UnivSize -> Proof era -> Term era Coin -> Term era [TxOutF era] -> [Pred era]
 txOutPreds size@UnivSize {usDatumFreq} p balanceCoin outputS =
   [ Choose
       (Range 6 6)

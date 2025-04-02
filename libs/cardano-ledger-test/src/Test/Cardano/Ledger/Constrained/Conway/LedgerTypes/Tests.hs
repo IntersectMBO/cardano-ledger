@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests where
 import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Conway.State
-import Cardano.Ledger.Core (PParamsHKD)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -21,11 +20,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
-  StashedAVVMAddresses,
   UTxOState (..),
  )
 import Constrained.API
-import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.Map (Map)
 import Data.TreeDiff
@@ -41,6 +38,7 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.ParametricSpec (irewardSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
+import Test.Cardano.Ledger.Conway.Era
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (
@@ -122,11 +120,7 @@ soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ prop
 specSuite ::
   forall (era :: Type).
   ( EraSpecLedger era
-  , ToExpr (GovState era)
-  , ToExpr (TxOut era)
-  , ToExpr (InstantStake era)
-  , ToExpr (PParamsHKD Identity era)
-  , ToExpr (StashedAVVMAddresses era)
+  , ShelleyEraTest era
   , HasSpec (InstantStake era)
   , CertState era ~ ShelleyCertState era
   ) =>

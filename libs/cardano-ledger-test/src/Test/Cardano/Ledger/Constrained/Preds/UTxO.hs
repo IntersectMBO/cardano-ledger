@@ -11,6 +11,8 @@ module Test.Cardano.Ledger.Constrained.Preds.UTxO where
 import Control.Monad (when)
 import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
+import Data.TreeDiff
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad (monadTyped)
@@ -22,13 +24,12 @@ import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Generic.PrettyCore (pcUTxO)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
 
 -- ===========================================================
 
-utxoPreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
+utxoPreds :: forall era. (Reflect era, EraTest era) => UnivSize -> Proof era -> [Pred era]
 utxoPreds usize p =
   [ MetaSize (SzExact (usNumPreUtxo usize)) utxoSize -- must be bigger than sum of (maxsize inputs 10) and (maxsize collateral 3)
   , Sized utxoSize preUtxo
@@ -50,7 +51,7 @@ utxoPreds usize p =
     preUtxo = Var (V "preUtxo" (MapR TxInR (TxOutR p)) No)
 
 utxoStage ::
-  Reflect era =>
+  (EraTest era, Reflect era) =>
   UnivSize ->
   Proof era ->
   Subst era ->
@@ -63,7 +64,7 @@ utxoStage usize proof subst0 = do
     Nothing -> pure subst
     Just msg -> error msg
 
-demoUTxO :: Reflect era => Proof era -> ReplMode -> IO ()
+demoUTxO :: (EraTest era, Reflect era) => Proof era -> ReplMode -> IO ()
 demoUTxO proof mode = do
   env <-
     generate
@@ -74,5 +75,5 @@ demoUTxO proof mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   utx <- monadTyped $ runTerm env (utxo proof)
-  when (mode == Interactive) $ putStrLn (show (pcUTxO proof (liftUTxO utx)))
+  when (mode == Interactive) . print . toExpr $ liftUTxO utx
   modeRepl mode proof env ""

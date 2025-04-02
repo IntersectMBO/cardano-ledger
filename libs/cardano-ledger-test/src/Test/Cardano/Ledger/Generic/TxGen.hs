@@ -92,6 +92,7 @@ import Data.Monoid (All (..))
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.TreeDiff (ToExpr (toExpr))
 import Data.Word (Word16)
 import GHC.Stack
 import Lens.Micro ((^.))
@@ -142,7 +143,6 @@ import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
   UtxoEntry,
  )
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..), ppRecord)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
@@ -1125,20 +1125,16 @@ mkTxdats fields = TxDats (List.foldl' accum Map.empty fields)
 
 data Box era = Box (Proof era) (TRC (EraRule "LEDGER" era)) (GenState era)
 
+instance (Era era, Signal (EraRule "LEDGER" era) ~ Tx era) => ToExpr (Box era) where
+  toExpr = toExpr . show
+
 instance
   ( Era era
-  , PrettyA (State (EraRule "LEDGER" era))
-  , PrettyA (Script era)
-  , PrettyA (Signal (EraRule "LEDGER" era))
   , Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>
   Show (Box era)
   where
-  show (Box _proof (TRC (_env, _state, _sig)) _gs) =
-    show $
-      ppRecord
-        "Box"
-        []
+  show _ = "Box {}"
 
 -- ==============================================================================
 -- How we take the generated stuff and put it through the STS rule mechanism

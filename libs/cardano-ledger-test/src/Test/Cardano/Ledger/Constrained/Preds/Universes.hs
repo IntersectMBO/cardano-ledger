@@ -61,6 +61,7 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..))
 import Test.Cardano.Ledger.Generic.Proof
@@ -647,12 +648,12 @@ stakeToHotCommittee = coerceKeyRole
 stakeToColdCommittee :: Credential 'Staking -> Credential 'ColdCommitteeRole
 stakeToColdCommittee = coerceKeyRole
 
-solveUniv :: Reflect era => UnivSize -> Proof era -> Gen (Subst era)
+solveUniv :: (EraTest era, Reflect era) => UnivSize -> Proof era -> Gen (Subst era)
 solveUniv size proof = do
   toolChainSub proof standardOrderInfo (universePreds size proof) emptySubst
 
 universeStage ::
-  Reflect era =>
+  (EraTest era, Reflect era) =>
   UnivSize ->
   Proof era ->
   Subst era ->

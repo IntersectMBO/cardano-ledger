@@ -12,12 +12,16 @@
 
 module Test.Cardano.Ledger.Constrained.Examples where
 
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Keys (GenDelegPair)
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.State (EraCertState (..), FutureGenDeleg (..))
 import Control.DeepSeq (deepseq)
 import Control.Exception (ErrorCall (..))
@@ -26,6 +30,7 @@ import Data.Default (Default (..))
 import Data.Map (Map)
 import Data.Ratio ((%))
 import qualified Debug.Trace as Debug
+import Test.Cardano.Ledger.Common (ToExpr (..))
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
@@ -39,7 +44,7 @@ import Test.Cardano.Ledger.Constrained.Tests (prop_shrinking, prop_soundness)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (explainBad, testIO)
 import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Proof (ConwayEra, Reflect (..))
 import Test.Cardano.Ledger.Generic.Trace (testPropMax)
 import Test.Hspec (shouldThrow)
@@ -53,28 +58,27 @@ import Type.Reflection (typeRep)
 
 -- ===========================================
 
-runCompile :: Era era => [Pred era] -> IO ()
+runCompile :: (EraTest era, Reflect era) => [Pred era] -> IO ()
 runCompile cs = case runTyped (compile standardOrderInfo cs) of
   Right x -> print x
   Left xs -> putStrLn (unlines xs)
 
 data Assembler era where
-  Assemble :: PrettyA t => RootTarget era x t -> Assembler era
+  Assemble :: ToExpr t => RootTarget era x t -> Assembler era
   Skip :: Assembler era
 
 stoi :: OrderInfo
 stoi = standardOrderInfo
 
 genMaybeCounterExample ::
-  Reflect era =>
-  Proof era ->
+  (Reflect era, EraTest era) =>
   String ->
   Bool ->
   OrderInfo ->
   [Pred era] ->
   Assembler era ->
   Gen (Maybe String)
-genMaybeCounterExample proof _testname loud order cs target = do
+genMaybeCounterExample _testname loud order cs target = do
   let cs3 = removeEqual cs []
   let cs4 = removeSameVar cs3 []
   graph@(DependGraph _) <- monadTyped $ compile order cs
@@ -95,8 +99,8 @@ genMaybeCounterExample proof _testname loud order cs target = do
             ]
   result <-
     if loud
-      then Debug.trace (unlines messages1) (genDependGraph loud proof graph)
-      else genDependGraph loud proof graph
+      then Debug.trace (unlines messages1) (genDependGraph loud graph)
+      else genDependGraph loud graph
   subst <- case result of
     Left msgs -> error (unlines msgs)
     Right x -> pure x
@@ -107,7 +111,7 @@ genMaybeCounterExample proof _testname loud order cs target = do
     Skip -> pure []
     Assemble t -> do
       !tval <- monadTyped (runTarget env t)
-      pure ["\nAssemble the pieces\n", show (prettyA tval)]
+      pure ["\nAssemble the pieces\n", show (toExpr tval)]
   let bad = filter (\(_, b, _) -> not b) testTriples
       ans =
         if null bad
@@ -119,27 +123,27 @@ genMaybeCounterExample proof _testname loud order cs target = do
 
 -- | Test that 'cs' :: [Pred] has a solution
 testn ::
-  Reflect era =>
-  Proof era ->
+  (EraTest era, Reflect era) =>
   String ->
   Bool ->
   OrderInfo ->
   [Pred era] ->
   Assembler era ->
   Gen Property
-testn proof testname loud order cs target = do
-  result <- genMaybeCounterExample proof testname loud order cs target
+testn testname loud order cs target = do
+  result <- genMaybeCounterExample testname loud order cs target
   case result of
     Nothing -> pure $ counterexample "" True
     Just xs -> pure $ counterexample xs False
 
 -- | Test that 'cs' :: [Pred] does NOT have a solution. We expect a failure
 failn ::
-  Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> IO ()
-failn proof message loud order cs target = do
+  (Reflect era, EraTest era) =>
+  String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> IO ()
+failn message loud order cs target = do
   shouldThrow
     ( do
-        result <- generate (genMaybeCounterExample proof message loud order cs target)
+        result <- generate (genMaybeCounterExample message loud order cs target)
         case result of
           Nothing -> putStrLn (message ++ " should have failed but it did not.")
           Just counter ->
@@ -188,8 +192,8 @@ test1 = do
   putStrLn "+++ OK, passed 1 test."
 
 -- ===================================
-test3 :: Gen Property
-test3 = testn Mary "Test 3. PState example" False stoi cs (Assemble pstateT)
+test3 :: EraTest MaryEra => Gen Property
+test3 = testn @MaryEra "Test 3. PState example" False stoi cs (Assemble pstateT)
   where
     cs =
       [ Sized (ExactSize 10) poolHashUniv
@@ -205,7 +209,7 @@ test3 = testn Mary "Test 3. PState example" False stoi cs (Assemble pstateT)
 -- ==============================
 
 test4 :: IO ()
-test4 = failn Mary "Test 4. Inconsistent Size" False stoi cs Skip
+test4 = failn @MaryEra "Test 4. Inconsistent Size" False stoi cs Skip
   where
     cs =
       [ Sized (ExactSize 5) rewards
@@ -213,7 +217,7 @@ test4 = failn Mary "Test 4. Inconsistent Size" False stoi cs Skip
       ]
 
 test5 :: IO ()
-test5 = failn Mary "Test 5. Bad Sum, impossible partition." False stoi cs Skip
+test5 = failn @MaryEra "Test 5. Bad Sum, impossible partition." False stoi cs Skip
   where
     cs =
       [ Sized (ExactSize 5) rewards
@@ -282,7 +286,7 @@ test7 loud = do
   when loud $ putStrLn (show $ constraints proof)
   graph <- monadTyped $ compile standardOrderInfo $ constraints proof
   when loud $ putStrLn (show graph)
-  result <- generate (genDependGraph loud proof graph)
+  result <- generate (genDependGraph loud graph)
   subst <- case result of
     Left msgs -> error (unlines msgs)
     Right x -> pure x
@@ -320,7 +324,7 @@ pstateConstraints =
 test8 :: Gen Property
 test8 =
   testn
-    Alonzo
+    @AlonzoEra
     "Test 8. Pstate constraints"
     False
     -- (stoi{setBeforeSubset = False})  -- Both of these choices work
@@ -331,7 +335,7 @@ test8 =
 -- ==============================================================
 -- Test the summation predicates
 
-sumPreds :: Reflect era => Proof era -> [Pred era]
+sumPreds :: (EraTest era, Reflect era) => Proof era -> [Pred era]
 sumPreds proof =
   [ Random totalAda
   , fees :=: (Lit CoinR (Coin 400))
@@ -346,12 +350,12 @@ sumPreds proof =
     utxoAmt = Var (V "utxoAmt" CoinR No)
 
 test9 :: Gen Property
-test9 = testn Alonzo "Test 9. Test of summing" False stoi (sumPreds Alonzo) Skip
+test9 = testn @AlonzoEra "Test 9. Test of summing" False stoi (sumPreds Alonzo) Skip
 
-test10 :: Gen Property
+test10 :: EraTest MaryEra => Gen Property
 test10 =
   testn
-    proof
+    @MaryEra
     "Test 10. Test conditions EQL LTH LTE GTH GTE"
     False
     stoi
@@ -373,12 +377,11 @@ test10 =
     tsumGTE = Var (V "tsumGTE" rep No)
     tsumEQL = Var (V "tsumEQL" rep No)
     rep = CoinR
-    proof = Mary
 
 test11 :: Gen Property
 test11 =
   testn
-    proof
+    @AlonzoEra
     "Test 11. Instanaeous Sum Tests"
     False
     stoi
@@ -393,15 +396,13 @@ test11 =
     , Before reserves deltaReserves
     ]
     Skip
-  where
-    proof = Alonzo
 
 -- =====================================================
 
 test12 :: Gen Property
 test12 =
   testn
-    p
+    @ShelleyEra
     "Test 12. CanFollow tests"
     False
     stoi
@@ -419,7 +420,7 @@ test12 =
 -- ==============================================================
 -- Test the Component Predicate
 
-componentPreds :: EraGov era => Proof era -> [Pred era]
+componentPreds :: (EraTest era, Reflect era) => Proof era -> [Pred era]
 componentPreds proof =
   [ Random (minFeeA proof)
   , Random size
@@ -443,7 +444,7 @@ componentPreds proof =
 test13 :: Gen Property
 test13 =
   testn
-    proof
+    @ShelleyEra
     "Test 13. Component tests"
     False
     stoi
@@ -457,7 +458,7 @@ test13 =
 test14 :: IO ()
 test14 =
   failn
-    Allegra
+    @AllegraEra
     "Test 14. Catch unsolveable use of Sized"
     False
     stoi
@@ -472,7 +473,7 @@ test14 =
 test15 :: Gen Property
 test15 =
   testn
-    proof
+    @AlonzoEra
     "Test 15. Summation on Natural"
     False
     stoi
@@ -508,7 +509,7 @@ preds16 _proof =
 test16 :: Gen Property
 test16 =
   testn
-    proof
+    @AlonzoEra
     "Test 11C. Test NonEmpty subset"
     False
     stoi
@@ -612,7 +613,7 @@ utxostatePreds proof =
   , Random (futurePParams proof)
   ]
 
-epochstatePreds :: EraGov era => Proof era -> [Pred era]
+epochstatePreds :: (EraTest era, Reflect era) => Proof era -> [Pred era]
 epochstatePreds proof =
   [ Random markStake
   , Random markDelegs
@@ -651,7 +652,7 @@ newepochstatePreds _proof =
   , SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL poolDistr]
   ]
 
-newepochConstraints :: Reflect era => Proof era -> [Pred era]
+newepochConstraints :: (EraTest era, Reflect era) => Proof era -> [Pred era]
 newepochConstraints pr =
   univPreds pr
     ++ pstatePreds pr
@@ -664,7 +665,7 @@ newepochConstraints pr =
 test17 :: Gen Property
 test17 =
   testn
-    proof
+    @AlonzoEra
     "Test 17. Full NewEpochState"
     False
     (stoi {sumBeforeParts = False})
@@ -693,14 +694,14 @@ projPreds2 _proof =
     futGDUniv = (Var (V "futGDUniv" (SetR FutureGenDelegR) No))
 
 test18a :: Gen Property
-test18a = testn proof "Test 18a. Projection test" False stoi (projPreds1 proof) Skip
+test18a = testn @AlonzoEra "Test 18a. Projection test" False stoi (projPreds1 proof) Skip
   where
     proof = Alonzo
 
 test18b :: Gen Property
 test18b =
   testn
-    proof
+    @AlonzoEra
     "Test 18b. Projection test with subset"
     False
     stoi
@@ -746,7 +747,7 @@ preds20 proof =
 test20 :: Gen Property
 test20 =
   testn
-    proof
+    @AlonzoEra
     "Test 20. Test ptr rewards iso"
     False
     stoi
@@ -850,7 +851,7 @@ allExampleTests =
 --   solution meets the 'preds', and puts you in the Repl to
 --   inspect the value of each variable solved for.
 --   Companion function to 'testPreds'
-demoPreds :: Reflect era => Proof era -> [Pred era] -> IO ()
+demoPreds :: (EraTest era, Reflect era) => Proof era -> [Pred era] -> IO ()
 demoPreds proof preds = do
   let tryPred env p = (p, errorTyped (runPred env p))
   env <-
@@ -866,7 +867,7 @@ demoPreds proof preds = do
 -- | Use this to generate a solution to 'preds', and make a TestTree
 --   that tests the solution meets the 'preds'.
 --   Companion function to 'demoPreds'
-testPreds :: Reflect era => String -> Proof era -> [Pred era] -> TestTree
+testPreds :: (EraTest era, Reflect era) => String -> Proof era -> [Pred era] -> TestTree
 testPreds name proof preds = do
   let tryPred env p = (p, errorTyped (runPred env p))
   testProperty name $ do

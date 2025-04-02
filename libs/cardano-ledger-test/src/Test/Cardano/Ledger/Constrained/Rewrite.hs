@@ -3,6 +3,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Constrained.Rewrite (
   rewrite,
@@ -55,6 +56,8 @@ import Test.Cardano.Ledger.Constrained.Env (
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed (..), failT, monadTyped)
 import Test.Cardano.Ledger.Constrained.Size (Size (SzExact), genFromSize)
 import Test.Cardano.Ledger.Constrained.TypeRep
+import Test.Cardano.Ledger.Era
+import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
 import Type.Reflection (typeRep)
 
@@ -171,7 +174,7 @@ anyWeq _ _ = False
 -- Rewriting by replacing (Dom x) by a new varariabl xDom, and adding additional
 -- [Pred], that relate xDom with other terms
 
-mkNewVar :: forall era d r. Term era (Map d r) -> Term era (Set d)
+mkNewVar :: forall era d r. (EraTest era, Reflect era) => Term era (Map d r) -> Term era (Set d)
 mkNewVar (Var (V nm (MapR d _) _)) = newVar
   where
     newstring = nm ++ "Dom"
@@ -207,7 +210,7 @@ removeEqual ((expr@Lit {} :=: Var v) : more) ans = removeEqual (map sub more) ((
     sub = substPred (singleSubst v expr)
 removeEqual (m : more) ans = removeEqual more (m : ans)
 
-removeTrivial :: Era era => [Pred era] -> [Pred era]
+removeTrivial :: (EraTest era, Reflect era) => [Pred era] -> [Pred era]
 removeTrivial = filter (not . trivial)
   where
     trivial p | null (varsOfPred mempty p) =
@@ -217,7 +220,7 @@ removeTrivial = filter (not . trivial)
     trivial (e1 :=: e2) = cteq e1 e2
     trivial _ = False
 
-rewrite :: Era era => [Pred era] -> [Pred era]
+rewrite :: (EraTest era, Reflect era) => [Pred era] -> [Pred era]
 rewrite cs = removeTrivial $ removeSameVar (removeEqual cs []) []
 
 -- =========================================================
@@ -323,7 +326,7 @@ freshPats (xx, ans) (pat, ps) = (yy, (pat2, ps2) : ans)
 -- | Or something like (SumSplit x total EQL [One x]) which expands to
 --   something like: (SumSplitx total EQL [One x.1, One x.2, One x.3])
 --   So we find all the bindings for 'x' in the SubItems, and cons them together.
-extendSum :: SubItems era -> Sum era c -> [Sum era c]
+extendSum :: (EraTest era, Reflect era) => SubItems era -> Sum era c -> [Sum era c]
 extendSum sub (ProjOne l r (Var v2)) = foldr accum [] sub
   where
     accum (SubItem v1 term) ans | Just Refl <- sameName v1 v2 = ProjOne l r term : ans
@@ -334,7 +337,7 @@ extendSum sub (One (Var v2)) = foldr accum [] sub
     accum _ ans = ans
 extendSum _sub other = error ("None One or ProjOne in Sum list: " ++ show other)
 
-extendSums :: Era era => SubItems era -> [Pred era] -> [Pred era]
+extendSums :: (EraTest era, Reflect era) => SubItems era -> [Pred era] -> [Pred era]
 extendSums _ [] = []
 extendSums sub (SumsTo c t cond [s] : more) = SumsTo c t cond (extendSum sub s) : extendSums sub more
 extendSums sub (SumSplit c t cond [s] : more) = SumSplit c t cond (extendSum sub s) : extendSums sub more
@@ -376,7 +379,7 @@ unfoldWhere (ps0, m0) = List.foldl' accum ([], m0) ps0
       where
         (mx1, _, tar2, ps2) = freshPair mx (tar, ps)
 
-rewritePred :: Era era => Int -> Pred era -> Gen ([Pred era], Int)
+rewritePred :: (EraTest era, Reflect era) => Int -> Pred era -> Gen ([Pred era], Int)
 {-
 OneOf x [(i,t1,p1),(j,t2,p2)] rewrites to
 [ Where x.1 t1 p1, Where x.2 t2 p2, List xlist.3 [(i,x.1),(j,x.2)], GenFrom x frequency xlist.3]
@@ -453,7 +456,8 @@ rewritePred m0 (Maybe (Var v) (target :: (RootTarget era r t)) preds) = do
       pure (expandedPred ++ [Var v :<-: (Invert "Just" (typeRep @r) Just :$ target2)], m2)
 rewritePred m0 p = pure ([p], m0)
 
-removeExpandablePred :: Era era => ([Pred era], Int) -> [Pred era] -> Gen ([Pred era], Int)
+removeExpandablePred ::
+  (EraTest era, Reflect era) => ([Pred era], Int) -> [Pred era] -> Gen ([Pred era], Int)
 removeExpandablePred (ps, m) [] = pure (List.nubBy cpeq (reverse ps), m)
 removeExpandablePred (ps, m) (p : more) = do
   (ps2, m1) <- rewritePred m p
@@ -467,7 +471,7 @@ removeMetaSize ((MetaSize sz t@(Var v)) : more) ans = do
   removeMetaSize (map sub more) ((t :<-: Simple (Lit SizeR (SzExact n))) : (map sub ans))
 removeMetaSize (m : more) ans = removeMetaSize more (m : ans)
 
-rewriteGen :: Era era => (Int, [Pred era]) -> Gen (Int, [Pred era])
+rewriteGen :: (EraTest era, Reflect era) => (Int, [Pred era]) -> Gen (Int, [Pred era])
 rewriteGen (m, cs0) = do
   cs1 <- removeMetaSize cs0 []
   (cs2, m1) <- removeExpandablePred ([], m) cs1
@@ -478,7 +482,8 @@ notBefore (Before _ _) = False
 notBefore _ = True
 
 -- | Construct the DependGraph
-compileGenWithSubst :: Era era => OrderInfo -> Subst era -> [Pred era] -> Gen (Int, DependGraph era)
+compileGenWithSubst ::
+  (EraTest era, Reflect era) => OrderInfo -> Subst era -> [Pred era] -> Gen (Int, DependGraph era)
 compileGenWithSubst info subst0 cs = do
   (m, simple) <- rewriteGen (0, cs)
   let instanSimple = fmap (substPredWithVarTest subst0) simple
@@ -496,7 +501,7 @@ compileGenWithSubst info subst0 cs = do
 -- | An Ordering
 newtype DependGraph era = DependGraph [([Name era], [Pred era])]
 
-instance Era era => Show (DependGraph era) where
+instance (EraTest era, Reflect era) => Show (DependGraph era) where
   show (DependGraph xs) = unlines (map f xs)
     where
       f (nm, cs) = pad n (showL shName " " nm) ++ " | " ++ showL show ", " cs
@@ -525,7 +530,7 @@ instance Era era => Show (DependGraph era) where
 -- 2) One predicate that defines many Names
 -- 3) Some other bad combination
 splitMultiName ::
-  Era era =>
+  (EraTest era, Reflect era) =>
   Name era ->
   [([Name era], Pred era)] ->
   ([Pred era], Maybe ([Name era], Pred era), [String]) ->
@@ -568,7 +573,7 @@ splitMultiName n ((ms, p) : more) (unary, Just first, bad) =
 
 mkDependGraph ::
   forall era.
-  Era era =>
+  (EraTest era, Reflect era) =>
   Int ->
   [([Name era], [Pred era])] ->
   HashSet (Name era) ->
@@ -740,7 +745,8 @@ componentVars (AnyF (FConst _ _ _ _) : cs) = componentVars cs
 -- =========================================================================
 -- Create an initial Ordering. Build a Graph, then extract the Ordering
 
-initialOrder :: forall era. Era era => OrderInfo -> [Pred era] -> Typed [Name era]
+initialOrder ::
+  forall era. (EraTest era, Reflect era) => OrderInfo -> [Pred era] -> Typed [Name era]
 initialOrder info cs0 = do
   mmm <- flatOrError (stronglyConnComp listDep)
   pure $ map getname mmm
@@ -766,7 +772,8 @@ initialOrder info cs0 = do
         message = "Cycle in dependencies: " ++ List.intercalate " <= " theCycle
 
 -- | Construct the DependGraph
-compile :: Era era => OrderInfo -> [Pred era] -> Typed (DependGraph era)
+compile ::
+  (EraTest era, Reflect era) => OrderInfo -> [Pred era] -> Typed (DependGraph era)
 compile info cs = do
   let simple = rewrite cs
   orderedNames <- initialOrder info simple

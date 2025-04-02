@@ -9,7 +9,7 @@
 module Test.Cardano.Ledger.Constrained.Trace.Pipeline where
 
 import Cardano.Ledger.BaseTypes (Globals)
-import Cardano.Ledger.Core (Era, EraRule, Tx)
+import Cardano.Ledger.Core (EraRule, Tx)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules
 import Control.Monad.Reader (Reader, runReader)
@@ -44,7 +44,9 @@ import Test.Cardano.Ledger.Constrained.Rewrite (
 import Test.Cardano.Ledger.Constrained.Solver (solveOneVar)
 import Test.Cardano.Ledger.Constrained.Stage (Pipeline, Stage (..), ledgerPipeline, solvePipeline)
 import Test.Cardano.Ledger.Constrained.Trace.TraceMonad
+import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Proof hiding (WitRule (..), lift)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck
@@ -123,7 +125,8 @@ stsWithContinuations proof rule fails succeeds env state sig =
 
 -- | Translate a Pipe into a DependGraph, given the set
 --   of variables that have aready been solved for.
-pipeToGraph :: Era era => Stage era -> HashSet (Name era) -> TraceM era (DependGraph era)
+pipeToGraph ::
+  (EraTest era, Reflect era) => Stage era -> HashSet (Name era) -> TraceM era (DependGraph era)
 pipeToGraph (Stage info ps) alreadyDefined = do
   simple <- liftCounter rewriteGen ps
   orderedNames <- liftTyped $ initialOrder info simple
@@ -139,7 +142,8 @@ pipeToGraph (Stage info ps) alreadyDefined = do
 -- | Merge a Pipeline into an existing DependGraph, given the set of variables
 --   that have aready been solved for, to get a larger DependGraph
 mergePipeline ::
-  Era era => Pipeline era -> HashSet (Name era) -> DependGraph era -> TraceM era (DependGraph era)
+  (EraTest era, Reflect era) =>
+  Pipeline era -> HashSet (Name era) -> DependGraph era -> TraceM era (DependGraph era)
 mergePipeline [] _ graph = pure graph
 mergePipeline (pipe : more) defined (DependGraph xs) = do
   DependGraph ys <- pipeToGraph pipe defined
@@ -147,7 +151,8 @@ mergePipeline (pipe : more) defined (DependGraph xs) = do
   mergePipeline more (HashSet.union (HashSet.fromList names) defined) (DependGraph (xs ++ ys))
 
 -- | Solve a Pipeline to get both an Env and a DependGraph
-solvePipeline2 :: Reflect era => Pipeline era -> TraceM era (Env era, DependGraph era)
+solvePipeline2 ::
+  (EraTest era, Reflect era) => Pipeline era -> TraceM era (Env era, DependGraph era)
 solvePipeline2 pipes = do
   gr@(DependGraph pairs) <- mergePipeline pipes HashSet.empty (DependGraph [])
   Subst subst <- liftGen (foldlM' solveOneVar emptySubst pairs)
@@ -222,7 +227,7 @@ genLedgerState = do
   ledgerstate <- monadTyped $ runTarget env (ledgerStateT proofx)
   pure (env, sub, ledgerstate)
 
-genSig :: Reflect era => Proof era -> (a, Subst era, b) -> p -> Gen (Tx era)
+genSig :: (EraTest era, Reflect era) => Proof era -> (a, Subst era, b) -> p -> Gen (Tx era)
 genSig proof (_, sub, _) _ledgerEnv = do
   let preds = fmap (substPred sub) (txBodyPreds def proof)
   (env0, _sub, _graph) <- solvePipeline [Stage standardOrderInfo preds]

@@ -48,7 +48,9 @@ import qualified Data.OMap.Strict as OMap
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.TreeDiff (toExpr)
 import Lens.Micro
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..), genPParamsUpdate)
 import Test.Cardano.Ledger.Constrained.Combinators (itemFromSet)
@@ -65,7 +67,6 @@ import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Generic.PrettyCore (pcLedgerState)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain)
@@ -103,7 +104,7 @@ enactStateCheckPreds _ = []
 
 ledgerStatePreds ::
   forall era.
-  Reflect era =>
+  (Reflect era, EraTest era) =>
   UnivSize -> Proof era -> [Pred era]
 ledgerStatePreds _usize p =
   [ Subset (Dom enactWithdrawals) credsUniv
@@ -182,7 +183,7 @@ ledgerStatePreds _usize p =
     getOne [] = NoPParamsUpdate
 
 ledgerStateStage ::
-  Reflect era =>
+  (EraTest era, Reflect era) =>
   UnivSize ->
   Proof era ->
   Subst era ->
@@ -196,7 +197,7 @@ ledgerStateStage usize proof subst0 = do
     Just msg -> error msg
 
 demo ::
-  Reflect era =>
+  (EraTest era, Reflect era) =>
   Proof era -> ReplMode -> IO ()
 demo proof mode = do
   env <-
@@ -213,7 +214,7 @@ demo proof mode = do
       )
   lstate <- monadTyped $ runTarget env (ledgerStateT proof)
   let env2 = getTarget lstate (ledgerStateT proof) env
-  when (mode == Interactive) $ putStrLn (show (pcLedgerState proof lstate))
+  when (mode == Interactive) . print $ toExpr lstate
   modeRepl mode proof env2 ""
 
 demoTest :: TestTree
@@ -342,7 +343,7 @@ toProposalMap xs = Map.fromList (map pairup xs)
   where
     pairup gas = (gasId gas, gas)
 
-demoGov :: (ConwayEraPParams era, Reflect era) => Proof era -> ReplMode -> IO ()
+demoGov :: (ConwayEraPParams era, EraTest era, Reflect era) => Proof era -> ReplMode -> IO ()
 demoGov proof mode = do
   env <-
     generate

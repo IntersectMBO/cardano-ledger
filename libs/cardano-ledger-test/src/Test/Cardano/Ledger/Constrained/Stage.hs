@@ -7,7 +7,6 @@
 
 module Test.Cardano.Ledger.Constrained.Stage where
 
-import Cardano.Ledger.Core (Era (..))
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
@@ -29,6 +28,8 @@ import Test.Cardano.Ledger.Constrained.Rewrite (
   standardOrderInfo,
  )
 import Test.Cardano.Ledger.Constrained.Solver (solveOneVar)
+import Test.Cardano.Ledger.Constrained.TypeRep
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.QuickCheck
 
@@ -42,7 +43,7 @@ type Pipeline era = [Stage era]
 
 -- | A pipeline for specifying the LederState
 ledgerPipeline ::
-  Reflect era =>
+  (EraTest era, Reflect era) =>
   UnivSize -> Proof era -> Pipeline era
 ledgerPipeline sizes proof =
   [ Stage standardOrderInfo (pParamsPreds proof)
@@ -59,7 +60,9 @@ ledgerPipeline sizes proof =
 
 -- | Translate a Stage into a DependGraph, given the set
 --   of variables that have aready been solved for.
-stageToGraph :: Era era => Int -> Stage era -> HashSet (Name era) -> Gen (Int, DependGraph era)
+stageToGraph ::
+  (EraTest era, Reflect era) =>
+  Int -> Stage era -> HashSet (Name era) -> Gen (Int, DependGraph era)
 stageToGraph n0 (Stage info ps) alreadyDefined = do
   (n1, simple) <- rewriteGen (n0, ps)
   orderedNames <- monadTyped $ initialOrder info simple
@@ -77,7 +80,7 @@ stageToGraph n0 (Stage info ps) alreadyDefined = do
 -- | Merge a Pipeline into an existing DependGraph, given the set of variables
 --   that have aready been solved for, to get a larger DependGraph
 mergePipeline ::
-  Era era =>
+  (EraTest era, Reflect era) =>
   Int ->
   Pipeline era ->
   HashSet (Name era) ->
@@ -90,7 +93,8 @@ mergePipeline n0 (pipe : more) defined (DependGraph xs) = do
   mergePipeline n1 more (HashSet.union (HashSet.fromList names) defined) (DependGraph (xs ++ ys))
 
 -- | Solve a Pipeline to get a Env, Subst, and a DependGraph
-solvePipeline :: Reflect era => Pipeline era -> Gen (Env era, Subst era, DependGraph era)
+solvePipeline ::
+  (EraTest era, Reflect era) => Pipeline era -> Gen (Env era, Subst era, DependGraph era)
 solvePipeline pipes = do
   (_, gr@(DependGraph pairs)) <- mergePipeline 0 pipes HashSet.empty (DependGraph [])
   Subst subst <- foldlM' solveOneVar emptySubst pairs

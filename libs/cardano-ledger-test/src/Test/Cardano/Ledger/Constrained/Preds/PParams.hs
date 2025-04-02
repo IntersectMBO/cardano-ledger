@@ -12,7 +12,6 @@ module Test.Cardano.Ledger.Constrained.Preds.PParams (
 
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Script (Prices (..))
-import Cardano.Ledger.Api.Era
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   NonNegativeInterval,
@@ -32,6 +31,7 @@ import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
+import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.Proof
@@ -39,7 +39,7 @@ import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
 import Test.Tasty (TestTree, defaultMain)
 import Test.Tasty.QuickCheck
 
-extract :: Era era => Term era t -> Term era s -> Pred era
+extract :: (EraTest era, Reflect era) => Term era t -> Term era s -> Pred era
 extract term@(Var (V _ _ (Yes r1 lens))) record =
   case testEql r1 (termRep record) of
     Just Refl -> term :<-: (Constr "lookup" (\x -> x ^. lens) ^$ record)
@@ -99,7 +99,7 @@ genPParams proof tx bb bh = do
           ]
     )
 
-pParamsPreds :: Reflect era => Proof era -> [Pred era]
+pParamsPreds :: (EraTest era, Reflect era) => Proof era -> [Pred era]
 pParamsPreds p =
   [ GenFrom
       (pparams p)
@@ -139,7 +139,7 @@ pParamsPreds p =
        )
 
 pParamsStage ::
-  Reflect era =>
+  (EraTest era, Reflect era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
