@@ -81,16 +81,6 @@ import Test.Cardano.Ledger.Constrained.Rewrite (
 import Test.Cardano.Ledger.Constrained.Solver (solveOneVar)
 import Test.Cardano.Ledger.Constrained.Vars (currentSlot, newEpochStateT)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  pcSlotNo,
-  pcTx,
-  ppInt,
-  ppList,
-  ppPair,
-  ppStrictSeq,
-  psNewEpochState,
-  summaryMapCompact,
- )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Trace (chooseIssuer)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)

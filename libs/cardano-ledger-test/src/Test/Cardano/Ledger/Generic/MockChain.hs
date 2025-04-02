@@ -46,26 +46,17 @@ import Control.State.Transition (
   trans,
   (?!),
  )
+import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Internal (Seq)
 import Data.Sequence.Strict (StrictSeq (..), fromStrict)
+import Data.TreeDiff (Expr, ToExpr (toExpr))
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks, ThunkInfo, noThunks)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  pcKeyHash,
-  pcNewEpochState,
-  pcSlotNo,
-  ppInt,
-  ppRecord,
-  ppShelleyLedgersPredFailure,
-  ppTickPredicateFailure,
- )
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (reify))
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect)
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 -- ================================================
@@ -90,6 +81,10 @@ data MockBlock era = MockBlock
   , mbSlot :: !SlotNo
   , mbTrans :: !(StrictSeq (Tx era))
   }
+  deriving (Generic)
+
+type MockBlockExpr era =
+  (ToExpr (StrictSeq (Tx era)))
 
 data MockChainState era = MockChainState
   { mcsNes :: !(NewEpochState era)
@@ -97,6 +92,15 @@ data MockChainState era = MockChainState
   , mcsLastBlock :: !SlotNo
   , mcsCount :: !Int -- Counts the blocks made
   }
+
+type MockChainStateExpr era =
+  ( ToExpr (PParamsHKD Identity era)
+  , ToExpr (TxOut era)
+  , ToExpr (StashedAVVMAddresses era)
+  , ToExpr (GovState era)
+  , ToExpr (CertState era)
+  , ToExpr (InstantStake era)
+  )
 
 deriving instance
   ( EraTxOut era
@@ -217,48 +221,51 @@ deriving instance
   (Eq (ShelleyTickPredFailure era), Eq (ShelleyLedgersPredFailure era)) => Eq (MockChainFailure era)
 
 ppMockChainState ::
-  Reflect era =>
+  (Reflect era, MockChainStateExpr era) =>
   MockChainState era ->
-  PDoc
-ppMockChainState (MockChainState nes _ sl count) =
-  ppRecord
-    "MockChainState"
-    [ ("NewEpochState", pcNewEpochState reify nes)
-    , ("LastBlock", pcSlotNo sl)
-    , ("Count", ppInt count)
-    ]
+  Expr
+ppMockChainState = toExpr
 
-instance Reflect era => PrettyA (MockChainState era) where
-  prettyA = ppMockChainState
+-- ppRecord
+--   "MockChainState"
+--   [ ("NewEpochState", pcNewEpochState reify nes)
+--   , ("LastBlock", pcSlotNo sl)
+--   , ("Count", ppInt count)
+--   ]
 
-ppMockBlock :: MockBlock era -> PDoc
-ppMockBlock (MockBlock iss sl txs) =
-  ppRecord
-    "MockBock"
-    [ ("Issuer", pcKeyHash iss)
-    , ("Slot", pcSlotNo sl)
-    , ("Transactions", ppInt (length txs))
-    ]
+instance (Reflect era, MockChainStateExpr era) => ToExpr (MockChainState era)
 
-instance PrettyA (MockBlock era) where prettyA = ppMockBlock
+ppMockBlock :: ToExpr (StrictSeq (Tx era)) => MockBlock era -> Expr
+ppMockBlock = toExpr
 
-ppMockChainFailure :: Reflect era => Proof era -> MockChainFailure era -> PDoc
-ppMockChainFailure proof x = case proof of
-  Conway -> help x
-  Babbage -> help x
-  Alonzo -> help x
-  Mary -> help x
-  Allegra -> help x
-  Shelley -> help x
-  where
-    help (MockChainFromTickFailure y) = ppTickPredicateFailure y
-    help (MockChainFromLedgersFailure y) = ppShelleyLedgersPredFailure proof y
-    help (BlocksOutOfOrder lastslot cand) =
-      ppRecord
-        "BlocksOutOfOrder"
-        [ ("Last applied block", pcSlotNo lastslot)
-        , ("Candidate block", pcSlotNo cand)
-        ]
+-- ppRecord
+--   "MockBock"
+--   [ ("Issuer", pcKeyHash iss)
+--   , ("Slot", pcSlotNo sl)
+--   , ("Transactions", ppInt (length txs))
+--   ]
+
+instance ToExpr (StrictSeq (Tx era)) => ToExpr (MockBlock era)
+
+ppMockChainFailure :: ToExpr (MockChainFailure era) => MockChainFailure era -> Expr
+ppMockChainFailure = toExpr
+
+-- case proof of
+-- Conway -> help x
+-- Babbage -> help x
+-- Alonzo -> help x
+-- Mary -> help x
+-- Allegra -> help x
+-- Shelley -> help x
+-- where
+--   help (MockChainFromTickFailure y) = ppTickPredicateFailure y
+--   help (MockChainFromLedgersFailure y) = ppShelleyLedgersPredFailure proof y
+--   help (BlocksOutOfOrder lastslot cand) =
+--     ppRecord
+--       "BlocksOutOfOrder"
+--       [ ("Last applied block", pcSlotNo lastslot)
+--       , ("Candidate block", pcSlotNo cand)
+--       ]
 
 noThunksGen :: Proof era -> MockChainState era -> IO (Maybe ThunkInfo)
 noThunksGen Conway = noThunks []

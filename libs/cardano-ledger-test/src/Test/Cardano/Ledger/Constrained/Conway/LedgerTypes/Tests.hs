@@ -37,7 +37,6 @@ import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
 import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.WitnessUniverse
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (prettyA))
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (

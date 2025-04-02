@@ -93,7 +93,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
 import Test.Cardano.Ledger.Constrained.Preds.Universes (genAddrPair)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
-import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 import Test.QuickCheck hiding (forAll, witness)

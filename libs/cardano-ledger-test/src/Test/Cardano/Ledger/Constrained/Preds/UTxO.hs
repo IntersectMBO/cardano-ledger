@@ -22,7 +22,6 @@ import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Generic.PrettyCore (pcUTxO)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
 

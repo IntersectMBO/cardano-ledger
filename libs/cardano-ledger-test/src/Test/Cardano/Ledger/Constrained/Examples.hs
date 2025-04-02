@@ -39,7 +39,6 @@ import Test.Cardano.Ledger.Constrained.Tests (prop_shrinking, prop_soundness)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (explainBad, testIO)
 import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.Cardano.Ledger.Generic.Proof (ConwayEra, Reflect (..))
 import Test.Cardano.Ledger.Generic.Trace (testPropMax)
 import Test.Hspec (shouldThrow)

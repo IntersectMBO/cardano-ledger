@@ -72,7 +72,6 @@ import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..))
 import Test.Cardano.Ledger.Generic.MockChain (MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (pcNewEpochState, pcTxCert, ppList)
 import Test.Cardano.Ledger.Generic.Proof (
   ConwayEra,
   Proof (..),

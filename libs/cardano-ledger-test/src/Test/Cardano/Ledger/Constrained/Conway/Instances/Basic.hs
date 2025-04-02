@@ -2,6 +2,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -57,6 +58,7 @@ import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Fail.String
 import Data.Maybe
 import Data.Ratio ((%))
+import Data.TreeDiff.Class
 import Data.Typeable
 import Data.Word
 import GHC.Generics (Generic)
@@ -64,7 +66,6 @@ import Numeric.Natural (Natural)
 import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
 import Test.QuickCheck hiding (Args, Fun, NonZero, forAll)
 
@@ -268,10 +269,13 @@ data SimplePParams era = SimplePParams
   , dRepActivity :: EpochInterval
   , minFeeRefScriptCostPerByte :: NonNegativeInterval
   }
-  deriving (Eq, Generic)
+  deriving (Eq, Generic, ToExpr)
+
+instance ToExpr PoolVotingThresholds
+instance ToExpr DRepVotingThresholds
 
 instance (EraSpecPParams era, Reflect era) => Show (SimplePParams era) where
-  show x = show (prettyA (subsetToPP @era x))
+  show x = show (toExpr (subsetToPP @era x))
 
 -- | Use then generic HasSimpleRep and HasSpec instances for SimplePParams
 instance HasSimpleRep (SimplePParams era)
@@ -366,6 +370,7 @@ class
   ( Reflect era
   , Eq (PParamsHKD Identity era)
   , Show (PParamsHKD Identity era)
+  , ToExpr (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , EraPParams era

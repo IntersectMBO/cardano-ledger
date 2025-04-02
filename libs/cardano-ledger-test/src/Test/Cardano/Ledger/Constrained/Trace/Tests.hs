@@ -43,7 +43,6 @@ import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (
   toGen,
  )
 import Test.Cardano.Ledger.Constrained.Vars hiding (drepDeposit)
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (LEDGER, lift)
 import Test.Cardano.Ledger.Generic.TxGen (applySTSByProof)
 import Test.QuickCheck (
