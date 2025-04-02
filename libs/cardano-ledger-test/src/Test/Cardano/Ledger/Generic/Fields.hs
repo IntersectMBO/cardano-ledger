@@ -1,10 +1,13 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Test.Cardano.Ledger.Generic.Fields (
@@ -87,8 +90,12 @@ import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word16, Word32)
+import GHC.Generics (Generic)
 import Lens.Micro (Lens', (^.))
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Alonzo.TreeDiff ()
+import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.Proof
@@ -109,6 +116,20 @@ data TxField era
   | WitnessesI [WitnessesField era] -- Inlines Witnesess Fields
   | AuxData (StrictMaybe (TxAuxData era))
   | Valid IsValid
+  deriving (Generic)
+
+instance
+  ( Era era
+  , ToExpr (TxBody era)
+  , ToExpr (TxWits era)
+  , ToExpr (Script era)
+  , ToExpr (Redeemers era)
+  , ToExpr (TxAuxData era)
+  , ToExpr (TxOut era)
+  , ToExpr (TxCert era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  ToExpr (TxField era)
 
 pattern AuxData' :: [TxAuxData era] -> TxField era
 
@@ -137,6 +158,15 @@ data TxBodyField era
   | VotingProc (VotingProcedures era)
   | CurrentTreasuryValue (StrictMaybe Coin)
   | TreasuryDonation Coin
+  deriving (Generic)
+
+instance
+  ( Era era
+  , ToExpr (TxOut era)
+  , ToExpr (TxCert era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  ToExpr (TxBodyField era)
 
 pattern Inputs' :: [TxIn] -> TxBodyField era -- Set
 
@@ -167,6 +197,23 @@ data WitnessesField era
   | ScriptWits (Map ScriptHash (Script era))
   | DataWits (TxDats era)
   | RdmrWits (Redeemers era)
+  deriving (Generic)
+
+instance
+  ( ToExpr (Script era)
+  , ToExpr (TxDats era)
+  , ToExpr (Redeemers era)
+  ) =>
+  ToExpr (WitnessesField era)
+
+instance Reflect era => Show (WitnessesField era) where
+  show w = case reify @era of
+    Shelley -> error "Impossible. `WitnessesField` doesn't exist pre-Alonzo."
+    Allegra -> error "Impossible. `WitnessesField` doesn't exist pre-Alonzo."
+    Mary -> error "Impossible. `WitnessesField` doesn't exist pre-Alonzo."
+    Alonzo -> show $ toExpr w
+    Babbage -> show $ toExpr w
+    Conway -> show $ toExpr w
 
 pattern AddrWits' :: Era era => [WitVKey 'Witness] -> WitnessesField era -- Set
 

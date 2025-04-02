@@ -8,12 +8,13 @@ module Test.Cardano.Ledger.NoThunks (
   test,
 ) where
 
-import Control.State.Transition.Extended (STS)
 import Data.Default (def)
 import Test.Cardano.Ledger.Generic.GenState (GenSize)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, noThunksGen)
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect)
-import Test.Cardano.Ledger.Generic.Trace (traceProp)
+import Test.Cardano.Ledger.Generic.Trace (Gen1, traceProp)
+import Test.Cardano.Ledger.Shelley.TreeDiff ()
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
@@ -33,7 +34,7 @@ test =
 testThunks ::
   forall era.
   ( Reflect era
-  , STS (MOCKCHAIN era)
+  , HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
   Int ->

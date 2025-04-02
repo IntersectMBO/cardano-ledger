@@ -43,8 +43,10 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
 import qualified Debug.Trace as Debug
 import Lens.Micro
+import Test.Cardano.Ledger.Alonzo.Era
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Constrained.Ast (RootTarget (..), (^$))
-import Test.Cardano.Ledger.Constrained.Classes (TxF (..), TxOutF (..))
+import Test.Cardano.Ledger.Constrained.Classes (TxF (..))
 import Test.Cardano.Ledger.Constrained.Combinators (itemFromSet)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (hashBody)
 import Test.Cardano.Ledger.Constrained.Trace.Actions (
@@ -69,13 +71,12 @@ import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (
   showPulserState,
   stepProp,
  )
+import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..))
 import Test.Cardano.Ledger.Generic.MockChain (MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (pcNewEpochState, pcTxCert, ppList)
 import Test.Cardano.Ledger.Generic.Proof (
   ConwayEra,
-  Proof (..),
   Reflect (..),
   TxCertWit (..),
   whichTxCert,
@@ -102,7 +103,8 @@ fixOutput delta@(Coin n) (Outputs' (txout : more) : others) =
 fixOutput delta (x : xs) = (x :) <$> fixOutput delta xs
 
 -- | Compute a valid Cert, and the change in the stored Deposits from that Cert.
-drepCert :: forall era. Reflect era => Proof era -> TraceM era (Coin, [TxBodyField era])
+drepCert ::
+  forall era. (Reflect era, AlonzoEraTest era) => Proof era -> TraceM era (Coin, [TxBodyField era])
 drepCert proof = case whichTxCert proof of
   TxCertShelleyToBabbage -> pure (mempty, [])
   TxCertConwayToConway -> do
@@ -124,7 +126,7 @@ drepCert proof = case whichTxCert proof of
                 pure (Coin 0, [Certs' [ConwayTxCertGov $ ConwayUpdateDRep cred mAnchor]])
             ]
 
-drepCertTx :: Reflect era => Coin -> Proof era -> TraceM era (TxF era)
+drepCertTx :: (Reflect era, AlonzoEraTest era) => Coin -> Proof era -> TraceM era (TxF era)
 drepCertTx maxFeeEstimate proof = do
   simplefields <- simpleTxBody proof maxFeeEstimate
   (deltadeposit, certfields) <- drepCert proof
@@ -139,7 +141,7 @@ drepCertTx maxFeeEstimate proof = do
 
 --   appropriate for a SimpleTx with DRepCerts.
 --   Changes to the Env are done by side effects in the TraceM mondad.
-applyDRepCertActions :: Reflect era => Proof era -> Tx era -> TraceM era ()
+applyDRepCertActions :: (Reflect era, AlonzoEraTest era) => Proof era -> Tx era -> TraceM era ()
 applyDRepCertActions proof tx = do
   let txb = tx ^. bodyTxL
       feeCoin = txb ^. feeTxBodyL
@@ -155,7 +157,7 @@ applyDRepCertActions proof tx = do
 --   necessary Actions to update the Env. The Env must contain the Vars that
 --   are updated by 'applyDRepCertActions' . It is best to intialize the whole
 --   LedgerState to do this.
-drepCertTxForTrace :: Reflect era => Coin -> Proof era -> TraceM era (Tx era)
+drepCertTxForTrace :: (Reflect era, AlonzoEraTest era) => Coin -> Proof era -> TraceM era (Tx era)
 drepCertTxForTrace maxFeeEstimate proof = do
   TxF _ tx <- drepCertTx maxFeeEstimate proof
   applyDRepCertActions proof tx
@@ -171,7 +173,7 @@ drepTree =
         "All Tx are valid on traces of length 150."
         $ withMaxSuccess 20
         $ mockChainProp Conway 150 (drepCertTxForTrace @ConwayEra (Coin 100000))
-        $ stepProp (allValidSignals Conway)
+        $ stepProp allValidSignals
     , testProperty
         "Bruteforce = Pulsed, in every epoch, on traces of length 150"
         $ withMaxSuccess 5
@@ -198,10 +200,10 @@ getProposals nes =
     (nes ^. (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL))
 
 allValidSignals ::
-  Reflect era => Proof era -> MockChainState era -> MockBlock era -> MockChainState era -> Property
-allValidSignals p (MockChainState nes _ slot count) (MockBlock _ _ _txs) _stateN =
+  ShelleyEraTest era => MockChainState era -> MockBlock era -> MockChainState era -> Property
+allValidSignals (MockChainState nes _ slot count) (MockBlock _ _ _txs) _stateN =
   counterexample
-    ("\nCount " ++ show count ++ " Slot " ++ show slot ++ "\n" ++ show (pcNewEpochState p nes))
+    ("\nCount " ++ show count ++ " Slot " ++ show slot ++ "\n" ++ show (toExpr nes))
     (property True)
 
 pulserWorks ::
@@ -241,8 +243,8 @@ extractPulsingDRepDistr nes =
 -- ===============================================
 -- helper functions
 
-showCerts :: Proof era -> [TxCert era] -> String
-showCerts proof cs = show (ppList (pcTxCert proof) cs)
+showCerts :: EraTest era => [TxCert era] -> String
+showCerts cs = show (ppList toExpr cs)
 
 certsOf :: EraTx era => Tx era -> [TxCert era]
 certsOf tx = toList (tx ^. (bodyTxL . certsTxBodyL))

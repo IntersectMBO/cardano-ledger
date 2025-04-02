@@ -41,6 +41,10 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   hasEq,
   format,
   genSigningKey,
+  ppList,
+  ppSet,
+  ppMap,
+  ppMaybe,
 ) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
@@ -102,6 +106,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val ((<+>)))
 import Control.Monad.Identity (Identity)
+import Data.Bifunctor (bimap)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Default (def)
@@ -113,15 +118,18 @@ import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.TreeDiff (Expr, ToExpr (toExpr))
 import Data.Typeable
 import Data.Universe (Eql, Singleton (..), cmpIndex)
 import Data.Word (Word16, Word64)
 import Formatting (formatToString)
 import Lens.Micro
 import Numeric.Natural (Natural)
-import Prettyprinter (hsep)
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
+import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoPlutusPurposePointer)
+import Test.Cardano.Ledger.Alonzo.TreeDiff ()
+import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (add, zero),
@@ -160,72 +168,17 @@ import Test.Cardano.Ledger.Constrained.Combinators (mapSized, setSized)
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed, failT)
 import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Conway.Arbitrary (genConwayPlutusPurposePointer, genProposals)
+import Test.Cardano.Ledger.Conway.Era
+import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (WitnessesField (..))
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  credSummary,
-  keyHashSummary,
-  pcAnchor,
-  pcCertState,
-  pcCoin,
-  pcCommittee,
-  pcConstitution,
-  pcConwayTxCert,
-  pcDRep,
-  pcDRepPulser,
-  pcDRepState,
-  pcDState,
-  pcData,
-  pcDataHash,
-  pcDatum,
-  pcDelegatee,
-  pcEnactState,
-  pcFutureGenDeleg,
-  pcFuturePParams,
-  pcGenDelegPair,
-  pcGovAction,
-  pcGovActionId,
-  pcGovActionState,
-  pcIndividualPoolStake,
-  pcLedgerState,
-  pcMultiAsset,
-  pcPParams,
-  pcPrevGovActionIds,
-  pcProposals,
-  pcRatifyState,
-  pcReward,
-  pcRewardAccount,
-  pcScriptHash,
-  pcShelleyTxCert,
-  pcTx,
-  pcTxBody,
-  pcTxCert,
-  pcTxIn,
-  pcTxOut,
-  pcVal,
-  pcWitVKey,
-  pcWitnesses,
-  pcWitnessesField,
-  ppHash,
-  ppInteger,
-  ppList,
-  ppMap,
-  ppMaybe,
-  ppRecord',
-  ppSet,
-  ppString,
-  ppVKey,
-  ppValidityInterval,
-  ppWord16,
-  trim,
- )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
+import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck hiding (Fixed, total)
@@ -568,10 +521,10 @@ instance Singleton (Rep era) where
 instance Show (Rep era t) where
   showsPrec d (repHasInstances -> (IsTypeable :: HasInstances t)) = showsPrec d $ typeRep (Proxy @t)
 
-synopsis :: forall e t. Rep e t -> t -> String
+synopsis :: forall e t. (EraTest e, Reflect e) => Rep e t -> t -> String
 synopsis TxIdR r = show r
 synopsis RationalR r = show r
-synopsis CoinR c = show (pcCoin c)
+synopsis CoinR c = show c
 synopsis EpochR e = show e
 synopsis EpochIntervalR e = show e
 synopsis (a :-> b) _ = "(Arrow " ++ show a ++ " " ++ show b ++ ")"
@@ -598,114 +551,114 @@ synopsis rep@(ListR a) ll = case ll of
   [] -> "(empty::" ++ show (ListR a) ++ "]"
   (d : _) -> "[" ++ synopsis a d ++ " | size = " ++ show (length ll) ++ synSum rep ll ++ "]"
 synopsis AddrR a = show a
-synopsis CredR c = show (credSummary c)
-synopsis PoolHashR k = "(KeyHash 'PoolStake " ++ show (keyHashSummary k) ++ ")"
-synopsis GenHashR k = "(KeyHash 'Genesis " ++ show (keyHashSummary k) ++ ")"
-synopsis WitHashR k = "(KeyHash 'Witness " ++ show (keyHashSummary k) ++ ")"
-synopsis GenDelegHashR k = "(KeyHash 'GenesisDelegate " ++ show (keyHashSummary k) ++ ")"
+synopsis CredR c = show c
+synopsis PoolHashR k = "(KeyHash 'PoolStake " ++ show k ++ ")"
+synopsis GenHashR k = "(KeyHash 'Genesis " ++ show k ++ ")"
+synopsis WitHashR k = "(KeyHash 'Witness " ++ show k ++ ")"
+synopsis GenDelegHashR k = "(KeyHash 'GenesisDelegate " ++ show k ++ ")"
 synopsis PoolParamsR pp = "(PoolParams " ++ synopsis @e PoolHashR (ppId pp) ++ ")"
 synopsis IntR n = show n
 synopsis NaturalR n = show n
 synopsis FloatR n = show n
-synopsis TxInR txin = show (pcTxIn txin)
+synopsis TxInR txin = show txin
 synopsis CharR s = show s
-synopsis (ValueR p) (ValueF _ x) = show (pcVal p x)
-synopsis (TxOutR p) (TxOutF _ x) = show ((unReflect pcTxOut p x) :: PDoc)
+synopsis (ValueR _p) x@(ValueF _ _) = show x
+synopsis (TxOutR _p) x@(TxOutF _ _) = show x
 synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOutF p) mp) ++ " )"
-synopsis (PParamsR _) (PParamsF p x) = show $ pcPParams p x
-synopsis (FuturePParamsR p) x = show $ pcFuturePParams p x
+synopsis (PParamsR _) x@(PParamsF _p _) = show x
+synopsis (FuturePParamsR _p) x = show $ toExpr x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
-synopsis CertStateR (CertStateF _ x) = show $ pcCertState x
-synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
-synopsis GenDelegPairR x = show (pcGenDelegPair x)
-synopsis FutureGenDelegR x = show (pcFutureGenDeleg x)
+synopsis CertStateR x@(CertStateF _ _) = show x
+synopsis DeltaCoinR n@(DeltaCoin _) = show n
+synopsis GenDelegPairR x = show x
+synopsis FutureGenDelegR x = show x
 synopsis (PPUPStateR _) _ = "PPUPStateR ..."
 synopsis PtrR p = show p
-synopsis IPoolStakeR p = show (pcIndividualPoolStake p)
+synopsis IPoolStakeR p = show p
 synopsis SnapShotsR _ = "SnapShots ..."
 synopsis UnitR () = "()"
 synopsis (PairR a b) (x, y) = "(" ++ synopsis a x ++ ", " ++ synopsis b y ++ ")"
-synopsis RewardR x = show (pcReward x)
+synopsis RewardR x = show x
 synopsis (MaybeR _) Nothing = "Nothing"
 synopsis (MaybeR x) (Just y) = "(Just " ++ synopsis x y ++ ")"
 synopsis NewEpochStateR _ = "NewEpochStateR ..."
 synopsis (ProtVerR _) (ProtVer x y) = "(" ++ show x ++ " " ++ show y ++ ")"
 synopsis SlotNoR x = show x
 synopsis SizeR x = show x
-synopsis VCredR x = show (credSummary x)
-synopsis VHashR x = "(KeyHash 'Voting " ++ show (keyHashSummary x) ++ ")"
-synopsis MultiAssetR x = "(MultiAsset " ++ show (pcMultiAsset x) ++ ")"
-synopsis PolicyIDR (PolicyID x) = show (pcScriptHash x)
-synopsis (WitnessesFieldR p) x = show $ ppRecord' mempty $ unReflect pcWitnessesField p x
+synopsis VCredR x = show x
+synopsis VHashR x = "(KeyHash 'Voting " ++ show x ++ ")"
+synopsis MultiAssetR x = "(MultiAsset " ++ show x ++ ")"
+synopsis PolicyIDR (PolicyID x) = show x
+synopsis (WitnessesFieldR _p) x = show x
 synopsis AssetNameR (AssetName x) = take 10 (show x)
-synopsis (TxCertR p) (TxCertF _ x) = show (pcTxCert p x)
-synopsis RewardAccountR x = show (pcRewardAccount x)
-synopsis ValidityIntervalR x = show (ppValidityInterval x)
+synopsis (TxCertR _p) (TxCertF _ x) = show x
+synopsis RewardAccountR x = show x
+synopsis ValidityIntervalR x = show x
 synopsis KeyPairR _ = "(KeyPairR ...)"
 synopsis (GenR x) _ = "(Gen " ++ show x ++ " ...)"
 synopsis (ScriptR _) x = show x -- The Show instance uses pcScript
-synopsis ScriptHashR x = show (pcScriptHash x)
+synopsis ScriptHashR x = show x
 synopsis NetworkR x = show x
 synopsis (RdmrPtrR _) x = show x
-synopsis DataR x = show (pcData x)
-synopsis DatumR x = show (pcDatum x)
+synopsis DataR x = show x
+synopsis DatumR x = show x
 synopsis ExUnitsR (ExUnits m d) = "(ExUnits mem=" ++ show m ++ " data=" ++ show d ++ ")"
-synopsis DataHashR x = show (pcDataHash x)
-synopsis PCredR c = show (credSummary c)
-synopsis ConwayTxCertR x = show (pcConwayTxCert x)
-synopsis ShelleyTxCertR x = show (pcShelleyTxCert x)
+synopsis DataHashR x = show x
+synopsis PCredR c = show c
+synopsis ConwayTxCertR x = show x
+synopsis ShelleyTxCertR x = show x
 synopsis MIRPotR x = show x
 synopsis IsValidR x = show x
 synopsis IntegerR x = show x
 synopsis (ScriptsNeededR _) x = show x
 synopsis (ScriptPurposeR _) x = show x
-synopsis (TxBodyR p) x = show (pcTxBody p (unTxBodyF x))
-synopsis BootstrapWitnessR x = "(BootstrapWitness " ++ show (ppVKey (bwKey x)) ++ ")"
+synopsis (TxBodyR _p) x = show $ unTxBodyF x
+synopsis BootstrapWitnessR x = "(BootstrapWitness " ++ show (bwKey x) ++ ")"
 synopsis SigningKeyR key = "(publicKeyOfSecretKey " ++ formatToString shortVerificationKeyHexF (toVerification key) ++ ")"
-synopsis (TxWitsR p) (TxWitsF _ x) = show ((unReflect pcWitnesses p x) :: PDoc)
-synopsis PayHashR k = "(KeyHash 'Payment " ++ show (keyHashSummary k) ++ ")"
-synopsis (TxR p) x = show (pcTx p (unTxF x))
-synopsis ScriptIntegrityHashR x = show (trim (ppHash (extractHash x)))
-synopsis TxAuxDataHashR (TxAuxDataHash x) = show (trim (ppHash (extractHash x)))
-synopsis GovActionR x = show (pcGovAction x)
-synopsis (WitVKeyR p) x = show ((unReflect pcWitVKey p x) :: PDoc)
+synopsis (TxWitsR _p) (TxWitsF _ x) = show x
+synopsis PayHashR k = "(KeyHash 'Payment " ++ show k ++ ")"
+synopsis (TxR _p) x = show $ unTxF x
+synopsis ScriptIntegrityHashR x = show x
+synopsis TxAuxDataHashR (TxAuxDataHash x) = show x
+synopsis GovActionR x = show x
+synopsis (WitVKeyR _p) x = show x
 synopsis (TxAuxDataR _) x = show x
 synopsis CommColdCredR x = show x
 synopsis CommHotCredR x = show x
 synopsis LanguageR x = show x
-synopsis (LedgerStateR p) x = show ((unReflect pcLedgerState p x) :: PDoc)
-synopsis StakeHashR k = "(KeyHash 'Staking " ++ show (keyHashSummary k) ++ ")"
+synopsis (LedgerStateR _p) x = show x
+synopsis StakeHashR k = "(KeyHash 'Staking " ++ show k ++ ")"
 synopsis BoolR x = show x
-synopsis DRepR x = show (pcDRep x)
+synopsis DRepR x = show x
 synopsis (PoolMetadataR _) x = show x
-synopsis DRepStateR x = show (pcDRepState x)
-synopsis DStateR x = show (pcDState x)
-synopsis GovActionIdR x = show (pcGovActionId x)
-synopsis GovActionIxR (GovActionIx a) = show (ppWord16 a)
-synopsis GovActionStateR x = show (pcGovActionState x)
-synopsis (ProposalsR _p) x = show (pcProposals x)
+synopsis DRepStateR x = show x
+synopsis DStateR x = show x
+synopsis GovActionIdR x = show x
+synopsis GovActionIxR (GovActionIx a) = show a
+synopsis GovActionStateR x = show x
+synopsis (ProposalsR _p) x = show x
 synopsis UnitIntervalR x = show x
-synopsis CommitteeR x = show (pcCommittee x)
-synopsis ConstitutionR x = show $ pcConstitution x
-synopsis PrevGovActionIdsR x = show (pcPrevGovActionIds x)
+synopsis CommitteeR x = show x
+synopsis ConstitutionR x = show x
+synopsis PrevGovActionIdsR x = show x
 synopsis PrevPParamUpdateR (GovPurposeId x) = synopsis @e GovActionIdR x
 synopsis PrevHardForkR (GovPurposeId x) = synopsis @e GovActionIdR x
 synopsis PrevCommitteeR (GovPurposeId x) = synopsis @e GovActionIdR x
 synopsis PrevConstitutionR (GovPurposeId x) = synopsis @e GovActionIdR x
-synopsis RatifyStateR dr = show (pcRatifyState reify dr)
+synopsis RatifyStateR dr = show dr
 synopsis NumDormantEpochsR x = show x
 synopsis CommitteeAuthorizationR x = show x
 synopsis CommitteeStateR x = show x
 synopsis VStateR x = show x
-synopsis DRepHashR k = "(KeyHash 'DRepRole " ++ show (keyHashSummary k) ++ ")"
-synopsis AnchorR k = show (pcAnchor k)
-synopsis EnactStateR x = show (pcEnactState reify x)
-synopsis DRepPulserR x = show (pcDRepPulser x)
-synopsis DelegateeR x = show (pcDelegatee x)
+synopsis DRepHashR k = "(KeyHash 'DRepRole " ++ show k ++ ")"
+synopsis AnchorR k = show k
+synopsis EnactStateR x = show x
+synopsis DRepPulserR x = show x
+synopsis DelegateeR x = show x
 synopsis VoteR v = show v
 
 synSum :: Rep era a -> a -> String
-synSum (MapR _ CoinR) m = ", sum = " ++ show (pcCoin (Map.foldl' (<>) mempty m))
+synSum (MapR _ CoinR) m = ", sum = " ++ show (toExpr (Map.foldl' (<>) mempty m))
 synSum (MapR _ RationalR) m = ", sum = " ++ show (Map.foldl' (+) 0 m)
 synSum (MapR _ IntR) m = ", sum = " ++ show (Map.foldl' (+) 0 m)
 synSum (MapR _ Word64R) m = ", sum = " ++ show (Map.foldl' (+) 0 m)
@@ -714,7 +667,7 @@ synSum (MapR _ IPoolStakeR) m = ", sum = " ++ show (Map.foldl' accum 0 m)
     accum z (IndividualPoolStake rat _ _) = z + rat
 synSum (MapR _ (TxOutR proof)) m = ", sum = " ++ show (Map.foldl' (accumTxOut proof) (Coin 0) m)
 synSum (MapR _ ExUnitsR) m = ", sum = " ++ show (Map.foldl' add zero m)
-synSum (SetR CoinR) m = ", sum = " ++ show (pcCoin (Set.foldl' (<>) mempty m))
+synSum (SetR CoinR) m = ", sum = " ++ show (toExpr (Set.foldl' (<>) mempty m))
 synSum (SetR RationalR) m = ", sum = " ++ show (Set.foldl' (+) 0 m)
 synSum (ListR CoinR) m = ", sum = " ++ show (List.foldl' (<>) mempty m)
 synSum (ListR RationalR) m = ", sum = " ++ show (List.foldl' (+) 0 m)
@@ -1157,12 +1110,24 @@ hasEq rep x = case repHasInstances rep of
   IsEq -> pure $ With x
   IsTypeable -> failT [show rep ++ " does not have an Eq instance."]
 
-format :: Rep era t -> t -> String
+format :: (EraTest era, Reflect era) => Rep era t -> t -> String
 format rep@(MapR d r) x = show (ppMap (syn d) (syn r) x) ++ synSum rep x ++ "\nsize=" ++ show (Map.size x)
 format rep@(ListR d) x = show (ppList (syn d) x) ++ synSum rep x ++ synSum rep x ++ "\nsize=" ++ show (length x)
 format rep@(SetR d) x = show (ppSet (syn d) x) ++ synSum rep x ++ synSum rep x ++ "\nsize=" ++ show (Set.size x)
 format (MaybeR d) x = show (ppMaybe (syn d) x)
 format r x = synopsis r x
 
-syn :: Rep era t -> t -> PDoc
-syn d x = ppString (format d x)
+ppMap :: (k -> Expr) -> (v -> Expr) -> Map.Map k v -> Expr
+ppMap kf vf = toExpr . fmap (bimap kf vf) . Map.toList
+
+ppList :: (x -> Expr) -> [x] -> Expr
+ppList p = toExpr . map p
+
+ppSet :: (x -> Expr) -> Set x -> Expr
+ppSet p = toExpr . map p . Set.toList
+
+ppMaybe :: (x -> Expr) -> Maybe x -> Expr
+ppMaybe p = toExpr . fmap p
+
+syn :: (EraTest era, Reflect era) => Rep era t -> t -> Expr
+syn d x = toExpr $ format d x

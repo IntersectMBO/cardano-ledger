@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -8,6 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | The data types in this file constitute a Model of the NewEpochState
 --   sufficient for generating transactions that can run in the
@@ -72,33 +75,12 @@ import Control.Monad.Trans ()
 import Data.Default (Default (def))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Maybe as Maybe
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Text (Text)
+import Data.TreeDiff (Expr, ToExpr (toExpr))
+import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Extras (view)
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  credSummary,
-  keyHashSummary,
-  pcChainAccountState,
-  pcCoin,
-  pcCredential,
-  pcIndividualPoolStake,
-  pcKeyHash,
-  pcPoolParams,
-  pcTxId,
-  pcTxIn,
-  pcTxOut,
-  ppEpochNo,
-  ppInt,
-  ppMap,
-  ppNatural,
-  ppRecord,
-  ppString,
- )
 import Test.Cardano.Ledger.Generic.Proof (
   BabbageEra,
   CertStateWit (..),
@@ -106,16 +88,12 @@ import Test.Cardano.Ledger.Generic.Proof (
   Reflect (..),
   whichCertState,
  )
+import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
-
--- =============================================
 
 -- | MUtxo = Model UTxO. In the Model we represent the
 --   UTxO as a Map (not a newtype around a Map)
 type MUtxo era = Map TxIn (TxOut era)
-
-pcMUtxo :: Reflect era => Proof era -> MUtxo era -> PDoc
-pcMUtxo proof = ppMap pcTxIn (pcTxOut proof)
 
 -- ===========================================================
 
@@ -158,6 +136,9 @@ data ModelNewEpochState era = ModelNewEpochState
   , mBcur :: !(Map (KeyHash 'StakePool) Natural)
   , mRu :: !(StrictMaybe RewardUpdate) -- Possible reward update
   }
+  deriving (Generic)
+
+instance ShelleyEraTest era => ToExpr (ModelNewEpochState era)
 
 type UtxoEntry era = (TxIn, TxOut era)
 
@@ -411,47 +392,10 @@ complete (Pulsing rewsnap pulser) = fst $ runShelleyBase (completeRupd (Pulsing 
 
 -- =====================================================================
 
-pcModelNewEpochState :: Reflect era => Proof era -> ModelNewEpochState era -> PDoc
-pcModelNewEpochState proof x =
-  ppRecord "ModelNewEpochState" $
-    [ ("poolparams", ppMap keyHashSummary pcPoolParams (mPoolParams x))
-    , ("pool deposits", ppMap keyHashSummary pcCoin (mPoolDeposits x))
-    , ("rewards", ppMap credSummary pcCoin (mRewards x))
-    , ("delegations", ppMap pcCredential pcKeyHash (mDelegations x))
-    , ("key deposits", ppMap credSummary pcCoin (mKeyDeposits x))
-    , ("utxo", ppMap pcTxIn (pcTxOut proof) (mUTxO x))
-    , ("mutFees", ppMap pcTxIn (pcTxOut proof) (mMutFee x))
-    , ("account", pcChainAccountState (mChainAccountState x))
-    , ("pool distr", ppMap pcKeyHash pcIndividualPoolStake (mPoolDistr x))
-    , ("protocol params", ppString "PParams ...")
-    , ("deposited", pcCoin (mDeposited x))
-    , ("fees", pcCoin (mFees x))
-    , ("count", ppInt (mCount x))
-    , ("index", ppMap ppInt pcTxId (mIndex x))
-    -- Add additional EpochBoundary fields here
-    ]
-      ++ Maybe.catMaybes (epochBoundaryPDoc proof x)
-
-epochBoundaryPDoc :: Proof era -> ModelNewEpochState era -> [Maybe (Text, PDoc)]
-epochBoundaryPDoc _proof x =
-  [ if Map.null futurepp
-      then Nothing
-      else Just ("future pparams", ppMap pcKeyHash pcPoolParams futurepp)
-  , if Map.null retiring then Nothing else Just ("retiring", ppMap pcKeyHash ppEpochNo retiring)
-  , if lastepoch == EpochNo 0 then Nothing else Just ("last epoch", ppEpochNo lastepoch)
-  , if Map.null prevBlocks then Nothing else Just ("prev blocks", ppMap pcKeyHash ppNatural prevBlocks)
-  , if Map.null curBlocks then Nothing else Just ("current blocks", ppMap pcKeyHash ppNatural curBlocks)
-  ]
-  where
-    futurepp = mFPoolParams x
-    retiring = mRetiring x
-    lastepoch = mEL x
-    prevBlocks = mBprev x
-    curBlocks = mBcur x
+pcModelNewEpochState :: ShelleyEraTest era => ModelNewEpochState era -> Expr
+pcModelNewEpochState = toExpr
 
 -- SnapShots and PulsingRewUdate delberately ommitted from pretty printer
 
-instance Reflect era => PrettyA (ModelNewEpochState era) where prettyA = pcModelNewEpochState reify
-
-instance Reflect era => Show (ModelNewEpochState era) where
-  show x = show (prettyA x)
+instance (Reflect era, ShelleyEraTest era) => Show (ModelNewEpochState era) where
+  show = show . toExpr

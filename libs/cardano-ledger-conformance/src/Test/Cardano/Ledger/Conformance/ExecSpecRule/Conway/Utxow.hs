@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import Lens.Micro ((^.))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import qualified Prettyprinter as PP
+import Test.Cardano.Ledger.Common (showExpr)
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   SpecTranslate,
@@ -42,9 +43,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoStateSpec,
   utxoTxSpec,
  )
-import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
 import Test.Cardano.Ledger.Shelley.Utils (runSTS)
-import Test.Cardano.Ledger.TreeDiff (showExpr)
 
 instance
   SpecTranslate ConwayTxBodyTransContext (ConwayTxCert ConwayEra) =>
@@ -73,11 +72,11 @@ instance
         [ "UTXOW"
         , "Impl:"
         , "witsVKeyNeeded"
-        , PP.ppString . showExpr $
+        , PP.pretty . showExpr $
             getConwayWitsVKeyNeeded @ConwayEra (utxosUtxo st) (sig ^. bodyTxL)
         , "witsVKeyHashes"
         , "Spec:"
-        , PP.ppString result
+        , PP.pretty result
         , mempty
         , "UTXO"
         , utxoInfo

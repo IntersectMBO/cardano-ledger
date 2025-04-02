@@ -1,18 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 -- Orphan Arbitrary instance for OrderInfo
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -43,6 +40,8 @@ import Test.Cardano.Ledger.Constrained.Shrink
 import Test.Cardano.Ledger.Constrained.Size (Size (SzRng))
 import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
+import Test.Cardano.Ledger.Era
+import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck hiding (getSize, total)
 import Prelude hiding (subtract)
 
@@ -95,7 +94,8 @@ data GenEnv era = GenEnv
   --   the variable in the dependency order (depth = 1 + depth of
   --   dependencies).
   }
-  deriving (Show)
+
+deriving instance (EraTest era, Reflect era) => Show (GenEnv era)
 
 type Depth = Int
 
@@ -608,25 +608,25 @@ initEnv info =
     , gSolved = mempty
     }
 
-showVal :: Rep era t -> t -> String
+showVal :: (EraTest era, Reflect era) => Rep era t -> t -> String
 showVal (SetR r) t = "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
 showVal (MapR kr vr) t =
   "{" ++ intercalate ", " [synopsis kr k ++ " -> " ++ synopsis vr v | (k, v) <- Map.toList t] ++ "}"
 showVal rep t = synopsis rep t
 
-showTerm :: Term era t -> String
+showTerm :: (EraTest era, Reflect era) => Term era t -> String
 showTerm (Lit rep t) = showVal rep t
 showTerm (Dom t) = "(Dom " ++ showTerm t ++ ")"
 showTerm (Rng t) = "(Rng " ++ showTerm t ++ ")"
 showTerm t = show t
 
-showPred :: Pred era -> String
+showPred :: (EraTest era, Reflect era) => Pred era -> String
 showPred (sub `Subset` sup) = showTerm sub ++ " ⊆ " ++ showTerm sup
 showPred (sub :=: sup) = showTerm sub ++ " == " ++ showTerm sup
 showPred (Disjoint s t) = "Disjoint " ++ showTerm s ++ " " ++ showTerm t
 showPred pr = show pr
 
-showEnv :: Env era -> String
+showEnv :: (EraTest era, Reflect era) => Env era -> String
 showEnv (Env vmap) = unlines $ map pr (Map.toList vmap)
   where
     pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ showVal rep t
@@ -669,7 +669,7 @@ constraintProperty strict whitelist info prop =
       counterexample ("\n-- Constraints --\n" ++ unlines (map showPred preds)) $
         counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
           checkTyped (compile info preds) $ \graph ->
-            forAllBlind (genDependGraph False testProof graph) . flip checkRight $ \subst ->
+            forAllBlind (genDependGraph False graph) . flip checkRight $ \subst ->
               let env = errorTyped $ substToEnv subst emptyEnv
                   n = let Env e = gEnv genenv in Map.size e
                in tabulate "Var count" [show n] $
@@ -693,7 +693,7 @@ constraintProperty strict whitelist info prop =
         ==> counterexample (unlines errs) False
     checkWhitelist (Right x) k = property $ k x
 
-checkPredicates :: [Pred era] -> Env era -> Property
+checkPredicates :: (EraTest era, Reflect era) => [Pred era] -> Env era -> Property
 checkPredicates preds env =
   counterexample ("-- Solution --\n" ++ showEnv env) $
     conjoin $
@@ -705,7 +705,7 @@ runPreds :: [Pred ShelleyEra] -> IO ()
 runPreds ps = do
   let info = standardOrderInfo
   Right g <- pure $ runTyped $ compile info ps
-  subst <- generate $ genDependGraph True testProof g
+  subst <- generate $ genDependGraph True g
   print subst
 
 -- | Generate a set of satisfiable constraints and check that we can generate a solution and that it

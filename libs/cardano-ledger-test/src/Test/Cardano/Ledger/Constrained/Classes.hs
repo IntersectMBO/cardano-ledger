@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -31,13 +33,16 @@ import Cardano.Ledger.State (EraCertState (..), IndividualPoolStake (..), Script
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (coin, modifyCoin, (<+>)))
 import Data.Default (Default (def))
+import Data.Functor.Identity (Identity)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.TreeDiff (ToExpr (toExpr))
 import Data.Typeable
 import Data.Word (Word64)
+import GHC.Generics (Generic)
 import GHC.Real (denominator, numerator, (%))
 import Lens.Micro
 import Numeric.Natural (Natural)
@@ -63,24 +68,6 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.GenState (plutusPurposeTags)
-import Test.Cardano.Ledger.Generic.PrettyCore (
-  PDoc,
-  PrettyA (..),
-  pcCertState,
-  pcPParams,
-  pcScript,
-  pcScriptsNeeded,
-  pcTx,
-  pcTxBody,
-  pcTxCert,
-  pcTxOut,
-  pcVal,
-  pcWitnesses,
-  ppPlutusPurposeAsIx,
-  ppPlutusPurposeAsIxItem,
-  ppProposedPPUpdates,
-  ppString,
- )
 import Test.Cardano.Ledger.Generic.Proof (
   Proof (..),
   Reflect (..),
@@ -501,8 +488,8 @@ hashTxAuxDataF (TxAuxDataF _ x) = hashTxAuxData x
 unTxAuxData :: TxAuxDataF era -> TxAuxData era
 unTxAuxData (TxAuxDataF _ x) = x
 
-instance Show (TxAuxDataF era) where
-  show (TxAuxDataF p x) = show ((unReflect pcAuxData p x) :: PDoc)
+instance ToExpr (TxAuxData era) => Show (TxAuxDataF era) where
+  show (TxAuxDataF _p x) = show $ toExpr x
 
 instance Eq (TxAuxDataF era) where
   (TxAuxDataF Shelley x) == (TxAuxDataF Shelley y) = x == y
@@ -511,9 +498,6 @@ instance Eq (TxAuxDataF era) where
   (TxAuxDataF Alonzo x) == (TxAuxDataF Alonzo y) = x == y
   (TxAuxDataF Babbage x) == (TxAuxDataF Babbage y) = x == y
   (TxAuxDataF Conway x) == (TxAuxDataF Conway y) = x == y
-
-pcAuxData :: Proof era -> TxAuxData era -> PDoc
-pcAuxData p _x = ppString ("TxAuxData " ++ show p) -- TODO make this more accurate
 
 genTxAuxDataF :: Proof era -> Gen (TxAuxDataF era)
 genTxAuxDataF p@Shelley = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
@@ -525,17 +509,16 @@ genTxAuxDataF p@Conway = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData 
 
 -- ==============
 
-data TxF era where
-  TxF :: Proof era -> Tx era -> TxF era
+data TxF era = TxF (Proof era) (Tx era)
+  deriving (Generic)
 
 unTxF :: TxF era -> Tx era
 unTxF (TxF _ x) = x
 
-instance PrettyA (TxF era) where
-  prettyA (TxF p tx) = pcTx p tx
+instance (ToExpr (Proof era), ToExpr (Tx era)) => ToExpr (TxF era)
 
-instance PrettyA (PParamsUpdate era) => Show (TxF era) where
-  show (TxF p x) = show ((unReflect pcTx p x) :: PDoc)
+instance (ToExpr (PParamsUpdate era), ToExpr (Tx era)) => Show (TxF era) where
+  show (TxF _p x) = show $ toExpr x
 
 instance Eq (TxF era) where
   (TxF Shelley x) == (TxF Shelley y) = x == y
@@ -553,8 +536,8 @@ data TxWitsF era where
 unTxWitsF :: TxWitsF era -> TxWits era
 unTxWitsF (TxWitsF _ x) = x
 
-instance Show (TxWitsF era) where
-  show (TxWitsF p x) = show ((unReflect pcWitnesses p x) :: PDoc)
+instance ToExpr (TxWits era) => Show (TxWitsF era) where
+  show (TxWitsF _p x) = show $ toExpr x
 
 instance Eq (TxWitsF era) where
   (TxWitsF Shelley x) == (TxWitsF Shelley y) = x == y
@@ -572,11 +555,12 @@ data TxBodyF era where
 unTxBodyF :: TxBodyF era -> TxBody era
 unTxBodyF (TxBodyF _ x) = x
 
-instance PrettyA (PParamsUpdate era) => Show (TxBodyF era) where
-  show (TxBodyF p x) = show ((unReflect pcTxBody p x) :: PDoc)
+deriving instance Generic (TxBodyF era)
 
-instance PrettyA (TxBodyF era) where
-  prettyA (TxBodyF p x) = unReflect pcTxBody p x
+instance (ToExpr (TxBody era), ToExpr (PParamsUpdate era)) => Show (TxBodyF era) where
+  show (TxBodyF _p x) = show $ toExpr x
+
+instance (ToExpr (TxBody era), ToExpr (Proof era)) => ToExpr (TxBodyF era)
 
 instance Eq (TxBodyF era) where
   (TxBodyF Shelley x) == (TxBodyF Shelley y) = x == y
@@ -593,11 +577,12 @@ data TxCertF era where
 unTxCertF :: TxCertF era -> TxCert era
 unTxCertF (TxCertF _ x) = x
 
-instance PrettyA (TxCertF era) where
-  prettyA (TxCertF p x) = pcTxCert p x
+deriving instance Generic (TxCertF era)
 
-instance Show (TxCertF era) where
-  show (TxCertF p x) = show (pcTxCert p x)
+instance (ToExpr (Proof era), ToExpr (TxCert era)) => ToExpr (TxCertF era)
+
+instance ToExpr (TxCert era) => Show (TxCertF era) where
+  show (TxCertF _p x) = show $ toExpr x
 
 instance Eq (TxCertF era) where
   (TxCertF Shelley x) == (TxCertF Shelley y) = x == y
@@ -620,11 +605,23 @@ data PlutusPointerF era where
 unPlutusPointerF :: PlutusPointerF era -> PlutusPurpose AsIx era
 unPlutusPointerF (PlutusPointerF _ pp) = pp
 
-instance Show (PlutusPurposeF era) where
-  show (PlutusPurposeF p x) = unReflect (\_ -> show (ppPlutusPurposeAsIxItem x)) p
+instance Reflect era => Show (PlutusPurposeF era) where
+  show (PlutusPurposeF _p x) = case reify @era of
+    Shelley -> error "Impossible. `PlutusPurpose AsIxItem` doesn't exist pre-Alonzo."
+    Allegra -> error "Impossible. `PlutusPurpose AsIxItem` doesn't exist pre-Alonzo."
+    Mary -> error "Impossible. `PlutusPurpose AsIxItem` doesn't exist pre-Alonzo."
+    Alonzo -> show $ toExpr x
+    Babbage -> show $ toExpr x
+    Conway -> show $ toExpr x
 
-instance Show (PlutusPointerF era) where
-  show (PlutusPointerF p x) = unReflect (\_ -> show (ppPlutusPurposeAsIx x)) p
+instance Reflect era => Show (PlutusPointerF era) where
+  show (PlutusPointerF _p x) = case reify @era of
+    Shelley -> error "Impossible. `PlutusPurpose AsIx` doesn't exist pre-Alonzo."
+    Allegra -> error "Impossible. `PlutusPurpose AsIx` doesn't exist pre-Alonzo."
+    Mary -> error "Impossible. `PlutusPurpose AsIx` doesn't exist pre-Alonzo."
+    Alonzo -> show $ toExpr x
+    Babbage -> show $ toExpr x
+    Conway -> show $ toExpr x
 
 instance Eq (PlutusPurposeF era) where
   PlutusPurposeF Alonzo x == PlutusPurposeF Alonzo y = x == y
@@ -651,9 +648,6 @@ data TxOutF era where
 unTxOut :: TxOutF era -> TxOut era
 unTxOut (TxOutF _ x) = x
 
-instance PrettyA (TxOutF era) where
-  prettyA (TxOutF p x) = unReflect pcTxOut p x
-
 instance Eq (TxOutF era) where
   x1 == x2 = compare x1 x2 == EQ
 
@@ -674,9 +668,6 @@ instance Ord (TxOutF era) where
 -- ======
 data ValueF era where
   ValueF :: Proof era -> Value era -> ValueF era
-
-instance PrettyA (ValueF era) where
-  prettyA (ValueF p v) = pcVal p v
 
 unValue :: ValueF era -> Value era
 unValue (ValueF _ v) = v
@@ -705,8 +696,9 @@ data PParamsF era where
 unPParams :: PParamsF era -> PParams era
 unPParams (PParamsF _ p) = p
 
-instance PrettyA (PParamsF era) where
-  prettyA (PParamsF p x) = unReflect pcPParams p x
+deriving instance Generic (PParamsF era)
+
+instance (ToExpr (PParamsHKD Identity era), ToExpr (Proof era)) => ToExpr (PParamsF era)
 
 instance Eq (PParamsF era) where
   PParamsF p1 x == PParamsF _ y =
@@ -740,8 +732,9 @@ data ProposedPPUpdatesF era where
 unProposedPPUpdates :: ProposedPPUpdatesF era -> PP.ProposedPPUpdates era
 unProposedPPUpdates (ProposedPPUpdatesF _ x) = x
 
-instance PrettyA (PParamsUpdate e) => PrettyA (ProposedPPUpdatesF e) where
-  prettyA (ProposedPPUpdatesF _p x) = ppProposedPPUpdates x
+deriving instance Generic (ProposedPPUpdatesF era)
+
+instance (ToExpr (PParamsUpdate e), ToExpr (Proof e)) => ToExpr (ProposedPPUpdatesF e)
 
 proposedCoreL ::
   Lens' (PP.ProposedPPUpdates era) (Map (KeyHash 'Genesis) (PParamsUpdate era))
@@ -772,9 +765,6 @@ data CertStateF era where
 unCertStateF :: CertStateF era -> CertState era
 unCertStateF (CertStateF _ x) = x
 
-instance Reflect era => PrettyA (CertStateF era) where
-  prettyA (CertStateF _ x) = pcCertState x
-
 instance Eq (CertStateF era) where
   (CertStateF Shelley x) == (CertStateF Shelley y) = x == y
   (CertStateF Allegra x) == (CertStateF Allegra y) = x == y
@@ -782,6 +772,9 @@ instance Eq (CertStateF era) where
   (CertStateF Alonzo x) == (CertStateF Alonzo y) = x == y
   (CertStateF Babbage x) == (CertStateF Babbage y) = x == y
   (CertStateF Conway x) == (CertStateF Conway y) = x == y
+
+instance ToExpr (CertState era) => Show (CertStateF era) where
+  show (CertStateF _p c) = show $ toExpr c
 
 -- ====================
 
@@ -816,11 +809,11 @@ putPPUP Conway _ = Gov.emptyGovState @era
 liftUTxO :: Map TxIn (TxOutF era) -> UTxO era
 liftUTxO m = UTxO (Map.map unTxOut m)
 
-instance Show (TxOutF era) where
-  show (TxOutF p t) = show (unReflect pcTxOut p t :: PDoc)
+instance ToExpr (TxOut era) => Show (TxOutF era) where
+  show (TxOutF _p t) = show $ toExpr t
 
-instance Show (ValueF era) where
-  show (ValueF p t) = show (pcVal p t)
+instance ToExpr (Value era) => Show (ValueF era) where
+  show (ValueF _p t) = show $ toExpr t
 
 instance Show (PParamsF era) where
   show (PParamsF _ _) = "PParamsF ..."
@@ -916,8 +909,14 @@ data ScriptsNeededF era where
 unScriptsNeededF :: ScriptsNeededF era -> ScriptsNeeded era
 unScriptsNeededF (ScriptsNeededF _ v) = v
 
-instance Show (ScriptsNeededF era) where
-  show (ScriptsNeededF p t) = unReflect (\_ -> show (pcScriptsNeeded p t)) p
+instance Reflect era => Show (ScriptsNeededF era) where
+  show (ScriptsNeededF _p t) = case reify @era of
+    Conway -> show $ toExpr t
+    Babbage -> show $ toExpr t
+    Alonzo -> show $ toExpr t
+    Mary -> show $ toExpr t
+    Allegra -> show $ toExpr t
+    Shelley -> show $ toExpr t
 
 -- ========================
 
@@ -927,11 +926,12 @@ data ScriptF era where
 unScriptF :: ScriptF era -> Script era
 unScriptF (ScriptF _ v) = v
 
-instance PrettyA (ScriptF era) where
-  prettyA (ScriptF p x) = unReflect pcScript p x
+deriving instance Generic (ScriptF era)
 
-instance Show (ScriptF era) where
-  show (ScriptF p t) = show ((unReflect pcScript p t) :: PDoc)
+instance (ToExpr (Proof era), ToExpr (Script era)) => ToExpr (ScriptF era)
+
+instance ToExpr (Script era) => Show (ScriptF era) where
+  show (ScriptF _p t) = show $ toExpr t
 
 instance Eq (ScriptF era) where
   (ScriptF Shelley x) == (ScriptF Shelley y) = x == y

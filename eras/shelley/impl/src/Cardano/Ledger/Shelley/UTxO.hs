@@ -3,6 +3,7 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -79,6 +80,7 @@ import Data.Foldable (Foldable (fold), foldr', toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
 -- | Compute the subset of inputs of the set 'txIns' for which each input is
@@ -172,7 +174,7 @@ getConsumedCoin pp lookupRefund utxo txBody =
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 
 newtype ShelleyScriptsNeeded era = ShelleyScriptsNeeded (Set ScriptHash)
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 instance EraUTxO ShelleyEra where
   type ScriptsNeeded ShelleyEra = ShelleyScriptsNeeded ShelleyEra

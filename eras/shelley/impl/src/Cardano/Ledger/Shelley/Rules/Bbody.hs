@@ -65,6 +65,7 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyBbodyState era
   = BbodyState !(State (EraRule "LEDGERS" era)) !BlocksMade
+  deriving (Generic)
 
 deriving stock instance Show (State (EraRule "LEDGERS" era)) => Show (ShelleyBbodyState era)
 

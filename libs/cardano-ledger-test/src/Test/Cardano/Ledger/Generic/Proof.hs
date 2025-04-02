@@ -113,6 +113,7 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
+import Data.TreeDiff
 import Data.Universe (Shape (..), Shaped (..), Singleton (..), Some (..), (:~:) (Refl))
 import GHC.TypeLits (Symbol)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
@@ -135,6 +136,9 @@ instance Show (Proof e) where
   show Alonzo = "Alonzo"
   show Babbage = "Babbage"
   show Conway = "Conway"
+
+instance ToExpr (Proof era) where
+  toExpr = toExpr . show
 
 -- ==================================
 -- Reflection over Crypto and Era

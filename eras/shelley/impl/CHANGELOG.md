@@ -2,6 +2,9 @@
 
 ## 1.17.0.0
 
+* Added `Generic` instances for:
+  * `ShelleyBbodyState`
+  * `ShelleyScriptsNeeded`
 * Remove Bool argument from `auxDataSeqDecoder`
 * Move to `testlib` `DecCBOR` instances for: `ShelleyTxSeq`, `ShelleyTxRaw`, `ShelleyTx`, `TxBody ShelleyEra`, `ShelleyTxAuxData`, `ShelleyTxWitsRaw`, `ShelleyTxWits`, `MultiSigRaw`, `MultiSig`
 * Remove `segWitTx`
@@ -37,6 +40,17 @@
 
 ### `testlib`
 
+* Added `ToExpr` instances for:
+  * `ShelleyScriptsNeeded`
+  * `ShelleyBbodyState`
+  * `ShelleyTickPredFailure`
+  * `ShelleyNewEpochPredFailure`
+  * `ShelleyEpochPredFailure`
+  * `ShelleyUpecPredFailure`
+  * `ShelleyPoolPredFailure`
+  * `ShelleySnapPredFailure`
+  * `ShelleyMirPredFailure`
+  * `ShelleyRupdPredFailure`
 * Added `Era` module with `ShelleyEraTest` class
 
 ## 1.16.0.0
