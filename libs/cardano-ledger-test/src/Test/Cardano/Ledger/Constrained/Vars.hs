@@ -40,6 +40,7 @@ import Cardano.Ledger.Conway.PParams (
   ppGovActionDepositL,
  )
 import Cardano.Ledger.Conway.State (
+  ChainAccountState (..),
   CommitteeAuthorization,
   CommitteeState (..),
   ConwayCertState (..),
@@ -52,6 +53,8 @@ import Cardano.Ledger.Conway.State (
   SnapShots (..),
   Stake (..),
   VState (..),
+  casReservesL,
+  casTreasuryL,
   conwayCertDStateL,
   conwayCertPStateL,
   conwayCertVStateL,
@@ -524,13 +527,13 @@ treasury :: Era era => Term era Coin
 treasury = Var $ V "treasury" CoinR (Yes NewEpochStateR treasuryL)
 
 treasuryL :: NELens era Coin
-treasuryL = nesEsL . esChainAccountStateL . asTreasuryL
+treasuryL = nesEsL . esChainAccountStateL . casTreasuryL
 
 reserves :: Era era => Term era Coin
 reserves = Var $ V "reserves" CoinR (Yes NewEpochStateR reservesL)
 
 reservesL :: NELens era Coin
-reservesL = nesEsL . esChainAccountStateL . asReservesL
+reservesL = nesEsL . esChainAccountStateL . casReservesL
 
 -- | The Coin availabe for a MIR transfer to/from the Treasury
 --   Computed from 'treasury' + 'deltaTreasury' - sum('instanTreasury')
@@ -1031,8 +1034,8 @@ epochStateT proof =
 accountStateT :: Era era => RootTarget era ChainAccountState ChainAccountState
 accountStateT =
   Invert "ChainAccountState" (typeRep @ChainAccountState) ChainAccountState
-    :$ Lensed treasury asTreasuryL
-    :$ Lensed reserves asReservesL
+    :$ Lensed treasury casTreasuryL
+    :$ Lensed reserves casReservesL
 
 -- | Target for LedgerState
 ledgerStateT ::

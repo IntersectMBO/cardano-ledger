@@ -615,9 +615,11 @@ futurePParamsEpochStateL = epochStateGovStateL . futurePParamsGovStateL
 
 asTreasuryL :: Lens' ChainAccountState Coin
 asTreasuryL = lens casTreasury (\ds u -> ds {casTreasury = u})
+{-# DEPRECATED asTreasuryL "In favor of `casTreasuryL`" #-}
 
 asReservesL :: Lens' ChainAccountState Coin
 asReservesL = lens casReserves (\ds u -> ds {casReserves = u})
+{-# DEPRECATED asReservesL "In favor of `casReservesL`" #-}
 
 -- ====================================================
 -- LedgerState

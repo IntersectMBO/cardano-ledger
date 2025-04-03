@@ -117,7 +117,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       pulseSize = max 1 (ceiling (numStakeCreds %. (knownNonZero @4 `mulNonZero` k)))
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
-      Coin reserves = acnt ^. asReservesL
+      Coin reserves = acnt ^. casReservesL
       ds = ls ^. lsCertStateL . certDStateL
       -- reserves and rewards change
       pr = es ^. prevPParamsEpochStateL

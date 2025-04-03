@@ -25,16 +25,9 @@ import Cardano.Ledger.Coin (Coin, addDeltaCoin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
-import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
-  ChainAccountState (..),
   EpochState,
-  InstantaneousRewards (..),
-  certDStateL,
   curPParamsEpochStateL,
-  dsIRewards,
-  dsIRewardsL,
-  dsUnifiedL,
   esChainAccountState,
   esLState,
   esLStateL,
@@ -42,10 +35,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   esSnapshots,
   lsCertStateL,
   prevPParamsEpochStateL,
-  rewards,
   pattern EpochState,
  )
-import Cardano.Ledger.State (EraCertState)
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (compactCoinOrError)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))

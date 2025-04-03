@@ -40,11 +40,8 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  ChainAccountState (..),
   LedgerState (..),
   UTxOState (..),
-  dsUnifiedL,
-  rewards,
  )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyDelegsPredFailure (..),
@@ -54,12 +51,12 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure (..),
   ShelleyUtxowPredFailure (..),
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, addrWits)
-import Cardano.Ledger.State (EraCertState (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))

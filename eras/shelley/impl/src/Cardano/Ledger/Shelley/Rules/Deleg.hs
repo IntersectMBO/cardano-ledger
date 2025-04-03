@@ -42,18 +42,8 @@ import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELEG, ShelleyEra)
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
-import Cardano.Ledger.Shelley.LedgerState (
-  ChainAccountState (..),
-  DState (..),
-  FutureGenDeleg (..),
-  InstantaneousRewards (..),
-  availableAfterMIR,
-  delegations,
-  dsFutureGenDelegs,
-  dsGenDelegs,
-  dsIRewards,
-  rewards,
- )
+import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (
   Duration (..),
   EpochNo (..),

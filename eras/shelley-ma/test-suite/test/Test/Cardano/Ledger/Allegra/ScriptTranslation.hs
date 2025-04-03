@@ -7,6 +7,7 @@ module Test.Cardano.Ledger.Allegra.ScriptTranslation (
 where
 
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra.State
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as S
@@ -63,7 +64,7 @@ testScriptPostTranslation =
               Nothing
               minBound
               emptyPParams
-              (S.ChainAccountState (S.Coin 0) (S.Coin 0))
+              (ChainAccountState (S.Coin 0) (S.Coin 0))
           utxoStShelley = def {S.utxosUtxo = utxo}
           utxoStAllegra = fromRight . runExcept $ translateEra @AllegraEra NoGenesis utxoStShelley
           txb =
