@@ -3,7 +3,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
--- some GHC bug wrongfully complains about CanGetChainAccountState constraint being redundant.
+-- some GHC bug wrongfully complains about CanSetChainAccountState constraint being redundant.
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.State.ChainAccount (
@@ -13,6 +13,8 @@ module Cardano.Ledger.State.ChainAccount (
   AccountState,
   casTreasuryL,
   casReservesL,
+  treasuryL,
+  reservesL,
 ) where
 
 import Cardano.Ledger.Binary
@@ -75,6 +77,16 @@ instance Default ChainAccountState where
 
 casTreasuryL :: Lens' ChainAccountState Coin
 casTreasuryL = lens casTreasury (\ds u -> ds {casTreasury = u})
+{-# INLINE casTreasuryL #-}
 
 casReservesL :: Lens' ChainAccountState Coin
 casReservesL = lens casReserves (\ds u -> ds {casReserves = u})
+{-# INLINE casReservesL #-}
+
+treasuryL :: CanSetChainAccountState t => Lens' (t era) Coin
+treasuryL = chainAccountStateL . lens casTreasury (\ds u -> ds {casTreasury = u})
+{-# INLINE treasuryL #-}
+
+reservesL :: CanSetChainAccountState t => Lens' (t era) Coin
+reservesL = chainAccountStateL . lens casReserves (\ds u -> ds {casReserves = u})
+{-# INLINE reservesL #-}

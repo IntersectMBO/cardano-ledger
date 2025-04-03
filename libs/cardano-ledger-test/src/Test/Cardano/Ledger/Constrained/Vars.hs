@@ -55,14 +55,17 @@ import Cardano.Ledger.Conway.State (
   VState (..),
   casReservesL,
   casTreasuryL,
+  chainAccountStateL,
   conwayCertDStateL,
   conwayCertPStateL,
   conwayCertVStateL,
   csCommitteeCredsL,
   instantStakeL,
   poolDistrDistrL,
+  reservesL,
   shelleyCertDStateL,
   shelleyCertPStateL,
+  treasuryL,
   vsCommitteeStateL,
   vsDRepsL,
   vsNumDormantEpochsL,
@@ -526,14 +529,8 @@ instantStakeTarget proof = Constr "computeInstantStake" get ^$ utxo proof
 treasury :: Era era => Term era Coin
 treasury = Var $ V "treasury" CoinR (Yes NewEpochStateR treasuryL)
 
-treasuryL :: NELens era Coin
-treasuryL = nesEsL . esChainAccountStateL . casTreasuryL
-
 reserves :: Era era => Term era Coin
 reserves = Var $ V "reserves" CoinR (Yes NewEpochStateR reservesL)
-
-reservesL :: NELens era Coin
-reservesL = nesEsL . esChainAccountStateL . casReservesL
 
 -- | The Coin availabe for a MIR transfer to/from the Treasury
 --   Computed from 'treasury' + 'deltaTreasury' - sum('instanTreasury')
@@ -1024,7 +1021,7 @@ epochStateT ::
   forall era. Reflect era => Proof era -> RootTarget era (EpochState era) (EpochState era)
 epochStateT proof =
   Invert "EpochState" (typeRep @(EpochState era)) epochStateFun
-    :$ Shift accountStateT esChainAccountStateL
+    :$ Shift accountStateT chainAccountStateL
     :$ Shift (ledgerStateT proof) esLStateL
     :$ Shift snapShotsT esSnapshotsL
   where

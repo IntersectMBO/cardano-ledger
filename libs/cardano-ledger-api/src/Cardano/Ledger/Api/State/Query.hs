@@ -337,7 +337,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
 queryChainAccountState ::
   NewEpochState era ->
   ChainAccountState
-queryChainAccountState = view $ nesEsL . esChainAccountStateL
+queryChainAccountState = view chainAccountStateL
 
 getNextEpochCommitteeMembers ::
   ConwayEraGov era =>

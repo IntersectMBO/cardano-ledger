@@ -2,7 +2,8 @@
 
 ## 1.17.0.0
 
-* Rename `esAccountState` and `esAccountStateL` to `esChainAccountState` and `esChainAccountStateL`
+* Deprecate ``esAccountStateL`, `epochStateTreasuryL`, `asTreasuryL` and `asReservesL`
+* Rename `esAccountState` to `esChainAccountState`
 * Replaced `prDState` and `prPState` with `prCertState` in `ShelleyPoolreapState`
 * Removed `ShelleyPoolreapEnv` (became obsolete)
 * Removed `shelleyCertVState` from `ShelleyCertState`
