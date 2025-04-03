@@ -53,7 +53,7 @@ applyTxMempoolEnv pp =
     , ledgerEpochNo = Nothing
     , ledgerIx = minBound
     , ledgerPp = pp
-    , ledgerAccount = AccountState (Coin 45000000000) (Coin 45000000000)
+    , ledgerAccount = ChainAccountState (Coin 45000000000) (Coin 45000000000)
     }
 
 data ApplyTxEnv era = ApplyTxEnv

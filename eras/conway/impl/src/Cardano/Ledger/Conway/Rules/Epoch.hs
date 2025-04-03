@@ -69,8 +69,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   asTreasuryL,
   curPParamsEpochStateL,
-  esAccountState,
-  esAccountStateL,
+  esChainAccountState,
+  esChainAccountStateL,
   esLStateL,
   esSnapshotsL,
   lsCertStateL,
@@ -228,16 +228,16 @@ updateNumDormantEpochs currentEpoch ps vState =
 --
 -- The utxo fees and donations are applied in the remaining body of EPOCH transition
 applyEnactedWithdrawals ::
-  AccountState ->
+  ChainAccountState ->
   DState era ->
   EnactState era ->
-  (AccountState, DState era, EnactState era)
-applyEnactedWithdrawals accountState dState enactedState =
+  (ChainAccountState, DState era, EnactState era)
+applyEnactedWithdrawals chainAccountState dState enactedState =
   let enactedWithdrawals = enactedState ^. ensWithdrawalsL
       rewardsUView = RewDepUView $ dState ^. dsUnifiedL
       successfulWithdrawls = rewardsUView ◁ enactedWithdrawals
-      accountState' =
-        accountState
+      chainAccountState' =
+        chainAccountState
           -- Subtract `successfulWithdrawals` from the treasury, and add them to the rewards UMap
           -- `unclaimed` withdrawals remain in the treasury.
           -- Compared to the spec, instead of adding `unclaimed` and subtracting `totWithdrawals`
@@ -258,7 +258,7 @@ applyEnactedWithdrawals accountState dState enactedState =
         enactedState
           & ensWithdrawalsL .~ Map.empty
           & ensTreasuryL .~ mempty
-   in (accountState', dState', enactedState')
+   in (chainAccountState', dState', enactedState')
 
 epochTransition ::
   forall era.
@@ -291,7 +291,7 @@ epochTransition = do
   TRC
     ( ()
       , epochState0@EpochState
-          { esAccountState = accountState0
+          { esChainAccountState = chainAccountState0
           , esSnapshots = snapshots0
           , esLState = ledgerState0
           }
@@ -314,9 +314,9 @@ epochTransition = do
           { psStakePoolParams = newStakePoolParams
           , psFutureStakePoolParams = Map.empty
           }
-  PoolreapState utxoState1 accountState1 certState1 <-
+  PoolreapState utxoState1 chainAccountState1 certState1 <-
     trans @(EraRule "POOLREAP" era) $
-      TRC ((), PoolreapState utxoState0 accountState0 (certState0 & certPStateL .~ pState1), eNo)
+      TRC ((), PoolreapState utxoState0 chainAccountState0 (certState0 & certPStateL .~ pState1), eNo)
 
   let
     stakePoolDistr = ssStakeMarkPoolDistr snapshots1
@@ -325,8 +325,8 @@ epochTransition = do
     ratifyState@RatifyState {rsEnactState, rsEnacted, rsExpired} =
       extractDRepPulsingState pulsingState
 
-    (accountState2, dState2, EnactState {..}) =
-      applyEnactedWithdrawals accountState1 (certState1 ^. certDStateL) rsEnactState
+    (chainAccountState2, dState2, EnactState {..}) =
+      applyEnactedWithdrawals chainAccountState1 (certState1 ^. certDStateL) rsEnactState
 
     -- NOTE: It is important that we apply the results of ratification
     -- and enactment from the pulser to the working copy of proposals.
@@ -375,8 +375,8 @@ epochTransition = do
         )
         (certState1 ^. certPStateL)
         (dState2 & dsUnifiedL .~ newUMap)
-    accountState3 =
-      accountState2
+    chainAccountState3 =
+      chainAccountState2
         -- Move donations and unclaimed rewards from proposals to treasury:
         & asTreasuryL <>~ (utxoState0 ^. utxosDonationL <> fold unclaimed)
     utxoState2 =
@@ -391,7 +391,7 @@ epochTransition = do
         & lsUTxOStateL .~ utxoState2
     epochState1 =
       epochState0
-        & esAccountStateL .~ accountState3
+        & esChainAccountStateL .~ chainAccountState3
         & esSnapshotsL .~ snapshots1
         & esLStateL .~ ledgerState1
   tellEvent $ EpochBoundaryRatifyState ratifyState

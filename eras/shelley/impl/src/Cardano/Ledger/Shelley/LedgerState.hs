@@ -16,7 +16,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   CanSetUTxO (..),
 
   -- * Others to organize
-  AccountState (..),
+  ChainAccountState (..),
   EraCertState (..),
   DState (..),
   rewards,
@@ -87,7 +87,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   nesRuL,
   nesStashedAVVMAddressesL,
   nesEpochStateL,
-  esAccountStateL,
+  esChainAccountStateL,
   esSnapshotsL,
   esLStateL,
   esNonMyopicL,

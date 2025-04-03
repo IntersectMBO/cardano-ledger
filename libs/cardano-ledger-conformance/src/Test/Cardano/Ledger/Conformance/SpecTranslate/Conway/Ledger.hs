@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledger () where
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway.Core (EraPParams (..), EraRule, ScriptHash)
 import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure, EnactState)
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
+import Cardano.Ledger.Shelley.LedgerState (ChainAccountState (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity (Identity)
@@ -44,7 +44,7 @@ instance
       <*> toSpecRep policyHash
       <*> toSpecRep ledgerPp
       <*> toSpecRep enactState
-      <*> toSpecRep (asTreasury ledgerAccount)
+      <*> toSpecRep (casTreasury ledgerAccount)
 
 instance
   ( ToExpr (PredicateFailure (EraRule "GOV" era))

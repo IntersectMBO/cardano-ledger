@@ -144,7 +144,11 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
     epochState :: EpochState ShelleyEra
     epochState =
       EpochState
-        { esAccountState = AccountState (Coin 0) reserves
+        { esChainAccountState =
+            ChainAccountState
+              { casTreasury = Coin 0
+              , casReserves = reserves
+              }
         , esSnapshots = emptySnapShots
         , esLState = ledgerState
         , esNonMyopic = def

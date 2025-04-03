@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState,
   UTxOState (utxosDeposited, utxosGovState),
   curPParamsEpochStateL,
-  esAccountState,
+  esChainAccountState,
   esLState,
   esLStateL,
   esNonMyopic,
@@ -197,7 +197,7 @@ epochTransition = do
   TRC
     ( _
       , es@EpochState
-          { esAccountState = acnt
+          { esChainAccountState = chainAccountState
           , esSnapshots = ss
           , esLState = ls
           , esNonMyopic = nm
@@ -219,9 +219,9 @@ epochTransition = do
           { psStakePoolParams = ppp
           , psFutureStakePoolParams = Map.empty
           }
-  PoolreapState utxoSt' acnt' adjustedCertState <-
+  PoolreapState utxoSt' chainAccountState' adjustedCertState <-
     trans @(EraRule "POOLREAP" era) $
-      TRC ((), PoolreapState utxoSt acnt (certState & certPStateL .~ pstate'), e)
+      TRC ((), PoolreapState utxoSt chainAccountState (certState & certPStateL .~ pstate'), e)
 
   let ls' = ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState}
 
@@ -239,7 +239,7 @@ epochTransition = do
     oblgNew = totalObligation adjustedCertState (utxoSt'' ^. utxosGovStateL)
     utxoSt''' = utxoSt'' {utxosDeposited = oblgNew}
   pure $
-    EpochState acnt' ls' ss' nm
+    EpochState chainAccountState' ls' ss' nm
       & esLStateL . lsUTxOStateL .~ utxoSt'''
       & prevPParamsEpochStateL .~ pp
       & curPParamsEpochStateL .~ pp'

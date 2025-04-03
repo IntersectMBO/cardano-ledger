@@ -51,7 +51,7 @@ import Cardano.Ledger.PoolParams (
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
+  ChainAccountState (..),
   LedgerState (..),
   UTxOState (..),
  )
@@ -140,7 +140,7 @@ ppsBench =
     & ppTauL .~ unsafeBoundRational 0.2
 
 ledgerEnv :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => LedgerEnv era
-ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound ppsBench (AccountState (Coin 0) (Coin 0))
+ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound ppsBench (ChainAccountState (Coin 0) (Coin 0))
 
 testLEDGER ::
   LedgerState ShelleyEra ->

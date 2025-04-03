@@ -140,7 +140,7 @@ instance
 
   toSpecRep (EpochState {esLState = esLState@LedgerState {lsUTxOState}, ..}) =
     Agda.MkEpochState
-      <$> toSpecRep esAccountState
+      <$> toSpecRep esChainAccountState
       <*> toSpecRep esSnapshots
       <*> toSpecRep esLState
       <*> toSpecRep enactState
@@ -172,13 +172,13 @@ instance SpecTranslate ctx Stake where
 
   toSpecRep (Stake stake) = toSpecRep $ VMap.toMap stake
 
-instance SpecTranslate ctx AccountState where
-  type SpecRep AccountState = Agda.Acnt
+instance SpecTranslate ctx ChainAccountState where
+  type SpecRep ChainAccountState = Agda.Acnt
 
-  toSpecRep (AccountState {..}) =
+  toSpecRep (ChainAccountState {..}) =
     Agda.MkAcnt
-      <$> toSpecRep asTreasury
-      <*> toSpecRep asReserves
+      <$> toSpecRep casTreasury
+      <*> toSpecRep casReserves
 
 instance SpecTranslate ctx DeltaCoin where
   type SpecRep DeltaCoin = Integer

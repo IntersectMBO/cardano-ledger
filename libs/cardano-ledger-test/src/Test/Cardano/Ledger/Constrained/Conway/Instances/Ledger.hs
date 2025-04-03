@@ -1247,8 +1247,8 @@ instance HasSpec Likelihood
 instance HasSimpleRep LogWeight
 instance HasSpec LogWeight
 
-instance HasSimpleRep AccountState
-instance HasSpec AccountState
+instance HasSimpleRep ChainAccountState
+instance HasSpec ChainAccountState
 
 instance HasSimpleRep SnapShot
 instance HasSpec SnapShot

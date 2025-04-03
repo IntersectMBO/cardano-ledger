@@ -476,14 +476,14 @@ committeeMinSizeAffectsInFlightProposalsSpec =
             & ppuCommitteeMinSizeL .~ SJust 3
       submitYesVoteCCs_ hotCommitteeCs gaiPC
       submitYesVote_ (DRepVoter drepC) gaiPC
-      treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+      treasury <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
       passNEpochs 2
       -- The ParameterChange prevents the TreasuryWithdrawal from being enacted,
       -- because it has higher priority.
       getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gaiPC)
       isCommitteeAccepted gaiTW `shouldReturn` False
       currentProposalsShouldContain gaiTW
-      getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` treasury
+      getsNES (nesEsL . esChainAccountStateL . asTreasuryL) `shouldReturn` treasury
     it "TreasuryWithdrawal ratifies due to a decrease in CommitteeMinSize" $ whenPostBootstrap $ do
       disableTreasuryExpansion
       (drepC, hotCommitteeC, _) <- electBasicCommittee
@@ -492,14 +492,14 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       -- Ensure sufficient amount in the treasury
       submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ amount)
       passEpoch
-      treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+      treasury <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
       gaiTW <- submitTreasuryWithdrawal amount
       submitYesVote_ (CommitteeVoter hotCommitteeC) gaiTW
       submitYesVote_ (DRepVoter drepC) gaiTW
       setCommitteeMinSize 2
       isCommitteeAccepted gaiTW `shouldReturn` False
       passNEpochs 2
-      getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` treasury
+      getsNES (nesEsL . esChainAccountStateL . asTreasuryL) `shouldReturn` treasury
       -- We do not enact the ParameterChange here because that does not pass
       -- ratification as the CC size is smaller than MinSize.
       -- We instead just add another Committee member to reach the CommitteeMinSize.
@@ -511,7 +511,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       _hotCommitteeC' <- registerCommitteeHotKey coldCommitteeCred
       isCommitteeAccepted gaiTW `shouldReturn` True
       passNEpochs 2
-      getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` (treasury <-> amount)
+      getsNES (nesEsL . esChainAccountStateL . asTreasuryL) `shouldReturn` (treasury <-> amount)
 
 spoVotesForHardForkInitiation ::
   forall era.
@@ -854,7 +854,7 @@ votingSpec =
           passEpoch
           getCommitteeMembers `shouldReturn` mempty
         it "AlwaysAbstain" $ whenPostBootstrap $ do
-          let getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
+          let getTreasury = getsNES (nesEsL . esChainAccountStateL . asTreasuryL)
 
           disableTreasuryExpansion
           donateToTreasury $ Coin 5_000_000

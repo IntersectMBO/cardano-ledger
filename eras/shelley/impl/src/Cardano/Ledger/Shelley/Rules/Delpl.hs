@@ -34,7 +34,7 @@ import Cardano.Ledger.Credential (Ptr)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELPL, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState,
+  ChainAccountState,
   DState,
   PState,
  )
@@ -62,7 +62,7 @@ data DelplEnv era = DelplEnv
   , delplEpochNo :: EpochNo
   , delPlPtr :: Ptr
   , delPlPp :: PParams era
-  , delPlAccount :: AccountState
+  , delPlAccount :: ChainAccountState
   }
 
 data ShelleyDelplPredFailure era
@@ -201,7 +201,7 @@ delplTransition ::
   ) =>
   TransitionRule (ShelleyDELPL era)
 delplTransition = do
-  TRC (DelplEnv slot eNo ptr pp acnt, d, c) <- judgmentContext
+  TRC (DelplEnv slot eNo ptr pp chainAccountState, d, c) <- judgmentContext
   case c of
     ShelleyTxCertPool poolCert -> do
       ps <-
@@ -209,14 +209,18 @@ delplTransition = do
       pure $ d & certPStateL .~ ps
     ShelleyTxCertGenesisDeleg GenesisDelegCert {} -> do
       ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, d ^. certDStateL, c)
+        trans @(EraRule "DELEG" era) $
+          TRC (DelegEnv slot eNo ptr chainAccountState pp, d ^. certDStateL, c)
       pure $ d & certDStateL .~ ds
     ShelleyTxCertDelegCert _ -> do
       ds <-
-        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, d ^. certDStateL, c)
+        trans @(EraRule "DELEG" era) $
+          TRC (DelegEnv slot eNo ptr chainAccountState pp, d ^. certDStateL, c)
       pure $ d & certDStateL .~ ds
     ShelleyTxCertMir _ -> do
-      ds <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot eNo ptr acnt pp, d ^. certDStateL, c)
+      ds <-
+        trans @(EraRule "DELEG" era) $
+          TRC (DelegEnv slot eNo ptr chainAccountState pp, d ^. certDStateL, c)
       pure $ d & certDStateL .~ ds
 
 instance

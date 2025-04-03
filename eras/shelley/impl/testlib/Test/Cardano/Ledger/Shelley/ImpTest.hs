@@ -177,7 +177,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
   curPParamsEpochStateL,
   epochStateUMapL,
-  esAccountStateL,
+  esChainAccountStateL,
   esLStateL,
   lsCertStateL,
   lsUTxOStateL,
@@ -655,7 +655,7 @@ impLedgerEnv nes = do
       , ledgerEpochNo = Just epochNo
       , ledgerPp = nes ^. nesEsL . curPParamsEpochStateL
       , ledgerIx = TxIx 0
-      , ledgerAccount = nes ^. nesEsL . esAccountStateL
+      , ledgerAccount = nes ^. nesEsL . esChainAccountStateL
       }
 
 -- | Modify the previous PParams in the current state with the given function. For current
@@ -1641,7 +1641,7 @@ expectNotRegisteredRewardAddress (RewardAccount _ cred) = do
 expectTreasury :: HasCallStack => Coin -> ImpTestM era ()
 expectTreasury c =
   impAnn "Checking treasury amount" $ do
-    treasuryAmt <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+    treasuryAmt <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
     c `shouldBe` treasuryAmt
 
 -- Ensure no fees reach the treasury since that complicates withdrawal checks

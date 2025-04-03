@@ -23,7 +23,7 @@ import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
+  ChainAccountState (..),
   EpochState (..),
   NewEpochState (..),
   PulsingRewUpdate,
@@ -93,13 +93,13 @@ initStMIR :: Coin -> ChainState ShelleyEra
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt @ShelleyEra initUTxO
-    as = esAccountState . nesEs $ chainNes cs
-    as' =
-      as
-        { asTreasury = asTreasury as <+> treasury
-        , asReserves = asReserves as <-> treasury
+    chainAccountState = esChainAccountState . nesEs $ chainNes cs
+    chainAccountState' =
+      ChainAccountState
+        { casTreasury = casTreasury chainAccountState <+> treasury
+        , casReserves = casReserves chainAccountState <-> treasury
         }
-    es' = (nesEs $ chainNes cs) {esAccountState = as'}
+    es' = (nesEs $ chainNes cs) {esChainAccountState = chainAccountState'}
 
 --
 -- Block 1, Slot 10, Epoch 0

@@ -178,7 +178,7 @@ mkMempoolEnv
       , Ledger.ledgerEpochNo = Nothing
       , Ledger.ledgerIx = minBound
       , Ledger.ledgerPp = nesEs ^. curPParamsEpochStateL
-      , Ledger.ledgerAccount = LedgerState.esAccountState nesEs
+      , Ledger.ledgerAccount = LedgerState.esChainAccountState nesEs
       }
 
 -- | Construct a mempool state from the wider ledger state.

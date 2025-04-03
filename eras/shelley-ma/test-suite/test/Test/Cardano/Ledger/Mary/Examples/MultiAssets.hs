@@ -31,7 +31,7 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
  )
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
+import Cardano.Ledger.Shelley.LedgerState (ChainAccountState (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure (..), ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -95,7 +95,7 @@ pp =
     & ppMinUTxOValueL .~ Coin 100
 
 ledgerEnv :: SlotNo -> LedgerEnv MaryEra
-ledgerEnv s = LedgerEnv s Nothing minBound pp (AccountState (Coin 0) (Coin 0))
+ledgerEnv s = LedgerEnv s Nothing minBound pp (ChainAccountState (Coin 0) (Coin 0))
 
 feeEx :: Coin
 feeEx = Coin 3

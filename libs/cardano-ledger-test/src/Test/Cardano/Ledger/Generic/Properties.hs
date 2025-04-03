@@ -137,7 +137,7 @@ genTxAndLEDGERState proof sizes = do
         model <- gets gsModel
         pp <- gets (gePParams . gsGenEnv)
         let ledgerState = extract @(LedgerState era) model
-            ledgerEnv = LedgerEnv slotNo Nothing txIx pp (AccountState (Coin 0) (Coin 0))
+            ledgerEnv = LedgerEnv slotNo Nothing txIx pp (ChainAccountState (Coin 0) (Coin 0))
         pure $ TRC (ledgerEnv, ledgerState, tx)
   (trc, genstate) <- runGenRS proof sizes (initStableFields >> genT)
   pure (Box proof trc genstate)

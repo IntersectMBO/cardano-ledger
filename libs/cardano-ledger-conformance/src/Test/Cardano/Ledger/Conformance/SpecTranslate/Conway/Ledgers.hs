@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Ledgers () where
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway.Core (EraPParams (..), EraRule)
 import Cardano.Ledger.Conway.Governance (Constitution (..), EnactState (..))
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
+import Cardano.Ledger.Shelley.LedgerState (ChainAccountState (..))
 import Cardano.Ledger.Shelley.Rules (Identity, ShelleyLedgersEnv (..), ShelleyLedgersPredFailure)
 import Control.State.Transition.Extended (STS (..))
 import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
@@ -47,7 +47,7 @@ instance
       <*> toSpecRep pPolicy
       <*> toSpecRep ledgersPp
       <*> toSpecRep enactState
-      <*> toSpecRep (asTreasury ledgersAccount)
+      <*> toSpecRep (casTreasury ledgersAccount)
 
 instance
   ToExpr (PredicateFailure (EraRule "LEDGER" era)) =>

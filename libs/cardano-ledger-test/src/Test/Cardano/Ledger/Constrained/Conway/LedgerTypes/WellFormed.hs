@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -10,7 +9,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
@@ -65,8 +63,8 @@ import Test.QuickCheck (Gen)
 ppX :: forall era. EraSpecPParams era => Gen (PParams era)
 ppX = genFromSpec @(PParams era) pparamsSpec
 
-acctX :: Gen AccountState
-acctX = genFromSpec @AccountState accountStateSpec
+acctX :: Gen ChainAccountState
+acctX = genFromSpec @ChainAccountState accountStateSpec
 
 psX :: forall era. GenScript era => Gen (PState era)
 psX = do
@@ -77,7 +75,7 @@ psX = do
 dsX :: forall era. EraSpecLedger era => Gen (DState era)
 dsX = do
   univ <- genWitUniv 25
-  acct <- genFromSpec @AccountState accountStateSpec
+  acct <- genFromSpec @ChainAccountState accountStateSpec
   pools <-
     genFromSpec @(Map (KeyHash 'StakePool) PoolParams)
       (hasSize (rangeSize 8 8))
@@ -97,7 +95,7 @@ vsX = do
 csX :: forall era. EraSpecLedger era => Gen (CertState era)
 csX = do
   univ <- genWitUniv 25
-  acct <- genFromSpec @AccountState accountStateSpec
+  acct <- genFromSpec @ChainAccountState accountStateSpec
   epoch <- genFromSpec @EpochNo epochNoSpec
   genFromSpec @(CertState era)
     (certStateSpec univ (lit acct) (lit epoch))
@@ -116,7 +114,8 @@ utxostateX ::
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
   ) =>
-  PParams era -> Gen (UTxOState era)
+  PParams era ->
+  Gen (UTxOState era)
 utxostateX pp = do
   univ <- genWitUniv @era 50
   certstate <- csX @era
@@ -135,17 +134,19 @@ lsX ::
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
   ) =>
-  PParams era -> Gen (LedgerState era)
+  PParams era ->
+  Gen (LedgerState era)
 lsX pp = do
   univ <- genWitUniv @era 50
-  acct <- genFromSpec @AccountState accountStateSpec
+  acct <- genFromSpec @ChainAccountState accountStateSpec
   epoch <- genFromSpec @EpochNo epochNoSpec
   genFromSpec @(LedgerState era) (ledgerStateSpec pp univ (lit acct) (lit epoch))
 
 esX ::
   forall era.
   (EraSpecLedger era, HasSpec (InstantStake era)) =>
-  PParams era -> Gen (EpochState era)
+  PParams era ->
+  Gen (EpochState era)
 esX pp = do
   univ <- genWitUniv @era 50
   epoch <- genFromSpec @EpochNo epochNoSpec
@@ -154,7 +155,8 @@ esX pp = do
 nesX ::
   forall era.
   (EraSpecLedger era, HasSpec (InstantStake era)) =>
-  PParams era -> Gen (NewEpochState era)
+  PParams era ->
+  Gen (NewEpochState era)
 nesX pp = do
   univ <- genWitUniv @era 50
   genFromSpec @(NewEpochState era) (newEpochStateSpec pp univ)
@@ -167,10 +169,11 @@ snapsX ::
   ( EraSpecLedger era
   , HasSpec (InstantStake era)
   ) =>
-  PParams era -> Gen SnapShots
+  PParams era ->
+  Gen SnapShots
 snapsX pp = do
   univ <- genWitUniv @era 50
-  acct <- genFromSpec @AccountState accountStateSpec
+  acct <- genFromSpec @ChainAccountState accountStateSpec
   epoch <- genFromSpec @EpochNo epochNoSpec
   ls <- genFromSpec @(LedgerState era) (ledgerStateSpec pp univ (lit acct) (lit epoch))
   genFromSpec @SnapShots (snapShotsSpec (lit (getMarkSnapShot ls)))
@@ -178,7 +181,7 @@ snapsX pp = do
 instanRewX :: forall era. EraSpecTxOut era => Gen InstantaneousRewards
 instanRewX = do
   univ <- genWitUniv @era 50
-  acct <- genFromSpec @AccountState accountStateSpec
+  acct <- genFromSpec @ChainAccountState accountStateSpec
   genFromSpec @InstantaneousRewards
     (irewardSpec @era univ (lit acct))
 
@@ -211,7 +214,7 @@ instance (EraSpecPParams era, HasSpec (InstantStake era)) => WellFormed (PParams
   wff = ppX @era
   wffWithPP = pure
 
-instance (EraSpecPParams era, HasSpec (InstantStake era)) => WellFormed AccountState era where
+instance (EraSpecPParams era, HasSpec (InstantStake era)) => WellFormed ChainAccountState era where
   wff = acctX
   wffWithPP _ = acctX
 

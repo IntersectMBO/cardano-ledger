@@ -82,7 +82,7 @@ class
   govStateSpec :: PParams era -> Specification (GovState era)
   newEpochStateSpec :: PParams era -> WitUniv era -> Specification (NewEpochState era)
   certStateSpec ::
-    WitUniv era -> Term AccountState -> Term EpochNo -> Specification (CertState era)
+    WitUniv era -> Term ChainAccountState -> Term EpochNo -> Specification (CertState era)
 
 instance EraSpecLedger ShelleyEra where
   govStateSpec = shelleyGovStateSpec
@@ -265,7 +265,7 @@ dstateSpec ::
   forall era.
   EraSpecLedger era =>
   WitUniv era ->
-  Term AccountState ->
+  Term ChainAccountState ->
   Term (Map (KeyHash 'StakePool) PoolParams) ->
   Specification (DState era)
 dstateSpec univ acct poolreg = constrained $ \ [var| ds |] ->
@@ -349,7 +349,7 @@ pstateSpec univ currepoch = constrained $ \ [var|pState|] ->
     , assert $ sizeOf_ (dom_ stakePoolParams) <=. 8
     ]
 
-accountStateSpec :: Specification AccountState
+accountStateSpec :: Specification ChainAccountState
 accountStateSpec =
   constrained
     ( \ [var|accountState|] ->
@@ -367,7 +367,7 @@ shelleyCertStateSpec ::
   forall era.
   EraSpecLedger era =>
   WitUniv era ->
-  Term AccountState ->
+  Term ChainAccountState ->
   Term EpochNo ->
   Specification (ShelleyCertState era)
 shelleyCertStateSpec univ acct epoch = constrained $ \ [var|shellCertState|] ->
@@ -382,7 +382,7 @@ shelleyCertStateSpec univ acct epoch = constrained $ \ [var|shellCertState|] ->
 conwayCertStateSpec ::
   EraSpecLedger ConwayEra =>
   WitUniv ConwayEra ->
-  Term AccountState ->
+  Term ChainAccountState ->
   Term EpochNo ->
   Specification (ConwayCertState ConwayEra)
 conwayCertStateSpec univ acct epoch = constrained $ \ [var|convCertState|] ->
@@ -483,7 +483,7 @@ ledgerStateSpec ::
   (EraSpecLedger era, HasSpec (InstantStake era)) =>
   PParams era ->
   WitUniv era ->
-  Term AccountState ->
+  Term ChainAccountState ->
   Term EpochNo ->
   Specification (LedgerState era)
 ledgerStateSpec pp univ acct epoch =
