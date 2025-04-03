@@ -61,7 +61,7 @@ import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
+  ChainAccountState (..),
   EpochState (..),
   FilteredRewards (..),
   NewEpochState (..),
@@ -546,7 +546,7 @@ createRUpdOld slotsPerEpoch b es@(EpochState acnt ls ss nm) maxSupply =
   where
     ds = ls ^. lsCertStateL . certDStateL
     rs = UM.domain $ rewards ds
-    reserves = asReserves acnt
+    reserves = casReserves acnt
     totalStake = circulation es maxSupply
     pr = es ^. prevPParamsEpochStateL
 

@@ -317,7 +317,7 @@ createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
 -- This is used in the rewards calculation, and for API endpoints for pool ranking.
 circulation :: EpochState era -> Coin -> Coin
 circulation (EpochState acnt _ _ _) supply =
-  supply <-> asReserves acnt
+  supply <-> casReserves acnt
 
 decayFactor :: Float
 decayFactor = 0.9

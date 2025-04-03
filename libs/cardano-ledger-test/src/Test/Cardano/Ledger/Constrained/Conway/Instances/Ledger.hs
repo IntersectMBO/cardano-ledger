@@ -1274,8 +1274,8 @@ instance IsConwayUniv fn => HasSpec fn Likelihood
 instance HasSimpleRep LogWeight
 instance IsConwayUniv fn => HasSpec fn LogWeight
 
-instance HasSimpleRep AccountState
-instance IsConwayUniv fn => HasSpec fn AccountState
+instance HasSimpleRep ChainAccountState
+instance IsConwayUniv fn => HasSpec fn ChainAccountState
 
 instance HasSimpleRep SnapShot
 instance IsConwayUniv fn => HasSpec fn SnapShot

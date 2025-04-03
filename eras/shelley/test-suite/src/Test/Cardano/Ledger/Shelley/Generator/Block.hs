@@ -79,7 +79,7 @@ import qualified Test.QuickCheck as QC (choose)
 -- | Type alias for a transaction generator
 type TxGen era =
   PParams era ->
-  AccountState ->
+  ChainAccountState ->
   LedgerState era ->
   SlotNo ->
   Gen (Seq (Tx era))

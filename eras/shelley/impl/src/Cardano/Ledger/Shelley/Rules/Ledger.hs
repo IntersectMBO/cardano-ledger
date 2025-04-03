@@ -46,7 +46,7 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState,
+  ChainAccountState,
   LedgerState (..),
   UTxOState (..),
   utxosDepositedL,
@@ -93,7 +93,7 @@ data LedgerEnv era = LedgerEnv
   , ledgerEpochNo :: Maybe EpochNo
   , ledgerIx :: TxIx
   , ledgerPp :: PParams era
-  , ledgerAccount :: AccountState
+  , ledgerAccount :: ChainAccountState
   }
   deriving (Generic)
 
@@ -130,7 +130,7 @@ ledgerIxL = lens ledgerIx $ \x y -> x {ledgerIx = y}
 ledgerPpL :: Lens' (LedgerEnv era) (PParams era)
 ledgerPpL = lens ledgerPp $ \x y -> x {ledgerPp = y}
 
-ledgerAccountL :: Lens' (LedgerEnv era) AccountState
+ledgerAccountL :: Lens' (LedgerEnv era) ChainAccountState
 ledgerAccountL = lens ledgerAccount $ \x y -> x {ledgerAccount = y}
 
 type instance EraRuleFailure "LEDGER" ShelleyEra = ShelleyLedgerPredFailure ShelleyEra

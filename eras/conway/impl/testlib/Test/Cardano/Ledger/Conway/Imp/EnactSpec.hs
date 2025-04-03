@@ -184,7 +184,7 @@ treasuryWithdrawalsSpec =
           -- check that the sum of the rewards matches what was spent from the treasury
           sumRewardAccounts withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
   where
-    getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
+    getTreasury = getsNES (nesEsL . esChainAccountStateL . asTreasuryL)
     sumRewardAccounts withdrawals = mconcat <$> traverse (getRewardAccountAmount . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
       vals <- genValuesExceeding val n

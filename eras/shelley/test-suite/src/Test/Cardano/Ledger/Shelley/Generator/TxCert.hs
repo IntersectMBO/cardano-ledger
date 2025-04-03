@@ -20,7 +20,7 @@ import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.API (
-  AccountState (..),
+  ChainAccountState (..),
   Coin (..),
   Credential (..),
   DState (..),
@@ -102,7 +102,7 @@ genTxCert ::
   Constants ->
   KeySpace c era ->
   PParams era ->
-  AccountState ->
+  ChainAccountState ->
   CertState era ->
   SlotNo ->
   Gen (Maybe (TxCert era, CertCred era))
@@ -462,7 +462,7 @@ genInstantaneousRewardsAccounts ::
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams era ->
-  AccountState ->
+  ChainAccountState ->
   DState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState delegSt = do
@@ -512,7 +512,7 @@ genInstantaneousRewardsTransfer ::
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams era ->
-  AccountState ->
+  ChainAccountState ->
   DState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState delegSt = do
@@ -549,7 +549,7 @@ genInstantaneousRewards ::
   -- | Index over the cold key hashes of all possible Genesis Delegates
   Map (KeyHash 'GenesisDelegate) (AllIssuerKeys c 'GenesisDelegate) ->
   PParams era ->
-  AccountState ->
+  ChainAccountState ->
   DState era ->
   Gen (Maybe (TxCert era, CertCred era))
 genInstantaneousRewards slot genesisDelegatesByHash pparams accountState delegSt =

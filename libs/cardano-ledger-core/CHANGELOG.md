@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Rename `AccountState` to `ChainAccountState`. Rename accessor fields `asTreasury` and `asReserves` to `casTreasury` and `casReserves` respectively.
 * Added `consumed` to `EraUTxO`
 * Removed `upgradeCertState`
 * Removed `VState` (moved to `cardano-ledger-conway`) and related functions

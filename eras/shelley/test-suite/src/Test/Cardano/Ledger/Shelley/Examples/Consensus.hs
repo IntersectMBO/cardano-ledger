@@ -312,10 +312,10 @@ exampleNewEpochState value ppp pp =
     epochState :: EpochState era
     epochState =
       EpochState
-        { esAccountState =
-            AccountState
-              { asTreasury = Coin 10000
-              , asReserves = Coin 1000
+        { esChainAccountState =
+            ChainAccountState
+              { casTreasury = Coin 10000
+              , casReserves = Coin 1000
               }
         , esSnapshots = emptySnapShots
         , esLState =

@@ -477,8 +477,8 @@ reapPool pool cs = cs {chainNes = nes'}
     umap1 = unUView rewards'
     umap2 = UM.SPoolUView umap1 UM.⋫ Set.singleton kh
     ds' = ds {dsUnified = umap2}
-    as = esAccountState es
-    as' = as {asTreasury = asTreasury as <+> unclaimed}
+    chainAccountState = esChainAccountState es
+    chainAccountState' = chainAccountState {casTreasury = casTreasury chainAccountState <+> unclaimed}
     utxoSt = lsUTxOState ls
     utxoSt' = utxoSt {utxosDeposited = utxosDeposited utxoSt <-> (pp ^. ppPoolDepositL)}
     dps' =
@@ -486,7 +486,7 @@ reapPool pool cs = cs {chainNes = nes'}
         & certPStateL .~ ps'
         & certDStateL .~ ds'
     ls' = ls {lsCertState = dps', lsUTxOState = utxoSt'}
-    es' = es {esLState = ls', esAccountState = as'}
+    es' = es {esLState = ls', esChainAccountState = chainAccountState'}
     nes' = nes {nesEs = es'}
 
 -- | = MIR
@@ -547,12 +547,12 @@ applyMIR pot newrewards cs = cs {chainNes = nes'}
         }
     dps' = dps & certDStateL .~ ds'
     ls' = ls {lsCertState = dps'}
-    as = esAccountState es
-    as' =
+    chainAccountState = esChainAccountState es
+    chainAccountState' =
       if pot == ReservesMIR
-        then as {asReserves = asReserves as <-> tot}
-        else as {asTreasury = asTreasury as <-> tot}
-    es' = es {esAccountState = as', esLState = ls'}
+        then chainAccountState {casReserves = casReserves chainAccountState <-> tot}
+        else chainAccountState {casTreasury = casTreasury chainAccountState <-> tot}
+    es' = es {esChainAccountState = chainAccountState', esLState = ls'}
     nes' = nes {nesEs = es'}
 
 -- | = Reward Update
