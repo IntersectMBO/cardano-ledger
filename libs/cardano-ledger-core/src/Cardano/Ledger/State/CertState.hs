@@ -10,6 +10,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -75,6 +76,7 @@ import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.State.Account
 import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), UView (RewDepUView, SPoolUView))
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
@@ -153,7 +155,7 @@ toInstantaneousRewardsPair InstantaneousRewards {..} =
 -- | The state used by the DELEG rule, which roughly tracks stake
 -- delegation and some governance features.
 data DState era = DState
-  { dsUnified :: !UMap
+  { dsUnified :: !(AccountStates era)
   -- ^ Unified Reward Maps. This contains the reward map (which is the source
   -- of truth regarding the registered stake credentials, the deposit map,
   -- the delegation map, and the stake credential pointer map.
@@ -164,7 +166,10 @@ data DState era = DState
   , dsIRewards :: !InstantaneousRewards
   -- ^ Instantaneous Rewards
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving instance Eq (AccountStates era) => Eq (DState era)
+deriving instance Show (AccountStates era) => Show (DState era)
 
 instance NoThunks (DState era)
 
@@ -394,18 +399,6 @@ instance Default (PState era) where
   def =
     PState Map.empty Map.empty Map.empty Map.empty
 
-rewards :: DState era -> UView (Credential 'Staking) RDPair
-rewards = RewDepUView . dsUnified
-
-delegations ::
-  DState era ->
-  UView (Credential 'Staking) (KeyHash 'StakePool)
-delegations = SPoolUView . dsUnified
-
--- | get the actual ptrs map, we don't need a view
-ptrsMap :: DState era -> Map Ptr (Credential 'Staking)
-ptrsMap (DState {dsUnified = UMap _ ptrmap}) = ptrmap
-
 -- ==========================================================
 -- Functions that handle Deposits
 
@@ -475,9 +468,6 @@ instance Show Obligations where
 
 -- ===================================
 -- DState
-
-dsUnifiedL :: Lens' (DState era) UMap
-dsUnifiedL = lens dsUnified (\ds u -> ds {dsUnified = u})
 
 dsGenDelegsL :: Lens' (DState era) GenDelegs
 dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
