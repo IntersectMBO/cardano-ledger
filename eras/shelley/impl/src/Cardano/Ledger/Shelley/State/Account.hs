@@ -27,8 +27,8 @@ data ShelleyAccountState era
   }
   deriving (Show, Eq)
 
-data ShelleyAccountStates era = ShelleyAccountStates
-  { sasAccountStates :: !(Map (Credential 'Staking) (ShelleyAccountState era))
+data ShelleyAccountsState era = ShelleyAccountsState
+  { sasAccountsState :: !(Map (Credential 'Staking) (ShelleyAccountState era))
   -- ^ Map from a staking credential to the account state.
   , sasAccountPtrs :: !(Map Ptr (Credential 'Staking))
   -- ^ A Map from a pointer, to the staking credential. Pointer points to the certificate which
@@ -36,7 +36,7 @@ data ShelleyAccountStates era = ShelleyAccountStates
   }
   deriving (Show, Eq)
 
-class EraAccountState era => ShelleyEraAccountState era where
+class EraAccountsState era => ShelleyEraAccountsState era where
   mkShelleyAccountState :: Ptr -> CompactForm Coin -> AccountState era
   default mkShelleyAccountState ::
     AccountState era ~ ShelleyAccountState era =>
@@ -51,11 +51,11 @@ class EraAccountState era => ShelleyEraAccountState era where
       , casStakePoolDelegation = SNothing
       }
 
-  accountStatesPtrsMapL :: Lens' (AccountStates era) (Map Ptr (Credential 'Staking))
-  default accountStatesPtrsMapL ::
-    AccountStates era ~ ShelleyAccountStates era =>
-    Lens' (AccountStates era) (Map Ptr (Credential 'Staking))
-  accountStatesPtrsMapL = lens sasAccountPtrs $ \as ptrsMap -> as {sasAccountPtrs = ptrsMap}
+  accountsStatePtrsMapL :: Lens' (AccountsState era) (Map Ptr (Credential 'Staking))
+  default accountsStatePtrsMapL ::
+    AccountsState era ~ ShelleyAccountsState era =>
+    Lens' (AccountsState era) (Map Ptr (Credential 'Staking))
+  accountsStatePtrsMapL = lens sasAccountPtrs $ \as ptrsMap -> as {sasAccountPtrs = ptrsMap}
 
   ptrAccountStateL :: Lens' (AccountState era) Ptr
   default ptrAccountStateL ::
@@ -64,32 +64,32 @@ class EraAccountState era => ShelleyEraAccountState era where
   ptrAccountStateL = lens casPtr $ \as ptr -> as {casPtr = ptr}
 
 registerShelleyStakingCredential ::
-  ShelleyEraAccountState era =>
+  ShelleyEraAccountsState era =>
   Credential 'Staking ->
   -- | Pointer to the certificate that registered the credential
   Ptr ->
   -- | Deposit
   CompactForm Coin ->
-  AccountStates era ->
-  AccountStates era
-registerShelleyStakingCredential cred ptr deposit accountStates =
-  accountStates
-    & (accountStatesMapL %~ Map.insert cred accountState)
-    & (accountStatesPtrsMapL %~ Map.insert ptr cred)
+  AccountsState era ->
+  AccountsState era
+registerShelleyStakingCredential cred ptr deposit accountsState =
+  accountsState
+    & (accountsStateMapL %~ Map.insert cred accountState)
+    & (accountsStatePtrsMapL %~ Map.insert ptr cred)
   where
     accountState =
       mkShelleyAccountState ptr deposit
 
 unregisterShelleyStakingCredential ::
-  ShelleyEraAccountState era =>
+  ShelleyEraAccountsState era =>
   Credential 'Staking ->
-  AccountStates era ->
-  (Maybe (AccountState era), AccountStates era)
-unregisterShelleyStakingCredential cred accountStates = (mAccountState, newAccountStates)
+  AccountsState era ->
+  (Maybe (AccountState era), AccountsState era)
+unregisterShelleyStakingCredential cred accountsState = (mAccountState, newAccountsState)
   where
-    (mAccountState, newAccountStatesMap) = Map.extract cred (accountStates ^. accountStatesMapL)
-    removePtr accountState = accountStatesPtrsMapL %~ Map.delete (accountState ^. ptrAccountStateL)
-    newAccountStates =
-      accountStates
-        & (accountStatesMapL .~ newAccountStatesMap)
+    (mAccountState, newAccountsStateMap) = Map.extract cred (accountsState ^. accountsStateMapL)
+    removePtr accountState = accountsStatePtrsMapL %~ Map.delete (accountState ^. ptrAccountStateL)
+    newAccountsState =
+      accountsState
+        & (accountsStateMapL .~ newAccountsStateMap)
         & maybe id removePtr mAccountState
