@@ -136,7 +136,12 @@ import Cardano.Ledger.Conway.Rules (
  )
 import qualified Cardano.Ledger.Conway.Rules as ConwayRules
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import Cardano.Ledger.Conway.State (ConwayCertState (..), ConwayEraCertState (..), VState (..))
+import Cardano.Ledger.Conway.State (
+  ChainAccountState (..),
+  ConwayCertState (..),
+  ConwayEraCertState (..),
+  VState (..),
+ )
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),
@@ -188,7 +193,6 @@ import Cardano.Ledger.Shelley.AdaPots (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  ChainAccountState (..),
   DState (..),
   EpochState (..),
   EraCertState (..),
@@ -1461,8 +1465,8 @@ ppConwayCertPredFailure proof x = case x of
   ConwayRules.GovCertFailure pf -> case proof of
     Conway -> ppSexp "GovCertFailure" [ppConwayGovCertPredFailure pf] -- (PredicateFailure (EraRule "GOVCERT" era))
     _ ->
-      error
-        ("Only the ConwayEra has a (PredicateFailure (EraRule \"GOVCERT\" era)). This Era is " ++ show proof)
+      error $
+        "Only the ConwayEra has a (PredicateFailure (EraRule \"GOVCERT\" era)). This Era is " ++ show proof
 
 instance Reflect era => PrettyA (ConwayRules.ConwayCertPredFailure era) where
   prettyA = ppConwayCertPredFailure reify

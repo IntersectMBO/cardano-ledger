@@ -12,16 +12,14 @@ import Cardano.Ledger.Credential (SlotNo32 (..))
 import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
-  ChainAccountState (..),
   Credential (..),
-  DState (..),
   DelegEnv (..),
-  InstantaneousRewards (..),
   Ptr (..),
   ShelleyDELEG,
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.State.Transition.Extended hiding (Assertion)

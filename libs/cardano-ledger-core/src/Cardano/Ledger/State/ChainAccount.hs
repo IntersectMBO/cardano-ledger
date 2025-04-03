@@ -1,9 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Cardano.Ledger.State.ChainAccount (
-  ChainAccountState (..),
+  ChainAccountState (AccountState, asTreasury, asReserves, ..),
+  AccountState,
+  casTreasuryL,
+  casReservesL,
 ) where
 
 import Cardano.Ledger.Binary
@@ -12,7 +16,16 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default (Default (def))
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks)
+
+type AccountState = ChainAccountState
+
+pattern AccountState :: Coin -> Coin -> AccountState
+pattern AccountState {asTreasury, asReserves} = ChainAccountState asTreasury asReserves
+{-# DEPRECATED AccountState "In favor of `ChainAccountState`" #-}
+{-# DEPRECATED asTreasury "In favor of `casTreasury`" #-}
+{-# DEPRECATED asReserves "In favor of `casReserves`" #-}
 
 data ChainAccountState = ChainAccountState
   { casTreasury :: !Coin
@@ -45,3 +58,9 @@ instance NFData ChainAccountState
 
 instance Default ChainAccountState where
   def = ChainAccountState (Coin 0) (Coin 0)
+
+casTreasuryL :: Lens' ChainAccountState Coin
+casTreasuryL = lens casTreasury (\ds u -> ds {casTreasury = u})
+
+casReservesL :: Lens' ChainAccountState Coin
+casReservesL = lens casReserves (\ds u -> ds {casReserves = u})

@@ -51,11 +51,11 @@ import Cardano.Ledger.PoolParams (
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  ChainAccountState (..),
   LedgerState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), ShelleyLEDGER)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))

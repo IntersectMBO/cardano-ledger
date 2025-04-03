@@ -184,7 +184,6 @@ import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), hashPlutus
 import Cardano.Ledger.PoolParams (PoolParams (..), ppRewardAccount)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
-  asTreasuryL,
   curPParamsEpochStateL,
   epochStateGovStateL,
   epochStatePoolParamsL,
@@ -1171,7 +1170,7 @@ logRatificationChecks gaId = do
   committee <- getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
   ratEnv@RatifyEnv {reCurrentEpoch} <- getRatifyEnv
   let ratSt = RatifyState ens mempty mempty False
-  curTreasury <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
+  curTreasury <- getsNES $ nesEsL . esChainAccountStateL . casTreasuryL
   currentEpoch <- getsNES nesELL
   pv <- getProtVer
   let
@@ -1671,13 +1670,13 @@ expectCommitteeMemberAbsence cc = do
 donateToTreasury :: ConwayEraImp era => Coin -> ImpTestM era ()
 donateToTreasury amount =
   impAnn ("Donation to treasury in the amount of: " ++ show amount) $ do
-    treasuryStart <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
+    treasuryStart <- getsNES $ nesEsL . esChainAccountStateL . casTreasuryL
     submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ amount)
-    treasuryEndEpoch0 <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
+    treasuryEndEpoch0 <- getsNES $ nesEsL . esChainAccountStateL . casTreasuryL
     -- Actual donation happens on the epoch boundary
     treasuryStart `shouldBe` treasuryEndEpoch0
     passEpoch
-    treasuryEndEpoch1 <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
+    treasuryEndEpoch1 <- getsNES $ nesEsL . esChainAccountStateL . casTreasuryL
     treasuryEndEpoch1 <-> treasuryStart `shouldBe` amount
 
 expectMembers ::

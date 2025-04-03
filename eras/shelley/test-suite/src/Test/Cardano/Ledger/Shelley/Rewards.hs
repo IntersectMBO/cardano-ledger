@@ -8,7 +8,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Currently this uses the trace mechanism to check that computing rewards has
@@ -56,12 +55,11 @@ import Cardano.Ledger.Coin (
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (VKey (..))
-import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
+import Cardano.Ledger.Shelley.API (NonMyopic)
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (
-  ChainAccountState (..),
   EpochState (..),
   FilteredRewards (..),
   NewEpochState (..),
@@ -72,7 +70,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   filterAllRewards,
   lsCertStateL,
   prevPParamsEpochStateL,
-  rewards,
   updateNonMyopic,
  )
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, leaderProbability, likelihood)
@@ -97,16 +94,9 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyNewEpochEvent (DeltaRewardEvent, TotalRewardEvent),
   ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent),
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Slot (epochInfoSize)
-import Cardano.Ledger.State (
-  EraCertState (..),
-  Stake (..),
-  maxPool,
-  poolStake,
-  sumAllStake,
-  sumStakePerPool,
- )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
 import Cardano.Protocol.Crypto (VRF, hashVerKeyVRF)

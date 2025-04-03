@@ -27,7 +27,6 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  ChainAccountState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
@@ -47,6 +46,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
  )
 import Cardano.Ledger.State (
+  ChainAccountState (..),
   EraCertState (..),
   IndividualPoolStake (..),
   PoolDistr (..),

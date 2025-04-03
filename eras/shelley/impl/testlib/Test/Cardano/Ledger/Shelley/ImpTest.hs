@@ -174,7 +174,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
-  asTreasuryL,
   curPParamsEpochStateL,
   epochStateUMapL,
   esChainAccountStateL,
@@ -200,9 +199,9 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
-import Cardano.Ledger.State
 import Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
   setMinCoinTxOut,
@@ -1621,7 +1620,9 @@ withPostFixup f = withCustomFixup (>=> f)
 
 expectUTxOContent ::
   (HasCallStack, ToExpr (TxOut era)) =>
-  UTxO era -> [(TxIn, Maybe (TxOut era) -> Bool)] -> ImpTestM era ()
+  UTxO era ->
+  [(TxIn, Maybe (TxOut era) -> Bool)] ->
+  ImpTestM era ()
 expectUTxOContent utxo = traverse_ $ \(txIn, test) -> do
   let result = txIn `Map.lookup` unUTxO utxo
   unless (test result) $
@@ -1641,7 +1642,7 @@ expectNotRegisteredRewardAddress (RewardAccount _ cred) = do
 expectTreasury :: HasCallStack => Coin -> ImpTestM era ()
 expectTreasury c =
   impAnn "Checking treasury amount" $ do
-    treasuryAmt <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
+    treasuryAmt <- getsNES $ nesEsL . esChainAccountStateL . casTreasuryL
     c `shouldBe` treasuryAmt
 
 -- Ensure no fees reach the treasury since that complicates withdrawal checks

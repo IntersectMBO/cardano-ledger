@@ -17,6 +17,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent (..))
@@ -184,7 +185,7 @@ treasuryWithdrawalsSpec =
           -- check that the sum of the rewards matches what was spent from the treasury
           sumRewardAccounts withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
   where
-    getTreasury = getsNES (nesEsL . esChainAccountStateL . asTreasuryL)
+    getTreasury = getsNES (nesEsL . esChainAccountStateL . casTreasuryL)
     sumRewardAccounts withdrawals = mconcat <$> traverse (getRewardAccountAmount . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
       vals <- genValuesExceeding val n

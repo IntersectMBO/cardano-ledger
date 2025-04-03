@@ -58,6 +58,7 @@ import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State (
+  ChainAccountState (..),
   EraCertState (..),
   IndividualPoolStake (..),
   PoolDistr (..),
