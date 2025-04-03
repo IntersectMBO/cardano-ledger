@@ -6,7 +6,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.LedgerSpec (spec) where
 
@@ -16,6 +15,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
   ConwayLedgerPredFailure (..),
+  ConwayUtxoPredFailure (BadInputsUTxO),
   maxRefScriptSizePerTx,
  )
 import Cardano.Ledger.Credential (Credential (..))
@@ -24,10 +24,12 @@ import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), ApplyTxError (..), applyTx, mkMempoolEnv)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
+import Control.Monad.Reader (asks)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import Lens.Micro ((&), (.~), (^.))
+import GHC.Exts (fromList)
+import Lens.Micro ((&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
@@ -41,6 +43,7 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayUtxoPredFailure era
   , ApplyTx era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
@@ -212,9 +215,54 @@ spec = do
         mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, mempty)]
 
   describe "Mempool" $ do
+    let
+      submitFailingMempoolTx cause tx expectedFailures = do
+        globals <- use impGlobalsL
+        nes <- use impNESL
+        slotNo <- use impLastTickG
+        let
+          mempoolEnv = mkMempoolEnv nes slotNo
+          ls = nes ^. nesEsL . esLStateL
+        txFixed <- (tx &) =<< asks iteFixup
+        logToExpr txFixed
+        case applyTx globals mempoolEnv ls txFixed of
+          Left err -> do
+            err `shouldBe` ApplyTxError @era expectedFailures
+          Right _ ->
+            assertFailure $ "Expected failure due to " <> cause <> ": " <> show txFixed
+        pure txFixed
+      submitFailingMempoolTx_ c t = void . submitFailingMempoolTx c t
+
+    it "Duplicate transactions" $ do
+      let
+        newInput = do
+          addr <- freshKeyAddr_
+          amount <- Coin <$> choose (2_000_000, 8_000_000)
+          sendCoinTo addr amount
+
+      inputsCommon <- replicateM 5 newInput
+      inputs1 <- replicateM 2 newInput
+      inputs2 <- replicateM 3 newInput
+
+      txFinal <-
+        submitTx $
+          mkBasicTx $
+            mkBasicTxBody & inputsTxBodyL <>~ fromList (inputsCommon <> inputs1)
+
+      impAnn "Identical transaction" $ do
+        withNoFixup $
+          submitFailingMempoolTx_ "duplicate transaction" txFinal $
+            pure . injectFailure . ConwayMempoolFailure $
+              "All inputs are spent. Transaction has probably already been included"
+
+      impAnn "Overlapping transaction" $ do
+        let txOverlap = mkBasicTx $ mkBasicTxBody & inputsTxBodyL <>~ fromList (inputsCommon <> inputs2)
+        submitFailingMempoolTx_
+          "overlapping transaction"
+          txOverlap
+          [injectFailure $ BadInputsUTxO $ fromList inputsCommon]
+
     it "Unelected Committee voting" $ whenPostBootstrap $ do
-      globals <- use impGlobalsL
-      slotNo <- use impLastTickG
       _ <- registerInitialCommittee
       ccCold <- KeyHashObj <$> freshKeyHash
       curEpochNo <- getsNES nesELL
@@ -232,11 +280,8 @@ spec = do
         rewardAccount <- registerRewardAccount
         submitTreasuryWithdrawals [(rewardAccount, Coin 1)]
 
-      nes <- use impNESL
-      let ls = nes ^. nesEsL . esLStateL
-          mempoolEnv = mkMempoolEnv nes slotNo
-      tx <-
-        fixupTx $
+      let
+        tx =
           mkBasicTx $
             mkBasicTxBody
               & votingProceduresTxBodyL
@@ -246,11 +291,11 @@ spec = do
                       (Map.singleton govActionId (VotingProcedure VoteYes SNothing))
                   )
 
-      case applyTx globals mempoolEnv ls tx of
-        Left err ->
-          let expectedFailure =
-                ConwayMempoolFailure $
-                  "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
-           in err `shouldBe` ApplyTxError @era (pure (injectFailure expectedFailure))
-        Right _ -> assertFailure $ "Expected failure due to an unallowed vote: " <> show tx
-      withNoFixup $ submitTx_ tx
+      txFixed <-
+        submitFailingMempoolTx "unallowed votes" tx $
+          pure . injectFailure . ConwayMempoolFailure $
+            "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
+
+      -- The tx should pass all other rules
+      withNoFixup $
+        submitTx_ txFixed
