@@ -24,6 +24,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
+import Cardano.Ledger.Mary.State
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -31,7 +32,6 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
  )
 import Cardano.Ledger.Shelley.API (LedgerEnv (..), ShelleyLEDGER)
-import Cardano.Ledger.Shelley.LedgerState (ChainAccountState (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgerPredFailure (..), ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.Scripts (
   pattern RequireAllOf,
@@ -41,7 +41,6 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (addrWits)
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val

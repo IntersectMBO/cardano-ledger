@@ -21,6 +21,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayEpochEvent (GovInfoEvent),
   ConwayNewEpochEvent (..),
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
 import Cardano.Ledger.Val
@@ -421,7 +422,7 @@ treasuryWithdrawalExpectation extraWithdrawals = do
   donateToTreasury withdrawalAmount
   committeeHotCreds <- registerInitialCommittee
   (dRepCred, _, _) <- setupSingleDRep 1_000_000
-  treasuryStart <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
+  treasuryStart <- getsNES $ nesEsL . esChainAccountStateL . casTreasuryL
   treasuryStart `shouldBe` withdrawalAmount
   rewardAccount <- registerRewardAccount
   govPolicy <- getGovPolicy
@@ -436,7 +437,7 @@ treasuryWithdrawalExpectation extraWithdrawals = do
     getReward (raCredential rewardAccount) `shouldReturn` mempty
   passEpoch -- 2nd epoch crossing enacts all the ratified actions
   expectMissingGovActionId govActionId
-  treasuryEnd <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
+  treasuryEnd <- getsNES $ nesEsL . esChainAccountStateL . casTreasuryL
   impAnn "Withdrawal deducted from treasury" $
     treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
   impAnn "Withdrawal received by reward account" $
@@ -445,7 +446,7 @@ treasuryWithdrawalExpectation extraWithdrawals = do
 depositMovesToTreasuryWhenStakingAddressUnregisters :: ConwayEraImp era => ImpTestM era ()
 depositMovesToTreasuryWhenStakingAddressUnregisters = do
   disableTreasuryExpansion
-  initialTreasury <- getsNES $ nesEsL . esChainAccountStateL . asTreasuryL
+  initialTreasury <- getsNES $ nesEsL . esChainAccountStateL . casTreasuryL
   modifyPParams $ \pp ->
     pp
       & ppGovActionLifetimeL .~ EpochInterval 8

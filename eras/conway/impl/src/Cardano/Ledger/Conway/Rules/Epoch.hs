@@ -67,7 +67,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
   UTxOState (..),
-  asTreasuryL,
   curPParamsEpochStateL,
   esChainAccountState,
   esChainAccountStateL,
@@ -244,7 +243,7 @@ applyEnactedWithdrawals chainAccountState dState enactedState =
           --   + unclaimed - totWithdrawals
           -- we just subtract the `refunds`
           --   - refunds
-          & asTreasuryL %~ (<-> fold successfulWithdrawls)
+          & casTreasuryL %~ (<-> fold successfulWithdrawls)
       -- The use of the partial function `compactCoinOrError` is justified here because
       -- 1. the decoder for coin at the proposal-submission boundary has already
       --    confirmed we have a compactible value
@@ -378,7 +377,7 @@ epochTransition = do
     chainAccountState3 =
       chainAccountState2
         -- Move donations and unclaimed rewards from proposals to treasury:
-        & asTreasuryL <>~ (utxoState0 ^. utxosDonationL <> fold unclaimed)
+        & casTreasuryL <>~ (utxoState0 ^. utxosDonationL <> fold unclaimed)
     utxoState2 =
       utxoState1
         & utxosDepositedL .~ totalObligation certState2 govState1

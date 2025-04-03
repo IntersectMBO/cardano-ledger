@@ -2,6 +2,7 @@
 
 ## 1.18.0.0
 
+* Add `casTreasuryL` and `casReservesL`
 * Rename `AccountState` to `ChainAccountState`. Rename accessor fields `asTreasury` and `asReserves` to `casTreasury` and `casReserves` respectively.
 * Added `consumed` to `EraUTxO`
 * Removed `upgradeCertState`

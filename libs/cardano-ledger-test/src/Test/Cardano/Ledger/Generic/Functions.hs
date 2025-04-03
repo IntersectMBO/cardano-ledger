@@ -31,7 +31,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.State (VState (..))
+import Cardano.Ledger.Conway.State (ChainAccountState (..), VState (..))
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
@@ -39,7 +39,6 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
-  ChainAccountState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
