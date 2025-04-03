@@ -69,7 +69,6 @@ import Cardano.Ledger.BaseTypes (
   Url,
   mkActiveSlotCoeff,
   mkNonceFromNumber,
-  natVersion,
   promoteRatio,
   textToDns,
   textToUrl,
@@ -761,19 +760,8 @@ genRightPreferenceUMap = do
 -- Cardano.Ledger.CertState -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Era era => Arbitrary (DState era) where
-  arbitrary =
-    if eraProtVerLow @era >= natVersion @9
-      then DState <$> genConwayUMap <*> arbitrary <*> arbitrary <*> arbitrary
-      else DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-
-genConwayUMap :: Gen UMap
-genConwayUMap = UMap <$> genElems <*> pure mempty
-  where
-    genElems :: Gen (Map (Credential 'Staking) UMElem)
-    genElems = Map.fromList <$> listOf ((,) <$> arbitrary <*> genElem)
-    genElem :: Gen UMElem
-    genElem = UMElem <$> arbitrary <*> pure mempty <*> arbitrary <*> arbitrary
+instance (Era era, Arbitrary (AccountsState era)) => Arbitrary (DState era) where
+  arbitrary = DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary (PState era) where
   arbitrary = PState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
