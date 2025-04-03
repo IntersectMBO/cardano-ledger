@@ -38,6 +38,10 @@ module Test.Cardano.Ledger.Common (
   expectLeftDeep,
   expectLeftDeep_,
   expectLeftDeepExpr,
+  expectJust,
+  expectJustDeep,
+  expectJustDeep_,
+  expectNothing,
 
   -- * Miscellanous helpers
   tracedDiscard,

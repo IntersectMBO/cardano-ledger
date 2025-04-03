@@ -10,6 +10,7 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.State
+import Cardano.Ledger.Conway.TxCert (mkDelegatee)
 import Test.Cardano.Ledger.Babbage.Era
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
@@ -19,12 +20,17 @@ class
   , ConwayEraTxBody era
   , ConwayEraCertState era
   , ConwayEraGov era
+  , ConwayEraAccounts era
   ) =>
   ConwayEraTest era
 
 instance EraTest ConwayEra
 
-instance ShelleyEraTest ConwayEra
+instance ShelleyEraTest ConwayEra where
+  registerTestAccount cred mPtr deposit mStakePool mDRep =
+    case mPtr of
+      Just _ -> error "When registering Account in Conway onwards Ptrs are not supported"
+      Nothing -> registerConwayAccount cred deposit (mkDelegatee mStakePool mDRep)
 
 instance AllegraEraTest ConwayEra
 

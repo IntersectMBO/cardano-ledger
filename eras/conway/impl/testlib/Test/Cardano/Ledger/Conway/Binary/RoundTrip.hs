@@ -38,6 +38,7 @@ roundTripConwayCommonSpec ::
   , EraStake era
   , EraCertState era
   , AlonzoEraScript era
+  , ConwayEraAccounts era
   , StashedAVVMAddresses era ~ ()
   , Arbitrary (Tx era)
   , Arbitrary (TxBody era)
@@ -55,6 +56,7 @@ roundTripConwayCommonSpec ::
   , Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (InstantStake era)
   , Arbitrary (CertState era)
+  , Arbitrary (Accounts era)
   , DecCBOR (Annotator (Script era))
   , DecCBOR (Annotator (TxAuxData era))
   , DecCBOR (Annotator (TxWits era))
@@ -75,6 +77,7 @@ roundTripConwayEraTypesSpec ::
   , Arbitrary (InstantStake era)
   , EraPParams era
   , EraStake era
+  , ConwayEraAccounts era
   ) =>
   Spec
 roundTripConwayEraTypesSpec = do

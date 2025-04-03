@@ -169,7 +169,7 @@ expectedStEx1 :: ChainState ShelleyEra
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits ppEx feeTx1 [] []
+    . C.addFees feeTx1
     . C.newUTxO txbodyEx1
     . C.setCurrentProposals ppVotes1
     $ initStUpdates
@@ -243,7 +243,7 @@ expectedStEx2 :: ChainState ShelleyEra
 expectedStEx2 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx2)
     . C.newLab blockEx2
-    . C.feesAndDeposits ppEx feeTx2 [] []
+    . C.addFees feeTx2
     . C.newUTxO txbodyEx2
     . C.setCurrentProposals (collectVotes ppVoteA [0, 1, 3, 4, 5])
     $ expectedStEx1
@@ -318,7 +318,7 @@ expectedStEx3 :: ChainState ShelleyEra
 expectedStEx3 =
   C.evolveNonceFrozen (getBlockNonce blockEx3)
     . C.newLab blockEx3
-    . C.feesAndDeposits ppEx feeTx3 [] []
+    . C.addFees feeTx3
     . C.newUTxO txbodyEx3
     . C.pulserUpdate pulserEx3
     . C.setFutureProposals (collectVotes ppVoteB [1])

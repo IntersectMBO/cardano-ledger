@@ -50,7 +50,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertStateL,
   lsUTxOStateL,
  )
-import qualified Cardano.Ledger.UMap as UM
 import Data.Default (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -135,13 +134,17 @@ instance TranslateEra ConwayEra EpochState where
         }
 
 instance TranslateEra ConwayEra DState where
-  translateEra _ DState {dsUnified = umap, ..} = pure DState {dsUnified = umap', ..}
+  translateEra _ DState {dsAccounts = accounts, ..} =
+    pure DState {dsAccounts = translateAccounts accounts, ..}
     where
-      umap' =
-        umap
-          { UM.umElems =
-              Map.map (\(UM.UMElem rd _ poolId drep) -> UM.UMElem rd mempty poolId drep) (UM.umElems umap)
-          , UM.umPtrs = mempty
+      translateAccounts ShelleyAccounts {saStates} =
+        ConwayAccounts {caStates = Map.map translateAccountState saStates}
+      translateAccountState ShelleyAccountState {sasBalance, sasDeposit, sasStakePoolDelegation} =
+        ConwayAccountState
+          { casBalance = sasBalance
+          , casDeposit = sasDeposit
+          , casStakePoolDelegation = sasStakePoolDelegation
+          , casDRepDelegation = SNothing
           }
 
 instance TranslateEra ConwayEra PState where
