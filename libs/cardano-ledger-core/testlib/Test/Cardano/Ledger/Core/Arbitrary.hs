@@ -69,7 +69,6 @@ import Cardano.Ledger.BaseTypes (
   Url,
   mkActiveSlotCoeff,
   mkNonceFromNumber,
-  natVersion,
   promoteRatio,
   textToDns,
   textToUrl,
@@ -376,7 +375,7 @@ deriving instance Arbitrary (CompactForm Coin)
 
 instance Arbitrary Coin where
   -- Cannot be negative even though it is an 'Integer'
-  arbitrary = Coin <$> choose (0, 1000000)
+  arbitrary = Coin <$> oneof [choose (0, 1000000), getNonNegative <$> arbitrary]
   shrink (Coin i) = Coin <$> shrink i
 
 instance Arbitrary DeltaCoin where
@@ -761,19 +760,8 @@ genRightPreferenceUMap = do
 -- Cardano.Ledger.CertState -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Era era => Arbitrary (DState era) where
-  arbitrary =
-    if eraProtVerLow @era >= natVersion @9
-      then DState <$> genConwayUMap <*> arbitrary <*> arbitrary <*> arbitrary
-      else DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-
-genConwayUMap :: Gen UMap
-genConwayUMap = UMap <$> genElems <*> pure mempty
-  where
-    genElems :: Gen (Map (Credential 'Staking) UMElem)
-    genElems = Map.fromList <$> listOf ((,) <$> arbitrary <*> genElem)
-    genElem :: Gen UMElem
-    genElem = UMElem <$> arbitrary <*> pure mempty <*> arbitrary <*> arbitrary
+instance (Era era, Arbitrary (Accounts era)) => Arbitrary (DState era) where
+  arbitrary = DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary (PState era) where
   arbitrary = PState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary

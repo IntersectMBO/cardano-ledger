@@ -4,5 +4,6 @@ module Cardano.Ledger.Alonzo.State (
 
 import Cardano.Ledger.Mary.State
 
+import Cardano.Ledger.Alonzo.State.Account ()
 import Cardano.Ledger.Alonzo.State.CertState ()
 import Cardano.Ledger.Alonzo.State.Stake ()

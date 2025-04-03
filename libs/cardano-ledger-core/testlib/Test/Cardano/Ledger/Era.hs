@@ -29,6 +29,7 @@ class
   , EraGov era
   , EraStake era
   , EraUTxO era
+  , EraAccounts era
   , -- Arbitrary Core
     Arbitrary (Tx era)
   , Arbitrary (TxOut era)
@@ -44,6 +45,8 @@ class
     Arbitrary (CertState era)
   , Arbitrary (GovState era)
   , Arbitrary (InstantStake era)
+  , Arbitrary (Accounts era)
+  , Arbitrary (AccountState era)
   , -- ToExpr Core
     ToExpr (Tx era)
   , ToExpr (TxOut era)
@@ -59,5 +62,7 @@ class
     ToExpr (CertState era)
   , ToExpr (GovState era)
   , ToExpr (InstantStake era)
+  , ToExpr (Accounts era)
+  , ToExpr (AccountState era)
   ) =>
   EraTest era

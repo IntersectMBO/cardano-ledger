@@ -74,6 +74,7 @@ library
     Cardano.Ledger.Conway.Rules.Utxo
     Cardano.Ledger.Conway.Rules.Utxos
     Cardano.Ledger.Conway.Rules.Utxow
+    Cardano.Ledger.Conway.State.Account
     Cardano.Ledger.Conway.State.CertState
     Cardano.Ledger.Conway.State.Stake
     Cardano.Ledger.Conway.State.VState
