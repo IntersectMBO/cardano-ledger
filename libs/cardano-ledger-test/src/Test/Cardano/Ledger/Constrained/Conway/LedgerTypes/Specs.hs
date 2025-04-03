@@ -76,7 +76,7 @@ class
   govStateSpec :: PParams era -> Specification fn (GovState era)
   newEpochStateSpec :: PParams era -> WitUniv era -> Specification fn (NewEpochState era)
   certStateSpec ::
-    WitUniv era -> Term fn AccountState -> Term fn EpochNo -> Specification fn (CertState era)
+    WitUniv era -> Term fn ChainAccountState -> Term fn EpochNo -> Specification fn (CertState era)
 
 instance IsConwayUniv fn => EraSpecLedger ShelleyEra fn where
   govStateSpec = shelleyGovStateSpec
@@ -258,7 +258,7 @@ dstateSpec ::
   forall era fn.
   EraSpecLedger era fn =>
   WitUniv era ->
-  Term fn AccountState ->
+  Term fn ChainAccountState ->
   Term fn (Map (KeyHash 'StakePool) PoolParams) ->
   Specification fn (DState era)
 dstateSpec univ acct poolreg = constrained $ \ [var| ds |] ->
@@ -342,7 +342,7 @@ pstateSpec univ currepoch = constrained $ \ [var|pState|] ->
     , assert $ sizeOf_ (dom_ stakePoolParams) <=. 8
     ]
 
-accountStateSpec :: IsConwayUniv fn => Specification fn AccountState
+accountStateSpec :: IsConwayUniv fn => Specification fn ChainAccountState
 accountStateSpec =
   constrained
     ( \ [var|accountState|] ->
@@ -360,7 +360,7 @@ shelleyCertStateSpec ::
   forall era fn.
   EraSpecLedger era fn =>
   WitUniv era ->
-  Term fn AccountState ->
+  Term fn ChainAccountState ->
   Term fn EpochNo ->
   Specification fn (ShelleyCertState era)
 shelleyCertStateSpec univ acct epoch = constrained $ \ [var|shellCertState|] ->
@@ -376,7 +376,7 @@ conwayCertStateSpec ::
   forall fn.
   EraSpecLedger ConwayEra fn =>
   WitUniv ConwayEra ->
-  Term fn AccountState ->
+  Term fn ChainAccountState ->
   Term fn EpochNo ->
   Specification fn (ConwayCertState ConwayEra)
 conwayCertStateSpec univ acct epoch = constrained $ \ [var|convCertState|] ->
@@ -479,7 +479,7 @@ ledgerStateSpec ::
   (EraSpecLedger era fn, HasSpec fn (InstantStake era)) =>
   PParams era ->
   WitUniv era ->
-  Term fn AccountState ->
+  Term fn ChainAccountState ->
   Term fn EpochNo ->
   Specification fn (LedgerState era)
 ledgerStateSpec pp univ acct epoch =

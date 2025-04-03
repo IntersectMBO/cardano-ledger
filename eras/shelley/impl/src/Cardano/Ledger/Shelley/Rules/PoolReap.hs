@@ -61,7 +61,7 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyPoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era
-  , prAccountState :: AccountState
+  , prChainAccountState :: ChainAccountState
   , prCertState :: CertState era
   }
 
@@ -179,7 +179,7 @@ poolReapTransition = do
   pure $
     PoolreapState
       us {utxosDeposited = utxosDeposited us <-> (unclaimed <+> refunded)}
-      a {asTreasury = asTreasury a <+> unclaimed}
+      a {casTreasury = casTreasury a <+> unclaimed}
       ( cs
           & certDStateL . dsUnifiedL
             %~ ( \uni ->

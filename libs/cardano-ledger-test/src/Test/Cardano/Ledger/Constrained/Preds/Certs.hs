@@ -28,7 +28,11 @@ import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolMetadata, PoolParams (..))
-import Cardano.Ledger.Shelley.LedgerState (AccountState, InstantaneousRewards, availableAfterMIR)
+import Cardano.Ledger.Shelley.LedgerState (
+  ChainAccountState,
+  InstantaneousRewards,
+  availableAfterMIR,
+ )
 import Cardano.Ledger.Shelley.TxCert (
   EraTxCert (..),
   MIRCert (..),
@@ -196,7 +200,7 @@ makeDRepPred drep vote =
 minusCoinDeltaCoin :: Coin -> DeltaCoin -> DeltaCoin
 minusCoinDeltaCoin (Coin n) (DeltaCoin m) = DeltaCoin (n - m)
 
-availableForDistrC :: DeltaCoin -> MIRPot -> AccountState -> InstantaneousRewards -> DeltaCoin
+availableForDistrC :: DeltaCoin -> MIRPot -> ChainAccountState -> InstantaneousRewards -> DeltaCoin
 availableForDistrC sumb p act irew = minusCoinDeltaCoin (availableAfterMIR p act irew) sumb
 
 txCertMir ::

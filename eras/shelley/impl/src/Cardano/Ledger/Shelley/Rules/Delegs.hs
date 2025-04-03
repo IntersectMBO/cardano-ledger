@@ -49,7 +49,7 @@ import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Rules.ValidationMode (Test)
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState,
+  ChainAccountState,
   DState (..),
   PState (..),
   psStakePoolParams,
@@ -104,7 +104,7 @@ data DelegsEnv era = DelegsEnv
   , delegsIx :: TxIx
   , delegspp :: PParams era
   , delegsTx :: Tx era
-  , delegsAccount :: AccountState
+  , delegsAccount :: ChainAccountState
   }
 
 deriving stock instance
@@ -238,7 +238,8 @@ delegsTransition ::
   ) =>
   TransitionRule (ShelleyDELEGS era)
 delegsTransition = do
-  TRC (env@(DelegsEnv slot@(SlotNo slot64) epochNo txIx pp tx acnt), certState, certificates) <-
+  TRC
+    (env@(DelegsEnv slot@(SlotNo slot64) epochNo txIx pp tx chainAccountState), certState, certificates) <-
     judgmentContext
   network <- liftSTS $ asks networkId
 
@@ -261,7 +262,7 @@ delegsTransition = do
       let certIx = CertIx (fromIntegral @Int @Word16 $ length gamma)
           ptr = Ptr (SlotNo32 (fromIntegral @Word64 @Word32 slot64)) txIx certIx
       trans @(EraRule "DELPL" era) $
-        TRC (DelplEnv slot epochNo ptr pp acnt, certState', txCert)
+        TRC (DelplEnv slot epochNo ptr pp chainAccountState, certState', txCert)
 
 validateStakePoolDelegateeRegistered ::
   PState era ->

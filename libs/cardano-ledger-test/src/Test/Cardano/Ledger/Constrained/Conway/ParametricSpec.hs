@@ -87,7 +87,7 @@ class
   EraSpecTxOut era fn
   where
   irewardSpec ::
-    WitUniv era -> Term fn AccountState -> Specification fn InstantaneousRewards
+    WitUniv era -> Term fn ChainAccountState -> Specification fn InstantaneousRewards
   hasPtrs :: proxy era -> Term fn Bool
 
   -- | Extract a Value from a TxOut
@@ -196,7 +196,7 @@ instantaneousRewardsSpec ::
   forall era fn.
   (IsConwayUniv fn, Era era) =>
   WitUniv era ->
-  Term fn AccountState ->
+  Term fn ChainAccountState ->
   Specification fn InstantaneousRewards
 instantaneousRewardsSpec univ acct = constrained $ \ [var| irewards |] ->
   match acct $ \ [var| acctRes |] [var| acctTreas |] ->
@@ -208,8 +208,8 @@ instantaneousRewardsSpec univ acct = constrained $ \ [var| irewards |] ->
       , witness univ (dom_ reserves)
       , witness univ (dom_ treasury)
       , assertExplain (pure "deltaTreausry and deltaReserves sum to 0") $ negate deltaRes ==. deltaTreas
-      , forAll (rng_ reserves) (\ [var| x |] -> x >=. (lit (Coin 0)))
-      , forAll (rng_ treasury) (\ [var| y |] -> y >=. (lit (Coin 0)))
+      , forAll (rng_ reserves) (\ [var| x |] -> x >=. lit (Coin 0))
+      , forAll (rng_ treasury) (\ [var| y |] -> y >=. lit (Coin 0))
       , assert $ toDelta_ (foldMap_ id (rng_ reserves)) - deltaRes <=. toDelta_ acctRes
       , assert $ toDelta_ (foldMap_ id (rng_ treasury)) - deltaTreas <=. toDelta_ acctTreas
       ]

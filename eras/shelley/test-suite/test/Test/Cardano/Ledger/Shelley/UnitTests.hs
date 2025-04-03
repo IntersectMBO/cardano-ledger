@@ -40,7 +40,7 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
+  ChainAccountState (..),
   LedgerState (..),
   UTxOState (..),
   dsUnifiedL,
@@ -330,7 +330,7 @@ addReward dp ra c = dp & certDStateL . dsUnifiedL .~ rewards'
 
 -- Any key deposit works in this test ^
 ledgerEnv :: LedgerEnv C
-ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound pp (AccountState (Coin 0) (Coin 0))
+ledgerEnv = LedgerEnv (SlotNo 0) Nothing minBound pp (ChainAccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::
   NonEmpty (PredicateFailure (ShelleyLEDGER C)) ->
@@ -491,7 +491,7 @@ testExpiredTx =
             , ttl = SlotNo 0
             , signers = [asWitness alicePay]
             }
-      ledgerEnv' = LedgerEnv (SlotNo 1) Nothing minBound pp (AccountState (Coin 0) (Coin 0))
+      ledgerEnv' = LedgerEnv (SlotNo 1) Nothing minBound pp (ChainAccountState (Coin 0) (Coin 0))
    in testLEDGER ledgerState tx ledgerEnv' (Left errs)
 
 testInvalidWintess :: Assertion

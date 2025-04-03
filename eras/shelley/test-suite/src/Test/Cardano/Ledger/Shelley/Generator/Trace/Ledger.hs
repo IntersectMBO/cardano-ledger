@@ -63,9 +63,9 @@ import Test.QuickCheck (Gen)
 
 -- ======================================================
 
-genAccountState :: Constants -> Gen AccountState
-genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
-  AccountState
+genChainAccountState :: Constants -> Gen ChainAccountState
+genChainAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
+  ChainAccountState
     <$> genCoin minTreasury maxTreasury
     <*> genCoin minReserves maxReserves
 
@@ -98,9 +98,9 @@ instance
   envGen GenEnv {geConstants} =
     LedgerEnv (SlotNo 0) Nothing minBound
       <$> genEraPParams @era geConstants
-      <*> genAccountState geConstants
+      <*> genChainAccountState geConstants
 
-  sigGen genenv env state = genTx genenv env state
+  sigGen = genTx
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 
@@ -129,7 +129,7 @@ instance
   envGen GenEnv {geConstants} =
     LedgersEnv (SlotNo 0) (EpochNo 0)
       <$> genEraPParams @era geConstants
-      <*> genAccountState geConstants
+      <*> genChainAccountState geConstants
 
   -- a LEDGERS signal is a sequence of LEDGER signals
   sigGen

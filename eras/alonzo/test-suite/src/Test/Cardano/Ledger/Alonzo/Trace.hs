@@ -37,7 +37,7 @@ import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (genAccountState)
+import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (genChainAccountState)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (CERTS)
 import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as TQC
@@ -73,9 +73,9 @@ instance
   envGen GenEnv {geConstants} =
     LedgerEnv (SlotNo 0) Nothing minBound
       <$> genEraPParams @era geConstants
-      <*> genAccountState geConstants
+      <*> genChainAccountState geConstants
 
-  sigGen genenv env state = genTx genenv env state
+  sigGen = genTx
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 

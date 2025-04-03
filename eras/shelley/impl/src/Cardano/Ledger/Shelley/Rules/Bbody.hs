@@ -36,7 +36,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
 import Cardano.Ledger.Shelley.Era (ShelleyBBODY, ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (AccountState)
+import Cardano.Ledger.Shelley.LedgerState (ChainAccountState)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
@@ -73,7 +73,7 @@ deriving stock instance Eq (State (EraRule "LEDGERS" era)) => Eq (ShelleyBbodySt
 
 data BbodyEnv era = BbodyEnv
   { bbodyPp :: PParams era
-  , bbodyAccount :: AccountState
+  , bbodyAccount :: ChainAccountState
   }
 
 data ShelleyBbodyPredFailure era

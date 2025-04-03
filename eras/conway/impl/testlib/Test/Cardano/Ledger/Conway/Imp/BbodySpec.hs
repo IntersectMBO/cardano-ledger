@@ -77,7 +77,7 @@ spec = describe "BBODY" $ do
     nes <- use impNESL
     let ls = nes ^. nesEsL . esLStateL
         pp = nes ^. nesEsL . curPParamsEpochStateL
-        account = nes ^. nesEsL . esAccountStateL
+        account = nes ^. nesEsL . esChainAccountStateL
     kh <- freshKeyHash
     slotNo <- use impLastTickG
     let bhView =
