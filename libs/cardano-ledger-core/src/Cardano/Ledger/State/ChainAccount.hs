@@ -1,9 +1,14 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+-- some GHC bug wrongfully complains about CanGetChainAccountState constraint being redundant.
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.State.ChainAccount (
+  CanGetChainAccountState (..),
+  CanSetChainAccountState (..),
   ChainAccountState (AccountState, asTreasury, asReserves, ..),
   AccountState,
   casTreasuryL,
@@ -18,6 +23,15 @@ import Data.Default (Default (def))
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+
+class CanGetChainAccountState t where
+  chainAccountStateG :: SimpleGetter (t era) ChainAccountState
+  default chainAccountStateG :: CanSetChainAccountState t => SimpleGetter (t era) ChainAccountState
+  chainAccountStateG = chainAccountStateL
+  {-# INLINE chainAccountStateG #-}
+
+class CanGetChainAccountState t => CanSetChainAccountState t where
+  chainAccountStateL :: Lens' (t era) ChainAccountState
 
 type AccountState = ChainAccountState
 
