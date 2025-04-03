@@ -68,8 +68,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
   curPParamsEpochStateL,
-  esChainAccountState,
-  esChainAccountStateL,
   esLStateL,
   esSnapshotsL,
   lsCertStateL,
@@ -290,14 +288,14 @@ epochTransition = do
   TRC
     ( ()
       , epochState0@EpochState
-          { esChainAccountState = chainAccountState0
-          , esSnapshots = snapshots0
+          { esSnapshots = snapshots0
           , esLState = ledgerState0
           }
       , eNo
       ) <-
     judgmentContext
-  let govState0 = utxosGovState utxoState0
+  let chainAccountState0 = epochState0 ^. chainAccountStateL
+      govState0 = utxosGovState utxoState0
       curPParams = govState0 ^. curPParamsGovStateL
       utxoState0 = lsUTxOState ledgerState0
       certState0 = ledgerState0 ^. lsCertStateL
@@ -390,7 +388,7 @@ epochTransition = do
         & lsUTxOStateL .~ utxoState2
     epochState1 =
       epochState0
-        & esChainAccountStateL .~ chainAccountState3
+        & chainAccountStateL .~ chainAccountState3
         & esSnapshotsL .~ snapshots1
         & esLStateL .~ ledgerState1
   tellEvent $ EpochBoundaryRatifyState ratifyState

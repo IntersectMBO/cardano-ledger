@@ -1,13 +1,20 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+-- some GHC bug wrongfully complains about CanSetChainAccountState constraint being redundant.
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.State.ChainAccount (
+  CanGetChainAccountState (..),
+  CanSetChainAccountState (..),
   ChainAccountState (AccountState, asTreasury, asReserves, ..),
   AccountState,
   casTreasuryL,
   casReservesL,
+  treasuryL,
+  reservesL,
 ) where
 
 import Cardano.Ledger.Binary
@@ -18,6 +25,15 @@ import Data.Default (Default (def))
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+
+class CanGetChainAccountState t where
+  chainAccountStateG :: SimpleGetter (t era) ChainAccountState
+  default chainAccountStateG :: CanSetChainAccountState t => SimpleGetter (t era) ChainAccountState
+  chainAccountStateG = chainAccountStateL
+  {-# INLINE chainAccountStateG #-}
+
+class CanGetChainAccountState t => CanSetChainAccountState t where
+  chainAccountStateL :: Lens' (t era) ChainAccountState
 
 type AccountState = ChainAccountState
 
@@ -61,6 +77,16 @@ instance Default ChainAccountState where
 
 casTreasuryL :: Lens' ChainAccountState Coin
 casTreasuryL = lens casTreasury (\ds u -> ds {casTreasury = u})
+{-# INLINE casTreasuryL #-}
 
 casReservesL :: Lens' ChainAccountState Coin
 casReservesL = lens casReserves (\ds u -> ds {casReserves = u})
+{-# INLINE casReservesL #-}
+
+treasuryL :: CanSetChainAccountState t => Lens' (t era) Coin
+treasuryL = chainAccountStateL . lens casTreasury (\ds u -> ds {casTreasury = u})
+{-# INLINE treasuryL #-}
+
+reservesL :: CanSetChainAccountState t => Lens' (t era) Coin
+reservesL = chainAccountStateL . lens casReserves (\ds u -> ds {casReserves = u})
+{-# INLINE reservesL #-}

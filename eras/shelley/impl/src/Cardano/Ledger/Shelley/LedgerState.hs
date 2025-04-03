@@ -88,7 +88,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   nesRuL,
   nesStashedAVVMAddressesL,
   nesEpochStateL,
-  esChainAccountStateL,
+  esAccountStateL,
   esSnapshotsL,
   esLStateL,
   esNonMyopicL,

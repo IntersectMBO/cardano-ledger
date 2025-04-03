@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -83,13 +82,18 @@ data EpochState era = EpochState
 
 instance CanGetUTxO EpochState
 instance CanSetUTxO EpochState where
-  utxoL = (lens esLState $ \s ls -> s {esLState = ls}) . utxoL
+  utxoL = lens esLState (\es ls -> es {esLState = ls}) . utxoL
   {-# INLINE utxoL #-}
 
 instance CanGetInstantStake EpochState
 instance CanSetInstantStake EpochState where
-  instantStakeL = (lens esLState $ \s ls -> s {esLState = ls}) . instantStakeL
+  instantStakeL = lens esLState (\es ls -> es {esLState = ls}) . instantStakeL
   {-# INLINE instantStakeL #-}
+
+instance CanGetChainAccountState EpochState
+instance CanSetChainAccountState EpochState where
+  chainAccountStateL = lens esChainAccountState $ \es cas -> es {esChainAccountState = cas}
+  {-# INLINE chainAccountStateL #-}
 
 deriving stock instance
   ( EraTxOut era
@@ -334,13 +338,18 @@ data NewEpochState era = NewEpochState
 
 instance CanGetUTxO NewEpochState
 instance CanSetUTxO NewEpochState where
-  utxoL = (lens nesEs $ \s es -> s {nesEs = es}) . utxoL
+  utxoL = lens nesEs (\s es -> s {nesEs = es}) . utxoL
   {-# INLINE utxoL #-}
 
 instance CanGetInstantStake NewEpochState
 instance CanSetInstantStake NewEpochState where
-  instantStakeL = (lens nesEs $ \s es -> s {nesEs = es}) . instantStakeL
+  instantStakeL = lens nesEs (\s es -> s {nesEs = es}) . instantStakeL
   {-# INLINE instantStakeL #-}
+
+instance CanGetChainAccountState NewEpochState
+instance CanSetChainAccountState NewEpochState where
+  chainAccountStateL = lens nesEs (\s es -> s {nesEs = es}) . chainAccountStateL
+  {-# INLINE chainAccountStateL #-}
 
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses ShelleyEra = UTxO ShelleyEra
@@ -441,12 +450,12 @@ data LedgerState era = LedgerState
 
 instance CanGetUTxO LedgerState
 instance CanSetUTxO LedgerState where
-  utxoL = (lens lsUTxOState $ \s us -> s {lsUTxOState = us}) . utxoL
+  utxoL = lens lsUTxOState (\s us -> s {lsUTxOState = us}) . utxoL
   {-# INLINE utxoL #-}
 
 instance CanGetInstantStake LedgerState
 instance CanSetInstantStake LedgerState where
-  instantStakeL = (lens lsUTxOState $ \s us -> s {lsUTxOState = us}) . instantStakeL
+  instantStakeL = lens lsUTxOState (\s us -> s {lsUTxOState = us}) . instantStakeL
   {-# INLINE instantStakeL #-}
 
 deriving stock instance
@@ -589,8 +598,9 @@ nesEpochStateL = lens nesEs $ \x y -> x {nesEs = y}
 -- ===================================================
 -- EpochState
 
-esChainAccountStateL :: Lens' (EpochState era) ChainAccountState
-esChainAccountStateL = lens esChainAccountState (\x y -> x {esChainAccountState = y})
+esAccountStateL :: Lens' (EpochState era) ChainAccountState
+esAccountStateL = lens esChainAccountState (\x y -> x {esChainAccountState = y})
+{-# DEPRECATED esAccountStateL "In favor of `chainAccountStateL`" #-}
 
 esSnapshotsL :: Lens' (EpochState era) SnapShots
 esSnapshotsL = lens esSnapshots (\x y -> x {esSnapshots = y})
@@ -660,7 +670,8 @@ epochStateDonationL :: Lens' (EpochState era) Coin
 epochStateDonationL = esLStateL . lsUTxOStateL . utxosDonationL
 
 epochStateTreasuryL :: Lens' (EpochState era) Coin
-epochStateTreasuryL = esChainAccountStateL . asTreasuryL
+epochStateTreasuryL = treasuryL
+{-# DEPRECATED epochStateTreasuryL "In favor of `treasuryL`" #-}
 
 epochStatePoolParamsL ::
   EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)

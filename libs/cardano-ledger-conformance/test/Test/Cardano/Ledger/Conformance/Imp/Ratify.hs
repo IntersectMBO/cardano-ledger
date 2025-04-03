@@ -26,7 +26,6 @@ import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
-  esChainAccountStateL,
   nesELL,
   nesEsL,
  )
@@ -60,7 +59,7 @@ spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitPr
     govSt <- getsNES $ nesEsL . epochStateGovStateL
     let ratSt = getRatifyState govSt
     noConfidenceGAS <- getGovActionState noConfidence
-    treasury <- getsNES $ nesEsL . esChainAccountStateL . casTreasuryL
+    treasury <- getsNES treasuryL
     let
       execCtx =
         ConwayRatifyExecContext
@@ -127,7 +126,7 @@ spec = withImpInit @(LedgerSpec ConwayEra) $ describe "RATIFY" $ modifyImpInitPr
     constitutionGAS <- getGovActionState constitutionId
 
     logString "Testing conformance"
-    treasury <- getsNES $ nesEsL . esChainAccountStateL . casTreasuryL
+    treasury <- getsNES treasuryL
     let execCtx = ConwayRatifyExecContext treasury [constitutionGAS]
     ratEnv <- getRatifyEnv
     govSt <- getsNES $ nesEsL . epochStateGovStateL
