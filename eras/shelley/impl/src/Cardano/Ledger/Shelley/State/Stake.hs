@@ -19,6 +19,7 @@ module Cardano.Ledger.Shelley.State.Stake (
 )
 where
 
+import Cardano.Ledger.Shelley.State.Account
 import Cardano.Ledger.Address
 import Cardano.Ledger.Binary (
   DecShareCBOR (..),

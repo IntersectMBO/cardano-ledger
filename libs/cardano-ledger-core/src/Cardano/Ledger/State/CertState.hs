@@ -162,6 +162,13 @@ data DState era = DState
   }
   deriving (Generic)
 
+
+instance CanGetAccountsState DState
+instance CanSetAccountsState DState where
+  accountsStateL =
+    lens dsAccountsState (\dState accountsState -> dState {dsAccountsState = accountsState})
+  {-# INLINE accountsStateL #-}
+
 deriving instance Eq (AccountsState era) => Eq (DState era)
 deriving instance Show (AccountsState era) => Show (DState era)
 
