@@ -27,7 +27,6 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
@@ -47,6 +46,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure (ScriptWitnessNotValidatingUTXOW),
  )
 import Cardano.Ledger.State (
+  ChainAccountState (..),
   EraCertState (..),
   IndividualPoolStake (..),
   PoolDistr (..),
@@ -217,7 +217,11 @@ initialMockChainState proof gstate =
 makeEpochState :: Reflect era => GenState era -> LedgerState era -> EpochState era
 makeEpochState gstate ledgerstate =
   EpochState
-    { esAccountState = AccountState (getTreasury gstate) (getReserves gstate)
+    { esChainAccountState =
+        ChainAccountState
+          { casTreasury = getTreasury gstate
+          , casReserves = getReserves gstate
+          }
     , esSnapshots = snaps ledgerstate
     , esLState = ledgerstate
     , esNonMyopic = def

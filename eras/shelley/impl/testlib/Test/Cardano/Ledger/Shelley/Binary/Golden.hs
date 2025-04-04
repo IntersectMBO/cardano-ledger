@@ -36,7 +36,7 @@ goldenNewEpochStateExpectation
   nes@NewEpochState
     { nesEs =
       EpochState
-        { esAccountState = AccountState {..}
+        { esChainAccountState = ChainAccountState {..}
         , esSnapshots = SnapShots {..}
         , ..
         }
@@ -52,8 +52,8 @@ goldenNewEpochStateExpectation
             [ E (TkListLen 4)
             , Em
                 [ E (TkListLen 2)
-                , E asTreasury
-                , E asReserves
+                , E casTreasury
+                , E casReserves
                 ]
             , E esLState
             , Em

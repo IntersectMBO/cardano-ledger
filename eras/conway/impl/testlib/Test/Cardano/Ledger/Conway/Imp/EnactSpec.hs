@@ -17,6 +17,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent (..))
@@ -122,7 +123,7 @@ treasuryWithdrawalsSpec =
       disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
-      initialTreasury <- getTreasury
+      initialTreasury <- getsNES treasuryL
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
 
@@ -137,14 +138,14 @@ treasuryWithdrawalsSpec =
                 & bodyTxL . treasuryDonationTxBodyL .~ (sumRequested <-> initialTreasury)
         submitTx_ tx
       passNEpochs 2
-      getTreasury `shouldReturn` zero
+      getsNES treasuryL `shouldReturn` zero
       sumRewardAccounts withdrawals `shouldReturn` sumRequested
 
     it "Withdrawals exceeding maxBound Word64 submitted in a single proposal" $ whenPostBootstrap $ do
       disableTreasuryExpansion
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
-      initialTreasury <- getTreasury
+      initialTreasury <- getsNES treasuryL
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding (Coin (fromIntegral (maxBound :: Word64))) numWithdrawals
       void $ enactTreasuryWithdrawals withdrawals drepC committeeCs
@@ -156,7 +157,7 @@ treasuryWithdrawalsSpec =
         committeeCs <- registerInitialCommittee
         (drepC, _, _) <- setupSingleDRep 1_000_000
         donateToTreasury $ Coin 5_000_000
-        initialTreasury <- getTreasury
+        initialTreasury <- getsNES treasuryL
         numWithdrawals <- choose (1, 10)
         withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
 
@@ -180,17 +181,16 @@ treasuryWithdrawalsSpec =
                   initialTreasury
                   withdrawals
 
-          getTreasury `shouldReturn` expectedTreasury
+          getsNES treasuryL `shouldReturn` expectedTreasury
           -- check that the sum of the rewards matches what was spent from the treasury
           sumRewardAccounts withdrawals `shouldReturn` (initialTreasury <-> expectedTreasury)
   where
-    getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
     sumRewardAccounts withdrawals = mconcat <$> traverse (getRewardAccountAmount . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
       vals <- genValuesExceeding val n
       forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccount
     checkNoWithdrawal initialTreasury withdrawals = do
-      getTreasury `shouldReturn` initialTreasury
+      getsNES treasuryL `shouldReturn` initialTreasury
       sumRewardAccounts withdrawals `shouldReturn` zero
     genValuesExceeding val n = do
       pcts <- replicateM (n - 1) $ choose (1, 100)

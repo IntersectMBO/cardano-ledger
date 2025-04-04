@@ -40,6 +40,7 @@ import Cardano.Ledger.Conway.PParams (
   ppGovActionDepositL,
  )
 import Cardano.Ledger.Conway.State (
+  ChainAccountState (..),
   CommitteeAuthorization,
   CommitteeState (..),
   ConwayCertState (..),
@@ -52,14 +53,19 @@ import Cardano.Ledger.Conway.State (
   SnapShots (..),
   Stake (..),
   VState (..),
+  casReservesL,
+  casTreasuryL,
+  chainAccountStateL,
   conwayCertDStateL,
   conwayCertPStateL,
   conwayCertVStateL,
   csCommitteeCredsL,
   instantStakeL,
   poolDistrDistrL,
+  reservesL,
   shelleyCertDStateL,
   shelleyCertPStateL,
+  treasuryL,
   vsCommitteeStateL,
   vsDRepsL,
   vsNumDormantEpochsL,
@@ -518,19 +524,13 @@ instantStakeTarget proof = Constr "computeInstantStake" get ^$ utxo proof
        in Map.map fromCompact instantStakeMap
 
 -- ==========================
--- AccountState
+-- ChainAccountState
 
 treasury :: Era era => Term era Coin
 treasury = Var $ V "treasury" CoinR (Yes NewEpochStateR treasuryL)
 
-treasuryL :: NELens era Coin
-treasuryL = nesEsL . esAccountStateL . asTreasuryL
-
 reserves :: Era era => Term era Coin
 reserves = Var $ V "reserves" CoinR (Yes NewEpochStateR reservesL)
-
-reservesL :: NELens era Coin
-reservesL = nesEsL . esAccountStateL . asReservesL
 
 -- | The Coin availabe for a MIR transfer to/from the Treasury
 --   Computed from 'treasury' + 'deltaTreasury' - sum('instanTreasury')
@@ -1021,18 +1021,18 @@ epochStateT ::
   forall era. Reflect era => Proof era -> RootTarget era (EpochState era) (EpochState era)
 epochStateT proof =
   Invert "EpochState" (typeRep @(EpochState era)) epochStateFun
-    :$ Shift accountStateT esAccountStateL
+    :$ Shift accountStateT chainAccountStateL
     :$ Shift (ledgerStateT proof) esLStateL
     :$ Shift snapShotsT esSnapshotsL
   where
     epochStateFun a s l = EpochState a s l (NonMyopic Map.empty (Coin 0))
 
--- | Target for AccountState
-accountStateT :: Era era => RootTarget era AccountState AccountState
+-- | Target for ChainAccountState
+accountStateT :: Era era => RootTarget era ChainAccountState ChainAccountState
 accountStateT =
-  Invert "AccountState" (typeRep @AccountState) AccountState
-    :$ Lensed treasury asTreasuryL
-    :$ Lensed reserves asReservesL
+  Invert "ChainAccountState" (typeRep @ChainAccountState) ChainAccountState
+    :$ Lensed treasury casTreasuryL
+    :$ Lensed reserves casReservesL
 
 -- | Target for LedgerState
 ledgerStateT ::

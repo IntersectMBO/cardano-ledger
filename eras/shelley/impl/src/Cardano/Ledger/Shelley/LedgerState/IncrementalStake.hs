@@ -87,7 +87,7 @@ smartUTxOState _pp utxo c1 c2 st =
 -- | Apply a RewardUpdate to the EpochState. Does several things
 --   1) Adds reward coins to Rewards component of the UMap field of the DState,
 --      for actively delegated Stake
---   2) Adds to the Treasury of the AccountState for non-actively delegated stake
+--   2) Adds to the Treasury of the ChainAccountState for non-actively delegated stake
 --   3) Adds fees to the UTxOState
 applyRUpd ::
   (EraGov era, EraCertState era) =>
@@ -125,8 +125,8 @@ applyRUpdFiltered
       -- Note: domain registeredAggregated is a subset of domain (rewards dstate)
       as' =
         as
-          { asTreasury = addDeltaCoin (asTreasury as) (deltaT ru) <> frTotalUnregistered
-          , asReserves = addDeltaCoin (asReserves as) (deltaR ru)
+          { casTreasury = addDeltaCoin (casTreasury as) (deltaT ru) <> frTotalUnregistered
+          , casReserves = addDeltaCoin (casReserves as) (deltaR ru)
           }
       ls' =
         ls

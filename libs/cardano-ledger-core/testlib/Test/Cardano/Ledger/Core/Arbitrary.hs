@@ -487,8 +487,8 @@ instance Arbitrary SizeOfPoolOwners where
 -- Cardano.Ledger.State ------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance Arbitrary AccountState where
-  arbitrary = AccountState <$> arbitrary <*> arbitrary
+instance Arbitrary ChainAccountState where
+  arbitrary = ChainAccountState <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
 ------------------------------------------------------------------------------------------

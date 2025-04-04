@@ -28,7 +28,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGERS)
-import Cardano.Ledger.Shelley.LedgerState (AccountState, LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (ChainAccountState, LedgerState)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
@@ -64,7 +64,7 @@ data ShelleyLedgersEnv era = LedgersEnv
   { ledgersSlotNo :: SlotNo
   , ledgersEpochNo :: EpochNo
   , ledgersPp :: PParams era
-  , ledgersAccount :: AccountState
+  , ledgersAccount :: ChainAccountState
   }
   deriving (Generic)
 

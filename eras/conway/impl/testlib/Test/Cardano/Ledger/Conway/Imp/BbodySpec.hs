@@ -21,6 +21,7 @@ import Cardano.Ledger.Conway.Rules (
   maxRefScriptSizePerBlock,
   maxRefScriptSizePerTx,
  )
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
@@ -77,7 +78,6 @@ spec = describe "BBODY" $ do
     nes <- use impNESL
     let ls = nes ^. nesEsL . esLStateL
         pp = nes ^. nesEsL . curPParamsEpochStateL
-        account = nes ^. nesEsL . esAccountStateL
     kh <- freshKeyHash
     slotNo <- use impLastTickG
     let bhView =
@@ -90,7 +90,7 @@ spec = describe "BBODY" $ do
             }
     Left predFailures <-
       tryRunImpRule @"BBODY"
-        (BbodyEnv pp account)
+        (BbodyEnv pp (nes ^. chainAccountStateL))
         (BbodyState ls (BlocksMade Map.empty))
         (Block bhView txSeq)
     predFailures

@@ -35,8 +35,8 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetCommitteeMembersState@
   queryCommitteeMembersState,
 
-  -- * @GetAccountState@
-  queryAccountState,
+  -- * @GetChainAccountState@
+  queryChainAccountState,
   CommitteeMemberState (..),
   CommitteeMembersState (..),
   HotCredAuthStatus (..),
@@ -334,10 +334,10 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
       , csEpochNo = currentEpoch
       }
 
-queryAccountState ::
+queryChainAccountState ::
   NewEpochState era ->
-  AccountState
-queryAccountState = view $ nesEsL . esAccountStateL
+  ChainAccountState
+queryChainAccountState = view chainAccountStateL
 
 getNextEpochCommitteeMembers ::
   ConwayEraGov era =>

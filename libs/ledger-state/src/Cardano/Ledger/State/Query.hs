@@ -170,8 +170,8 @@ insertEpochState es@Shelley.EpochState {..} = do
   epochStateKey <-
     insert
       EpochState
-        { epochStateTreasury = Shelley.asTreasury esAccountState
-        , epochStateReserves = Shelley.asReserves esAccountState
+        { epochStateTreasury = State.casTreasury esChainAccountState
+        , epochStateReserves = State.casReserves esChainAccountState
         , epochStatePrevPp = es ^. prevPParamsEpochStateL
         , epochStatePp = es ^. curPParamsEpochStateL
         , epochStateNonMyopic = esNonMyopic
@@ -734,10 +734,10 @@ loadEpochState fp = runSqlite fp $ do
   ledgerState <- getLedgerStateNoSharing ese
   pure $
     Shelley.EpochState
-      { esAccountState =
-          Shelley.AccountState
-            { asTreasury = epochStateTreasury
-            , asReserves = epochStateReserves
+      { esChainAccountState =
+          State.ChainAccountState
+            { casTreasury = epochStateTreasury
+            , casReserves = epochStateReserves
             }
       , esLState = ledgerState
       , esSnapshots = snapshots
@@ -753,10 +753,10 @@ loadEpochStateWithSharing fp = runSqlite fp $ do
   ledgerState <- getLedgerStateWithSharing ese
   pure $
     Shelley.EpochState
-      { esAccountState =
-          Shelley.AccountState
-            { asTreasury = epochStateTreasury
-            , asReserves = epochStateReserves
+      { esChainAccountState =
+          State.ChainAccountState
+            { casTreasury = epochStateTreasury
+            , casReserves = epochStateReserves
             }
       , esLState = ledgerState
       , esSnapshots = snapshots

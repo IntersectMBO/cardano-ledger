@@ -213,7 +213,7 @@ mkBbodyEnv
     } =
     STS.BbodyEnv
       { STS.bbodyPp = nesEs ^. curPParamsEpochStateL
-      , STS.bbodyAccount = LedgerState.esAccountState nesEs
+      , STS.bbodyAccount = LedgerState.esChainAccountState nesEs
       }
 
 updateNewEpochState ::

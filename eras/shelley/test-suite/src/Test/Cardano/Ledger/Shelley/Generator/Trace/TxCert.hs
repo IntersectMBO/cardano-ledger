@@ -98,7 +98,7 @@ instance
   ) =>
   STS (CERTS era)
   where
-  type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, AccountState)
+  type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, ChainAccountState)
   type State (CERTS era) = (CertState era, CertIx)
   type Signal (CERTS era) = Maybe (TxCert era, CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
@@ -199,7 +199,7 @@ genTxCerts ::
   CertState era ->
   SlotNo ->
   TxIx ->
-  AccountState ->
+  ChainAccountState ->
   Gen
     ( [TxCert era]
     , Coin

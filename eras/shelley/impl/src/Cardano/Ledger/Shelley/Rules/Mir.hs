@@ -25,27 +25,19 @@ import Cardano.Ledger.Coin (Coin, addDeltaCoin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
-import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   EpochState,
-  InstantaneousRewards (..),
-  certDStateL,
   curPParamsEpochStateL,
-  dsIRewards,
-  dsIRewardsL,
-  dsUnifiedL,
-  esAccountState,
+  esChainAccountState,
   esLState,
   esLStateL,
   esNonMyopic,
   esSnapshots,
   lsCertStateL,
   prevPParamsEpochStateL,
-  rewards,
   pattern EpochState,
  )
-import Cardano.Ledger.State (EraCertState)
+import Cardano.Ledger.State
 import Cardano.Ledger.UMap (compactCoinOrError)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
@@ -118,7 +110,7 @@ mirTransition = do
   TRC
     ( _
       , es@EpochState
-          { esAccountState = acnt
+          { esChainAccountState = chainAccountState
           , esSnapshots = ss
           , esLState = ls
           , esNonMyopic = nm
@@ -131,8 +123,8 @@ mirTransition = do
       dpState = ls ^. lsCertStateL
       ds = dpState ^. certDStateL
       rewards' = rewards ds
-      reserves = asReserves acnt
-      treasury = asTreasury acnt
+      reserves = casReserves chainAccountState
+      treasury = casTreasury chainAccountState
       irwdR = rewards' UM.◁ iRReserves (dsIRewards ds) :: Map.Map (Credential 'Staking) Coin
       irwdT = rewards' UM.◁ iRTreasury (dsIRewards ds) :: Map.Map (Credential 'Staking) Coin
       totR = fold irwdR
@@ -146,9 +138,9 @@ mirTransition = do
       tellEvent $ MirTransfer ((dsIRewards ds) {iRReserves = irwdR, iRTreasury = irwdT})
       pure $
         EpochState
-          acnt
-            { asReserves = availableReserves <-> totR
-            , asTreasury = availableTreasury <-> totT
+          ChainAccountState
+            { casReserves = availableReserves <-> totR
+            , casTreasury = availableTreasury <-> totT
             }
           ( ls
               & lsCertStateL . certDStateL . dsUnifiedL .~ (rewards' UM.∪+ Map.map compactCoinOrError update)
@@ -166,7 +158,7 @@ mirTransition = do
           availableTreasury
       pure $
         EpochState
-          acnt
+          chainAccountState
           ( ls
               & lsCertStateL . certDStateL . dsIRewardsL .~ emptyInstantaneousRewards
           )
