@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (nameTxCert) whe
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import Constrained.API
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg (nameDelegCert)

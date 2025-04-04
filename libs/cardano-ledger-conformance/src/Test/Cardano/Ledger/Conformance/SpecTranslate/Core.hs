@@ -40,7 +40,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Void (Void)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), V1, (:*:) (..), (:+:) (..))
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.TreeDiff (Expr (..), ToExpr (..), showExpr)
 
 type SpecTranslationError = Text
