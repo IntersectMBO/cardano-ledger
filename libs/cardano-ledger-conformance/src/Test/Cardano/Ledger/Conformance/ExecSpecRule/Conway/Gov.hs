@@ -24,12 +24,10 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common
 
 instance
-  ( NFData (SpecRep (ConwayGovPredFailure ConwayEra))
-  , IsConwayUniv fn
-  ) =>
-  ExecSpecRule fn "GOV" ConwayEra
+  NFData (SpecRep (ConwayGovPredFailure ConwayEra)) =>
+  ExecSpecRule "GOV" ConwayEra
   where
-  type ExecContext fn "GOV" ConwayEra = EnactState ConwayEra
+  type ExecContext "GOV" ConwayEra = EnactState ConwayEra
 
   environmentSpec _ = govEnvSpec
 

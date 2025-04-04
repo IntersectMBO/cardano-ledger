@@ -16,7 +16,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Governance (VotingProcedures)
 import Cardano.Ledger.Conway.TxCert
-import Constrained
+import Constrained.API
 import Data.Bifunctor (Bifunctor (..))
 import Data.Map.Strict (Map)
 import qualified Lib as Agda
@@ -34,21 +34,18 @@ instance Inject (WitUniv ConwayEra, ConwayCertExecContext ConwayEra) (Map Reward
 instance Inject (WitUniv ConwayEra, ConwayCertExecContext ConwayEra) (VotingProcedures ConwayEra) where
   inject (_, x) = ccecVotes x
 
-instance
-  IsConwayUniv fn =>
-  ExecSpecRule fn "GOVCERT" ConwayEra
-  where
-  type ExecContext fn "GOVCERT" ConwayEra = (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
+instance ExecSpecRule "GOVCERT" ConwayEra where
+  type ExecContext "GOVCERT" ConwayEra = (WitUniv ConwayEra, ConwayCertExecContext ConwayEra)
 
   genExecContext = do
     univ <- genWitUniv @ConwayEra 300
-    ccec <- genFromSpec @ConwayFn (conwayCertExecContextSpec univ 5)
+    ccec <- genFromSpec (conwayCertExecContextSpec univ 5)
     pure (univ, ccec)
 
   environmentSpec (univ, _) = govCertEnvSpec univ
 
   stateSpec (univ, ccec) _env =
-    certStateSpec @ConwayEra @fn univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
+    certStateSpec @ConwayEra univ (ccecDelegatees ccec) (ccecWithdrawals ccec)
 
   signalSpec (univ, _) = govCertSpec univ
 

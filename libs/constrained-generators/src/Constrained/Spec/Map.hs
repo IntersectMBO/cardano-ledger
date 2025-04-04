@@ -1,10 +1,12 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -21,34 +23,49 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 #endif
 
-module Constrained.Spec.Map (MapSpec (..), defaultMapSpec, dom_, rng_, lookup_) where
+module Constrained.Spec.Map where
 
 import Constrained.Base
-import Constrained.Core
+import Constrained.Conformance
+import Constrained.Core (Evidence (..), NonEmpty ((:|)), unionWithMaybe)
 import Constrained.GenT
-import Constrained.Instances ()
+import Constrained.Generic (Prod (..))
 import Constrained.List
-import Constrained.Spec.Generics
-import Constrained.Spec.Pairs
-import Constrained.Univ
+import Constrained.NumSpec (cardinality, geqSpec, leqSpec, nubOrd)
+import Constrained.Spec.ListFoldy (
+  FoldSpec (..),
+  Foldy (..),
+  ListSpec (..),
+  adds,
+  combineFoldSpec,
+  conformsToFoldSpec,
+  elem_,
+  toPredsFoldSpec,
+ )
+import Constrained.Spec.Set
+import Constrained.Spec.Size (Sized (..), maxSpec, sizeOf_)
+import Constrained.Spec.SumProd
+import Constrained.Syntax (forAll, genHint, letBind, unsafeExists)
+import Constrained.TheKnot
 import Control.Monad
 import Data.Foldable
+import Data.Kind
 import Data.List (nub)
-import Data.List.NonEmpty (NonEmpty ((:|)))
-import Data.List.NonEmpty qualified as NE
+import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
-import Data.Map qualified as Map
+import qualified Data.Map as Map
 import Data.Set (Set)
-import Data.Set qualified as Set
+import qualified Data.Set as Set
 import GHC.Generics
+import GHC.TypeLits
 import Prettyprinter
-import Test.QuickCheck (Arbitrary (..), frequency, genericShrink, shrinkList)
+import Test.QuickCheck hiding (Fun, Witness, forAll)
 
 ------------------------------------------------------------------------
 -- HasSpec
 ------------------------------------------------------------------------
 
-instance Ord a => Sized fn (Map.Map a b) where
+instance Ord a => Sized (Map.Map a b) where
   sizeOf = toInteger . Map.size
   liftSizeSpec sz cant = typeSpec $ defaultMapSpec {mapSpecSize = TypeSpec sz cant}
   liftMemberSpec xs = case NE.nonEmpty (nubOrd xs) of
@@ -59,18 +76,18 @@ instance Ord a => Sized fn (Map.Map a b) where
       <> geqSpec (sizeOf mustv)
       <> size
 
-data MapSpec fn k v = MapSpec
+data MapSpec k v = MapSpec
   { mapSpecHint :: Maybe Integer
   , mapSpecMustKeys :: Set k
   , mapSpecMustValues :: [v]
-  , mapSpecSize :: Specification fn Integer
-  , mapSpecElem :: Specification fn (k, v)
-  , mapSpecFold :: FoldSpec fn v
+  , mapSpecSize :: Specification Integer
+  , mapSpecElem :: Specification (k, v)
+  , mapSpecFold :: FoldSpec v
   }
   deriving (Generic)
 
 -- | emptySpec without all the constraints
-defaultMapSpec :: Ord k => MapSpec fn k v
+defaultMapSpec :: Ord k => MapSpec k v
 defaultMapSpec = MapSpec Nothing mempty mempty TrueSpec TrueSpec NoFold
 
 -- TODO: consider making this more interesting to get fewer discarded tests
@@ -78,13 +95,13 @@ defaultMapSpec = MapSpec Nothing mempty mempty TrueSpec TrueSpec NoFold
 instance
   ( Arbitrary k
   , Arbitrary v
-  , Arbitrary (TypeSpec fn k)
-  , Arbitrary (TypeSpec fn v)
+  , Arbitrary (TypeSpec k)
+  , Arbitrary (TypeSpec v)
   , Ord k
-  , HasSpec fn k
-  , Foldy fn v
+  , HasSpec k
+  , Foldy v
   ) =>
-  Arbitrary (MapSpec fn k v)
+  Arbitrary (MapSpec k v)
   where
   arbitrary =
     MapSpec
@@ -96,16 +113,16 @@ instance
       <*> frequency [(1, pure NoFold), (1, arbitrary)]
   shrink = genericShrink
 
-instance Arbitrary (FoldSpec fn (Map k v)) where
+instance Arbitrary (FoldSpec (Map k v)) where
   arbitrary = pure NoFold
 
 instance
-  ( HasSpec fn (k, v)
-  , HasSpec fn k
-  , HasSpec fn v
-  , HasSpec fn [v]
+  ( HasSpec (k, v)
+  , HasSpec k
+  , HasSpec v
+  , HasSpec [v]
   ) =>
-  Pretty (WithPrec (MapSpec fn k v))
+  Pretty (WithPrec (MapSpec k v))
   where
   pretty (WithPrec d s) =
     parensIf (d > 10) $
@@ -120,12 +137,12 @@ instance
           ]
 
 instance
-  ( HasSpec fn (k, v)
-  , HasSpec fn k
-  , HasSpec fn v
-  , HasSpec fn [v]
+  ( HasSpec (k, v)
+  , HasSpec k
+  , HasSpec v
+  , HasSpec [v]
   ) =>
-  Show (MapSpec fn k v)
+  Show (MapSpec k v)
   where
   showsPrec d = shows . prettyPrec d
 
@@ -133,12 +150,24 @@ instance Ord k => Forallable (Map k v) (k, v) where
   fromForAllSpec kvs = typeSpec $ defaultMapSpec {mapSpecElem = kvs}
   forAllToList = Map.toList
 
+-- ============================================================
+-- We will need to take projections on (Specification (a,b))
+
+fstSpec :: forall k v. (HasSpec k, HasSpec v) => Specification (k, v) -> Specification k
+fstSpec s = mapSpec ProdFstW (mapSpec ToGenericW s)
+
+sndSpec :: forall k v. (HasSpec k, HasSpec v) => Specification (k, v) -> Specification v
+sndSpec s = mapSpec ProdSndW (mapSpec ToGenericW s)
+
+-- ======================================================================
+-- The HasSpec instance for Maps
+
 instance
-  (Ord k, HasSpec fn (Prod k v), HasSpec fn k, HasSpec fn v, HasSpec fn [v]) =>
-  HasSpec fn (Map k v)
+  (Ord k, HasSpec (Prod k v), HasSpec k, HasSpec v, HasSpec [v], IsNormalType k, IsNormalType v) =>
+  HasSpec (Map k v)
   where
-  type TypeSpec fn (Map k v) = MapSpec fn k v
-  type Prerequisites fn (Map k v) = (HasSpec fn k, HasSpec fn v)
+  type TypeSpec (Map k v) = MapSpec k v
+  type Prerequisites (Map k v) = (HasSpec k, HasSpec v)
 
   emptySpec = defaultMapSpec
 
@@ -182,8 +211,8 @@ instance
               fold
                 [ maybe TrueSpec (leqSpec . max 0) mHint
                 , size
-                , maxSpec (cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
-                , maxSpec (cardinalTrueSpec @fn @k)
+                , maxSpec (cardinality (fstSpec kvs)) -- (mapSpec FstW  (mapSpec ToGenericW kvs)))
+                , maxSpec (cardinalTrueSpec @k)
                 , geqSpec 0
                 ]
         n <- genFromSpecT size'
@@ -211,7 +240,7 @@ instance
         explain1 ("  n = " ++ show n) $ go n kvs mempty
   genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
     mustMap <- explain1 "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
-      let vSpec = constrained $ \v -> satisfies (pair_ (lit k) v) kvs
+      let vSpec = constrained $ \v -> satisfies (pair_ (Lit k) v) kvs
       v <- explain1 (show $ "vSpec =" <+> pretty vSpec) $ genFromSpecT vSpec
       pure (k, v)
     let haveVals = map snd mustMap
@@ -222,14 +251,14 @@ instance
             (sz + Lit (sizeOf mustMap))
             ( maybe TrueSpec (leqSpec . max 0) mHint
                 <> size
-                <> maxSpec (cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
-                <> maxSpec (cardinalTrueSpec @fn @k)
+                <> maxSpec (cardinality (fstSpec kvs)) -- (mapSpec FstW $ mapSpec ToGenericW kvs))
+                <> maxSpec (cardinalTrueSpec @k)
             )
         foldSpec' = case foldSpec of
           NoFold -> NoFold
-          FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec
+          FoldSpec fn@(Fun symbol) sumSpec -> FoldSpec fn $ propagate (Context theAddFn (HOLE :<> mustSum :<| End)) sumSpec
             where
-              mustSum = adds @fn (map (sem fn) haveVals)
+              mustSum = adds (map (semantics symbol) haveVals)
     let valsSpec =
           ListSpec
             Nothing
@@ -251,7 +280,7 @@ instance
         $ valsSpec
     let go m [] = pure m
         go m (v : restVals') = do
-          let keySpec = notMemberSpec (Map.keysSet m) <> constrained (\k -> pair_ k (lit v) `satisfies` kvs)
+          let keySpec = notMemberSpec (Map.keysSet m) <> constrained (\k -> pair_ k (Lit v) `satisfies` kvs)
           k <-
             explain
               ( NE.fromList
@@ -270,7 +299,7 @@ instance
 
   toPreds m (MapSpec mHint mustKeys mustVals size kvs foldSpec) =
     toPred $
-      [ assert $ lit mustKeys `subset_` dom_ m
+      [ Assert $ Lit mustKeys `subset_` dom_ m
       , forAll (Lit mustVals) $ \val ->
           val `elem_` rng_ m
       , sizeOf_ (rng_ m) `satisfies` size
@@ -280,138 +309,172 @@ instance
       ]
 
 instance
-  (Ord k, HasSpec fn (Prod k v), HasSpec fn k, HasSpec fn v, HasSpec fn [v]) =>
-  HasGenHint fn (Map k v)
+  (Ord k, HasSpec k, HasSpec v, HasSpec [v], IsNormalType k, IsNormalType v) =>
+  HasGenHint (Map k v)
   where
   type Hint (Map k v) = Integer
   giveHint h = typeSpec $ defaultMapSpec {mapSpecHint = Just h}
 
 ------------------------------------------------------------------------
--- Functions
+-- Logic instances for
 ------------------------------------------------------------------------
 
-instance BaseUniverse fn => Functions (MapFn fn) fn where
-  propagateSpecFun _ _ TrueSpec = TrueSpec
-  propagateSpecFun fn ctx (ExplainSpec [] s) = propagateSpecFun fn ctx s
-  propagateSpecFun fn ctx (ExplainSpec es s) = ExplainSpec es $ propagateSpecFun fn ctx s
-  propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
-  propagateSpecFun fn ctx spec = case fn of
-    _
-      | SuspendedSpec v ps <- spec
-      , ListCtx pre HOLE suf <- ctx ->
-          constrained $ \v' ->
-            let args = appendList (mapList (\(Value a) -> Lit a) pre) (v' :> mapList (\(Value a) -> Lit a) suf)
-             in Let (App (injectFn fn) args) (v :-> ps)
-    Dom ->
-      -- No TypeAbstractions in ghc-8.10
-      case fn of
-        (_ :: MapFn fn '[Map k v] (Set k))
-          | NilCtx HOLE <- ctx
-          , Evidence <- prerequisites @fn @(Map k v) -> case spec of
-              MemberSpec (s :| []) ->
-                typeSpec $
-                  MapSpec Nothing s [] (equalSpec $ sizeOf s) TrueSpec NoFold
-              TypeSpec (SetSpec must elemspec size) [] ->
-                typeSpec $
-                  MapSpec
-                    Nothing
-                    must
-                    []
-                    size
-                    (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec)
-                    NoFold
-              _ -> ErrorSpec (NE.fromList ["Dom on bad map spec", show spec])
-    Rng ->
-      -- No TypeAbstractions in ghc-8.10
-      case fn of
-        (_ :: MapFn fn '[Map k v] [v])
-          | NilCtx HOLE <- ctx
-          , Evidence <- prerequisites @fn @(Map k v) ->
-              case spec of
-                TypeSpec (ListSpec listHint must size elemspec foldspec) [] ->
-                  typeSpec $
-                    MapSpec
-                      listHint
-                      Set.empty
-                      must
-                      size
-                      (constrained $ \kv -> satisfies (app (sndFn @fn) (app (toGenericFn @fn) kv)) elemspec)
-                      foldspec
-                -- NOTE: you'd think `MemberSpec [r]` was a safe and easy case. However, that requires not only that the elements
-                -- of the map are fixed to what is in `r`, but they appear in the order that they are in `r`. That's
-                -- very difficult to achieve!
-                _ -> ErrorSpec (NE.fromList ["Rng on bad map spec", show spec])
-    Lookup ->
-      case fn of
-        Lookup :: MapFn fn '[k, Map k v] (Maybe v)
-          | HOLE :? Value (m :: Map k v) :> Nil <- ctx ->
-              if Nothing `conformsToSpec` spec
-                then notMemberSpec [k | (k, v) <- Map.toList m, not $ Just v `conformsToSpec` spec]
-                else
-                  memberSpecList
-                    (Map.keys $ Map.filter ((`conformsToSpec` spec) . Just) m)
-                    ( NE.fromList
-                        [ "propagateSpecFun (lookup HOLE ms) on (MemberSpec ms)"
-                        , "forall pairs (d,r) in ms, no 'd' conforms to spec"
-                        , "  " ++ show spec
-                        ]
-                    )
-          | Value k :! NilCtx HOLE <- ctx
-          , Evidence <- prerequisites @fn @(Map k v) ->
-              constrained $ \m ->
-                [assert $ lit k `member_` dom_ m | not $ Nothing `conformsToSpec` spec]
-                  ++ [ forAll m $ \kv ->
-                        letBind (fst_ kv) $ \k' ->
-                          letBind (snd_ kv) $ \v ->
-                            whenTrue (lit k ==. k') $
-                              -- TODO: What you want to write is `cJust_ v `satisfies` spec` but we can't
-                              -- do that because we don't have access to `IsNormalType v` here. When
-                              -- we refactor the `IsNormalType` machinery we will be able to make
-                              -- this nicer.
-                              case spec of
-                                MemberSpec as -> assert $ v `elem_` lit [a | Just a <- NE.toList as]
-                                TypeSpec (SumSpec _ _ vspec) cant ->
-                                  v `satisfies` (vspec <> notMemberSpec [a | Just a <- cant])
-                     ]
+data MapW (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
+  DomW :: forall k v. Ord k => MapW "dom_" '[Map k v] (Set k)
+  RngW :: forall k v. Ord k => MapW "rng_" '[Map k v] [v]
+  LookupW :: forall k v. Ord k => MapW "lookup_" '[k, Map k v] (Maybe v)
 
-  -- NOTE: this function over-approximates and returns a liberal spec.
-  mapTypeSpec f ts = case f of
-    -- TODO: consider checking against singleton member-specs in the other component
-    -- interacting with cant
-    Dom ->
-      -- No TypeAbstractions in ghc-8.10
-      case f of
-        (_ :: MapFn fn '[Map k v] (Set k))
-          | MapSpec _ mustSet _ sz kvSpec _ <- ts
-          , Evidence <- prerequisites @fn @(Map k v) ->
-              typeSpec $ SetSpec mustSet (mapSpec (fstFn @fn) $ toSimpleRepSpec kvSpec) sz
-    Rng ->
-      -- No TypeAbstractions in ghc-8.10
-      case f of
-        (_ :: MapFn fn '[Map k v] [v])
-          | MapSpec _ _ mustList sz kvSpec foldSpec <- ts
-          , Evidence <- prerequisites @fn @(Map k v) ->
-              typeSpec $ ListSpec Nothing mustList sz (mapSpec (sndFn @fn) $ toSimpleRepSpec kvSpec) foldSpec
+deriving instance Eq (MapW s dom rng)
+
+mapSem :: MapW s d r -> FunTy d r
+mapSem DomW = Map.keysSet
+mapSem RngW = Map.elems
+mapSem LookupW = Map.lookup
+
+instance Semantics MapW where
+  semantics = mapSem
+
+instance Syntax MapW
+
+instance Show (MapW s d r) where
+  show DomW = "dom_"
+  show RngW = "rng_"
+  show LookupW = "lookup_"
+
+-- ============ DomW
+
+instance
+  (HasSpec k, HasSpec v, Ord k, IsNormalType v, IsNormalType k) =>
+  Logic "dom_" MapW '[Map k v] (Set k)
+  where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context DomW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App DomW (v' :> Nil)) (v :-> ps)
+  propagate (Context DomW (HOLE :<> End)) spec =
+    case spec of
+      MemberSpec (s :| []) ->
+        typeSpec $
+          MapSpec Nothing s [] (equalSpec $ sizeOf s) TrueSpec NoFold
+      TypeSpec (SetSpec must elemspec size) [] ->
+        typeSpec $
+          MapSpec
+            Nothing
+            must
+            []
+            size
+            (constrained $ \kv -> satisfies (fst_ kv) elemspec)
+            NoFold
+      _ -> ErrorSpec (NE.fromList ["Dom on bad map spec", show spec])
+  propagate ctx _ =
+    ErrorSpec $ pure ("Logic instance for DomW with wrong number of arguments. " ++ show ctx)
+
+  mapTypeSpec DomW (MapSpec _ mustSet _ sz kvSpec _)
+    | Evidence <- prerequisites @(Map k v) = typeSpec $ SetSpec mustSet (fstSpec @k @v kvSpec) sz
+
+-- ============ RngW
+
+instance
+  (HasSpec k, HasSpec v, Ord k, IsNormalType v, IsNormalType k) =>
+  Logic "rng_" MapW '[Map k v] [v]
+  where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context RngW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App RngW (v' :> Nil)) (v :-> ps)
+  propagate (Context RngW (HOLE :<> End)) spec
+    | Evidence <- prerequisites @(Map k v) =
+        case spec of
+          TypeSpec (ListSpec listHint must size elemspec foldspec) [] ->
+            typeSpec $
+              MapSpec
+                listHint
+                Set.empty
+                must
+                size
+                (constrained $ \kv -> satisfies (snd_ kv) elemspec)
+                foldspec
+          -- NOTE: you'd think `MemberSpec [r]` was a safe and easy case. However, that
+          -- requires not only that the elements of the map are fixed to what is in `r`,
+          -- but they appear in the order that they are in `r`. That's
+          -- very difficult to achieve!
+          _ -> ErrorSpec (NE.fromList ["Rng on bad map spec", show spec])
+  propagate ctx _ =
+    ErrorSpec $ pure ("Logic instance for RngW with wrong number of arguments. " ++ show ctx)
+
+  mapTypeSpec RngW (MapSpec _ _ mustList sz kvSpec foldSpec)
+    | Evidence <- prerequisites @(Map k v) =
+        typeSpec $ (ListSpec Nothing mustList sz (sndSpec @k @v kvSpec) foldSpec)
+
+-- ============ LookupW
+
+instance
+  (HasSpec k, HasSpec v, IsNormalType v, IsNormalType k) =>
+  Logic "lookup_" MapW '[k, Map k v] (Maybe v)
+  where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context LookupW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App LookupW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate (Context LookupW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App LookupW (Lit x :> v' :> Nil)) (v :-> ps)
+  propagate (Context LookupW (k :|> HOLE :<> End)) spec
+    | Evidence <- prerequisites @(Map k v) =
+        constrained $ \m ->
+          [Assert $ Lit k `member_` dom_ m | not $ Nothing `conformsToSpec` spec]
+            ++ [ forAll m $ \kv ->
+                  letBind (fst_ kv) $ \k' ->
+                    letBind (snd_ kv) $ \v ->
+                      whenTrue (Lit k ==. k') $
+                        -- TODO: What you want to write is `cJust_ v `satisfies` spec` but we can't
+                        -- do that because we don't have access to `IsNormalType v` here. When
+                        -- we refactor the `IsNormalType` machinery we will be able to make
+                        -- this nicer.
+                        case spec of
+                          MemberSpec as -> Assert $ v `elem_` Lit [a | Just a <- NE.toList as]
+                          TypeSpec (SumSpec _ _ vspec) cant ->
+                            v `satisfies` (vspec <> notMemberSpec [a | Just a <- cant])
+               ]
+  propagate (Context LookupW (HOLE :<> m :<| End)) spec =
+    if Nothing `conformsToSpec` spec
+      then notMemberSpec [k | (k, v) <- Map.toList m, not $ Just v `conformsToSpec` spec]
+      else
+        memberSpecList
+          (Map.keys $ Map.filter ((`conformsToSpec` spec) . Just) m)
+          ( NE.fromList
+              [ "propagate (lookup HOLE ms) on (MemberSpec ms)"
+              , "forall pairs (d,r) in ms, no 'd' conforms to spec"
+              , "  " ++ show spec
+              ]
+          )
+  propagate ctx _ =
+    ErrorSpec $ pure ("Logic instance for LookupW with wrong number of arguments. " ++ show ctx)
 
 ------------------------------------------------------------------------
 -- Syntax
 ------------------------------------------------------------------------
 
 dom_ ::
-  (HasSpec fn (Map k v), HasSpec fn k, Ord k) =>
-  Term fn (Map k v) ->
-  Term fn (Set k)
-dom_ = app domFn
+  (HasSpec (Map k v), HasSpec v, HasSpec k, Ord k, IsNormalType k, IsNormalType v) =>
+  Term (Map k v) ->
+  Term (Set k)
+dom_ = appTerm DomW
 
 rng_ ::
-  (HasSpec fn k, HasSpec fn v, Ord k) =>
-  Term fn (Map k v) ->
-  Term fn [v]
-rng_ = app rngFn
+  (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =>
+  Term (Map k v) ->
+  Term [v]
+rng_ = appTerm RngW
 
 lookup_ ::
-  (HasSpec fn k, HasSpec fn v, Ord k, IsNormalType v) =>
-  Term fn k ->
-  Term fn (Map k v) ->
-  Term fn (Maybe v)
-lookup_ = app lookupFn
+  (HasSpec k, HasSpec v, Ord k, IsNormalType k, IsNormalType v) =>
+  Term k ->
+  Term (Map k v) ->
+  Term (Maybe v)
+lookup_ = appTerm LookupW

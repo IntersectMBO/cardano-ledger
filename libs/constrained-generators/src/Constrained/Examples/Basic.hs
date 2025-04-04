@@ -11,18 +11,16 @@
 
 module Constrained.Examples.Basic where
 
+import Constrained.API
 import GHC.Generics
-
 import Test.QuickCheck qualified as QC
 
-import Constrained
-
-leqPair :: Specification BaseFn (Int, Int)
+leqPair :: Specification (Int, Int)
 leqPair = constrained $ \ [var| p |] ->
   match p $ \ [var| x |] [var| y |] ->
     x <=. y
 
-simplePairSpec :: Specification BaseFn (Int, Int)
+simplePairSpec :: Specification (Int, Int)
 simplePairSpec = constrained $ \(name "p" -> p) ->
   match p $ \(name "x" -> x) y ->
     [ assert $ x /=. 0
@@ -35,35 +33,35 @@ simplePairSpec = constrained $ \(name "p" -> p) ->
           . QC.classify (eval x > 0) "positive x"
     ]
 
-sizeAddOrSub1 :: Specification BaseFn Integer
+sizeAddOrSub1 :: Specification Integer
 sizeAddOrSub1 = constrained $ \s ->
   4 ==. s + 2
 
-sizeAddOrSub2 :: Specification BaseFn Integer
+sizeAddOrSub2 :: Specification Integer
 sizeAddOrSub2 = constrained $ \s ->
   4 ==. 2 + s
 
-sizeAddOrSub3 :: Specification BaseFn Integer
+sizeAddOrSub3 :: Specification Integer
 sizeAddOrSub3 = constrained $ \s ->
   4 ==. s - 2
 
 -- | We expect a negative Integer, so ltSpec tests for that.
-sizeAddOrSub4 :: Specification BaseFn Integer
+sizeAddOrSub4 :: Specification Integer
 sizeAddOrSub4 = ltSpec 0 <> (constrained $ \s -> 4 ==. 2 - s)
 
-sizeAddOrSub5 :: Specification BaseFn Integer
+sizeAddOrSub5 :: Specification Integer
 sizeAddOrSub5 = constrained $ \s ->
   2 ==. 12 - s
 
-listSubSize :: Specification BaseFn [Int]
+listSubSize :: Specification [Int]
 listSubSize = constrained $ \s ->
   2 ==. 12 - (sizeOf_ s)
 
-orPair :: Specification BaseFn (Int, Int)
+orPair :: Specification (Int, Int)
 orPair = constrained' $ \x y ->
   x <=. 5 ||. y <=. 5
 
-trickyCompositional :: Specification BaseFn (Int, Int)
+trickyCompositional :: Specification (Int, Int)
 trickyCompositional = constrained $ \p ->
   satisfies p simplePairSpec <> assert (fst_ p ==. 1000)
 
@@ -71,9 +69,9 @@ data Foo = Foo Int | Bar Int Int
   deriving (Show, Eq, Ord, Generic)
 
 instance HasSimpleRep Foo
-instance BaseUniverse fn => HasSpec fn Foo
+instance HasSpec Foo
 
-fooSpec :: Specification BaseFn Foo
+fooSpec :: Specification Foo
 fooSpec = constrained $ \foo ->
   (caseOn foo)
     ( branch $ \i ->
@@ -87,37 +85,37 @@ fooSpec = constrained $ \foo ->
         ]
     )
 
-intSpec :: Specification BaseFn (Int, Int)
+intSpec :: Specification (Int, Int)
 intSpec = constrained' $ \a b ->
   reify a (`mod` 10) $ \a' -> b ==. a'
 
-mapElemKeySpec :: Specification BaseFn Int
+mapElemKeySpec :: Specification Int
 mapElemKeySpec = constrained $ \n ->
-  letBind (pair_ n $ lit (False, 4)) $ \(p :: Term BaseFn (Int, (Bool, Int))) ->
+  letBind (pair_ n $ lit (False, 4)) $ \(p :: Term (Int, (Bool, Int))) ->
     letBind (snd_ (snd_ p)) $ \x ->
       [x <. 10, 0 <. x, not_ $ elem_ n $ lit []]
 
-intRangeSpec :: Int -> Specification BaseFn Int
+intRangeSpec :: Int -> Specification Int
 intRangeSpec a = constrained $ \n -> n <. lit a
 
-testRewriteSpec :: Specification BaseFn ((Int, Int), (Int, Int))
+testRewriteSpec :: Specification ((Int, Int), (Int, Int))
 testRewriteSpec = constrained' $ \x y ->
   x ==. fromGeneric_ (toGeneric_ y)
 
-pairSingletonSpec :: Specification BaseFn (Int, Int)
+pairSingletonSpec :: Specification (Int, Int)
 pairSingletonSpec = constrained $ \q ->
   forAll (singleton_ q) $ \p ->
     letBind (fst_ p) $ \x ->
       letBind (snd_ p) $ \y ->
         x <=. y
 
-parallelLet :: Specification BaseFn (Int, Int)
+parallelLet :: Specification (Int, Int)
 parallelLet = constrained $ \p ->
   [ letBind (fst_ p) $ \x -> 0 <. x
   , letBind (snd_ p) $ \x -> x <. 0
   ]
 
-letExists :: Specification BaseFn (Int, Int)
+letExists :: Specification (Int, Int)
 letExists = constrained $ \p ->
   [ letBind (fst_ p) $ \x -> 0 <. x
   , exists (\eval -> pure $ snd (eval p)) $
@@ -127,7 +125,7 @@ letExists = constrained $ \p ->
         ]
   ]
 
-letExistsLet :: Specification BaseFn (Int, Int)
+letExistsLet :: Specification (Int, Int)
 letExistsLet = constrained $ \p ->
   [ letBind (fst_ p) $ \x -> 0 <. x
   , exists (\eval -> pure $ snd (eval p)) $
@@ -140,11 +138,11 @@ letExistsLet = constrained $ \p ->
         ]
   ]
 
-dependencyWeirdness :: Specification BaseFn (Int, Int, Int)
+dependencyWeirdness :: Specification (Int, Int, Int)
 dependencyWeirdness = constrained' $ \x y z ->
   reify (x + y) id $ \zv -> z ==. zv
 
-parallelLetPair :: Specification BaseFn (Int, Int)
+parallelLetPair :: Specification (Int, Int)
 parallelLetPair = constrained $ \p ->
   [ match p $ \x y ->
       [ assert $ x <=. y
@@ -153,10 +151,10 @@ parallelLetPair = constrained $ \p ->
   , match p $ \x y -> y <=. x
   ]
 
-existsUnfree :: Specification BaseFn Int
+existsUnfree :: Specification Int
 existsUnfree = constrained $ \_ -> exists (\_ -> pure 1) $ \y -> y `elem_` lit [1, 2 :: Int]
 
-reifyYucky :: Specification BaseFn (Int, Int, Int)
+reifyYucky :: Specification (Int, Int, Int)
 reifyYucky = constrained' $ \x y z ->
   [ reify x id $ \w ->
       [ y ==. w
@@ -165,13 +163,13 @@ reifyYucky = constrained' $ \x y z ->
   , z `dependsOn` y
   ]
 
-basicSpec :: Specification BaseFn Int
+basicSpec :: Specification Int
 basicSpec = constrained $ \x ->
   exists (\eval -> pure $ eval x) $ \y ->
     satisfies x $ constrained $ \x' ->
       x' <=. 1 + y
 
-canFollowLike :: Specification BaseFn ((Int, Int), (Int, Int))
+canFollowLike :: Specification ((Int, Int), (Int, Int))
 canFollowLike = constrained' $ \p q ->
   match p $ \ma mi ->
     match q $ \ma' mi' ->
@@ -184,7 +182,7 @@ canFollowLike = constrained' $ \p q ->
       , ma' `dependsOn` ma
       ]
 
-ifElseBackwards :: Specification BaseFn (Int, Int)
+ifElseBackwards :: Specification (Int, Int)
 ifElseBackwards = constrained' $ \p q ->
   [ ifElse
       (p ==. 1)
@@ -193,20 +191,20 @@ ifElseBackwards = constrained' $ \p q ->
   , p `dependsOn` q
   ]
 
-assertReal :: Specification BaseFn Int
+assertReal :: Specification Int
 assertReal = constrained $ \x ->
   [ assert $ x <=. 10
   , assertReified x (<= 10)
   ]
 
-assertRealMultiple :: Specification BaseFn (Int, Int)
+assertRealMultiple :: Specification (Int, Int)
 assertRealMultiple = constrained' $ \x y ->
   [ assert $ x <=. 10
   , assert $ 11 <=. y
   , assertReified (pair_ x y) $ uncurry (/=)
   ]
 
-reifiesMultiple :: Specification BaseFn (Int, Int, Int)
+reifiesMultiple :: Specification (Int, Int, Int)
 reifiesMultiple = constrained' $ \x y z ->
   [ reifies (x + y) z id
   , x `dependsOn` y
@@ -214,12 +212,12 @@ reifiesMultiple = constrained' $ \x y z ->
 
 data Three = One | Two | Three deriving (Ord, Eq, Show, Generic)
 instance HasSimpleRep Three
-instance BaseUniverse fn => HasSpec fn Three
+instance HasSpec Three
 
-trueSpecUniform :: Specification BaseFn Three
+trueSpecUniform :: Specification Three
 trueSpecUniform = constrained $ \o -> monitor $ \eval -> QC.cover 30 True (show $ eval o)
 
-three :: Specification BaseFn Three
+three :: Specification Three
 three = constrained $ \o ->
   [ caseOn
       o
@@ -229,10 +227,10 @@ three = constrained $ \o ->
   , monitor $ \eval -> QC.cover 30 True (show $ eval o)
   ]
 
-three' :: Specification BaseFn Three
+three' :: Specification Three
 three' = three <> three
 
-threeSpecific :: Specification BaseFn Three
+threeSpecific :: Specification Three
 threeSpecific = constrained $ \o ->
   [ caseOn
       o
@@ -244,17 +242,17 @@ threeSpecific = constrained $ \o ->
         . QC.tabulate "TheValue" [show $ eval o]
   ]
 
-threeSpecific' :: Specification BaseFn Three
+threeSpecific' :: Specification Three
 threeSpecific' = threeSpecific <> threeSpecific
 
-posNegDistr :: Specification BaseFn Int
+posNegDistr :: Specification Int
 posNegDistr =
   constrained $ \x ->
     [ monitor $ \eval -> QC.cover 60 (0 < eval x) "x positive"
     , x `satisfies` chooseSpec (1, constrained (<. 0)) (2, constrained (0 <.))
     ]
 
-ifElseMany :: Specification BaseFn (Bool, Int, Int)
+ifElseMany :: Specification (Bool, Int, Int)
 ifElseMany = constrained' $ \b x y ->
   ifElse
     b
@@ -265,14 +263,14 @@ ifElseMany = constrained' $ \b x y ->
     , 10 <. y
     ]
 
-propBack :: Specification BaseFn (Int, Int)
+propBack :: Specification (Int, Int)
 propBack = constrained' $ \x y ->
   [ x ==. y + 10
   , x <. 20
   , 8 <. y
   ]
 
-propBack' :: Specification BaseFn (Int, Int)
+propBack' :: Specification (Int, Int)
 propBack' = constrained' $ \x y ->
   [ y ==. x - 10
   , 20 >. x
@@ -280,7 +278,7 @@ propBack' = constrained' $ \x y ->
   , y >. x - 20
   ]
 
-propBack'' :: Specification BaseFn (Int, Int)
+propBack'' :: Specification (Int, Int)
 propBack'' = constrained' $ \x y ->
   [ assert $ y + 10 ==. x
   , x `dependsOn` y
@@ -288,14 +286,14 @@ propBack'' = constrained' $ \x y ->
   , assert $ 8 <. y
   ]
 
-chooseBackwards :: Specification BaseFn (Int, [Int])
+chooseBackwards :: Specification (Int, [Int])
 chooseBackwards = constrained $ \xy ->
   [ assert $ xy `elem_` lit [(1, [1001 .. 1005]), (2, [1006 .. 1010])]
   , match xy $ \_ ys ->
       forAll ys $ \y -> 0 <. y
   ]
 
-chooseBackwards' :: Specification BaseFn ([(Int, [Int])], (Int, [Int]))
+chooseBackwards' :: Specification ([(Int, [Int])], (Int, [Int]))
 chooseBackwards' = constrained' $ \ [var| xys |] [var| xy |] ->
   [ forAll' xys $ \_ [var| ys |] ->
       forAll ys $ \ [var| y |] -> 1000 <. y
@@ -305,7 +303,7 @@ chooseBackwards' = constrained' $ \ [var| xys |] [var| xy |] ->
       forAll ys $ \ [var| y |] -> 0 <. y
   ]
 
-whenTrueExists :: Specification BaseFn Int
+whenTrueExists :: Specification Int
 whenTrueExists = constrained $ \x ->
   whenTrue ([var| x |] ==. 0) $
     exists (\_ -> pure False) $ \b ->
@@ -313,7 +311,7 @@ whenTrueExists = constrained $ \x ->
       , not_ (not_ b)
       ]
 
-wtfSpec :: Specification BaseFn ([Int], Maybe ((), [Int]))
+wtfSpec :: Specification ([Int], Maybe ((), [Int]))
 wtfSpec = constrained' $ \ [var| options |] [var| mpair |] ->
   caseOn
     mpair

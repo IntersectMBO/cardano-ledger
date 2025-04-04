@@ -27,6 +27,7 @@ module Constrained.Spec.Generics (
   Args,
   GenericsFn,
   IsNormalType,
+  IsProductType,
   fst_,
   snd_,
   pair_,
@@ -60,6 +61,7 @@ import Constrained.Base
 import Constrained.Core
 import Constrained.List
 import Constrained.Spec.Pairs ()
+import Constrained.Spec.SumProd (IsProductType)
 import Constrained.Univ
 import qualified Data.List.NonEmpty as NE
 

@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -15,29 +15,58 @@
 -- | Useful properties for debugging custom @HasSpec@ instances.
 module Constrained.Properties where
 
-import Constrained.Base
-import Constrained.Internals
-import Constrained.List
+import Constrained.API
+import Constrained.Base (
+  AppRequires,
+  CList (..),
+  Context (..),
+  Ctx (Ctx, HOLE),
+  Mode (..),
+  appTerm,
+  (/>),
+ )
+import Constrained.Conformance (monitorSpec)
+import Constrained.Core (Value (..), Var (..), unValue)
+import Constrained.GenT (GE (..), errorGE, fromGEDiscard, fromGEProp, strictGen)
+import Constrained.List (
+  All,
+  FunTy,
+  List (..),
+  TypeList,
+  lengthList,
+  listShape,
+  uncurryList,
+  uncurryList_,
+ )
+import Constrained.Spec.ListFoldy (genInverse)
+import Constrained.Syntax (PolyCList (..))
+import Constrained.TheKnot
+import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
-import Data.Typeable
+import Data.Typeable (Typeable, typeOf)
 import Prettyprinter
-import Test.QuickCheck qualified as QC
+import qualified Test.QuickCheck as QC
+
+conformsToSpecProp :: forall a. HasSpec a => a -> Specification a -> QC.Property
+conformsToSpecProp a s = case conformsToSpecE a (simplifySpec s) (pure "call to conformsToSpecProp") of
+  Nothing -> QC.property True
+  Just msgs -> QC.counterexample (unlines (NE.toList msgs)) False
 
 forAllSpecShow ::
-  (HasSpec fn a, QC.Testable p) => Specification fn a -> (a -> String) -> (a -> p) -> QC.Property
+  (HasSpec a, QC.Testable p) => Specification a -> (a -> String) -> (a -> p) -> QC.Property
 forAllSpecShow spec pp prop =
   let sspec = simplifySpec spec
    in QC.forAllShrinkShow (genFromSpec sspec) (shrinkWithSpec sspec) pp $ \a ->
         monitorSpec spec a $ prop a
 
-forAllSpec :: (HasSpec fn a, QC.Testable p) => Specification fn a -> (a -> p) -> QC.Property
+forAllSpec :: (HasSpec a, QC.Testable p) => Specification a -> (a -> p) -> QC.Property
 forAllSpec spec prop = forAllSpecShow spec show prop
 
-forAllSpecDiscard :: (HasSpec fn a, QC.Testable p) => Specification fn a -> (a -> p) -> QC.Property
+forAllSpecDiscard :: (HasSpec a, QC.Testable p) => Specification a -> (a -> p) -> QC.Property
 forAllSpecDiscard spec prop =
   let sspec = simplifySpec spec
    in QC.forAllShrinkBlind
-        (strictGen $ genFromSpecT @_ @_ @GE sspec)
+        (strictGen $ genFromSpecT @_ @GE sspec)
         (map pure . shrinkWithSpec sspec . errorGE)
         $ \ge ->
           fromGEDiscard $ do
@@ -45,8 +74,8 @@ forAllSpecDiscard spec prop =
             pure $ QC.counterexample (show a) $ prop a
 
 prop_sound ::
-  HasSpec fn a =>
-  Specification fn a ->
+  HasSpec a =>
+  Specification a ->
   QC.Property
 prop_sound spec =
   QC.forAllBlind (strictGen $ genFromSpecT spec) $ \ma ->
@@ -58,16 +87,16 @@ prop_sound spec =
               conformsToSpecProp a spec
       _ -> QC.cover 80 False "successful" True
 
-prop_constrained_satisfies_sound :: HasSpec fn a => Specification fn a -> QC.Property
+prop_constrained_satisfies_sound :: HasSpec a => Specification a -> QC.Property
 prop_constrained_satisfies_sound spec = prop_sound (constrained $ \a -> satisfies a spec)
 
-prop_constrained_explained :: HasSpec fn a => Specification fn a -> QC.Property
+prop_constrained_explained :: HasSpec a => Specification a -> QC.Property
 prop_constrained_explained spec =
   QC.forAll QC.arbitrary $ \es ->
-    prop_sound $ constrained $ \x -> explanation es $ x `satisfies` spec
+    prop_sound $ constrained $ \x -> Explain es $ x `satisfies` spec
 
 -- | `prop_complete ps` assumes that `ps` is satisfiable
-prop_complete :: HasSpec fn a => Specification fn a -> QC.Property
+prop_complete :: HasSpec a => Specification a -> QC.Property
 prop_complete s =
   QC.forAllBlind (strictGen $ genFromSpecT s) $ \ma -> fromGEProp $ do
     a <- ma
@@ -75,10 +104,10 @@ prop_complete s =
     -- or fall into an inifinite loop
     pure $ length (show a) > 0
 
-prop_constrained_satisfies_complete :: HasSpec fn a => Specification fn a -> QC.Property
+prop_constrained_satisfies_complete :: HasSpec a => Specification a -> QC.Property
 prop_constrained_satisfies_complete spec = prop_complete (constrained $ \a -> satisfies a spec)
 
-prop_shrink_sound :: HasSpec fn a => Specification fn a -> QC.Property
+prop_shrink_sound :: HasSpec a => Specification a -> QC.Property
 prop_shrink_sound s =
   QC.forAll (strictGen $ genFromSpecT s) $ \ma -> fromGEDiscard $ do
     a <- ma
@@ -91,46 +120,48 @@ prop_shrink_sound s =
             conformsToSpecProp a' s
 
 prop_conformEmpty ::
-  forall fn a.
-  HasSpec fn a =>
+  forall a.
+  HasSpec a =>
   a ->
   QC.Property
-prop_conformEmpty a = QC.property $ conformsTo @fn a (emptySpec @fn @a)
+prop_conformEmpty a = QC.property $ conformsTo a (emptySpec @a)
 
-prop_univSound :: forall fn. TestableFn fn -> QC.Property
+prop_univSound :: TestableFn -> QC.Property
 prop_univSound (TestableFn fn) =
   QC.label (show fn) $
-    QC.forAllShrinkBlind QC.arbitrary QC.shrink $ \(TestableCtx ctx :: TestableCtx fn as) ->
-      QC.forAllShrinkBlind QC.arbitrary QC.shrink $ \(spec :: Specification fn a) ->
-        QC.counterexample ("\nfn ctx = " ++ showCtxWith fn (TestableCtx ctx)) $
+    QC.forAllShrinkBlind @QC.Property (genCtxForFn fn) QC.shrink $ \tc@(TestableCtx clist) ->
+      QC.forAllShrinkBlind QC.arbitrary QC.shrink $ \spec ->
+        QC.counterexample ("\nfn ctx = " ++ showCtxWith fn tc) $
           QC.counterexample (show $ "\nspec =" <+> pretty spec) $
-            let sspec = simplifySpec (propagateSpecFun fn ctx spec)
-             in QC.counterexample ("\n" ++ show ("propagateSpecFun fn ctx spec =" /> pretty sspec)) $
+            let sspec = simplifySpec (propagate (Context fn clist) spec)
+             in QC.counterexample ("\n" ++ show ("propagate ctx spec =" /> pretty sspec)) $
                   QC.counterexample ("\n" ++ show (prettyPlan sspec)) $
                     QC.within 20_000_000 $
-                      QC.forAllBlind (strictGen $ genFromSpecT @_ @_ sspec) $ \ge ->
+                      QC.forAllBlind (strictGen $ genFromSpecT sspec) $ \ge ->
                         fromGEDiscard $ do
                           a <- ge
-                          let res = uncurryList_ unValue (sem fn) $ fillListCtx ctx $ \HOLE -> Value a
+                          let res = runOnCtx clist fn a
                           pure $
                             QC.counterexample ("\ngenerated value: a = " ++ show a) $
                               QC.counterexample ("\nfn ctx[a] = " ++ show res) $
                                 conformsToSpecProp res spec
+main :: IO ()
+main = QC.quickCheck (QC.withMaxSuccess 10000 prop_univSound)
 
-prop_gen_sound :: forall fn a. HasSpec fn a => Specification fn a -> QC.Property
+prop_gen_sound :: forall a. HasSpec a => Specification a -> QC.Property
 prop_gen_sound spec =
   let sspec = simplifySpec spec
    in QC.tabulate "specType spec" [specType spec] $
         QC.tabulate "specType (simplifySpec spec)" [specType sspec] $
           QC.counterexample ("\n" ++ show (prettyPlan sspec)) $
-            QC.forAllBlind (strictGen $ genFromSpecT @_ @_ @GE sspec) $ \ge ->
+            QC.forAllBlind (strictGen $ genFromSpecT @a @GE sspec) $ \ge ->
               fromGEDiscard $ do
                 a <- ge
                 pure $
                   QC.counterexample ("\ngenerated value: a = " ++ show a) $
                     conformsToSpecProp a spec
 
-specType :: Specification fn a -> String
+specType :: Specification a -> String
 specType (ExplainSpec [] s) = specType s
 specType (ExplainSpec _ s) = "(ExplainSpec " ++ specType s ++ ")"
 specType SuspendedSpec {} = "SuspendedSpec"
@@ -139,117 +170,239 @@ specType MemberSpec {} = "MemberSpec"
 specType TypeSpec {} = "TypeSpec"
 specType TrueSpec {} = "TrueSpec"
 
+-- ========================================================================
+-- Combining function symbols and compatible contexts in interesting ways.
+-- ========================================================================
+
+-- | Builds a Term from A FunSym and an appropriate (List Term) of args
+--   computed from the TestableCtx, using fillCList, which fills the HOLE with variable 'v0'
+--  (uncurryList $ appTerm ProdW) (Lit True :> Lit False :> Nil)  ===> prod_ True False
 showCtxWith ::
-  forall fn as b.
-  (Typeable as, TypeList as, All (HasSpec fn) as, HasSpec fn b) =>
-  fn as b ->
-  TestableCtx fn as ->
+  forall s t as b.
+  (AppRequires s t as b, Fill as) =>
+  t s as b ->
+  TestableCtx as ->
   String
 showCtxWith fn (TestableCtx ctx) = show $ pretty tm
   where
-    tm :: Term fn b
+    tm :: Term b
     tm =
-      uncurryList (app fn) $
-        fillListCtx (mapListCtxC @(HasSpec fn) (lit @_ @fn . unValue) ctx) (\HOLE -> V $ Var 0 "v")
+      uncurryList (appTerm fn) $
+        fillCList
+          (\case HOLE -> V $ Var 0 "v"; Ctx {} -> error ("Impossible, only HOLE has type (Ctx hole hole)"))
+          Lit
+          ctx
 
-data TestableFn fn where
+-- | Takes a CList, replaces the hole with 'x', and turns it into a (List Value as), then uses the
+--   semantics of the function symbol 'fn' applying it to each item in the List in turn,
+--   to get a resulting answer of type 'b'
+runOnCtx ::
+  forall s t as b x.
+  (AppRequires s t as b, Fill as) =>
+  CList 'Pre as x x ->
+  t s as b ->
+  x ->
+  b
+runOnCtx clist fn x = uncurryList_ unValue (semantics fn) (fillCList fillWithX Value clist)
+  where
+    fillWithX HOLE = Value x
+    fillWithX _ = error ("Impossible, only HOLE has type (Ctx hole hole)")
+
+-- | Fill in the HOLE in a CList, and then turn it into a regular List
+class Fill as where
+  fillCList ::
+    forall f hole m.
+    (Ctx hole hole -> f hole) -> (forall a. Literal a => a -> f a) -> CList m as hole hole -> List f as
+
+instance Fill '[] where
+  fillCList _ _ End = Nil
+
+instance Fill as => Fill (a : as) where
+  fillCList f g (x :|> xs) = g x :> fillCList @as f g xs
+  fillCList f g (x :<| xs) = g x :> fillCList @as f g xs
+  fillCList f g (c :<> xs) = f c :> fillCList @as f g xs
+
+-- ============================================================
+-- An abstraction that hides everything about a function symbol
+-- But includes inside in the constraints, everything needed to
+-- use the function symbol
+
+data TestableFn where
   TestableFn ::
-    ( All (HasSpec fn) as
-    , TypeList as
-    , HasSpec fn b
-    , Typeable as
-    , QC.Arbitrary (Specification fn b)
+    ( Fill as
+    , QC.Arbitrary (Specification b)
     , Typeable (FunTy as b)
+    , AppRequires s t as b
     ) =>
-    fn as b ->
-    TestableFn fn
+    t s as b ->
+    TestableFn
 
-instance BaseUniverse fn => Show (TestableFn fn) where
-  show (TestableFn (fn :: fn as b)) =
+genCtxForFn :: forall s t as b. AppRequires s t as b => t s as b -> QC.Gen (TestableCtx as)
+genCtxForFn _ = QC.arbitrary @(TestableCtx as)
+
+ex2 :: Prod (Value Bool) (Value Bool)
+ex2 = (uncurryList (semantics ProdW)) (Value True :> Value False :> Nil)
+
+instance Show TestableFn where
+  show (TestableFn (fn :: t s as b)) =
     show fn ++ " :: " ++ show (typeOf (undefined :: FunTy as b))
 
-data TestableCtx fn as where
-  TestableCtx ::
-    HasSpec fn a =>
-    ListCtx Value as (HOLE a) ->
-    TestableCtx fn as
+-- ===========================================================
+-- Random contexts
+-- ===========================================================
 
-instance forall fn as. (All (HasSpec fn) as, TypeList as) => QC.Arbitrary (TestableCtx fn as) where
+data TestableCtx as where
+  TestableCtx ::
+    ( HasSpec a
+    , All HasSpec as
+    ) =>
+    CList 'Pre as a a -> -- This is a Clist with only HOLE Ctx inside, the final 'a a' ensure this.
+    TestableCtx as
+
+-- ===========================================================
+-- QC.Arbitrary instances
+-- ===========================================================
+
+genTestableCtx :: (All HasSpec as, TypeList as) => QC.Gen (TestableCtx as)
+genTestableCtx = QC.arbitrary
+
+instance forall as. (All HasSpec as, TypeList as) => QC.Arbitrary (TestableCtx as) where
   arbitrary = do
     let shape = listShape @as
     idx <- QC.choose (0, lengthList shape - 1)
-    go idx shape
-    where
-      go :: forall f as'. All (HasSpec fn) as' => Int -> List f as' -> QC.Gen (TestableCtx fn as')
-      go 0 (_ :> as) =
-        TestableCtx . (HOLE :?) <$> mapMListC @(HasSpec fn) (\_ -> Value <$> genFromSpec @fn TrueSpec) as
-      go n (_ :> as) = do
-        TestableCtx ctx <- go (n - 1) as
-        TestableCtx . (:! ctx) . Value <$> genFromSpec @fn TrueSpec
-      go _ _ = error "The impossible happened in Arbitrary for TestableCtx"
+    genPre idx shape
+  shrink (TestableCtx clist) = map TestableCtx (shrinkCList clist)
 
-  shrink (TestableCtx ctx) = TestableCtx <$> shrinkCtx ctx
-    where
-      shrinkCtx :: forall c as'. All (HasSpec fn) as' => ListCtx Value as' c -> [ListCtx Value as' c]
-      shrinkCtx (c :? as) = (c :?) <$> go as
-      shrinkCtx (Value a :! ctx') = map ((:! ctx') . Value) (shrinkWithSpec @fn TrueSpec a) ++ map (Value a :!) (shrinkCtx ctx')
+genPre :: forall f as. All HasSpec as => Int -> List f as -> QC.Gen (TestableCtx as)
+genPre _ Nil = error ("The impossible happened, unless we chose 'idx' in the Arbitrary instance out of bounds")
+genPre n (_ :> xs) | n <= 0 = do Poly ys <- genPost xs; pure $ TestableCtx (HOLE :<> ys)
+genPre n ((_ :: f a) :> xs) =
+  do
+    TestableCtx ys <- genPre (n - 1) xs
+    x <- genFromSpec (TrueSpec @a)
+    pure $ (TestableCtx (x :|> ys))
 
-      go :: forall as'. All (HasSpec fn) as' => List Value as' -> [List Value as']
-      go Nil = []
-      go (Value a :> as) = map ((:> as) . Value) (shrinkWithSpec @fn TrueSpec a) ++ map (Value a :>) (go as)
+genPost :: forall f as. All HasSpec as => List f as -> QC.Gen (PolyCList as)
+genPost Nil = pure (Poly End)
+genPost ((_ :: f a) :> xs) =
+  do
+    Poly ys <- genPost xs
+    n <- genFromSpec (TrueSpec @a)
+    pure (Poly (n :<| ys))
 
--- TODO: we should improve these
-instance fn ~ BaseFn => QC.Arbitrary (TestableFn fn) where
+shrinkCList :: All HasSpec as => CList m as x y -> [CList m as x y]
+shrinkCList (HOLE :<> End) = []
+shrinkCList (x :|> HOLE :<> End) = [x' :|> HOLE :<> End | x' <- shrinkWithSpec TrueSpec x]
+shrinkCList (HOLE :<> x :<| End) = [HOLE :<> x' :<| End | x' <- shrinkWithSpec TrueSpec x]
+shrinkCList (a :|> b :|> HOLE :<> End) =
+  [ (a' :|> b' :|> HOLE :<> End)
+  | a' <- shrinkWithSpec TrueSpec a
+  , b' <- shrinkWithSpec TrueSpec b
+  ]
+shrinkCList (a :|> HOLE :<> c :<| End) =
+  [ (a' :|> HOLE :<> c' :<| End)
+  | a' <- shrinkWithSpec TrueSpec a
+  , c' <- shrinkWithSpec TrueSpec c
+  ]
+shrinkCList (HOLE :<> b :<| c :<| End) =
+  [ (HOLE :<> b' :<| c' :<| End)
+  | b' <- shrinkWithSpec TrueSpec b
+  , c' <- shrinkWithSpec TrueSpec c
+  ]
+shrinkCList (a :|> b :|> c :|> HOLE :<> End) =
+  [ (a' :|> b' :|> c' :|> HOLE :<> End)
+  | a' <- shrinkWithSpec TrueSpec a
+  , b' <- shrinkWithSpec TrueSpec b
+  , c' <- shrinkWithSpec TrueSpec c
+  ]
+shrinkCList (a :|> b :|> HOLE :<> d :<| End) =
+  [ (a' :|> b' :|> HOLE :<> d' :<| End)
+  | a' <- shrinkWithSpec TrueSpec a
+  , b' <- shrinkWithSpec TrueSpec b
+  , d' <- shrinkWithSpec TrueSpec d
+  ]
+shrinkCList (a :|> HOLE :<> c :<| d :<| End) =
+  [ (a' :|> HOLE :<> c' :<| d' :<| End)
+  | a' <- shrinkWithSpec TrueSpec a
+  , c' <- shrinkWithSpec TrueSpec c
+  , d' <- shrinkWithSpec TrueSpec d
+  ]
+shrinkCList (HOLE :<> b :<| c :<| d :<| End) =
+  [ (HOLE :<> b' :<| c' :<| d' :<| End)
+  | b' <- shrinkWithSpec TrueSpec b
+  , c' <- shrinkWithSpec TrueSpec c
+  , d' <- shrinkWithSpec TrueSpec d
+  ]
+shrinkCList clist = error ("CList length greater than 4\n" ++ show clist)
+
+genTestableFn :: QC.Gen TestableFn
+genTestableFn = QC.arbitrary
+
+instance QC.Arbitrary TestableFn where
   arbitrary =
     QC.elements
-      [ TestableFn $ addFn @fn @Int
-      , TestableFn $ negateFn @fn @Int
-      , TestableFn $ sizeOfFn @fn @(Map Int Int)
-      , TestableFn $ memberFn @fn @Int
-      , TestableFn $ notFn @fn
-      , TestableFn $ disjointFn @fn @Int
-      , TestableFn $ subsetFn @fn @Int
-      , TestableFn $ subsetFn @fn @Int
-      , TestableFn $ elemFn @fn @Int
-      , TestableFn $ orFn @fn
-      , TestableFn $ lessFn @fn @Int
-      , TestableFn $ lessOrEqualFn @fn @Int
-      , TestableFn $ equalFn @fn @Int
-      , TestableFn $ fstFn @fn @Int @Int
-      , TestableFn $ sndFn @fn @Int @Int
-      , TestableFn $ pairFn @fn @Int @Int
-      , TestableFn $ injRightFn @fn @Int @Int
-      , TestableFn $ singletonFn @fn @Int
-      , TestableFn $ unionFn @fn @Int
-      , TestableFn $ foldMapFn @fn @Int idFn
-      , TestableFn $ rngFn @fn @Int @Int
-      , TestableFn $ domFn @fn @Int @Int
-      , TestableFn $ fromListFn @fn @Int
-      , TestableFn $ lookupFn @fn @Int @Int
-      , TestableFn $ singletonListFn @fn @Int
-      , TestableFn $ appendFn @fn @Int
+      [ -- data IntW
+        TestableFn $ AddW @Int
+      , TestableFn $ NegateW @Int
+      , TestableFn $ SizeOfW @(Map Int Int)
+      , -- data BaseW
+        TestableFn $ EqualW @Int
+      , TestableFn $ ProdFstW @Int @Int
+      , TestableFn $ ProdSndW @Int @Int
+      , TestableFn $ ProdW @Int @Int
+      , TestableFn $ InjRightW @Int @Int
+      , TestableFn $ InjLeftW @Int @Int
+      , TestableFn $ ElemW @Int
+      , TestableFn $ FromGenericW @Bool -- These require GenericC constraints
+      , TestableFn $ ToGenericW @(Either Int Bool)
+      , -- data SetW
+        TestableFn $ SingletonW @Int
+      , TestableFn $ UnionW @Int
+      , TestableFn $ SubsetW @Int
+      , TestableFn $ MemberW @Int
+      , TestableFn $ DisjointW @Int
+      , TestableFn $ FromListW @Int
+      , -- data BoolW
+        TestableFn $ NotW
+      , TestableFn $ OrW
+      , -- data NumOrdW
+        TestableFn $ LessW @Int
+      , TestableFn $ LessOrEqualW @Int
+      , -- data MapW
+        TestableFn $ RngW @Int @Int
+      , TestableFn $ DomW @Int @Int
+      , TestableFn $ LookupW @Int @Int
+      , -- data ListW
+        TestableFn $ FoldMapW @Int (Fun IdW)
+      , TestableFn $ SingletonListW @Int
+      , TestableFn $ AppendW @Int
       ]
+  shrink _ = []
+
+-- ==========================================================
+-- More Properties
+-- ==========================================================
 
 prop_mapSpec ::
-  ( HasSpec fn a
-  , HasSpec fn b
+  ( HasSpec a
+  , AppRequires s t '[a] b
   ) =>
-  fn '[a] b ->
-  Specification fn a ->
+  t s '[a] b ->
+  Specification a ->
   QC.Property
-prop_mapSpec fn spec =
+prop_mapSpec funsym spec =
   QC.forAll (strictGen $ genFromSpecT spec) $ \ma -> fromGEDiscard $ do
     a <- ma
-    pure $ conformsToSpec (sem fn a) (mapSpec fn spec)
+    pure $ conformsToSpec (semantics funsym a) (mapSpec funsym spec)
 
 prop_propagateSpecSound ::
-  ( HasSpec fn a
-  , HasSpec fn b
+  ( HasSpec a
+  , AppRequires s t '[a] b
   ) =>
-  fn '[a] b ->
+  t s '[a] b ->
   b ->
   QC.Property
-prop_propagateSpecSound fn b =
-  QC.forAll (strictGen $ genInverse fn TrueSpec b) $ \ma -> fromGEDiscard $ do
+prop_propagateSpecSound funsym b =
+  QC.forAll (strictGen $ genInverse (Fun funsym) TrueSpec b) $ \ma -> fromGEDiscard $ do
     a <- ma
-    pure $ sem fn a == b
+    pure $ semantics funsym a == b

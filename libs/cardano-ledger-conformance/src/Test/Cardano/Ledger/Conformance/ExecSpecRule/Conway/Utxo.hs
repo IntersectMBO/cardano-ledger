@@ -35,7 +35,6 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (externalFunctio
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo ()
 import Test.Cardano.Ledger.Constrained.Conway (
-  IsConwayUniv,
   UtxoExecContext (..),
   utxoEnvSpec,
   utxoStateSpec,
@@ -80,12 +79,8 @@ genUtxoExecContext = do
     uecUtxoEnv = UtxoEnv {..}
   pure UtxoExecContext {..}
 
-instance
-  forall fn.
-  IsConwayUniv fn =>
-  ExecSpecRule fn "UTXO" ConwayEra
-  where
-  type ExecContext fn "UTXO" ConwayEra = UtxoExecContext ConwayEra
+instance ExecSpecRule "UTXO" ConwayEra where
+  type ExecContext "UTXO" ConwayEra = UtxoExecContext ConwayEra
 
   genExecContext = genUtxoExecContext
 

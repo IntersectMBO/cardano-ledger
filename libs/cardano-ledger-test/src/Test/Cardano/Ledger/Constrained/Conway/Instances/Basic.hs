@@ -15,7 +15,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- RecordWildCards cause name shadowing warnings in ghc-8.10.
 #if __GLASGOW_HASKELL__ < 900
@@ -40,6 +39,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (
   SimplePParams (..),
   SimplePPUpdate (..),
   EraSpecPParams (..),
+  prettyE,
 ) where
 
 import Cardano.Ledger.Alonzo.PParams
@@ -50,13 +50,17 @@ import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import Constrained hiding (Value)
-import Constrained.Base (genListWithSize)
-import Constrained.Univ ()
+import Constrained.API
+import Constrained.Base
+import Constrained.GenT
+import Constrained.NumSpec
+import Constrained.Spec.ListFoldy (genListWithSize)
+import Constrained.TheKnot
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Fail.String
 import Data.Maybe
 import Data.Ratio ((%))
+import Data.TreeDiff
 import Data.Typeable
 import Data.Word
 import GHC.Generics (Generic)
@@ -64,9 +68,14 @@ import Numeric.Natural (Natural)
 import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
-import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
 import Test.QuickCheck hiding (Args, Fun, NonZero, forAll)
+import Text.PrettyPrint.HughesPJ (Doc)
+
+-- ===============================================
+-- Pretty printing via TreeDiff Expr
+
+prettyE :: ToExpr x => x -> Doc
+prettyE x = prettyExpr (toExpr x)
 
 -- ============================================================================
 -- Making Intervals based on Ratios, These can fail, so be careful using them.
@@ -89,37 +98,44 @@ instance HasSimpleRep Coin where
     Nothing -> error $ "The impossible happened in toSimpleRep for (Coin " ++ show i ++ ")"
     Just w -> w
   fromSimpleRep = word64ToCoin
-instance BaseUniverse fn => HasSpec fn Coin
-instance BaseUniverse fn => OrdLike fn Coin
-instance BaseUniverse fn => NumLike fn Coin
-instance BaseUniverse fn => Foldy fn Coin where
-  genList s s' = map fromSimpleRep <$> genList @fn @Word64 (toSimpleRepSpec s) (toSimpleRepSpec s')
-  theAddFn = addFn
+instance HasSpec Coin
+
+instance MaybeBounded Coin where
+  lowerBound = Just (word64ToCoin 0)
+  upperBound = Just (word64ToCoin (maxBound @Word64))
+
+instance OrdLike Coin
+
+instance NumLike Coin
+
+instance Foldy Coin where
+  genList s s' = map fromSimpleRep <$> genList @Word64 (toSimpleRepSpec s) (toSimpleRepSpec s')
+  theAddFn = AddW
   theZero = Coin 0
   genSizedList sz elemSpec foldSpec =
     map fromSimpleRep
-      <$> genListWithSize @fn @Word64 sz (toSimpleRepSpec elemSpec) (toSimpleRepSpec foldSpec)
+      <$> genListWithSize @Word64 sz (toSimpleRepSpec elemSpec) (toSimpleRepSpec foldSpec)
   noNegativeValues = True
 
 -- TODO: This is hack to get around the need for `Num` in `NumLike`. We should possibly split
 -- this up so that `NumLike` has its own addition etc. instead?
 deriving via Integer instance Num Coin
 
-instance HasSimpleRep (StrictMaybe a)
-instance (HasSpec fn a, IsNormalType a) => HasSpec fn (StrictMaybe a)
+instance Typeable a => HasSimpleRep (StrictMaybe a)
+instance (HasSpec a, IsNormalType a) => HasSpec (StrictMaybe a)
 
-cSNothing_ :: (HasSpec fn a, IsNormalType a) => Term fn (StrictMaybe a)
+cSNothing_ :: (HasSpec a, IsNormalType a) => Term (StrictMaybe a)
 cSNothing_ = con @"SNothing" (lit ())
 
-cSJust_ :: (HasSpec fn a, IsNormalType a) => Term fn a -> Term fn (StrictMaybe a)
+cSJust_ :: (HasSpec a, IsNormalType a) => Term a -> Term (StrictMaybe a)
 cSJust_ = con @"SJust"
 
 instance HasSimpleRep EpochInterval
-instance BaseUniverse fn => OrdLike fn EpochInterval
-instance BaseUniverse fn => HasSpec fn EpochInterval
+instance OrdLike EpochInterval
+instance HasSpec EpochInterval
 
-instance BaseUniverse fn => HasSpec fn UnitInterval where
-  type TypeSpec fn UnitInterval = ()
+instance HasSpec UnitInterval where
+  type TypeSpec UnitInterval = ()
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
@@ -128,8 +144,8 @@ instance BaseUniverse fn => HasSpec fn UnitInterval where
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
-instance BaseUniverse fn => HasSpec fn NonNegativeInterval where
-  type TypeSpec fn NonNegativeInterval = ()
+instance HasSpec NonNegativeInterval where
+  type TypeSpec NonNegativeInterval = ()
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
@@ -139,8 +155,8 @@ instance BaseUniverse fn => HasSpec fn NonNegativeInterval where
   toPreds _ _ = toPred True
 
 instance HasSimpleRep CostModels
-instance BaseUniverse fn => HasSpec fn CostModels where
-  type TypeSpec fn CostModels = ()
+instance HasSpec CostModels where
+  type TypeSpec CostModels = ()
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
@@ -150,36 +166,36 @@ instance BaseUniverse fn => HasSpec fn CostModels where
   toPreds _ _ = toPred True
 
 instance HasSimpleRep Prices
-instance BaseUniverse fn => HasSpec fn Prices
+instance HasSpec Prices
 
 instance HasSimpleRep ExUnits where
   type SimpleRep ExUnits = SimpleRep (Natural, Natural)
   fromSimpleRep = uncurry ExUnits . fromSimpleRep
   toSimpleRep (ExUnits a b) = toSimpleRep (a, b)
-instance BaseUniverse fn => HasSpec fn ExUnits
+instance HasSpec ExUnits
 
 instance HasSimpleRep OrdExUnits where
   type SimpleRep OrdExUnits = SimpleRep ExUnits
   fromSimpleRep = OrdExUnits . fromSimpleRep
   toSimpleRep = toSimpleRep . unOrdExUnits
-instance BaseUniverse fn => HasSpec fn OrdExUnits
+instance HasSpec OrdExUnits
 
 instance HasSimpleRep PoolVotingThresholds
-instance BaseUniverse fn => HasSpec fn PoolVotingThresholds
+instance HasSpec PoolVotingThresholds
 
 instance HasSimpleRep DRepVotingThresholds
-instance BaseUniverse fn => HasSpec fn DRepVotingThresholds
+instance HasSpec DRepVotingThresholds
 
 instance HasSimpleRep ProtVer
-instance BaseUniverse fn => HasSpec fn ProtVer
+instance HasSpec ProtVer
 
 -- We do this like this to get the right bounds for `VersionRep`
 -- while ensuring that we don't have to add instances for e.g. `Num`
 -- to version.
 newtype VersionRep = VersionRep Word8
   deriving (Show, Eq, Ord, Num, Random, Arbitrary, Integral, Real, Enum) via Word8
-instance BaseUniverse fn => HasSpec fn VersionRep where
-  type TypeSpec fn VersionRep = NumSpec fn VersionRep
+instance HasSpec VersionRep where
+  type TypeSpec VersionRep = NumSpec VersionRep
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -204,14 +220,14 @@ instance HasSimpleRep Version where
           ]
     Right a -> a
   toSimpleRep = VersionRep . getVersion
-instance BaseUniverse fn => HasSpec fn Version
-instance BaseUniverse fn => OrdLike fn Version
+instance HasSpec Version
+instance OrdLike Version
 
-succV_ :: BaseUniverse fn => Term fn Version -> Term fn Version
+succV_ :: Term Version -> Term Version
 succV_ = fromGeneric_ . (+ 1) . toGeneric_
 
-instance (BaseUniverse fn, Typeable r) => HasSpec fn (KeyHash r) where
-  type TypeSpec fn (KeyHash r) = ()
+instance Typeable r => HasSpec (KeyHash r) where
+  type TypeSpec (KeyHash r) = ()
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
@@ -270,13 +286,13 @@ data SimplePParams era = SimplePParams
   }
   deriving (Eq, Generic)
 
-instance (EraSpecPParams era, Reflect era) => Show (SimplePParams era) where
-  show x = show (prettyA (subsetToPP @era x))
+instance (EraSpecPParams era, EraGov era, EraTxOut era) => Show (SimplePParams era) where
+  show x = show (subsetToPP @era x)
 
 -- | Use then generic HasSimpleRep and HasSpec instances for SimplePParams
 instance HasSimpleRep (SimplePParams era)
 
-instance (EraSpecPParams era, Reflect era, BaseUniverse fn) => HasSpec fn (SimplePParams era)
+instance (EraSpecPParams era, EraGov era, EraTxOut era) => HasSpec (SimplePParams era)
 
 -- | Use this as the SimpleRep of (PParamsUpdate era)
 data SimplePPUpdate = SimplePPUpdate
@@ -325,7 +341,7 @@ data SimplePPUpdate = SimplePPUpdate
 -- | Use the generic HasSimpleRep and HasSpec instances for SimplePParams
 instance HasSimpleRep SimplePPUpdate
 
-instance BaseUniverse fn => HasSpec fn SimplePPUpdate
+instance HasSpec SimplePPUpdate
 
 -- | SimpleRep instance for PParamsUpdate
 instance EraSpecPParams era => HasSimpleRep (PParamsUpdate era) where
@@ -334,7 +350,7 @@ instance EraSpecPParams era => HasSimpleRep (PParamsUpdate era) where
   fromSimpleRep = updateToPPU
 
 -- | HasSpec instance for PParams
-instance (BaseUniverse fn, EraSpecPParams era) => HasSpec fn (PParamsUpdate era) where
+instance EraSpecPParams era => HasSpec (PParamsUpdate era) where
   genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
 
 -- ===============================================================
@@ -346,16 +362,16 @@ instance EraSpecPParams era => HasSimpleRep (PParams era) where
   fromSimpleRep = subsetToPP
 
 -- | HasSpec instance for PParams
-instance (BaseUniverse fn, EraSpecPParams era, HasSpec fn Coin) => HasSpec fn (PParams era) where
+instance (EraSpecPParams era, EraTxOut era, EraGov era) => HasSpec (PParams era) where
   genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
 
 -- =======================================
 
 instance EraSpecPParams era => HasSimpleRep (ProposedPPUpdates era)
-instance (EraSpecPParams era, BaseUniverse fn) => HasSpec fn (ProposedPPUpdates era)
+instance EraSpecPParams era => HasSpec (ProposedPPUpdates era)
 
 instance EraSpecPParams era => HasSimpleRep (FuturePParams era)
-instance (EraSpecPParams era, BaseUniverse fn) => HasSpec fn (FuturePParams era)
+instance (EraGov era, EraTxOut era, EraSpecPParams era) => HasSpec (FuturePParams era)
 
 -- =============================================================
 
@@ -363,12 +379,14 @@ instance (EraSpecPParams era, BaseUniverse fn) => HasSpec fn (FuturePParams era)
 --   This allow us to use (SimplePParams era) as the (SimpleRep (PParams era))
 --   Much easier to constrain (SimplePParams era) than (PParams era) with all the THKD stuff.
 class
-  ( Reflect era
-  , Eq (PParamsHKD Identity era)
+  ( Eq (PParamsHKD Identity era)
   , Show (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)
   , EraPParams era
+  , EraTxOut era
+  , EraGov era
+  , EraTx era
   ) =>
   EraSpecPParams era
   where

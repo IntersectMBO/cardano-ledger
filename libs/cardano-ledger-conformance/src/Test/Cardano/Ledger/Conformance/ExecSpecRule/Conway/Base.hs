@@ -79,7 +79,7 @@ import Cardano.Ledger.State (
   CommitteeState (..),
   IndividualPoolStake (..),
  )
-import Constrained hiding (inject)
+import Constrained.API
 import Data.Either (isRight)
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
@@ -89,6 +89,7 @@ import Data.Ratio (denominator, numerator, (%))
 import qualified Data.Sequence.Strict as SSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import qualified Lib as Agda
@@ -149,14 +150,14 @@ data ConwayCertExecContext era
     }
   deriving (Generic, Eq, Show)
 
-instance HasSimpleRep (ConwayCertExecContext era)
-instance (IsConwayUniv fn, Era era) => HasSpec fn (ConwayCertExecContext era)
+instance Typeable era => HasSimpleRep (ConwayCertExecContext era)
+instance Era era => HasSpec (ConwayCertExecContext era)
 
 -- No particular constraints, other than witnessing
 conwayCertExecContextSpec ::
-  forall fn era.
-  (Reflect era, IsConwayUniv fn) =>
-  WitUniv era -> Integer -> Specification fn (ConwayCertExecContext era)
+  forall era.
+  Era era =>
+  WitUniv era -> Integer -> Specification (ConwayCertExecContext era)
 conwayCertExecContextSpec univ wdrlsize = constrained $ \ [var|ccec|] ->
   match ccec $ \ [var|withdrawals|] [var|deposits|] _ [var|delegatees|] ->
     [ assert $
@@ -164,10 +165,10 @@ conwayCertExecContextSpec univ wdrlsize = constrained $ \ [var|ccec|] ->
         , assert $ sizeOf_ (dom_ withdrawals) <=. (lit wdrlsize)
         ]
     , forAll (dom_ deposits) $ \dp -> satisfies dp (witnessDepositPurpose univ)
-    , satisfies delegatees (delegateeSpec @fn @era univ)
+    , satisfies delegatees (delegateeSpec @era univ)
     ]
 
-instance Reflect era => Arbitrary (ConwayCertExecContext era) where
+instance Era era => Arbitrary (ConwayCertExecContext era) where
   arbitrary =
     ConwayCertExecContext
       <$> arbitrary
@@ -259,23 +260,19 @@ instance
   where
   inject = crecGovActionMap
 
-instance HasSimpleRep (ConwayRatifyExecContext era)
+instance Typeable era => HasSimpleRep (ConwayRatifyExecContext era)
 instance
-  ( IsConwayUniv fn
-  , EraPParams era
-  , HasSpec fn (GovActionState era)
+  ( EraPParams era
+  , HasSpec (GovActionState era)
   ) =>
-  HasSpec fn (ConwayRatifyExecContext era)
+  HasSpec (ConwayRatifyExecContext era)
 
 instance EraPParams era => NFData (ConwayRatifyExecContext era)
 
 ratifyEnvSpec ::
-  ( IsConwayUniv fn
-  , HasSpec fn (RatifyEnv ConwayEra)
-  , HasSpec fn (SimpleRep (RatifyEnv ConwayEra))
-  ) =>
+  HasSpec (SimpleRep (RatifyEnv ConwayEra)) =>
   ConwayRatifyExecContext ConwayEra ->
-  Specification fn (RatifyEnv ConwayEra)
+  Specification (RatifyEnv ConwayEra)
 ratifyEnvSpec ConwayRatifyExecContext {crecGovActionMap} =
   constrained' $ \_ poolDistr drepDistr drepState _ committeeState _ _ ->
     [ -- Bias the generator towards generating DReps that have stake and are registered
@@ -351,10 +348,9 @@ ratifyEnvSpec ConwayRatifyExecContext {crecGovActionMap} =
         crecGovActionMap
 
 ratifyStateSpec ::
-  IsConwayUniv fn =>
   ConwayRatifyExecContext ConwayEra ->
   RatifyEnv ConwayEra ->
-  Specification fn (RatifyState ConwayEra)
+  Specification (RatifyState ConwayEra)
 ratifyStateSpec _ RatifyEnv {..} =
   constrained' $ \ens enacted expired _ ->
     mconcat
@@ -387,15 +383,14 @@ ratifyStateSpec _ RatifyEnv {..} =
       let CommitteeState m = reCommitteeState
        in Map.keysSet m
     -- Bootstrap is not in the spec
-    disableBootstrap :: IsConwayUniv fn => Term fn (PParams ConwayEra) -> Pred fn
+    disableBootstrap :: Term (PParams ConwayEra) -> Pred
     disableBootstrap pp = match pp $ \simplepp ->
       match (protocolVersion_ simplepp) $ \major _ ->
         assert $ not_ (major ==. lit (natVersion @9))
 
     preferSmallerCCMinSizeValues ::
-      IsConwayUniv fn =>
-      Term fn (PParams ConwayEra) ->
-      Pred fn
+      Term (PParams ConwayEra) ->
+      Pred
     preferSmallerCCMinSizeValues pp = match pp $ \simplepp ->
       satisfies (committeeMinSize_ simplepp) $
         chooseSpec
@@ -405,9 +400,8 @@ ratifyStateSpec _ RatifyEnv {..} =
         committeeSize = lit . fromIntegral . Set.size $ ccColdKeys
 
 ratifySignalSpec ::
-  IsConwayUniv fn =>
   ConwayRatifyExecContext ConwayEra ->
-  Specification fn (RatifySignal ConwayEra)
+  Specification (RatifySignal ConwayEra)
 ratifySignalSpec ConwayRatifyExecContext {crecGovActionMap} =
   constrained $ \sig ->
     match sig $ \gasS ->
@@ -415,8 +409,8 @@ ratifySignalSpec ConwayRatifyExecContext {crecGovActionMap} =
         forAll gasL $ \gas ->
           gas `elem_` lit crecGovActionMap
 
-instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" ConwayEra where
-  type ExecContext fn "RATIFY" ConwayEra = ConwayRatifyExecContext ConwayEra
+instance ExecSpecRule "RATIFY" ConwayEra where
+  type ExecContext "RATIFY" ConwayEra = ConwayRatifyExecContext ConwayEra
 
   genExecContext = arbitrary
 
@@ -471,7 +465,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" ConwayEra where
 
   testConformance ctx env st@(RatifyState {rsEnactState}) sig@(RatifySignal actions) =
     labelRatios $
-      defaultTestConformance @fn @ConwayEra @"RATIFY" ctx env st sig
+      defaultTestConformance @ConwayEra @"RATIFY" ctx env st sig
     where
       bucket r
         | r == 0 % 1 = "=0%"
@@ -531,11 +525,10 @@ instance Era era => EncCBOR (ConwayEnactExecContext era) where
   encCBOR (ConwayEnactExecContext x) = encCBOR x
 
 enactSignalSpec ::
-  IsConwayUniv fn =>
   ConwayEnactExecContext ConwayEra ->
   ConwayExecEnactEnv ConwayEra ->
   EnactState ConwayEra ->
-  Specification fn (EnactSignal ConwayEra)
+  Specification (EnactSignal ConwayEra)
 enactSignalSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} EnactState {..} =
   constrained' $ \gid action ->
     [ assert $ gid ==. lit ceeeGid
@@ -563,10 +556,9 @@ enactSignalSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} EnactState {
     ]
 
 enactStateSpec ::
-  IsConwayUniv fn =>
   ConwayEnactExecContext ConwayEra ->
   ConwayExecEnactEnv ConwayEra ->
-  Specification fn (EnactState ConwayEra)
+  Specification (EnactState ConwayEra)
 enactStateSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} =
   constrained' $ \_ _ curPParams _ treasury wdrls _ ->
     [ match curPParams $ \simplepp -> committeeMaxTermLength_ simplepp ==. lit ceecMaxTerm
@@ -574,11 +566,11 @@ enactStateSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} =
     , assert $ treasury ==. lit ceeeTreasury
     ]
 
-instance IsConwayUniv fn => ExecSpecRule fn "ENACT" ConwayEra where
-  type ExecContext fn "ENACT" ConwayEra = ConwayEnactExecContext ConwayEra
-  type ExecEnvironment fn "ENACT" ConwayEra = ConwayExecEnactEnv ConwayEra
-  type ExecState fn "ENACT" ConwayEra = EnactState ConwayEra
-  type ExecSignal fn "ENACT" ConwayEra = EnactSignal ConwayEra
+instance ExecSpecRule "ENACT" ConwayEra where
+  type ExecContext "ENACT" ConwayEra = ConwayEnactExecContext ConwayEra
+  type ExecEnvironment "ENACT" ConwayEra = ConwayExecEnactEnv ConwayEra
+  type ExecState "ENACT" ConwayEra = EnactState ConwayEra
+  type ExecSignal "ENACT" ConwayEra = EnactSignal ConwayEra
 
   environmentSpec _ = TrueSpec
   stateSpec = enactStateSpec
@@ -602,11 +594,9 @@ nameGovAction UpdateCommittee {} = "UpdateCommittee"
 nameGovAction NewConstitution {} = "NewConstitution"
 nameGovAction InfoAction {} = "InfoAction"
 
--- The `fn ~ ConwayFn` thing here is because `ConwayFn` is a type alias
--- and those shouldn't go in instance heads apparently.
-instance fn ~ ConwayFn => ExecSpecRule fn "EPOCH" ConwayEra where
-  type ExecContext fn "EPOCH" ConwayEra = [GovActionState ConwayEra]
-  type ExecEnvironment fn "EPOCH" ConwayEra = EpochExecEnv ConwayEra
+instance ExecSpecRule "EPOCH" ConwayEra where
+  type ExecContext "EPOCH" ConwayEra = [GovActionState ConwayEra]
+  type ExecEnvironment "EPOCH" ConwayEra = EpochExecEnv ConwayEra
 
   environmentSpec _ = epochEnvSpec
 
@@ -621,11 +611,9 @@ instance fn ~ ConwayFn => ExecSpecRule fn "EPOCH" ConwayEra where
 nameEpoch :: EpochNo -> String
 nameEpoch x = show x
 
--- The `fn ~ ConwayFn` thing here is because `ConwayFn` is a type alias
--- and those shouldn't go in instance heads apparently.
-instance fn ~ ConwayFn => ExecSpecRule fn "NEWEPOCH" ConwayEra where
-  type ExecContext fn "NEWEPOCH" ConwayEra = [GovActionState ConwayEra]
-  type ExecEnvironment fn "NEWEPOCH" ConwayEra = EpochExecEnv ConwayEra
+instance ExecSpecRule "NEWEPOCH" ConwayEra where
+  type ExecContext "NEWEPOCH" ConwayEra = [GovActionState ConwayEra]
+  type ExecEnvironment "NEWEPOCH" ConwayEra = EpochExecEnv ConwayEra
 
   environmentSpec _ = epochEnvSpec
 

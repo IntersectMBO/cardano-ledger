@@ -9,32 +9,31 @@
 
 module Constrained.Bench where
 
-import Constrained
+import Constrained.API
+import Constrained.Spec.Tree
 import Control.DeepSeq
 import Criterion
 import Data.Map (Map)
 import Data.Set (Set)
 import Data.Tree
 
-type RoseFn = Fix (OneofL (TreeFn : BaseFns))
-
 benchmarks :: Benchmark
 benchmarks =
   bgroup
     "constrained"
-    [ benchSpec 10 30 "TrueSpec@Map" (TrueSpec :: Specification BaseFn (Map Int Int))
-    , benchSpec 10 30 "TrueSpec@[]" (TrueSpec :: Specification BaseFn [Int])
-    , benchSpec 10 30 "TrueSpec@Set" (TrueSpec :: Specification BaseFn (Set Int))
+    [ benchSpec 10 30 "TrueSpec@Map" (TrueSpec :: Specification (Map Int Int))
+    , benchSpec 10 30 "TrueSpec@[]" (TrueSpec :: Specification [Int])
+    , benchSpec 10 30 "TrueSpec@Set" (TrueSpec :: Specification (Set Int))
     , benchSpec
         10
         30
         "TrueSpec@Tree"
-        (giveHint (Nothing, 30) <> TrueSpec :: Specification RoseFn (Tree Int))
+        (giveHint (Nothing, 30) <> TrueSpec :: Specification (Tree Int))
     , benchSpec 10 30 "roseTreeMaybe" roseTreeMaybe
     , benchSpec 10 30 "listSumPair" listSumPair
     ]
 
-roseTreeMaybe :: Specification RoseFn (Tree (Maybe (Int, Int)))
+roseTreeMaybe :: Specification (Tree (Maybe (Int, Int)))
 roseTreeMaybe = constrained $ \t ->
   [ forAll' t $ \mp ts ->
       forAll ts $ \t' ->
@@ -45,13 +44,13 @@ roseTreeMaybe = constrained $ \t ->
   , genHint (Nothing, 10) t
   ]
 
-listSumPair :: Specification BaseFn [(Int, Int)]
+listSumPair :: Specification [(Int, Int)]
 listSumPair = constrained $ \xs ->
   [ assert $ foldMap_ fst_ xs ==. 100
   , forAll' xs $ \x y -> [20 <. x, x <. 30, y <. 100]
   ]
 
-benchSpec :: (HasSpec fn a, NFData a) => Int -> Int -> String -> Specification fn a -> Benchmark
+benchSpec :: (HasSpec a, NFData a) => Int -> Int -> String -> Specification a -> Benchmark
 benchSpec seed size nm spec =
   bench (unlines [nm, show (genFromSpecWithSeed seed size spec)]) $
     nf (genFromSpecWithSeed seed size) spec

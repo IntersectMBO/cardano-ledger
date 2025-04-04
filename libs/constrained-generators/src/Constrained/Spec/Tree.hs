@@ -13,20 +13,22 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Constrained.Spec.Tree (BinTree (..), TreeFn, rootLabel_, TreeSpec (..)) where
+module Constrained.Spec.Tree (BinTree (..), TreeW (..), rootLabel_, TreeSpec (..)) where
 
+import Constrained.Base
+import Constrained.Conformance (conformsToSpec, satisfies)
+import Constrained.Core (unionWithMaybe)
+import Constrained.GenT (oneofT)
+import Constrained.List (List (..))
+import Constrained.Spec.ListFoldy (FoldSpec (..), ListSpec (..))
+import Constrained.Spec.SumProd (PairSpec (Cartesian), match)
+import Constrained.Syntax (forAll, genHint)
+import Constrained.TheKnot (genFromSpecT, shrinkWithSpec)
 import Data.Kind
 import Data.Tree
 import GHC.Generics
+import GHC.TypeLits hiding (Text)
 import Test.QuickCheck (shrinkList)
-
-import Constrained.Base
-import Constrained.Core
-import Constrained.GenT
-import Constrained.List
-import Constrained.Spec.Generics
-import Constrained.Spec.Pairs
-import Constrained.Univ
 
 ------------------------------------------------------------------------
 -- The types
@@ -41,7 +43,7 @@ data BinTree a
 -- HasSpec for BinTree
 ------------------------------------------------------------------------
 
-data BinTreeSpec fn a = BinTreeSpec (Maybe Integer) (Specification fn (BinTree a, a, BinTree a))
+data BinTreeSpec a = BinTreeSpec (Maybe Integer) (Specification (BinTree a, a, BinTree a))
   deriving (Show)
 
 instance Forallable (BinTree a) (BinTree a, a, BinTree a) where
@@ -49,8 +51,8 @@ instance Forallable (BinTree a) (BinTree a, a, BinTree a) where
   forAllToList BinTip = []
   forAllToList (BinNode left a right) = (left, a, right) : forAllToList left ++ forAllToList right
 
-instance HasSpec fn a => HasSpec fn (BinTree a) where
-  type TypeSpec fn (BinTree a) = BinTreeSpec fn a
+instance HasSpec a => HasSpec (BinTree a) where
+  type TypeSpec (BinTree a) = BinTreeSpec a
 
   emptySpec = BinTreeSpec Nothing TrueSpec
 
@@ -72,7 +74,7 @@ instance HasSpec fn a => HasSpec fn (BinTree a) where
             sz' = sz `div` 2
         oneofT
           [ do
-              (left, a, right) <- genFromSpecT @fn @(BinTree a, a, BinTree a) $
+              (left, a, right) <- genFromSpecT @(BinTree a, a, BinTree a) $
                 constrained $ \ctx ->
                   [ match ctx $ \left _ right ->
                       [ forAll left (`satisfies` s)
@@ -100,7 +102,7 @@ instance HasSpec fn a => HasSpec fn (BinTree a) where
     (forAll t $ \n -> n `satisfies` s)
       <> maybe TruePred (flip genHint t) msz
 
-instance HasSpec fn a => HasGenHint fn (BinTree a) where
+instance HasSpec a => HasGenHint (BinTree a) where
   type Hint (BinTree a) = Integer
   giveHint h = typeSpec $ BinTreeSpec (Just h) TrueSpec
 
@@ -108,14 +110,14 @@ instance HasSpec fn a => HasGenHint fn (BinTree a) where
 -- HasSpec for Tree
 ------------------------------------------------------------------------
 
-data TreeSpec fn a = TreeSpec
+data TreeSpec a = TreeSpec
   { roseTreeAvgLength :: Maybe Integer
   , roseTreeMaxSize :: Maybe Integer
-  , roseTreeRootSpec :: Specification fn a
-  , roseTreeCtxSpec :: Specification fn (a, [Tree a])
+  , roseTreeRootSpec :: Specification a
+  , roseTreeCtxSpec :: Specification (a, [Tree a])
   }
 
-deriving instance (HasSpec fn a, Member (TreeFn fn) fn) => Show (TreeSpec fn a)
+deriving instance HasSpec a => Show (TreeSpec a)
 
 instance Forallable (Tree a) (a, [Tree a]) where
   fromForAllSpec = guardRoseSpec . TreeSpec Nothing Nothing TrueSpec
@@ -123,14 +125,14 @@ instance Forallable (Tree a) (a, [Tree a]) where
 
 -- TODO: get rid of this when we implement `cardinality`
 -- in `HasSpec`
-guardRoseSpec :: HasSpec fn (Tree a) => TreeSpec fn a -> Specification fn (Tree a)
+guardRoseSpec :: HasSpec (Tree a) => TreeSpec a -> Specification (Tree a)
 guardRoseSpec spec@(TreeSpec _ _ rs s)
   | isErrorLike rs = ErrorSpec (pure "guardRoseSpec: rootSpec is error")
   | isErrorLike s = ErrorSpec (pure "guardRoseSpec: ctxSpec is error")
   | otherwise = TypeSpec spec []
 
-instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
-  type TypeSpec fn (Tree a) = TreeSpec fn a
+instance HasSpec a => HasSpec (Tree a) where
+  type TypeSpec (Tree a) = TreeSpec a
 
   emptySpec = TreeSpec Nothing Nothing TrueSpec TrueSpec
 
@@ -168,7 +170,7 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
               NoFold
         innerSpec = s <> typeSpec (Cartesian rs childrenSpec)
     fmap (uncurry Node) $
-      genFromSpecT @fn @(a, [Tree a]) innerSpec
+      genFromSpecT @(a, [Tree a]) innerSpec
 
   shrinkWithTypeSpec (TreeSpec _ _ rs ctxSpec) (Node a ts) =
     [Node a [] | not $ null ts]
@@ -186,46 +188,40 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
       <> rootLabel_ t `satisfies` rs
       <> maybe TruePred (\sz -> genHint (mal, sz) t) msz
 
-instance (Member (TreeFn fn) fn, HasSpec fn a) => HasGenHint fn (Tree a) where
+instance HasSpec a => HasGenHint (Tree a) where
   type Hint (Tree a) = (Maybe Integer, Integer)
   giveHint (avgLen, sz) = typeSpec $ TreeSpec avgLen (Just sz) TrueSpec TrueSpec
 
-data TreeFn (fn :: [Type] -> Type -> Type) args res where
-  RootLabel :: TreeFn fn '[Tree a] a
+data TreeW (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
+  RootLabelW :: TreeW "rootLabel_" '[Tree a] a
 
-deriving instance Eq (TreeFn fn args res)
-deriving instance Show (TreeFn fn args res)
+deriving instance Eq (TreeW s d r)
+deriving instance Show (TreeW s d r)
 
-instance FunctionLike (TreeFn fn) where
-  sem RootLabel = \(Node a _) -> a
+instance Semantics TreeW where
+  semantics RootLabelW = \(Node a _) -> a
 
-instance (Member (TreeFn fn) fn, BaseUniverse fn) => Functions (TreeFn fn) fn where
-  propagateSpecFun _ _ TrueSpec = TrueSpec
-  propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
-  propagateSpecFun fn ctx spec = case fn of
-    _
-      | SuspendedSpec v ps <- spec
-      , ListCtx pre HOLE suf <- ctx ->
-          constrained $ \v' ->
-            let args = appendList (mapList (\(Value a) -> Lit a) pre) (v' :> mapList (\(Value a) -> Lit a) suf)
-             in Let (App (injectFn fn) args) (v :-> ps)
-    RootLabel ->
-      -- No TypeAbstractions in ghc-8.10
-      case fn of
-        (_ :: TreeFn fn '[Tree a] a)
-          | NilCtx HOLE <- ctx -> typeSpec $ TreeSpec Nothing Nothing spec TrueSpec
+instance Syntax TreeW where
+  isInFix _ = False
+
+instance HasSpec a => Logic "rootLabel_" TreeW '[Tree a] a where
+  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
+  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
+  propagate _ TrueSpec = TrueSpec
+  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate (Context RootLabelW (HOLE :<> End)) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App RootLabelW (v' :> Nil)) (v :-> ps)
+  propagate (Context RootLabelW (HOLE :<> End)) spec =
+    typeSpec $ TreeSpec Nothing Nothing spec TrueSpec
+  propagate ctx _ =
+    ErrorSpec $ pure ("FunSym instance for RootLabel with wrong number of arguments. " ++ show ctx)
 
   -- NOTE: this function over-approximates and returns a liberal spec.
-  mapTypeSpec f ts = case f of
-    RootLabel ->
-      -- No TypeAbstractions in ghc-8.10
-      case f of
-        (_ :: TreeFn fn '[Tree a] a)
-          | TreeSpec _ _ rs _ <- ts -> rs
+  mapTypeSpec RootLabelW (TreeSpec _ _ rs _) = rs
 
 rootLabel_ ::
-  forall fn a.
-  (Member (TreeFn fn) fn, HasSpec fn a) =>
-  Term fn (Tree a) ->
-  Term fn a
-rootLabel_ = app (injectFn $ RootLabel @fn)
+  forall a.
+  HasSpec a =>
+  Term (Tree a) ->
+  Term a
+rootLabel_ = appTerm RootLabelW
