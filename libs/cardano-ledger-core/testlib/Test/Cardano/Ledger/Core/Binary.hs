@@ -299,38 +299,6 @@ expectRawEqual thing expected actual =
         , Pretty.indent 2 $ diffExpr expected actual
         ]
 
-decoderEquivalenceEraSpec ::
-  forall era t.
-  ( Era era
-  , Eq t
-  , ToCBOR t
-  , DecCBOR (Annotator t)
-  , Arbitrary t
-  , Show t
-  ) =>
-  Spec
-decoderEquivalenceEraSpec = decoderEquivalenceSpec @t (eraProtVerLow @era) (eraProtVerHigh @era)
-
-decoderEquivalenceCoreEraTypesSpec ::
-  forall era.
-  ( EraTx era
-  , Arbitrary (Tx era)
-  , Arbitrary (TxBody era)
-  , Arbitrary (TxWits era)
-  , Arbitrary (TxAuxData era)
-  , Arbitrary (Script era)
-  , HasCallStack
-  ) =>
-  Spec
-decoderEquivalenceCoreEraTypesSpec =
-  describe "DecCBOR instances equivalence" $ do
-    decoderEquivalenceEraSpec @era @(Data era)
-    decoderEquivalenceEraSpec @era @(Script era)
-    decoderEquivalenceEraSpec @era @(TxAuxData era)
-    decoderEquivalenceEraSpec @era @(TxWits era)
-    decoderEquivalenceEraSpec @era @(TxBody era)
-    decoderEquivalenceEraSpec @era @(Tx era)
-
 txSizeSpec ::
   forall era.
   ( EraTx era
