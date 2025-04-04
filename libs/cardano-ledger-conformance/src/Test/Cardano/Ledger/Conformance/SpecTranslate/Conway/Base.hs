@@ -115,7 +115,7 @@ import qualified GHC.Exts as Exts
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   OpaqueErrorString (..),
   SpecTransM,
@@ -398,6 +398,8 @@ instance SpecTranslate ctx (ConwayPParams Identity era) where
     ppGovActionDeposit <- toSpecRep cppGovActionDeposit
     ppDrepDeposit <- toSpecRep cppDRepDeposit
     ppDrepActivity <- toSpecRep cppDRepActivity
+    ppMonetaryExpansion <- toSpecRep cppRho
+    ppTreasuryCut <- toSpecRep cppTau
 
     pure Agda.MkPParams {..}
 
@@ -863,6 +865,8 @@ instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
     ppuGovActionDeposit <- toSpecRep cppGovActionDeposit
     ppuDrepDeposit <- toSpecRep cppDRepDeposit
     ppuDrepActivity <- toSpecRep cppDRepActivity
+    ppuMonetaryExpansion <- toSpecRep cppRho
+    ppuTreasuryCut <- toSpecRep cppTau
 
     pure Agda.MkPParamsUpdate {..}
 

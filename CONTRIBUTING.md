@@ -329,7 +329,7 @@ To change the local build directory, redo step 3 _without leaving_ the `nix deve
     ```
     returns a path to the nix store, e.g., `/nix/store/9pv3x44dfnwrz0jjrh9mlxa9y143i987-hs-src-0.1`, that can be used as:
     ```
-    /nix/store/9pv3x44dfnwrz0jjrh9mlxa9y143i987-hs-src-0.1/haskell/Ledger
+    /nix/store/9pv3x44dfnwrz0jjrh9mlxa9y143i987-hs-src-0.1/hs
     ```
     in the packages section of the `cabal.project` file.
 

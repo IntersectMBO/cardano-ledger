@@ -18,7 +18,7 @@ import Cardano.Ledger.Conway.Governance (Constitution (..), EnactState (..))
 import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
 import Cardano.Ledger.Shelley.Rules (Identity, ShelleyLedgersEnv (..), ShelleyLedgersPredFailure)
 import Control.State.Transition.Extended (STS (..))
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   OpaqueErrorString (..),
   SpecTranslate (..),
