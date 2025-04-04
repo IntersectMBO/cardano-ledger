@@ -26,7 +26,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
 import Data.List.NonEmpty
 import Lens.Micro
-import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
+import MAlonzo.Code.Ledger.Foreign.API qualified as Agda
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (ConwayLedgerExecContext (..))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (ConwayTxBodyTransContext)
