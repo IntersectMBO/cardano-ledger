@@ -1,9 +1,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.State.CertState (
@@ -43,7 +46,10 @@ data ShelleyCertState era = ShelleyCertState
   { shelleyCertPState :: !(PState era)
   , shelleyCertDState :: !(DState era)
   }
-  deriving (Show, Eq, Generic)
+  deriving (Generic)
+
+deriving instance Eq (AccountsState era) => Eq (ShelleyCertState era)
+deriving instance Show (AccountsState era) => Show (ShelleyCertState era)
 
 mkShelleyCertState :: EraCertState era => PState era -> DState era -> CertState era
 mkShelleyCertState p d =
@@ -59,7 +65,7 @@ shelleyCertPStateL :: Lens' (ShelleyCertState era) (PState era)
 shelleyCertPStateL = lens shelleyCertPState (\ds u -> ds {shelleyCertPState = u})
 {-# INLINE shelleyCertPStateL #-}
 
-toCertStatePairs :: KeyValue e a => ShelleyCertState era -> [a]
+toCertStatePairs :: (ToJSON (AccountsState era), KeyValue e a) => ShelleyCertState era -> [a]
 toCertStatePairs certState@(ShelleyCertState _ _) =
   let ShelleyCertState {..} = certState
    in [ "dstate" .= shelleyCertDState
@@ -69,8 +75,7 @@ toCertStatePairs certState@(ShelleyCertState _ _) =
 shelleyObligationCertState :: EraCertState era => CertState era -> Obligations
 shelleyObligationCertState certState =
   Obligations
-    { oblStake =
-        UM.fromCompact (UM.sumDepositUView (UM.RewDepUView (certState ^. certDStateL . dsUnifiedL)))
+    { oblStake = sumDepositsAcountsState (certState ^. certDStateL . accountsStateL)
     , oblPool = F.foldl' (<>) (Coin 0) (certState ^. certPStateL . psDepositsL)
     , oblDRep = Coin 0
     , oblProposal = Coin 0
@@ -82,7 +87,7 @@ shelleyCertsTotalDepositsTxBody pp ShelleyCertState {shelleyCertPState} =
   getTotalDepositsTxBody pp (`Map.member` psStakePoolParams shelleyCertPState)
 
 shelleyCertsTotalRefundsTxBody ::
-  EraTxBody era => PParams era -> ShelleyCertState era -> TxBody era -> Coin
+  (EraTxBody era, EraAccountsState era) => PParams era -> ShelleyCertState era -> TxBody era -> Coin
 shelleyCertsTotalRefundsTxBody pp ShelleyCertState {shelleyCertDState} =
   getTotalRefundsTxBody
     pp
@@ -104,7 +109,7 @@ instance EraCertState ShelleyEra where
 
   certsTotalRefundsTxBody = shelleyCertsTotalRefundsTxBody
 
-instance ToJSON (ShelleyCertState era) where
+instance ToJSON (AccountsState era) => ToJSON (ShelleyCertState era) where
   toJSON = object . toCertStatePairs
   toEncoding = pairs . mconcat . toCertStatePairs
 
