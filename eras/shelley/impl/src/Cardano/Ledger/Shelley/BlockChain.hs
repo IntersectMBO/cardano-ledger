@@ -204,14 +204,7 @@ auxDataSeqDecoder bodiesLength auxDataMap lax = do
     indexLookupSeq :: Int -> IntMap a -> Seq (Maybe a)
     indexLookupSeq n ixMap = Seq.fromList [IntMap.lookup ix ixMap | ix <- [0 .. n - 1]]
 
-instance
-  ( EraTx era
-  , DecCBOR (TxBody era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  DecCBOR (ShelleyTxSeq era)
-  where
+instance EraTx era => DecCBOR (ShelleyTxSeq era) where
   decCBOR = do
     Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
     Annotated wits witsBytes <- decodeAnnotated decCBOR
