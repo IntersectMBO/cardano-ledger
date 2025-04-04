@@ -119,7 +119,7 @@ instance
 
 instance EraScript era => NoThunks (ShelleyTxWits era)
 
-instance (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWits era) where
+instance EraScript era => DecCBOR (ShelleyTxWits era) where
   decCBOR = ShelleyTxWitsConstr <$> decodeMemoized decCBOR
 
 -- =======================================================
@@ -214,7 +214,7 @@ shelleyEqTxWitsRaw txWits1 txWits2 =
     && liftEq eqRaw (txWits1 ^. scriptTxWitsL) (txWits2 ^. scriptTxWitsL)
     && txWits1 ^. bootAddrTxWitsL == txWits2 ^. bootAddrTxWitsL
 
-instance (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWitsRaw era) where
+instance EraScript era => DecCBOR (ShelleyTxWitsRaw era) where
   decCBOR =
     decode $
       SparseKeyed
