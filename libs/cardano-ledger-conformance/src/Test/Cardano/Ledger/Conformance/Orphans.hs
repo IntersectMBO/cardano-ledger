@@ -14,7 +14,7 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Lib
+import MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (FixupSpecRep (..), OpaqueErrorString)
 import Test.Cardano.Ledger.Conformance.Utils
@@ -336,7 +336,7 @@ instance FixupSpecRep CertState
 
 instance FixupSpecRep Vote
 
-instance FixupSpecRep Lib.Rational where
+instance FixupSpecRep Agda.Rational where
   fixup = id
 
 instance FixupSpecRep PParamsUpdate

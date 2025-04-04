@@ -20,7 +20,7 @@ import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Data.Bifunctor (Bifunctor (..))
 import qualified Data.Text as T
 import Lens.Micro ((^.))
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),

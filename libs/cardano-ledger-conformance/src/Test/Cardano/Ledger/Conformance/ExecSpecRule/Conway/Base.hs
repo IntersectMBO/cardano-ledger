@@ -91,7 +91,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Binary.TreeDiff (tableDoc)
 import Test.Cardano.Ledger.Common (Arbitrary (..))

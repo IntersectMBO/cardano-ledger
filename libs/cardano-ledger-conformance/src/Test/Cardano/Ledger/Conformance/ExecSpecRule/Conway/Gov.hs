@@ -16,7 +16,7 @@ import Cardano.Ledger.Conway.Core (EraPParams (..))
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Lens.Micro ((&), (.~), (^.))
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
 import Test.Cardano.Ledger.Constrained.Conway
