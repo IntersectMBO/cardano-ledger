@@ -28,6 +28,7 @@ import Test.Cardano.Ledger.Mary.Binary.Cddl (readMaryCddlFiles)
 import Test.Cardano.Ledger.Mary.CDDL (maryCDDL)
 import Test.Cardano.Ledger.Shelley.Binary.Cddl (readShelleyCddlFiles)
 import Test.Cardano.Ledger.Shelley.CDDL (shelleyCDDL)
+import Test.Cardano.Protocol.Binary.Annotator ()
 import Test.Cardano.Protocol.Binary.Cddl (
   cddlBlockSpec,
   huddleBlockSpec,

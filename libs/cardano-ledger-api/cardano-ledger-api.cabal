@@ -94,7 +94,7 @@ library testlib
     base,
     bytestring,
     cardano-ledger-api,
-    cardano-ledger-binary,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     containers,
 

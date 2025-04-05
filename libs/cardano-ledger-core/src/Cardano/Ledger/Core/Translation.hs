@@ -20,12 +20,12 @@ module Cardano.Ledger.Core.Translation (
 where
 
 import Cardano.Ledger.Binary
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core.Era
 import Cardano.Ledger.Genesis
-import Control.Monad.Except (Except, runExcept)
+import Control.Monad.Except (Except, runExcept, throwError)
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
-import Data.Text (Text)
 import Data.Void (Void, absurd)
 
 --------------------------------------------------------------------------------
@@ -115,10 +115,10 @@ translateEraMaybe ctxt =
 -- | Translate a type through its binary representation from previous era to the current one.
 translateEraThroughCBOR ::
   forall era ti to.
-  (Era era, ToCBOR (ti (PreviousEra era)), DecCBOR (Annotator (to era))) =>
-  -- | Label for error reporting
-  Text ->
+  (Era era, ToCBOR (ti (PreviousEra era)), DecCBOR (to era)) =>
   ti (PreviousEra era) ->
   Except DecoderError (to era)
-translateEraThroughCBOR =
-  translateViaCBORAnnotator (eraProtVerLow @era)
+translateEraThroughCBOR prevEraType =
+  case decodeFull (eraProtVerLow @era) (Plain.serialize prevEraType) of
+    Right curEraType -> pure curEraType
+    Left decoderError -> throwError decoderError

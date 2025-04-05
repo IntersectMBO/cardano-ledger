@@ -8,23 +8,26 @@
 
 module Test.Cardano.Ledger.Core.Binary (
   BinaryUpgradeOpts (..),
-  decoderEquivalenceCoreEraTypesSpec,
   specUpgrade,
+  decoderEquivalenceSpec,
   decoderEquivalenceEraSpec,
   txSizeSpec,
+  decoderEquivalenceCoreEraTypesSpec,
+  Mem,
 ) where
 
-import Cardano.Ledger.Binary (Annotator, DecCBOR, ToCBOR, decNoShareCBOR, encodeMemPack)
+import Cardano.Ledger.Binary (DecCBOR, decNoShareCBOR, encodeMemPack)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
-import Cardano.Ledger.Plutus (Data)
 import Data.Default (Default (def))
 import Lens.Micro
 import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Binary (decoderEquivalenceSpec)
+import Test.Cardano.Ledger.Binary.Annotator
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Binary.Annotator
 import Test.Cardano.Ledger.TreeDiff (AnsiStyle, Doc)
 
 data BinaryUpgradeOpts = BinaryUpgradeOpts
@@ -87,7 +90,7 @@ specTxAuxDataUpgrade ::
   , Arbitrary (TxAuxData (PreviousEra era))
   , HasCallStack
   , ToExpr (TxAuxData era)
-  , DecCBOR (TxAuxData era)
+  , DecCBOR (Annotator (TxAuxData era))
   ) =>
   Spec
 specTxAuxDataUpgrade = do
@@ -115,7 +118,7 @@ specScriptUpgrade ::
   ( EraScript (PreviousEra era)
   , EraScript era
   , Arbitrary (Script (PreviousEra era))
-  , DecCBOR (Script era)
+  , DecCBOR (Annotator (Script era))
   , HasCallStack
   ) =>
   Spec
@@ -144,7 +147,7 @@ specTxWitsUpgrade ::
   , Arbitrary (TxWits (PreviousEra era))
   , HasCallStack
   , ToExpr (TxWits era)
-  , DecCBOR (TxWits era)
+  , DecCBOR (Annotator (TxWits era))
   ) =>
   Spec
 specTxWitsUpgrade = do
@@ -174,7 +177,7 @@ specTxBodyUpgrade ::
   , Arbitrary (TxBody (PreviousEra era))
   , HasCallStack
   , ToExpr (TxBody era)
-  , DecCBOR (TxBody era)
+  , DecCBOR (Annotator (TxBody era))
   ) =>
   Spec
 specTxBodyUpgrade = do
@@ -212,7 +215,7 @@ specTxUpgrade ::
   , Arbitrary (Tx (PreviousEra era))
   , HasCallStack
   , ToExpr (Tx era)
-  , DecCBOR (Tx era)
+  , DecCBOR (Annotator (Tx era))
   ) =>
   Spec
 specTxUpgrade = do
@@ -259,11 +262,11 @@ specUpgrade ::
   , ToExpr (TxBody era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
-  , DecCBOR (TxAuxData era)
-  , DecCBOR (Script era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
+  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (Script era))
+  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (Tx era))
   ) =>
   BinaryUpgradeOpts ->
   Spec
@@ -295,38 +298,6 @@ expectRawEqual thing expected actual =
         [ Pretty.hsep ["Expected raw representation of", thing, "to be equal:"]
         , Pretty.indent 2 $ diffExpr expected actual
         ]
-
-decoderEquivalenceEraSpec ::
-  forall era t.
-  ( Era era
-  , Eq t
-  , ToCBOR t
-  , DecCBOR (Annotator t)
-  , Arbitrary t
-  , Show t
-  ) =>
-  Spec
-decoderEquivalenceEraSpec = decoderEquivalenceSpec @t (eraProtVerLow @era) (eraProtVerHigh @era)
-
-decoderEquivalenceCoreEraTypesSpec ::
-  forall era.
-  ( EraTx era
-  , Arbitrary (Tx era)
-  , Arbitrary (TxBody era)
-  , Arbitrary (TxWits era)
-  , Arbitrary (TxAuxData era)
-  , Arbitrary (Script era)
-  , HasCallStack
-  ) =>
-  Spec
-decoderEquivalenceCoreEraTypesSpec =
-  describe "DecCBOR instances equivalence" $ do
-    decoderEquivalenceEraSpec @era @(Data era)
-    decoderEquivalenceEraSpec @era @(Script era)
-    decoderEquivalenceEraSpec @era @(TxAuxData era)
-    decoderEquivalenceEraSpec @era @(TxWits era)
-    decoderEquivalenceEraSpec @era @(TxBody era)
-    decoderEquivalenceEraSpec @era @(Tx era)
 
 txSizeSpec ::
   forall era.

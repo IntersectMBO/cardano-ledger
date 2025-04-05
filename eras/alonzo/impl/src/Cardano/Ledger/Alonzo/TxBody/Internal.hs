@@ -106,7 +106,6 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
-  Annotator,
   DecCBOR (..),
   EncCBOR (..),
   ToCBOR (..),
@@ -124,7 +123,6 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.MemoBytes (
   EqRaw,
-  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
@@ -395,12 +393,6 @@ deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (AlonzoTxBody era)
 
-deriving via
-  Mem (AlonzoTxBodyRaw era)
-  instance
-    (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-    DecCBOR (Annotator (AlonzoTxBody era))
-
 deriving newtype instance
   (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
   DecCBOR (AlonzoTxBody era)
@@ -603,7 +595,6 @@ instance
     where
       bodyFields :: Word -> Field (AlonzoTxBodyRaw era)
       bodyFields 0 = field (\x tx -> tx {atbrInputs = x}) From
-      bodyFields 13 = field (\x tx -> tx {atbrCollateral = x}) From
       bodyFields 1 = field (\x tx -> tx {atbrOutputs = x}) From
       bodyFields 2 = field (\x tx -> tx {atbrTxFee = x}) From
       bodyFields 3 =
@@ -620,6 +611,7 @@ instance
           From
       bodyFields 9 = field (\x tx -> tx {atbrMint = x}) From
       bodyFields 11 = ofield (\x tx -> tx {atbrScriptIntegrityHash = x}) From
+      bodyFields 13 = field (\x tx -> tx {atbrCollateral = x}) From
       bodyFields 14 = field (\x tx -> tx {atbrReqSignerHashes = x}) From
       bodyFields 15 = ofield (\x tx -> tx {atbrTxNetworkId = x}) From
       bodyFields n = invalidField n
@@ -645,12 +637,6 @@ emptyAlonzoTxBodyRaw =
     SNothing
     SNothing
     SNothing
-
-instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-  DecCBOR (Annotator (AlonzoTxBodyRaw era))
-  where
-  decCBOR = pure <$> decCBOR
 
 alonzoRedeemerPointer ::
   forall era.

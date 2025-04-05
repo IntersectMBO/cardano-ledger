@@ -69,11 +69,11 @@ instance TranslateEra BabbageEra Tx where
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
-    txWits <- translateEraThroughCBOR "TxWitness" $ tx ^. witsTxL
+    txBody <- translateEraThroughCBOR $ tx ^. bodyTxL
+    txWits <- translateEraThroughCBOR $ tx ^. witsTxL
     auxData <- case tx ^. auxDataTxL of
       SNothing -> pure SNothing
-      SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
+      SJust auxData -> SJust <$> translateEraThroughCBOR auxData
     let validating = tx ^. Alonzo.isValidTxL
     pure $ Tx $ AlonzoTx txBody txWits validating auxData
 

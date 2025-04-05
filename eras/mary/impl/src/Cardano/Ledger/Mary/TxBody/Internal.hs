@@ -48,7 +48,7 @@ where
 
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.TxBody
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.TxCert ()
@@ -56,7 +56,6 @@ import Cardano.Ledger.Mary.TxOut ()
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.MemoBytes (
   EqRaw,
-  Mem,
   MemoBytes (Memo),
   MemoHashIndex,
   Memoized (RawType),
@@ -117,9 +116,6 @@ instance
   (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
   EqRaw (MaryTxBody era)
 
-instance AllegraEraTxBody era => DecCBOR (Annotator (MaryTxBodyRaw era)) where
-  decCBOR = pure <$> decCBOR
-
 deriving newtype instance (EraTxOut era, EraTxCert era) => EncCBOR (MaryTxBodyRaw era)
 
 instance Memoized (MaryTxBody era) where
@@ -142,11 +138,6 @@ deriving newtype instance
 deriving newtype instance
   (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (MaryTxBody era)
-
-deriving via
-  Mem (MaryTxBodyRaw era)
-  instance
-    MaryEraTxBody era => DecCBOR (Annotator (MaryTxBody era))
 
 deriving newtype instance MaryEraTxBody era => DecCBOR (MaryTxBody era)
 

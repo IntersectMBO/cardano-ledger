@@ -63,7 +63,7 @@ instance TranslateEra MaryEra NewEpochState where
 
 instance TranslateEra MaryEra ShelleyTx where
   type TranslationError MaryEra ShelleyTx = DecoderError
-  translateEra _ctx = translateEraThroughCBOR "ShelleyTx"
+  translateEra _ctx = translateEraThroughCBOR
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
@@ -153,7 +153,7 @@ instance TranslateEra MaryEra UTxO where
 
 instance TranslateEra MaryEra ShelleyTxWits where
   type TranslationError MaryEra ShelleyTxWits = DecoderError
-  translateEra _ctx = translateEraThroughCBOR "ShelleyTxWits"
+  translateEra _ctx = translateEraThroughCBOR
 
 instance TranslateEra MaryEra Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en

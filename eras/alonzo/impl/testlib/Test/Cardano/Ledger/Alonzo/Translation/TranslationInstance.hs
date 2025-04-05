@@ -4,7 +4,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,12 +19,10 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
 
 import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
-  Annotator,
   DecCBOR (..),
   DecoderError,
   EncCBOR (..),
-  decodeFullAnnotator,
-  decodeList,
+  decodeFull,
   fromPlainDecoder,
   fromPlainEncoding,
  )
@@ -36,7 +33,6 @@ import Cardano.Ledger.Binary.Coders (
   encode,
   (!>),
   (<!),
-  (<*!),
  )
 import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Plutus.Language (Language (..))
@@ -148,24 +144,6 @@ instance
 
 instance
   ( Typeable era
-  , Typeable (Tx era)
-  , DecCBOR (PParams era)
-  , DecCBOR (UTxO era)
-  , DecCBOR (Annotator (Core.Tx era))
-  ) =>
-  DecCBOR (Annotator (TranslationInstance era))
-  where
-  decCBOR =
-    decode $
-      Ann (RecD TranslationInstance)
-        <*! Ann From
-        <*! Ann From
-        <*! Ann From
-        <*! From
-        <*! Ann From
-
-instance
-  ( Typeable era
   , DecCBOR (PParams era)
   , DecCBOR (UTxO era)
   , DecCBOR (Core.Tx era)
@@ -184,13 +162,10 @@ instance
 deserializeTranslationInstances ::
   forall era.
   ( Era era
-  , Typeable (Tx era)
   , DecCBOR (PParams era)
   , DecCBOR (UTxO era)
-  , DecCBOR (Annotator (Core.Tx era))
+  , DecCBOR (Core.Tx era)
   ) =>
   BSL.ByteString ->
   Either DecoderError [TranslationInstance era]
-deserializeTranslationInstances = decodeFullAnnotator (eraProtVerHigh @era) "Translations" decList
-  where
-    decList = sequence <$> decodeList decCBOR
+deserializeTranslationInstances = decodeFull (eraProtVerHigh @era)

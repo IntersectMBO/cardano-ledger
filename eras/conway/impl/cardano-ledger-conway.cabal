@@ -125,6 +125,7 @@ library
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Conway.Arbitrary
+    Test.Cardano.Ledger.Conway.Binary.Annotator
     Test.Cardano.Ledger.Conway.Binary.Cddl
     Test.Cardano.Ledger.Conway.Binary.Regression
     Test.Cardano.Ledger.Conway.Binary.RoundTrip

@@ -9,6 +9,7 @@ import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits, Redeemers)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data)
+import Test.Cardano.Ledger.Alonzo.Binary.Annotator ()
 import Test.Cardano.Ledger.Alonzo.Binary.Cddl (readAlonzoCddlFiles)
 import Test.Cardano.Ledger.Alonzo.CDDL (alonzoCDDL)
 import Test.Cardano.Ledger.Binary.Cddl (
