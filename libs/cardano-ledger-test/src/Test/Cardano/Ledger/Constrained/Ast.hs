@@ -26,6 +26,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
+import Data.TreeDiff
 import qualified Data.Universe as Univ (Any (..))
 import Data.Void (Void)
 import Data.Word (Word64)
@@ -257,7 +258,7 @@ data RootTarget era root t where
   Mask :: RootTarget era r a -> RootTarget era Void a
   Virtual ::
     Term era t ->
-    PDoc ->
+    Expr ->
     Lens' root t ->
     -- | Just like Lensed but uses the String to name the field (instead of the Term)
     RootTarget era root t
@@ -408,10 +409,10 @@ args other = [Univ.Any other]
 -- | Print a Target as a record showing the struture and names of all
 --   the variables involved. This documents what is in scope where
 --   the Target value was defined.
-ppTarget :: RootTarget era r t -> PDoc
+ppTarget :: RootTarget era r t -> Expr
 ppTarget x = targetRecord x []
 
-targetRecord :: RootTarget era r t -> [(Text, PDoc)] -> PDoc
+targetRecord :: RootTarget era r t -> [(Text, Expr)] -> Expr
 targetRecord (Constr n _) xs = ppRecord (pack n) xs
 targetRecord (ts :$ t) xs = targetRecord ts (targetPair t : xs)
 targetRecord (Simple e) [] = ppString (show e)
@@ -437,7 +438,7 @@ nameOf (Shift x _) = nameOf x
 nameOf (Mask x) = nameOf x
 nameOf (Virtual _ x _) = pack (show x)
 
-targetPair :: RootTarget era r t -> (Text, PDoc)
+targetPair :: RootTarget era r t -> (Text, Expr)
 targetPair (Simple (Var (V n rep _))) = (pack n, ppString (show rep))
 targetPair (Lensed (Var (V n rep _)) _) = (pack n, ppString (show rep))
 targetPair (Partial (Var (V n rep _)) _) = (pack n, ppString (show rep))
