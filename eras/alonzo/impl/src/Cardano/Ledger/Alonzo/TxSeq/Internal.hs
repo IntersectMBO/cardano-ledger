@@ -179,14 +179,7 @@ hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
     hashStrict = Hash.hashWith id
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
 
-instance
-  ( AlonzoEraTx era
-  , DecCBOR (TxBody era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxAuxData era)
-  ) =>
-  DecCBOR (AlonzoTxSeq era)
-  where
+instance AlonzoEraTx era => DecCBOR (AlonzoTxSeq era) where
   decCBOR = do
     Annotated bodies bodiesBytes <- decodeAnnotated decCBOR
     Annotated wits witsBytes <- decodeAnnotated decCBOR
