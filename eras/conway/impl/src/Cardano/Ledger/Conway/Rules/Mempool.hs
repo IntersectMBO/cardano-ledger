@@ -47,6 +47,8 @@ import Control.State.Transition (
   failOnNonEmpty,
   judgmentContext,
   transitionRules,
+  whenFailureFreeDefault,
+  (?!),
  )
 import Control.State.Transition.Extended (Embed (..), trans)
 import qualified Data.List.NonEmpty as NE
@@ -100,24 +102,40 @@ mempoolTransition ::
 mempoolTransition = do
   TRC trc@(_ledgerEnv, ledgerState, tx) <-
     judgmentContext
+
   -- This rule only gets invoked on transactions within the mempool.
   -- Add checks here that sanitize undesired transactions.
+
+  -- Detect whether the transaction is probably a duplicate
   let
-    authorizedElectedHotCreds = authorizedElectedHotCommitteeCredentials ledgerState
-    collectUnelectedCommitteeVotes !unelectedHotCreds voter _ =
-      case voter of
-        CommitteeVoter hotCred
-          | hotCred `Set.notMember` authorizedElectedHotCreds ->
-              Set.insert hotCred unelectedHotCreds
-        _ -> unelectedHotCreds
-    unelectedCommitteeVoters =
-      Map.foldlWithKey' collectUnelectedCommitteeVotes Set.empty $
-        unVotingProcedures (tx ^. bodyTxL . votingProceduresTxBodyL)
-    addPrefix =
-      ("Unelected committee members are not allowed to cast votes: " <>)
-  failOnNonEmpty unelectedCommitteeVoters $
-    ConwayMempoolFailure . addPrefix . T.pack . show . NE.toList
-  trans @(EraRule "LEDGER" era) $ TRC trc
+    inputs = tx ^. bodyTxL . inputsTxBodyL
+    UTxO utxo = ledgerState ^. utxoG
+    notAllSpent = any (`Map.member` utxo) inputs
+  notAllSpent
+    ?! ConwayMempoolFailure
+      "All inputs are spent. Transaction has probably already been included"
+
+  -- Skip all other checks if the transaction is probably a duplicate
+  whenFailureFreeDefault ledgerState $ do
+    -- Disallow votes by unelected committee members
+    let
+      authorizedElectedHotCreds = authorizedElectedHotCommitteeCredentials ledgerState
+      collectUnelectedCommitteeVotes !unelectedHotCreds voter _ =
+        case voter of
+          CommitteeVoter hotCred
+            | hotCred `Set.notMember` authorizedElectedHotCreds ->
+                Set.insert hotCred unelectedHotCreds
+          _ -> unelectedHotCreds
+      unelectedCommitteeVoters =
+        Map.foldlWithKey' collectUnelectedCommitteeVotes Set.empty $
+          unVotingProcedures (tx ^. bodyTxL . votingProceduresTxBodyL)
+      addPrefix =
+        ("Unelected committee members are not allowed to cast votes: " <>)
+    failOnNonEmpty unelectedCommitteeVoters $
+      ConwayMempoolFailure . addPrefix . T.pack . show . NE.toList
+
+    -- Continue with LEDGER rules
+    trans @(EraRule "LEDGER" era) $ TRC trc
 
 instance
   ( AlonzoEraTx era

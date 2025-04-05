@@ -6,7 +6,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.LedgerSpec (spec) where
 
@@ -27,7 +26,8 @@ import Cardano.Ledger.Shelley.LedgerState
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import Lens.Micro ((&), (.~), (^.))
+import GHC.Exts (fromList)
+import Lens.Micro ((&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
@@ -212,9 +212,35 @@ spec = do
         mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, mempty)]
 
   describe "Mempool" $ do
+    let
+      submitFailingMempoolTx cause tx expectedFailures = do
+        globals <- use impGlobalsL
+        nes <- use impNESL
+        slotNo <- use impLastTickG
+        let
+          mempoolEnv = mkMempoolEnv nes slotNo
+          ls = nes ^. nesEsL . esLStateL
+        case applyTx globals mempoolEnv ls tx of
+          Left err ->
+            err `shouldBe` ApplyTxError @era (injectFailure <$> expectedFailures)
+          Right _ -> assertFailure $ "Expected failure due to " <> cause <> ": " <> show tx
+
+    it "Duplicate transactions" $ do
+      inputs <- replicateM 10 $ do
+        addr <- freshKeyAddr_
+        amount <- Coin <$> choose (2_000_000, 8_000_000)
+        sendCoinTo addr amount
+      tx <- submitTx $ mkBasicTx $ mkBasicTxBody & inputsTxBodyL <>~ fromList inputs
+      submitFailingMempoolTx "duplicate transaction" tx $
+        pure . ConwayMempoolFailure $
+          "All inputs are spent. Transaction has probably already been included"
+      input <- elements inputs
+      let tx1 = mkBasicTx $ mkBasicTxBody & inputsTxBodyL <>~ [input]
+      submitFailingMempoolTx "duplicate transaction" tx1 $
+        pure . ConwayMempoolFailure $
+          "All inputs are spent. Transaction has probably already been included"
+
     it "Unelected Committee voting" $ whenPostBootstrap $ do
-      globals <- use impGlobalsL
-      slotNo <- use impLastTickG
       _ <- registerInitialCommittee
       ccCold <- KeyHashObj <$> freshKeyHash
       curEpochNo <- getsNES nesELL
@@ -232,9 +258,6 @@ spec = do
         rewardAccount <- registerRewardAccount
         submitTreasuryWithdrawals [(rewardAccount, Coin 1)]
 
-      nes <- use impNESL
-      let ls = nes ^. nesEsL . esLStateL
-          mempoolEnv = mkMempoolEnv nes slotNo
       tx <-
         fixupTx $
           mkBasicTx $
@@ -246,11 +269,7 @@ spec = do
                       (Map.singleton govActionId (VotingProcedure VoteYes SNothing))
                   )
 
-      case applyTx globals mempoolEnv ls tx of
-        Left err ->
-          let expectedFailure =
-                ConwayMempoolFailure $
-                  "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
-           in err `shouldBe` ApplyTxError @era (pure (injectFailure expectedFailure))
-        Right _ -> assertFailure $ "Expected failure due to an unallowed vote: " <> show tx
+      submitFailingMempoolTx "unallowed votes" tx $
+        pure . ConwayMempoolFailure $
+          "Unelected committee members are not allowed to cast votes: " <> T.pack (show (pure @[] ccHot))
       withNoFixup $ submitTx_ tx
