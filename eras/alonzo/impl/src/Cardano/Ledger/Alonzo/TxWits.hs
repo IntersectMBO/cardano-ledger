@@ -611,12 +611,7 @@ instance AlonzoEraScript era => DecCBOR (RedeemersRaw era) where
 -- | Encodes memoized bytes created upon construction.
 instance AlonzoEraScript era => EncCBOR (Redeemers era)
 
-instance
-  ( AlonzoEraScript era
-  , DecCBOR (NativeScript era)
-  ) =>
-  DecCBOR (AlonzoTxWitsRaw era)
-  where
+instance AlonzoEraScript era => DecCBOR (AlonzoTxWitsRaw era) where
   decCBOR =
     decode $
       SparseKeyed
@@ -671,11 +666,7 @@ instance
           {-# INLINE pairDecoder #-}
       {-# INLINE nativeScriptsDecoder #-}
 
-deriving newtype instance
-  ( AlonzoEraScript era
-  , DecCBOR (NativeScript era)
-  ) =>
-  DecCBOR (AlonzoTxWits era)
+deriving newtype instance AlonzoEraScript era => DecCBOR (AlonzoTxWits era)
 
 addScripts ::
   Map ScriptHash (Script era) ->
