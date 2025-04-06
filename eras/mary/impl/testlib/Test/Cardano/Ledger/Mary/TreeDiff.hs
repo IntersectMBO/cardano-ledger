@@ -31,14 +31,6 @@ instance ToExpr AssetName where
 
 deriving newtype instance ToExpr (CompactForm MaryValue)
 
--- TxBody
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  , ToExpr (Update era)
-  ) =>
-  ToExpr (MaryTxBodyRaw era)
-
 instance
   ( ToExpr (TxOut era)
   , ToExpr (TxCert era)

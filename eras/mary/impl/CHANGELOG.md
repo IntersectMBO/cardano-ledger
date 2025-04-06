@@ -1,7 +1,10 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.8.0.1
+## 1.8.1.0
 
+* Converted `MaryTxBodyRaw` into a type synonym
+* Expose constructor `MkMaryTxBody`
+* Add default implementation for `mintValueTxBodyF`
 
 ## 1.8.0.0
 

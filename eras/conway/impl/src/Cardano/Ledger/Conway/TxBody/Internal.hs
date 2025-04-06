@@ -32,7 +32,7 @@
 module Cardano.Ledger.Conway.TxBody.Internal (
   ConwayEraTxBody (..),
   ConwayTxBody (
-    ..,
+    MkConwayTxBody,
     ConwayTxBody,
     ctbSpendInputs,
     ctbCollateralInputs,
@@ -101,7 +101,7 @@ import Cardano.Ledger.Conway.TxCert (
   ConwayTxCertUpgradeError,
  )
 import Cardano.Ledger.Conway.TxOut ()
-import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), policies)
+import Cardano.Ledger.Mary.Value (MultiAsset (..), policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -139,13 +139,13 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrTotalCollateral :: !(StrictMaybe Coin)
   , ctbrCerts :: !(OSet.OSet (TxCert era))
   , ctbrWithdrawals :: !Withdrawals
-  , ctbrTxfee :: !Coin
+  , ctbrFee :: !Coin
   , ctbrVldt :: !ValidityInterval
   , ctbrReqSignerHashes :: !(Set (KeyHash 'Witness))
   , ctbrMint :: !MultiAsset
   , ctbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
   , ctbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
-  , ctbrTxNetworkId :: !(StrictMaybe Network)
+  , ctbrNetworkId :: !(StrictMaybe Network)
   , ctbrVotingProcedures :: !(VotingProcedures era)
   , ctbrProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
   , ctbrCurrentTreasuryValue :: !(StrictMaybe Coin)
@@ -185,7 +185,7 @@ instance
       bodyFields :: Word -> Field (ConwayTxBodyRaw era)
       bodyFields 0 = field (\x tx -> tx {ctbrSpendInputs = x}) From
       bodyFields 1 = field (\x tx -> tx {ctbrOutputs = x}) From
-      bodyFields 2 = field (\x tx -> tx {ctbrTxfee = x}) From
+      bodyFields 2 = field (\x tx -> tx {ctbrFee = x}) From
       bodyFields 3 =
         ofield
           (\x tx -> tx {ctbrVldt = (ctbrVldt tx) {invalidHereafter = x}})
@@ -226,7 +226,7 @@ instance
           null
           (\x tx -> tx {ctbrReqSignerHashes = x})
           From
-      bodyFields 15 = ofield (\x tx -> tx {ctbrTxNetworkId = x}) From
+      bodyFields 15 = ofield (\x tx -> tx {ctbrNetworkId = x}) From
       bodyFields 16 = ofield (\x tx -> tx {ctbrCollateralReturn = x}) From
       bodyFields 17 = ofield (\x tx -> tx {ctbrTotalCollateral = x}) From
       bodyFields 18 =
@@ -262,7 +262,7 @@ instance
       emptyFailure fieldName requirement =
         "TxBody: '" <> fieldName <> "' must be " <> requirement <> " when supplied"
 
-newtype ConwayTxBody era = TxBodyConstr (MemoBytes (ConwayTxBodyRaw era))
+newtype ConwayTxBody era = MkConwayTxBody (MemoBytes (ConwayTxBodyRaw era))
   deriving (Generic, SafeToHash, ToCBOR)
 
 deriving newtype instance
@@ -361,7 +361,7 @@ instance EraTxBody ConwayEra where
       \txb x -> txb {ctbrOutputs = mkSized (eraProtVerLow @ConwayEra) <$> x}
   {-# INLINE outputsTxBodyL #-}
 
-  feeTxBodyL = lensMemoRawType @ConwayEra ctbrTxfee (\txb x -> txb {ctbrTxfee = x})
+  feeTxBodyL = lensMemoRawType @ConwayEra ctbrFee (\txb x -> txb {ctbrFee = x})
   {-# INLINE feeTxBodyL #-}
 
   auxDataHashTxBodyL = lensMemoRawType @ConwayEra ctbrAuxDataHash $
@@ -467,10 +467,7 @@ instance MaryEraTxBody ConwayEra where
     \txb x -> txb {ctbrMint = x}
   {-# INLINE mintTxBodyL #-}
 
-  mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
-
-  mintedTxBodyF =
-    to (\(TxBodyConstr (Memo txBodyRaw _)) -> policies (ctbrMint txBodyRaw))
+  mintedTxBodyF = to $ \txBody -> policies (ctbrMint (getMemoRawType txBody))
   {-# INLINE mintedTxBodyF #-}
 
 instance AlonzoEraTxBody ConwayEra where
@@ -489,8 +486,8 @@ instance AlonzoEraTxBody ConwayEra where
       \txb x -> txb {ctbrScriptIntegrityHash = x}
   {-# INLINE scriptIntegrityHashTxBodyL #-}
 
-  networkIdTxBodyL = lensMemoRawType @ConwayEra ctbrTxNetworkId $
-    \txb x -> txb {ctbrTxNetworkId = x}
+  networkIdTxBodyL = lensMemoRawType @ConwayEra ctbrNetworkId $
+    \txb x -> txb {ctbrNetworkId = x}
   {-# INLINE networkIdTxBodyL #-}
 
   redeemerPointer = conwayRedeemerPointer
@@ -601,13 +598,13 @@ pattern ConwayTxBody
         , ctbrTotalCollateral = ctbTotalCollateral
         , ctbrCerts = ctbCerts
         , ctbrWithdrawals = ctbWithdrawals
-        , ctbrTxfee = ctbTxfee
+        , ctbrFee = ctbTxfee
         , ctbrVldt = ctbVldt
         , ctbrReqSignerHashes = ctbReqSignerHashes
         , ctbrMint = ctbMint
         , ctbrScriptIntegrityHash = ctbScriptIntegrityHash
         , ctbrAuxDataHash = ctbAdHash
-        , ctbrTxNetworkId = ctbTxNetworkId
+        , ctbrNetworkId = ctbTxNetworkId
         , ctbrVotingProcedures = ctbVotingProcedures
         , ctbrProposalProcedures = ctbProposalProcedures
         , ctbrCurrentTreasuryValue = ctbCurrentTreasuryValue
@@ -679,7 +676,7 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> Key 1 (To ctbrOutputs)
         !> encodeKeyedStrictMaybe 16 ctbrCollateralReturn
         !> encodeKeyedStrictMaybe 17 ctbrTotalCollateral
-        !> Key 2 (To ctbrTxfee)
+        !> Key 2 (To ctbrFee)
         !> encodeKeyedStrictMaybe 3 top
         !> Omit OSet.null (Key 4 (To ctbrCerts))
         !> Omit (null . unWithdrawals) (Key 5 (To ctbrWithdrawals))
@@ -688,7 +685,7 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> Omit (== mempty) (Key 9 (To ctbrMint))
         !> encodeKeyedStrictMaybe 11 ctbrScriptIntegrityHash
         !> encodeKeyedStrictMaybe 7 ctbrAuxDataHash
-        !> encodeKeyedStrictMaybe 15 ctbrTxNetworkId
+        !> encodeKeyedStrictMaybe 15 ctbrNetworkId
         !> Omit (null . unVotingProcedures) (Key 19 (To ctbrVotingProcedures))
         !> Omit OSet.null (Key 20 (To ctbrProposalProcedures))
         !> encodeKeyedStrictMaybe 21 ctbrCurrentTreasuryValue

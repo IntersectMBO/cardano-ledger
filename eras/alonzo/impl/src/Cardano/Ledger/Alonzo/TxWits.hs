@@ -23,17 +23,18 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.TxWits (
-  Redeemers (Redeemers),
-  RedeemersRaw,
+  Redeemers (MkRedeemers, Redeemers),
+  RedeemersRaw (..),
   unRedeemersL,
   unRedeemers,
   nullRedeemers,
   lookupRedeemer,
   upgradeRedeemers,
-  TxDats (TxDats, TxDats'),
-  TxDatsRaw,
+  TxDats (MkTxDats, TxDats, TxDats'),
+  TxDatsRaw (..),
   upgradeTxDats,
   AlonzoTxWits (
+    MkAlonzoTxWits,
     AlonzoTxWits,
     txwitsVKey,
     txwitsBoot,
@@ -47,7 +48,7 @@ module Cardano.Ledger.Alonzo.TxWits (
     txdats',
     txrdmrs'
   ),
-  AlonzoTxWitsRaw,
+  AlonzoTxWitsRaw (..),
   addrAlonzoTxWitsL,
   bootAddrAlonzoTxWitsL,
   scriptAlonzoTxWitsL,
@@ -59,6 +60,7 @@ module Cardano.Ledger.Alonzo.TxWits (
   unTxDatsL,
   nullDats,
   alonzoEqTxWitsRaw,
+  emptyTxWitsRaw,
 )
 where
 
@@ -130,6 +132,7 @@ import Data.Bifunctor (Bifunctor (first))
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (fromElems)
 import qualified Data.MapExtras as Map (fromElems)
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
@@ -172,7 +175,7 @@ instance Memoized (Redeemers era) where
 -- the original bytes for the 'Cardano.Ledger.Alonzo.Tx.ScriptIntegrity'.
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
-newtype Redeemers era = RedeemersConstr (MemoBytes (RedeemersRaw era))
+newtype Redeemers era = MkRedeemers (MemoBytes (RedeemersRaw era))
   deriving newtype (Generic, ToCBOR, SafeToHash, Typeable, DecCBOR)
 
 deriving newtype instance AlonzoEraScript era => Eq (Redeemers era)
@@ -207,7 +210,8 @@ unRedeemers = unRedeemersRaw . getMemoRawType
 -- Conceptually, this is an Iso' but vanilla microlens doesn't have Iso's
 unRedeemersL ::
   forall era.
-  AlonzoEraScript era => Lens' (Redeemers era) (Map.Map (PlutusPurpose AsIx era) (Data era, ExUnits))
+  AlonzoEraScript era =>
+  Lens' (Redeemers era) (Map.Map (PlutusPurpose AsIx era) (Data era, ExUnits))
 unRedeemersL f = fmap Redeemers . f . unRedeemers
 {-# INLINE unRedeemersL #-}
 
@@ -215,8 +219,8 @@ nullRedeemers :: Redeemers era -> Bool
 nullRedeemers = Map.null . unRedeemers
 {-# DEPRECATED nullRedeemers "In favor of `unRedeemersL`" #-}
 
-emptyTxWitness :: AlonzoEraScript era => AlonzoTxWitsRaw era
-emptyTxWitness = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
+emptyTxWitsRaw :: AlonzoEraScript era => AlonzoTxWitsRaw era
+emptyTxWitsRaw = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
 
 emptyRedeemers :: AlonzoEraScript era => Redeemers era
 emptyRedeemers = Redeemers mempty
@@ -277,7 +281,7 @@ instance
   ) =>
   NFData (AlonzoTxWitsRaw era)
 
-newtype AlonzoTxWits era = TxWitnessConstr (MemoBytes (AlonzoTxWitsRaw era))
+newtype AlonzoTxWits era = MkAlonzoTxWits (MemoBytes (AlonzoTxWitsRaw era))
   deriving newtype (SafeToHash, ToCBOR)
   deriving (Generic)
 
@@ -321,6 +325,7 @@ pattern TxDats' :: Map DataHash (Data era) -> TxDats era
 pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
 
 {-# COMPLETE TxDats' #-}
+{-# DEPRECATED TxDats' "In favor of `TxDats`" #-}
 
 pattern TxDats :: forall era. Era era => Map DataHash (Data era) -> TxDats era
 pattern TxDats m <- (getMemoRawType -> TxDatsRaw m)
@@ -330,7 +335,7 @@ pattern TxDats m <- (getMemoRawType -> TxDatsRaw m)
 {-# COMPLETE TxDats #-}
 
 unTxDats :: TxDats era -> Map DataHash (Data era)
-unTxDats (TxDats' m) = m
+unTxDats (getMemoRawType -> TxDatsRaw m) = m
 
 -- Conceptually, this is an Iso' but vanilla microlens doesn't have Iso's
 unTxDatsL :: forall era. Era era => Lens' (TxDats era) (Map DataHash (Data era))
@@ -338,7 +343,7 @@ unTxDatsL f = fmap TxDats . f . unTxDats
 {-# INLINE unTxDatsL #-}
 
 nullDats :: TxDats era -> Bool
-nullDats (TxDats' d) = Map.null d
+nullDats (getMemoRawType -> TxDatsRaw m) = Map.null m
 {-# DEPRECATED nullDats "In favor of `unTxDatsL`" #-}
 
 instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
@@ -367,7 +372,7 @@ instance Era era => DecCBOR (TxDatsRaw era) where
 -- the original bytes for the 'Cardano.Ledger.Alonzo.Tx.ScriptIntegrity'.
 -- Since the 'TxDats' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
-newtype TxDats era = TxDatsConstr (MemoBytes (TxDatsRaw era))
+newtype TxDats era = MkTxDats (MemoBytes (TxDatsRaw era))
   deriving newtype (SafeToHash, ToCBOR, Eq, NoThunks, NFData, DecCBOR)
   deriving (Generic)
 
@@ -429,6 +434,12 @@ pattern AlonzoTxWits' {txwitsVKey', txwitsBoot', txscripts', txdats', txrdmrs'} 
   (getMemoRawType -> AlonzoTxWitsRaw txwitsVKey' txwitsBoot' txscripts' txdats' txrdmrs')
 
 {-# COMPLETE AlonzoTxWits' #-}
+{-# DEPRECATED AlonzoTxWits' "In favor of `AlonzoTxWits`" #-}
+{-# DEPRECATED txwitsVKey' "In favor of `txwitsVKey`" #-}
+{-# DEPRECATED txwitsBoot' "In favor of `txwitsBoot`" #-}
+{-# DEPRECATED txscripts' "In favor of `txscripts`" #-}
+{-# DEPRECATED txdats' "In favor of `txdats`" #-}
+{-# DEPRECATED txrdmrs' "In favor of `txrdmrs`" #-}
 
 pattern AlonzoTxWits ::
   forall era.
@@ -534,7 +545,7 @@ hashDataTxWitsL :: AlonzoEraTxWits era => Lens (TxWits era) (TxWits era) (TxDats
 hashDataTxWitsL =
   lens
     (\wits -> wits ^. datsTxWitsL)
-    (\wits ds -> wits & datsTxWitsL .~ TxDats (Map.fromList [(hashData d, d) | d <- ds]))
+    (\wits ds -> wits & datsTxWitsL .~ TxDats (fromElems hashData ds))
 {-# INLINEABLE hashDataTxWitsL #-}
 
 --------------------------------------------------------------------------------
@@ -685,7 +696,7 @@ instance
     decode $
       SparseKeyed
         "AlonzoTxWits"
-        (pure emptyTxWitness)
+        (pure emptyTxWitsRaw)
         txWitnessField
         []
     where
@@ -703,7 +714,7 @@ instance
           )
       txWitnessField 1 =
         fieldAA
-          addScripts
+          addScriptsTxWitsRaw
           (D nativeScriptsDecoder)
       txWitnessField 2 =
         fieldAA
@@ -716,14 +727,14 @@ instance
                 )
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
-      txWitnessField 3 = fieldA addScripts (decodePlutus SPlutusV1)
+      txWitnessField 3 = fieldA addScriptsTxWitsRaw (decodePlutus SPlutusV1)
       txWitnessField 4 =
         fieldAA
           (\x wits -> wits {atwrDatsTxWits = x})
           From
       txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
-      txWitnessField 6 = fieldA addScripts (decodePlutus SPlutusV2)
-      txWitnessField 7 = fieldA addScripts (decodePlutus SPlutusV3)
+      txWitnessField 6 = fieldA addScriptsTxWitsRaw (decodePlutus SPlutusV2)
+      txWitnessField 7 = fieldA addScriptsTxWitsRaw (decodePlutus SPlutusV3)
       txWitnessField n = invalidField n
       {-# INLINE txWitnessField #-}
 
@@ -750,7 +761,7 @@ instance
     decode $
       SparseKeyed
         "AlonzoTxWits"
-        emptyTxWitness
+        emptyTxWitsRaw
         txWitnessField
         []
     where
@@ -766,7 +777,7 @@ instance
                 )
                 (Set.fromList <$> decodeList decCBOR)
           )
-      txWitnessField 1 = field addScripts (D nativeScriptsDecoder)
+      txWitnessField 1 = field addScriptsTxWitsRaw (D nativeScriptsDecoder)
       txWitnessField 2 =
         field
           (\x wits -> wits {atwrBootAddrTxWits = x})
@@ -778,11 +789,11 @@ instance
                 )
                 (Set.fromList <$> decodeList decCBOR)
           )
-      txWitnessField 3 = field addScripts (decodePlutus SPlutusV1)
+      txWitnessField 3 = field addScriptsTxWitsRaw (decodePlutus SPlutusV1)
       txWitnessField 4 = field (\x wits -> wits {atwrDatsTxWits = x}) From
       txWitnessField 5 = field (\x wits -> wits {atwrRdmrsTxWits = x}) From
-      txWitnessField 6 = field addScripts (decodePlutus SPlutusV2)
-      txWitnessField 7 = field addScripts (decodePlutus SPlutusV3)
+      txWitnessField 6 = field addScriptsTxWitsRaw (decodePlutus SPlutusV2)
+      txWitnessField 7 = field addScriptsTxWitsRaw (decodePlutus SPlutusV3)
       txWitnessField n = invalidField n
 
       nativeScriptsDecoder :: Decoder s (Map ScriptHash (Script era))
@@ -803,15 +814,15 @@ deriving newtype instance
   ) =>
   DecCBOR (AlonzoTxWits era)
 
-addScripts ::
+addScriptsTxWitsRaw ::
   Map ScriptHash (Script era) ->
   AlonzoTxWitsRaw era ->
   AlonzoTxWitsRaw era
-addScripts scriptWitnesses txWits =
+addScriptsTxWitsRaw scriptWitnesses txWits =
   txWits
     { atwrScriptTxWits = scriptWitnesses <> atwrScriptTxWits txWits
     }
-{-# INLINE addScripts #-}
+{-# INLINE addScriptsTxWitsRaw #-}
 
 decodePlutus ::
   (AlonzoEraScript era, PlutusLanguage l) =>

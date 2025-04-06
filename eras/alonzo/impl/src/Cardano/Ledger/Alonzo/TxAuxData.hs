@@ -22,6 +22,7 @@
 module Cardano.Ledger.Alonzo.TxAuxData (
   -- * AlonzoTxAuxData
   AlonzoTxAuxData (
+    MkAlonzoTxAuxData,
     AlonzoTxAuxData,
     AlonzoTxAuxData',
     atadMetadata,
@@ -32,7 +33,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
     atadPlutus'
   ),
   AlonzoEraTxAuxData (..),
-  AlonzoTxAuxDataRaw,
+  AlonzoTxAuxDataRaw (..),
   mkAlonzoTxAuxData,
   hashAlonzoTxAuxData,
   validateAlonzoTxAuxData,
@@ -273,7 +274,7 @@ emptyAuxData = AlonzoTxAuxDataRaw mempty mempty mempty
 -- ================================================================================
 -- Version with serialized bytes.
 
-newtype AlonzoTxAuxData era = AlonzoTxAuxDataConstr (MemoBytes (AlonzoTxAuxDataRaw era))
+newtype AlonzoTxAuxData era = MkAlonzoTxAuxData (MemoBytes (AlonzoTxAuxDataRaw era))
   deriving (Generic)
   deriving newtype (ToCBOR, SafeToHash, DecCBOR)
 

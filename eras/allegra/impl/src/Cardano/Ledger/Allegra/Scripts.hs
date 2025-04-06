@@ -14,7 +14,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -34,11 +33,10 @@ module Cardano.Ledger.Allegra.Scripts (
   getTimeStartTimelock,
   mkTimeExpireTimelock,
   getTimeExpireTimelock,
-  Timelock,
+  Timelock (MkTimelock, TimelockConstr),
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
-  TimelockRaw,
-  pattern TimelockConstr,
+  TimelockRaw (..),
   inInterval,
   showTimelock,
   evalTimelock,
@@ -78,11 +76,11 @@ import Cardano.Ledger.MemoBytes (
   byteCountMemoBytes,
   decodeMemoized,
   getMemoRawType,
-  mkMemoBytes,
   mkMemoizedEra,
   packMemoBytesM,
   unpackMemoBytesM,
  )
+import Cardano.Ledger.MemoBytes.Internal (mkMemoBytes)
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript (..),
   nativeMultiSigTag,
@@ -97,6 +95,7 @@ import Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (fromShort)
+import Data.Foldable as F (foldl')
 import Data.MemPack
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)))
 import qualified Data.Sequence.Strict as SSeq
@@ -167,8 +166,8 @@ translateTimelock ::
   ) =>
   Timelock era1 ->
   Timelock era2
-translateTimelock (TimelockConstr (Memo tl bs)) =
-  let rewrap rtl = TimelockConstr $ mkMemoBytes rtl (fromStrict $ fromShort bs)
+translateTimelock (MkTimelock (Memo tl bs)) =
+  let rewrap rtl = MkTimelock $ mkMemoBytes rtl (fromStrict $ fromShort bs)
    in case tl of
         Signature s -> rewrap $ Signature s
         AllOf l -> rewrap . AllOf $ translateTimelock <$> l
@@ -220,20 +219,25 @@ instance Era era => DecCBOR (TimelockRaw era) where
 -- They rely on memoBytes, and TimelockRaw to memoize each constructor of Timelock
 -- =================================================================
 
-newtype Timelock era = TimelockConstr (MemoBytes (TimelockRaw era))
+newtype Timelock era = MkTimelock (MemoBytes (TimelockRaw era))
   deriving (Eq, Generic)
   deriving newtype (ToCBOR, NFData, SafeToHash)
 
+pattern TimelockConstr :: MemoBytes (TimelockRaw era) -> Timelock era
+pattern TimelockConstr timelockRaw = MkTimelock timelockRaw
+{-# COMPLETE TimelockConstr #-}
+{-# DEPRECATED TimelockConstr "In favor of more consistently name `MkTimelock`" #-}
+
 instance Era era => MemPack (Timelock era) where
-  packedByteCount (TimelockConstr mb) = byteCountMemoBytes mb
-  packM (TimelockConstr mb) = packMemoBytesM mb
-  unpackM = TimelockConstr <$> unpackMemoBytesM (eraProtVerLow @era)
+  packedByteCount (MkTimelock mb) = byteCountMemoBytes mb
+  packM (MkTimelock mb) = packMemoBytesM mb
+  unpackM = MkTimelock <$> unpackMemoBytesM (eraProtVerLow @era)
 
 instance Era era => NoThunks (Timelock era)
 instance Era era => EncCBOR (Timelock era)
 
 instance Era era => DecCBOR (Timelock era) where
-  decCBOR = TimelockConstr <$> decodeMemoized decCBOR
+  decCBOR = MkTimelock <$> decodeMemoized decCBOR
 
 instance Memoized (Timelock era) where
   type RawType (Timelock era) = TimelockRaw era
@@ -244,7 +248,7 @@ instance EqRaw (Timelock era) where
   eqRaw = eqTimelockRaw
 
 instance Era era => DecCBOR (Annotator (Timelock era)) where
-  decCBOR = fmap TimelockConstr <$> decCBOR
+  decCBOR = fmap MkTimelock <$> decCBOR
 
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- MultiSig scripts, we can use the same 'scriptPrefixTag' tag here as we did
@@ -308,37 +312,37 @@ pattern RequireTimeStart mslot <- (getTimeStart -> Just mslot)
 mkRequireSignatureTimelock :: forall era. Era era => KeyHash 'Witness -> Timelock era
 mkRequireSignatureTimelock = mkMemoizedEra @era . Signature
 getRequireSignatureTimelock :: Timelock era -> Maybe (KeyHash 'Witness)
-getRequireSignatureTimelock (TimelockConstr (Memo (Signature kh) _)) = Just kh
+getRequireSignatureTimelock (MkTimelock (Memo (Signature kh) _)) = Just kh
 getRequireSignatureTimelock _ = Nothing
 
 mkRequireAllOfTimelock :: forall era. Era era => StrictSeq (Timelock era) -> Timelock era
 mkRequireAllOfTimelock = mkMemoizedEra @era . AllOf
 getRequireAllOfTimelock :: Timelock era -> Maybe (StrictSeq (Timelock era))
-getRequireAllOfTimelock (TimelockConstr (Memo (AllOf ms) _)) = Just ms
+getRequireAllOfTimelock (MkTimelock (Memo (AllOf ms) _)) = Just ms
 getRequireAllOfTimelock _ = Nothing
 
 mkRequireAnyOfTimelock :: forall era. Era era => StrictSeq (Timelock era) -> Timelock era
 mkRequireAnyOfTimelock = mkMemoizedEra @era . AnyOf
 getRequireAnyOfTimelock :: Timelock era -> Maybe (StrictSeq (Timelock era))
-getRequireAnyOfTimelock (TimelockConstr (Memo (AnyOf ms) _)) = Just ms
+getRequireAnyOfTimelock (MkTimelock (Memo (AnyOf ms) _)) = Just ms
 getRequireAnyOfTimelock _ = Nothing
 
 mkRequireMOfTimelock :: forall era. Era era => Int -> StrictSeq (Timelock era) -> Timelock era
 mkRequireMOfTimelock n = mkMemoizedEra @era . MOfN n
 getRequireMOfTimelock :: Timelock era -> Maybe (Int, StrictSeq (Timelock era))
-getRequireMOfTimelock (TimelockConstr (Memo (MOfN n ms) _)) = Just (n, ms)
+getRequireMOfTimelock (MkTimelock (Memo (MOfN n ms) _)) = Just (n, ms)
 getRequireMOfTimelock _ = Nothing
 
 mkTimeStartTimelock :: forall era. Era era => SlotNo -> Timelock era
 mkTimeStartTimelock = mkMemoizedEra @era . TimeStart
 getTimeStartTimelock :: Timelock era -> Maybe SlotNo
-getTimeStartTimelock (TimelockConstr (Memo (TimeStart mslot) _)) = Just mslot
+getTimeStartTimelock (MkTimelock (Memo (TimeStart mslot) _)) = Just mslot
 getTimeStartTimelock _ = Nothing
 
 mkTimeExpireTimelock :: forall era. Era era => SlotNo -> Timelock era
 mkTimeExpireTimelock = mkMemoizedEra @era . TimeExpire
 getTimeExpireTimelock :: Timelock era -> Maybe SlotNo
-getTimeExpireTimelock (TimelockConstr (Memo (TimeExpire mslot) _)) = Just mslot
+getTimeExpireTimelock (MkTimelock (Memo (TimeExpire mslot) _)) = Just mslot
 getTimeExpireTimelock _ = Nothing
 
 -- =================================================================
@@ -390,13 +394,13 @@ inInterval slot (ValidityInterval (SJust bottom) (SJust top)) =
 showTimelock :: AllegraEraScript era => NativeScript era -> String
 showTimelock (RequireTimeStart (SlotNo i)) = "(Start >= " ++ show i ++ ")"
 showTimelock (RequireTimeExpire (SlotNo i)) = "(Expire < " ++ show i ++ ")"
-showTimelock (RequireAllOf xs) = "(AllOf " ++ foldl accum ")" xs
+showTimelock (RequireAllOf xs) = "(AllOf " ++ F.foldl' accum ")" xs
   where
     accum ans x = showTimelock x ++ " " ++ ans
-showTimelock (RequireAnyOf xs) = "(AnyOf " ++ foldl accum ")" xs
+showTimelock (RequireAnyOf xs) = "(AnyOf " ++ F.foldl' accum ")" xs
   where
     accum ans x = showTimelock x ++ " " ++ ans
-showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ foldl accum ")" xs
+showTimelock (RequireMOf m xs) = "(MOf " ++ show m ++ " " ++ F.foldl' accum ")" xs
   where
     accum ans x = showTimelock x ++ " " ++ ans
 showTimelock (RequireSignature hash) = "(Signature " ++ show hash ++ ")"

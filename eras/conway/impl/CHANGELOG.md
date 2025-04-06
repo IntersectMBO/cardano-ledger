@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Expose access to `ConwayTxBodyRaw`
+* Expose constructor `MkConwayTxBody`
 * Added `VState` (moved from `cardano-ledger-core`) and related functions
 * Added `ConwayEraCertState` class
 * Added `ConwayCertState` and related functions

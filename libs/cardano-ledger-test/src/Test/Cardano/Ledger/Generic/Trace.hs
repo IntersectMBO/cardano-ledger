@@ -20,9 +20,7 @@ module Test.Cardano.Ledger.Generic.Trace where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowPredFailure (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (body))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
-import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.Shelley.Core
@@ -65,7 +63,6 @@ import Control.State.Transition.Extended (IRC (), STS (..), TRC (..))
 import Data.Default (Default (def))
 import qualified Data.Foldable as Fold
 import Data.Functor.Identity (Identity (runIdentity))
-import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -78,7 +75,6 @@ import qualified Debug.Trace as Debug
 import GHC.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
 import Prettyprinter (hsep, parens, vsep)
-import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), abstractTxBody)
 import Test.Cardano.Ledger.Generic.Functions (
@@ -111,14 +107,11 @@ import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   PDoc,
-  PrettyA (..),
   pcCoin,
   pcCredential,
   pcKeyHash,
-  pcPoolParams,
   pcScript,
   pcScriptHash,
-  pcSlotNo,
   pcTxBodyField,
   pcTxIn,
   ppInt,
@@ -138,7 +131,7 @@ import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlob
 import Test.Control.State.Transition.Trace (Trace (..), lastState, splitTrace)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), traceFromInitState)
 import Test.QuickCheck
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
 -- ===========================================
@@ -161,16 +154,14 @@ genRsTxSeq ::
   [(StrictSeq (Tx era), SlotNo)] ->
   SlotNo ->
   GenRS era (Vector (StrictSeq (Tx era), SlotNo))
-genRsTxSeq proof this lastN ans _slot | this >= lastN = do
-  seq
-    (unsafePerformIO (writeIORef theVector (TT proof (reverse ans))))
-    (pure (Vector.fromList (reverse ans)))
+genRsTxSeq _ this lastN ans _slot | this >= lastN = do
+  pure (Vector.fromList (reverse ans))
 genRsTxSeq proof this lastN ans slot = do
   maxBlockSize <- getBlocksizeMax <$> get
   n <- lift $ choose (2 :: Int, fromIntegral maxBlockSize)
   txs <- forM [0 .. n - 1] (\i -> genRsTxAndModel proof (this + i) slot)
   newSlotRange <- gets getSlotDelta
-  nextSlotNo <- lift $ SlotNo . (+ (unSlotNo slot)) <$> choose newSlotRange
+  nextSlotNo <- lift $ SlotNo . (+ unSlotNo slot) <$> choose newSlotRange
   genRsTxSeq proof (this + n) lastN ((SS.fromList txs, slot) : ans) nextSlotNo
 
 -- | Generate a Vector of Blocks, and an initial LedgerState
@@ -621,48 +612,3 @@ multiEpochTest proof numTx gsize =
         30
         ("Multi epoch. Ada is preserved. " ++ show proof ++ " era. Trace length = " ++ show numTx)
         (traceProp proof numTx gensize propf)
-
--- ===========================================================
--- Debugging tools for replaying failures. We store the trace in
--- the IORef TT, and then we can use 'main3' to display what we
--- need to see from the trace.
-
-main :: IO ()
-main = defaultMain $ multiEpochTest Shelley 200 def
-
-data TT where
-  TT :: Proof era -> [(StrictSeq (Tx era), SlotNo)] -> TT
-
-theVector :: IORef TT
-theVector = unsafePerformIO (newIORef (TT Babbage []))
-
-showVector :: (forall era. Proof era -> [Tx era] -> SlotNo -> PDoc) -> IO ()
-showVector pretty = do
-  xs <- readIORef theVector
-  case xs of
-    TT _ [] -> print ("NONE" :: String)
-    TT proof ys -> mapM_ (\(ss, slot) -> print (pretty proof (Fold.toList ss) slot)) ys
-
-main3 :: IO ()
-main3 = showVector pretty
-  where
-    pretty :: Proof era -> [Tx era] -> SlotNo -> PDoc
-    pretty Babbage xs slot =
-      vsep
-        [ pcSlotNo slot
-        , vsep (map (ppList prettyA . Fold.toList . certs' . body) xs)
-        ]
-    pretty p _ _ = ppString ("main3 does not work in era " ++ show p)
-
-main2 :: IO ()
-main2 = defaultMain (chainTest Babbage 100 def)
-
--- | display information about stable fields if the only action is to 'initStableFields'
-displayStableInfo :: IO ()
-displayStableInfo = do
-  let proof = Babbage
-  ((), gstate) <- generate $ runGenRS proof def initStableFields
-  let mcst = initialMockChainState proof gstate
-  let del = gsInitialPoolParams gstate
-  print (ppMockChainState mcst)
-  print (ppMap pcKeyHash pcPoolParams del)

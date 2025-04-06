@@ -39,7 +39,7 @@ module Cardano.Ledger.Babbage.TxBody.Internal (
   allSizedOutputsBabbageTxBodyF,
   babbageMinUTxOValue,
   BabbageTxBody (
-    ..,
+    MkBabbageTxBody,
     BabbageTxBody,
     btbInputs,
     btbCollateral,
@@ -111,7 +111,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, PolicyID (..), policies)
+import Cardano.Ledger.Mary.Value (MultiAsset, policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -158,7 +158,7 @@ class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
 -- ======================================
 
 data BabbageTxBodyRaw era = BabbageTxBodyRaw
-  { btbrSpendInputs :: !(Set TxIn)
+  { btbrInputs :: !(Set TxIn)
   , btbrCollateralInputs :: !(Set TxIn)
   , btbrReferenceInputs :: !(Set TxIn)
   , btbrOutputs :: !(StrictSeq (Sized (TxOut era)))
@@ -166,7 +166,7 @@ data BabbageTxBodyRaw era = BabbageTxBodyRaw
   , btbrTotalCollateral :: !(StrictMaybe Coin)
   , btbrCerts :: !(StrictSeq (TxCert era))
   , btbrWithdrawals :: !Withdrawals
-  , btbrTxFee :: !Coin
+  , btbrFee :: !Coin
   , btbrValidityInterval :: !ValidityInterval
   , btbrUpdate :: !(StrictMaybe (Update era))
   , btbrReqSignerHashes :: !(Set (KeyHash 'Witness))
@@ -177,7 +177,7 @@ data BabbageTxBodyRaw era = BabbageTxBodyRaw
     -- We now store only the MultiAsset part of a Mary.Value.
     btbrScriptIntegrityHash :: !(StrictMaybe ScriptIntegrityHash)
   , btbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
-  , btbrTxNetworkId :: !(StrictMaybe Network)
+  , btbrNetworkId :: !(StrictMaybe Network)
   }
   deriving (Generic, Typeable)
 
@@ -189,7 +189,7 @@ instance
   EqRaw (BabbageTxBodyRaw era)
   where
   eqRaw a b =
-    btbrSpendInputs a == btbrSpendInputs b
+    btbrInputs a == btbrInputs b
       && btbrCollateralInputs a == btbrCollateralInputs b
       && btbrReferenceInputs a == btbrReferenceInputs b
       && btbrOutputs a `eqSeqUnsized` btbrOutputs b
@@ -197,14 +197,14 @@ instance
       && btbrTotalCollateral a == btbrTotalCollateral b
       && btbrCerts a == btbrCerts b
       && btbrWithdrawals a == btbrWithdrawals b
-      && btbrTxFee a == btbrTxFee b
+      && btbrFee a == btbrFee b
       && btbrValidityInterval a == btbrValidityInterval b
       && btbrUpdate a == btbrUpdate b
       && btbrReqSignerHashes a == btbrReqSignerHashes b
       && btbrMint a == btbrMint b
       && btbrScriptIntegrityHash a == btbrScriptIntegrityHash b
       && btbrAuxDataHash a == btbrAuxDataHash b
-      && btbrTxNetworkId a == btbrTxNetworkId b
+      && btbrNetworkId a == btbrNetworkId b
     where
       eqMbUnsized x y = case (x, y) of
         (SJust a', SJust b') -> a' `eqUnsized` b'
@@ -233,7 +233,7 @@ deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (BabbageTxBodyRaw era)
 
-newtype BabbageTxBody era = TxBodyConstr (MemoBytes (BabbageTxBodyRaw era))
+newtype BabbageTxBody era = MkBabbageTxBody (MemoBytes (BabbageTxBodyRaw era))
   deriving newtype (Generic, SafeToHash, ToCBOR)
 
 deriving newtype instance
@@ -251,32 +251,6 @@ deriving newtype instance
   (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
   NFData (BabbageTxBody era)
 
-inputsBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set TxIn)
-inputsBabbageTxBodyL =
-  lensMemoRawType @era btbrSpendInputs $ \txBodyRaw inputs -> txBodyRaw {btbrSpendInputs = inputs}
-{-# INLINEABLE inputsBabbageTxBodyL #-}
-
-outputsBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictSeq (TxOut era))
-outputsBabbageTxBodyL =
-  lensMemoRawType @era (fmap sizedValue . btbrOutputs) $
-    \txBodyRaw outputs -> txBodyRaw {btbrOutputs = mkSized (eraProtVerLow @era) <$> outputs}
-{-# INLINEABLE outputsBabbageTxBodyL #-}
-
-feeBabbageTxBodyL :: forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) Coin
-feeBabbageTxBodyL =
-  lensMemoRawType @era btbrTxFee $
-    \txBodyRaw fee -> txBodyRaw {btbrTxFee = fee}
-{-# INLINEABLE feeBabbageTxBodyL #-}
-
-auxDataHashBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe TxAuxDataHash)
-auxDataHashBabbageTxBodyL =
-  lensMemoRawType @era btbrAuxDataHash $
-    \txBodyRaw auxDataHash -> txBodyRaw {btbrAuxDataHash = auxDataHash}
-{-# INLINEABLE auxDataHashBabbageTxBodyL #-}
-
 babbageSpendableInputsTxBodyF ::
   BabbageEraTxBody era => SimpleGetter (TxBody era) (Set TxIn)
 babbageSpendableInputsTxBodyF =
@@ -293,115 +267,6 @@ babbageAllInputsTxBodyF =
       `Set.union` (txBody ^. collateralInputsTxBodyL)
       `Set.union` (txBody ^. referenceInputsTxBodyL)
 {-# INLINEABLE babbageAllInputsTxBodyF #-}
-
-mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set PolicyID)
-mintedBabbageTxBodyF = to (policies . btbrMint . getMemoRawType)
-{-# INLINEABLE mintedBabbageTxBodyF #-}
-
-withdrawalsBabbbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) Withdrawals
-withdrawalsBabbbageTxBodyL =
-  lensMemoRawType @era btbrWithdrawals $
-    \txBodyRaw withdrawals -> txBodyRaw {btbrWithdrawals = withdrawals}
-{-# INLINEABLE withdrawalsBabbbageTxBodyL #-}
-
-updateBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe (Update era))
-updateBabbageTxBodyL =
-  lensMemoRawType @era btbrUpdate $
-    \txBodyRaw update -> txBodyRaw {btbrUpdate = update}
-{-# INLINEABLE updateBabbageTxBodyL #-}
-
-certsBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictSeq (TxCert era))
-certsBabbageTxBodyL =
-  lensMemoRawType @era btbrCerts $
-    \txBodyRaw certs -> txBodyRaw {btbrCerts = certs}
-{-# INLINEABLE certsBabbageTxBodyL #-}
-
-vldtBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) ValidityInterval
-vldtBabbageTxBodyL =
-  lensMemoRawType @era btbrValidityInterval $
-    \txBodyRaw vldt -> txBodyRaw {btbrValidityInterval = vldt}
-{-# INLINEABLE vldtBabbageTxBodyL #-}
-
-mintBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) MultiAsset
-mintBabbageTxBodyL =
-  lensMemoRawType @era btbrMint $
-    \txBodyRaw mint -> txBodyRaw {btbrMint = mint}
-{-# INLINEABLE mintBabbageTxBodyL #-}
-
-mintValueBabbageTxBodyF ::
-  (BabbageEraTxBody era, Value era ~ MaryValue) =>
-  SimpleGetter (BabbageTxBody era) (Value era)
-mintValueBabbageTxBodyF = mintBabbageTxBodyL . to (MaryValue mempty)
-{-# INLINEABLE mintValueBabbageTxBodyF #-}
-
-collateralInputsBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set TxIn)
-collateralInputsBabbageTxBodyL =
-  lensMemoRawType @era btbrCollateralInputs $
-    \txBodyRaw collateral -> txBodyRaw {btbrCollateralInputs = collateral}
-{-# INLINEABLE collateralInputsBabbageTxBodyL #-}
-
-reqSignerHashesBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (KeyHash 'Witness))
-reqSignerHashesBabbageTxBodyL =
-  lensMemoRawType @era btbrReqSignerHashes $
-    \txBodyRaw reqSignerHashes -> txBodyRaw {btbrReqSignerHashes = reqSignerHashes}
-{-# INLINEABLE reqSignerHashesBabbageTxBodyL #-}
-
-scriptIntegrityHashBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe ScriptIntegrityHash)
-scriptIntegrityHashBabbageTxBodyL =
-  lensMemoRawType @era btbrScriptIntegrityHash $
-    \txBodyRaw scriptIntegrityHash -> txBodyRaw {btbrScriptIntegrityHash = scriptIntegrityHash}
-{-# INLINEABLE scriptIntegrityHashBabbageTxBodyL #-}
-
-networkIdBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe Network)
-networkIdBabbageTxBodyL =
-  lensMemoRawType @era btbrTxNetworkId $
-    \txBodyRaw networkId -> txBodyRaw {btbrTxNetworkId = networkId}
-{-# INLINEABLE networkIdBabbageTxBodyL #-}
-
-sizedOutputsBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictSeq (Sized (TxOut era)))
-sizedOutputsBabbageTxBodyL =
-  lensMemoRawType @era btbrOutputs $
-    \txBodyRaw outputs -> txBodyRaw {btbrOutputs = outputs}
-{-# INLINEABLE sizedOutputsBabbageTxBodyL #-}
-
-referenceInputsBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set TxIn)
-referenceInputsBabbageTxBodyL =
-  lensMemoRawType @era btbrReferenceInputs $
-    \txBodyRaw reference -> txBodyRaw {btbrReferenceInputs = reference}
-{-# INLINEABLE referenceInputsBabbageTxBodyL #-}
-
-totalCollateralBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe Coin)
-totalCollateralBabbageTxBodyL =
-  lensMemoRawType @era btbrTotalCollateral $
-    \txBodyRaw totalCollateral -> txBodyRaw {btbrTotalCollateral = totalCollateral}
-{-# INLINEABLE totalCollateralBabbageTxBodyL #-}
-
-collateralReturnBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe (TxOut era))
-collateralReturnBabbageTxBodyL =
-  lensMemoRawType @era (fmap sizedValue . btbrCollateralReturn) $
-    \txBodyRaw collateralReturn ->
-      txBodyRaw {btbrCollateralReturn = mkSized (eraProtVerLow @era) <$> collateralReturn}
-{-# INLINEABLE collateralReturnBabbageTxBodyL #-}
-
-sizedCollateralReturnBabbageTxBodyL ::
-  forall era. BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe (Sized (TxOut era)))
-sizedCollateralReturnBabbageTxBodyL =
-  lensMemoRawType @era btbrCollateralReturn $
-    \txBodyRaw collateralReturn -> txBodyRaw {btbrCollateralReturn = collateralReturn}
-{-# INLINEABLE sizedCollateralReturnBabbageTxBodyL #-}
 
 allSizedOutputsBabbageTxBodyF ::
   BabbageEraTxBody era =>
@@ -429,16 +294,22 @@ instance EraTxBody BabbageEra where
 
   mkBasicTxBody = mkMemoizedEra @BabbageEra basicBabbageTxBodyRaw
 
-  inputsTxBodyL = inputsBabbageTxBodyL
+  inputsTxBodyL =
+    lensMemoRawType @BabbageEra btbrInputs $ \txBodyRaw inputs -> txBodyRaw {btbrInputs = inputs}
   {-# INLINE inputsTxBodyL #-}
 
-  outputsTxBodyL = outputsBabbageTxBodyL
+  outputsTxBodyL =
+    lensMemoRawType @BabbageEra (fmap sizedValue . btbrOutputs) $ \txBodyRaw outputs ->
+      txBodyRaw {btbrOutputs = mkSized (eraProtVerLow @BabbageEra) <$> outputs}
   {-# INLINE outputsTxBodyL #-}
 
-  feeTxBodyL = feeBabbageTxBodyL
+  feeTxBodyL =
+    lensMemoRawType @BabbageEra btbrFee $ \txBodyRaw fee -> txBodyRaw {btbrFee = fee}
   {-# INLINE feeTxBodyL #-}
 
-  auxDataHashTxBodyL = auxDataHashBabbageTxBodyL
+  auxDataHashTxBodyL =
+    lensMemoRawType @BabbageEra btbrAuxDataHash $ \txBodyRaw auxDataHash ->
+      txBodyRaw {btbrAuxDataHash = auxDataHash}
   {-# INLINE auxDataHashTxBodyL #-}
 
   spendableInputsTxBodyF = babbageSpendableInputsTxBodyF
@@ -447,10 +318,13 @@ instance EraTxBody BabbageEra where
   allInputsTxBodyF = babbageAllInputsTxBodyF
   {-# INLINE allInputsTxBodyF #-}
 
-  withdrawalsTxBodyL = withdrawalsBabbbageTxBodyL
+  withdrawalsTxBodyL =
+    lensMemoRawType @BabbageEra btbrWithdrawals $
+      \txBodyRaw withdrawals -> txBodyRaw {btbrWithdrawals = withdrawals}
   {-# INLINE withdrawalsTxBodyL #-}
 
-  certsTxBodyL = certsBabbageTxBodyL
+  certsTxBodyL =
+    lensMemoRawType @BabbageEra btbrCerts $ \txBodyRaw certs -> txBodyRaw {btbrCerts = certs}
   {-# INLINE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
@@ -511,34 +385,42 @@ instance ShelleyEraTxBody BabbageEra where
   ttlTxBodyL = notSupportedInThisEraL
   {-# INLINE ttlTxBodyL #-}
 
-  updateTxBodyL = updateBabbageTxBodyL
+  updateTxBodyL =
+    lensMemoRawType @BabbageEra btbrUpdate $ \txBodyRaw update -> txBodyRaw {btbrUpdate = update}
   {-# INLINE updateTxBodyL #-}
 
 instance AllegraEraTxBody BabbageEra where
-  vldtTxBodyL = vldtBabbageTxBodyL
+  vldtTxBodyL =
+    lensMemoRawType @BabbageEra btbrValidityInterval $ \txBodyRaw vldt ->
+      txBodyRaw {btbrValidityInterval = vldt}
   {-# INLINE vldtTxBodyL #-}
 
 instance MaryEraTxBody BabbageEra where
-  mintTxBodyL = mintBabbageTxBodyL
+  mintTxBodyL =
+    lensMemoRawType @BabbageEra btbrMint $ \txBodyRaw mint -> txBodyRaw {btbrMint = mint}
   {-# INLINE mintTxBodyL #-}
 
-  mintValueTxBodyF = mintValueBabbageTxBodyF
-  {-# INLINE mintValueTxBodyF #-}
-
-  mintedTxBodyF = mintedBabbageTxBodyF
+  mintedTxBodyF = to (policies . btbrMint . getMemoRawType)
   {-# INLINE mintedTxBodyF #-}
 
 instance AlonzoEraTxBody BabbageEra where
-  collateralInputsTxBodyL = collateralInputsBabbageTxBodyL
+  collateralInputsTxBodyL =
+    lensMemoRawType @BabbageEra btbrCollateralInputs $ \txBodyRaw collateral ->
+      txBodyRaw {btbrCollateralInputs = collateral}
   {-# INLINE collateralInputsTxBodyL #-}
 
-  reqSignerHashesTxBodyL = reqSignerHashesBabbageTxBodyL
+  reqSignerHashesTxBodyL =
+    lensMemoRawType @BabbageEra btbrReqSignerHashes $ \txBodyRaw reqSignerHashes ->
+      txBodyRaw {btbrReqSignerHashes = reqSignerHashes}
   {-# INLINE reqSignerHashesTxBodyL #-}
 
-  scriptIntegrityHashTxBodyL = scriptIntegrityHashBabbageTxBodyL
+  scriptIntegrityHashTxBodyL =
+    lensMemoRawType @BabbageEra btbrScriptIntegrityHash $ \txBodyRaw scriptIntegrityHash ->
+      txBodyRaw {btbrScriptIntegrityHash = scriptIntegrityHash}
   {-# INLINE scriptIntegrityHashTxBodyL #-}
 
-  networkIdTxBodyL = networkIdBabbageTxBodyL
+  networkIdTxBodyL = lensMemoRawType @BabbageEra btbrNetworkId $ \txBodyRaw networkId ->
+    txBodyRaw {btbrNetworkId = networkId}
   {-# INLINE networkIdTxBodyL #-}
 
   redeemerPointer = alonzoRedeemerPointer
@@ -546,19 +428,29 @@ instance AlonzoEraTxBody BabbageEra where
   redeemerPointerInverse = alonzoRedeemerPointerInverse
 
 instance BabbageEraTxBody BabbageEra where
-  sizedOutputsTxBodyL = sizedOutputsBabbageTxBodyL
+  sizedOutputsTxBodyL =
+    lensMemoRawType @BabbageEra btbrOutputs $ \txBodyRaw outputs -> txBodyRaw {btbrOutputs = outputs}
   {-# INLINE sizedOutputsTxBodyL #-}
 
-  referenceInputsTxBodyL = referenceInputsBabbageTxBodyL
+  referenceInputsTxBodyL =
+    lensMemoRawType @BabbageEra btbrReferenceInputs $ \txBodyRaw reference ->
+      txBodyRaw {btbrReferenceInputs = reference}
   {-# INLINE referenceInputsTxBodyL #-}
 
-  totalCollateralTxBodyL = totalCollateralBabbageTxBodyL
+  totalCollateralTxBodyL =
+    lensMemoRawType @BabbageEra btbrTotalCollateral $ \txBodyRaw totalCollateral ->
+      txBodyRaw {btbrTotalCollateral = totalCollateral}
   {-# INLINE totalCollateralTxBodyL #-}
 
-  collateralReturnTxBodyL = collateralReturnBabbageTxBodyL
+  collateralReturnTxBodyL =
+    lensMemoRawType @BabbageEra (fmap sizedValue . btbrCollateralReturn) $
+      \txBodyRaw collateralReturn ->
+        txBodyRaw {btbrCollateralReturn = mkSized (eraProtVerLow @BabbageEra) <$> collateralReturn}
   {-# INLINE collateralReturnTxBodyL #-}
 
-  sizedCollateralReturnTxBodyL = sizedCollateralReturnBabbageTxBodyL
+  sizedCollateralReturnTxBodyL =
+    lensMemoRawType @BabbageEra btbrCollateralReturn $ \txBodyRaw collateralReturn ->
+      txBodyRaw {btbrCollateralReturn = collateralReturn}
   {-# INLINE sizedCollateralReturnTxBodyL #-}
 
   allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
@@ -634,7 +526,7 @@ pattern BabbageTxBody
   } <-
   ( getMemoRawType ->
       BabbageTxBodyRaw
-        { btbrSpendInputs = btbInputs
+        { btbrInputs = btbInputs
         , btbrCollateralInputs = btbCollateral
         , btbrReferenceInputs = btbReferenceInputs
         , btbrOutputs = btbOutputs
@@ -642,14 +534,14 @@ pattern BabbageTxBody
         , btbrTotalCollateral = btbTotalCollateral
         , btbrCerts = btbCerts
         , btbrWithdrawals = btbWithdrawals
-        , btbrTxFee = btbTxFee
+        , btbrFee = btbTxFee
         , btbrValidityInterval = btbValidityInterval
         , btbrUpdate = btbUpdate
         , btbrReqSignerHashes = btbReqSignerHashes
         , btbrMint = btbMint
         , btbrScriptIntegrityHash = btbScriptIntegrityHash
         , btbrAuxDataHash = btbAuxDataHash
-        , btbrTxNetworkId = btbTxNetworkId
+        , btbrNetworkId = btbTxNetworkId
         }
     )
   where
@@ -672,7 +564,7 @@ pattern BabbageTxBody
       txNetworkId =
         mkMemoizedEra @era $
           BabbageTxBodyRaw
-            { btbrSpendInputs = inputs
+            { btbrInputs = inputs
             , btbrCollateralInputs = collateral
             , btbrReferenceInputs = referenceInputs
             , btbrOutputs = outputs
@@ -680,14 +572,14 @@ pattern BabbageTxBody
             , btbrTotalCollateral = totalCollateral
             , btbrCerts = certs
             , btbrWithdrawals = withdrawals
-            , btbrTxFee = txFee
+            , btbrFee = txFee
             , btbrValidityInterval = validityInterval
             , btbrUpdate = update
             , btbrReqSignerHashes = reqSignerHashes
             , btbrMint = mint
             , btbrScriptIntegrityHash = scriptIntegrityHash
             , btbrAuxDataHash = auxDataHash
-            , btbrTxNetworkId = txNetworkId
+            , btbrNetworkId = txNetworkId
             }
 
 {-# COMPLETE BabbageTxBody #-}
@@ -716,39 +608,54 @@ reqSignerHashes' :: BabbageTxBody era -> Set (KeyHash 'Witness)
 adHash' :: BabbageTxBody era -> StrictMaybe TxAuxDataHash
 mint' :: BabbageTxBody era -> MultiAsset
 scriptIntegrityHash' :: BabbageTxBody era -> StrictMaybe ScriptIntegrityHash
-spendInputs' = btbrSpendInputs . getMemoRawType
-
 txnetworkid' :: BabbageTxBody era -> StrictMaybe Network
+spendInputs' = btbrInputs . getMemoRawType
+{-# DEPRECATED spendInputs' "In favor of `inputsTxBodyL`" #-}
 
 collateralInputs' = btbrCollateralInputs . getMemoRawType
+{-# DEPRECATED collateralInputs' "In favor of `collateralInputsTxBodyL`" #-}
 
 referenceInputs' = btbrReferenceInputs . getMemoRawType
+{-# DEPRECATED referenceInputs' "In favor of `referenceInputsTxBodyL`" #-}
 
 outputs' = fmap sizedValue . btbrOutputs . getMemoRawType
+{-# DEPRECATED outputs' "In favor of `outputsTxBodyL`" #-}
 
 collateralReturn' = fmap sizedValue . btbrCollateralReturn . getMemoRawType
+{-# DEPRECATED collateralReturn' "In favor of `collateralReturnTxBodyL`" #-}
 
 totalCollateral' = btbrTotalCollateral . getMemoRawType
+{-# DEPRECATED totalCollateral' "In favor of `totalCollateralTxBodyL`" #-}
 
 certs' = btbrCerts . getMemoRawType
+{-# DEPRECATED certs' "In favor of `certsTxBodyL`" #-}
 
 withdrawals' = btbrWithdrawals . getMemoRawType
+{-# DEPRECATED withdrawals' "In favor of `withdrawalsTxBodyL`" #-}
 
-txfee' = btbrTxFee . getMemoRawType
+txfee' = btbrFee . getMemoRawType
+{-# DEPRECATED txfee' "In favor of `feeTxBodyL`" #-}
 
 vldt' = btbrValidityInterval . getMemoRawType
+{-# DEPRECATED vldt' "In favor of `vldtTxBodyL`" #-}
 
 update' = btbrUpdate . getMemoRawType
+{-# DEPRECATED update' "In favor of `updateTxBodyL`" #-}
 
 reqSignerHashes' = btbrReqSignerHashes . getMemoRawType
+{-# DEPRECATED reqSignerHashes' "In favor of `reqSignerHashesTxBodyL`" #-}
 
 adHash' = btbrAuxDataHash . getMemoRawType
+{-# DEPRECATED adHash' "In favor of `auxDataHashTxBodyL`" #-}
 
 mint' = btbrMint . getMemoRawType
+{-# DEPRECATED mint' "In favor of `mintTxBodyL`" #-}
 
 scriptIntegrityHash' = btbrScriptIntegrityHash . getMemoRawType
+{-# DEPRECATED scriptIntegrityHash' "In favor of `scriptIntegrityHashTxBodyL`" #-}
 
-txnetworkid' = btbrTxNetworkId . getMemoRawType
+txnetworkid' = btbrNetworkId . getMemoRawType
+{-# DEPRECATED txnetworkid' "In favor of `networkIdTxBodyL`" #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -763,7 +670,7 @@ instance
   where
   encCBOR
     BabbageTxBodyRaw
-      { btbrSpendInputs
+      { btbrInputs
       , btbrCollateralInputs
       , btbrReferenceInputs
       , btbrOutputs
@@ -771,27 +678,27 @@ instance
       , btbrTotalCollateral
       , btbrCerts
       , btbrWithdrawals
-      , btbrTxFee
+      , btbrFee
       , btbrValidityInterval = ValidityInterval bot top
       , btbrUpdate
       , btbrReqSignerHashes
       , btbrMint
       , btbrScriptIntegrityHash
       , btbrAuxDataHash
-      , btbrTxNetworkId
+      , btbrNetworkId
       } =
       encode $
         Keyed
           ( \i ifee ri o cr tc f t c w u b rsh mi sh ah ni ->
               BabbageTxBodyRaw i ifee ri o cr tc c w f (ValidityInterval b t) u rsh mi sh ah ni
           )
-          !> Key 0 (To btbrSpendInputs)
+          !> Key 0 (To btbrInputs)
           !> Omit null (Key 13 (To btbrCollateralInputs))
           !> Omit null (Key 18 (To btbrReferenceInputs))
           !> Key 1 (To btbrOutputs)
           !> encodeKeyedStrictMaybe 16 btbrCollateralReturn
           !> encodeKeyedStrictMaybe 17 btbrTotalCollateral
-          !> Key 2 (To btbrTxFee)
+          !> Key 2 (To btbrFee)
           !> encodeKeyedStrictMaybe 3 top
           !> Omit null (Key 4 (To btbrCerts))
           !> Omit (null . unWithdrawals) (Key 5 (To btbrWithdrawals))
@@ -801,7 +708,7 @@ instance
           !> Omit (== mempty) (Key 9 (To btbrMint))
           !> encodeKeyedStrictMaybe 11 btbrScriptIntegrityHash
           !> encodeKeyedStrictMaybe 7 btbrAuxDataHash
-          !> encodeKeyedStrictMaybe 15 btbrTxNetworkId
+          !> encodeKeyedStrictMaybe 15 btbrNetworkId
 
 instance
   (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
@@ -816,13 +723,13 @@ instance
         requiredFields
     where
       bodyFields :: Word -> Field (BabbageTxBodyRaw era)
-      bodyFields 0 = field (\x tx -> tx {btbrSpendInputs = x}) From
+      bodyFields 0 = field (\x tx -> tx {btbrInputs = x}) From
       bodyFields 13 = field (\x tx -> tx {btbrCollateralInputs = x}) From
       bodyFields 18 = field (\x tx -> tx {btbrReferenceInputs = x}) From
       bodyFields 1 = field (\x tx -> tx {btbrOutputs = x}) From
       bodyFields 16 = ofield (\x tx -> tx {btbrCollateralReturn = x}) From
       bodyFields 17 = ofield (\x tx -> tx {btbrTotalCollateral = x}) From
-      bodyFields 2 = field (\x tx -> tx {btbrTxFee = x}) From
+      bodyFields 2 = field (\x tx -> tx {btbrFee = x}) From
       bodyFields 3 =
         ofield
           (\x tx -> tx {btbrValidityInterval = (btbrValidityInterval tx) {invalidHereafter = x}})
@@ -838,7 +745,7 @@ instance
       bodyFields 9 = field (\x tx -> tx {btbrMint = x}) From
       bodyFields 11 = ofield (\x tx -> tx {btbrScriptIntegrityHash = x}) From
       bodyFields 14 = field (\x tx -> tx {btbrReqSignerHashes = x}) From
-      bodyFields 15 = ofield (\x tx -> tx {btbrTxNetworkId = x}) From
+      bodyFields 15 = ofield (\x tx -> tx {btbrNetworkId = x}) From
       bodyFields n = invalidField n
       {-# INLINE bodyFields #-}
       requiredFields :: [(Word, String)]

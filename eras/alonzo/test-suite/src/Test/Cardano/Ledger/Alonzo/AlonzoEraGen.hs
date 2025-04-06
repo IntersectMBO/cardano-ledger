@@ -83,6 +83,7 @@ import Cardano.Ledger.State (
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
 import Control.Monad (replicateM)
+import Data.Foldable as F
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -447,7 +448,7 @@ instance EraGen AlonzoEra where
 
   constructTx bod wit auxdata = AlonzoTx bod wit (IsValid v) auxdata
     where
-      v = all twoPhaseValidates (txscripts' wit)
+      v = all twoPhaseValidates (txscripts wit)
       twoPhaseValidates script =
         isNativeScript @AlonzoEra script
           || (phase2scripts3ArgSucceeds script && phase2scripts2ArgSucceeds script)
@@ -564,11 +565,11 @@ dataMapFromTxOut ::
   [TxOut AlonzoEra] ->
   TxDats AlonzoEra ->
   TxDats AlonzoEra
-dataMapFromTxOut txouts datahashmap = Prelude.foldl accum datahashmap txouts
+dataMapFromTxOut txouts datahashmap = F.foldl' accum datahashmap txouts
   where
     f dhash info = hashData (getData3 info) == dhash
     accum !ans (AlonzoTxOut _ _ SNothing) = ans
-    accum ans@(TxDats' m) (AlonzoTxOut _ _ (SJust dhash)) =
+    accum ans@(TxDats m) (AlonzoTxOut _ _ (SJust dhash)) =
       case List.find (f dhash) (genEraTwoPhase3Arg @AlonzoEra) of
         Just info -> TxDats (Map.insert dhash (Data (getData3 info)) m)
         Nothing -> ans

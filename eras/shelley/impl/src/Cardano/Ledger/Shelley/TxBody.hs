@@ -12,7 +12,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -21,7 +20,7 @@
 module Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (
     ShelleyTxBody,
-    TxBodyConstr,
+    MkShelleyTxBody,
     stbInputs,
     stbOutputs,
     stbCerts,
@@ -104,10 +103,10 @@ data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
   , stbrOutputs :: !(StrictSeq (TxOut era))
   , stbrCerts :: !(StrictSeq (TxCert era))
   , stbrWithdrawals :: !Withdrawals
-  , stbrTxFee :: !Coin
-  , stbrTTL :: !SlotNo
+  , stbrFee :: !Coin
+  , stbrTtl :: !SlotNo
   , stbrUpdate :: !(StrictMaybe (Update era))
-  , stbrMDHash :: !(StrictMaybe TxAuxDataHash)
+  , stbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
   }
   deriving (Generic, Typeable)
 
@@ -177,10 +176,10 @@ boxBody 0 = field (\x tx -> tx {stbrInputs = x}) From
 boxBody 1 = field (\x tx -> tx {stbrOutputs = x}) From
 boxBody 4 = field (\x tx -> tx {stbrCerts = x}) From
 boxBody 5 = field (\x tx -> tx {stbrWithdrawals = x}) From
-boxBody 2 = field (\x tx -> tx {stbrTxFee = x}) From
-boxBody 3 = field (\x tx -> tx {stbrTTL = x}) From
+boxBody 2 = field (\x tx -> tx {stbrFee = x}) From
+boxBody 3 = field (\x tx -> tx {stbrTtl = x}) From
 boxBody 6 = ofield (\x tx -> tx {stbrUpdate = x}) From
-boxBody 7 = ofield (\x tx -> tx {stbrMDHash = x}) From
+boxBody 7 = ofield (\x tx -> tx {stbrAuxDataHash = x}) From
 boxBody n = invalidField n
 
 -- | Tells how to serialise each field, and what tag to label it with in the
@@ -208,12 +207,12 @@ basicShelleyTxBodyRaw =
   ShelleyTxBodyRaw
     { stbrInputs = Set.empty
     , stbrOutputs = StrictSeq.empty
-    , stbrTxFee = Coin 0
-    , stbrTTL = SlotNo maxBound -- transaction is eternally valid by default
+    , stbrFee = Coin 0
+    , stbrTtl = SlotNo maxBound -- transaction is eternally valid by default
     , stbrCerts = StrictSeq.empty
     , stbrWithdrawals = Withdrawals Map.empty
     , stbrUpdate = SNothing
-    , stbrMDHash = SNothing
+    , stbrAuxDataHash = SNothing
     }
 
 instance
@@ -225,7 +224,7 @@ instance
 -- ====================================================
 -- Introduce ShelleyTxBody as a newtype around a MemoBytes
 
-newtype ShelleyTxBody era = TxBodyConstr (MemoBytes (ShelleyTxBodyRaw era))
+newtype ShelleyTxBody era = MkShelleyTxBody (MemoBytes (ShelleyTxBodyRaw era))
   deriving (Generic)
   deriving newtype (SafeToHash, ToCBOR)
 
@@ -258,13 +257,13 @@ instance EraTxBody ShelleyEra where
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
-    lensMemoRawType @ShelleyEra stbrTxFee $
-      \txBodyRaw fee -> txBodyRaw {stbrTxFee = fee}
+    lensMemoRawType @ShelleyEra stbrFee $
+      \txBodyRaw fee -> txBodyRaw {stbrFee = fee}
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lensMemoRawType @ShelleyEra stbrMDHash $
-      \txBodyRaw auxDataHash -> txBodyRaw {stbrMDHash = auxDataHash}
+    lensMemoRawType @ShelleyEra stbrAuxDataHash $
+      \txBodyRaw auxDataHash -> txBodyRaw {stbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
   withdrawalsTxBodyL =
@@ -282,11 +281,11 @@ instance EraTxBody ShelleyEra where
   upgradeTxBody =
     error $
       "Calling this function will cause a compilation error, "
-        ++ "since there is no TxBody instance for ByronEra"
+        ++ "since there is no `EraTxBody` instance for `ByronEra`"
 
 instance ShelleyEraTxBody ShelleyEra where
   ttlTxBodyL =
-    lensMemoRawType @ShelleyEra stbrTTL $ \txBodyRaw ttl -> txBodyRaw {stbrTTL = ttl}
+    lensMemoRawType @ShelleyEra stbrTtl $ \txBodyRaw ttl -> txBodyRaw {stbrTtl = ttl}
   {-# INLINEABLE ttlTxBodyL #-}
 
   updateTxBodyL =
@@ -347,10 +346,10 @@ pattern ShelleyTxBody
         , stbrOutputs = stbOutputs
         , stbrCerts = stbCerts
         , stbrWithdrawals = stbWithdrawals
-        , stbrTxFee = stbTxFee
-        , stbrTTL = stbTTL
+        , stbrFee = stbTxFee
+        , stbrTtl = stbTTL
         , stbrUpdate = stbUpdate
-        , stbrMDHash = stbMDHash
+        , stbrAuxDataHash = stbMDHash
         }
     )
   where
@@ -359,20 +358,20 @@ pattern ShelleyTxBody
       outputs
       certs
       withdrawals
-      txFee
+      fee
       ttl
       update
-      mDHash =
+      auxDataHash =
         mkMemoizedEra @era $
           ShelleyTxBodyRaw
             { stbrInputs = inputs
             , stbrOutputs = outputs
             , stbrCerts = certs
             , stbrWithdrawals = withdrawals
-            , stbrTxFee = txFee
-            , stbrTTL = ttl
+            , stbrFee = fee
+            , stbrTtl = ttl
             , stbrUpdate = update
-            , stbrMDHash = mDHash
+            , stbrAuxDataHash = auxDataHash
             }
 
 {-# COMPLETE ShelleyTxBody #-}

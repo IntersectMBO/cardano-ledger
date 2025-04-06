@@ -1,11 +1,11 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -30,7 +30,7 @@
 module Cardano.Ledger.Mary.TxBody.Internal (
   MaryEraTxBody (..),
   MaryTxBody (
-    ..,
+    MkMaryTxBody,
     MaryTxBody,
     mtbAuxDataHash,
     mtbCerts,
@@ -42,7 +42,7 @@ module Cardano.Ledger.Mary.TxBody.Internal (
     mtbWithdrawals,
     mtbMint
   ),
-  MaryTxBodyRaw (..),
+  MaryTxBodyRaw,
 )
 where
 
@@ -57,7 +57,7 @@ import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
-  MemoBytes (Memo),
+  MemoBytes,
   MemoHashIndex,
   Memoized (RawType),
   getMemoRawType,
@@ -78,36 +78,19 @@ import NoThunks.Class (NoThunks (..))
 class AllegraEraTxBody era => MaryEraTxBody era where
   mintTxBodyL :: Lens' (TxBody era) MultiAsset
 
-  mintValueTxBodyF :: SimpleGetter (TxBody era) (Value era)
-
   mintedTxBodyF :: SimpleGetter (TxBody era) (Set PolicyID)
+
+  mintValueTxBodyF :: SimpleGetter (TxBody era) (Value era)
+  default mintValueTxBodyF :: Value era ~ MaryValue => SimpleGetter (TxBody era) (Value era)
+  mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
+  {-# INLINE mintValueTxBodyF #-}
 
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern constructor.
 
-newtype MaryTxBodyRaw era = MaryTxBodyRaw (AllegraTxBodyRaw MultiAsset era)
+type MaryTxBodyRaw era = AllegraTxBodyRaw MultiAsset era
 
-deriving newtype instance
-  (Era era, NFData (TxOut era), NFData (TxCert era), NFData (PParamsUpdate era)) =>
-  NFData (MaryTxBodyRaw era)
-
-deriving newtype instance
-  (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
-  Eq (MaryTxBodyRaw era)
-
-deriving newtype instance
-  (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
-  Show (MaryTxBodyRaw era)
-
-deriving instance Generic (MaryTxBodyRaw era)
-
-deriving newtype instance
-  (Era era, NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>
-  NoThunks (MaryTxBodyRaw era)
-
-deriving newtype instance AllegraEraTxBody era => DecCBOR (MaryTxBodyRaw era)
-
-newtype MaryTxBody era = TxBodyConstr (MemoBytes (MaryTxBodyRaw era))
+newtype MaryTxBody era = MkMaryTxBody (MemoBytes (MaryTxBodyRaw era))
   deriving newtype (SafeToHash, ToCBOR)
 
 -- | Encodes memoized bytes created upon construction.
@@ -116,11 +99,6 @@ instance Era era => EncCBOR (MaryTxBody era)
 instance
   (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
   EqRaw (MaryTxBody era)
-
-instance AllegraEraTxBody era => DecCBOR (Annotator (MaryTxBodyRaw era)) where
-  decCBOR = pure <$> decCBOR
-
-deriving newtype instance (EraTxOut era, EraTxCert era) => EncCBOR (MaryTxBodyRaw era)
 
 instance Memoized (MaryTxBody era) where
   type RawType (MaryTxBody era) = MaryTxBodyRaw era
@@ -181,19 +159,17 @@ pattern MaryTxBody
   , mtbMint
   } <-
   ( getMemoRawType ->
-      MaryTxBodyRaw
-        ( AllegraTxBodyRaw
-            { atbrInputs = mtbInputs
-            , atbrOutputs = mtbOutputs
-            , atbrCerts = mtbCerts
-            , atbrWithdrawals = mtbWithdrawals
-            , atbrTxFee = mtbTxFee
-            , atbrValidityInterval = mtbValidityInterval
-            , atbrUpdate = mtbUpdate
-            , atbrAuxDataHash = mtbAuxDataHash
-            , atbrMint = mtbMint
-            }
-          )
+      AllegraTxBodyRaw
+        { atbrInputs = mtbInputs
+        , atbrOutputs = mtbOutputs
+        , atbrCerts = mtbCerts
+        , atbrWithdrawals = mtbWithdrawals
+        , atbrFee = mtbTxFee
+        , atbrValidityInterval = mtbValidityInterval
+        , atbrUpdate = mtbUpdate
+        , atbrAuxDataHash = mtbAuxDataHash
+        , atbrMint = mtbMint
+        }
     )
   where
     MaryTxBody
@@ -207,52 +183,39 @@ pattern MaryTxBody
       auxDataHash
       mint =
         mkMemoizedEra @era $
-          MaryTxBodyRaw $
-            AllegraTxBodyRaw
-              { atbrInputs = inputs
-              , atbrOutputs = outputs
-              , atbrCerts = certs
-              , atbrWithdrawals = withdrawals
-              , atbrTxFee = txFee
-              , atbrValidityInterval = validityInterval
-              , atbrUpdate = update
-              , atbrAuxDataHash = auxDataHash
-              , atbrMint = mint
-              }
+          AllegraTxBodyRaw
+            { atbrInputs = inputs
+            , atbrOutputs = outputs
+            , atbrCerts = certs
+            , atbrWithdrawals = withdrawals
+            , atbrFee = txFee
+            , atbrValidityInterval = validityInterval
+            , atbrUpdate = update
+            , atbrAuxDataHash = auxDataHash
+            , atbrMint = mint
+            }
 
 {-# COMPLETE MaryTxBody #-}
-
--- | This is a helper Lens creator for any Memoized type.
-lensMaryTxBodyRaw ::
-  forall era a b.
-  (EraTxOut era, EraTxCert era) =>
-  (AllegraTxBodyRaw MultiAsset era -> a) ->
-  (AllegraTxBodyRaw MultiAsset era -> b -> AllegraTxBodyRaw MultiAsset era) ->
-  Lens (MaryTxBody era) (MaryTxBody era) a b
-lensMaryTxBodyRaw getter setter =
-  lensMemoRawType @era (\(MaryTxBodyRaw atbr) -> getter atbr) $
-    \(MaryTxBodyRaw atbr) a -> MaryTxBodyRaw (setter atbr a)
-{-# INLINEABLE lensMaryTxBodyRaw #-}
 
 instance EraTxBody MaryEra where
   type TxBody MaryEra = MaryTxBody MaryEra
 
-  mkBasicTxBody = mkMemoizedEra @MaryEra $ MaryTxBodyRaw emptyAllegraTxBodyRaw
+  mkBasicTxBody = mkMemoizedEra @MaryEra emptyAllegraTxBodyRaw
 
   inputsTxBodyL =
-    lensMaryTxBodyRaw atbrInputs $ \txBodyRaw inputs -> txBodyRaw {atbrInputs = inputs}
+    lensMemoRawType @MaryEra atbrInputs $ \txBodyRaw inputs -> txBodyRaw {atbrInputs = inputs}
   {-# INLINEABLE inputsTxBodyL #-}
 
   outputsTxBodyL =
-    lensMaryTxBodyRaw atbrOutputs $ \txBodyRaw outputs -> txBodyRaw {atbrOutputs = outputs}
+    lensMemoRawType @MaryEra atbrOutputs $ \txBodyRaw outputs -> txBodyRaw {atbrOutputs = outputs}
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
-    lensMaryTxBodyRaw atbrTxFee $ \txBodyRaw fee -> txBodyRaw {atbrTxFee = fee}
+    lensMemoRawType @MaryEra atbrFee $ \txBodyRaw fee -> txBodyRaw {atbrFee = fee}
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lensMaryTxBodyRaw atbrAuxDataHash $
+    lensMemoRawType @MaryEra atbrAuxDataHash $
       \txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash}
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
@@ -263,11 +226,11 @@ instance EraTxBody MaryEra where
   {-# INLINEABLE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL =
-    lensMaryTxBodyRaw atbrWithdrawals $ \txBodyRaw withdrawals -> txBodyRaw {atbrWithdrawals = withdrawals}
+    lensMemoRawType @MaryEra atbrWithdrawals $ \txBodyRaw withdrawals -> txBodyRaw {atbrWithdrawals = withdrawals}
   {-# INLINEABLE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
-    lensMaryTxBodyRaw atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
+    lensMemoRawType @MaryEra atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
   getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
@@ -292,25 +255,19 @@ instance ShelleyEraTxBody MaryEra where
   {-# INLINEABLE ttlTxBodyL #-}
 
   updateTxBodyL =
-    lensMaryTxBodyRaw atbrUpdate $ \txBodyRaw update -> txBodyRaw {atbrUpdate = update}
+    lensMemoRawType @MaryEra atbrUpdate $ \txBodyRaw update -> txBodyRaw {atbrUpdate = update}
   {-# INLINEABLE updateTxBodyL #-}
 
 instance AllegraEraTxBody MaryEra where
   vldtTxBodyL =
-    lensMaryTxBodyRaw atbrValidityInterval $
+    lensMemoRawType @MaryEra atbrValidityInterval $
       \txBodyRaw vldt -> txBodyRaw {atbrValidityInterval = vldt}
   {-# INLINEABLE vldtTxBodyL #-}
 
 instance MaryEraTxBody MaryEra where
   mintTxBodyL =
-    lensMaryTxBodyRaw atbrMint (\txBodyRaw mint -> txBodyRaw {atbrMint = mint})
+    lensMemoRawType @MaryEra atbrMint (\txBodyRaw mint -> txBodyRaw {atbrMint = mint})
   {-# INLINEABLE mintTxBodyL #-}
 
-  mintValueTxBodyF =
-    to $ \(TxBodyConstr (Memo (MaryTxBodyRaw txBodyRaw) _)) ->
-      MaryValue mempty (atbrMint txBodyRaw)
-  {-# INLINEABLE mintValueTxBodyF #-}
-
-  mintedTxBodyF =
-    to $ \(TxBodyConstr (Memo (MaryTxBodyRaw txBodyRaw) _)) -> policies (atbrMint txBodyRaw)
+  mintedTxBodyF = to $ \txBody -> policies (atbrMint (getMemoRawType txBody))
   {-# INLINEABLE mintedTxBodyF #-}

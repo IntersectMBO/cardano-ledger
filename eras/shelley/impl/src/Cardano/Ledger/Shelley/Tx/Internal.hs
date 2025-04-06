@@ -13,6 +13,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -69,10 +70,11 @@ import Cardano.Ledger.MemoBytes (
   Mem,
   MemoBytes,
   Memoized (..),
-  memoBytesEra,
-  mkMemoBytes,
-  pattern Memo,
+  getMemoRawBytes,
+  getMemoRawType,
+  lensMemoRawType,
  )
+import Cardano.Ledger.MemoBytes.Internal (memoBytesEra, mkMemoBytes)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts (validateMultiSig)
 import Cardano.Ledger.Shelley.TxAuxData ()
@@ -93,7 +95,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
+import Lens.Micro (Lens', SimpleGetter, to, (^.))
 import NoThunks.Class (NoThunks (..))
 
 -- ========================================================
@@ -101,7 +103,7 @@ import NoThunks.Class (NoThunks (..))
 data ShelleyTxRaw era = ShelleyTxRaw
   { strBody :: !(TxBody era)
   , strWits :: !(TxWits era)
-  , strAuxiliaryData :: !(StrictMaybe (TxAuxData era))
+  , strAuxData :: !(StrictMaybe (TxAuxData era))
   }
   deriving (Generic, Typeable)
 
@@ -136,7 +138,7 @@ instance
   ) =>
   NoThunks (ShelleyTxRaw era)
 
-newtype ShelleyTx era = TxConstr (MemoBytes (ShelleyTxRaw era))
+newtype ShelleyTx era = MkShelleyTx (MemoBytes (ShelleyTxRaw era))
   deriving newtype (SafeToHash, ToCBOR)
   deriving (Generic)
 
@@ -147,35 +149,30 @@ instance Memoized (ShelleyTx era) where
 -- memoized binary representation.
 bodyShelleyTxL :: forall era. EraTx era => Lens' (ShelleyTx era) (TxBody era)
 bodyShelleyTxL =
-  lens (\(TxConstr (Memo tx _)) -> strBody tx) $
-    \(TxConstr (Memo tx _)) txBody ->
-      TxConstr $ memoBytesEra @era $ encodeShelleyTxRaw $ tx {strBody = txBody}
+  lensMemoRawType @era strBody $ \tx txBody -> tx {strBody = txBody}
 {-# INLINEABLE bodyShelleyTxL #-}
 
 -- | `TxWits` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
 witsShelleyTxL :: forall era. EraTx era => Lens' (ShelleyTx era) (TxWits era)
 witsShelleyTxL =
-  lens (\(TxConstr (Memo tx _)) -> strWits tx) $
-    \(TxConstr (Memo tx _)) txWits ->
-      TxConstr $ memoBytesEra @era $ encodeShelleyTxRaw $ tx {strWits = txWits}
+  lensMemoRawType @era strWits $ \tx txWits -> tx {strWits = txWits}
 {-# INLINEABLE witsShelleyTxL #-}
 
 -- | `TxAuxData` setter and getter for `ShelleyTx`. The setter does update
 -- memoized binary representation.
-auxDataShelleyTxL :: EraTx era => Lens' (ShelleyTx era) (StrictMaybe (TxAuxData era))
+auxDataShelleyTxL :: forall era. EraTx era => Lens' (ShelleyTx era) (StrictMaybe (TxAuxData era))
 auxDataShelleyTxL =
-  lens (\(TxConstr (Memo tx _)) -> strAuxiliaryData tx) $
-    \(TxConstr (Memo tx _)) auxData -> mkShelleyTx $ tx {strAuxiliaryData = auxData}
+  lensMemoRawType @era strAuxData $ \tx txAuxData -> tx {strAuxData = txAuxData}
 {-# INLINEABLE auxDataShelleyTxL #-}
 
 -- | Size getter for `ShelleyTx`.
 sizeShelleyTxF :: SimpleGetter (ShelleyTx era) Integer
-sizeShelleyTxF = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
+sizeShelleyTxF = to (\(getMemoRawBytes -> bytes) -> fromIntegral $ SBS.length bytes)
 {-# INLINEABLE sizeShelleyTxF #-}
 
 wireSizeShelleyTxF :: SimpleGetter (ShelleyTx era) Word32
-wireSizeShelleyTxF = to $ \(TxConstr (Memo _ bytes)) ->
+wireSizeShelleyTxF = to $ \(getMemoRawBytes -> bytes) ->
   let n = SBS.length bytes
    in if n <= fromIntegral (maxBound :: Word32)
         then fromIntegral n
@@ -183,7 +180,7 @@ wireSizeShelleyTxF = to $ \(TxConstr (Memo _ bytes)) ->
 {-# INLINEABLE wireSizeShelleyTxF #-}
 
 mkShelleyTx :: forall era. EraTx era => ShelleyTxRaw era -> ShelleyTx era
-mkShelleyTx = TxConstr . memoBytesEra @era . encodeShelleyTxRaw
+mkShelleyTx = MkShelleyTx . memoBytesEra @era . encodeShelleyTxRaw
 {-# INLINEABLE mkShelleyTx #-}
 
 mkBasicShelleyTx :: EraTx era => TxBody era -> ShelleyTx era
@@ -192,7 +189,7 @@ mkBasicShelleyTx txBody =
     ShelleyTxRaw
       { strBody = txBody
       , strWits = mkBasicTxWits
-      , strAuxiliaryData = SNothing
+      , strAuxData = SNothing
       }
 
 instance EraTx ShelleyEra where
@@ -270,15 +267,13 @@ pattern ShelleyTx ::
   StrictMaybe (TxAuxData era) ->
   ShelleyTx era
 pattern ShelleyTx {body, wits, auxiliaryData} <-
-  TxConstr
-    ( Memo
-        ShelleyTxRaw
-          { strBody = body
-          , strWits = wits
-          , strAuxiliaryData = auxiliaryData
-          }
-        _
-      )
+  ( getMemoRawType ->
+      ShelleyTxRaw
+        { strBody = body
+        , strWits = wits
+        , strAuxData = auxiliaryData
+        }
+    )
   where
     ShelleyTx b w a = mkShelleyTx $ ShelleyTxRaw b w a
 
@@ -292,11 +287,11 @@ encodeShelleyTxRaw ::
   (EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>
   ShelleyTxRaw era ->
   Encode ('Closed 'Dense) (ShelleyTxRaw era)
-encodeShelleyTxRaw ShelleyTxRaw {strBody, strWits, strAuxiliaryData} =
+encodeShelleyTxRaw ShelleyTxRaw {strBody, strWits, strAuxData} =
   Rec ShelleyTxRaw
     !> To strBody
     !> To strWits
-    !> E (encodeNullMaybe encCBOR . strictMaybeToMaybe) strAuxiliaryData
+    !> E (encodeNullMaybe encCBOR . strictMaybeToMaybe) strAuxData
 
 instance
   (Era era, EncCBOR (TxWits era), EncCBOR (TxBody era), EncCBOR (TxAuxData era)) =>
@@ -369,7 +364,7 @@ unsafeConstructTxWithBytes ::
   StrictMaybe (TxAuxData era) ->
   LBS.ByteString ->
   ShelleyTx era
-unsafeConstructTxWithBytes b w a bytes = TxConstr (mkMemoBytes (ShelleyTxRaw b w a) bytes)
+unsafeConstructTxWithBytes b w a bytes = MkShelleyTx (mkMemoBytes (ShelleyTxRaw b w a) bytes)
 
 --------------------------------------------------------------------------------
 -- Segregated witness
@@ -407,21 +402,21 @@ segWitTx ::
   TxWits era ->
   Maybe (TxAuxData era) ->
   ShelleyTx era
-segWitTx body' witnessSet metadata =
+segWitTx body' witnessSet auxData =
   let
-    wrappedMetadataBytes = case metadata of
+    wrappedAuxDataBytes = case auxData of
       Nothing -> Plain.serialize Plain.encodeNull
       Just b -> Plain.serialize b
     fullBytes =
       Plain.serialize (Plain.encodeListLen 3)
         <> Plain.serialize body'
         <> Plain.serialize witnessSet
-        <> wrappedMetadataBytes
+        <> wrappedAuxDataBytes
    in
     unsafeConstructTxWithBytes
       body'
       witnessSet
-      (maybeToStrictMaybe metadata)
+      (maybeToStrictMaybe auxData)
       fullBytes
 
 -- ========================================

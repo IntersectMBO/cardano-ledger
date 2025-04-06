@@ -55,9 +55,9 @@ import Cardano.Ledger.MemoBytes (
   Memoized (..),
   decodeMemoized,
   getMemoRawType,
-  memoBytesEra,
   pattern Memo,
  )
+import Cardano.Ledger.MemoBytes.Internal (memoBytesEra)
 import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
@@ -110,7 +110,7 @@ class EraScript era => ShelleyEraScript era where
 
 instance NFData (MultiSigRaw era)
 
-newtype MultiSig era = MultiSigConstr (MemoBytes (MultiSigRaw era))
+newtype MultiSig era = MkMultiSig (MemoBytes (MultiSigRaw era))
   deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
 
@@ -139,23 +139,23 @@ instance EraScript ShelleyEra where
 
 instance ShelleyEraScript ShelleyEra where
   mkRequireSignature kh =
-    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireSignature' 0 !> To kh)
-  getRequireSignature (MultiSigConstr (Memo (RequireSignature' kh) _)) = Just kh
+    MkMultiSig $ memoBytesEra @ShelleyEra (Sum RequireSignature' 0 !> To kh)
+  getRequireSignature (MkMultiSig (Memo (RequireSignature' kh) _)) = Just kh
   getRequireSignature _ = Nothing
 
   mkRequireAllOf ms =
-    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireAllOf' 1 !> To ms)
-  getRequireAllOf (MultiSigConstr (Memo (RequireAllOf' ms) _)) = Just ms
+    MkMultiSig $ memoBytesEra @ShelleyEra (Sum RequireAllOf' 1 !> To ms)
+  getRequireAllOf (MkMultiSig (Memo (RequireAllOf' ms) _)) = Just ms
   getRequireAllOf _ = Nothing
 
   mkRequireAnyOf ms =
-    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireAnyOf' 2 !> To ms)
-  getRequireAnyOf (MultiSigConstr (Memo (RequireAnyOf' ms) _)) = Just ms
+    MkMultiSig $ memoBytesEra @ShelleyEra (Sum RequireAnyOf' 2 !> To ms)
+  getRequireAnyOf (MkMultiSig (Memo (RequireAnyOf' ms) _)) = Just ms
   getRequireAnyOf _ = Nothing
 
   mkRequireMOf n ms =
-    MultiSigConstr $ memoBytesEra @ShelleyEra (Sum RequireMOf' 3 !> To n !> To ms)
-  getRequireMOf (MultiSigConstr (Memo (RequireMOf' n ms) _)) = Just (n, ms)
+    MkMultiSig $ memoBytesEra @ShelleyEra (Sum RequireMOf' 3 !> To n !> To ms)
+  getRequireMOf (MkMultiSig (Memo (RequireMOf' n ms) _)) = Just (n, ms)
   getRequireMOf _ = Nothing
 
 deriving newtype instance NFData (MultiSig era)
@@ -193,7 +193,7 @@ pattern RequireMOf n ms <- (getRequireMOf -> Just (n, ms))
 instance Era era => EncCBOR (MultiSig era)
 
 instance Era era => DecCBOR (MultiSig era) where
-  decCBOR = MultiSigConstr <$> decodeMemoized decCBOR
+  decCBOR = MkMultiSig <$> decodeMemoized decCBOR
 
 instance Era era => DecCBOR (MultiSigRaw era) where
   decCBOR = decodeRecordSum "MultiSig" $ do
