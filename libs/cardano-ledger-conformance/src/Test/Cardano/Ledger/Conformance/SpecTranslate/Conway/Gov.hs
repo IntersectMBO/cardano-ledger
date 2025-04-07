@@ -22,7 +22,7 @@ import Cardano.Ledger.UMap (umElemsL)
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import Lens.Micro ((^.))
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 

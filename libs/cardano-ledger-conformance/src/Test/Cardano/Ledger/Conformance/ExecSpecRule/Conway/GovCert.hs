@@ -19,7 +19,7 @@ import Cardano.Ledger.Conway.TxCert
 import Constrained.API
 import Data.Bifunctor (Bifunctor (..))
 import Data.Map.Strict (Map)
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   ConwayCertExecContext (..),

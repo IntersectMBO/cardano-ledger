@@ -21,7 +21,7 @@ import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import qualified Data.Text as T
 import Lens.Micro ((&), (.~), (^.))
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Prettyprinter ((<+>))
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Common (Arbitrary (..), Gen, showExpr)

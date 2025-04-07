@@ -62,7 +62,7 @@ import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), UtxoEnv (..))
 import Data.Bitraversable (bimapM)
 import GHC.Generics (Generic)
 import Lens.Micro.Mtl (use)
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Common (Arbitrary (..), NFData, Testable (..), ToExpr, ansiExpr)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (enactStateSpec)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo (genUtxoExecContext)

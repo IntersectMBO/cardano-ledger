@@ -18,7 +18,7 @@ import Data.Bifunctor (first)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Set as Set
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert ()

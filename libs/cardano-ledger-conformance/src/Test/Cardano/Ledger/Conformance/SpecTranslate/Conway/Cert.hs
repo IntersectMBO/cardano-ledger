@@ -27,7 +27,7 @@ import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map, keysSet)
 import qualified Data.VMap as VMap
 import Lens.Micro
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()

@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Ledgers () where
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (EnactState)
 import Constrained.API (Specification (..))
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   unComputationResult,

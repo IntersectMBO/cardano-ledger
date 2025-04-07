@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.Rules
 import qualified Cardano.Ledger.UMap as UMap
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (
   hashToInteger,
  )

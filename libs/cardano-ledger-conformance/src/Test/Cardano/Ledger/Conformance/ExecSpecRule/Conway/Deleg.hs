@@ -17,7 +17,7 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained.API
 import Data.Bifunctor (second)
 import Data.Set (Set)
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   ConwayCertExecContext (..),

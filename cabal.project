@@ -16,7 +16,7 @@ source-repository-package
   subdir: hs
   -- !WARNING!:
   -- MAKE SURE THIS POINTS TO A COMMIT IN `*-artifacts` BEFORE MERGE!
-  tag: b10541e6b623fd2e987c249a7434a16fd6d8ce14
+  tag: cccfde6934ab0988fee3885ee160fffe04aa8274
 
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec

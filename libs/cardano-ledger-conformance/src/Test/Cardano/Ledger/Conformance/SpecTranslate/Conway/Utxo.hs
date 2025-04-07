@@ -17,7 +17,7 @@ import Cardano.Ledger.Core (EraTxOut (..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity (Identity)
-import qualified Lib as Agda
+import qualified MAlonzo.Code.Ledger.Foreign.API as Agda
 import Test.Cardano.Ledger.Conformance (OpaqueErrorString (..), showOpaqueErrorString)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (SpecTranslate (..))
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert ()
