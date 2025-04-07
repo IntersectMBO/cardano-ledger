@@ -136,13 +136,13 @@ instance ToJSON ValidityInterval where
 -- ==================================================================
 
 data TimelockRaw era
-  = Signature !(KeyHash 'Witness)
-  | AllOf !(StrictSeq (Timelock era)) -- NOTE that Timelock and
-  | AnyOf !(StrictSeq (Timelock era)) -- TimelockRaw are mutually recursive.
-  | MOfN !Int !(StrictSeq (Timelock era))
-  | -- Note that the Int may be negative in which case (MOfN (-2) [..]) is always True
-    TimeStart !SlotNo -- The start time
-  | TimeExpire !SlotNo -- The time it expires
+  = TimelockSignature !(KeyHash 'Witness)
+  | TimelockAllOf !(StrictSeq (Timelock era)) -- NOTE that Timelock and
+  | TimelockAnyOf !(StrictSeq (Timelock era)) -- TimelockRaw are mutually recursive.
+  | TimelockMOf !Int !(StrictSeq (Timelock era))
+  | -- Note that the Int may be negative in which case (TimelockMOf (-2) [..]) is always True
+    TimelockTimeStart !SlotNo -- The start time
+  | TimelockTimeExpire !SlotNo -- The time it expires
   deriving (Eq, Generic, NFData)
 
 class ShelleyEraScript era => AllegraEraScript era where
@@ -169,12 +169,12 @@ translateTimelock ::
 translateTimelock (MkTimelock (Memo tl bs)) =
   let rewrap rtl = MkTimelock $ mkMemoBytes rtl (fromStrict $ fromShort bs)
    in case tl of
-        Signature s -> rewrap $ Signature s
-        AllOf l -> rewrap . AllOf $ translateTimelock <$> l
-        AnyOf l -> rewrap . AnyOf $ translateTimelock <$> l
-        MOfN n l -> rewrap $ MOfN n (translateTimelock <$> l)
-        TimeStart x -> rewrap $ TimeStart x
-        TimeExpire x -> rewrap $ TimeExpire x
+        TimelockSignature s -> rewrap $ TimelockSignature s
+        TimelockAllOf l -> rewrap . TimelockAllOf $ translateTimelock <$> l
+        TimelockAnyOf l -> rewrap . TimelockAnyOf $ translateTimelock <$> l
+        TimelockMOf n l -> rewrap $ TimelockMOf n (translateTimelock <$> l)
+        TimelockTimeStart x -> rewrap $ TimelockTimeStart x
+        TimelockTimeExpire x -> rewrap $ TimelockTimeExpire x
 
 -- These coding choices are chosen so that a MultiSig script
 -- can be deserialised as a Timelock script
@@ -182,12 +182,12 @@ translateTimelock (MkTimelock (Memo tl bs)) =
 instance Era era => EncCBOR (TimelockRaw era) where
   encCBOR =
     encode . \case
-      Signature hash -> Sum Signature 0 !> To hash
-      AllOf xs -> Sum AllOf 1 !> To xs
-      AnyOf xs -> Sum AnyOf 2 !> To xs
-      MOfN m xs -> Sum MOfN 3 !> To m !> To xs
-      TimeStart m -> Sum TimeStart 4 !> To m
-      TimeExpire m -> Sum TimeExpire 5 !> To m
+      TimelockSignature hash -> Sum TimelockSignature 0 !> To hash
+      TimelockAllOf xs -> Sum TimelockAllOf 1 !> To xs
+      TimelockAnyOf xs -> Sum TimelockAnyOf 2 !> To xs
+      TimelockMOf m xs -> Sum TimelockMOf 3 !> To m !> To xs
+      TimelockTimeStart m -> Sum TimelockTimeStart 4 !> To m
+      TimelockTimeExpire m -> Sum TimelockTimeExpire 5 !> To m
 
 -- This instance allows us to derive instance DecCBOR (Annotator (Timelock era)).
 -- Since Timelock is a newtype around (Memo (Timelock era)).
@@ -195,22 +195,22 @@ instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
   decCBOR = decode (Summands "TimelockRaw" decRaw)
     where
       decRaw :: Word -> Decode 'Open (Annotator (TimelockRaw era))
-      decRaw 0 = Ann (SumD Signature <! From)
-      decRaw 1 = Ann (SumD AllOf) <*! D (sequence <$> decCBOR)
-      decRaw 2 = Ann (SumD AnyOf) <*! D (sequence <$> decCBOR)
-      decRaw 3 = Ann (SumD MOfN) <*! Ann From <*! D (sequence <$> decCBOR)
-      decRaw 4 = Ann (SumD TimeStart <! From)
-      decRaw 5 = Ann (SumD TimeExpire <! From)
+      decRaw 0 = Ann (SumD TimelockSignature <! From)
+      decRaw 1 = Ann (SumD TimelockAllOf) <*! D (sequence <$> decCBOR)
+      decRaw 2 = Ann (SumD TimelockAnyOf) <*! D (sequence <$> decCBOR)
+      decRaw 3 = Ann (SumD TimelockMOf) <*! Ann From <*! D (sequence <$> decCBOR)
+      decRaw 4 = Ann (SumD TimelockTimeStart <! From)
+      decRaw 5 = Ann (SumD TimelockTimeExpire <! From)
       decRaw n = Invalid n
 
 instance Era era => DecCBOR (TimelockRaw era) where
   decCBOR = decode $ Summands "TimelockRaw" $ \case
-    0 -> SumD Signature <! From
-    1 -> SumD AllOf <! From
-    2 -> SumD AnyOf <! From
-    3 -> SumD MOfN <! From <! From
-    4 -> SumD TimeStart <! From
-    5 -> SumD TimeExpire <! From
+    0 -> SumD TimelockSignature <! From
+    1 -> SumD TimelockAllOf <! From
+    2 -> SumD TimelockAnyOf <! From
+    3 -> SumD TimelockMOf <! From <! From
+    4 -> SumD TimelockTimeStart <! From
+    5 -> SumD TimelockTimeExpire <! From
     n -> Invalid n
 
 -- =================================================================
@@ -310,39 +310,39 @@ pattern RequireTimeStart mslot <- (getTimeStart -> Just mslot)
   #-}
 
 mkRequireSignatureTimelock :: forall era. Era era => KeyHash 'Witness -> Timelock era
-mkRequireSignatureTimelock = mkMemoizedEra @era . Signature
+mkRequireSignatureTimelock = mkMemoizedEra @era . TimelockSignature
 getRequireSignatureTimelock :: Timelock era -> Maybe (KeyHash 'Witness)
-getRequireSignatureTimelock (MkTimelock (Memo (Signature kh) _)) = Just kh
+getRequireSignatureTimelock (MkTimelock (Memo (TimelockSignature kh) _)) = Just kh
 getRequireSignatureTimelock _ = Nothing
 
 mkRequireAllOfTimelock :: forall era. Era era => StrictSeq (Timelock era) -> Timelock era
-mkRequireAllOfTimelock = mkMemoizedEra @era . AllOf
+mkRequireAllOfTimelock = mkMemoizedEra @era . TimelockAllOf
 getRequireAllOfTimelock :: Timelock era -> Maybe (StrictSeq (Timelock era))
-getRequireAllOfTimelock (MkTimelock (Memo (AllOf ms) _)) = Just ms
+getRequireAllOfTimelock (MkTimelock (Memo (TimelockAllOf ms) _)) = Just ms
 getRequireAllOfTimelock _ = Nothing
 
 mkRequireAnyOfTimelock :: forall era. Era era => StrictSeq (Timelock era) -> Timelock era
-mkRequireAnyOfTimelock = mkMemoizedEra @era . AnyOf
+mkRequireAnyOfTimelock = mkMemoizedEra @era . TimelockAnyOf
 getRequireAnyOfTimelock :: Timelock era -> Maybe (StrictSeq (Timelock era))
-getRequireAnyOfTimelock (MkTimelock (Memo (AnyOf ms) _)) = Just ms
+getRequireAnyOfTimelock (MkTimelock (Memo (TimelockAnyOf ms) _)) = Just ms
 getRequireAnyOfTimelock _ = Nothing
 
 mkRequireMOfTimelock :: forall era. Era era => Int -> StrictSeq (Timelock era) -> Timelock era
-mkRequireMOfTimelock n = mkMemoizedEra @era . MOfN n
+mkRequireMOfTimelock n = mkMemoizedEra @era . TimelockMOf n
 getRequireMOfTimelock :: Timelock era -> Maybe (Int, StrictSeq (Timelock era))
-getRequireMOfTimelock (MkTimelock (Memo (MOfN n ms) _)) = Just (n, ms)
+getRequireMOfTimelock (MkTimelock (Memo (TimelockMOf n ms) _)) = Just (n, ms)
 getRequireMOfTimelock _ = Nothing
 
 mkTimeStartTimelock :: forall era. Era era => SlotNo -> Timelock era
-mkTimeStartTimelock = mkMemoizedEra @era . TimeStart
+mkTimeStartTimelock = mkMemoizedEra @era . TimelockTimeStart
 getTimeStartTimelock :: Timelock era -> Maybe SlotNo
-getTimeStartTimelock (MkTimelock (Memo (TimeStart mslot) _)) = Just mslot
+getTimeStartTimelock (MkTimelock (Memo (TimelockTimeStart mslot) _)) = Just mslot
 getTimeStartTimelock _ = Nothing
 
 mkTimeExpireTimelock :: forall era. Era era => SlotNo -> Timelock era
-mkTimeExpireTimelock = mkMemoizedEra @era . TimeExpire
+mkTimeExpireTimelock = mkMemoizedEra @era . TimelockTimeExpire
 getTimeExpireTimelock :: Timelock era -> Maybe SlotNo
-getTimeExpireTimelock (MkTimelock (Memo (TimeExpire mslot) _)) = Just mslot
+getTimeExpireTimelock (MkTimelock (Memo (TimelockTimeExpire mslot) _)) = Just mslot
 getTimeExpireTimelock _ = Nothing
 
 -- =================================================================
@@ -413,10 +413,10 @@ eqTimelockRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
     seqEq Empty Empty = True
     seqEq (x :<| xs) (y :<| ys) = eqTimelockRaw x y && seqEq xs ys
     seqEq _ _ = False
-    go (Signature kh1) (Signature kh2) = kh1 == kh2
-    go (AllOf ts1) (AllOf ts2) = seqEq ts1 ts2
-    go (AnyOf ts1) (AnyOf ts2) = seqEq ts1 ts2
-    go (MOfN n1 ts1) (MOfN n2 ts2) = n1 == n2 && seqEq ts1 ts2
-    go (TimeStart sn1) (TimeStart sn2) = sn1 == sn2
-    go (TimeExpire sn1) (TimeExpire sn2) = sn1 == sn2
+    go (TimelockSignature kh1) (TimelockSignature kh2) = kh1 == kh2
+    go (TimelockAllOf ts1) (TimelockAllOf ts2) = seqEq ts1 ts2
+    go (TimelockAnyOf ts1) (TimelockAnyOf ts2) = seqEq ts1 ts2
+    go (TimelockMOf n1 ts1) (TimelockMOf n2 ts2) = n1 == n2 && seqEq ts1 ts2
+    go (TimelockTimeStart sn1) (TimelockTimeStart sn2) = sn1 == sn2
+    go (TimelockTimeExpire sn1) (TimelockTimeExpire sn2) = sn1 == sn2
     go _ _ = False
