@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -63,8 +62,6 @@ import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys.Bootstrap (bootstrapWitKeyHash)
-import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
   Mem,
@@ -91,7 +88,6 @@ import Data.Maybe.Strict (
   strictMaybeToMaybe,
  )
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -431,6 +427,5 @@ witsFromTxWitnesses ::
   EraTx era =>
   Tx era ->
   Set (KeyHash 'Witness)
-witsFromTxWitnesses tx =
-  Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
-    `Set.union` Set.map bootstrapWitKeyHash (tx ^. witsTxL . bootAddrTxWitsL)
+witsFromTxWitnesses tx = keyHashWitnessesTxWits (tx ^. witsTxL)
+{-# DEPRECATED witsFromTxWitnesses "In favor ot `keyHashWitnessesTxWits`" #-}

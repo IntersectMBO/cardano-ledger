@@ -62,7 +62,6 @@ import Cardano.Ledger.Shelley.Rules (
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.State (EraCertState (..), EraUTxO (..), ScriptsProvided (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
@@ -301,7 +300,7 @@ babbageUtxowMirTransition = do
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum  -}
   let genDelegs = certState ^. certDStateL . dsGenDelegsL
-      witsKeyHashes = witsFromTxWitnesses tx
+      witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
@@ -335,7 +334,7 @@ babbageUtxowTransition = do
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
-      witsKeyHashes = witsFromTxWitnesses tx
+      witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
       inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
 
   -- check scripts

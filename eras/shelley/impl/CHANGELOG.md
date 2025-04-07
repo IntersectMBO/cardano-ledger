@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Deprecate `witsFromTxWitnesses`
 * Expose access to `ShelleyTxRaw`, `ShelleyTxAuxDataRaw`, `ShelleyTxBodyRaw`, `ShelleyTxWitsRaw`, `MkMultiSig`
 * Expose constructors `MkShelleyTx`, `MkShelleyTxAuxData`, `MkShelleyTxBody`, `MkShelleyTxWits`, `MultiSigRaw`
 * Remove re-export of `WitVKey` from `Cardano.Ledger.Shelley.TxWits`

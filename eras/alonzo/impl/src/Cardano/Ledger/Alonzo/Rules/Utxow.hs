@@ -67,7 +67,6 @@ import Cardano.Ledger.Shelley.Rules (
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.State (
   EraCertState (..),
@@ -341,7 +340,7 @@ alonzoStyleWitness = do
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
-      witsKeyHashes = witsFromTxWitnesses @era tx
+      witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
       scriptsProvided = getScriptsProvided utxo tx
 
   -- check scripts
