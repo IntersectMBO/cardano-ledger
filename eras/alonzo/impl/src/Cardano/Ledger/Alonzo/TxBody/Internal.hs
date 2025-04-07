@@ -37,7 +37,7 @@ module Cardano.Ledger.Alonzo.TxBody.Internal (
   Addr28Extra,
   DataHash32,
   AlonzoTxBody (
-    ..,
+    MkAlonzoTxBody,
     AlonzoTxBody,
     atbInputs,
     atbCollateral,
@@ -117,7 +117,6 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (
-  MaryValue (MaryValue),
   MultiAsset (..),
   PolicyID (..),
   policies,
@@ -215,7 +214,7 @@ deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (AlonzoTxBodyRaw era)
 
-newtype AlonzoTxBody era = TxBodyConstr (MemoBytes (AlonzoTxBodyRaw era))
+newtype AlonzoTxBody era = MkAlonzoTxBody (MemoBytes (AlonzoTxBodyRaw era))
   deriving (ToCBOR, Generic)
   deriving newtype (SafeToHash)
 
@@ -347,9 +346,6 @@ instance MaryEraTxBody AlonzoEra where
     lensMemoRawType @AlonzoEra atbrMint $
       \txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_}
   {-# INLINEABLE mintTxBodyL #-}
-
-  mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
-  {-# INLINEABLE mintValueTxBodyF #-}
 
   mintedTxBodyF = to (policies . atbrMint . getMemoRawType)
   {-# INLINEABLE mintedTxBodyF #-}

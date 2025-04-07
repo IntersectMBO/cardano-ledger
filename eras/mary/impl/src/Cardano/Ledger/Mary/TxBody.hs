@@ -1,6 +1,7 @@
 module Cardano.Ledger.Mary.TxBody (
   MaryEraTxBody (..),
   MaryTxBody (
+    MkMaryTxBody,
     MaryTxBody,
     mtbAuxDataHash,
     mtbCerts,

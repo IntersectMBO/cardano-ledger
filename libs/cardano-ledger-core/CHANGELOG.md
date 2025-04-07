@@ -2,6 +2,8 @@
 
 ## 1.18.0.0
 
+* Add `keyHashWitnessesTxWits`
+* Remove export of `mkMemoBytes` from `Cardano.Ledger.MemoBytes` as unsafe
 * Add `CanGetChainAccountState` and `CanSetChainAccountState`
 * Add `treasuryL` and `reservesL`
 * Add `casTreasuryL` and `casReservesL`

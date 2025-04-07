@@ -38,6 +38,7 @@ module Cardano.Ledger.Core (
   hashScript,
   isNativeScript,
   hashScriptTxWitsL,
+  keyHashWitnessesTxWits,
   Value,
   EraPParams (..),
   mkCoinTxOut,
@@ -92,8 +93,8 @@ import Cardano.Ledger.Core.Translation
 import Cardano.Ledger.Core.TxCert
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Hashes hiding (GenDelegPair (..), GenDelegs (..), unsafeMakeSafeHash)
-import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.Keys.WitVKey (WitVKey)
+import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness, bootstrapWitKeyHash)
+import Cardano.Ledger.Keys.WitVKey (WitVKey, witVKeyHash)
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Metadata
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
@@ -110,6 +111,7 @@ import Data.Maybe.Strict (StrictMaybe, strictMaybe)
 import Data.MemPack
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Void (Void)
 import Data.Word (Word32, Word64)
 import GHC.Stack (HasCallStack)
@@ -511,6 +513,16 @@ hashScriptTxWitsL =
     (\wits -> wits ^. scriptTxWitsL)
     (\wits ss -> wits & scriptTxWitsL .~ Map.fromList [(hashScript s, s) | s <- ss])
 {-# INLINEABLE hashScriptTxWitsL #-}
+
+-- | Extract all of the `KeyHash` witnesses provided in the `TxWits`
+keyHashWitnessesTxWits ::
+  EraTxWits era =>
+  TxWits era ->
+  Set (KeyHash 'Witness)
+keyHashWitnessesTxWits txWits =
+  Set.map witVKeyHash (txWits ^. addrTxWitsL)
+    `Set.union` Set.map bootstrapWitKeyHash (txWits ^. bootAddrTxWitsL)
+{-# INLINEABLE keyHashWitnessesTxWits #-}
 
 -----------------------------------------------------------------------------
 -- Script Validation

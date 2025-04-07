@@ -12,7 +12,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -30,7 +29,7 @@
 module Cardano.Ledger.Allegra.TxBody.Internal (
   AllegraEraTxBody (..),
   AllegraTxBody (
-    ..,
+    MkAllegraTxBody,
     AllegraTxBody,
     atbAuxDataHash,
     atbCerts,
@@ -102,7 +101,7 @@ data AllegraTxBodyRaw ma era = AllegraTxBodyRaw
   , atbrOutputs :: !(StrictSeq (TxOut era))
   , atbrCerts :: !(StrictSeq (TxCert era))
   , atbrWithdrawals :: !Withdrawals
-  , atbrTxFee :: !Coin
+  , atbrFee :: !Coin
   , atbrValidityInterval :: !ValidityInterval
   , atbrUpdate :: !(StrictMaybe (Update era))
   , atbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
@@ -134,10 +133,13 @@ instance (DecCBOR ma, Monoid ma, AllegraEraTxBody era) => DecCBOR (AllegraTxBody
           "AllegraTxBodyRaw"
           emptyAllegraTxBodyRaw
           bodyFields
-          [(0, "atbrInputs"), (1, "atbrOutputs"), (2, "atbrTxFee")]
+          [(0, "atbrInputs"), (1, "atbrOutputs"), (2, "atbrFee")]
       )
 
-instance AllegraEraTxBody era => DecCBOR (Annotator (AllegraTxBodyRaw () era)) where
+instance
+  (DecCBOR m, Monoid m, AllegraEraTxBody era) =>
+  DecCBOR (Annotator (AllegraTxBodyRaw m era))
+  where
   decCBOR = pure <$> decCBOR
 
 -- Sparse encodings of AllegraTxBodyRaw, the key values are fixed by backward compatibility
@@ -167,7 +169,7 @@ instance
 bodyFields :: (DecCBOR ma, EraTxOut era, EraTxCert era) => Word -> Field (AllegraTxBodyRaw ma era)
 bodyFields 0 = field (\x tx -> tx {atbrInputs = x}) From
 bodyFields 1 = field (\x tx -> tx {atbrOutputs = x}) From
-bodyFields 2 = field (\x tx -> tx {atbrTxFee = x}) From
+bodyFields 2 = field (\x tx -> tx {atbrFee = x}) From
 bodyFields 3 =
   ofield
     ( \x tx ->
@@ -209,7 +211,7 @@ emptyAllegraTxBodyRaw =
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern construtor.
 
-newtype AllegraTxBody e = TxBodyConstr (MemoBytes (AllegraTxBodyRaw () e))
+newtype AllegraTxBody e = MkAllegraTxBody (MemoBytes (AllegraTxBodyRaw () e))
   deriving newtype (SafeToHash, ToCBOR, DecCBOR)
 
 instance Memoized (AllegraTxBody era) where
@@ -279,7 +281,7 @@ pattern AllegraTxBody
         , atbrOutputs = atbOutputs
         , atbrCerts = atbCerts
         , atbrWithdrawals = atbWithdrawals
-        , atbrTxFee = atbTxFee
+        , atbrFee = atbTxFee
         , atbrValidityInterval = atbValidityInterval
         , atbrUpdate = atbUpdate
         , atbrAuxDataHash = atbAuxDataHash
@@ -301,7 +303,7 @@ pattern AllegraTxBody
             , atbrOutputs = outputs
             , atbrCerts = certs
             , atbrWithdrawals = withdrawals
-            , atbrTxFee = txFee
+            , atbrFee = txFee
             , atbrValidityInterval = validityInterval
             , atbrUpdate = update
             , atbrAuxDataHash = auxDataHash
@@ -326,8 +328,7 @@ instance EraTxBody AllegraEra where
   {-# INLINEABLE outputsTxBodyL #-}
 
   feeTxBodyL =
-    lensMemoRawType @AllegraEra atbrTxFee $
-      \txBodyRaw fee -> txBodyRaw {atbrTxFee = fee}
+    lensMemoRawType @AllegraEra atbrFee $ \txBodyRaw fee -> txBodyRaw {atbrFee = fee}
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =

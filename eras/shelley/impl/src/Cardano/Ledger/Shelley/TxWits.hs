@@ -21,21 +21,19 @@
 module Cardano.Ledger.Shelley.TxWits (
   decodeWits,
   ShelleyTxWits (
+    MkShelleyTxWits,
     ShelleyTxWits,
     addrWits,
     bootWits,
     scriptWits
   ),
-  ShelleyTxWitsRaw,
+  ShelleyTxWitsRaw (..),
   scriptShelleyTxWitsL,
   addrShelleyTxWitsL,
   bootAddrShelleyTxWitsL,
   addrWits',
   shelleyEqTxWitsRaw,
   mapTraverseableDecoderA,
-
-  -- * Re-exports
-  WitVKey (..),
 )
 where
 
@@ -84,11 +82,15 @@ import Lens.Micro (Lens', (^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyTxWitsRaw era = ShelleyTxWitsRaw
-  { addrWits' :: !(Set (WitVKey 'Witness))
-  , scriptWits' :: !(Map ScriptHash (Script era))
-  , bootWits' :: !(Set BootstrapWitness)
+  { stwrAddrTxWits :: !(Set (WitVKey 'Witness))
+  , stwrScriptTxWits :: !(Map ScriptHash (Script era))
+  , stwrBootAddrTxWits :: !(Set BootstrapWitness)
   }
   deriving (Generic)
+
+addrWits' :: ShelleyTxWitsRaw era -> Set (WitVKey 'Witness)
+addrWits' = stwrAddrTxWits
+{-# DEPRECATED addrWits' "In favor of `stwrAddrTxWits`" #-}
 
 deriving instance EraScript era => Show (ShelleyTxWitsRaw era)
 
@@ -104,7 +106,7 @@ instance
 
 instance EraScript era => NoThunks (ShelleyTxWitsRaw era)
 
-newtype ShelleyTxWits era = ShelleyTxWitsConstr (MemoBytes (ShelleyTxWitsRaw era))
+newtype ShelleyTxWits era = MkShelleyTxWits (MemoBytes (ShelleyTxWitsRaw era))
   deriving (Generic)
   deriving newtype (SafeToHash, Plain.ToCBOR)
 
@@ -126,7 +128,7 @@ instance
 instance EraScript era => NoThunks (ShelleyTxWits era)
 
 instance (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWits era) where
-  decCBOR = ShelleyTxWitsConstr <$> decodeMemoized decCBOR
+  decCBOR = MkShelleyTxWits <$> decodeMemoized decCBOR
 
 -- =======================================================
 -- Accessors
@@ -137,7 +139,7 @@ instance (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWits era) wh
 addrShelleyTxWitsL ::
   EraScript era => Lens' (ShelleyTxWits era) (Set (WitVKey 'Witness))
 addrShelleyTxWitsL =
-  lensMemoRawType @ShelleyEra addrWits' $ \witsRaw aw -> witsRaw {addrWits' = aw}
+  lensMemoRawType @ShelleyEra stwrAddrTxWits $ \witsRaw aw -> witsRaw {stwrAddrTxWits = aw}
 {-# INLINEABLE addrShelleyTxWitsL #-}
 
 -- | Bootstrap Addresses witness setter and getter for `ShelleyTxWits`. The
@@ -146,7 +148,7 @@ bootAddrShelleyTxWitsL ::
   EraScript era =>
   Lens' (ShelleyTxWits era) (Set BootstrapWitness)
 bootAddrShelleyTxWitsL =
-  lensMemoRawType @ShelleyEra bootWits' $ \witsRaw bw -> witsRaw {bootWits' = bw}
+  lensMemoRawType @ShelleyEra stwrBootAddrTxWits $ \witsRaw bw -> witsRaw {stwrBootAddrTxWits = bw}
 {-# INLINEABLE bootAddrShelleyTxWitsL #-}
 
 -- | Script witness setter and getter for `ShelleyTxWits`. The
@@ -155,8 +157,8 @@ scriptShelleyTxWitsL ::
   EraScript era =>
   Lens' (ShelleyTxWits era) (Map ScriptHash (Script era))
 scriptShelleyTxWitsL =
-  lensMemoRawType @ShelleyEra scriptWits' $
-    \witsRaw sw -> witsRaw {scriptWits' = sw}
+  lensMemoRawType @ShelleyEra stwrScriptTxWits $
+    \witsRaw sw -> witsRaw {stwrScriptTxWits = sw}
 {-# INLINEABLE scriptShelleyTxWitsL #-}
 
 instance EraTxWits ShelleyEra where
@@ -178,7 +180,7 @@ instance EraTxWits ShelleyEra where
       "Calling this function will cause a compilation error, since there is no TxWits instance for ByronEra"
 
 instance (TxWits era ~ ShelleyTxWits era, EraTxWits era) => EqRaw (ShelleyTxWits era) where
-  eqRaw = shelleyEqTxWitsRaw
+  eqRaw = shelleyEqTxWitsRaw @era
 
 instance (Era era, EncCBOR (Script era)) => EncCBOR (ShelleyTxWitsRaw era) where
   encCBOR (ShelleyTxWitsRaw vkeys scripts boots) =
@@ -238,12 +240,12 @@ instance (EraScript era, DecCBOR (Script era)) => DecCBOR (ShelleyTxWitsRaw era)
         []
     where
       witField :: Word -> Field (ShelleyTxWitsRaw era)
-      witField 0 = field (\x wits -> wits {addrWits' = x}) From
+      witField 0 = field (\x wits -> wits {stwrAddrTxWits = x}) From
       witField 1 =
         field
-          (\x wits -> wits {scriptWits' = x})
+          (\x wits -> wits {stwrScriptTxWits = x})
           (D $ Map.fromElems (hashScript @era) <$> decodeList decCBOR)
-      witField 2 = field (\x wits -> wits {bootWits' = x}) From
+      witField 2 = field (\x wits -> wits {stwrBootAddrTxWits = x}) From
       witField n = invalidField n
 
 decodeWits ::
@@ -262,11 +264,11 @@ decodeWits =
     witField :: Word -> Field (Annotator (ShelleyTxWitsRaw era))
     witField 0 =
       fieldAA
-        (\x wits -> wits {addrWits' = x})
+        (\x wits -> wits {stwrAddrTxWits = x})
         (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
     witField 1 =
       fieldAA
-        (\x wits -> wits {scriptWits' = x})
+        (\x wits -> wits {stwrScriptTxWits = x})
         ( D $
             mapTraverseableDecoderA
               (decodeList decCBOR)
@@ -274,7 +276,7 @@ decodeWits =
         )
     witField 2 =
       fieldAA
-        (\x wits -> wits {bootWits' = x})
+        (\x wits -> wits {stwrBootAddrTxWits = x})
         (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
     witField n = fieldAA (\(_ :: Void) wits -> wits) (Invalid n)
 

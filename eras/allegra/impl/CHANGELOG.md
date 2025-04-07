@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.7.0.1
+## 1.8.0.0
 
-*
+* Expose access to `AllegraTxBodyRaw` and `TimelockRaw`
+* Expose constructor `MkAllegraTxBody` and `MkTimelock`
+* Deprecate `TimelockConstr`
+* Rename `atbrTxFee` to `atbrFee` for consistency
 
 ## 1.7.0.0
 

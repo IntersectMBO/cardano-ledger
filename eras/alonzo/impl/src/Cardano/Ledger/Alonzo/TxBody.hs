@@ -5,6 +5,7 @@ module Cardano.Ledger.Alonzo.TxBody (
   Addr28Extra,
   DataHash32,
   AlonzoTxBody (
+    MkAlonzoTxBody,
     AlonzoTxBody,
     atbInputs,
     atbCollateral,
@@ -20,7 +21,7 @@ module Cardano.Ledger.Alonzo.TxBody (
     atbAuxDataHash,
     atbTxNetworkId
   ),
-  AlonzoTxBodyRaw,
+  AlonzoTxBodyRaw (..),
   AlonzoTxBodyUpgradeError (..),
   AlonzoEraTxBody (..),
   ShelleyEraTxBody (..),

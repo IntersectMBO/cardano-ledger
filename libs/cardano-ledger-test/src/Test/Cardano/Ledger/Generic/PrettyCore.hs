@@ -16,6 +16,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Generic.PrettyCore where
@@ -58,11 +59,17 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData,
-  atadMetadata',
+  atadrMetadata,
   getAlonzoTxAuxDataScripts,
  )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), TxDats (..), unRedeemers, unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (
+  AlonzoTxWits,
+  AlonzoTxWitsRaw (..),
+  TxDats (..),
+  unRedeemers,
+  unTxDats,
+ )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Babbage.Core (CoinPerByte (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
@@ -176,7 +183,7 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
   flattenMultiAsset,
  )
-import Cardano.Ledger.MemoBytes (MemoBytes (..))
+import Cardano.Ledger.MemoBytes (getMemoRawType)
 import Cardano.Ledger.Plutus.Data (
   Data (..),
   Datum (..),
@@ -651,7 +658,7 @@ ppTxWitness ::
   Reflect era =>
   AlonzoTxWits era ->
   PDoc
-ppTxWitness (AlonzoTxWits' vk wb sc da rd) =
+ppTxWitness (getMemoRawType -> AlonzoTxWitsRaw vk wb sc da rd) =
   ppRecord
     "AlonzoTxWits"
     [ ("keys", ppSet (pcWitVKey @era reify) vk)
@@ -840,7 +847,7 @@ ppAlonzoTxAuxData ::
 ppAlonzoTxAuxData auxData =
   ppSexp
     "AuxiliaryData"
-    [ ppMap ppWord64 ppMetadatum (atadMetadata' auxData)
+    [ ppMap ppWord64 ppMetadatum (atadrMetadata (getMemoRawType auxData))
     , ppStrictSeq (pcScript reify) (extractAlonzoTxAuxDataScripts auxData)
     ]
 
@@ -927,18 +934,19 @@ ppShelleyTxBody ::
   ) =>
   ShelleyTxBody era ->
   PDoc
-ppShelleyTxBody (TxBodyConstr (Memo (ShelleyTxBodyRaw ins outs cs withdrawals fee ttl upd mdh) _)) =
-  ppRecord
-    "TxBody"
-    [ ("inputs", ppSet pcTxIn ins)
-    , ("outputs", ppStrictSeq (pcTxOut reify) outs)
-    , ("cert", ppStrictSeq (pcTxCert reify) cs)
-    , ("withdrawals", ppWithdrawals withdrawals)
-    , ("fee", pcCoin fee)
-    , ("timetolive", pcSlotNo ttl)
-    , ("update", ppStrictMaybe ppUpdate upd)
-    , ("metadatahash", ppStrictMaybe ppTxAuxDataHash mdh)
-    ]
+ppShelleyTxBody txBody =
+  let ShelleyTxBodyRaw ins outs cs withdrawals fee ttl upd mdh = getMemoRawType txBody
+   in ppRecord
+        "TxBody"
+        [ ("inputs", ppSet pcTxIn ins)
+        , ("outputs", ppStrictSeq (pcTxOut reify) outs)
+        , ("cert", ppStrictSeq (pcTxCert reify) cs)
+        , ("withdrawals", ppWithdrawals withdrawals)
+        , ("fee", pcCoin fee)
+        , ("timetolive", pcSlotNo ttl)
+        , ("update", ppStrictMaybe ppUpdate upd)
+        , ("metadatahash", ppStrictMaybe ppTxAuxDataHash mdh)
+        ]
 
 instance
   ( EraTxOut era

@@ -69,7 +69,6 @@ import Cardano.Ledger.Shelley.Rules.Utxo (
   UtxoEvent,
  )
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.Shelley.UTxO (
   EraUTxO (..),
@@ -303,7 +302,7 @@ transitionRulesUTXOW = do
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = utxosUtxo u
-      witsKeyHashes = witsFromTxWitnesses tx
+      witsKeyHashes = keyHashWitnessesTxWits (tx ^. witsTxL)
       scriptsProvided = getScriptsProvided utxo tx
 
   -- check scripts

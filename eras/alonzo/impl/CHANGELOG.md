@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.13.0.1
+## 1.13.1.0
 
-*
+* Expose `alonzoEqTxWitsRaw` and `emptyTxWitsRaw`
+* Expose access to `AlonzoTxAuxDataRaw`, `AlonzoTxBodyRaw`, `AlonzoTxWitsRaw`, `RedeemersRaw` and `TxDatsRaw`
+* Expose constructors `MkAlonzoTxAuxData`, `MkAlonzoTxBody`, `MkAlonzoTxWits`, `MkRedeemers` and `MkTxDats`
+* Deprecate `TxDats'` and `AlonzoTxWits'`
+* Deprecate `txwitsVKey'`, `txwitsBoot'`, `txscripts'`, `txdats'` and `txrdmrs'`
 
 ## 1.13.0.0
 

@@ -1,12 +1,13 @@
 module Cardano.Ledger.Shelley.Tx (
   -- * Transaction
   ShelleyTx (
+    MkShelleyTx,
     ShelleyTx,
     body,
     wits,
     auxiliaryData
   ),
-  ShelleyTxRaw,
+  ShelleyTxRaw (..),
   bodyShelleyTxL,
   witsShelleyTxL,
   auxDataShelleyTxL,

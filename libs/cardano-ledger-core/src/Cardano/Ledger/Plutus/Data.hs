@@ -63,10 +63,10 @@ import Cardano.Ledger.MemoBytes (
   Memoized (RawType),
   getMemoRawType,
   getMemoSafeHash,
-  mkMemoBytes,
   mkMemoizedEra,
   shortToLazy,
  )
+import Cardano.Ledger.MemoBytes.Internal (mkMemoBytes)
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON (..), Value (Null))

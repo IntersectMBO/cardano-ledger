@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -12,15 +11,17 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxAuxData (
-  ShelleyTxAuxData (ShelleyTxAuxData),
-  ShelleyTxAuxDataRaw,
+  ShelleyTxAuxData (
+    MkShelleyTxAuxData,
+    ShelleyTxAuxData
+  ),
+  ShelleyTxAuxDataRaw (..),
   hashShelleyTxAuxData,
 
   -- * Re-exports
@@ -80,7 +81,7 @@ deriving via
     Era era => DecCBOR (Annotator (ShelleyTxAuxData era))
 
 newtype ShelleyTxAuxData era
-  = AuxiliaryDataConstr (MemoBytes (ShelleyTxAuxDataRaw era))
+  = MkShelleyTxAuxData (MemoBytes (ShelleyTxAuxDataRaw era))
   deriving (Eq, Show, Generic)
   deriving newtype (NFData, Plain.ToCBOR, SafeToHash, DecCBOR)
 
