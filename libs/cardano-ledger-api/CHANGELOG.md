@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.11.0.1
+## 1.12.0.0
 
-*
+* Rename `queryAccountState` to `queryChainAccountState`
 
 ## 1.11.0.0
 

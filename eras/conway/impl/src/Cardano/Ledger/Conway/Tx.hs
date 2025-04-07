@@ -105,7 +105,7 @@ getConwayMinFeeTx pp tx refScriptsSize =
         refScriptCostPerByte
         refScriptsSize
 
--- | Calculate the fee for reference scripts using an expoential growth of the price per
+-- | Calculate the fee for reference scripts using an exponential growth of the price per
 -- byte with linear increments
 tierRefScriptFee ::
   HasCallStack =>

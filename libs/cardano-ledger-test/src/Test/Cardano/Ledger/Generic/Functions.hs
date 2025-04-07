@@ -31,14 +31,13 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.State (VState (..))
+import Cardano.Ledger.Conway.State (ChainAccountState (..), VState (..))
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   CertState,
   DState (..),
   EpochState (..),
@@ -336,8 +335,8 @@ createRUpdNonPulsing' ::
 createRUpdNonPulsing' proof model =
   let bm = BlocksMade $ mBcur model -- TODO or should this be mBprev?
       ss = mSnapshots model
-      as = mAccountState model
-      reserves = asReserves as
+      as = mChainAccountState model
+      reserves = casReserves as
       pp = mPParams model
       totalStake = Map.foldr (<+>) (Coin 0) $ mRewards model
       rs = Map.keysSet $ mRewards model -- TODO or should we look at delegated keys instead?
@@ -392,8 +391,8 @@ languages tx utxo sNeeded = Map.foldl' accum Set.empty allScripts
 class TotalAda t where
   totalAda :: t -> Coin
 
-instance TotalAda AccountState where
-  totalAda (AccountState treasury reserves) = treasury <+> reserves
+instance TotalAda ChainAccountState where
+  totalAda (ChainAccountState treasury reserves) = treasury <+> reserves
 
 instance Reflect era => TotalAda (UTxOState era) where
   totalAda (UTxOState utxo _deposits fees gs _ donations) =
@@ -449,7 +448,7 @@ instance Reflect era => TotalAda (LedgerState era) where
   totalAda (LedgerState utxos dps) = totalAda utxos <+> certStateTotalAda dps
 
 instance Reflect era => TotalAda (EpochState era) where
-  totalAda eps = totalAda (esLState eps) <+> totalAda (esAccountState eps)
+  totalAda eps = totalAda (esLState eps) <+> totalAda (esChainAccountState eps)
 
 instance Reflect era => TotalAda (NewEpochState era) where
   totalAda nes = totalAda (nesEs nes)

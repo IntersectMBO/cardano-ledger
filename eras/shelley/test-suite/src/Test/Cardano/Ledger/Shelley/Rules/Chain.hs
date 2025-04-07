@@ -203,7 +203,10 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
         ( EpochState
-            (AccountState (Coin 0) reserves)
+            ChainAccountState
+              { casTreasury = Coin 0
+              , casReserves = reserves
+              }
             ( LedgerState
                 ( smartUTxOState
                     pp

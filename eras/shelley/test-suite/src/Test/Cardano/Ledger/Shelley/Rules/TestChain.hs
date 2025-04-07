@@ -248,7 +248,7 @@ ledgerTraceBase ::
   (ChainState era, LedgerEnv era, LedgerState era, [Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt
-  , LedgerEnv slot Nothing minBound pp_ (esAccountState nes)
+  , LedgerEnv slot Nothing minBound pp_ (esChainAccountState nes)
   , esLState nes
   , txs
   )

@@ -2,6 +2,10 @@
 
 ## 1.18.0.0
 
+* Add `CanGetChainAccountState` and `CanSetChainAccountState`
+* Add `treasuryL` and `reservesL`
+* Add `casTreasuryL` and `casReservesL`
+* Rename `AccountState` to `ChainAccountState`. Rename accessor fields `asTreasury` and `asReserves` to `casTreasury` and `casReserves` respectively.
 * Added `sizeTxForFeeCalculation` to `EraTx` with a default implementation
 * Added `consumed` to `EraUTxO`
 * Removed `upgradeCertState`

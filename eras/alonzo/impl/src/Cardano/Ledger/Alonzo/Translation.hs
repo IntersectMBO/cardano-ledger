@@ -94,7 +94,7 @@ instance TranslateEra AlonzoEra EpochState where
   translateEra ctxt es =
     return
       EpochState
-        { esAccountState = esAccountState es
+        { esChainAccountState = esChainAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es

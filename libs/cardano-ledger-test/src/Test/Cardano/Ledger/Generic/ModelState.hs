@@ -40,7 +40,7 @@ import Cardano.Ledger.Hashes (GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
+  ChainAccountState (..),
   DState (..),
   EpochState (..),
   InstantaneousRewards (..),
@@ -58,6 +58,7 @@ import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State (
+  ChainAccountState (..),
   EraCertState (..),
   IndividualPoolStake (..),
   PoolDistr (..),
@@ -82,7 +83,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   PrettyA (..),
   credSummary,
   keyHashSummary,
-  pcAccountState,
+  pcChainAccountState,
   pcCoin,
   pcCredential,
   pcIndividualPoolStake,
@@ -137,7 +138,7 @@ data ModelNewEpochState era = ModelNewEpochState
     -- and are abstracted away.
 
     -- EpochState fields
-    mAccountState :: !AccountState
+    mChainAccountState :: !ChainAccountState
   , -- esPrevPp and esPp are for changing PParams
     -- esNonMyopic is for efficiency, and all are abstracted away
 
@@ -172,8 +173,8 @@ blocksMadeZero = BlocksMade Map.empty
 poolDistrZero :: PoolDistr
 poolDistrZero = PoolDistr Map.empty $ CompactCoin 1
 
-accountStateZero :: AccountState
-accountStateZero = AccountState (Coin 0) (Coin 0)
+accountStateZero :: ChainAccountState
+accountStateZero = ChainAccountState (Coin 0) (Coin 0)
 
 utxoZero :: UTxO era
 utxoZero = UTxO Map.empty
@@ -274,7 +275,7 @@ mNewEpochStateZero =
     , mKeyDeposits = Map.empty
     , mUTxO = Map.empty
     , mMutFee = Map.empty
-    , mAccountState = accountStateZero
+    , mChainAccountState = accountStateZero
     , mPoolDistr = Map.empty
     , mPParams = pParamsZero
     , mDeposited = Coin 0
@@ -354,7 +355,7 @@ instance Reflect era => Extract (LedgerState era) era where
 instance Reflect era => Extract (EpochState era) era where
   extract x =
     EpochState
-      (mAccountState x)
+      (mChainAccountState x)
       (extract x)
       (mSnapshots x)
       nonMyopicZero
@@ -382,7 +383,7 @@ abstract x =
     , mKeyDeposits = (UM.depositMap . dsUnified . certDState . lsCertState . esLState . nesEs) x
     , mUTxO = (unUTxO . utxosUtxo . lsUTxOState . esLState . nesEs) x
     , mMutFee = Map.empty
-    , mAccountState = (esAccountState . nesEs) x
+    , mChainAccountState = (esChainAccountState . nesEs) x
     , mPoolDistr = (unPoolDistr . nesPd) x
     , mPParams = (view curPParamsEpochStateL . nesEs) x
     , mDeposited = (utxosDeposited . lsUTxOState . esLState . nesEs) x
@@ -392,7 +393,7 @@ abstract x =
     , -- below here NO EFFECT until we model EpochBoundary
       mFPoolParams = (psFutureStakePoolParams . certPState . lsCertState . esLState . nesEs) x
     , mRetiring = (psRetiring . certPState . lsCertState . esLState . nesEs) x
-    , mSnapshots = (esSnapshots . nesEs) x
+    , mSnapshots = esSnapshots (nesEs x)
     , mEL = nesEL x
     , mBprev = unBlocksMade (nesBprev x)
     , mBcur = unBlocksMade (nesBcur x)
@@ -420,7 +421,7 @@ pcModelNewEpochState proof x =
     , ("key deposits", ppMap credSummary pcCoin (mKeyDeposits x))
     , ("utxo", ppMap pcTxIn (pcTxOut proof) (mUTxO x))
     , ("mutFees", ppMap pcTxIn (pcTxOut proof) (mMutFee x))
-    , ("account", pcAccountState (mAccountState x))
+    , ("account", pcChainAccountState (mChainAccountState x))
     , ("pool distr", ppMap pcKeyHash pcIndividualPoolStake (mPoolDistr x))
     , ("protocol params", ppString "PParams ...")
     , ("deposited", pcCoin (mDeposited x))
@@ -445,8 +446,8 @@ epochBoundaryPDoc _proof x =
     futurepp = mFPoolParams x
     retiring = mRetiring x
     lastepoch = mEL x
-    prevBlocks = (mBprev x)
-    curBlocks = (mBcur x)
+    prevBlocks = mBprev x
+    curBlocks = mBcur x
 
 -- SnapShots and PulsingRewUdate delberately ommitted from pretty printer
 

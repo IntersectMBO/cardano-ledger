@@ -94,7 +94,7 @@ instance TranslateEra BabbageEra EpochState where
   translateEra ctxt es =
     pure
       EpochState
-        { esAccountState = esAccountState es
+        { esChainAccountState = esChainAccountState es
         , esSnapshots = esSnapshots es
         , esLState = translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es

@@ -28,9 +28,8 @@ import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState.Types (curPParamsEpochStateL, prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rules ()
-import Cardano.Ledger.Shelley.State ()
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
-import Cardano.Ledger.State (coinBalance, emptySnapShots)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (zero, (<->))
 import qualified Data.ByteString.Short as SBS
@@ -144,7 +143,11 @@ translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
     epochState :: EpochState ShelleyEra
     epochState =
       EpochState
-        { esAccountState = AccountState (Coin 0) reserves
+        { esChainAccountState =
+            ChainAccountState
+              { casTreasury = Coin 0
+              , casReserves = reserves
+              }
         , esSnapshots = emptySnapShots
         , esLState = ledgerState
         , esNonMyopic = def

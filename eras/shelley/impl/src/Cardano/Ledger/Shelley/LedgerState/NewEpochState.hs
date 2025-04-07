@@ -35,11 +35,11 @@ import Lens.Micro.Extras (view)
 -- | This function returns the coin balance of a given pot, either the
 -- reserves or the treasury, after the instantaneous rewards and pot
 -- transfers are accounted for.
-availableAfterMIR :: MIRPot -> AccountState -> InstantaneousRewards -> Coin
+availableAfterMIR :: MIRPot -> ChainAccountState -> InstantaneousRewards -> Coin
 availableAfterMIR ReservesMIR as ir =
-  asReserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
+  casReserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
 availableAfterMIR TreasuryMIR as ir =
-  asTreasury as `addDeltaCoin` deltaTreasury ir <-> fold (iRTreasury ir)
+  casTreasury as `addDeltaCoin` deltaTreasury ir <-> fold (iRTreasury ir)
 
 -- ========================
 -- Virtual selectors, which get the appropriate view from a DState from the embedded UnifiedMap
@@ -129,18 +129,18 @@ returnRedeemAddrsToReserves ::
   EraTxOut era =>
   EpochState era ->
   EpochState era
-returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
+returnRedeemAddrsToReserves es = es {esChainAccountState = acnt', esLState = ls'}
   where
     ls = esLState es
     us = lsUTxOState ls
     UTxO utxo = utxosUtxo us
     (redeemers, nonredeemers) =
       Map.partition (maybe False isBootstrapRedeemer . view bootAddrTxOutF) utxo
-    acnt = esAccountState es
+    acnt = esChainAccountState es
     utxoR = UTxO redeemers :: UTxO era
     acnt' =
       acnt
-        { asReserves = asReserves acnt <+> coinBalance utxoR
+        { casReserves = casReserves acnt <+> coinBalance utxoR
         }
     us' = us {utxosUtxo = UTxO nonredeemers :: UTxO era}
     ls' = ls {lsUTxOState = us'}

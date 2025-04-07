@@ -191,7 +191,7 @@ instance Reflect era => Same era (LedgerState era) where
 
 instance Reflect era => Same era (EpochState era) where
   same proof e1 e2 =
-    [ ("AccountState", eqByShow (esAccountState e1) (esAccountState e2))
+    [ ("ChainAccountState", eqByShow (esChainAccountState e1) (esChainAccountState e2))
     , ("SnapShots", eqByShow (esSnapshots e1) (esSnapshots e2))
     , ("PrevPP", samePParams proof (e1 ^. prevPParamsEpochStateL) (e2 ^. prevPParamsEpochStateL))
     , ("CurPP", samePParams proof (e1 ^. curPParamsEpochStateL) (e2 ^. curPParamsEpochStateL))

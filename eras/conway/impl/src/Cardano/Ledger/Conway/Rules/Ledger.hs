@@ -83,16 +83,13 @@ import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
-import Cardano.Ledger.Conway.State (ConwayEraCertState)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
-  asTreasuryL,
-  dsUnifiedL,
-  utxoL,
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -108,7 +105,6 @@ import Cardano.Ledger.Shelley.Rules (
   shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochFromSlot)
-import Cardano.Ledger.State (EraCertState (..), EraUTxO (..))
 import Cardano.Ledger.UMap (UView (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)
@@ -363,7 +359,7 @@ ledgerTransition ::
   TransitionRule (someLEDGER era)
 ledgerTransition = do
   TRC
-    ( LedgerEnv slot mbCurEpochNo _txIx pp account
+    ( LedgerEnv slot mbCurEpochNo _txIx pp chainAccountState
       , LedgerState utxoState certState
       , tx
       ) <-
@@ -375,7 +371,7 @@ ledgerTransition = do
     if tx ^. isValidTxL == IsValid True
       then do
         let txBody = tx ^. bodyTxL
-            actualTreasuryValue = account ^. asTreasuryL
+            actualTreasuryValue = chainAccountState ^. casTreasuryL
         case txBody ^. currentTreasuryValueTxBodyL of
           SNothing -> pure ()
           SJust submittedTreasuryValue ->

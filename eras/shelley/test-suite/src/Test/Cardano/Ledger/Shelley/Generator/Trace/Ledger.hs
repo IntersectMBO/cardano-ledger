@@ -63,9 +63,9 @@ import Test.QuickCheck (Gen)
 
 -- ======================================================
 
-genAccountState :: Constants -> Gen AccountState
+genAccountState :: Constants -> Gen ChainAccountState
 genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
-  AccountState
+  ChainAccountState
     <$> genCoin minTreasury maxTreasury
     <*> genCoin minReserves maxReserves
 
@@ -100,7 +100,7 @@ instance
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
-  sigGen genenv env state = genTx genenv env state
+  sigGen = genTx
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 

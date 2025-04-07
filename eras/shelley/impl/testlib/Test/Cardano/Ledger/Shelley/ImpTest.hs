@@ -174,10 +174,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
-  asTreasuryL,
   curPParamsEpochStateL,
   epochStateUMapL,
-  esAccountStateL,
   esLStateL,
   lsCertStateL,
   lsUTxOStateL,
@@ -200,9 +198,9 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
-import Cardano.Ledger.State
 import Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
   setMinCoinTxOut,
@@ -655,7 +653,7 @@ impLedgerEnv nes = do
       , ledgerEpochNo = Just epochNo
       , ledgerPp = nes ^. nesEsL . curPParamsEpochStateL
       , ledgerIx = TxIx 0
-      , ledgerAccount = nes ^. nesEsL . esAccountStateL
+      , ledgerAccount = nes ^. chainAccountStateL
       }
 
 -- | Modify the previous PParams in the current state with the given function. For current
@@ -1621,7 +1619,9 @@ withPostFixup f = withCustomFixup (>=> f)
 
 expectUTxOContent ::
   (HasCallStack, ToExpr (TxOut era)) =>
-  UTxO era -> [(TxIn, Maybe (TxOut era) -> Bool)] -> ImpTestM era ()
+  UTxO era ->
+  [(TxIn, Maybe (TxOut era) -> Bool)] ->
+  ImpTestM era ()
 expectUTxOContent utxo = traverse_ $ \(txIn, test) -> do
   let result = txIn `Map.lookup` unUTxO utxo
   unless (test result) $
@@ -1641,7 +1641,7 @@ expectNotRegisteredRewardAddress (RewardAccount _ cred) = do
 expectTreasury :: HasCallStack => Coin -> ImpTestM era ()
 expectTreasury c =
   impAnn "Checking treasury amount" $ do
-    treasuryAmt <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+    treasuryAmt <- getsNES treasuryL
     c `shouldBe` treasuryAmt
 
 -- Ensure no fees reach the treasury since that complicates withdrawal checks

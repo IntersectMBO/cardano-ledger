@@ -266,7 +266,11 @@ createInitialState tc =
       , nesBcur = BlocksMade Map.empty
       , nesEs =
           EpochState
-            { esAccountState = AccountState zero reserves
+            { esChainAccountState =
+                ChainAccountState
+                  { casTreasury = zero
+                  , casReserves = reserves
+                  }
             , esSnapshots = emptySnapShots
             , esLState =
                 LedgerState
@@ -417,17 +421,16 @@ registerInitialFunds tc nes =
   nes
     { nesEs =
         epochState
-          { esAccountState = accountState'
+          { esChainAccountState = accountState'
           , esLState = ledgerState'
           }
     }
   where
     epochState = nesEs nes
-    accountState = esAccountState epochState
+    accountState = esChainAccountState epochState
     ledgerState = esLState epochState
     utxoState = lsUTxOState ledgerState
     utxo = utxosUtxo utxoState
-    reserves = asReserves accountState
 
     initialFundsUtxo :: UTxO era
     initialFundsUtxo =
@@ -444,7 +447,7 @@ registerInitialFunds tc nes =
     -- Update the reserves
     accountState' =
       accountState
-        { asReserves = reserves <-> coin (balance initialFundsUtxo)
+        { casReserves = casReserves accountState <-> coin (balance initialFundsUtxo)
         }
 
     ledgerState' =

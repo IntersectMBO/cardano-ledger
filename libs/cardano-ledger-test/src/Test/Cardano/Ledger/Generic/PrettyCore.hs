@@ -136,7 +136,12 @@ import Cardano.Ledger.Conway.Rules (
  )
 import qualified Cardano.Ledger.Conway.Rules as ConwayRules
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import Cardano.Ledger.Conway.State (ConwayCertState (..), ConwayEraCertState (..), VState (..))
+import Cardano.Ledger.Conway.State (
+  ChainAccountState (..),
+  ConwayCertState (..),
+  ConwayEraCertState (..),
+  VState (..),
+ )
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),
@@ -188,7 +193,6 @@ import Cardano.Ledger.Shelley.AdaPots (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
   DState (..),
   EpochState (..),
   EraCertState (..),
@@ -1461,8 +1465,8 @@ ppConwayCertPredFailure proof x = case x of
   ConwayRules.GovCertFailure pf -> case proof of
     Conway -> ppSexp "GovCertFailure" [ppConwayGovCertPredFailure pf] -- (PredicateFailure (EraRule "GOVCERT" era))
     _ ->
-      error
-        ("Only the ConwayEra has a (PredicateFailure (EraRule \"GOVCERT\" era)). This Era is " ++ show proof)
+      error $
+        "Only the ConwayEra has a (PredicateFailure (EraRule \"GOVCERT\" era)). This Era is " ++ show proof
 
 instance Reflect era => PrettyA (ConwayRules.ConwayCertPredFailure era) where
   prettyA = ppConwayCertPredFailure reify
@@ -3291,10 +3295,10 @@ showProtver :: ProtVer -> String
 showProtver (ProtVer x y) = "(" ++ show x ++ " " ++ show y ++ ")"
 
 pcEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
-pcEpochState proof es@(EpochState (AccountState tre res) ls sss nonmy) =
+pcEpochState proof es@(EpochState (ChainAccountState tre res) ls sss nonmy) =
   ppRecord
     "EpochState"
-    [ ("AccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)])
+    [ ("ChainAccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)])
     , ("LedgerState", pcLedgerState proof ls)
     , ("SnapShots", pcSnapShots sss)
     , ("NonMyopic", ppNonMyopic nonmy)
@@ -3304,18 +3308,18 @@ pcEpochState proof es@(EpochState (AccountState tre res) ls sss nonmy) =
 instance Reflect era => PrettyA (EpochState era) where
   prettyA = pcEpochState reify
 
-pcAccountState :: AccountState -> PDoc
-pcAccountState (AccountState tr re) = ppRecord' "" [("treasury", pcCoin tr), ("reserves", pcCoin re)]
+pcChainAccountState :: ChainAccountState -> PDoc
+pcChainAccountState (ChainAccountState tr re) = ppRecord' "" [("treasury", pcCoin tr), ("reserves", pcCoin re)]
 
-instance PrettyA AccountState where
-  prettyA = pcAccountState
+instance PrettyA ChainAccountState where
+  prettyA = pcChainAccountState
 
 -- | Like pcEpochState.but it only prints a summary of the UTxO
 psEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
-psEpochState proof es@(EpochState (AccountState tre res) ls sss _) =
+psEpochState proof es@(EpochState (ChainAccountState tre res) ls sss _) =
   ppRecord
     "EpochState"
-    [ ("AccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)])
+    [ ("ChainAccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)])
     , ("LedgerState", psLedgerState proof ls)
     , ("SnapShots", pcSnapShots sss)
     , ("AdaPots", pcAdaPot es)

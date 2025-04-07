@@ -16,7 +16,8 @@ module Cardano.Ledger.Shelley.LedgerState (
   CanSetUTxO (..),
 
   -- * Others to organize
-  AccountState (..),
+  AccountState,
+  ChainAccountState (AccountState, asReserves, asTreasury),
   EraCertState (..),
   DState (..),
   rewards,

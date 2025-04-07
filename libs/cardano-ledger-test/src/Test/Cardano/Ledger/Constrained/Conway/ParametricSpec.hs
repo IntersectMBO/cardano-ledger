@@ -41,15 +41,12 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  InstantaneousRewards,
-  StashedAVVMAddresses,
- )
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Constrained.API
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -87,7 +84,7 @@ class
   EraSpecTxOut era
   where
   irewardSpec ::
-    WitUniv era -> Term AccountState -> Specification InstantaneousRewards
+    WitUniv era -> Term ChainAccountState -> Specification InstantaneousRewards
   hasPtrs :: proxy era -> Term Bool
 
   -- | Extract a Value from a TxOut
@@ -195,7 +192,7 @@ instantaneousRewardsSpec ::
   forall era.
   Era era =>
   WitUniv era ->
-  Term AccountState ->
+  Term ChainAccountState ->
   Specification InstantaneousRewards
 instantaneousRewardsSpec univ acct = constrained $ \ [var| irewards |] ->
   match acct $ \ [var| acctRes |] [var| acctTreas |] ->
@@ -207,8 +204,8 @@ instantaneousRewardsSpec univ acct = constrained $ \ [var| irewards |] ->
       , witness univ (dom_ reserves)
       , witness univ (dom_ treasury)
       , assertExplain (pure "deltaTreausry and deltaReserves sum to 0") $ negate deltaRes ==. deltaTreas
-      , forAll (rng_ reserves) (\ [var| x |] -> x >=. (lit (Coin 0)))
-      , forAll (rng_ treasury) (\ [var| y |] -> y >=. (lit (Coin 0)))
+      , forAll (rng_ reserves) (\ [var| x |] -> x >=. lit (Coin 0))
+      , forAll (rng_ treasury) (\ [var| y |] -> y >=. lit (Coin 0))
       , assert $ toDelta_ (foldMap_ id (rng_ reserves)) - deltaRes <=. toDelta_ acctRes
       , assert $ toDelta_ (foldMap_ id (rng_ treasury)) - deltaTreas <=. toDelta_ acctTreas
       ]

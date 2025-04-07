@@ -42,18 +42,8 @@ import Cardano.Ledger.Hashes (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyDELEG, ShelleyEra)
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
-import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  DState (..),
-  FutureGenDeleg (..),
-  InstantaneousRewards (..),
-  availableAfterMIR,
-  delegations,
-  dsFutureGenDelegs,
-  dsGenDelegs,
-  dsIRewards,
-  rewards,
- )
+import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Slot (
   Duration (..),
   EpochNo (..),
@@ -85,7 +75,7 @@ data DelegEnv era = DelegEnv
   , deCurEpochNo :: EpochNo
   -- ^ Lazy on purpose, because not all certificates need to know the current EpochNo
   , ptr_ :: Ptr
-  , acnt_ :: AccountState
+  , deChainAccountState :: ChainAccountState
   , ppDE :: PParams era -- The protocol parameters are only used for the HardFork mechanism
   }
   deriving (Generic)
@@ -252,7 +242,7 @@ delegationTransition ::
   (ShelleyEraTxCert era, EraPParams era, ProtVerAtMost era 8) =>
   TransitionRule (ShelleyDELEG era)
 delegationTransition = do
-  TRC (DelegEnv slot epochNo ptr acnt pp, ds, c) <- judgmentContext
+  TRC (DelegEnv slot epochNo ptr chainAccountState pp, ds, c) <- judgmentContext
   let pv = pp ^. ppProtocolVersionL
   case c of
     RegTxCert hk -> do
@@ -317,9 +307,15 @@ delegationTransition = do
           let (potAmount, delta, instantaneousRewards) =
                 case targetPot of
                   ReservesMIR ->
-                    (asReserves acnt, deltaReserves $ dsIRewards ds, iRReserves $ dsIRewards ds)
+                    ( casReserves chainAccountState
+                    , deltaReserves $ dsIRewards ds
+                    , iRReserves $ dsIRewards ds
+                    )
                   TreasuryMIR ->
-                    (asTreasury acnt, deltaTreasury $ dsIRewards ds, iRTreasury $ dsIRewards ds)
+                    ( casTreasury chainAccountState
+                    , deltaTreasury $ dsIRewards ds
+                    , iRTreasury $ dsIRewards ds
+                    )
           let credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
           (combinedMap, available) <-
             if HardForks.allowMIRTransfer pv
@@ -334,7 +330,7 @@ delegationTransition = do
         SendToOppositePotMIR coin ->
           if HardForks.allowMIRTransfer pv
             then do
-              let available = availableAfterMIR targetPot acnt (dsIRewards ds)
+              let available = availableAfterMIR targetPot chainAccountState (dsIRewards ds)
               coin >= mempty ?! MIRNegativeTransfer targetPot coin
               coin <= available ?! InsufficientForTransferDELEG targetPot (Mismatch coin available)
 

@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -163,9 +162,9 @@ mkGenesisChainState ge@(GenEnv _ _ constants) (IRC _slotNo) = do
             chainNes
               { nesEs =
                   (nesEs chainNes)
-                    { esAccountState =
-                        (esAccountState (nesEs chainNes))
-                          { asTreasury = Coin 1000000
+                    { esChainAccountState =
+                        (esChainAccountState (nesEs chainNes))
+                          { casTreasury = Coin 1000000
                           }
                     }
               }

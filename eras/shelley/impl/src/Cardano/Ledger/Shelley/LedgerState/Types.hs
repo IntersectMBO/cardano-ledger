@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -70,7 +69,7 @@ type RewardAccounts =
 {-# DEPRECATED RewardAccounts "In favor of `Map` (`Credential` `Staking`) `Coin`" #-}
 
 data EpochState era = EpochState
-  { esAccountState :: !AccountState
+  { esChainAccountState :: !ChainAccountState
   , esLState :: !(LedgerState era)
   , esSnapshots :: !SnapShots
   , esNonMyopic :: !NonMyopic
@@ -83,13 +82,18 @@ data EpochState era = EpochState
 
 instance CanGetUTxO EpochState
 instance CanSetUTxO EpochState where
-  utxoL = (lens esLState $ \s ls -> s {esLState = ls}) . utxoL
+  utxoL = lens esLState (\es ls -> es {esLState = ls}) . utxoL
   {-# INLINE utxoL #-}
 
 instance CanGetInstantStake EpochState
 instance CanSetInstantStake EpochState where
-  instantStakeL = (lens esLState $ \s ls -> s {esLState = ls}) . instantStakeL
+  instantStakeL = lens esLState (\es ls -> es {esLState = ls}) . instantStakeL
   {-# INLINE instantStakeL #-}
+
+instance CanGetChainAccountState EpochState
+instance CanSetChainAccountState EpochState where
+  chainAccountStateL = lens esChainAccountState $ \es cas -> es {esChainAccountState = cas}
+  {-# INLINE chainAccountStateL #-}
 
 deriving stock instance
   ( EraTxOut era
@@ -131,10 +135,10 @@ instance
   ) =>
   EncCBOR (EpochState era)
   where
-  encCBOR EpochState {esAccountState, esLState, esSnapshots, esNonMyopic} =
+  encCBOR EpochState {esChainAccountState, esLState, esSnapshots, esNonMyopic} =
     encode $
       Rec EpochState
-        !> To esAccountState
+        !> To esChainAccountState
         !> To esLState -- We get better sharing when encoding ledger state before snaphots
         !> To esSnapshots
         !> To esNonMyopic
@@ -150,13 +154,13 @@ instance
   decCBOR =
     decodeRecordNamed "EpochState" (const 4) $
       flip evalStateT mempty $ do
-        esAccountState <- lift decCBOR
+        esChainAccountState <- lift decCBOR
         esLState <- decSharePlusCBOR
         esSnapshots <-
           decSharePlusLensCBOR $
             lens (\(cs, ks, _, _) -> (cs, ks)) (\(_, _, cd, ch) (cs, ks) -> (cs, ks, cd, ch))
         esNonMyopic <- decShareLensCBOR _2
-        pure EpochState {esAccountState, esSnapshots, esLState, esNonMyopic}
+        pure EpochState {esChainAccountState, esSnapshots, esLState, esNonMyopic}
 
 instance (EraTxOut era, EraGov era, EraStake era, EraCertState era) => ToCBOR (EpochState era) where
   toCBOR = toEraCBOR @era
@@ -179,7 +183,7 @@ toEpochStatePairs ::
   [a]
 toEpochStatePairs es@(EpochState _ _ _ _) =
   let EpochState {..} = es
-   in [ "esAccountState" .= esAccountState
+   in [ "esChainAccountState" .= esChainAccountState
       , "esSnapshots" .= esSnapshots
       , "esLState" .= esLState
       , "esNonMyopic" .= esNonMyopic
@@ -334,13 +338,18 @@ data NewEpochState era = NewEpochState
 
 instance CanGetUTxO NewEpochState
 instance CanSetUTxO NewEpochState where
-  utxoL = (lens nesEs $ \s es -> s {nesEs = es}) . utxoL
+  utxoL = lens nesEs (\s es -> s {nesEs = es}) . utxoL
   {-# INLINE utxoL #-}
 
 instance CanGetInstantStake NewEpochState
 instance CanSetInstantStake NewEpochState where
-  instantStakeL = (lens nesEs $ \s es -> s {nesEs = es}) . instantStakeL
+  instantStakeL = lens nesEs (\s es -> s {nesEs = es}) . instantStakeL
   {-# INLINE instantStakeL #-}
+
+instance CanGetChainAccountState NewEpochState
+instance CanSetChainAccountState NewEpochState where
+  chainAccountStateL = lens nesEs (\s es -> s {nesEs = es}) . chainAccountStateL
+  {-# INLINE chainAccountStateL #-}
 
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses ShelleyEra = UTxO ShelleyEra
@@ -441,12 +450,12 @@ data LedgerState era = LedgerState
 
 instance CanGetUTxO LedgerState
 instance CanSetUTxO LedgerState where
-  utxoL = (lens lsUTxOState $ \s us -> s {lsUTxOState = us}) . utxoL
+  utxoL = lens lsUTxOState (\s us -> s {lsUTxOState = us}) . utxoL
   {-# INLINE utxoL #-}
 
 instance CanGetInstantStake LedgerState
 instance CanSetInstantStake LedgerState where
-  instantStakeL = (lens lsUTxOState $ \s us -> s {lsUTxOState = us}) . instantStakeL
+  instantStakeL = lens lsUTxOState (\s us -> s {lsUTxOState = us}) . instantStakeL
   {-# INLINE instantStakeL #-}
 
 deriving stock instance
@@ -589,8 +598,9 @@ nesEpochStateL = lens nesEs $ \x y -> x {nesEs = y}
 -- ===================================================
 -- EpochState
 
-esAccountStateL :: Lens' (EpochState era) AccountState
-esAccountStateL = lens esAccountState (\x y -> x {esAccountState = y})
+esAccountStateL :: Lens' (EpochState era) ChainAccountState
+esAccountStateL = lens esChainAccountState (\x y -> x {esChainAccountState = y})
+{-# DEPRECATED esAccountStateL "In favor of `chainAccountStateL`" #-}
 
 esSnapshotsL :: Lens' (EpochState era) SnapShots
 esSnapshotsL = lens esSnapshots (\x y -> x {esSnapshots = y})
@@ -611,13 +621,15 @@ futurePParamsEpochStateL :: EraGov era => Lens' (EpochState era) (FuturePParams 
 futurePParamsEpochStateL = epochStateGovStateL . futurePParamsGovStateL
 
 -- ==========================================
--- AccountState
+-- ChainAccountState
 
-asTreasuryL :: Lens' AccountState Coin
-asTreasuryL = lens asTreasury (\ds u -> ds {asTreasury = u})
+asTreasuryL :: Lens' ChainAccountState Coin
+asTreasuryL = lens casTreasury (\ds u -> ds {casTreasury = u})
+{-# DEPRECATED asTreasuryL "In favor of `casTreasuryL`" #-}
 
-asReservesL :: Lens' AccountState Coin
-asReservesL = lens asReserves (\ds u -> ds {asReserves = u})
+asReservesL :: Lens' ChainAccountState Coin
+asReservesL = lens casReserves (\ds u -> ds {casReserves = u})
+{-# DEPRECATED asReservesL "In favor of `casReservesL`" #-}
 
 -- ====================================================
 -- LedgerState
@@ -658,7 +670,8 @@ epochStateDonationL :: Lens' (EpochState era) Coin
 epochStateDonationL = esLStateL . lsUTxOStateL . utxosDonationL
 
 epochStateTreasuryL :: Lens' (EpochState era) Coin
-epochStateTreasuryL = esAccountStateL . asTreasuryL
+epochStateTreasuryL = treasuryL
+{-# DEPRECATED epochStateTreasuryL "In favor of `treasuryL`" #-}
 
 epochStatePoolParamsL ::
   EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)

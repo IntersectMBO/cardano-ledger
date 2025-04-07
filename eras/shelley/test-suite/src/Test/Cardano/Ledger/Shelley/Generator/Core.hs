@@ -49,7 +49,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Core (
   mkKeyPair,
   mkKeyPairs,
   mkGenKey,
-  genesisAccountState,
+  genesisChainAccountState,
   genCoin,
   PreAlonzo,
   hashData,
@@ -71,7 +71,7 @@ import Cardano.Ledger.Credential (
  )
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (VKey, asWitness)
-import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.Slot (
   Duration (..),
@@ -79,7 +79,6 @@ import Cardano.Ledger.Slot (
   epochInfoFirst,
   (*-),
  )
-import Cardano.Ledger.State (UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId, TxIn (TxIn))
 import Cardano.Protocol.Crypto (Crypto)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -437,11 +436,11 @@ tooLateInEpoch s = runShelleyBase $ do
   return (s >= firstSlotNo *- Duration (2 * stabilityWindow))
 
 -- | Account with empty treasury
-genesisAccountState :: AccountState
-genesisAccountState =
-  AccountState
-    { asTreasury = Coin 0
-    , asReserves = maxLLSupply
+genesisChainAccountState :: ChainAccountState
+genesisChainAccountState =
+  ChainAccountState
+    { casTreasury = Coin 0
+    , casReserves = maxLLSupply
     }
 
 -- | Creates the UTxO for a new ledger with the specified

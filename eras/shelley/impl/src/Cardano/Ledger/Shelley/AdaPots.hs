@@ -58,10 +58,10 @@ totalAdaPotsES ::
   ) =>
   EpochState era ->
   AdaPots
-totalAdaPotsES (EpochState (AccountState treasury_ reserves_) ls _ _) =
+totalAdaPotsES (EpochState (ChainAccountState {casTreasury, casReserves}) ls _ _) =
   AdaPots
-    { treasuryAdaPot = treasury_
-    , reservesAdaPot = reserves_
+    { treasuryAdaPot = casTreasury
+    , reservesAdaPot = casReserves
     , rewardsAdaPot = rewards_
     , utxoAdaPot = coins
     , feesAdaPot = fees_

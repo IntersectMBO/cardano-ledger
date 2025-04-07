@@ -75,7 +75,7 @@ instance
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
-  sigGen genenv env state = genTx genenv env state
+  sigGen = genTx
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 
