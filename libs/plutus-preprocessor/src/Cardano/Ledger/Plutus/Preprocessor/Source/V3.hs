@@ -3,12 +3,11 @@
 module Cardano.Ledger.Plutus.Preprocessor.Source.V3 where
 
 import Language.Haskell.TH
-import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.Data.V3 as PV3D
 import PlutusTx (fromBuiltinData, unsafeFromBuiltinData)
-import qualified PlutusTx.AssocMap as PAM
-import qualified PlutusTx.Data.List as PLD
 import qualified PlutusTx.Builtins as P
+import qualified PlutusTx.Data.AssocMap as PAMD
+import qualified PlutusTx.Data.List as PLD
 import qualified PlutusTx.Prelude as P
 
 alwaysSucceedsNoDatumQ :: Q [Dec]
@@ -74,9 +73,12 @@ redeemerSameAsDatumQ =
     redeemerSameAsDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3D.ScriptContext _txInfo (PV3D.Redeemer redeemer) (PV3D.SpendingScript _ (Just (PV3D.Datum datum))) ->
-            -- Expecting a spending script with a Datum, thus failing when it is not
-            datum P.== redeemer
+          PV3D.ScriptContext
+            _txInfo
+            (PV3D.Redeemer redeemer)
+            (PV3D.SpendingScript _ (Just (PV3D.Datum datum))) ->
+              -- Expecting a spending script with a Datum, thus failing when it is not
+              datum P.== redeemer
           _ -> False
     |]
 
@@ -126,23 +128,31 @@ purposeIsWellformedNoDatumQ =
     purposeIsWellformedNoDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext txInfo _redeemer scriptInfo ->
-            case scriptInfo of
-              PV3.MintingScript cs ->
-                PAM.member cs $ PV3.getValue . PV3.mintValueMinted $ PV3.txInfoMint txInfo
+          PV3D.ScriptContext
+            PV3D.TxInfo
+              { PV3D.txInfoMint = infoMint
+              , PV3D.txInfoInputs = infoInputs
+              , PV3D.txInfoWdrl = infoWdrl
+              , PV3D.txInfoTxCerts = infoTxCerts
+              , PV3D.txInfoVotes = infoVotes
+              }
+            _redeemer
+            scriptInfo -> case scriptInfo of
+              PV3D.MintingScript cs ->
+                PAMD.member cs $ PV3D.getValue $ PV3D.mintValueMinted infoMint
               -- Expecting No Datum, therefore should fail when it is supplied
-              PV3.SpendingScript txOutRef mDatum ->
+              PV3D.SpendingScript txOutRef mDatum ->
                 case mDatum of
                   Just _ -> False
                   Nothing ->
-                    null $ P.filter ((txOutRef P.==) . PV3.txInInfoOutRef) $ PV3.txInfoInputs txInfo
-              PV3.RewardingScript stakingCredential ->
-                PAM.member stakingCredential $ PV3.txInfoWdrl txInfo
-              PV3.CertifyingScript _idx txCert ->
-                null $ P.filter (txCert P.==) $ PV3.txInfoTxCerts txInfo
-              PV3.VotingScript voter ->
-                PAM.member voter $ PV3.txInfoVotes txInfo
-              PV3.ProposingScript _idx _propProc -> True
+                    PLD.null $ PLD.filter ((txOutRef P.==) . PV3D.txInInfoOutRef) infoInputs
+              PV3D.RewardingScript cred ->
+                PAMD.member cred infoWdrl
+              PV3D.CertifyingScript _idx txCert ->
+                PLD.null $ PLD.filter (txCert P.==) infoTxCerts
+              PV3D.VotingScript voter ->
+                PAMD.member voter infoVotes
+              PV3D.ProposingScript _idx _propProc -> True
               -- Eq instance for proposals have been removed. I am not sure if this is a
               -- good idea, but it only affects ledger test script, so we'll deal with
               -- this later:
@@ -169,8 +179,8 @@ datumIsWellformedQ =
     datumIsWellformed arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext txInfo _redeemer (PV3.SpendingScript _txOutRef (Just datum)) ->
-            not $ null $ P.filter (datum P.==) $ PAM.elems $ PV3.txInfoData txInfo
+          PV3D.ScriptContext txInfo _redeemer (PV3D.SpendingScript _txOutRef (Just datum)) ->
+            not $ PLD.null $ PLD.filter (datum P.==) $ PAMD.elems $ PV3D.txInfoData txInfo
           _ -> False
     |]
 

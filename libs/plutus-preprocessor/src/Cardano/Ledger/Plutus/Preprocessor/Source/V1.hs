@@ -7,6 +7,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 import PlutusTx (fromBuiltinData, unsafeFromBuiltinData)
 import qualified PlutusTx.AssocMap as PAM
 import qualified PlutusTx.Builtins as P
+import qualified PlutusTx.List as PL
 import qualified PlutusTx.Prelude as P
 
 alwaysSucceedsNoDatumQ :: Q [Dec]
@@ -153,11 +154,11 @@ purposeIsWellformedNoDatumQ =
                 -- Spending PlutusV1 scripts must have a Datum
                 PV1.Spending _ -> P.error ()
                 PV1.Rewarding stakingCredential ->
-                  if null $ P.filter ((stakingCredential P.==) . fst) $ PV1.txInfoWdrl txInfo
+                  if null $ PL.filter ((stakingCredential P.==) . fst) $ PV1.txInfoWdrl txInfo
                     then P.error ()
                     else ()
                 PV1.Certifying dCert ->
-                  if null $ P.filter (dCert P.==) $ PV1.txInfoDCert txInfo
+                  if null $ PL.filter (dCert P.==) $ PV1.txInfoDCert txInfo
                     then P.error ()
                     else ()
     |]
@@ -174,7 +175,7 @@ purposeIsWellformedWithDatumQ =
               case unsafeFromBuiltinData context of
                 -- Only spending scripts can have a Datum
                 PV1.ScriptContext txInfo (PV1.Spending txOutRef) ->
-                  if null $ P.filter ((txOutRef P.==) . PV1.txInInfoOutRef) $ PV1.txInfoInputs txInfo
+                  if null $ PL.filter ((txOutRef P.==) . PV1.txInInfoOutRef) $ PV1.txInfoInputs txInfo
                     then P.error ()
                     else ()
                 _ -> P.error ()
@@ -192,7 +193,7 @@ datumIsWellformedQ =
               case unsafeFromBuiltinData context of
                 -- Only spending scripts can have a Datum
                 PV1.ScriptContext txInfo (PV1.Spending _txOutRef) ->
-                  if null $ P.filter ((datum' P.==) . snd) $ PV1.txInfoData txInfo
+                  if null $ PL.filter ((datum' P.==) . snd) $ PV1.txInfoData txInfo
                     then P.error ()
                     else ()
                 _ -> P.error ()
