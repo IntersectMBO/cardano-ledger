@@ -271,7 +271,7 @@ spec = describe "Invalid transactions" $ do
                     , mkDelegStakeTxCert cred poolId -- 1: Needs a redeemer
                     , mkDelegStakeTxCert cred poolId -- 2: Duplicate, ignored, no redeemer needed
                     ]
-                  redeemer = (Data (P.I 32), ExUnits 5000 1_000_000)
+                  redeemer = (Data (P.I 32), ExUnits 15_000 5_000_000)
                   redeemers = Map.fromList [(mkCertifyingPurpose (AsIx i), redeemer) | i <- [1 .. 2]]
                   tx =
                     mkBasicTx mkBasicTxBody
