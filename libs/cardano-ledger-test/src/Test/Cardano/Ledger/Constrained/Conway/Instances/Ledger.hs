@@ -11,6 +11,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -71,6 +72,7 @@ import Cardano.Chain.Common (
   NetworkMagic (..),
   UnparsedFields (..),
  )
+import Cardano.Crypto.Hash hiding (Blake2b_224)
 import Cardano.Crypto.Hashing (AbstractHash, abstractHashFromBytes)
 import Cardano.Ledger.Address
 import Cardano.Ledger.Allegra.Scripts
@@ -125,16 +127,11 @@ import Constrained.API
 import Constrained.Base
 import Constrained.GenT (pureGen, vectorOfT)
 import Constrained.Generic
-import Constrained.List (List (..))
-import Constrained.Spec.ListFoldy (genListWithSize)
+import Constrained.NumSpec
 import Constrained.Spec.Map
-import Constrained.Spec.Size qualified as C
 import Constrained.Spec.Tree ()
-import GHC.TypeLits hiding (Text)
-import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
-import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
-
-import Cardano.Crypto.Hash hiding (Blake2b_224)
+import Constrained.SumList (genListWithSize)
+import Constrained.TheKnot qualified as C
 import Control.DeepSeq (NFData)
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
@@ -166,6 +163,8 @@ import GHC.Generics (Generic)
 import PlutusLedgerApi.V1 qualified as PV1
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
+import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Shelley.Utils
@@ -730,16 +729,13 @@ instance StringLike ShortByteString where
   getLengthSpec (StringSpec len) = len
   getLength = SBS.length
 
-data StringW (sym :: Symbol) (as :: [Type]) (b :: Type) where
-  StrLenW :: StringLike s => StringW "strLen_" '[s] Int
+data StringW :: [Type] -> Type -> Type where
+  StrLenW :: StringLike s => StringW '[s] Int
 
-deriving instance Show (StringW s as b)
-deriving instance Eq (StringW s as b)
+deriving instance Show (StringW as b)
+deriving instance Eq (StringW as b)
 
-strLen_ ::
-  (StringLike s, HasSpec s) =>
-  Term s ->
-  Term Int
+strLen_ :: (HasSpec s, StringLike s) => Term s -> Term Int
 strLen_ = appTerm StrLenW
 
 instance Syntax StringW
@@ -747,18 +743,20 @@ instance Syntax StringW
 instance Semantics StringW where
   semantics StrLenW = getLength
 
-instance (Typeable s, StringLike s) => Logic "strLen_" StringW '[s] Int where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context StrLenW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App StrLenW (v' :> Nil)) (v :-> ps)
-  propagate (Context StrLenW (HOLE :<> End)) spec = typeSpec $ lengthSpec @s spec
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for StrLenW with wrong number of arguments. " ++ show ctx)
+-- | In this instance there is no way to bring the type variable `s` into scope
+--   so we introduce some local functions that have a signature that bring it into scope.
+instance Logic StringW where
+  propagateTypeSpec StrLenW (Unary HOLE) ts cant = foo ts cant
+    where
+      foo :: forall s. (HasSpec s, StringLike s) => NumSpec Int -> [Int] -> Specification s
+      foo t c = typeSpec $ lengthSpec @s (TypeSpec t c)
+  propagateMemberSpec StrLenW (Unary HOLE) xs = bar xs
+    where
+      bar :: forall s. (HasSpec s, StringLike s) => NonEmpty Int -> Specification s
+      bar ys = typeSpec $ lengthSpec @s (MemberSpec ys)
 
-  mapTypeSpec StrLenW ss = getLengthSpec @s ss
+  mapTypeSpec :: forall a b. (HasSpec a, HasSpec b) => StringW '[a] b -> TypeSpec a -> Specification b
+  mapTypeSpec StrLenW ss = getLengthSpec @a ss
 
 class StringLike s where
   lengthSpec :: Specification Int -> TypeSpec s
@@ -1714,28 +1712,23 @@ instance CoercibleLike (CompactForm Coin) Word64 where
     Specification Word64
   getCoerceSpec (NumSpecInterval a b) = TypeSpec (NumSpecInterval a b) mempty
 
-data CoercibleW (s :: Symbol) (args :: [Type]) (res :: Type) where
-  CoerceW :: (CoercibleLike a b, Coercible a b) => CoercibleW "coerce_" '[a] b
+data CoercibleW (args :: [Type]) (res :: Type) where
+  CoerceW :: (CoercibleLike a b, Coercible a b) => CoercibleW '[a] b
 
-deriving instance Show (CoercibleW sym args res)
-deriving instance Eq (CoercibleW sym args res)
+deriving instance Show (CoercibleW args res)
+deriving instance Eq (CoercibleW args res)
 
 instance Syntax CoercibleW
 instance Semantics CoercibleW where
   semantics = \case
     CoerceW -> coerce
 
-instance (Typeable a, Typeable b, CoercibleLike a b) => Logic "coerce_" CoercibleW '[a] b where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context CoerceW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App CoerceW (v' :> Nil)) (v :-> ps)
-  propagate (Context CoerceW (HOLE :<> End)) spec = coerceSpec @a @b spec
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for CoerceW with wrong number of arguments. " ++ show ctx)
+instance Logic CoercibleW where
+  propagateMemberSpec CoerceW (Unary HOLE) xs = coerceSpec $ MemberSpec xs
+  propagateTypeSpec CoerceW (Unary HOLE) ts cant = coerceSpec $ TypeSpec ts cant
 
+  mapTypeSpec ::
+    forall a b. (HasSpec a, HasSpec b) => CoercibleW '[a] b -> TypeSpec a -> Specification b
   mapTypeSpec CoerceW ss = getCoerceSpec @a ss
 
 coerce_ ::
@@ -1750,11 +1743,11 @@ coerce_ = appTerm CoerceW
 
 -- ==============================================================
 
-data CoinW (s :: Symbol) (ds :: [Type]) (res :: Type) where
-  ToDeltaW :: CoinW "toDelta_" '[Coin] DeltaCoin
+data CoinW (ds :: [Type]) (res :: Type) where
+  ToDeltaW :: CoinW '[Coin] DeltaCoin
 
-deriving instance Show (CoinW s args res)
-deriving instance Eq (CoinW s args res)
+deriving instance Show (CoinW args res)
+deriving instance Eq (CoinW args res)
 
 instance Syntax CoinW
 
@@ -1767,20 +1760,13 @@ toDelta_ ::
   Term DeltaCoin
 toDelta_ = appTerm ToDeltaW
 
-instance Logic "toDelta_" CoinW '[Coin] DeltaCoin where
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context ToDeltaW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App ToDeltaW (v' :> Nil)) (v :-> ps)
-  propagate (Context ToDeltaW (HOLE :<> End)) (MemberSpec xs) = MemberSpec (NE.map deltaToCoin xs)
-  propagate (Context ToDeltaW (HOLE :<> End)) (TypeSpec (NumSpecInterval l h) cant) =
-    ( TypeSpec
-        (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
-        (map deltaToCoin cant)
-    )
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for ToDeltaW with wrong number of arguments. " ++ show ctx)
+instance Logic CoinW where
+  propagateMemberSpec ToDeltaW (Unary HOLE) xs = MemberSpec (NE.map deltaToCoin xs)
+
+  propagateTypeSpec ToDeltaW (Unary HOLE) (NumSpecInterval l h) cant =
+    TypeSpec
+      (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
+      (map deltaToCoin cant)
 
   mapTypeSpec ToDeltaW (NumSpecInterval l h) = typeSpec (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
 

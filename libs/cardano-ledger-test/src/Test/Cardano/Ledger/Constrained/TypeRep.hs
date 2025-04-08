@@ -121,6 +121,7 @@ import Formatting (formatToString)
 import Lens.Micro
 import Numeric.Natural (Natural)
 import Prettyprinter (hsep)
+import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoPlutusPurposePointer)
 import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
 import Test.Cardano.Ledger.Constrained.Classes (

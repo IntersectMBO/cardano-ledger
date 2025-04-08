@@ -10,6 +10,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,7 +20,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans -Wno-name-shadowing #-}
 
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
 -- cases and turning off the overlap check in newer ghc versions we disable the check for old
@@ -30,29 +31,52 @@
 
 module Constrained.Spec.Set where
 
-import Constrained.Base
-import Constrained.Conformance (conformsToSpec, satisfies)
-import Constrained.Core (Evidence (..), NonEmpty ((:|)))
+import Constrained.Base (
+  Binder (..),
+  Forallable (..),
+  HOLE (..),
+  HasSpec (..),
+  Logic (..),
+  Pred (..),
+  Semantics (..),
+  Specification (..),
+  Syntax (..),
+  Term (..),
+  appTerm,
+  constrained,
+  equalSpec,
+  explainSpec,
+  fromListCtx,
+  isErrorLike,
+  memberSpecList,
+  notEqualSpec,
+  notMemberSpec,
+  parensIf,
+  prettyPrec,
+  short,
+  showType,
+  typeSpec,
+  (/>),
+  pattern Unary,
+ )
+import Constrained.Conformance (
+  conformsToSpec,
+  satisfies,
+ )
+import Constrained.Core
 import Constrained.GenT
 import Constrained.List
 import Constrained.NumSpec
-import Constrained.Spec.ListFoldy (
-  FoldSpec (..),
-  ListSpec (..),
-  elem_,
-  knownUpperBound,
-  maxFromSpec,
- )
-import Constrained.Spec.Size (Sized (..), maxSpec, sizeOf_)
-import Constrained.Syntax (exists, forAll, unsafeExists)
-import Constrained.TheKnot (caseBoolSpec, genFromSpecT, not_, shrinkWithSpec, simplifySpec, (==.))
+import Constrained.SumList (knownUpperBound, maxFromSpec)
+import Constrained.Syntax
+import Constrained.TheKnot
+
 import Data.Foldable
 import Data.Kind
 import Data.List ((\\))
 import qualified Data.List.NonEmpty as NE
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.TypeLits
 import Prettyprinter hiding (cat)
 import Test.QuickCheck (Arbitrary (..), shrinkList, shuffle)
 
@@ -137,7 +161,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
 
   genFromTypeSpec (SetSpec must e _)
     | any (not . (`conformsToSpec` e)) must =
-        genError
+        genErrorNE
           ( NE.fromList
               [ "Failed to generate set"
               , "Some element in the must set does not conform to the elem specification"
@@ -152,7 +176,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
   genFromTypeSpec (SetSpec must (ExplainSpec [] elemspec) szSpec) =
     genFromTypeSpec (SetSpec must elemspec szSpec)
   genFromTypeSpec (SetSpec must (ExplainSpec (e : es) elemspec) szSpec) =
-    explain (e :| es) $ genFromTypeSpec (SetSpec must elemspec szSpec)
+    explainNE (e :| es) $ genFromTypeSpec (SetSpec must elemspec szSpec)
   genFromTypeSpec (SetSpec must elemS@(MemberSpec xs) szSpec) = do
     let szSpec' = szSpec <> geqSpec (sizeOf must) <> maxSpec (cardinality elemS)
     choices <- pureGen $ shuffle (NE.toList xs \\ Set.toList must)
@@ -162,10 +186,10 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
   genFromTypeSpec (SetSpec must elemS szSpec) = do
     let szSpec' = (szSpec <> geqSpec (sizeOf must) <> maxSpec (cardinality elemS))
     count <-
-      explain1 ("Choose a size for the Set to be generated") $
+      explain "Choose a size for the Set to be generated" $
         genFromSpecT szSpec'
     let targetSize = count - sizeOf must
-    explain
+    explainNE
       ( NE.fromList
           [ "Choose size count = " ++ show count
           , "szSpec' = " ++ show szSpec'
@@ -178,7 +202,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
         -- 0 means TrueSpec or SuspendedSpec so we can't rule anything out
         0 -> go 100 targetSize must
         n -> case compare n targetSize of
-          LT -> fatalError (pure "The number of things that meet the element test is too small.")
+          LT -> fatalError "The number of things that meet the element test is too small."
           GT -> go 100 targetSize must
           EQ -> go 100 targetSize must
     where
@@ -186,7 +210,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
       go _ n s | n <= 0 = pure s
       go tries n s = do
         e <-
-          explain
+          explainNE
             ( NE.fromList
                 [ "Generate set member at type " ++ showType @a
                 , "  number of items starting with  = " ++ show (Set.size must)
@@ -222,17 +246,17 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
 
   guardTypeSpec = guardSetSpec
 
-data SetW (s :: Symbol) (d :: [Type]) (r :: Type) where
-  SingletonW :: Ord a => SetW "singleton_" '[a] (Set a)
-  UnionW :: (Literal a, Ord a) => SetW "union_" '[Set a, Set a] (Set a)
-  SubsetW :: (Literal a, Ord a) => SetW "subset_" '[Set a, Set a] Bool
-  MemberW :: (Literal a, Ord a) => SetW "member_" '[a, Set a] Bool
-  DisjointW :: (Literal a, Ord a) => SetW "disjoint_" '[Set a, Set a] Bool
-  FromListW :: forall a. (HasSpec a, Ord a) => SetW "fromList_" '[[a]] (Set a)
+data SetW (d :: [Type]) (r :: Type) where
+  SingletonW :: (HasSpec a, Ord a) => SetW '[a] (Set a)
+  UnionW :: (HasSpec a, Ord a) => SetW '[Set a, Set a] (Set a)
+  SubsetW :: (HasSpec a, Ord a, HasSpec a) => SetW '[Set a, Set a] Bool
+  MemberW :: (HasSpec a, Ord a) => SetW '[a, Set a] Bool
+  DisjointW :: (HasSpec a, Ord a) => SetW '[Set a, Set a] Bool
+  FromListW :: (HasSpec a, Ord a) => SetW '[[a]] (Set a)
 
-deriving instance Eq (SetW s dom rng)
+deriving instance Eq (SetW dom rng)
 
-instance Show (SetW s ds r) where
+instance Show (SetW ds r) where
   show SingletonW = "singleton_"
   show UnionW = "union_"
   show SubsetW = "subset_"
@@ -240,7 +264,7 @@ instance Show (SetW s ds r) where
   show DisjointW = "disjoint_"
   show FromListW = "fromList_"
 
-setSem :: SetW s ds r -> FunTy ds r
+setSem :: SetW ds r -> FunTy ds r
 setSem SingletonW = Set.singleton
 setSem UnionW = Set.union
 setSem SubsetW = Set.isSubsetOf
@@ -274,14 +298,12 @@ instance (Ord a, HasSpec a, HasSpec (Set a)) => Monoid (Term (Set a)) where
 singletons :: [Set a] -> [Set a] -- Every Set in the filterd output has size 1 (if there are any)
 singletons = filter ((1 ==) . Set.size)
 
-instance (HasSpec a, Ord a) => Logic "singleton_" SetW '[a] (Set a) where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context SingletonW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App SingletonW (v' :> Nil)) (v :-> ps)
-  propagate (Context SingletonW (HOLE :<> End)) (TypeSpec (SetSpec must es size) cant)
+instance Logic SetW where
+  propagate f ctxt (ExplainSpec es s) = explainSpec es $ propagate f ctxt s
+  propagate _ _ TrueSpec = TrueSpec
+  propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate f ctx (SuspendedSpec v ps) = constrained $ \v' -> Let (App f (fromListCtx ctx v')) (v :-> ps)
+  propagate SingletonW (Unary HOLE) (TypeSpec (SetSpec must es size) cant)
     | not $ 1 `conformsToSpec` size =
         ErrorSpec (pure "propagateSpecFun Singleton with spec that doesn't accept 1 size set")
     | [a] <- Set.toList must
@@ -290,104 +312,14 @@ instance (HasSpec a, Ord a) => Logic "singleton_" SetW '[a] (Set a) where
         equalSpec a
     | null must = es <> notMemberSpec (Set.toList $ fold $ singletons cant)
     | otherwise = ErrorSpec (pure "propagateSpecFun Singleton with `must` of size > 1")
-  propagate (Context SingletonW (HOLE :<> End)) (MemberSpec es) =
+  propagate SingletonW (Unary HOLE) (MemberSpec es) =
     case Set.toList $ fold $ singletons (NE.toList es) of
       [] -> ErrorSpec $ pure "In propagateSpecFun Singleton, the sets of size 1, in MemberSpec is empty"
       (x : xs) -> MemberSpec (x :| xs)
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for SingletonW with wrong number of arguments. " ++ show ctx)
-
-  mapTypeSpec SingletonW ts =
-    constrained $ \x ->
-      unsafeExists $ \x' ->
-        Assert (x ==. singleton_ x') <> toPreds x' ts
-
-singleton_ :: (Ord a, HasSpec a) => Term a -> Term (Set a)
-singleton_ = appTerm SingletonW
-
--- ==== SubsetW =====
-
-instance (HasSpec a, Ord a) => Logic "subset_" SetW '[Set a, Set a] Bool where
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context SubsetW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App SubsetW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context SubsetW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App SubsetW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate (Context SubsetW ctx) spec
-    | (HOLE :<> (s :: Set a) :<| End) <- ctx
-    , Evidence <- prerequisites @(Set a) = caseBoolSpec spec $ \case
-        True ->
-          case NE.nonEmpty (Set.toList s) of
-            Nothing -> MemberSpec (pure Set.empty)
-            Just slist -> typeSpec $ SetSpec mempty (MemberSpec slist) mempty
-        False -> constrained $ \set ->
-          exists (\eval -> headGE $ Set.difference (eval set) s) $ \e ->
-            [ set `DependsOn` e
-            , Assert $ not_ $ member_ e (Lit s)
-            , Assert $ member_ e set
-            ]
-    | ((s :: Set a) :|> HOLE :<> End) <- ctx
-    , Evidence <- prerequisites @(Set a) = caseBoolSpec spec $ \case
-        True -> typeSpec $ SetSpec s TrueSpec mempty
-        False -> constrained $ \set ->
-          exists (\eval -> headGE $ Set.difference (eval set) s) $ \e ->
-            [ set `DependsOn` e
-            , Assert $ member_ e (Lit s)
-            , Assert $ not_ $ member_ e set
-            ]
-  propagate ctx _ = ErrorSpec $ pure ("Logic instance for SubsetW with wrong number of arguments. " ++ show ctx)
-
-  rewriteRules SubsetW (Lit s :> _ :> Nil) Evidence | null s = Just $ Lit True
-  rewriteRules SubsetW (x :> Lit s :> Nil) Evidence | null s = Just $ x ==. Lit Set.empty
-  rewriteRules _ _ _ = Nothing
-
-subset_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term Bool
-subset_ = appTerm SubsetW
-
--- ==== MemberW =====
-
-instance (HasSpec a, Ord a) => Logic "member_" SetW '[a, Set a] Bool where
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context MemberW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App MemberW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context MemberW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App MemberW (Lit (x :: a) :> v' :> Nil)) (v :-> ps)
-  propagate ctx (SuspendedSpec _ _) = ErrorSpec $ pure ("Logic instance for MemberW with wrong number of arguments. " ++ show ctx)
-  propagate (Context MemberW ctx) spec
-    | (HOLE :<> s :<| End) <- ctx = caseBoolSpec spec $ \case
-        True -> memberSpecList (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
-        False -> notMemberSpec s
-    | (e :|> HOLE :<> End) <- ctx = caseBoolSpec spec $ \case
-        True -> typeSpec $ SetSpec (Set.singleton e) mempty mempty
-        False -> typeSpec $ SetSpec mempty (notEqualSpec e) mempty
-  propagate ctx _ = ErrorSpec $ pure ("Logic instance for MemberW with wrong number of arguments. " ++ show ctx)
-
-  rewriteRules MemberW (t :> Lit s :> Nil) Evidence
-    | null s = Just $ Lit False
-    | [a] <- Set.toList s = Just $ t ==. Lit a
-  rewriteRules _ _ _ = Nothing
-
-member_ :: (Ord a, HasSpec a) => Term a -> Term (Set a) -> Term Bool
-member_ = appTerm MemberW
-
--- ==== UnionW =====
-
-instance (HasSpec a, Ord a) => Logic "union_" SetW '[Set a, Set a] (Set a) where
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context UnionW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App UnionW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context UnionW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App UnionW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate (Context UnionW ctx) spec
-    | (s :|> HOLE :<> End) <- ctx =
-        propagate (Context UnionW (HOLE :<> s :<| End)) spec
-    | (HOLE :<> (s :: Set a) :<| End) <- ctx
+  propagate UnionW ctx spec
+    | (Value s :! Unary HOLE) <- ctx =
+        propagate UnionW (HOLE :? Value s :> Nil) spec
+    | (HOLE :? Value (s :: Set a) :> Nil) <- ctx
     , Evidence <- prerequisites @(Set a) =
         case spec of
           _ | null s -> spec
@@ -435,29 +367,39 @@ instance (HasSpec a, Ord a) => Logic "union_" SetW '[Set a, Set a] (Set a) where
                   , "spec = " ++ show spec
                   ]
               )
-  propagate ctx _ = ErrorSpec $ pure ("Logic instance for UnionW   with wrong number of arguments. " ++ show ctx)
-
-  rewriteRules UnionW (x :> Lit s :> Nil) Evidence | null s = Just x
-  rewriteRules UnionW (Lit s :> x :> Nil) Evidence | null s = Just x
-  rewriteRules _ _ _ = Nothing
-
-union_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term (Set a)
-union_ = appTerm UnionW
-
--- ==== DisjointW =====
-
-instance (HasSpec a, Ord a) => Logic "disjoint_" SetW '[Set a, Set a] Bool where
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context DisjointW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App DisjointW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context DisjointW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App DisjointW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate (Context DisjointW ctx) spec
-    | (HOLE :<> (s :: Set a) :<| End) <- ctx =
-        propagate (Context DisjointW (s :|> HOLE :<> End)) spec
-    | ((s :: Set a) :|> HOLE :<> End) <- ctx
+  propagate SubsetW ctx spec
+    | (HOLE :? Value (s :: Set a) :> Nil) <- ctx
+    , Evidence <- prerequisites @(Set a) = caseBoolSpec spec $ \case
+        True ->
+          case NE.nonEmpty (Set.toList s) of
+            Nothing -> MemberSpec (pure Set.empty)
+            Just slist -> typeSpec $ SetSpec mempty (MemberSpec slist) mempty
+        False -> constrained $ \set ->
+          exists (\eval -> headGE $ Set.difference (eval set) s) $ \e ->
+            [ set `DependsOn` e
+            , Assert $ not_ $ member_ e (Lit s)
+            , Assert $ member_ e set
+            ]
+    | (Value (s :: Set a) :! Unary HOLE) <- ctx
+    , Evidence <- prerequisites @(Set a) = caseBoolSpec spec $ \case
+        True -> typeSpec $ SetSpec s TrueSpec mempty
+        False -> constrained $ \set ->
+          exists (\eval -> headGE $ Set.difference (eval set) s) $ \e ->
+            [ set `DependsOn` e
+            , Assert $ member_ e (Lit s)
+            , Assert $ not_ $ member_ e set
+            ]
+  propagate MemberW ctx spec
+    | (HOLE :? Value s :> Nil) <- ctx = caseBoolSpec spec $ \case
+        True -> memberSpecList (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
+        False -> notMemberSpec s
+    | (Value e :! Unary HOLE) <- ctx = caseBoolSpec spec $ \case
+        True -> typeSpec $ SetSpec (Set.singleton e) mempty mempty
+        False -> typeSpec $ SetSpec mempty (notEqualSpec e) mempty
+  propagate DisjointW ctx spec
+    | (HOLE :? Value (s :: Set a) :> Nil) <- ctx =
+        propagate DisjointW (Value s :! Unary HOLE) spec
+    | (Value (s :: Set a) :! Unary HOLE) <- ctx
     , Evidence <- prerequisites @(Set a) = caseBoolSpec spec $ \case
         True -> typeSpec $ SetSpec mempty (notMemberSpec s) mempty
         False -> constrained $ \set ->
@@ -466,61 +408,80 @@ instance (HasSpec a, Ord a) => Logic "disjoint_" SetW '[Set a, Set a] Bool where
             , Assert $ member_ e (Lit s)
             , Assert $ member_ e set
             ]
-  propagate ctx _ = ErrorSpec $ pure ("Logic instance for DisjointW with wrong number of arguments. " ++ show ctx)
+  propagate FromListW (Unary HOLE) spec =
+    case spec of
+      MemberSpec (xs :| []) ->
+        typeSpec $
+          ListSpec
+            Nothing
+            (Set.toList xs)
+            TrueSpec
+            ( memberSpecList
+                (Set.toList xs)
+                (pure "propagateSpec (fromList_ HOLE) on (MemberSpec xs) where the set 'xs' is empty")
+            )
+            NoFold
+      TypeSpec (SetSpec must elemSpec sizeSpec) []
+        | TrueSpec <- sizeSpec -> typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
+        | TypeSpec (NumSpecInterval (Just l) Nothing) cantSize <- sizeSpec
+        , l <= sizeOf must
+        , all (< sizeOf must) cantSize ->
+            typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
+      _ ->
+        -- Here we simply defer to basically generating the universe that we can
+        -- draw from according to `spec` first and then fold that into the spec for the list.
+        -- The tricky thing about this is that it may not play super nicely with other constraints
+        -- on the list. For this reason it's important to try to find as many possible work-arounds
+        -- in the above cases as possible.
+        constrained $ \xs ->
+          exists (\eval -> pure $ Set.fromList (eval xs)) $ \s ->
+            [ s `satisfies` spec
+            , xs `DependsOn` s
+            , forAll xs $ \e -> e `member_` s
+            , forAll s $ \e -> e `elem_` xs
+            ]
 
+  mapTypeSpec FromListW ts =
+    constrained $ \x ->
+      unsafeExists $ \x' -> Assert (x ==. fromList_ x') <> toPreds x' ts
+  mapTypeSpec SingletonW ts =
+    constrained $ \x ->
+      unsafeExists $ \x' ->
+        Assert (x ==. singleton_ x') <> toPreds x' ts
+
+  rewriteRules SubsetW (Lit s :> _ :> Nil) Evidence | null s = Just $ Lit True
+  rewriteRules SubsetW (x :> Lit s :> Nil) Evidence | null s = Just $ x ==. Lit Set.empty
+  rewriteRules UnionW (x :> Lit s :> Nil) Evidence | null s = Just x
+  rewriteRules UnionW (Lit s :> x :> Nil) Evidence | null s = Just x
+  rewriteRules MemberW (t :> Lit s :> Nil) Evidence
+    | null s = Just $ Lit False
+    | [a] <- Set.toList s = Just $ t ==. Lit a
   rewriteRules DisjointW (Lit s :> _ :> Nil) Evidence | null s = Just $ Lit True
   rewriteRules DisjointW (_ :> Lit s :> Nil) Evidence | null s = Just $ Lit True
   rewriteRules _ _ _ = Nothing
+
+singleton_ :: (Ord a, HasSpec a) => Term a -> Term (Set a)
+singleton_ = appTerm SingletonW
+
+subset_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term Bool
+subset_ = appTerm SubsetW
+
+-- ==== MemberW =====
+
+member_ :: (Ord a, HasSpec a) => Term a -> Term (Set a) -> Term Bool
+member_ = appTerm MemberW
+
+-- ==== UnionW =====
+
+union_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term (Set a)
+union_ = appTerm UnionW
+
+-- ==== DisjointW =====
 
 disjoint_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term Bool
 disjoint_ = appTerm DisjointW
 
 -- ==== FromListW =====
-
-instance (HasSpec a, Ord a) => Logic "fromList_" SetW '[[a]] (Set a) where
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context FromListW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App FromListW (v' :> Nil)) (v :-> ps)
-  propagate (Context FromListW (HOLE :<> End)) spec
-    | Evidence <- prerequisites @[a] =
-        case spec of
-          MemberSpec (xs :| []) ->
-            typeSpec $
-              ListSpec
-                Nothing
-                (Set.toList xs)
-                TrueSpec
-                ( memberSpecList
-                    (Set.toList xs)
-                    (pure "propagateSpec (fromList_ HOLE) on (MemberSpec xs) where the set 'xs' is empty")
-                )
-                NoFold
-          TypeSpec (SetSpec must elemSpec sizeSpec) []
-            | TrueSpec <- sizeSpec -> typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
-            | TypeSpec (NumSpecInterval (Just l) Nothing) cantSize <- sizeSpec
-            , l <= sizeOf must
-            , all (< sizeOf must) cantSize ->
-                typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
-          _ ->
-            -- Here we simply defer to basically generating the universe that we can
-            -- draw from according to `spec` first and then fold that into the spec for the list.
-            -- The tricky thing about this is that it may not play super nicely with other constraints
-            -- on the list. For this reason it's important to try to find as many possible work-arounds
-            -- in the above cases as possible.
-            constrained $ \xs ->
-              exists (\eval -> pure $ Set.fromList (eval xs)) $ \s ->
-                [ s `satisfies` spec
-                , xs `DependsOn` s
-                , forAll xs $ \e -> e `member_` s
-                , forAll s $ \e -> e `elem_` xs
-                ]
-  propagate ctx _ = ErrorSpec $ pure ("Logic instance for FromListW with wrong number of arguments. " ++ show ctx)
-
-  mapTypeSpec FromListW ts =
-    constrained $ \x ->
-      unsafeExists $ \x' -> Assert (x ==. fromList_ x') <> toPreds x' ts
 
 fromList_ :: forall a. (Ord a, HasSpec a) => Term [a] -> Term (Set a)
 fromList_ = appTerm FromListW
