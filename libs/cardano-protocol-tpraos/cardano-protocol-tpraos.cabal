@@ -61,6 +61,7 @@ library
 
 library testlib
   exposed-modules:
+    Test.Cardano.Protocol.Binary.Annotator
     Test.Cardano.Protocol.Binary.Cddl
     Test.Cardano.Protocol.Binary.RoundTrip
     Test.Cardano.Protocol.Crypto.KES
@@ -87,6 +88,7 @@ library testlib
     cardano-crypto-class >=2.1.1,
     cardano-ledger-babbage,
     cardano-ledger-binary:{cardano-ledger-binary, testlib},
+    cardano-ledger-conway:testlib,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:testlib,
     cardano-protocol-tpraos,

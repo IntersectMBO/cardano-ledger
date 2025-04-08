@@ -1,8 +1,10 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.6.0.1
+## 1.7.0.0
 
-*
+* Add `decodeFullFromHexText`
+* Move `translateViaCBORAnnotator`, `decodeFullAnnotator`, `decodeFullAnnotatedBytes`, `decodeFullAnnotatorFromHexText` to `testlib`
+* Moved `Annotator` orphan instance for plutus `Data` into `testlib`
 
 ## 1.6.0.0
 

@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.8.1.0
+## 1.9.0.0
 
+* Move `Annotator` instances to `testlib`
 * Converted `MaryTxBodyRaw` into a type synonym
 * Expose constructor `MkMaryTxBody`
 * Add default implementation for `mintValueTxBodyF`

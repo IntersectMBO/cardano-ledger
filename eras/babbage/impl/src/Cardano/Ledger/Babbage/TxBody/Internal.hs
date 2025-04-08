@@ -102,7 +102,6 @@ import Cardano.Ledger.BaseTypes (
   isSJust,
  )
 import Cardano.Ledger.Binary (
-  Annotator (..),
   DecCBOR (..),
   EncCBOR (..),
   Sized (..),
@@ -114,7 +113,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (MultiAsset, policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
-  Mem,
   MemoBytes,
   MemoHashIndex,
   Memoized (..),
@@ -473,18 +471,6 @@ deriving instance
 deriving instance
   (Era era, Show (TxOut era), Show (TxCert era), Show (PParamsUpdate era)) =>
   Show (BabbageTxBody era)
-
-deriving via
-  Mem (BabbageTxBodyRaw era)
-  instance
-    (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-    DecCBOR (Annotator (BabbageTxBody era))
-
-instance
-  (Era era, DecCBOR (TxOut era), DecCBOR (TxCert era), DecCBOR (PParamsUpdate era)) =>
-  DecCBOR (Annotator (BabbageTxBodyRaw era))
-  where
-  decCBOR = pure <$> decCBOR
 
 pattern BabbageTxBody ::
   forall era.

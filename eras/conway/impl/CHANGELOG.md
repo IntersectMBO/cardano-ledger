@@ -2,6 +2,7 @@
 
 ## 1.20.0.0
 
+* Move `Annotator` instances to `testlib`
 * Expose access to `ConwayTxBodyRaw`
 * Expose constructor `MkConwayTxBody`
 * Added `VState` (moved from `cardano-ledger-core`) and related functions

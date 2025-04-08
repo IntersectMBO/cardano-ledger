@@ -96,11 +96,11 @@ library
     cardano-crypto-class,
     cardano-data >=1.2.3,
     cardano-ledger-allegra ^>=1.8,
-    cardano-ledger-alonzo ^>=1.13,
-    cardano-ledger-babbage ^>=1.11,
-    cardano-ledger-binary ^>=1.6,
+    cardano-ledger-alonzo ^>=1.14,
+    cardano-ledger-babbage ^>=1.12,
+    cardano-ledger-binary ^>=1.7,
     cardano-ledger-core ^>=1.18,
-    cardano-ledger-mary ^>=1.8.1,
+    cardano-ledger-mary ^>=1.9,
     cardano-ledger-shelley ^>=1.17,
     cardano-slotting,
     cardano-strict-containers,
@@ -125,6 +125,7 @@ library
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Conway.Arbitrary
+    Test.Cardano.Ledger.Conway.Binary.Annotator
     Test.Cardano.Ledger.Conway.Binary.Cddl
     Test.Cardano.Ledger.Conway.Binary.Regression
     Test.Cardano.Ledger.Conway.Binary.RoundTrip

@@ -110,7 +110,7 @@ library
     cardano-crypto-praos ^>=2.2,
     cardano-crypto-wrapper,
     cardano-data ^>=1.2,
-    cardano-ledger-binary ^>=1.6,
+    cardano-ledger-binary ^>=1.7,
     cardano-ledger-byron,
     cardano-slotting,
     cardano-strict-containers,
@@ -155,6 +155,7 @@ library testlib
     Test.Cardano.Ledger.Core.Address
     Test.Cardano.Ledger.Core.Arbitrary
     Test.Cardano.Ledger.Core.Binary
+    Test.Cardano.Ledger.Core.Binary.Annotator
     Test.Cardano.Ledger.Core.Binary.CDDL
     Test.Cardano.Ledger.Core.Binary.RoundTrip
     Test.Cardano.Ledger.Core.JSON

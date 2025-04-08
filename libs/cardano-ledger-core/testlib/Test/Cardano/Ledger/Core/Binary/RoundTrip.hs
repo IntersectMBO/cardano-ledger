@@ -199,11 +199,11 @@ roundTripCoreEraTypesSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (CertState era)
-  , DecCBOR (Script era)
-  , DecCBOR (TxAuxData era)
-  , DecCBOR (TxWits era)
-  , DecCBOR (TxBody era)
-  , DecCBOR (Tx era)
+  , DecCBOR (Annotator (Script era))
+  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (TxWits era))
+  , DecCBOR (Annotator (TxBody era))
+  , DecCBOR (Annotator (Tx era))
   , HasCallStack
   ) =>
   Spec

@@ -1,7 +1,10 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.13.1.0
+## 1.14.0.0
 
+* Move `Annotator` instances and `alonzoSegwitTx` to `testlib`
+* Expose `addScriptsTxWitsRaw`, `decodeAlonzoPlutusScript` and `asHashedScriptPair`
+* Expose `emptyAlonzoTxAuxDataRaw`, `decodeTxAuxDataByTokenType` and `addPlutusScripts`
 * Expose `alonzoEqTxWitsRaw` and `emptyTxWitsRaw`
 * Expose access to `AlonzoTxAuxDataRaw`, `AlonzoTxBodyRaw`, `AlonzoTxWitsRaw`, `RedeemersRaw` and `TxDatsRaw`
 * Expose constructors `MkAlonzoTxAuxData`, `MkAlonzoTxBody`, `MkAlonzoTxWits`, `MkRedeemers` and `MkTxDats`

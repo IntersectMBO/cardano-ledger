@@ -23,6 +23,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
+import Test.Cardano.Protocol.Binary.Annotator ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
 

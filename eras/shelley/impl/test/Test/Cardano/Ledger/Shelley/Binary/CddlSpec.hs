@@ -30,6 +30,7 @@ import Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
  )
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Shelley.Binary.Annotator ()
 import Test.Cardano.Ledger.Shelley.Binary.Cddl (readShelleyCddlFiles)
 import Test.Cardano.Ledger.Shelley.CDDL (shelleyCDDL)
 

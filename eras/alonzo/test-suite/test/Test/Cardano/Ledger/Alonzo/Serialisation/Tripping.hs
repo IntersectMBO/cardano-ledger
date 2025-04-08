@@ -27,6 +27,7 @@ import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
+import Test.Cardano.Protocol.Binary.Annotator ()
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

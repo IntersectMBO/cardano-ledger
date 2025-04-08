@@ -46,6 +46,7 @@ module Cardano.Ledger.Core.Era (
   fromEraCBOR,
   fromEraShareCBOR,
   eraDecoder,
+  eraDecoderWithBytes,
 )
 where
 
@@ -53,6 +54,7 @@ import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition.Extended (PredicateFailure, STS (..))
+import qualified Data.ByteString.Lazy as BSL
 import Data.Kind (Constraint, Type)
 import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
@@ -302,7 +304,12 @@ fromEraShareCBOR = eraDecoder @era decNoShareCBOR
 -- version for the supplied @era@
 --
 -- This action should not be used for decoders that require access to original bytes, use
--- `toPlainDecoder` instead.
+-- `eraDecoderWithBytes` instead.
 eraDecoder :: forall era t s. Era era => Decoder s t -> Plain.Decoder s t
 eraDecoder = toPlainDecoder Nothing (eraProtVerLow @era)
 {-# INLINE eraDecoder #-}
+
+-- | Just like `eraDecoder`, but for decoders that rely on access for underlying bytes
+eraDecoderWithBytes :: forall era t s. Era era => BSL.ByteString -> Decoder s t -> Plain.Decoder s t
+eraDecoderWithBytes bsl = toPlainDecoder (Just bsl) (eraProtVerLow @era)
+{-# INLINE eraDecoderWithBytes #-}

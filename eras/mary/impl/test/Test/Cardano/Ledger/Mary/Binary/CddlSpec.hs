@@ -13,6 +13,7 @@ import Test.Cardano.Ledger.Binary.Cddl (
  )
 import Test.Cardano.Ledger.Binary.Cuddle
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Mary.Binary.Annotator ()
 import Test.Cardano.Ledger.Mary.Binary.Cddl (readMaryCddlFiles)
 import Test.Cardano.Ledger.Mary.CDDL (maryCDDL)
 

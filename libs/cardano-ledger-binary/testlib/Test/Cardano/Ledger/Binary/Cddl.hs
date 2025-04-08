@@ -46,6 +46,7 @@ import System.Process.Typed (
   setStdin,
  )
 import Test.Cardano.Ledger.Binary (decoderEquivalenceExpectation)
+import Test.Cardano.Ledger.Binary.Annotator (decodeFullAnnotator)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Hspec
 import UnliftIO.Temporary (withTempFile)

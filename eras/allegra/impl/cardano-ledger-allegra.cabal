@@ -87,6 +87,7 @@ library
 library testlib
   exposed-modules:
     Test.Cardano.Ledger.Allegra.Arbitrary
+    Test.Cardano.Ledger.Allegra.Binary.Annotator
     Test.Cardano.Ledger.Allegra.Binary.Cddl
     Test.Cardano.Ledger.Allegra.CDDL
     Test.Cardano.Ledger.Allegra.Imp
@@ -112,6 +113,7 @@ library testlib
     base,
     bytestring,
     cardano-ledger-allegra,
+    cardano-ledger-binary,
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-strict-containers,

@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Move `Annotator` instances, `txSeqDecoder` and `mapTraverseableDecoderA` to `testlib`
 * Deprecate `witsFromTxWitnesses`
 * Expose access to `ShelleyTxRaw`, `ShelleyTxAuxDataRaw`, `ShelleyTxBodyRaw`, `ShelleyTxWitsRaw`, `MkMultiSig`
 * Expose constructors `MkShelleyTx`, `MkShelleyTxAuxData`, `MkShelleyTxBody`, `MkShelleyTxWits`, `MultiSigRaw`

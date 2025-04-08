@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-shelley-test`
 
-## 1.6.0.1
+## 1.7.0.0
 
+* Remove `Test.Cardano.Ledger.Shelley.LaxBlock` as unused
 
 ## 1.6.0.0
 

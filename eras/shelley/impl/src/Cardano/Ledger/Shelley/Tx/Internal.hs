@@ -27,7 +27,7 @@
 module Cardano.Ledger.Shelley.Tx.Internal (
   -- * Transaction
   ShelleyTx (
-    ..,
+    MkShelleyTx,
     ShelleyTx,
     body,
     wits,
@@ -39,24 +39,21 @@ module Cardano.Ledger.Shelley.Tx.Internal (
   auxDataShelleyTxL,
   sizeShelleyTxF,
   wireSizeShelleyTxF,
-  segWitAnnTx,
   segWitTx,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
   witsFromTxWitnesses,
   shelleyEqTxRaw,
+  unsafeConstructTxWithBytes,
 )
 where
 
 import Cardano.Ledger.Binary (
-  Annotator (..),
   DecCBOR (decCBOR),
   EncCBOR (encCBOR),
   ToCBOR,
-  decodeNullMaybe,
   decodeNullStrictMaybe,
   encodeNullMaybe,
-  runAnnotator,
  )
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
@@ -64,7 +61,6 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
-  Mem,
   MemoBytes,
   Memoized (..),
   getMemoRawBytes,
@@ -300,26 +296,6 @@ instance Era era => EncCBOR (ShelleyTx era)
 
 instance
   ( Era era
-  , Typeable (TxBody era)
-  , Typeable (TxWits era)
-  , Typeable (TxAuxData era)
-  , DecCBOR (Annotator (TxBody era))
-  , DecCBOR (Annotator (TxWits era))
-  , DecCBOR (Annotator (TxAuxData era))
-  ) =>
-  DecCBOR (Annotator (ShelleyTxRaw era))
-  where
-  decCBOR =
-    decode $
-      Ann (RecD ShelleyTxRaw)
-        <*! From
-        <*! From
-        <*! D
-          ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe decCBOR
-          )
-instance
-  ( Era era
   , DecCBOR (TxBody era)
   , DecCBOR (TxWits era)
   , DecCBOR (TxAuxData era)
@@ -332,11 +308,6 @@ instance
         <! From
         <! From
         <! D (decodeNullStrictMaybe decCBOR)
-
-deriving via
-  Mem (ShelleyTxRaw era)
-  instance
-    EraTx era => DecCBOR (Annotator (ShelleyTx era))
 
 deriving newtype instance
   ( Era era
@@ -365,31 +336,6 @@ unsafeConstructTxWithBytes b w a bytes = MkShelleyTx (mkMemoBytes (ShelleyTxRaw 
 --------------------------------------------------------------------------------
 -- Segregated witness
 --------------------------------------------------------------------------------
-
-segWitAnnTx ::
-  forall era.
-  EraTx era =>
-  Annotator (TxBody era) ->
-  Annotator (TxWits era) ->
-  Maybe (Annotator (TxAuxData era)) ->
-  Annotator (ShelleyTx era)
-segWitAnnTx bodyAnn witsAnn metaAnn = Annotator $ \bytes ->
-  let body' = runAnnotator bodyAnn bytes
-      witnessSet = runAnnotator witsAnn bytes
-      metadata = flip runAnnotator bytes <$> metaAnn
-      wrappedMetadataBytes = case metadata of
-        Nothing -> Plain.serialize Plain.encodeNull
-        Just b -> Plain.serialize b
-      fullBytes =
-        Plain.serialize (Plain.encodeListLen 3)
-          <> Plain.serialize body'
-          <> Plain.serialize witnessSet
-          <> wrappedMetadataBytes
-   in unsafeConstructTxWithBytes
-        body'
-        witnessSet
-        (maybeToStrictMaybe metadata)
-        fullBytes
 
 segWitTx ::
   forall era.

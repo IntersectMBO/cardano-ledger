@@ -65,7 +65,7 @@ library
     cardano-ledger-binary >=1.4,
     cardano-ledger-conway >=1.19,
     cardano-ledger-core >=1.17,
-    cardano-ledger-mary ^>=1.8,
+    cardano-ledger-mary ^>=1.9,
     cardano-ledger-shelley ^>=1.17,
     cardano-strict-containers,
     containers,
@@ -94,7 +94,7 @@ library testlib
     base,
     bytestring,
     cardano-ledger-api,
-    cardano-ledger-binary,
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     containers,
 

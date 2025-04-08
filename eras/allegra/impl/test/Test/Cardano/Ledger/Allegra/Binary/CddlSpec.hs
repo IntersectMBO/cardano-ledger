@@ -5,6 +5,7 @@ module Test.Cardano.Ledger.Allegra.Binary.CddlSpec (spec) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Core
+import Test.Cardano.Ledger.Allegra.Binary.Annotator ()
 import Test.Cardano.Ledger.Allegra.Binary.Cddl (readAllegraCddlFiles)
 import Test.Cardano.Ledger.Allegra.CDDL (allegraCDDL)
 import Test.Cardano.Ledger.Binary.Cddl (
