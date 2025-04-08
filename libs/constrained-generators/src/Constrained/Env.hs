@@ -7,8 +7,14 @@
 
 module Constrained.Env where
 
-import Constrained.Core
-import Constrained.GenT
+import Constrained.Core (
+  Var (..),
+ )
+import Constrained.GenT (
+  MonadGenError,
+  genError,
+ )
+
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Typeable
@@ -54,7 +60,7 @@ findEnv :: (Typeable a, MonadGenError m) => Env -> Var a -> m a
 findEnv env var = do
   case lookupEnv env var of
     Just a -> pure a
-    Nothing -> genError (pure ("Couldn't find " ++ show var ++ " in " ++ show env))
+    Nothing -> genError ("Couldn't find " ++ show var ++ " in " ++ show env)
 
 instance Pretty EnvValue where
   pretty (EnvValue x) = pretty $ take 80 (show x)

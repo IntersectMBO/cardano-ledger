@@ -38,11 +38,8 @@ library
     Constrained.List
     Constrained.NumSpec
     Constrained.Properties
-    Constrained.Spec.ListFoldy
     Constrained.Spec.Map
-    Constrained.Spec.Num
     Constrained.Spec.Set
-    Constrained.Spec.Size
     Constrained.Spec.SumProd
     Constrained.Spec.Tree
     Constrained.SumList

@@ -24,7 +24,11 @@ module Constrained.Core (
 )
 where
 
-import Constrained.List
+import Constrained.List (
+  List (..),
+  mapList,
+ )
+
 import Control.Applicative
 import Data.Function
 import Data.List.NonEmpty (NonEmpty ((:|)))

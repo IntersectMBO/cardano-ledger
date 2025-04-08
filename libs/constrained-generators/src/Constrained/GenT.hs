@@ -27,6 +27,9 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+-- NOTE: this is for `split` vs. `splitGen` that we haven't had
+-- time to fix in `QuickCheck`.
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Constrained.GenT where
 
@@ -91,7 +94,7 @@ instance Monad m => Monad (GenT m) where
     unGen (runGenT (k a) mode msgs) r2 n
 
 instance MonadGenError m => MonadFail (GenT m) where
-  fail s = genError (pure s)
+  fail s = genError s
 
 ------------------------------------------------------------------------
 -- The MonadGenError transformer
@@ -101,48 +104,50 @@ instance MonadGenError m => MonadFail (GenT m) where
 -- narrow down problems. The (NonEmpty String) means one cannot cause an
 -- Error without at least 1 string to explain it.
 class Monad m => MonadGenError m where
-  genError :: HasCallStack => NonEmpty String -> m a
-  fatalError :: HasCallStack => NonEmpty String -> m a
   genErrors :: HasCallStack => NonEmpty (NonEmpty String) -> m a
   fatalErrors :: HasCallStack => NonEmpty (NonEmpty String) -> m a
-  explain :: HasCallStack => NonEmpty String -> m a -> m a
+  genErrorNE :: HasCallStack => NonEmpty String -> m a
+  fatalErrorNE :: HasCallStack => NonEmpty String -> m a
+  explainNE :: HasCallStack => NonEmpty String -> m a -> m a
 
 -- | genError with one line of explanation
-genError1 :: MonadGenError m => String -> m a
-genError1 s = genError (pure s)
+genError :: MonadGenError m => String -> m a
+genError = genErrorNE . pure
 
 -- | fatalError with one line of explanation
-fatalError1 :: MonadGenError m => String -> m a
-fatalError1 s = fatalError (pure s)
+fatalError :: MonadGenError m => String -> m a
+fatalError = fatalErrorNE . pure
 
 -- | explain with one line of explanation
-explain1 :: MonadGenError m => String -> m a -> m a
-explain1 s = explain (pure s)
+explain :: MonadGenError m => String -> m a -> m a
+explain s
+  | null s = id
+  | otherwise = explainNE (pure s)
 
 -- GE instance
 
 instance MonadGenError GE where
-  genError msg = GenError (pure msg)
+  genErrorNE msg = GenError (pure msg)
   genErrors msgs = GenError msgs
-  fatalError msg = FatalError (pure msg)
+  fatalErrorNE msg = FatalError (pure msg)
   fatalErrors msgs = FatalError msgs
-  explain m (GenError ms) = GenError (m <| ms)
-  explain m (FatalError ms) = FatalError (m <| ms)
-  explain _ (Result x) = Result x
+  explainNE m (GenError ms) = GenError (m <| ms)
+  explainNE m (FatalError ms) = FatalError (m <| ms)
+  explainNE _ (Result x) = Result x
 
 -- GenT instance
 
 -- | calls to genError and fatalError, add the stacked messages in the monad.
 instance MonadGenError m => MonadGenError (GenT m) where
-  genError e = GenT $ \_ xs -> pure $ genErrors (add e xs)
+  genErrorNE e = GenT $ \_ xs -> pure $ genErrors (add e xs)
   genErrors es = GenT $ \_ xs -> pure $ genErrors (cat es xs)
 
   -- Perhaps we want to turn genError into fatalError, if mode_ is Strict?
-  fatalError e = GenT $ \_ xs -> pure $ fatalErrors (add e xs)
+  fatalErrorNE e = GenT $ \_ xs -> pure $ fatalErrors (add e xs)
   fatalErrors es = GenT $ \_ xs -> pure $ fatalErrors (cat es xs)
 
   -- Perhaps we want to turn fatalError into genError, if mode_ is Loose?
-  explain e (GenT f) = GenT $ \mode es -> fmap (explain e) (f mode es)
+  explainNE e (GenT f) = GenT $ \mode es -> fmap (explainNE e) (f mode es)
 
 -- ====================================================
 -- useful operations on NonEmpty
@@ -224,11 +229,11 @@ fromGEDiscard ge = case ge of
 headGE :: Foldable t => t a -> GE a
 headGE t
   | x : _ <- toList t = pure x
-  | otherwise = fatalError (pure "head of empty structure")
+  | otherwise = fatalError "head of empty structure"
 
 -- | Turn a `GE [a]` to `[a]`, `genError` goes to `[]` and `fatalError` to `error`.
 listFromGE :: GE [a] -> [a]
-listFromGE = fromGE (const []) . explain1 "listFromGE"
+listFromGE = fromGE (const []) . explain "listFromGE"
 
 -- ========================================================
 -- Useful operations on GenT
@@ -286,9 +291,7 @@ suchThatWithTryT tries g p = do
   where
     go 0 cont =
       cont
-        ( pure
-            ("Ran out of tries (" ++ show tries ++ ") on suchThatWithTryT at type " ++ show (typeRep (Proxy @a)))
-        )
+        ("Ran out of tries (" ++ show tries ++ ") on suchThatWithTryT at type " ++ show (typeRep (Proxy @a)))
     go n cont = do
       a <- g
       if p a then pure a else scaleT (+ 1) $ go (n - 1) cont
@@ -310,7 +313,7 @@ oneofT gs = do
   mode <- getMode
   msgs <- getMessages
   r <-
-    explain (pure "suchThatT in oneofT") $
+    explain "suchThatT in oneofT" $
       pureGen (oneof [runGenT g mode msgs | g <- gs]) `suchThatT` isOk
   runGE r
 
@@ -319,13 +322,13 @@ frequencyT gs = do
   mode <- getMode
   msgs <- getMessages
   r <-
-    explain (pure "suchThatT in oneofT") $
+    explain "suchThatT in oneofT" $
       pureGen (frequency [(f, runGenT g mode msgs) | (f, g) <- gs]) `suchThatT` isOk
   runGE r
 
 chooseT :: (Random a, Ord a, Show a, MonadGenError m) => (a, a) -> GenT m a
 chooseT (a, b)
-  | b < a = genError (pure ("chooseT (" ++ show a ++ ", " ++ show b ++ ")"))
+  | b < a = genError ("chooseT (" ++ show a ++ ", " ++ show b ++ ")")
   | otherwise = pureGen $ choose (a, b)
 
 sizeT :: Monad m => GenT m Int
@@ -396,14 +399,14 @@ dropGen y = do
 -- | Run one of the actions with frequency proportional to the count. If it fails, run the other.
 frequency2 :: forall m a. MonadGenError m => (Int, GenT GE a) -> (Int, GenT GE a) -> GenT m a
 frequency2 (n, g1) (m, g2)
-  | n <= 0 && m <= 0 = fatalError (pure ("Non positive frequencies in frequency2 " ++ show (n, m)))
+  | n <= 0 && m <= 0 = fatalError $ "Non positive frequencies in frequency2 " ++ show (n, m)
   | n <= 0 = dropGen g2
   | m <= 0 = dropGen g1
   | True = do
       i <- pureGen $ choose (1, n + m)
       ans <- if i <= n then firstGenT [g1, g2] else firstGenT [g2, g1]
       case ans of
-        Left _ -> fatalError (pure "Both branches of frequency2 fail")
+        Left _ -> fatalError "Both branches of frequency2 fail"
         Right x -> pure x
 
 -- ======================================
@@ -412,10 +415,10 @@ frequency2 (n, g1) (m, g2)
 --   if the list is null, it becomes the identity
 push :: forall m a. MonadGenError m => [String] -> m a -> m a
 push [] m = m
-push (x : xs) m = explain (x :| xs) m
+push (x : xs) m = explainNE (x :| xs) m
 
 -- | like explain for GE, but uses [String] rather than (NonEmpty String)
 --   if the list is null, it becomes the identity
 pushGE :: forall a. [String] -> GE a -> GE a
 pushGE [] x = x
-pushGE (x : xs) m = explain (x :| xs) m
+pushGE (x : xs) m = explainNE (x :| xs) m

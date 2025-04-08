@@ -54,7 +54,7 @@ import Constrained.API
 import Constrained.Base
 import Constrained.GenT
 import Constrained.NumSpec
-import Constrained.Spec.ListFoldy (genListWithSize)
+import Constrained.SumList (genListWithSize)
 import Constrained.TheKnot
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Fail.String

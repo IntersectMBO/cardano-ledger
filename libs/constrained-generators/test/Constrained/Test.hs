@@ -35,8 +35,7 @@ import Constrained.Examples.Map
 import Constrained.Examples.Set
 import Constrained.Examples.Tree
 import Constrained.Properties hiding (main)
-import Constrained.Spec.ListFoldy (narrowByFuelAndSize)
-import Constrained.TheKnot ()
+import Constrained.SumList (narrowByFuelAndSize)
 import Control.Monad
 import Data.Int
 import qualified Data.List.NonEmpty as NE
