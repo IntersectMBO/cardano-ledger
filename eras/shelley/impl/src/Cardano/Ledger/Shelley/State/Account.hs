@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -19,6 +20,7 @@ import Cardano.Ledger.Shelley.Era
 import Cardano.Ledger.State hiding (balance)
 import Control.DeepSeq (NFData (rnf), deepseq, rwhnf)
 import Control.Monad.Trans.State.Strict (StateT (..))
+import Data.Aeson as Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -30,13 +32,13 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyAccountState era
   = ShelleyAccountState
-  { casPtr :: {-# UNPACK #-} !Ptr
+  { sasPtr :: {-# UNPACK #-} !Ptr
   -- ^ Pointer to the certificate in which the stake credential was registered in.
-  , casBalance :: {-# UNPACK #-} !(CompactForm Coin)
+  , sasBalance :: {-# UNPACK #-} !(CompactForm Coin)
   -- ^ Current balance of the account
-  , casDeposit :: {-# UNPACK #-} !(CompactForm Coin)
+  , sasDeposit :: {-# UNPACK #-} !(CompactForm Coin)
   -- ^ Deposit amount that was left when staking credential was registered
-  , casStakePoolDelegation :: !(StrictMaybe (KeyHash 'StakePool))
+  , sasStakePoolDelegation :: !(StrictMaybe (KeyHash 'StakePool))
   -- ^ Potential delegation to a stake pool
   }
   deriving (Show, Eq, Generic)
@@ -62,58 +64,84 @@ instance Typeable era => DecShareCBOR (ShelleyAccountState era) where
         <*> decCBOR
         <*> decodeStrictMaybe (interns ks <$> decCBOR)
 
-data ShelleyAccountsState era = ShelleyAccountsState
-  { sasAccountStates :: !(Map (Credential 'Staking) (ShelleyAccountState era))
+instance ToJSON (ShelleyAccountState era) where
+  toJSON = object . toShelleyAccountStatePairs
+  toEncoding = Aeson.pairs . mconcat . toShelleyAccountStatePairs
+
+toShelleyAccountStatePairs :: Aeson.KeyValue e a => ShelleyAccountState era -> [a]
+toShelleyAccountStatePairs sas@(ShelleyAccountState _ _ _ _) =
+  let ShelleyAccountState {..} = sas
+   in [ "reward" .= sasBalance -- deprecated
+      , "balance" .= sasBalance
+      , "deposit" .= sasDeposit
+      , "ptr" .= sasPtr
+      , "spool" .= sasStakePoolDelegation
+      ]
+
+data ShelleyAccounts era = ShelleyAccounts
+  { saStates :: !(Map (Credential 'Staking) (ShelleyAccountState era))
   -- ^ Map from a staking credential to the account state.
-  , sasAccountPtrs :: !(Map Ptr (Credential 'Staking))
+  , saPtrs :: !(Map Ptr (Credential 'Staking))
   -- ^ A Map from a pointer, to the staking credential. Pointer points to the certificate which
   -- registered the staking credential.
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (ShelleyAccountsState era)
+instance NoThunks (ShelleyAccounts era)
 
-instance NFData (ShelleyAccountsState era) where
-  rnf (ShelleyAccountsState accountsState accountPtr) =
-    accountsState `deepseq` rnf accountPtr
+instance NFData (ShelleyAccounts era) where
+  rnf (ShelleyAccounts accounts accountPtr) =
+    accounts `deepseq` rnf accountPtr
 
-instance Typeable era => EncCBOR (ShelleyAccountsState era) where
-  encCBOR ShelleyAccountsState {sasAccountStates, sasAccountPtrs} =
-    encodeListLen 2 <> encCBOR sasAccountStates <> encCBOR sasAccountPtrs
+instance Typeable era => EncCBOR (ShelleyAccounts era) where
+  encCBOR ShelleyAccounts {saStates, saPtrs} =
+    encodeListLen 2 <> encCBOR saStates <> encCBOR saPtrs
 
-instance Typeable era => DecShareCBOR (ShelleyAccountsState era) where
+instance Typeable era => DecShareCBOR (ShelleyAccounts era) where
   type
-    Share (ShelleyAccountsState era) =
+    Share (ShelleyAccounts era) =
       (Interns (Credential 'Staking), Interns (KeyHash 'StakePool), Interns (Credential 'DRepRole))
   decSharePlusCBOR =
     StateT
       ( \(a, b, c) ->
-          decodeRecordNamed "ShelleyAccountsState" (const 2) $ do
-            sasAccountStates <- decodeMap (interns a <$> decCBOR) (decShareCBOR (b, c))
-            let a' = internsFromMap sasAccountStates <> a
-            sasAccountPtrs <- decodeMap decCBOR (interns a' <$> decCBOR)
-            pure (ShelleyAccountsState {sasAccountStates, sasAccountPtrs}, (a', b, c))
+          decodeRecordNamed "ShelleyAccounts" (const 2) $ do
+            saStates <- decodeMap (interns a <$> decCBOR) (decShareCBOR (b, c))
+            let a' = internsFromMap saStates <> a
+            saPtrs <- decodeMap decCBOR (interns a' <$> decCBOR)
+            pure (ShelleyAccounts {saStates, saPtrs}, (a', b, c))
       )
 
-instance Default (ShelleyAccountsState era) where
-  def = ShelleyAccountsState mempty mempty
+instance ToJSON (ShelleyAccounts era) where
+  toJSON = object . toShelleyAccountsPairs
+  toEncoding = Aeson.pairs . mconcat . toShelleyAccountsPairs
 
-instance EraAccountsState ShelleyEra where
+toShelleyAccountsPairs :: Aeson.KeyValue e a => ShelleyAccounts era -> [a]
+toShelleyAccountsPairs sas@(ShelleyAccounts _ _) =
+  let ShelleyAccounts {..} = sas
+   in [ "credentials" .= saStates
+      , "pointers" .= saPtrs
+      ]
+
+instance Default (ShelleyAccounts era) where
+  def = ShelleyAccounts mempty mempty
+
+instance EraAccounts ShelleyEra where
   type AccountState ShelleyEra = ShelleyAccountState ShelleyEra
-  type AccountsState ShelleyEra = ShelleyAccountsState ShelleyEra
+  type Accounts ShelleyEra = ShelleyAccounts ShelleyEra
 
-  accountsStateMapL = lens sasAccountStates $ \sas asMap -> sas {sasAccountStates = asMap}
+  accountsMapL = lens saStates $ \sas asMap -> sas {saStates = asMap}
 
   balanceAccountStateL = lens sasBalance $ \sas b -> sas {sasBalance = b}
 
   depositAccountStateL = lens sasDeposit $ \sas d -> sas {sasDeposit = d}
 
   stakePoolDelegationAccountStateL =
-    lens (strictMaybeToMaybe . casStakePoolDelegation) $ \sas d -> sas {casStakePoolDelegation = d}
+    lens (strictMaybeToMaybe . sasStakePoolDelegation) $ \sas d ->
+      sas {sasStakePoolDelegation = maybeToStrictMaybe d}
 
-instance ShelleyEraAccountsState ShelleyEra
+instance ShelleyEraAccounts ShelleyEra
 
-class EraAccountsState era => ShelleyEraAccountsState era where
+class EraAccounts era => ShelleyEraAccounts era where
   mkShelleyAccountState :: Ptr -> CompactForm Coin -> AccountState era
   default mkShelleyAccountState ::
     AccountState era ~ ShelleyAccountState era =>
@@ -122,51 +150,51 @@ class EraAccountsState era => ShelleyEraAccountsState era where
     AccountState era
   mkShelleyAccountState ptr deposit =
     ShelleyAccountState
-      { casPtr = ptr
-      , casBalance = mempty
-      , casDeposit = deposit
-      , casStakePoolDelegation = SNothing
+      { sasPtr = ptr
+      , sasBalance = mempty
+      , sasDeposit = deposit
+      , sasStakePoolDelegation = SNothing
       }
 
-  accountsStatePtrsMapL :: Lens' (AccountsState era) (Map Ptr (Credential 'Staking))
-  default accountsStatePtrsMapL ::
-    AccountsState era ~ ShelleyAccountsState era =>
-    Lens' (AccountsState era) (Map Ptr (Credential 'Staking))
-  accountsStatePtrsMapL = lens sasAccountPtrs $ \as ptrsMap -> as {sasAccountPtrs = ptrsMap}
+  accountsPtrsMapL :: Lens' (Accounts era) (Map Ptr (Credential 'Staking))
+  default accountsPtrsMapL ::
+    Accounts era ~ ShelleyAccounts era =>
+    Lens' (Accounts era) (Map Ptr (Credential 'Staking))
+  accountsPtrsMapL = lens saPtrs $ \as ptrsMap -> as {saPtrs = ptrsMap}
 
   ptrAccountStateL :: Lens' (AccountState era) Ptr
   default ptrAccountStateL ::
     AccountState era ~ ShelleyAccountState era =>
     Lens' (AccountState era) Ptr
-  ptrAccountStateL = lens casPtr $ \as ptr -> as {casPtr = ptr}
+  ptrAccountStateL = lens sasPtr $ \as ptr -> as {sasPtr = ptr}
 
 registerShelleyStakingCredential ::
-  ShelleyEraAccountsState era =>
+  ShelleyEraAccounts era =>
   Credential 'Staking ->
   -- | Pointer to the certificate that registered the credential
   Ptr ->
   -- | Deposit
   CompactForm Coin ->
-  AccountsState era ->
-  AccountsState era
-registerShelleyStakingCredential cred ptr deposit accountsState =
-  accountsState
-    & (accountsStateMapL %~ Map.insert cred accountState)
-    & (accountsStatePtrsMapL %~ Map.insert ptr cred)
+  Accounts era ->
+  Accounts era
+registerShelleyStakingCredential cred ptr deposit accounts =
+  accounts
+    & (accountsMapL %~ Map.insert cred accountState)
+    & (accountsPtrsMapL %~ Map.insert ptr cred)
   where
     accountState =
       mkShelleyAccountState ptr deposit
 
 unregisterShelleyStakingCredential ::
-  ShelleyEraAccountsState era =>
+  ShelleyEraAccounts era =>
   Credential 'Staking ->
-  AccountsState era ->
-  (Maybe (AccountState era), AccountsState era)
-unregisterShelleyStakingCredential cred accountsState = (mAccountState, newAccountsState)
+  Accounts era ->
+  (Maybe (AccountState era), Accounts era)
+unregisterShelleyStakingCredential cred accounts = (mAccountState, newAccounts)
   where
-    (mAccountState, newAccountsStateMap) = Map.extract cred (accountsState ^. accountsStateMapL)
-    removePtr accountState = accountsStatePtrsMapL %~ Map.delete (accountState ^. ptrAccountStateL)
-    newAccountsState =
-      accountsState
-        & (accountsStateMapL .~ newAccountsStateMap)
+    (mAccountState, newAccountsMap) = Map.extract cred (accounts ^. accountsMapL)
+    removePtr accountState = accountsPtrsMapL %~ Map.delete (accountState ^. ptrAccountStateL)
+    newAccounts =
+      accounts
+        & (accountsMapL .~ newAccountsMap)
         & maybe id removePtr mAccountState

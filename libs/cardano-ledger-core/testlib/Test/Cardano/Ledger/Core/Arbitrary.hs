@@ -760,7 +760,7 @@ genRightPreferenceUMap = do
 -- Cardano.Ledger.CertState -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-instance (Era era, Arbitrary (AccountsState era)) => Arbitrary (DState era) where
+instance (Era era, Arbitrary (Accounts era)) => Arbitrary (DState era) where
   arbitrary = DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary (PState era) where

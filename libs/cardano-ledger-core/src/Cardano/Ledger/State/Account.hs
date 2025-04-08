@@ -8,9 +8,9 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.State.Account (
-  CanGetAccountsState (..),
-  CanSetAccountsState (..),
-  EraAccountsState (..),
+  CanGetAccounts (..),
+  CanSetAccounts (..),
+  EraAccounts (..),
   sumDepositsAcountsState,
 )
 where
@@ -28,36 +28,36 @@ import Data.Map.Strict (Map)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
-class CanGetAccountsState t where
-  accountsStateG :: SimpleGetter (t era) (AccountsState era)
-  default accountsStateG :: CanSetAccountsState t => SimpleGetter (t era) (AccountsState era)
-  accountsStateG = accountsStateL
-  {-# INLINE accountsStateG #-}
+class CanGetAccounts t where
+  accountsG :: SimpleGetter (t era) (Accounts era)
+  default accountsG :: CanSetAccounts t => SimpleGetter (t era) (Accounts era)
+  accountsG = accountsL
+  {-# INLINE accountsG #-}
 
-class CanGetAccountsState t => CanSetAccountsState t where
-  accountsStateL :: Lens' (t era) (AccountsState era)
+class CanGetAccounts t => CanSetAccounts t where
+  accountsL :: Lens' (t era) (Accounts era)
 
 class
   ( Era era
-  , Eq (AccountsState era)
-  , Show (AccountsState era)
-  , Default (AccountsState era)
-  , EncCBOR (AccountsState era)
-  , DecShareCBOR (AccountsState era)
-  , Share (AccountsState era)
+  , Eq (Accounts era)
+  , Show (Accounts era)
+  , Default (Accounts era)
+  , EncCBOR (Accounts era)
+  , DecShareCBOR (Accounts era)
+  , Share (Accounts era)
       ~ ( Interns (Credential Staking)
         , Interns (KeyHash StakePool)
         , Interns (Credential DRepRole)
         )
-  , NFData (AccountsState era)
-  , NoThunks (AccountsState era)
+  , NFData (Accounts era)
+  , NoThunks (Accounts era)
   ) =>
-  EraAccountsState era
+  EraAccounts era
   where
   type AccountState era = (r :: Type) | r -> era
-  type AccountsState era = (r :: Type) | r -> era
+  type Accounts era = (r :: Type) | r -> era
 
-  accountsStateMapL :: Lens' (AccountsState era) (Map (Credential 'Staking) (AccountState era))
+  accountsMapL :: Lens' (Accounts era) (Map (Credential 'Staking) (AccountState era))
 
   balanceAccountStateL :: Lens' (AccountState era) (CompactForm Coin)
 
@@ -65,6 +65,6 @@ class
 
   stakePoolDelegationAccountStateL :: Lens' (AccountState era) (Maybe (KeyHash 'StakePool))
 
-sumDepositsAcountsState :: EraAccountsState era => AccountsState era -> Coin
-sumDepositsAcountsState accountsState =
-  fromCompact $ foldMap' (^. depositAccountStateL) $ accountsState ^. accountsStateMapL
+sumDepositsAcountsState :: EraAccounts era => Accounts era -> Coin
+sumDepositsAcountsState accounts =
+  fromCompact $ foldMap' (^. depositAccountStateL) $ accounts ^. accountsMapL

@@ -46,7 +46,7 @@ import Lens.Micro
 import NoThunks.Class (NoThunks)
 
 class
-  ( EraAccountsState era
+  ( EraAccounts era
   , Eq (InstantStake era)
   , Show (InstantStake era)
   , Monoid (InstantStake era)
@@ -81,18 +81,18 @@ class
 
   -- | Using known stake credential registrations and delegations resolve the instant stake into a
   -- `Stake` that will be used for `SnapShot` creation by `snapShotFromInstantStake`.
-  resolveInstantStake :: InstantStake era -> AccountsState era -> Stake
+  resolveInstantStake :: InstantStake era -> Accounts era -> Stake
 
 snapShotFromInstantStake ::
   forall era. EraStake era => InstantStake era -> DState era -> PState era -> SnapShot
 snapShotFromInstantStake iStake dState PState {psStakePoolParams} =
   SnapShot
-    { ssStake = resolveInstantStake iStake accountsState
+    { ssStake = resolveInstantStake iStake accounts
     , ssDelegations = VMap.fromAscListN delegsCount delegsAscList
     , ssPoolParams = VMap.fromMap psStakePoolParams
     }
   where
-    accountsState = dsAccountsState dState
+    accounts = dsAccounts dState
     keepAndCountDelegations ::
       Credential 'Staking ->
       AccountState era ->
@@ -103,7 +103,7 @@ snapShotFromInstantStake iStake dState PState {psStakePoolParams} =
         Nothing -> acc
         Just deleg -> ((cred, deleg) : delegs, count + 1)
     (delegsAscList, delegsCount) =
-      Map.foldrWithKey keepAndCountDelegations ([], 0) $ accountsState ^. accountsStateMapL
+      Map.foldrWithKey keepAndCountDelegations ([], 0) $ accounts ^. accountsMapL
 {-# INLINEABLE snapShotFromInstantStake #-}
 
 class CanGetInstantStake t where
@@ -121,15 +121,15 @@ class CanGetInstantStake t => CanSetInstantStake t where
 resolveActiveInstantStakeCredentials ::
   EraStake era =>
   InstantStake era ->
-  AccountsState era ->
+  Accounts era ->
   Map (Credential 'Staking) (CompactForm Coin)
-resolveActiveInstantStakeCredentials instantStake accountsState =
+resolveActiveInstantStakeCredentials instantStake accounts =
   Map.merge
     Map.dropMissing -- ignore non-registered stake credentials
     (Map.mapMaybeMissing (const getNonZeroActiveBalance)) -- use the account balance, unless it is zero
     (Map.zipWithMaybeAMatched addInstantActiveStake) -- combine the stake with the account balance
     (instantStake ^. instantStakeCredentialsL)
-    (accountsState ^. accountsStateMapL)
+    (accounts ^. accountsMapL)
   where
     -- Only return balance for accounts that have an active delegation to a stake pool.
     getActiveBalance accountState = do

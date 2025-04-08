@@ -79,7 +79,6 @@ library
     Cardano.Ledger.Core.TxCert
     Cardano.Ledger.Keys.Internal
     Cardano.Ledger.State.Account
-    Cardano.Ledger.State.ChainAccount
     Cardano.Ledger.State.CertState
     Cardano.Ledger.State.ChainAccount
     Cardano.Ledger.State.Governance

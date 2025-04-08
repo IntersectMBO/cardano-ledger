@@ -49,7 +49,6 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (UMap (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
@@ -458,6 +457,11 @@ instance CanSetInstantStake LedgerState where
   instantStakeL = lens lsUTxOState (\s us -> s {lsUTxOState = us}) . instantStakeL
   {-# INLINE instantStakeL #-}
 
+instance CanGetAccounts LedgerState
+instance CanSetAccounts LedgerState where
+  accountsL = lens lsCertState (\s cs -> s {lsCertState = cs}) . accountsL
+  {-# INLINE accountsL #-}
+
 deriving stock instance
   ( EraTxOut era
   , Show (GovState era)
@@ -573,9 +577,6 @@ nesPdL = lens nesPd (\ds u -> ds {nesPd = u})
 nesEsL :: Lens' (NewEpochState era) (EpochState era)
 nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
 
-unifiedL :: EraCertState era => Lens' (NewEpochState era) UMap
-unifiedL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
-
 nesELL :: Lens' (NewEpochState era) EpochNo
 nesELL = lens nesEL (\ds u -> ds {nesEL = u})
 
@@ -676,9 +677,6 @@ epochStateTreasuryL = treasuryL
 epochStatePoolParamsL ::
   EraCertState era => Lens' (EpochState era) (Map (KeyHash 'StakePool) PoolParams)
 epochStatePoolParamsL = esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
-
-epochStateUMapL :: EraCertState era => Lens' (EpochState era) UMap
-epochStateUMapL = esLStateL . lsCertStateL . certDStateL . dsUnifiedL
 
 epochStateStakeDistrL ::
   Lens' (EpochState era) (VMap VB VP (Credential 'Staking) (CompactForm Coin))
