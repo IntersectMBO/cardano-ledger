@@ -150,23 +150,24 @@ alwaysSucceedsNoDatum =
       , "30010012213300300522335006375c0046a660080082400200224002444a666aae7c004400c4cc008d5d08009a"
       , "ba2001122002122122330010040031"
       ]
-    -- ScriptHash "08cc0da96095fa5b13b9b9a58a4b4f10f351ea4bec2c54acbfe48b75"
+    -- ScriptHash "953c40eaaf5302a6b0a68d605ae67d9a35e260f5a3c278936fc15880"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- alwaysSucceedsNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
     --                            PlutusTx.Builtins.Internal.BuiltinUnit
-    -- alwaysSucceedsNoDatum_0 arg_1 = PlutusTx.Prelude.check GHC.Base.$ (case PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1 of
-    --                                                                    {PlutusLedgerApi.V3.Data.Contexts.ScriptContext _txInfo_2
-    --                                                                                                                    (PlutusLedgerApi.V1.Scripts.Redeemer _redeemer_3)
-    --                                                                                                                    scriptInfo_4 -> case scriptInfo_4 of
-    --                                                                                                                                    {PlutusLedgerApi.V3.Data.Contexts.SpendingScript _
-    --                                                                                                                                                                                     (GHC.Maybe.Just _) -> GHC.Types.False;
-    --                                                                                                                                     _ -> GHC.Types.True}})
+    -- alwaysSucceedsNoDatum_0 arg_1 = let PlutusLedgerApi.V3.Data.Contexts.ScriptContext _txInfo_2
+    --                                                                                    (PlutusLedgerApi.V1.Scripts.Redeemer _redeemer_3)
+    --                                                                                    scriptInfo_4 = PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1
+    --                                  in PlutusTx.Prelude.check GHC.Base.$ (case scriptInfo_4 of
+    --                                                                        {PlutusLedgerApi.V3.Data.Contexts.SpendingScript _
+    --                                                                                                                         (GHC.Maybe.Just _) -> GHC.Types.False;
+    --                                                                         _ -> GHC.Types.True})
     -- @@@
     SPlutusV3 ->
-      [ "5884010100253293255333573466e1d200235573a0022264b2646464aa666ae68cdc3a40040042300211553335"
+      [ "5896010100253293255333573466e1d200235573a0022264b2646464aa666ae68cdc3a40040042300211553335"
       , "73466e1d2000002118009aba10010898032481035054310035573c0046aae74004dd51aba13574400321801460"
-      , "0035573c0022300037546ae84d5d11aba235573c6ea800a29344c00524010350543500119319ab9c00180001"
+      , "0035573c002230003755264650013574200535742003357426ae880046ae88004d55cf1baa002911000a29344c"
+      , "0052410350543500119319ab9c00180001"
       ]
 
 -- | Script that always succeeds, unless arguments are malformed or context does not contain a datum
@@ -290,22 +291,24 @@ alwaysSucceedsWithDatum =
       , "00919319ab9c00100633230010012213300300522335006375c0046a660080082400200224002444a666aae7c0"
       , "04400c4cc008d5d08009aba200112200212212233001004003120011"
       ]
-    -- ScriptHash "ac9b594df2e90cece2a52576cc36181de3f5bc10dedcba9fef1fda37"
+    -- ScriptHash "d4ecf06c769de6193048042f28c135c74d388e05ee429c95dd88631e"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- alwaysSucceedsWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
     --                              PlutusTx.Builtins.Internal.BuiltinUnit
-    -- alwaysSucceedsWithDatum_0 arg_1 = PlutusTx.Prelude.check GHC.Base.$ (case PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1 of
-    --                                                                      {PlutusLedgerApi.V3.Data.Contexts.ScriptContext _txInfo_2
-    --                                                                                                                      (PlutusLedgerApi.V1.Scripts.Redeemer _redeemer_3)
-    --                                                                                                                      (PlutusLedgerApi.V3.Data.Contexts.SpendingScript _
-    --                                                                                                                                                                       (GHC.Maybe.Just _)) -> GHC.Types.True;
-    --                                                                       _ -> GHC.Types.False})
+    -- alwaysSucceedsWithDatum_0 arg_1 = let PlutusLedgerApi.V3.Data.Contexts.ScriptContext _txInfo_2
+    --                                                                                      (PlutusLedgerApi.V1.Scripts.Redeemer _redeemer_3)
+    --                                                                                      scriptPurpose_4 = PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1
+    --                                    in PlutusTx.Prelude.check GHC.Base.$ (case scriptPurpose_4 of
+    --                                                                          {PlutusLedgerApi.V3.Data.Contexts.SpendingScript _
+    --                                                                                                                           (GHC.Maybe.Just _) -> GHC.Types.True;
+    --                                                                           _ -> GHC.Types.False})
     -- @@@
     SPlutusV3 ->
-      [ "5884010100253293255333573466e1d200235573a0022264b2646464aa666ae68cdc3a40040042300211553335"
+      [ "5896010100253293255333573466e1d200235573a0022264b2646464aa666ae68cdc3a40040042300211553335"
       , "73466e1d2000002118009aba10010898032481035054310035573c0046aae74004dd51aba13574400321800460"
-      , "0435573c0022300237546ae84d5d11aba235573c6ea800a29344c00524010350543500119319ab9c00180001"
+      , "0435573c002230023755264650013574200535742003357426ae880046ae88004d55cf1baa002911000a29344c"
+      , "0052410350543500119319ab9c00180001"
       ]
 
 -- | Script that always fails, unless arguments are malformed or context contains a datum

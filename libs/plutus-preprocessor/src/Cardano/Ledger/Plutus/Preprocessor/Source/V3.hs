@@ -15,9 +15,9 @@ alwaysSucceedsNoDatumQ =
   [d|
     alwaysSucceedsNoDatum :: P.BuiltinData -> P.BuiltinUnit
     alwaysSucceedsNoDatum arg =
-      P.check $
-        case unsafeFromBuiltinData arg of
-          PV3D.ScriptContext _txInfo (PV3D.Redeemer _redeemer) scriptInfo ->
+      let PV3D.ScriptContext _txInfo (PV3D.Redeemer _redeemer) scriptInfo =
+            P.unsafeFromBuiltinData arg
+       in P.check $
             case scriptInfo of
               -- We fail if this is a spending script with a Datum
               PV3D.SpendingScript _ (Just _) -> False
@@ -29,11 +29,13 @@ alwaysSucceedsWithDatumQ =
   [d|
     alwaysSucceedsWithDatum :: P.BuiltinData -> P.BuiltinUnit
     alwaysSucceedsWithDatum arg =
-      P.check $
-        case unsafeFromBuiltinData arg of
-          -- Expecting a spending script with a Datum, thus failing when it is not
-          PV3D.ScriptContext _txInfo (PV3D.Redeemer _redeemer) (PV3D.SpendingScript _ (Just _)) -> True
-          _ -> False
+      let PV3D.ScriptContext _txInfo (PV3D.Redeemer _redeemer) scriptPurpose =
+            P.unsafeFromBuiltinData arg
+       in P.check $
+            case scriptPurpose of
+              PV3D.SpendingScript _ (Just _) -> True
+              -- Expecting a spending script with a Datum, thus failing when it is not
+              _ -> False
     |]
 
 alwaysFailsNoDatumQ :: Q [Dec]
