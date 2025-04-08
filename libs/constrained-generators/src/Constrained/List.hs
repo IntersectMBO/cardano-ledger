@@ -1,20 +1,24 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ViewPatterns #-}
-
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE PatternSynonyms #-}
 module Constrained.List where
 
+import GHC.TypeLits
+import Data.Foldable
 import Data.Functor.Const
 import Data.Kind
 import Data.Semigroup (Sum (..))
@@ -32,6 +36,32 @@ infixr 5 :>
 
 deriving instance (forall a. Show (f a)) => Show (List f as)
 deriving instance (forall a. Eq (f a)) => Eq (List f as)
+
+type family Length as where
+  Length '[] = 0
+  Length (_ : as) = 1 + Length as
+
+type family as :! n where
+  '[] :! n = TypeError (Text "Indexing into empty type-level list")
+  (a : as) :! 0 = a
+  (a : as) :! n = as :! (n - 1)
+
+class IndexOf n as where
+  at :: List f as -> f (as :! n)
+
+instance IndexOf 0 (a : as) where
+  at (a :> _) = a
+
+instance {-# OVERLAPPABLE #-} (IndexOf (n - 1) as, as :! (n - 1) ~ (a : as) :! n) => IndexOf n (a : as) where
+  at (_ :> as) = at @(n - 1) as
+
+mapList_ :: (forall a. f a -> b) -> List f as -> [b]
+mapList_ _ Nil = []
+mapList_ f (x :> xs) = f x : mapList_ f xs
+
+mapListC_ :: forall c f as b. All c as => (forall a. c a => f a -> b) -> List f as -> [b]
+mapListC_ _ Nil = []
+mapListC_ f (x :> xs) = f x : mapListC_ @c f xs
 
 mapList :: (forall a. f a -> g a) -> List f as -> List g as
 mapList _ Nil = Nil
@@ -55,13 +85,11 @@ mapMListC _ Nil = pure Nil
 mapMListC f (x :> xs) = (:>) <$> f x <*> mapMListC @c f xs
 
 foldMapList :: Monoid b => (forall a. f a -> b) -> List f as -> b
-foldMapList _ Nil = mempty
-foldMapList f (a :> as) = f a <> foldMapList f as
+foldMapList f = fold . mapList_ f
 
 foldMapListC ::
   forall c as b f. (All c as, Monoid b) => (forall a. c a => f a -> b) -> List f as -> b
-foldMapListC _ Nil = mempty
-foldMapListC f (a :> as) = f a <> foldMapListC @c f as
+foldMapListC f = fold . mapListC_ @c f
 
 appendList :: List f as -> List f bs -> List f (Append as bs)
 appendList Nil bs = bs

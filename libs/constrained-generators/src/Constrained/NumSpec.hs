@@ -30,25 +30,24 @@
 
 module Constrained.NumSpec where
 
+import Constrained.List
 import Constrained.Base
 import Constrained.Conformance ()
-import Constrained.Core (NonEmpty ((:|)), unionWithMaybe)
+import Constrained.Core
 import Constrained.GenT (GenT, MonadGenError (..), pureGen, sizeT)
 import Constrained.Generic
-import Constrained.List
 import Control.Applicative ((<|>))
 import Control.Arrow (first)
 import Data.Kind
 import Data.List (nub)
 import qualified Data.List.NonEmpty as NE
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe
 import qualified Data.Set as Set
 import Data.Typeable (typeOf)
 import Data.Word
 import GHC.Int
 import GHC.Natural
 import GHC.Real
-import GHC.TypeLits
 import System.Random.Stateful (Random (..), Uniform (..))
 import Test.QuickCheck (Arbitrary (arbitrary, shrink), choose, frequency)
 
@@ -58,15 +57,15 @@ import Test.QuickCheck (Arbitrary (arbitrary, shrink), choose, frequency)
 -- will eventually get Logic instances
 -- =====================================================================
 
-data NumOrdW (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  LessOrEqualW :: OrdLike a => NumOrdW "<=." '[a, a] Bool
-  LessW :: OrdLike a => NumOrdW "<." '[a, a] Bool
-  GreaterOrEqualW :: OrdLike a => NumOrdW ">=." '[a, a] Bool
-  GreaterW :: OrdLike a => NumOrdW ">." '[a, a] Bool
+data NumOrdW (dom :: [Type]) (rng :: Type) where
+  LessOrEqualW :: OrdLike a => NumOrdW '[a, a] Bool
+  LessW :: OrdLike a => NumOrdW '[a, a] Bool
+  GreaterOrEqualW :: OrdLike a => NumOrdW '[a, a] Bool
+  GreaterW :: OrdLike a => NumOrdW '[a, a] Bool
 
-deriving instance Eq (NumOrdW s ds r)
+deriving instance Eq (NumOrdW ds r)
 
-instance Show (NumOrdW s ds r) where
+instance Show (NumOrdW ds r) where
   show LessOrEqualW = "<=."
   show LessW = "<."
   show GreaterOrEqualW = ">=."
@@ -79,10 +78,10 @@ instance Semantics NumOrdW where
   semantics GreaterOrEqualW = (>=)
 
 instance Syntax NumOrdW where
-  isInFix LessOrEqualW = True
-  isInFix LessW = True
-  isInFix GreaterOrEqualW = True
-  isInFix GreaterW = True
+  inFix LessOrEqualW = True
+  inFix LessW = True
+  inFix GreaterOrEqualW = True
+  inFix GreaterW = True
 
 -- =============================================
 -- OrdLike. Ord for Numbers in the Logic
@@ -651,13 +650,13 @@ class (Num a, HasSpec a) => NumLike a where
     Maybe a
   safeSubtract a b = fromSimpleRep <$> safeSubtract @(SimpleRep a) (toSimpleRep a) (toSimpleRep b)
 
-data IntW (s :: Symbol) (as :: [Type]) b where
-  AddW :: NumLike a => IntW "addFn" '[a, a] a
-  NegateW :: NumLike a => IntW "negateFn" '[a] a
+data IntW (as :: [Type]) b where
+  AddW :: NumLike a => IntW '[a, a] a
+  NegateW :: NumLike a => IntW '[a] a
 
-deriving instance Eq (IntW s dom rng)
+deriving instance Eq (IntW dom rng)
 
-instance Show (IntW s d r) where
+instance Show (IntW d r) where
   show AddW = "addFn"
   show NegateW = "negateFn"
 
@@ -720,20 +719,26 @@ instance NumLike a => Num (Term a) where
 -- | Just a note that these instances won't work until we are in a context where
 --   there is a HasSpec instance of 'a', which (NumLike a) demands.
 --   This happens in Constrained.Experiment.TheKnot
-instance NumLike a => Logic "addFn" IntW '[a, a] a where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context AddW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
+instance Logic IntW where
+  propagate f ctxt (ExplainSpec [] s) = propagate f ctxt s
+  propagate f ctxt (ExplainSpec es s) = ExplainSpec es $ propagate f ctxt s
+  propagate _ _ TrueSpec = TrueSpec
+  propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate AddW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App AddW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context AddW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
+  propagate AddW (Value x :! NilCtx HOLE) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App AddW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate (Context AddW (i :|> HOLE :<> End)) spec =
-    propagate (Context AddW (HOLE :<> i :<| End)) spec
-  propagate (Context AddW (HOLE :<> i :<| End)) (TypeSpec ts cant) =
+  propagate AddW (i :! NilCtx HOLE) spec =
+    propagate AddW (HOLE :? i :> Nil) spec
+  propagate AddW (HOLE :? Value i :> Nil) (TypeSpec ts cant) =
     subtractSpec i ts <> notMemberSpec (mapMaybe (safeSubtract i) cant)
-  propagate (Context AddW (HOLE :<> i :<| End)) (MemberSpec es) =
+  propagate NegateW (NilCtx HOLE) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App NegateW (v' :> Nil)) (v :-> ps)
+  propagate NegateW (NilCtx HOLE) (TypeSpec ts cant) =
+    negateSpec ts <> notMemberSpec (map negate cant)
+  propagate NegateW (NilCtx HOLE) (MemberSpec es) =
+    MemberSpec $ NE.nub $ fmap negate es
+  propagate AddW (HOLE :? Value i :> Nil) (MemberSpec es) =
     memberSpecList
       (nub $ mapMaybe (safeSubtract i) (NE.toList es))
       ( NE.fromList
@@ -742,29 +747,9 @@ instance NumLike a => Logic "addFn" IntW '[a, a] a where
           , "We can't safely subtract " ++ show i ++ " from any choice in the MemberSpec."
           ]
       )
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for AddW with wrong number of arguments. " ++ show ctx)
 
 addFn :: forall a. NumLike a => Term a -> Term a -> Term a
 addFn = appTerm AddW
 
-instance NumLike a => Logic "negateFn" IntW '[a] a where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context NegateW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App NegateW (v' :> Nil)) (v :-> ps)
-  propagate (Context NegateW (HOLE :<> End)) (TypeSpec ts cant) =
-    negateSpec @a ts <> notMemberSpec (map negate cant)
-  propagate (Context NegateW (HOLE :<> End)) (MemberSpec es) =
-    MemberSpec $ NE.nub $ fmap negate es
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for NegateW with wrong number of arguments. " ++ show ctx)
-
-  mapTypeSpec NegateW (ts) = negateSpec ts
-
 negateFn :: forall a. NumLike a => Term a -> Term a
 negateFn = appTerm NegateW
-
--- ============================================================

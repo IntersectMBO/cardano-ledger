@@ -19,15 +19,13 @@ import Constrained.Base
 import Constrained.Conformance (conformsToSpec, satisfies)
 import Constrained.Core (unionWithMaybe)
 import Constrained.GenT (oneofT)
-import Constrained.List (List (..))
-import Constrained.Spec.ListFoldy (FoldSpec (..), ListSpec (..))
-import Constrained.Spec.SumProd (PairSpec (Cartesian), match)
+import Constrained.List
+import Constrained.Spec.SumProd (match)
 import Constrained.Syntax (forAll, genHint)
-import Constrained.TheKnot (genFromSpecT, shrinkWithSpec)
+import Constrained.TheKnot
 import Data.Kind
 import Data.Tree
 import GHC.Generics
-import GHC.TypeLits hiding (Text)
 import Test.QuickCheck (shrinkList)
 
 ------------------------------------------------------------------------
@@ -192,29 +190,24 @@ instance HasSpec a => HasGenHint (Tree a) where
   type Hint (Tree a) = (Maybe Integer, Integer)
   giveHint (avgLen, sz) = typeSpec $ TreeSpec avgLen (Just sz) TrueSpec TrueSpec
 
-data TreeW (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  RootLabelW :: TreeW "rootLabel_" '[Tree a] a
+data TreeW (dom :: [Type]) (rng :: Type) where
+  RootLabelW :: HasSpec a => TreeW '[Tree a] a
 
-deriving instance Eq (TreeW s d r)
-deriving instance Show (TreeW s d r)
+deriving instance Eq (TreeW d r)
+deriving instance Show (TreeW d r)
 
 instance Semantics TreeW where
   semantics RootLabelW = \(Node a _) -> a
 
 instance Syntax TreeW where
-  isInFix _ = False
+  inFix _ = False
 
-instance HasSpec a => Logic "rootLabel_" TreeW '[Tree a] a where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context RootLabelW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App RootLabelW (v' :> Nil)) (v :-> ps)
-  propagate (Context RootLabelW (HOLE :<> End)) spec =
-    typeSpec $ TreeSpec Nothing Nothing spec TrueSpec
-  propagate ctx _ =
-    ErrorSpec $ pure ("FunSym instance for RootLabel with wrong number of arguments. " ++ show ctx)
+instance Logic TreeW where
+  propagate f ctxt (ExplainSpec es s) = explainSpec es $ propagate f ctxt s
+  propagate _ _ TrueSpec = TrueSpec
+  propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
+  propagate RootLabelW (NilCtx HOLE) (SuspendedSpec v ps) = constrained $ \v' -> Let (App RootLabelW (v' :> Nil)) (v :-> ps)
+  propagate RootLabelW (NilCtx HOLE) spec = typeSpec $ TreeSpec Nothing Nothing spec TrueSpec
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec RootLabelW (TreeSpec _ _ rs _) = rs

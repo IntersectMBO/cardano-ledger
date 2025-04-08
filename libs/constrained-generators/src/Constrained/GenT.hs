@@ -28,6 +28,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
+-- NOTE: this is for `split` vs. `splitGen` that we haven't had
+-- time to fix in `QuickCheck`.
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Constrained.GenT where
 
 import Control.Monad
