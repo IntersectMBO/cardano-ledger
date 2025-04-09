@@ -40,10 +40,6 @@ import Cardano.Ledger.Shelley.Rewards (
   filterRewards,
  )
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (
-  member,
- )
-import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
@@ -95,7 +91,7 @@ applyRUpd ::
   EpochState era ->
   EpochState era
 applyRUpd ru es =
-  let (!es', _) = applyRUpdFiltered ru es
+  let !(!es', _) = applyRUpdFiltered ru es
    in es'
 
 -- TO IncrementalStake
@@ -131,7 +127,7 @@ applyRUpdFiltered
       ls' =
         ls
           & lsUTxOStateL . utxosFeesL %~ (`addDeltaCoin` deltaF ru)
-          & lsCertStateL . certDStateL . dsUnifiedL .~ (rewards dState UM.∪+ registeredAggregated)
+          & lsCertStateL . certDStateL . accountsL %~ addToBalanceAccounts registeredAggregated
       nm' = nonMyopic ru
 
 data FilteredRewards era = FilteredRewards
@@ -159,19 +155,22 @@ instance NFData (FilteredRewards era) where
 --   'prevPParams' is the ProtocolParams of the previous Epoch
 --   'rs' is the rewards mapping of the RewardUpdate from that previous Epoch
 filterAllRewards' ::
+  EraAccounts era =>
   Map (Credential 'Staking) (Set Reward) ->
   ProtVer ->
   DState era ->
   FilteredRewards era
-filterAllRewards' rs protVer dState =
+filterAllRewards' rewards protVer dState =
   FilteredRewards registered shelleyIgnored unregistered totalUnregistered
   where
-    (regRU, unregRU) = Map.partitionWithKey (\k _ -> member k (rewards dState)) rs
+    accountsMap = dState ^. accountsL . accountsMapL
+    (registeredRewardsUpdate, unregisteredRewardsUpdate) =
+      Map.partitionWithKey (\cred _ -> cred `Map.member` accountsMap) rewards
     -- Partition on memebership in the rewards view of the unified map of DState
     -- Note that only registered rewards appear in 'regRU' because of this 'member' check.
-    totalUnregistered = fold $ aggregateRewards protVer unregRU
-    unregistered = Map.keysSet unregRU
-    (registered, shelleyIgnored) = filterRewards protVer regRU
+    totalUnregistered = fold $ aggregateRewards protVer unregisteredRewardsUpdate
+    unregistered = Map.keysSet unregisteredRewardsUpdate
+    (registered, shelleyIgnored) = filterRewards protVer registeredRewardsUpdate
 
 filterAllRewards ::
   (EraGov era, EraCertState era) =>

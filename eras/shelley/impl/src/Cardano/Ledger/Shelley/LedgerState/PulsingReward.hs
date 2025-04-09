@@ -117,7 +117,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
       Coin reserves = acnt ^. casReservesL
-      accountsMap = ls ^. accountsG . accountsMapL
+      accountsMap = ls ^. lsCertStateL . certDStateL . accountsL . accountsMapL
       -- reserves and rewards change
       pr = es ^. prevPParamsEpochStateL
       deltaR1 =

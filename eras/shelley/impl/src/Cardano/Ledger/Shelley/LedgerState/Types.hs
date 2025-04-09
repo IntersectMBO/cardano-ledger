@@ -457,11 +457,6 @@ instance CanSetInstantStake LedgerState where
   instantStakeL = lens lsUTxOState (\s us -> s {lsUTxOState = us}) . instantStakeL
   {-# INLINE instantStakeL #-}
 
-instance CanGetAccounts LedgerState
-instance CanSetAccounts LedgerState where
-  accountsL = lens lsCertState (\s cs -> s {lsCertState = cs}) . accountsL
-  {-# INLINE accountsL #-}
-
 deriving stock instance
   ( EraTxOut era
   , Show (GovState era)

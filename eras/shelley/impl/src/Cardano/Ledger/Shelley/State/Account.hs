@@ -168,29 +168,30 @@ class EraAccounts era => ShelleyEraAccounts era where
     Lens' (AccountState era) Ptr
   ptrAccountStateL = lens sasPtr $ \as ptr -> as {sasPtr = ptr}
 
-registerShelleyStakingCredential ::
+registerShelleyAccount ::
   ShelleyEraAccounts era =>
   Credential 'Staking ->
   -- | Pointer to the certificate that registered the credential
   Ptr ->
   -- | Deposit
   CompactForm Coin ->
+  Maybe (KeyHash 'StakePool) ->
   Accounts era ->
   Accounts era
-registerShelleyStakingCredential cred ptr deposit accounts =
+registerShelleyAccount cred ptr deposit mStakePool accounts =
   accounts
     & (accountsMapL %~ Map.insert cred accountState)
     & (accountsPtrsMapL %~ Map.insert ptr cred)
   where
     accountState =
-      mkShelleyAccountState ptr deposit
+      mkShelleyAccountState ptr deposit & stakePoolDelegationAccountStateL .~ mStakePool
 
-unregisterShelleyStakingCredential ::
+unregisterShelleyAccount ::
   ShelleyEraAccounts era =>
   Credential 'Staking ->
   Accounts era ->
   (Maybe (AccountState era), Accounts era)
-unregisterShelleyStakingCredential cred accounts = (mAccountState, newAccounts)
+unregisterShelleyAccount cred accounts = (mAccountState, newAccounts)
   where
     (mAccountState, newAccountsMap) = Map.extract cred (accounts ^. accountsMapL)
     removePtr accountState = accountsPtrsMapL %~ Map.delete (accountState ^. ptrAccountStateL)

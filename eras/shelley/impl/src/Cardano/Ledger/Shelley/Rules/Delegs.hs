@@ -53,7 +53,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   PState (..),
   psStakePoolParams,
-  rewards,
  )
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (
@@ -272,19 +271,18 @@ validateStakePoolDelegateeRegistered pState targetPool =
   let stPools = psStakePoolParams pState
    in failureUnless (eval (targetPool ∈ dom stPools)) targetPool
 
--- @withdrawals_@ is small and @rewards@ big, better to transform the former
--- than the latter into the right shape so we can call 'Map.isSubmapOf'.
-isSubmapOfUM ::
+-- @withdrawalsMap@ is small and @accountsMap@ big, better to transform the former
+-- than the latter to have the same keys, so we can call 'Map.isSubmapOfBy'.
+doWithdrawalsDrainAccounts ::
   Map RewardAccount Coin ->
-  UView (Credential 'Staking) UM.RDPair ->
+  Accounts era ->
   Bool
-isSubmapOfUM ws (RewDepUView (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
+doWithdrawalsDrainAccounts (Withdrawals withdrawalsMap) accounts =
+  Map.isSubmapOfBy checkBalance (Map.mapKeys raCredential withdrawalsMap) (accounts ^. accountsMapL)
   where
-    withdrawalMap :: Map.Map (Credential 'Staking) Coin
-    withdrawalMap = Map.mapKeys (\(RewardAccount _ cred) -> cred) ws
-    f :: Coin -> UMElem -> Bool
-    f coin1 (UMElem (SJust (UM.RDPair coin2 _)) _ _ _) = coin1 == fromCompact coin2
-    f _ _ = False
+    checkBalance :: Coin -> AccountState era -> Bool
+    checkBalance withdrawalAmount accountState =
+      withdrawalAmount == fromCompact (accountState balanceAccountStateL)
 
 drainWithdrawals :: DState era -> Withdrawals -> DState era
 drainWithdrawals dState (Withdrawals wdrls) =
@@ -305,8 +303,8 @@ validateZeroRewards ::
   Withdrawals ->
   Network ->
   Test (Map RewardAccount Coin)
-validateZeroRewards dState (Withdrawals wdrls) network = do
-  failureUnless (isSubmapOfUM wdrls (rewards dState)) $ -- withdrawals_ ⊆ rewards
+validateZeroRewards dState withdrawals@(Withdrawals wdrls) network = do
+  failureUnless (doWithdrawalsDrainAccounts withdrawals (rewards dState)) $ -- withdrawals_ ⊆ rewards
     Map.differenceWith
       (\x y -> if x /= y then Just x else Nothing)
       wdrls
