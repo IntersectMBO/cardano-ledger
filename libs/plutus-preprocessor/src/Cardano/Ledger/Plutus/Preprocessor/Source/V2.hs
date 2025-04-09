@@ -7,6 +7,7 @@ import qualified PlutusLedgerApi.V2 as PV2
 import PlutusTx (fromBuiltinData, unsafeFromBuiltinData)
 import qualified PlutusTx.AssocMap as PAM
 import qualified PlutusTx.Builtins as P
+import qualified PlutusTx.List as PL
 import qualified PlutusTx.Prelude as P
 
 alwaysSucceedsNoDatumQ :: Q [Dec]
@@ -157,7 +158,7 @@ purposeIsWellformedNoDatumQ =
                     then ()
                     else P.error ()
                 PV2.Certifying dCert ->
-                  if null $ P.filter (dCert P.==) $ PV2.txInfoDCert txInfo
+                  if null $ PL.filter (dCert P.==) $ PV2.txInfoDCert txInfo
                     then P.error ()
                     else ()
     |]
@@ -174,7 +175,7 @@ purposeIsWellformedWithDatumQ =
               case unsafeFromBuiltinData context of
                 -- Only spending scripts can have a Datum
                 PV2.ScriptContext txInfo (PV2.Spending txOutRef) ->
-                  if null $ P.filter ((txOutRef P.==) . PV2.txInInfoOutRef) $ PV2.txInfoInputs txInfo
+                  if null $ PL.filter ((txOutRef P.==) . PV2.txInInfoOutRef) $ PV2.txInfoInputs txInfo
                     then P.error ()
                     else ()
                 _ -> P.error ()
@@ -192,7 +193,7 @@ datumIsWellformedQ =
               case unsafeFromBuiltinData context of
                 -- Only spending scripts can have a Datum
                 PV2.ScriptContext txInfo (PV2.Spending _txOutRef) ->
-                  if null $ P.filter (datum' P.==) $ PAM.elems $ PV2.txInfoData txInfo
+                  if null $ PL.filter (datum' P.==) $ PAM.elems $ PV2.txInfoData txInfo
                     then P.error ()
                     else ()
                 _ -> P.error ()
