@@ -248,7 +248,7 @@ delegsTransition = do
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
       validateTrans WithdrawalsNotInRewardsDELEGS $
         validateZeroRewards dState withdrawals network
-      pure $ certState & certDStateL .~ drainWithdrawals dState withdrawals
+      pure $ certState & certDStateL . accountsL %~ drainAccounts withdrawals
     gamma :|> txCert -> do
       certState' <-
         trans @(ShelleyDELEGS era) $ TRC (env, certState, gamma)
@@ -271,31 +271,6 @@ validateStakePoolDelegateeRegistered pState targetPool =
   let stPools = psStakePoolParams pState
    in failureUnless (eval (targetPool ∈ dom stPools)) targetPool
 
--- @withdrawalsMap@ is small and @accountsMap@ big, better to transform the former
--- than the latter to have the same keys, so we can call 'Map.isSubmapOfBy'.
-doWithdrawalsDrainAccounts ::
-  Map RewardAccount Coin ->
-  Accounts era ->
-  Bool
-doWithdrawalsDrainAccounts (Withdrawals withdrawalsMap) accounts =
-  Map.isSubmapOfBy checkBalance (Map.mapKeys raCredential withdrawalsMap) (accounts ^. accountsMapL)
-  where
-    checkBalance :: Coin -> AccountState era -> Bool
-    checkBalance withdrawalAmount accountState =
-      withdrawalAmount == fromCompact (accountState balanceAccountStateL)
-
-drainWithdrawals :: DState era -> Withdrawals -> DState era
-drainWithdrawals dState (Withdrawals wdrls) =
-  dState {dsUnified = rewards dState UM.⨃ drainedRewardAccounts}
-  where
-    drainedRewardAccounts =
-      Map.foldrWithKey
-        ( \(RewardAccount _ cred) _coin ->
-            Map.insert cred (UM.RDPair (UM.CompactCoin 0) (UM.CompactCoin 0))
-            -- Note that the deposit (CompactCoin 0) will be ignored.
-        )
-        Map.empty
-        wdrls
 
 validateZeroRewards ::
   forall era.
