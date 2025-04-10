@@ -2,6 +2,9 @@
 
 ## 1.18.0.0
 
+* Add `addCompactCoin` to `Cardano.Ledger.Coin` and deprecate `Cardano.Ledger.UMap.addCompact`
+  in its favor
+* Move `sumCompactCoin` to `Cardano.Ledger.Coin`
 * Add `eraDecoderWithBytes`
 * Move `Annotator` instances to `testlib`
 * Expose `MkData` constructor.

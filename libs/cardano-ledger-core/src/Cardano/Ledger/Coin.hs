@@ -24,6 +24,8 @@ module Cardano.Ledger.Coin (
   integerToWord64,
   decodePositiveCoin,
   compactCoinOrError,
+  addCompactCoin,
+  sumCompactCoin,
   -- NonZero helpers
   toCompactCoinNonZero,
   unCoinNonZero,
@@ -54,6 +56,7 @@ import Cardano.Ledger.Compactible
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Coerce (coerce)
+import Data.Foldable (Foldable (..))
 import Data.Group (Abelian, Group (..))
 import Data.MemPack
 import Data.Monoid (Sum (..))
@@ -65,6 +68,7 @@ import GHC.Stack
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import System.Random.Stateful (Uniform (..), UniformRange (..))
+import Prelude hiding (Foldable (..))
 
 -- | The amount of value held by a transaction output.
 newtype Coin = Coin {unCoin :: Integer}
@@ -172,6 +176,12 @@ instance EncCBOR (CompactForm DeltaCoin) where
 
 instance DecCBOR (CompactForm DeltaCoin) where
   decCBOR = CompactDeltaCoin <$> decCBOR
+
+addCompactCoin :: CompactForm Coin -> CompactForm Coin -> CompactForm Coin
+addCompactCoin (CompactCoin x) (CompactCoin y) = CompactCoin (x + y)
+
+sumCompactCoin :: Foldable t => t (CompactForm Coin) -> CompactForm Coin
+sumCompactCoin = foldl' addCompactCoin (CompactCoin 0)
 
 -- ================================
 
