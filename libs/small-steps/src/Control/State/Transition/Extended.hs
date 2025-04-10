@@ -51,6 +51,7 @@ module Control.State.Transition.Extended (
   labeledPredE,
   ifFailureFree,
   whenFailureFree,
+  whenFailureFreeDefault,
   failBecause,
   failOnJust,
   failOnNonEmpty,
@@ -449,7 +450,11 @@ ifFailureFree :: Rule sts rtype a -> Rule sts rtype a -> Rule sts rtype a
 ifFailureFree x y = liftF (IfFailureFree x y)
 
 whenFailureFree :: Rule sts rtype () -> Rule sts rtype ()
-whenFailureFree action = ifFailureFree action (pure ())
+whenFailureFree = whenFailureFreeDefault ()
+
+whenFailureFreeDefault :: a -> Rule sts rtype a -> Rule sts rtype a
+whenFailureFreeDefault defValOnFailure actionOnNoFailure =
+  ifFailureFree actionOnNoFailure (pure defValOnFailure)
 
 liftSTS ::
   STS sts =>

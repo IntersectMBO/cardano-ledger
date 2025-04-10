@@ -113,7 +113,7 @@ library
     nothunks,
     plutus-ledger-api >=1.37,
     set-algebra,
-    small-steps >=1.1,
+    small-steps >=1.1.2,
     text,
     transformers,
     validation-selective,
