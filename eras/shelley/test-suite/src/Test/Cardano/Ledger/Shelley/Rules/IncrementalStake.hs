@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
   incrStakeComputationTest,
@@ -72,13 +73,14 @@ incrStakeComputationTest ::
   forall era ledger.
   ( EraGen era
   , EraStake era
+  , InstantStake era ~ ShelleyInstantStake era
   , TestingLedger era ledger
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv MockCrypto era)
   ) =>
   TestTree
 incrStakeComputationTest =
-  testProperty "incremental stake calc" $
+  testProperty "instant stake calculation" $
     forAllChainTrace @era longTraceLen defaultConstants $ \tr -> do
       let ssts = sourceSignalTargets tr
 
@@ -89,7 +91,10 @@ incrStakeComputationTest =
 
 incrStakeComp ::
   forall era ledger.
-  (ChainProperty era, EraStake era, TestingLedger era ledger) =>
+  ( ChainProperty era
+  , InstantStake era ~ ShelleyInstantStake era
+  , TestingLedger era ledger
+  ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
 incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
@@ -126,10 +131,10 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
               , show ptrs'
               ]
           )
-          $ utxoBal === fromCompact incrStakeBal
+          $ utxoBalanace === fromCompact instantStakeBalanace
         where
-          utxoBal = coinBalance u'
-          incrStakeBal = fold (is' ^. instantStakeCredentialsL) <> fold (is' ^. instantStakeCredentialsL)
+          utxoBalanace = coinBalance u'
+          instantStakeBalanace = fold (sisCredentialStake is') <> fold (sisPtrStake is')
           ptrs = ptrsMap $ dp ^. certDStateL
           ptrs' = ptrsMap $ dp' ^. certDStateL
 
