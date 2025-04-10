@@ -273,7 +273,7 @@ data ScriptIntegrity era
       !(Redeemers era) -- From the witnesses
       !(TxDats era)
       !(Set LangDepView) -- From the Protocol parameters
-  deriving (Eq, Generic, Typeable)
+  deriving (Eq, Generic)
 
 deriving instance AlonzoEraScript era => Show (ScriptIntegrity era)
 

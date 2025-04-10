@@ -134,7 +134,6 @@ import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Data.Void (absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -177,7 +176,7 @@ data BabbageTxBodyRaw era = BabbageTxBodyRaw
   , btbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
   , btbrNetworkId :: !(StrictMaybe Network)
   }
-  deriving (Generic, Typeable)
+  deriving (Generic)
 
 -- We override this instance because the 'Sized' types also reference their
 -- serialisation and as such cannot be compared directly. An alternative would

@@ -58,7 +58,7 @@ import Control.State.Transition (
   (?!),
  )
 import qualified Data.Bimap as Bimap
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import Data.Foldable (fold, traverse_)
 import Data.Function ((&))
 import Data.List.Unique (count)
@@ -322,7 +322,7 @@ onlyValidSignalsAreGenerated =
   withTests 300 $ Transition.Generator.onlyValidSignalsAreGenerated @UPIREG () 100
 
 -- | Dummy transition system to test blocks with update payload only.
-data UBLOCK deriving (Data, Typeable)
+data UBLOCK deriving (Data)
 
 -- | An update block
 data UBlock = UBlock
@@ -346,7 +346,7 @@ data UBlockPredicateFailure
   | UPIVOTESFailure (PredicateFailure UPIVOTES)
   | UPIENDFailure (PredicateFailure UPIEND)
   | NotIncreasingBlockSlot
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data)
 
 instance STS UBLOCK where
   type Environment UBLOCK = UPIEnv

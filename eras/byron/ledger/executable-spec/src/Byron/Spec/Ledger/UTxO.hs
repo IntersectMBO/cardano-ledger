@@ -20,7 +20,7 @@ module Byron.Spec.Ledger.UTxO where
 import Byron.Spec.Ledger.Core hiding ((<|))
 import Byron.Spec.Ledger.Update (FactorA (..), FactorB (..), PParams (PParams), _factorA, _factorB)
 import Data.AbstractSize (HasTypeReps, abstractSize)
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Map.Strict (Map)
@@ -33,7 +33,7 @@ import Numeric.Natural (Natural)
 
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId {getTxId :: Hash}
-  deriving stock (Show, Generic, Data, Typeable)
+  deriving stock (Show, Generic, Data)
   deriving newtype (Eq, Ord, Hashable, NoThunks)
   deriving anyclass (HasTypeReps)
 
@@ -49,7 +49,6 @@ data TxIn = TxIn TxId Natural
     , Hashable
     , HasTypeReps
     , Data
-    , Typeable
     , NoThunks
     )
 
@@ -66,7 +65,6 @@ data TxOut = TxOut
     , Hashable
     , HasTypeReps
     , Data
-    , Typeable
     , NoThunks
     )
 
@@ -74,7 +72,7 @@ data TxOut = TxOut
 newtype UTxO = UTxO
   { unUTxO :: Map TxIn TxOut
   }
-  deriving stock (Show, Data, Typeable)
+  deriving stock (Show, Data)
   deriving newtype (Eq, Relation, Semigroup, Monoid, NoThunks)
 
 -- | Apply function uniformly across all outputs
@@ -106,7 +104,6 @@ data TxBody = TxBody
     , Hashable
     , HasTypeReps
     , Data
-    , Typeable
     , NoThunks
     )
 
@@ -171,7 +168,6 @@ data Wit = Wit VKey (Sig TxBody)
     , Hashable
     , HasTypeReps
     , Data
-    , Typeable
     , NoThunks
     )
 
@@ -187,7 +183,6 @@ data Tx = Tx
     , Hashable
     , HasTypeReps
     , Data
-    , Typeable
     , NoThunks
     )
 

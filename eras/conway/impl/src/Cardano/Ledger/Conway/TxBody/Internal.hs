@@ -120,7 +120,6 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', to, (^.))
 import NoThunks.Class (NoThunks)
@@ -149,7 +148,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrCurrentTreasuryValue :: !(StrictMaybe Coin)
   , ctbrTreasuryDonation :: !Coin
   }
-  deriving (Generic, Typeable)
+  deriving (Generic)
 
 deriving instance (EraPParams era, Eq (TxCert era), Eq (TxOut era)) => Eq (ConwayTxBodyRaw era)
 

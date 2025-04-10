@@ -30,7 +30,7 @@ import qualified Byron.Spec.Ledger.Update as Update
 import Control.State.Transition
 import Data.Bimap (Bimap)
 import Data.Bits (shift)
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import qualified Data.Map as Map
 import Data.Sequence (Seq)
 import Data.Set (Set)
@@ -46,7 +46,7 @@ import Lens.Micro.Internal (Field1 (..), Field5 (..))
 import Numeric.Natural (Natural)
 import Test.Control.State.Transition.Generator
 
-data CHAIN deriving (Data, Typeable)
+data CHAIN deriving (Data)
 
 data ChainPredicateFailure
   = EpochFailure (PredicateFailure EPOCH)
@@ -56,7 +56,7 @@ data ChainPredicateFailure
   | MaximumBlockSize Natural Natural
   | LedgerDelegationFailure (PredicateFailure DELEG)
   | LedgerUTxOFailure (PredicateFailure UTXOWS)
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data)
 
 instance STS CHAIN where
   type

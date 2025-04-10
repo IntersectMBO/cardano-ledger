@@ -214,7 +214,7 @@ library testlib
     prettyprinter,
     primitive,
     quickcheck-transformer,
-    random >=1.2,
+    random ^>=1.2,
     small-steps >=1.1,
     text,
     time,

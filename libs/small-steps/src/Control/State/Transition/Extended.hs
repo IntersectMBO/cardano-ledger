@@ -783,7 +783,7 @@ applySTSInternal ep ap goRule ctx =
 --
 -- TODO move this somewhere more sensible
 newtype Threshold a = Threshold a
-  deriving (Eq, Ord, Show, Data, Typeable, NoThunks)
+  deriving (Eq, Ord, Show, Data, NoThunks)
 
 {------------------------------------------------------------------------------
 -- Utils
