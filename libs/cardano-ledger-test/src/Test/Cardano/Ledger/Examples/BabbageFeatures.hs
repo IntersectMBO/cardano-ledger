@@ -102,6 +102,7 @@ import Test.Cardano.Ledger.Generic.GenState (
  )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
+import qualified Test.Cardano.Ledger.Generic.Scriptic as Scriptic
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair, mkKeyPair')
@@ -128,7 +129,7 @@ keyHashForMultisig :: forall era. Proof era -> KeyHash 'Witness
 keyHashForMultisig pf = hashKey . vKey $ keysForMultisig pf
 
 simpleScript :: forall era. Scriptic era => Proof era -> Script era
-simpleScript pf = fromNativeScript $ allOf [require @era (keyHashForMultisig pf)] pf
+simpleScript pf = fromNativeScript $ Scriptic.allOf [require @era (keyHashForMultisig pf)] pf
 
 evenData3ArgsScript :: HasCallStack => Proof era -> Script era
 evenData3ArgsScript proof =
