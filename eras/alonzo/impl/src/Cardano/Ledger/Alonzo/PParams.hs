@@ -77,16 +77,13 @@ import Cardano.Ledger.Binary (
   Encoding,
   FromCBOR (..),
   ToCBOR (..),
-  decCBORGroup,
   decodeRecordNamed,
-  encCBORGroup,
   encodeFoldableAsDefLenList,
   encodeFoldableAsIndefLenList,
   encodeListLen,
   encodeMapLen,
   encodeNull,
   encodePreEncoded,
-  listLen,
   serialize',
  )
 import Cardano.Ledger.Binary.Coders (
@@ -389,7 +386,7 @@ instance EraGov AlonzoEra where
 
 instance Era era => EncCBOR (AlonzoPParams Identity era) where
   encCBOR AlonzoPParams {..} =
-    encodeListLen (23 + listLen appProtocolVersion)
+    encodeListLen 24
       <> encCBOR appMinFeeA
       <> encCBOR appMinFeeB
       <> encCBOR appMaxBBSize
@@ -404,7 +401,7 @@ instance Era era => EncCBOR (AlonzoPParams Identity era) where
       <> encCBOR appTau
       <> encCBOR appD
       <> encCBOR appExtraEntropy
-      <> encCBORGroup appProtocolVersion
+      <> encCBOR appProtocolVersion
       <> encCBOR appMinPoolCost
       -- new/updated for alonzo
       <> encCBOR appCoinsPerUTxOWord
@@ -418,7 +415,7 @@ instance Era era => EncCBOR (AlonzoPParams Identity era) where
 
 instance Era era => DecCBOR (AlonzoPParams Identity era) where
   decCBOR =
-    decodeRecordNamed "PParams" (\pp -> 23 + fromIntegral (listLen (appProtocolVersion pp))) $ do
+    decodeRecordNamed "PParams" (const 24) $ do
       appMinFeeA <- decCBOR
       appMinFeeB <- decCBOR
       appMaxBBSize <- decCBOR
@@ -433,7 +430,7 @@ instance Era era => DecCBOR (AlonzoPParams Identity era) where
       appTau <- decCBOR
       appD <- decCBOR
       appExtraEntropy <- decCBOR
-      appProtocolVersion <- decCBORGroup
+      appProtocolVersion <- decCBOR
       appMinPoolCost <- decCBOR
       -- new/updated for alonzo
       appCoinsPerUTxOWord <- decCBOR
