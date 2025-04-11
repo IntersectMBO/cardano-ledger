@@ -10,6 +10,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -88,7 +89,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
@@ -104,7 +105,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
-import Lens.Micro (Lens', SimpleGetter, lens)
+import Lens.Micro (Lens', SimpleGetter, lens, (^.))
 import NoThunks.Class (NoThunks)
 
 -- | Protocol parameters
@@ -364,6 +365,13 @@ class
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
   pparamDescriptors :: [PParamDescriptor era]
+
+  encCBORPParams :: PParams era -> Encoding
+  encCBORPParams pp =
+    encodeListLen (fromIntegral (length (pparamDescriptors @era)))
+      <> foldMap' toEnc (pparamDescriptors @era)
+    where
+      toEnc PParamDescriptor {ppdLens} = encCBOR $ pp ^. ppdLens
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
