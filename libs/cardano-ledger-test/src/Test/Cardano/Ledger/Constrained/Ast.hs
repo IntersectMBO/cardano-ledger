@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | The types that make up the Abstract Syntax Trees of the Language
@@ -53,6 +54,7 @@ import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed (..), 
 import Test.Cardano.Ledger.Constrained.Size (Size (..), runSize, seps)
 import Test.Cardano.Ledger.Constrained.TypeRep (
   Rep (..),
+  ToExprs,
   format,
   hasEq,
   synopsis,
@@ -218,7 +220,7 @@ pattern Word64 x = Lit Word64R x
 var :: Era era => String -> Rep era t -> Term era t
 var s r = Var (V s r No)
 
-unVar :: Term era t -> V era t
+unVar :: ToExprs era => Term era t -> V era t
 unVar (Var v) = v
 unVar x = error ("Non Var in unVar: " ++ show x)
 
@@ -233,7 +235,7 @@ select small big lenz = Proj lenz (termRep small) big :=: small
 
 -- | (select small big lens), 'big' is evaluated to a value, 'small' is a Var, constrain 'small'
 --   such that it is bound to the 'lens' component of 'big'. Computes a 'Component' Pred
-select2 :: Era era => Term era t -> Term era big -> Lens' big t -> Pred era
+select2 :: (Era era, ToExprs era) => Term era t -> Term era big -> Lens' big t -> Pred era
 select2 (Var (V nm t _)) big lenz = Component (Left big) [AnyF (Field nm t (termRep big) lenz)]
 select2 t1 t2 _ =
   error ("In (select " ++ show t1 ++ " " ++ show t2 ++ " lens)  " ++ show t1 ++ " is not a Var term.")
@@ -308,7 +310,7 @@ showL _f _sep [] = ""
 showL f _sep [t] = f t
 showL f sep (t : ts) = f t ++ sep ++ showL f sep ts
 
-instance Show (Term era t) where
+instance ToExprs era => Show (Term era t) where
   show (Lit r k) = synopsis r k
   show (Var (V nm _rep _)) = nm -- ++ "::" ++ show _rep
   show (Dom x) = "(Dom " ++ show x ++ ")"
@@ -325,14 +327,14 @@ instance Show (Term era t) where
   show (Pair r t) = "(Pair " ++ show r ++ " " ++ show t ++ ")"
   showList xs ans = unlines (ans : map show xs)
 
-instance Show (Sum era c) where
+instance ToExprs era => Show (Sum era c) where
   show (SumMap t) = "sum " ++ show t
   show (SumList t) = "sum " ++ show t
   show (One t) = show t
   show (ProjOne _ c t) = seps ["ProjOne", show c, show t]
   show (ProjMap crep _lens t) = "ProjMap " ++ show crep ++ " " ++ show t
 
-instance Show (Pred era) where
+instance ToExprs era => Show (Pred era) where
   show (MetaSize n t) = "MetaSize " ++ show n ++ " " ++ show t
   show (Sized n t) = "Sized " ++ show n ++ " " ++ show t
   show (x :=: y) = show x ++ " :=: " ++ show y
@@ -373,7 +375,7 @@ instance Show (Pred era) where
 showAllTarget :: RootTarget era r t -> [Char]
 showAllTarget tar = "   forall " ++ showL show " " (HashSet.toList (varsOfTarget HashSet.empty tar)) ++ ". "
 
-instance Show (RootTarget era r t) where
+instance ToExprs era => Show (RootTarget era r t) where
   show (Constr nm _f) = nm
   show (Simple x) = show x
   show (Lensed x _) = show x
@@ -388,7 +390,7 @@ instance Show (RootTarget era r t) where
   show (Virtual x y _) = "(Virtual " ++ show x ++ " " ++ show y ++ ")"
 
 -- | "Print a Target as nested applications"
-showT :: forall era t r. RootTarget era r t -> String
+showT :: forall era t r. ToExprs era => RootTarget era r t -> String
 showT (Constr nm _f) = nm
 showT (Simple x) = show x
 showT (Lensed x _) = show x
@@ -409,22 +411,22 @@ args other = [Univ.Any other]
 -- | Print a Target as a record showing the struture and names of all
 --   the variables involved. This documents what is in scope where
 --   the Target value was defined.
-ppTarget :: RootTarget era r t -> Expr
+ppTarget :: ToExprs era => RootTarget era r t -> Expr
 ppTarget x = targetRecord x []
 
-targetRecord :: RootTarget era r t -> [(Text, Expr)] -> Expr
-targetRecord (Constr n _) xs = ppRecord (pack n) xs
+targetRecord :: ToExprs era => RootTarget era r t -> [(Text, Expr)] -> Expr
+targetRecord (Constr n _) xs = toExpr (n, xs)
 targetRecord (ts :$ t) xs = targetRecord ts (targetPair t : xs)
-targetRecord (Simple e) [] = ppString (show e)
-targetRecord (Lensed e _) [] = ppString (show e)
-targetRecord (Partial e _) [] = ppString (show e)
-targetRecord (Invert n _ _) xs = ppRecord (pack n) xs
+targetRecord (Simple e) [] = toExpr $ show e
+targetRecord (Lensed e _) [] = toExpr $ show e
+targetRecord (Partial e _) [] = toExpr $ show e
+targetRecord (Invert n _ _) xs = toExpr (n, xs)
 targetRecord (Shift x _) xs = targetRecord x xs
 targetRecord (Mask x) xs = targetRecord x xs
 targetRecord (Virtual _ e _) [] = e
-targetRecord other xs = ppRecord (nameOf other) xs
+targetRecord other xs = toExpr (nameOf other, xs)
 
-nameOf :: RootTarget era r t -> Text
+nameOf :: ToExprs era => RootTarget era r t -> Text
 nameOf (Constr cs _) = pack (map toLower cs ++ "T")
 nameOf (Simple (Var (V n _ _))) = pack n
 nameOf (Lensed (Var (V n _ _)) _) = pack n
@@ -438,11 +440,11 @@ nameOf (Shift x _) = nameOf x
 nameOf (Mask x) = nameOf x
 nameOf (Virtual _ x _) = pack (show x)
 
-targetPair :: RootTarget era r t -> (Text, Expr)
-targetPair (Simple (Var (V n rep _))) = (pack n, ppString (show rep))
-targetPair (Lensed (Var (V n rep _)) _) = (pack n, ppString (show rep))
-targetPair (Partial (Var (V n rep _)) _) = (pack n, ppString (show rep))
-targetPair (Virtual (Var (V _ rep _)) newname _) = (pack (show newname), ppString (show rep))
+targetPair :: ToExprs era => RootTarget era r t -> (Text, Expr)
+targetPair (Simple (Var (V n rep _))) = (pack n, toExpr $ show rep)
+targetPair (Lensed (Var (V n rep _)) _) = (pack n, toExpr $ show rep)
+targetPair (Partial (Var (V n rep _)) _) = (pack n, toExpr $ show rep)
+targetPair (Virtual (Var (V _ rep _)) newname _) = (pack (show newname), toExpr $ show rep)
 targetPair x = (nameOf x, targetRecord x [])
 
 -- ===================================================
@@ -565,7 +567,7 @@ varsOfSum ans (ProjMap _ _ x) = varsOfTerm ans x
 
 -- =====================================================================
 
-expandSum :: Sum era c -> [Int] -> [Sum era c]
+expandSum :: ToExprs era => Sum era c -> [Int] -> [Sum era c]
 expandSum (One (Var (V n r a))) ns = map (\i -> One (Var (V (n ++ "." ++ show i) r a))) ns
 expandSum (ProjOne l rep (Var (V n r a))) ns = map (\i -> ProjOne l rep (Var (V (n ++ "." ++ show i) r a))) ns
 expandSum x _ = error ("Bad Sum in expandSum: " ++ show x)
@@ -579,7 +581,7 @@ pad n x = x ++ replicate (n - length x) ' '
 data SubstElem era where
   SubstElem :: Rep era t -> Term era t -> Access era s t -> SubstElem era
 
-instance Show (SubstElem era) where
+instance ToExprs era => Show (SubstElem era) where
   show (SubstElem rep t _) = show t ++ " :: " ++ show rep
 
 newtype Subst era = Subst (Map String (SubstElem era))
@@ -587,7 +589,7 @@ newtype Subst era = Subst (Map String (SubstElem era))
 extend :: V era t -> Term era t -> Subst era -> Subst era
 extend (V nm rep access) term (Subst m) = Subst (Map.insert nm (SubstElem rep term access) m)
 
-instance Show (Subst era) where
+instance ToExprs era => Show (Subst era) where
   show (Subst m) = unlines (map f (Map.toList m))
     where
       f (nm, SubstElem _ t _) = nm ++ " -> " ++ show t
@@ -595,7 +597,7 @@ instance Show (Subst era) where
 emptySubst :: Subst era
 emptySubst = Subst Map.empty
 
-substToEnv :: Subst era -> Env era -> Typed (Env era)
+substToEnv :: ToExprs era => Subst era -> Env era -> Typed (Env era)
 substToEnv (Subst m) env = Map.foldlWithKey' accum (pure env) m
   where
     accum ansM key (SubstElem r (Lit _ v) access) = do
@@ -640,7 +642,7 @@ substFromNames names = Subst (HashSet.foldl' accum Map.empty names)
 data SubItem era where
   SubItem :: V era t -> Term era t -> SubItem era
 
-instance Show (SubItem era) where
+instance ToExprs era => Show (SubItem era) where
   show (SubItem x y) = "(SubItem " ++ show x ++ " " ++ show y ++ ")"
 
 itemsToSubst :: [SubItem era] -> Subst era
@@ -723,7 +725,7 @@ substPred sub (ListWhere sz t tar ps) =
     newsub = composeSubst (substFromTarget tar) sub
 
 -- | Apply the Subst, and test if all variables are removed.
-substPredWithVarTest :: Subst era -> Pred era -> Pred era
+substPredWithVarTest :: ToExprs era => Subst era -> Pred era -> Pred era
 substPredWithVarTest sub oldpred =
   let newpred = substPred sub oldpred
       freevars = varsOfPred HashSet.empty newpred
@@ -769,7 +771,7 @@ substTarget sub (Virtual x y l) = Virtual (substTerm sub x) y l
 -- Symbolic evaluators
 
 -- | Simplify Terms that only contain Literals (or constant) sub-Terms
-simplify :: Term era t -> Typed t
+simplify :: ToExprs era => Term era t -> Typed t
 simplify (Lit _ x) = pure x
 simplify (Dom (Lit _ x)) = pure (Map.keysSet x)
 simplify (Dom (ProjM _ _ t)) = simplify (Dom t)
@@ -817,7 +819,7 @@ simplify (Pair s m) = do
 simplify x = failT ["Can't simplify term: " ++ show x ++ ", to a value."]
 
 -- | Simplify constant Sum's
-simplifySum :: Sum era c -> Typed c
+simplifySum :: ToExprs era => Sum era c -> Typed c
 simplifySum (One (Lit _ x)) = pure x
 simplifySum (One (Delta (Lit CoinR (Coin n)))) = pure (DeltaCoin n)
 simplifySum (One (Negate (Lit DeltaCoinR (DeltaCoin n)))) = pure (DeltaCoin (-n))
@@ -827,7 +829,7 @@ simplifySum (SumList (Lit _ m)) = pure (List.foldl' add zero m)
 simplifySum (ProjMap _ l (Lit _ m)) = pure (List.foldl' (\ans x -> add ans (x ^. l)) zero m)
 simplifySum x = failT ["Can't simplify Sum: " ++ show x ++ ", to a value."]
 
-simplifyTarget :: forall era t root. RootTarget era root t -> Typed t
+simplifyTarget :: forall era t root. ToExprs era => RootTarget era root t -> Typed t
 simplifyTarget (Invert _ _ f) = pure f
 simplifyTarget (Shift x _) = simplifyTarget x
 simplifyTarget (Mask x) = simplifyTarget x
@@ -929,7 +931,7 @@ targetMaybeEnv root (x :$ y) env =
   targetMaybeEnv root y env >>= targetMaybeEnv root x
 targetMaybeEnv _ _ _ = Nothing
 
-runPred :: Env era -> Pred era -> Typed Bool
+runPred :: ToExprs era => Env era -> Pred era -> Typed Bool
 runPred env (MetaSize w x) = do
   sz <- runTerm env x
   case sz of
@@ -1073,12 +1075,12 @@ extendableSumsTo pat (SumSplit _ t _ [One s]) =
 extendableSumsTo _ _ = False
 
 -- | run a bunch of Preds, and and together the results
-runPreds :: Env era -> [Pred era] -> Typed Bool
+runPreds :: ToExprs era => Env era -> [Pred era] -> Typed Bool
 runPreds env ps = do
   bs <- mapM (runPred env) ps
   pure (and bs)
 
-bind :: RootTarget era r t -> t -> Env era -> Env era
+bind :: ToExprs era => RootTarget era r t -> t -> Env era -> Env era
 bind (Simple (Var v)) x env = storeVar v x env
 bind (Lensed (Var v) _) x env = storeVar v x env
 bind t _ _ = error ("Non simple Target in bind: " ++ show t)
@@ -1119,12 +1121,12 @@ runSum env (ProjMap _ l t) = Map.foldl' accum zero <$> runTerm env t
   where
     accum ans x = add ans (x ^. l)
 
-makeTest :: Env era -> Pred era -> Typed (String, Bool, Pred era)
+makeTest :: ToExprs era => Env era -> Pred era -> Typed (String, Bool, Pred era)
 makeTest env c = do
   b <- runPred env c
   pure (show c ++ " => " ++ show b, b, c)
 
-displayTerm :: Era era => Env era -> Term era a -> IO ()
+displayTerm :: (Era era, ToExprs era) => Env era -> Term era a -> IO ()
 displayTerm env (Var v@(V nm rep _)) = do
   x <- monadTyped (findVar v env)
   putStrLn (nm ++ "\n" ++ format rep x)
@@ -1155,7 +1157,7 @@ data Arg era t where
   Arg :: !(Field era t s) -> Arg era t
 
 -- | Succeds if 'term' is a variable with an embedded (Lens' t2 t1)
-patt :: Rep era t1 -> Term era t2 -> Pat era t1
+patt :: ToExprs era => Rep era t1 -> Term era t2 -> Pat era t1
 patt rep term = Pat rep [arg rep term]
 
 instance Show (Pat era t) where
@@ -1207,7 +1209,7 @@ bindArg t env (ArgPs (Field n r rx l) qs) =
 --   3) A list of sub-patterns.
 --   Check that all the embedded Access have the right Lens'.
 --   If not throw an error.
-argP :: Rep era s -> Term era t -> [Pat era t] -> Arg era s
+argP :: ToExprs era => Rep era s -> Term era t -> [Pat era t] -> Arg era s
 argP repS1 (Var (V name rept (Yes repS2 ll))) qs = case testEql repS1 repS2 of
   Just Refl -> ArgPs (Field name rept repS2 ll) qs
   Nothing ->
@@ -1223,7 +1225,7 @@ argP _ term _ = error ("argP can only be applied to variable terms: " ++ show te
 
 -- | Construct an Arg from a variable (Term era s) with a Yes Access.
 --   Check that the Access has the right Lens'. If not throw an error.
-arg :: Rep era s -> Term era t -> Arg era s
+arg :: ToExprs era => Rep era s -> Term era t -> Arg era s
 arg repS1 (Var (V name rept (Yes repS2 l))) = case testEql repS1 repS2 of
   Just Refl -> Arg (Field name rept repS2 l)
   Nothing ->

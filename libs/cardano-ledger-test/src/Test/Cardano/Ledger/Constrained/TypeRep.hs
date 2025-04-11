@@ -21,6 +21,7 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   (:~:) (Refl),
   Singleton (..),
   Eql,
+  ToExprs,
   typeRepOf,
   synopsis,
   genSizedRep,
@@ -1139,6 +1140,7 @@ format rep@(SetR d) x = show (ppSet (syn d) x) ++ synSum rep x ++ synSum rep x +
 format (MaybeR d) x = show (ppMaybe (syn d) x)
 format r x = synopsis r x
 
+-- TODO: rename and consider moving the below pp functions
 ppMap :: (k -> Expr) -> (v -> Expr) -> Map.Map k v -> Expr
 ppMap kf vf = toExpr . fmap (bimap kf vf) . Map.toList
 
