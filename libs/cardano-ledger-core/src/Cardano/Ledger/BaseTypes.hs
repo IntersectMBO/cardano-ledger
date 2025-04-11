@@ -740,7 +740,7 @@ data Relation
     RelGTEQ
   | -- | Is subset of
     RelSubset
-  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, ToJSON, FromJSON, NoThunks, Typeable)
+  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, ToJSON, FromJSON, NoThunks)
 
 -- | This is intended to help clarify supplied and expected values reported by
 -- predicate-failures in all eras.

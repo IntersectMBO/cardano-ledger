@@ -56,7 +56,7 @@ import Control.State.Transition (
  )
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import Data.Foldable (toList)
 import Data.List as F (foldl')
 import qualified Data.Map.Strict as Map
@@ -133,7 +133,7 @@ initialDIState =
     }
 
 -- | Delegation blocks. Simple blockchain to test delegation.
-data DBLOCK deriving (Data, Typeable)
+data DBLOCK deriving (Data)
 
 -- | A delegation block.
 data DBlock = DBlock
@@ -147,7 +147,7 @@ makeLenses ''DBlock
 data DBlockPredicateFailure
   = DPF (PredicateFailure DELEG)
   | NotIncreasingBlockSlot
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data)
 
 -- | This corresponds to a state-transition rule where blocks with increasing
 -- slot-numbers are produced.

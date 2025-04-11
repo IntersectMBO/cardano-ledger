@@ -176,7 +176,7 @@ instance Memoized (Redeemers era) where
 -- Since the 'Redeemers' exist outside of the transaction body,
 -- this is how we ensure that they are not manipulated.
 newtype Redeemers era = MkRedeemers (MemoBytes (RedeemersRaw era))
-  deriving newtype (Generic, ToCBOR, SafeToHash, Typeable, DecCBOR)
+  deriving newtype (Generic, ToCBOR, SafeToHash, DecCBOR)
 
 deriving newtype instance AlonzoEraScript era => Eq (Redeemers era)
 deriving newtype instance AlonzoEraScript era => NFData (Redeemers era)
@@ -313,7 +313,7 @@ isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e)) =
 
 -- =====================================================
 newtype TxDatsRaw era = TxDatsRaw {unTxDatsRaw :: Map DataHash (Data era)}
-  deriving (Generic, Typeable, Eq)
+  deriving (Generic, Eq)
   deriving newtype (NoThunks, NFData)
 
 deriving instance Show (TxDatsRaw era)

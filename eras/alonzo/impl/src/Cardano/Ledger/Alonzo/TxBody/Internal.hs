@@ -145,7 +145,6 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Data.Void (absurd)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
@@ -194,7 +193,7 @@ data AlonzoTxBodyRaw era = AlonzoTxBodyRaw
   , atbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
   , atbrTxNetworkId :: !(StrictMaybe Network)
   }
-  deriving (Generic, Typeable)
+  deriving (Generic)
 
 deriving instance
   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>

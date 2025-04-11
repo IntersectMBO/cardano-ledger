@@ -83,7 +83,6 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -106,7 +105,7 @@ data ShelleyTxBodyRaw era = ShelleyTxBodyRaw
   , stbrUpdate :: !(StrictMaybe (Update era))
   , stbrAuxDataHash :: !(StrictMaybe TxAuxDataHash)
   }
-  deriving (Generic, Typeable)
+  deriving (Generic)
 
 deriving instance
   (NoThunks (TxOut era), NoThunks (TxCert era), NoThunks (PParamsUpdate era)) =>

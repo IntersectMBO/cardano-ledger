@@ -64,6 +64,7 @@ import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, Model, ModelNewEpochState (..))
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..))
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
+import qualified Test.Cardano.Ledger.Generic.Scriptic as Scriptic
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld, createRUpdOld_)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 
@@ -301,11 +302,11 @@ primaryLanguage _ = Nothing
 
 alwaysTrue :: forall era. Proof era -> Maybe Language -> Natural -> Script era
 alwaysTrue Conway (Just l) n = alwaysSucceedsLang @era l n
-alwaysTrue p@Conway Nothing _ = fromNativeScript $ allOf [] p
+alwaysTrue p@Conway Nothing _ = fromNativeScript $ Scriptic.allOf [] p
 alwaysTrue Babbage (Just l) n = alwaysSucceedsLang @era l n
-alwaysTrue p@Babbage Nothing _ = fromNativeScript $ allOf [] p
+alwaysTrue p@Babbage Nothing _ = fromNativeScript $ Scriptic.allOf [] p
 alwaysTrue Alonzo (Just l) n = alwaysSucceedsLang @era l n
-alwaysTrue p@Alonzo Nothing _ = fromNativeScript $ allOf [] p
+alwaysTrue p@Alonzo Nothing _ = fromNativeScript $ Scriptic.allOf [] p
 alwaysTrue p@Mary _ n = always n p
 alwaysTrue p@Allegra _ n = always n p
 alwaysTrue p@Shelley _ n = always n p
@@ -313,11 +314,11 @@ alwaysTrue p@Shelley _ n = always n p
 
 alwaysFalse :: forall era. Proof era -> Maybe Language -> Natural -> Script era
 alwaysFalse Conway (Just l) n = alwaysFailsLang @era l n
-alwaysFalse p@Conway Nothing _ = fromNativeScript $ anyOf [] p
+alwaysFalse p@Conway Nothing _ = fromNativeScript $ Scriptic.anyOf [] p
 alwaysFalse Babbage (Just l) n = alwaysFailsLang @era l n
-alwaysFalse p@Babbage Nothing _ = fromNativeScript $ anyOf [] p
+alwaysFalse p@Babbage Nothing _ = fromNativeScript $ Scriptic.anyOf [] p
 alwaysFalse Alonzo (Just l) n = alwaysFailsLang @era l n
-alwaysFalse p@Alonzo Nothing _ = fromNativeScript $ anyOf [] p
+alwaysFalse p@Alonzo Nothing _ = fromNativeScript $ Scriptic.anyOf [] p
 alwaysFalse p@Mary _ n = never n p
 alwaysFalse p@Allegra _ n = never n p
 alwaysFalse p@Shelley _ n = never n p

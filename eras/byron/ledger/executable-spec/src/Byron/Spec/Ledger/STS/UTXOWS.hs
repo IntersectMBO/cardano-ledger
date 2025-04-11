@@ -30,17 +30,17 @@ import Control.State.Transition (
   transitionRules,
   wrapFailed,
  )
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Test.Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
 import Test.Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 
-data UTXOWS deriving (Data, Typeable)
+data UTXOWS deriving (Data)
 
 data UtxowsPredicateFailure
   = UtxowFailure (PredicateFailure UTXOW)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UTXOWS where
   type State UTXOWS = UTxOState

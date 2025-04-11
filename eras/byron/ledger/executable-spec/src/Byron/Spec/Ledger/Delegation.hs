@@ -143,7 +143,7 @@ import Control.State.Transition (
 import Data.AbstractSize
 import Data.Bimap (Bimap, (!>))
 import qualified Data.Bimap as Bimap
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import qualified Data.List as List
@@ -184,7 +184,7 @@ data DCert = DCert
   , signature :: Sig (VKey, Epoch)
   -- ^ Witness for the delegation certificate
   }
-  deriving (Show, Eq, Ord, Generic, Hashable, Data, Typeable, NoThunks)
+  deriving (Show, Eq, Ord, Generic, Hashable, Data, NoThunks)
 
 instance HasTypeReps DCert
 
@@ -321,10 +321,10 @@ dIStateDState =
 --------------------------------------------------------------------------------
 
 -- | Delegation scheduling rules
-data SDELEG deriving (Data, Typeable)
+data SDELEG deriving (Data)
 
 data EpochDiff = EpochDiff {currentEpoch :: Epoch, certEpoch :: Epoch}
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 -- | These `PredicateFailure`s are all "throwable". The disjunction of the
 --   rules' preconditions is not `True` - the `PredicateFailure`s represent
@@ -336,7 +336,7 @@ data SdelegPredicateFailure
   | HasAlreadyDelegated
   | IsAlreadyScheduled
   | DoesNotVerify
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS SDELEG where
   type State SDELEG = DSState
@@ -422,10 +422,10 @@ data AdelegPredicateFailure
   | S_NoLastDelegation
   | S_AfterExistingDelegation
   | S_AlreadyADelegateOf VKey VKeyGenesis
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 -- | Delegation rules
-data ADELEG deriving (Data, Typeable)
+data ADELEG deriving (Data)
 
 instance STS ADELEG where
   type State ADELEG = DState
@@ -489,11 +489,11 @@ instance STS ADELEG where
     ]
 
 -- | Delegation scheduling sequencing
-data SDELEGS deriving (Data, Typeable)
+data SDELEGS deriving (Data)
 
 data SdelegsPredicateFailure
   = SDelegFailure (PredicateFailure SDELEG)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS SDELEGS where
   type State SDELEGS = DSState
@@ -521,11 +521,11 @@ instance Embed SDELEG SDELEGS where
   wrapFailed = SDelegFailure
 
 -- | Delegation rules sequencing
-data ADELEGS deriving (Data, Typeable)
+data ADELEGS deriving (Data)
 
 data AdelegsPredicateFailure
   = ADelegFailure (PredicateFailure ADELEG)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS ADELEGS where
   type State ADELEGS = DState
@@ -556,12 +556,12 @@ instance Embed ADELEG ADELEGS where
   wrapFailed = ADelegFailure
 
 -- | Delegation interface
-data DELEG deriving (Data, Typeable)
+data DELEG deriving (Data)
 
 data DelegPredicateFailure
   = SDelegSFailure (PredicateFailure SDELEGS)
   | ADelegSFailure (PredicateFailure ADELEGS)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS DELEG where
   type State DELEG = DIState
@@ -672,10 +672,10 @@ randomDCertGen env = do
         Epoch n = _dSEnvEpoch env
 
 -- | Dummy transition system needed for generating sequences of delegation certificates.
-data MSDELEG deriving (Data, Typeable)
+data MSDELEG deriving (Data)
 
 data MsdelegPredicateFailure = SDELEGFailure (PredicateFailure SDELEG)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS MSDELEG where
   type Environment MSDELEG = DSEnv

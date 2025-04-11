@@ -103,7 +103,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Text.Encoding (decodeLatin1)
-import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
@@ -397,7 +396,7 @@ instance ToJSONKey AssetName where
 
 instance Compactible MaryValue where
   newtype CompactForm MaryValue = CompactValue CompactValue
-    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
+    deriving (Eq, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -419,7 +418,7 @@ data CompactValue
       {-# UNPACK #-} !(CompactForm Coin) -- ada
       {-# UNPACK #-} !Word32 -- number of ma's
       {-# UNPACK #-} !ShortByteString -- rep
-  deriving (Generic, Show, Typeable)
+  deriving (Generic, Show)
 
 -- | We need to manually pack/unpack `CompactForm Coin` here because its MemPack instance can't be
 -- used due to the requirement of it being compatible with the first case of

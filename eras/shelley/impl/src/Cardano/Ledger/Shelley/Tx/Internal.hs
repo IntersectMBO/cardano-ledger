@@ -84,7 +84,6 @@ import Data.Maybe.Strict (
   strictMaybeToMaybe,
  )
 import Data.Set (Set)
-import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, to, (^.))
@@ -97,7 +96,7 @@ data ShelleyTxRaw era = ShelleyTxRaw
   , strWits :: !(TxWits era)
   , strAuxData :: !(StrictMaybe (TxAuxData era))
   }
-  deriving (Generic, Typeable)
+  deriving (Generic)
 
 instance
   ( NFData (TxBody era)

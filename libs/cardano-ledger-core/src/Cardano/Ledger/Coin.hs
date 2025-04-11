@@ -59,7 +59,6 @@ import Data.MemPack
 import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
 import Data.Primitive.Types
-import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Stack
@@ -122,7 +121,7 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin {unCompactCoin :: Word64}
-    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim, Ord, ToCBOR, ToJSON, FromJSON)
+    deriving (Eq, Show, NoThunks, NFData, HeapWords, Prim, Ord, ToCBOR, ToJSON, FromJSON)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
@@ -143,7 +142,7 @@ instance MemPack (CompactForm Coin) where
 
 instance Compactible DeltaCoin where
   newtype CompactForm DeltaCoin = CompactDeltaCoin Word64
-    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, ToJSON, Prim)
+    deriving (Eq, Show, NoThunks, NFData, HeapWords, ToJSON, Prim)
 
   toCompact (DeltaCoin dc) = CompactDeltaCoin <$> integerToWord64 dc
   fromCompact (CompactDeltaCoin cdc) = DeltaCoin (unCoin (word64ToCoin cdc))

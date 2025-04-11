@@ -56,7 +56,7 @@ import Data.AbstractSize (HasTypeReps)
 import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import Data.Foldable as F (foldl', toList)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
@@ -88,22 +88,22 @@ import Test.Control.State.Transition.Generator (
 import Prelude
 
 newtype FactorA = FactorA Int
-  deriving stock (Generic, Show, Data, Typeable)
+  deriving stock (Generic, Show, Data)
   deriving newtype (Eq, Ord, Hashable, NoThunks)
   deriving anyclass (HasTypeReps)
 
 newtype FactorB = FactorB Int
-  deriving stock (Generic, Show, Data, Typeable)
+  deriving stock (Generic, Show, Data)
   deriving newtype (Eq, Ord, Hashable, NoThunks)
   deriving anyclass (HasTypeReps)
 
 newtype UpAdptThd = UpAdptThd Double
-  deriving stock (Generic, Show, Data, Typeable)
+  deriving stock (Generic, Show, Data)
   deriving newtype (Eq, Ord, Hashable, Num, Real, Fractional, RealFrac, NoThunks)
   deriving anyclass (HasTypeReps)
 
 newtype BkSgnCntT = BkSgnCntT Double
-  deriving stock (Generic, Show, Data, Typeable)
+  deriving stock (Generic, Show, Data)
   deriving newtype (Eq, Ord, Hashable, Num, Fractional, NoThunks)
   deriving anyclass (HasTypeReps)
 
@@ -137,14 +137,14 @@ data PParams = PParams -- TODO: this should be a module of @byron-spec-ledger@.
   , _factorB :: !FactorB
   -- ^ Additional fees per transaction size
   }
-  deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable, NoThunks)
+  deriving (Eq, Generic, Ord, Show, Hashable, Data, NoThunks)
 
 makeLenses ''PParams
 
 instance HasTypeReps PParams
 
 newtype UpId = UpId Int
-  deriving stock (Generic, Show, Data, Typeable)
+  deriving stock (Generic, Show, Data)
   deriving newtype (Eq, Ord, Hashable, NoThunks)
   deriving anyclass (HasTypeReps)
 
@@ -154,21 +154,21 @@ data ProtVer = ProtVer
   , _pvMin :: Natural
   , _pvAlt :: Natural
   }
-  deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable, NoThunks)
+  deriving (Eq, Generic, Ord, Show, Hashable, Data, NoThunks)
 
 makeLenses ''ProtVer
 
 instance HasTypeReps ProtVer
 
 newtype ApName = ApName String
-  deriving stock (Generic, Show, Data, Typeable)
+  deriving stock (Generic, Show, Data)
   deriving newtype (Eq, Ord, Hashable, NoThunks)
 
 instance HasTypeReps ApName
 
 -- | Application version
 newtype ApVer = ApVer Natural
-  deriving stock (Generic, Show, Data, Typeable)
+  deriving stock (Generic, Show, Data)
   deriving newtype (Eq, Ord, Num, Hashable, NoThunks)
 
 instance HasTypeReps ApVer
@@ -177,7 +177,7 @@ data SwVer = SwVer
   { _svName :: ApName
   , _svVer :: ApVer
   }
-  deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoThunks)
+  deriving (Eq, Generic, Show, Hashable, Data, NoThunks)
 
 makeLenses ''SwVer
 
@@ -198,7 +198,7 @@ type STag = String
 
 -- | For now we do not have any requirements on metadata.
 data Metadata = Metadata
-  deriving (Eq, Ord, Show, Generic, Hashable, Data, Typeable, NoThunks)
+  deriving (Eq, Ord, Show, Generic, Hashable, Data, NoThunks)
 
 -- | Update proposal
 data UProp = UProp
@@ -213,7 +213,7 @@ data UProp = UProp
   , _upMdt :: Metadata
   -- ^ Metadata required for performing software updates.
   }
-  deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoThunks)
+  deriving (Eq, Generic, Show, Hashable, Data, NoThunks)
 
 #if MIN_VERSION_hashable(1,3,4)
 -- Instance Hashable (Set a) is provided by the hashable package
@@ -365,7 +365,7 @@ data UpdateConstraintViolation
   | TransactionSizeTooLarge Natural (Threshold Natural)
   | ScriptVersionTooLarge Natural (Threshold Natural)
   | ScriptVersionTooSmall Natural (Threshold Natural)
-  deriving (Eq, Ord, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Ord, Show, Data, Generic, NoThunks)
 
 svCanFollow ::
   Map ApName (ApVer, Core.Slot, Metadata) ->
@@ -384,7 +384,7 @@ svCanFollow avs (an, av) =
 ------------------------------------------------------------------------
 
 -- | Update Proposal Software Version Validation
-data UPSVV deriving (Generic, Data, Typeable)
+data UPSVV deriving (Generic, Data)
 
 -- | These `PredicateFailure`s are all "throwable". The disjunction of the
 --   rules' preconditions is not `True` - the `PredicateFailure`s represent
@@ -394,7 +394,7 @@ data UpsvvPredicateFailure
   | CannotFollowSv
   | InvalidApplicationName
   | InvalidSystemTags
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPSVV where
   type Environment UPSVV = Map ApName (ApVer, Core.Slot, Metadata)
@@ -420,7 +420,7 @@ instance STS UPSVV where
 
       sTagValid tag = all isAscii tag && length tag <= 10
 
-data UPPVV deriving (Generic, Data, Typeable)
+data UPPVV deriving (Generic, Data)
 
 -- | These `PredicateFailure`s are all "throwable". The disjunction of the
 --   rules' preconditions is not `True` - the `PredicateFailure`s represent
@@ -429,7 +429,7 @@ data UppvvPredicateFailure
   = CannotFollowPv
   | CannotUpdatePv [UpdateConstraintViolation]
   | AlreadyProposedPv
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPPVV where
   type
@@ -455,7 +455,7 @@ instance STS UPPVV where
     ]
 
 -- | Update proposal validity
-data UPV deriving (Generic, Data, Typeable)
+data UPV deriving (Generic, Data)
 
 -- | These `PredicateFailure`s are all throwable.
 data UpvPredicateFailure
@@ -464,7 +464,7 @@ data UpvPredicateFailure
   | AVChangedInPVUpdate ApName ApVer (Maybe (ApVer, Slot, Metadata))
   | ParamsChangedInSVUpdate
   | PVChangedInSVUpdate
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPV where
   type
@@ -527,14 +527,14 @@ instance Embed UPPVV UPV where
 instance Embed UPSVV UPV where
   wrapFailed = UPSVVFailure
 
-data UPREG deriving (Generic, Data, Typeable)
+data UPREG deriving (Generic, Data)
 
 -- | These `PredicateFailure`s are all throwable.
 data UpregPredicateFailure
   = UPVFailure (PredicateFailure UPV)
   | NotGenesisDelegate
   | DoesNotVerify
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPREG where
   type
@@ -580,7 +580,7 @@ data Vote = Vote
   , _vPropId :: UpId
   , _vSig :: Core.Sig UpId
   }
-  deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoThunks)
+  deriving (Eq, Generic, Show, Hashable, Data, NoThunks)
 
 makeLenses ''Vote
 
@@ -597,7 +597,7 @@ mkVote caster proposalId =
 instance HasHash (Maybe Byron.Spec.Ledger.Update.UProp, [Byron.Spec.Ledger.Update.Vote]) where
   hash = Core.Hash . Just . H.hash
 
-data ADDVOTE deriving (Generic, Data, Typeable)
+data ADDVOTE deriving (Generic, Data)
 
 -- | These `PredicateFailure`s are all throwable.
 data AddvotePredicateFailure
@@ -605,7 +605,7 @@ data AddvotePredicateFailure
   | NoUpdateProposal UpId
   | VoteByNonGenesisDelegate VKey
   | RepeatVoteByGenesisDelegate VKey
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS ADDVOTE where
   type
@@ -639,7 +639,7 @@ instance STS ADDVOTE where
         return $! vts <> vtsPid
     ]
 
-data UPVOTE deriving (Generic, Data, Typeable)
+data UPVOTE deriving (Generic, Data)
 
 -- | The 3 non-embedded `PredicateFailure`s here are all structural. The
 -- disjuntion of the preconditions is `True` - one rule either fires or the
@@ -649,7 +649,7 @@ data UpvotePredicateFailure
   | S_HigherThanThdAndNotAlreadyConfirmed
   | S_CfmThdNotReached
   | S_AlreadyConfirmed
-  deriving (Eq, Show, Data, Generic, Typeable, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPVOTE where
   type
@@ -707,10 +707,10 @@ instance Embed ADDVOTE UPVOTE where
 -- Update voting
 ------------------------------------------------------------------------
 
-data FADS deriving (Generic, Data, Typeable)
+data FADS deriving (Generic, Data)
 
 data FadsPredicateFailure
-  deriving (Eq, Show, Data, Typeable, Generic)
+  deriving (Eq, Show, Data, Generic)
 
 instance STS FADS where
   type Environment FADS = ()
@@ -735,7 +735,7 @@ instance STS FADS where
           _ -> (sn, (bv, ppsc)) : fads
     ]
 
-data UPEND deriving (Generic, Data, Typeable)
+data UPEND deriving (Generic, Data)
 
 -- | Find the key that corresponds to the value satisfying the given predicate.
 -- In case zero or more than one key is found this function returns Nothing.
@@ -755,7 +755,7 @@ data UpendPredicateFailure
   | CannotAdopt ProtVer
   | NotADelegate VKey
   | UnconfirmedProposal UpId
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPEND where
   type
@@ -986,11 +986,11 @@ endorsements ((_, _), _, _, _, _, _, _, bvs, _) = bvs
 registeredProtocolUpdateProposals :: UPIState -> Map UpId (ProtVer, PParams)
 registeredProtocolUpdateProposals ((_, _), _, _, rpus, _, _, _, _, _) = rpus
 
-data UPIREG deriving (Generic, Data, Typeable)
+data UPIREG deriving (Generic, Data)
 
 data UpiregPredicateFailure
   = UPREGFailure (PredicateFailure UPREG)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPIREG where
   type Environment UPIREG = UPIEnv
@@ -1384,11 +1384,11 @@ reSign uprop =
   uprop
     & upSig .~ Core.sign (skey (uprop ^. upIssuer)) (uprop ^. upSigData)
 
-data UPIVOTE deriving (Generic, Data, Typeable)
+data UPIVOTE deriving (Generic, Data)
 
 data UpivotePredicateFailure
   = UPVOTEFailure (PredicateFailure UPVOTE)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPIVOTE where
   type Environment UPIVOTE = UPIEnv
@@ -1446,11 +1446,11 @@ instance STS UPIVOTE where
 instance Embed UPVOTE UPIVOTE where
   wrapFailed = UPVOTEFailure
 
-data APPLYVOTES deriving (Generic, Data, Typeable)
+data APPLYVOTES deriving (Generic, Data)
 
 data ApplyVotesPredicateFailure
   = UpivoteFailure (PredicateFailure UPIVOTE)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS APPLYVOTES where
   type Environment APPLYVOTES = UPIEnv
@@ -1474,11 +1474,11 @@ instance STS APPLYVOTES where
 instance Embed UPIVOTE APPLYVOTES where
   wrapFailed = UpivoteFailure
 
-data UPIVOTES deriving (Generic, Data, Typeable)
+data UPIVOTES deriving (Generic, Data)
 
 data UpivotesPredicateFailure
   = ApplyVotesFailure (PredicateFailure APPLYVOTES)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPIVOTES where
   type Environment UPIVOTES = UPIEnv
@@ -1623,11 +1623,11 @@ instance HasTrace UPIVOTES where
         [(a, b)]
       replicateFst (a, bs) = zip (repeat a) bs
 
-data UPIEND deriving (Generic, Data, Typeable)
+data UPIEND deriving (Generic, Data)
 
 data UpiendPredicateFailure
   = UPENDFailure (PredicateFailure UPEND)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPIEND where
   type Environment UPIEND = UPIEnv
@@ -1698,11 +1698,11 @@ pickHighlyEndorsedProtocolVersion endorsementsList =
         & take 5
         & fmap fst
 
-data PVBUMP deriving (Generic, Data, Typeable)
+data PVBUMP deriving (Generic, Data)
 
 -- PVBUMP has no predicate failures
 data PvbumpPredicateFailure = NoPVBUMPFailure
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS PVBUMP where
   type
@@ -1732,11 +1732,11 @@ instance STS PVBUMP where
             pure $! (pv_c, pps_c)
     ]
 
-data UPIEC deriving (Generic, Data, Typeable)
+data UPIEC deriving (Generic, Data)
 
 data UpiecPredicateFailure
   = PVBUMPFailure (PredicateFailure PVBUMP)
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UPIEC where
   type

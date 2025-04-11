@@ -38,12 +38,12 @@ import Control.State.Transition (
   transitionRules,
   (?!),
  )
-import Data.Data (Data, Typeable)
+import Data.Data (Data)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data UTXO deriving (Data, Typeable)
+data UTXO deriving (Data)
 
 data UTxOEnv = UTxOEnv
   { utxo0 :: UTxO
@@ -67,7 +67,7 @@ data UtxoPredicateFailure
   | IncreasedTotalBalance
   | InputsNotInUTxO
   | NonPositiveOutputs
-  deriving (Eq, Show, Data, Typeable, Generic, NoThunks)
+  deriving (Eq, Show, Data, Generic, NoThunks)
 
 instance STS UTXO where
   type Environment UTXO = UTxOEnv

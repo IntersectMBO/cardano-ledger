@@ -557,15 +557,15 @@ requireInstances (Type eq ord) = Type (requireIs eq) (requireIs ord)
 
 instance Singleton (Rep era) where
   testEql
-    (repHasInstances -> IsTypeable :: HasInstances a)
-    (repHasInstances -> IsTypeable :: HasInstances b) = eqT @a @b
+    (repHasInstances -> (IsTypeable :: HasInstances a))
+    (repHasInstances -> (IsTypeable :: HasInstances b)) = eqT @a @b
   cmpIndex x y = compare (typeRepOf x) (typeRepOf y)
 
 -- ============================================================
 -- Show instances
 
 instance Show (Rep era t) where
-  showsPrec d (repHasInstances -> IsTypeable :: HasInstances t) = showsPrec d $ typeRep (Proxy @t)
+  showsPrec d (repHasInstances -> (IsTypeable :: HasInstances t)) = showsPrec d $ typeRep (Proxy @t)
 
 synopsis :: forall e t. Rep e t -> t -> String
 synopsis TxIdR r = show r
