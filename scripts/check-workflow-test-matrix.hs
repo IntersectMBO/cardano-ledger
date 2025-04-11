@@ -1,9 +1,12 @@
-#!/usr/bin/env cabal
+#!/usr/bin/env -S cabal run -v0 --
 {- cabal:
   build-depends:
     base, cabal-plan, containers, directory, filepath, microlens, microlens-aeson,
     optparse-applicative, terminal-size, text, yaml
   ghc-options: -Wall -Wcompat -Wunused-packages
+-}
+{- project:
+allow-newer: cabal-plan:*
 -}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE OverloadedStrings #-}
