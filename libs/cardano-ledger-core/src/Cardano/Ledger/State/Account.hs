@@ -15,9 +15,12 @@ module Cardano.Ledger.State.Account (
   sumBalancesAccounts,
   sumDepositsAccounts,
   addToBalanceAccounts,
+  doWithdrawalsDrainAccounts,
+  drainAccounts,
 )
 where
 
+import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -113,7 +116,7 @@ isAccountRegistered cred accounts = Map.member cred (accounts ^. accountsMapL)
 -- indeed registered and all of the amounts in the withdrawals match the respective balances exactly.
 --
 -- /Note/ - `NetworkId` in the withdrawals are ignored.
-doWithdrawalsDrainAccounts ::
+whichWithdrawalsDoNotDrainAccounts ::
   EraAccounts era =>
   Withdrawals ->
   Accounts era ->
@@ -121,9 +124,9 @@ doWithdrawalsDrainAccounts ::
 doWithdrawalsDrainAccounts (Withdrawals withdrawalsMap) accounts =
   Map.isSubmapOfBy checkBalance (Map.mapKeys raCredential withdrawalsMap) (accounts ^. accountsMapL)
   where
-    checkBalance :: Coin -> AccountState era -> Bool
+    --checkBalance :: Coin -> AccountState era -> Bool
     checkBalance withdrawalAmount accountState =
-      withdrawalAmount == fromCompact (accountState balanceAccountStateL)
+      withdrawalAmount == fromCompact (accountState ^. balanceAccountStateL)
 
 -- | Reset balances to zero for all accounts that are specified in the supplied `Withdrawals`.
 --

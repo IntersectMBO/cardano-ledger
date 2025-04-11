@@ -48,6 +48,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, Ptr (..), SlotNo32 (..))
 import Cardano.Ledger.Rules.ValidationMode (Test)
 import Cardano.Ledger.Shelley.Era (ShelleyDELEGS, ShelleyEra)
+import Cardano.Ledger.Shelley.State
 import Cardano.Ledger.Shelley.LedgerState (
   ChainAccountState,
   DState (..),
