@@ -76,6 +76,7 @@ module Cardano.Ledger.Core.PParams (
   -- * PParamsUpdate to Data
   PParam (..),
   makePParamMap,
+  PParamDescriptor (..),
 )
 where
 
@@ -100,6 +101,7 @@ import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Text (Text)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import Lens.Micro (Lens', SimpleGetter, lens)
@@ -361,6 +363,8 @@ class
   -- | Minimum Stake Pool Cost
   hkdMinPoolCostL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
+  pparamDescriptors :: [PParamDescriptor era]
+
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
 
@@ -565,3 +569,13 @@ data PParam era where
 -- | Turn a list into a Map, this assures we have no duplicates.
 makePParamMap :: [PParam era] -> Map Word (PParam era)
 makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
+
+data PParamDescriptor era where
+  PParamDescriptor ::
+    EncCBOR t =>
+    { ppdName :: Text
+    , ppdTag :: Word
+    , ppdLens :: Lens' (PParams era) t
+    , ppdUpdateLens :: Lens' (PParamsUpdate era) (StrictMaybe t)
+    } ->
+    PParamDescriptor era
