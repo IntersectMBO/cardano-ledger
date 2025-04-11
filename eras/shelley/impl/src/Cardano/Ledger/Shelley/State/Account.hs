@@ -43,6 +43,19 @@ data ShelleyAccountState era
   }
   deriving (Show, Eq, Generic)
 
+-- data ConwayAccountState era
+--   = ConwayAccountState
+--   { sasBalance :: {-# UNPACK #-} !(CompactForm Coin)
+--   -- ^ Current balance of the account
+--   , sasDeposit :: {-# UNPACK #-} !(CompactForm Coin)
+--   -- ^ Deposit amount that was left when staking credential was registered
+--   , sasStakePoolDelegation :: !(StrictMaybe (KeyHash 'StakePool))
+--   -- ^ Potential delegation to a stake pool
+--   , sasDRepDelegation :: !(StrictMaybe DRep)
+--   -- ^ Potential delegation to a stake pool
+--   }
+--   deriving (Show, Eq, Generic)
+
 instance NoThunks (ShelleyAccountState era)
 
 instance NFData (ShelleyAccountState era) where
@@ -180,8 +193,8 @@ registerShelleyAccount ::
   Accounts era
 registerShelleyAccount cred ptr deposit mStakePool accounts =
   accounts
-    & (accountsMapL %~ Map.insert cred accountState)
-    & (accountsPtrsMapL %~ Map.insert ptr cred)
+    & accountsMapL %~ Map.insert cred accountState
+    & accountsPtrsMapL %~ Map.insert ptr cred
   where
     accountState =
       mkShelleyAccountState ptr deposit & stakePoolDelegationAccountStateL .~ mStakePool
