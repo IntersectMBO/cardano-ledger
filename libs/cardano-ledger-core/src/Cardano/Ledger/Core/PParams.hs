@@ -11,6 +11,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -99,15 +100,18 @@ import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Typeable)
 import Data.Default (Default (..))
-import Data.Foldable (Foldable (foldMap'))
+import Data.Foldable (Foldable (foldMap'), foldr')
 import qualified Data.Foldable as F (foldl')
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
 import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Typeable (typeRep)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
-import Lens.Micro (Lens', SimpleGetter, lens, (^.))
+import Lens.Micro (Lens', SimpleGetter, lens, set, (^.))
 import NoThunks.Class (NoThunks)
 
 -- | Protocol parameters
@@ -387,6 +391,19 @@ class
             SJust y -> (n + 1, acc <> y)
             SNothing -> (n, acc)
 
+  decCBORPParams :: Decoder s (PParams era)
+  decCBORPParams =
+    decodeRecordNamed
+      (T.pack . show . typeRep $ Proxy @(PParams era))
+      (const (fromIntegral (length (pparamDescriptors @era))))
+      $ foldr'
+        accum
+        (pure (emptyPParams @era))
+        (pparamDescriptors @era)
+    where
+      accum PParamDescriptor {ppdLens} acc =
+        set ppdLens <$> decCBOR <*> acc
+
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
 
@@ -594,7 +611,7 @@ makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
 
 data PParamDescriptor era where
   PParamDescriptor ::
-    EncCBOR t =>
+    (DecCBOR t, EncCBOR t) =>
     { ppdName :: Text
     , ppdTag :: Word
     , ppdLens :: Lens' (PParams era) t
