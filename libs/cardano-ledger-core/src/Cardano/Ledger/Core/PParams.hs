@@ -105,6 +105,8 @@ import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON, ToJSON)
+import qualified Data.Aeson as Aeson (KeyValue, Value)
+import qualified Data.Aeson.Types as Aeson (Parser)
 import Data.Data (Typeable)
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (foldMap'), foldr')
@@ -434,6 +436,15 @@ class
             ( \PParamDescriptor {ppdTag, ppdUpdateLens} ->
                 (fromIntegral ppdTag, field (set ppdUpdateLens . SJust) From)
             )
+
+  jsonPairsPParams :: Aeson.KeyValue e a => PParams era -> [a]
+  jsonPairsPParams = undefined
+
+  jsonPairsPParamsUpdate :: Aeson.KeyValue e a => PParamsUpdate era -> [a]
+  jsonPairsPParamsUpdate = undefined
+
+  fromJsonPParams :: Aeson.Value -> Aeson.Parser (PParams era)
+  fromJsonPParams = undefined
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
