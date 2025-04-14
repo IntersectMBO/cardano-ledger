@@ -104,8 +104,9 @@ import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON, ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson (KeyValue, Value)
+import qualified Data.Aeson.Key as Aeson (fromText)
 import qualified Data.Aeson.Types as Aeson (Parser)
 import Data.Data (Typeable)
 import Data.Default (Default (..))
@@ -428,20 +429,28 @@ class
         IntMap.findWithDefault
           (invalidField k)
           (fromIntegral k)
-          (updateFieldMap pparamDescriptors)
-      updateFieldMap :: [PParamDescriptor era] -> IntMap (Field (PParamsUpdate era))
+          updateFieldMap
+      updateFieldMap :: IntMap (Field (PParamsUpdate era))
       updateFieldMap =
         IntMap.fromList
           . map
             ( \PParamDescriptor {ppdTag, ppdUpdateLens} ->
                 (fromIntegral ppdTag, field (set ppdUpdateLens . SJust) From)
             )
+          $ pparamDescriptors
 
   jsonPairsPParams :: Aeson.KeyValue e a => PParams era -> [a]
-  jsonPairsPParams = undefined
+  jsonPairsPParams pp =
+    [ Aeson.fromText ppdName .= toJSON (pp ^. ppdLens)
+    | PParamDescriptor {ppdName, ppdLens} <- pparamDescriptors @era
+    ]
 
   jsonPairsPParamsUpdate :: Aeson.KeyValue e a => PParamsUpdate era -> [a]
-  jsonPairsPParamsUpdate = undefined
+  jsonPairsPParamsUpdate ppu =
+    [ Aeson.fromText ppdName .= toJSON v
+    | PParamDescriptor {ppdName, ppdUpdateLens} <- pparamDescriptors @era
+    , SJust v <- [ppu ^. ppdUpdateLens]
+    ]
 
   fromJsonPParams :: Aeson.Value -> Aeson.Parser (PParams era)
   fromJsonPParams = undefined
@@ -653,7 +662,7 @@ makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
 
 data PParamDescriptor era where
   PParamDescriptor ::
-    (DecCBOR t, EncCBOR t) =>
+    (DecCBOR t, EncCBOR t, ToJSON t) =>
     { ppdName :: Text
     , ppdTag :: Word
     , ppdLens :: Lens' (PParams era) t
