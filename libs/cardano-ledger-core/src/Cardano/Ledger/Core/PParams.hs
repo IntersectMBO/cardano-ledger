@@ -99,6 +99,8 @@ import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Typeable)
 import Data.Default (Default (..))
+import Data.Foldable (Foldable (foldMap'))
+import qualified Data.Foldable as F (foldl')
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -372,6 +374,18 @@ class
       <> foldMap' toEnc (pparamDescriptors @era)
     where
       toEnc PParamDescriptor {ppdLens} = encCBOR $ pp ^. ppdLens
+
+  encCBORPParamsUpdate :: PParamsUpdate era -> Encoding
+  encCBORPParamsUpdate pp = encodeMapLen count <> enc
+    where
+      (!count, !enc) = countAndConcat encodeField pparamDescriptors
+      encodeField PParamDescriptor {ppdTag, ppdUpdateLens} =
+        (encodeWord ppdTag <>) . encCBOR <$> pp ^. ppdUpdateLens
+      countAndConcat f = F.foldl' accum (0, mempty)
+        where
+          accum (!n, !acc) x = case f x of
+            SJust y -> (n + 1, acc <> y)
+            SNothing -> (n, acc)
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
