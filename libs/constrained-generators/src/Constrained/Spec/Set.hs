@@ -266,13 +266,11 @@ singletons :: [Set a] -> [Set a] -- Every Set in the filterd output has size 1 (
 singletons = filter ((1 ==) . Set.size)
 
 instance Logic SetW where
-  propagate f ctxt (ExplainSpec [] s) = propagate f ctxt s
-  propagate f ctxt (ExplainSpec es s) = ExplainSpec es $ propagate f ctxt s
+  propagate f ctxt (ExplainSpec es s) = explainSpec es $ propagate f ctxt s
   propagate _ _ TrueSpec = TrueSpec
   propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate SingletonW (NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App SingletonW (v' :> Nil)) (v :-> ps)
-  propagate SingletonW (NilCtx HOLE) (TypeSpec (SetSpec must es size) cant)
+  propagate f ctx (SuspendedSpec v ps) = constrained $ \v' -> Let (App f (fromListCtx ctx v')) (v :-> ps)
+  propagate SingletonW (Unary HOLE) (TypeSpec (SetSpec must es size) cant)
     | not $ 1 `conformsToSpec` size =
         ErrorSpec (pure "propagateSpecFun Singleton with spec that doesn't accept 1 size set")
     | [a] <- Set.toList must
@@ -281,16 +279,12 @@ instance Logic SetW where
         equalSpec a
     | null must = es <> notMemberSpec (Set.toList $ fold $ singletons cant)
     | otherwise = ErrorSpec (pure "propagateSpecFun Singleton with `must` of size > 1")
-  propagate SingletonW (NilCtx HOLE) (MemberSpec es) =
+  propagate SingletonW (Unary HOLE) (MemberSpec es) =
     case Set.toList $ fold $ singletons (NE.toList es) of
       [] -> ErrorSpec $ pure "In propagateSpecFun Singleton, the sets of size 1, in MemberSpec is empty"
       (x : xs) -> MemberSpec (x :| xs)
-  propagate UnionW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App UnionW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate UnionW (Value x :! NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App UnionW (Lit x :> v' :> Nil)) (v :-> ps)
   propagate UnionW ctx spec
-    | (Value s :! NilCtx HOLE) <- ctx =
+    | (Value s :! Unary HOLE) <- ctx =
         propagate UnionW (HOLE :? Value s :> Nil) spec
     | (HOLE :? Value (s :: Set a) :> Nil) <- ctx
     , Evidence <- prerequisites @(Set a) =
@@ -340,10 +334,6 @@ instance Logic SetW where
                   , "spec = " ++ show spec
                   ]
               )
-  propagate SubsetW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App SubsetW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate SubsetW (Value x :! NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App SubsetW (Lit x :> v' :> Nil)) (v :-> ps)
   propagate SubsetW ctx spec
     | (HOLE :? Value (s :: Set a) :> Nil) <- ctx
     , Evidence <- prerequisites @(Set a) = caseBoolSpec spec $ \case
@@ -357,7 +347,7 @@ instance Logic SetW where
             , Assert $ not_ $ member_ e (Lit s)
             , Assert $ member_ e set
             ]
-    | (Value (s :: Set a) :! NilCtx HOLE) <- ctx
+    | (Value (s :: Set a) :! Unary HOLE) <- ctx
     , Evidence <- prerequisites @(Set a) = caseBoolSpec spec $ \case
         True -> typeSpec $ SetSpec s TrueSpec mempty
         False -> constrained $ \set ->
@@ -366,25 +356,17 @@ instance Logic SetW where
             , Assert $ member_ e (Lit s)
             , Assert $ not_ $ member_ e set
             ]
-  propagate MemberW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App MemberW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate MemberW (Value x :! NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App MemberW (Lit x :> v' :> Nil)) (v :-> ps)
   propagate MemberW ctx spec
     | (HOLE :? Value s :> Nil) <- ctx = caseBoolSpec spec $ \case
         True -> memberSpecList (Set.toList s) (pure "propagateSpecFun on (Member x s) where s is Set.empty")
         False -> notMemberSpec s
-    | (Value e :! NilCtx HOLE) <- ctx = caseBoolSpec spec $ \case
+    | (Value e :! Unary HOLE) <- ctx = caseBoolSpec spec $ \case
         True -> typeSpec $ SetSpec (Set.singleton e) mempty mempty
         False -> typeSpec $ SetSpec mempty (notEqualSpec e) mempty
-  propagate DisjointW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App DisjointW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate DisjointW (Value x :! NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App DisjointW (Lit x :> v' :> Nil)) (v :-> ps)
   propagate DisjointW ctx spec
     | (HOLE :? Value (s :: Set a) :> Nil) <- ctx =
-        propagate DisjointW (Value s :! NilCtx HOLE) spec
-    | (Value (s :: Set a) :! NilCtx HOLE) <- ctx
+        propagate DisjointW (Value s :! Unary HOLE) spec
+    | (Value (s :: Set a) :! Unary HOLE) <- ctx
     , Evidence <- prerequisites @(Set a) = caseBoolSpec spec $ \case
         True -> typeSpec $ SetSpec mempty (notMemberSpec s) mempty
         False -> constrained $ \set ->
@@ -393,9 +375,7 @@ instance Logic SetW where
             , Assert $ member_ e (Lit s)
             , Assert $ member_ e set
             ]
-  propagate FromListW (NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App FromListW (v' :> Nil)) (v :-> ps)
-  propagate FromListW (NilCtx HOLE) spec =
+  propagate FromListW (Unary HOLE) spec =
         case spec of
           MemberSpec (xs :| []) ->
             typeSpec $

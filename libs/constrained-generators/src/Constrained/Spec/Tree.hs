@@ -206,8 +206,8 @@ instance Logic TreeW where
   propagate f ctxt (ExplainSpec es s) = explainSpec es $ propagate f ctxt s
   propagate _ _ TrueSpec = TrueSpec
   propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate RootLabelW (NilCtx HOLE) (SuspendedSpec v ps) = constrained $ \v' -> Let (App RootLabelW (v' :> Nil)) (v :-> ps)
-  propagate RootLabelW (NilCtx HOLE) spec = typeSpec $ TreeSpec Nothing Nothing spec TrueSpec
+  propagate RootLabelW (Unary HOLE) (SuspendedSpec v ps) = constrained $ \v' -> Let (App RootLabelW (v' :> Nil)) (v :-> ps)
+  propagate RootLabelW (Unary HOLE) spec = typeSpec $ TreeSpec Nothing Nothing spec TrueSpec
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec RootLabelW (TreeSpec _ _ rs _) = rs

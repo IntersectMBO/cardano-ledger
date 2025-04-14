@@ -720,25 +720,11 @@ instance NumLike a => Num (Term a) where
 --   there is a HasSpec instance of 'a', which (NumLike a) demands.
 --   This happens in Constrained.Experiment.TheKnot
 instance Logic IntW where
-  propagate f ctxt (ExplainSpec [] s) = propagate f ctxt s
-  propagate f ctxt (ExplainSpec es s) = ExplainSpec es $ propagate f ctxt s
-  propagate _ _ TrueSpec = TrueSpec
-  propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate AddW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App AddW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate AddW (Value x :! NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App AddW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate AddW (i :! NilCtx HOLE) spec =
-    propagate AddW (HOLE :? i :> Nil) spec
-  propagate AddW (HOLE :? Value i :> Nil) (TypeSpec ts cant) =
-    subtractSpec i ts <> notMemberSpec (mapMaybe (safeSubtract i) cant)
-  propagate NegateW (NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App NegateW (v' :> Nil)) (v :-> ps)
-  propagate NegateW (NilCtx HOLE) (TypeSpec ts cant) =
-    negateSpec ts <> notMemberSpec (map negate cant)
-  propagate NegateW (NilCtx HOLE) (MemberSpec es) =
-    MemberSpec $ NE.nub $ fmap negate es
-  propagate AddW (HOLE :? Value i :> Nil) (MemberSpec es) =
+  propagateTypeSpec AddW (HOLE :<: i) ts cant = subtractSpec i ts <> notMemberSpec (mapMaybe (safeSubtract i) cant)
+  propagateTypeSpec AddW ctx ts cant = propagateTypeSpec AddW (flipCtx ctx) ts cant
+  propagateTypeSpec NegateW (Unary HOLE) ts cant = negateSpec ts <> notMemberSpec (map negate cant)
+
+  propagateMemberSpec AddW (HOLE :<: i) es =
     memberSpecList
       (nub $ mapMaybe (safeSubtract i) (NE.toList es))
       ( NE.fromList
@@ -747,6 +733,8 @@ instance Logic IntW where
           , "We can't safely subtract " ++ show i ++ " from any choice in the MemberSpec."
           ]
       )
+  propagateMemberSpec AddW ctx es = propagateMemberSpec AddW (flipCtx ctx) es
+  propagateMemberSpec NegateW (Unary HOLE) es = MemberSpec $ NE.nub $ fmap negate es
 
 addFn :: forall a. NumLike a => Term a -> Term a -> Term a
 addFn = appTerm AddW

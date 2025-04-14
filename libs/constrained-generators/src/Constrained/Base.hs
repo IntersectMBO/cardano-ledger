@@ -103,12 +103,34 @@ type LogicRequires t =
 -- | Logical operations are one that support reasoning about how a function symbol
 --   relates to logical properties, that we call Specification's
 class LogicRequires t => Logic t where
-  {-# MINIMAL (propagate) #-}
+  {-# MINIMAL propagate | (propagateTypeSpec, propagateMemberSpec) #-}
 
-  propagate :: (All HasSpec as, HasSpec b)
+  propagateTypeSpec :: (AppRequires t as b, HasSpec a)
+                    => t as b
+                    -> ListCtx Value as (HOLE a)
+                    -> TypeSpec b
+                    -> [b]
+                    -> Specification a
+  propagateTypeSpec f ctx ts cant = propagate f ctx (TypeSpec ts cant)
+
+  propagateMemberSpec :: (AppRequires t as b, HasSpec a)
+                      => t as b
+                      -> ListCtx Value as (HOLE a)
+                      -> NonEmpty b
+                      -> Specification a
+  propagateMemberSpec f ctx xs = propagate f ctx (MemberSpec xs)
+
+  propagate :: (AppRequires t as b, All HasSpec as, HasSpec a, HasSpec b, TypeList as)
             => t as b
             -> ListCtx Value as (HOLE a)
-            -> Specification b -> Specification a
+            -> Specification b
+            -> Specification a
+  propagate f ctx (ExplainSpec es s) = explainSpec es (propagate f ctx s)
+  propagate _ _ TrueSpec = TrueSpec
+  propagate _ _ (ErrorSpec es) = ErrorSpec es
+  propagate f ctx (SuspendedSpec v ps) = constrained $ \v' -> Let (App f (fromListCtx ctx v')) (v :-> ps)
+  propagate f ctx (TypeSpec ts cant) = propagateTypeSpec f ctx ts cant
+  propagate f ctx (MemberSpec xs) = propagateMemberSpec f ctx xs
 
   rewriteRules ::
     (TypeList dom, Typeable dom, HasSpec rng, All HasSpec dom) =>
@@ -151,7 +173,8 @@ data Ctx v a where
     Ctx v v
   -- | The application `f vs Ctx vs'`
   CtxApp ::
-    ( HasSpec b
+    ( AppRequires fn as b
+    , HasSpec b
     , TypeList as
     , Typeable as
     , All HasSpec as
@@ -210,6 +233,29 @@ toCtxList v = prefix
     suffix Nil = pure Nil
     suffix (Lit l :> ts) = (Value l :>) <$> suffix ts
     suffix (_ :> _) = error "toCtxList with too many holes"
+
+-- | A Convenient pattern for singleton contexts
+pattern Unary :: HOLE a' a -> ListCtx f '[a] (HOLE a')
+pattern Unary h = NilCtx h
+
+{-# COMPLETE Unary #-}
+
+-- | Conenient patterns for binary contexs
+pattern (:<:) :: (Typeable b, Show b) => HOLE c a -> b -> ListCtx Value '[a, b] (HOLE c)
+pattern h :<: a = h :? Value a :> Nil
+
+-- | Conenient patterns for binary contexs
+pattern (:>:) :: (Typeable a, Show a) => a -> HOLE c b -> ListCtx Value '[a, b] (HOLE c)
+pattern a :>: h = Value a :! NilCtx h
+
+{-# COMPLETE (:<:), (:>:) #-}
+
+flipCtx :: (Typeable a, Show a, Typeable b, Show b) => ListCtx Value '[a, b] (HOLE c) -> ListCtx Value '[b, a] (HOLE c)
+flipCtx (HOLE :<: x) = x :>: HOLE
+flipCtx (x :>: HOLE) = HOLE :<: x
+
+fromListCtx :: All HasSpec as => ListCtx Value as (HOLE a) -> Term a -> List Term as
+fromListCtx ctx t = fillListCtx (mapListCtxC @HasSpec (\(Value a) -> Lit a) ctx) (\ HOLE -> t)
 
 -- ========================================================================
 --
@@ -485,18 +531,11 @@ instance Semantics BaseW where
 -- -- ============== ToGenericW Logic instance
 
 instance Logic BaseW where
-  propagate f ctxt (ExplainSpec [] s) = propagate f ctxt s
-  propagate f ctxt (ExplainSpec es s) = ExplainSpec es $ propagate f ctxt s
-  propagate _ _ TrueSpec = TrueSpec
-  propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate ToGenericW (NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App ToGenericW (v' :> Nil)) (v :-> ps)
-  propagate ToGenericW (NilCtx HOLE) (TypeSpec s cant) = TypeSpec s (fromSimpleRep <$> cant)
-  propagate ToGenericW (NilCtx HOLE) (MemberSpec es) = MemberSpec (fmap fromSimpleRep es)
-  propagate FromGenericW (NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App FromGenericW (v' :> Nil)) (v :-> ps)
-  propagate FromGenericW (NilCtx HOLE) (TypeSpec s cant) = TypeSpec s (toSimpleRep <$> cant)
-  propagate FromGenericW (NilCtx HOLE) (MemberSpec es) = MemberSpec (fmap toSimpleRep es)
+  propagateTypeSpec ToGenericW (Unary HOLE) s cant = TypeSpec s (fromSimpleRep <$> cant)
+  propagateTypeSpec FromGenericW (Unary HOLE) s cant = TypeSpec s (toSimpleRep <$> cant)
+
+  propagateMemberSpec ToGenericW (Unary HOLE) es = MemberSpec (fmap fromSimpleRep es)
+  propagateMemberSpec FromGenericW (Unary HOLE) es = MemberSpec (fmap toSimpleRep es)
 
   mapTypeSpec ToGenericW ts = typeSpec ts
   mapTypeSpec FromGenericW ts = typeSpec ts

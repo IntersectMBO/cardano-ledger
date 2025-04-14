@@ -335,9 +335,8 @@ instance Logic MapW where
   propagate f ctxt (ExplainSpec es s) = explainSpec es $ propagate f ctxt s
   propagate _ _ TrueSpec = TrueSpec
   propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate DomW (NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App DomW (v' :> Nil)) (v :-> ps)
-  propagate DomW (NilCtx HOLE) spec =
+  propagate f ctx (SuspendedSpec v ps) = constrained $ \v' -> Let (App f (fromListCtx ctx v')) (v :-> ps)
+  propagate DomW (Unary HOLE) spec =
     case spec of
       MemberSpec (s :| []) ->
         typeSpec $
@@ -352,9 +351,7 @@ instance Logic MapW where
             (constrained $ \kv -> satisfies (fst_ kv) elemspec)
             NoFold
       _ -> ErrorSpec (NE.fromList ["Dom on bad map spec", show spec])
-  propagate RngW (NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App RngW (v' :> Nil)) (v :-> ps)
-  propagate RngW (NilCtx HOLE) spec =
+  propagate RngW (Unary HOLE) spec =
     case spec of
       TypeSpec (ListSpec listHint must size elemspec foldspec) [] ->
         typeSpec $
@@ -370,11 +367,7 @@ instance Logic MapW where
       -- but they appear in the order that they are in `r`. That's
       -- very difficult to achieve!
       _ -> ErrorSpec (NE.fromList ["Rng on bad map spec", show spec])
-  propagate LookupW (HOLE :? Value x :> Nil) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App LookupW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate LookupW (Value x :! NilCtx HOLE) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App LookupW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate LookupW (Value k :! NilCtx HOLE) spec =
+  propagate LookupW (Value k :! Unary HOLE) spec =
         constrained $ \m ->
           [Assert $ Lit k `member_` dom_ m | not $ Nothing `conformsToSpec` spec]
             ++ [ forAll m $ \kv ->
