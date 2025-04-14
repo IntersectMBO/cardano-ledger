@@ -25,7 +25,7 @@ coin :: Rule
 coin = "coin" =:= VUInt
 
 positive_coin :: Rule
-positive_coin = "positive_coin" =:= 1 ... maxWord64
+positive_coin = "positive_coin" =:= (1 :: Integer) ... maxWord64
 
 address :: Rule
 address =
@@ -164,10 +164,10 @@ maxWord64 :: Integer
 maxWord64 = 18446744073709551615
 
 negInt64 :: Rule
-negInt64 = "negInt64" =:= minInt64 ... (-1)
+negInt64 = "negInt64" =:= minInt64 ... (-1 :: Integer)
 
 posInt64 :: Rule
-posInt64 = "posInt64" =:= 1 ... maxInt64
+posInt64 = "posInt64" =:= (1 :: Integer) ... maxInt64
 
 -- | this is the same as the current int64 definition but without zero
 nonZeroInt64 :: Rule
@@ -177,7 +177,7 @@ int64 :: Rule
 int64 = "int64" =:= minInt64 ... maxInt64
 
 positive_int :: Rule
-positive_int = "positive_int" =:= 1 ... 18446744073709551615
+positive_int = "positive_int" =:= (1 :: Integer) ... (18446744073709551615 :: Integer)
 
 unit_interval :: Rule
 unit_interval =

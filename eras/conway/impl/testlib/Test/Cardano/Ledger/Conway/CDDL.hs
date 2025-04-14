@@ -219,30 +219,30 @@ parameter_change_action =
   "parameter_change_action"
     =:~ grp
       [ 0
-      , gov_action_id / VNil
+      , a $ gov_action_id / VNil
       , a protocol_param_update
-      , policy_hash / VNil
+      , a $ policy_hash / VNil
       ]
 
 hard_fork_initiation_action :: Named Group
 hard_fork_initiation_action =
   "hard_fork_initiation_action"
-    =:~ grp [1, gov_action_id / VNil, a protocol_version]
+    =:~ grp [1, a $ gov_action_id / VNil, a protocol_version]
 
 treasury_withdrawals_action :: Named Group
 treasury_withdrawals_action =
   "treasury_withdrawals_action"
-    =:~ grp [2, a (mp [0 <+ asKey reward_account ==> coin]), policy_hash / VNil]
+    =:~ grp [2, a (mp [0 <+ asKey reward_account ==> coin]), a $ policy_hash / VNil]
 
 no_confidence :: Named Group
-no_confidence = "no_confidence" =:~ grp [3, gov_action_id / VNil]
+no_confidence = "no_confidence" =:~ grp [3, a $ gov_action_id / VNil]
 
 update_committee :: Named Group
 update_committee =
   "update_committee"
     =:~ grp
       [ 4
-      , gov_action_id / VNil
+      , a $ gov_action_id / VNil
       , a (set committee_cold_credential)
       , a (mp [0 <+ asKey committee_cold_credential ==> epoch_no])
       , a unit_interval
@@ -251,7 +251,7 @@ update_committee =
 new_constitution :: Named Group
 new_constitution =
   "new_constitution"
-    =:~ grp [5, gov_action_id / VNil, a constitution]
+    =:~ grp [5, a $ gov_action_id / VNil, a constitution]
 
 constitution :: Rule
 constitution =
@@ -289,7 +289,7 @@ anchor =
       ]
 
 vote :: Rule
-vote = "vote" =:= 0 ... 2
+vote = "vote" =:= (0 :: Integer) ... (2 :: Integer)
 
 gov_action_id :: Rule
 gov_action_id =
@@ -480,16 +480,16 @@ auth_committee_hot_cert =
 resign_committee_cold_cert :: Named Group
 resign_committee_cold_cert =
   "resign_committee_cold_cert"
-    =:~ grp [15, a committee_cold_credential, anchor / VNil]
+    =:~ grp [15, a committee_cold_credential, a $ anchor / VNil]
 
 reg_drep_cert :: Named Group
-reg_drep_cert = "reg_drep_cert" =:~ grp [16, a drep_credential, a coin, anchor / VNil]
+reg_drep_cert = "reg_drep_cert" =:~ grp [16, a drep_credential, a coin, a $ anchor / VNil]
 
 unreg_drep_cert :: Named Group
 unreg_drep_cert = "unreg_drep_cert" =:~ grp [17, a drep_credential, a coin]
 
 update_drep_cert :: Named Group
-update_drep_cert = "update_drep_cert" =:~ grp [18, a drep_credential, anchor / VNil]
+update_drep_cert = "update_drep_cert" =:~ grp [18, a drep_credential, a $ anchor / VNil]
 
 drep :: Rule
 drep =
@@ -538,7 +538,7 @@ single_host_name =
   comment
     [str|dns_name: An A or AAAA DNS record
         |]
-    $ "single_host_name" =:~ grp [1, port / VNil, a dns_name]
+    $ "single_host_name" =:~ grp [1, a $ port / VNil, a dns_name]
 
 multi_host_name :: Named Group
 multi_host_name =
@@ -755,7 +755,7 @@ language =
     / int 2 -- Plutus v3
 
 potential_languages :: Rule
-potential_languages = "potential_languages" =:= 0 ... 255
+potential_languages = "potential_languages" =:= (0 :: Integer) ... (255 :: Integer)
 
 cost_models :: Rule
 cost_models =
@@ -774,7 +774,7 @@ cost_models =
         [ opt $ idx 0 ==> arr [0 <+ a int64]
         , opt $ idx 1 ==> arr [0 <+ a int64]
         , opt $ idx 2 ==> arr [0 <+ a int64]
-        , 0 <+ asKey (3 ... 255) ==> arr [0 <+ a int64]
+        , 0 <+ asKey ((3 :: Integer) ... (255 :: Integer)) ==> arr [0 <+ a int64]
         ]
 
 transaction_metadatum_label :: Rule
