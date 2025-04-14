@@ -2,7 +2,19 @@
   description = "cardano-ledger";
 
   inputs = {
-    haskellNix.url = "github:input-output-hk/haskell.nix";
+
+    # Remove this once we no longer need GHC 8.10.7.
+    hackageNix = {
+      url = "github:input-output-hk/hackage.nix?ref=for-stackage";
+      flake = false;
+    };
+    haskellNix = {
+      # GHC 8.10.7 cross compilation for windows is broken in newer versions of haskell.nix.
+      # Unpin this once we no longer need GHC 8.10.7.
+      url = "github:input-output-hk/haskell.nix/a0283c855a38ed70ba521f7a9290e78488ddf11b";
+      inputs.hackage.follows = "hackageNix";
+    };
+
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
