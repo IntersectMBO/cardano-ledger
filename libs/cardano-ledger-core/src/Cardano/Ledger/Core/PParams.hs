@@ -91,6 +91,13 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Field (..),
+  decode,
+  field,
+  invalidField,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
 import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
@@ -102,6 +109,8 @@ import Data.Data (Typeable)
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (foldMap'), foldr')
 import qualified Data.Foldable as F (foldl')
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -403,6 +412,28 @@ class
     where
       accum PParamDescriptor {ppdLens} acc =
         set ppdLens <$> decCBOR <*> acc
+
+  decCBORPParamsUpdate :: Decoder s (PParamsUpdate era)
+  decCBORPParamsUpdate =
+    decode $
+      SparseKeyed
+        (show . typeRep $ Proxy @(PParamsUpdate era))
+        emptyPParamsUpdate
+        updateField
+        []
+    where
+      updateField k =
+        IntMap.findWithDefault
+          (invalidField k)
+          (fromIntegral k)
+          (updateFieldMap pparamDescriptors)
+      updateFieldMap :: [PParamDescriptor era] -> IntMap (Field (PParamsUpdate era))
+      updateFieldMap =
+        IntMap.fromList
+          . map
+            ( \PParamDescriptor {ppdTag, ppdUpdateLens} ->
+                (fromIntegral ppdTag, field (set ppdUpdateLens . SJust) From)
+            )
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
