@@ -71,7 +71,7 @@ import Cardano.Ledger.Shelley.TxCert
 import Constrained.API
 import Constrained.Base (toPred)
 import Constrained.GenT (pureGen)
-import Constrained.Spec.Size (hasSize, rangeSize)
+import Constrained.TheKnot (hasSize, rangeSize)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (replicateM)
 import Data.ByteString (ByteString)

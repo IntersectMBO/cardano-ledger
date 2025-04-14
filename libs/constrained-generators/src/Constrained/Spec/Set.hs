@@ -10,6 +10,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -30,14 +31,45 @@
 
 module Constrained.Spec.Set where
 
-import Constrained.Base
-import Constrained.Conformance (conformsToSpec, satisfies)
+import Constrained.Base (
+  Binder (..),
+  Forallable (..),
+  HOLE (..),
+  HasSpec (..),
+  Logic (..),
+  Pred (..),
+  Semantics (..),
+  Specification (..),
+  Syntax (..),
+  Term (..),
+  appTerm,
+  constrained,
+  equalSpec,
+  explainSpec,
+  fromListCtx,
+  isErrorLike,
+  memberSpecList,
+  notEqualSpec,
+  notMemberSpec,
+  parensIf,
+  prettyPrec,
+  short,
+  showType,
+  typeSpec,
+  (/>),
+  pattern Unary,
+ )
+import Constrained.Conformance (
+  conformsToSpec,
+  satisfies,
+ )
 import Constrained.Core
 import Constrained.GenT
 import Constrained.List
 import Constrained.NumSpec
 import Constrained.Syntax
 import Constrained.TheKnot
+
 import Data.Foldable
 import Data.Kind
 import Data.List ((\\))
@@ -128,7 +160,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
 
   genFromTypeSpec (SetSpec must e _)
     | any (not . (`conformsToSpec` e)) must =
-        genError
+        genErrorNE
           ( NE.fromList
               [ "Failed to generate set"
               , "Some element in the must set does not conform to the elem specification"
@@ -143,7 +175,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
   genFromTypeSpec (SetSpec must (ExplainSpec [] elemspec) szSpec) =
     genFromTypeSpec (SetSpec must elemspec szSpec)
   genFromTypeSpec (SetSpec must (ExplainSpec (e : es) elemspec) szSpec) =
-    explain (e :| es) $ genFromTypeSpec (SetSpec must elemspec szSpec)
+    explainNE (e :| es) $ genFromTypeSpec (SetSpec must elemspec szSpec)
   genFromTypeSpec (SetSpec must elemS@(MemberSpec xs) szSpec) = do
     let szSpec' = szSpec <> geqSpec (sizeOf must) <> maxSpec (cardinality elemS)
     choices <- pureGen $ shuffle (NE.toList xs \\ Set.toList must)
@@ -153,10 +185,10 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
   genFromTypeSpec (SetSpec must elemS szSpec) = do
     let szSpec' = (szSpec <> geqSpec (sizeOf must) <> maxSpec (cardinality elemS))
     count <-
-      explain1 ("Choose a size for the Set to be generated") $
+      explain "Choose a size for the Set to be generated" $
         genFromSpecT szSpec'
     let targetSize = count - sizeOf must
-    explain
+    explainNE
       ( NE.fromList
           [ "Choose size count = " ++ show count
           , "szSpec' = " ++ show szSpec'
@@ -169,7 +201,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
         -- 0 means TrueSpec or SuspendedSpec so we can't rule anything out
         0 -> go 100 targetSize must
         n -> case compare n targetSize of
-          LT -> fatalError (pure "The number of things that meet the element test is too small.")
+          LT -> fatalError "The number of things that meet the element test is too small."
           GT -> go 100 targetSize must
           EQ -> go 100 targetSize must
     where
@@ -177,7 +209,7 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
       go _ n s | n <= 0 = pure s
       go tries n s = do
         e <-
-          explain
+          explainNE
             ( NE.fromList
                 [ "Generate set member at type " ++ showType @a
                 , "  number of items starting with  = " ++ show (Set.size must)
@@ -214,12 +246,12 @@ instance (Ord a, HasSpec a) => HasSpec (Set a) where
   guardTypeSpec = guardSetSpec
 
 data SetW (d :: [Type]) (r :: Type) where
-  SingletonW :: (Ord a, HasSpec a) => SetW '[a] (Set a)
-  UnionW :: (Literal a, Ord a, HasSpec a) => SetW '[Set a, Set a] (Set a)
-  SubsetW :: (Literal a, Ord a, HasSpec a) => SetW '[Set a, Set a] Bool
-  MemberW :: (Literal a, Ord a) => SetW '[a, Set a] Bool
-  DisjointW :: (Literal a, Ord a) => SetW '[Set a, Set a] Bool
-  FromListW :: forall a. (HasSpec a, Ord a) => SetW '[[a]] (Set a)
+  SingletonW :: (HasSpec a, Ord a) => SetW '[a] (Set a)
+  UnionW :: (HasSpec a, Ord a) => SetW '[Set a, Set a] (Set a)
+  SubsetW :: (HasSpec a, Ord a, HasSpec a) => SetW '[Set a, Set a] Bool
+  MemberW :: (HasSpec a, Ord a) => SetW '[a, Set a] Bool
+  DisjointW :: (HasSpec a, Ord a) => SetW '[Set a, Set a] Bool
+  FromListW :: (HasSpec a, Ord a) => SetW '[[a]] (Set a)
 
 deriving instance Eq (SetW dom rng)
 
@@ -376,37 +408,37 @@ instance Logic SetW where
             , Assert $ member_ e set
             ]
   propagate FromListW (Unary HOLE) spec =
-        case spec of
-          MemberSpec (xs :| []) ->
-            typeSpec $
-              ListSpec
-                Nothing
+    case spec of
+      MemberSpec (xs :| []) ->
+        typeSpec $
+          ListSpec
+            Nothing
+            (Set.toList xs)
+            TrueSpec
+            ( memberSpecList
                 (Set.toList xs)
-                TrueSpec
-                ( memberSpecList
-                    (Set.toList xs)
-                    (pure "propagateSpec (fromList_ HOLE) on (MemberSpec xs) where the set 'xs' is empty")
-                )
-                NoFold
-          TypeSpec (SetSpec must elemSpec sizeSpec) []
-            | TrueSpec <- sizeSpec -> typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
-            | TypeSpec (NumSpecInterval (Just l) Nothing) cantSize <- sizeSpec
-            , l <= sizeOf must
-            , all (< sizeOf must) cantSize ->
-                typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
-          _ ->
-            -- Here we simply defer to basically generating the universe that we can
-            -- draw from according to `spec` first and then fold that into the spec for the list.
-            -- The tricky thing about this is that it may not play super nicely with other constraints
-            -- on the list. For this reason it's important to try to find as many possible work-arounds
-            -- in the above cases as possible.
-            constrained $ \xs ->
-              exists (\eval -> pure $ Set.fromList (eval xs)) $ \s ->
-                [ s `satisfies` spec
-                , xs `DependsOn` s
-                , forAll xs $ \e -> e `member_` s
-                , forAll s $ \e -> e `elem_` xs
-                ]
+                (pure "propagateSpec (fromList_ HOLE) on (MemberSpec xs) where the set 'xs' is empty")
+            )
+            NoFold
+      TypeSpec (SetSpec must elemSpec sizeSpec) []
+        | TrueSpec <- sizeSpec -> typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
+        | TypeSpec (NumSpecInterval (Just l) Nothing) cantSize <- sizeSpec
+        , l <= sizeOf must
+        , all (< sizeOf must) cantSize ->
+            typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
+      _ ->
+        -- Here we simply defer to basically generating the universe that we can
+        -- draw from according to `spec` first and then fold that into the spec for the list.
+        -- The tricky thing about this is that it may not play super nicely with other constraints
+        -- on the list. For this reason it's important to try to find as many possible work-arounds
+        -- in the above cases as possible.
+        constrained $ \xs ->
+          exists (\eval -> pure $ Set.fromList (eval xs)) $ \s ->
+            [ s `satisfies` spec
+            , xs `DependsOn` s
+            , forAll xs $ \e -> e `member_` s
+            , forAll s $ \e -> e `elem_` xs
+            ]
 
   mapTypeSpec FromListW ts =
     constrained $ \x ->

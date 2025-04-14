@@ -18,7 +18,6 @@ module Constrained.API (
   name,
   named,
   Pred (..),
-  Literal,
   HasSpec (..),
   HasSimpleRep (..),
   OrdLike (..),
@@ -126,6 +125,9 @@ module Constrained.API (
   pattern Elem,
   pattern ToGeneric,
   pattern FromGeneric,
+  pattern Unary,
+  pattern (:<:),
+  pattern (:>:),
   printPlan,
   NumLike,
   PairSpec (..),
@@ -143,7 +145,6 @@ where
 import Constrained.Base (
   Fun (..),
   HasSpec (..),
-  Literal,
   Logic (..),
   Pred (..),
   Semantics (..),
@@ -161,6 +162,9 @@ import Constrained.Base (
   toGeneric_,
   pattern FromGeneric,
   pattern ToGeneric,
+  pattern Unary,
+  pattern (:<:),
+  pattern (:>:),
  )
 import Constrained.Conformance (
   conformsToSpec,

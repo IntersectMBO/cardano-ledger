@@ -32,7 +32,26 @@
 --    5) Syntacic only transformations
 module Constrained.Syntax where
 
-import Constrained.Base
+import Constrained.Base (
+  Binder (..),
+  Forallable,
+  HasGenHint,
+  HasSpec,
+  Hint,
+  IsPred,
+  Pred (..),
+  Specification (..),
+  Term (..),
+  Weighted (..),
+  bind,
+  explainSpecOpt,
+  forAllToList,
+  mapWeighted,
+  semantics,
+  toPred,
+  vsep',
+  (/>),
+ )
 import Constrained.Core (
   Rename (rename),
   Value (..),
@@ -41,11 +60,36 @@ import Constrained.Core (
   freshen,
   unValue,
  )
-import Constrained.Env
-import Constrained.GenT (GE (..), MonadGenError (..), errorGE, explain1)
-import Constrained.Generic
-import Constrained.Graph (Graph (..))
-import Constrained.List
+import Constrained.Env (
+  Env,
+  extendEnv,
+  lookupEnv,
+  removeVar,
+  singletonEnv,
+ )
+import Constrained.GenT (
+  GE (..),
+  MonadGenError (..),
+  errorGE,
+  explain,
+  fatalError,
+ )
+import Constrained.Generic (
+  Sum (..),
+  SumOver,
+ )
+import Constrained.Graph (
+  Graph (..),
+ )
+import Constrained.List (
+  List (..),
+  foldMapList,
+  mapList,
+  mapListC,
+  mapMList,
+  uncurryList_,
+ )
+
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, tell)
 import Data.Foldable (fold, toList)
@@ -653,7 +697,7 @@ letFloating = fold . go []
           ((forall b. Term b -> b) -> GE a) ->
           (forall b. Term b -> b) ->
           GE a
-        explainSemantics k2 env = explain es $ k2 env
+        explainSemantics k2 env = explainNE es $ k2 env
     -- TODO: possibly one wants to have a `Term` level explanation in case
     -- the `b` propagates to ErrorSpec for some reason?
     pushExplain es (When b p) = When b (pushExplain es p)
@@ -734,7 +778,7 @@ unsafeExists ::
   (HasSpec a, IsPred p) =>
   (Term a -> p) ->
   Pred
-unsafeExists = exists (\_ -> fatalError (pure "unsafeExists"))
+unsafeExists = exists (\_ -> fatalError "unsafeExists")
 
 letBind ::
   ( HasSpec a
@@ -831,7 +875,7 @@ envFromPred env p = case p of
     envFromPred (extendEnv x v env) pp
   Explain _ pp -> envFromPred env pp
   Exists c (x :-> pp) -> do
-    v <- c (errorGE . explain1 "envFromPred: Exists" . runTerm env)
+    v <- c (errorGE . explain "envFromPred: Exists" . runTerm env)
     envFromPred (extendEnv x v env) pp
   And [] -> pure env
   And (pp : ps) -> do
@@ -853,9 +897,10 @@ runTermE env = \case
     vs <- mapMList (fmap Identity . runTermE env) ts
     pure $ uncurryList_ runIdentity (semantics f) vs
 
+-- TODO: Why on gods earth is this in a module called `Syntax`?!
 runTerm :: MonadGenError m => Env -> Term a -> m a
 runTerm env x = case runTermE env x of
-  Left msgs -> fatalError msgs
+  Left msgs -> fatalErrorNE msgs
   Right val -> pure val
 
 -- ===============================================================================

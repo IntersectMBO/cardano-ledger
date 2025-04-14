@@ -15,17 +15,67 @@
 -- | Useful properties for debugging custom @HasSpec@ instances.
 module Constrained.Properties where
 
-import Constrained.List
-import Constrained.Spec.Map
-import Constrained.Spec.Set
-import Constrained.Spec.SumProd
-import Constrained.NumSpec
 import Constrained.API
-import Constrained.Base
-import Constrained.Conformance
-import Constrained.Core
-import Constrained.GenT
-import Constrained.TheKnot
+import Constrained.Base (
+  AppRequires,
+  BaseW (..),
+  HOLE (..),
+  appTerm,
+  (/>),
+ )
+import Constrained.Conformance (
+  monitorSpec,
+ )
+import Constrained.Core (
+  Value (..),
+  Var (..),
+  unValue,
+ )
+import Constrained.GenT (
+  GE (..),
+  errorGE,
+  fromGEDiscard,
+  fromGEProp,
+  strictGen,
+ )
+import Constrained.List (
+  All,
+  FunTy,
+  List (..),
+  ListCtx (..),
+  TypeList,
+  fillListCtx,
+  lengthList,
+  listShape,
+  mapListCtxC,
+  mapMListC,
+  uncurryList,
+  uncurryList_,
+ )
+import Constrained.NumSpec (
+  IntW (..),
+  NumOrdW (..),
+ )
+import Constrained.Spec.Map (
+  MapW (..),
+ )
+import Constrained.Spec.Set ()
+import Constrained.Spec.SumProd ()
+import Constrained.TheKnot (
+  BoolW (..),
+  ElemW (..),
+  EqW (..),
+  FunW (..),
+  ListW (..),
+  ProdW (..),
+  SizeW (..),
+  SumW (..),
+  genInverse,
+  mapSpec,
+  prettyPlan,
+  shrinkWithSpec,
+ )
+
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import Data.Typeable (Typeable, typeOf)

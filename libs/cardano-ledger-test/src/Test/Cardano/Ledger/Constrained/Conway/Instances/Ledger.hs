@@ -126,10 +126,9 @@ import Constrained.Base
 import Constrained.GenT (pureGen, vectorOfT)
 import Constrained.Generic
 import Constrained.List (List (..))
-import Constrained.Spec.ListFoldy (genListWithSize)
 import Constrained.Spec.Map
-import Constrained.Spec.Size qualified as C
 import Constrained.Spec.Tree ()
+import Constrained.TheKnot qualified as C
 import GHC.TypeLits hiding (Text)
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
 import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
@@ -242,7 +241,7 @@ instance Foldy DeltaCoin where
   theZero = DeltaCoin 0
   genSizedList sz elemSpec foldSpec =
     map fromSimpleRep
-      <$> genListWithSize @Integer sz (toSimpleRepSpec elemSpec) (toSimpleRepSpec foldSpec)
+      <$> C.genListWithSize @Integer sz (toSimpleRepSpec elemSpec) (toSimpleRepSpec foldSpec)
   noNegativeValues = False
 
 deriving via Integer instance Num DeltaCoin

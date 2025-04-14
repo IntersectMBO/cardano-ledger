@@ -3,6 +3,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -30,16 +31,45 @@
 
 module Constrained.NumSpec where
 
-import Constrained.List
-import Constrained.Base
+import Constrained.Base (
+  HOLE (..),
+  HasSpec (..),
+  Logic (..),
+  Semantics (..),
+  Specification (..),
+  Syntax (..),
+  Term (..),
+  appTerm,
+  equalSpec,
+  explainSpecOpt,
+  flipCtx,
+  fromSimpleRepSpec,
+  memberSpecList,
+  notMemberSpec,
+  showType,
+  typeSpec,
+  pattern Unary,
+  pattern (:<:),
+ )
 import Constrained.Conformance ()
-import Constrained.Core
-import Constrained.GenT (GenT, MonadGenError (..), pureGen, sizeT)
-import Constrained.Generic
+import Constrained.Core (unionWithMaybe)
+import Constrained.GenT (
+  GenT,
+  MonadGenError (..),
+  genError,
+  pureGen,
+  sizeT,
+ )
+import Constrained.Generic (
+  HasSimpleRep (..),
+  SimpleRep,
+ )
+
 import Control.Applicative ((<|>))
 import Control.Arrow (first)
 import Data.Kind
 import Data.List (nub)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
 import qualified Data.Set as Set
@@ -157,6 +187,12 @@ class MaybeBounded a where
   default upperBound :: Bounded a => Maybe a
   upperBound = Just maxBound
 
+newtype Unbonded a = Unbonded a
+
+instance MaybeBounded (Unbonded a) where
+  lowerBound = Nothing
+  upperBound = Nothing
+
 instance MaybeBounded Int
 instance MaybeBounded Int64
 instance MaybeBounded Int32
@@ -166,21 +202,12 @@ instance MaybeBounded Word64
 instance MaybeBounded Word32
 instance MaybeBounded Word16
 instance MaybeBounded Word8
-
-instance MaybeBounded Integer where
-  lowerBound = Nothing
-  upperBound = Nothing
-
-instance MaybeBounded (Ratio Integer) where
-  lowerBound = Nothing
-  upperBound = Nothing
+deriving via Unbonded Integer instance MaybeBounded Integer
+deriving via Unbonded (Ratio Integer) instance MaybeBounded (Ratio Integer)
+deriving via Unbonded Float instance MaybeBounded Float
 
 instance MaybeBounded Natural where
   lowerBound = Just 0
-  upperBound = Nothing
-
-instance MaybeBounded Float where
-  lowerBound = Nothing
   upperBound = Nothing
 
 -- ===================================================================
@@ -255,7 +282,9 @@ emptyNumSpec = mempty
 
 guardNumSpec ::
   (Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =>
-  [String] -> NumSpec n -> Specification n
+  [String] ->
+  NumSpec n ->
+  Specification n
 guardNumSpec msg s@(NumSpecInterval (Just a) (Just b))
   | a > b = ErrorSpec ("NumSpec has low bound greater than hi bound" :| (("   " ++ show s) : msg))
   | a == b = equalSpec a
@@ -292,7 +321,7 @@ constrainInterval ml mu r =
       | u > 0 -> pure (negate r', min u r')
       | otherwise -> pure (u - r' - r', u)
     (Just l, Just u)
-      | l > u -> genError (pure ("bad interval: " ++ show l ++ " " ++ show u))
+      | l > u -> genError ("bad interval: " ++ show l ++ " " ++ show u)
       | u < 0 -> pure (safeSub l (safeSub l u r') r', u)
       | l >= 0 -> pure (l, safeAdd u (safeAdd u l r') r')
       -- TODO: this is a bit suspect if the bounds are lopsided
@@ -509,17 +538,23 @@ type Number n = (Num n, Enum n, TypeSpec n ~ NumSpec n, Num (NumSpec n), HasSpec
 
 addSpecInt ::
   Number n =>
-  Specification n -> Specification n -> Specification n
+  Specification n ->
+  Specification n ->
+  Specification n
 addSpecInt x y = operateSpec " + " (+) (+) x y
 
 subSpecInt ::
   Number n =>
-  Specification n -> Specification n -> Specification n
+  Specification n ->
+  Specification n ->
+  Specification n
 subSpecInt x y = operateSpec " - " (-) (-) x y
 
 multSpecInt ::
   Number n =>
-  Specification n -> Specification n -> Specification n
+  Specification n ->
+  Specification n ->
+  Specification n
 multSpecInt x y = operateSpec " * " (*) (*) x y
 
 -- | let 'n' be some numeric type, and 'f' and 'ft' be operations on 'n' and (TypeSpec n)

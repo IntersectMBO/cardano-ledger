@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,14 +16,54 @@
 
 module Constrained.Spec.Tree (BinTree (..), TreeW (..), rootLabel_, TreeSpec (..)) where
 
-import Constrained.Base
-import Constrained.Conformance (conformsToSpec, satisfies)
-import Constrained.Core (unionWithMaybe)
-import Constrained.GenT (oneofT)
-import Constrained.List
-import Constrained.Spec.SumProd (match)
-import Constrained.Syntax (forAll, genHint)
-import Constrained.TheKnot
+import Constrained.Base (
+  Binder (..),
+  Forallable (..),
+  HOLE (..),
+  HasGenHint (..),
+  HasSpec (..),
+  Logic (..),
+  Pred (..),
+  Semantics (..),
+  Specification (..),
+  Syntax (..),
+  Term (..),
+  appTerm,
+  constrained,
+  errorLikeMessage,
+  explainSpec,
+  isErrorLike,
+  typeSpec,
+  pattern Unary,
+ )
+import Constrained.Conformance (
+  conformsToSpec,
+  satisfies,
+ )
+import Constrained.Core (
+  unionWithMaybe,
+ )
+import Constrained.GenT (
+  oneofT,
+ )
+import Constrained.List (
+  List (..),
+ )
+import Constrained.Spec.SumProd (
+  match,
+ )
+import Constrained.Syntax (
+  forAll,
+  genHint,
+ )
+import Constrained.TheKnot (
+  FoldSpec (..),
+  ListSpec (..),
+  PairSpec (..),
+  genFromSpecT,
+  shrinkWithSpec,
+ )
+
 import Data.Kind
 import Data.Tree
 import GHC.Generics
@@ -183,7 +224,8 @@ instance HasSpec a => HasSpec (Tree a) where
 
   toPreds t (TreeSpec mal msz rs s) =
     (forAll t $ \n -> n `satisfies` s)
-      <> rootLabel_ t `satisfies` rs
+      <> rootLabel_ t
+        `satisfies` rs
       <> maybe TruePred (\sz -> genHint (mal, sz) t) msz
 
 instance HasSpec a => HasGenHint (Tree a) where

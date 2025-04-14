@@ -1,27 +1,29 @@
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
+
 module Constrained.List where
 
-import GHC.TypeLits
-import Data.Foldable
+import Data.Foldable (fold)
 import Data.Functor.Const
 import Data.Kind
 import Data.Semigroup (Sum (..))
+import GHC.TypeLits
 
 -- | A heterogeneous list / an inductive tuple.
 -- We use this heavily to represent arguments to
@@ -42,7 +44,7 @@ type family Length as where
   Length (_ : as) = 1 + Length as
 
 type family as :! n where
-  '[] :! n = TypeError (Text "Indexing into empty type-level list")
+  '[] :! n = TypeError ('Text "Indexing into empty type-level list")
   (a : as) :! 0 = a
   (a : as) :! n = as :! (n - 1)
 
@@ -52,12 +54,12 @@ class IndexOf n as where
 instance IndexOf 0 (a : as) where
   at (a :> _) = a
 
-instance {-# OVERLAPPABLE #-} (IndexOf (n - 1) as, as :! (n - 1) ~ (a : as) :! n) => IndexOf n (a : as) where
+instance {-# OVERLAPPABLE #-} (IndexOf (n - 1) as, (as :! (n - 1)) ~ ((a : as) :! n)) => IndexOf n (a : as) where
   at (_ :> as) = at @(n - 1) as
 
-mapList_ :: (forall a. f a -> b) -> List f as -> [b]
-mapList_ _ Nil = []
-mapList_ f (x :> xs) = f x : mapList_ f xs
+toList :: (forall a. f a -> b) -> List f as -> [b]
+toList _ Nil = []
+toList f (x :> xs) = f x : toList f xs
 
 mapListC_ :: forall c f as b. All c as => (forall a. c a => f a -> b) -> List f as -> [b]
 mapListC_ _ Nil = []
@@ -85,7 +87,7 @@ mapMListC _ Nil = pure Nil
 mapMListC f (x :> xs) = (:>) <$> f x <*> mapMListC @c f xs
 
 foldMapList :: Monoid b => (forall a. f a -> b) -> List f as -> b
-foldMapList f = fold . mapList_ f
+foldMapList f = fold . toList f
 
 foldMapListC ::
   forall c as b f. (All c as, Monoid b) => (forall a. c a => f a -> b) -> List f as -> b

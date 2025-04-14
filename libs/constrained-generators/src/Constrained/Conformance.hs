@@ -22,12 +22,51 @@
 
 module Constrained.Conformance where
 
-import Constrained.Base
-import Constrained.Core (NonEmpty ((:|)), Rename (rename))
-import Constrained.Env
-import Constrained.GenT
-import Constrained.List
-import Constrained.Syntax
+import Constrained.Base (
+  Binder (..),
+  HasSpec,
+  Pred (..),
+  Specification (..),
+  Term (..),
+  Weighted (..),
+  addToErrorSpec,
+  combineSpec,
+  conformsTo,
+  explainSpecOpt,
+  forAllToList,
+  memberSpecList,
+  notMemberSpec,
+  showType,
+  toPreds,
+ )
+import Constrained.Core (
+  NonEmpty ((:|)),
+  Rename (rename),
+ )
+import Constrained.Env (
+  Env,
+  extendEnv,
+  singletonEnv,
+ )
+import Constrained.GenT (
+  GE (..),
+  MonadGenError (..),
+  catMessageList,
+  errorGE,
+  explain,
+  fromGE,
+  runGE,
+ )
+import Constrained.List (
+  mapList,
+ )
+import Constrained.Syntax (
+  runCaseOn,
+  runTerm,
+  runTermE,
+  substitutePred,
+ )
+
 import Data.List (intersect, nub)
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
@@ -45,8 +84,8 @@ checkPred env = \case
     v <- runTerm env term
     case (elem v xs, bool) of
       (True, True) -> pure True
-      (True, False) -> fatalError ("notElemPred reduces to True" :| [show p])
-      (False, True) -> fatalError ("elemPred reduces to False" :| [show p])
+      (True, False) -> fatalErrorNE ("notElemPred reduces to True" :| [show p])
+      (False, True) -> fatalErrorNE ("elemPred reduces to False" :| [show p])
       (False, False) -> pure True
   Monitor {} -> pure True
   Subst x t p -> checkPred env $ substitutePred x t p
@@ -55,7 +94,7 @@ checkPred env = \case
   p@(Reifies t' t f) -> do
     val <- runTerm env t
     val' <- runTerm env t'
-    explain (NE.fromList ["Reification:", "  " ++ show p]) $ pure (f val == val')
+    explainNE (NE.fromList ["Reification:", "  " ++ show p]) $ pure (f val == val')
   ForAll t (x :-> p) -> do
     set <- runTerm env t
     and
@@ -71,16 +110,16 @@ checkPred env = \case
     b <- runTerm env bt
     if b then checkPred env p else pure True
   TruePred -> pure True
-  FalsePred es -> explain es $ pure False
+  FalsePred es -> explainNE es $ pure False
   DependsOn {} -> pure True
   And ps -> checkPreds env ps
   Let t (x :-> p) -> do
     val <- runTerm env t
     checkPred (extendEnv x val env) p
   Exists k (x :-> p) -> do
-    a <- runGE $ k (errorGE . explain1 "checkPred: Exists" . runTerm env)
+    a <- runGE $ k (errorGE . explain "checkPred: Exists" . runTerm env)
     checkPred (extendEnv x a env) p
-  Explain es p -> explain es $ checkPred env p
+  Explain es p -> explainNE es $ checkPred env p
 
 checkPreds :: (MonadGenError m, Traversable t) => Env -> t Pred -> m Bool
 checkPreds env ps = and <$> mapM (checkPred env) ps
@@ -294,7 +333,7 @@ monitorPred ::
   forall m. MonadGenError m => Env -> Pred -> m (Property -> Property)
 monitorPred env = \case
   ElemPred {} -> pure id -- Not sure about this, but ElemPred is a lot like Assert, so ...
-  Monitor m -> pure (m $ errorGE . explain1 "monitorPred: Monitor" . runTerm env)
+  Monitor m -> pure (m $ errorGE . explain "monitorPred: Monitor" . runTerm env)
   Subst x t p -> monitorPred env $ substitutePred x t p
   Assert {} -> pure id
   GenHint {} -> pure id
@@ -321,7 +360,7 @@ monitorPred env = \case
     val <- runTerm env t
     monitorPred (extendEnv x val env) p
   Exists k (x :-> p) -> do
-    case k (errorGE . explain1 "monitorPred: Exists" . runTerm env) of
+    case k (errorGE . explain "monitorPred: Exists" . runTerm env) of
       Result a -> monitorPred (extendEnv x a env) p
       _ -> pure id
-  Explain es p -> explain es $ monitorPred env p
+  Explain es p -> explainNE es $ monitorPred env p

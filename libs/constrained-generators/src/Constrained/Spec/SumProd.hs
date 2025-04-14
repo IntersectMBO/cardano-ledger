@@ -60,20 +60,83 @@ module Constrained.Spec.SumProd (
   prodSnd_,
   prod_,
   PairSpec (..),
-  SumW(..)
+  SumW (..),
 ) where
 
-import Constrained.Base
-import Constrained.Conformance (conformsToSpec, satisfies)
-import Constrained.Core
-import Constrained.Generic
-import Constrained.List
-import Constrained.Syntax (exists, forAll, letBind, mkCase, reify)
-import Constrained.TheKnot
+import Constrained.Base (
+  BaseW (..),
+  Binder (..),
+  Forallable (..),
+  Fun (..),
+  HasSpec (..),
+  IsPred (..),
+  Pred (..),
+  Specification (..),
+  Term (..),
+  Weighted (..),
+  appTerm,
+  bind,
+  constrained,
+  fromGeneric_,
+  toGeneric_,
+ )
+import Constrained.Conformance (
+  conformsToSpec,
+  satisfies,
+ )
+import Constrained.Core (
+  Evidence (..),
+ )
+import Constrained.Generic (
+  ConstrOf,
+  HasSimpleRep (..),
+  Prod,
+  ProdOver,
+  SOP,
+  SimpleRep,
+  Sum,
+  SumOver,
+  TheSop,
+  (:::),
+ )
+import Constrained.List (
+  All,
+  FunTy,
+  List (..),
+  MapList,
+  TypeList,
+  curryList,
+  listShape,
+  mapListC,
+ )
+import Constrained.Syntax (
+  exists,
+  forAll,
+  letBind,
+  mkCase,
+  reify,
+ )
+import Constrained.TheKnot (
+  CountCases,
+  FoldSpec (..),
+  FunW (..),
+  PairSpec (..),
+  ProdW (..),
+  SumW (..),
+  ifElse,
+  injLeft_,
+  injRight_,
+  preMapFoldSpec,
+  prodFst_,
+  prodSnd_,
+  prod_,
+ )
+
 import Data.Typeable (Typeable)
 import GHC.TypeLits (Symbol)
 import GHC.TypeNats
 import Test.QuickCheck (Arbitrary (..), oneof)
+
 -- ==================================================================
 -- Generics
 -- HasSpec for various types that are Sums of Products

@@ -216,7 +216,7 @@ instance
                     (kvs' <> typeSpec (Cartesian (notEqualSpec k) mempty))
                     (Map.insert k v m)
                 _ ->
-                  genError
+                  genErrorNE
                     ( NE.fromList
                         [ "Failed to generate enough elements for the map:"
                         , "  m = " ++ show m
@@ -225,11 +225,11 @@ instance
                         , show $ "  simplifySpec kvs' = " <> pretty (simplifySpec kvs')
                         ]
                     )
-        explain1 ("  n = " ++ show n) $ go n kvs mempty
+        explain ("  n = " ++ show n) $ go n kvs mempty
   genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
-    !mustMap <- explain1 "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
+    !mustMap <- explain "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (pair_ (Lit k) v) kvs
-      v <- explain1 (show $ "vSpec =" <+> pretty vSpec) $ genFromSpecT vSpec
+      v <- explain (show $ "vSpec =" <+> pretty vSpec) $ genFromSpecT vSpec
       pure $ (k, v)
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
@@ -256,7 +256,7 @@ instance
             foldSpec'
 
     !restVals <-
-      explain
+      explainNE
         ( NE.fromList
             [ "Make the restVals"
             , show $ "  valsSpec =" <+> pretty valsSpec
@@ -270,7 +270,7 @@ instance
         go m (v : restVals') = do
           let keySpec = notMemberSpec (Map.keysSet m) <> constrained (\k -> pair_ k (Lit v) `satisfies` kvs)
           k <-
-            explain
+            explainNE
               ( NE.fromList
                   [ "Make a key"
                   , show $ indent 4 $ "keySpec =" <+> pretty keySpec
@@ -310,7 +310,8 @@ instance
 data MapW (dom :: [Type]) (rng :: Type) where
   DomW :: (HasSpec k, HasSpec v, IsNormalType k, IsNormalType v, Ord k) => MapW '[Map k v] (Set k)
   RngW :: (HasSpec k, HasSpec v, IsNormalType k, IsNormalType v, Ord k) => MapW '[Map k v] [v]
-  LookupW :: (HasSpec k, HasSpec v, IsNormalType k, IsNormalType v, Ord k) => MapW '[k, Map k v] (Maybe v)
+  LookupW ::
+    (HasSpec k, HasSpec v, IsNormalType k, IsNormalType v, Ord k) => MapW '[k, Map k v] (Maybe v)
 
 deriving instance Eq (MapW dom rng)
 
@@ -368,21 +369,21 @@ instance Logic MapW where
       -- very difficult to achieve!
       _ -> ErrorSpec (NE.fromList ["Rng on bad map spec", show spec])
   propagate LookupW (Value k :! Unary HOLE) spec =
-        constrained $ \m ->
-          [Assert $ Lit k `member_` dom_ m | not $ Nothing `conformsToSpec` spec]
-            ++ [ forAll m $ \kv ->
-                  letBind (fst_ kv) $ \k' ->
-                    letBind (snd_ kv) $ \v ->
-                      whenTrue (Lit k ==. k') $
-                        -- TODO: What you want to write is `cJust_ v `satisfies` spec` but we can't
-                        -- do that because we don't have access to `IsNormalType v` here. When
-                        -- we refactor the `IsNormalType` machinery we will be able to make
-                        -- this nicer.
-                        case spec of
-                          MemberSpec as -> Assert $ v `elem_` Lit [a | Just a <- NE.toList as]
-                          TypeSpec (SumSpec _ _ vspec) cant ->
-                            v `satisfies` (vspec <> notMemberSpec [a | Just a <- cant])
-               ]
+    constrained $ \m ->
+      [Assert $ Lit k `member_` dom_ m | not $ Nothing `conformsToSpec` spec]
+        ++ [ forAll m $ \kv ->
+              letBind (fst_ kv) $ \k' ->
+                letBind (snd_ kv) $ \v ->
+                  whenTrue (Lit k ==. k') $
+                    -- TODO: What you want to write is `cJust_ v `satisfies` spec` but we can't
+                    -- do that because we don't have access to `IsNormalType v` here. When
+                    -- we refactor the `IsNormalType` machinery we will be able to make
+                    -- this nicer.
+                    case spec of
+                      MemberSpec as -> Assert $ v `elem_` Lit [a | Just a <- NE.toList as]
+                      TypeSpec (SumSpec _ _ vspec) cant ->
+                        v `satisfies` (vspec <> notMemberSpec [a | Just a <- cant])
+           ]
   propagate LookupW (HOLE :? Value m :> Nil) spec =
     if Nothing `conformsToSpec` spec
       then notMemberSpec [k | (k, v) <- Map.toList m, not $ Just v `conformsToSpec` spec]

@@ -153,7 +153,13 @@ testFoldSpec size elemSpec total outcome = do
 -- | Generate a property from a call to 'pickAll'. We can test for success or failure using 'outcome'
 sumProp ::
   (Integral t, Random t, HasSpec t) =>
-  t -> t -> Specification t -> t -> Int -> Outcome -> Gen Property
+  t ->
+  t ->
+  Specification t ->
+  t ->
+  Int ->
+  Outcome ->
+  Gen Property
 sumProp smallest largest spec total count outcome = sumProp2 smallest largest (predSpecPair spec) total count outcome
 
 -- | Like SumProp, but instead of using a (Specification fn n) for the element predicate
@@ -161,7 +167,13 @@ sumProp smallest largest spec total count outcome = sumProp2 smallest largest (p
 --   using any Haskell function.
 sumProp2 ::
   (Show t, Integral t, Random t) =>
-  t -> t -> (String, t -> Bool) -> t -> Int -> Outcome -> Gen Property
+  t ->
+  t ->
+  (String, t -> Bool) ->
+  t ->
+  Int ->
+  Outcome ->
+  Gen Property
 sumProp2 smallest largest spec total count outcome = do
   (_, ans) <- pickAll smallest largest spec total count (Cost 0)
   let callString = parensList ["pickAll", show smallest, (fst spec), show total, show count]
