@@ -15,6 +15,7 @@ build-type: Simple
 data-files:
   cddl-files/alonzo.cddl
   golden/*.cbor
+  golden/*.json
 
 extra-source-files: CHANGELOG.md
 
@@ -214,6 +215,7 @@ test-suite tests
     Paths_cardano_ledger_alonzo
     Test.Cardano.Ledger.Alonzo.Binary.CddlSpec
     Test.Cardano.Ledger.Alonzo.BinarySpec
+    Test.Cardano.Ledger.Alonzo.GoldenSpec
     Test.Cardano.Ledger.Alonzo.GoldenTranslation
 
   default-language: Haskell2010

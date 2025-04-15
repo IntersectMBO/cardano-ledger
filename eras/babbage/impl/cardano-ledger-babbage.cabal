@@ -17,6 +17,7 @@ build-type: Simple
 data-files:
   cddl-files/babbage.cddl
   golden/*.cbor
+  golden/*.json
 
 extra-source-files: CHANGELOG.md
 
@@ -188,6 +189,7 @@ test-suite tests
     Paths_cardano_ledger_babbage
     Test.Cardano.Ledger.Babbage.Binary.CddlSpec
     Test.Cardano.Ledger.Babbage.BinarySpec
+    Test.Cardano.Ledger.Babbage.GoldenSpec
     Test.Cardano.Ledger.Babbage.GoldenTranslation
 
   default-language: Haskell2010
