@@ -47,7 +47,6 @@ import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoTxBody (..),
   AlonzoTxOut (..),
-  inputs',
   utxoEntrySize,
  )
 import Cardano.Ledger.Alonzo.TxWits (
@@ -429,7 +428,7 @@ instance EraGen AlonzoEra where
           (dataMapFromTxOut smallUtxo (TxDats (getDataMap scriptinfo mapScriptWit)))
           -- The data hashes come from two places
           (Redeemers rdmrMap)
-      txinputs = inputs' txbody
+      txinputs = txbody ^. inputsTxBodyL
       smallUtxo :: [TxOut AlonzoEra]
       smallUtxo = Map.elems (unUTxO (txInsFilter utxo txinputs))
       AlonzoScriptsNeeded purposeHashPairs = getScriptsNeeded @AlonzoEra utxo txbody

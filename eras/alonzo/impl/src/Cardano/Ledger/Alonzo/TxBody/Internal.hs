@@ -500,30 +500,43 @@ mint' :: AlonzoTxBody era -> MultiAsset
 scriptIntegrityHash' :: AlonzoTxBody era -> StrictMaybe ScriptIntegrityHash
 txnetworkid' :: AlonzoTxBody era -> StrictMaybe Network
 inputs' = atbrInputs . getMemoRawType
+{-# DEPRECATED inputs' "In favor of inputsTxBodyL" #-}
 
 collateral' = atbrCollateral . getMemoRawType
+{-# DEPRECATED collateral' "In favor of collateralInputsTxBodyL" #-}
 
 outputs' = atbrOutputs . getMemoRawType
+{-# DEPRECATED outputs' "In favor of outputsTxBodyL" #-}
 
 certs' = atbrCerts . getMemoRawType
+{-# DEPRECATED certs' "In favor of certsTxBodyL" #-}
 
 withdrawals' = atbrWithdrawals . getMemoRawType
+{-# DEPRECATED withdrawals' "In favor of withdrawalsTxBodyL" #-}
 
 txfee' = atbrTxFee . getMemoRawType
+{-# DEPRECATED txfee' "In favor of feeTxBodyL" #-}
 
 vldt' = atbrValidityInterval . getMemoRawType
+{-# DEPRECATED vldt' "In favor of vldtTxBodyL" #-}
 
 update' = atbrUpdate . getMemoRawType
+{-# DEPRECATED update' "In favor of updateTxBodyL" #-}
 
 reqSignerHashes' = atbrReqSignerHashes . getMemoRawType
+{-# DEPRECATED reqSignerHashes' "In favor of reqSignerHashesTxBodyL" #-}
 
 adHash' = atbrAuxDataHash . getMemoRawType
+{-# DEPRECATED adHash' "In favor of auxDataHashTxBodyL" #-}
 
 mint' = atbrMint . getMemoRawType
+{-# DEPRECATED mint' "In favor of mintTxBodyL" #-}
 
 scriptIntegrityHash' = atbrScriptIntegrityHash . getMemoRawType
+{-# DEPRECATED scriptIntegrityHash' "In favor of scriptIntegrityHashTxBodyL" #-}
 
 txnetworkid' = atbrTxNetworkId . getMemoRawType
+{-# DEPRECATED txnetworkid' "In favor of networkIdTxBodyL" #-}
 
 instance
   (Era era, Eq (PParamsUpdate era), Eq (TxOut era), Eq (TxCert era)) =>
