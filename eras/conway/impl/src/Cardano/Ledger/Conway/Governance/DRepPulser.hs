@@ -58,7 +58,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), addCompactCoin)
 import Cardano.Ledger.Conway.Era (ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance.Internal
 import Cardano.Ledger.Conway.Governance.Procedures (GovActionState)
@@ -214,7 +214,7 @@ computeDRepDistr instantStake regDReps proposalDeposits poolDistr dRepDistr =
       let instantStakeCredentials = instantStake ^. instantStakeCredentialsL
           stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred instantStakeCredentials
           mProposalDeposit = Map.lookup stakeCred proposalDeposits
-          stakeAndDeposits = maybe stake (addCompact stake) mProposalDeposit
+          stakeAndDeposits = maybe stake (addCompactCoin stake) mProposalDeposit
        in case umElemDelegations umElem of
             Nothing -> (drepAccum, poolAccum)
             Just (RewardDelegationSPO spo _r) ->
@@ -222,11 +222,11 @@ computeDRepDistr instantStake regDReps proposalDeposits poolDistr dRepDistr =
               , addToPoolDistr spo mProposalDeposit poolAccum
               )
             Just (RewardDelegationDRep drep r) ->
-              ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
+              ( addToDRepDistr drep (addCompactCoin stakeAndDeposits r) drepAccum
               , poolAccum
               )
             Just (RewardDelegationBoth spo drep r) ->
-              ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
+              ( addToDRepDistr drep (addCompactCoin stakeAndDeposits r) drepAccum
               , addToPoolDistr spo mProposalDeposit poolAccum
               )
     addToPoolDistr spo mProposalDeposit distr = fromMaybe distr $ do
@@ -237,7 +237,7 @@ computeDRepDistr instantStake regDReps proposalDeposits poolDistr dRepDistr =
           & poolDistrDistrL %~ Map.insert spo (ips & individualTotalPoolStakeL <>~ proposalDeposit)
           & poolDistrTotalL <>~ proposalDeposit
     addToDRepDistr drep ccoin distr =
-      let updatedDistr = Map.insertWith addCompact drep ccoin distr
+      let updatedDistr = Map.insertWith addCompactCoin drep ccoin distr
        in case drep of
             DRepAlwaysAbstain -> updatedDistr
             DRepAlwaysNoConfidence -> updatedDistr

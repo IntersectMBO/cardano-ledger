@@ -7,7 +7,7 @@
 module Test.Cardano.Ledger.UMapSpec where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
-import Cardano.Ledger.Coin (Coin, CompactForm)
+import Cardano.Ledger.Coin (Coin, CompactForm, addCompactCoin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential, Ptr)
 import Cardano.Ledger.DRep (DRep)
@@ -18,7 +18,6 @@ import Cardano.Ledger.UMap (
   UMElem (UMElem),
   UMap (UMap, umElems, umPtrs),
   UView (DRepUView, PtrUView, RewDepUView, SPoolUView),
-  addCompact,
   compactRewardMap,
   dRepMap,
   delete,
@@ -216,7 +215,7 @@ oldUnionRewAgg ::
     addC :: CompactForm Coin -> StrictMaybe RDPair -> StrictMaybe RDPair
     addC newR = \case
       SNothing -> SNothing
-      SJust (RDPair r d) -> SJust $ RDPair (addCompact r newR) d
+      SJust (RDPair r d) -> SJust $ RDPair (addCompactCoin r newR) d
 
 spec :: Spec
 spec = do

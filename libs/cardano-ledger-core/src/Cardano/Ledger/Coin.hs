@@ -24,6 +24,8 @@ module Cardano.Ledger.Coin (
   integerToWord64,
   decodePositiveCoin,
   compactCoinOrError,
+  addCompactCoin,
+  sumCompactCoin,
   -- NonZero helpers
   toCompactCoinNonZero,
   unCoinNonZero,
@@ -54,6 +56,7 @@ import Cardano.Ledger.Compactible
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Coerce (coerce)
+import qualified Data.Foldable as F (foldl') -- Drop this when ghc >= 9.10
 import Data.Group (Abelian, Group (..))
 import Data.MemPack
 import Data.Monoid (Sum (..))
@@ -172,6 +175,12 @@ instance EncCBOR (CompactForm DeltaCoin) where
 
 instance DecCBOR (CompactForm DeltaCoin) where
   decCBOR = CompactDeltaCoin <$> decCBOR
+
+addCompactCoin :: CompactForm Coin -> CompactForm Coin -> CompactForm Coin
+addCompactCoin (CompactCoin x) (CompactCoin y) = CompactCoin (x + y)
+
+sumCompactCoin :: Foldable t => t (CompactForm Coin) -> CompactForm Coin
+sumCompactCoin = F.foldl' addCompactCoin (CompactCoin 0)
 
 -- ================================
 

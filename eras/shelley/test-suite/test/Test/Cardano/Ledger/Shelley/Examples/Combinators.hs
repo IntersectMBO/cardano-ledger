@@ -57,7 +57,12 @@ import Cardano.Ledger.BaseTypes (
   (⭒),
  )
 import Cardano.Ledger.Block (Block (..), bheader)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (
+  Coin (..),
+  CompactForm (CompactCoin),
+  addCompactCoin,
+  compactCoinOrError,
+ )
 import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Hashes (GenDelegPair, GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -186,7 +191,7 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
     newcount = F.foldl' accum 0 pools
     accum n x = if Map.member (ppId x) (psDeposits pstate) then (n :: Integer) else n + 1
     newDeposits =
-      Map.fromList (map (\cred -> (cred, UM.compactCoinOrError (ppEx ^. ppKeyDepositL))) stakes)
+      Map.fromList (map (\cred -> (cred, compactCoinOrError (ppEx ^. ppKeyDepositL))) stakes)
     newPools = Map.fromList (map (\p -> (ppId p, ppEx ^. ppPoolDepositL)) pools)
     dpstate' =
       mkShelleyCertState
@@ -222,7 +227,7 @@ feesAndKeyRefund newFees key cs = cs {chainNes = nes'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
     dpstate' = certState & certDStateL . dsUnifiedL %~ (UM.adjust zeroD key . RewDepUView)
-    zeroD (RDPair x _) = RDPair x (UM.CompactCoin 0)
+    zeroD (RDPair x _) = RDPair x (CompactCoin 0)
 
 -- | = Update the UTxO
 --
@@ -273,7 +278,7 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
       ds
         { dsUnified =
             let um0 = dsUnified ds
-                um1 = UM.insert cred (UM.RDPair (UM.CompactCoin 0) (UM.CompactCoin 0)) (RewDepUView um0)
+                um1 = UM.insert cred (UM.RDPair (CompactCoin 0) (CompactCoin 0)) (RewDepUView um0)
                 um2 = (PtrUView um1 UM.∪ (ptr, cred))
              in um2
         }
@@ -469,7 +474,7 @@ reapPool pool cs = cs {chainNes = nes'}
         Just (UM.RDPair ccoin dep) ->
           ( UM.insert'
               rewardAddr
-              (UM.RDPair (UM.addCompact ccoin (UM.compactCoinOrError (pp ^. ppPoolDepositL))) dep)
+              (UM.RDPair (addCompactCoin ccoin (compactCoinOrError (pp ^. ppPoolDepositL))) dep)
               (rewards ds)
           , Coin 0
           )
@@ -542,7 +547,7 @@ applyMIR pot newrewards cs = cs {chainNes = nes'}
     ds = dps ^. certDStateL
     ds' =
       ds
-        { dsUnified = rewards ds UM.∪+ Map.map UM.compactCoinOrError newrewards
+        { dsUnified = rewards ds UM.∪+ Map.map compactCoinOrError newrewards
         , dsIRewards = emptyInstantaneousRewards
         }
     dps' = dps & certDStateL .~ ds'

@@ -119,7 +119,13 @@ where
 
 import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), compactCoinOrError)
+import Cardano.Ledger.Coin (
+  Coin (..),
+  CompactForm (CompactCoin),
+  addCompactCoin,
+  compactCoinOrError,
+  sumCompactCoin,
+ )
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr, mkPtrNormalized)
 import Cardano.Ledger.DRep (DRep)
@@ -926,7 +932,7 @@ unionRewAgg view m = Map.foldlWithKey' accum (unUView view) m
   where
     accum umap key ccoin = adjust combine key (RewDepUView umap)
       where
-        combine (RDPair r d) = RDPair (addCompact r ccoin) d
+        combine (RDPair r d) = RDPair (addCompactCoin r ccoin) d
 (∪+) = unionRewAgg
 
 -- | Add the deposit from the `Map` on the right side to the deposit in the `UView` on the left.
@@ -937,7 +943,7 @@ unionKeyDeposits view m = unUView $ Map.foldlWithKey' accum view m
     accum vw key ccoin = insertWith' combine key (RDPair (CompactCoin 0) ccoin) vw
     -- If the key isn't present in the `UMap` the combining function is ignored
     -- and the new `RDPair` is inserted in the `UMap`. Ref: haddock for `insertWith'`.
-    combine (RDPair r d) (RDPair _ newD) = RDPair r (addCompact d newD)
+    combine (RDPair r d) (RDPair _ newD) = RDPair r (addCompactCoin d newD)
 
 -- | Delete all keys in the given `Set` from the domain of the given map-like `UView`.
 --
@@ -1083,17 +1089,15 @@ unify rd ptr sPool dRep = um4
     um4 = unUView $ Map.foldlWithKey' (\um k v -> insert' k v um) (PtrUView um3) ptr
 
 addCompact :: CompactForm Coin -> CompactForm Coin -> CompactForm Coin
-addCompact (CompactCoin x) (CompactCoin y) = CompactCoin (x + y)
-
-sumCompactCoin :: Foldable t => t (CompactForm Coin) -> CompactForm Coin
-sumCompactCoin = foldl' addCompact (CompactCoin 0)
+addCompact = addCompactCoin
+{-# DEPRECATED addCompact "In favor of `Cardano.Ledger.Coin.addCompactCoin`" #-}
 
 sumRewardsUView :: UView k RDPair -> CompactForm Coin
 sumRewardsUView = foldl' accum (CompactCoin 0)
   where
-    accum ans (RDPair r _) = addCompact ans r
+    accum ans (RDPair r _) = addCompactCoin ans r
 
 sumDepositUView :: UView k RDPair -> CompactForm Coin
 sumDepositUView = foldl' accum (CompactCoin 0)
   where
-    accum ans (RDPair _ d) = addCompact ans d
+    accum ans (RDPair _ d) = addCompactCoin ans d

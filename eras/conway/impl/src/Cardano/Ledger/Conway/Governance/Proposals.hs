@@ -131,11 +131,11 @@ import Cardano.Ledger.Binary (
   decodeListLikeWithCountT,
   decodeRecordNamedT,
  )
-import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
+import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin), addCompactCoin)
+import Cardano.Ledger.Compactible (toCompact)
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.UMap (addCompact, toCompact)
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Control.Monad (unless)
@@ -545,7 +545,7 @@ proposalsDeposits =
   F.foldl'
     ( \gasMap gas ->
         Map.insertWith
-          addCompact
+          addCompactCoin
           (gas ^. gasReturnAddrL . rewardAccountCredentialL)
           (fromMaybe (CompactCoin 0) $ toCompact $ gas ^. gasDepositL)
           gasMap
