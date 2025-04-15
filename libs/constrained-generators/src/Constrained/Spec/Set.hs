@@ -455,6 +455,8 @@ instance Logic SetW where
   rewriteRules MemberW (t :> Lit s :> Nil) Evidence
     | null s = Just $ Lit False
     | [a] <- Set.toList s = Just $ t ==. Lit a
+  rewriteRules DisjointW (Lit s :> _ :> Nil) Evidence | null s = Just $ Lit True
+  rewriteRules DisjointW (_ :> Lit s :> Nil) Evidence | null s = Just $ Lit True
   rewriteRules _ _ _ = Nothing
 
 singleton_ :: (Ord a, HasSpec a) => Term a -> Term (Set a)
@@ -465,53 +467,20 @@ subset_ = appTerm SubsetW
 
 -- ==== MemberW =====
 
--- instance (HasSpec a, Ord a) => Logic "member_" SetW '[a, Set a] Bool where
---   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
---   propagate _ TrueSpec = TrueSpec
---   propagate _ (ErrorSpec msgs) = ErrorSpec msgs
---   propagate ctx _ = ErrorSpec $ pure ("Logic instance for MemberW with wrong number of arguments. " ++ show ctx)
-
---   rewriteRules _ _ _ = Nothing
-
 member_ :: (Ord a, HasSpec a) => Term a -> Term (Set a) -> Term Bool
 member_ = appTerm MemberW
 
 -- ==== UnionW =====
-
--- instance (HasSpec a, Ord a) => Logic "union_" SetW '[Set a, Set a] (Set a) where
---   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
---   propagate _ TrueSpec = TrueSpec
---   propagate _ (ErrorSpec msgs) = ErrorSpec msgs
 
 union_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term (Set a)
 union_ = appTerm UnionW
 
 -- ==== DisjointW =====
 
--- instance (HasSpec a, Ord a) => Logic "disjoint_" SetW '[Set a, Set a] Bool where
---   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
---   propagate _ TrueSpec = TrueSpec
---   propagate _ (ErrorSpec msgs) = ErrorSpec msgs
---   propagate ctx _ = ErrorSpec $ pure ("Logic instance for DisjointW with wrong number of arguments. " ++ show ctx)
-
---   rewriteRules DisjointW (Lit s :> _ :> Nil) Evidence | null s = Just $ Lit True
---   rewriteRules DisjointW (_ :> Lit s :> Nil) Evidence | null s = Just $ Lit True
---   rewriteRules _ _ _ = Nothing
-
 disjoint_ :: (Ord a, HasSpec a) => Term (Set a) -> Term (Set a) -> Term Bool
 disjoint_ = appTerm DisjointW
 
 -- ==== FromListW =====
-
--- instance (HasSpec a, Ord a) => Logic "fromList_" SetW '[[a]] (Set a) where
---   propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
---   propagate _ TrueSpec = TrueSpec
---   propagate _ (ErrorSpec msgs) = ErrorSpec msgs
---   propagate ctx _ = ErrorSpec $ pure ("Logic instance for FromListW with wrong number of arguments. " ++ show ctx)
-
---   mapTypeSpec FromListW ts =
---     constrained $ \x ->
---       unsafeExists $ \x' -> Assert (x ==. fromList_ x') <> toPreds x' ts
 
 fromList_ :: forall a. (Ord a, HasSpec a) => Term [a] -> Term (Set a)
 fromList_ = appTerm FromListW

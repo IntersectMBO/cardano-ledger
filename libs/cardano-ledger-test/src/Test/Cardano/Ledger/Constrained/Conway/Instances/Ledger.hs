@@ -729,8 +729,8 @@ instance StringLike ShortByteString where
   getLengthSpec (StringSpec len) = len
   getLength = SBS.length
 
-data StringW (sym :: Symbol) (as :: [Type]) (b :: Type) where
-  StrLenW :: StringLike s => StringW "strLen_" '[s] Int
+data StringW (as :: [Type]) (b :: Type) where
+  StrLenW :: StringLike s => StringW '[s] Int
 
 deriving instance Show (StringW s as b)
 deriving instance Eq (StringW s as b)
@@ -746,16 +746,9 @@ instance Syntax StringW
 instance Semantics StringW where
   semantics StrLenW = getLength
 
-instance (Typeable s, StringLike s) => Logic "strLen_" StringW '[s] Int where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context StrLenW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App StrLenW (v' :> Nil)) (v :-> ps)
-  propagate (Context StrLenW (HOLE :<> End)) spec = typeSpec $ lengthSpec @s spec
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for StrLenW with wrong number of arguments. " ++ show ctx)
+instance (Typeable s, StringLike s) => Logic StringW 'where
+  propagateTypeSpec StrLenW (Unary HOLE) ts cant = typeSpec $ lengthSpec @s (TypeSpec ts cant)
+  propagateMemberSpec StrLenW (Unary HOLE) xs = typeSpec $ lengthSpec @s (MemberSpec xs)
 
   mapTypeSpec StrLenW ss = getLengthSpec @s ss
 
@@ -1713,8 +1706,8 @@ instance CoercibleLike (CompactForm Coin) Word64 where
     Specification Word64
   getCoerceSpec (NumSpecInterval a b) = TypeSpec (NumSpecInterval a b) mempty
 
-data CoercibleW (s :: Symbol) (args :: [Type]) (res :: Type) where
-  CoerceW :: (CoercibleLike a b, Coercible a b) => CoercibleW "coerce_" '[a] b
+data CoercibleW (args :: [Type]) (res :: Type) where
+  CoerceW :: (CoercibleLike a b, Coercible a b) => CoercibleW '[a] b
 
 deriving instance Show (CoercibleW sym args res)
 deriving instance Eq (CoercibleW sym args res)
@@ -1724,16 +1717,9 @@ instance Semantics CoercibleW where
   semantics = \case
     CoerceW -> coerce
 
-instance (Typeable a, Typeable b, CoercibleLike a b) => Logic "coerce_" CoercibleW '[a] b where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context CoerceW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App CoerceW (v' :> Nil)) (v :-> ps)
-  propagate (Context CoerceW (HOLE :<> End)) spec = coerceSpec @a @b spec
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for CoerceW with wrong number of arguments. " ++ show ctx)
+instance (Typeable a, Typeable b, CoercibleLike a b) => Logic CoercibleW where
+  propagateMemberSpec CoerceW (Unary HOLE) xs = coerceSpec @a @b $ MemberSpec xs
+  propagateTypeSpec CoerceW (Unary HOLE) ts cant = coerceSpec @a @b $ TypeSpec ts cant
 
   mapTypeSpec CoerceW ss = getCoerceSpec @a ss
 
@@ -1749,8 +1735,8 @@ coerce_ = appTerm CoerceW
 
 -- ==============================================================
 
-data CoinW (s :: Symbol) (ds :: [Type]) (res :: Type) where
-  ToDeltaW :: CoinW "toDelta_" '[Coin] DeltaCoin
+data CoinW (ds :: [Type]) (res :: Type) where
+  ToDeltaW :: CoinW '[Coin] DeltaCoin
 
 deriving instance Show (CoinW s args res)
 deriving instance Eq (CoinW s args res)
@@ -1766,20 +1752,14 @@ toDelta_ ::
   Term DeltaCoin
 toDelta_ = appTerm ToDeltaW
 
-instance Logic "toDelta_" CoinW '[Coin] DeltaCoin where
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context ToDeltaW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App ToDeltaW (v' :> Nil)) (v :-> ps)
-  propagate (Context ToDeltaW (HOLE :<> End)) (MemberSpec xs) = MemberSpec (NE.map deltaToCoin xs)
-  propagate (Context ToDeltaW (HOLE :<> End)) (TypeSpec (NumSpecInterval l h) cant) =
-    ( TypeSpec
+instance Logic CoinW where
+
+  propagateMemberSpec ToDeltaW (Unary HOLE) xs = MemberSpec (NE.map deltaToCoin xs)
+
+  propagateTypeSpec ToDeltaW (Unary HOLE) (NumSpecInterval l h) cant =
+    TypeSpec
         (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
         (map deltaToCoin cant)
-    )
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for ToDeltaW with wrong number of arguments. " ++ show ctx)
 
   mapTypeSpec ToDeltaW (NumSpecInterval l h) = typeSpec (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
 
