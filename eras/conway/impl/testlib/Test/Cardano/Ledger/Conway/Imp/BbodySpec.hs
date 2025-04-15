@@ -38,7 +38,7 @@ import Lens.Micro ((&), (.~), (^.))
 import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsWithDatum)
+import Test.Cardano.Ledger.Plutus.Examples (purposeIsWellformedNoDatum)
 
 spec ::
   forall era.
@@ -111,7 +111,7 @@ spec = describe "BBODY" $ do
 
     largeScript :: Maybe (Script era)
     largeScript = do
-      script <- mkPlutusScript @era $ alwaysFailsWithDatum SPlutusV2
+      script <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2
       pure $ fromPlutusScript script
 
     mkTxWithNScripts :: TxIn -> Script era -> Int -> ImpTestM era (Tx era)
