@@ -577,10 +577,10 @@ genConsistentRelSpec msg g x = case x of
 -- ==================
 -- Actual property tests for Relpec
 
-testConsistentRel :: Gen Property
+testConsistentRel :: forall era. ToExprs era => Gen Property
 testConsistentRel = do
   n <- chooseInt (3, 10)
-  s1 <- genRelSpec ["testConsistentRel " ++ show n] (choose (1, 10000)) IntR n
+  s1 <- genRelSpec @_ @era ["testConsistentRel " ++ show n] (choose (1, 10000)) IntR n
   s2 <- genConsistentRelSpec ["testConsistentRel " ++ show n ++ " " ++ show s1] (choose (1, 1000)) s1
   case s1 <> s2 of
     RelNever ms -> pure $ counterexample (unlines (["genConsistent fails", show s1, show s2] ++ ms)) False
@@ -922,7 +922,7 @@ testMergeRngSpec = do
               ++ "\n  n="
               ++ show n
               ++ "\n  list="
-              ++ synopsis (ListR Word64R) list
+              ++ synopsis @BabbageEra (ListR Word64R) list
               ++ "\n  run1="
               ++ show (runRngSpec list s1)
               ++ "\n run2="
@@ -1773,7 +1773,13 @@ testSoundElemSpec = do
       spec
   pure $
     counterexample
-      ("size=" ++ show size ++ "\nspec=" ++ show spec ++ "\nlist=" ++ synopsis (ListR Word64R) list)
+      ( "size="
+          ++ show size
+          ++ "\nspec="
+          ++ show spec
+          ++ "\nlist="
+          ++ synopsis @BabbageEra (ListR Word64R) list
+      )
       (runElemSpec list spec)
 
 testSoundListSpec :: ToExprs BabbageEra => Gen Property
@@ -1783,7 +1789,7 @@ testSoundListSpec = do
   list <- genFromListSpec @BabbageEra ["testSoundListSpec"] (choose (1, 1000)) spec
   pure $
     counterexample
-      ("spec=" ++ show spec ++ "\nlist=" ++ synopsis (ListR Word64R) list)
+      ("spec=" ++ show spec ++ "\nlist=" ++ synopsis @BabbageEra (ListR Word64R) list)
       (runListSpec list spec)
 
 manyMergeListSpec :: ToExprs BabbageEra => Gen (Size, Int, [String])
@@ -2036,7 +2042,7 @@ allSpecTests =
         ]
     , testGroup
         "RelSpec tests"
-        [ testProperty "we generate consistent RelSpecs" testConsistentRel
+        [ testProperty "we generate consistent RelSpecs" (testConsistentRel @BabbageEra)
         , testProperty "test RelSpec sound" testSoundRelSpec
         , testProperty "test mergeRelSpec" testMergeRelSpec
         , testProperty "test More consistent RelSpec" reportManyMergeRelSpec
