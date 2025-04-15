@@ -87,7 +87,7 @@ import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Common (ToExpr (..))
-import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (cSJust_)
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic (cSJust_, prettyE)
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Ledger
 import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
 import Test.Cardano.Ledger.Constrained.Preds.Universes (genAddrPair)
@@ -96,6 +96,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 import Test.QuickCheck hiding (forAll, witness)
+import Text.PrettyPrint.HughesPJ (Doc)
 
 -- ===============================================
 -- Move these somewhere else
@@ -154,7 +155,7 @@ class
   hash :: TypeHashed hashtype era -> hashtype
   mkWitness :: ProofType hashtype era -> WitnessType hashtype era
   getTypeHashed :: ProofType hashtype era -> TypeHashed hashtype era
-  prettyHash :: hashtype -> PDoc
+  prettyHash :: hashtype -> Doc
 
 -- ============================================================
 
@@ -183,11 +184,8 @@ wbMap :: WitBlock t era -> Map t (ProofType t era)
 wbMap (WitBlock _ y) = y
 
 -- | when we print a WitBlock, we are only interested in the hashes, not the witnesses
-instance PrettyA (WitBlock t era) where
-  prettyA (WitBlock hashset _) = ppSet (prettyHash @t @era) hashset
-
-instance Show (WitBlock t era) where
-  show x = show (prettyA x)
+instance ToExpr t => Show (WitBlock t era) where
+  show (WitBlock hashset _) = show (prettyE hashset)
 
 instance NFData (WitBlock t era) where
   rnf (WitBlock x y) = deepseq (rnf x) (deepseq (rnf y) ())
@@ -205,14 +203,14 @@ type BodyHash = SafeHash EraIndependentTxBody
 -- KeyHash and VKey
 -- KeyPair seems to be missing a lot of instances, so we define them here
 
-instance Reflect era => HasWitness (KeyHash 'Witness) era where
+instance Era era => HasWitness (KeyHash 'Witness) era where
   type ProofType (KeyHash 'Witness) era = KeyPair 'Witness
   type WitnessType (KeyHash 'Witness) era = (BodyHash -> WitVKey 'Witness)
   type TypeHashed (KeyHash 'Witness) era = VKey 'Witness
   hash x = hashKey x
   mkWitness keypair safehash = mkWitnessVKey safehash keypair
   getTypeHashed (KeyPair x _) = x
-  prettyHash x = prettyA x
+  prettyHash x = prettyE x
 
 -- ========
 -- ScriptHash and Scripts
@@ -228,7 +226,7 @@ instance
   hash (x) = hashScript x
   mkWitness (script) = script
   getTypeHashed x = x
-  prettyHash x = prettyA x
+  prettyHash x = prettyE x
 
 -- ========
 -- BootstrapAddress and SigningKey
@@ -262,7 +260,7 @@ instance Reflect era => HasWitness BootstrapAddress era where
           signkey
           (Byron.addrAttributes (unBootstrapAddress bootAddr))
   getTypeHashed signkey = signkey
-  prettyHash x = prettyA x
+  prettyHash x = prettyE x
 
 -- ========
 -- DataHash and Data
@@ -276,7 +274,7 @@ instance EraScript era => HasWitness DataHash era where
   hash x = hashData x
   mkWitness script = script
   getTypeHashed x = x
-  prettyHash x = pcDataHash x
+  prettyHash x = prettyE x
 
 -- ==============================================
 -- The WitUniv type is 4 WitBlocks, there are some missing instances
@@ -291,19 +289,7 @@ data WitUniv era
   }
   deriving (Eq, NFData, ToExpr, Generic)
 
--- Non deriveable instances for WitUniv
-
-instance Proof.Reflect era => PrettyA (WitUniv era) where
-  prettyA (WitUniv n keys boot script dats) =
-    ppRecord
-      ("WitnessUniverse " <> pack (show n))
-      [ ("keys", ppSet pcKeyHash (wbHash keys))
-      , ("boot", ppSet pcByronAddress (wbHash boot))
-      , ("scripts", ppSet pcScriptHash (wbHash script))
-      , ("dats", ppSet ppSafeHash (wbHash dats))
-      ]
-
-instance Proof.Reflect era => Show (WitUniv era) where show x = show (prettyA x)
+instance Show (WitUniv era) where show x = show (prettyE x)
 
 instance Era era => EncCBOR (WitUniv era) where
   encCBOR (WitUniv n w x y z) = encode $ Rec WitUniv !> To n !> To w !> To x !> To y !> To z
@@ -775,7 +761,7 @@ go1 :: IO ()
 go1 = do
   univ <- generate $ genWitUniv @ShelleyEra 5
   ans <- generate $ genFromSpec (spec1 univ)
-  putStrLn (show (prettyA ans))
+  putStrLn (show (prettyE ans))
 
 spec2 ::
   WitUniv ShelleyEra ->
@@ -791,7 +777,7 @@ go2 = do
   univ <- generate $ genWitUniv @ShelleyEra 5
   big <- generate arbitrary
   ans <- generate $ genFromSpec (spec2 univ big)
-  putStrLn (show (prettyA ans))
+  putStrLn (show (prettyE ans))
 
 -- ======================================================================
 
@@ -888,6 +874,6 @@ committeeWitness univ =
 go9 :: IO ()
 go9 = do
   univ <- generate $ genWitUniv @ConwayEra 5
-  ans <- generate $ genFromSpec (committeeWitness @ConwayFn @ConwayEra univ)
-  putStrLn (show (prettyA ans))
-  putStrLn (show (prettyA univ))
+  ans <- generate $ genFromSpec (committeeWitness @ConwayEra univ)
+  putStrLn (show (prettyE ans))
+  putStrLn (show (prettyE univ))
