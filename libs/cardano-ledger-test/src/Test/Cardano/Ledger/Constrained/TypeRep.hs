@@ -319,6 +319,7 @@ type ToExprs e =
   , ToExpr (TxAuxData e)
   , ToExpr (Tx e)
   , ToExpr (PParamsHKD Identity e)
+  , ToExpr (PParamsHKD StrictMaybe e)
   , ToExpr (CertState e)
   , ToExpr MultiAsset
   , ToExpr (WitnessesField e)
