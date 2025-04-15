@@ -2,11 +2,11 @@
 
 module Cardano.Ledger.Conway.State.Account where
 
-import Data.Map.Strict (Map)
-import Cardano.Ledger.Hashes
 import Cardano.Ledger.Coin
-import Cardano.Ledger.DRep
 import Cardano.Ledger.Credential
+import Cardano.Ledger.DRep
+import Cardano.Ledger.Hashes
+import Data.Map.Strict (Map)
 
 data Delegation
   = NoDelegation
@@ -14,8 +14,8 @@ data Delegation
   | DelegateDRep !DRep
   | DelegateStakePoolDRep !(KeyHash 'StakePool) !DRep
 
-data ConwayAccountState =
-  ConwayAccountState
+data ConwayAccountState
+  = ConwayAccountState
   { casBalance :: {-# UNPACK #-} !(CompactForm Coin)
   , casDeposit :: {-# UNPACK #-} !(CompactForm Coin)
   , casDelegation :: !Delegation

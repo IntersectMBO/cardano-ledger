@@ -162,7 +162,6 @@ data DState era = DState
   }
   deriving (Generic)
 
-
 instance CanGetAccounts DState
 instance CanSetAccounts DState where
   accountsL =

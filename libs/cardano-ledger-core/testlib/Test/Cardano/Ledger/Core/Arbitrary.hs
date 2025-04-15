@@ -375,7 +375,7 @@ deriving instance Arbitrary (CompactForm Coin)
 
 instance Arbitrary Coin where
   -- Cannot be negative even though it is an 'Integer'
-  arbitrary = Coin <$> choose (0, 1000000)
+  arbitrary = Coin <$> oneof [choose (0, 1000000), getNonNegative <$> arbitrary]
   shrink (Coin i) = Coin <$> shrink i
 
 instance Arbitrary DeltaCoin where

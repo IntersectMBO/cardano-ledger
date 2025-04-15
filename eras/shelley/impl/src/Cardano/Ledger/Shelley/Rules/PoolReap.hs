@@ -23,7 +23,7 @@ where
 
 import Cardano.Ledger.Address (RewardAccount, raCredential)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.PoolParams (ppRewardAccount)
@@ -36,8 +36,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.LedgerState.Types (potEqualsObligation)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (UView (RewDepUView, SPoolUView), compactCoinOrError)
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (dom, eval, setSingleton, (⋪), (▷), (◁))
@@ -121,8 +119,9 @@ instance
     , PostCondition
         "PoolReap may not create or remove reward accounts"
         ( \(TRC (_, st, _)) st' ->
-            let r prState = rewards (prCertState prState ^. certDStateL)
-             in length (r st) == length (r st')
+            let accountsCount prState =
+                  Map.size (prCertState prState ^. certDStateL . accountsL . accountsMapL)
+             in accountsCount st == accountsCount st'
         )
     ]
 
@@ -142,22 +141,19 @@ poolReapTransition = do
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
     rewardAccounts :: Map.Map (KeyHash 'StakePool) RewardAccount
     rewardAccounts = Map.map ppRewardAccount $ eval (retired ◁ psStakePoolParams ps)
-    rewardAccounts_ ::
-      Map.Map (KeyHash 'StakePool) (RewardAccount, Coin)
+    rewardAccounts_ :: Map.Map (KeyHash 'StakePool) (RewardAccount, Coin)
     rewardAccounts_ = Map.intersectionWith (,) rewardAccounts retiringDeposits
     rewardAccounts' :: Map.Map RewardAccount Coin
-    rewardAccounts' =
-      Map.fromListWith (<+>)
-        . Map.elems
-        $ rewardAccounts_
-    refunds :: Map.Map (Credential 'Staking) Coin
-    mRefunds :: Map.Map (Credential 'Staking) Coin
-    (refunds, mRefunds) =
+    rewardAccounts' = Map.fromListWith (<+>) $ Map.elems rewardAccounts_
+    accounts = ds ^. accountsL
+    depositRefunds :: Map.Map RewardAccount Coin
+    unclaimedDepositRefunds :: Map.Map RewardAccount Coin
+    (depositRefunds, unclaimedDepositRefunds) =
       Map.partitionWithKey
-        (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
-        (Map.mapKeys raCredential rewardAccounts')
-    refunded = fold refunds
-    unclaimed = fold mRefunds
+        (\ra _ -> isAccountRegistered (raCredential ra) accounts) -- (k ∈ dom (rewards ds))
+        rewardAccounts'
+    refunded = fold depositRefunds
+    unclaimed = fold unclaimedDepositRefunds
 
   tellEvent $
     let rewardAccountsWithPool =
@@ -169,7 +165,7 @@ poolReapTransition = do
             rewardAccounts_
         (refundPools', unclaimedPools') =
           Map.partitionWithKey
-            (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
+            (\cred _ -> isAccountRegistered cred accounts) -- (k ∈ dom (rewards ds))
             rewardAccountsWithPool
      in RetiredPools
           { refundPools = refundPools'
@@ -181,10 +177,12 @@ poolReapTransition = do
       us {utxosDeposited = utxosDeposited us <-> (unclaimed <+> refunded)}
       a {casTreasury = casTreasury a <+> unclaimed}
       ( cs
-          & certDStateL . dsUnifiedL
-            %~ ( \uni ->
-                  SPoolUView (RewDepUView uni UM.∪+ Map.map compactCoinOrError refunds) UM.⋫ retired
-               )
+          & certDStateL . accountsL
+            %~ removeStakePoolDelegations retired
+              . addToBalanceAccounts
+                ( Map.map compactCoinOrError $
+                    Map.mapKeys raCredential depositRefunds
+                )
           & certPStateL . psStakePoolParamsL %~ (eval . (retired ⋪))
           & certPStateL . psFutureStakePoolParamsL %~ (eval . (retired ⋪))
           & certPStateL . psRetiringL %~ (eval . (retired ⋪))

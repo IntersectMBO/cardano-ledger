@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -15,12 +17,14 @@ module Cardano.Ledger.State.Account (
   sumBalancesAccounts,
   sumDepositsAccounts,
   addToBalanceAccounts,
-  doWithdrawalsDrainAccounts,
+  whichWithdrawalsDoNotDrainAccounts,
   drainAccounts,
+  removeStakePoolDelegations,
 )
 where
 
 import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
+import Cardano.Ledger.BaseTypes (Network)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -34,6 +38,8 @@ import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
@@ -114,25 +120,38 @@ isAccountRegistered cred accounts = Map.member cred (accounts ^. accountsMapL)
 
 -- | This function returns `True` iff all of the accounts that withdrawals are trying to drain are
 -- indeed registered and all of the amounts in the withdrawals match the respective balances exactly.
---
--- /Note/ - `NetworkId` in the withdrawals are ignored.
 whichWithdrawalsDoNotDrainAccounts ::
   EraAccounts era =>
   Withdrawals ->
+  Network ->
   Accounts era ->
-  Bool
-doWithdrawalsDrainAccounts (Withdrawals withdrawalsMap) accounts =
-  Map.isSubmapOfBy checkBalance (Map.mapKeys raCredential withdrawalsMap) (accounts ^. accountsMapL)
+  Maybe Withdrawals
+whichWithdrawalsDoNotDrainAccounts (Withdrawals withdrawalsMap) networkId accounts
+  | Map.foldrWithKey checkAllValidWithdrawals True withdrawalsMap =
+      Nothing
+  | otherwise =
+      Just $ Withdrawals $ Map.foldrWithKey collectInvalidWithdrawals Map.empty withdrawalsMap
   where
-    --checkBalance :: Coin -> AccountState era -> Bool
-    checkBalance withdrawalAmount accountState =
-      withdrawalAmount == fromCompact (accountState ^. balanceAccountStateL)
+    accountsMap = accounts ^. accountsMapL
+    checkAllValidWithdrawals rewardAccount withdrawalAmount hasBadWithdrawals =
+      hasBadWithdrawals && isValidWithdrawal rewardAccount withdrawalAmount
+    collectInvalidWithdrawals rewardAccount withdrawalAmount badWithdrawals
+      | isValidWithdrawal rewardAccount withdrawalAmount = badWithdrawals
+      | otherwise = Map.insert rewardAccount withdrawalAmount badWithdrawals
+    isValidWithdrawal RewardAccount {raCredential, raNetwork} withdrawalAmount
+      | raNetwork == networkId
+      , Just accountState <- Map.lookup raCredential accountsMap
+      , withdrawalAmount == fromCompact (accountState ^. balanceAccountStateL) =
+          True
+      | otherwise =
+          False
 
 -- | Reset balances to zero for all accounts that are specified in the supplied `Withdrawals`.
 --
--- /Note/ - There are no checks that withdrawals mention only registered accounts. There are also no
--- checks that amounts in withdrawals match up the balance in the corresponding accounts. Use
--- `doWithdrawalsDrainAccounts` to verify that calling `drainAccounts` is actually safe.
+-- /Note/ - There are no checks that withdrawals mention only registered accounts with correct
+-- `NetworkId`. Nor there are any checks that amounts in withdrawals match up the balance in the
+-- corresponding accounts. Use `whichWithdrawalsDoNotDrainAccounts` to verify that calling
+-- `drainAccounts` is actually safe on the supplied arguments
 drainAccounts ::
   EraAccounts era =>
   Withdrawals ->
@@ -145,3 +164,19 @@ drainAccounts (Withdrawals withdrawalsMap) accounts =
         (\ra _withdrawalAmount -> Map.adjust (balanceAccountStateL .~ mempty) (raCredential ra))
         accountsMap
         withdrawalsMap
+
+-- TODO: This is an expensive operation, since it iterates over the whole accountsMap. We need to
+-- start keeping track of all delegations to the stake pool in its state, then we would be able to
+-- switch from `Set (KeyHash 'StakePool)` to `Map (KeyHash 'StakePool) (Set (Credential Staking))`
+-- and drastically speed up this operation.
+
+-- | Remove delegations for the supplied Stake
+removeStakePoolDelegations ::
+  EraAccounts era => Set (KeyHash 'StakePool) -> Accounts era -> Accounts era
+removeStakePoolDelegations stakeDelegationsToRemove accounts =
+  accounts & accountsMapL %~ Map.map clearAccountStateDelegation
+  where
+    clearAccountStateDelegation =
+      stakePoolDelegationAccountStateL %~ \case
+        Just poolId | poolId `Set.member` stakeDelegationsToRemove -> Nothing
+        delegation -> delegation

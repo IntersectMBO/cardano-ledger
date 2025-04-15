@@ -21,7 +21,7 @@ module Cardano.Ledger.Shelley.Rules.Mir (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Coin (Coin, addDeltaCoin)
+import Cardano.Ledger.Coin (Coin, addDeltaCoin, compactCoinOrError)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyMIR)
@@ -38,8 +38,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   pattern EpochState,
  )
 import Cardano.Ledger.State
-import Cardano.Ledger.UMap (compactCoinOrError)
-import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (eval, (∪+))
@@ -55,7 +53,7 @@ import Data.Default (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyMirPredFailure era
@@ -97,8 +95,9 @@ instance
     [ PostCondition
         "MIR may not create or remove reward accounts"
         ( \(TRC (_, st, _)) st' ->
-            let r esl = rewards (esl ^. esLStateL . lsCertStateL . certDStateL)
-             in length (r st) == length (r st')
+            let accountsCount esl =
+                  Map.size (esl ^. esLStateL . lsCertStateL . certDStateL . accountsL . accountsMapL)
+             in accountsCount st == accountsCount st'
         )
     ]
 
@@ -122,11 +121,11 @@ mirTransition = do
       pp = es ^. curPParamsEpochStateL
       dpState = ls ^. lsCertStateL
       ds = dpState ^. certDStateL
-      rewards' = rewards ds
+      accountsMap = ds ^. accountsL . accountsMapL
       reserves = casReserves chainAccountState
       treasury = casTreasury chainAccountState
-      irwdR = rewards' UM.◁ iRReserves (dsIRewards ds) :: Map.Map (Credential 'Staking) Coin
-      irwdT = rewards' UM.◁ iRTreasury (dsIRewards ds) :: Map.Map (Credential 'Staking) Coin
+      irwdR = iRReserves (dsIRewards ds) `Map.intersection` accountsMap
+      irwdT = iRTreasury (dsIRewards ds) `Map.intersection` accountsMap
       totR = fold irwdR
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` deltaReserves (dsIRewards ds)
@@ -143,7 +142,8 @@ mirTransition = do
             , casTreasury = availableTreasury <-> totT
             }
           ( ls
-              & lsCertStateL . certDStateL . dsUnifiedL .~ (rewards' UM.∪+ Map.map compactCoinOrError update)
+              & lsCertStateL . certDStateL . accountsL
+                %~ addToBalanceAccounts (Map.map compactCoinOrError update)
               & lsCertStateL . certDStateL . dsIRewardsL .~ emptyInstantaneousRewards
           )
           ss
