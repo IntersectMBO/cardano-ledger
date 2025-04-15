@@ -9,10 +9,12 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 -- Orphan Arbitrary instance for OrderInfo
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -97,7 +99,8 @@ data GenEnv era = GenEnv
   --   the variable in the dependency order (depth = 1 + depth of
   --   dependencies).
   }
-  deriving (Show)
+
+deriving instance ToExprs era => Show (GenEnv era)
 
 type Depth = Int
 
@@ -610,25 +613,25 @@ initEnv info =
     , gSolved = mempty
     }
 
-showVal :: Rep era t -> t -> String
+showVal :: ToExprs era => Rep era t -> t -> String
 showVal (SetR r) t = "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
 showVal (MapR kr vr) t =
   "{" ++ intercalate ", " [synopsis kr k ++ " -> " ++ synopsis vr v | (k, v) <- Map.toList t] ++ "}"
 showVal rep t = synopsis rep t
 
-showTerm :: Term era t -> String
+showTerm :: ToExprs era => Term era t -> String
 showTerm (Lit rep t) = showVal rep t
 showTerm (Dom t) = "(Dom " ++ showTerm t ++ ")"
 showTerm (Rng t) = "(Rng " ++ showTerm t ++ ")"
 showTerm t = show t
 
-showPred :: Pred era -> String
+showPred :: ToExprs era => Pred era -> String
 showPred (sub `Subset` sup) = showTerm sub ++ " ⊆ " ++ showTerm sup
 showPred (sub :=: sup) = showTerm sub ++ " == " ++ showTerm sup
 showPred (Disjoint s t) = "Disjoint " ++ showTerm s ++ " " ++ showTerm t
 showPred pr = show pr
 
-showEnv :: Env era -> String
+showEnv :: ToExprs era => Env era -> String
 showEnv (Env vmap) = unlines $ map pr (Map.toList vmap)
   where
     pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ showVal rep t
@@ -660,6 +663,7 @@ predConstr Oneof {} = "Oneof"
 predConstr ListWhere {} = "ListWhere"
 
 constraintProperty ::
+  ToExprs ShelleyEra =>
   Bool ->
   [String] ->
   OrderInfo ->
@@ -695,7 +699,7 @@ constraintProperty strict whitelist info prop =
         ==> counterexample (unlines errs) False
     checkWhitelist (Right x) k = property $ k x
 
-checkPredicates :: [Pred era] -> Env era -> Property
+checkPredicates :: ToExprs era => [Pred era] -> Env era -> Property
 checkPredicates preds env =
   counterexample ("-- Solution --\n" ++ showEnv env) $
     conjoin $
@@ -703,7 +707,7 @@ checkPredicates preds env =
   where
     checkPred pr = counterexample ("Failed: " ++ showPred pr) $ ensureTyped (runPred env pr) id
 
-runPreds :: [Pred ShelleyEra] -> IO ()
+runPreds :: ToExprs ShelleyEra => [Pred ShelleyEra] -> IO ()
 runPreds ps = do
   let info = standardOrderInfo
   Right g <- pure $ runTyped $ compile info ps
@@ -712,7 +716,7 @@ runPreds ps = do
 
 -- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
 --   actually satisfies the constraints.
-prop_soundness :: OrderInfo -> Property
+prop_soundness :: ToExprs ShelleyEra => OrderInfo -> Property
 prop_soundness x = prop_soundness' False [] x
 
 defaultWhitelist :: [String]
@@ -720,16 +724,16 @@ defaultWhitelist = ["Size specifications", "The SetSpec's are inconsistent", "Th
 
 -- | If argument is True, fail property if constraints cannot be solved. Otherwise discard unsolved
 --   constraints.
-prop_soundness' :: Bool -> [String] -> OrderInfo -> Property
+prop_soundness' :: ToExprs ShelleyEra => Bool -> [String] -> OrderInfo -> Property
 prop_soundness' strict whitelist info =
   constraintProperty strict whitelist info $ \preds _graph env ->
     checkPredicates preds env
 
 -- | Check that shrinking is sound, i.e. that all shrink steps preserves constraint satisfaction.
-prop_shrinking :: OrderInfo -> Property
+prop_shrinking :: ToExprs ShelleyEra => OrderInfo -> Property
 prop_shrinking = prop_shrinking' False []
 
-prop_shrinking' :: Bool -> [String] -> OrderInfo -> Property
+prop_shrinking' :: ToExprs ShelleyEra => Bool -> [String] -> OrderInfo -> Property
 prop_shrinking' strict whitelist info =
   constraintProperty strict whitelist info $ \preds graph env ->
     counterexample ("-- Original solution --\n" ++ showEnv env) $

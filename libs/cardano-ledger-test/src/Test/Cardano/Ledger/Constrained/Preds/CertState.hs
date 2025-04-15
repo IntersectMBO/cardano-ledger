@@ -16,6 +16,7 @@ import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
 import Control.Monad (when)
 import Data.Default (Default (def))
+import Data.TreeDiff (toExpr)
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..), unCertStateF)
@@ -31,8 +32,10 @@ import Test.Cardano.Ledger.Constrained.Solver
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
+import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.Proof
+import Test.Cardano.Ledger.TreeDiff ()
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
@@ -91,13 +94,13 @@ vstateCheckPreds :: Proof era -> [Pred era]
 vstateCheckPreds _p = []
 
 vstateStage ::
-  Reflect era =>
+  (Reflect era, ToExprs era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 vstateStage proof = toolChainSub proof standardOrderInfo (vstatePreds proof)
 
-demoV :: ReplMode -> IO ()
+demoV :: ToExprs ConwayEra => ReplMode -> IO ()
 demoV mode = do
   let proof = Conway
   env <-
@@ -109,13 +112,13 @@ demoV mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   vstate <- monadTyped $ runTarget env vstateT
-  when (mode == Interactive) $ putStrLn (show (pcVState vstate))
+  when (mode == Interactive) . print $ toExpr vstate
   modeRepl mode proof env ""
 
-demoTestV :: TestTree
+demoTestV :: ToExprs ConwayEra => TestTree
 demoTestV = testIO "Testing VState Stage" (demoV CI)
 
-mainV :: IO ()
+mainV :: ToExprs ConwayEra => IO ()
 mainV = defaultMain $ testIO "Testing VState Stage" (demoV Interactive)
 
 -- ==========================================
@@ -162,13 +165,13 @@ pstateCheckPreds _ =
   ]
 
 pstateStage ::
-  Reflect era =>
+  (Reflect era, ToExprs era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 pstateStage proof = toolChainSub proof standardOrderInfo (pstatePreds proof)
 
-demoP :: ReplMode -> IO ()
+demoP :: ToExprs BabbageEra => ReplMode -> IO ()
 demoP mode = do
   let proof = Babbage
   env <-
@@ -179,14 +182,13 @@ demoP mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   pstate <- monadTyped $ runTarget env pstateT
-  when (mode == Interactive) $ do
-    putStrLn (show (pcPState pstate))
+  when (mode == Interactive) . print $ toExpr pstate
   modeRepl mode proof env ""
 
-demoTestP :: TestTree
+demoTestP :: ToExprs BabbageEra => TestTree
 demoTestP = testIO "Testing PState Stage" (demoP CI)
 
-mainP :: IO ()
+mainP :: ToExprs BabbageEra => IO ()
 mainP = defaultMain $ testIO "Testing PState Stage" (demoP Interactive)
 
 -- =================================================
@@ -303,13 +305,13 @@ certStateCheckPreds p =
   ]
 
 dstateStage ::
-  Reflect era =>
+  (Reflect era, ToExprs era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 dstateStage proof = toolChainSub proof standardOrderInfo (certStatePreds proof)
 
-demoD :: ReplMode -> Int -> IO ()
+demoD :: ToExprs BabbageEra => ReplMode -> Int -> IO ()
 demoD mode seed = do
   let proof = Babbage
   env <-
@@ -321,18 +323,18 @@ demoD mode seed = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   dState <- monadTyped $ runTarget env dstateT
-  when (mode == Interactive) $ putStrLn (show (pcDState dState))
+  when (mode == Interactive) . print $ toExpr dState
   modeRepl mode proof env ""
 
-demoTestD :: TestTree
+demoTestD :: ToExprs BabbageEra => TestTree
 demoTestD = testIO "Testing DState Stage" (demoD CI 99)
 
-mainD :: Int -> IO ()
+mainD :: ToExprs BabbageEra => Int -> IO ()
 mainD seed = defaultMain $ testIO "Testing DState Stage" (demoD Interactive seed)
 
 -- ===============================================
 
-demoC :: ReplMode -> IO ()
+demoC :: ToExprs ConwayEra => ReplMode -> IO ()
 demoC mode = do
   let proof = Conway
   env <-
@@ -346,16 +348,16 @@ demoC mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   certState <- monadTyped . runTarget env $ certStateT
-  when (mode == Interactive) $ putStrLn (show (pcCertState (unCertStateF certState)))
+  when (mode == Interactive) . print . toExpr $ unCertStateF certState
   modeRepl mode proof env ""
 
-demoTestC :: TestTree
+demoTestC :: ToExprs ConwayEra => TestTree
 demoTestC = testIO "Testing CertState Stage" (demoC CI)
 
-mainC :: IO ()
+mainC :: ToExprs ConwayEra => IO ()
 mainC = defaultMain $ testIO "Testing CertState Stage" (demoC Interactive)
 
-demoTest :: TestTree
+demoTest :: (ToExprs ConwayEra, ToExprs BabbageEra) => TestTree
 demoTest =
   testGroup
     "CertState tests"
