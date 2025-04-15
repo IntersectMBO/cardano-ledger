@@ -132,6 +132,7 @@ import Constrained.TheKnot qualified as C
 import GHC.TypeLits hiding (Text)
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
 import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
+import Constrained.NumSpec
 
 import Cardano.Crypto.Hash hiding (Blake2b_224)
 import Control.DeepSeq (NFData)
@@ -729,16 +730,13 @@ instance StringLike ShortByteString where
   getLengthSpec (StringSpec len) = len
   getLength = SBS.length
 
-data StringW (as :: [Type]) (b :: Type) where
+data StringW :: [Type] -> Type -> Type where
   StrLenW :: StringLike s => StringW '[s] Int
 
-deriving instance Show (StringW s as b)
-deriving instance Eq (StringW s as b)
+deriving instance Show (StringW as b)
+deriving instance Eq (StringW as b)
 
-strLen_ ::
-  (StringLike s, HasSpec s) =>
-  Term s ->
-  Term Int
+strLen_ :: (HasSpec s, StringLike s) => Term s -> Term Int
 strLen_ = appTerm StrLenW
 
 instance Syntax StringW
@@ -746,11 +744,11 @@ instance Syntax StringW
 instance Semantics StringW where
   semantics StrLenW = getLength
 
-instance (Typeable s, StringLike s) => Logic StringW where
-  propagateTypeSpec StrLenW (Unary HOLE) ts cant = typeSpec $ lengthSpec @s (TypeSpec ts cant)
-  propagateMemberSpec StrLenW (Unary HOLE) xs = typeSpec $ lengthSpec @s (MemberSpec xs)
+instance Logic StringW where
+  propagateTypeSpec StrLenW (Unary HOLE) ts cant = typeSpec $ lengthSpec (TypeSpec ts cant)
+  propagateMemberSpec StrLenW (Unary HOLE) xs = typeSpec $ lengthSpec (MemberSpec xs)
 
-  mapTypeSpec StrLenW ss = getLengthSpec @s ss
+  mapTypeSpec StrLenW ss = getLengthSpec ss
 
 class StringLike s where
   lengthSpec :: Specification Int -> TypeSpec s
@@ -1709,19 +1707,19 @@ instance CoercibleLike (CompactForm Coin) Word64 where
 data CoercibleW (args :: [Type]) (res :: Type) where
   CoerceW :: (CoercibleLike a b, Coercible a b) => CoercibleW '[a] b
 
-deriving instance Show (CoercibleW sym args res)
-deriving instance Eq (CoercibleW sym args res)
+deriving instance Show (CoercibleW args res)
+deriving instance Eq (CoercibleW args res)
 
 instance Syntax CoercibleW
 instance Semantics CoercibleW where
   semantics = \case
     CoerceW -> coerce
 
-instance (Typeable a, Typeable b, CoercibleLike a b) => Logic CoercibleW where
-  propagateMemberSpec CoerceW (Unary HOLE) xs = coerceSpec @a @b $ MemberSpec xs
-  propagateTypeSpec CoerceW (Unary HOLE) ts cant = coerceSpec @a @b $ TypeSpec ts cant
+instance Logic CoercibleW where
+  propagateMemberSpec CoerceW (Unary HOLE) xs = coerceSpec $ MemberSpec xs
+  propagateTypeSpec CoerceW (Unary HOLE) ts cant = coerceSpec $ TypeSpec ts cant
 
-  mapTypeSpec CoerceW ss = getCoerceSpec @a ss
+  mapTypeSpec CoerceW ss = getCoerceSpec ss
 
 coerce_ ::
   forall a b.
@@ -1738,8 +1736,8 @@ coerce_ = appTerm CoerceW
 data CoinW (ds :: [Type]) (res :: Type) where
   ToDeltaW :: CoinW '[Coin] DeltaCoin
 
-deriving instance Show (CoinW s args res)
-deriving instance Eq (CoinW s args res)
+deriving instance Show (CoinW args res)
+deriving instance Eq (CoinW args res)
 
 instance Syntax CoinW
 
