@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 
 module Test.Cardano.Ledger.Constrained.Shrink (
@@ -28,7 +29,7 @@ justOneName xs = foldr accum [] xs -- FIXME throw away new style DependGraph ele
 --   Note that the DependGraph tells us the dependency order of the variables: a variable only
 --   depends on the variables before it in the graph, so when shrinking the value of a variable we
 --   only need to adjust the values of later variables.
-shrinkEnv :: DependGraph era -> Env era -> [Env era]
+shrinkEnv :: ToExprs era => DependGraph era -> Env era -> [Env era]
 shrinkEnv (DependGraph vs) env =
   [ env'
   | (before, (x, cs), after) <- splits (justOneName vs)
@@ -40,6 +41,7 @@ shrinkEnv (DependGraph vs) env =
     splits (x : xs) = ([], x, xs) : [(x : ys, y, zs) | (ys, y, zs) <- splits xs]
 
 shrinkOneVar ::
+  ToExprs era =>
   Env era -> [Name era] -> Name era -> [Pred era] -> [(Name era, [Pred era])] -> [Env era]
 shrinkOneVar originalEnv before x cs after =
   [ env'
@@ -58,7 +60,7 @@ shrinkOneVar originalEnv before x cs after =
       Just v -> v
       Nothing -> error $ "shrinkOneVar: Failed to find: " ++ show x ++ " in env"
 
-shrinkVar :: Name era -> [Pred era] -> Payload era -> [Payload era]
+shrinkVar :: ToExprs era => Name era -> [Pred era] -> Payload era -> [Payload era]
 shrinkVar v cs p = [p' | p' <- shrinkPayload p, validAssignment v p' cs]
 
 shrinkPayload :: Payload era -> [Payload era]
@@ -66,12 +68,12 @@ shrinkPayload (Payload rep t acc) = [Payload rep t' acc | t' <- shrinkRep rep t]
 
 -- | Compute something satisfying the constraints that's as "close" to the original value as
 --   possible. TODO: more cleverness
-fixupVar :: Name era -> [Pred era] -> Payload era -> Maybe (Payload era)
+fixupVar :: ToExprs era => Name era -> [Pred era] -> Payload era -> Maybe (Payload era)
 fixupVar v cs p = listToMaybe [p' | p' <- [p | validAssignment v p cs] ++ reverse (shrinkVar v cs p)]
 
 -- | Assumes the variable is the only free variable in the constraints.
-validAssignment :: Name era -> Payload era -> [Pred era] -> Bool
+validAssignment :: ToExprs era => Name era -> Payload era -> [Pred era] -> Bool
 validAssignment v p cs = all (runPred_ $ storeName v p emptyEnv) cs
 
-runPred_ :: Env era -> Pred era -> Bool
+runPred_ :: ToExprs era => Env era -> Pred era -> Bool
 runPred_ env p = either (const False) id $ runTyped $ runPred env p

@@ -42,6 +42,10 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   hasEq,
   format,
   genSigningKey,
+  ppList,
+  ppSet,
+  ppMap,
+  ppMaybe,
 )
 where
 
@@ -164,7 +168,7 @@ import Test.Cardano.Ledger.Constrained.Size (Size (..))
 import Test.Cardano.Ledger.Conway.Arbitrary (genConwayPlutusPurposePointer, genProposals)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
-import Test.Cardano.Ledger.Generic.Fields (WitnessesField (..))
+import Test.Cardano.Ledger.Generic.Fields (TxBodyField, TxField, WitnessesField (..))
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody)
@@ -342,6 +346,8 @@ type ToExprs e =
   , ToExpr (Constitution e)
   , ToExpr (GovRelation StrictMaybe e)
   , ToExpr (DRepPulser e Identity (RatifyState e))
+  , ToExpr (TxBodyField e)
+  , ToExpr (TxField e)
   )
 
 -- ===========================================================

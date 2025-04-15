@@ -39,7 +39,7 @@ import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
 import Test.Tasty (TestTree, defaultMain)
 import Test.Tasty.QuickCheck
 
-extract :: Era era => Term era t -> Term era s -> Pred era
+extract :: (Era era, ToExprs era) => Term era t -> Term era s -> Pred era
 extract term@(Var (V _ _ (Yes r1 lens))) record =
   case testEql r1 (termRep record) of
     Just Refl -> term :<-: (Constr "lookup" (\x -> x ^. lens) ^$ record)
@@ -99,7 +99,7 @@ genPParams proof tx bb bh = do
           ]
     )
 
-pParamsPreds :: Reflect era => Proof era -> [Pred era]
+pParamsPreds :: (Reflect era, ToExprs era) => Proof era -> [Pred era]
 pParamsPreds p =
   [ GenFrom
       (pparams p)
@@ -139,13 +139,13 @@ pParamsPreds p =
        )
 
 pParamsStage ::
-  Reflect era =>
+  (Reflect era, ToExprs era) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 pParamsStage proof = toolChainSub proof standardOrderInfo (pParamsPreds proof)
 
-demo :: ReplMode -> IO ()
+demo :: ToExprs BabbageEra => ReplMode -> IO ()
 demo mode = do
   let proof = Babbage
   subst <- generate (pParamsStage proof emptySubst)
@@ -153,8 +153,8 @@ demo mode = do
   when (mode == Interactive) $ putStrLn "\n" >> putStrLn (show subst)
   modeRepl mode proof env ""
 
-demoTest :: TestTree
+demoTest :: ToExprs BabbageEra => TestTree
 demoTest = testIO "Testing TxOut Stage" (demo CI)
 
-mainPParams :: IO ()
+mainPParams :: ToExprs BabbageEra => IO ()
 mainPParams = defaultMain $ testIO "Testing TxOut Stage" (demo Interactive)

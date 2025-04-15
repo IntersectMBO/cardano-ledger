@@ -50,6 +50,7 @@ import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
+import Data.TreeDiff (Expr, toExpr)
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
@@ -103,7 +104,8 @@ import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
-predsTests :: TestTree
+predsTests ::
+  (ToExprs BabbageEra, ToExprs ShelleyEra, ToExprs ConwayEra) => TestTree
 predsTests =
   testGroup
     "Testing all Stages in the Preds directory"
@@ -285,11 +287,11 @@ sufficientKeyHashes p scriptmap cs gendel =
 
 -- =======================================
 
-pcUtxo :: Reflect era => Map TxIn (TxOutF era) -> String
+pcUtxo :: ToExprs era => Map TxIn (TxOutF era) -> String
 pcUtxo m = show (pcUtxoDoc m)
 
-pcUtxoDoc :: Reflect era => Map TxIn (TxOutF era) -> PDoc
-pcUtxoDoc = ppMap pcTxIn (\(TxOutF p o) -> pcTxOut p o)
+pcUtxoDoc :: ToExprs era => Map TxIn (TxOutF era) -> Expr
+pcUtxoDoc = ppMap toExpr (\(TxOutF _p o) -> toExpr o)
 
 necessaryKeyHashTarget ::
   forall era.
@@ -343,7 +345,7 @@ necessaryKeyHashes (TxBodyF _ txb) u gd reqsigners =
 -- ========================================================
 
 makeKeyWitnessTarget ::
-  Reflect era =>
+  (Reflect era, ToExprs era) =>
   Term era (TxBodyF era) ->
   Term era (Set (KeyHash 'Witness)) ->
   Term era (Set (KeyHash 'Witness)) ->
@@ -362,7 +364,7 @@ makeKeyWitnessTarget txbparam necessary sufficient scripts byAdUniv =
 
 makeKeyWitness ::
   forall era.
-  Reflect era =>
+  (Reflect era, ToExprs era) =>
   TxBodyF era ->
   Set (KeyHash 'Witness) ->
   Set (KeyHash 'Witness) ->
@@ -371,7 +373,7 @@ makeKeyWitness ::
   Map (KeyHash 'Genesis) GenDelegPair ->
   Map (KeyHash 'Payment) (Addr, SigningKey) ->
   Set (WitVKey 'Witness)
-makeKeyWitness (TxBodyF proof txb) necessary sufficient keyUniv scripts gendel byronAdUniv = keywits
+makeKeyWitness (TxBodyF _proof txb) necessary sufficient keyUniv scripts gendel byronAdUniv = keywits
   where
     bodyhash :: SafeHash EraIndependentTxBody
     bodyhash = hashAnnotated txb
@@ -390,13 +392,13 @@ makeKeyWitness (TxBodyF proof txb) necessary sufficient keyUniv scripts gendel b
                     ++ "\n member sufficient = "
                     ++ show (Set.member hash sufficient)
                     ++ "\n scripts = "
-                    ++ show (ppMap pcScriptHash (\(ScriptF p s) -> pcScript p s) scripts)
+                    ++ show (ppMap toExpr (\(ScriptF _p s) -> toExpr s) scripts)
                     ++ "\n genDelegs = "
-                    ++ show (ppMap pcKeyHash pcGenDelegPair gendel)
+                    ++ show (ppMap toExpr toExpr gendel)
                     ++ "\nbyronAddrUniv\n"
                     ++ format @era (MapR PayHashR (PairR AddrR SigningKeyR)) byronAdUniv
                     ++ "\nTxBody =\n"
-                    ++ show (pcTxBody proof txb)
+                    ++ show (toExpr txb)
                 )
 
 -- ===============================================
@@ -481,7 +483,8 @@ minusMultiValue p v1 v2 = case whichValue p of
 -- Using constraints to generate a TxBody
 -- ==============================================================
 
-txBodyPreds :: forall era. (HasCallStack, Reflect era) => UnivSize -> Proof era -> [Pred era]
+txBodyPreds ::
+  forall era. (HasCallStack, Reflect era, ToExprs era) => UnivSize -> Proof era -> [Pred era]
 txBodyPreds sizes@UnivSize {..} p =
   txOutPreds sizes p balanceCoin (outputs p)
     ++ [ mint
@@ -689,7 +692,7 @@ txBodyPreds sizes@UnivSize {..} p =
     sufficientHashes = Var $ pV p "sufficientHashes" (SetR WitHashR) No
 
 txBodyStage ::
-  Reflect era =>
+  (Reflect era, ToExprs era) =>
   UnivSize ->
   Proof era ->
   Subst era ->
@@ -706,7 +709,7 @@ balanceMap pairs m0 l = List.foldl' accum m0 pairs
     accum m (k, thecoin) = Map.adjust (\t -> t & l .~ (thecoin <> t ^. l)) k m
 
 -- | Adjust the Coin part of the TxOut in the 'utxo' map for the TxIn 'feeTxIn' by adding 'txfee'
-adjustFeeInput :: (HasCallStack, Reflect era) => Env era -> Typed (Env era)
+adjustFeeInput :: (HasCallStack, Reflect era, ToExprs era) => Env era -> Typed (Env era)
 adjustFeeInput env = case utxo reify of
   u@(Var utxoV) -> do
     feeinput <- runTerm env feeTxIn
@@ -718,7 +721,7 @@ adjustFeeInput env = case utxo reify of
 -- | Adjust UTxO image of 'collateral' to pay for the collateral fees. Do this by
 --   adding 'extraCol' to the TxOuts associated with col inputs
 adjustColInput ::
-  (HasCallStack, Reflect era) =>
+  (HasCallStack, Reflect era, ToExprs era) =>
   -- Term era (TxIn ) ->
   -- Term era Coin ->
   -- Term era Coin ->
@@ -760,20 +763,21 @@ adjustC (i : is) m extra@(Coin n) coinL = case compare n 0 of
         Nothing -> error ("Collateral input: " ++ show i ++ " is not found in UTxO in 'adjust'")
       subextra outf = outf & coinL .~ (Coin (max 1 (unCoin ((outf ^. coinL) <+> extra))))
 
-updateVal :: (a -> b -> a) -> Term era a -> b -> Env era -> Typed (Env era)
+updateVal :: ToExprs era => (a -> b -> a) -> Term era a -> b -> Env era -> Typed (Env era)
 updateVal adjust term@(Var v) delta env = do
   varV <- runTerm env term
   pure $ storeVar v (adjust varV delta) env
 updateVal _ v _ _ = failT ["Non Var in updateVal: " ++ show v]
 
-updateTerm :: (a -> b -> a) -> Term era a -> Term era b -> Env era -> Typed (Env era)
+updateTerm :: ToExprs era => (a -> b -> a) -> Term era a -> Term era b -> Env era -> Typed (Env era)
 updateTerm adjust term@(Var v) delta env = do
   varV <- runTerm env term
   deltaV <- runTerm env delta
   pure $ storeVar v (adjust varV deltaV) env
 updateTerm _ v _ _ = failT ["Non Var in updateTerm: " ++ show v]
 
-updateTarget :: (a -> b -> a) -> Term era a -> Target era b -> Env era -> Typed (Env era, b)
+updateTarget ::
+  ToExprs era => (a -> b -> a) -> Term era a -> Target era b -> Env era -> Typed (Env era, b)
 updateTarget adjust term@(Var v) delta env = do
   varV <- runTerm env term
   deltaV <- runTarget env delta
@@ -785,7 +789,8 @@ override _ y = y
 
 -- ========================================
 
-genTxAndLedger :: Reflect era => UnivSize -> Proof era -> Gen (LedgerState era, Tx era, Env era)
+genTxAndLedger ::
+  (Reflect era, ToExprs era) => UnivSize -> Proof era -> Gen (LedgerState era, Tx era, Env era)
 genTxAndLedger sizes proof = do
   subst <-
     ( pure emptySubst
@@ -806,7 +811,8 @@ genTxAndLedger sizes proof = do
   (TxF _ tx) <- monadTyped (findVar (unVar txterm) env2)
   pure (ledger, tx, env2)
 
-genTxAndNewEpoch :: Reflect era => UnivSize -> Proof era -> Gen (NewEpochState era, Tx era, Env era)
+genTxAndNewEpoch ::
+  (Reflect era, ToExprs era) => UnivSize -> Proof era -> Gen (NewEpochState era, Tx era, Env era)
 genTxAndNewEpoch sizes proof = do
   subst <-
     pure emptySubst
@@ -828,17 +834,20 @@ genTxAndNewEpoch sizes proof = do
   TxF _ tx <- monadTyped (findVar (unVar txterm) env2)
   pure (newepochst, tx, env2)
 
-demoTxNes :: IO ()
+demoTxNes :: ToExprs ConwayEra => IO ()
 demoTxNes = do
   let proof = Conway
   (nes, _tx, env) <- generate $ genTxAndNewEpoch def proof
-  print (psNewEpochState proof nes)
+  print (toExpr nes)
   pools <- monadTyped $ runTerm env regPools
   deleg <- monadTyped $ runTerm env delegations
   stak <- monadTyped $ runTerm env instantStakeTerm
-  putDoc (ppString "\nPool " <> prettyA pools)
-  putDoc (ppString "\nDeleg " <> prettyA deleg)
-  putDoc (ppString "\nStake " <> prettyA stak)
+  putStrLn "\nPool "
+  print $ toExpr pools
+  putStrLn "\nDeleg "
+  print $ toExpr deleg
+  putStrLn "\nStake "
+  print $ toExpr stak
   let distr =
         calculatePoolDistr
           ( SnapShot
@@ -846,20 +855,21 @@ demoTxNes = do
               (VMap.fromMap deleg)
               (VMap.fromMap pools)
           )
-  putDoc (ppString "\nPoolDistr " <> prettyA distr)
+  putStrLn "\nPoolDistr"
+  print $ toExpr distr
   goRepl proof env ""
 
-demoTx :: IO ()
+demoTx :: ToExprs ConwayEra => IO ()
 demoTx = do
   let proof = Conway
   (ls, tx, env) <- generate $ genTxAndLedger def proof
-  print (pcLedgerState proof ls)
-  print (pcTx proof tx)
+  print (toExpr ls)
+  print (toExpr tx)
   goRepl proof env ""
 
 -- ================================================================
 
-gone :: Gen (IO ())
+gone :: ToExprs BabbageEra => Gen (IO ())
 gone = do
   txIx <- arbitrary
   let proof = Babbage
@@ -878,10 +888,10 @@ gone = do
     Left errs -> do
       putStrLn "FAIL"
       print $ pgenTx proof utxo1 tx
-      print $ prettyA errs
+      print $ toExpr errs
       goRepl Babbage env ""
 
-test :: Maybe Int -> IO ()
+test :: ToExprs BabbageEra => Maybe Int -> IO ()
 test (Just seed) = join $ generateWithSeed seed gone
 test Nothing = do
   seed <- generate arbitrary
@@ -890,7 +900,7 @@ test Nothing = do
 
 bad :: [Int]
 bad = [] -- [3, 8, 13, 41, 50, 60, 65, 82, 99, 100, 109, 112]
-go :: Int -> IO ()
+go :: ToExprs BabbageEra => Int -> IO ()
 go n = sequence_ [print i >> test (Just i) | i <- [n .. 113], notElem i bad]
 
 -- ========================================
@@ -900,44 +910,44 @@ go n = sequence_ [print i >> test (Just i) | i <- [n .. 113], notElem i bad]
 -- | Pretty print the fields of a Randomly generated TxBody, except resolve the
 --   inputs with the given Ut map.
 pgenTxBodyField ::
-  Reflect era =>
+  ToExprs era =>
   Proof era ->
   Map TxIn (TxOutF era) ->
   TxBodyField era ->
-  [(Text, PDoc)]
-pgenTxBodyField proof ut x = case x of
+  [(Text, Expr)]
+pgenTxBodyField _proof ut x = case x of
   Inputs s -> [(pack "spend inputs", pcUtxoDoc (Map.restrictKeys ut s))]
   Collateral s -> [(pack "coll inputs", pcUtxoDoc (Map.restrictKeys ut s))]
   RefInputs s -> [(pack "ref inputs", pcUtxoDoc (Map.restrictKeys ut s))]
-  other -> pcTxBodyField proof other
+  other -> [(pack "", toExpr other)] -- TODO
 
 pgenTxBody ::
-  Reflect era => Proof era -> TxBody era -> Map TxIn (TxOutF era) -> PDoc
-pgenTxBody proof txBody ut = ppRecord (pack "TxBody " <> pack (show proof)) pairs
+  ToExprs era => Proof era -> TxBody era -> Map TxIn (TxOutF era) -> Expr
+pgenTxBody proof txBody ut = toExpr (pack "TxBody " <> pack (show proof), pairs)
   where
     fields = abstractTxBody proof txBody
     pairs = concatMap (pgenTxBodyField proof ut) fields
 
 pgenTxField ::
   forall era.
-  Reflect era =>
+  (Reflect era, ToExprs era) =>
   Proof era ->
   Map TxIn (TxOutF era) ->
   TxField era ->
-  [(Text, PDoc)]
+  [(Text, Expr)]
 pgenTxField proof ut x = case x of
-  Body b -> [(pack "txbody hash", ppSafeHash (hashAnnotated b)), (pack "body", pgenTxBody proof b ut)]
-  BodyI xs -> [(pack "body", ppRecord (pack "TxBody") (concatMap (pgenTxBodyField proof ut) xs))]
-  _other -> pcTxField proof x
+  Body b -> [(pack "txbody hash", toExpr (hashAnnotated b)), (pack "body", pgenTxBody proof b ut)]
+  BodyI xs -> [(pack "body", toExpr (pack "TxBody", (concatMap (pgenTxBodyField proof ut) xs)))]
+  _other -> [(pack "", toExpr x)] -- TODO
 
-pgenTx :: Reflect era => Proof era -> Map TxIn (TxOutF era) -> Tx era -> PDoc
-pgenTx proof ut tx = ppRecord (pack "Tx") pairs
+pgenTx :: (Reflect era, ToExprs era) => Proof era -> Map TxIn (TxOutF era) -> Tx era -> Expr
+pgenTx proof ut tx = toExpr (pack "Tx", pairs)
   where
     fields = abstractTx proof tx
     pairs = concatMap (pgenTxField proof ut) fields
 
-pcTxWithUTxO :: Reflect era => Proof era -> UTxO era -> Tx era -> PDoc
-pcTxWithUTxO proof (UTxO ut) tx = ppRecord (pack "Tx") pairs
+pcTxWithUTxO :: (Reflect era, ToExprs era) => Proof era -> UTxO era -> Tx era -> Expr
+pcTxWithUTxO proof (UTxO ut) tx = toExpr (pack "Tx", pairs)
   where
     fields = abstractTx proof tx
     pairs = concatMap (pgenTxField proof (fmap (TxOutF proof) ut)) fields
@@ -951,6 +961,7 @@ oneTest ::
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Show (PredicateFailure (EraRule "LEDGER" era))
+  , ToExprs era
   ) =>
   UnivSize ->
   Proof era ->
@@ -986,13 +997,13 @@ oneTest sizes proof = do
           (putStrLn msg >> goRepl proof env2 "")
           (counterexample msg False)
 
-main1 :: IO ()
+main1 :: ToExprs BabbageEra => IO ()
 main1 = quickCheck (withMaxSuccess 30 (oneTest def Babbage))
 
-main2 :: IO ()
+main2 :: ToExprs ShelleyEra => IO ()
 main2 = quickCheck (withMaxSuccess 30 (oneTest def Shelley))
 
-demo :: ReplMode -> IO ()
+demo :: ToExprs BabbageEra => ReplMode -> IO ()
 demo mode = do
   let proof = Babbage
   -- Conway
@@ -1031,7 +1042,7 @@ demo mode = do
     print (consumedTxBody txb ppV (unCertStateF certState) (liftUTxO utxoV))
   modeRepl mode proof env2 ""
 
-demoTest :: TestTree
+demoTest :: (ToExprs BabbageEra, ToExprs ShelleyEra) => TestTree
 demoTest =
   testGroup
     "Tests for Tx Stage"
@@ -1040,5 +1051,5 @@ demoTest =
     , testProperty "One Tx Test Shelley" $ withMaxSuccess 30 (oneTest def Shelley)
     ]
 
-main :: IO ()
+main :: ToExprs BabbageEra => IO ()
 main = defaultMain $ testIO "Testing Tx Stage" (demo Interactive)

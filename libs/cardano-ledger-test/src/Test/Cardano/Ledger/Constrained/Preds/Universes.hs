@@ -649,19 +649,19 @@ stakeToHotCommittee = coerceKeyRole
 stakeToColdCommittee :: Credential 'Staking -> Credential 'ColdCommitteeRole
 stakeToColdCommittee = coerceKeyRole
 
-solveUniv :: Reflect era => UnivSize -> Proof era -> Gen (Subst era)
+solveUniv :: (Reflect era, ToExprs era) => UnivSize -> Proof era -> Gen (Subst era)
 solveUniv size proof = do
   toolChainSub proof standardOrderInfo (universePreds size proof) emptySubst
 
 universeStage ::
-  Reflect era =>
+  (Reflect era, ToExprs era) =>
   UnivSize ->
   Proof era ->
   Subst era ->
   Gen (Subst era)
 universeStage size proof = toolChainSub proof standardOrderInfo (universePreds size proof)
 
-demo :: ReplMode -> IO ()
+demo :: ToExprs ShelleyEra => ReplMode -> IO ()
 demo mode = do
   let proof = Shelley
   subst <- generate (universeStage def proof emptySubst)
@@ -671,8 +671,8 @@ demo mode = do
   env <- monadTyped (substToEnv subst emptyEnv)
   modeRepl mode proof env ""
 
-demoTest :: TestTree
+demoTest :: ToExprs ShelleyEra => TestTree
 demoTest = testIO "Testing Universe Stage" (demo CI)
 
-main :: IO ()
+main :: ToExprs ShelleyEra => IO ()
 main = defaultMain $ testIO "Testing Universe Stage" (demo Interactive)
