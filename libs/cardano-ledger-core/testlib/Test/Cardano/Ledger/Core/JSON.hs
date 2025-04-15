@@ -7,10 +7,11 @@ module Test.Cardano.Ledger.Core.JSON (
   roundTripJsonSpec,
   roundTripJsonEraSpec,
   roundTripJsonProperty,
+  goldenJsonPParamsSpec,
 ) where
 
 import Cardano.Ledger.Core
-import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
+import Data.Aeson (FromJSON, ToJSON, eitherDecode, eitherDecodeFileStrict, encode)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Function ((&))
@@ -58,3 +59,12 @@ roundTripJsonEraSpec =
   describe (eraName @era) $ do
     describe "RoundTrip JSON" $ do
       roundTripJsonSpec @(PParams era)
+
+goldenJsonPParamsSpec ::
+  forall era.
+  EraPParams era =>
+  SpecWith FilePath
+goldenJsonPParamsSpec =
+  it "Golden JSON specs for PParams " $ \file -> do
+    decoded <- eitherDecodeFileStrict @(PParams era) file
+    void $ expectRightExpr decoded
