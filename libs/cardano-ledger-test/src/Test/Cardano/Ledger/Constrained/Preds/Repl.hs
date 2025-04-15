@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -22,16 +23,16 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 
 -- =====================================================
 
-repl :: Proof era -> Env era -> IO ()
+repl :: ToExprs era => Proof era -> Env era -> IO ()
 repl proof env = runInputT defaultSettings (loop proof env)
 
-goRepl :: Proof era -> Env era -> String -> IO ()
+goRepl :: ToExprs era => Proof era -> Env era -> String -> IO ()
 goRepl p env@(Env emap) str = runInputT (setComplete comp defaultSettings) (helpRepl p env str)
   where
     keys = Set.toList (Map.keysSet emap)
     comp = completeWord Nothing [' '] (\s -> pure (map simpleCompletion (filter (List.isPrefixOf s) keys)))
 
-loop :: Proof era -> Env era -> InputT IO ()
+loop :: ToExprs era => Proof era -> Env era -> InputT IO ()
 loop proof env@(Env emap) = do
   minput <- getInputLine "prompt> "
   case minput of
@@ -48,7 +49,7 @@ loop proof env@(Env emap) = do
           outputStrLn (format rep t)
           loop proof env
 
-helpRepl :: forall era. Proof era -> Env era -> [Char] -> InputT IO ()
+helpRepl :: forall era. ToExprs era => Proof era -> Env era -> [Char] -> InputT IO ()
 helpRepl proof env@(Env emap) more = do
   let keys = Set.toList (Map.keysSet emap)
       matches = filter (\k -> List.isInfixOf (map toLower more) (map toLower k)) keys
@@ -72,7 +73,7 @@ helpRepl proof env@(Env emap) more = do
 data ReplMode = Interactive | CI
   deriving (Eq)
 
-modeRepl :: ReplMode -> Proof era -> Env era -> String -> IO ()
+modeRepl :: ToExprs era => ReplMode -> Proof era -> Env era -> String -> IO ()
 modeRepl Interactive p e s = goRepl p e s
 modeRepl CI _ (Env emap) _ = do
   let keys = Set.toList (Map.keysSet emap)

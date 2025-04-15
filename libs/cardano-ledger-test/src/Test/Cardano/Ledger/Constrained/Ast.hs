@@ -1160,9 +1160,9 @@ data Arg era t where
 patt :: ToExprs era => Rep era t1 -> Term era t2 -> Pat era t1
 patt rep term = Pat rep [arg rep term]
 
-instance Show (Pat era t) where
+instance ToExprs era => Show (Pat era t) where
   show (Pat r xs) = "Pat " ++ show r ++ " " ++ showL show ", " xs
-instance Show (Arg era t) where
+instance ToExprs era => Show (Arg era t) where
   show (Arg (Field nm _ _ _)) = nm
   show (Arg f@(FConst _ _ _ _)) = show f
   show (ArgPs (Field nm _ _ _) qs) = nm ++ " [" ++ showL show ", " qs ++ "]"

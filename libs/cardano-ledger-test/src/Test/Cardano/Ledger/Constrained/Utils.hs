@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Test.Cardano.Ledger.Constrained.Utils (
   testIO,
@@ -22,6 +23,7 @@ import Test.Cardano.Ledger.Constrained.Ast (
  )
 import Test.Cardano.Ledger.Constrained.Env (Env, Name (..), V (..), emptyEnv)
 import Test.Cardano.Ledger.Constrained.Monad (Typed, monadTyped)
+import Test.Cardano.Ledger.Constrained.TypeRep (ToExprs)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (assertFailure, testCase)
 
@@ -31,7 +33,8 @@ testIO msg x = testCase msg (Exc.catch (void x) handler)
     -- handler :: Exc.ErrorCall -> IO ()
     handler (Exc.SomeException zs) = assertFailure (unlines [msg, show zs])
 
-checkForSoundness :: Era era => [Pred era] -> Subst era -> Typed (Env era, Maybe String)
+checkForSoundness ::
+  (Era era, ToExprs era) => [Pred era] -> Subst era -> Typed (Env era, Maybe String)
 checkForSoundness preds subst = do
   !env <- monadTyped $ substToEnv subst emptyEnv
   testTriples <- mapM (makeTest env) preds
@@ -40,7 +43,7 @@ checkForSoundness preds subst = do
     then pure (env, Nothing)
     else pure (env, Just ("Some conditions fail\n" ++ explainBad bad subst))
 
-explainBad :: Era era => [(String, Bool, Pred era)] -> Subst era -> String
+explainBad :: (Era era, ToExprs era) => [(String, Bool, Pred era)] -> Subst era -> String
 explainBad cs (Subst subst) = unlines (map getString cs) ++ "\n" ++ show restricted
   where
     names = List.foldl' varsOfPred HashSet.empty (map getPred cs)
