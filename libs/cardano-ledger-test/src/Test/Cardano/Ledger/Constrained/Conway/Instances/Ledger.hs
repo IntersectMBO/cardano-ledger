@@ -746,7 +746,7 @@ instance Syntax StringW
 instance Semantics StringW where
   semantics StrLenW = getLength
 
-instance (Typeable s, StringLike s) => Logic StringW 'where
+instance (Typeable s, StringLike s) => Logic StringW where
   propagateTypeSpec StrLenW (Unary HOLE) ts cant = typeSpec $ lengthSpec @s (TypeSpec ts cant)
   propagateMemberSpec StrLenW (Unary HOLE) xs = typeSpec $ lengthSpec @s (MemberSpec xs)
 
@@ -1753,13 +1753,12 @@ toDelta_ ::
 toDelta_ = appTerm ToDeltaW
 
 instance Logic CoinW where
-
   propagateMemberSpec ToDeltaW (Unary HOLE) xs = MemberSpec (NE.map deltaToCoin xs)
 
   propagateTypeSpec ToDeltaW (Unary HOLE) (NumSpecInterval l h) cant =
     TypeSpec
-        (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
-        (map deltaToCoin cant)
+      (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
+      (map deltaToCoin cant)
 
   mapTypeSpec ToDeltaW (NumSpecInterval l h) = typeSpec (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
 
