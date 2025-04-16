@@ -50,9 +50,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
-  DecCBORGroup (..),
   EncCBOR (..),
-  EncCBORGroup (..),
   FromCBOR (..),
   ToCBOR (..),
   decodeMapContents,
@@ -195,7 +193,7 @@ instance EraPParams ShelleyEra where
 instance Era era => EncCBOR (ShelleyPParams Identity era) where
   encCBOR
     ShelleyPParams {..} =
-      encodeListLen 18
+      encodeListLen 17
         <> encCBOR sppMinFeeA
         <> encCBOR sppMinFeeB
         <> encCBOR sppMaxBBSize
@@ -210,13 +208,13 @@ instance Era era => EncCBOR (ShelleyPParams Identity era) where
         <> encCBOR sppTau
         <> encCBOR sppD
         <> encCBOR sppExtraEntropy
-        <> encCBORGroup sppProtocolVersion
+        <> encCBOR sppProtocolVersion
         <> encCBOR sppMinUTxOValue
         <> encCBOR sppMinPoolCost
 
 instance Era era => DecCBOR (ShelleyPParams Identity era) where
   decCBOR = do
-    decodeRecordNamed "ShelleyPParams" (const 18) $
+    decodeRecordNamed "ShelleyPParams" (const 17) $
       ShelleyPParams @Identity
         <$> decCBOR -- sppMinFeeA         :: Integer
         <*> decCBOR -- sppMinFeeB         :: Natural
@@ -232,7 +230,7 @@ instance Era era => DecCBOR (ShelleyPParams Identity era) where
         <*> decCBOR -- sppTau             :: UnitInterval
         <*> decCBOR -- sppD               :: UnitInterval
         <*> decCBOR -- sppExtraEntropy    :: Nonce
-        <*> decCBORGroup -- sppProtocolVersion :: ProtVer
+        <*> decCBOR -- sppProtocolVersion :: ProtVer
         <*> decCBOR -- sppMinUTxOValue    :: Natural
         <*> decCBOR -- sppMinPoolCost     :: Natural
 

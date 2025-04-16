@@ -73,11 +73,8 @@ import Cardano.Ledger.Binary (
   Encoding,
   FromCBOR (..),
   ToCBOR (..),
-  decCBORGroup,
   decodeRecordNamed,
-  encCBORGroup,
   encodeListLen,
-  listLen,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -274,7 +271,7 @@ instance EraGov BabbageEra where
 
 instance Era era => EncCBOR (BabbagePParams Identity era) where
   encCBOR BabbagePParams {..} =
-    encodeListLen (21 + listLen bppProtocolVersion)
+    encodeListLen 22
       <> encCBOR bppMinFeeA
       <> encCBOR bppMinFeeB
       <> encCBOR bppMaxBBSize
@@ -287,7 +284,7 @@ instance Era era => EncCBOR (BabbagePParams Identity era) where
       <> encCBOR bppA0
       <> encCBOR bppRho
       <> encCBOR bppTau
-      <> encCBORGroup bppProtocolVersion
+      <> encCBOR bppProtocolVersion
       <> encCBOR bppMinPoolCost
       <> encCBOR bppCoinsPerUTxOByte
       <> encCBOR bppCostModels
@@ -303,7 +300,7 @@ instance Era era => ToCBOR (BabbagePParams Identity era) where
 
 instance Era era => DecCBOR (BabbagePParams Identity era) where
   decCBOR =
-    decodeRecordNamed "PParams" (\pp -> 21 + fromIntegral (listLen (bppProtocolVersion pp))) $ do
+    decodeRecordNamed "PParams" (const 22) $ do
       bppMinFeeA <- decCBOR
       bppMinFeeB <- decCBOR
       bppMaxBBSize <- decCBOR
@@ -316,7 +313,7 @@ instance Era era => DecCBOR (BabbagePParams Identity era) where
       bppA0 <- decCBOR
       bppRho <- decCBOR
       bppTau <- decCBOR
-      bppProtocolVersion <- decCBORGroup
+      bppProtocolVersion <- decCBOR
       bppMinPoolCost <- decCBOR
       bppCoinsPerUTxOByte <- decCBOR
       bppCostModels <- decCBOR

@@ -94,7 +94,7 @@ golden_cbor_ShelleyGenesis =
         . TkInt 8000000 -- sgSlotLength
         . TkInt 16991 -- sgUpdateQuorum
         . TkInt 71 -- sgMaxLovelaceSupply
-        . TkListLen 18 -- sgProtocolParams
+        . TkListLen 17 -- sgProtocolParams
         . TkInt 0
         . TkInt 0
         . TkInt 239857
@@ -122,6 +122,7 @@ golden_cbor_ShelleyGenesis =
         . TkInt 1000
         . TkListLen 1
         . TkInt 0
+        . TkListLen 2
         . TkInt 2
         . TkInt 0
         . TkInt 0
