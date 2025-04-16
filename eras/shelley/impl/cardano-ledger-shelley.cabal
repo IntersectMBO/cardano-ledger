@@ -6,7 +6,10 @@ maintainer: operations@iohk.io
 author: IOHK
 synopsis: Shelley Ledger Executable Model
 build-type: Simple
-data-files: cddl-files/shelley.cddl
+data-files:
+  cddl-files/shelley.cddl
+  golden/*.json
+
 extra-source-files: CHANGELOG.md
 
 source-repository head
@@ -220,6 +223,7 @@ test-suite tests
   main-is: Main.hs
   hs-source-dirs: test
   other-modules:
+    Paths_cardano_ledger_shelley
     Test.Cardano.Ledger.Shelley.Binary.CddlSpec
     Test.Cardano.Ledger.Shelley.Binary.GoldenSpec
     Test.Cardano.Ledger.Shelley.Binary.RoundTripSpec

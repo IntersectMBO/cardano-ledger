@@ -79,9 +79,7 @@ import Data.Aeson (
   ToJSON (..),
   object,
   pairs,
-  (.!=),
   (.:),
-  (.:?),
   (.=),
  )
 import qualified Data.Aeson as Aeson
@@ -284,8 +282,8 @@ instance FromJSON (ShelleyPParams Identity era) where
         <*> obj .: "decentralization"
         <*> obj .: "extraPraosEntropy"
         <*> obj .: "protocolVersion"
-        <*> obj .:? "minUTxOValue" .!= mempty
-        <*> obj .:? "minPoolCost" .!= mempty
+        <*> obj .: "minUTxOValue"
+        <*> obj .: "minPoolCost"
 
 emptyShelleyPParams :: forall era. Era era => ShelleyPParams Identity era
 emptyShelleyPParams =

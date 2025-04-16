@@ -134,7 +134,6 @@ import Data.Aeson as Aeson (
   object,
   pairs,
   withObject,
-  (.!=),
   (.:),
  )
 import qualified Data.Aeson.Types as Aeson
@@ -484,7 +483,7 @@ instance FromJSON (AlonzoPParams Identity era) where
         <*> obj .: "decentralization"
         <*> obj .: "extraPraosEntropy"
         <*> obj .: "protocolVersion"
-        <*> obj .: "minPoolCost" .!= mempty
+        <*> obj .: "minPoolCost"
         <*> obj .: "utxoCostPerByte"
         <*> obj .: "costModels"
         <*> obj .: "executionUnitPrices"

@@ -106,7 +106,6 @@ import Data.Aeson as Aeson (
   object,
   pairs,
   withObject,
-  (.!=),
   (.:),
  )
 import Data.Functor.Identity (Identity (..))
@@ -364,7 +363,7 @@ instance FromJSON (BabbagePParams Identity era) where
         <*> obj .: "monetaryExpansion"
         <*> obj .: "treasuryCut"
         <*> obj .: "protocolVersion"
-        <*> obj .: "minPoolCost" .!= mempty
+        <*> obj .: "minPoolCost"
         <*> obj .: "utxoCostPerByte"
         <*> obj .: "costModels"
         <*> obj .: "executionUnitPrices"

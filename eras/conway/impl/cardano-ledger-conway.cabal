@@ -14,6 +14,7 @@ build-type: Simple
 data-files:
   cddl-files/conway.cddl
   golden/*.cbor
+  golden/*.json
   test/data/*.json
 
 extra-source-files: CHANGELOG.md
@@ -241,6 +242,7 @@ test-suite tests
     Test.Cardano.Ledger.Conway.CommitteeRatifySpec
     Test.Cardano.Ledger.Conway.DRepRatifySpec
     Test.Cardano.Ledger.Conway.GenesisSpec
+    Test.Cardano.Ledger.Conway.GoldenSpec
     Test.Cardano.Ledger.Conway.GoldenTranslation
     Test.Cardano.Ledger.Conway.GovActionReorderSpec
     Test.Cardano.Ledger.Conway.Plutus.PlutusSpec
