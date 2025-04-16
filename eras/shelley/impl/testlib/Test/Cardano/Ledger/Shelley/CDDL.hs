@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Shelley.CDDL (
   module Test.Cardano.Ledger.Shelley.CDDL,
 ) where
 
+import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
@@ -20,7 +21,7 @@ import Test.Cardano.Ledger.Core.Binary.CDDL
 import Text.Heredoc
 
 shelleyCDDL :: Huddle
-shelleyCDDL = collectFrom [block, transaction, signkeyKES]
+shelleyCDDL = collectFrom [HIRule block, HIRule transaction, HIRule signkeyKES]
 
 block :: Rule
 block =
@@ -66,19 +67,13 @@ header_body =
 
 operational_cert :: Named Group
 operational_cert =
-  comment
-    [str| kes_vkey: hot_vkey
-        |     uint: sequence_number
-        |     uint: key_period
-        |signature: sigma
-        |]
-    $ "operational_cert"
-      =:~ grp
-        [ "hot_vkey" ==> kes_vkey
-        , "sequence_number" ==> VUInt
-        , "kes_period" ==> VUInt
-        , "sigma" ==> signature
-        ]
+  "operational_cert"
+    =:~ grp
+      [ "hot_vkey" ==> kes_vkey
+      , "sequence_number" ==> VUInt
+      , "kes_period" ==> VUInt
+      , "sigma" ==> signature
+      ]
 
 -- TODO Replace with the following once
 -- https://github.com/input-output-hk/cuddle/issues/29 is addressed in cuddle.
@@ -191,25 +186,18 @@ credential = "credential" =:= arr [0, a addr_keyhash] / arr [1, a script_hash]
 
 pool_params :: Named Group
 pool_params =
-  comment
-    [str|        pool_keyhash: operator
-        |                coin: pledge
-        |                coin: cost
-        |       unit_interval: margin
-        |   set<addr_keyhash>: pool_owners
-        |]
-    $ "pool_params"
-      =:~ grp
-        [ "operator" ==> pool_keyhash
-        , "vrf_keyhash" ==> vrf_keyhash
-        , "pledge" ==> coin
-        , "cost" ==> coin
-        , "margin" ==> unit_interval
-        , "reward_account" ==> reward_account
-        , "pool_owners" ==> set addr_keyhash
-        , "relays" ==> arr [0 <+ a relay]
-        , "pool_metadata" ==> (pool_metadata / VNil)
-        ]
+  "pool_params"
+    =:~ grp
+      [ "operator" ==> pool_keyhash
+      , "vrf_keyhash" ==> vrf_keyhash
+      , "pledge" ==> coin
+      , "cost" ==> coin
+      , "margin" ==> unit_interval
+      , "reward_account" ==> reward_account
+      , "pool_owners" ==> set addr_keyhash
+      , "relays" ==> arr [0 <+ a relay]
+      , "pool_metadata" ==> (pool_metadata / VNil)
+      ]
 
 port :: Rule
 port = "port" =:= VUInt `le` 65535
@@ -225,14 +213,14 @@ dns_name = "dns_name" =:= VText `sized` (0 :: Word64, 64 :: Word64)
 
 single_host_addr :: Named Group
 single_host_addr =
-  "single_host_addr" =:~ grp [0, port / VNil, ipv4 / VNil, ipv6 / VNil]
+  "single_host_addr" =:~ grp [0, a $ port / VNil, a $ ipv4 / VNil, a $ ipv6 / VNil]
 
 single_host_name :: Named Group
 single_host_name =
   comment
     [str|dns_name: An A or AAAA DNS record
         |]
-    $ "single_host_name" =:~ grp [1, port / VNil, a dns_name]
+    $ "single_host_name" =:~ grp [1, a $ port / VNil, a dns_name]
 
 multi_host_name :: Named Group
 multi_host_name =
@@ -267,43 +255,25 @@ proposed_protocol_parameter_updates =
 
 protocol_param_update :: Rule
 protocol_param_update =
-  comment
-    [str| 0: minfee A
-        | 1: minfee B
-        | 2: max block body size
-        | 3: max transaction size
-        | 4: max block header size
-        | 5: key deposit
-        | 6: pool deposit
-        | 7: maximum epoch
-        | 8: n_opt: desired number of stake pools
-        | 9: pool pledge influence
-        |10: expansion rate
-        |11: treasury growth rate
-        |12: decentralization constant
-        |13: extra entropy
-        |14: protocol version
-        |15: min utxo value
-        |]
-    $ "protocol_param_update"
-      =:= mp
-        [ opt (idx 0 ==> VUInt)
-        , opt (idx 1 ==> VUInt)
-        , opt (idx 2 ==> VUInt)
-        , opt (idx 3 ==> VUInt)
-        , opt (idx 4 ==> (VUInt `sized` (2 :: Word64)))
-        , opt (idx 5 ==> coin)
-        , opt (idx 6 ==> coin)
-        , opt (idx 7 ==> epoch)
-        , opt (idx 8 ==> VUInt `sized` (2 :: Word64))
-        , opt (idx 9 ==> nonnegative_interval)
-        , opt (idx 10 ==> unit_interval)
-        , opt (idx 11 ==> unit_interval)
-        , opt (idx 12 ==> unit_interval)
-        , opt (idx 13 ==> nonce)
-        , opt (idx 14 ==> arr [a protocol_version])
-        , opt (idx 15 ==> coin)
-        ]
+  "protocol_param_update"
+    =:= mp
+      [ opt (idx 0 ==> VUInt) //- "minfee A"
+      , opt (idx 1 ==> VUInt) //- "minfee B"
+      , opt (idx 2 ==> VUInt) //- "max block body size"
+      , opt (idx 3 ==> VUInt) //- "max transaction size"
+      , opt (idx 4 ==> (VUInt `sized` (2 :: Word64))) //- "max block header size"
+      , opt (idx 5 ==> coin) //- "key deposit"
+      , opt (idx 6 ==> coin) //- "pool deposit"
+      , opt (idx 7 ==> epoch) //- "maximum epoch"
+      , opt (idx 8 ==> VUInt `sized` (2 :: Word64)) //- "n_opt: desired number of stake pools"
+      , opt (idx 9 ==> nonnegative_interval) //- "pool pledge influence"
+      , opt (idx 10 ==> unit_interval) //- "expansion rate"
+      , opt (idx 11 ==> unit_interval) //- "treasury growth rate"
+      , opt (idx 12 ==> unit_interval) //- "decentralization constant"
+      , opt (idx 13 ==> nonce) //- "extra entropy"
+      , opt (idx 14 ==> arr [a protocol_version]) //- "protocol version"
+      , opt (idx 15 ==> coin) //- "min utxo value"
+      ]
 
 transaction_witness_set :: Rule
 transaction_witness_set =

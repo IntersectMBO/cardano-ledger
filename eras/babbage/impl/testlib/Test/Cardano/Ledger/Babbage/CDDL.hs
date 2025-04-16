@@ -14,9 +14,7 @@ module Test.Cardano.Ledger.Babbage.CDDL (
 ) where
 
 import Codec.CBOR.Cuddle.Huddle
-import Data.Function (($))
 import Data.Word (Word64)
-import GHC.Num (Integer)
 import Test.Cardano.Ledger.Alonzo.CDDL hiding (
   auxiliary_data,
   block,
@@ -42,9 +40,17 @@ import Test.Cardano.Ledger.Alonzo.CDDL hiding (
   update,
  )
 import Text.Heredoc
+import Prelude hiding ((/))
 
 babbageCDDL :: Huddle
-babbageCDDL = collectFrom [block, transaction, kes_signature, language, signkeyKES]
+babbageCDDL =
+  collectFrom
+    [ HIRule block
+    , HIRule transaction
+    , HIRule kes_signature
+    , HIRule language
+    , HIRule signkeyKES
+    ]
 
 block :: Rule
 block =
