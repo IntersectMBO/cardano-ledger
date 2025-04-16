@@ -2,6 +2,9 @@
 
 ## 1.14.0.0
 
+* Deprecate `inputs'`, `collateral'`, `outputs'`, `certs'`, `withdrawals'`, `txfee'`,
+  `vldt'`, `update'`, `reqSignerHashes'`, `adHash'`, `mint'`, `scriptIntegrityHash'`,
+  and `txnetworkid'`
 * Move `Annotator` instances and `alonzoSegwitTx` to `testlib`
 * Expose `addScriptsTxWitsRaw`, `decodeAlonzoPlutusScript` and `asHashedScriptPair`
 * Expose `emptyAlonzoTxAuxDataRaw`, `decodeTxAuxDataByTokenType` and `addPlutusScripts`
