@@ -93,7 +93,7 @@ huddleDecoderEquivalenceSpec version ruleName =
   let lbl = label $ Proxy @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName) $ \term -> do
+          withGenTerm cddlData (Cuddle.Name ruleName mempty) $ \term -> do
             let encoding = CBOR.encodeTerm term
                 initCborBytes = CBOR.toLazyByteString encoding
             decoderEquivalenceExpectation @a version initCborBytes
@@ -111,7 +111,7 @@ huddleRoundTripCborSpec version ruleName =
       trip = cborTrip @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName) $
+          withGenTerm cddlData (Cuddle.Name ruleName mempty) $
             roundTripExample lbl version version trip
 
 huddleRoundTripAnnCborSpec ::
@@ -127,7 +127,7 @@ huddleRoundTripAnnCborSpec version ruleName =
       trip = cborTrip @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName) $
+          withGenTerm cddlData (Cuddle.Name ruleName mempty) $
             roundTripAnnExample lbl version version trip
 
 specWithHuddle :: Cuddle.Huddle -> Int -> SpecWith CuddleData -> Spec
@@ -233,8 +233,8 @@ cddlFailure encoding err =
 -- | Write a Huddle specification to a file at the given path
 writeSpec :: Cuddle.Huddle -> FilePath -> IO ()
 writeSpec hddl path =
-  let cddl = Cuddle.toCDDL hddl
-      preface = "; This file was auto-generated from huddle. Please do not modify it directly!"
+  let cddl = Cuddle.toCDDLNoRoot hddl
+      preface = "; This file was auto-generated from huddle. Please do not modify it directly!\n"
    in withFile path WriteMode $ \h -> do
         hPutStrLn h preface
         hPutDoc h (pretty cddl)

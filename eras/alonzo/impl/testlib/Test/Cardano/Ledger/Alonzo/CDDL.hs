@@ -41,7 +41,14 @@ import Test.Cardano.Ledger.Mary.CDDL hiding (
 import Text.Heredoc
 
 alonzoCDDL :: Huddle
-alonzoCDDL = collectFrom [block, transaction, kes_signature, language, signkeyKES]
+alonzoCDDL =
+  collectFrom
+    [ HIRule block
+    , HIRule transaction
+    , HIRule kes_signature
+    , HIRule language
+    , HIRule signkeyKES
+    ]
 
 block :: Rule
 block =
