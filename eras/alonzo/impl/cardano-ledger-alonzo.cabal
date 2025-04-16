@@ -152,7 +152,7 @@ library testlib
     cardano-slotting,
     cardano-strict-containers,
     containers,
-    cuddle,
+    cuddle >=0.4,
     generic-random,
     heredoc,
     microlens,

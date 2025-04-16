@@ -1,24 +1,72 @@
 ; This file was auto-generated from huddle. Please do not modify it directly!
-; Pseudo-rule introduced by Cuddle to collect root elements
-huddle_root_defs = [block, transaction, signkeyKES]
 
-$hash28 = bytes .size 28
+block = 
+  [ header                 
+  , transaction_bodies       : [* transaction_body]                         
+  , transaction_witness_sets : [* transaction_witness_set]                  
+  , transaction_metadata_set : {* transaction_index => transaction_metadata}
+  ]
 
-$hash32 = bytes .size 32
 
-$kes_signature = bytes .size 448
+header = [header_body, body_signature : kes_signature]
 
-$kes_vkey = bytes .size 32
+header_body = 
+  [ block_number      : uint        
+  , slot              : uint        
+  , prev_hash         : hash32/ nil 
+  , issuer_vkey       : vkey        
+  , vrf_vkey          : vrf_vkey    
+  , nonce_vrf         : vrf_cert    
+  , leader_vrf        : vrf_cert    
+  , block_body_size   : uint .size 4
+  , block_body_hash   : hash32      
+  , operational_cert
+  , protocol_version
+  ]
 
-$signature = bytes .size 64
 
-$vkey = bytes .size 32
+hash32 = bytes .size 32
 
-$vrf_cert = [bytes, bytes .size 80]
+vkey = bytes .size 32
 
-$vrf_vkey = bytes .size 32
+vrf_vkey = bytes .size 32
 
-addr_keyhash = $hash28
+vrf_cert = [bytes, bytes .size 80]
+
+operational_cert = 
+  ( hot_vkey        : kes_vkey 
+  , sequence_number : uint     
+  , kes_period      : uint     
+  , sigma           : signature
+  )
+
+kes_vkey = bytes .size 32
+
+signature = bytes .size 64
+
+protocol_version = (major_protocol_version, uint)
+
+major_protocol_version = 1 .. 3
+
+kes_signature = bytes .size 448
+
+transaction_body = 
+  {   0 : set<transaction_input>   
+  ,   1 : [* transaction_output]
+  ,   2 : coin                      
+  ,   3 : uint                      
+  , ? 4 : [* certificate]       
+  , ? 5 : withdrawals               
+  , ? 6 : update                    
+  , ? 7 : metadata_hash             
+  }
+
+
+set<a0> = [* a0]
+
+transaction_input = [transaction_id : hash32, index : uint .size 2]
+
+transaction_output = [address, amount : coin]
 
 ; address = bytes
 ; 
@@ -52,141 +100,39 @@ addr_keyhash = $hash28
 ;      1110: reward account: keyhash28
 ;      1111: reward account: scripthash28
 ; 1001-1101: future formats
-; 
-address = h'001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000'
-           / h'102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000'
-           / h'203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000'
-           / h'304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000'
-           / h'405000000000000000000000000000000000000000000000000000000087680203'
-           / h'506000000000000000000000000000000000000000000000000000000087680203'
-           / h'6070000000000000000000000000000000000000000000000000000000'
-           / h'7080000000000000000000000000000000000000000000000000000000'
-
-block = [header
-        , transaction_bodies : [* transaction_body]
-        , transaction_witness_sets : [* transaction_witness_set]
-        , transaction_metadata_set : {* transaction_index => transaction_metadata}]
-
-bootstrap_witness = [public_key : $vkey
-                    , signature : $signature
-                    , chain_code : bytes .size 32
-                    , attributes : bytes]
-
-certificate = [stake_registration
-               // stake_deregistration
-               // stake_delegation
-               // pool_registration
-               // pool_retirement
-               // genesis_key_delegation
-               // move_instantaneous_rewards_cert]
+address = 
+  h'001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000'
+  / h'102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000'
+  / h'203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000'
+  / h'304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000'
+  / h'405000000000000000000000000000000000000000000000000000000087680203'                                                
+  / h'506000000000000000000000000000000000000000000000000000000087680203'                                                
+  / h'6070000000000000000000000000000000000000000000000000000000'                                                        
+  / h'7080000000000000000000000000000000000000000000000000000000'                                                        
 
 coin = uint
 
-credential = [0, addr_keyhash // 1, script_hash]
+certificate = 
+  [  stake_registration
+  // stake_deregistration
+  // stake_delegation
+  // pool_registration
+  // pool_retirement
+  // genesis_key_delegation
+  // move_instantaneous_rewards_cert
+  ]
 
-; This too has been introduced in Shelley as a backport from Alonzo.
-; 
-delta_coin = int
 
-dns_name = text .size (0 .. 64)
+; This will be deprecated in a future era
+stake_registration = (0, stake_credential)
 
-epoch = uint
+stake_credential = credential
 
-genesis_delegate_hash = $hash28
+credential = [0, addr_keyhash// 1, script_hash]
 
-genesis_hash = $hash28
+addr_keyhash = hash28
 
-header = [header_body, body_signature : $kes_signature]
-
-header_body = [block_number : uint
-              , slot : uint
-              , prev_hash : $hash32 / nil
-              , issuer_vkey : $vkey
-              , vrf_vkey : $vrf_vkey
-              , nonce_vrf : $vrf_cert
-              , leader_vrf : $vrf_cert
-              , block_body_size : uint .size 4
-              , block_body_hash : $hash32
-              , operational_cert
-              , protocol_version]
-
-ipv4 = bytes .size 4
-
-ipv6 = bytes .size 16
-
-major_protocol_version = 1 .. 3
-
-metadata_hash = $hash32
-
-; The first field determines where the funds are drawn from.
-;   0 denotes the reserves,
-;   1 denotes the treasury.
-; If the second field is a map, funds are moved to stake credentials.
-; Otherwise, the funds are given to the other accounting pot.
-; NOTE:
-;   This has been safely backported to Shelley from Alonzo.
-; 
-move_instantaneous_reward = [0 / 1, {* stake_credential => delta_coin} / coin]
-
-multisig_script = [multisig_pubkey
-                   // multisig_all
-                   // multisig_any
-                   // multisig_n_of_k]
-
-nonce = [0 // 1, bytes .size 32]
-
-nonnegative_interval = #6.30([uint, positive_int])
-
-pool_keyhash = $hash28
-
-pool_metadata = [url, metadata_hash]
-
-port = uint .le 65535
-
-positive_int = 1 .. 18446744073709551615
-
-proposed_protocol_parameter_updates = {* genesis_hash => protocol_param_update}
-
-;  0: minfee A
-;  1: minfee B
-;  2: max block body size
-;  3: max transaction size
-;  4: max block header size
-;  5: key deposit
-;  6: pool deposit
-;  7: maximum epoch
-;  8: n_opt: desired number of stake pools
-;  9: pool pledge influence
-; 10: expansion rate
-; 11: treasury growth rate
-; 12: decentralization constant
-; 13: extra entropy
-; 14: protocol version
-; 15: min utxo value
-; 
-protocol_param_update = {? 0 : uint
-                        , ? 1 : uint
-                        , ? 2 : uint
-                        , ? 3 : uint
-                        , ? 4 : uint .size 2
-                        , ? 5 : coin
-                        , ? 6 : coin
-                        , ? 7 : epoch
-                        , ? 8 : uint .size 2
-                        , ? 9 : nonnegative_interval
-                        , ? 10 : unit_interval
-                        , ? 11 : unit_interval
-                        , ? 12 : unit_interval
-                        , ? 13 : nonce
-                        , ? 14 : [protocol_version]
-                        , ? 15 : coin}
-
-relay = [single_host_addr // single_host_name // multi_host_name]
-
-; reward_account = bytes
-; 
-reward_account = h'E090000000000000000000000000000000000000000000000000000000'
-                  / h'F0A0000000000000000000000000000000000000000000000000000000'
+hash28 = bytes .size 28
 
 ; To compute a script hash, note that you must prepend
 ; a tag to the bytes of the script before hashing.
@@ -196,45 +142,30 @@ reward_account = h'E090000000000000000000000000000000000000000000000000000000'
 ;   "\x01" for Plutus V1 scripts
 ;   "\x02" for Plutus V2 scripts
 ;   "\x03" for Plutus V3 scripts
-; 
-script_hash = $hash28
+script_hash = hash28
 
-signkeyKES = bytes .size 64
+; This will be deprecated in a future era
+stake_deregistration = (1, stake_credential)
 
-stake_credential = credential
+stake_delegation = (2, stake_credential, pool_keyhash)
 
-transaction = [transaction_body
-              , transaction_witness_set
-              , transaction_metadata / nil]
+pool_keyhash = hash28
 
-transaction_body = {0 : set<transaction_input>
-                   , 1 : [* transaction_output]
-                   , 2 : coin
-                   , 3 : uint
-                   , ? 4 : [* certificate]
-                   , ? 5 : withdrawals
-                   , ? 6 : update
-                   , ? 7 : metadata_hash}
+pool_registration = (3, pool_params)
 
-transaction_index = uint .size 2
+pool_params = 
+  ( operator       : pool_keyhash      
+  , vrf_keyhash    : vrf_keyhash       
+  , pledge         : coin              
+  , cost           : coin              
+  , margin         : unit_interval     
+  , reward_account : reward_account    
+  , pool_owners    : set<addr_keyhash>
+  , relays         : [* relay]     
+  , pool_metadata  : pool_metadata/ nil
+  )
 
-transaction_input = [transaction_id : $hash32, index : uint .size 2]
-
-transaction_metadata = {* transaction_metadatum_label => transaction_metadatum}
-
-transaction_metadatum = {* transaction_metadatum => transaction_metadatum}
-                         / [* transaction_metadatum]
-                         / int
-                         / bytes .size (0 .. 64)
-                         / text .size (0 .. 64)
-
-transaction_metadatum_label = uint
-
-transaction_output = [address, amount : coin]
-
-transaction_witness_set = {? 0 : [* vkeywitness]
-                          , ? 1 : [* multisig_script]
-                          , ? 2 : [* bootstrap_witness]}
+vrf_keyhash = hash32
 
 ; The real unit_interval is: #6.30([uint, uint])
 ; 
@@ -250,76 +181,138 @@ transaction_witness_set = {? 0 : [* vkeywitness]
 ; generate random valid data for testing implementation of
 ; our encoders/decoders. Which means we cannot use the actual
 ; definition here and we hard code the value to 1/2
-; 
 unit_interval = #6.30([1, 2])
 
-update = [proposed_protocol_parameter_updates, epoch]
+; reward_account = bytes
+reward_account = 
+  h'E090000000000000000000000000000000000000000000000000000000'
+  / h'F0A0000000000000000000000000000000000000000000000000000000'
+
+relay = [single_host_addr// single_host_name// multi_host_name]
+
+single_host_addr = (0, port/ nil, ipv4/ nil, ipv6/ nil)
+
+port = uint .le 65535
+
+ipv4 = bytes .size 4
+
+ipv6 = bytes .size 16
+
+; dns_name: An A or AAAA DNS record
+single_host_name = (1, port/ nil, dns_name)
+
+dns_name = text .size (0 .. 64)
+
+; dns_name: An SRV DNS record
+multi_host_name = (2, dns_name)
+
+pool_metadata = [url, metadata_hash]
 
 url = text .size (0 .. 64)
 
-vkeywitness = [$vkey, $signature]
+metadata_hash = hash32
 
-vrf_keyhash = $hash32
+pool_retirement = (4, pool_keyhash, epoch)
 
-withdrawals = {* reward_account => coin}
+epoch = uint
 
 genesis_key_delegation = (5, genesis_hash, genesis_delegate_hash, vrf_keyhash)
 
+genesis_hash = hash28
+
+genesis_delegate_hash = hash28
+
 move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
 
-; dns_name: An SRV DNS record
-; 
-multi_host_name = (2, dns_name)
+; The first field determines where the funds are drawn from.
+;   0 denotes the reserves,
+;   1 denotes the treasury.
+; If the second field is a map, funds are moved to stake credentials.
+; Otherwise, the funds are given to the other accounting pot.
+; NOTE:
+;   This has been safely backported to Shelley from Alonzo.
+move_instantaneous_reward = [0/ 1, {* stake_credential => delta_coin}/ coin]
+
+; This too has been introduced in Shelley as a backport from Alonzo.
+delta_coin = int
+
+withdrawals = {* reward_account => coin}
+
+update = [proposed_protocol_parameter_updates, epoch]
+
+proposed_protocol_parameter_updates = {* genesis_hash => protocol_param_update}
+
+protocol_param_update = 
+  { ? 0  : uint                   ; minfee A
+  , ? 1  : uint                   ; minfee B
+  , ? 2  : uint                   ; max block body size
+  , ? 3  : uint                   ; max transaction size
+  , ? 4  : uint .size 2           ; max block header size
+  , ? 5  : coin                   ; key deposit
+  , ? 6  : coin                   ; pool deposit
+  , ? 7  : epoch                  ; maximum epoch
+  , ? 8  : uint .size 2           ; n_opt: desired number of stake pools
+  , ? 9  : nonnegative_interval   ; pool pledge influence
+  , ? 10 : unit_interval          ; expansion rate
+  , ? 11 : unit_interval          ; treasury growth rate
+  , ? 12 : unit_interval          ; decentralization constant
+  , ? 13 : nonce                  ; extra entropy
+  , ? 14 : [protocol_version] ; protocol version
+  , ? 15 : coin                   ; min utxo value
+  }
+
+
+nonnegative_interval = #6.30([uint, positive_int])
+
+positive_int = 1 .. maxWord64
+
+maxWord64 = 18446744073709551615
+
+nonce = [0// 1, bytes .size 32]
+
+transaction_witness_set = 
+  { ? 0 : [* vkeywitness]      
+  , ? 1 : [* multisig_script]  
+  , ? 2 : [* bootstrap_witness]
+  }
+
+
+vkeywitness = [vkey, signature]
+
+multisig_script = 
+  [multisig_pubkey// multisig_all// multisig_any// multisig_n_of_k]
+
+multisig_pubkey = (0, addr_keyhash)
 
 multisig_all = (1, [* multisig_script])
 
 multisig_any = (2, [* multisig_script])
 
-multisig_n_of_k = (3, uint, [* multisig_script])
+multisig_n_of_k = (3, n : uint, [* multisig_script])
 
-multisig_pubkey = (0, addr_keyhash)
+bootstrap_witness = 
+  [ public_key : vkey          
+  , signature  : signature     
+  , chain_code : bytes .size 32
+  , attributes : bytes         
+  ]
 
-;  kes_vkey: hot_vkey
-;      uint: sequence_number
-;      uint: key_period
-; signature: sigma
-; 
-operational_cert = ($kes_vkey, uint, uint, $signature)
 
-;         pool_keyhash: operator
-;                 coin: pledge
-;                 coin: cost
-;        unit_interval: margin
-;    set<addr_keyhash>: pool_owners
-; 
-pool_params = (pool_keyhash
-              , vrf_keyhash
-              , coin
-              , coin
-              , unit_interval
-              , reward_account
-              , set<addr_keyhash>
-              , [* relay]
-              , pool_metadata / nil)
+transaction_index = uint .size 2
 
-pool_registration = (3, pool_params)
+transaction_metadata = {* transaction_metadatum_label => transaction_metadatum}
 
-pool_retirement = (4, pool_keyhash, epoch)
+transaction_metadatum_label = uint
 
-protocol_version = (major_protocol_version, uint)
+transaction_metadatum = 
+  {* transaction_metadatum => transaction_metadatum}
+  / [* transaction_metadatum]
+  / int                          
+  / bytes .size (0 .. 64)     
+  / text .size (0 .. 64)      
 
-single_host_addr = (0, port / nil, ipv4 / nil, ipv6 / nil)
+transaction = 
+  [transaction_body, transaction_witness_set, transaction_metadata/ nil]
 
-; dns_name: An A or AAAA DNS record
-; 
-single_host_name = (1, port / nil, dns_name)
+signkeyKES = bytes .size 64
 
-stake_delegation = (2, stake_credential, pool_keyhash)
-
-; This will be deprecated in a future era
-stake_deregistration = (1, stake_credential)
-
-; This will be deprecated in a future era
-stake_registration = (0, stake_credential)
-
-set<a0> = [* a0]

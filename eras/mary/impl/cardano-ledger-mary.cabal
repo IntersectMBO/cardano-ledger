@@ -131,7 +131,7 @@ library testlib
     cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
     cardano-strict-containers,
     containers,
-    cuddle,
+    cuddle >=0.4,
     microlens,
 
 executable huddle-cddl

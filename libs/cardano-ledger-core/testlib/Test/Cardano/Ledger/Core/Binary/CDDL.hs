@@ -25,7 +25,7 @@ coin :: Rule
 coin = "coin" =:= VUInt
 
 positive_coin :: Rule
-positive_coin = "positive_coin" =:= 1 ... maxWord64
+positive_coin = "positive_coin" =:= (1 :: Integer) ... maxWord64
 
 address :: Rule
 address =
@@ -100,31 +100,31 @@ vrf_keyhash = "vrf_keyhash" =:= hash32
 --------------------------------------------------------------------------------
 
 hash28 :: Rule
-hash28 = "$hash28" =:= VBytes `sized` (28 :: Word64)
+hash28 = "hash28" =:= VBytes `sized` (28 :: Word64)
 
 hash32 :: Rule
-hash32 = "$hash32" =:= VBytes `sized` (32 :: Word64)
+hash32 = "hash32" =:= VBytes `sized` (32 :: Word64)
 
 vkey :: Rule
-vkey = "$vkey" =:= VBytes `sized` (32 :: Word64)
+vkey = "vkey" =:= VBytes `sized` (32 :: Word64)
 
 vrf_vkey :: Rule
-vrf_vkey = "$vrf_vkey" =:= VBytes `sized` (32 :: Word64)
+vrf_vkey = "vrf_vkey" =:= VBytes `sized` (32 :: Word64)
 
 vrf_cert :: Rule
-vrf_cert = "$vrf_cert" =:= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+vrf_cert = "vrf_cert" =:= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
 
 kes_vkey :: Rule
-kes_vkey = "$kes_vkey" =:= VBytes `sized` (32 :: Word64)
+kes_vkey = "kes_vkey" =:= VBytes `sized` (32 :: Word64)
 
 kes_signature :: Rule
-kes_signature = "$kes_signature" =:= VBytes `sized` (448 :: Word64)
+kes_signature = "kes_signature" =:= VBytes `sized` (448 :: Word64)
 
 signkeyKES :: Rule
 signkeyKES = "signkeyKES" =:= VBytes `sized` (64 :: Word64)
 
 signature :: Rule
-signature = "$signature" =:= VBytes `sized` (64 :: Word64)
+signature = "signature" =:= VBytes `sized` (64 :: Word64)
 
 --------------------------------------------------------------------------------
 -- Utility
@@ -155,19 +155,14 @@ minInt64 = -9223372036854775808
 maxInt64 :: Integer
 maxInt64 = 9223372036854775807
 
--- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
--- with:
---
--- maxWord64 :: Rule
--- maxWord64 = "maxWord64" =:= 18446744073709551615
-maxWord64 :: Integer
-maxWord64 = 18446744073709551615
+maxWord64 :: Rule
+maxWord64 = "maxWord64" =:= (18446744073709551615 :: Integer)
 
 negInt64 :: Rule
-negInt64 = "negInt64" =:= minInt64 ... (-1)
+negInt64 = "negInt64" =:= minInt64 ... (-1 :: Integer)
 
 posInt64 :: Rule
-posInt64 = "posInt64" =:= 1 ... maxInt64
+posInt64 = "posInt64" =:= (1 :: Integer) ... maxInt64
 
 -- | this is the same as the current int64 definition but without zero
 nonZeroInt64 :: Rule
@@ -177,7 +172,7 @@ int64 :: Rule
 int64 = "int64" =:= minInt64 ... maxInt64
 
 positive_int :: Rule
-positive_int = "positive_int" =:= 1 ... 18446744073709551615
+positive_int = "positive_int" =:= (1 :: Integer) ... maxWord64
 
 unit_interval :: Rule
 unit_interval =

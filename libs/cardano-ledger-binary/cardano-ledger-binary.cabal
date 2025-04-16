@@ -124,7 +124,7 @@ library testlib
     cardano-strict-containers,
     cborg,
     containers,
-    cuddle >=0.3.2,
+    cuddle >=0.4,
     formatting,
     half,
     hedgehog,
