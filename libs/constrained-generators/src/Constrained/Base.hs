@@ -48,6 +48,7 @@ import Constrained.GenT (
   MonadGenError (..),
   catMessageList,
   catMessages,
+  fatalError,
  )
 import Constrained.Generic (
   HasSimpleRep,
@@ -183,6 +184,10 @@ class LogicRequires t => Logic t where
   saturate :: t dom Bool -> List Term dom -> [Pred]
   saturate _symbol _ = []
 
+-- This is where the logical properties of a function symbol are applied to transform one spec into another
+-- Note if there is a bunch of functions nested together, like (sizeOf_ (elems_ (snd_ x)))
+-- we propagate each of those nested function symbols over the current spec, one at a time.
+-- The result of this propagation is then made the current spec in the recusive calls to 'propagateSpec'
 propagateSpec ::
   forall v a.
   HasSpec v =>
@@ -202,10 +207,9 @@ ctxHasSpec CtxApp {} = Evidence
 -- instead of a variable. This is used to traverse the defining
 -- constraints for a variable and turn them into a spec. Each
 -- subterm `f vs Ctx vs'` for lists of values `vs` and `vs'`
--- gets given to the `propagateSpecFun` for `f` as
--- `f vs HOLE vs'`.
+-- gets given to the `propagateSpecFun` for `f` as  `(f vs HOLE vs')`.
 data Ctx v a where
-  -- | A single hole of type `v`
+  -- | A single hole of type `v`. Note ctxHOLE is a nullary constructor, where the `a` type index is the same as the `v` type index.
   CtxHOLE ::
     HasSpec v =>
     Ctx v v
@@ -227,13 +231,14 @@ data Ctx v a where
 
 -- | This is used together with `ListCtx` to form
 -- just the arguments to `f vs Ctx vs'` - replacing
--- `Ctx` with `HOLE` - to provide to `propagateSpecFun`.
+-- `Ctx` with `HOLE`, to get a `ListCtx Value as (HOLE a)` which then can be used as an input to `propagate`.
 data HOLE a b where
   HOLE :: HOLE a a
 
 toCtx ::
   forall m v a.
   ( Typeable v
+  , Show v
   , MonadGenError m
   , HasCallStack
   ) =>
@@ -243,22 +248,33 @@ toCtx ::
 toCtx v = go
   where
     go :: forall b. Term b -> m (Ctx v b)
-    go (Lit _i) = error "TODO: bring back the old error message"
+    go (Lit i) =
+      fatalErrorNE $
+        NE.fromList
+          [ "toCtx applied to literal: (Lit " ++ show i ++ ")"
+          , "A context is always constructed from an (App f xs) term."
+          ]
     go (App f as) = CtxApp f <$> toCtxList v as
     go (V v')
       | Just Refl <- eqVar v v' = pure $ CtxHOLE
-      | otherwise = error "TODO: bring back the old error messagte"
+      | otherwise =
+          fatalErrorNE $
+            NE.fromList
+              [ "A context is always constructed from an (App f xs) term,"
+              , "with a single occurence of the variable " ++ show v ++ "@(" ++ show (typeOf v) ++ ")"
+              , "Instead we found an unknown variable " ++ show v' ++ "@(" ++ show (typeOf v') ++ ")"
+              ]
 
 toCtxList ::
   forall m v as.
-  (Typeable v, MonadGenError m, HasCallStack) =>
+  (Show v, Typeable v, MonadGenError m, HasCallStack) =>
   Var v ->
   List Term as ->
   m (ListCtx Value as (Ctx v))
-toCtxList v = prefix
+toCtxList v xs = prefix xs
   where
     prefix :: forall as'. HasCallStack => List Term as' -> m (ListCtx Value as' (Ctx v))
-    prefix Nil = error "toCtxList without hole"
+    prefix Nil = fatalError ("toCtxList without hole, for variable " ++ show v)
     prefix (Lit l :> ts) = do
       ctx <- prefix ts
       pure $ Value l :! ctx
@@ -270,7 +286,7 @@ toCtxList v = prefix
     suffix :: forall as'. List Term as' -> m (List Value as')
     suffix Nil = pure Nil
     suffix (Lit l :> ts) = (Value l :>) <$> suffix ts
-    suffix (_ :> _) = error "toCtxList with too many holes"
+    suffix (_ :> _) = fatalErrorNE $ NE.fromList ["toCtxList with too many holes, for variable " ++ show v]
 
 -- | A Convenient pattern for singleton contexts
 pattern Unary :: HOLE a' a -> ListCtx f '[a] (HOLE a')
@@ -278,11 +294,11 @@ pattern Unary h = NilCtx h
 
 {-# COMPLETE Unary #-}
 
--- | Conenient patterns for binary contexs
+-- | Convenient patterns for binary contexts (the arrow :<: points towards the hole)
 pattern (:<:) :: (Typeable b, Show b) => HOLE c a -> b -> ListCtx Value '[a, b] (HOLE c)
 pattern h :<: a = h :? Value a :> Nil
 
--- | Conenient patterns for binary contexs
+-- | Convenient patterns for binary contexts (the arrow :>: points towards the hole)
 pattern (:>:) :: (Typeable a, Show a) => a -> HOLE c b -> ListCtx Value '[a, b] (HOLE c)
 pattern a :>: h = Value a :! NilCtx h
 
@@ -294,11 +310,12 @@ flipCtx ::
 flipCtx (HOLE :<: x) = x :>: HOLE
 flipCtx (x :>: HOLE) = HOLE :<: x
 
+-- | From a ListCtx, build a (List Term as), to which the function symbol can be applied.
 fromListCtx :: All HasSpec as => ListCtx Value as (HOLE a) -> Term a -> List Term as
 fromListCtx ctx t = fillListCtx (mapListCtxC @HasSpec (\(Value a) -> Lit a) ctx) (\HOLE -> t)
 
 -- ========================================================================
---
+-- Useful for testing if two function symbols are `the same` for some notion of `the same`
 
 sameFunSym ::
   forall (t1 :: [Type] -> Type -> Type) d1 r1 (t2 :: [Type] -> Type -> Type) d2 r2.
@@ -315,7 +332,7 @@ sameFunSym x y = do
     else Nothing
 
 -- | Here we only care about the Type 't' and the Symbol 's'
---   the dom, and the rng can be anything.
+--   the dom, and the rng can be anything. Useful for defining patterns.
 getWitness :: forall t t' d r. (AppRequires t d r, Typeable t') => t d r -> Maybe (t' d r)
 getWitness = cast
 
@@ -695,13 +712,13 @@ sameTerms (x :> xs) (y :> ys) = x == y && sameTerms xs ys
 
 -- | Recall function symbols are objects that you can use to build applications
 --   They carry information about both its semantic and logical properties.
---   Usually the Haskel name ends in '_', for example consider: not_, subset_ ,lookup_
+--   Usually the Haskel name ends in '_', for example consider: not_, subset_ ,lookup_, toGeneric_
 --   Infix function symbols names end in '.', for example: ==. , <=.
---   E.g  appTerm NotW :: Term Bool -> Term Bool
---        (appTerm NotW (lit False)) builds the Term  (not_ False)
---   Note the witness (NotW) must have a Logic instance like:
---   instance Logic "not_"            BaseW       '[Bool]           Bool where ...
---        Name in Haskell^    type of NotW^    arg types^   result type^
+--   E.g  appTerm ToGenericW  :: Term a -> Term(SimpleRep a)
+--        (appTerm ToGenericW  (lit True)) builds the Term  (toGeneric_ True)
+--   Note the witness (ToGenericW ) must have a Logic instance like:
+--   instance Logic      BaseW          '[a]           (SimpleRep a) where ...
+--        type of ToGenericW ^    arg types^            result type^
 --   The Logic instance does not demand any of these things have any properties at all.
 --   It is here, where we actually build the App node, that we demand the properties App terms require.
 --   App :: AppRequires s t ds r => t s ds r -> List Term dom -> Term rng
@@ -1192,8 +1209,7 @@ instance HasSpec () where
 
 -- ========================================================================
 -- Uni-directional, Match only patterns, for the Function Symbols in BaseW.
--- The commented out Constructor patterns , work but have such convoluted types,
--- that without a monomorphic typing, are basically useless. Use the xxx_ functions instead.
+-- We do not defined Constructor patterns. Use the xxx_ functions instead.
 
 pattern FromGeneric ::
   forall rng.

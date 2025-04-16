@@ -126,13 +126,13 @@ import Constrained.Base
 import Constrained.GenT (pureGen, vectorOfT)
 import Constrained.Generic
 import Constrained.List (List (..))
+import Constrained.NumSpec
 import Constrained.Spec.Map
 import Constrained.Spec.Tree ()
 import Constrained.TheKnot qualified as C
 import GHC.TypeLits hiding (Text)
 import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
 import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
-import Constrained.NumSpec
 
 import Cardano.Crypto.Hash hiding (Blake2b_224)
 import Control.DeepSeq (NFData)

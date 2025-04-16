@@ -82,7 +82,7 @@ import System.Random.Stateful (Random (..), Uniform (..))
 import Test.QuickCheck (Arbitrary (arbitrary, shrink), choose, frequency)
 
 -- ====================================================================
--- NumOrdW  witnesses for comparison operations (<=. and <.) on numbers
+-- NumOrdW  witnesses for comparison operations (<=. and <. and <=. and >=.) on numbers
 -- The other operations are defined in terms of these. These things
 -- will eventually get Logic instances
 -- =====================================================================
@@ -187,9 +187,9 @@ class MaybeBounded a where
   default upperBound :: Bounded a => Maybe a
   upperBound = Just maxBound
 
-newtype Unbonded a = Unbonded a
+newtype Unbounded a = Unbounded a
 
-instance MaybeBounded (Unbonded a) where
+instance MaybeBounded (Unbounded a) where
   lowerBound = Nothing
   upperBound = Nothing
 
@@ -202,9 +202,9 @@ instance MaybeBounded Word64
 instance MaybeBounded Word32
 instance MaybeBounded Word16
 instance MaybeBounded Word8
-deriving via Unbonded Integer instance MaybeBounded Integer
-deriving via Unbonded (Ratio Integer) instance MaybeBounded (Ratio Integer)
-deriving via Unbonded Float instance MaybeBounded Float
+deriving via Unbounded Integer instance MaybeBounded Integer
+deriving via Unbounded (Ratio Integer) instance MaybeBounded (Ratio Integer)
+deriving via Unbounded Float instance MaybeBounded Float
 
 instance MaybeBounded Natural where
   lowerBound = Just 0

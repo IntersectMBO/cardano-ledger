@@ -210,6 +210,7 @@ import Constrained.SumList (
  )
 
 -- TODO: some strange things here, why is SolverStage in here?!
+-- Because it is mutually recursive with something else in here.
 import Constrained.Syntax
 
 import Control.Applicative
@@ -431,6 +432,75 @@ instance (Arbitrary (Specification a), Arbitrary (Specification b)) => Arbitrary
       <*> arbitrary
   shrink (SumSpec h a b) = [SumSpec h' a' b' | (h', a', b') <- shrink (h, a, b)]
 
+-- ======================================
+-- Here are the Logic Instances for Sum
+
+data SumW dom rng where
+  InjLeftW :: (HasSpec a, HasSpec b) => SumW '[a] (Sum a b)
+  InjRightW :: (HasSpec a, HasSpec b) => SumW '[b] (Sum a b)
+
+instance Show (SumW dom rng) where
+  show InjLeftW = "injLeft_"
+  show InjRightW = "injRight_"
+
+deriving instance (Eq (SumW dom rng))
+
+instance Syntax SumW
+
+instance Semantics SumW where
+  semantics InjLeftW = SumLeft
+  semantics InjRightW = SumRight
+
+instance Logic SumW where
+  propagateTypeSpec InjLeftW (Unary HOLE) (SumSpec _ sl _) cant = sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
+  propagateTypeSpec InjRightW (Unary HOLE) (SumSpec _ _ sr) cant = sr <> foldMap notEqualSpec [a | SumRight a <- cant]
+
+  propagateMemberSpec InjLeftW (Unary HOLE) es =
+    case [a | SumLeft a <- NE.toList es] of
+      (x : xs) -> MemberSpec (x :| xs)
+      [] ->
+        ErrorSpec $
+          pure $
+            "propMemberSpec (sumleft_ HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
+  propagateMemberSpec InjRightW (Unary HOLE) es =
+    case [a | SumRight a <- NE.toList es] of
+      (x : xs) -> MemberSpec (x :| xs)
+      [] ->
+        ErrorSpec $
+          pure $
+            "propagate(InjRight HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
+
+  mapTypeSpec InjLeftW ts = typeSpec $ SumSpec Nothing (typeSpec ts) (ErrorSpec (pure "mapTypeSpec InjLeftW"))
+  mapTypeSpec InjRightW ts = typeSpec $ SumSpec Nothing (ErrorSpec (pure "mapTypeSpec InjRightW")) (typeSpec ts)
+
+injLeft_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term a -> Term (Sum a b)
+injLeft_ = appTerm InjLeftW
+
+injRight_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term b -> Term (Sum a b)
+injRight_ = appTerm InjRightW
+
+pattern InjRight ::
+  forall c.
+  () =>
+  forall a b.
+  ( c ~ Sum a b
+  , AppRequires SumW '[b] c
+  ) =>
+  Term b ->
+  Term c
+pattern InjRight x <- (App (getWitness -> Just InjRightW) (x :> Nil))
+
+pattern InjLeft ::
+  forall c.
+  () =>
+  forall a b.
+  ( c ~ Sum a b
+  , AppRequires SumW '[a] c
+  ) =>
+  Term a ->
+  Term c
+pattern InjLeft x <- App (getWitness -> Just InjLeftW) (x :> Nil)
+
 -- ===========================================================================
 -- HasSpec Bool
 -- ===========================================================================
@@ -515,7 +585,7 @@ okOr constant need = case (constant, need) of
 or_ :: Term Bool -> Term Bool -> Term Bool
 or_ = appTerm OrW
 
--- ======= Logic instance EqualW(==.)
+-- ======= Logic instance EqualW(==.)  CAN WE MOVE THIS OUT OF TheKnot?
 
 data EqW :: [Type] -> Type -> Type where
   EqualW :: (Eq a, HasSpec a) => EqW '[a, a] Bool
@@ -1500,7 +1570,7 @@ backPropagation (SolverPlan initplan graph) = SolverPlan (go [] (reverse initpla
 -- =======================================================================================
 
 -- | Functor like property for Specification, but instead of a Haskell function (a -> b),
---   it takes a function symbol (t c s '[a] b) from a to b.
+--   it takes a function symbol (t '[a] b) from a to b.
 --   Note, in this context, a function symbol is some constructor of a witnesstype.
 --   Eg. ProdFstW, InjRightW, SingletonW, etc. NOT the lifted versions like fst_ singleton_,
 --   which construct Terms. We had to wait until here to define this because it
@@ -1792,78 +1862,8 @@ pattern Product ::
   Term c
 pattern Product x y <- (App (getWitness -> Just ProdW) (x :> y :> Nil))
 
--- ==================================================================
--- The HasSpec instance for Sum is in TheKnot.
--- Here are the Logic Instances for Sum
--- ===================================================================
-
--- ============= InjLeftW ====
-
-data SumW dom rng where
-  InjLeftW :: (HasSpec a, HasSpec b) => SumW '[a] (Sum a b)
-  InjRightW :: (HasSpec a, HasSpec b) => SumW '[b] (Sum a b)
-
-instance Show (SumW dom rng) where
-  show InjLeftW = "injLeft_"
-  show InjRightW = "injRight_"
-
-deriving instance (Eq (SumW dom rng))
-
-instance Syntax SumW
-
-instance Semantics SumW where
-  semantics InjLeftW = SumLeft
-  semantics InjRightW = SumRight
-
-instance Logic SumW where
-  propagateTypeSpec InjLeftW (Unary HOLE) (SumSpec _ sl _) cant = sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
-  propagateTypeSpec InjRightW (Unary HOLE) (SumSpec _ _ sr) cant = sr <> foldMap notEqualSpec [a | SumRight a <- cant]
-
-  propagateMemberSpec InjLeftW (Unary HOLE) es =
-    case [a | SumLeft a <- NE.toList es] of
-      (x : xs) -> MemberSpec (x :| xs)
-      [] ->
-        ErrorSpec $
-          pure $
-            "propMemberSpec (sumleft_ HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
-  propagateMemberSpec InjRightW (Unary HOLE) es =
-    case [a | SumRight a <- NE.toList es] of
-      (x : xs) -> MemberSpec (x :| xs)
-      [] ->
-        ErrorSpec $
-          pure $
-            "propagate(InjRight HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
-
-  mapTypeSpec InjLeftW ts = typeSpec $ SumSpec Nothing (typeSpec ts) (ErrorSpec (pure "mapTypeSpec InjLeftW"))
-  mapTypeSpec InjRightW ts = typeSpec $ SumSpec Nothing (ErrorSpec (pure "mapTypeSpec InjRightW")) (typeSpec ts)
-
-injLeft_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term a -> Term (Sum a b)
-injLeft_ = appTerm InjLeftW
-
-injRight_ :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term b -> Term (Sum a b)
-injRight_ = appTerm InjRightW
-
-pattern InjRight ::
-  forall c.
-  () =>
-  forall a b.
-  ( c ~ Sum a b
-  , AppRequires SumW '[b] c
-  ) =>
-  Term b ->
-  Term c
-pattern InjRight x <- (App (getWitness -> Just InjRightW) (x :> Nil))
-
-pattern InjLeft ::
-  forall c.
-  () =>
-  forall a b.
-  ( c ~ Sum a b
-  , AppRequires SumW '[a] c
-  ) =>
-  Term a ->
-  Term c
-pattern InjLeft x <- App (getWitness -> Just InjLeftW) (x :> Nil)
+-- =================================================
+-- CAN WE MOVE THIS OUT OF TheKnot?
 
 data ElemW :: [Type] -> Type -> Type where
   ElemW :: HasSpec a => ElemW '[a, [a]] Bool
@@ -1901,6 +1901,13 @@ instance Logic ElemW where
 
   saturate ElemW (x :> Lit (y : ys) :> Nil) = [satisfies x (MemberSpec (y :| ys))]
   saturate _ _ = []
+
+infix 4 `elem_`
+elem_ :: (Sized [a], HasSpec a) => Term a -> Term [a] -> Term Bool
+elem_ = appTerm ElemW
+
+elemFn :: HasSpec a => Fun '[a, [a]] Bool
+elemFn = Fun ElemW
 
 pattern Elem ::
   forall b.
@@ -2064,6 +2071,189 @@ instance Forallable [a] a where
   fromForAllSpec es = typeSpec (ListSpec Nothing [] mempty es NoFold)
   forAllToList = id
 
+-- =====================================================================
+-- Syntax, Semantics and Logic instances for function symbols on List
+
+data ListW (args :: [Type]) (res :: Type) where
+  FoldMapW :: forall a b. (Foldy b, HasSpec a) => Fun '[a] b -> ListW '[[a]] b
+  SingletonListW :: HasSpec a => ListW '[a] [a]
+  AppendW :: (HasSpec a, Typeable a, Show a) => ListW '[[a], [a]] [a]
+
+instance Semantics ListW where
+  semantics = listSem
+
+instance Syntax ListW where
+  prettyWit AppendW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> short n <+> prettyPrec 10 y
+  prettyWit AppendW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> prettyPrec 10 y <+> short n
+  prettyWit _ _ _ = Nothing
+
+listSem :: ListW dom rng -> FunTy dom rng
+listSem (FoldMapW (Fun f)) = adds . map (semantics f)
+listSem SingletonListW = (: [])
+listSem AppendW = (++)
+
+instance Show (ListW d r) where
+  show AppendW = "append_"
+  show SingletonListW = "singletonList_"
+  show (FoldMapW n) = "(FoldMapW  " ++ show n ++ ")"
+
+deriving instance (Eq (ListW d r))
+
+instance Logic ListW where
+  propagateTypeSpec (FoldMapW f) (Unary HOLE) ts cant =
+    typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f (TypeSpec ts cant))
+  propagateTypeSpec SingletonListW (Unary HOLE) (ListSpec _ m sz e f) cant
+    | length m > 1 =
+        ErrorSpec $
+          NE.fromList
+            [ "Too many required elements for SingletonListW : "
+            , "  " ++ show m
+            ]
+    | not $ 1 `conformsToSpec` sz =
+        ErrorSpec $ pure $ "Size spec requires too many elements for SingletonListW : " ++ show sz
+    | bad@(_ : _) <- filter (not . (`conformsToSpec` e)) m =
+        ErrorSpec $
+          NE.fromList
+            [ "The following elements of the must spec do not conforms to the elem spec:"
+            , show bad
+            ]
+    -- There is precisely one required element in the final list, so the argument to singletonList_ has to
+    -- be that element and we have to respect the cant and fold specs
+    | [a] <- m = equalSpec a <> notMemberSpec [z | [z] <- cant] <> reverseFoldSpec f
+    -- We have to respect the elem-spec, the can't spec, and the fold spec.
+    | otherwise = e <> notMemberSpec [a | [a] <- cant] <> reverseFoldSpec f
+  propagateTypeSpec AppendW ctx (ts@ListSpec {listSpecElem = e}) cant
+    | (HOLE :? Value (ys :: [a]) :> Nil) <- ctx
+    , Evidence <- prerequisites @[a]
+    , all (`conformsToSpec` e) ys =
+        TypeSpec (alreadyHave ys ts) (suffixedBy ys cant)
+    | (Value (ys :: [a]) :! Unary HOLE) <- ctx
+    , Evidence <- prerequisites @[a]
+    , all (`conformsToSpec` e) ys =
+        TypeSpec (alreadyHave ys ts) (prefixedBy ys cant)
+    | otherwise = ErrorSpec $ pure "The spec given to propagate for AppendW is inconsistent!"
+
+  propagateMemberSpec (FoldMapW f) (Unary HOLE) es =
+    typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f (MemberSpec es))
+  propagateMemberSpec SingletonListW (Unary HOLE) xss =
+    case [a | [a] <- NE.toList xss] of
+      [] ->
+        ErrorSpec $ (pure "PropagateSpec SingletonListW  with MemberSpec which has no lists of length 1")
+      (x : xs) -> MemberSpec (x :| xs)
+  propagateMemberSpec AppendW ctx xss
+    | (HOLE :<: (ys :: [a])) <- ctx
+    , Evidence <- prerequisites @[a] =
+        -- Only keep the prefixes of the elements of xss that can
+        -- give you the correct resulting list
+        case suffixedBy ys (NE.toList xss) of
+          [] ->
+            ErrorSpec
+              ( NE.fromList
+                  [ "propagateSpecFun (append HOLE ys) with (MemberSpec xss)"
+                  , "there are no elements in xss with suffix ys"
+                  ]
+              )
+          (x : xs) -> MemberSpec (x :| xs)
+    | ((ys :: [a]) :>: HOLE) <- ctx
+    , Evidence <- prerequisites @[a] =
+        -- Only keep the suffixes of the elements of xss that can
+        -- give you the correct resulting list
+        case prefixedBy ys (NE.toList xss) of
+          [] ->
+            ErrorSpec
+              ( NE.fromList
+                  [ "propagateSpecFun (append ys HOLE) with (MemberSpec xss)"
+                  , "there are no elements in xss with prefix ys"
+                  ]
+              )
+          (x : xs) -> MemberSpec (x :| xs)
+
+  mapTypeSpec SingletonListW ts = typeSpec (ListSpec Nothing [] (equalSpec 1) (typeSpec ts) NoFold)
+  mapTypeSpec (FoldMapW g) ts =
+    constrained $ \x ->
+      unsafeExists $ \x' ->
+        Assert (x ==. appFun (foldMapFn g) x') <> toPreds x' ts
+
+foldMap_ :: forall a b. (Foldy b, HasSpec a) => (Term a -> Term b) -> Term [a] -> Term b
+foldMap_ f = appFun $ foldMapFn $ toFn $ f (V v)
+  where
+    v = Var (-1) "v" :: Var a
+    -- Turn `f (V v) = fn (gn (hn v))` into `composeFn fn (composeFn gn hn)`
+    -- Note: composeFn :: HasSpec b => Fun '[b] c -> Fun '[a] b -> Fun '[a] c
+    toFn :: forall x. HasCallStack => Term x -> Fun '[a] x
+    toFn (App fn (V v' :> Nil)) | Just Refl <- eqVar v v' = Fun fn
+    toFn (App fn (t :> Nil)) = composeFn (Fun fn) (toFn t)
+    toFn (V v') | Just Refl <- eqVar v v' = idFn
+    toFn _ = error "foldMap_ has not been given a function of the form \\ x -> f (g ... (h x))"
+
+-- function symbol definitions for List
+sum_ ::
+  Foldy a =>
+  Term [a] ->
+  Term a
+sum_ = foldMap_ id
+
+singletonList_ :: (Sized [a], HasSpec a) => Term a -> Term [a]
+singletonList_ = appTerm SingletonListW
+
+append_ :: (Sized [a], HasSpec a) => Term [a] -> Term [a] -> Term [a]
+append_ = appTerm AppendW
+
+-- Fun types for lists and their helper functions
+
+appendFn :: forall a. (Sized [a], HasSpec a) => Fun '[[a], [a]] [a]
+appendFn = Fun AppendW
+
+singletonListFn :: forall a. HasSpec a => Fun '[a] [a]
+singletonListFn = Fun SingletonListW
+
+foldMapFn :: forall a b. (HasSpec a, Foldy b) => Fun '[a] b -> Fun '[[a]] b
+foldMapFn f = Fun (FoldMapW f)
+
+reverseFoldSpec :: FoldSpec a -> Specification a
+reverseFoldSpec NoFold = TrueSpec
+-- The single element list has to sum to something that obeys spec, i.e. `conformsToSpec (f a) spec`
+reverseFoldSpec (FoldSpec (Fun fn) spec) = propagate fn (HOLE :? Nil) spec
+
+-- ==============  Helper functions
+
+prefixedBy :: Eq a => [a] -> [[a]] -> [[a]]
+prefixedBy ys xss = [drop (length ys) xs | xs <- xss, ys `isPrefixOf` xs]
+
+suffixedBy :: Eq a => [a] -> [[a]] -> [[a]]
+suffixedBy ys xss = [take (length xs - length ys) xs | xs <- xss, ys `isSuffixOf` xs]
+
+alreadyHave :: Eq a => [a] -> ListSpec a -> ListSpec a
+alreadyHave ys (ListSpec h m sz e f) =
+  ListSpec
+    -- Reduce the hint
+    (fmap (subtract (sizeOf ys)) h)
+    -- The things in `ys` have already been added to the list, no need to
+    -- require them too
+    (m \\ ys)
+    -- Reduce the required size
+    (constrained $ \x -> (x + Lit (sizeOf ys)) `satisfies` sz)
+    -- Nothing changes about what's a correct element
+    e
+    -- we have fewer things to sum now
+    (alreadyHaveFold ys f)
+
+alreadyHaveFold :: [a] -> FoldSpec a -> FoldSpec a
+alreadyHaveFold _ NoFold = NoFold
+alreadyHaveFold ys (FoldSpec fn spec) =
+  FoldSpec
+    fn
+    (constrained $ \s -> appTerm theAddFn s (foldMap_ (appFun fn) (Lit ys)) `satisfies` spec)
+
+-- | Used in the HasSpec [a] instance
+toPredsFoldSpec :: HasSpec a => Term [a] -> FoldSpec a -> Pred
+toPredsFoldSpec _ NoFold = TruePred
+toPredsFoldSpec x (FoldSpec funAB sspec) =
+  satisfies (appFun (foldMapFn funAB) x) sspec
+
+-- =======================================================
+-- FoldSpec is a Spec that appears inside of ListSpec
+
 data FoldSpec a where
   NoFold :: FoldSpec a
   FoldSpec ::
@@ -2181,7 +2371,6 @@ knownUpperBound (TypeSpec (NumSpecInterval lo hi) cant) = upper (lo <|> lowerBou
 
 -- =============================================================
 -- All Foldy class instances are over Numbers (so far).
--- So that's why the Foldy class is in the NumberSpec module.
 -- Foldy class requires higher order functions, so here they are.
 -- Note this is a new witness type, different from BaseW
 -- but serving the same purpose. Note it can take Witnesses from
@@ -2288,12 +2477,8 @@ compose_ ::
   Term r
 compose_ f g = appTerm $ ComposeW f g -- @b @c1 @c2 @s1 @s2 @t1 @t2 @a @r f g
 
--- =============================================================
-
 -- =======================================================
--- All the Foldy class instances are intimately tied to
--- Numbers. But that is not required, but this is a
--- convenient place to put the code.
+-- The Foldy class instances for Numbers
 -- =======================================================
 
 instance Foldy Integer where
@@ -2429,197 +2614,6 @@ genFromFold must (simplifySpec -> size) elemS fun@(Fun fn) foldS
 
 addFun :: NumLike n => Fun '[n, n] n
 addFun = Fun AddW
-
--- =============================================================================
--- Lists and Foldy are mutually recursive
--- Here are HasSpec instance for List and the Logic instances for List operators
-
-data ListW (args :: [Type]) (res :: Type) where
-  FoldMapW :: forall a b. (Foldy b, HasSpec a) => Fun '[a] b -> ListW '[[a]] b
-  SingletonListW :: HasSpec a => ListW '[a] [a]
-  AppendW :: (HasSpec a, Typeable a, Show a) => ListW '[[a], [a]] [a]
-
--- ====================== Semantics for ListW
-
-instance Semantics ListW where
-  semantics = listSem
-
-instance Syntax ListW where
-  prettyWit AppendW (Lit n :> y :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> short n <+> prettyPrec 10 y
-  prettyWit AppendW (y :> Lit n :> Nil) p = Just $ parensIf (p > 10) $ "append_" <+> prettyPrec 10 y <+> short n
-  prettyWit _ _ _ = Nothing
-
-listSem :: ListW dom rng -> FunTy dom rng
-listSem (FoldMapW (Fun f)) = adds . map (semantics f)
-listSem SingletonListW = (: [])
-listSem AppendW = (++)
-
-instance Show (ListW d r) where
-  show AppendW = "append_"
-  show SingletonListW = "singletonList_"
-  show (FoldMapW n) = "(FoldMapW  " ++ show n ++ ")"
-
-deriving instance (Eq (ListW d r))
-
-instance Logic ListW where
-  propagateTypeSpec (FoldMapW f) (Unary HOLE) ts cant =
-    typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f (TypeSpec ts cant))
-  propagateTypeSpec SingletonListW (Unary HOLE) (ListSpec _ m sz e f) cant
-    | length m > 1 =
-        ErrorSpec $
-          NE.fromList
-            [ "Too many required elements for SingletonListW : "
-            , "  " ++ show m
-            ]
-    | not $ 1 `conformsToSpec` sz =
-        ErrorSpec $ pure $ "Size spec requires too many elements for SingletonListW : " ++ show sz
-    | bad@(_ : _) <- filter (not . (`conformsToSpec` e)) m =
-        ErrorSpec $
-          NE.fromList
-            [ "The following elements of the must spec do not conforms to the elem spec:"
-            , show bad
-            ]
-    -- There is precisely one required element in the final list, so the argument to singletonList_ has to
-    -- be that element and we have to respect the cant and fold specs
-    | [a] <- m = equalSpec a <> notMemberSpec [z | [z] <- cant] <> reverseFoldSpec f
-    -- We have to respect the elem-spec, the can't spec, and the fold spec.
-    | otherwise = e <> notMemberSpec [a | [a] <- cant] <> reverseFoldSpec f
-  propagateTypeSpec AppendW ctx (ts@ListSpec {listSpecElem = e}) cant
-    | (HOLE :? Value (ys :: [a]) :> Nil) <- ctx
-    , Evidence <- prerequisites @[a]
-    , all (`conformsToSpec` e) ys =
-        TypeSpec (alreadyHave ys ts) (suffixedBy ys cant)
-    | (Value (ys :: [a]) :! Unary HOLE) <- ctx
-    , Evidence <- prerequisites @[a]
-    , all (`conformsToSpec` e) ys =
-        TypeSpec (alreadyHave ys ts) (prefixedBy ys cant)
-    | otherwise = ErrorSpec $ pure "The spec given to propagate for AppendW is inconsistent!"
-
-  propagateMemberSpec (FoldMapW f) (Unary HOLE) es =
-    typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f (MemberSpec es))
-  propagateMemberSpec SingletonListW (Unary HOLE) xss =
-    case [a | [a] <- NE.toList xss] of
-      [] ->
-        ErrorSpec $ (pure "PropagateSpec SingletonListW  with MemberSpec which has no lists of length 1")
-      (x : xs) -> MemberSpec (x :| xs)
-  propagateMemberSpec AppendW ctx xss
-    | (HOLE :<: (ys :: [a])) <- ctx
-    , Evidence <- prerequisites @[a] =
-        -- Only keep the prefixes of the elements of xss that can
-        -- give you the correct resulting list
-        case suffixedBy ys (NE.toList xss) of
-          [] ->
-            ErrorSpec
-              ( NE.fromList
-                  [ "propagateSpecFun (append HOLE ys) with (MemberSpec xss)"
-                  , "there are no elements in xss with suffix ys"
-                  ]
-              )
-          (x : xs) -> MemberSpec (x :| xs)
-    | ((ys :: [a]) :>: HOLE) <- ctx
-    , Evidence <- prerequisites @[a] =
-        -- Only keep the suffixes of the elements of xss that can
-        -- give you the correct resulting list
-        case prefixedBy ys (NE.toList xss) of
-          [] ->
-            ErrorSpec
-              ( NE.fromList
-                  [ "propagateSpecFun (append ys HOLE) with (MemberSpec xss)"
-                  , "there are no elements in xss with prefix ys"
-                  ]
-              )
-          (x : xs) -> MemberSpec (x :| xs)
-
-  mapTypeSpec SingletonListW ts = typeSpec (ListSpec Nothing [] (equalSpec 1) (typeSpec ts) NoFold)
-  mapTypeSpec (FoldMapW g) ts =
-    constrained $ \x ->
-      unsafeExists $ \x' ->
-        Assert (x ==. appFun (foldMapFn g) x') <> toPreds x' ts
-
-foldMap_ :: forall a b. (Foldy b, HasSpec a) => (Term a -> Term b) -> Term [a] -> Term b
-foldMap_ f = appFun $ foldMapFn $ toFn $ f (V v)
-  where
-    v = Var (-1) "v" :: Var a
-    -- Turn `f (V v) = fn (gn (hn v))` into `composeFn fn (composeFn gn hn)`
-    -- Note: composeFn :: HasSpec b => Fun '[b] c -> Fun '[a] b -> Fun '[a] c
-    toFn :: forall x. HasCallStack => Term x -> Fun '[a] x
-    toFn (App fn (V v' :> Nil)) | Just Refl <- eqVar v v' = Fun fn
-    toFn (App fn (t :> Nil)) = composeFn (Fun fn) (toFn t)
-    toFn (V v') | Just Refl <- eqVar v v' = idFn
-    toFn _ = error "foldMap_ has not been given a function of the form \\ x -> f (g ... (h x))"
-
-sum_ ::
-  Foldy a =>
-  Term [a] ->
-  Term a
-sum_ = foldMap_ id
-
-foldMapFn :: forall a b. (HasSpec a, Foldy b) => Fun '[a] b -> Fun '[[a]] b
-foldMapFn f = Fun (FoldMapW f)
-
--- | Used in the HasSpec [a] instance
-toPredsFoldSpec :: HasSpec a => Term [a] -> FoldSpec a -> Pred
-toPredsFoldSpec _ NoFold = TruePred
-toPredsFoldSpec x (FoldSpec funAB sspec) =
-  satisfies (appFun (foldMapFn funAB) x) sspec
-
--- ============ Logicbol for ElemW
-
-infix 4 `elem_`
-elem_ :: (Sized [a], HasSpec a) => Term a -> Term [a] -> Term Bool
-elem_ = appTerm ElemW
-
-elemFn :: HasSpec a => Fun '[a, [a]] Bool
-elemFn = Fun ElemW
-
--- ============= Logicbol for SingletonListW
-
-reverseFoldSpec :: FoldSpec a -> Specification a
-reverseFoldSpec NoFold = TrueSpec
--- The single element list has to sum to something that obeys spec, i.e. `conformsToSpec (f a) spec`
-reverseFoldSpec (FoldSpec (Fun fn) spec) = propagate fn (HOLE :? Nil) spec
-
-singletonList_ :: (Sized [a], HasSpec a) => Term a -> Term [a]
-singletonList_ = appTerm SingletonListW
-
-singletonListFn :: forall a. HasSpec a => Fun '[a] [a]
-singletonListFn = Fun SingletonListW
-
--- ============== Logicbol for AppendW
-
-prefixedBy :: Eq a => [a] -> [[a]] -> [[a]]
-prefixedBy ys xss = [drop (length ys) xs | xs <- xss, ys `isPrefixOf` xs]
-
-suffixedBy :: Eq a => [a] -> [[a]] -> [[a]]
-suffixedBy ys xss = [take (length xs - length ys) xs | xs <- xss, ys `isSuffixOf` xs]
-
-alreadyHave :: Eq a => [a] -> ListSpec a -> ListSpec a
-alreadyHave ys (ListSpec h m sz e f) =
-  ListSpec
-    -- Reduce the hint
-    (fmap (subtract (sizeOf ys)) h)
-    -- The things in `ys` have already been added to the list, no need to
-    -- require them too
-    (m \\ ys)
-    -- Reduce the required size
-    (constrained $ \x -> (x + Lit (sizeOf ys)) `satisfies` sz)
-    -- Nothing changes about what's a correct element
-    e
-    -- we have fewer things to sum now
-    (alreadyHaveFold ys f)
-
-alreadyHaveFold :: [a] -> FoldSpec a -> FoldSpec a
-alreadyHaveFold _ NoFold = NoFold
-alreadyHaveFold ys (FoldSpec fn spec) =
-  FoldSpec
-    fn
-    (constrained $ \s -> appTerm theAddFn s (foldMap_ (appFun fn) (Lit ys)) `satisfies` spec)
-
-appendFn :: forall a. (Sized [a], HasSpec a) => Fun '[[a], [a]] [a]
-appendFn = Fun AppendW
-
-append_ :: (Sized [a], HasSpec a) => Term [a] -> Term [a] -> Term [a]
-append_ = appTerm AppendW
 
 -- ================================================
 -- Sized instance for Lists

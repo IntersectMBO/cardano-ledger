@@ -898,6 +898,7 @@ runTermE env = \case
     pure $ uncurryList_ runIdentity (semantics f) vs
 
 -- TODO: Why on gods earth is this in a module called `Syntax`?!
+-- Because we don't want a module named `Semantics` with just 15 lines
 runTerm :: MonadGenError m => Env -> Term a -> m a
 runTerm env x = case runTermE env x of
   Left msgs -> fatalErrorNE msgs
