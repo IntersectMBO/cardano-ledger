@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Alonzo.Binary.Annotator (
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.Tx hiding (wits)
 import Cardano.Ledger.Alonzo.TxAuxData
-import Cardano.Ledger.Alonzo.TxBody.Internal
+import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxSeq.Internal
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Binary

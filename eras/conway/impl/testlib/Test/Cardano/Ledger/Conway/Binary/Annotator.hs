@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Conway.Binary.Annotator (
 
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.TxBody.Internal
+import Cardano.Ledger.Conway.TxBody
 import Test.Cardano.Ledger.Babbage.Binary.Annotator
 
 instance

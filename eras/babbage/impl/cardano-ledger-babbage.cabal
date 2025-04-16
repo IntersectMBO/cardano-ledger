@@ -39,7 +39,6 @@ library
     Cardano.Ledger.Babbage.Translation
     Cardano.Ledger.Babbage.Tx
     Cardano.Ledger.Babbage.TxBody
-    Cardano.Ledger.Babbage.TxBody.Internal
     Cardano.Ledger.Babbage.TxInfo
     Cardano.Ledger.Babbage.TxOut
     Cardano.Ledger.Babbage.TxWits
