@@ -318,21 +318,11 @@ pool_params =
 
 vrf_keyhash = hash32
 
-;The real unit_interval is: #6.30([uint, uint])
-;
 ;A unit interval is a number in the range between 0 and 1, which
 ;means there are two extra constraints:
 ;  1. numerator <= denominator
 ;  2. denominator > 0
-;
-;The relation between numerator and denominator can be
-;expressed in CDDL, but we have a limitation currently
-;(see: https://github.com/input-output-hk/cuddle/issues/30)
-;which poses a problem for testing. We need to be able to
-;generate random valid data for testing implementation of
-;our encoders/decoders. Which means we cannot use the actual
-;definition here and we hard code the value to 1/2
-unit_interval = #6.30([1, 2])
+unit_interval = #6.30([uint, uint])
 
 ;reward_account = bytes
 reward_account = 
@@ -677,22 +667,10 @@ redeemer_tag =
 
 transaction_index = uint .size 2
 
-;              metadata: shelley
-;  transaction_metadata: shelley-ma
-;#6.259(0 ==> metadata): alonzo onwards
 auxiliary_data = 
-  metadata
-  / [ transaction_metadata: metadata, auxiliary_scripts: [*native_script]
-  ]                                                                          
-  / #6.259(
-    { ?0: metadata
-    , ?1: [*native_script]   
-    , ?2: [*plutus_v1_script]
-    , ?3: [*plutus_v2_script]
-    , ?4: [*plutus_v3_script]
-    }
+  shelley_auxiliary_data/ shelley_ma_auxiliary_data/ alonzo_auxiliary_data
 
-  )
+shelley_auxiliary_data = metadata
 
 metadata = {*transaction_metadatum_label: transaction_metadatum}
 
@@ -704,6 +682,21 @@ transaction_metadatum =
   / int                         
   / bytes .size (0 .. 64)    
   / text .size (0 .. 64)     
+
+shelley_ma_auxiliary_data = 
+  [transaction_metadata: metadata, auxiliary_scripts: [*native_script]]
+
+alonzo_auxiliary_data = 
+  #6.259(
+    { ?0: metadata
+    , ?1: [*native_script]   
+    , ?2: [*plutus_v1_script]
+    , ?3: [*plutus_v2_script]
+    , ?4: [*plutus_v3_script]
+    }
+
+  )
+
 
 transaction = 
   [transaction_body, transaction_witness_set, bool, auxiliary_data/ nil]

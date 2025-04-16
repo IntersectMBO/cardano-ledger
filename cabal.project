@@ -21,7 +21,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cuddle.git
-  tag: 94283e90e29f867877525ca87e9545b35fec7b52
+  tag: d7972fedf613f45bc4f5d773366930e025e8eaf7
 
 -- NOTE: If you would like to update the above,
 -- see CONTRIBUTING.md#to-update-the-referenced-agda-ledger-spec

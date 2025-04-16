@@ -44,10 +44,6 @@ vrf_vkey = bytes .size 32
 
 vrf_cert = [bytes, bytes .size 80]
 
-; kes_vkey: hot_vkey
-;     uint: sequence_number
-;     uint: key_period
-;signature: sigma
 operational_cert = 
   ( hot_vkey: kes_vkey
   , sequence_number: uint     
@@ -183,11 +179,6 @@ pool_keyhash = hash28
 
 pool_registration = (3, pool_params)
 
-;        pool_keyhash: operator
-;                coin: pledge
-;                coin: cost
-;       unit_interval: margin
-;   set<addr_keyhash>: pool_owners
 pool_params = 
   ( operator: pool_keyhash
   , vrf_keyhash   : vrf_keyhash       
@@ -202,21 +193,11 @@ pool_params =
 
 vrf_keyhash = hash32
 
-;The real unit_interval is: #6.30([uint, uint])
-;
 ;A unit interval is a number in the range between 0 and 1, which
 ;means there are two extra constraints:
 ;  1. numerator <= denominator
 ;  2. denominator > 0
-;
-;The relation between numerator and denominator can be
-;expressed in CDDL, but we have a limitation currently
-;(see: https://github.com/input-output-hk/cuddle/issues/30)
-;which poses a problem for testing. We need to be able to
-;generate random valid data for testing implementation of
-;our encoders/decoders. Which means we cannot use the actual
-;definition here and we hard code the value to 1/2
-unit_interval = #6.30([1, 2])
+unit_interval = #6.30([uint, uint])
 
 ;reward_account = bytes
 reward_account = 

@@ -35,10 +35,6 @@ vrf_vkey = bytes .size 32
 
 vrf_cert = [bytes, bytes .size 80]
 
-; kes_vkey: hot_vkey
-;     uint: sequence_number
-;     uint: key_period
-;signature: sigma
 operational_cert = 
   ( hot_vkey: kes_vkey
   , sequence_number: uint     
@@ -149,11 +145,6 @@ pool_keyhash = hash28
 
 pool_registration = (3, pool_params)
 
-;        pool_keyhash: operator
-;                coin: pledge
-;                coin: cost
-;       unit_interval: margin
-;   set<addr_keyhash>: pool_owners
 pool_params = 
   ( operator: pool_keyhash
   , vrf_keyhash   : vrf_keyhash       
@@ -168,21 +159,11 @@ pool_params =
 
 vrf_keyhash = hash32
 
-;The real unit_interval is: #6.30([uint, uint])
-;
 ;A unit interval is a number in the range between 0 and 1, which
 ;means there are two extra constraints:
 ;  1. numerator <= denominator
 ;  2. denominator > 0
-;
-;The relation between numerator and denominator can be
-;expressed in CDDL, but we have a limitation currently
-;(see: https://github.com/input-output-hk/cuddle/issues/30)
-;which poses a problem for testing. We need to be able to
-;generate random valid data for testing implementation of
-;our encoders/decoders. Which means we cannot use the actual
-;definition here and we hard code the value to 1/2
-unit_interval = #6.30([1, 2])
+unit_interval = #6.30([uint, uint])
 
 ;reward_account = bytes
 reward_account = 
@@ -243,39 +224,23 @@ update = [proposed_protocol_parameter_updates, epoch]
 
 proposed_protocol_parameter_updates = {*genesis_hash: protocol_param_update}
 
-; 0: minfee A
-; 1: minfee B
-; 2: max block body size
-; 3: max transaction size
-; 4: max block header size
-; 5: key deposit
-; 6: pool deposit
-; 7: maximum epoch
-; 8: n_opt: desired number of stake pools
-; 9: pool pledge influence
-;10: expansion rate
-;11: treasury growth rate
-;12: decentralization constant
-;13: extra entropy
-;14: protocol version
-;15: min utxo value
 protocol_param_update = 
-  { ?0: uint
-  , ?1 : uint                  
-  , ?2 : uint                  
-  , ?3 : uint                  
-  , ?4 : uint .size 2          
-  , ?5 : coin                  
-  , ?6 : coin                  
-  , ?7 : epoch                 
-  , ?8 : uint .size 2          
-  , ?9 : nonnegative_interval  
-  , ?10: unit_interval         
-  , ?11: unit_interval         
-  , ?12: unit_interval         
-  , ?13: nonce                 
-  , ?14: [protocol_version]
-  , ?15: coin                  
+  { ?0: uint ;minfee A
+  , ?1 : uint                   ;minfee B                            
+  , ?2 : uint                   ;max block body size                 
+  , ?3 : uint                   ;max transaction size                
+  , ?4 : uint .size 2           ;max block header size               
+  , ?5 : coin                   ;key deposit                         
+  , ?6 : coin                   ;pool deposit                        
+  , ?7 : epoch                  ;maximum epoch                       
+  , ?8 : uint .size 2           ;n_opt: desired number of stake pools
+  , ?9 : nonnegative_interval   ;pool pledge influence               
+  , ?10: unit_interval          ;expansion rate                      
+  , ?11: unit_interval          ;treasury growth rate                
+  , ?12: unit_interval          ;decentralization constant           
+  , ?13: nonce                  ;extra entropy                       
+  , ?14: [protocol_version] ;protocol version                    
+  , ?15: coin                   ;min utxo value                      
   }
 
 

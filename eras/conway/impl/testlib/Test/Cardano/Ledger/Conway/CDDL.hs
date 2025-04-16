@@ -743,29 +743,38 @@ metadata =
           ==> transaction_metadatum
       ]
 
+shelley_auxiliary_data :: Rule
+shelley_auxiliary_data =
+  "shelley_auxiliary_data" =:= metadata
+
+shelley_ma_auxiliary_data :: Rule
+shelley_ma_auxiliary_data =
+  "shelley_ma_auxiliary_data"
+    =:= arr
+      [ "transaction_metadata" ==> metadata
+      , "auxiliary_scripts" ==> arr [0 <+ a native_script]
+      ]
+
+alonzo_auxiliary_data :: Rule
+alonzo_auxiliary_data =
+  "alonzo_auxiliary_data"
+    =:= tag
+      259
+      ( mp
+          [ opt (idx 0 ==> metadata)
+          , opt (idx 1 ==> arr [0 <+ a native_script])
+          , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
+          , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
+          , opt (idx 4 ==> arr [0 <+ a plutus_v3_script])
+          ]
+      )
+
 auxiliary_data :: Rule
 auxiliary_data =
-  comment
-    [str|              metadata: shelley
-        |  transaction_metadata: shelley-ma
-        |#6.259(0 ==> metadata): alonzo onwards
-        |]
-    $ "auxiliary_data"
-      =:= metadata
-      / sarr
-        [ "transaction_metadata" ==> metadata
-        , "auxiliary_scripts" ==> arr [0 <+ a native_script]
-        ]
-      / tag
-        259
-        ( mp
-            [ opt (idx 0 ==> metadata)
-            , opt (idx 1 ==> arr [0 <+ a native_script])
-            , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
-            , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
-            , opt (idx 4 ==> arr [0 <+ a plutus_v3_script])
-            ]
-        )
+  "auxiliary_data"
+    =:= shelley_auxiliary_data
+    / shelley_ma_auxiliary_data
+    / alonzo_auxiliary_data
 
 native_script :: Rule
 native_script =
