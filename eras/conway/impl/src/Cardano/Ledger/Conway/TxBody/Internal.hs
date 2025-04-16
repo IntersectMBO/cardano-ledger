@@ -69,7 +69,7 @@ import Cardano.Ledger.Babbage.TxBody (
  )
 import Cardano.Ledger.BaseTypes (Network, fromSMaybe, isSJust)
 import Cardano.Ledger.Binary (
-  Annotator,
+  Annotator (..),
   DecCBOR (..),
   EncCBOR (..),
   Sized (..),

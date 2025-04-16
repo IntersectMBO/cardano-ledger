@@ -51,7 +51,7 @@ import Cardano.Ledger.Binary.Version
 import Codec.CBOR.Read as Read (DeserialiseFailure, IDecode (..), deserialiseIncremental)
 import Codec.CBOR.Write (toStrictByteString)
 import Control.Exception (displayException)
-import Control.Monad (when)
+import Control.Monad (join, when)
 import Control.Monad.ST (ST, runST)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString as BS
@@ -171,7 +171,7 @@ decodeFullAnnotator ::
   BSL.ByteString ->
   Either DecoderError a
 decodeFullAnnotator v lbl decoder bytes =
-  (\x -> runAnnotator x (Full bytes)) <$> decodeFullDecoder v lbl decoder bytes
+  join $ (`runAnnotator` Full bytes) <$> decodeFullDecoder v lbl decoder bytes
 {-# INLINE decodeFullAnnotator #-}
 
 -- | Same as `decodeFullDecoder`, decodes a Haskell value from a lazy

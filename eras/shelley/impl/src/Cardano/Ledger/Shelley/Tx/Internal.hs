@@ -373,23 +373,24 @@ segWitAnnTx ::
   Annotator (TxWits era) ->
   Maybe (Annotator (TxAuxData era)) ->
   Annotator (ShelleyTx era)
-segWitAnnTx bodyAnn witsAnn metaAnn = Annotator $ \bytes ->
-  let body' = runAnnotator bodyAnn bytes
-      witnessSet = runAnnotator witsAnn bytes
-      metadata = flip runAnnotator bytes <$> metaAnn
-      wrappedMetadataBytes = case metadata of
+segWitAnnTx bodyAnn witsAnn auxDataAnnMaybe = Annotator $ \bytes -> do
+  txBody <- runAnnotator bodyAnn bytes
+  txWits <- runAnnotator witsAnn bytes
+  txAuxData <- mapM (`runAnnotator` bytes) auxDataAnnMaybe
+  let wrappedTxAuxDataBytes = case txAuxData of
         Nothing -> Plain.serialize Plain.encodeNull
         Just b -> Plain.serialize b
       fullBytes =
         Plain.serialize (Plain.encodeListLen 3)
-          <> Plain.serialize body'
-          <> Plain.serialize witnessSet
-          <> wrappedMetadataBytes
-   in unsafeConstructTxWithBytes
-        body'
-        witnessSet
-        (maybeToStrictMaybe metadata)
-        fullBytes
+          <> Plain.serialize txBody
+          <> Plain.serialize txWits
+          <> wrappedTxAuxDataBytes
+  pure $
+    unsafeConstructTxWithBytes
+      txBody
+      txWits
+      (maybeToStrictMaybe txAuxData)
+      fullBytes
 
 segWitTx ::
   forall era.

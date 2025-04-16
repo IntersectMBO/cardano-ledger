@@ -73,7 +73,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   toPlutusSLanguage,
  )
 import Cardano.Ledger.Binary (
-  Annotator,
+  Annotator (..),
   DecCBOR (..),
   DecCBORGroup (..),
   Decoder,

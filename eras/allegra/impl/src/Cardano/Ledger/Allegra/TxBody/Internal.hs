@@ -52,7 +52,7 @@ import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxCert ()
 import Cardano.Ledger.Allegra.TxOut ()
 import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (SJust, SNothing))
-import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR)
+import Cardano.Ledger.Binary (Annotator (..), DecCBOR (..), EncCBOR (..), ToCBOR)
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),

@@ -113,4 +113,5 @@ test-suite cardano-ledger-alonzo-test
     tasty,
     tasty-hunit,
     tasty-quickcheck,
+    text,
     time,

@@ -165,7 +165,8 @@ instance
   where
   decCBOR = do
     (Annotator getT, Annotator getBytes) <- withSlice decCBOR
-    pure (Annotator (\fullbytes -> mkMemoBytes (getT fullbytes) (getBytes fullbytes)))
+    pure $ Annotator $ \fullBytes ->
+      mkMemoBytes <$> getT fullBytes <*> getBytes fullBytes
 
 instance DecCBOR t => DecCBOR (MemoBytes t) where
   decCBOR = decodeMemoized decCBOR

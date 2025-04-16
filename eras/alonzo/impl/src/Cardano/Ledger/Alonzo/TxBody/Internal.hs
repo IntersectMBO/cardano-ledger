@@ -106,7 +106,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
-  Annotator,
+  Annotator (..),
   DecCBOR (..),
   EncCBOR (..),
   ToCBOR (..),

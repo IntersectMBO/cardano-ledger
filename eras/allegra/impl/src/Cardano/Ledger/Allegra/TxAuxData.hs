@@ -109,7 +109,8 @@ instance AllegraEraTxAuxData AllegraEra where
 
 timelockScriptsAllegraTxAuxDataL ::
   forall era.
-  Era era => Lens' (AllegraTxAuxData era) (StrictSeq (Timelock era))
+  Era era =>
+  Lens' (AllegraTxAuxData era) (StrictSeq (Timelock era))
 timelockScriptsAllegraTxAuxDataL =
   lensMemoRawType @era atadrTimelock $
     \txAuxDataRaw ts -> txAuxDataRaw {atadrTimelock = ts}

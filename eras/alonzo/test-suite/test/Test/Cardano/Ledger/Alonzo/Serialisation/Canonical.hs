@@ -9,6 +9,7 @@ import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Binary (
   Annotator (..),
   Decoder,
+  DecoderError (..),
   TokenType (..),
   decodeBool,
   decodeBytesCanonical,
@@ -21,17 +22,20 @@ import Cardano.Ledger.Binary (
   decodeSimpleCanonical,
   decodeStringCanonical,
   peekTokenType,
+  runAnnotator,
   serialize,
   withSlice,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Language (Language)
+import Control.Arrow (left)
 import Control.Monad (replicateM, unless, void)
 import qualified Data.ByteString.Base16 as B16
 import Data.ByteString.Lazy as LBS
 import Data.Functor.Compose (Compose (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import qualified Test.QuickCheck.Property as QCP
@@ -110,8 +114,9 @@ checkCanonicalMap = do
       keys' = getCompose (traverse Compose keys)
   pure $
     Annotator $ \fullBytes -> do
-      ks <- runAnnotator keys' fullBytes
-      unless (isSorted ks) (Left "map keys out of order")
+      ksEither <- runAnnotator keys' fullBytes
+      ks <- left (DecoderErrorCustom "Canonical" . T.pack) ksEither
+      pure $ unless (isSorted ks) $ Left "map keys out of order"
 
 checkCanonicalList :: Decoder s (Annotator (Either String ()))
 checkCanonicalList = do

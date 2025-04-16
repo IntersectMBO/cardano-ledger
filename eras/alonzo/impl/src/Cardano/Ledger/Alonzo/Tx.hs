@@ -107,6 +107,7 @@ import Cardano.Ledger.Binary (
   decodeNullStrictMaybe,
   encodeListLen,
   encodeNullMaybe,
+  runAnnotator,
   serialize,
   serialize',
  )
@@ -362,14 +363,15 @@ alonzoSegwitTx ::
   IsValid ->
   Maybe (Annotator (TxAuxData era)) ->
   Annotator (Tx era)
-alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
-  let txBody = runAnnotator txBodyAnn bytes
-      txWits = runAnnotator txWitsAnn bytes
-      txAuxData = maybeToStrictMaybe (flip runAnnotator bytes <$> auxDataAnn)
-   in mkBasicTx txBody
-        & witsTxL .~ txWits
-        & auxDataTxL .~ txAuxData
-        & isValidTxL .~ isValid
+alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes -> do
+  txBody <- runAnnotator txBodyAnn bytes
+  txWits <- runAnnotator txWitsAnn bytes
+  txAuxData <- mapM (`runAnnotator` bytes) auxDataAnn
+  pure $
+    mkBasicTx txBody
+      & witsTxL .~ txWits
+      & auxDataTxL .~ maybeToStrictMaybe txAuxData
+      & isValidTxL .~ isValid
 
 --------------------------------------------------------------------------------
 -- Mempool Serialisation
