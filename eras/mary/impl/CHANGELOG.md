@@ -8,6 +8,10 @@
 * Expose constructor `MkMaryTxBody`
 * Add default implementation for `mintValueTxBodyF`
 
+### `testlib`
+
+* Added `Era` module with `MaryEraTest` class
+
 ## 1.8.0.0
 
 * Add `DecCBOR` instance for `MaryTxBody`
