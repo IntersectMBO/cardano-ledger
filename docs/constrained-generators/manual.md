@@ -276,7 +276,7 @@ Once we have written a `Specification` what can we do with it? Specifications ha
 The first interpretation of the specification is the function `genFromSpec`
 
 ```
--- Generate a value from the spec in the QuickCheck monad 'Gen'
+--| Generate a value from the spec in the QuickCheck monad 'Gen'
 genFromSpec:: (HasCallStack, HasSpec a) => Specification a -> QuickCheck.Gen a
 ```
 
