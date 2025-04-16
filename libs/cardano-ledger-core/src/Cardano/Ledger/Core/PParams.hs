@@ -104,10 +104,10 @@ import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
-import Data.Aeson (FromJSON, ToJSON (..), (.=))
-import qualified Data.Aeson as Aeson (KeyValue, Value)
+import Data.Aeson (FromJSON, ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson (KeyValue)
 import qualified Data.Aeson.Key as Aeson (fromText)
-import qualified Data.Aeson.Types as Aeson (Parser)
+import qualified Data.Aeson.Types as Aeson (Object, Parser)
 import Data.Data (Typeable)
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (foldMap'), foldr')
@@ -452,8 +452,12 @@ class
     , SJust v <- [ppu ^. ppdUpdateLens]
     ]
 
-  fromJsonPParams :: Aeson.Value -> Aeson.Parser (PParams era)
-  fromJsonPParams = undefined
+  fromJsonPParams :: Aeson.Object -> Aeson.Parser (PParams era)
+  fromJsonPParams obj =
+    F.foldl' accum mempty (pparamDescriptors @era)
+    where
+      accum acc PParamDescriptor {ppdName, ppdLens} =
+        set ppdLens <$> obj .: Aeson.fromText ppdName <*> acc
 
 emptyPParams :: EraPParams era => PParams era
 emptyPParams = PParams emptyPParamsIdentity
@@ -662,7 +666,7 @@ makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]
 
 data PParamDescriptor era where
   PParamDescriptor ::
-    (DecCBOR t, EncCBOR t, ToJSON t) =>
+    (DecCBOR t, EncCBOR t, FromJSON t, ToJSON t) =>
     { ppdName :: Text
     , ppdTag :: Word
     , ppdLens :: Lens' (PParams era) t
