@@ -23,7 +23,7 @@ import Test.Cardano.Ledger.Shelley.CDDL hiding (
 import Text.Heredoc
 
 allegraCDDL :: Huddle
-allegraCDDL = collectFrom [block, transaction]
+allegraCDDL = collectFrom [HIRule block, HIRule transaction]
 
 native_script :: Rule
 native_script =
