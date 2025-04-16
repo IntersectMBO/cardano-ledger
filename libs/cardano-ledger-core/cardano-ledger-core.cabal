@@ -161,6 +161,7 @@ library testlib
     Test.Cardano.Ledger.Core.KeyPair
     Test.Cardano.Ledger.Core.Rational
     Test.Cardano.Ledger.Core.Utils
+    Test.Cardano.Ledger.Era
     Test.Cardano.Ledger.Imp.Common
     Test.Cardano.Ledger.Plutus
     Test.Cardano.Ledger.Plutus.Examples
