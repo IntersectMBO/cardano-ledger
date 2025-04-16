@@ -196,7 +196,7 @@ library testlib
     cardano-ledger-core,
     cardano-slotting,
     containers,
-    cuddle,
+    cuddle >=0.4,
     data-default,
     deepseq,
     generic-random,
