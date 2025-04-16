@@ -173,7 +173,8 @@ instance
   where
   decCBOR = do
     (Annotator getT, Annotator getBytes) <- withSlice decCBOR
-    pure $ Annotator (\fullbytes -> mkMemoBytes (getT fullbytes) (getBytes fullbytes))
+    pure $ Annotator $ \fullBytes ->
+      mkMemoBytes <$> getT fullBytes <*> getBytes fullBytes
 
 -- | Both binary representation and Haskell types are compared.
 instance Eq t => Eq (MemoBytes t) where

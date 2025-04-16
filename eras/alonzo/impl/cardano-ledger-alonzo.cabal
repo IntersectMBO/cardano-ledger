@@ -254,3 +254,4 @@ test-suite tests
     microlens,
     microlens-mtl,
     testlib,
+    text,

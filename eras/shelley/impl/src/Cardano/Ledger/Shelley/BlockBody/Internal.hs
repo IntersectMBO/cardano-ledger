@@ -266,13 +266,14 @@ instance
       )
 
     let
-      segWitAnnTx bodyAnn witsAnn' metaAnn = Annotator $ \bytes ->
-        let body' = runAnnotator bodyAnn bytes
-            witnessSet = runAnnotator witsAnn' bytes
-            metadata' = flip runAnnotator bytes <$> metaAnn
-         in mkBasicTx @era body'
-              & witsTxL .~ witnessSet
-              & auxDataTxL .~ maybeToStrictMaybe metadata'
+      segWitAnnTx txBodyAnn txWitsAnn txAuxDataAnnMaybe = Annotator $ \bytes -> do
+        txBody <- runAnnotator txBodyAnn bytes
+        txWits <- runAnnotator txWitsAnn bytes
+        txAuxData <- mapM (`runAnnotator` bytes) txAuxDataAnnMaybe
+        pure $
+          mkBasicTx @era txBody
+            & witsTxL .~ txWits
+            & auxDataTxL .~ maybeToStrictMaybe txAuxData
       txns =
         sequenceA $
           StrictSeq.forceToStrict $

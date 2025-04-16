@@ -36,7 +36,7 @@ module Cardano.Ledger.Shelley.TxWits (
 ) where
 
 import Cardano.Ledger.Binary (
-  Annotator,
+  Annotator (..),
   DecCBOR (decCBOR),
   Decoder,
   EncCBOR (encCBOR),
