@@ -102,6 +102,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.Binary.Annotator
     Test.Cardano.Ledger.Babbage.Binary.Cddl
     Test.Cardano.Ledger.Babbage.CDDL
+    Test.Cardano.Ledger.Babbage.Era
     Test.Cardano.Ledger.Babbage.Imp
     Test.Cardano.Ledger.Babbage.Imp.UtxowSpec
     Test.Cardano.Ledger.Babbage.ImpTest
