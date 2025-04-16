@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Conway.CDDL (
   module Test.Cardano.Ledger.Conway.CDDL,
 ) where
 
+import Codec.CBOR.Cuddle.Comments ((//-))
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
@@ -219,30 +220,30 @@ parameter_change_action =
   "parameter_change_action"
     =:~ grp
       [ 0
-      , gov_action_id / VNil
+      , a $ gov_action_id / VNil
       , a protocol_param_update
-      , policy_hash / VNil
+      , a $ policy_hash / VNil
       ]
 
 hard_fork_initiation_action :: Named Group
 hard_fork_initiation_action =
   "hard_fork_initiation_action"
-    =:~ grp [1, gov_action_id / VNil, a protocol_version]
+    =:~ grp [1, a $ gov_action_id / VNil, a protocol_version]
 
 treasury_withdrawals_action :: Named Group
 treasury_withdrawals_action =
   "treasury_withdrawals_action"
-    =:~ grp [2, a (mp [0 <+ asKey reward_account ==> coin]), policy_hash / VNil]
+    =:~ grp [2, a (mp [0 <+ asKey reward_account ==> coin]), a $ policy_hash / VNil]
 
 no_confidence :: Named Group
-no_confidence = "no_confidence" =:~ grp [3, gov_action_id / VNil]
+no_confidence = "no_confidence" =:~ grp [3, a $ gov_action_id / VNil]
 
 update_committee :: Named Group
 update_committee =
   "update_committee"
     =:~ grp
       [ 4
-      , gov_action_id / VNil
+      , a $ gov_action_id / VNil
       , a (set committee_cold_credential)
       , a (mp [0 <+ asKey committee_cold_credential ==> epoch_no])
       , a unit_interval
@@ -251,7 +252,7 @@ update_committee =
 new_constitution :: Named Group
 new_constitution =
   "new_constitution"
-    =:~ grp [5, gov_action_id / VNil, a constitution]
+    =:~ grp [5, a $ gov_action_id / VNil, a constitution]
 
 constitution :: Rule
 constitution =
@@ -266,19 +267,12 @@ info_action = "info_action" =:= int 6
 
 voter :: Rule
 voter =
-  comment
-    [str|0: constitutional committee hot keyhash
-        |1: constitutional committee hot script_hash
-        |2: drep keyhash
-        |3: drep script_hash
-        |4: stakingpool keyhash
-        |]
-    $ "voter"
-      =:= arr [0, a addr_keyhash]
-      / arr [1, a script_hash]
-      / arr [2, a addr_keyhash]
-      / arr [3, a script_hash]
-      / arr [4, a addr_keyhash]
+  "voter"
+    =:= (arr [0, a addr_keyhash] //- "constitutional committee hot key hash")
+    / (arr [1, a script_hash] //- "consitutional committee script hash")
+    / (arr [2, a addr_keyhash] //- "drep keyhash")
+    / (arr [3, a script_hash] //- "drep script hash")
+    / (arr [4, a addr_keyhash] //- "staking pool key hash")
 
 anchor :: Rule
 anchor =
@@ -289,7 +283,7 @@ anchor =
       ]
 
 vote :: Rule
-vote = "vote" =:= 0 ... 2
+vote = "vote" =:= (0 :: Integer) ... (2 :: Integer)
 
 gov_action_id :: Rule
 gov_action_id =
@@ -480,16 +474,16 @@ auth_committee_hot_cert =
 resign_committee_cold_cert :: Named Group
 resign_committee_cold_cert =
   "resign_committee_cold_cert"
-    =:~ grp [15, a committee_cold_credential, anchor / VNil]
+    =:~ grp [15, a committee_cold_credential, a $ anchor / VNil]
 
 reg_drep_cert :: Named Group
-reg_drep_cert = "reg_drep_cert" =:~ grp [16, a drep_credential, a coin, anchor / VNil]
+reg_drep_cert = "reg_drep_cert" =:~ grp [16, a drep_credential, a coin, a $ anchor / VNil]
 
 unreg_drep_cert :: Named Group
 unreg_drep_cert = "unreg_drep_cert" =:~ grp [17, a drep_credential, a coin]
 
 update_drep_cert :: Named Group
-update_drep_cert = "update_drep_cert" =:~ grp [18, a drep_credential, anchor / VNil]
+update_drep_cert = "update_drep_cert" =:~ grp [18, a drep_credential, a $ anchor / VNil]
 
 drep :: Rule
 drep =
@@ -538,7 +532,7 @@ single_host_name =
   comment
     [str|dns_name: An A or AAAA DNS record
         |]
-    $ "single_host_name" =:~ grp [1, port / VNil, a dns_name]
+    $ "single_host_name" =:~ grp [1, a $ port / VNil, a dns_name]
 
 multi_host_name :: Named Group
 multi_host_name =
@@ -566,97 +560,65 @@ withdrawals = "withdrawals" =:= mp [1 <+ asKey reward_account ==> coin]
 
 protocol_param_update :: Rule
 protocol_param_update =
-  comment
-    [str| 0: minfee A
-        | 1: minfee B
-        | 2: max block body size
-        | 3: max transaction size
-        | 4: max block header size
-        | 5: key deposit
-        | 6: pool deposit
-        | 7: maximum epoch
-        | 8: n_opt: desired number of stake pools
-        | 9: pool pledge influence
-        |10: expansion rate
-        |11: treasury growth rate
-        |16: min pool cost
-        |17: ada per utxo byte
-        |18: cost models for script languages
-        |19: execution costs
-        |20: max tx ex units
-        |21: max block ex units
-        |22: max value size
-        |23: collateral percentage
-        |24: max collateral inputs
-        |25: pool voting thresholds
-        |26: drep voting thresholds
-        |27: min committee size
-        |28: committee term limit
-        |29: governance action validity period
-        |30: governance action deposit
-        |31: drep deposit
-        |32: drep inactivity period
-        |33: minfee refscriptcoinsperbyte
-        |]
-    $ "protocol_param_update"
-      =:= mp
-        [ opt (idx 0 ==> coin)
-        , opt (idx 1 ==> coin)
-        , opt (idx 2 ==> (VUInt `sized` (4 :: Word64)))
-        , opt (idx 3 ==> (VUInt `sized` (4 :: Word64)))
-        , opt (idx 4 ==> (VUInt `sized` (2 :: Word64)))
-        , opt (idx 5 ==> coin)
-        , opt (idx 6 ==> coin)
-        , opt (idx 7 ==> epoch_interval)
-        , opt (idx 8 ==> (VUInt `sized` (2 :: Word64)))
-        , opt (idx 9 ==> nonnegative_interval)
-        , opt (idx 10 ==> unit_interval)
-        , opt (idx 11 ==> unit_interval)
-        , opt (idx 16 ==> coin)
-        , opt (idx 17 ==> coin)
-        , opt (idx 18 ==> cost_models)
-        , opt (idx 19 ==> ex_unit_prices)
-        , opt (idx 20 ==> ex_units)
-        , opt (idx 21 ==> ex_units)
-        , opt (idx 22 ==> (VUInt `sized` (4 :: Word64)))
-        , opt (idx 23 ==> (VUInt `sized` (2 :: Word64)))
-        , opt (idx 24 ==> (VUInt `sized` (2 :: Word64)))
-        , opt (idx 25 ==> pool_voting_thresholds)
-        , opt (idx 26 ==> drep_voting_thresholds)
-        , opt (idx 27 ==> (VUInt `sized` (2 :: Word64)))
-        , opt (idx 28 ==> epoch_interval)
-        , opt (idx 29 ==> epoch_interval)
-        , opt (idx 30 ==> coin)
-        , opt (idx 31 ==> coin)
-        , opt (idx 32 ==> epoch_interval)
-        , opt (idx 33 ==> nonnegative_interval)
-        ]
+  "protocol_param_update"
+    =:= mp
+      [ opt (idx 0 ==> coin) //- "minfeeA"
+      , opt (idx 1 ==> coin) //- "minfeeB"
+      , opt (idx 2 ==> (VUInt `sized` (4 :: Word64))) //- "max block body size"
+      , opt (idx 3 ==> (VUInt `sized` (4 :: Word64))) //- "max transaction size"
+      , opt (idx 4 ==> (VUInt `sized` (2 :: Word64))) //- "max block header size"
+      , opt (idx 5 ==> coin) //- "key deposit"
+      , opt (idx 6 ==> coin) //- "pool deposit"
+      , opt (idx 7 ==> epoch_interval) //- "maximum epoch"
+      , opt (idx 8 ==> (VUInt `sized` (2 :: Word64))) //- "n_opt: desired number of stake pools"
+      , opt (idx 9 ==> nonnegative_interval) //- "pool pledge influence"
+      , opt (idx 10 ==> unit_interval) //- "expansion rate"
+      , opt (idx 11 ==> unit_interval) //- "treasury growth rate"
+      , opt (idx 16 ==> coin) //- "min pool cost"
+      , opt (idx 17 ==> coin) //- "ada per utxo byte"
+      , opt (idx 18 ==> cost_models) //- "cost models for script languages"
+      , opt (idx 19 ==> ex_unit_prices) //- "execution costs"
+      , opt (idx 20 ==> ex_units) //- "max tx ex units"
+      , opt (idx 21 ==> ex_units) //- "max block ex units"
+      , opt (idx 22 ==> (VUInt `sized` (4 :: Word64))) //- "max value size"
+      , opt (idx 23 ==> (VUInt `sized` (2 :: Word64))) //- "collateral percentage"
+      , opt (idx 24 ==> (VUInt `sized` (2 :: Word64))) //- "max collateral inputs"
+      , opt (idx 25 ==> pool_voting_thresholds) //- "pool voting thresholds"
+      , opt (idx 26 ==> drep_voting_thresholds) //- "drep voting thresholds"
+      , opt (idx 27 ==> (VUInt `sized` (2 :: Word64))) //- "min committee size"
+      , opt (idx 28 ==> epoch_interval) //- "committee term limit"
+      , opt (idx 29 ==> epoch_interval) //- "goveranance action validity period"
+      , opt (idx 30 ==> coin) //- "governance action deposit"
+      , opt (idx 31 ==> coin) //- "drep deposit"
+      , opt (idx 32 ==> epoch_interval) //- "drep inactivity period"
+      , opt (idx 33 ==> nonnegative_interval) //- "minfee refscriptcoinsperbyte"
+      ]
 
 pool_voting_thresholds :: Rule
 pool_voting_thresholds =
   "pool_voting_thresholds"
     =:= arr
-      [ a unit_interval -- motion no confidence
-      , a unit_interval -- committee normal
-      , a unit_interval -- committee no confidence
-      , a unit_interval -- hard fork initiation
-      , a unit_interval -- security relevant parameter voting threshold
+      [ a unit_interval //- "motion no confidence"
+      , a unit_interval //- "committee normal"
+      , a unit_interval //- "committee no confidence"
+      , a unit_interval //- "hard fork initiation"
+      , a unit_interval //- "security relevant parameter voting threshold"
       ]
 
 drep_voting_thresholds :: Rule
 drep_voting_thresholds =
   "drep_voting_thresholds"
     =:= arr
-      [ a unit_interval -- motion no confidence
-      , a unit_interval -- committee normal
-      , a unit_interval -- committee no confidence
-      , a unit_interval -- update constitution
-      , a unit_interval -- hard fork initiation
-      , a unit_interval -- PP network group
-      , a unit_interval -- PP economic group
-      , a unit_interval -- PP technical group
-      , a unit_interval -- PP governance group
-      , a unit_interval -- treasury withdrawal
+      [ a unit_interval //- "motion no confidence"
+      , a unit_interval //- "committee normal"
+      , a unit_interval //- "committee no confidence"
+      , a unit_interval //- "update constitution"
+      , a unit_interval //- "hard fork initiation"
+      , a unit_interval //- "PP network group"
+      , a unit_interval //- "PP economic group"
+      , a unit_interval //- "PP technical group"
+      , a unit_interval //- "PP governance group"
+      , a unit_interval //- "treasury withdrawal"
       ]
 
 transaction_witness_set :: Rule
@@ -723,21 +685,13 @@ redeemers =
 
 redeemer_tag :: Rule
 redeemer_tag =
-  comment
-    [str|0: spend
-        |1: mint
-        |2: cert
-        |3: reward
-        |4: voting
-        |5: proposing
-        |]
-    $ "redeemer_tag"
-      =:= int 0
-      / int 1
-      / int 2
-      / int 3
-      / int 4
-      / int 5
+  "redeemer_tag"
+    =:= (int 0 //- "spend")
+    / (int 1 //- "mint")
+    / (int 2 //- "cert")
+    / (int 3 //- "reward")
+    / (int 4 //- "voting")
+    / (int 5 //- "proposing")
 
 ex_unit_prices :: Rule
 ex_unit_prices =
@@ -755,7 +709,7 @@ language =
     / int 2 -- Plutus v3
 
 potential_languages :: Rule
-potential_languages = "potential_languages" =:= 0 ... 255
+potential_languages = "potential_languages" =:= (0 :: Integer) ... (255 :: Integer)
 
 cost_models :: Rule
 cost_models =
@@ -774,7 +728,7 @@ cost_models =
         [ opt $ idx 0 ==> arr [0 <+ a int64]
         , opt $ idx 1 ==> arr [0 <+ a int64]
         , opt $ idx 2 ==> arr [0 <+ a int64]
-        , 0 <+ asKey (3 ... 255) ==> arr [0 <+ a int64]
+        , 0 <+ asKey ((3 :: Integer) ... (255 :: Integer)) ==> arr [0 <+ a int64]
         ]
 
 transaction_metadatum_label :: Rule

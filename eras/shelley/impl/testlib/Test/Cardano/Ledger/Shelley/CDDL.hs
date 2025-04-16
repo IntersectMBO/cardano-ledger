@@ -225,14 +225,14 @@ dns_name = "dns_name" =:= VText `sized` (0 :: Word64, 64 :: Word64)
 
 single_host_addr :: Named Group
 single_host_addr =
-  "single_host_addr" =:~ grp [0, port / VNil, ipv4 / VNil, ipv6 / VNil]
+  "single_host_addr" =:~ grp [0, a $ port / VNil, a $ ipv4 / VNil, a $ ipv6 / VNil]
 
 single_host_name :: Named Group
 single_host_name =
   comment
     [str|dns_name: An A or AAAA DNS record
         |]
-    $ "single_host_name" =:~ grp [1, port / VNil, a dns_name]
+    $ "single_host_name" =:~ grp [1, a $ port / VNil, a dns_name]
 
 multi_host_name :: Named Group
 multi_host_name =

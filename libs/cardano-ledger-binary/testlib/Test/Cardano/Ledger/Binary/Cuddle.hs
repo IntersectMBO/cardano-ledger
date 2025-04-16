@@ -93,7 +93,7 @@ huddleDecoderEquivalenceSpec version ruleName =
   let lbl = label $ Proxy @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName) $ \term -> do
+          withGenTerm cddlData (Cuddle.Name ruleName mempty) $ \term -> do
             let encoding = CBOR.encodeTerm term
                 initCborBytes = CBOR.toLazyByteString encoding
             decoderEquivalenceExpectation @a version initCborBytes
@@ -111,7 +111,7 @@ huddleRoundTripCborSpec version ruleName =
       trip = cborTrip @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName) $
+          withGenTerm cddlData (Cuddle.Name ruleName mempty) $
             roundTripExample lbl version version trip
 
 huddleRoundTripAnnCborSpec ::
@@ -127,7 +127,7 @@ huddleRoundTripAnnCborSpec version ruleName =
       trip = cborTrip @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
-          withGenTerm cddlData (Cuddle.Name ruleName) $
+          withGenTerm cddlData (Cuddle.Name ruleName mempty) $
             roundTripAnnExample lbl version version trip
 
 specWithHuddle :: Cuddle.Huddle -> Int -> SpecWith CuddleData -> Spec
