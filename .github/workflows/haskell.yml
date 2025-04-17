@@ -387,7 +387,7 @@ jobs:
     - name: Run fourmolu
       run: ./scripts/fourmolize.sh
 
-  gen-cddl:
+  codegen:
     needs: build
 
     runs-on: ubuntu-latest
@@ -473,6 +473,9 @@ jobs:
 
     - name: Run gen-cddl
       run: ./scripts/gen-cddl.sh
+
+    - name: Run gen-plutus
+      run: ./scripts/gen-plutus.sh
 
   cabal-format:
     runs-on: ubuntu-latest
