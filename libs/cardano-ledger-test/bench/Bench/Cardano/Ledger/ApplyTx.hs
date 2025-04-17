@@ -117,7 +117,6 @@ deserialiseTxEra ::
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ Tx era
-  , NFData (Tx era)
   , EraStake era
   , EraGov era
   ) =>
@@ -137,7 +136,6 @@ deserialiseAnnTxEra ::
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Signal (EraRule "LEDGER" era) ~ Tx era
-  , NFData (Tx era)
   , EraStake era
   , EraGov era
   , DecCBOR (Annotator (Tx era))

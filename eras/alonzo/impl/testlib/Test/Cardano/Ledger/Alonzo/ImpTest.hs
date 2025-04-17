@@ -440,7 +440,7 @@ instance ShelleyEraImp AlonzoEra where
 
 instance MaryEraImp AlonzoEra
 
-instance MaryEraImp AlonzoEra => AlonzoEraImp AlonzoEra where
+instance AlonzoEraImp AlonzoEra where
   scriptTestContexts = plutusTestScripts SPlutusV1
 
 impLookupScriptContext ::
