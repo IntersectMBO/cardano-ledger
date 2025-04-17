@@ -18,8 +18,7 @@ import qualified Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest as Insta
 
 spec ::
   forall era.
-  ( Arbitrary (TxAuxData era)
-  , ShelleyEraImp era
+  ( ShelleyEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
