@@ -16,8 +16,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
--- This is needed for the `HeapWords (StrictMaybe (DataHash c))` instance
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Plutus.Data (
   PlutusData (..),
@@ -39,7 +37,6 @@ module Cardano.Ledger.Plutus.Data (
 )
 where
 
-import Cardano.HeapWords (HeapWords (..), heapWords0, heapWords1)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -188,10 +185,6 @@ hashData = hashAnnotated
 dataHashSize :: StrictMaybe DataHash -> Integer
 dataHashSize SNothing = 0
 dataHashSize (SJust _) = 10
-
-instance HeapWords (StrictMaybe DataHash) where
-  heapWords SNothing = heapWords0
-  heapWords (SJust a) = heapWords1 a
 
 -- ============================================================================
 -- Datum

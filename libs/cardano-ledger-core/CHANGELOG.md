@@ -2,6 +2,15 @@
 
 ## 1.18.0.0
 
+* Remove `HeapWords` instances for: #5001
+  - `Coin`
+  - `DeltaCoin`
+  - `CompactFormCoin`
+  - `CompactFormDeltaCoin`
+  - `SafeHash`
+  - `StrictMaybe DataHash`
+  - `TxId`
+  - `TxIn`
 * Add `addCompactCoin` to `Cardano.Ledger.Coin` and deprecate `Cardano.Ledger.UMap.addCompact`
   in its favor
 * Move `sumCompactCoin` to `Cardano.Ledger.Coin`
