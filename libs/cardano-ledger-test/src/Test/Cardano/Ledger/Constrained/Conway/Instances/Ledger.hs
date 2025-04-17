@@ -11,6 +11,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -71,6 +72,7 @@ import Cardano.Chain.Common (
   NetworkMagic (..),
   UnparsedFields (..),
  )
+import Cardano.Crypto.Hash hiding (Blake2b_224)
 import Cardano.Crypto.Hashing (AbstractHash, abstractHashFromBytes)
 import Cardano.Ledger.Address
 import Cardano.Ledger.Allegra.Scripts
@@ -125,16 +127,10 @@ import Constrained.API
 import Constrained.Base
 import Constrained.GenT (pureGen, vectorOfT)
 import Constrained.Generic
-import Constrained.List (List (..))
 import Constrained.NumSpec
 import Constrained.Spec.Map
 import Constrained.Spec.Tree ()
 import Constrained.TheKnot qualified as C
-import GHC.TypeLits hiding (Text)
-import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
-import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
-
-import Cardano.Crypto.Hash hiding (Blake2b_224)
 import Control.DeepSeq (NFData)
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
@@ -166,6 +162,8 @@ import GHC.Generics (Generic)
 import PlutusLedgerApi.V1 qualified as PV1
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Constrained.Conway.Instances.Basic
+import Test.Cardano.Ledger.Constrained.Conway.Instances.PParams ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Shelley.Utils
@@ -744,11 +742,20 @@ instance Syntax StringW
 instance Semantics StringW where
   semantics StrLenW = getLength
 
+-- | In this instance there is no way to bring the type variable `s` into scope
+--   so we introduce some local functions that have a signature that bring it into scope.
 instance Logic StringW where
-  propagateTypeSpec StrLenW (Unary HOLE) ts cant = typeSpec $ lengthSpec (TypeSpec ts cant)
-  propagateMemberSpec StrLenW (Unary HOLE) xs = typeSpec $ lengthSpec (MemberSpec xs)
+  propagateTypeSpec StrLenW (Unary HOLE) ts cant = foo ts cant
+    where
+      foo :: forall s. (HasSpec s, StringLike s) => NumSpec Int -> [Int] -> Specification s
+      foo t c = typeSpec $ lengthSpec @s (TypeSpec t c)
+  propagateMemberSpec StrLenW (Unary HOLE) xs = bar xs
+    where
+      bar :: forall s. (HasSpec s, StringLike s) => NonEmpty Int -> Specification s
+      bar ys = typeSpec $ lengthSpec @s (MemberSpec ys)
 
-  mapTypeSpec StrLenW ss = getLengthSpec ss
+  mapTypeSpec :: forall a b. (HasSpec a, HasSpec b) => StringW '[a] b -> TypeSpec a -> Specification b
+  mapTypeSpec StrLenW ss = getLengthSpec @a ss
 
 class StringLike s where
   lengthSpec :: Specification Int -> TypeSpec s
@@ -1719,7 +1726,9 @@ instance Logic CoercibleW where
   propagateMemberSpec CoerceW (Unary HOLE) xs = coerceSpec $ MemberSpec xs
   propagateTypeSpec CoerceW (Unary HOLE) ts cant = coerceSpec $ TypeSpec ts cant
 
-  mapTypeSpec CoerceW ss = getCoerceSpec ss
+  mapTypeSpec ::
+    forall a b. (HasSpec a, HasSpec b) => CoercibleW '[a] b -> TypeSpec a -> Specification b
+  mapTypeSpec CoerceW ss = getCoerceSpec @a ss
 
 coerce_ ::
   forall a b.
