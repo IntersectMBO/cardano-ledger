@@ -74,13 +74,32 @@ import Text.Heredoc
 
 conwayCDDL :: Huddle
 conwayCDDL =
-  collectFrom
-    [ block
-    , transaction
-    , kes_signature
-    , language
-    , potential_languages
-    , signkeyKES
+  collectFromInit
+    [ HIRule block
+    , HIRule transaction
+    , HIRule kes_signature
+    , HIRule language
+    , HIRule potential_languages
+    , HIRule signkeyKES
+    , -- Certificates
+      HIRule certificate
+    , HIGroup stake_registration
+    , HIGroup stake_deregistration
+    , HIGroup stake_delegation
+    , HIGroup pool_registration
+    , HIGroup pool_retirement
+    , HIGroup reg_cert
+    , HIGroup unreg_cert
+    , HIGroup vote_deleg_cert
+    , HIGroup stake_vote_deleg_cert
+    , HIGroup stake_reg_deleg_cert
+    , HIGroup vote_reg_deleg_cert
+    , HIGroup stake_vote_reg_deleg_cert
+    , HIGroup auth_committee_hot_cert
+    , HIGroup resign_committee_cold_cert
+    , HIGroup reg_drep_cert
+    , HIGroup unreg_drep_cert
+    , HIGroup update_drep_cert
     ]
 
 block :: Rule

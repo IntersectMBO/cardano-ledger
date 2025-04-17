@@ -43,7 +43,14 @@ import Text.Heredoc
 import Prelude hiding ((/))
 
 babbageCDDL :: Huddle
-babbageCDDL = collectFrom [block, transaction, kes_signature, language, signkeyKES]
+babbageCDDL =
+  collectFrom
+    [ HIRule block
+    , HIRule transaction
+    , HIRule kes_signature
+    , HIRule language
+    , HIRule signkeyKES
+    ]
 
 block :: Rule
 block =

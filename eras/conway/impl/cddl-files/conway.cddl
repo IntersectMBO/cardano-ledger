@@ -1,7 +1,167 @@
 ; This file was auto-generated from huddle. Please do not modify it directly!
-;Pseudo-rule introduced by Cuddle to collect root elements
-huddle_root_defs = 
-  [block, transaction, kes_signature, language, potential_languages, signkeyKES]
+certificates = nonempty_set<certificate>
+
+nonempty_set<a0> = #6.258([+a0])/ [+a0]
+
+certificate = 
+  [  stake_registration        
+  // stake_deregistration      
+  // stake_delegation          
+  // pool_registration         
+  // pool_retirement           
+  // reg_cert                  
+  // unreg_cert                
+  // vote_deleg_cert           
+  // stake_vote_deleg_cert     
+  // stake_reg_deleg_cert      
+  // vote_reg_deleg_cert       
+  // stake_vote_reg_deleg_cert 
+  // auth_committee_hot_cert   
+  // resign_committee_cold_cert
+  // reg_drep_cert             
+  // unreg_drep_cert           
+  // update_drep_cert          
+  ]
+
+
+;This will be deprecated in a future era
+stake_registration = (0, stake_credential)
+
+stake_credential = credential
+
+credential = [0, addr_keyhash// 1, script_hash]
+
+addr_keyhash = hash28
+
+hash28 = bytes .size 28
+
+;To compute a script hash, note that you must prepend
+;a tag to the bytes of the script before hashing.
+;The tag is determined by the language.
+;The tags in the Conway era are:
+;  "\x00" for multisig scripts
+;  "\x01" for Plutus V1 scripts
+;  "\x02" for Plutus V2 scripts
+;  "\x03" for Plutus V3 scripts
+script_hash = hash28
+
+;This will be deprecated in a future era
+stake_deregistration = (1, stake_credential)
+
+stake_delegation = (2, stake_credential, pool_keyhash)
+
+pool_keyhash = hash28
+
+pool_registration = (3, pool_params)
+
+;        pool_keyhash: operator
+;                coin: pledge
+;                coin: cost
+;       unit_interval: margin
+;   set<addr_keyhash>: pool_owners
+pool_params = 
+  ( operator: pool_keyhash
+  , vrf_keyhash   : vrf_keyhash       
+  , pledge        : coin              
+  , cost          : coin              
+  , margin        : unit_interval     
+  , reward_account: reward_account    
+  , pool_owners   : set<addr_keyhash>
+  , relays        : [*relay]      
+  , pool_metadata : pool_metadata/ nil
+  )
+
+vrf_keyhash = hash32
+
+hash32 = bytes .size 32
+
+coin = uint
+
+;The real unit_interval is: #6.30([uint, uint])
+;
+;A unit interval is a number in the range between 0 and 1, which
+;means there are two extra constraints:
+;  1. numerator <= denominator
+;  2. denominator > 0
+;
+;The relation between numerator and denominator can be
+;expressed in CDDL, but we have a limitation currently
+;(see: https://github.com/input-output-hk/cuddle/issues/30)
+;which poses a problem for testing. We need to be able to
+;generate random valid data for testing implementation of
+;our encoders/decoders. Which means we cannot use the actual
+;definition here and we hard code the value to 1/2
+unit_interval = #6.30([1, 2])
+
+;reward_account = bytes
+reward_account = 
+  h'E090000000000000000000000000000000000000000000000000000000'
+  / h'F0A0000000000000000000000000000000000000000000000000000000'
+
+set<a0> = #6.258([*a0])/ [*a0]
+
+relay = [single_host_addr// single_host_name// multi_host_name]
+
+single_host_addr = (0, port/ nil, ipv4/ nil, ipv6/ nil)
+
+port = uint .le 65535
+
+ipv4 = bytes .size 4
+
+ipv6 = bytes .size 16
+
+;dns_name: An A or AAAA DNS record
+single_host_name = (1, port/ nil, dns_name)
+
+dns_name = text .size (0 .. 128)
+
+;dns_name: An SRV DNS record
+multi_host_name = (2, dns_name)
+
+pool_metadata = [url, metadata_hash]
+
+url = text .size (0 .. 128)
+
+metadata_hash = hash32
+
+pool_retirement = (4, pool_keyhash, epoch_no)
+
+epoch_no = uint .size 8
+
+reg_cert = (7, stake_credential, coin)
+
+unreg_cert = (8, stake_credential, coin)
+
+vote_deleg_cert = (9, stake_credential, drep)
+
+drep = [0, addr_keyhash// 1, script_hash// 2// 3]
+
+stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, drep)
+
+stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
+
+vote_reg_deleg_cert = (12, stake_credential, drep, coin)
+
+stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
+
+auth_committee_hot_cert = 
+  (14, committee_cold_credential, committee_hot_credential)
+
+committee_cold_credential = credential
+
+committee_hot_credential = credential
+
+resign_committee_cold_cert = (15, committee_cold_credential, anchor/ nil)
+
+anchor = [anchor_url: url, anchor_data_hash: hash32]
+
+reg_drep_cert = (16, drep_credential, coin, anchor/ nil)
+
+drep_credential = credential
+
+unreg_drep_cert = (17, drep_credential, coin)
+
+update_drep_cert = (18, drep_credential, anchor/ nil)
 
 ;Valid blocks must also satisfy the following two constraints:
 ;1. the length of transaction_bodies and transaction_witness_sets
@@ -16,6 +176,17 @@ block =
   , invalid_transactions    : [*transaction_index]                
   ]
 
+
+transaction = 
+  [transaction_body, transaction_witness_set, bool, auxiliary_data/ nil]
+
+kes_signature = bytes .size 448
+
+language = 0/ 1/ 2
+
+potential_languages = 0 .. 255
+
+signkeyKES = bytes .size 64
 
 header = [header_body, body_signature: kes_signature]
 
@@ -36,8 +207,6 @@ header_body =
 block_no = uint .size 8
 
 slot_no = uint .size 8
-
-hash32 = bytes .size 32
 
 vkey = bytes .size 32
 
@@ -60,8 +229,6 @@ signature = bytes .size 64
 protocol_version = [major_protocol_version, uint]
 
 major_protocol_version = 1 .. 10
-
-kes_signature = bytes .size 448
 
 transaction_body = 
   { 0: set<transaction_input>
@@ -87,8 +254,6 @@ transaction_body =
   }
 
 
-set<a0> = #6.258([*a0])/ [*a0]
-
 transaction_input = [transaction_id: hash32, index: uint .size 2]
 
 ;Both of the Alonzo and Babbage style TxOut formats are equally valid
@@ -98,6 +263,8 @@ transaction_output = shelley_transaction_output/ babbage_transaction_output
 ;hash32: datum_hash
 shelley_transaction_output = [address, amount: value, ?hash32]
 
+;address = bytes
+;
 ;address format:
 ;  [ 8 bit header | payload ];
 ;
@@ -128,27 +295,21 @@ shelley_transaction_output = [address, amount: value, ?hash32]
 ;     1110: reward account: keyhash28
 ;     1111: reward account: scripthash28
 ;1001-1101: future formats
-address = bytes
+address = 
+  h'001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000'
+  / h'102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000'
+  / h'203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000'
+  / h'304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000'
+  / h'405000000000000000000000000000000000000000000000000000000087680203'                                                
+  / h'506000000000000000000000000000000000000000000000000000000087680203'                                                
+  / h'6070000000000000000000000000000000000000000000000000000000'                                                        
+  / h'7080000000000000000000000000000000000000000000000000000000'                                                        
 
 value = coin/ [coin, multiasset<positive_coin>]
-
-coin = uint
 
 multiasset<a0> = {+policy_id: {+asset_name: a0}}
 
 policy_id = script_hash
-
-;To compute a script hash, note that you must prepend
-;a tag to the bytes of the script before hashing.
-;The tag is determined by the language.
-;The tags in the Conway era are:
-;  "\x00" for multisig scripts
-;  "\x01" for Plutus V1 scripts
-;  "\x02" for Plutus V2 scripts
-;  "\x03" for Plutus V3 scripts
-script_hash = hash28
-
-hash28 = bytes .size 28
 
 asset_name = bytes .size (0 .. 32)
 
@@ -222,8 +383,6 @@ native_script =
 
 script_pubkey = (0, addr_keyhash)
 
-addr_keyhash = hash28
-
 script_all = (1, [*native_script])
 
 script_any = (2, [*native_script])
@@ -257,140 +416,6 @@ distinct_VBytes =
 plutus_v2_script = distinct_VBytes
 
 plutus_v3_script = distinct_VBytes
-
-certificates = nonempty_set<certificate>
-
-nonempty_set<a0> = #6.258([+a0])/ [+a0]
-
-certificate = 
-  [  stake_registration        
-  // stake_deregistration      
-  // stake_delegation          
-  // pool_registration         
-  // pool_retirement           
-  // reg_cert                  
-  // unreg_cert                
-  // vote_deleg_cert           
-  // stake_vote_deleg_cert     
-  // stake_reg_deleg_cert      
-  // vote_reg_deleg_cert       
-  // stake_vote_reg_deleg_cert 
-  // auth_committee_hot_cert   
-  // resign_committee_cold_cert
-  // reg_drep_cert             
-  // unreg_drep_cert           
-  // update_drep_cert          
-  ]
-
-
-;This will be deprecated in a future era
-stake_registration = (0, stake_credential)
-
-stake_credential = credential
-
-credential = [0, addr_keyhash// 1, script_hash]
-
-;This will be deprecated in a future era
-stake_deregistration = (1, stake_credential)
-
-stake_delegation = (2, stake_credential, pool_keyhash)
-
-pool_keyhash = hash28
-
-pool_registration = (3, pool_params)
-
-;        pool_keyhash: operator
-;                coin: pledge
-;                coin: cost
-;       unit_interval: margin
-;   set<addr_keyhash>: pool_owners
-pool_params = 
-  ( operator: pool_keyhash
-  , vrf_keyhash   : vrf_keyhash       
-  , pledge        : coin              
-  , cost          : coin              
-  , margin        : unit_interval     
-  , reward_account: reward_account    
-  , pool_owners   : set<addr_keyhash>
-  , relays        : [*relay]      
-  , pool_metadata : pool_metadata/ nil
-  )
-
-vrf_keyhash = hash32
-
-;A unit interval is a number in the range between 0 and 1, which
-;means there are two extra constraints:
-;  1. numerator <= denominator
-;  2. denominator > 0
-unit_interval = #6.30([uint, uint])
-
-;reward_account = bytes
-reward_account = 
-  h'E090000000000000000000000000000000000000000000000000000000'
-  / h'F0A0000000000000000000000000000000000000000000000000000000'
-
-relay = [single_host_addr// single_host_name// multi_host_name]
-
-single_host_addr = (0, port/ nil, ipv4/ nil, ipv6/ nil)
-
-port = uint .le 65535
-
-ipv4 = bytes .size 4
-
-ipv6 = bytes .size 16
-
-;dns_name: An A or AAAA DNS record
-single_host_name = (1, port/ nil, dns_name)
-
-dns_name = text .size (0 .. 128)
-
-;dns_name: An SRV DNS record
-multi_host_name = (2, dns_name)
-
-pool_metadata = [url, metadata_hash]
-
-url = text .size (0 .. 128)
-
-metadata_hash = hash32
-
-pool_retirement = (4, pool_keyhash, epoch_no)
-
-epoch_no = uint .size 8
-
-reg_cert = (7, stake_credential, coin)
-
-unreg_cert = (8, stake_credential, coin)
-
-vote_deleg_cert = (9, stake_credential, drep)
-
-drep = [0, addr_keyhash// 1, script_hash// 2// 3]
-
-stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, drep)
-
-stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
-
-vote_reg_deleg_cert = (12, stake_credential, drep, coin)
-
-stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
-
-auth_committee_hot_cert = 
-  (14, committee_cold_credential, committee_hot_credential)
-
-committee_cold_credential = credential
-
-committee_hot_credential = credential
-
-resign_committee_cold_cert = (15, committee_cold_credential, anchor/ nil)
-
-anchor = [anchor_url: url, anchor_data_hash: hash32]
-
-reg_drep_cert = (16, drep_credential, coin, anchor/ nil)
-
-drep_credential = credential
-
-unreg_drep_cert = (17, drep_credential, coin)
-
-update_drep_cert = (18, drep_credential, anchor/ nil)
 
 withdrawals = {+reward_account: coin}
 
@@ -697,13 +722,4 @@ alonzo_auxiliary_data =
 
   )
 
-
-transaction = 
-  [transaction_body, transaction_witness_set, bool, auxiliary_data/ nil]
-
-language = 0/ 1/ 2
-
-potential_languages = 0 .. 255
-
-signkeyKES = bytes .size 64
 

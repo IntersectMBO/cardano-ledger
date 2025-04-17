@@ -21,7 +21,7 @@ import Test.Cardano.Ledger.Core.Binary.CDDL
 import Text.Heredoc
 
 shelleyCDDL :: Huddle
-shelleyCDDL = collectFrom [block, transaction, signkeyKES]
+shelleyCDDL = collectFrom [HIRule block, HIRule transaction, HIRule signkeyKES]
 
 block :: Rule
 block =

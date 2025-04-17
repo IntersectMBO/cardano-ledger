@@ -233,7 +233,7 @@ cddlFailure encoding err =
 -- | Write a Huddle specification to a file at the given path
 writeSpec :: Cuddle.Huddle -> FilePath -> IO ()
 writeSpec hddl path =
-  let cddl = Cuddle.toCDDL hddl
+  let cddl = Cuddle.toCDDLNoRoot hddl
       preface = "; This file was auto-generated from huddle. Please do not modify it directly!"
    in withFile path WriteMode $ \h -> do
         hPutStrLn h preface
