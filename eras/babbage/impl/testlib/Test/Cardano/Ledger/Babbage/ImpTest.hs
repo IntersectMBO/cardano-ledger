@@ -104,9 +104,9 @@ impBabbageExpectTxSuccess tx = do
       impAnn "Collateral return should be in UTxO" $
         expectUTxOContent utxo [(txIn, (== Just txOut)) | (txIn, txOut) <- returns]
 
-instance ShelleyEraImp BabbageEra => MaryEraImp BabbageEra
+instance MaryEraImp BabbageEra
 
-instance ShelleyEraImp BabbageEra => AlonzoEraImp BabbageEra where
+instance AlonzoEraImp BabbageEra where
   scriptTestContexts = plutusTestScripts SPlutusV1 <> plutusTestScripts SPlutusV2
 
 produceRefScript ::
