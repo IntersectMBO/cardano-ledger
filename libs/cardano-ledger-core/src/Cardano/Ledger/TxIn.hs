@@ -24,8 +24,6 @@ module Cardano.Ledger.TxIn (
 where
 
 import Cardano.Crypto.Hash.Class (hashToTextAsHex)
-import Cardano.HeapWords (HeapWords (..))
-import qualified Cardano.HeapWords as HW
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -61,11 +59,7 @@ import NoThunks.Class (NoThunks (..))
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId {unTxId :: SafeHash EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks, ToJSON, FromJSON, HeapWords, EncCBOR, DecCBOR, NFData, MemPack)
-
-instance HeapWords TxIn where
-  heapWords (TxIn txId _) =
-    2 + HW.heapWords txId + 1 {- txIx -}
+  deriving newtype (NoThunks, ToJSON, FromJSON, EncCBOR, DecCBOR, NFData, MemPack)
 
 instance ToJSON TxIn where
   toJSON = toJSON . txInToText
