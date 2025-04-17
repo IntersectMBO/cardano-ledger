@@ -20,6 +20,7 @@ import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Allegra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.Arbitrary ()
+import Test.Cardano.Ledger.Mary.Era
 import Test.Cardano.Ledger.Mary.TreeDiff ()
 
 instance ShelleyEraImp MaryEra where
@@ -29,7 +30,7 @@ instance ShelleyEraImp MaryEra where
 
 class
   ( ShelleyEraImp era
-  , MaryEraTxBody era
+  , MaryEraTest era
   , NativeScript era ~ Timelock era
   , Value era ~ MaryValue
   ) =>

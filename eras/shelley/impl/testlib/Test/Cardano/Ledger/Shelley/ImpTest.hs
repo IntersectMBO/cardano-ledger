@@ -173,7 +173,6 @@ import Cardano.Ledger.Shelley.Genesis (
 import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
-  StashedAVVMAddresses,
   curPParamsEpochStateL,
   epochStateUMapL,
   esLStateL,
@@ -259,6 +258,7 @@ import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
+import Test.Cardano.Ledger.Shelley.Era
 import Test.Cardano.Ledger.Shelley.TreeDiff (Expr (..))
 import Test.Cardano.Slotting.Numeric ()
 import Test.ImpSpec
@@ -397,29 +397,8 @@ impEventsL :: Lens' (ImpTestState era) [SomeSTSEvent era]
 impEventsL = lens impEvents (\x y -> x {impEvents = y})
 
 class
-  ( EraGov era
-  , EraUTxO era
-  , EraTxOut era
-  , EraStake era
-  , EraPParams era
-  , ShelleyEraTxCert era
-  , ShelleyEraScript era
-  , ToExpr (Tx era)
-  , NFData (Tx era)
-  , ToExpr (TxBody era)
-  , ToExpr (TxOut era)
-  , ToExpr (Value era)
-  , ToExpr (PParams era)
-  , ToExpr (PParamsHKD Identity era)
-  , ToExpr (PParamsHKD StrictMaybe era)
-  , Show (NewEpochState era)
-  , ToExpr (NewEpochState era)
-  , ToExpr (GovState era)
-  , Eq (StashedAVVMAddresses era)
-  , Show (StashedAVVMAddresses era)
-  , ToExpr (StashedAVVMAddresses era)
-  , NFData (StashedAVVMAddresses era)
-  , Default (StashedAVVMAddresses era)
+  ( ShelleyEraTxCert era
+  , ShelleyEraTest era
   , -- For BBODY rule
     STS (EraRule "BBODY" era)
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
@@ -457,9 +436,6 @@ class
   , NFData (EraRuleEvent "TICK" era)
   , Typeable (EraRuleEvent "TICK" era)
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
-  , ToExpr (InstantStake era)
-  , ToExpr (CertState era)
-  , EraCertState era
   ) =>
   ShelleyEraImp era
   where

@@ -27,8 +27,7 @@ import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
 
 spec ::
   forall era.
-  ( Arbitrary (TxAuxData era)
-  , AlonzoEraImp era
+  ( AlonzoEraImp era
   , InjectRuleFailure "LEDGER" ShelleyDelegPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era

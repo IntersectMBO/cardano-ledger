@@ -41,6 +41,7 @@ import qualified Data.Sequence.Strict as SSeq
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.ImpTest
+import Test.Cardano.Ledger.Babbage.Era ()
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Plutus (testingCostModels)
 

@@ -44,7 +44,6 @@ spec ::
   forall era.
   ( AlonzoEraImp era
   , BabbageEraTxBody era
-  , EraSegWits era
   , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))

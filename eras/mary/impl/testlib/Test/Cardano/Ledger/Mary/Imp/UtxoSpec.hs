@@ -7,7 +7,6 @@
 
 module Test.Cardano.Ledger.Mary.Imp.UtxoSpec (spec) where
 
-import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.BaseTypes (Mismatch (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
@@ -23,7 +22,7 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.ImpTest
 
 mintBasicToken ::
-  (HasCallStack, AllegraEraScript era, MaryEraImp era) => ImpTestM era (Tx era)
+  (HasCallStack, MaryEraImp era) => ImpTestM era (Tx era)
 mintBasicToken = do
   addr <- freshKeyAddr_
   keyHash <- freshKeyHash
@@ -41,7 +40,6 @@ mintBasicToken = do
 spec ::
   ( HasCallStack
   , MaryEraImp era
-  , AllegraEraScript era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))

@@ -31,6 +31,7 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
+import Test.Cardano.Ledger.Allegra.Era ()
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
 import Test.Cardano.Ledger.Shelley.ImpTest
