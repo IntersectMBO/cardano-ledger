@@ -153,7 +153,7 @@ class LogicRequires t => Logic t where
   propagateMemberSpec f ctx xs = propagate f ctx (MemberSpec xs)
 
   propagate ::
-    (AppRequires t as b, All HasSpec as, HasSpec a, HasSpec b, TypeList as) =>
+    (AppRequires t as b, HasSpec a) =>
     t as b ->
     ListCtx Value as (HOLE a) ->
     Specification b ->

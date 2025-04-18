@@ -165,9 +165,11 @@ import Constrained.Graph (
  )
 import qualified Constrained.Graph as Graph
 import Constrained.List (
+  -- All,
   FunTy,
   List (..),
   ListCtx (..),
+  -- TypeList,
   curryList,
   foldMapList,
   lengthList,
@@ -1882,8 +1884,8 @@ instance Logic ElemW where
   propagate f ctxt (ExplainSpec es s) = explainSpec es $ propagate f ctxt s
   propagate _ _ TrueSpec = TrueSpec
   propagate _ _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate ElemW (HOLE :<: x) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App ElemW (v' :> Lit x :> Nil)) (v :-> ps)
+  propagate ElemW (HOLE :<: (x :: [w])) (SuspendedSpec v ps) =
+    constrained $ \v' -> Let (App ElemW ((v' :: Term w) :> Lit x :> Nil)) (v :-> ps)
   propagate ElemW (x :>: HOLE) (SuspendedSpec v ps) =
     constrained $ \v' -> Let (App ElemW (Lit x :> v' :> Nil)) (v :-> ps)
   propagate ElemW (HOLE :<: es) spec =
