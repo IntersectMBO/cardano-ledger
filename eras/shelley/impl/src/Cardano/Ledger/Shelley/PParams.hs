@@ -190,6 +190,26 @@ instance EraPParams ShelleyEra where
   hkdMinUTxOValueL = lens sppMinUTxOValue $ \pp x -> pp {sppMinUTxOValue = x}
   hkdMinPoolCostL = lens sppMinPoolCost $ \pp x -> pp {sppMinPoolCost = x}
 
+  pparamDescriptors =
+    [ minFeeADescriptor
+    , minFeeBDescriptor
+    , maxBBSizeDescriptor
+    , maxTxSizeDescriptor
+    , maxBHSizeDescriptor
+    , keyDepositDescriptor
+    , poolDepositDescriptor
+    , eMaxDescriptor
+    , nOptDescriptor
+    , a0Descriptor
+    , rhoDescriptor
+    , tauDescriptor
+    , dDescriptor
+    , extraEntropyDescriptor
+    , protocolVersionDescriptor
+    , minUTxOValueDescriptor
+    , minPoolCostDescriptor
+    ]
+
 instance Era era => EncCBOR (ShelleyPParams Identity era) where
   encCBOR
     ShelleyPParams {..} =
@@ -567,3 +587,156 @@ upgradeProposedPPUpdates ::
   ProposedPPUpdates era
 upgradeProposedPPUpdates args (ProposedPPUpdates ppus) =
   ProposedPPUpdates $ upgradePParamsUpdate args <$> ppus
+
+minFeeADescriptor :: EraPParams era => PParamDescriptor era
+minFeeADescriptor =
+  PParamDescriptor
+    { ppdName = "txFeePerByte"
+    , ppdTag = 0
+    , ppdLens = ppMinFeeAL
+    , ppdUpdateLens = ppuMinFeeAL
+    }
+
+minFeeBDescriptor :: EraPParams era => PParamDescriptor era
+minFeeBDescriptor =
+  PParamDescriptor
+    { ppdName = "txFeeFixed"
+    , ppdTag = 1
+    , ppdLens = ppMinFeeBL
+    , ppdUpdateLens = ppuMinFeeBL
+    }
+
+maxBBSizeDescriptor :: EraPParams era => PParamDescriptor era
+maxBBSizeDescriptor =
+  PParamDescriptor
+    { ppdName = "maxBlockBodySize"
+    , ppdTag = 2
+    , ppdLens = ppMaxBBSizeL
+    , ppdUpdateLens = ppuMaxBBSizeL
+    }
+
+maxTxSizeDescriptor :: EraPParams era => PParamDescriptor era
+maxTxSizeDescriptor =
+  PParamDescriptor
+    { ppdName = "maxTxSize"
+    , ppdTag = 3
+    , ppdLens = ppMaxTxSizeL
+    , ppdUpdateLens = ppuMaxTxSizeL
+    }
+
+maxBHSizeDescriptor :: EraPParams era => PParamDescriptor era
+maxBHSizeDescriptor =
+  PParamDescriptor
+    { ppdName = "maxBlockHeaderSize"
+    , ppdTag = 4
+    , ppdLens = ppMaxBHSizeL
+    , ppdUpdateLens = ppuMaxBHSizeL
+    }
+
+keyDepositDescriptor :: EraPParams era => PParamDescriptor era
+keyDepositDescriptor =
+  PParamDescriptor
+    { ppdName = "stakeAddressDeposit"
+    , ppdTag = 5
+    , ppdLens = ppKeyDepositL
+    , ppdUpdateLens = ppuKeyDepositL
+    }
+
+poolDepositDescriptor :: EraPParams era => PParamDescriptor era
+poolDepositDescriptor =
+  PParamDescriptor
+    { ppdName = "stakePoolDeposit"
+    , ppdTag = 6
+    , ppdLens = ppPoolDepositL
+    , ppdUpdateLens = ppuPoolDepositL
+    }
+
+eMaxDescriptor :: EraPParams era => PParamDescriptor era
+eMaxDescriptor =
+  PParamDescriptor
+    { ppdName = "poolRetireMaxEpoch"
+    , ppdTag = 7
+    , ppdLens = ppEMaxL
+    , ppdUpdateLens = ppuEMaxL
+    }
+
+nOptDescriptor :: EraPParams era => PParamDescriptor era
+nOptDescriptor =
+  PParamDescriptor
+    { ppdName = "stakePoolTargetNum"
+    , ppdTag = 8
+    , ppdLens = ppNOptL
+    , ppdUpdateLens = ppuNOptL
+    }
+
+a0Descriptor :: EraPParams era => PParamDescriptor era
+a0Descriptor =
+  PParamDescriptor
+    { ppdName = "poolPledgeInfluence"
+    , ppdTag = 9
+    , ppdLens = ppA0L
+    , ppdUpdateLens = ppuA0L
+    }
+
+rhoDescriptor :: EraPParams era => PParamDescriptor era
+rhoDescriptor =
+  PParamDescriptor
+    { ppdName = "monetaryExpansion"
+    , ppdTag = 10
+    , ppdLens = ppRhoL
+    , ppdUpdateLens = ppuRhoL
+    }
+
+tauDescriptor :: EraPParams era => PParamDescriptor era
+tauDescriptor =
+  PParamDescriptor
+    { ppdName = "treasuryCut"
+    , ppdTag = 11
+    , ppdLens = ppTauL
+    , ppdUpdateLens = ppuTauL
+    }
+
+dDescriptor :: (EraPParams era, ProtVerAtMost era 6) => PParamDescriptor era
+dDescriptor =
+  PParamDescriptor
+    { ppdName = "decentralization"
+    , ppdTag = 12
+    , ppdLens = ppDL
+    , ppdUpdateLens = ppuDL
+    }
+
+extraEntropyDescriptor :: (EraPParams era, ProtVerAtMost era 6) => PParamDescriptor era
+extraEntropyDescriptor =
+  PParamDescriptor
+    { ppdName = "extraPraosEntropy"
+    , ppdTag = 13
+    , ppdLens = ppExtraEntropyL
+    , ppdUpdateLens = ppuExtraEntropyL
+    }
+
+protocolVersionDescriptor :: (EraPParams era, ProtVerAtMost era 8) => PParamDescriptor era
+protocolVersionDescriptor =
+  PParamDescriptor
+    { ppdName = "protocolVersion"
+    , ppdTag = 14
+    , ppdLens = ppProtocolVersionL
+    , ppdUpdateLens = ppuProtocolVersionL
+    }
+
+minUTxOValueDescriptor :: (EraPParams era, ProtVerAtMost era 4) => PParamDescriptor era
+minUTxOValueDescriptor =
+  PParamDescriptor
+    { ppdName = "minUTxOValue"
+    , ppdTag = 15
+    , ppdLens = ppMinUTxOValueL
+    , ppdUpdateLens = ppuMinUTxOValueL
+    }
+
+minPoolCostDescriptor :: EraPParams era => PParamDescriptor era
+minPoolCostDescriptor =
+  PParamDescriptor
+    { ppdName = "minPoolCost"
+    , ppdTag = 16
+    , ppdLens = ppMinPoolCostL
+    , ppdUpdateLens = ppuMinPoolCostL
+    }
