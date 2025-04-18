@@ -3,6 +3,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -30,43 +31,71 @@
 
 module Constrained.NumSpec where
 
-import Constrained.Base
+import Constrained.Base (
+  HOLE (..),
+  HasSpec (..),
+  Logic (..),
+  Semantics (..),
+  Specification (..),
+  Syntax (..),
+  Term (..),
+  appTerm,
+  equalSpec,
+  explainSpecOpt,
+  flipCtx,
+  fromSimpleRepSpec,
+  memberSpecList,
+  notMemberSpec,
+  showType,
+  typeSpec,
+  pattern Unary,
+  pattern (:<:),
+ )
 import Constrained.Conformance ()
-import Constrained.Core (NonEmpty ((:|)), unionWithMaybe)
-import Constrained.GenT (GenT, MonadGenError (..), pureGen, sizeT)
-import Constrained.Generic
-import Constrained.List
+import Constrained.Core (unionWithMaybe)
+import Constrained.GenT (
+  GenT,
+  MonadGenError (..),
+  genError,
+  pureGen,
+  sizeT,
+ )
+import Constrained.Generic (
+  HasSimpleRep (..),
+  SimpleRep,
+ )
+
 import Control.Applicative ((<|>))
 import Control.Arrow (first)
 import Data.Kind
 import Data.List (nub)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe
 import qualified Data.Set as Set
 import Data.Typeable (typeOf)
 import Data.Word
 import GHC.Int
 import GHC.Natural
 import GHC.Real
-import GHC.TypeLits
 import System.Random.Stateful (Random (..), Uniform (..))
 import Test.QuickCheck (Arbitrary (arbitrary, shrink), choose, frequency)
 
 -- ====================================================================
--- NumOrdW  witnesses for comparison operations (<=. and <.) on numbers
+-- NumOrdW  witnesses for comparison operations (<=. and <. and <=. and >=.) on numbers
 -- The other operations are defined in terms of these. These things
 -- will eventually get Logic instances
 -- =====================================================================
 
-data NumOrdW (sym :: Symbol) (dom :: [Type]) (rng :: Type) where
-  LessOrEqualW :: OrdLike a => NumOrdW "<=." '[a, a] Bool
-  LessW :: OrdLike a => NumOrdW "<." '[a, a] Bool
-  GreaterOrEqualW :: OrdLike a => NumOrdW ">=." '[a, a] Bool
-  GreaterW :: OrdLike a => NumOrdW ">." '[a, a] Bool
+data NumOrdW (dom :: [Type]) (rng :: Type) where
+  LessOrEqualW :: OrdLike a => NumOrdW '[a, a] Bool
+  LessW :: OrdLike a => NumOrdW '[a, a] Bool
+  GreaterOrEqualW :: OrdLike a => NumOrdW '[a, a] Bool
+  GreaterW :: OrdLike a => NumOrdW '[a, a] Bool
 
-deriving instance Eq (NumOrdW s ds r)
+deriving instance Eq (NumOrdW ds r)
 
-instance Show (NumOrdW s ds r) where
+instance Show (NumOrdW ds r) where
   show LessOrEqualW = "<=."
   show LessW = "<."
   show GreaterOrEqualW = ">=."
@@ -79,10 +108,10 @@ instance Semantics NumOrdW where
   semantics GreaterOrEqualW = (>=)
 
 instance Syntax NumOrdW where
-  isInFix LessOrEqualW = True
-  isInFix LessW = True
-  isInFix GreaterOrEqualW = True
-  isInFix GreaterW = True
+  inFix LessOrEqualW = True
+  inFix LessW = True
+  inFix GreaterOrEqualW = True
+  inFix GreaterW = True
 
 -- =============================================
 -- OrdLike. Ord for Numbers in the Logic
@@ -158,6 +187,12 @@ class MaybeBounded a where
   default upperBound :: Bounded a => Maybe a
   upperBound = Just maxBound
 
+newtype Unbounded a = Unbounded a
+
+instance MaybeBounded (Unbounded a) where
+  lowerBound = Nothing
+  upperBound = Nothing
+
 instance MaybeBounded Int
 instance MaybeBounded Int64
 instance MaybeBounded Int32
@@ -167,21 +202,12 @@ instance MaybeBounded Word64
 instance MaybeBounded Word32
 instance MaybeBounded Word16
 instance MaybeBounded Word8
-
-instance MaybeBounded Integer where
-  lowerBound = Nothing
-  upperBound = Nothing
-
-instance MaybeBounded (Ratio Integer) where
-  lowerBound = Nothing
-  upperBound = Nothing
+deriving via Unbounded Integer instance MaybeBounded Integer
+deriving via Unbounded (Ratio Integer) instance MaybeBounded (Ratio Integer)
+deriving via Unbounded Float instance MaybeBounded Float
 
 instance MaybeBounded Natural where
   lowerBound = Just 0
-  upperBound = Nothing
-
-instance MaybeBounded Float where
-  lowerBound = Nothing
   upperBound = Nothing
 
 -- ===================================================================
@@ -256,7 +282,9 @@ emptyNumSpec = mempty
 
 guardNumSpec ::
   (Ord n, HasSpec n, TypeSpec n ~ NumSpec n) =>
-  [String] -> NumSpec n -> Specification n
+  [String] ->
+  NumSpec n ->
+  Specification n
 guardNumSpec msg s@(NumSpecInterval (Just a) (Just b))
   | a > b = ErrorSpec ("NumSpec has low bound greater than hi bound" :| (("   " ++ show s) : msg))
   | a == b = equalSpec a
@@ -293,7 +321,7 @@ constrainInterval ml mu r =
       | u > 0 -> pure (negate r', min u r')
       | otherwise -> pure (u - r' - r', u)
     (Just l, Just u)
-      | l > u -> genError (pure ("bad interval: " ++ show l ++ " " ++ show u))
+      | l > u -> genError ("bad interval: " ++ show l ++ " " ++ show u)
       | u < 0 -> pure (safeSub l (safeSub l u r') r', u)
       | l >= 0 -> pure (l, safeAdd u (safeAdd u l r') r')
       -- TODO: this is a bit suspect if the bounds are lopsided
@@ -510,17 +538,23 @@ type Number n = (Num n, Enum n, TypeSpec n ~ NumSpec n, Num (NumSpec n), HasSpec
 
 addSpecInt ::
   Number n =>
-  Specification n -> Specification n -> Specification n
+  Specification n ->
+  Specification n ->
+  Specification n
 addSpecInt x y = operateSpec " + " (+) (+) x y
 
 subSpecInt ::
   Number n =>
-  Specification n -> Specification n -> Specification n
+  Specification n ->
+  Specification n ->
+  Specification n
 subSpecInt x y = operateSpec " - " (-) (-) x y
 
 multSpecInt ::
   Number n =>
-  Specification n -> Specification n -> Specification n
+  Specification n ->
+  Specification n ->
+  Specification n
 multSpecInt x y = operateSpec " * " (*) (*) x y
 
 -- | let 'n' be some numeric type, and 'f' and 'ft' be operations on 'n' and (TypeSpec n)
@@ -651,13 +685,13 @@ class (Num a, HasSpec a) => NumLike a where
     Maybe a
   safeSubtract a b = fromSimpleRep <$> safeSubtract @(SimpleRep a) (toSimpleRep a) (toSimpleRep b)
 
-data IntW (s :: Symbol) (as :: [Type]) b where
-  AddW :: NumLike a => IntW "addFn" '[a, a] a
-  NegateW :: NumLike a => IntW "negateFn" '[a] a
+data IntW (as :: [Type]) b where
+  AddW :: NumLike a => IntW '[a, a] a
+  NegateW :: NumLike a => IntW '[a] a
 
-deriving instance Eq (IntW s dom rng)
+deriving instance Eq (IntW dom rng)
 
-instance Show (IntW s d r) where
+instance Show (IntW d r) where
   show AddW = "addFn"
   show NegateW = "negateFn"
 
@@ -720,20 +754,12 @@ instance NumLike a => Num (Term a) where
 -- | Just a note that these instances won't work until we are in a context where
 --   there is a HasSpec instance of 'a', which (NumLike a) demands.
 --   This happens in Constrained.Experiment.TheKnot
-instance NumLike a => Logic "addFn" IntW '[a, a] a where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context AddW (HOLE :<> x :<| End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App AddW (v' :> Lit x :> Nil)) (v :-> ps)
-  propagate (Context AddW (x :|> HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App AddW (Lit x :> v' :> Nil)) (v :-> ps)
-  propagate (Context AddW (i :|> HOLE :<> End)) spec =
-    propagate (Context AddW (HOLE :<> i :<| End)) spec
-  propagate (Context AddW (HOLE :<> i :<| End)) (TypeSpec ts cant) =
-    subtractSpec i ts <> notMemberSpec (mapMaybe (safeSubtract i) cant)
-  propagate (Context AddW (HOLE :<> i :<| End)) (MemberSpec es) =
+instance Logic IntW where
+  propagateTypeSpec AddW (HOLE :<: i) ts cant = subtractSpec i ts <> notMemberSpec (mapMaybe (safeSubtract i) cant)
+  propagateTypeSpec AddW ctx ts cant = propagateTypeSpec AddW (flipCtx ctx) ts cant
+  propagateTypeSpec NegateW (Unary HOLE) ts cant = negateSpec ts <> notMemberSpec (map negate cant)
+
+  propagateMemberSpec AddW (HOLE :<: i) es =
     memberSpecList
       (nub $ mapMaybe (safeSubtract i) (NE.toList es))
       ( NE.fromList
@@ -742,29 +768,11 @@ instance NumLike a => Logic "addFn" IntW '[a, a] a where
           , "We can't safely subtract " ++ show i ++ " from any choice in the MemberSpec."
           ]
       )
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for AddW with wrong number of arguments. " ++ show ctx)
+  propagateMemberSpec AddW ctx es = propagateMemberSpec AddW (flipCtx ctx) es
+  propagateMemberSpec NegateW (Unary HOLE) es = MemberSpec $ NE.nub $ fmap negate es
 
 addFn :: forall a. NumLike a => Term a -> Term a -> Term a
 addFn = appTerm AddW
 
-instance NumLike a => Logic "negateFn" IntW '[a] a where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context NegateW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App NegateW (v' :> Nil)) (v :-> ps)
-  propagate (Context NegateW (HOLE :<> End)) (TypeSpec ts cant) =
-    negateSpec @a ts <> notMemberSpec (map negate cant)
-  propagate (Context NegateW (HOLE :<> End)) (MemberSpec es) =
-    MemberSpec $ NE.nub $ fmap negate es
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for NegateW with wrong number of arguments. " ++ show ctx)
-
-  mapTypeSpec NegateW (ts) = negateSpec ts
-
 negateFn :: forall a. NumLike a => Term a -> Term a
 negateFn = appTerm NegateW
-
--- ============================================================

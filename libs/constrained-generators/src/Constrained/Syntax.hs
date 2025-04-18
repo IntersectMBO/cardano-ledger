@@ -32,7 +32,26 @@
 --    5) Syntacic only transformations
 module Constrained.Syntax where
 
-import Constrained.Base
+import Constrained.Base (
+  Binder (..),
+  Forallable,
+  HasGenHint,
+  HasSpec,
+  Hint,
+  IsPred,
+  Pred (..),
+  Specification (..),
+  Term (..),
+  Weighted (..),
+  bind,
+  explainSpecOpt,
+  forAllToList,
+  mapWeighted,
+  semantics,
+  toPred,
+  vsep',
+  (/>),
+ )
 import Constrained.Core (
   Rename (rename),
   Value (..),
@@ -41,11 +60,36 @@ import Constrained.Core (
   freshen,
   unValue,
  )
-import Constrained.Env
-import Constrained.GenT (GE (..), MonadGenError (..), errorGE, explain1)
-import Constrained.Generic
-import Constrained.Graph (Graph (..))
-import Constrained.List
+import Constrained.Env (
+  Env,
+  extendEnv,
+  lookupEnv,
+  removeVar,
+  singletonEnv,
+ )
+import Constrained.GenT (
+  GE (..),
+  MonadGenError (..),
+  errorGE,
+  explain,
+  fatalError,
+ )
+import Constrained.Generic (
+  Sum (..),
+  SumOver,
+ )
+import Constrained.Graph (
+  Graph (..),
+ )
+import Constrained.List (
+  List (..),
+  foldMapList,
+  mapList,
+  mapListC,
+  mapMList,
+  uncurryList_,
+ )
+
 import Control.Monad.Identity
 import Control.Monad.Writer (Writer, tell)
 import Data.Foldable (fold, toList)
@@ -61,7 +105,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.String (fromString)
 import Data.Typeable
-import GHC.Stack
 import qualified Language.Haskell.TH as TH
 import qualified Language.Haskell.TH.Quote as TH
 import Prettyprinter hiding (cat)
@@ -654,7 +697,7 @@ letFloating = fold . go []
           ((forall b. Term b -> b) -> GE a) ->
           (forall b. Term b -> b) ->
           GE a
-        explainSemantics k2 env = explain es $ k2 env
+        explainSemantics k2 env = explainNE es $ k2 env
     -- TODO: possibly one wants to have a `Term` level explanation in case
     -- the `b` propagates to ErrorSpec for some reason?
     pushExplain es (When b p) = When b (pushExplain es p)
@@ -735,7 +778,7 @@ unsafeExists ::
   (HasSpec a, IsPred p) =>
   (Term a -> p) ->
   Pred
-unsafeExists = exists (\_ -> fatalError (pure "unsafeExists"))
+unsafeExists = exists (\_ -> fatalError "unsafeExists")
 
 letBind ::
   ( HasSpec a
@@ -832,7 +875,7 @@ envFromPred env p = case p of
     envFromPred (extendEnv x v env) pp
   Explain _ pp -> envFromPred env pp
   Exists c (x :-> pp) -> do
-    v <- c (errorGE . explain1 "envFromPred: Exists" . runTerm env)
+    v <- c (errorGE . explain "envFromPred: Exists" . runTerm env)
     envFromPred (extendEnv x v env) pp
   And [] -> pure env
   And (pp : ps) -> do
@@ -854,9 +897,11 @@ runTermE env = \case
     vs <- mapMList (fmap Identity . runTermE env) ts
     pure $ uncurryList_ runIdentity (semantics f) vs
 
+-- TODO: Why on gods earth is this in a module called `Syntax`?!
+-- Because we don't want a module named `Semantics` with just 15 lines
 runTerm :: MonadGenError m => Env -> Term a -> m a
 runTerm env x = case runTermE env x of
-  Left msgs -> fatalError msgs
+  Left msgs -> fatalErrorNE msgs
   Right val -> pure val
 
 -- ===============================================================================
@@ -941,77 +986,3 @@ regularizeNames (SuspendedSpec x p) =
   where
     x' :-> p' = regularizeBinder (x :-> p)
 regularizeNames spec = spec
-
--- ===========================================================================
-
--- | Construct a Context from a Var and a Term (which we hope has exactly
---   one occurrence of that Var). Runs monadically, and fails with a error message
---   if that property does not hold.
-toCtx ::
-  forall m v a.
-  ( MonadGenError m
-  , HasCallStack
-  , HasSpec a
-  , HasSpec v
-  ) =>
-  Var v ->
-  Term a ->
-  m (Ctx v a)
-toCtx v t
-  | countOf (Name v) t > 1 =
-      fatalError $
-        NE.fromList
-          [ "Can't build a single-hole context from a variable " ++ show v ++ " in term " ++ show t
-          , "A context is always constructed from an (App f xs) term with just a single occurence."
-          ]
-  | otherwise = go t
-  where
-    go :: forall b. Term b -> m (Ctx v b)
-    go (Lit i) =
-      fatalError $
-        NE.fromList
-          [ "toCtx applied to literal: (Lit " ++ show i ++ ")"
-          , "A context is always constructed from an (App f xs) term."
-          ]
-    go (App f as) = do
-      hidden <- toCtxList v as
-      case hidden of
-        (Hide clist) -> pure (Ctx (Context f clist))
-    go (V v')
-      | Just Refl <- eqVar v v' = pure $ HOLE
-      | otherwise =
-          fatalError $
-            NE.fromList
-              [ "A context is always constructed from an (App f xs) term,"
-              , "with a single occurence of the variable " ++ show v ++ "@(" ++ show (typeOf v) ++ ")"
-              , "Instead we found an unknown variable " ++ show v' ++ "@(" ++ show (typeOf v') ++ ")"
-              ]
-
-data HiddenClist mode ds v where
-  Hide :: CList mode ds v y -> HiddenClist mode ds v
-
-toCtxList ::
-  forall m v as.
-  (All HasSpec as, HasSpec v, MonadGenError m, HasCallStack) =>
-  Var v -> List Term as -> m (HiddenClist 'Pre as v)
-toCtxList v l = prefix l
-  where
-    prefix :: forall ds. All HasSpec ds => List Term ds -> m (HiddenClist 'Pre ds v)
-    prefix Nil = fatalError (pure $ "toCtxList without hole, for variable " ++ show v)
-    prefix (Lit n :> ts) = do
-      Hide ctx <- prefix ts
-      pure $ Hide (n :|> ctx)
-    prefix (t :> ts) = do
-      ctx <- toCtx v t
-      Poly suf <- suffix ts
-      pure $ Hide (ctx :<> suf)
-
-    suffix :: forall zs. List Term zs -> m (PolyCList zs)
-    suffix Nil = pure (Poly End)
-    suffix (Lit n :> ts) = do
-      Poly ys <- suffix ts
-      pure $ Poly (n :<| ys)
-    suffix (_ :> _) = fatalError (pure "toCtxList with too many holes")
-
-data PolyCList as where
-  Poly :: (forall i j. CList 'Post as i j) -> PolyCList as

@@ -31,8 +31,6 @@
 
 module Constrained.Spec.SumProd (
   IsNormalType,
-  IsProductType,
-  ProductAsList,
   caseOn,
   branch,
   branchW,
@@ -56,91 +54,88 @@ module Constrained.Spec.SumProd (
   fstW,
   sndW,
   pair_,
-  leftFn,
-  rightFn,
+  injLeft_,
+  injRight_,
   prodFst_,
   prodSnd_,
   prod_,
   PairSpec (..),
+  SumW (..),
 ) where
 
-import Constrained.Base
-import Constrained.Conformance (conformsToSpec, satisfies)
-import Constrained.Core (Evidence (..), NonEmpty ((:|)))
-import Constrained.Generic
-import Constrained.List
-import Constrained.Spec.ListFoldy
-import Constrained.Syntax (exists, forAll, letBind, mkCase, reify)
-import Constrained.TheKnot
-import qualified Data.List.NonEmpty as NE
+import Constrained.Base (
+  BaseW (..),
+  Binder (..),
+  Forallable (..),
+  Fun (..),
+  HasSpec (..),
+  IsPred (..),
+  Pred (..),
+  Specification (..),
+  Term (..),
+  Weighted (..),
+  appTerm,
+  bind,
+  constrained,
+  fromGeneric_,
+  toGeneric_,
+ )
+import Constrained.Conformance (
+  conformsToSpec,
+  satisfies,
+ )
+import Constrained.Core (
+  Evidence (..),
+ )
+import Constrained.Generic (
+  ConstrOf,
+  HasSimpleRep (..),
+  Prod,
+  ProdOver,
+  SOP,
+  SimpleRep,
+  Sum,
+  SumOver,
+  TheSop,
+  (:::),
+ )
+import Constrained.List (
+  All,
+  FunTy,
+  List (..),
+  MapList,
+  TypeList,
+  curryList,
+  listShape,
+  mapListC,
+ )
+import Constrained.Syntax (
+  exists,
+  forAll,
+  letBind,
+  mkCase,
+  reify,
+ )
+import Constrained.TheKnot (
+  CountCases,
+  FoldSpec (..),
+  FunW (..),
+  PairSpec (..),
+  ProdW (..),
+  SumW (..),
+  ifElse,
+  injLeft_,
+  injRight_,
+  preMapFoldSpec,
+  prodFst_,
+  prodSnd_,
+  prod_,
+ )
+
 import Data.Typeable (Typeable)
 import GHC.TypeLits (Symbol)
 import GHC.TypeNats
 import Test.QuickCheck (Arbitrary (..), oneof)
-
--- ==================================================================
--- The HasSpec instance for Sum is in TheKnot.
--- Here are the Logic Instances for Sum
--- ===================================================================
-
--- ============= InjLeftW ====
-
-instance (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Logic "leftFn" BaseW '[a] (Sum a b) where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context InjLeftW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App InjLeftW (v' :> Nil)) (v :-> ps)
-  propagate (Context InjLeftW (HOLE :<> End)) (TypeSpec (SumSpec _ sl _) cant) =
-    sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
-  propagate (Context InjLeftW (HOLE :<> End)) (MemberSpec es) =
-    case [a | SumLeft a <- NE.toList es] of
-      (x : xs) -> MemberSpec (x :| xs)
-      [] ->
-        ErrorSpec $
-          pure $
-            "propMemberSpec (sumleft_ HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for InjLeftW with wrong number of arguments. " ++ show ctx)
-
-  -- NOTE: this function over-approximates and returns a liberal spec.
-  mapTypeSpec f ts = case f of
-    InjLeftW -> typeSpec $ SumSpec Nothing (typeSpec ts) (ErrorSpec (pure "mapTypeSpec InjLeftW"))
-
-leftFn :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term a -> Term (Sum a b)
-leftFn = appTerm InjLeftW
-
--- ============= InjRightW ====
-
-instance
-  (HasSpec a, HasSpec b, KnownNat (CountCases b)) =>
-  Logic "rightFn" BaseW '[b] (Sum a b)
-  where
-  propagate ctxt (ExplainSpec [] s) = propagate ctxt s
-  propagate ctxt (ExplainSpec es s) = ExplainSpec es $ propagate ctxt s
-  propagate _ TrueSpec = TrueSpec
-  propagate _ (ErrorSpec msgs) = ErrorSpec msgs
-  propagate (Context InjRightW (HOLE :<> End)) (SuspendedSpec v ps) =
-    constrained $ \v' -> Let (App InjRightW (v' :> Nil)) (v :-> ps)
-  propagate (Context InjRightW (HOLE :<> End)) (TypeSpec (SumSpec _ _ sr) cant) =
-    sr <> foldMap notEqualSpec [a | SumRight a <- cant]
-  propagate (Context InjRightW (HOLE :<> End)) (MemberSpec es) =
-    case [a | SumRight a <- NE.toList es] of
-      (x : xs) -> MemberSpec (x :| xs)
-      [] ->
-        ErrorSpec $
-          pure $
-            "propagate(InjRight HOLE) on (MemberSpec es) with no SumLeft in es: " ++ show (NE.toList es)
-  propagate ctx _ =
-    ErrorSpec $ pure ("Logic instance for InjRightW with wrong number of arguments. " ++ show ctx)
-
-  -- NOTE: this function over-approximates and returns a liberal spec.
-  mapTypeSpec f ts = case f of
-    InjRightW -> typeSpec $ SumSpec Nothing (ErrorSpec (pure "mapTypeSpec InjRightW")) (typeSpec ts)
-
-rightFn :: (HasSpec a, HasSpec b, KnownNat (CountCases b)) => Term b -> Term (Sum a b)
-rightFn = appTerm InjRightW
 
 -- ==================================================================
 -- Generics
@@ -232,7 +227,7 @@ instance {-# OVERLAPPABLE #-} Args a ~ '[a] => IsProd a where
 
 instance IsProd b => IsProd (Prod a b) where
   toArgs (p :: Term (Prod a b))
-    | Evidence <- prerequisites @(Prod a b) = prodFst_ p :> toArgs (prodSnd_ p)
+    | Evidence <- prerequisites @(Prod a b) = (prodFst_ p) :> toArgs (prodSnd_ p)
 
 type family Args t where
   Args (Prod a b) = a : Args b
@@ -273,7 +268,7 @@ instance
   ) =>
   SOPTerm c (c ::: constr : con : sop)
   where
-  inj_ = leftFn -- app injLeftFn
+  inj_ = injLeft_
 
 instance
   {-# OVERLAPPABLE #-}
@@ -284,7 +279,7 @@ instance
   ) =>
   SOPTerm c ((c' ::: con) : con' : sop)
   where
-  inj_ = rightFn . inj_ @c @(con' : sop)
+  inj_ = injRight_ . inj_ @c @(con' : sop)
 
 class HasSpec (ProdOver constr) => ConstrTerm constr where
   prodOver_ :: List Term constr -> Term (ProdOver constr)
@@ -360,10 +355,10 @@ fst_ = appTerm (ComposeW ProdFstW ToGenericW)
 snd_ :: (HasSpec x, HasSpec y) => Term (x, y) -> Term y
 snd_ = appTerm (ComposeW ProdSndW ToGenericW)
 
-fstW :: (HasSpec a, HasSpec b) => FunW "composeFn" '[(a, b)] a
+fstW :: (HasSpec a, HasSpec b) => FunW '[(a, b)] a
 fstW = (ComposeW ProdFstW ToGenericW)
 
-sndW :: (HasSpec a, HasSpec b) => FunW "composeFn" '[(a, b)] b
+sndW :: (HasSpec a, HasSpec b) => FunW '[(a, b)] b
 sndW = (ComposeW ProdSndW ToGenericW)
 
 instance
@@ -398,7 +393,7 @@ left_ ::
   ) =>
   Term a ->
   Term (Either a b)
-left_ = fromGeneric_ . leftFn
+left_ = fromGeneric_ . injLeft_
 
 right_ ::
   ( HasSpec a
@@ -408,7 +403,7 @@ right_ ::
   ) =>
   Term b ->
   Term (Either a b)
-right_ = fromGeneric_ . rightFn
+right_ = fromGeneric_ . injRight_
 
 caseOn ::
   forall a.

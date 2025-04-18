@@ -9,14 +9,6 @@ module Constrained.API (
   Semantics (..),
   Syntax (..),
   Foldy (..),
-  BaseW (ToGenericW, FromGenericW, EqualW, InjLeftW, InjRightW, ProdW, ProdSndW, ProdFstW, ElemW),
-  BoolW (NotW, OrW),
-  NumOrdW (LessOrEqualW, LessW, GreaterW, GreaterOrEqualW),
-  IntW (AddW, NegateW),
-  SizeW (SizeOfW),
-  FunW (IdW, ComposeW, FlipW),
-  ListW (FoldMapW, SingletonListW, AppendW),
-  MapW (DomW, RngW, LookupW),
   NumSpec (..),
   MaybeBounded (..),
   NonEmpty ((:|)),
@@ -26,7 +18,6 @@ module Constrained.API (
   name,
   named,
   Pred (..),
-  Literal,
   HasSpec (..),
   HasSimpleRep (..),
   OrdLike (..),
@@ -82,8 +73,8 @@ module Constrained.API (
   prodFst_,
   prod_,
   IsNormalType,
-  leftFn,
-  rightFn,
+  injLeft_,
+  injRight_,
   left_,
   right_,
   cJust_,
@@ -131,15 +122,12 @@ module Constrained.API (
   subset_,
   disjoint_,
   fromList_,
-  pattern Equal,
   pattern Elem,
   pattern ToGeneric,
   pattern FromGeneric,
-  pattern InjLeft,
-  pattern InjRight,
-  pattern ProdFst,
-  pattern ProdSnd,
-  pattern Product,
+  pattern Unary,
+  pattern (:<:),
+  pattern (:>:),
   printPlan,
   NumLike,
   PairSpec (..),
@@ -155,10 +143,8 @@ module Constrained.API (
 where
 
 import Constrained.Base (
-  BaseW (..),
   Fun (..),
   HasSpec (..),
-  Literal,
   Logic (..),
   Pred (..),
   Semantics (..),
@@ -174,15 +160,11 @@ import Constrained.Base (
   notEqualSpec,
   notMemberSpec,
   toGeneric_,
-  pattern Elem,
-  pattern Equal,
   pattern FromGeneric,
-  pattern InjLeft,
-  pattern InjRight,
-  pattern ProdFst,
-  pattern ProdSnd,
-  pattern Product,
   pattern ToGeneric,
+  pattern Unary,
+  pattern (:<:),
+  pattern (:>:),
  )
 import Constrained.Conformance (
   conformsToSpec,
@@ -192,10 +174,8 @@ import Constrained.Conformance (
 import Constrained.Core (NonEmpty ((:|)))
 import Constrained.Generic (HasSimpleRep (..), Prod (..))
 import Constrained.NumSpec (
-  IntW (..),
   MaybeBounded (..),
   NumLike,
-  NumOrdW (..),
   NumSpec (..),
   Numeric,
   OrdLike (..),
@@ -204,55 +184,8 @@ import Constrained.NumSpec (
   negateFn,
  )
 
-import Constrained.Spec.SumProd (
-  IsNormalType,
-  PairSpec (..),
-  branch,
-  branchW,
-  cJust_,
-  cNothing_,
-  caseOn,
-  chooseSpec,
-  con,
-  constrained',
-  forAll',
-  fst_,
-  isCon,
-  isJust,
-  leftFn,
-  left_,
-  match,
-  onCon,
-  onJust,
-  pair_,
-  prodFst_,
-  prodSnd_,
-  prod_,
-  reify',
-  rightFn,
-  right_,
-  sel,
-  snd_,
- )
-import Constrained.TheKnot (
-  BoolW (..),
-  debugSpec,
-  genFromSpec,
-  genFromSpecT,
-  genFromSpecWithSeed,
-  ifElse,
-  not_,
-  or_,
-  printPlan,
-  simplifySpec,
-  simplifyTerm,
-  whenTrue,
-  (<.),
-  (<=.),
-  (==.),
-  (>.),
-  (>=.),
- )
+import Constrained.Spec.SumProd
+import Constrained.TheKnot
 
 import Constrained.Syntax (
   assert,
@@ -271,30 +204,14 @@ import Constrained.Syntax (
   unsafeExists,
  )
 
-import Constrained.Spec.ListFoldy (
-  Foldy (..),
-  FunW (..),
-  ListW (..),
-  append_,
-  compose_,
-  elem_,
-  flip_,
-  foldMap_,
-  id_,
-  singletonList_,
-  sum_,
- )
-
 import Constrained.Spec.Map (
   MapSpec (..),
-  MapW (..),
   dom_,
   fstSpec,
   lookup_,
   rng_,
   sndSpec,
  )
-import Constrained.Spec.Num (negate_, (+.), (-.))
 import Constrained.Spec.Set (
   SetSpec (..),
   SetW (..),
@@ -304,16 +221,6 @@ import Constrained.Spec.Set (
   singleton_,
   subset_,
   union_,
- )
-import Constrained.Spec.Size (
-  SizeW (..),
-  Sized (sizeOf),
-  between,
-  genFromSizeSpec,
-  hasSize,
-  maxSpec,
-  rangeSize,
-  sizeOf_,
  )
 import Constrained.Syntax (var)
 

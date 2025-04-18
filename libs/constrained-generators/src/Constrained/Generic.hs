@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,14 +14,23 @@
 -- | How can we automatically inject normal Haskell types into the logic, using GHC.Generics
 module Constrained.Generic where
 
-import GHC.TypeLits (Symbol)
+import Constrained.List (
+  Append,
+  FunTy,
+  List (..),
+  TypeList,
+  appendList,
+  curryList_,
+  listShape,
+  uncurryList_,
+ )
 
-import Constrained.List
 import Data.Functor.Const
 import Data.Functor.Identity
 import Data.Kind
 import Data.Typeable
 import GHC.Generics
+import GHC.TypeLits (Symbol)
 
 -- Sum and Prod and their operations came from Constrained.Univ
 -- Since that file is basically about Fn, which is going to disappear
@@ -140,6 +150,8 @@ class Typeable (SimpleRep a) => HasSimpleRep a where
 
 type family SimplifyRep f where
   SimplifyRep f = SOP (SOPOf f)
+
+instance HasSimpleRep Bool
 
 -- ===============================================================
 -- How to move back and forth from (SimpleRep a) to 'a' in a

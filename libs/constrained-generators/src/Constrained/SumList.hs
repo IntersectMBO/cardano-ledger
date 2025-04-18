@@ -123,7 +123,13 @@ splitsOf count = [(i, j) | i <- [1 .. div count 2], let j = count - i]
 pickAll ::
   forall t.
   (Show t, Integral t, Random t) =>
-  t -> t -> (String, t -> Bool) -> t -> Int -> Cost -> Gen (Cost, Solution t)
+  t ->
+  t ->
+  (String, t -> Bool) ->
+  t ->
+  Int ->
+  Cost ->
+  Gen (Cost, Solution t)
 pickAll smallest largest (pName, _) total count cost
   | cost > 1000 =
       pure $
