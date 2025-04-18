@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Babbage.Binary.Annotator (
 ) where
 
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxBody.Internal
+import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.Binary
 import Test.Cardano.Ledger.Alonzo.Binary.Annotator
 

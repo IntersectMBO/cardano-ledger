@@ -2,6 +2,12 @@
 
 ## 1.20.0.0
 
+* Add `MkConwayTxBody` and all members of `ConwayTxBodyRaw`:  
+  (`ConwayTxBodyRaw`, `ctbrAuxDataHash`, `ctbrCerts`, `ctbrCollateralInputs`,
+  `ctbrCollateralReturn`, `ctbrCurrentTreasuryValue`, `ctbrFee`, `ctbrMint`, `ctbrNetworkId`,
+  `ctbrOutputs`, `ctbrProposalProcedures`, `ctbrReferenceInputs`, `ctbrReqSignerHashes`,
+  `ctbrScriptIntegrityHash`, `ctbrSpendInputs`, `ctbrTotalCollateral`, `ctbrTreasuryDonation`,
+  `ctbrVldt`, `ctbrVotingProcedures`, `ctbrWithdrawals`)
 * Move `Annotator` instances to `testlib`
 * Expose access to `ConwayTxBodyRaw`
 * Expose constructor `MkConwayTxBody`

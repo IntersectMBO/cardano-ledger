@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Allegra.Binary.Annotator (
 
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
-import Cardano.Ledger.Allegra.TxBody.Internal
+import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
