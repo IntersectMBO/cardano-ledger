@@ -35,7 +35,6 @@ module Cardano.Ledger.Coin (
 )
 where
 
-import Cardano.HeapWords (HeapWords)
 import Cardano.Ledger.BaseTypes (
   HasZero (..),
   Inject (..),
@@ -83,7 +82,7 @@ newtype Coin = Coin {unCoin :: Integer}
     )
   deriving (Show) via Quiet Coin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
-  deriving newtype (PartialOrd, ToCBOR, EncCBOR, HeapWords)
+  deriving newtype (PartialOrd, ToCBOR, EncCBOR)
 
 instance FromCBOR Coin where
   fromCBOR = Coin . toInteger <$> Plain.decodeWord64
@@ -91,7 +90,7 @@ instance FromCBOR Coin where
 instance DecCBOR Coin
 
 newtype DeltaCoin = DeltaCoin Integer
-  deriving (Eq, Ord, Generic, Enum, NoThunks, HeapWords)
+  deriving (Eq, Ord, Generic, Enum, NoThunks)
   deriving (Show) via Quiet DeltaCoin
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
   deriving newtype (PartialOrd, NFData, ToCBOR, DecCBOR, EncCBOR, ToJSON, FromJSON)
@@ -124,7 +123,7 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin {unCompactCoin :: Word64}
-    deriving (Eq, Show, NoThunks, NFData, HeapWords, Prim, Ord, ToCBOR, ToJSON, FromJSON)
+    deriving (Eq, Show, NoThunks, NFData, Prim, Ord, ToCBOR, ToJSON, FromJSON)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
@@ -145,7 +144,7 @@ instance MemPack (CompactForm Coin) where
 
 instance Compactible DeltaCoin where
   newtype CompactForm DeltaCoin = CompactDeltaCoin Word64
-    deriving (Eq, Show, NoThunks, NFData, HeapWords, ToJSON, Prim)
+    deriving (Eq, Show, NoThunks, NFData, ToJSON, Prim)
 
   toCompact (DeltaCoin dc) = CompactDeltaCoin <$> integerToWord64 dc
   fromCompact (CompactDeltaCoin cdc) = DeltaCoin (unCoin (word64ToCoin cdc))

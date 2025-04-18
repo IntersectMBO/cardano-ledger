@@ -82,7 +82,6 @@ where
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -332,7 +331,6 @@ newtype SafeHash i = SafeHash (Hash.Hash HASH i)
     , NoThunks
     , NFData
     , SafeToHash
-    , HeapWords
     , ToCBOR
     , FromCBOR
     , EncCBOR
