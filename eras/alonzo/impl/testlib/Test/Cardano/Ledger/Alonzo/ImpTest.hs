@@ -46,7 +46,6 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScriptsWithLogs,
@@ -61,7 +60,7 @@ import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL, unTxDatsL)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -97,6 +96,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
+import Test.Cardano.Ledger.Alonzo.Era
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Rational ((%!))
@@ -112,11 +112,7 @@ import Test.Cardano.Ledger.Plutus.Guardrail (guardrailScript)
 
 class
   ( MaryEraImp era
-  , AlonzoEraScript era
-  , AlonzoEraTxWits era
-  , AlonzoEraTx era
-  , AlonzoEraUTxO era
-  , EraPlutusContext era
+  , AlonzoEraTest era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , TxAuxData era ~ AlonzoTxAuxData era
   ) =>
@@ -440,7 +436,7 @@ instance ShelleyEraImp AlonzoEra where
 
 instance MaryEraImp AlonzoEra
 
-instance MaryEraImp AlonzoEra => AlonzoEraImp AlonzoEra where
+instance AlonzoEraImp AlonzoEra where
   scriptTestContexts = plutusTestScripts SPlutusV1
 
 impLookupScriptContext ::

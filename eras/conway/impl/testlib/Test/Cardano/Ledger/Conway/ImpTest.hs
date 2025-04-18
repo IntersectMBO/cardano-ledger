@@ -139,7 +139,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -225,6 +224,7 @@ import Lens.Micro
 import Prettyprinter (align, hsep, viaShow, vsep)
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Conway.Era
 import Test.Cardano.Ledger.Conway.TreeDiff (tableDoc)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
@@ -316,18 +316,14 @@ instance AlonzoEraImp ConwayEra where
 
 class
   ( AlonzoEraImp era
-  , ConwayEraGov era
-  , ConwayEraTxBody era
+  , ConwayEraTest era
   , ConwayEraTxCert era
-  , ConwayEraPParams era
-  , ConwayEraCertState era
   , STS (EraRule "ENACT" era)
   , BaseM (EraRule "ENACT" era) ~ ShelleyBase
   , State (EraRule "ENACT" era) ~ EnactState era
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , Environment (EraRule "ENACT" era) ~ ()
   , NativeScript era ~ Timelock era
-  , Script era ~ AlonzoScript era
   , GovState era ~ ConwayGovState era
   ) =>
   ConwayEraImp era
