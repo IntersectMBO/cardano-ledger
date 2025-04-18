@@ -7,6 +7,13 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 10.3
+
+- Removed crypto parametrization from ledger eras, which finally allowed us to avoid regression in `ghc-9` and stop using `ghc-8.10.7` for building `cardano-node` releases.
+- Improve performance of ledger snapshot creation by changing how we serialize `UTxO` in the ledger state. This should solve an issue with missed leadership checks due to snapshot creation problem [`ouroboros-consensus#868`](https://github.com/IntersectMBO/ouroboros-consensus/issues/868#issuecomment-2778621189)
+- Add cli to `plutus-debug` executable and provide ability for overridding different parts used for script execution.
+- Much cleanup, re-organization of the code and various minor performance optimizations
+
 ## 10.2
 
 - Add registered DRep stake distribution query

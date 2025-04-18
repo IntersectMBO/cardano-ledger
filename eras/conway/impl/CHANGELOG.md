@@ -27,7 +27,7 @@
 * Converted `CertState` to a type family
 * Remove `ConwayMempoolPredFailure` and `ConwayMempoolEvent`
 * Switch to `MEMPOOL` rule to be the entry point for `ApplyTx` instead of `LEDGER` and invert their
-  ivocation.
+  invocation.
 * Added `ToCBOR` and `FromCBOR` instances for `DefaultVote`.
 * Made the fields of predicate failures and environments lazy
 * Add `MemPack` instance for `PlutusScript ConwayEra`
